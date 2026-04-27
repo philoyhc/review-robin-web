@@ -20,9 +20,9 @@ Open `http://127.0.0.1:8000/health` and expect:
 {"status":"ok"}
 ```
 
-To exercise the authenticated `/me` endpoint locally, set
-`ALLOW_FAKE_AUTH=true` in your `.env` (see `.env.example`). In Azure, Easy Auth
-provides the identity instead — see `docs/authentication.md`.
+To exercise the authenticated `/me` (JSON) and `/me/debug` (HTML) endpoints
+locally, set `ALLOW_FAKE_AUTH=true` in your `.env` (see `.env.example`). In
+Azure, Easy Auth provides the identity instead — see `docs/authentication.md`.
 
 ## Tests
 
