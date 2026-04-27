@@ -81,6 +81,41 @@ heading toward a real internal pilot.
 
 ---
 
+## 3.2 Inherited from Segment 5A
+
+Segment 5 (per `guide/segment_05A.md`) provisioned dev Postgres with the
+simplest acceptable infrastructure choices. The following hardening items
+were deferred here:
+
+- **Move `DATABASE_URL` (and any other secrets) to Key Vault references.**
+  Segment 5A stored the connection string as a plain App Service App
+  Setting and as a GitHub Actions secret. For staging/production, switch
+  the App Setting to a Key Vault reference and assign the App Service a
+  managed identity with `Get` permissions on the relevant secrets.
+- **VNet integration / private endpoints for Azure Postgres.** Segment 5
+  used public access with firewall rules. For staging/production, put the
+  database behind a private endpoint, integrate the App Service into the
+  VNet, and remove "Allow Azure services" plus the developer-IP firewall
+  rules.
+- **Full Postgres pytest matrix in CI.** Segment 5A added a migration-only
+  Postgres smoke job (`alembic upgrade head` + round-trip) but kept the
+  full pytest suite on SQLite. Add a parallel job that runs the entire
+  test suite against a Postgres service container so dialect drift in
+  application queries (not just schema) is caught in CI.
+- **Migration-on-deploy safety controls.** Segment 5A's migrate-on-deploy
+  step fails the workflow if migration fails, but does not gate
+  destructive migrations. Add: a manual-approval gate for staging/production
+  deploys, a "long migration" detector, and a documented rollback playbook.
+- **CSS extraction and design pass.** Segment 5A used inline `<style>`
+  blocks in `base.html`. Extract to static assets, decide on a design
+  language, and migrate `me_debug.html` to extend `base.html`.
+- **First-time-user creation auditing.** Segment 5A creates a `User` row
+  on first sign-in without writing an audit event. Decide whether
+  first-sign-in deserves its own audit event, or whether the
+  Easy-Auth-side sign-in record is sufficient.
+
+---
+
 ## 4. Branch strategy
 
 This segment may be too broad for one PR. Prefer several smaller PRs.
