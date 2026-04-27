@@ -34,9 +34,17 @@ def test_me_returns_identity_from_easy_auth_headers() -> None:
 
 
 def test_me_returns_401_when_unauthenticated_and_fake_auth_disabled() -> None:
-    client = TestClient(app)
+    real_settings = Settings(allow_fake_auth=False)
 
-    response = client.get("/me")
+    def override_get_current_user(request: Request) -> AuthenticatedUser:
+        return resolve_current_user(request, real_settings)
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    try:
+        client = TestClient(app)
+        response = client.get("/me")
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
     assert response.status_code == 401
 
@@ -99,9 +107,17 @@ def test_me_debug_renders_html_with_identity_and_claims() -> None:
 
 
 def test_me_debug_returns_401_when_unauthenticated() -> None:
-    client = TestClient(app)
+    real_settings = Settings(allow_fake_auth=False)
 
-    response = client.get("/me/debug")
+    def override_get_current_user(request: Request) -> AuthenticatedUser:
+        return resolve_current_user(request, real_settings)
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    try:
+        client = TestClient(app)
+        response = client.get("/me/debug")
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
     assert response.status_code == 401
 
