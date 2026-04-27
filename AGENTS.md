@@ -26,3 +26,6 @@ Before considering a change complete, run:
 
 ```bash
 pytest
+```
+
+If dependencies or tooling change, update `README.md`.
