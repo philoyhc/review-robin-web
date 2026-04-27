@@ -64,6 +64,30 @@ Three places to look when something goes wrong:
    *Monitoring → App Service logs → Application logging (Filesystem)* is
    turned on.
 
+## Authentication
+
+Azure App Service Authentication ("Easy Auth") V2 is enabled on the dev app.
+
+- **Restrict access:** Require authentication.
+- **Unauthenticated requests:** HTTP 302 → Microsoft (Entra ID).
+- **Token store:** enabled (so the app receives the rich
+  `X-MS-CLIENT-PRINCIPAL` header with claims).
+- **Excluded paths:** `/health` (set on `authsettingsV2` →
+  `globalValidation.excludedPaths` so probes do not bounce through sign-in).
+
+To verify after a deploy:
+
+1. In a fresh browser, open
+   `https://app-review-robin-web-dev-a5c9f3gpfudaambf.southeastasia-01.azurewebsites.net/me`
+   — you should be redirected to Microsoft sign-in.
+2. After sign-in, `/me` should return JSON with your `email`, `name`,
+   `principal_id`, and `provider: "aad"`.
+3. `curl https://.../health` (unauthenticated) should still return
+   `{"status": "ok"}`.
+
+Application code consumes Easy Auth headers; do not enable `ALLOW_FAKE_AUTH`
+in App Service configuration. See `docs/authentication.md` for details.
+
 ## Known issues
 
 - The workflow currently installs from `requirements.txt` rather than
