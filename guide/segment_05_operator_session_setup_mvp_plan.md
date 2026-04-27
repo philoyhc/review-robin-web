@@ -57,6 +57,35 @@ This is only the first operator loop.
 
 ---
 
+## 3.1 Inherited from Segment 4A
+
+Segment 4 (per `guide/segment_04A.md`) was scoped to the data model only and
+deferred all live-database work into this segment. Segment 5 must therefore
+**also** cover:
+
+- **Azure Database for PostgreSQL Flexible Server (dev) provisioning.** Use
+  the institutionally appropriate region and the smallest dev tier. Public
+  access with firewall allow-rules for the dev App Service and the
+  developer machine is acceptable for the dev environment.
+- **App Service configuration.** Set the `DATABASE_URL` (or equivalent) App
+  Setting to the Postgres connection string. Do not commit the secret;
+  store it as an App Setting (or a Key Vault reference if Key Vault is
+  introduced earlier).
+- **Local Postgres for development.** Add a `docker-compose.yml` (or
+  equivalent instructions) so a contributor can run a local Postgres on a
+  known port. Update `docs/database.md` accordingly.
+- **Migration on deploy.** Decide how `alembic upgrade head` runs against
+  Azure Postgres on each deploy (recommended: a step in
+  `.github/workflows/main_app-review-robin-web-dev.yml` that runs migrations
+  before the App Service swap, against the dev DB, using the same
+  connection string).
+- **First real-Postgres smoke test.** The Segment 4 migration was only
+  exercised against SQLite. Running it against Azure Postgres for the first
+  time in Segment 5 is the moment any portability gaps surface — budget
+  time to fix them rather than work around them.
+
+---
+
 ## 4. Recommended branch strategy
 
 ```bash

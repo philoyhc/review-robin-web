@@ -5,6 +5,11 @@
 **Segment:** 4 of the low-intensity workplan  
 **Purpose:** Establish the relational database foundation for Review Robin Web
 
+> **See also:** `guide/segment_04A.md` — agreed implementation plan with
+> decisions made (model class names, migrations-in-tests strategy, type
+> portability rules, deferrals into later segments). Read this parent plan
+> for scope and intent; read 04A for the implementation contract.
+
 ---
 
 ## 1. Segment goal
