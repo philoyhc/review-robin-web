@@ -8,6 +8,28 @@ This repository is currently at the project skeleton stage.
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate  # Windows PowerShell/CMD variant may differ
+source .venv/bin/activate  # macOS/Linux
+# .venv\Scripts\activate   # Windows PowerShell/CMD
 pip install -e .[dev]
 uvicorn app.main:app --reload
+```
+
+Open `http://127.0.0.1:8000/health` and expect:
+
+```json
+{"status":"ok"}
+```
+
+## Tests
+
+```bash
+pytest
+```
+
+## Project documents
+
+- `FUNCTIONAL_SPEC.md`
+- `TECH_STACK.md`
+- `ARCHITECTURE.md`
+- `AGENTS.md`
+- `CONTRIBUTING.md`
