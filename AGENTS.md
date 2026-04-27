@@ -5,7 +5,9 @@
 - Use Python 3.12+.
 - Use FastAPI for the backend.
 - Use Pydantic for request/response schemas.
-- Use SQLAlchemy 2.x style when database models are introduced.
+- Use SQLAlchemy 2.x declarative style with `Mapped[]` and `mapped_column`.
+  Do not import from `sqlalchemy.dialects.postgresql` in `app/db/models/` —
+  Postgres-specific column types are deferred to Segment 13.
 - Keep route handlers thin.
 - Put business logic in service modules.
 - Add or update tests for every behavior change.
@@ -16,7 +18,9 @@
 
 ## Current stage
 
-The project is currently in Segment 1: repository setup and skeleton app.
+Segments 1–4 complete. The project has a FastAPI app skeleton, Azure
+deployment, Easy Auth identity, and a SQLAlchemy 2.x core data model with
+Alembic migrations. No DB-backed routes yet; that comes in Segment 5.
 
 Do not add Review Robin domain functionality unless an issue explicitly asks for it.
 

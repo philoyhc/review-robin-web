@@ -11,6 +11,7 @@ python -m venv .venv
 source .venv/bin/activate  # macOS/Linux
 # .venv\Scripts\activate   # Windows PowerShell/CMD
 pip install -e .[dev]
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
@@ -39,3 +40,4 @@ pytest
 - `CONTRIBUTING.md`
 - `deployment_dev.md`
 - `docs/authentication.md`
+- `docs/database.md`
