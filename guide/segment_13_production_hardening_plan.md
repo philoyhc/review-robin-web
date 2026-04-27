@@ -50,6 +50,37 @@ Do not include:
 
 ---
 
+## 3.1 Inherited from Segment 4A
+
+Segment 4 (per `guide/segment_04A.md`) deliberately used cross-dialect column
+types so the same migration runs on SQLite (tests) and PostgreSQL (deployed).
+The following Postgres-specific optimizations were deferred here:
+
+- **Migrate JSON columns to `JSONB`.** `AuditEvent.detail` and any other
+  JSON columns introduced in later segments should be moved to `JSONB` for
+  indexing and operator-friendly queries. Postgres-only migration; tests
+  continue to run on SQLite using `JSON`.
+- **Migrate string-UUID columns to native `UUID`.** Where Segment 4 used
+  `String(36)` for UUID-shaped columns, swap to Postgres `UUID` for storage
+  efficiency and constraint correctness. Add explicit casting in
+  application code if needed.
+- **Add a Postgres-against-Docker CI job.** Segment 4's `ci.yml` runs
+  `pytest` against SQLite. Add a parallel job that spins up a Postgres
+  service container (GitHub Actions `services:` block) and runs the test
+  suite against it, so dialect drift is caught in CI rather than on
+  deploy.
+- **Review and add Postgres-specific indexes.** GIN indexes on `JSONB`
+  columns where queried; partial indexes for frequently-filtered subsets;
+  expression indexes if any.
+- **Consider DB-level enums.** Where Segment 4 used `String` + Python enum
+  validation (e.g. `AuditEvent.event_type`, `AuditEvent.severity`), decide
+  per column whether a Postgres `ENUM` type is worth the migration cost.
+
+These items belong in this segment because they only matter once the app is
+heading toward a real internal pilot.
+
+---
+
 ## 4. Branch strategy
 
 This segment may be too broad for one PR. Prefer several smaller PRs.
