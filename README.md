@@ -33,3 +33,4 @@ pytest
 - `ARCHITECTURE.md`
 - `AGENTS.md`
 - `CONTRIBUTING.md`
+- `doc/deployment_dev.md`
