@@ -26,3 +26,8 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local development database
+*.db
+*.sqlite
+*.sqlite3

@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     fake_auth_email: str = "operator@example.edu"
     fake_auth_name: str = "Local Operator"
 
+    database_url: str = "sqlite:///./review_robin_web.db"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
