@@ -69,9 +69,13 @@ Rules:
 > **Warning:** Fake auth is a development convenience only. Never set
 > `ALLOW_FAKE_AUTH=true` in Azure App Service configuration.
 
-## The `/me` route
+## Diagnostic routes
 
-`GET /me` returns the current authenticated user as JSON:
+There are two diagnostic surfaces:
+
+### `GET /me` (JSON)
+
+Machine-readable identity, useful for scripting and tests:
 
 ```json
 {
@@ -83,8 +87,18 @@ Rules:
 }
 ```
 
-It is a diagnostic endpoint for Segment 3. Later segments may restrict it,
-remove it, or replace it with a richer user-profile surface.
+### `GET /me/debug` (HTML)
+
+Human-readable page that renders:
+
+- the parsed `AuthenticatedUser` (name, email, principal id, provider);
+- the **raw claims list** decoded from `X-MS-CLIENT-PRINCIPAL`, useful for
+  confirming what Entra is actually sending for the current tenant;
+- a "fake auth" pill when the local fallback is in use;
+- a sign-out link to `/.auth/logout` (handled by Easy Auth in Azure).
+
+Both routes are diagnostic. Later segments may restrict, remove, or replace
+them with a richer user-profile surface.
 
 ## What this segment does not implement
 

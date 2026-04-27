@@ -57,7 +57,6 @@ def _user_from_easy_auth_headers(request: Request) -> AuthenticatedUser | None:
 
     if not (simple_name or simple_id or rich):
         return None
-
     email: str | None = None
     name: str | None = None
     principal_id: str | None = simple_id
@@ -127,3 +126,28 @@ def resolve_current_user(
 
 def get_current_user(request: Request) -> AuthenticatedUser:
     return resolve_current_user(request)
+
+
+def decode_client_principal(request: Request) -> dict[str, Any] | None:
+    rich = request.headers.get("X-MS-CLIENT-PRINCIPAL")
+    if not rich:
+        return None
+    return _decode_client_principal(rich)
+
+
+def extract_claims(request: Request) -> list[dict[str, str]]:
+    payload = decode_client_principal(request)
+    if payload is None:
+        return []
+    raw = payload.get("claims")
+    if not isinstance(raw, list):
+        return []
+    claims: list[dict[str, str]] = []
+    for claim in raw:
+        if not isinstance(claim, dict):
+            continue
+        typ = claim.get("typ")
+        val = claim.get("val")
+        if isinstance(typ, str) and isinstance(val, str):
+            claims.append({"typ": typ, "val": val})
+    return claims

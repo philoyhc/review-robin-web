@@ -82,7 +82,10 @@ To verify after a deploy:
    — you should be redirected to Microsoft sign-in.
 2. After sign-in, `/me` should return JSON with your `email`, `name`,
    `principal_id`, and `provider: "aad"`.
-3. `curl https://.../health` (unauthenticated) should still return
+3. `/me/debug` renders the same identity as an HTML page plus the full raw
+   claims list and a sign-out link (`/.auth/logout`) — useful for inspecting
+   what Entra is sending for this tenant.
+4. `curl https://.../health` (unauthenticated) should still return
    `{"status": "ok"}`.
 
 Application code consumes Easy Auth headers; do not enable `ALLOW_FAKE_AUTH`
