@@ -361,3 +361,78 @@ def assignments_full_matrix(
         url=f"/operator/sessions/{review_session.id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/manual/import",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def assignments_manual_import(
+    request: Request,
+    file: UploadFile = File(...),
+    dry_run: str | None = Form(default=None),
+    confirm_replace: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse | RedirectResponse:
+    content = await file.read()
+    reviewers = assignments.list_reviewers(db, review_session.id)
+    reviewees = assignments.list_reviewees(db, review_session.id)
+    result = assignments.parse_manual_csv(content, reviewers, reviewees)
+    existing = assignments.existing_count(db, review_session.id)
+
+    is_dry_run = dry_run == "true"
+    needs_confirm = existing > 0 and confirm_replace != "true"
+
+    def render(status_code: int) -> HTMLResponse:
+        pair_sample = result.rows[: assignments.PAIR_PREVIEW_LIMIT]
+        truncated_count = max(0, len(result.rows) - assignments.PAIR_PREVIEW_LIMIT)
+        return _templates.TemplateResponse(
+            request,
+            "operator/assignments_preview_manual.html",
+            {
+                "user": user,
+                "session": review_session,
+                "issues": result.issues,
+                "rows": result.rows,
+                "pair_sample": pair_sample,
+                "truncated_count": truncated_count,
+                "filename": file.filename,
+                "existing_count": existing,
+                "needs_confirm_replace": existing > 0,
+                "missing_confirm": needs_confirm and not is_dry_run and not result.is_blocked,
+                "is_blocked": result.is_blocked,
+            },
+            status_code=status_code,
+        )
+
+    if result.is_blocked:
+        return render(status.HTTP_400_BAD_REQUEST)
+
+    if is_dry_run:
+        return render(status.HTTP_200_OK)
+
+    if needs_confirm:
+        return render(status.HTTP_400_BAD_REQUEST)
+
+    pairs, contexts, includes = assignments.manual_rows_to_pairs(
+        result.rows, reviewers, reviewees
+    )
+    assignments.replace_assignments(
+        db,
+        review_session=review_session,
+        user=user,
+        pairs=pairs,
+        mode=AssignmentMode.manual,
+        correlation_id=request_correlation_id(),
+        excluded_self_count=0,
+        filename=file.filename,
+        contexts=contexts,
+        includes=includes,
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/assignments",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )

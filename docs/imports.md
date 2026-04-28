@@ -74,9 +74,64 @@ which CSV produced which state.
 | `File too large (max 1024 KiB)` | Split the import into smaller batches, or remove unused columns. |
 | HTTP 400 with no error list shown | The form is asking for the replace-confirmation checkbox; tick it and re-submit. |
 
+## ManualAssignment CSV
+
+Required columns: `ReviewerEmail`, `RevieweeEmail`. Both must already
+exist in the session's reviewer / reviewee rosters — manual rows
+**never** auto-create reviewers or reviewees.
+
+Optional columns: `IncludeAssignment`, `AssignmentContext1`,
+`AssignmentContext2`, `AssignmentContext3`. Any other columns are
+ignored.
+
+```csv
+ReviewerEmail,RevieweeEmail,IncludeAssignment,AssignmentContext1
+alice@example.edu,carol@example.edu,true,morning
+bob@example.edu,carol@example.edu,false,afternoon
+```
+
+`IncludeAssignment` accepts (case-insensitive):
+
+| Value | Parsed as |
+|---|---|
+| `true`, `yes`, `1` | `true` |
+| `false`, `no`, `0` | `false` |
+| empty / column absent | `true` (default) |
+| anything else | blocking error |
+
+`AssignmentContext1`/`2`/`3` are stored together in the assignment's
+`context` JSON column under the keys `context_1`, `context_2`,
+`context_3`. Used by Segment 11 RuleBased reviews and as a free-form
+operator note in the meantime.
+
+### Workflow
+
+1. Open the **Assignments** page on a session that already has at
+   least one reviewer and one reviewee.
+2. Under **Manual CSV**, pick your file and click **Preview manual
+   import**.
+3. The preview shows total rows, an `include=false` count if any,
+   and a table of the first 200 pairs (with truncation note if the
+   file is longer). Blocking errors are listed inline; nothing is
+   saved when errors are present.
+4. To save, **re-upload the same file** in the Save card and (if the
+   session already has assignments) tick the replace-confirm
+   checkbox.
+
+### Blocking errors
+
+| Error | Cause |
+|---|---|
+| `Missing required column: …` | Add the column to the CSV header. Names are case-sensitive. |
+| `Unknown reviewer: 'x' is not in this session's reviewer roster` | The reviewer email doesn't match any row in the session's reviewers table. Re-import reviewers or fix the CSV. |
+| `Unknown reviewee: 'x' is not in this session's reviewee roster` | Same idea for reviewees. |
+| `Duplicate assignment: 'a' -> 'b' (also on row N)` | Each `(reviewer, reviewee)` pair must be unique in the file. |
+| `IncludeAssignment 'maybe' is not a recognised true/false value` | Use one of the documented truthy/falsy strings (or leave blank). |
+| `File too large` / `Too many rows` | Same caps as roster CSVs (1 MiB / 5000 rows). |
+
 ## What's not implemented yet
 
 - Excel upload (still CSV-only).
 - Append / merge instead of replace.
 - Importing custom instrument fields (Segment 8).
-- Importing assignments (Segment 7).
+- RuleBased assignment generation (Segment 11).
