@@ -100,7 +100,7 @@
               </td>
             {% endfor %}
             <td style="width: 1%; white-space: nowrap; text-align: center;">
-              {% if row.submitted_at %}
+              {% if row.submitted_at or show_acknowledge %}
                 {% if row.is_complete %}
                   <span title="Complete"
                         style="color: #16a34a; font-weight: bold; font-size: 1.2em;">✓</span>
@@ -108,10 +108,12 @@
                   <span title="{{ row.missing_count }} required field{{ '' if row.missing_count == 1 else 's' }} missing"
                         style="color: #d97706; font-weight: bold; font-size: 1.2em;">⚠</span>
                 {% endif %}
-                <div class="muted"
-                     style="font-size: 0.85em; margin-top: 4px; white-space: normal;">
-                  submitted {{ row.submitted_at.strftime("%Y-%m-%d %H:%M") }}
-                </div>
+                {% if row.submitted_at %}
+                  <div class="muted"
+                       style="font-size: 0.85em; margin-top: 4px; white-space: normal;">
+                    submitted {{ row.submitted_at.strftime("%Y-%m-%d %H:%M") }}
+                  </div>
+                {% endif %}
               {% endif %}
             </td>
           </tr>

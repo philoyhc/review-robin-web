@@ -299,6 +299,9 @@ def test_submit_with_missing_required_warns_without_audit(
     assert response.status_code == 400
     assert "Required fields missing" in response.text
     assert "acknowledge_missing" in response.text
+    # Per-row amber icon shows on the warn re-render (so reviewer can find
+    # which rows are incomplete without scrolling back to the top card).
+    assert "⚠" in response.text
     submitted = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")
     ).first()
