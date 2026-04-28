@@ -116,7 +116,7 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
         "mode": "full_matrix",
         "replaced_count": 0,
         "new_count": 2,
-        "excluded_self_count": 0,
+        "excluded_counts": {},
         "filename": None,
     }
 
