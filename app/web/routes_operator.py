@@ -139,6 +139,7 @@ def reviewers_import_form(
             "user": user,
             "session": review_session,
             "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
+            "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
         },
     )
@@ -186,6 +187,7 @@ def reviewees_import_form(
             "user": user,
             "session": review_session,
             "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
+            "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
         },
     )
@@ -236,6 +238,7 @@ async def _handle_import(
     content = await file.read()
     result = parse_fn(content)
     existing = existing_count_fn(db, review_session.id)
+    assignment_count = csv_imports.existing_assignment_count(db, review_session.id)
 
     def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
         return _templates.TemplateResponse(
@@ -245,6 +248,7 @@ async def _handle_import(
                 "user": user,
                 "session": review_session,
                 "existing_count": existing,
+                "assignment_count": assignment_count,
                 "issues": result.issues,
                 "filename": file.filename,
             },
