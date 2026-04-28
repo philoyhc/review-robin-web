@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Reviewers — {{ session.name }}{% endblock %}
+
+{% block content %}
+  <p><a href="/operator/sessions/{{ session.id }}">&larr; {{ session.name }}</a></p>
+
+  <h1>Reviewers</h1>
+
+  <div class="card">
+    <p>
+      <strong>{{ reviewers | length }}</strong>
+      reviewer{% if reviewers | length != 1 %}s{% endif %}
+      &middot;
+      <a href="/operator/sessions/{{ session.id }}/reviewers/import">{% if reviewers %}Replace{% else %}Import{% endif %} CSV</a>
+    </p>
+  </div>
+
+  {% if reviewers %}
+    {% set has_tags = reviewers | selectattr("tag_1") | list | length > 0
+                    or reviewers | selectattr("tag_2") | list | length > 0
+                    or reviewers | selectattr("tag_3") | list | length > 0 %}
+    <div class="card">
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Status</th>
+          {% if has_tags %}<th>Tags</th>{% endif %}
+        </tr>
+        {% for reviewer in reviewers %}
+          <tr>
+            <td>{{ reviewer.name }}</td>
+            <td><code>{{ reviewer.email }}</code></td>
+            <td>{{ reviewer.status }}</td>
+            {% if has_tags %}
+              <td>
+                {% if reviewer.tag_1 %}1: {{ reviewer.tag_1 }}<br>{% endif %}
+                {% if reviewer.tag_2 %}2: {{ reviewer.tag_2 }}<br>{% endif %}
+                {% if reviewer.tag_3 %}3: {{ reviewer.tag_3 }}{% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <div class="card">
+      <p class="muted">No reviewers yet.</p>
+    </div>
+  {% endif %}
+{% endblock %}

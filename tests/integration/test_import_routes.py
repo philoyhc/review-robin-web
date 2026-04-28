@@ -469,3 +469,74 @@ def test_reviewer_import_form_warns_about_cascade(
     assert page.status_code == 200
     assert "1 existing assignment" in page.text
     assert "will be deleted" in page.text
+
+
+def test_reviewers_page_lists_imported_rows(client: TestClient, db: Session) -> None:
+    review_session = _make_session(client, db, code="r-list")
+    csv_body = (
+        b"ReviewerName,ReviewerEmail,ReviewerTag1\n"
+        b"Alice,alice@example.edu,senior\n"
+        b"Bob,bob@example.edu,\n"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={"file": ("r.csv", csv_body, "text/csv")},
+        follow_redirects=False,
+    )
+
+    response = client.get(f"/operator/sessions/{review_session.id}/reviewers")
+
+    assert response.status_code == 200
+    body = response.text
+    assert "Alice" in body
+    assert "alice@example.edu" in body
+    assert "Bob" in body
+    assert "bob@example.edu" in body
+    assert "senior" in body
+    assert f"/operator/sessions/{review_session.id}\"" in body  # back link
+
+
+def test_reviewees_page_lists_imported_rows_with_photolink(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="e-list")
+    csv_body = (
+        b"RevieweeName,RevieweeEmail,PhotoLink\n"
+        b"Carol,carol@example.edu,https://example.edu/c.jpg\n"
+        b"Dan,dan-2026,\n"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={"file": ("e.csv", csv_body, "text/csv")},
+        follow_redirects=False,
+    )
+
+    response = client.get(f"/operator/sessions/{review_session.id}/reviewees")
+
+    assert response.status_code == 200
+    body = response.text
+    assert "Carol" in body
+    assert "carol@example.edu" in body
+    assert "Dan" in body
+    assert "dan-2026" in body
+    assert "https://example.edu/c.jpg" in body
+
+
+def test_non_operator_gets_403_on_roster_pages(
+    db: Session,
+    alice: AuthenticatedUser,
+    bob: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    alice_client = make_client(alice)
+    review_session = _make_session(alice_client, db, code="alice-rosters")
+
+    bob_client = make_client(bob)
+    assert (
+        bob_client.get(f"/operator/sessions/{review_session.id}/reviewers").status_code
+        == 403
+    )
+    assert (
+        bob_client.get(f"/operator/sessions/{review_session.id}/reviewees").status_code
+        == 403
+    )

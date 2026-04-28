@@ -402,7 +402,9 @@ def replace_assignments(
 def list_reviewers(db: Session, session_id: int) -> list[Reviewer]:
     return list(
         db.execute(
-            select(Reviewer).where(Reviewer.session_id == session_id)
+            select(Reviewer)
+            .where(Reviewer.session_id == session_id)
+            .order_by(Reviewer.id)
         ).scalars()
     )
 
@@ -410,7 +412,9 @@ def list_reviewers(db: Session, session_id: int) -> list[Reviewer]:
 def list_reviewees(db: Session, session_id: int) -> list[Reviewee]:
     return list(
         db.execute(
-            select(Reviewee).where(Reviewee.session_id == session_id)
+            select(Reviewee)
+            .where(Reviewee.session_id == session_id)
+            .order_by(Reviewee.id)
         ).scalars()
     )
 
