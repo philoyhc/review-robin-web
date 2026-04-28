@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Preview FullMatrix — {{ session.name }}{% endblock %}
+
+{% block content %}
+  <p>
+    <a href="/operator/sessions/{{ session.id }}/assignments">
+      &larr; Back to assignments
+    </a>
+  </p>
+
+  <h1>Preview: FullMatrix</h1>
+
+  {% if missing_confirm %}
+    <div class="card" style="border-color: #b91c1c; background: #fee2e2;">
+      <p>
+        <strong>Replace not confirmed.</strong>
+        Tick the confirm checkbox below before generating.
+      </p>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Will generate</h2>
+    <ul>
+      <li>Total assignments: <strong>{{ stats.total }}</strong></li>
+      <li>Reviewers covered: <strong>{{ stats.reviewers_covered }} / {{ stats.reviewers_total }}</strong></li>
+      <li>Reviewees covered: <strong>{{ stats.reviewees_covered }} / {{ stats.reviewees_total }}</strong></li>
+      {% if exclude_self_review %}
+        <li>Self-reviews excluded: <strong>{{ excluded_self_count }}</strong></li>
+      {% endif %}
+    </ul>
+
+    {% if stats.reviewers_uncovered %}
+      <p class="muted">
+        Reviewers with no assignments:
+        {% for r in stats.reviewers_uncovered %}{{ r.email }}{% if not loop.last %}, {% endif %}{% endfor %}
+      </p>
+    {% endif %}
+    {% if stats.reviewees_uncovered %}
+      <p class="muted">
+        Reviewees with no assignments:
+        {% for r in stats.reviewees_uncovered %}{{ r.email_or_identifier }}{% if not loop.last %}, {% endif %}{% endfor %}
+      </p>
+    {% endif %}
+  </div>
+
+  <form method="post"
+        action="/operator/sessions/{{ session.id }}/assignments/full-matrix">
+    <input type="hidden" name="exclude_self_review" value="{{ 'true' if exclude_self_review else '' }}">
+    {# dry_run omitted -> real save #}
+
+    {% if needs_confirm_replace %}
+      <div class="card" style="border-color: #d97706; background: #fef3c7;">
+        <p>
+          <strong>This session already has {{ existing_count }} assignment{% if existing_count != 1 %}s{% endif %}.</strong>
+          Generating will <strong>replace</strong> them.
+        </p>
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm_replace" value="true" required>
+            Yes, replace the existing {{ existing_count }} assignment{% if existing_count != 1 %}s{% endif %}.
+          </label>
+        </p>
+      </div>
+    {% endif %}
+
+    <p style="margin-top: 20px;">
+      <button class="btn" type="submit">Confirm and generate</button>
+      <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">
+        Cancel
+      </a>
+    </p>
+  </form>
+{% endblock %}

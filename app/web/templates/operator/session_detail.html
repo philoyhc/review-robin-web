@@ -29,7 +29,14 @@
         <a href="/operator/sessions/{{ session.id }}/reviewees/import">{% if reviewee_count %}Replace{% else %}Import{% endif %} CSV</a>
       </li>
       <li class="muted">Instruments — not yet implemented.</li>
-      <li class="muted">Assignments — not yet implemented.</li>
+      <li>
+        Assignments: <strong>{{ assignment_count }}</strong>
+        {% if session.assignment_mode %}
+          <span class="pill pill-info">{{ session.assignment_mode }}</span>
+        {% endif %}
+        &middot;
+        <a href="/operator/sessions/{{ session.id }}/assignments">{% if assignment_count %}Manage{% else %}Generate{% endif %}</a>
+      </li>
     </ul>
     <p>
       <a class="btn secondary" href="/operator/sessions/{{ session.id }}/validate">Run setup validation</a>

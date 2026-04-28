@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
+from app.schemas.assignments import AssignmentMode
 from app.schemas.sessions import SessionCreate
-from app.services import csv_imports, sessions, validation
+from app.services import assignments, csv_imports, sessions, validation
 from app.web.deps import get_or_create_user, request_correlation_id, require_session_operator
 
 router = APIRouter(prefix="/operator", tags=["operator"])
@@ -97,6 +98,7 @@ def session_detail(
             "session": review_session,
             "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
+            "assignment_count": assignments.existing_count(db, review_session.id),
         },
     )
 
@@ -265,5 +267,89 @@ async def _handle_import(
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+
+@router.get("/sessions/{session_id}/assignments", response_class=HTMLResponse)
+def assignments_hub(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_assignments.html",
+        {
+            "user": user,
+            "session": review_session,
+            "assignment_count": assignments.existing_count(db, review_session.id),
+            "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
+            "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
+        },
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/full-matrix",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def assignments_full_matrix(
+    request: Request,
+    exclude_self_review: str | None = Form(default=None),
+    dry_run: str | None = Form(default=None),
+    confirm_replace: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse | RedirectResponse:
+    exclude_self = exclude_self_review == "true"
+    reviewers = assignments.list_reviewers(db, review_session.id)
+    reviewees = assignments.list_reviewees(db, review_session.id)
+    pairs, excluded = assignments.generate_full_matrix(
+        reviewers, reviewees, exclude_self_review=exclude_self
+    )
+    stats = assignments.coverage_stats(reviewers, reviewees, pairs)
+    existing = assignments.existing_count(db, review_session.id)
+
+    is_dry_run = dry_run == "true"
+    needs_confirm = existing > 0 and confirm_replace != "true"
+
+    if is_dry_run or needs_confirm:
+        status_code = (
+            status.HTTP_400_BAD_REQUEST
+            if needs_confirm and not is_dry_run
+            else status.HTTP_200_OK
+        )
+        return _templates.TemplateResponse(
+            request,
+            "operator/assignments_preview_full_matrix.html",
+            {
+                "user": user,
+                "session": review_session,
+                "exclude_self_review": exclude_self,
+                "excluded_self_count": excluded,
+                "stats": stats,
+                "existing_count": existing,
+                "needs_confirm_replace": existing > 0,
+                "missing_confirm": needs_confirm and not is_dry_run,
+            },
+            status_code=status_code,
+        )
+
+    assignments.replace_assignments(
+        db,
+        review_session=review_session,
+        user=user,
+        pairs=pairs,
+        mode=AssignmentMode.full_matrix,
+        correlation_id=request_correlation_id(),
+        excluded_self_count=excluded,
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
