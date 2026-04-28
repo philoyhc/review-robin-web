@@ -443,3 +443,33 @@ async def assignments_manual_import(
         url=f"/operator/sessions/{review_session.id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+@router.get("/sessions/{session_id}/reviewers", response_class=HTMLResponse)
+def reviewers_list(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    reviewers = assignments.list_reviewers(db, review_session.id)
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_reviewers.html",
+        {"user": user, "session": review_session, "reviewers": reviewers},
+    )
+
+
+@router.get("/sessions/{session_id}/reviewees", response_class=HTMLResponse)
+def reviewees_list(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    reviewees = assignments.list_reviewees(db, review_session.id)
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_reviewees.html",
+        {"user": user, "session": review_session, "reviewees": reviewees},
+    )

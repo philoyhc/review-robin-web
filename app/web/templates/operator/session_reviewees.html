@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Reviewees — {{ session.name }}{% endblock %}
+
+{% block content %}
+  <p><a href="/operator/sessions/{{ session.id }}">&larr; {{ session.name }}</a></p>
+
+  <h1>Reviewees</h1>
+
+  <div class="card">
+    <p>
+      <strong>{{ reviewees | length }}</strong>
+      reviewee{% if reviewees | length != 1 %}s{% endif %}
+      &middot;
+      <a href="/operator/sessions/{{ session.id }}/reviewees/import">{% if reviewees %}Replace{% else %}Import{% endif %} CSV</a>
+    </p>
+  </div>
+
+  {% if reviewees %}
+    {% set has_photo = reviewees | selectattr("profile_link") | list | length > 0 %}
+    {% set has_tags = reviewees | selectattr("tag_1") | list | length > 0
+                    or reviewees | selectattr("tag_2") | list | length > 0
+                    or reviewees | selectattr("tag_3") | list | length > 0 %}
+    <div class="card">
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Email / Identifier</th>
+          <th>Status</th>
+          {% if has_photo %}<th>Photo</th>{% endif %}
+          {% if has_tags %}<th>Tags</th>{% endif %}
+        </tr>
+        {% for reviewee in reviewees %}
+          <tr>
+            <td>{{ reviewee.name }}</td>
+            <td><code>{{ reviewee.email_or_identifier }}</code></td>
+            <td>{{ reviewee.status }}</td>
+            {% if has_photo %}
+              <td>
+                {% if reviewee.profile_link %}
+                  <a href="{{ reviewee.profile_link }}" target="_blank" rel="noopener">link</a>
+                {% endif %}
+              </td>
+            {% endif %}
+            {% if has_tags %}
+              <td>
+                {% if reviewee.tag_1 %}1: {{ reviewee.tag_1 }}<br>{% endif %}
+                {% if reviewee.tag_2 %}2: {{ reviewee.tag_2 }}<br>{% endif %}
+                {% if reviewee.tag_3 %}3: {{ reviewee.tag_3 }}{% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <div class="card">
+      <p class="muted">No reviewees yet.</p>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -21,10 +21,14 @@
       <li>
         Reviewers: <strong>{{ reviewer_count }}</strong>
         &middot;
+        <a href="/operator/sessions/{{ session.id }}/reviewers">Manage</a>
+        &middot;
         <a href="/operator/sessions/{{ session.id }}/reviewers/import">{% if reviewer_count %}Replace{% else %}Import{% endif %} CSV</a>
       </li>
       <li>
         Reviewees: <strong>{{ reviewee_count }}</strong>
+        &middot;
+        <a href="/operator/sessions/{{ session.id }}/reviewees">Manage</a>
         &middot;
         <a href="/operator/sessions/{{ session.id }}/reviewees/import">{% if reviewee_count %}Replace{% else %}Import{% endif %} CSV</a>
       </li>
