@@ -63,7 +63,7 @@
           {% for cell in first_row.cells %}
             <th>{{ cell.field.label }}{% if cell.field.required %} *{% endif %}</th>
           {% endfor %}
-          <th style="width: 1%; white-space: nowrap;">Status</th>
+          <th style="width: 1%;"></th>
         </tr>
         {% for row in rows %}
           <tr>
@@ -99,13 +99,15 @@
                 {% endif %}
               </td>
             {% endfor %}
-            <td style="width: 1%; white-space: nowrap;">
-              {% if row.is_complete %}
-                <span class="pill pill-info">✓ complete</span>
-              {% else %}
-                <span class="pill pill-warning">{{ row.missing_count }} missing</span>
-              {% endif %}
+            <td style="width: 1%; white-space: nowrap; text-align: center;">
               {% if row.submitted_at %}
+                {% if row.is_complete %}
+                  <span title="Complete"
+                        style="color: #16a34a; font-weight: bold; font-size: 1.2em;">✓</span>
+                {% else %}
+                  <span title="{{ row.missing_count }} required field{{ '' if row.missing_count == 1 else 's' }} missing"
+                        style="color: #d97706; font-weight: bold; font-size: 1.2em;">⚠</span>
+                {% endif %}
                 <div class="muted"
                      style="font-size: 0.85em; margin-top: 4px; white-space: normal;">
                   submitted {{ row.submitted_at.strftime("%Y-%m-%d %H:%M") }}
