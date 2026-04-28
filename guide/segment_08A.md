@@ -116,8 +116,13 @@ guardrail):
      missing_required_count, session_id}`.
 
 After submit, the reviewer can keep editing (Save draft updates
-values; re-submit refreshes `submitted_at`). When session
-**closure** lands in Segment 9, post-close edits will be blocked.
+values; re-submit refreshes `submitted_at`). When **per-instrument
+closure** lands in Segment 9, save / submit on a *closed*
+instrument's fields will be blocked at the route layer. There is
+no session-level closure — the response window is owned by each
+Instrument, not by the session as a whole, so different
+instruments can close on different schedules (relevant once
+multi-instrument ships in Segment 12).
 
 ### 3.5 Clear all
 
@@ -193,8 +198,9 @@ Deadline shows on dashboard for context only. Save / submit
 always work regardless of deadline. Late-submission policy is
 out of scope per parent §3.
 
-Once Segment 9 ships activation + closure, post-close edits get
-blocked at `require_reviewer_in_session`.
+Once Segment 9 ships **per-instrument** open/close, save and
+submit on a closed instrument's fields get blocked at the route
+layer.
 
 ### 3.11 Single instance only
 
@@ -396,7 +402,7 @@ Newly clarified deferrals:
 | Operator-controlled `InstrumentDisplayField` (which of the 9 fields show) | Segment 12 |
 | AG Grid replacement of the plain table | Possible Segment 8 follow-on; not blocking |
 | Single-session redirect from `/reviewer` | Polish, no specific segment |
-| Session closure / post-close edit lock | Segment 9 |
+| Per-instrument response window (open / close) and post-close edit lock — closure is per-Instrument, never per-session | Segment 9 |
 | Per-instrument tabs on the reviewer surface | Segment 12 |
 | Pre-submit "preview my answers" page | Not planned; the warn-and-override surface already renders the form state |
 
