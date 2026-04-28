@@ -268,22 +268,14 @@ def manual_rows_to_pairs(
 def get_or_create_default_instrument(
     db: Session, review_session: ReviewSession
 ) -> Instrument:
-    existing = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.id)
-    ).scalars().first()
-    if existing is not None:
-        return existing
+    """Backwards-compatible wrapper around ``ensure_default_instrument``.
 
-    instrument = Instrument(
-        session_id=review_session.id,
-        name="Default",
-        order=0,
-    )
-    db.add(instrument)
-    db.flush()
-    return instrument
+    Kept so existing tests and call sites that import this name still
+    work; the canonical helper is now ``app.services.instruments``.
+    """
+    from app.services.instruments import ensure_default_instrument
+
+    return ensure_default_instrument(db, review_session)
 
 
 def existing_count(db: Session, session_id: int) -> int:
