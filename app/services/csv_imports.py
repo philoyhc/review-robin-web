@@ -415,3 +415,76 @@ def _count_assignments(db: Session, session_id: int) -> int:
 def existing_assignment_count(db: Session, session_id: int) -> int:
     """Used by routes to surface the cascade warning before import."""
     return _count_assignments(db, session_id)
+
+
+def delete_all_reviewers(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str,
+) -> tuple[int, int]:
+    return _delete_all(
+        db,
+        review_session=review_session,
+        user=user,
+        model=Reviewer,
+        event_type="reviewers.deleted_all",
+        source_label="reviewers",
+        correlation_id=correlation_id,
+    )
+
+
+def delete_all_reviewees(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str,
+) -> tuple[int, int]:
+    return _delete_all(
+        db,
+        review_session=review_session,
+        user=user,
+        model=Reviewee,
+        event_type="reviewees.deleted_all",
+        source_label="reviewees",
+        correlation_id=correlation_id,
+    )
+
+
+def _delete_all(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    model: Any,
+    event_type: str,
+    source_label: str,
+    correlation_id: str,
+) -> tuple[int, int]:
+    cascaded = _count_assignments(db, review_session.id)
+    rows = list(
+        db.execute(
+            select(model).where(model.session_id == review_session.id)
+        ).scalars()
+    )
+    deleted = len(rows)
+    for row in rows:
+        db.delete(row)
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type=event_type,
+        summary=f"Deleted all {deleted} {source_label}",
+        actor_user_id=user.id,
+        session_id=review_session.id,
+        detail={
+            "deleted_count": deleted,
+            "cascaded_assignment_count": cascaded,
+        },
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return deleted, cascaded

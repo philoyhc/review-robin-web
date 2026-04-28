@@ -440,3 +440,35 @@ def list_pairs(
         .limit(limit)
     )
     return list(db.execute(stmt).scalars())
+
+
+def delete_all_assignments(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str,
+) -> int:
+    """Remove every Assignment for the session. Clears assignment_mode."""
+    rows = list(
+        db.execute(
+            select(Assignment).where(Assignment.session_id == review_session.id)
+        ).scalars()
+    )
+    deleted = len(rows)
+    for row in rows:
+        db.delete(row)
+    review_session.assignment_mode = None
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type="assignments.deleted_all",
+        summary=f"Deleted all {deleted} assignments",
+        actor_user_id=user.id,
+        session_id=review_session.id,
+        detail={"deleted_count": deleted},
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return deleted

@@ -79,23 +79,35 @@ SQLite (every test session) and Postgres (every PR via the
 | `GET /operator/sessions/new` | create form |
 | `POST /operator/sessions` | create + insert `SessionOperator` + audit + 303 |
 | `GET /operator/sessions/{id}` | session detail (counts, mode pill, links) |
+| `GET /operator/sessions/{id}/edit` | edit form |
+| `POST /operator/sessions/{id}/edit` | apply changes + audit |
+| `POST /operator/sessions/{id}/delete` | delete session and all dependents (confirm) |
 | `GET /operator/sessions/{id}/validate` | setup validation page |
 | `GET /operator/sessions/{id}/reviewers` | roster Manage view |
 | `GET /operator/sessions/{id}/reviewers/import` | upload form |
 | `POST /operator/sessions/{id}/reviewers/import` | parse + replace + audit |
+| `POST /operator/sessions/{id}/reviewers/delete-all` | delete every reviewer + cascade |
 | `GET /operator/sessions/{id}/reviewees` | roster Manage view |
 | `GET /operator/sessions/{id}/reviewees/import` | upload form |
 | `POST /operator/sessions/{id}/reviewees/import` | parse + replace + audit |
+| `POST /operator/sessions/{id}/reviewees/delete-all` | delete every reviewee + cascade |
 | `GET /operator/sessions/{id}/assignments` | hub (counts, mode pill, current pairs) |
 | `POST /operator/sessions/{id}/assignments/full-matrix` | preview / save |
 | `POST /operator/sessions/{id}/assignments/manual/import` | preview / save |
+| `POST /operator/sessions/{id}/assignments/delete-all` | delete every assignment, clear mode |
 
 ### Sessions
 
 - Create with name, code (unique per operator), description, deadline.
 - View detail with live counts of reviewers, reviewees, assignments,
   and the current `assignment_mode`.
-- **Cannot edit or delete** a session yet.
+- **Edit** name / code / description / deadline; changes recorded as
+  `session.updated` with a `changes: {field: [old, new]}` map.
+- **Delete** session — removes operators, reviewers, reviewees,
+  instruments, assignments, invitations, and the session's audit
+  events; a final `session.deleted` event with `session_id=None`
+  survives in the global audit log. Requires explicit confirm
+  checkbox.
 
 ### Reviewers & reviewees
 
@@ -114,6 +126,10 @@ SQLite (every test session) and Postgres (every PR via the
   assignments deletes those assignments via ORM cascade. Operator
   sees a warning before they confirm. Audit event records the
   cascaded count.
+- **Delete all** reviewers / reviewees from the roster Manage page
+  with explicit confirm checkbox. Cascades to assignments. Audit
+  events `reviewers.deleted_all` / `reviewees.deleted_all` record
+  both the deleted count and the cascaded assignment count.
 
 ### Assignments
 
@@ -133,6 +149,9 @@ SQLite (every test session) and Postgres (every PR via the
   Segment 8 ships real instruments).
 - **`assignment_mode`** column on `sessions` records the strategy
   used; `Assignment.created_by_mode` records the same per row.
+- **Delete all** assignments from the hub with explicit confirm.
+  Reviewers and reviewees stay; `session.assignment_mode` clears
+  back to `null`. Audit event `assignments.deleted_all`.
 
 ### Audit log
 
@@ -142,9 +161,14 @@ Every destructive operation writes an `audit_events` row with
 | event_type | When |
 |---|---|
 | `session.created` | new session |
+| `session.updated` | edit form save (incl. `changes: {field: [old, new]}`) |
+| `session.deleted` | session deletion (`session_id=None` in the row, original id in `detail`) |
 | `reviewers.imported` | reviewer CSV save (incl. `cascaded_assignment_count`) |
 | `reviewees.imported` | reviewee CSV save (incl. `cascaded_assignment_count`) |
+| `reviewers.deleted_all` | delete-all from roster Manage view |
+| `reviewees.deleted_all` | delete-all from roster Manage view |
 | `assignments.generated` | FullMatrix or Manual save (incl. `mode`, `excluded_counts`) |
+| `assignments.deleted_all` | delete-all from assignments hub |
 
 `excluded_counts` is a generic map (`{"self_review": N, ...}`) so
 RuleBased exclusions in Segment 11 can plug in additional reasons
@@ -156,7 +180,7 @@ without a schema change.
 
 | Capability | Lands in |
 |---|---|
-| Edit / delete sessions, reviewers, reviewees, individual assignments | Not yet planned; would slot before activation |
+| Edit individual reviewer / reviewee / assignment rows (today: bulk operations only via CSV replace or delete-all) | Not yet planned; would slot before activation |
 | **Instruments** (custom review forms beyond placeholder "Default") | **Segment 8** |
 | **Reviewer surface** — the actual review experience for reviewers | **Segment 8** |
 | **Activation** (operator publishes the session, locks edits, opens to reviewers) | **Segment 9** |

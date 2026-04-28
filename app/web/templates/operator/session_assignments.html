@@ -124,4 +124,25 @@
       </form>
     </div>
   {% endif %}
+
+  {% if assignment_count %}
+    <div class="card" style="border-color: #b91c1c;">
+      <h2 style="color: #b91c1c;">Danger zone</h2>
+      <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required>
+            Yes, delete all <strong>{{ assignment_count }}</strong>
+            assignment{% if assignment_count != 1 %}s{% endif %} for this session.
+            Reviewers and reviewees stay; the assignment mode is cleared.
+          </label>
+        </p>
+        <p>
+          <button class="btn"
+                  style="background: #b91c1c; border-color: #b91c1c;"
+                  type="submit">Delete all assignments</button>
+        </p>
+      </form>
+    </div>
+  {% endif %}
 {% endblock %}

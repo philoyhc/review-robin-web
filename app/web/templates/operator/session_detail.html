@@ -13,6 +13,9 @@
     <p><strong>Status:</strong> {{ session.status }}</p>
     <p><strong>Deadline:</strong> {{ session.deadline.isoformat() if session.deadline else "Not set" }}</p>
     <p><strong>Description:</strong> {{ session.description or "—" }}</p>
+    <p>
+      <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit details</a>
+    </p>
   </div>
 
   <div class="card">
@@ -45,5 +48,27 @@
     <p>
       <a class="btn secondary" href="/operator/sessions/{{ session.id }}/validate">Run setup validation</a>
     </p>
+  </div>
+
+  <div class="card" style="border-color: #b91c1c;">
+    <h2 style="color: #b91c1c;">Danger zone</h2>
+    <p class="muted">
+      Deleting this session removes its reviewers, reviewees, assignments,
+      operator links, and audit trail. This cannot be undone.
+    </p>
+    <form method="post" action="/operator/sessions/{{ session.id }}/delete">
+      <p>
+        <label style="font-weight: normal;">
+          <input type="checkbox" name="confirm" value="true" required>
+          Yes, delete <strong>{{ session.name }}</strong> ({{ session.code }})
+          and all its data.
+        </label>
+      </p>
+      <p>
+        <button class="btn"
+                style="background: #b91c1c; border-color: #b91c1c;"
+                type="submit">Delete session</button>
+      </p>
+    </form>
   </div>
 {% endblock %}

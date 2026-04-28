@@ -472,3 +472,151 @@ def reviewees_list(
         "operator/session_reviewees.html",
         {"user": user, "session": review_session, "reviewees": reviewees},
     )
+
+
+@router.get("/sessions/{session_id}/edit", response_class=HTMLResponse)
+def session_edit_form(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+) -> HTMLResponse:
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_edit.html",
+        {"user": user, "session": review_session},
+    )
+
+
+@router.post("/sessions/{session_id}/edit")
+def session_edit_submit(
+    name: str = Form(...),
+    code: str = Form(...),
+    description: str | None = Form(default=None),
+    deadline: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    parsed_deadline: datetime | None = None
+    if deadline:
+        try:
+            parsed_deadline = datetime.fromisoformat(deadline)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="deadline must be ISO-8601",
+            ) from exc
+
+    payload = SessionCreate(
+        name=name,
+        code=code,
+        description=description or None,
+        deadline=parsed_deadline,
+    )
+    sessions.update_session(
+        db,
+        review_session=review_session,
+        user=user,
+        payload=payload,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/delete")
+def session_delete(
+    confirm: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required",
+        )
+    sessions.delete_session(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url="/operator/sessions",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/reviewers/delete-all")
+def reviewers_delete_all(
+    confirm: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required",
+        )
+    csv_imports.delete_all_reviewers(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/reviewers",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/reviewees/delete-all")
+def reviewees_delete_all(
+    confirm: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required",
+        )
+    csv_imports.delete_all_reviewees(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/reviewees",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/assignments/delete-all")
+def assignments_delete_all(
+    confirm: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required",
+        )
+    assignments.delete_all_assignments(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/assignments",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
