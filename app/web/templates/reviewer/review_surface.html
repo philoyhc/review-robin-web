@@ -82,20 +82,20 @@
               <td>
                 {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
                 {% if cell.field.response_type == "long_text" %}
-                  <textarea name="{{ field_name }}" rows="3">{{ cell.value }}</textarea>
+                  <textarea name="{{ field_name }}"
+                            rows="2"
+                            style="min-height: 44px;">{{ cell.value }}</textarea>
                 {% elif cell.field.response_type == "integer" %}
                   {% set validation = cell.field.validation or {} %}
                   <input type="number"
                          name="{{ field_name }}"
                          value="{{ cell.value }}"
                          {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
-                         {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
-                         {% if cell.field.required %}required{% endif %}>
+                         {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}>
                 {% else %}
                   <input type="text"
                          name="{{ field_name }}"
-                         value="{{ cell.value }}"
-                         {% if cell.field.required %}required{% endif %}>
+                         value="{{ cell.value }}">
                 {% endif %}
               </td>
             {% endfor %}
