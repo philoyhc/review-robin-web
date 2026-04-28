@@ -68,6 +68,18 @@ SQLite (every test session) and Postgres (every PR via the
 - **Diagnostic pages**: `/me` (JSON), `/me/debug` (HTML with the raw
   claims list and a sign-out link).
 
+### UI / branding
+
+- Inline-SVG favicon (bird emoji 🐦) defined in
+  `app/web/templates/base.html`. Edit the emoji or the SVG markup
+  in the `<link rel="icon">` data URI to change it; for a real
+  graphic asset, mount `StaticFiles` and point `href` at
+  `/static/favicon.png`.
+- Topbar with sign-out link, monospace tabular code spans,
+  card-based layout, severity pills (`error` / `warning` / `info`)
+  for validation issues. All inline `<style>` in `base.html`. CSS
+  framework / extraction is a Segment 13 concern.
+
 ### Operator-facing app
 
 | URL | What it does |
