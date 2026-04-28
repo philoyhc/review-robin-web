@@ -78,6 +78,48 @@ postgresql+psycopg://rrw_app:<password>@<server>.postgres.database.azure.com:543
 Key Vault references for App Settings are deferred to Segment 13. Until
 then, rotate by updating both secrets together.
 
+## First-time database bootstrap
+
+This is a **one-time** step that has to run after the Flexible Server is
+provisioned and the application user is created, but **before** the first
+deploy's `migrate` job runs.
+
+Postgres 15+ tightened the default privileges on the `public` schema:
+non-owners no longer get `CREATE`. So a fresh `rrw_app` connecting to a
+fresh `rrw` database can authenticate but cannot create the
+`alembic_version` table, and the deploy workflow's `migrate` job fails
+with:
+
+```text
+psycopg.errors.InsufficientPrivilege: permission denied for schema public
+LINE 2: CREATE TABLE alembic_version (
+```
+
+Fix it once, from Azure Cloud Shell, connecting as the **Flexible Server
+admin login** (not `rrw_app`) to the `rrw` database:
+
+```bash
+psql "host=<server>.postgres.database.azure.com port=5432 dbname=rrw user=<admin_user> sslmode=require"
+```
+
+Then run:
+
+```sql
+GRANT ALL ON SCHEMA public TO rrw_app;
+GRANT ALL PRIVILEGES ON DATABASE rrw TO rrw_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON TABLES TO rrw_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON SEQUENCES TO rrw_app;
+```
+
+The first line is the one that unblocks `alembic upgrade head`. The
+`ALTER DEFAULT PRIVILEGES` lines belt-and-brace future migrations that
+add tables and sequences so the same error doesn't resurface.
+
+After this, re-run the failed workflow (Actions → the failed run →
+*Re-run failed jobs*) and the `migrate` job applies cleanly.
+
 ## Verifying the database is reachable
 
 From a network with outbound 5432 open (e.g. a home network or Azure
