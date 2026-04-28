@@ -1,0 +1,19 @@
+{% if issues %}
+  <div class="card">
+    <h2>Issues</h2>
+    {% set sources = issues | map(attribute='source') | unique | list %}
+    {% for source in sources %}
+      <h3 style="text-transform: capitalize;">{{ source }}</h3>
+      <ul>
+        {% for issue in issues if issue.source == source %}
+          <li>
+            <span class="pill pill-{{ issue.severity.value }}">{{ issue.severity.value }}</span>
+            {% if issue.row_number %}<strong>Row {{ issue.row_number }}:</strong>{% endif %}
+            {% if issue.field %}<code>{{ issue.field }}</code>{% endif %}
+            {{ issue.message }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endfor %}
+  </div>
+{% endif %}
