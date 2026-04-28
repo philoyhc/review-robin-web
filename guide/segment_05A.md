@@ -12,6 +12,13 @@ governs scope, success criteria, and out-of-scope items. The §3.1
 "Inherited from Segment 4A" block in the parent plan is folded into the
 infra PR below.
 
+> **Amendment, 2026-04-28:** §3.5 (local Docker Compose for Postgres)
+> has been deferred. Local development continues to use SQLite; Postgres
+> parity is enforced via CI (§3.6) and the migration-on-deploy step
+> (§3.4). See §3.5 for full reasoning. Other sections updated to match:
+> §4 (file layout), §8 (docs), §9 (deferrals), §10 (PR 1 checklist),
+> §11 (risks).
+
 ---
 
 ## 1. Scope (unchanged from parent plan + 4A inheritance)
@@ -98,26 +105,46 @@ A third PR for any UI polish is fine but not required up front.
   hook running migrations; that pattern is fragile under concurrent
   deploys.
 
-### 3.5 Local Postgres
+### 3.5 Local Postgres — deferred
 
-- **`docker-compose.yml` at the repo root** with a single `postgres`
-  service:
-  - image `postgres:16`;
-  - port `5432`;
-  - default user `postgres`, password `postgres`, database `rrw`;
-  - named volume `rrw_postgres_data` for persistence;
-  - health check via `pg_isready`.
-- Local `DATABASE_URL` becomes
-  `postgresql+psycopg://postgres:postgres@localhost:5432/rrw`.
-- **SQLite remains the default** in `app/config.py` so contributors who
-  don't yet have Docker (or want fast unit tests) still work. The
-  `.env.example` shows both options, with the Postgres line commented
-  out.
-- `guide/local_setup.md` and `docs/database.md` updated with the Docker
-  Compose flow, including a note about port 5432 conflicts and how to
-  override.
+**Original decision (superseded):** add a `docker-compose.yml` at the
+repo root for a local Postgres 16 container so contributors can
+reproduce Postgres-only issues on their own machine.
+
+**Amended decision:** local Docker Compose is **deferred**. Reasons:
+
+- The developer works across multiple machines (home, office, laptop);
+  installing and maintaining Docker on each is friction we don't yet
+  need.
+- For Segment 5 the new code is pure SQLAlchemy ORM with no raw SQL or
+  dialect-specific features, so the Postgres-vs-SQLite divergence risk
+  is small.
+- Postgres parity is still enforced — by the CI smoke job (§3.6) on
+  every PR, and by the migration-on-deploy step (§3.4) on every deploy.
+
+**What this means in practice:**
+
+- **SQLite remains the local default** in `app/config.py`. Local
+  development and `pytest` continue to run against
+  `sqlite:///./review_robin_web.db`.
+- **No `docker-compose.yml` is added in PR 1.**
+- **No new local-Postgres documentation** is added to
+  `guide/local_setup.md` or `docs/database.md` beyond a short note that
+  local Postgres setup is intentionally deferred and that contributors
+  who want it can run any local Postgres they prefer and set
+  `DATABASE_URL` accordingly.
+- `.env.example` still shows a commented-out `DATABASE_URL` line as a
+  reference for "switch to Postgres if you want to."
+
+**When to revisit:** install Docker (or another local Postgres) on
+whichever machine the developer is at, *if and only if* a
+Postgres-specific bug appears that can't be diagnosed from CI logs or
+Azure App Service logs. Until then, CI is the portability guard.
 
 ### 3.6 CI
+
+With local Docker deferred (§3.5), the CI Postgres smoke job becomes
+the **primary** portability guard rather than a secondary check.
 
 - **`ci.yml` keeps running pytest against SQLite** (fast, ~1s, runs on
   every PR).
@@ -126,6 +153,8 @@ A third PR for any UI polish is fine but not required up front.
   - runs `alembic upgrade head` against it;
   - then runs `alembic downgrade base && alembic upgrade head` to
     confirm round-trip on Postgres.
+- This job is **required to pass** before merging any PR that touches
+  models or migrations.
 - The full Postgres-against-Docker pytest matrix is deferred to
   **Segment 13**.
 
@@ -181,17 +210,16 @@ A third PR for any UI polish is fine but not required up front.
 ### Added in PR 1 (infra)
 
 ```text
-docker-compose.yml                      # Local Postgres service
 .github/workflows/
   main_app-review-robin-web-dev.yml     # MODIFIED: migrate-on-deploy step
   ci-postgres-migration.yml             # NEW: Postgres migration smoke
 
-.env.example                            # MODIFIED: add Postgres URL example
-docs/database.md                        # MODIFIED: Docker Compose flow
-guide/local_setup.md                    # MODIFIED: Docker Compose section
+.env.example                            # MODIFIED: add Postgres URL example (commented)
+docs/database.md                        # MODIFIED: note that local Postgres is deferred
 deployment_dev.md                       # MODIFIED: Postgres + migration step
 
 # No app/ changes in PR 1.
+# No docker-compose.yml — local Docker is deferred (§3.5).
 ```
 
 ### Added in PR 2 (app)
@@ -289,12 +317,14 @@ log/dashboard queries simple later.
 
 ## 8. Documentation
 
-- `docs/database.md` gets a Docker Compose / local Postgres section.
+- `docs/database.md` gets a short section noting that local Postgres
+  setup is deliberately deferred (§3.5) and pointing contributors who
+  want it at any local Postgres install with the appropriate
+  `DATABASE_URL`.
 - `deployment_dev.md` gets a section on the Postgres resource, the
   `DATABASE_URL` App Setting, and the migration-on-deploy step.
-- `guide/local_setup.md` gets a Docker Compose entry under §3 (files you
-  create) and §4 (first-time setup), plus a "switching to Postgres"
-  subsection.
+- `guide/local_setup.md` is **not** modified in this segment — local
+  setup is unchanged (still SQLite).
 - A new `docs/operator_session.md` is **not** added in this segment —
   the routes are simple enough that route-level docstrings + the route
   table in §5 above are enough. A user-facing operator guide can land
@@ -314,6 +344,7 @@ Newly deferred to specific later segments:
 
 | Item                                                | Deferred to |
 |-----------------------------------------------------|-------------|
+| Local Docker Compose / local Postgres setup         | When needed (see §3.5); no fixed segment |
 | Key Vault references for App Settings               | Segment 13  |
 | VNet integration / private endpoints for Postgres   | Segment 13  |
 | Full Postgres-against-Docker pytest matrix in CI    | Segment 13  |
@@ -327,11 +358,15 @@ Newly deferred to specific later segments:
 
 ### PR 1 (infra)
 
-- [ ] `docker compose up -d` brings up Postgres locally.
-- [ ] `DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/rrw alembic upgrade head` succeeds.
-- [ ] `alembic downgrade base && alembic upgrade head` round-trips on
-  local Postgres.
-- [ ] `ci-postgres-migration.yml` passes on the PR.
+- [ ] Azure Postgres firewall rules allow the dev App Service ("Allow
+  Azure services") and the developer's current public IP.
+- [ ] `psql` from the developer machine to the Azure dev DB succeeds
+  (sanity-checks firewall + app user credentials before touching CI).
+- [ ] `DATABASE_URL` is set as an App Service App Setting on
+  `app-review-robin-web-dev`.
+- [ ] `DATABASE_URL` is set as a GitHub Actions secret on the repo.
+- [ ] `ci-postgres-migration.yml` passes on the PR (migration applies +
+  round-trips against a `postgres:16` service container).
 - [ ] After merge: the dev deploy workflow runs the new migration step
   successfully against Azure Postgres.
 - [ ] `curl https://.../health` (anonymous) still returns 200 after deploy
@@ -356,6 +391,7 @@ Newly deferred to specific later segments:
 | Risk | Mitigation |
 |------|------------|
 | Migration runs on SQLite but breaks on Postgres | PR 1's CI smoke job catches it before any deploy. |
+| Postgres-only bug reaches Azure with no local way to reproduce it (consequence of §3.5 deferral) | Diagnose first from CI logs and Azure App Service logs. If that's not enough, install a local Postgres on the current machine *then* — we accept this one-off cost rather than pay the multi-machine Docker setup cost up front. |
 | `DATABASE_URL` leaks to logs | Pydantic settings doesn't log values; gunicorn / uvicorn don't log env vars; never echo the URL in app code. |
 | Migration-on-deploy fails halfway | The migration step fails the workflow before the deploy job runs. The dev DB may be in a partial state — fix the migration, push, redeploy. (Production migrations would need more care; that's S13.) |
 | First operator user is created without explicit consent | Acceptable — the user has already authenticated through Easy Auth. The User row is just persistence of the same identity Azure has already verified. |
