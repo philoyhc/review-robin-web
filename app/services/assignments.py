@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import (
     Assignment,
@@ -224,7 +224,9 @@ def parse_manual_csv(
                 reviewer_id=reviewer.id,
                 reviewee_id=reviewee.id,
                 reviewer_email=reviewer.email,
+                reviewer_name=reviewer.name,
                 reviewee_identifier=reviewee.email_or_identifier,
+                reviewee_name=reviewee.name,
                 include=include,
                 context_1=(raw.get("AssignmentContext1") or "").strip() or None,
                 context_2=(raw.get("AssignmentContext2") or "").strip() or None,
@@ -411,3 +413,20 @@ def list_reviewees(db: Session, session_id: int) -> list[Reviewee]:
             select(Reviewee).where(Reviewee.session_id == session_id)
         ).scalars()
     )
+
+
+def list_pairs(
+    db: Session, session_id: int, *, limit: int = PAIR_PREVIEW_LIMIT
+) -> list[Assignment]:
+    """Return saved Assignment rows with reviewer + reviewee eagerly loaded.
+
+    Ordered by (reviewer_id, reviewee_id) to match the FullMatrix preview.
+    """
+    stmt = (
+        select(Assignment)
+        .options(joinedload(Assignment.reviewer), joinedload(Assignment.reviewee))
+        .where(Assignment.session_id == session_id)
+        .order_by(Assignment.reviewer_id, Assignment.reviewee_id)
+        .limit(limit)
+    )
+    return list(db.execute(stmt).scalars())

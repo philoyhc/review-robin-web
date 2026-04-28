@@ -283,15 +283,22 @@ def assignments_hub(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    assignment_count = assignments.existing_count(db, review_session.id)
+    pair_sample = (
+        assignments.list_pairs(db, review_session.id) if assignment_count else []
+    )
+    truncated_count = max(0, assignment_count - len(pair_sample))
     return _templates.TemplateResponse(
         request,
         "operator/session_assignments.html",
         {
             "user": user,
             "session": review_session,
-            "assignment_count": assignments.existing_count(db, review_session.id),
+            "assignment_count": assignment_count,
             "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
+            "pair_sample": pair_sample,
+            "truncated_count": truncated_count,
         },
     )
 

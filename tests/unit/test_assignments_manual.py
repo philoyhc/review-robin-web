@@ -177,3 +177,21 @@ def test_missing_required_column_blocks(db: Session) -> None:
 
     assert result.is_blocked
     assert any(i.field == "RevieweeEmail" for i in result.issues)
+
+
+def test_parsed_rows_carry_roster_names(db: Session) -> None:
+    user = _user(db)
+    session = _session(db, user)
+    alice = _reviewer(db, session.id, "Alice Example", "alice@example.edu")
+    carol = _reviewee(db, session.id, "Carol Example", "carol@example.edu")
+
+    csv = (
+        b"ReviewerEmail,RevieweeEmail\n"
+        b"alice@example.edu,carol@example.edu\n"
+    )
+    result = parse_manual_csv(csv, [alice], [carol])
+
+    assert result.issues == []
+    row = result.rows[0]
+    assert row.reviewer_name == "Alice Example"
+    assert row.reviewee_name == "Carol Example"

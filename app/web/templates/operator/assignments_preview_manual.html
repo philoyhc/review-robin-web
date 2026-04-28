@@ -75,8 +75,8 @@
           </tr>
           {% for row in pair_sample %}
             <tr>
-              <td><code>{{ row.reviewer_email }}</code></td>
-              <td><code>{{ row.reviewee_identifier }}</code></td>
+              <td>{{ row.reviewer_name }} &middot; <code>{{ row.reviewer_email }}</code></td>
+              <td>{{ row.reviewee_name }} &middot; <code>{{ row.reviewee_identifier }}</code></td>
               <td>{{ "yes" if row.include else "no" }}</td>
               <td>
                 {% if row.context_1 %}1: {{ row.context_1 }}<br>{% endif %}
