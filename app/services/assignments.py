@@ -344,12 +344,18 @@ def replace_assignments(
     pairs: list[tuple[Reviewer, Reviewee]],
     mode: AssignmentMode,
     correlation_id: str,
-    excluded_self_count: int = 0,
+    excluded_counts: dict[str, int] | None = None,
     filename: str | None = None,
     contexts: list[dict[str, Any] | None] | None = None,
     includes: list[bool] | None = None,
 ) -> tuple[int, int]:
-    """Replace all assignments for the session. Returns (replaced, new)."""
+    """Replace all assignments for the session. Returns (replaced, new).
+
+    ``excluded_counts`` is a generic map of exclusion-reason -> row count
+    (e.g. ``{"self_review": 3}``). Recorded on the audit event detail.
+    Future RuleBased exclusions (tag mismatch, capacity caps, deny lists)
+    plug in as additional keys without a schema change.
+    """
     if contexts is not None and len(contexts) != len(pairs):
         raise ValueError("contexts length must match pairs length")
     if includes is not None and len(includes) != len(pairs):
@@ -389,7 +395,7 @@ def replace_assignments(
             "mode": mode.value,
             "replaced_count": replaced,
             "new_count": len(pairs),
-            "excluded_self_count": excluded_self_count,
+            "excluded_counts": excluded_counts or {},
             "filename": filename,
         },
         correlation_id=correlation_id,

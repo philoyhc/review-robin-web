@@ -362,7 +362,7 @@ def assignments_full_matrix(
         pairs=pairs,
         mode=AssignmentMode.full_matrix,
         correlation_id=request_correlation_id(),
-        excluded_self_count=excluded,
+        excluded_counts={"self_review": excluded} if excluded else {},
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/assignments",
@@ -434,7 +434,6 @@ async def assignments_manual_import(
         pairs=pairs,
         mode=AssignmentMode.manual,
         correlation_id=request_correlation_id(),
-        excluded_self_count=0,
         filename=file.filename,
         contexts=contexts,
         includes=includes,
