@@ -236,3 +236,51 @@ def test_non_operator_gets_403_on_assignments_hub_and_post(
         follow_redirects=False,
     )
     assert post.status_code == 403
+
+
+def test_full_matrix_preview_lists_pairs(client: TestClient, db: Session) -> None:
+    review_session = _make_session(client, db)
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=["alice@example.edu", "bob@example.edu"],
+        reviewee_idents=["carol@example.edu", "dan-2026"],
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": "", "dry_run": "true"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    body = response.text
+    assert "<h2>Pairs</h2>" in body
+    assert "alice@example.edu" in body
+    assert "bob@example.edu" in body
+    assert "carol@example.edu" in body
+    assert "dan-2026" in body
+    assert "Showing first" not in body
+
+
+def test_full_matrix_preview_truncates_large_pair_list(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db)
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=[f"r{i}@example.edu" for i in range(7)],
+        reviewee_idents=[f"e{i}@example.edu" for i in range(31)],
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": "", "dry_run": "true"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    body = response.text
+    assert "Showing first 200 of 217" in body
+    assert "and 17 more" in body
