@@ -45,6 +45,32 @@
     {% endif %}
   </div>
 
+  {% if pair_sample %}
+    <div class="card">
+      <h2>Pairs</h2>
+      {% if truncated_count %}
+        <p class="muted">
+          Showing first {{ pair_sample | length }} of {{ stats.total }} pairs.
+        </p>
+      {% endif %}
+      <table>
+        <tr>
+          <th>Reviewer</th>
+          <th>Reviewee</th>
+        </tr>
+        {% for reviewer, reviewee in pair_sample %}
+          <tr>
+            <td>{{ reviewer.name }} &middot; <code>{{ reviewer.email }}</code></td>
+            <td>{{ reviewee.name }} &middot; <code>{{ reviewee.email_or_identifier }}</code></td>
+          </tr>
+        {% endfor %}
+      </table>
+      {% if truncated_count %}
+        <p class="muted">…and {{ truncated_count }} more not shown.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
   <form method="post"
         action="/operator/sessions/{{ session.id }}/assignments/full-matrix">
     <input type="hidden" name="exclude_self_review" value="{{ 'true' if exclude_self_review else '' }}">

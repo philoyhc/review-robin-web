@@ -17,6 +17,8 @@ from app.db.models import (
 from app.schemas.assignments import AssignmentMode
 from app.services import audit
 
+PAIR_PREVIEW_LIMIT = 200
+
 
 def get_or_create_default_instrument(
     db: Session, review_session: ReviewSession

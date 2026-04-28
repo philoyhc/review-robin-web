@@ -324,6 +324,8 @@ def assignments_full_matrix(
             if needs_confirm and not is_dry_run
             else status.HTTP_200_OK
         )
+        pair_sample = pairs[: assignments.PAIR_PREVIEW_LIMIT]
+        truncated_count = max(0, len(pairs) - assignments.PAIR_PREVIEW_LIMIT)
         return _templates.TemplateResponse(
             request,
             "operator/assignments_preview_full_matrix.html",
@@ -336,6 +338,8 @@ def assignments_full_matrix(
                 "existing_count": existing,
                 "needs_confirm_replace": existing > 0,
                 "missing_confirm": needs_confirm and not is_dry_run,
+                "pair_sample": pair_sample,
+                "truncated_count": truncated_count,
             },
             status_code=status_code,
         )
