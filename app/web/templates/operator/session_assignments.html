@@ -59,9 +59,24 @@
       </form>
     </div>
 
-    <div class="card" style="opacity: 0.6;">
+    <div class="card" {% if reviewer_count == 0 or reviewee_count == 0 %}style="opacity: 0.6;"{% endif %}>
       <h2>Manual CSV</h2>
-      <p class="muted">Coming in the next PR of Segment 7.</p>
+      <p class="muted">
+        Upload a CSV with one row per assignment. Required columns:
+        <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
+        Optional: <code>IncludeAssignment</code>,
+        <code>AssignmentContext1</code>/<code>2</code>/<code>3</code>.
+      </p>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/assignments/manual/import"
+            enctype="multipart/form-data">
+        <label for="manual-file">CSV file</label>
+        <input type="file" id="manual-file" name="file" accept=".csv,text/csv" required>
+        <input type="hidden" name="dry_run" value="true">
+        <p style="margin-top: 12px;">
+          <button class="btn" type="submit">Preview manual import</button>
+        </p>
+      </form>
     </div>
   {% endif %}
 {% endblock %}

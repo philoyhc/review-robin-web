@@ -284,3 +284,152 @@ def test_full_matrix_preview_truncates_large_pair_list(
     body = response.text
     assert "Showing first 200 of 217" in body
     assert "and 17 more" in body
+
+
+def test_manual_dry_run_renders_preview_and_writes_no_rows(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="m-dry")
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=["alice@example.edu", "bob@example.edu"],
+        reviewee_idents=["carol@example.edu"],
+    )
+
+    csv_body = (
+        b"ReviewerEmail,RevieweeEmail,IncludeAssignment\n"
+        b"alice@example.edu,carol@example.edu,true\n"
+        b"bob@example.edu,carol@example.edu,false\n"
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/manual/import",
+        data={"dry_run": "true"},
+        files={"file": ("manual.csv", csv_body, "text/csv")},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    assert "Will save" in response.text
+    assert "alice@example.edu" in response.text
+    assert "bob@example.edu" in response.text
+    assert (
+        db.execute(
+            select(Assignment).where(Assignment.session_id == review_session.id)
+        ).first()
+        is None
+    )
+
+
+def test_manual_save_persists_with_include_and_context(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="m-save")
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=["alice@example.edu", "bob@example.edu"],
+        reviewee_idents=["carol@example.edu"],
+    )
+
+    csv_body = (
+        b"ReviewerEmail,RevieweeEmail,IncludeAssignment,"
+        b"AssignmentContext1,AssignmentContext2\n"
+        b"alice@example.edu,carol@example.edu,true,morning,room-A\n"
+        b"bob@example.edu,carol@example.edu,false,,\n"
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/manual/import",
+        files={"file": ("manual.csv", csv_body, "text/csv")},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    rows = list(
+        db.execute(
+            select(Assignment).where(Assignment.session_id == review_session.id)
+        ).scalars()
+    )
+    assert len(rows) == 2
+    by_reviewer = {r.reviewer.email: r for r in rows}
+    assert by_reviewer["alice@example.edu"].include is True
+    assert by_reviewer["alice@example.edu"].context == {
+        "context_1": "morning",
+        "context_2": "room-A",
+    }
+    assert by_reviewer["bob@example.edu"].include is False
+    assert by_reviewer["bob@example.edu"].context is None
+    assert all(r.created_by_mode == "manual" for r in rows)
+
+    db.refresh(review_session)
+    assert review_session.assignment_mode == "manual"
+
+    event = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "assignments.generated")
+        .order_by(AuditEvent.id.desc())
+    ).scalars().first()
+    assert event.detail["mode"] == "manual"
+    assert event.detail["new_count"] == 2
+    assert event.detail["filename"] == "manual.csv"
+
+
+def test_manual_import_blocks_unknown_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="m-bad")
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=["alice@example.edu"],
+        reviewee_idents=["carol@example.edu"],
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/manual/import",
+        data={"dry_run": "true"},
+        files={
+            "file": (
+                "manual.csv",
+                b"ReviewerEmail,RevieweeEmail\nghost@example.edu,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 400
+    assert "Unknown reviewer" in response.text
+    assert (
+        db.execute(
+            select(Assignment).where(Assignment.session_id == review_session.id)
+        ).first()
+        is None
+    )
+
+
+def test_non_operator_gets_403_on_manual_import(
+    db: Session,
+    alice: AuthenticatedUser,
+    bob: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    alice_client = make_client(alice)
+    review_session = _make_session(alice_client, db, code="m-403")
+
+    bob_client = make_client(bob)
+    response = bob_client.post(
+        f"/operator/sessions/{review_session.id}/assignments/manual/import",
+        data={"dry_run": "true"},
+        files={
+            "file": (
+                "manual.csv",
+                b"ReviewerEmail,RevieweeEmail\nfoo@example.edu,bar@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 403

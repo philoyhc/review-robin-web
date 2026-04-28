@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import csv
+import io
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -14,10 +17,246 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.schemas.assignments import AssignmentMode
+from app.schemas.assignments import AssignmentMode, ManualAssignmentRow
+from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit
 
 PAIR_PREVIEW_LIMIT = 200
+
+MANUAL_CSV_MAX_BYTES = 1 * 1024 * 1024
+MANUAL_CSV_MAX_ROWS = 5000
+
+_TRUTHY = {"true", "yes", "1"}
+_FALSY = {"false", "no", "0"}
+
+
+@dataclass
+class ManualParseResult:
+    rows: list[ManualAssignmentRow]
+    issues: list[ValidationIssue]
+
+    @property
+    def is_blocked(self) -> bool:
+        return any(i.is_blocking for i in self.issues)
+
+
+def _parse_include(value: str) -> tuple[bool | None, str | None]:
+    """Returns (parsed, error_message). Empty string defaults to True."""
+    stripped = value.strip()
+    if not stripped:
+        return True, None
+    lowered = stripped.lower()
+    if lowered in _TRUTHY:
+        return True, None
+    if lowered in _FALSY:
+        return False, None
+    return None, f"IncludeAssignment '{stripped}' is not a recognised true/false value"
+
+
+def parse_manual_csv(
+    content: bytes,
+    reviewers: list[Reviewer],
+    reviewees: list[Reviewee],
+) -> ManualParseResult:
+    source = "assignments"
+    issues: list[ValidationIssue] = []
+
+    if len(content) > MANUAL_CSV_MAX_BYTES:
+        return ManualParseResult(
+            rows=[],
+            issues=[
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    message=f"File too large (max {MANUAL_CSV_MAX_BYTES // 1024} KiB)",
+                )
+            ],
+        )
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return ManualParseResult(
+            rows=[],
+            issues=[
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    message="File is not valid UTF-8",
+                )
+            ],
+        )
+
+    reader = csv.DictReader(io.StringIO(text))
+    fieldnames = list(reader.fieldnames or [])
+    if not fieldnames:
+        return ManualParseResult(
+            rows=[],
+            issues=[
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    message="CSV has no header row",
+                )
+            ],
+        )
+
+    for required in ("ReviewerEmail", "RevieweeEmail"):
+        if required not in fieldnames:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    field=required,
+                    message=f"Missing required column: {required}",
+                )
+            )
+    if issues:
+        return ManualParseResult(rows=[], issues=issues)
+
+    raw_rows = list(reader)
+    if len(raw_rows) > MANUAL_CSV_MAX_ROWS:
+        return ManualParseResult(
+            rows=[],
+            issues=[
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    message=f"Too many rows (max {MANUAL_CSV_MAX_ROWS})",
+                )
+            ],
+        )
+
+    reviewer_by_email = {r.email.casefold(): r for r in reviewers}
+    reviewee_by_ident = {r.email_or_identifier.casefold(): r for r in reviewees}
+
+    parsed: list[ManualAssignmentRow] = []
+    seen_pairs: dict[tuple[int, int], int] = {}
+
+    for index, raw in enumerate(raw_rows, start=1):
+        reviewer_email = (raw.get("ReviewerEmail") or "").strip()
+        reviewee_identifier = (raw.get("RevieweeEmail") or "").strip()
+
+        if not reviewer_email:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    row_number=index,
+                    field="ReviewerEmail",
+                    message="ReviewerEmail is required",
+                )
+            )
+            continue
+        if not reviewee_identifier:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    row_number=index,
+                    field="RevieweeEmail",
+                    message="RevieweeEmail is required",
+                )
+            )
+            continue
+
+        reviewer = reviewer_by_email.get(reviewer_email.casefold())
+        if reviewer is None:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    row_number=index,
+                    field="ReviewerEmail",
+                    message=(
+                        f"Unknown reviewer: '{reviewer_email}' is not in this "
+                        f"session's reviewer roster"
+                    ),
+                )
+            )
+            continue
+        reviewee = reviewee_by_ident.get(reviewee_identifier.casefold())
+        if reviewee is None:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    row_number=index,
+                    field="RevieweeEmail",
+                    message=(
+                        f"Unknown reviewee: '{reviewee_identifier}' is not in "
+                        f"this session's reviewee roster"
+                    ),
+                )
+            )
+            continue
+
+        pair_key = (reviewer.id, reviewee.id)
+        if pair_key in seen_pairs:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    row_number=index,
+                    message=(
+                        f"Duplicate assignment: '{reviewer_email}' -> "
+                        f"'{reviewee_identifier}' (also on row {seen_pairs[pair_key]})"
+                    ),
+                )
+            )
+            continue
+        seen_pairs[pair_key] = index
+
+        include, include_err = _parse_include(raw.get("IncludeAssignment") or "")
+        if include is None:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    row_number=index,
+                    field="IncludeAssignment",
+                    message=include_err or "",
+                )
+            )
+            continue
+
+        parsed.append(
+            ManualAssignmentRow(
+                reviewer_id=reviewer.id,
+                reviewee_id=reviewee.id,
+                reviewer_email=reviewer.email,
+                reviewee_identifier=reviewee.email_or_identifier,
+                include=include,
+                context_1=(raw.get("AssignmentContext1") or "").strip() or None,
+                context_2=(raw.get("AssignmentContext2") or "").strip() or None,
+                context_3=(raw.get("AssignmentContext3") or "").strip() or None,
+            )
+        )
+
+    return ManualParseResult(rows=parsed, issues=issues)
+
+
+def manual_rows_to_pairs(
+    rows: list[ManualAssignmentRow],
+    reviewers: list[Reviewer],
+    reviewees: list[Reviewee],
+) -> tuple[list[tuple[Reviewer, Reviewee]], list[dict[str, Any] | None], list[bool]]:
+    reviewer_by_id = {r.id: r for r in reviewers}
+    reviewee_by_id = {r.id: r for r in reviewees}
+    pairs: list[tuple[Reviewer, Reviewee]] = []
+    contexts: list[dict[str, Any] | None] = []
+    includes: list[bool] = []
+    for row in rows:
+        pairs.append((reviewer_by_id[row.reviewer_id], reviewee_by_id[row.reviewee_id]))
+        ctx: dict[str, Any] = {}
+        if row.context_1:
+            ctx["context_1"] = row.context_1
+        if row.context_2:
+            ctx["context_2"] = row.context_2
+        if row.context_3:
+            ctx["context_3"] = row.context_3
+        contexts.append(ctx or None)
+        includes.append(row.include)
+    return pairs, contexts, includes
 
 
 def get_or_create_default_instrument(
