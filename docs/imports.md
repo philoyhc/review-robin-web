@@ -80,15 +80,31 @@ Required columns: `ReviewerEmail`, `RevieweeEmail`. Both must already
 exist in the session's reviewer / reviewee rosters — manual rows
 **never** auto-create reviewers or reviewees.
 
-Optional columns: `IncludeAssignment`, `AssignmentContext1`,
-`AssignmentContext2`, `AssignmentContext3`. Any other columns are
-ignored.
+Optional columns: `IncludeAssignment`,
+`PairContext1`/`PairContext2`/`PairContext3`,
+`AssignmentContext1`/`AssignmentContext2`/`AssignmentContext3`.
+Any other columns are ignored.
 
 ```csv
-ReviewerEmail,RevieweeEmail,IncludeAssignment,AssignmentContext1
-alice@example.edu,carol@example.edu,true,morning
-bob@example.edu,carol@example.edu,false,afternoon
+ReviewerEmail,RevieweeEmail,IncludeAssignment,PairContext1,AssignmentContext1
+alice@example.edu,carol@example.edu,true,room-A,panel-1
+bob@example.edu,carol@example.edu,false,room-B,panel-2
 ```
+
+**`PairContext1/2/3`** is informational metadata for the
+reviewer/reviewee pairing. Examples: a room number, an interview slot
+note, a free-form remark. **Pair context never affects assignment
+logic** — RuleBased rules (Segment 11) ignore it. The reviewer
+surface (Segment 8) will display it alongside the reviewee.
+
+**`AssignmentContext1/2/3`** is logic-engaging context. Examples: a
+panel identifier, a category code, anything RuleBased rules need to
+match on. **Assignment context can affect future rule decisions**.
+
+Both kinds land in the assignment's `context` JSON column with
+distinct keys (`pair_context_1`, `assignment_context_1`, etc.) so
+later code can filter cleanly. Empty cells / absent columns are
+stored as nothing rather than empty strings.
 
 `IncludeAssignment` accepts (case-insensitive):
 
@@ -99,10 +115,12 @@ bob@example.edu,carol@example.edu,false,afternoon
 | empty / column absent | `true` (default) |
 | anything else | blocking error |
 
-`AssignmentContext1`/`2`/`3` are stored together in the assignment's
-`context` JSON column under the keys `context_1`, `context_2`,
-`context_3`. Used by Segment 11 RuleBased reviews and as a free-form
-operator note in the meantime.
+`PairContext1`/`2`/`3` and `AssignmentContext1`/`2`/`3` are stored
+together in the assignment's `context` JSON column under the keys
+`pair_context_1` … `assignment_context_3`. Used by Segment 11
+RuleBased reviews (assignment-context only) and the reviewer surface
+(pair-context only). Operators may use whichever bucket fits their
+intent.
 
 ### Workflow
 

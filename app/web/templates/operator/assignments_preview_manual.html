@@ -79,9 +79,12 @@
               <td>{{ row.reviewee_name }} &middot; <code>{{ row.reviewee_identifier }}</code></td>
               <td>{{ "yes" if row.include else "no" }}</td>
               <td>
-                {% if row.context_1 %}1: {{ row.context_1 }}<br>{% endif %}
-                {% if row.context_2 %}2: {{ row.context_2 }}<br>{% endif %}
-                {% if row.context_3 %}3: {{ row.context_3 }}{% endif %}
+                {% if row.pair_context_1 %}P1: {{ row.pair_context_1 }}<br>{% endif %}
+                {% if row.pair_context_2 %}P2: {{ row.pair_context_2 }}<br>{% endif %}
+                {% if row.pair_context_3 %}P3: {{ row.pair_context_3 }}<br>{% endif %}
+                {% if row.assignment_context_1 %}A1: {{ row.assignment_context_1 }}<br>{% endif %}
+                {% if row.assignment_context_2 %}A2: {{ row.assignment_context_2 }}<br>{% endif %}
+                {% if row.assignment_context_3 %}A3: {{ row.assignment_context_3 }}{% endif %}
               </td>
             </tr>
           {% endfor %}

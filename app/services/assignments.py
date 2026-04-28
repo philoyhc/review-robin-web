@@ -228,9 +228,12 @@ def parse_manual_csv(
                 reviewee_identifier=reviewee.email_or_identifier,
                 reviewee_name=reviewee.name,
                 include=include,
-                context_1=(raw.get("AssignmentContext1") or "").strip() or None,
-                context_2=(raw.get("AssignmentContext2") or "").strip() or None,
-                context_3=(raw.get("AssignmentContext3") or "").strip() or None,
+                pair_context_1=(raw.get("PairContext1") or "").strip() or None,
+                pair_context_2=(raw.get("PairContext2") or "").strip() or None,
+                pair_context_3=(raw.get("PairContext3") or "").strip() or None,
+                assignment_context_1=(raw.get("AssignmentContext1") or "").strip() or None,
+                assignment_context_2=(raw.get("AssignmentContext2") or "").strip() or None,
+                assignment_context_3=(raw.get("AssignmentContext3") or "").strip() or None,
             )
         )
 
@@ -250,12 +253,13 @@ def manual_rows_to_pairs(
     for row in rows:
         pairs.append((reviewer_by_id[row.reviewer_id], reviewee_by_id[row.reviewee_id]))
         ctx: dict[str, Any] = {}
-        if row.context_1:
-            ctx["context_1"] = row.context_1
-        if row.context_2:
-            ctx["context_2"] = row.context_2
-        if row.context_3:
-            ctx["context_3"] = row.context_3
+        for slot in (1, 2, 3):
+            pair_value = getattr(row, f"pair_context_{slot}")
+            if pair_value:
+                ctx[f"pair_context_{slot}"] = pair_value
+            asn_value = getattr(row, f"assignment_context_{slot}")
+            if asn_value:
+                ctx[f"assignment_context_{slot}"] = asn_value
         contexts.append(ctx or None)
         includes.append(row.include)
     return pairs, contexts, includes
