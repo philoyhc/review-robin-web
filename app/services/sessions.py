@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 from app.schemas.sessions import SessionCreate
 from app.services import audit
+from app.services.instruments import ensure_default_instrument
 
 
 def create_session(
@@ -34,6 +35,12 @@ def create_session(
             role="owner",
         )
     )
+
+    # Model invariant: every session has at least one Instrument with
+    # response fields. The reviewer surface (Segment 8) renders against
+    # these defaults; a future instrument-builder will let operators
+    # rename / extend / replace them.
+    ensure_default_instrument(db, review_session)
 
     audit.write_event(
         db,

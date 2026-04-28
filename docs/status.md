@@ -111,6 +111,12 @@ SQLite (every test session) and Postgres (every PR via the
 ### Sessions
 
 - Create with name, code (unique per operator), description, deadline.
+- Session creation **also synchronously creates the Default
+  Instrument** with two seed response fields (`rating` integer 1–5
+  required; `comments` long text optional). Operator-controlled
+  instrument editing lands later (Segment 12); until then this
+  placeholder is what the reviewer surface renders against. See
+  `ARCHITECTURE.md` "Conceptual hierarchy."
 - View detail with live counts of reviewers, reviewees, assignments,
   and the current `assignment_mode`.
 - **Edit** name / code / description / deadline; changes recorded as
@@ -227,9 +233,19 @@ event records old count, new count, and any cascaded downstream
 deletions. No append/merge for now — defer until activation
 constraints make it necessary.
 
-### Single-instrument constraint
+### Single-instrument invariant
 
-`Assignment.instrument_id` is `NOT NULL`. Until Segment 8 ships
-real instruments, every session gets one auto-created `Default`
-Instrument; every assignment points at it. This is not a bug; it's
-the intended placeholder.
+Every session has exactly one Instrument (`Default`) with seed
+response fields, auto-created at session creation time. Every
+assignment points at it. Multi-instrument operator UI lands in
+Segment 12; until then the schema's per-instrument granularity is
+real but unused. See `ARCHITECTURE.md` "Conceptual hierarchy."
+
+### Pair-level vs assignment-level context
+
+Manual CSV imports carry two distinct kinds of per-pair context
+(`pair_context_*` and `assignment_context_*`), both stored on
+`Assignment.context`. Pair-level is reviewer-facing informational
+metadata; assignment-level is logic-engaging metadata that
+RuleBased (Segment 11) will read. See `docs/imports.md` and
+`ARCHITECTURE.md` "Pair-level vs assignment-level context."
