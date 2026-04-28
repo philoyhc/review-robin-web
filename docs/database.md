@@ -8,8 +8,19 @@ The implementation contract for this segment lives in
 ## Local development
 
 The default `database_url` is `sqlite:///./review_robin_web.db`. SQLite is
-sufficient for unit tests and most local development in Segment 4. A real
-PostgreSQL setup arrives in Segment 5.
+sufficient for unit tests and most local development through Segment 5.
+
+**Local Postgres is intentionally deferred** (see `guide/segment_05A.md`
+§3.5). The repo no longer ships a `docker-compose.yml` for Postgres, and
+`guide/local_setup.md` does not require Docker. Postgres-vs-SQLite parity
+is enforced by the CI smoke job at `.github/workflows/ci-postgres-migration.yml`
+(every PR) and by the migration-on-deploy step in
+`.github/workflows/main_app-review-robin-web-dev.yml` (every deploy).
+
+If you do need a local Postgres for a Postgres-only investigation, install
+any local Postgres 16 you prefer (Postgres.app, Homebrew, native package,
+or `docker run postgres:16`), create a database, and set `DATABASE_URL` in
+your `.env` to point at it — `.env.example` shows the format.
 
 ### First-time setup
 
@@ -82,12 +93,17 @@ teardown, so tests do not pollute each other.
 
 ## Where Postgres lives
 
-- **Local Postgres for development** — added in Segment 5 (typically via
-  Docker Compose). Until then, SQLite is fine.
+- **Local Postgres for development** — deferred (see §3.5 of
+  `guide/segment_05A.md`). SQLite is the local default; install your own
+  Postgres only when a Postgres-only bug demands it.
 - **Azure Database for PostgreSQL Flexible Server** — provisioned in
-  Segment 5. The dev App Service will run migrations against it on deploy.
-- **Postgres-against-Docker CI job** — added in Segment 13 alongside the
-  rest of production hardening.
+  Segment 5. The dev App Service runs migrations against it on every
+  deploy via the `migrate` job in
+  `.github/workflows/main_app-review-robin-web-dev.yml`.
+- **Postgres-against-Docker CI smoke** — `ci-postgres-migration.yml`
+  applies and round-trips migrations against a `postgres:16` service
+  container on every PR. The full Postgres pytest matrix is still a
+  Segment 13 concern.
 
 ## Adding a new model
 

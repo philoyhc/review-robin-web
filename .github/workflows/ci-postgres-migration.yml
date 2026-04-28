@@ -1,0 +1,51 @@
+name: CI - Postgres migration smoke
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  postgres-migration:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: rrw_app
+          POSTGRES_PASSWORD: rrw_app
+          POSTGRES_DB: rrw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rrw_app -d rrw"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+psycopg://rrw_app:rrw_app@localhost:5432/rrw
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Apply migrations (upgrade head)
+        run: alembic upgrade head
+
+      - name: Round-trip migrations (downgrade base + upgrade head)
+        run: |
+          alembic downgrade base
+          alembic upgrade head
