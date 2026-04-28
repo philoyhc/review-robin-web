@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ session.name }} — Review Robin Web{% endblock %}
+
+{% block content %}
+  <p><a href="/operator/sessions">&larr; All sessions</a></p>
+
+  <h1>{{ session.name }}</h1>
+
+  <div class="card">
+    <h2>Details</h2>
+    <p><strong>Code:</strong> <code>{{ session.code }}</code></p>
+    <p><strong>Status:</strong> {{ session.status }}</p>
+    <p><strong>Deadline:</strong> {{ session.deadline.isoformat() if session.deadline else "Not set" }}</p>
+    <p><strong>Description:</strong> {{ session.description or "—" }}</p>
+  </div>
+
+  <div class="card">
+    <h2>Next steps</h2>
+    <ul>
+      <li class="muted">Reviewers — not yet implemented.</li>
+      <li class="muted">Reviewees — not yet implemented.</li>
+      <li class="muted">Instruments — not yet implemented.</li>
+      <li class="muted">Assignments — not yet implemented.</li>
+    </ul>
+  </div>
+{% endblock %}
