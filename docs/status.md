@@ -159,10 +159,11 @@ SQLite (every test session) and Postgres (every PR via the
   preview shows total + coverage + the first 200 pairs; replace-all
   on confirm.
 - **Manual CSV mode**: required `ReviewerEmail`/`RevieweeEmail` (must
-  exist in roster); optional `IncludeAssignment` and
-  `AssignmentContext1/2/3`. Re-upload pattern for preview-then-save
-  (no draft table). Blocking errors for unknown roster references and
-  duplicates.
+  exist in roster); optional `IncludeAssignment`,
+  `PairContext1/2/3`, and `AssignmentContext1/2/3`. Re-upload pattern
+  for preview-then-save (no draft table). Blocking errors for unknown
+  roster references and duplicates. See `docs/imports.md` for the
+  pair-vs-assignment-context distinction.
 - **Default Instrument** auto-created per session (placeholder until
   Segment 8 ships real instruments).
 - **`assignment_mode`** column on `sessions` records the strategy

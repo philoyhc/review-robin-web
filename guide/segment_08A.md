@@ -17,15 +17,22 @@ governs scope, success criteria, and out-of-scope items.
 The first reviewer-facing workflow:
 
 - Reviewer dashboard at `/reviewer` lists sessions where the
-  authenticated user's email matches a `Reviewer` row.
+  authenticated user's email matches an **active** `Reviewer` row.
 - Review surface at `/reviewer/sessions/{id}` renders all of the
   reviewer's assignments (excluding `include = false`) as a
   plain HTML table. Each row carries the Default Instrument's
   response fields as inputs.
-- Three actions: **Save draft**, **Clear all** (with confirm),
+- Four actions: **Save draft**, **Cancel** (revert in-progress
+  edits to last-saved values), **Clear all** (with confirm),
   **Submit** (with required-field warn-and-override).
 - Per-row completion indicator on the surface.
 - Per-session completion indicator on the dashboard.
+
+This segment also retrofits a roster-status filter onto
+existing assignment generation (FullMatrix + Manual CSV import)
+so inactive `Reviewer` / `Reviewee` rows are excluded — a
+small Segment 7 fix-up bundled here because it shares the rule
+the dashboard depends on. See §3.13.
 
 ---
 
@@ -33,9 +40,10 @@ The first reviewer-facing workflow:
 
 **One PR** against `main`: `claude/segment-8-reviewer-surface`.
 
-The dashboard, review surface, save / clear / submit endpoints,
-and tests are tightly coupled. Splitting produces awkward partial
-states. Estimated ~600–700 LOC.
+The dashboard, review surface, save / cancel / clear / submit
+endpoints, the roster-status retrofit, and tests are tightly
+coupled. Splitting produces awkward partial states. Estimated
+~800–950 LOC including the §3.13 retrofit and its tests.
 
 **Autosave is deferred** to a small follow-on PR (vanilla JS over
 the same `/save` endpoint). Reasons in §3.5.
@@ -47,14 +55,18 @@ the same `/save` endpoint). Reasons in §3.5.
 ### 3.1 Identity matching
 
 The authenticated user is matched to `Reviewer` rows by
-case-insensitive email equality. A user can be a reviewer in N
-sessions; the dashboard lists all of them.
+case-insensitive email equality (`casefold()` both sides — the
+same convention as `parse_manual_csv`). Only `Reviewer` rows
+with `status == "active"` count; non-active rows are filtered
+out at query time everywhere a reviewer's identity is resolved.
+A user can be an active reviewer in N sessions; the dashboard
+lists all of them.
 
 The new dependency `require_reviewer_in_session(session_id)` —
 analogous to `require_session_operator` from 6A — looks up the
-`Reviewer` row matching the user's email in that session and
-returns `(reviewer, review_session)`. Returns **403** if no
-matching reviewer row.
+active `Reviewer` row matching the user's email in that session
+and returns `(reviewer, review_session)`. Returns **403** if no
+matching active reviewer row.
 
 ### 3.2 What the reviewer sees on the surface
 
@@ -105,8 +117,9 @@ guardrail):
 2. If any required field is empty:
    - The page re-renders with HTTP **400**, a yellow warning card
      listing the missing-required positions ("Carol — `rating`",
-     "Dan — `rating`"), and a hidden `acknowledge_missing=true`
-     checkbox the reviewer must tick to retry.
+     "Dan — `rating`"), and an `acknowledge_missing` checkbox
+     (rendered only on the warning re-render) the reviewer must
+     tick to retry.
 3. If all required fields are filled, **or** the form was
    submitted with `acknowledge_missing=true`:
    - All `Response` rows for the reviewer's assignments in this
@@ -116,11 +129,17 @@ guardrail):
      missing_required_count, session_id}`.
 
 After submit, the reviewer can keep editing (Save draft updates
-values; re-submit refreshes `submitted_at`). When **per-instrument
-closure** lands in Segment 9, save / submit on a *closed*
-instrument's fields will be blocked at the route layer. There is
-no session-level closure — the response window is owned by each
-Instrument, not by the session as a whole, so different
+values; re-submit refreshes `submitted_at`). Editing a required
+field down to empty deletes the row including its `submitted_at`,
+so the next submit attempt re-fires the missing-required warning
+normally. The Cancel button (§3.12) lets a reviewer abandon
+in-progress edits without writing anything.
+
+Per-Instrument open/close (the operator-controlled state where
+an instrument stops accepting new responses) lands in Segment 9.
+Save / submit on a not-accepting instrument's fields will be
+blocked at the route layer there. The response window is owned
+by each Instrument, not by the session as a whole, so different
 instruments can close on different schedules (relevant once
 multi-instrument ships in Segment 12).
 
@@ -171,11 +190,23 @@ behaviour; it's purely informational.
 `GET /reviewer` lists the user's reviewer-sessions. Each shows:
 
 - Session name
-- Deadline (if set; never enforced — late submission is out of
-  scope per parent §3)
-- Pill: `not started` (no responses) / `in progress` (some
-  responses, none submitted) / `submitted` (all required filled
-  and submitted_at set).
+- Deadline (if set; never enforced in this segment — late
+  submission is out of scope per parent §3, and the operator
+  open/close gate lands in Segment 9)
+- Pill, computed from the reviewer's `Response` rows in that
+  session:
+  - `not started` — no `Response` rows.
+  - `in progress` — at least one `Response` row, but at least
+    one required-field row missing OR at least one row without
+    `submitted_at`.
+  - `submitted` — every required field across every visible
+    assignment has a `Response` row with `submitted_at` set.
+
+Editing a submitted required field down to empty (which deletes
+the row, per §3.3) flips the pill back to `in progress` next
+time the dashboard renders. That's the intended consequence of
+making submission an attribute of `Response` rather than a
+separate object.
 
 Single-session shortcut not implemented (parent §11 §13 mentions
 "may take them directly to the review surface" — left as polish
@@ -195,12 +226,10 @@ the seed defaults the operator can rename / replace / extend.
 ### 3.10 No deadline enforcement
 
 Deadline shows on dashboard for context only. Save / submit
-always work regardless of deadline. Late-submission policy is
-out of scope per parent §3.
-
-Once Segment 9 ships **per-instrument** open/close, save and
-submit on a closed instrument's fields get blocked at the route
-layer.
+always work regardless of deadline in this segment.
+Late-submission policy is out of scope per parent §3. The
+operator-controlled "stop accepting responses" gate lands in
+Segment 9 (per-Instrument, not per-session).
 
 ### 3.11 Single instance only
 
@@ -209,6 +238,49 @@ concurrently, last-write-wins on each `(assignment, field)`
 cell. We accept this for MVP per parent §3 ("autosave conflict
 handling out of scope"). Will revisit if a real conflict
 materialises.
+
+### 3.12 Cancel (revert in-progress edits)
+
+A **Cancel** button sits next to Save draft. It is a no-op on
+the server: it triggers a `GET` redirect back to the surface,
+re-fetching the last-saved values from the DB. Any unsaved
+changes in the inputs are discarded.
+
+Implemented as a plain link (`<a href="/reviewer/sessions/{id}">Cancel</a>`),
+not a form button — there's no state to mutate. No audit event;
+nothing was written.
+
+The button addresses a workflow gap: once a reviewer has
+submitted, opening the surface and editing values dirties the
+form even if they didn't intend to change anything. Cancel lets
+them back out without having to remember the original values.
+
+### 3.13 Roster status filter retrofit
+
+`Reviewer` and `Reviewee` rows already carry a
+`status: String(32)` defaulting to `"active"`. Today's
+assignment generation does not filter on status — see
+`app/services/assignments.py` `generate_full_matrix` and the
+Manual CSV reference resolver. This segment adds:
+
+- **FullMatrix generation** filters reviewers and reviewees on
+  `status == "active"` before building pairs. Inactive rows
+  are silently excluded; the audit detail's `excluded_counts`
+  gains an `inactive_reviewer` / `inactive_reviewee` key when
+  any are skipped.
+- **Manual CSV import** treats a reference to an inactive
+  reviewer or reviewee as an error (same shape as a reference
+  to a missing row), so operators don't accidentally bring
+  inactive participants back via CSV.
+- **Reviewer dashboard** and `require_reviewer_in_session`
+  filter on `status == "active"` (per §3.1).
+
+There is no operator UI in this segment to flip a row's status —
+status is always `"active"` today since CSV imports default to
+it and there's no edit-row form. The filter is therefore
+defensive against future operator actions (a roster-edit UI is
+not yet planned). Tests assert the filter behaviour by setting
+`status = "inactive"` directly in test fixtures.
 
 ---
 
@@ -224,13 +296,17 @@ app/
   services/
     responses.py                         # NEW: save / submit / clear /
                                          #      compute_row_completion
+    assignments.py                       # MODIFIED: filter active rosters
+                                         # in FullMatrix; treat inactive
+                                         # refs as errors in Manual CSV
 
   web/
     deps.py                              # MODIFIED: add
                                          # require_reviewer_in_session
+                                         # (active-only)
     routes_reviewer.py                   # NEW: /reviewer dashboard,
                                          # /reviewer/sessions/{id} surface,
-                                         # save / clear / submit
+                                         # save / cancel / clear / submit
     templates/
       reviewer/
         dashboard.html                   # NEW
@@ -245,6 +321,8 @@ app/main.py                              # MODIFIED: include reviewer router
 tests/
   unit/
     test_responses.py                    # NEW
+    test_assignments_full_matrix.py      # MODIFIED: status-filter cases
+    test_assignments_manual.py           # MODIFIED: inactive-ref error cases
   integration/
     test_reviewer_response_flow.py       # NEW
 ```
@@ -255,7 +333,9 @@ tests/
 ARCHITECTURE.md                          # corrected line on
                                          # AssignmentContext visibility
 docs/status.md                           # add reviewer surface to URL
-                                         # table; new audit event types
+                                         # table; new audit event types;
+                                         # add PairContext1/2/3 to the
+                                         # Manual CSV bullet
 ```
 
 ---
@@ -264,11 +344,11 @@ docs/status.md                           # add reviewer surface to URL
 
 | Method | Path                                       | Auth          | What it does |
 |--------|--------------------------------------------|---------------|--------------|
-| GET    | `/reviewer`                                | reviewer      | Dashboard listing sessions where user is a reviewer |
-| GET    | `/reviewer/sessions/{id}`                  | reviewer in session | Review surface (table) |
-| POST   | `/reviewer/sessions/{id}/save`             | reviewer in session | Upsert draft responses; 303 → surface with `?saved=ok` |
-| POST   | `/reviewer/sessions/{id}/submit`           | reviewer in session | Upsert + validate + (warn or set submitted_at); 400 on missing-without-acknowledge, else 303 → surface with `?submitted=ok` |
-| POST   | `/reviewer/sessions/{id}/clear`            | reviewer in session | Delete all responses in this session for this reviewer; 303 → surface |
+| GET    | `/reviewer`                                | reviewer      | Dashboard listing sessions where user is an active reviewer |
+| GET    | `/reviewer/sessions/{id}`                  | active reviewer in session | Review surface (table). Cancel is a plain link back to this URL. |
+| POST   | `/reviewer/sessions/{id}/save`             | active reviewer in session | Upsert draft responses; 303 → surface with `?saved=ok` |
+| POST   | `/reviewer/sessions/{id}/submit`           | active reviewer in session | Upsert + validate + (warn or set submitted_at); 400 on missing-without-acknowledge, else 303 → surface with `?submitted=ok` |
+| POST   | `/reviewer/sessions/{id}/clear`            | active reviewer in session | Delete all responses in this session for this reviewer; 303 → surface |
 
 Form field names on save / submit: `response[<assignment_id>][<field_key>]`. The save service parses these into upserts.
 
@@ -322,11 +402,12 @@ writes nothing").
 
 ## 7. Tests
 
-Parent plan §10 lists 8 tests. This expands to ~14, with explicit
-coverage of warn-and-override, clear, post-submit edit, and
-access-control URL hacking.
+Parent plan §10 lists 8 tests. This expands to 19 reviewer-flow
+tests (with explicit coverage of warn-and-override, clear,
+cancel, post-submit edit, and access-control URL hacking) plus
+~4 retrofit tests in the existing assignment-generation suites.
 
-### Unit (`tests/unit/test_responses.py`)
+### Unit (`tests/unit/test_responses.py`) — 6 tests
 
 1. Empty form payload yields zero upserts.
 2. Form payload with values upserts cleanly into new `Response`
@@ -339,10 +420,11 @@ access-control URL hacking.
 6. Required-field validation returns the missing positions list
    with assignment id and field key.
 
-### Integration (`tests/integration/test_reviewer_response_flow.py`)
+### Integration (`tests/integration/test_reviewer_response_flow.py`) — 13 tests
 
-7. Dashboard scoped to user's email — only sessions where a
-   `Reviewer.email` matches show up.
+7. Dashboard scoped to user's email — only sessions where an
+   active `Reviewer.email` matches show up; inactive reviewer
+   rows do not.
 8. Surface renders assigned reviewees and Default Instrument
    fields; pair_context shown when set; tags/assignment_context
    hidden.
@@ -358,14 +440,29 @@ access-control URL hacking.
 14. Clear all with confirm: deletes all responses; audit.
 15. Clear all without confirm: 400; nothing deleted.
 16. Re-submit after edits refreshes `submitted_at`.
-17. Reviewer in Session A cannot view Session B's surface (URL
+17. Cancel — `GET /reviewer/sessions/{id}` after dirtying inputs
+    in another tab still renders last-saved values; no DB
+    change; no audit.
+18. Reviewer in Session A cannot view Session B's surface (URL
     hack returns 403).
-18. Operator-only user (not a reviewer in this session) gets
-    403 on the surface.
+19. Operator-only user (not an active reviewer in this session)
+    gets 403 on the surface; an inactive `Reviewer` row also
+    gets 403.
 
-That's 18 tests. Parent plan §10 calls for 8; the extras
-exercise the new clear flow, the warn-and-override path, the
-post-submit-edit invariant, and access-control corners.
+### Retrofit (existing files) — ~4 tests
+
+20. (`tests/unit/test_assignments_full_matrix.py`) FullMatrix
+    skips inactive reviewers; audit detail's
+    `excluded_counts` includes `inactive_reviewer`.
+21. (`tests/unit/test_assignments_full_matrix.py`) FullMatrix
+    skips inactive reviewees; same audit shape.
+22. (`tests/unit/test_assignments_manual.py`) Manual CSV
+    referencing an inactive reviewer reports a row error
+    (same shape as missing-roster-row).
+23. (`tests/unit/test_assignments_manual.py`) Manual CSV
+    referencing an inactive reviewee reports a row error.
+
+That's 23 tests added by this PR. Parent plan §10 calls for 8.
 
 ---
 
@@ -375,9 +472,16 @@ post-submit-edit invariant, and access-control corners.
   AssignmentContext visibility (was "stays invisible to
   reviewers"; should be "can be reviewer-visible if the
   operator opts in via `InstrumentDisplayField`").
-- `docs/status.md`: add reviewer surface to capability list and
-  URL table; add the three new audit event types to the audit
-  table; note autosave is a planned follow-on.
+- `docs/status.md`:
+  - Add reviewer surface to capability list and URL table.
+  - Add the three new audit event types (`responses.saved`,
+    `responses.submitted`, `responses.cleared`) to the audit
+    table.
+  - Note autosave is a planned follow-on.
+  - Add `PairContext1/2/3` to the Manual CSV bullet (drift fix
+    — code and `docs/imports.md` already document it).
+  - Note the active-only roster filter now applied to FullMatrix
+    and Manual generation.
 
 A new `docs/reviewer_surface.md` is **not** added in this
 segment — the route table in §5 plus inline template comments
@@ -399,35 +503,48 @@ Newly clarified deferrals:
 | Item | Lands in |
 |------|----------|
 | Vanilla-JS autosave on top of `/save` | Follow-on PR after Segment 8 lands |
+| `Response.saved_at` updated on each upsert (drives "last saved at HH:MM" UI) | Lands with autosave |
 | Operator-controlled `InstrumentDisplayField` (which of the 9 fields show) | Segment 12 |
 | AG Grid replacement of the plain table | Possible Segment 8 follow-on; not blocking |
 | Single-session redirect from `/reviewer` | Polish, no specific segment |
-| Per-instrument response window (open / close) and post-close edit lock — closure is per-Instrument, never per-session | Segment 9 |
+| Operator-controlled per-Instrument open/close (the "stop accepting responses" gate, deadline-driven or manual) — per-Instrument, never per-session | Segment 9 |
+| Operator UI to flip `Reviewer.status` / `Reviewee.status` | Not yet planned (filter in §3.13 is defensive) |
 | Per-instrument tabs on the reviewer surface | Segment 12 |
 | Pre-submit "preview my answers" page | Not planned; the warn-and-override surface already renders the form state |
+| Explicit submission record (one per reviewer-session) instead of inferring from per-`Response.submitted_at` | Not planned; per §3.8 the inferred-pill behaviour is the intended contract |
 
 ---
 
 ## 10. Verification checklist
 
-- [ ] `pytest` green locally (101 existing + ~17 new = 118 minimum).
+- [ ] `pytest` green locally (full suite, 23 new tests added by
+  this PR).
 - [ ] CI: `test`, `postgres-migration`.
-- [ ] After merge: signed-in reviewer (email matches a `Reviewer`
-  row) lands on `/reviewer` and sees their session(s).
+- [ ] After merge: signed-in reviewer (email matches an active
+  `Reviewer` row) lands on `/reviewer` and sees their session(s).
 - [ ] Click into a session: surface renders rows for assigned
   reviewees with rating + comments inputs; pair_context shown
   if set.
 - [ ] Save draft → reload → values still there.
+- [ ] Cancel → discards in-progress edits; reload shows
+  last-saved values.
 - [ ] Submit with required missing → warning + acknowledge
   checkbox; tick + resubmit → marks submitted, dashboard shows
   "submitted" pill.
 - [ ] Edit + re-submit → `submitted_at` refreshes (visible in
   audit log).
+- [ ] Edit a submitted required field down to empty → row
+  deletes; dashboard pill returns to "in progress".
 - [ ] Clear all (with confirm) → all rows wiped; dashboard shows
   "not started".
+- [ ] FullMatrix run with an inactive reviewer / reviewee in the
+  roster excludes that participant; audit `excluded_counts`
+  reflects it.
+- [ ] Manual CSV referencing an inactive participant reports a
+  row error.
 - [ ] A reviewer in Session A typing Session B's URL gets 403.
-- [ ] An operator-only user (no `Reviewer` row in any session)
-  gets `/reviewer` showing the empty state.
+- [ ] An operator-only user (no active `Reviewer` row in any
+  session) gets `/reviewer` showing the empty state.
 
 ---
 
@@ -447,15 +564,19 @@ Newly clarified deferrals:
 
 ## 12. Done when
 
-- Reviewer dashboard lists user's sessions with completion pills.
+- Reviewer dashboard lists user's active-reviewer sessions with
+  completion pills.
 - Review surface renders rows with editable response fields.
 - Save draft persists; reload shows saved values.
+- Cancel reverts in-progress edits without writing.
 - Submit with all required filled marks every response submitted
   and writes audit.
 - Submit with missing required: 400 on first try; succeeds with
   acknowledge checkbox.
 - Clear all wipes responses with confirm.
-- All 18 tests pass; CI green.
+- FullMatrix and Manual generation respect roster `status`.
+- All 23 new tests pass; full suite green.
 
-Next segment after this PR merges: **Segment 9 — Invitation,
-monitoring, and reminder MVP**.
+Next segment after this PR merges: **Segment 9 — Activation,
+invitations, monitoring, reminders, and per-Instrument
+open/close**.
