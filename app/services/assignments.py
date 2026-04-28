@@ -53,6 +53,10 @@ def _parse_include(value: str) -> tuple[bool | None, str | None]:
     return None, f"IncludeAssignment '{stripped}' is not a recognised true/false value"
 
 
+def _is_active(row: Reviewer | Reviewee) -> bool:
+    return (row.status or "active") == "active"
+
+
 def parse_manual_csv(
     content: bytes,
     reviewers: list[Reviewer],
@@ -126,8 +130,18 @@ def parse_manual_csv(
             ],
         )
 
-    reviewer_by_email = {r.email.casefold(): r for r in reviewers}
-    reviewee_by_ident = {r.email_or_identifier.casefold(): r for r in reviewees}
+    reviewer_by_email = {
+        r.email.casefold(): r for r in reviewers if _is_active(r)
+    }
+    reviewee_by_ident = {
+        r.email_or_identifier.casefold(): r for r in reviewees if _is_active(r)
+    }
+    inactive_reviewer_emails = {
+        r.email.casefold() for r in reviewers if not _is_active(r)
+    }
+    inactive_reviewee_idents = {
+        r.email_or_identifier.casefold() for r in reviewees if not _is_active(r)
+    }
 
     parsed: list[ManualAssignmentRow] = []
     seen_pairs: dict[tuple[int, int], int] = {}
@@ -161,31 +175,45 @@ def parse_manual_csv(
 
         reviewer = reviewer_by_email.get(reviewer_email.casefold())
         if reviewer is None:
+            if reviewer_email.casefold() in inactive_reviewer_emails:
+                message = (
+                    f"Inactive reviewer: '{reviewer_email}' is in this "
+                    f"session's reviewer roster but is not active"
+                )
+            else:
+                message = (
+                    f"Unknown reviewer: '{reviewer_email}' is not in this "
+                    f"session's reviewer roster"
+                )
             issues.append(
                 ValidationIssue(
                     severity=Severity.error,
                     source=source,
                     row_number=index,
                     field="ReviewerEmail",
-                    message=(
-                        f"Unknown reviewer: '{reviewer_email}' is not in this "
-                        f"session's reviewer roster"
-                    ),
+                    message=message,
                 )
             )
             continue
         reviewee = reviewee_by_ident.get(reviewee_identifier.casefold())
         if reviewee is None:
+            if reviewee_identifier.casefold() in inactive_reviewee_idents:
+                message = (
+                    f"Inactive reviewee: '{reviewee_identifier}' is in this "
+                    f"session's reviewee roster but is not active"
+                )
+            else:
+                message = (
+                    f"Unknown reviewee: '{reviewee_identifier}' is not in "
+                    f"this session's reviewee roster"
+                )
             issues.append(
                 ValidationIssue(
                     severity=Severity.error,
                     source=source,
                     row_number=index,
                     field="RevieweeEmail",
-                    message=(
-                        f"Unknown reviewee: '{reviewee_identifier}' is not in "
-                        f"this session's reviewee roster"
-                    ),
+                    message=message,
                 )
             )
             continue
@@ -295,18 +323,41 @@ def generate_full_matrix(
     reviewees: Iterable[Reviewee],
     *,
     exclude_self_review: bool,
-) -> tuple[list[tuple[Reviewer, Reviewee]], int]:
-    """Return (pairs, excluded_self_count). Deterministic ordering by id."""
-    sorted_reviewers = sorted(reviewers, key=lambda r: r.id)
-    sorted_reviewees = sorted(reviewees, key=lambda r: r.id)
+) -> tuple[list[tuple[Reviewer, Reviewee]], dict[str, int]]:
+    """Return (pairs, excluded_counts). Deterministic ordering by id.
+
+    ``excluded_counts`` is a generic map keyed by reason; today's keys are
+    ``self_review``, ``inactive_reviewer``, ``inactive_reviewee``. The
+    audit detail uses the same shape so future RuleBased exclusions can
+    plug in additional reasons without a schema change.
+    """
+    reviewers_list = list(reviewers)
+    reviewees_list = list(reviewees)
+    inactive_reviewers = sum(1 for r in reviewers_list if not _is_active(r))
+    inactive_reviewees = sum(1 for r in reviewees_list if not _is_active(r))
+
+    active_reviewers = sorted(
+        (r for r in reviewers_list if _is_active(r)), key=lambda r: r.id
+    )
+    active_reviewees = sorted(
+        (r for r in reviewees_list if _is_active(r)), key=lambda r: r.id
+    )
     pairs: list[tuple[Reviewer, Reviewee]] = []
-    excluded = 0
-    for reviewer in sorted_reviewers:
-        for reviewee in sorted_reviewees:
+    excluded_self = 0
+    for reviewer in active_reviewers:
+        for reviewee in active_reviewees:
             if exclude_self_review and _is_self_review(reviewer, reviewee):
-                excluded += 1
+                excluded_self += 1
                 continue
             pairs.append((reviewer, reviewee))
+
+    excluded: dict[str, int] = {}
+    if excluded_self:
+        excluded["self_review"] = excluded_self
+    if inactive_reviewers:
+        excluded["inactive_reviewer"] = inactive_reviewers
+    if inactive_reviewees:
+        excluded["inactive_reviewee"] = inactive_reviewees
     return pairs, excluded
 
 

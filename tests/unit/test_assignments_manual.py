@@ -218,6 +218,44 @@ def test_missing_required_column_blocks(db: Session) -> None:
     assert any(i.field == "RevieweeEmail" for i in result.issues)
 
 
+def test_inactive_reviewer_referenced_blocks(db: Session) -> None:
+    user = _user(db)
+    session = _session(db, user)
+    alice = _reviewer(db, session.id, "Alice", "alice@example.edu")
+    alice.status = "inactive"
+    carol = _reviewee(db, session.id, "Carol", "carol@example.edu")
+    db.flush()
+
+    csv = (
+        b"ReviewerEmail,RevieweeEmail\n"
+        b"alice@example.edu,carol@example.edu\n"
+    )
+    result = parse_manual_csv(csv, [alice], [carol])
+
+    assert result.is_blocked
+    assert result.rows == []
+    assert any("Inactive reviewer" in i.message for i in result.issues)
+
+
+def test_inactive_reviewee_referenced_blocks(db: Session) -> None:
+    user = _user(db)
+    session = _session(db, user)
+    alice = _reviewer(db, session.id, "Alice", "alice@example.edu")
+    carol = _reviewee(db, session.id, "Carol", "carol@example.edu")
+    carol.status = "inactive"
+    db.flush()
+
+    csv = (
+        b"ReviewerEmail,RevieweeEmail\n"
+        b"alice@example.edu,carol@example.edu\n"
+    )
+    result = parse_manual_csv(csv, [alice], [carol])
+
+    assert result.is_blocked
+    assert result.rows == []
+    assert any("Inactive reviewee" in i.message for i in result.issues)
+
+
 def test_parsed_rows_carry_roster_names(db: Session) -> None:
     user = _user(db)
     session = _session(db, user)

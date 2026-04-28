@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser, get_current_user
-from app.db.models import ReviewSession, User
+from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import permissions, sessions
 
@@ -53,6 +53,43 @@ def require_session_operator(
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return review_session
+
+
+def require_reviewer_in_session(
+    session_id: int,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> tuple[Reviewer, ReviewSession]:
+    """403 unless the authenticated user has an active Reviewer row in the session.
+
+    Identity match is case-insensitive email equality (``casefold()`` both
+    sides). Reviewer rows whose ``status`` is anything other than ``active``
+    do not grant access.
+    """
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none()
+    if review_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    reviewer = db.execute(
+        select(Reviewer).where(
+            Reviewer.session_id == session_id,
+            Reviewer.status == "active",
+        )
+    ).scalars()
+    user_email = (user.email or "").casefold()
+    matched: Reviewer | None = None
+    for r in reviewer:
+        if r.email.casefold() == user_email:
+            matched = r
+            break
+    if matched is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not an active reviewer in this session",
+        )
+    return matched, review_session
 
 
 def request_correlation_id() -> str:

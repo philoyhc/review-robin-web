@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 7 (2026-04-28)
+**As of:** end of Segment 8 (2026-04-28)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -23,10 +23,10 @@ For the full long-term plan see
 | 5 | Postgres provisioning + migrate-on-deploy + operator session CRUD-lite | ✅ |
 | 6 | Reviewer / reviewee CSV imports + setup validation | ✅ |
 | 7 | FullMatrix + Manual assignment generation + roster Manage views | ✅ |
+| 8 | Reviewer dashboard + review surface (save / submit / clear / cancel); active-only roster filter retrofit | ✅ |
 
-86 → 89 tests across unit + integration. Migration round-trips on both
-SQLite (every test session) and Postgres (every PR via the
-`ci-postgres-migration` smoke job).
+Migration round-trips on both SQLite (every test session) and Postgres
+(every PR via the `ci-postgres-migration` smoke job).
 
 ---
 
@@ -108,6 +108,18 @@ SQLite (every test session) and Postgres (every PR via the
 | `POST /operator/sessions/{id}/assignments/manual/import` | preview / save |
 | `POST /operator/sessions/{id}/assignments/delete-all` | delete every assignment, clear mode |
 
+### Reviewer-facing app
+
+| URL | What it does |
+|---|---|
+| `GET /reviewer` | dashboard: sessions where user has an active `Reviewer` row; per-session pill (`not started` / `in progress` / `submitted`) |
+| `GET /reviewer/sessions/{id}` | review surface: editable table of assigned reviewees and Default Instrument fields; ?saved=ok / ?submitted=ok flash banners |
+| `POST /reviewer/sessions/{id}/save` | upsert response cells (empty value deletes the row); 303 → surface with `?saved=ok` |
+| `POST /reviewer/sessions/{id}/submit` | persist + validate required; 400 + warn-and-override on missing without acknowledge; else stamps `submitted_at` and 303 → surface with `?submitted=ok` |
+| `POST /reviewer/sessions/{id}/clear` | delete every response for this reviewer in this session (confirm checkbox required); 303 → surface |
+
+The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id}` — no server-side state change.
+
 ### Sessions
 
 - Create with name, code (unique per operator), description, deadline.
@@ -157,12 +169,16 @@ SQLite (every test session) and Postgres (every PR via the
 - **FullMatrix mode**: deterministic every-with-every; default
   excludes self-review (case-insensitive email/identifier match);
   preview shows total + coverage + the first 200 pairs; replace-all
-  on confirm.
+  on confirm. Inactive reviewers and reviewees (rows whose `status`
+  is anything other than `"active"`) are silently excluded; the
+  audit `excluded_counts` records `inactive_reviewer` /
+  `inactive_reviewee` keys when any are skipped.
 - **Manual CSV mode**: required `ReviewerEmail`/`RevieweeEmail` (must
-  exist in roster); optional `IncludeAssignment`,
-  `PairContext1/2/3`, and `AssignmentContext1/2/3`. Re-upload pattern
-  for preview-then-save (no draft table). Blocking errors for unknown
-  roster references and duplicates. See `docs/imports.md` for the
+  exist in roster, and roster row must be active); optional
+  `IncludeAssignment`, `PairContext1/2/3`, and
+  `AssignmentContext1/2/3`. Re-upload pattern for preview-then-save
+  (no draft table). Blocking errors for unknown / inactive roster
+  references and duplicates. See `docs/imports.md` for the
   pair-vs-assignment-context distinction.
 - **Default Instrument** auto-created per session (placeholder until
   Segment 8 ships real instruments).
@@ -171,6 +187,42 @@ SQLite (every test session) and Postgres (every PR via the
 - **Delete all** assignments from the hub with explicit confirm.
   Reviewers and reviewees stay; `session.assignment_mode` clears
   back to `null`. Audit event `assignments.deleted_all`.
+
+### Reviewer review surface
+
+- **Identity matching**: an authenticated user is matched to
+  `Reviewer` rows by case-insensitive email equality (`casefold()`
+  both sides). Only `Reviewer` rows with `status == "active"` count.
+- **Dashboard** at `/reviewer` lists the user's reviewer-sessions
+  with per-session pill (`not started` / `in progress` /
+  `submitted`) computed from the reviewer's `Response` rows.
+- **Surface** at `/reviewer/sessions/{id}` renders an editable HTML
+  table: one row per non-excluded assignment (`include = true`),
+  one input per `InstrumentResponseField` on the Default Instrument
+  (today: `rating` integer 1–5 required, `comments` long text
+  optional). Pair-level context (`pair_context_1/2/3`) is shown
+  alongside the reviewee; tags and `assignment_context_*` are
+  hidden by default in this segment.
+- **Save draft**: form post upserts `Response` rows. Empty value
+  deletes the row, so the row's absence == empty answer. Never
+  touches `submitted_at`.
+- **Submit**: persists pending writes, then validates required
+  fields. Missing-required-without-acknowledge re-renders the page
+  at HTTP 400 with a warning card and an `acknowledge_missing`
+  checkbox. Missing-required-with-acknowledge stamps `submitted_at`
+  and writes audit. Editing a previously-submitted required field
+  to empty deletes the row including its `submitted_at`, flipping
+  the dashboard pill back to `in progress` next render.
+- **Clear all**: confirm-checkbox-required action that deletes
+  every `Response` row for this reviewer in this session. No
+  partial undo; reviewers re-enter values from scratch afterward.
+- **Cancel**: plain `<a>` link back to the surface; no DB write,
+  no audit. Discards in-progress edits by re-fetching saved values.
+- **Autosave is deferred** to a follow-on PR (vanilla JS layered
+  over the same `/save` endpoint).
+- **Per-Instrument open/close** (operator-controlled
+  "stop accepting responses" gate, deadline-driven or manual)
+  lands in Segment 9. Until then save / submit always work.
 
 ### Audit log
 
@@ -188,10 +240,14 @@ Every destructive operation writes an `audit_events` row with
 | `reviewees.deleted_all` | delete-all from roster Manage view |
 | `assignments.generated` | FullMatrix or Manual save (incl. `mode`, `excluded_counts`) |
 | `assignments.deleted_all` | delete-all from assignments hub |
+| `responses.saved` | reviewer saves a draft (incl. `count`, `reviewer_id`) |
+| `responses.submitted` | reviewer submits (incl. `count`, `missing_required_count`, `acknowledged_missing`) |
+| `responses.cleared` | reviewer clears all their responses in a session |
 
-`excluded_counts` is a generic map (`{"self_review": N, ...}`) so
-RuleBased exclusions in Segment 11 can plug in additional reasons
-without a schema change.
+`excluded_counts` is a generic map (`{"self_review": N,
+"inactive_reviewer": M, ...}`) so RuleBased exclusions in Segment 11 can
+plug in additional reasons without a schema change. Today's keys are
+`self_review`, `inactive_reviewer`, `inactive_reviewee`.
 
 ---
 
@@ -200,11 +256,12 @@ without a schema change.
 | Capability | Lands in |
 |---|---|
 | Edit individual reviewer / reviewee / assignment rows (today: bulk operations only via CSV replace or delete-all) | Not yet planned; would slot before activation |
-| **Instruments** (custom review forms beyond placeholder "Default") | **Segment 8** |
-| **Reviewer surface** — the actual review experience for reviewers | **Segment 8** |
+| Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
+| Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
+| **Instruments** (operator-editable forms beyond the seed Default) | **Segment 12** |
 | **Activation** (operator publishes the session, locks edits, opens to reviewers) | **Segment 9** |
 | **Invitations & reminders** (email reviewers their links) | **Segment 9** |
-| **Responses** (reviewer-submitted data) | **Segment 8 / 9** |
+| **Per-Instrument open/close** (deadline-driven or manual "stop accepting responses" gate) | **Segment 9** |
 | **Export / audit retention** | **Segment 10** |
 | **RuleBased assignment** | **Segment 11** |
 | **Multi-instrument sessions** | **Segment 12** |

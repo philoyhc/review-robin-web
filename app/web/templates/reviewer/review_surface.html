@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}{{ session.name }} — Review{% endblock %}
+
+{% block content %}
+  <p><a href="/reviewer">&larr; Your reviews</a></p>
+
+  <h1>{{ session.name }}</h1>
+
+  {% if session.description %}
+    <p>{{ session.description }}</p>
+  {% endif %}
+  {% if session.deadline %}
+    <p class="muted">Deadline: {{ session.deadline.isoformat() }}</p>
+  {% endif %}
+
+  {% if saved %}
+    <div class="card" style="border-color: #16a34a; background: #dcfce7;">
+      <p>Your draft has been saved.</p>
+    </div>
+  {% endif %}
+  {% if submitted %}
+    <div class="card" style="border-color: #2563eb; background: #dbeafe;">
+      <p>Your responses have been submitted. You can keep editing
+      and re-submit if needed.</p>
+    </div>
+  {% endif %}
+
+  {% if missing %}
+    <div class="card" style="border-color: #d97706; background: #fef3c7;">
+      <h2 style="color: #92400e;">Required fields missing</h2>
+      <p>
+        The following required field{% if missing|length != 1 %}s have{% else %} has{% endif %}
+        no value yet:
+      </p>
+      <ul>
+        {% for m in missing %}
+          <li>
+            <strong>{{ m.reviewee_name }}</strong> — <code>{{ m.field_label }}</code>
+          </li>
+        {% endfor %}
+      </ul>
+      <p>
+        Tick the box below and submit again to record your responses
+        anyway.
+      </p>
+    </div>
+  {% endif %}
+
+  {% if rows %}
+    <div class="card">
+      <p>
+        <a class="btn secondary"
+           href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
+      </p>
+    </div>
+
+    <form method="post" action="/reviewer/sessions/{{ session.id }}/save">
+      <table>
+        <tr>
+          <th>Reviewee</th>
+          {% set first_row = rows[0] %}
+          {% for cell in first_row.cells %}
+            <th>{{ cell.field.label }}{% if cell.field.required %} *{% endif %}</th>
+          {% endfor %}
+          <th>Status</th>
+        </tr>
+        {% for row in rows %}
+          <tr>
+            <td>
+              <strong>{{ row.assignment.reviewee.name }}</strong><br>
+              <code>{{ row.assignment.reviewee.email_or_identifier }}</code>
+              {% if row.pair_contexts %}
+                <div class="muted" style="margin-top: 6px; font-size: 0.85em;">
+                  {% for slot, value in row.pair_contexts %}
+                    <div>P{{ slot }}: {{ value }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </td>
+            {% for cell in row.cells %}
+              <td>
+                {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
+                {% if cell.field.response_type == "long_text" %}
+                  <textarea name="{{ field_name }}" rows="3">{{ cell.value }}</textarea>
+                {% elif cell.field.response_type == "integer" %}
+                  {% set validation = cell.field.validation or {} %}
+                  <input type="number"
+                         name="{{ field_name }}"
+                         value="{{ cell.value }}"
+                         {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
+                         {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
+                         {% if cell.field.required %}required{% endif %}>
+                {% else %}
+                  <input type="text"
+                         name="{{ field_name }}"
+                         value="{{ cell.value }}"
+                         {% if cell.field.required %}required{% endif %}>
+                {% endif %}
+              </td>
+            {% endfor %}
+            <td>
+              {% if row.is_complete %}
+                <span class="pill pill-info">✓ complete</span>
+              {% else %}
+                <span class="pill pill-warning">{{ row.missing_count }} missing</span>
+              {% endif %}
+              {% if row.submitted_at %}
+                <div class="muted" style="font-size: 0.85em; margin-top: 4px;">
+                  submitted {{ row.submitted_at.strftime("%Y-%m-%d %H:%M") }}
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+
+      <p style="margin-top: 16px;">
+        <button class="btn secondary" type="submit">Save draft</button>
+        <button class="btn"
+                type="submit"
+                formaction="/reviewer/sessions/{{ session.id }}/submit">
+          Submit
+        </button>
+      </p>
+      {% if show_acknowledge %}
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="acknowledge_missing" value="true">
+            I acknowledge required fields are missing — submit anyway.
+          </label>
+        </p>
+      {% endif %}
+    </form>
+
+    <div class="card" style="border-color: #b91c1c; margin-top: 24px;">
+      <h2 style="color: #b91c1c;">Clear all responses</h2>
+      <form method="post" action="/reviewer/sessions/{{ session.id }}/clear">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required>
+            Yes, delete every response I have saved for this session.
+            This also clears my submitted state.
+          </label>
+        </p>
+        <p>
+          <button class="btn"
+                  style="background: #b91c1c; border-color: #b91c1c;"
+                  type="submit">Clear all</button>
+        </p>
+      </form>
+    </div>
+  {% else %}
+    <div class="card">
+      <p class="muted">No assignments are visible to you in this session yet.</p>
+    </div>
+  {% endif %}
+{% endblock %}

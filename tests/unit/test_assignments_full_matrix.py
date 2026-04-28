@@ -55,7 +55,7 @@ def test_full_matrix_pairs_every_reviewer_with_every_reviewee(db: Session) -> No
     )
 
     assert len(pairs) == 6
-    assert excluded == 0
+    assert excluded == {}
 
 
 def test_full_matrix_excludes_self_review_when_emails_match(db: Session) -> None:
@@ -70,7 +70,7 @@ def test_full_matrix_excludes_self_review_when_emails_match(db: Session) -> None
         [alice_r, bob_r], [alice_e, carol_e], exclude_self_review=True
     )
 
-    assert excluded == 1
+    assert excluded == {"self_review": 1}
     assert (alice_r, alice_e) not in pairs
     assert (alice_r, carol_e) in pairs
     assert (bob_r, alice_e) in pairs
@@ -89,8 +89,42 @@ def test_full_matrix_does_not_exclude_when_reviewee_has_no_at_sign(
         [alice_r], [dan_e], exclude_self_review=True
     )
 
-    assert excluded == 0
+    assert excluded == {}
     assert pairs == [(alice_r, dan_e)]
+
+
+def test_full_matrix_skips_inactive_reviewers(db: Session) -> None:
+    user = _user(db)
+    session = _session(db, user)
+    alice = _reviewer(db, session.id, "Alice", "alice@example.edu")
+    bob = _reviewer(db, session.id, "Bob", "bob@example.edu")
+    bob.status = "inactive"
+    carol = _reviewee(db, session.id, "Carol", "carol@example.edu")
+    db.flush()
+
+    pairs, excluded = generate_full_matrix(
+        [alice, bob], [carol], exclude_self_review=False
+    )
+
+    assert pairs == [(alice, carol)]
+    assert excluded == {"inactive_reviewer": 1}
+
+
+def test_full_matrix_skips_inactive_reviewees(db: Session) -> None:
+    user = _user(db)
+    session = _session(db, user)
+    alice = _reviewer(db, session.id, "Alice", "alice@example.edu")
+    carol = _reviewee(db, session.id, "Carol", "carol@example.edu")
+    dan = _reviewee(db, session.id, "Dan", "dan-2026")
+    dan.status = "inactive"
+    db.flush()
+
+    pairs, excluded = generate_full_matrix(
+        [alice], [carol, dan], exclude_self_review=False
+    )
+
+    assert pairs == [(alice, carol)]
+    assert excluded == {"inactive_reviewee": 1}
 
 
 def test_get_or_create_default_instrument_is_idempotent(db: Session) -> None:
