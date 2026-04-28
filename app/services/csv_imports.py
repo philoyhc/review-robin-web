@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, Reviewer, ReviewSession, User
@@ -372,8 +372,16 @@ def _save(
     correlation_id: str,
     to_kwargs: Any,
 ) -> tuple[int, int]:
-    replaced = _count(db, model, session.id)
-    db.execute(delete(model).where(model.session_id == session.id))
+    cascaded_assignment_count = _count_assignments(db, session.id)
+
+    existing_rows = list(
+        db.execute(select(model).where(model.session_id == session.id)).scalars()
+    )
+    replaced = len(existing_rows)
+    for row in existing_rows:
+        db.delete(row)
+    db.flush()
+
     for row in rows:
         db.add(model(**to_kwargs(row, session.id)))
     db.flush()
@@ -388,9 +396,22 @@ def _save(
             "replaced_count": replaced,
             "new_count": len(rows),
             "filename": filename,
+            "cascaded_assignment_count": cascaded_assignment_count,
         },
         correlation_id=correlation_id,
     )
 
     db.commit()
     return replaced, len(rows)
+
+
+def _count_assignments(db: Session, session_id: int) -> int:
+    from app.db.models import Assignment
+
+    stmt = select(Assignment.id).where(Assignment.session_id == session_id)
+    return len(db.execute(stmt).all())
+
+
+def existing_assignment_count(db: Session, session_id: int) -> int:
+    """Used by routes to surface the cascade warning before import."""
+    return _count_assignments(db, session_id)

@@ -75,6 +75,7 @@ def test_reviewer_import_writes_audit_event(client: TestClient, db: Session) -> 
         "replaced_count": 0,
         "new_count": 1,
         "filename": "reviewers.csv",
+        "cascaded_assignment_count": 0,
     }
     assert "Imported 1 reviewers" in event.summary
 
@@ -164,6 +165,7 @@ def test_reviewer_import_replace_with_confirm_succeeds(
         "replaced_count": 1,
         "new_count": 1,
         "filename": "reviewers.csv",
+        "cascaded_assignment_count": 0,
     }
 
 
@@ -240,3 +242,230 @@ def test_reviewee_import_persists_with_photolink(
     assert by_id["carol@example.edu"].profile_link == "https://example.edu/c.jpg"
     assert by_id["carol@example.edu"].tag_1 == "cohort-A"
     assert by_id["dan-2026"].profile_link is None
+
+
+def test_reviewer_replace_cascades_assignments(
+    client: TestClient, db: Session
+) -> None:
+    from sqlalchemy import select as _select
+
+    from app.db.models import Assignment, ReviewSession
+
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Cascade", "code": "cascade-r"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    review_session = db.execute(
+        _select(ReviewSession).where(ReviewSession.code == "cascade-r")
+    ).scalar_one()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                _reviewer_csv(("Alice", "alice@example.edu")),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": "true"},
+        follow_redirects=False,
+    )
+    assignments_before = list(
+        db.execute(
+            _select(Assignment).where(Assignment.session_id == review_session.id)
+        ).scalars()
+    )
+    assert len(assignments_before) == 1
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                _reviewer_csv(("Bob", "bob@example.edu")),
+                "text/csv",
+            )
+        },
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assignments_after = list(
+        db.execute(
+            _select(Assignment).where(Assignment.session_id == review_session.id)
+        ).scalars()
+    )
+    assert assignments_after == []
+
+    events = list(
+        db.execute(
+            _select(AuditEvent)
+            .where(AuditEvent.event_type == "reviewers.imported")
+            .order_by(AuditEvent.id.desc())
+        ).scalars()
+    )
+    assert events[0].detail["cascaded_assignment_count"] == 1
+    assert events[0].detail["replaced_count"] == 1
+
+
+def test_reviewee_replace_cascades_assignments(
+    client: TestClient, db: Session
+) -> None:
+    from sqlalchemy import select as _select
+
+    from app.db.models import Assignment, Reviewee, ReviewSession
+
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Cascade", "code": "cascade-e"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    review_session = db.execute(
+        _select(ReviewSession).where(ReviewSession.code == "cascade-e")
+    ).scalar_one()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                _reviewer_csv(("Alice", "alice@example.edu")),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\nDan,dan-2026\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": "true"},
+        follow_redirects=False,
+    )
+    assignments_before = list(
+        db.execute(
+            _select(Assignment).where(Assignment.session_id == review_session.id)
+        ).scalars()
+    )
+    assert len(assignments_before) == 2
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nEve,eve@example.edu\n",
+                "text/csv",
+            )
+        },
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+
+    reviewees = list(
+        db.execute(
+            _select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    )
+    assert {r.email_or_identifier for r in reviewees} == {"eve@example.edu"}
+
+    assignments_after = list(
+        db.execute(
+            _select(Assignment).where(Assignment.session_id == review_session.id)
+        ).scalars()
+    )
+    assert assignments_after == []
+
+    events = list(
+        db.execute(
+            _select(AuditEvent)
+            .where(AuditEvent.event_type == "reviewees.imported")
+            .order_by(AuditEvent.id.desc())
+        ).scalars()
+    )
+    assert events[0].detail["cascaded_assignment_count"] == 2
+
+
+def test_reviewer_import_form_warns_about_cascade(
+    client: TestClient, db: Session
+) -> None:
+    from sqlalchemy import select as _select
+
+    from app.db.models import ReviewSession
+
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Warn", "code": "warn-test"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    review_session = db.execute(
+        _select(ReviewSession).where(ReviewSession.code == "warn-test")
+    ).scalar_one()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                _reviewer_csv(("Alice", "alice@example.edu")),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": "true"},
+        follow_redirects=False,
+    )
+
+    page = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers/import"
+    )
+
+    assert page.status_code == 200
+    assert "1 existing assignment" in page.text
+    assert "will be deleted" in page.text
