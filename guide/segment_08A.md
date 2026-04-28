@@ -84,7 +84,7 @@ there's one Default Instrument):
 Hidden by default in this segment: `RevieweeTag1/2/3`,
 `AssignmentContext1/2/3`. The schema for showing them already
 exists (`InstrumentDisplayField`); operator-controlled
-visibility lands in Segment 12.
+visibility lands in Segment 13.
 
 Excluded assignments (`Assignment.include = false`) are filtered
 out at query time and never reach the surface.
@@ -141,7 +141,7 @@ Save / submit on a not-accepting instrument's fields will be
 blocked at the route layer there. The response window is owned
 by each Instrument, not by the session as a whole, so different
 instruments can close on different schedules (relevant once
-multi-instrument ships in Segment 12).
+multi-instrument ships in Segment 13).
 
 ### 3.5 Clear all
 
@@ -220,7 +220,7 @@ Per Segment 7's `ensure_default_instrument`:
   Renders as `<input type="number" min="1" max="5">`.
 - `comments` — long text, optional. Renders as `<textarea>`.
 
-When operator instrument-builder ships (Segment 12), these become
+When operator instrument-builder ships (Segment 13), these become
 the seed defaults the operator can rename / replace / extend.
 
 ### 3.10 No deadline enforcement
@@ -504,12 +504,12 @@ Newly clarified deferrals:
 |------|----------|
 | Vanilla-JS autosave on top of `/save` | Follow-on PR after Segment 8 lands |
 | `Response.saved_at` updated on each upsert (drives "last saved at HH:MM" UI) | Lands with autosave |
-| Operator-controlled `InstrumentDisplayField` (which of the 9 fields show) | Segment 12 |
+| Operator-controlled `InstrumentDisplayField` (which of the 9 fields show) | Segment 13 |
 | AG Grid replacement of the plain table | Possible Segment 8 follow-on; not blocking |
 | Single-session redirect from `/reviewer` | Polish, no specific segment |
 | Operator-controlled per-Instrument open/close (the "stop accepting responses" gate, deadline-driven or manual) — per-Instrument, never per-session | Segment 9 |
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` | Not yet planned (filter in §3.13 is defensive) |
-| Per-instrument tabs on the reviewer surface | Segment 12 |
+| Per-instrument tabs on the reviewer surface | Segment 13 |
 | Pre-submit "preview my answers" page | Not planned; the warn-and-override surface already renders the form state |
 | Explicit submission record (one per reviewer-session) instead of inferring from per-`Response.submitted_at` | Not planned; per §3.8 the inferred-pill behaviour is the intended contract |
 
@@ -555,7 +555,7 @@ Newly clarified deferrals:
 | Reviewer's saved values collide with another tab's saved values | Last-write-wins per `(assignment, field)`. Out of scope for proper conflict handling per parent §3. |
 | Submit fires accidentally without acknowledging missing required | Warn-and-override pattern matches the operator replace guardrail. The acknowledge checkbox is a hard requirement. |
 | A reviewer is in many sessions and the dashboard becomes long | Sessions list ordered by `updated_at desc`. No pagination yet; revisit if a real reviewer hits 50+ sessions. |
-| Schema change in the placeholder Default Instrument breaks loaded forms mid-session | Segment 8 doesn't ship instrument editing; the seed fields are stable. Segment 12 will need to handle field add/remove against existing responses. |
+| Schema change in the placeholder Default Instrument breaks loaded forms mid-session | Segment 8 doesn't ship instrument editing; the seed fields are stable. Segment 13 will need to handle field add/remove against existing responses. |
 | `pair_context` containing HTML / control characters renders unsafely | Jinja2 auto-escapes by default; we don't bypass it. |
 | Autosave silently drops a save on network failure | Autosave is deferred entirely to a follow-on PR; the explicit Save Draft button is the canonical mechanism. |
 | Reviewer matching by email mismatches across capitalization | `casefold()` comparison both ways (already the convention in `parse_manual_csv`). |

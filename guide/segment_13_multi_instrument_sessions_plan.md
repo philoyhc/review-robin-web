@@ -1,15 +1,15 @@
-# Segment 12 Plan — Multi-Instrument Sessions
+# Segment 13 Plan — Multi-Instrument Sessions
 
 **Project:** Review Robin Web  
 **Repository:** <https://github.com/philoyhc/review-robin-web>  
-**Segment:** 12 of the low-intensity workplan  
+**Segment:** 13 of the low-intensity workplan  
 **Purpose:** Allow a session to contain multiple review instruments, with reviewers completing the relevant tabular forms within one session
 
 ---
 
 ## 1. Segment goal
 
-Segment 12 adds the multi-instrument capability.
+Segment 13 adds the multi-instrument capability.
 
 By the end of this segment, a session should be able to contain more than one instrument. Assignments should target a specific instrument, reviewers should see separate review surfaces by instrument, and exports should clearly identify the instrument associated with each response.
 
@@ -19,7 +19,7 @@ Single-instrument sessions must continue to work simply.
 
 ## 2. Success criteria
 
-Segment 12 is complete when:
+Segment 13 is complete when:
 
 1. Operators can create multiple instruments within a session.
 2. Each instrument has its own display fields and response fields.
@@ -58,7 +58,7 @@ git checkout -b segment-12-multi-instrument
 Suggested PR title:
 
 ```text
-Segment 12: Add multi-instrument session support
+Segment 13: Add multi-instrument session support
 ```
 
 ---
@@ -132,7 +132,7 @@ If multiple instruments exist and `Instrument` is absent, show a blocking error.
 
 ### 7.3 RuleBased
 
-If Segment 11 is already implemented, rules should target an instrument.
+If Segment 12 is already implemented, rules should target an instrument.
 
 If not, this can be deferred until RuleBased and multi-instrument are both active.
 
@@ -230,7 +230,7 @@ Minimum tests:
 ### Implementation prompt
 
 ```text
-Implement Segment 12 multi-instrument support.
+Implement Segment 13 multi-instrument support.
 
 Add:
 - operator instrument management page
@@ -308,7 +308,7 @@ Acceptance criteria:
 ## 15. Completion note template
 
 ```markdown
-## Segment 12 completion note
+## Segment 13 completion note
 
 Completed:
 - multi-instrument model support

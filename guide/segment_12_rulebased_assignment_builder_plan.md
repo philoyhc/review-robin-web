@@ -1,15 +1,15 @@
-# Segment 11 Plan — RuleBased Assignment Builder
+# Segment 12 Plan — RuleBased Assignment Builder
 
 **Project:** Review Robin Web  
 **Repository:** <https://github.com/philoyhc/review-robin-web>  
-**Segment:** 11 of the low-intensity workplan  
+**Segment:** 12 of the low-intensity workplan  
 **Purpose:** Add rule-based assignment generation, preserving the core Review Robin concept in web-app form
 
 ---
 
 ## 1. Segment goal
 
-Segment 11 adds RuleBased assignment generation after the simpler end-to-end loop works.
+Segment 12 adds RuleBased assignment generation after the simpler end-to-end loop works.
 
 By the end of this segment, an operator should be able to define rules using reviewer and reviewee attributes, preview generated assignments, and apply them to a session.
 
@@ -19,7 +19,7 @@ This segment should emphasize correctness and explainability over UI sophisticat
 
 ## 2. Success criteria
 
-Segment 11 is complete when:
+Segment 12 is complete when:
 
 1. Rule schema exists.
 2. Operator can create and edit basic rules.
@@ -44,7 +44,7 @@ Do not include at first:
 - weighted allocation;
 - optimization algorithms;
 - cross-session rule libraries;
-- multi-instrument complexity unless Segment 12 has already landed.
+- multi-instrument complexity unless Segment 13 has already landed.
 
 ---
 
@@ -57,7 +57,7 @@ git checkout -b segment-11-rulebased-builder
 Suggested PR title:
 
 ```text
-Segment 11: Add RuleBased assignment builder
+Segment 12: Add RuleBased assignment builder
 ```
 
 ---
@@ -165,7 +165,7 @@ Minimum tests:
 ### Implementation prompt
 
 ```text
-Implement Segment 11 RuleBased assignment builder.
+Implement Segment 12 RuleBased assignment builder.
 
 Add:
 - rule data model
@@ -250,7 +250,7 @@ Acceptance criteria:
 ## 12. Completion note template
 
 ```markdown
-## Segment 11 completion note
+## Segment 12 completion note
 
 Completed:
 - RuleBased model

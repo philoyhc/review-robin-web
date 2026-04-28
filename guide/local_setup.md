@@ -252,7 +252,7 @@ it's deferred to a later segment:
 | Assignment generation               | Segment 7  |
 | Reviewer tabular response surface   | Segment 8  |
 | Email invitations + reminders       | Segment 9  |
-| CSV / Excel exports                 | Segment 10 |
-| Rule-based assignment builder       | Segment 11 |
-| Multi-instrument sessions           | Segment 12 |
-| Production hardening (`JSONB`, native `UUID`, Postgres CI job, structured logging, monitoring, runbooks) | Segment 13 |
+| CSV / Excel exports                 | Segment 11 |
+| Rule-based assignment builder       | Segment 12 |
+| Multi-instrument sessions           | Segment 13 |
+| Production hardening (`JSONB`, native `UUID`, Postgres CI job, structured logging, monitoring, runbooks) | Segment 14 |

@@ -78,7 +78,7 @@ A third PR for any UI polish is fine but not required up front.
     reach the DB without VNet integration).
   - Add the developer's current public IP to the firewall list for
     running migrations and one-off psql connections.
-- **VNet / private endpoints:** deferred to **Segment 13**. Public
+- **VNet / private endpoints:** deferred to **Segment 14**. Public
   access with firewall rules is acceptable for an internal-only dev pilot.
 
 ### 3.3 Secret management
@@ -90,7 +90,7 @@ A third PR for any UI polish is fine but not required up front.
   ```
 - **GitHub Actions secret** `DATABASE_URL` (same value) is added to the
   repository for the migration-on-deploy step.
-- **Key Vault references** for App Settings are deferred to **Segment 13**.
+- **Key Vault references** for App Settings are deferred to **Segment 14**.
 
 ### 3.4 Migration on deploy
 
@@ -156,7 +156,7 @@ the **primary** portability guard rather than a secondary check.
 - This job is **required to pass** before merging any PR that touches
   models or migrations.
 - The full Postgres-against-Docker pytest matrix is deferred to
-  **Segment 13**.
+  **Segment 14**.
 
 ### 3.7 Permission model
 
@@ -180,7 +180,7 @@ the **primary** portability guard rather than a secondary check.
   `base.html` in this segment — that's a cosmetic refactor and out of
   scope here.
 - Inline `<style>` block in `base.html` for now. CSS extraction is a
-  Segment 13 concern.
+  Segment 14 concern.
 
 ### 3.9 Service / schema layout
 
@@ -345,12 +345,12 @@ Newly deferred to specific later segments:
 | Item                                                | Deferred to |
 |-----------------------------------------------------|-------------|
 | Local Docker Compose / local Postgres setup         | When needed (see §3.5); no fixed segment |
-| Key Vault references for App Settings               | Segment 13  |
-| VNet integration / private endpoints for Postgres   | Segment 13  |
-| Full Postgres-against-Docker pytest matrix in CI    | Segment 13  |
-| CSS extraction / framework / design system          | Segment 13  |
-| Migrating `me_debug.html` to extend `base.html`     | Segment 13  |
-| Multi-operator add/remove UI                        | Segment 11+ |
+| Key Vault references for App Settings               | Segment 14  |
+| VNet integration / private endpoints for Postgres   | Segment 14  |
+| Full Postgres-against-Docker pytest matrix in CI    | Segment 14  |
+| CSS extraction / framework / design system          | Segment 14  |
+| Migrating `me_debug.html` to extend `base.html`     | Segment 14  |
+| Multi-operator add/remove UI                        | Segment 12+ |
 
 ---
 
