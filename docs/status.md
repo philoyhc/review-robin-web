@@ -19,7 +19,8 @@ For the full long-term plan see
 | 2026-04-25 | GitHub repository created |
 | 2026-04-26 | Azure subscription, App Service, Postgres Flexible Server provisioned |
 | 2026-04-27 | Segments 1–4 shipped (skeleton, deploy, auth, data model) |
-| 2026-04-28 | Segments 5–8 shipped (operator MVP, reviewer surface MVP) |
+| 2026-04-28 | Segments 5–7 shipped (operator session MVP, imports + validation, assignment generation) |
+| 2026-04-29 | Segment 8 shipped (reviewer surface MVP + roster status-filter retrofit) |
 
 ---
 
@@ -34,7 +35,7 @@ For the full long-term plan see
 | 5 | Postgres provisioning + migrate-on-deploy + operator session CRUD-lite | 2026-04-28 |
 | 6 | Reviewer / reviewee CSV imports + setup validation | 2026-04-28 |
 | 7 | FullMatrix + Manual assignment generation + roster Manage views | 2026-04-28 |
-| 8 | Reviewer dashboard + review surface (save / submit / clear / cancel); active-only roster filter retrofit | 2026-04-28 |
+| 8 | Reviewer dashboard + review surface (save / submit / clear / cancel); active-only roster filter retrofit | 2026-04-29 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
