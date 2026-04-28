@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
-from app.services import csv_imports, sessions
+from app.services import csv_imports, sessions, validation
 from app.web.deps import get_or_create_user, request_correlation_id, require_session_operator
 
 router = APIRouter(prefix="/operator", tags=["operator"])
@@ -87,11 +87,39 @@ def session_detail(
     request: Request,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
 ) -> HTMLResponse:
     return _templates.TemplateResponse(
         request,
         "operator/session_detail.html",
-        {"user": user, "session": review_session},
+        {
+            "user": user,
+            "session": review_session,
+            "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
+            "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/validate", response_class=HTMLResponse)
+def validate_session(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    issues = validation.validate_session_setup(db, review_session)
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_validate.html",
+        {
+            "user": user,
+            "session": review_session,
+            "issues": issues,
+            "error_count": sum(1 for i in issues if i.is_blocking),
+            "warning_count": sum(1 for i in issues if i.severity.value == "warning"),
+            "info_count": sum(1 for i in issues if i.severity.value == "info"),
+        },
     )
 
 

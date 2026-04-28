@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Validate setup — {{ session.name }}{% endblock %}
+
+{% block content %}
+  <p><a href="/operator/sessions/{{ session.id }}">&larr; {{ session.name }}</a></p>
+
+  <h1>Setup validation</h1>
+
+  <p class="muted">
+    Read-only view of setup readiness for this session. Errors must be
+    cleared before activation (later segment).
+  </p>
+
+  <p>
+    <span class="pill pill-error">{{ error_count }} error{% if error_count != 1 %}s{% endif %}</span>
+    <span class="pill pill-warning">{{ warning_count }} warning{% if warning_count != 1 %}s{% endif %}</span>
+    <span class="pill pill-info">{{ info_count }} info</span>
+  </p>
+
+  {% include "operator/partials/validation_results.html" %}
+{% endblock %}

@@ -7,6 +7,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,3 +30,22 @@ def engine() -> Iterator[Engine]:
 
     yield eng
     eng.dispose()
+
+
+@pytest.fixture
+def db(engine: Engine) -> Iterator[Session]:
+    """Per-test transactional session that rolls back on teardown.
+
+    Suitable for tests that only flush(). Integration tests that need
+    to tolerate service-layer commit() calls override this with a
+    savepoint-based fixture in tests/integration/conftest.py.
+    """
+    connection = engine.connect()
+    transaction = connection.begin()
+    session = Session(bind=connection, expire_on_commit=False)
+    try:
+        yield session
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
