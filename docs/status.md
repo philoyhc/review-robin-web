@@ -17,8 +17,8 @@ For the full long-term plan see
 | Date | Milestone |
 |---|---|
 | 2026-04-25 | GitHub repository created |
-| 2026-04-26 | Azure subscription, App Service, Postgres Flexible Server provisioned |
-| 2026-04-27 | Segments 1–4 shipped (skeleton, deploy, auth, data model) |
+| 2026-04-26 | Azure subscription + App Service provisioned |
+| 2026-04-27 | Postgres Flexible Server provisioned; Segments 1–4 shipped (skeleton, deploy, auth, data model) |
 | 2026-04-28 | Segments 5–7 shipped (operator session MVP, imports + validation, assignment generation) |
 | 2026-04-29 | Segment 8 shipped (reviewer surface MVP + roster status-filter retrofit) |
 
