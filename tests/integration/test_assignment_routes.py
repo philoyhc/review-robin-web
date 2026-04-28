@@ -433,3 +433,70 @@ def test_non_operator_gets_403_on_manual_import(
         follow_redirects=False,
     )
     assert response.status_code == 403
+
+
+def test_hub_renders_current_pairs_card_when_assignments_exist(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="hub-pairs")
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=["alice@example.edu"],
+        reviewee_idents=["carol@example.edu"],
+    )
+
+    empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
+    assert "Current pairs" not in empty.text
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": "true"},
+        follow_redirects=False,
+    )
+
+    populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
+    body = populated.text
+    assert "Current pairs" in body
+    assert "alice@example.edu" in body
+    assert "carol@example.edu" in body
+
+
+def test_manual_preview_shows_roster_names(client: TestClient, db: Session) -> None:
+    review_session = _make_session(client, db, code="m-names")
+    reviewer_csv = (
+        "ReviewerName,ReviewerEmail\n"
+        "Alice Example,alice@example.edu\n"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={"file": ("r.csv", reviewer_csv.encode(), "text/csv")},
+        follow_redirects=False,
+    )
+    reviewee_csv = (
+        "RevieweeName,RevieweeEmail\n"
+        "Carol Example,carol@example.edu\n"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={"file": ("e.csv", reviewee_csv.encode(), "text/csv")},
+        follow_redirects=False,
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/manual/import",
+        data={"dry_run": "true"},
+        files={
+            "file": (
+                "manual.csv",
+                b"ReviewerEmail,RevieweeEmail\nalice@example.edu,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    body = response.text
+    assert "Alice Example" in body
+    assert "Carol Example" in body
