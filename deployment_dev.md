@@ -8,6 +8,25 @@
 - App Service Plan: `ASP-rgreviewrobinweblab-913a (F1: 1)`
 - Operating System: `Linux`
 - Runtime Stack: `Python 3.12`
+- Database: Azure Database for PostgreSQL Flexible Server, **Burstable
+  B1ms**, region **Southeast Asia**, Postgres **16**, 32 GB storage, HA
+  disabled, default 7-day backup retention. Application database name
+  `rrw`, application user `rrw_app`. See `guide/segment_05A.md` §3.1 for
+  the rationale.
+
+### Database networking
+
+Public access is enabled with a firewall allow-list:
+
+- "Allow public access from Azure services and resources within Azure
+  to this server" — **enabled** (the App Service reaches the DB this
+  way; no VNet integration in dev).
+- The developer's current public IP is added to the firewall list for
+  one-off `psql` and Alembic runs from the developer machine. Office
+  networks that block outbound 5432 will need to use Azure Cloud Shell
+  / Cloud CLI instead — that's the verified working path today.
+
+VNet integration and private endpoints are deferred to Segment 13.
 
 ## App startup
 
@@ -23,11 +42,54 @@ GitHub Actions workflow name:
 
 - `.github/workflows/main_app-review-robin-web-dev.yml`
 
-The workflow triggers on push to `main` (or via `workflow_dispatch`), builds the
-app, and deploys to the App Service using OIDC federated credentials. The
-client, tenant, and subscription IDs are stored as GitHub repository secrets
-(`AZUREAPPSERVICE_CLIENTID_*`, `AZUREAPPSERVICE_TENANTID_*`,
-`AZUREAPPSERVICE_SUBSCRIPTIONID_*`) — no publish profile is committed.
+The workflow triggers on push to `main` (or via `workflow_dispatch`) and
+runs three jobs in order: **build → migrate → deploy**.
+
+1. **build** packages `app/`, `alembic/`, `alembic.ini`, `requirements.txt`,
+   and `pyproject.toml` into the deployment artifact.
+2. **migrate** runs `alembic upgrade head` against Azure Postgres using
+   the `DATABASE_URL` GitHub Actions secret. If migration fails, the
+   workflow stops here and the deploy job is skipped — the app never
+   ships against a stale schema.
+3. **deploy** uses OIDC federated credentials to push the artifact to
+   the App Service. The client, tenant, and subscription IDs are stored
+   as GitHub repository secrets (`AZUREAPPSERVICE_CLIENTID_*`,
+   `AZUREAPPSERVICE_TENANTID_*`, `AZUREAPPSERVICE_SUBSCRIPTIONID_*`) —
+   no publish profile is committed.
+
+There is no startup-time migration hook in the app; that pattern is
+fragile under concurrent deploys.
+
+## Database configuration
+
+`DATABASE_URL` lives in two places, with identical values:
+
+- **App Service App Setting** on `app-review-robin-web-dev` (consumed by
+  the running app at request time).
+- **GitHub Actions secret** `DATABASE_URL` on the repo (consumed by the
+  `migrate` job at deploy time).
+
+Format:
+
+```text
+postgresql+psycopg://rrw_app:<password>@<server>.postgres.database.azure.com:5432/rrw?sslmode=require
+```
+
+Key Vault references for App Settings are deferred to Segment 13. Until
+then, rotate by updating both secrets together.
+
+## Verifying the database is reachable
+
+From a network with outbound 5432 open (e.g. a home network or Azure
+Cloud Shell):
+
+```bash
+psql "host=<server>.postgres.database.azure.com port=5432 dbname=rrw user=rrw_app sslmode=require"
+```
+
+Office networks that block 5432 outbound will need Azure Cloud Shell /
+Cloud CLI for ad-hoc psql sessions. CI and the deploy workflow are
+unaffected — they connect from GitHub Actions runners.
 
 ## Health check
 
