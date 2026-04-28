@@ -63,7 +63,7 @@ stays valid through that.
 Add a nullable `String(32)` column `assignment_mode` to the `sessions`
 table via Alembic migration. Set when assignments are first generated
 or imported. `null` until then. Values: `"full_matrix"` or `"manual"`
-in this segment; `"rule_based"` reserved for Segment 11.
+in this segment; `"rule_based"` reserved for Segment 12.
 
 We do this even though `Assignment.created_by_mode` already records
 the per-row mode, because the parent plan explicitly calls for it
@@ -401,7 +401,7 @@ Newly clarified deferrals:
 | Item                                                | Deferred to |
 |-----------------------------------------------------|-------------|
 | Server-side draft table for partially-uploaded imports | Not planned (re-upload pattern is sufficient at MVP scale) |
-| Append / merge assignment policy                    | Possibly Segment 11 if RuleBased re-runs need it |
+| Append / merge assignment policy                    | Possibly Segment 12 if RuleBased re-runs need it |
 | Multiple Instruments per session                    | Segment 8 |
 | Renaming the "Default" Instrument                   | Segment 8 |
 | Per-assignment instrument selection in CSV          | Segment 8 |

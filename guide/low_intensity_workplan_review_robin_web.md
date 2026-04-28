@@ -634,7 +634,42 @@ An operator can activate a session, send invitation emails, monitor reviewer pro
 
 ---
 
-## 13. Segment 10 — Export, audit, and retention MVP
+## 13. Segment 10 — Instrument builder MVP
+
+### Goal
+
+Let operators rename, edit, add, reorder, and delete response fields on the session's single Default Instrument before activation.
+
+### Main learning focus
+
+- per-field schema-vs-data trade-offs
+- form-builder UX in plain HTML
+- cascade safety when a field is deleted with saved responses
+- audit trail for instrument structure changes
+
+### Build outcome
+
+An operator can shape the questions reviewers see — beyond the seed `rating` integer + `comments` long-text pair — without leaving the operator UI.
+
+### Work items
+
+1. Operator page listing the session's Instrument's response fields.
+2. Add / edit / delete / reorder field actions, with confirm + cascade warnings on destructive paths.
+3. Field types: integer (with min/max), short-text, long-text, yes/no.
+4. Server-side validation of required + per-type validation JSON on submit.
+5. Audit events: `instrument.field_added`, `instrument.field_updated`, `instrument.field_deleted`, `instrument.fields_reordered`.
+6. Tests for the new routes, cascade behaviour, and reviewer-surface auto-adapt.
+
+### Out of scope
+
+- multi-instrument (still one Instrument per session — Segment 13)
+- conditional / branching field logic
+- file-upload field type
+- editing the instrument after activation locks it (revisit later if needed)
+
+---
+
+## 14. Segment 11 — Export, audit, and retention MVP
 
 ### Goal
 
@@ -691,7 +726,7 @@ An operator can export session responses as CSV/Excel and apply a basic retentio
 
 ---
 
-## 14. Segment 11 — RuleBased assignment builder
+## 15. Segment 12 — RuleBased assignment builder
 
 ### Goal
 
@@ -729,7 +764,7 @@ An operator can define simple rules, preview generated assignments, and apply th
 
 ---
 
-## 15. Segment 12 — Multi-instrument sessions
+## 16. Segment 13 — Multi-instrument sessions
 
 ### Goal
 
@@ -765,7 +800,7 @@ A session can contain multiple instruments, and a reviewer can complete separate
 
 ---
 
-## 16. Segment 13 — Production hardening
+## 17. Segment 14 — Production hardening
 
 ### Goal
 
@@ -809,7 +844,7 @@ The app is credible for a real internal pilot.
 
 ---
 
-## 17. Segment 14 — Operator polish and documentation
+## 18. Segment 15 — Operator polish and documentation
 
 ### Goal
 
@@ -847,7 +882,7 @@ A new operator can understand the system, set up a test session, and run through
 
 ---
 
-## 18. Suggested low-intensity cadence
+## 19. Suggested low-intensity cadence
 
 A sustainable rhythm might be:
 
@@ -870,7 +905,8 @@ Week 11–13   Segment 6: Import and validation
 Week 14–15   Segment 7: Assignment generation
 Week 16–20   Segment 8: Reviewer surface
 Week 21–23   Segment 9: Invitations and monitoring
-Week 24–26   Segment 10: Export, audit, and retention
+Week 24       Segment 10: Instrument builder
+Week 25–27   Segment 11: Export, audit, and retention
 ```
 
 This is not a deadline. It is a low-pressure sequencing guide.
@@ -879,7 +915,7 @@ Some segments will go faster because AI assistance handles the boilerplate. Some
 
 ---
 
-## 19. How to break segments down later
+## 20. How to break segments down later
 
 Each segment can later be decomposed into smaller issues using this pattern:
 
@@ -921,7 +957,7 @@ Prefer prompts like:
 
 ---
 
-## 20. Recommended AI workflow
+## 21. Recommended AI workflow
 
 ### 20.1 Before asking AI to code
 
@@ -958,7 +994,7 @@ Useful prompt:
 
 ---
 
-## 21. Risk points to expect
+## 22. Risk points to expect
 
 ### 21.1 Azure deployment errors
 
@@ -1042,7 +1078,7 @@ Mitigation:
 
 ---
 
-## 22. First end-to-end milestone
+## 23. First end-to-end milestone
 
 The first major milestone is not production readiness. It is this:
 
@@ -1065,7 +1101,7 @@ Before this milestone, avoid deep polish.
 
 ---
 
-## 23. Final note
+## 24. Final note
 
 This workplan intentionally does not assume mastery of all technologies at the start.
 

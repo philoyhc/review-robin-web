@@ -1,17 +1,17 @@
-# Segment 13 Plan — Production Hardening
+# Segment 14 Plan — Production Hardening
 
 **Project:** Review Robin Web  
 **Repository:** <https://github.com/philoyhc/review-robin-web>  
-**Segment:** 13 of the low-intensity workplan  
+**Segment:** 14 of the low-intensity workplan  
 **Purpose:** Make the application safer, more observable, more supportable, and more credible for a real internal pilot
 
 ---
 
 ## 1. Segment goal
 
-Segment 13 hardens the application after the core functional loop exists.
+Segment 14 hardens the application after the core functional loop exists.
 
-By this point, the app should already support session setup, imports, assignments, reviewer responses, invitations, monitoring, export, and retention. Segment 13 improves operational readiness.
+By this point, the app should already support session setup, imports, assignments, reviewer responses, invitations, monitoring, export, and retention. Segment 14 improves operational readiness.
 
 This is not about adding new Review Robin features. It is about making the existing system more reliable and supportable.
 
@@ -19,7 +19,7 @@ This is not about adding new Review Robin features. It is about making the exist
 
 ## 2. Success criteria
 
-Segment 13 is complete when:
+Segment 14 is complete when:
 
 1. Production/staging deployment path is defined.
 2. App settings are documented and separated by environment.
@@ -139,7 +139,7 @@ git checkout -b segment-13-production-hardening
 Suggested umbrella PR title:
 
 ```text
-Segment 13: Production hardening pass
+Segment 14: Production hardening pass
 ```
 
 ---
@@ -476,7 +476,7 @@ Acceptance criteria:
 ## 11. Completion note template
 
 ```markdown
-## Segment 13 completion note
+## Segment 14 completion note
 
 Completed:
 - deployment hardening
@@ -517,5 +517,5 @@ Deferred:
 - [ ] Troubleshooting guide exists.
 - [ ] Known limitations are documented.
 
-After Segment 13, the application is ready for a cautious internal pilot, subject to institutional policy and data-classification approval.
+After Segment 14, the application is ready for a cautious internal pilot, subject to institutional policy and data-classification approval.
 

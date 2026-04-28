@@ -69,7 +69,7 @@ migration instead.
 Segment 4 keeps every column type cross-dialect so the same migration runs
 on both:
 
-| Need              | Used in Segment 4              | Postgres-specific upgrade in Segment 13 |
+| Need              | Used in Segment 4              | Postgres-specific upgrade in Segment 14 |
 |-------------------|-------------------------------|-----------------------------------------|
 | JSON blob         | `sqlalchemy.JSON`             | `JSONB`                                  |
 | UUID column       | `String(36)` (where used)     | native `UUID`                            |
@@ -103,7 +103,7 @@ teardown, so tests do not pollute each other.
 - **Postgres-against-Docker CI smoke** — `ci-postgres-migration.yml`
   applies and round-trips migrations against a `postgres:16` service
   container on every PR. The full Postgres pytest matrix is still a
-  Segment 13 concern.
+  Segment 14 concern.
 
 ## Adding a new model
 

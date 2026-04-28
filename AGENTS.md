@@ -7,7 +7,7 @@
 - Use Pydantic for request/response schemas.
 - Use SQLAlchemy 2.x declarative style with `Mapped[]` and `mapped_column`.
   Do not import from `sqlalchemy.dialects.postgresql` in `app/db/models/` —
-  Postgres-specific column types are deferred to Segment 13.
+  Postgres-specific column types are deferred to Segment 14.
 - Keep route handlers thin.
 - Put business logic in service modules.
 - Add or update tests for every behavior change.
@@ -42,7 +42,7 @@ Not yet implemented (do not add unless an issue explicitly asks):
 operator-editable instruments, the reviewer-facing review surface,
 session activation, invitations & reminders, responses, export,
 RuleBased assignment, multi-instrument sessions, production hardening
-(Key Vault, VNet, soft-delete). These map to Segments 8–13 — see
+(Key Vault, VNet, soft-delete). These map to Segments 8–14 — see
 `guide/segment_NN_*` and `docs/status.md` "What's deliberately not
 yet there."
 

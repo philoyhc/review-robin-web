@@ -23,7 +23,7 @@ perspective:
   matrix that determines which reviewer-reviewee pairs are reviewed.
   The matrix is computed once per session — manually (Manual import)
   or via a deterministic preset (FullMatrix today, RuleBased in
-  Segment 11).
+  Segment 12).
 - **Instruments** are the *response forms* attached to a session. A
   session has one or more instruments, each defining its own set of
   response fields. **Multi-instrument is a planned future** (Segment
@@ -54,7 +54,7 @@ Because instrument editing has not shipped:
 - The reviewer surface (Segment 8) renders the Default Instrument's
   fields against each assigned reviewee.
 
-When multi-instrument lands (Segment 12):
+When multi-instrument lands (Segment 13):
 
 - Operators can add more instruments under a session and define
   per-instrument response fields.
@@ -74,7 +74,7 @@ stored in `Assignment.context` JSON:
 - **`assignment_context_1/2/3`** is logic-engaging context (e.g.
   "panel-1", a category code). Read by RuleBased rules in Segment
   11. Hidden from reviewers by default; can become reviewer-visible
-  when an operator opts in via `InstrumentDisplayField` (Segment 12).
+  when an operator opts in via `InstrumentDisplayField` (Segment 13).
 
 CSV columns are `PairContext1/2/3` and `AssignmentContext1/2/3`.
 

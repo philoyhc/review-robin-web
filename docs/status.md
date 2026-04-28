@@ -49,7 +49,7 @@ Migration round-trips on both SQLite (every test session) and Postgres
 - **Azure App Service** (Linux, Python 3.12, gunicorn + uvicorn).
 - **Azure Postgres Flexible Server** (Burstable B1ms, Pg 16, Southeast
   Asia). Public access with firewall allow-list ("Allow Azure
-  services" + dev IP). VNet integration deferred to Segment 13.
+  services" + dev IP). VNet integration deferred to Segment 14.
 - **Deploy on push to `main`** — three jobs: `build` → `migrate` →
   `deploy`. The `migrate` job runs `alembic upgrade head` against
   Azure Postgres before the App Service swap; deploy is skipped if
@@ -90,7 +90,7 @@ Migration round-trips on both SQLite (every test session) and Postgres
 - Topbar with sign-out link, monospace tabular code spans,
   card-based layout, severity pills (`error` / `warning` / `info`)
   for validation issues. All inline `<style>` in `base.html`. CSS
-  framework / extraction is a Segment 13 concern.
+  framework / extraction is a Segment 14 concern.
 
 ### Operator-facing app
 
@@ -138,7 +138,7 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
 - Session creation **also synchronously creates the Default
   Instrument** with two seed response fields (`rating` integer 1–5
   required; `comments` long text optional). Operator-controlled
-  instrument editing lands later (Segment 12); until then this
+  instrument editing lands later (Segment 10); until then this
   placeholder is what the reviewer surface renders against. See
   `ARCHITECTURE.md` "Conceptual hierarchy."
 - View detail with live counts of reviewers, reviewees, assignments,
@@ -257,7 +257,7 @@ Every destructive operation writes an `audit_events` row with
 | `responses.cleared` | reviewer clears all their responses in a session |
 
 `excluded_counts` is a generic map (`{"self_review": N,
-"inactive_reviewer": M, ...}`) so RuleBased exclusions in Segment 11 can
+"inactive_reviewer": M, ...}`) so RuleBased exclusions in Segment 12 can
 plug in additional reasons without a schema change. Today's keys are
 `self_review`, `inactive_reviewer`, `inactive_reviewee`.
 
@@ -270,14 +270,14 @@ plug in additional reasons without a schema change. Today's keys are
 | Edit individual reviewer / reviewee / assignment rows (today: bulk operations only via CSV replace or delete-all) | Not yet planned; would slot before activation |
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
-| **Instruments** (operator-editable forms beyond the seed Default) | **Segment 12** |
 | **Activation** (operator publishes the session, locks edits, opens to reviewers) | **Segment 9** |
 | **Invitations & reminders** (email reviewers their links) | **Segment 9** |
 | **Per-Instrument open/close** (deadline-driven or manual "stop accepting responses" gate) | **Segment 9** |
-| **Export / audit retention** | **Segment 10** |
-| **RuleBased assignment** | **Segment 11** |
-| **Multi-instrument sessions** | **Segment 12** |
-| **Production hardening** (Key Vault, VNet, soft-delete, full Postgres pytest matrix) | **Segment 13** |
+| **Instrument builder** (operator-editable response fields on the session's Instrument: add / edit / reorder / delete; field types beyond the seed pair) | **Segment 10** |
+| **Export / audit retention** | **Segment 11** |
+| **RuleBased assignment** | **Segment 12** |
+| **Multi-instrument sessions** (more than one Instrument under a session) | **Segment 13** |
+| **Production hardening** (Key Vault, VNet, soft-delete, full Postgres pytest matrix) | **Segment 14** |
 
 ---
 
@@ -288,7 +288,7 @@ plug in additional reasons without a schema change. Today's keys are
 FullMatrix and Manual currently have parallel implementations, but the
 storage model treats them uniformly: every assignment is a row in
 `assignments` with `created_by_mode` as a string discriminator and
-`Assignment.context` as JSON. Segment 11 RuleBased is expected to
+`Assignment.context` as JSON. Segment 12 RuleBased is expected to
 introduce a generic generation framework; FullMatrix becomes the
 simplest preset of that framework. The audit-detail shape
 (`excluded_counts: {...}`) is already generic; Manual rows ship with
@@ -308,7 +308,7 @@ constraints make it necessary.
 Every session has exactly one Instrument (`Default`) with seed
 response fields, auto-created at session creation time. Every
 assignment points at it. Multi-instrument operator UI lands in
-Segment 12; until then the schema's per-instrument granularity is
+Segment 13; until then the schema's per-instrument granularity is
 real but unused. See `ARCHITECTURE.md` "Conceptual hierarchy."
 
 ### Pair-level vs assignment-level context
@@ -317,5 +317,5 @@ Manual CSV imports carry two distinct kinds of per-pair context
 (`pair_context_*` and `assignment_context_*`), both stored on
 `Assignment.context`. Pair-level is reviewer-facing informational
 metadata; assignment-level is logic-engaging metadata that
-RuleBased (Segment 11) will read. See `docs/imports.md` and
+RuleBased (Segment 12) will read. See `docs/imports.md` and
 `ARCHITECTURE.md` "Pair-level vs assignment-level context."

@@ -11,7 +11,7 @@ The implementation contract for this feature lives in
 
 Required columns: `ReviewerName`, `ReviewerEmail`.
 
-Optional columns (used by the Segment 11 RuleBased assignment
+Optional columns (used by the Segment 12 RuleBased assignment
 generator): `ReviewerTag1`, `ReviewerTag2`, `ReviewerTag3`.
 
 Any other columns are ignored.
@@ -94,7 +94,7 @@ bob@example.edu,carol@example.edu,false,room-B,panel-2
 **`PairContext1/2/3`** is informational metadata for the
 reviewer/reviewee pairing. Examples: a room number, an interview slot
 note, a free-form remark. **Pair context never affects assignment
-logic** — RuleBased rules (Segment 11) ignore it. The reviewer
+logic** — RuleBased rules (Segment 12) ignore it. The reviewer
 surface (Segment 8) will display it alongside the reviewee.
 
 **`AssignmentContext1/2/3`** is logic-engaging context. Examples: a
@@ -117,7 +117,7 @@ stored as nothing rather than empty strings.
 
 `PairContext1`/`2`/`3` and `AssignmentContext1`/`2`/`3` are stored
 together in the assignment's `context` JSON column under the keys
-`pair_context_1` … `assignment_context_3`. Used by Segment 11
+`pair_context_1` … `assignment_context_3`. Used by Segment 12
 RuleBased reviews (assignment-context only) and the reviewer surface
 (pair-context only). Operators may use whichever bucket fits their
 intent.
@@ -152,4 +152,4 @@ intent.
 - Excel upload (still CSV-only).
 - Append / merge instead of replace.
 - Importing custom instrument fields (Segment 8).
-- RuleBased assignment generation (Segment 11).
+- RuleBased assignment generation (Segment 12).

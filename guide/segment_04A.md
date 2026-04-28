@@ -130,7 +130,7 @@ this segment uses it. Three lines, lets Segment 5 wire routes immediately.
 
 **Decision:** existing `ci.yml` is unchanged. Tests use SQLite, so no
 Postgres-against-Docker job is needed in this segment. A Postgres CI job is
-deferred to **Segment 13** (production hardening), where it joins the
+deferred to **Segment 14** (production hardening), where it joins the
 broader hardening pass.
 
 ---
@@ -245,8 +245,8 @@ Newly deferred to specific later segments:
 |-----------------------------------------------|-------------|
 | Azure PostgreSQL Flexible Server provisioning | Segment 5   |
 | Local Postgres development setup (Docker etc.)| Segment 5   |
-| `JSONB`, native `UUID`, dialect-specific types | Segment 13 |
-| Postgres-against-Docker CI job                | Segment 13  |
+| `JSONB`, native `UUID`, dialect-specific types | Segment 14 |
+| Postgres-against-Docker CI job                | Segment 14  |
 
 ---
 

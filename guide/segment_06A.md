@@ -422,9 +422,9 @@ Newly clarified deferrals:
 | Item                                                | Deferred to |
 |-----------------------------------------------------|-------------|
 | Two-step preview / dry-run                          | Not planned (replaced by guardrail per §3.1) |
-| Append / merge import policy                        | Possibly Segment 11 if RuleBased needs it |
+| Append / merge import policy                        | Possibly Segment 12 if RuleBased needs it |
 | Many-to-many tags (vs the 3 fixed tag columns)      | Not planned — 3 slots is enough for RuleBased |
-| `email-validator` strict checking                   | Segment 13 |
+| `email-validator` strict checking                   | Segment 14 |
 | Importing custom instruments / status fields        | Segment 8 (instruments) |
 
 ---
@@ -460,10 +460,10 @@ Newly clarified deferrals:
 
 | Risk | Mitigation |
 |------|------------|
-| Operator uploads the wrong file to a populated session and clicks through the guardrail | The guardrail is a meaningful click-through ("23 will be replaced"). Audit event records `replaced_count` so the destruction is at least retroactively visible. We accept this risk for dev/MVP; production hardening (e.g. soft-delete with restore) is Segment 13. |
+| Operator uploads the wrong file to a populated session and clicks through the guardrail | The guardrail is a meaningful click-through ("23 will be replaced"). Audit event records `replaced_count` so the destruction is at least retroactively visible. We accept this risk for dev/MVP; production hardening (e.g. soft-delete with restore) is Segment 14. |
 | Large CSV blows up memory | 1 MB / 5000-row hard cap before parsing. |
 | CSV with mixed encodings produces mojibake | Force `utf-8-sig` decode; non-UTF-8 bytes raise a single blocking error. Strict ASCII-or-fail is overkill; mixed-encoding strict tolerance is overkill the other way. |
-| `tag_*` columns become a dumping ground for free-form text | Accepted. They are user-defined buckets; RuleBased (Segment 11) will impose match/exclude semantics on whatever the operator put there. |
+| `tag_*` columns become a dumping ground for free-form text | Accepted. They are user-defined buckets; RuleBased (Segment 12) will impose match/exclude semantics on whatever the operator put there. |
 | Permission check missed on a new import route | `require_session_operator` dependency is mandatory for all new operator routes; the dependency raises a clear 403 if the user is not an operator. |
 | Migration breaks on Postgres but works on SQLite | The `ci-postgres-migration.yml` job from Segment 5 PR 1 round-trips the migration on `postgres:16` before merge. |
 

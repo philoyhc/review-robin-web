@@ -29,7 +29,7 @@ This is the first segment where Review Robin Web feels like an operational syste
 The Instrument open/close gate is what stops the
 "reviewers can submit a year after the session is over" failure mode.
 It is per-Instrument (not per-session) so that, once multi-instrument
-ships in Segment 12, different instruments under one session can close
+ships in Segment 13, different instruments under one session can close
 on different schedules.
 
 ---
@@ -227,7 +227,7 @@ exposes per-Instrument state:
 - Toggle button: **Stop accepting responses** /
   **Resume accepting responses**.
 
-Until multi-instrument ships in Segment 12, each session has
+Until multi-instrument ships in Segment 13, each session has
 exactly one Instrument (the Default), so the surface is
 single-row.
 

@@ -8,7 +8,7 @@
 > **See also:** `guide/segment_05A.md` — agreed implementation plan with
 > decisions made (Azure Postgres tier and networking, secret strategy,
 > migration-on-deploy, two-PR split, permission model, deferrals into
-> Segment 13). Read this parent plan for scope and intent; read 05A for
+> Segment 14). Read this parent plan for scope and intent; read 05A for
 > the implementation contract.
 
 ---
