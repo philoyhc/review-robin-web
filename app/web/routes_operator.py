@@ -1,55 +1,22 @@
 from __future__ import annotations
 
-import uuid
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.identity import AuthenticatedUser, get_current_user
-from app.db.models import User
+from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
-from app.services import permissions, sessions
+from app.services import csv_imports, sessions
+from app.web.deps import get_or_create_user, request_correlation_id, require_session_operator
 
 router = APIRouter(prefix="/operator", tags=["operator"])
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
-
-
-def get_or_create_user(
-    current_user: AuthenticatedUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> User:
-    if not current_user.email:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authenticated identity has no email claim",
-        )
-
-    user = db.execute(
-        select(User).where(User.email == current_user.email)
-    ).scalar_one_or_none()
-    if user is not None:
-        return user
-
-    user = User(
-        email=current_user.email,
-        display_name=current_user.name,
-        external_principal_id=current_user.principal_id,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
-
-
-def request_correlation_id() -> str:
-    return uuid.uuid4().hex
 
 
 @router.get("/sessions", response_class=HTMLResponse)
@@ -118,20 +85,157 @@ def create_session(
 @router.get("/sessions/{session_id}", response_class=HTMLResponse)
 def session_detail(
     request: Request,
-    session_id: int,
+    review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    if not permissions.user_can_view_session(db, user, session_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this session",
-        )
-    review_session = sessions.get_for_user(db, user, session_id)
-    if review_session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return _templates.TemplateResponse(
         request,
         "operator/session_detail.html",
         {"user": user, "session": review_session},
+    )
+
+
+@router.get("/sessions/{session_id}/reviewers/import", response_class=HTMLResponse)
+def reviewers_import_form(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_import_reviewers.html",
+        {
+            "user": user,
+            "session": review_session,
+            "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
+            "issues": [],
+        },
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/reviewers/import",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def reviewers_import_submit(
+    request: Request,
+    file: UploadFile = File(...),
+    confirm_replace: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse | RedirectResponse:
+    return await _handle_import(
+        request=request,
+        file=file,
+        confirm_replace=confirm_replace,
+        review_session=review_session,
+        user=user,
+        db=db,
+        kind="reviewers",
+        template="operator/session_import_reviewers.html",
+        existing_count_fn=csv_imports.existing_reviewer_count,
+        parse_fn=csv_imports.parse_reviewer_csv,
+        save_fn=csv_imports.save_reviewers,
+    )
+
+
+@router.get("/sessions/{session_id}/reviewees/import", response_class=HTMLResponse)
+def reviewees_import_form(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_import_reviewees.html",
+        {
+            "user": user,
+            "session": review_session,
+            "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
+            "issues": [],
+        },
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/reviewees/import",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def reviewees_import_submit(
+    request: Request,
+    file: UploadFile = File(...),
+    confirm_replace: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse | RedirectResponse:
+    return await _handle_import(
+        request=request,
+        file=file,
+        confirm_replace=confirm_replace,
+        review_session=review_session,
+        user=user,
+        db=db,
+        kind="reviewees",
+        template="operator/session_import_reviewees.html",
+        existing_count_fn=csv_imports.existing_reviewee_count,
+        parse_fn=csv_imports.parse_reviewee_csv,
+        save_fn=csv_imports.save_reviewees,
+    )
+
+
+async def _handle_import(
+    *,
+    request: Request,
+    file: UploadFile,
+    confirm_replace: str | None,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+    kind: str,
+    template: str,
+    existing_count_fn,
+    parse_fn,
+    save_fn,
+) -> HTMLResponse | RedirectResponse:
+    content = await file.read()
+    result = parse_fn(content)
+    existing = existing_count_fn(db, review_session.id)
+
+    def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
+        return _templates.TemplateResponse(
+            request,
+            template,
+            {
+                "user": user,
+                "session": review_session,
+                "existing_count": existing,
+                "issues": result.issues,
+                "filename": file.filename,
+            },
+            status_code=status_code,
+        )
+
+    if result.is_blocked:
+        return render(status_code=status.HTTP_400_BAD_REQUEST)
+
+    if existing > 0 and confirm_replace != "true":
+        return render(status_code=status.HTTP_400_BAD_REQUEST)
+
+    save_fn(
+        db,
+        session=review_session,
+        user=user,
+        rows=result.rows,
+        filename=file.filename or "",
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
     )

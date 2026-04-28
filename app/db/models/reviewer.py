@@ -23,6 +23,9 @@ class Reviewer(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(320), index=True, nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
+    tag_1: Mapped[str | None] = mapped_column(String(255))
+    tag_2: Mapped[str | None] = mapped_column(String(255))
+    tag_3: Mapped[str | None] = mapped_column(String(255))
 
     session: Mapped[ReviewSession] = relationship(back_populates="reviewers")
     assignments: Mapped[list[Assignment]] = relationship(
