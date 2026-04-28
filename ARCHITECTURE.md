@@ -73,7 +73,8 @@ stored in `Assignment.context` JSON:
   reviewer surface. Never read by assignment-generation logic.
 - **`assignment_context_1/2/3`** is logic-engaging context (e.g.
   "panel-1", a category code). Read by RuleBased rules in Segment
-  11. Not displayed to reviewers.
+  11. Hidden from reviewers by default; can become reviewer-visible
+  when an operator opts in via `InstrumentDisplayField` (Segment 12).
 
 CSV columns are `PairContext1/2/3` and `AssignmentContext1/2/3`.
 

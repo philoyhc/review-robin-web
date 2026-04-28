@@ -320,7 +320,7 @@ def assignments_full_matrix(
     exclude_self = exclude_self_review == "true"
     reviewers = assignments.list_reviewers(db, review_session.id)
     reviewees = assignments.list_reviewees(db, review_session.id)
-    pairs, excluded = assignments.generate_full_matrix(
+    pairs, excluded_counts = assignments.generate_full_matrix(
         reviewers, reviewees, exclude_self_review=exclude_self
     )
     stats = assignments.coverage_stats(reviewers, reviewees, pairs)
@@ -344,7 +344,8 @@ def assignments_full_matrix(
                 "user": user,
                 "session": review_session,
                 "exclude_self_review": exclude_self,
-                "excluded_self_count": excluded,
+                "excluded_self_count": excluded_counts.get("self_review", 0),
+                "excluded_counts": excluded_counts,
                 "stats": stats,
                 "existing_count": existing,
                 "needs_confirm_replace": existing > 0,
@@ -362,7 +363,7 @@ def assignments_full_matrix(
         pairs=pairs,
         mode=AssignmentMode.full_matrix,
         correlation_id=request_correlation_id(),
-        excluded_counts={"self_review": excluded} if excluded else {},
+        excluded_counts=excluded_counts,
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/assignments",
