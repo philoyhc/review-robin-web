@@ -28,6 +28,7 @@ class ReviewSession(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(String(2000))
     status: Mapped[str] = mapped_column(String(32), default="draft", nullable=False)
     deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    assignment_mode: Mapped[str | None] = mapped_column(String(32))
 
     created_by_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=False
