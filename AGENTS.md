@@ -18,11 +18,36 @@
 
 ## Current stage
 
-Segments 1–4 complete. The project has a FastAPI app skeleton, Azure
-deployment, Easy Auth identity, and a SQLAlchemy 2.x core data model with
-Alembic migrations. No DB-backed routes yet; that comes in Segment 5.
+Segments 1–7 complete. See `docs/status.md` for the authoritative
+snapshot of what ships today; this section summarises only what an
+agent needs before opening files.
 
-Do not add Review Robin domain functionality unless an issue explicitly asks for it.
+The project has:
+
+- FastAPI app on Azure App Service, deploy-on-push to `main` with a
+  `build → migrate → deploy` pipeline.
+- Azure Postgres Flexible Server with `alembic upgrade head` running
+  in CI before every deploy. PR CI runs SQLite pytest plus a
+  `postgres-migration` smoke job.
+- Microsoft Entra ID via Azure Easy Auth in deployed envs;
+  `ALLOW_FAKE_AUTH=true` fallback for local dev. `User` rows are
+  created on first sign-in.
+- 12-table SQLAlchemy 2.x schema with Alembic migrations.
+- Operator MVP: session CRUD, reviewer/reviewee CSV import + Manage
+  views, setup validation, FullMatrix + Manual assignment generation,
+  per-session Default Instrument placeholder, audit log on every
+  destructive op.
+
+Not yet implemented (do not add unless an issue explicitly asks):
+operator-editable instruments, the reviewer-facing review surface,
+session activation, invitations & reminders, responses, export,
+RuleBased assignment, multi-instrument sessions, production hardening
+(Key Vault, VNet, soft-delete). These map to Segments 8–13 — see
+`guide/segment_NN_*` and `docs/status.md` "What's deliberately not
+yet there."
+
+Update `docs/status.md` at the end of each segment; keep the summary
+above in sync.
 
 ## Testing expectations
 
