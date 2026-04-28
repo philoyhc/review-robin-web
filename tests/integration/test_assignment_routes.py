@@ -204,7 +204,7 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
     empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
     assert empty.status_code == 200
     assert "<strong>0</strong>" in empty.text
-    assert "Preview FullMatrix" in empty.text
+    assert "Generate FullMatrix" in empty.text
 
     client.post(
         f"/operator/sessions/{review_session.id}/assignments/full-matrix",
