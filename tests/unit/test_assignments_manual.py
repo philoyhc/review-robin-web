@@ -161,9 +161,48 @@ def test_assignment_context_columns_carried(db: Session) -> None:
 
     assert result.issues == []
     row = result.rows[0]
-    assert row.context_1 == "morning"
-    assert row.context_2 == "room-A"
-    assert row.context_3 is None
+    assert row.assignment_context_1 == "morning"
+    assert row.assignment_context_2 == "room-A"
+    assert row.assignment_context_3 is None
+    assert row.pair_context_1 is None
+
+
+def test_pair_context_columns_carried(db: Session) -> None:
+    user = _user(db)
+    session = _session(db, user)
+    alice = _reviewer(db, session.id, "Alice", "alice@example.edu")
+    carol = _reviewee(db, session.id, "Carol", "carol@example.edu")
+
+    csv = (
+        b"ReviewerEmail,RevieweeEmail,PairContext1,PairContext2,PairContext3\n"
+        b"alice@example.edu,carol@example.edu,morning,room-A,note\n"
+    )
+    result = parse_manual_csv(csv, [alice], [carol])
+
+    assert result.issues == []
+    row = result.rows[0]
+    assert row.pair_context_1 == "morning"
+    assert row.pair_context_2 == "room-A"
+    assert row.pair_context_3 == "note"
+    assert row.assignment_context_1 is None
+
+
+def test_pair_and_assignment_context_columns_independent(db: Session) -> None:
+    user = _user(db)
+    session = _session(db, user)
+    alice = _reviewer(db, session.id, "Alice", "alice@example.edu")
+    carol = _reviewee(db, session.id, "Carol", "carol@example.edu")
+
+    csv = (
+        b"ReviewerEmail,RevieweeEmail,PairContext1,AssignmentContext1\n"
+        b"alice@example.edu,carol@example.edu,room-A,panel-1\n"
+    )
+    result = parse_manual_csv(csv, [alice], [carol])
+
+    assert result.issues == []
+    row = result.rows[0]
+    assert row.pair_context_1 == "room-A"
+    assert row.assignment_context_1 == "panel-1"
 
 
 def test_missing_required_column_blocks(db: Session) -> None:

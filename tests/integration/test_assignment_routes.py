@@ -356,8 +356,8 @@ def test_manual_save_persists_with_include_and_context(
     by_reviewer = {r.reviewer.email: r for r in rows}
     assert by_reviewer["alice@example.edu"].include is True
     assert by_reviewer["alice@example.edu"].context == {
-        "context_1": "morning",
-        "context_2": "room-A",
+        "assignment_context_1": "morning",
+        "assignment_context_2": "room-A",
     }
     assert by_reviewer["bob@example.edu"].include is False
     assert by_reviewer["bob@example.edu"].context is None
@@ -500,3 +500,35 @@ def test_manual_preview_shows_roster_names(client: TestClient, db: Session) -> N
     body = response.text
     assert "Alice Example" in body
     assert "Carol Example" in body
+
+
+def test_manual_save_persists_pair_and_assignment_context(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="m-context")
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=["alice@example.edu"],
+        reviewee_idents=["carol@example.edu"],
+    )
+
+    csv_body = (
+        b"ReviewerEmail,RevieweeEmail,PairContext1,AssignmentContext1\n"
+        b"alice@example.edu,carol@example.edu,room-A,panel-1\n"
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/manual/import",
+        files={"file": ("manual.csv", csv_body, "text/csv")},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).scalar_one()
+    assert assignment.context == {
+        "pair_context_1": "room-A",
+        "assignment_context_1": "panel-1",
+    }

@@ -53,9 +53,12 @@
             {% if has_context %}
               <td>
                 {% if assignment.context %}
-                  {% if assignment.context.context_1 %}1: {{ assignment.context.context_1 }}<br>{% endif %}
-                  {% if assignment.context.context_2 %}2: {{ assignment.context.context_2 }}<br>{% endif %}
-                  {% if assignment.context.context_3 %}3: {{ assignment.context.context_3 }}{% endif %}
+                  {% if assignment.context.pair_context_1 %}P1: {{ assignment.context.pair_context_1 }}<br>{% endif %}
+                  {% if assignment.context.pair_context_2 %}P2: {{ assignment.context.pair_context_2 }}<br>{% endif %}
+                  {% if assignment.context.pair_context_3 %}P3: {{ assignment.context.pair_context_3 }}<br>{% endif %}
+                  {% if assignment.context.assignment_context_1 %}A1: {{ assignment.context.assignment_context_1 }}<br>{% endif %}
+                  {% if assignment.context.assignment_context_2 %}A2: {{ assignment.context.assignment_context_2 }}<br>{% endif %}
+                  {% if assignment.context.assignment_context_3 %}A3: {{ assignment.context.assignment_context_3 }}{% endif %}
                 {% endif %}
               </td>
             {% endif %}
