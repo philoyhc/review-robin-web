@@ -12,7 +12,7 @@ enum and rewires the activation flow against it.
   route that can affect validation outcome. The locked set:
   - reviewer import + delete-all
   - reviewee import + delete-all
-  - assignment generate + delete-all
+  - assignment generate + import + delete-all
   - session edit (name / code / description / deadline)
 
   Instrument open/close/visibility do **not** invalidate (they don't change
@@ -30,6 +30,9 @@ enum and rewires the activation flow against it.
 - **D6 — Scope split.** 9.4B shipped against the two-state semantics
   (`draft`/`ready`); 9.5A introduces `validated` and rewrites every mutating
   route's invalidation hook.
+
+  Note: assignment import covers the manual-mode CSV path
+  (`POST /operator/sessions/{id}/assignments/manual/import`).
 
 ## Transition mechanics (resolved 2026-04-29)
 
