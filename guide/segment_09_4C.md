@@ -47,6 +47,7 @@ _Not yet drafted. Sketch:_
 - **Add / delete instruments** — disabled per Decision 11; Segment 13 (multi-instrument).
 - **Sticky validate-summary across refresh** — query-param branch from 9.4B is one-shot by design; durable summary lands when `validated` becomes a stored state in Segment 9.5.
 - **`spec/target_operator_map.md` edits** — already synced; only touch if a verify-pass surfaces stale wording.
+- **Folding per-instrument runtime controls (`/instruments/{iid}` open / close / visibility) back into the Session setup table** is a possible future direction; not in 9.4C. 9.4C ships the `/instruments` index as an additive layer above the per-instrument page, matching today's `target_operator_map.md`. The slice work should keep the per-instrument page untouched so a later absorption is a clean delete-and-inline rather than a multi-page rewrite.
 
 ---
 
