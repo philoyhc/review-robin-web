@@ -74,3 +74,13 @@ Analogous to the reviewers / reviewees pages:
   implemented).
 - Table of assignments.
 - **Danger Zone**: **Delete** button.
+
+## `/operator/sessions/{id}/invitations` — Invitations
+
+_Placeholder — to be specified._
+
+## `/operator/sessions/{id}/instrument/{instrument_id}` — Instrument
+
+_Placeholder — to be specified. Single-instrument sessions still
+address the lone instrument as `.../instrument/1` (etc.); the path
+always includes the instrument id._
