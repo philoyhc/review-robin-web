@@ -11,7 +11,8 @@ Every operator page renders the same chrome before its body:
 
 - **App identity (top left).** The text "Review Robin Web App
   (version {num})" rendered small (not large heading), as a link to
-  `/operator/sessions`.
+  `/about`. (Operators reach the sessions list via the breadcrumb,
+  not via the app-identity text.)
 - **User card (top right).** A small card with "Signed in as
   {user name}" and a **Sign out** button. The Sign out button posts /
   links to `/.auth/logout`.
@@ -119,3 +120,8 @@ session detail._
 _Placeholder — to be specified. Hosts invitation management:
 sending, link to outbox, etc. Reached from the **Manage Invitations**
 button on the session detail._
+
+## `/about` — About
+
+_Placeholder — to be specified. Reached from the app-identity text
+at the top left of every operator page._

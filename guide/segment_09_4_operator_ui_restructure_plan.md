@@ -35,8 +35,10 @@ Replaces today's topbar. Implemented in `app/web/templates/base.html`
 plus a new `_partials/breadcrumb.html`.
 
 - **Top left.** Small "Review Robin Web App (version {num})" text
-  (not a large heading), linked to `/operator/sessions`. The version
-  string comes from a single source (e.g. `app.config.APP_VERSION`).
+  (not a large heading), linked to `/about`. The version string
+  comes from a single source (e.g. `app.config.APP_VERSION`).
+  Operators navigate to the sessions list via the breadcrumb, not
+  the app-identity text.
 - **Top left, just below the app identity.** Breadcrumb trail.
   Each page passes a list of `(label, url|None)` tuples; the last
   tuple has `url=None` to mark the current page (rendered as plain
@@ -138,6 +140,8 @@ New surface added by 9.4:
   back-breadcrumb. No POST routes yet.
 - `GET /operator/sessions/{id}/extract` — placeholder page with the
   "Extract Data coming in Segment 11" notice. No POST routes.
+- `GET /about` — short stub page; target of the chrome's
+  app-identity link.
 
 ## Implementation slices
 
@@ -203,6 +207,8 @@ New surface added by 9.4:
   "Email template editor — Segment 15" notice.
 - New `GET /operator/sessions/{id}/extract`: stub page with the
   "Extract Data — Segment 11" notice.
+- New `GET /about`: stub page (single short paragraph + version
+  string). Targets the chrome's app-identity link.
 
 ### Slice 5 — Delete Data + Danger zone wiring
 
