@@ -26,16 +26,24 @@ they are specified.
 ## `/operator/sessions/{id}` — Session detail
 
 - **Session** card: session details, status, **Edit details** button.
-- **Session setup** card — table:
-  - **Reviewers** row: number, status, **Manage** button.
-  - **Reviewees** row: number, status, **Manage** button.
-  - **Instrument 1** row: status, **Manage** button. Always present.
-  - **Instrument 2…6** rows: status, **Manage** button, **Delete**
+- **Session setup** card — table. Each row's **Manage** button links
+  to the matching subpage (listed below):
+  - **Reviewers** row: number, status, **Manage** →
+    `/operator/sessions/{id}/reviewers`.
+  - **Reviewees** row: number, status, **Manage** →
+    `/operator/sessions/{id}/reviewees`.
+  - **Instrument 1** row: status, **Manage** →
+    `/operator/sessions/{id}/instruments/{instrument_id}`. Always
+    present.
+  - **Instrument 2…6** rows: status, **Manage** →
+    `/operator/sessions/{id}/instruments/{instrument_id}`, **Delete**
     button. Each row only exists if the operator has added that
     instrument; capped at 6 instruments total. (Add-instrument
     affordance: TBD.)
-  - **Assignments** row: number, mode, **Manage** button.
-  - **Invitations** row: number, status, **Manage** button.
+  - **Assignments** row: number, mode, **Manage** →
+    `/operator/sessions/{id}/assignments`.
+  - **Invitations** row: number, status, **Manage** →
+    `/operator/sessions/{id}/invitations`.
 - **Run Session** card:
   - **Validate Session Setup** button
   - **Manage Invitations** button
@@ -79,8 +87,8 @@ Analogous to the reviewers / reviewees pages:
 
 _Placeholder — to be specified._
 
-## `/operator/sessions/{id}/instrument/{instrument_id}` — Instrument
+## `/operator/sessions/{id}/instruments/{instrument_id}` — Instrument
 
 _Placeholder — to be specified. Single-instrument sessions still
-address the lone instrument as `.../instrument/1` (etc.); the path
+address the lone instrument as `.../instruments/1` (etc.); the path
 always includes the instrument id._
