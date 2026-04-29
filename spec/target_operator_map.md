@@ -42,11 +42,13 @@ they are specified.
     affordance: TBD.)
   - **Assignments** row: number, mode, **Manage** →
     `/operator/sessions/{id}/assignments`.
-  - **Invitations** row: number, status, **Manage** →
-    `/operator/sessions/{id}/invitations`.
+  - **Set up invites** row: number, status, **Manage** →
+    `/operator/sessions/{id}/setupinvite` (email template).
 - **Run Session** card:
   - **Validate Session Setup** button
-  - **Manage Invitations** button
+  - **Manage Invitations** button →
+    `/operator/sessions/{id}/setupinvite` (managing the invitations:
+    sending, link to outbox, etc.)
   - **Extract Data** button
 - **Danger zone** card:
   - **Delete Data** button — wipes collected response data only;
@@ -82,9 +84,16 @@ Analogous to the reviewers page:
 - Table of assignments.
 - **Danger Zone**: **Delete** button.
 
-## `/operator/sessions/{id}/invitations` — Invitations
+## `/operator/sessions/{id}/assignments/rules` — Assignment by Rules
 
 _Placeholder — to be specified._
+
+## `/operator/sessions/{id}/setupinvite` — Set up invites
+
+_Placeholder — to be specified. Single page that hosts both the
+invitation email template and invitation management (sending, outbox,
+etc.). Reached from both the **Set up invites** row's Manage button
+and the **Manage Invitations** button on the session detail._
 
 ## `/operator/sessions/{id}/instruments/{instrument_id}` — Instrument
 
