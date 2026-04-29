@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 9.4B (2026-04-29)
+**As of:** end of Segment 9.4C (2026-04-29)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -26,6 +26,7 @@ For the full long-term plan see
 | 2026-04-29 | Segment 9.3 shipped (monitoring page + reminder send) |
 | 2026-04-29 | Segment 9.4A shipped (page chrome + breadcrumbs + sessions list reshape + `/about`) |
 | 2026-04-29 | Segment 9.4B shipped (session detail four-card restructure + inline validate-summary + Delete Data) |
+| 2026-04-29 | Segment 9.4C shipped (Manage-page reshapes + instruments index + `/setupinvite` stub) |
 
 ---
 
@@ -46,6 +47,7 @@ For the full long-term plan see
 | 9.3 | Per-session monitoring page + per-row and bulk reminder send | 2026-04-29 |
 | 9.4A | Global page chrome (app identity + user card + breadcrumb), `/about` stub, sessions list per-row Access/Delete + Create-new-session button | 2026-04-29 |
 | 9.4B | Session detail four-card layout (Session / Session setup / Run Session / Danger zone), inline validate-summary card via `?validated=1`, `POST /delete-data` with `responses.deleted_all` audit event | 2026-04-29 |
+| 9.4C | Reviewers / reviewees / assignments Manage pages with anchored Upload-CSV cards and disabled Edit buttons; Assign by Rules placeholder card; `/operator/sessions/{id}/instruments` index page; `/operator/sessions/{id}/setupinvite` stub; setup-table Manage buttons for Instruments and Set up invites enabled | 2026-04-29 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
@@ -97,6 +99,25 @@ Migration round-trips on both SQLite (every test session) and Postgres
   in the `<link rel="icon">` data URI to change it; for a real
   graphic asset, mount `StaticFiles` and point `href` at
   `/static/favicon.png`.
+- **Manage-page reshape (Segment 9.4C)**: the reviewers, reviewees,
+  and assignments Manage pages now render an always-present
+  `<section id="upload-csv">` card with the existing import form;
+  the Upload CSV button is `<a href="#upload-csv">` (no JS, no
+  `<details>`, stateful via the URL fragment). Validation errors on
+  POST re-render the Manage page itself — there is no longer a
+  standalone `…/import` GET. The assignments page also carries an
+  anchored `<section id="rules">` "Assign by Rules" placeholder
+  (Rule editor — Segment 12) with a Cancel anchor that drops the
+  fragment. **Edit Reviewers / Reviewees / Assignments** buttons
+  render as disabled anchors (`<a class="btn disabled"
+  aria-disabled="true">`) per the 9.4B disabled-affordance
+  convention. New `/operator/sessions/{id}/instruments` index lists
+  one card per instrument with the `accepting_responses` pill,
+  Manage link to the per-instrument page, and disabled
+  Add / Delete instrument buttons (Multi-instrument — Segment 13).
+  New `/operator/sessions/{id}/setupinvite` is a stub (Email
+  template editor — Segment 15). Session-detail Setup table Manage
+  buttons for Instruments and Set up invites are now real links.
 - **Page chrome (Segment 9.4A)** in `app/web/templates/base.html`:
   top-left "Review Robin Web App (version {num})" link to `/about`,
   breadcrumb trail rendered just below, top-right user card with
@@ -130,20 +151,20 @@ Migration round-trips on both SQLite (every test session) and Postgres
 | `POST /operator/sessions/{id}/delete` | delete session and all dependents (confirm; locked while `ready`) |
 | `POST /operator/sessions/{id}/delete-data` | wipe every reviewer Response for the session; preserves setup; allowed in any status; emits `responses.deleted_all` audit event |
 | `GET /operator/sessions/{id}/validate` | read-only setup validation deep-dive (Activate moved to the inline summary card on session detail) |
-| `GET /operator/sessions/{id}/reviewers` | roster Manage view |
-| `GET /operator/sessions/{id}/reviewers/import` | upload form |
-| `POST /operator/sessions/{id}/reviewers/import` | parse + replace + audit |
+| `GET /operator/sessions/{id}/reviewers` | roster Manage view with anchored `#upload-csv` import card and disabled Edit Reviewers button |
+| `POST /operator/sessions/{id}/reviewers/import` | parse + replace + audit; on validation errors re-renders the Manage page |
 | `POST /operator/sessions/{id}/reviewers/delete-all` | delete every reviewer + cascade |
-| `GET /operator/sessions/{id}/reviewees` | roster Manage view |
-| `GET /operator/sessions/{id}/reviewees/import` | upload form |
-| `POST /operator/sessions/{id}/reviewees/import` | parse + replace + audit |
+| `GET /operator/sessions/{id}/reviewees` | roster Manage view with anchored `#upload-csv` import card and disabled Edit Reviewees button |
+| `POST /operator/sessions/{id}/reviewees/import` | parse + replace + audit; on validation errors re-renders the Manage page |
 | `POST /operator/sessions/{id}/reviewees/delete-all` | delete every reviewee + cascade |
-| `GET /operator/sessions/{id}/assignments` | hub (counts, mode pill, current pairs) |
+| `GET /operator/sessions/{id}/assignments` | hub (counts, mode pill, current pairs) with anchored `#upload-csv` manual-import card, anchored `#rules` Assign-by-Rules placeholder, and disabled Edit Assignments button |
 | `POST /operator/sessions/{id}/assignments/full-matrix` | preview / save |
 | `POST /operator/sessions/{id}/assignments/manual/import` | preview / save |
 | `POST /operator/sessions/{id}/assignments/delete-all` | delete every assignment, clear mode |
 | `POST /operator/sessions/{id}/activate` | flip session draft→ready (warn-and-acknowledge for non-blocking findings) |
 | `POST /operator/sessions/{id}/revert` | flip session ready→draft (confirm checkbox; closes all instruments) |
+| `GET /operator/sessions/{id}/instruments` | instruments index — one card per instrument with `accepting_responses` pill + Manage link; Add / Delete instrument disabled until Segment 13 |
+| `GET /operator/sessions/{id}/setupinvite` | stub page — email-template editor lands in Segment 15 |
 | `GET /operator/sessions/{id}/instruments/{instrument_id}` | per-instrument acceptance + visibility sub-page |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/open` | start accepting responses (requires session ready, pre-deadline) |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/close` | stop accepting responses (manual) |
@@ -198,8 +219,10 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
 - **One-shot replace** with explicit confirm checkbox when the session
   already has rows. CSV files cap at 1 MiB / 5000 rows. Unknown
   columns are silently ignored. UTF-8 with BOM tolerated.
-- **Browseable Manage views** showing the saved rows in a table, with
-  Replace CSV link.
+- **Browseable Manage views** showing the saved rows in a table,
+  with an anchored `Upload CSV` card on the same page (no separate
+  `…/import` GET) and a disabled `Edit Reviewers` / `Edit Reviewees`
+  button reserved for the future inline-edit pattern.
 - **Setup validation** page lists structural issues (no reviewers, no
   reviewees, duplicate emails) plus info-level placeholders for not-
   yet-implemented surfaces.
