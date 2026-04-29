@@ -174,29 +174,6 @@ def validate_session(
     )
 
 
-@router.get("/sessions/{session_id}/reviewers/import", response_class=HTMLResponse)
-def reviewers_import_form(
-    request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_import_reviewers.html",
-        {
-            "user": user,
-            "session": review_session,
-            "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
-            "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
-            "issues": [],
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Import reviewers"
-            ),
-        },
-    )
-
-
 @router.post(
     "/sessions/{session_id}/reviewers/import",
     response_class=HTMLResponse,
@@ -220,33 +197,9 @@ async def reviewers_import_submit(
         user=user,
         db=db,
         kind="reviewers",
-        template="operator/session_import_reviewers.html",
         existing_count_fn=csv_imports.existing_reviewer_count,
         parse_fn=csv_imports.parse_reviewer_csv,
         save_fn=csv_imports.save_reviewers,
-    )
-
-
-@router.get("/sessions/{session_id}/reviewees/import", response_class=HTMLResponse)
-def reviewees_import_form(
-    request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_import_reviewees.html",
-        {
-            "user": user,
-            "session": review_session,
-            "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
-            "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
-            "issues": [],
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Import reviewees"
-            ),
-        },
     )
 
 
@@ -273,7 +226,6 @@ async def reviewees_import_submit(
         user=user,
         db=db,
         kind="reviewees",
-        template="operator/session_import_reviewees.html",
         existing_count_fn=csv_imports.existing_reviewee_count,
         parse_fn=csv_imports.parse_reviewee_csv,
         save_fn=csv_imports.save_reviewees,
@@ -290,7 +242,6 @@ async def _handle_import(
     user: User,
     db: Session,
     kind: str,
-    template: str,
     existing_count_fn,
     parse_fn,
     save_fn,
@@ -301,7 +252,16 @@ async def _handle_import(
     existing = existing_count_fn(db, review_session.id)
     assignment_count = csv_imports.existing_assignment_count(db, review_session.id)
 
-    crumb_label = "Import reviewers" if kind == "reviewers" else "Import reviewees"
+    if kind == "reviewers":
+        template = "operator/session_reviewers.html"
+        crumb_label = "Reviewers"
+        list_key = "reviewers"
+        list_items = assignments.list_reviewers(db, review_session.id)
+    else:
+        template = "operator/session_reviewees.html"
+        crumb_label = "Reviewees"
+        list_key = "reviewees"
+        list_items = assignments.list_reviewees(db, review_session.id)
 
     def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
         return _templates.TemplateResponse(
@@ -310,6 +270,7 @@ async def _handle_import(
             {
                 "user": user,
                 "session": review_session,
+                list_key: list_items,
                 "existing_count": existing,
                 "assignment_count": assignment_count,
                 "issues": result.issues,
@@ -546,6 +507,9 @@ def reviewers_list(
             "user": user,
             "session": review_session,
             "reviewers": reviewers,
+            "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
+            "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
+            "issues": [],
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Reviewers"
             ),
@@ -568,6 +532,9 @@ def reviewees_list(
             "user": user,
             "session": review_session,
             "reviewees": reviewees,
+            "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
+            "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
+            "issues": [],
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Reviewees"
             ),
@@ -882,6 +849,57 @@ def session_revert_to_draft(
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}",
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/instruments",
+    response_class=HTMLResponse,
+)
+def instruments_index(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    lifecycle.observe_deadline(db, review_session)
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.id)
+        ).scalars()
+    )
+    return _templates.TemplateResponse(
+        request,
+        "operator/instruments_index.html",
+        {
+            "user": user,
+            "session": review_session,
+            "instruments": instruments,
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Instruments"
+            ),
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/setupinvite", response_class=HTMLResponse)
+def setupinvite_stub(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+) -> HTMLResponse:
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_setupinvite.html",
+        {
+            "user": user,
+            "session": review_session,
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Set up invites"
+            ),
+        },
     )
 
 

@@ -113,9 +113,10 @@ def test_build_setup_rows_returns_expected_shape(
     assert by_label["Reviewers"].value == "1"
     assert by_label["Reviewers"].manage_url.endswith("/reviewers")
     assert by_label["Reviewers"].manage_disabled is False
-    assert by_label["Instruments"].manage_disabled is True
-    assert "9.4C" in (by_label["Instruments"].manage_disabled_reason or "")
-    assert by_label["Set up invites"].manage_disabled is True
+    assert by_label["Instruments"].manage_disabled is False
+    assert by_label["Instruments"].manage_url.endswith("/instruments")
+    assert by_label["Set up invites"].manage_disabled is False
+    assert by_label["Set up invites"].manage_url.endswith("/setupinvite")
     assert by_label["Assignments"].value == "1"
 
 
@@ -139,18 +140,14 @@ def test_session_detail_renders_four_cards(
     assert "Validate & activate" not in body
 
 
-def test_setup_table_renders_disabled_manage_for_9_4c_rows(
+def test_setup_table_renders_manage_links(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="disabled-manage")
 
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    # Instruments row's Manage button is disabled
-    assert "Instruments index lands in Segment 9.4C" in body
-    # Set up invites row exists with disabled Manage
-    assert "Email template editor lands in Segment 9.4C" in body
-    # Reviewers / Reviewees / Assignments Manage buttons are real anchors
+    # All five Manage buttons are real anchors after 9.4C
     assert (
         f'href="/operator/sessions/{review_session.id}/reviewers"' in body
     )
@@ -159,6 +156,12 @@ def test_setup_table_renders_disabled_manage_for_9_4c_rows(
     )
     assert (
         f'href="/operator/sessions/{review_session.id}/assignments"' in body
+    )
+    assert (
+        f'href="/operator/sessions/{review_session.id}/instruments"' in body
+    )
+    assert (
+        f'href="/operator/sessions/{review_session.id}/setupinvite"' in body
     )
 
 
