@@ -5,6 +5,15 @@ surface. This is the design target, not what currently ships — see
 `spec/operator_map.md` for today's implementation. Pages are added as
 they are specified.
 
+## Cross-page conventions
+
+- **Breadcrumb navigation.** Every page renders a breadcrumb trail at
+  the top reflecting its position in the operator hierarchy (e.g.
+  `Sessions › {session name} › Reviewers`). Each segment except the
+  current page is a link to that ancestor page. Breadcrumbs replace
+  per-page back-link buttons, so individual page specs below do not
+  list a separate back link.
+
 ## `/operator/sessions` — Sessions list
 
 - Table of sessions, one row per session, with two per-row buttons:
@@ -36,7 +45,6 @@ they are specified.
     setup items (reviewers, reviewees, instruments, assignments,
     invitations) stay.
   - **Delete Session** button — removes everything for the session.
-- Back link/button → `/operator/sessions`.
 
 ## `/operator/sessions/{id}/reviewers` — Reviewers
 
@@ -45,7 +53,6 @@ they are specified.
   inline-editable table on the same page (not yet implemented).
 - Table of reviewers.
 - **Danger Zone**: **Delete** button.
-- Back link/button → `/operator/sessions/{id}` (the session page).
 
 ## `/operator/sessions/{id}/reviewees` — Reviewees
 
@@ -56,4 +63,3 @@ Analogous to the reviewers page:
   inline-editable table on the same page (not yet implemented).
 - Table of reviewees.
 - **Danger Zone**: **Delete** button.
-- Back link/button → `/operator/sessions/{id}` (the session page).
