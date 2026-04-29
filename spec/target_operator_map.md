@@ -47,7 +47,7 @@ they are specified.
 - **Run Session** card:
   - **Validate Session Setup** button
   - **Manage Invitations** button →
-    `/operator/sessions/{id}/setupinvite` (managing the invitations:
+    `/operator/sessions/{id}/invitations` (managing the invitations:
     sending, link to outbox, etc.)
   - **Extract Data** button
 - **Danger zone** card:
@@ -90,10 +90,15 @@ _Placeholder — to be specified._
 
 ## `/operator/sessions/{id}/setupinvite` — Set up invites
 
-_Placeholder — to be specified. Single page that hosts both the
-invitation email template and invitation management (sending, outbox,
-etc.). Reached from both the **Set up invites** row's Manage button
-and the **Manage Invitations** button on the session detail._
+_Placeholder — to be specified. Hosts the invitation email template.
+Reached from the **Set up invites** row's Manage button on the
+session detail._
+
+## `/operator/sessions/{id}/invitations` — Manage invitations
+
+_Placeholder — to be specified. Hosts invitation management:
+sending, link to outbox, etc. Reached from the **Manage Invitations**
+button on the session detail._
 
 ## `/operator/sessions/{id}/instruments/{instrument_id}` — Instrument
 
