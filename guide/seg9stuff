@@ -42,3 +42,26 @@ Lazily
 
 Q: Segment 9 suggests one branch covering activation + invitations + monitoring + reminders + per-instrument open/close. That's 5 sub-features and ~30+ tests. Want it as one PR (like 8A), or split (e.g. 9A.1 = activation + open/close gate; 9A.2 = invitations + monitoring + reminders)?
 In 2 PRs; when drafting 9A, do in two blocks, 9A.1. Then, 9A.2
+
+---
+
+Q1. Naming update: should we treat “Plan 9_1A” as (a) Segment 9.1 implementation plan as one PR, or (b) split 9.1 further into 9.1A/9.1B?
+Use (a) scope intent, but update seg9stuff/planning to at least 3 blocks total for Segment 9: 9.1, 9.2, 9.3. Each segment should also have its own A-plan version markdown. No need to split 9.1 further.
+
+Q2. Activation readiness gate behavior: block only on errors, or also warnings/info? Must assignment_mode be set / at least one assignment exist?
+Block on errors by default, warn on warnings/info, but allow operator explicit consent to continue.
+
+Q3. Edit-lock surface while Ready: block session edit/delete, reviewer/reviewee import + delete-all, assignment generate + delete-all; still allow read pages, per-instrument open/close page, and revert to draft.
+Yes. Revert-to-Draft requires a confirm checkbox.
+
+Q4. Expired/Archived pre-positioning: schema-only reservation vs UI hooks.
+Schema-level reservation only is fine.
+
+Q5. responses_visible_when_closed semantics in 9.1.
+Visibility policy should be operator-controlled, not reviewer-controlled.
+
+Q6. Lazy deadline-close audit trigger source.
+OK to fire lazily from reviewer GET routes too (not operator-only).
+
+Q7. Scope of save/submit/clear gating when not accepting.
+Gate strictly: allow writes only when instrument.accepting_responses is true, session is Ready, and now() < deadline.
