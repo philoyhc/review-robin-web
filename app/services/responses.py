@@ -372,6 +372,58 @@ def clear_all(
 
 
 @dataclass
+class DeleteAllResult:
+    deleted_count: int
+
+
+def delete_all_for_session(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str,
+) -> DeleteAllResult:
+    """Delete every Response row for the session in one transaction.
+
+    Preserves reviewers, reviewees, assignments, instruments, invitations.
+    Allowed in any session status (operator-driven wipe of response data
+    only). Emits a single ``responses.deleted_all`` audit event.
+    """
+    assignment_ids = list(
+        db.execute(
+            select(Assignment.id).where(
+                Assignment.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    deleted = 0
+    if assignment_ids:
+        rows = list(
+            db.execute(
+                select(Response).where(
+                    Response.assignment_id.in_(assignment_ids)
+                )
+            ).scalars()
+        )
+        for row in rows:
+            db.delete(row)
+            deleted += 1
+        db.flush()
+
+    audit.write_event(
+        db,
+        event_type="responses.deleted_all",
+        summary=f"Deleted {deleted} response{'' if deleted == 1 else 's'} (operator)",
+        actor_user_id=user.id,
+        session_id=review_session.id,
+        detail={"deleted_count": deleted},
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return DeleteAllResult(deleted_count=deleted)
+
+
+@dataclass
 class SessionPill:
     """One reviewer's per-session aggregate state for the dashboard."""
 

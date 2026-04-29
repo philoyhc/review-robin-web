@@ -5,8 +5,9 @@
 {% block content %}
   <h1>{{ session.name }}</h1>
 
+  {# Card 1: Session #}
   <div class="card">
-    <h2>Details</h2>
+    <h2>Session</h2>
     <p>
       <strong>Status:</strong>
       {% if is_ready %}
@@ -23,69 +24,6 @@
         Session is <strong>ready</strong> — setup edits are locked. Revert to
         draft below to make changes.
       </p>
-    {% else %}
-      <p>
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit details</a>
-      </p>
-    {% endif %}
-  </div>
-
-  <div class="card">
-    <h2>Setup</h2>
-    <ul>
-      <li>
-        Reviewers: <strong>{{ reviewer_count }}</strong>
-        &middot;
-        <a href="/operator/sessions/{{ session.id }}/reviewers">Manage</a>
-        &middot;
-        <a href="/operator/sessions/{{ session.id }}/reviewers/import">{% if reviewer_count %}Replace{% else %}Import{% endif %} CSV</a>
-      </li>
-      <li>
-        Reviewees: <strong>{{ reviewee_count }}</strong>
-        &middot;
-        <a href="/operator/sessions/{{ session.id }}/reviewees">Manage</a>
-        &middot;
-        <a href="/operator/sessions/{{ session.id }}/reviewees/import">{% if reviewee_count %}Replace{% else %}Import{% endif %} CSV</a>
-      </li>
-      <li>
-        Instruments:
-        {% for instrument in instruments %}
-          <a href="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}">{{ instrument.name }}</a>
-          {% if instrument.accepting_responses %}
-            <span class="pill pill-info">open</span>
-          {% else %}
-            <span class="pill pill-warning">closed</span>
-          {% endif %}
-          {% if not loop.last %}&middot;{% endif %}
-        {% endfor %}
-      </li>
-      <li>
-        Assignments: <strong>{{ assignment_count }}</strong>
-        {% if session.assignment_mode %}
-          <span class="pill pill-info">{{ session.assignment_mode }}</span>
-        {% endif %}
-        &middot;
-        <a href="/operator/sessions/{{ session.id }}/assignments">{% if assignment_count %}Manage{% else %}Generate{% endif %}</a>
-      </li>
-    </ul>
-    <p>
-      <a class="btn secondary" href="/operator/sessions/{{ session.id }}/validate">Run setup validation</a>
-      {% if is_draft %}
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/validate#activate">Validate &amp; activate</a>
-      {% endif %}
-      <a class="btn secondary" href="/operator/sessions/{{ session.id }}/invitations">Invitations</a>
-      <a class="btn secondary" href="/operator/sessions/{{ session.id }}/monitoring">Monitoring</a>
-    </p>
-  </div>
-
-  {% if is_ready %}
-    <div class="card" style="border-color: #d97706;">
-      <h2 style="color: #92400e;">Revert to draft</h2>
-      <p class="muted">
-        Reverting closes every instrument so reviewers can no longer save or
-        submit. Existing responses are preserved untouched and the reviewer
-        surface stays read-only.
-      </p>
       <form method="post" action="/operator/sessions/{{ session.id }}/revert">
         <p>
           <label style="font-weight: normal;">
@@ -99,8 +37,44 @@
                   type="submit">Revert to draft</button>
         </p>
       </form>
-    </div>
-  {% endif %}
+    {% else %}
+      <p>
+        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit details</a>
+      </p>
+    {% endif %}
+  </div>
+
+  {# Card 2: Session setup #}
+  <div class="card">
+    <h2>Session setup</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in setup_rows %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.value }}</td>
+            <td>
+              {% if row.manage_disabled %}
+                <a class="btn secondary disabled"
+                   aria-disabled="true"
+                   title="{{ row.manage_disabled_reason }}">Manage</a>
+              {% else %}
+                <a class="btn secondary"
+                   href="{{ row.manage_url }}">Manage</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
   {% if has_responses and is_draft %}
     <div class="card" style="border-color: #d97706; background: #fef3c7;">
@@ -113,18 +87,93 @@
     </div>
   {% endif %}
 
+  {# Inline validate-summary card (rendered when ?validated=1) #}
+  {% if validation_summary %}
+    <div class="card" id="validation-summary">
+      <h2>Validation summary</h2>
+      <p>
+        <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
+        <span class="pill pill-warning">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
+        <span class="pill pill-info">{{ validation_summary.info_count }} info</span>
+      </p>
+      {% if is_ready %}
+        <p class="muted">
+          Session is already <strong>ready</strong>. Reviewers can save and
+          submit responses on the open instruments.
+        </p>
+      {% elif validation_summary.can_activate %}
+        <form method="post" action="/operator/sessions/{{ session.id }}/activate">
+          {% if validation_summary.needs_acknowledge %}
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="acknowledge_warnings" value="true" required>
+                I have reviewed the warnings/info and want to activate anyway.
+              </label>
+            </p>
+          {% endif %}
+          <p>
+            <button class="btn" type="submit">Activate session</button>
+          </p>
+        </form>
+      {% else %}
+        <p class="muted">
+          Cannot activate while {{ validation_summary.error_count }}
+          error{% if validation_summary.error_count != 1 %}s remain{% else %} remains{% endif %}.
+          Resolve the errors above and re-run validation.
+        </p>
+      {% endif %}
+      <p>
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
+      </p>
+    </div>
+  {% endif %}
+
+  {# Card 3: Run Session #}
+  <div class="card">
+    <h2>Run Session</h2>
+    <p>
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}?validated=1">Validate Session Setup</a>
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/invitations">Manage Invitations</a>
+      <a class="btn secondary disabled"
+         aria-disabled="true"
+         title="Extract Data lands in Segment 11">Extract Data</a>
+    </p>
+  </div>
+
+  {# Card 4: Danger zone #}
   <div class="card" id="danger-zone" style="border-color: #b91c1c;">
     <h2 style="color: #b91c1c;">Danger zone</h2>
+    <p class="muted">
+      Delete data wipes every reviewer response while leaving setup intact.
+      Delete session removes the entire session and is locked while ready.
+    </p>
+
+    <form method="post" action="/operator/sessions/{{ session.id }}/delete-data">
+      <p>
+        <label style="font-weight: normal;">
+          <input type="checkbox" name="confirm" value="true" required>
+          Yes, delete every reviewer response on
+          <strong>{{ session.name }}</strong>. Setup data is preserved.
+        </label>
+      </p>
+      <p>
+        <button class="btn"
+                style="background: #b91c1c; border-color: #b91c1c;"
+                type="submit">Delete data</button>
+      </p>
+    </form>
+
+    <hr>
+
     {% if is_ready %}
       <p class="muted">
         Session deletion is locked while status is <strong>ready</strong>.
         Revert to draft first.
       </p>
     {% else %}
-      <p class="muted">
-        Deleting this session removes its reviewers, reviewees, assignments,
-        operator links, and audit trail. This cannot be undone.
-      </p>
       <form method="post" action="/operator/sessions/{{ session.id }}/delete">
         <p>
           <label style="font-weight: normal;">

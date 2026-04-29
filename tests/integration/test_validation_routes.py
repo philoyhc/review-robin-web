@@ -96,10 +96,14 @@ def test_session_detail_shows_counts_and_validate_link(
     empty_response = client.get(f"/operator/sessions/{review_session.id}")
     assert empty_response.status_code == 200
     body = empty_response.text
-    assert "Reviewers: <strong>0</strong>" in body
-    assert "Reviewees: <strong>0</strong>" in body
-    assert f"/operator/sessions/{review_session.id}/validate" in body
-    assert "Import CSV" in body
+    # Setup table cells for the count rows
+    assert "<td>Reviewers</td>" in body
+    assert "<td>Reviewees</td>" in body
+    assert "<td>Assignments</td>" in body
+    # Validate Session Setup button targets the ?validated=1 query branch
+    assert (
+        f'href="/operator/sessions/{review_session.id}?validated=1"' in body
+    )
 
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
@@ -117,5 +121,5 @@ def test_session_detail_shows_counts_and_validate_link(
 
     populated = client.get(f"/operator/sessions/{review_session.id}")
     body = populated.text
-    assert "Reviewers: <strong>2</strong>" in body
-    assert "Replace CSV" in body
+    # Reviewers count cell now shows 2
+    assert "<td>2</td>" in body
