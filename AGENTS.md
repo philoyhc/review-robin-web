@@ -18,7 +18,7 @@
 
 ## Current stage
 
-Segments 1–8 and 9 (9.1, 9.2, 9.3) complete. See `docs/status.md`
+Segments 1–8 and 9 (9.1, 9.2, 9.3, 9.4A) complete. See `docs/status.md`
 for the authoritative snapshot of what ships today; this section
 summarises only what an agent needs before opening files.
 
@@ -55,6 +55,12 @@ The project has:
   from the most recent invitation outbox row (no token rotation),
   falling back to a fresh send when an invitation has never been
   sent; single batch `reminders.sent` audit event per bulk send.
+- Page chrome + breadcrumbs (Segment 9.4A): global chrome on
+  `base.html` (app-identity link to `/about`, breadcrumb partial,
+  signed-in user card with Sign out); per-page back-links removed.
+  Breadcrumb factories live in `app/web/breadcrumbs.py`. Sessions
+  list reshaped: per-row Access/Delete buttons + Create-new-session
+  button below the table. New `/about` stub.
 
 Not yet implemented (do not add unless an issue explicitly asks):
 operator-editable instruments, export, RuleBased assignment,

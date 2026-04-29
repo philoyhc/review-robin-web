@@ -3,8 +3,6 @@
 {% block title %}{{ session.name }} — Review Robin Web{% endblock %}
 
 {% block content %}
-  <p><a href="/operator/sessions">&larr; All sessions</a></p>
-
   <h1>{{ session.name }}</h1>
 
   <div class="card">
@@ -115,7 +113,7 @@
     </div>
   {% endif %}
 
-  <div class="card" style="border-color: #b91c1c;">
+  <div class="card" id="danger-zone" style="border-color: #b91c1c;">
     <h2 style="color: #b91c1c;">Danger zone</h2>
     {% if is_ready %}
       <p class="muted">

@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import Instrument, Invitation, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
@@ -22,6 +23,7 @@ from app.services import (
     validation,
 )
 from app.services import session_lifecycle as lifecycle
+from app.web import breadcrumbs
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -31,6 +33,7 @@ from app.web.deps import (
 router = APIRouter(prefix="/operator", tags=["operator"])
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+_templates.env.globals["app_version"] = settings.app_version
 
 
 @router.get("/sessions", response_class=HTMLResponse)
@@ -43,7 +46,11 @@ def list_sessions(
     return _templates.TemplateResponse(
         request,
         "operator/sessions_list.html",
-        {"user": user, "sessions": review_sessions},
+        {
+            "user": user,
+            "sessions": review_sessions,
+            "breadcrumbs": breadcrumbs.operator_root(),
+        },
     )
 
 
@@ -55,7 +62,10 @@ def new_session_form(
     return _templates.TemplateResponse(
         request,
         "operator/session_new.html",
-        {"user": user},
+        {
+            "user": user,
+            "breadcrumbs": breadcrumbs.operator_new_session(),
+        },
     )
 
 
@@ -123,6 +133,7 @@ def session_detail(
             "is_draft": lifecycle.is_draft(review_session),
             "is_ready": lifecycle.is_ready(review_session),
             "has_responses": lifecycle.session_has_responses(db, review_session),
+            "breadcrumbs": breadcrumbs.operator_session(review_session),
         },
     )
 
@@ -150,6 +161,9 @@ def validate_session(
             "needs_acknowledge": report.has_non_blocking_findings,
             "is_draft": lifecycle.is_draft(review_session),
             "is_ready": lifecycle.is_ready(review_session),
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Validate setup"
+            ),
         },
     )
 
@@ -170,6 +184,9 @@ def reviewers_import_form(
             "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Import reviewers"
+            ),
         },
     )
 
@@ -220,6 +237,9 @@ def reviewees_import_form(
             "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Import reviewees"
+            ),
         },
     )
 
@@ -275,6 +295,8 @@ async def _handle_import(
     existing = existing_count_fn(db, review_session.id)
     assignment_count = csv_imports.existing_assignment_count(db, review_session.id)
 
+    crumb_label = "Import reviewers" if kind == "reviewers" else "Import reviewees"
+
     def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
         return _templates.TemplateResponse(
             request,
@@ -286,6 +308,9 @@ async def _handle_import(
                 "assignment_count": assignment_count,
                 "issues": result.issues,
                 "filename": file.filename,
+                "breadcrumbs": breadcrumbs.operator_session_child(
+                    review_session, crumb_label
+                ),
             },
             status_code=status_code,
         )
@@ -337,6 +362,9 @@ def assignments_hub(
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "pair_sample": pair_sample,
             "truncated_count": truncated_count,
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Assignments"
+            ),
         },
     )
 
@@ -392,6 +420,9 @@ def assignments_full_matrix(
                 "missing_confirm": needs_confirm and not is_dry_run,
                 "pair_sample": pair_sample,
                 "truncated_count": truncated_count,
+                "breadcrumbs": breadcrumbs.operator_session_child(
+                    review_session, "Preview FullMatrix"
+                ),
             },
             status_code=status_code,
         )
@@ -456,6 +487,9 @@ async def assignments_manual_import(
                 "needs_confirm_replace": existing > 0,
                 "missing_confirm": needs_confirm and not is_dry_run and not result.is_blocked,
                 "is_blocked": result.is_blocked,
+                "breadcrumbs": breadcrumbs.operator_session_child(
+                    review_session, "Preview manual import"
+                ),
             },
             status_code=status_code,
         )
@@ -502,7 +536,14 @@ def reviewers_list(
     return _templates.TemplateResponse(
         request,
         "operator/session_reviewers.html",
-        {"user": user, "session": review_session, "reviewers": reviewers},
+        {
+            "user": user,
+            "session": review_session,
+            "reviewers": reviewers,
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Reviewers"
+            ),
+        },
     )
 
 
@@ -517,7 +558,14 @@ def reviewees_list(
     return _templates.TemplateResponse(
         request,
         "operator/session_reviewees.html",
-        {"user": user, "session": review_session, "reviewees": reviewees},
+        {
+            "user": user,
+            "session": review_session,
+            "reviewees": reviewees,
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Reviewees"
+            ),
+        },
     )
 
 
@@ -530,7 +578,13 @@ def session_edit_form(
     return _templates.TemplateResponse(
         request,
         "operator/session_edit.html",
-        {"user": user, "session": review_session},
+        {
+            "user": user,
+            "session": review_session,
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Edit details"
+            ),
+        },
     )
 
 
@@ -822,6 +876,9 @@ def instrument_detail(
             "session": review_session,
             "instrument": instrument,
             "is_ready": lifecycle.is_ready(review_session),
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, instrument.name
+            ),
         },
     )
 
@@ -960,6 +1017,9 @@ def invitations_index(
             "uninvited_count": sum(1 for r in eligible if r.id not in invited_ids),
             "pending_count": len(pending_ids),
             "is_ready": lifecycle.is_ready(review_session),
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Invitations"
+            ),
         },
     )
 
@@ -1076,6 +1136,9 @@ def outbox_index(
             "user": user,
             "session": review_session,
             "rows": rows,
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Outbox"
+            ),
         },
     )
 
@@ -1105,6 +1168,9 @@ def session_monitoring(
             "summary": summary,
             "rows": rows,
             "is_ready": lifecycle.is_ready(review_session),
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Monitoring"
+            ),
         },
     )
 

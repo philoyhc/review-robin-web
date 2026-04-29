@@ -5,8 +5,6 @@
 {% block content %}
   <h1>Your sessions</h1>
 
-  <p><a class="btn" href="/operator/sessions/new">Create session</a></p>
-
   {% if sessions %}
     <table>
       <tr>
@@ -15,21 +13,30 @@
         <th>Status</th>
         <th>Deadline</th>
         <th>Created</th>
+        <th>Actions</th>
       </tr>
       {% for s in sessions %}
         <tr>
-          <td><a href="/operator/sessions/{{ s.id }}">{{ s.name }}</a></td>
+          <td>{{ s.name }}</td>
           <td><code>{{ s.code }}</code></td>
           <td>{{ s.status }}</td>
           <td>{{ s.deadline.isoformat() if s.deadline else "—" }}</td>
           <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
+          <td>
+            <a class="btn secondary" href="/operator/sessions/{{ s.id }}">Access</a>
+            <a class="btn danger" href="/operator/sessions/{{ s.id }}#danger-zone">Delete</a>
+          </td>
         </tr>
       {% endfor %}
     </table>
   {% else %}
     <div class="card">
       <p class="muted">You don't have any sessions yet.</p>
-      <p>Use <strong>Create session</strong> above to start your first review session.</p>
+      <p>Use <strong>Create new session</strong> below to start your first review session.</p>
     </div>
   {% endif %}
+
+  <p style="margin-top: 20px;">
+    <a class="btn" href="/operator/sessions/new">Create new session</a>
+  </p>
 {% endblock %}

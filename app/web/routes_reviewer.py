@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.config import settings
 from app.db.models import (
     Assignment,
     Instrument,
@@ -21,6 +22,7 @@ from app.db.session import get_db
 from app.services import invitations as invitations_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
+from app.web import breadcrumbs
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -30,6 +32,7 @@ from app.web.deps import (
 router = APIRouter(prefix="/reviewer", tags=["reviewer"])
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+_templates.env.globals["app_version"] = settings.app_version
 
 
 @router.get("", response_class=HTMLResponse)
@@ -64,7 +67,11 @@ def reviewer_dashboard(
     return _templates.TemplateResponse(
         request,
         "reviewer/dashboard.html",
-        {"user": user, "items": items},
+        {
+            "user": user,
+            "items": items,
+            "breadcrumbs": breadcrumbs.reviewer_root(),
+        },
     )
 
 
@@ -251,6 +258,7 @@ def review_surface(
         saved=saved == "ok",
         submitted=submitted == "ok",
     )
+    context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
     return _templates.TemplateResponse(
         request, "reviewer/review_surface.html", context
     )
@@ -328,6 +336,7 @@ async def reviewer_submit(
             missing=result.missing,
             show_acknowledge=True,
         )
+        context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
         return _templates.TemplateResponse(
             request,
             "reviewer/review_surface.html",
@@ -400,6 +409,7 @@ def reviewer_invite(
                 "user": user,
                 "session": review_session,
                 "reviewer_email": reviewer.email,
+                "breadcrumbs": breadcrumbs.reviewer_invite_mismatch(),
             },
             status_code=status.HTTP_403_FORBIDDEN,
         )

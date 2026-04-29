@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 9.3 (2026-04-29)
+**As of:** end of Segment 9.4A (2026-04-29)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -24,6 +24,7 @@ For the full long-term plan see
 | 2026-04-29 | Segment 9.1 shipped (session activation lifecycle + per-instrument acceptance gates) |
 | 2026-04-29 | Segment 9.2 shipped (per-reviewer invitations + dev outbox + token landing route) |
 | 2026-04-29 | Segment 9.3 shipped (monitoring page + reminder send) |
+| 2026-04-29 | Segment 9.4A shipped (page chrome + breadcrumbs + sessions list reshape + `/about`) |
 
 ---
 
@@ -42,6 +43,7 @@ For the full long-term plan see
 | 9.1 | Session activation lifecycle (draft↔ready), edit-lock, per-instrument open/close, response-window gates | 2026-04-29 |
 | 9.2 | Invitation generation + dev email outbox + `/reviewer/invite/{token}` landing route | 2026-04-29 |
 | 9.3 | Per-session monitoring page + per-row and bulk reminder send | 2026-04-29 |
+| 9.4A | Global page chrome (app identity + user card + breadcrumb), `/about` stub, sessions list per-row Access/Delete + Create-new-session button | 2026-04-29 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
@@ -93,10 +95,21 @@ Migration round-trips on both SQLite (every test session) and Postgres
   in the `<link rel="icon">` data URI to change it; for a real
   graphic asset, mount `StaticFiles` and point `href` at
   `/static/favicon.png`.
-- Topbar with sign-out link, monospace tabular code spans,
-  card-based layout, severity pills (`error` / `warning` / `info`)
-  for validation issues. All inline `<style>` in `base.html`. CSS
-  framework / extraction is a Segment 14 concern.
+- **Page chrome (Segment 9.4A)** in `app/web/templates/base.html`:
+  top-left "Review Robin Web App (version {num})" link to `/about`,
+  breadcrumb trail rendered just below, top-right user card with
+  "Signed in as ..." + Sign out. Per-page back-links are removed —
+  the breadcrumb replaces them. Operator-page crumbs root at
+  `Sessions → /operator/sessions`; reviewer-page crumbs root at
+  `Reviewer → /reviewer`. Crumb factories live in
+  `app/web/breadcrumbs.py`; the partial is
+  `app/web/templates/_partials/breadcrumb.html`. Version string
+  comes from `app.config.app_version` (`"dev"` for now;
+  pipeline-driven version bumping is a Segment 14 concern).
+- Card-based layout, monospace tabular code spans, severity pills
+  (`error` / `warning` / `info`) for validation issues. All inline
+  `<style>` in `base.html`. CSS framework / extraction is a Segment
+  14 concern.
 
 ### Operator-facing app
 
@@ -104,6 +117,7 @@ Migration round-trips on both SQLite (every test session) and Postgres
 |---|---|
 | `GET /` | service metadata |
 | `GET /health` | unauthenticated `{"status": "ok"}` |
+| `GET /about` | unauthenticated stub page; chrome's app-identity link target |
 | `GET /me`, `/me/debug` | identity introspection |
 | `GET /operator/sessions` | list of sessions where user is operator |
 | `GET /operator/sessions/new` | create form |

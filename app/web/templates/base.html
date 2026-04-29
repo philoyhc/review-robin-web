@@ -15,15 +15,44 @@
       }
       h1 { margin-top: 0; }
       a { color: #2563eb; }
-      .topbar {
+      .chrome {
         display: flex;
         justify-content: space-between;
-        align-items: baseline;
+        align-items: flex-start;
         border-bottom: 1px solid #eee;
         padding-bottom: 12px;
         margin-bottom: 24px;
+        gap: 16px;
       }
-      .topbar .who { color: #555; font-size: 0.9em; }
+      .chrome-left { display: flex; flex-direction: column; gap: 4px; }
+      .chrome-app-identity {
+        font-size: 0.85em;
+        color: #555;
+        text-decoration: none;
+      }
+      .chrome-app-identity:hover { text-decoration: underline; }
+      .breadcrumb { font-size: 0.95em; }
+      .breadcrumb a { color: #2563eb; text-decoration: none; }
+      .breadcrumb a:hover { text-decoration: underline; }
+      .breadcrumb span[aria-current="page"] { color: #222; font-weight: 600; }
+      .breadcrumb-sep { color: #999; margin: 0 6px; }
+      .chrome-user {
+        font-size: 0.85em;
+        color: #555;
+        text-align: right;
+        line-height: 1.4;
+      }
+      .chrome-user .signout {
+        display: inline-block;
+        margin-top: 4px;
+        padding: 4px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        text-decoration: none;
+        color: #222;
+        font-size: 0.9em;
+      }
+      .chrome-user .signout:hover { background: #f4f4f4; }
       .card {
         border: 1px solid #ddd;
         border-radius: 12px;
@@ -55,6 +84,11 @@
         background: #fff;
         color: #2563eb;
       }
+      .btn.danger {
+        background: #fff;
+        color: #b91c1c;
+        border-color: #b91c1c;
+      }
       label { display: block; margin-top: 12px; font-weight: 600; }
       input[type="text"], textarea, input[type="datetime-local"] {
         width: 100%;
@@ -81,14 +115,17 @@
     </style>
   </head>
   <body>
-    <div class="topbar">
-      <div><a href="/operator/sessions">Review Robin Web</a></div>
-      <div class="who">
-        {% if user %}
-          Signed in as {{ user.display_name or user.email }}
-          &middot; <a href="/.auth/logout">Sign out</a>
-        {% endif %}
+    <div class="chrome">
+      <div class="chrome-left">
+        <a class="chrome-app-identity" href="/about">Review Robin Web App (version {{ app_version }})</a>
+        {% include "_partials/breadcrumb.html" %}
       </div>
+      {% if user %}
+        <div class="chrome-user">
+          <div>Signed in as {{ user.display_name or user.email }}</div>
+          <a class="signout" href="/.auth/logout">Sign out</a>
+        </div>
+      {% endif %}
     </div>
 
     {% block content %}{% endblock %}
