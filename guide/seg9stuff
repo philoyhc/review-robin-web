@@ -1,0 +1,44 @@
+Q: Session lifecycle: adopt Draft / Ready / Expired / Archived as a status enum in 9A, or stay with the plan's binary "active flag"? Expired and Archived clearly belong to later segments — should 9A only ship Draft → Ready and reserve the others?
+It's ok to reserve the others so long as it doesn't cause us trouble later; if not costly, pre-position.
+
+Q: Instrument lifecycle: replace the plan's accepting_responses: bool with a status enum (draft / open / closed) + closes_at? Or keep the bool and treat Draft as implicit (no fields yet)?
+Keep is fine. This is an acceptable way to implement.
+
+Q: Session deadline auto-closes the Instrument: should is_instrument_accepting() also return false when now() >= session.deadline? Or copy session.deadline into instrument.closes_at at activation and let them diverge afterward?
+Session deadline should supersede/determine. It's ok to manage all deadlines from Session deadline.
+
+Q: Response visibility when closed: add a responses_visible_when_closed: bool (default false) toggle to Instrument in 9A, or defer to Segment 10 / 13 along with the instrument builder?
+Add toggle as pre-positioning
+
+Q: Activation reversibility: plan calls activation "irreversible except admin". Assumptions.md implies you can edit when paused → that suggests Ready → Draft should be a real transition. Allow operator to revert to Draft (closes all instruments, freezes reviewer surface)? Or one-way for MVP?
+Allow operator to revert to Draft. Update relevant docs as needed
+
+Q: Edit-while-active + notify reviewers: in 9A do we just block edits when Ready, or build an edit-while-paused + reviewer-notification flow? (The latter feels too large for this segment.)
+Block edits
+
+Q: Token path: when a reviewer clicks an emailed link, do we (a) trust the token alone (anonymous access), or (b) require Easy Auth login + verify the token's email matches the signed-in user, like today's /reviewer flow?
+Sign in. Magic link deferred to new Segment 16
+
+Q: Token strength / lifetime: token is secrets.token_urlsafe(32) hashed with sha256, single-use for opened_at stamping but reusable for return visits, no expiry beyond instrument close — sound?
+Lifetime
+
+Q: Email dev mode: write to a new outbox table (operator-visible page) or just log + a mailto: "copy link" fallback? An outbox table is more useful but adds a model + migration.
+Outbox table
+
+Q: Real send: leave SMTP fully stubbed in 9A and ship the dev-outbox only? Or wire an EMAIL_BACKEND=smtp env var that's off by default?
+Defer to Segment 15
+
+Q: Per-instrument open/close UI location: new sub-page /operator/sessions/{id}/instruments/{instrument_id} (plan §9A option), or inline section on session_detail.html since today there's exactly one Instrument per session?
+New sub page
+
+Q: Monitoring page granularity: just per-reviewer table with counts (plan §8), or also per-reviewee progress? I'd defer per-reviewee.
+Defer
+
+Q: Reminder targeting: only not submitted reviewers, or also submitted but missing required (the warn-and-override case)? Plan §9 says "incomplete = not submitted OR required missing", which would chase reviewers who already overrode the warning.
+Yes
+
+Q: Deadline-driven close audit event: write the instrument.closed reason=deadline event lazily (first observing request) per plan, or skip the audit event for the deadline path entirely in 9A and add a periodic job in 11/14?
+Lazily
+
+Q: Segment 9 suggests one branch covering activation + invitations + monitoring + reminders + per-instrument open/close. That's 5 sub-features and ~30+ tests. Want it as one PR (like 8A), or split (e.g. 9A.1 = activation + open/close gate; 9A.2 = invitations + monitoring + reminders)?
+In 2 PRs; when drafting 9A, do in two blocks, 9A.1. Then, 9A.2
