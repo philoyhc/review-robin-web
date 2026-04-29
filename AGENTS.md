@@ -18,7 +18,7 @@
 
 ## Current stage
 
-Segments 1–8 and 9 (9.1, 9.2, 9.3, 9.4A) complete. See `docs/status.md`
+Segments 1–8 and 9 (9.1, 9.2, 9.3, 9.4A, 9.4B) complete. See `docs/status.md`
 for the authoritative snapshot of what ships today; this section
 summarises only what an agent needs before opening files.
 
@@ -61,6 +61,16 @@ The project has:
   Breadcrumb factories live in `app/web/breadcrumbs.py`. Sessions
   list reshaped: per-row Access/Delete buttons + Create-new-session
   button below the table. New `/about` stub.
+- Session detail four-card restructure (Segment 9.4B):
+  `app/web/templates/operator/session_detail.html` now renders four
+  cards — Session, Session setup (table fed by
+  `app/web/views.build_setup_rows`), Run Session, Danger zone.
+  Validate Session Setup uses a query-param branch on the existing
+  GET (`?validated=1`) to render an inline summary card with the
+  Activate form; the legacy activate form on `/validate` is removed
+  (page is the read-only deep-dive). New `POST /delete-data` wipes
+  every Response row for the session, preserves setup, allowed in
+  any status, emits `responses.deleted_all`.
 
 Not yet implemented (do not add unless an issue explicitly asks):
 operator-editable instruments, export, RuleBased assignment,

@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 9.4A (2026-04-29)
+**As of:** end of Segment 9.4B (2026-04-29)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -25,6 +25,7 @@ For the full long-term plan see
 | 2026-04-29 | Segment 9.2 shipped (per-reviewer invitations + dev outbox + token landing route) |
 | 2026-04-29 | Segment 9.3 shipped (monitoring page + reminder send) |
 | 2026-04-29 | Segment 9.4A shipped (page chrome + breadcrumbs + sessions list reshape + `/about`) |
+| 2026-04-29 | Segment 9.4B shipped (session detail four-card restructure + inline validate-summary + Delete Data) |
 
 ---
 
@@ -44,6 +45,7 @@ For the full long-term plan see
 | 9.2 | Invitation generation + dev email outbox + `/reviewer/invite/{token}` landing route | 2026-04-29 |
 | 9.3 | Per-session monitoring page + per-row and bulk reminder send | 2026-04-29 |
 | 9.4A | Global page chrome (app identity + user card + breadcrumb), `/about` stub, sessions list per-row Access/Delete + Create-new-session button | 2026-04-29 |
+| 9.4B | Session detail four-card layout (Session / Session setup / Run Session / Danger zone), inline validate-summary card via `?validated=1`, `POST /delete-data` with `responses.deleted_all` audit event | 2026-04-29 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
@@ -122,11 +124,12 @@ Migration round-trips on both SQLite (every test session) and Postgres
 | `GET /operator/sessions` | list of sessions where user is operator |
 | `GET /operator/sessions/new` | create form |
 | `POST /operator/sessions` | create + insert `SessionOperator` + audit + 303 |
-| `GET /operator/sessions/{id}` | session detail (counts, mode pill, links) |
+| `GET /operator/sessions/{id}` | session detail in four cards (Session / Session setup / Run Session / Danger zone). `?validated=1` re-runs setup validation and renders an inline summary card with the Activate form when there are no blocking errors. |
 | `GET /operator/sessions/{id}/edit` | edit form |
 | `POST /operator/sessions/{id}/edit` | apply changes + audit |
-| `POST /operator/sessions/{id}/delete` | delete session and all dependents (confirm) |
-| `GET /operator/sessions/{id}/validate` | setup validation page |
+| `POST /operator/sessions/{id}/delete` | delete session and all dependents (confirm; locked while `ready`) |
+| `POST /operator/sessions/{id}/delete-data` | wipe every reviewer Response for the session; preserves setup; allowed in any status; emits `responses.deleted_all` audit event |
+| `GET /operator/sessions/{id}/validate` | read-only setup validation deep-dive (Activate moved to the inline summary card on session detail) |
 | `GET /operator/sessions/{id}/reviewers` | roster Manage view |
 | `GET /operator/sessions/{id}/reviewers/import` | upload form |
 | `POST /operator/sessions/{id}/reviewers/import` | parse + replace + audit |
@@ -298,6 +301,7 @@ Every destructive operation writes an `audit_events` row with
 | `responses.saved` | reviewer saves a draft (incl. `count`, `reviewer_id`) |
 | `responses.submitted` | reviewer submits (incl. `count`, `missing_required_count`, `acknowledged_missing`) |
 | `responses.cleared` | reviewer clears all their responses in a session |
+| `responses.deleted_all` | operator-driven Delete Data on session detail (`detail.deleted_count`); allowed in any session status, including `ready` |
 | `session.activated` | operator flips session draft→ready (`detail.override_warnings`) |
 | `session.reverted_to_draft` | operator flips session ready→draft (`detail.closed_instrument_ids`, `response_count_at_revert`) |
 | `instrument.opened` | operator manually re-opens a closed instrument |

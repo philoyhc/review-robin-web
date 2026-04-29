@@ -8,6 +8,7 @@
   <p class="muted">
     Read-only view of setup readiness for this session. Errors must be
     cleared before activation. Warnings can be acknowledged and overridden.
+    Activate from the inline summary card on the session detail page.
   </p>
 
   <p>
@@ -17,41 +18,4 @@
   </p>
 
   {% include "operator/partials/validation_results.html" %}
-
-  <div class="card" id="activate" style="margin-top: 24px;">
-    <h2>Activate session</h2>
-    {% if is_ready %}
-      <p class="muted">
-        Session is already <strong>ready</strong>. Reviewers can save and
-        submit responses on the open instruments. Revert to draft from the
-        session detail page to make further setup changes.
-      </p>
-    {% elif not is_draft %}
-      <p class="muted">Session status is <code>{{ session.status }}</code>; activation not available.</p>
-    {% elif can_activate %}
-      <form method="post" action="/operator/sessions/{{ session.id }}/activate">
-        {% if needs_acknowledge %}
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="acknowledge_warnings" value="true" required>
-              I have reviewed the warnings/info above and want to activate
-              anyway.
-            </label>
-          </p>
-        {% endif %}
-        <p>
-          <button class="btn" type="submit">Activate session</button>
-        </p>
-        <p class="muted">
-          Activation flips every instrument open and lets reviewers start
-          submitting. You can revert to draft later from the session detail
-          page.
-        </p>
-      </form>
-    {% else %}
-      <p class="muted">
-        Cannot activate while {{ error_count }} error{% if error_count != 1 %}s remain{% else %} remains{% endif %} above.
-      </p>
-    {% endif %}
-  </div>
 {% endblock %}
