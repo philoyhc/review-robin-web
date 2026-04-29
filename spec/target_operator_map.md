@@ -7,12 +7,22 @@ they are specified.
 
 ## Cross-page conventions
 
-- **Breadcrumb navigation.** Every page renders a breadcrumb trail at
-  the top reflecting its position in the operator hierarchy (e.g.
+Every operator page renders the same chrome before its body:
+
+- **App identity (top left).** The text "Review Robin Web App
+  (version {num})" rendered small (not large heading), as a link to
+  `/operator/sessions`.
+- **User card (top right).** A small card with "Signed in as
+  {user name}" and a **Sign out** button. The Sign out button posts /
+  links to `/.auth/logout`.
+- **Breadcrumb trail (top left, just below the app identity).**
+  Reflects the page's position in the operator hierarchy (e.g.
   `Sessions › {session name} › Reviewers`). Each segment except the
   current page is a link to that ancestor page. Breadcrumbs replace
   per-page back-link buttons, so individual page specs below do not
-  list a separate back link.
+  list a separate back link, and individual page specs do not list a
+  separate Sign out control either.
+- **Page title.** The page's H1, rendered below the breadcrumb.
 
 ## `/operator/sessions` — Sessions list
 
@@ -20,8 +30,7 @@ they are specified.
   - **Access**
   - **Delete**
 - Below the table:
-  - **Create new session** button
-  - **Sign out** button
+  - **Create new session** button.
 
 ## `/operator/sessions/{id}` — Session detail
 
@@ -32,24 +41,19 @@ they are specified.
     `/operator/sessions/{id}/reviewers`.
   - **Reviewees** row: number, status, **Manage** →
     `/operator/sessions/{id}/reviewees`.
-  - **Instrument 1** row: status, **Manage** →
-    `/operator/sessions/{id}/instruments/{instrument_id}`. Always
-    present.
-  - **Instrument 2…6** rows: status, **Manage** →
-    `/operator/sessions/{id}/instruments/{instrument_id}`, **Delete**
-    button. Each row only exists if the operator has added that
-    instrument; capped at 6 instruments total. (Add-instrument
-    affordance: TBD.)
+  - **Instruments** row: count, status summary, **Manage** →
+    `/operator/sessions/{id}/instruments` (single index page; one
+    card per instrument, with add / edit / delete).
   - **Assignments** row: number, mode, **Manage** →
     `/operator/sessions/{id}/assignments`.
   - **Set up invites** row: number, status, **Manage** →
     `/operator/sessions/{id}/setupinvite` (email template).
 - **Run Session** card:
-  - **Validate Session Setup** button
+  - **Validate Session Setup** button.
   - **Manage Invitations** button →
     `/operator/sessions/{id}/invitations` (managing the invitations:
-    sending, link to outbox, etc.)
-  - **Extract Data** button
+    sending, link to outbox, etc.).
+  - **Extract Data** button.
 - **Danger zone** card:
   - **Delete Data** button — wipes collected response data only;
     setup items (reviewers, reviewees, instruments, assignments,
@@ -77,20 +81,36 @@ Analogous to the reviewers page:
 ## `/operator/sessions/{id}/assignments` — Assignments
 
 - **Assignments** card: numbers, **Upload CSV** button, **Assign by
-  Rules** button → `/operator/sessions/{id}/assignments/rules`,
-  **Edit Assignments** button. **Edit Assignments** turns the table
-  below into an inline-editable table on the same page (not yet
-  implemented).
+  Rules** button, **Edit Assignments** button.
+  - **Assign by Rules** reveals an additional card above the
+    assignments table. The card hosts the rules editor and exposes a
+    **Cancel** button that dismisses the card without saving. (No
+    separate `/assignments/rules` URL; the rules engine itself is
+    deferred — the card renders a placeholder until it lands.)
+  - **Edit Assignments** turns the table below into an
+    inline-editable table on the same page (not yet implemented).
 - Table of assignments.
 - **Danger Zone**: **Delete** button.
 
-## `/operator/sessions/{id}/assignments/rules` — Assignment by Rules
+## `/operator/sessions/{id}/instruments` — Instruments index
 
-_Placeholder — to be specified._
+- **Instruments** card: count, status summary, **Add Instrument**
+  button (deferred until multi-instrument support lands).
+- One card per instrument, each with: instrument name, status pill,
+  **Manage** → `/operator/sessions/{id}/instruments/{instrument_id}`,
+  **Delete** button (the lone first instrument is not deletable).
+
+## `/operator/sessions/{id}/instruments/{instrument_id}` — Instrument
+
+_Placeholder — to be specified. Single-instrument sessions still
+address the lone instrument as `.../instruments/1` (etc.); the path
+always includes the instrument id._
 
 ## `/operator/sessions/{id}/setupinvite` — Set up invites
 
-_Placeholder — to be specified. Hosts the invitation email template.
+_Placeholder — to be specified. Own page (rather than inline on the
+session detail) because the email-template editor is heavier than
+the rest of session setup. Hosts the invitation email template.
 Reached from the **Set up invites** row's Manage button on the
 session detail._
 
@@ -99,30 +119,3 @@ session detail._
 _Placeholder — to be specified. Hosts invitation management:
 sending, link to outbox, etc. Reached from the **Manage Invitations**
 button on the session detail._
-
-## `/operator/sessions/{id}/instruments/{instrument_id}` — Instrument
-
-_Placeholder — to be specified. Single-instrument sessions still
-address the lone instrument as `.../instruments/1` (etc.); the path
-always includes the instrument id._
-
-## Open design notes
-
-These are alternatives still under consideration; not decided.
-
-- **Note 1 — Inline `setupinvite`.** The content of
-  `/operator/sessions/{id}/setupinvite` could instead live inline on
-  `/operator/sessions/{id}/`, sitting below the Session setup card and
-  above the Danger zone, rather than on its own page.
-- **Note 2 — Inline assignment rules.** The content of
-  `/operator/sessions/{id}/assignments/rules` could instead live
-  inline on `/operator/sessions/{id}/assignments/`: pressing **Assign
-  by Rules** would reveal an additional card above the assignments
-  table; a **Cancel** button on that card would dismiss it.
-- **Note 3 — Single instruments index.** Instead of separate Instrument
-  1…6 rows in Session setup that each link to their own
-  `/operator/sessions/{id}/instruments/{instrument_id}` page, the
-  Session setup table could collapse to a single **Instruments** row
-  whose Manage button goes to `/operator/sessions/{id}/instruments`.
-  That index page would render one card per instrument with the
-  facilities to add, delete, and edit them.

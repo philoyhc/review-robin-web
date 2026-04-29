@@ -23,15 +23,36 @@ This is a UI restructure. No new domain behavior other than:
 - A new `Delete data` action on session detail that wipes responses
   while leaving setup intact (small new audit event).
 - A breadcrumb partial used by every operator template.
+- A global page chrome (app identity + signed-in user card) that
+  replaces the existing topbar.
 
 Everything else maps existing services / routes onto the target page
 shapes.
 
-## Decisions for the open design notes (`spec/target_operator_map.md`)
+## Cross-page chrome and breadcrumbs
 
-The spec carries three undecided alternatives. 9.4 adopts the
-following positions and updates the spec accordingly so this PR has
-a single source of truth:
+Replaces today's topbar. Implemented in `app/web/templates/base.html`
+plus a new `_partials/breadcrumb.html`.
+
+- **Top left.** Small "Review Robin Web App (version {num})" text
+  (not a large heading), linked to `/operator/sessions`. The version
+  string comes from a single source (e.g. `app.config.APP_VERSION`).
+- **Top left, just below the app identity.** Breadcrumb trail.
+  Each page passes a list of `(label, url|None)` tuples; the last
+  tuple has `url=None` to mark the current page (rendered as plain
+  text).
+- **Top right.** Small card containing "Signed in as {user name}"
+  and a **Sign out** button → `/.auth/logout`.
+- **Page H1.** Rendered below the breadcrumb in the page body.
+
+Per-page back links and per-page Sign out controls are removed — the
+chrome carries both.
+
+## Decisions on open design notes (now closed)
+
+The spec previously carried three undecided alternatives. 9.4 closes
+them as follows; the spec's "Open design notes" section is removed
+in Slice 1.
 
 ### Note 1 — `setupinvite` page vs. inline on session detail
 
@@ -65,7 +86,7 @@ row's Manage button.
   to the FullMatrix flow which is already inline.
 
 Net: keeping rules adjacent to the resulting pairs is the right UX
-shape. Spec is updated; the reserved URL goes away.
+shape. The reserved `/assignments/rules` URL goes away.
 
 ### Note 3 — One `/instruments` index vs. Instrument 1…6 rows
 
@@ -86,9 +107,6 @@ Net: a single index page is the structurally right answer and
 matches the rest of the table; the per-instrument detail page
 already exists today and stays as the index's row click-through.
 
-A spec-update commit at the start of 9.4 records these decisions
-and removes the "Open design notes" section.
-
 ## What ships today vs. what 9.4 changes
 
 Implemented and structurally close to the target — needs reshaping
@@ -96,7 +114,7 @@ or new buttons:
 
 | Today | 9.4 change |
 |---|---|
-| `GET /operator/sessions` (table with one big link per row) | Replace per-row link with **Access** + **Delete** buttons; replace top "Create session" link with a button below the table; add **Sign out** button below the table. |
+| `GET /operator/sessions` (table with one big link per row) | Replace per-row link with **Access** + **Delete** buttons; replace top "Create session" link with a button below the table. (Sign out lives in the top-right user card now, not below the table.) |
 | `GET /operator/sessions/{id}` (cards stacked freely) | Restructure into four cards: **Session** (details + Edit details), **Session setup** (table with one row each for Reviewers / Reviewees / Instruments / Assignments / Set up invites), **Run Session** (Validate Session Setup, Manage Invitations, Extract Data), **Danger zone** (Delete Data, Delete Session). |
 | `GET /operator/sessions/{id}/reviewers` (Manage view) | Promote the existing `/reviewers/import` form to a button on the Manage page (POST to a new combined endpoint). Add a disabled **Edit Reviewers** button (placeholder for the inline-editable mode, not yet implemented). |
 | `GET /operator/sessions/{id}/reviewees` | Same shape as reviewers. |
@@ -121,34 +139,31 @@ New surface added by 9.4:
 - `GET /operator/sessions/{id}/extract` — placeholder page with the
   "Extract Data coming in Segment 11" notice. No POST routes.
 
-## Cross-page convention: breadcrumbs
-
-A new `app/web/templates/_partials/breadcrumb.html` renders the
-trail. Each page passes a list of `(label, url|None)` tuples; the
-last tuple has `url=None` to mark the current page (rendered as
-plain text). Rendered in `base.html` above `{% block content %}`.
-
-The existing `← Back` `<a>` at the top of each operator template is
-removed in the same patch.
-
 ## Implementation slices
 
-### Slice 1 — Spec sync + breadcrumb plumbing
+### Slice 1 — Spec sync + page chrome + breadcrumb plumbing
 
-- Update `spec/target_operator_map.md`: drop the Open design notes
-  section, fold Decisions 1/2/3 into the existing page sections
-  (drop the rules placeholder; collapse Instruments rows into a
-  single row pointing at `/instruments`).
-- Add the breadcrumb partial and wire `base.html`.
-- Pass an empty crumb list from every existing operator template so
-  the partial renders a blank trail until later slices populate it.
+- Update `spec/target_operator_map.md` (spec sync): drop the Open
+  design notes section, fold Decisions 1/2/3 into the existing page
+  sections (drop the rules placeholder; collapse Instruments rows
+  into a single row pointing at `/instruments`).
+- Replace the existing topbar in `base.html` with the new chrome:
+  - Top-left "Review Robin Web App (version {num})" link.
+  - Top-right user card with "Signed in as {name}" + Sign out.
+  - Slot for breadcrumbs below the app identity.
+  - Slot for the page H1 in the page body.
+- Add `app/web/templates/_partials/breadcrumb.html`. Pass an empty
+  crumb list from every existing operator template so the partial
+  renders a blank trail until later slices populate it.
+- Remove the per-template `← Back` `<a>` links at the top of each
+  operator template.
 
 ### Slice 2 — Sessions list + session detail restructure
 
 - Sessions list: per-row **Access** + **Delete** buttons (Delete
   uses the existing `/delete` POST + confirm). Move "Create new
-  session" to a button below the table. Add a **Sign out** button
-  (same `/.auth/logout` link the topbar already uses).
+  session" to a button below the table. (Sign out is in the chrome
+  now, not under the table.)
 - Session detail: replace the current ad-hoc body with the four
   cards specified. The Setup table gets its rows from a single
   service helper that returns `[(label, count_or_status, manage_url,
@@ -219,6 +234,8 @@ removed in the same patch.
   9. `POST /delete-data` wipes responses and leaves setup rows
      intact; confirm checkbox required.
   10. Breadcrumb partial renders the expected trail on each page.
+  11. Chrome renders the app-identity link, the signed-in user
+      name, and a Sign out button on every operator page.
 - `docs/status.md`: add Segment 9.4 row; refresh the operator URL
   table (drop `…/reviewers/import` and `…/reviewees/import` GETs;
   add `…/instruments`, `…/setupinvite`, `…/extract`,
@@ -242,7 +259,11 @@ removed in the same patch.
 - **Session-status changes** — activation, revert, edit-lock all
   keep today's semantics; only the UI placement moves.
 - **Sign-out behavior** — reuses the existing `/.auth/logout` link;
-  no auth changes.
+  no auth changes (the chrome's Sign out button targets the same URL).
+- **Version string source** — wire to a single constant or env var;
+  the version-bumping process / release pipeline change is out of
+  scope for 9.4. If no source is wired today, surface the literal
+  `dev` string for now.
 
 ## Pre-positioned placeholders summary
 
