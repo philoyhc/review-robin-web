@@ -74,11 +74,10 @@ Analogous to the reviewers page:
 
 ## `/operator/sessions/{id}/assignments` — Assignments
 
-Analogous to the reviewers / reviewees pages:
-
-- **Assignments** card: numbers, **Upload CSV** button, **Edit
-  Assignments** button. **Edit Assignments** turns the table below
-  into an inline-editable table on the same page (not yet
+- **Assignments** card: numbers, **Upload CSV** button, **Assign by
+  Rules** button → `/operator/sessions/{id}/assignments/rules`,
+  **Edit Assignments** button. **Edit Assignments** turns the table
+  below into an inline-editable table on the same page (not yet
   implemented).
 - Table of assignments.
 - **Danger Zone**: **Delete** button.
