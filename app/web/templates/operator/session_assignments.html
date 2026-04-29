@@ -19,6 +19,13 @@
       &middot;
       Reviewees: <strong>{{ reviewee_count }}</strong>
     </p>
+    <p>
+      <a class="btn secondary" href="#upload-csv">Upload CSV</a>
+      <a class="btn secondary" href="#rules">Assign by Rules</a>
+      <a class="btn secondary disabled"
+         aria-disabled="true"
+         title="Inline editing — coming soon">Edit Assignments</a>
+    </p>
   </div>
 
   {% if pair_sample %}
@@ -77,12 +84,12 @@
       </p>
       <p>
         <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/reviewers/import">
-           Import reviewers
+           href="/operator/sessions/{{ session.id }}/reviewers">
+           Manage reviewers
         </a>
         <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/reviewees/import">
-           Import reviewees
+           href="/operator/sessions/{{ session.id }}/reviewees">
+           Manage reviewees
         </a>
       </p>
     </div>
@@ -104,15 +111,21 @@
         <button class="btn" type="submit">Generate FullMatrix</button>
       </form>
     </div>
+  {% endif %}
 
-    <div class="card" {% if reviewer_count == 0 or reviewee_count == 0 %}style="opacity: 0.6;"{% endif %}>
-      <h2>Manual CSV</h2>
+  <section class="card" id="upload-csv">
+    <h2>Upload CSV</h2>
+    <p class="muted">
+      Upload a CSV with one row per assignment. Required columns:
+      <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
+      Optional: <code>IncludeAssignment</code>,
+      <code>AssignmentContext1</code>/<code>2</code>/<code>3</code>.
+    </p>
+    {% if reviewer_count == 0 or reviewee_count == 0 %}
       <p class="muted">
-        Upload a CSV with one row per assignment. Required columns:
-        <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
-        Optional: <code>IncludeAssignment</code>,
-        <code>AssignmentContext1</code>/<code>2</code>/<code>3</code>.
+        Import reviewers and reviewees first.
       </p>
+    {% else %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/assignments/manual/import"
             enctype="multipart/form-data">
@@ -121,10 +134,21 @@
         <input type="hidden" name="dry_run" value="true">
         <p style="margin-top: 12px;">
           <button class="btn" type="submit">Manual Import</button>
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
         </p>
       </form>
-    </div>
-  {% endif %}
+    {% endif %}
+  </section>
+
+  <section class="card" id="rules">
+    <h2>Assign by Rules</h2>
+    <p class="muted">Rule editor — Segment 12.</p>
+    <p>
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+    </p>
+  </section>
 
   {% if assignment_count %}
     <div class="card" style="border-color: #b91c1c;">

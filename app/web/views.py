@@ -68,8 +68,6 @@ def build_setup_rows(
             label="Instruments",
             value=instrument_status,
             manage_url=f"/operator/sessions/{sid}/instruments",
-            manage_disabled=True,
-            manage_disabled_reason="Instruments index lands in Segment 9.4C",
         ),
         SetupRow(
             label="Assignments",
@@ -80,7 +78,5 @@ def build_setup_rows(
             label="Set up invites",
             value="—",
             manage_url=f"/operator/sessions/{sid}/setupinvite",
-            manage_disabled=True,
-            manage_disabled_reason="Email template editor lands in Segment 9.4C",
         ),
     ]

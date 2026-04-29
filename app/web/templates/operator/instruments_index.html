@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Instruments — {{ session.name }}{% endblock %}
+
+{% block content %}
+  <h1>Instruments</h1>
+
+  <div class="card">
+    <p>
+      <strong>{{ instruments | length }}</strong>
+      instrument{% if instruments | length != 1 %}s{% endif %}
+    </p>
+    <p>
+      <a class="btn secondary disabled"
+         aria-disabled="true"
+         title="Multi-instrument — Segment 13">Add instrument</a>
+    </p>
+  </div>
+
+  {% for instrument in instruments %}
+    <div class="card">
+      <h2>{{ instrument.name }}</h2>
+      <p>
+        <strong>Status:</strong>
+        {% if instrument.accepting_responses %}
+          <span class="pill pill-info">accepting responses</span>
+        {% else %}
+          <span class="pill pill-warning">not accepting</span>
+        {% endif %}
+      </p>
+      <p>
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}">Manage</a>
+        <a class="btn secondary disabled"
+           aria-disabled="true"
+           title="Multi-instrument — Segment 13">Delete instrument</a>
+      </p>
+    </div>
+  {% endfor %}
+{% endblock %}

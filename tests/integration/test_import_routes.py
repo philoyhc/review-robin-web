@@ -463,7 +463,7 @@ def test_reviewer_import_form_warns_about_cascade(
     )
 
     page = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers/import"
+        f"/operator/sessions/{review_session.id}/reviewers"
     )
 
     assert page.status_code == 200
