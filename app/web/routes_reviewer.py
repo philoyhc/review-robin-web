@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import (
     Assignment,
+    Instrument,
     InstrumentResponseField,
     Response,
     Reviewer,
@@ -18,6 +19,7 @@ from app.db.models import (
 )
 from app.db.session import get_db
 from app.services import responses as responses_service
+from app.services import session_lifecycle as lifecycle
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -84,6 +86,46 @@ def _load_assignments_with_relations(
     return list(db.execute(stmt).scalars())
 
 
+def _instruments_for_session(db: Session, session_id: int) -> dict[int, Instrument]:
+    rows = db.execute(
+        select(Instrument).where(Instrument.session_id == session_id)
+    ).scalars()
+    return {i.id: i for i in rows}
+
+
+def _require_session_accepting(
+    db: Session, review_session: ReviewSession, reviewer: Reviewer
+) -> None:
+    """Raise 403 unless every instrument the reviewer would write to is accepting."""
+    lifecycle.observe_deadline(db, review_session)
+    db.refresh(review_session)
+    assignments = db.execute(
+        select(Assignment).where(
+            Assignment.session_id == review_session.id,
+            Assignment.reviewer_id == reviewer.id,
+            Assignment.include.is_(True),
+        )
+    ).scalars()
+    instrument_ids = {a.instrument_id for a in assignments}
+    if not instrument_ids:
+        # No assignments — nothing to write. Treat as not accepting so the
+        # reviewer surface flow is consistent.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No longer accepting responses",
+        )
+    instruments = _instruments_for_session(db, review_session.id)
+    for instrument_id in instrument_ids:
+        instrument = instruments.get(instrument_id)
+        if instrument is None or not lifecycle.session_accepts_responses(
+            review_session, instrument
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No longer accepting responses",
+            )
+
+
 def _surface_context(
     *,
     db: Session,
@@ -95,6 +137,8 @@ def _surface_context(
     missing: list[responses_service.MissingPosition] | None = None,
     show_acknowledge: bool = False,
 ) -> dict:
+    lifecycle.observe_deadline(db, review_session)
+    db.refresh(review_session)
     assignments = _load_assignments_with_relations(
         db, session_id=review_session.id, reviewer_id=reviewer.id
     )
@@ -117,16 +161,33 @@ def _surface_context(
         for r in db.execute(stmt).scalars():
             response_rows[(r.assignment_id, r.response_field_id)] = r
 
+    instruments = _instruments_for_session(db, review_session.id)
+
     rows = []
+    any_accepting = False
+    any_closed_with_hidden_values = False
     for assignment in assignments:
         fields = fields_by_instrument.get(assignment.instrument_id, [])
+        instrument = instruments.get(assignment.instrument_id)
+        accepting = bool(
+            instrument
+            and lifecycle.session_accepts_responses(review_session, instrument)
+        )
+        if accepting:
+            any_accepting = True
+        show_values = accepting or (
+            instrument is not None and instrument.responses_visible_when_closed
+        )
+        if not show_values:
+            any_closed_with_hidden_values = True
         cells = []
         for field in fields:
             existing = response_rows.get((assignment.id, field.id))
+            value = (existing.value or "") if existing else ""
             cells.append(
                 {
                     "field": field,
-                    "value": (existing.value or "") if existing else "",
+                    "value": value if show_values else "",
                 }
             )
         is_complete, missing_count, latest_submitted = (
@@ -146,6 +207,8 @@ def _surface_context(
                 "missing_count": missing_count,
                 "submitted_at": latest_submitted,
                 "pair_contexts": pair_contexts,
+                "accepting": accepting,
+                "show_values": show_values,
             }
         )
 
@@ -162,6 +225,8 @@ def _surface_context(
             any(f.required for f in fields_by_instrument.get(a.instrument_id, []))
             for a in assignments
         ),
+        "any_accepting": any_accepting,
+        "any_closed_with_hidden_values": any_closed_with_hidden_values,
     }
 
 
@@ -204,6 +269,7 @@ async def reviewer_save(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     reviewer, review_session = reviewer_session
+    _require_session_accepting(db, review_session, reviewer)
     form = await request.form()
     upserts = responses_service.parse_form_payload(
         {k: v for k, v in form.items() if isinstance(v, str)}
@@ -236,6 +302,7 @@ async def reviewer_submit(
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     reviewer, review_session = reviewer_session
+    _require_session_accepting(db, review_session, reviewer)
     form = await request.form()
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
     acknowledge = string_form.get("acknowledge_missing") == "true"
@@ -286,6 +353,7 @@ def reviewer_clear(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     reviewer, review_session = reviewer_session
+    _require_session_accepting(db, review_session, reviewer)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

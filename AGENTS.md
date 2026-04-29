@@ -18,9 +18,9 @@
 
 ## Current stage
 
-Segments 1–7 complete. See `docs/status.md` for the authoritative
-snapshot of what ships today; this section summarises only what an
-agent needs before opening files.
+Segments 1–8 and 9.1 complete. See `docs/status.md` for the
+authoritative snapshot of what ships today; this section summarises
+only what an agent needs before opening files.
 
 The project has:
 
@@ -37,12 +37,19 @@ The project has:
   views, setup validation, FullMatrix + Manual assignment generation,
   per-session Default Instrument placeholder, audit log on every
   destructive op.
+- Reviewer review surface (Segment 8): dashboard, save / submit /
+  clear / cancel.
+- Session activation lifecycle (Segment 9.1): draft↔ready transitions
+  with audit, edit-lock while ready, per-instrument open/close +
+  visibility sub-page, lazy deadline-driven instrument close,
+  reviewer write-path gated by session status + instrument acceptance
+  + deadline.
 
 Not yet implemented (do not add unless an issue explicitly asks):
-operator-editable instruments, the reviewer-facing review surface,
-session activation, invitations & reminders, responses, export,
-RuleBased assignment, multi-instrument sessions, production hardening
-(Key Vault, VNet, soft-delete). These map to Segments 8–14 — see
+operator-editable instruments, invitations & dev outbox (9.2),
+monitoring + reminders (9.3), export, RuleBased assignment,
+multi-instrument sessions, production hardening (Key Vault, VNet,
+soft-delete). These map to Segments 9.2–14 — see
 `guide/segment_NN_*` and `docs/status.md` "What's deliberately not
 yet there."
 

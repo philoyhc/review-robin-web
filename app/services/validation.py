@@ -89,15 +89,23 @@ def validate_session_setup(
         ValidationIssue(
             severity=Severity.info,
             source="instruments",
-            message="Instruments not yet implemented (Segment 8)",
+            message=(
+                "Instrument editor lands in Segment 10 — using Default "
+                "Instrument with rating + comments fields"
+            ),
         )
     )
-    issues.append(
-        ValidationIssue(
-            severity=Severity.info,
-            source="assignments",
-            message="Assignments not yet implemented (Segment 7)",
+
+    if review_session.assignment_mode is None:
+        issues.append(
+            ValidationIssue(
+                severity=Severity.warning,
+                source="assignments",
+                message=(
+                    "No assignments generated yet — reviewers will see an "
+                    "empty surface"
+                ),
+            )
         )
-    )
 
     return issues

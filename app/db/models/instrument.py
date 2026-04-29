@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -26,6 +28,15 @@ class Instrument(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(String(2000))
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    accepting_responses: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    responses_visible_when_closed: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    deadline_closed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
 
     session: Mapped[ReviewSession] = relationship(back_populates="instruments")
     display_fields: Mapped[list[InstrumentDisplayField]] = relationship(

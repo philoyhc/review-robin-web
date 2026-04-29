@@ -51,6 +51,8 @@ def ensure_default_instrument(
             session_id=review_session.id,
             name=DEFAULT_INSTRUMENT_NAME,
             order=0,
+            accepting_responses=False,
+            responses_visible_when_closed=False,
         )
         db.add(instrument)
         db.flush()

@@ -18,6 +18,7 @@ def _operator_creates_session_with_pair(
     code: str,
     reviewer_email: str,
     reviewee_ident: str,
+    activate: bool = True,
 ) -> ReviewSession:
     operator_client.post(
         "/operator/sessions",
@@ -54,7 +55,22 @@ def _operator_creates_session_with_pair(
         data={"exclude_self_review": ""},
         follow_redirects=False,
     )
+    if activate:
+        _activate(operator_client, db, review_session)
     return review_session
+
+
+def _activate(
+    operator_client: TestClient, db: Session, review_session: ReviewSession
+) -> None:
+    response = operator_client.post(
+        f"/operator/sessions/{review_session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(review_session)
+    assert review_session.status == "ready"
 
 
 @pytest.fixture
@@ -137,6 +153,7 @@ def test_surface_renders_pair_context_and_default_fields(
         code="rae-ctx",
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
+        activate=False,
     )
     operator.post(
         f"/operator/sessions/{review_session.id}/assignments/manual/import",
@@ -153,6 +170,7 @@ def test_surface_renders_pair_context_and_default_fields(
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
+    _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
     response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
@@ -178,6 +196,7 @@ def test_surface_filters_out_excluded_assignments(
         code="rae-excl",
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
+        activate=False,
     )
     operator.post(
         f"/operator/sessions/{review_session.id}/assignments/manual/import",
@@ -194,6 +213,7 @@ def test_surface_filters_out_excluded_assignments(
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
+    _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
     response = rae_client.get(f"/reviewer/sessions/{review_session.id}")

@@ -6,14 +6,20 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, User
+from app.db.models import Instrument, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
 from app.schemas.sessions import SessionCreate
 from app.services import assignments, csv_imports, sessions, validation
-from app.web.deps import get_or_create_user, request_correlation_id, require_session_operator
+from app.services import session_lifecycle as lifecycle
+from app.web.deps import (
+    get_or_create_user,
+    request_correlation_id,
+    require_session_operator,
+)
 
 router = APIRouter(prefix="/operator", tags=["operator"])
 
@@ -90,6 +96,13 @@ def session_detail(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_detail.html",
@@ -99,6 +112,10 @@ def session_detail(
             "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "assignment_count": assignments.existing_count(db, review_session.id),
+            "instruments": instruments,
+            "is_draft": lifecycle.is_draft(review_session),
+            "is_ready": lifecycle.is_ready(review_session),
+            "has_responses": lifecycle.session_has_responses(db, review_session),
         },
     )
 
@@ -111,6 +128,7 @@ def validate_session(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     issues = validation.validate_session_setup(db, review_session)
+    report = lifecycle.build_readiness_report(issues)
     return _templates.TemplateResponse(
         request,
         "operator/session_validate.html",
@@ -118,9 +136,13 @@ def validate_session(
             "user": user,
             "session": review_session,
             "issues": issues,
-            "error_count": sum(1 for i in issues if i.is_blocking),
-            "warning_count": sum(1 for i in issues if i.severity.value == "warning"),
-            "info_count": sum(1 for i in issues if i.severity.value == "info"),
+            "error_count": len(report.errors),
+            "warning_count": len(report.warnings),
+            "info_count": len(report.info),
+            "can_activate": report.can_activate and lifecycle.is_draft(review_session),
+            "needs_acknowledge": report.has_non_blocking_findings,
+            "is_draft": lifecycle.is_draft(review_session),
+            "is_ready": lifecycle.is_ready(review_session),
         },
     )
 
@@ -154,6 +176,7 @@ async def reviewers_import_submit(
     request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -162,6 +185,7 @@ async def reviewers_import_submit(
         request=request,
         file=file,
         confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
         review_session=review_session,
         user=user,
         db=db,
@@ -202,6 +226,7 @@ async def reviewees_import_submit(
     request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -210,6 +235,7 @@ async def reviewees_import_submit(
         request=request,
         file=file,
         confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
         review_session=review_session,
         user=user,
         db=db,
@@ -226,6 +252,7 @@ async def _handle_import(
     request: Request,
     file: UploadFile,
     confirm_replace: str | None,
+    acknowledge_response_loss: str | None,
     review_session: ReviewSession,
     user: User,
     db: Session,
@@ -235,6 +262,7 @@ async def _handle_import(
     parse_fn,
     save_fn,
 ) -> HTMLResponse | RedirectResponse:
+    _require_draft(review_session)
     content = await file.read()
     result = parse_fn(content)
     existing = existing_count_fn(db, review_session.id)
@@ -260,6 +288,9 @@ async def _handle_import(
 
     if existing > 0 and confirm_replace != "true":
         return render(status_code=status.HTTP_400_BAD_REQUEST)
+
+    if existing > 0:
+        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
 
     save_fn(
         db,
@@ -313,10 +344,12 @@ def assignments_full_matrix(
     exclude_self_review: str | None = Form(default=None),
     dry_run: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
+    _require_draft(review_session)
     exclude_self = exclude_self_review == "true"
     reviewers = assignments.list_reviewers(db, review_session.id)
     reviewees = assignments.list_reviewees(db, review_session.id)
@@ -356,6 +389,8 @@ def assignments_full_matrix(
             status_code=status_code,
         )
 
+    if existing > 0:
+        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     assignments.replace_assignments(
         db,
         review_session=review_session,
@@ -381,10 +416,12 @@ async def assignments_manual_import(
     file: UploadFile = File(...),
     dry_run: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
+    _require_draft(review_session)
     content = await file.read()
     reviewers = assignments.list_reviewers(db, review_session.id)
     reviewees = assignments.list_reviewees(db, review_session.id)
@@ -425,6 +462,8 @@ async def assignments_manual_import(
     if needs_confirm:
         return render(status.HTTP_400_BAD_REQUEST)
 
+    if existing > 0:
+        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     pairs, contexts, includes = assignments.manual_rows_to_pairs(
         result.rows, reviewers, reviewees
     )
@@ -494,10 +533,13 @@ def session_edit_submit(
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    _require_draft(review_session)
+    _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     parsed_deadline: datetime | None = None
     if deadline:
         try:
@@ -534,6 +576,7 @@ def session_delete(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    _require_draft(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -554,15 +597,18 @@ def session_delete(
 @router.post("/sessions/{session_id}/reviewers/delete-all")
 def reviewers_delete_all(
     confirm: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    _require_draft(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="confirm checkbox required",
         )
+    _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     csv_imports.delete_all_reviewers(
         db,
         review_session=review_session,
@@ -578,15 +624,18 @@ def reviewers_delete_all(
 @router.post("/sessions/{session_id}/reviewees/delete-all")
 def reviewees_delete_all(
     confirm: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    _require_draft(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="confirm checkbox required",
         )
+    _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     csv_imports.delete_all_reviewees(
         db,
         review_session=review_session,
@@ -602,15 +651,18 @@ def reviewees_delete_all(
 @router.post("/sessions/{session_id}/assignments/delete-all")
 def assignments_delete_all(
     confirm: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    _require_draft(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="confirm checkbox required",
         )
+    _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     assignments.delete_all_assignments(
         db,
         review_session=review_session,
@@ -619,5 +671,221 @@ def assignments_delete_all(
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/assignments",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Edit-lock helpers
+# --------------------------------------------------------------------------- #
+
+
+def _require_draft(review_session: ReviewSession) -> None:
+    """Reject mutating operator actions while session is not draft."""
+    if not lifecycle.is_draft(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Session is {review_session.status}; revert to draft to edit"
+            ),
+        )
+
+
+def _require_response_loss_ack(
+    db: Session, review_session: ReviewSession, ack: str | None
+) -> None:
+    """When responses exist, require explicit acknowledge_response_loss=true."""
+    if not lifecycle.session_has_responses(db, review_session):
+        return
+    if ack != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Existing reviewer responses will be discarded; tick "
+                "'acknowledge response loss' to proceed"
+            ),
+        )
+
+
+def _require_instrument_in_session(
+    instrument_id: int,
+    review_session: ReviewSession = Depends(require_session_operator),
+    db: Session = Depends(get_db),
+) -> tuple[Instrument, ReviewSession]:
+    instrument = db.execute(
+        select(Instrument).where(
+            Instrument.id == instrument_id,
+            Instrument.session_id == review_session.id,
+        )
+    ).scalar_one_or_none()
+    if instrument is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return instrument, review_session
+
+
+def _lifecycle_error_response(exc: lifecycle.LifecycleError) -> HTTPException:
+    code_to_status = {
+        "not_draft": status.HTTP_409_CONFLICT,
+        "not_ready": status.HTTP_409_CONFLICT,
+        "session_not_ready": status.HTTP_409_CONFLICT,
+        "deadline_passed": status.HTTP_409_CONFLICT,
+        "locked": status.HTTP_409_CONFLICT,
+        "has_errors": status.HTTP_400_BAD_REQUEST,
+        "needs_acknowledge": status.HTTP_400_BAD_REQUEST,
+        "needs_confirm": status.HTTP_400_BAD_REQUEST,
+    }
+    return HTTPException(
+        status_code=code_to_status.get(exc.code, status.HTTP_400_BAD_REQUEST),
+        detail=str(exc),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Lifecycle routes (Segment 9.1)
+# --------------------------------------------------------------------------- #
+
+
+@router.post("/sessions/{session_id}/activate")
+def session_activate(
+    acknowledge_warnings: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    issues = validation.validate_session_setup(db, review_session)
+    report = lifecycle.build_readiness_report(issues)
+    try:
+        lifecycle.activate_session(
+            db,
+            review_session=review_session,
+            user=user,
+            report=report,
+            acknowledge_warnings=acknowledge_warnings == "true",
+            correlation_id=request_correlation_id(),
+        )
+    except lifecycle.LifecycleError as exc:
+        raise _lifecycle_error_response(exc) from exc
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/revert")
+def session_revert_to_draft(
+    confirm: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    try:
+        lifecycle.revert_session_to_draft(
+            db,
+            review_session=review_session,
+            user=user,
+            confirm=confirm == "true",
+            correlation_id=request_correlation_id(),
+        )
+    except lifecycle.LifecycleError as exc:
+        raise _lifecycle_error_response(exc) from exc
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/instruments/{instrument_id}",
+    response_class=HTMLResponse,
+)
+def instrument_detail(
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    instrument, review_session = bundle
+    lifecycle.observe_deadline(db, review_session)
+    db.refresh(instrument)
+    return _templates.TemplateResponse(
+        request,
+        "operator/instrument_detail.html",
+        {
+            "user": user,
+            "session": review_session,
+            "instrument": instrument,
+            "is_ready": lifecycle.is_ready(review_session),
+        },
+    )
+
+
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/open")
+def instrument_open(
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    try:
+        lifecycle.open_instrument(
+            db,
+            instrument=instrument,
+            review_session=review_session,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except lifecycle.LifecycleError as exc:
+        raise _lifecycle_error_response(exc) from exc
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/close")
+def instrument_close(
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    lifecycle.close_instrument(
+        db,
+        instrument=instrument,
+        review_session=review_session,
+        user=user,
+        reason="manual",
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/visibility")
+def instrument_visibility(
+    visible_when_closed: str | None = Form(default=None),
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    lifecycle.set_responses_visible_when_closed(
+        db,
+        instrument=instrument,
+        review_session=review_session,
+        user=user,
+        visible=visible_when_closed == "true",
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
