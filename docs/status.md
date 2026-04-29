@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 8 (2026-04-28)
+**As of:** end of Segment 9.1 (2026-04-29)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -21,6 +21,7 @@ For the full long-term plan see
 | 2026-04-27 | Postgres Flexible Server provisioned; Segments 1–4 shipped (skeleton, deploy, auth, data model) |
 | 2026-04-28 | Segments 5–7 shipped (operator session MVP, imports + validation, assignment generation) |
 | 2026-04-29 | Segment 8 shipped (reviewer surface MVP + roster status-filter retrofit) |
+| 2026-04-29 | Segment 9.1 shipped (session activation lifecycle + per-instrument acceptance gates) |
 
 ---
 
@@ -36,6 +37,7 @@ For the full long-term plan see
 | 6 | Reviewer / reviewee CSV imports + setup validation | 2026-04-28 |
 | 7 | FullMatrix + Manual assignment generation + roster Manage views | 2026-04-28 |
 | 8 | Reviewer dashboard + review surface (save / submit / clear / cancel); active-only roster filter retrofit | 2026-04-29 |
+| 9.1 | Session activation lifecycle (draft↔ready), edit-lock, per-instrument open/close, response-window gates | 2026-04-29 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
@@ -119,6 +121,12 @@ Migration round-trips on both SQLite (every test session) and Postgres
 | `POST /operator/sessions/{id}/assignments/full-matrix` | preview / save |
 | `POST /operator/sessions/{id}/assignments/manual/import` | preview / save |
 | `POST /operator/sessions/{id}/assignments/delete-all` | delete every assignment, clear mode |
+| `POST /operator/sessions/{id}/activate` | flip session draft→ready (warn-and-acknowledge for non-blocking findings) |
+| `POST /operator/sessions/{id}/revert` | flip session ready→draft (confirm checkbox; closes all instruments) |
+| `GET /operator/sessions/{id}/instruments/{instrument_id}` | per-instrument acceptance + visibility sub-page |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/open` | start accepting responses (requires session ready, pre-deadline) |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/close` | stop accepting responses (manual) |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/visibility` | toggle `responses_visible_when_closed` |
 
 ### Reviewer-facing app
 
@@ -232,9 +240,16 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
   no audit. Discards in-progress edits by re-fetching saved values.
 - **Autosave is deferred** to a follow-on PR (vanilla JS layered
   over the same `/save` endpoint).
-- **Per-Instrument open/close** (operator-controlled
-  "stop accepting responses" gate, deadline-driven or manual)
-  lands in Segment 9. Until then save / submit always work.
+- **Lifecycle gating (Segment 9.1)**: reviewer save / submit / clear
+  return **HTTP 403** unless the session is `ready`, the assigned
+  instrument is `accepting_responses`, and `now() < session.deadline`.
+  When the gate is closed, the surface renders read-only; saved values
+  are hidden unless the operator turns on
+  `responses_visible_when_closed` on the per-instrument sub-page.
+  Deadline closure is observed lazily on every reviewer GET/POST and
+  on the per-instrument operator page; the first observer flips
+  `accepting_responses=false`, stamps `deadline_closed_at`, and emits
+  one `instrument.closed reason=deadline` audit event.
 
 ### Audit log
 
@@ -255,6 +270,10 @@ Every destructive operation writes an `audit_events` row with
 | `responses.saved` | reviewer saves a draft (incl. `count`, `reviewer_id`) |
 | `responses.submitted` | reviewer submits (incl. `count`, `missing_required_count`, `acknowledged_missing`) |
 | `responses.cleared` | reviewer clears all their responses in a session |
+| `session.activated` | operator flips session draft→ready (`detail.override_warnings`) |
+| `session.reverted_to_draft` | operator flips session ready→draft (`detail.closed_instrument_ids`, `response_count_at_revert`) |
+| `instrument.opened` | operator manually re-opens a closed instrument |
+| `instrument.closed` | manual or lazy-deadline close (`detail.reason ∈ {manual, deadline}`) |
 
 `excluded_counts` is a generic map (`{"self_review": N,
 "inactive_reviewer": M, ...}`) so RuleBased exclusions in Segment 12 can
@@ -270,9 +289,8 @@ plug in additional reasons without a schema change. Today's keys are
 | Edit individual reviewer / reviewee / assignment rows (today: bulk operations only via CSV replace or delete-all) | Not yet planned; would slot before activation |
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
-| **Activation** (operator publishes the session, locks edits, opens to reviewers) | **Segment 9** |
-| **Invitations & reminders** (email reviewers their links) | **Segment 9** |
-| **Per-Instrument open/close** (deadline-driven or manual "stop accepting responses" gate) | **Segment 9** |
+| **Invitations & dev outbox** (email reviewers their links) | **Segment 9.2** |
+| **Monitoring dashboard + reminder send** | **Segment 9.3** |
 | **Instrument builder** (operator-editable response fields on the session's Instrument: add / edit / reorder / delete; field types beyond the seed pair) | **Segment 10** |
 | **Export / audit retention** | **Segment 11** |
 | **RuleBased assignment** | **Segment 12** |

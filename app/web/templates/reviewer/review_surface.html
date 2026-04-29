@@ -48,12 +48,29 @@
   {% endif %}
 
   {% if rows %}
-    <div class="card">
-      <p>
-        <a class="btn secondary"
-           href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
-      </p>
-    </div>
+    {% if not any_accepting %}
+      <div class="card" style="border-color: #d97706; background: #fef3c7;">
+        <p>
+          This session is no longer accepting responses.
+          {% if any_closed_with_hidden_values %}
+            Your previously saved values are hidden by the operator's
+            visibility setting.
+          {% else %}
+            Your previously saved values remain visible below in read-only
+            form.
+          {% endif %}
+        </p>
+      </div>
+    {% endif %}
+
+    {% if any_accepting %}
+      <div class="card">
+        <p>
+          <a class="btn secondary"
+             href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
+        </p>
+      </div>
+    {% endif %}
 
     <form method="post" action="/reviewer/sessions/{{ session.id }}/save">
       <table>
@@ -81,21 +98,25 @@
             {% for cell in row.cells %}
               <td>
                 {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
+                {% set disabled_attr = "" if row.accepting else "disabled" %}
                 {% if cell.field.response_type == "long_text" %}
                   <textarea name="{{ field_name }}"
                             rows="2"
-                            style="min-height: 44px;">{{ cell.value }}</textarea>
+                            style="min-height: 44px;"
+                            {{ disabled_attr }}>{{ cell.value }}</textarea>
                 {% elif cell.field.response_type == "integer" %}
                   {% set validation = cell.field.validation or {} %}
                   <input type="number"
                          name="{{ field_name }}"
                          value="{{ cell.value }}"
                          {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
-                         {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}>
+                         {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
+                         {{ disabled_attr }}>
                 {% else %}
                   <input type="text"
                          name="{{ field_name }}"
-                         value="{{ cell.value }}">
+                         value="{{ cell.value }}"
+                         {{ disabled_attr }}>
                 {% endif %}
               </td>
             {% endfor %}
@@ -120,41 +141,45 @@
         {% endfor %}
       </table>
 
-      <p style="margin-top: 16px;">
-        <button class="btn secondary" type="submit">Save draft</button>
-        <button class="btn"
-                type="submit"
-                formaction="/reviewer/sessions/{{ session.id }}/submit">
-          Submit
-        </button>
-      </p>
-      {% if show_acknowledge %}
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="acknowledge_missing" value="true">
-            I acknowledge required fields are missing — submit anyway.
-          </label>
+      {% if any_accepting %}
+        <p style="margin-top: 16px;">
+          <button class="btn secondary" type="submit">Save draft</button>
+          <button class="btn"
+                  type="submit"
+                  formaction="/reviewer/sessions/{{ session.id }}/submit">
+            Submit
+          </button>
         </p>
+        {% if show_acknowledge %}
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="acknowledge_missing" value="true">
+              I acknowledge required fields are missing — submit anyway.
+            </label>
+          </p>
+        {% endif %}
       {% endif %}
     </form>
 
-    <div class="card" style="border-color: #b91c1c; margin-top: 24px;">
-      <h2 style="color: #b91c1c;">Clear all responses</h2>
-      <form method="post" action="/reviewer/sessions/{{ session.id }}/clear">
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required>
-            Yes, delete every response I have saved for this session.
-            This also clears my submitted state.
-          </label>
-        </p>
-        <p>
-          <button class="btn"
-                  style="background: #b91c1c; border-color: #b91c1c;"
-                  type="submit">Clear all</button>
-        </p>
-      </form>
-    </div>
+    {% if any_accepting %}
+      <div class="card" style="border-color: #b91c1c; margin-top: 24px;">
+        <h2 style="color: #b91c1c;">Clear all responses</h2>
+        <form method="post" action="/reviewer/sessions/{{ session.id }}/clear">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required>
+              Yes, delete every response I have saved for this session.
+              This also clears my submitted state.
+            </label>
+          </p>
+          <p>
+            <button class="btn"
+                    style="background: #b91c1c; border-color: #b91c1c;"
+                    type="submit">Clear all</button>
+          </p>
+        </form>
+      </div>
+    {% endif %}
   {% else %}
     <div class="card">
       <p class="muted">No assignments are visible to you in this session yet.</p>

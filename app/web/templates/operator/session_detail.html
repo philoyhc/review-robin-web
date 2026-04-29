@@ -9,13 +9,27 @@
 
   <div class="card">
     <h2>Details</h2>
+    <p>
+      <strong>Status:</strong>
+      {% if is_ready %}
+        <span class="pill pill-info">ready</span>
+      {% else %}
+        <span class="pill pill-warning">{{ session.status }}</span>
+      {% endif %}
+    </p>
     <p><strong>Code:</strong> <code>{{ session.code }}</code></p>
-    <p><strong>Status:</strong> {{ session.status }}</p>
     <p><strong>Deadline:</strong> {{ session.deadline.isoformat() if session.deadline else "Not set" }}</p>
     <p><strong>Description:</strong> {{ session.description or "—" }}</p>
-    <p>
-      <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit details</a>
-    </p>
+    {% if is_ready %}
+      <p class="muted">
+        Session is <strong>ready</strong> — setup edits are locked. Revert to
+        draft below to make changes.
+      </p>
+    {% else %}
+      <p>
+        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit details</a>
+      </p>
+    {% endif %}
   </div>
 
   <div class="card">
@@ -35,7 +49,18 @@
         &middot;
         <a href="/operator/sessions/{{ session.id }}/reviewees/import">{% if reviewee_count %}Replace{% else %}Import{% endif %} CSV</a>
       </li>
-      <li class="muted">Instruments — not yet implemented.</li>
+      <li>
+        Instruments:
+        {% for instrument in instruments %}
+          <a href="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}">{{ instrument.name }}</a>
+          {% if instrument.accepting_responses %}
+            <span class="pill pill-info">open</span>
+          {% else %}
+            <span class="pill pill-warning">closed</span>
+          {% endif %}
+          {% if not loop.last %}&middot;{% endif %}
+        {% endfor %}
+      </li>
       <li>
         Assignments: <strong>{{ assignment_count }}</strong>
         {% if session.assignment_mode %}
@@ -47,28 +72,73 @@
     </ul>
     <p>
       <a class="btn secondary" href="/operator/sessions/{{ session.id }}/validate">Run setup validation</a>
+      {% if is_draft %}
+        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/validate#activate">Validate &amp; activate</a>
+      {% endif %}
     </p>
   </div>
 
+  {% if is_ready %}
+    <div class="card" style="border-color: #d97706;">
+      <h2 style="color: #92400e;">Revert to draft</h2>
+      <p class="muted">
+        Reverting closes every instrument so reviewers can no longer save or
+        submit. Existing responses are preserved untouched and the reviewer
+        surface stays read-only.
+      </p>
+      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required>
+            Yes, revert <strong>{{ session.name }}</strong> to draft.
+          </label>
+        </p>
+        <p>
+          <button class="btn"
+                  style="background: #d97706; border-color: #d97706;"
+                  type="submit">Revert to draft</button>
+        </p>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if has_responses and is_draft %}
+    <div class="card" style="border-color: #d97706; background: #fef3c7;">
+      <p>
+        This session has <strong>existing reviewer responses</strong>.
+        Editing the session, replacing rosters, or regenerating assignments
+        may invalidate or delete them. Forms below ask you to acknowledge
+        response loss before proceeding.
+      </p>
+    </div>
+  {% endif %}
+
   <div class="card" style="border-color: #b91c1c;">
     <h2 style="color: #b91c1c;">Danger zone</h2>
-    <p class="muted">
-      Deleting this session removes its reviewers, reviewees, assignments,
-      operator links, and audit trail. This cannot be undone.
-    </p>
-    <form method="post" action="/operator/sessions/{{ session.id }}/delete">
-      <p>
-        <label style="font-weight: normal;">
-          <input type="checkbox" name="confirm" value="true" required>
-          Yes, delete <strong>{{ session.name }}</strong> ({{ session.code }})
-          and all its data.
-        </label>
+    {% if is_ready %}
+      <p class="muted">
+        Session deletion is locked while status is <strong>ready</strong>.
+        Revert to draft first.
       </p>
-      <p>
-        <button class="btn"
-                style="background: #b91c1c; border-color: #b91c1c;"
-                type="submit">Delete session</button>
+    {% else %}
+      <p class="muted">
+        Deleting this session removes its reviewers, reviewees, assignments,
+        operator links, and audit trail. This cannot be undone.
       </p>
-    </form>
+      <form method="post" action="/operator/sessions/{{ session.id }}/delete">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required>
+            Yes, delete <strong>{{ session.name }}</strong> ({{ session.code }})
+            and all its data.
+          </label>
+        </p>
+        <p>
+          <button class="btn"
+                  style="background: #b91c1c; border-color: #b91c1c;"
+                  type="submit">Delete session</button>
+        </p>
+      </form>
+    {% endif %}
   </div>
 {% endblock %}

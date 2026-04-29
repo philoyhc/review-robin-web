@@ -63,6 +63,41 @@ When multi-instrument lands (Segment 13):
 - The reviewer surface stacks (or tabs) sections per instrument the
   reviewer is assigned on for that reviewee. Schema unchanged.
 
+### Session lifecycle (Segment 9.1)
+
+`ReviewSession.status` is the canonical lifecycle column. Active values
+in 9.1 are `draft` and `ready`; `expired` and `archived` are reserved
+in `app/services/session_lifecycle.py::SessionStatus` and not yet
+written by any route. The column stays a `String(32)` — the value
+set is enforced at the application layer, not via a DB CHECK
+constraint.
+
+**Session status overrides instrument acceptance.** Activation
+(`draft → ready`) flips every instrument's `accepting_responses` to
+`true`. Revert (`ready → draft`) flips them all back to `false` in the
+same transaction and emits a single `session.reverted_to_draft` audit
+event (no per-instrument close events on the revert path). Existing
+`Response` rows are preserved untouched on revert; the reviewer surface
+returns to read-only.
+
+The reviewer write-path predicate
+`session_lifecycle.session_accepts_responses(session, instrument)`
+gates `save`/`submit`/`clear`. Saving requires all of: session is
+`ready`, the assignment's instrument has `accepting_responses=true`,
+and `now() < session.deadline`. The session deadline auto-closes the
+instrument lazily — the first reviewer or operator request that
+observes the deadline has passed sets `accepting_responses=false`,
+stamps `Instrument.deadline_closed_at`, and emits a single
+`instrument.closed reason=deadline` audit event per instrument.
+
+While `status == ready`, every operator setup-mutation endpoint
+(session edit/delete, roster import + delete-all, assignment generate
++ delete-all) returns **HTTP 409**. The corresponding GET pages render
+read-only banners. Operators must revert to draft to make further
+setup changes; if any `Response` rows already exist, response-loss
+acknowledgment (`acknowledge_response_loss=true`) is required on
+operations that would invalidate them.
+
 ### Pair-level vs assignment-level context
 
 Manual CSV imports may carry two kinds of per-pair context, both
