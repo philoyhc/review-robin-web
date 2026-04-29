@@ -18,7 +18,7 @@
 
 ## Current stage
 
-Segments 1–8 and 9.1 complete. See `docs/status.md` for the
+Segments 1–8, 9.1, and 9.2 complete. See `docs/status.md` for the
 authoritative snapshot of what ships today; this section summarises
 only what an agent needs before opening files.
 
@@ -44,14 +44,18 @@ The project has:
   visibility sub-page, lazy deadline-driven instrument close,
   reviewer write-path gated by session status + instrument acceptance
   + deadline.
+- Per-reviewer invitations + dev email outbox (Segment 9.2):
+  operator-paced generate / regenerate / send / send-all on a ready
+  session; sha256-hashed tokens; `/reviewer/invite/{token}` landing
+  route requires Easy Auth + email match (mismatch → 403 page);
+  per-session outbox view shows the rendered email + raw token URL.
 
 Not yet implemented (do not add unless an issue explicitly asks):
-operator-editable instruments, invitations & dev outbox (9.2),
-monitoring + reminders (9.3), export, RuleBased assignment,
-multi-instrument sessions, production hardening (Key Vault, VNet,
-soft-delete). These map to Segments 9.2–14 — see
-`guide/segment_NN_*` and `docs/status.md` "What's deliberately not
-yet there."
+operator-editable instruments, monitoring + reminders (9.3), export,
+RuleBased assignment, multi-instrument sessions, production
+hardening (Key Vault, VNet, soft-delete, real SMTP). These map to
+Segments 9.3–14 — see `guide/segment_NN_*` and `docs/status.md`
+"What's deliberately not yet there."
 
 Update `docs/status.md` at the end of each segment; keep the summary
 above in sync.

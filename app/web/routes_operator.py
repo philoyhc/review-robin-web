@@ -9,11 +9,11 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, ReviewSession, User
+from app.db.models import Instrument, Invitation, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
 from app.schemas.sessions import SessionCreate
-from app.services import assignments, csv_imports, sessions, validation
+from app.services import assignments, csv_imports, invitations, sessions, validation
 from app.services import session_lifecycle as lifecycle
 from app.web.deps import (
     get_or_create_user,
@@ -888,4 +888,186 @@ def instrument_visibility(
             f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Invitation + outbox routes (Segment 9.2)
+# --------------------------------------------------------------------------- #
+
+
+def _require_ready(review_session: ReviewSession) -> None:
+    """Reject invitation actions while session is not ready.
+
+    Inverse of the 9.1 ``_require_draft`` lock: invitations point at a live
+    reviewer surface, so they must only be issued / sent on a ready session.
+    """
+    if not lifecycle.is_ready(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Invitations can only be issued while the session is ready"
+            ),
+        )
+
+
+def _require_invitation_in_session(
+    invitation_id: int,
+    review_session: ReviewSession = Depends(require_session_operator),
+    db: Session = Depends(get_db),
+) -> tuple[Invitation, ReviewSession]:
+    invitation = db.execute(
+        select(Invitation).where(
+            Invitation.id == invitation_id,
+            Invitation.session_id == review_session.id,
+        )
+    ).scalar_one_or_none()
+    if invitation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return invitation, review_session
+
+
+@router.get(
+    "/sessions/{session_id}/invitations", response_class=HTMLResponse
+)
+def invitations_index(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    rows = invitations.list_invitations_for_session(db, review_session.id)
+    eligible = invitations.reviewers_eligible_for_invitation(db, review_session.id)
+    invited_ids = {r.invitation.reviewer_id for r in rows}
+    pending_ids = [
+        r.invitation.id for r in rows if r.invitation.status == "pending"
+    ]
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_invitations.html",
+        {
+            "user": user,
+            "session": review_session,
+            "rows": rows,
+            "eligible_count": len(eligible),
+            "uninvited_count": sum(1 for r in eligible if r.id not in invited_ids),
+            "pending_count": len(pending_ids),
+            "is_ready": lifecycle.is_ready(review_session),
+        },
+    )
+
+
+@router.post("/sessions/{session_id}/invitations/generate")
+def invitations_generate(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_ready(review_session)
+    invitations.generate_invitations(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/invitations",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/invitations/send-all")
+def invitations_send_all(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_ready(review_session)
+    rows = invitations.list_invitations_for_session(db, review_session.id)
+    for row in rows:
+        if row.invitation.status != "pending":
+            continue
+        invitations.send_invitation(
+            db,
+            invitation=row.invitation,
+            review_session=review_session,
+            reviewer=row.reviewer,
+            user=user,
+            request=request,
+            correlation_id=request_correlation_id(),
+        )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/invitations",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/invitations/{invitation_id}/regenerate"
+)
+def invitations_regenerate(
+    bundle: tuple[Invitation, ReviewSession] = Depends(_require_invitation_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    invitation, review_session = bundle
+    _require_ready(review_session)
+    invitations.regenerate_token(
+        db,
+        invitation=invitation,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/invitations",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/invitations/{invitation_id}/send"
+)
+def invitations_send_one(
+    request: Request,
+    bundle: tuple[Invitation, ReviewSession] = Depends(_require_invitation_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    invitation, review_session = bundle
+    _require_ready(review_session)
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
+    ).scalar_one()
+    invitations.send_invitation(
+        db,
+        invitation=invitation,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=user,
+        request=request,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/invitations",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get("/sessions/{session_id}/outbox", response_class=HTMLResponse)
+def outbox_index(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    rows = invitations.list_outbox_for_session(db, review_session.id)
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_outbox.html",
+        {
+            "user": user,
+            "session": review_session,
+            "rows": rows,
+        },
     )
