@@ -31,24 +31,32 @@ shapes.
 
 ## Cross-page chrome and breadcrumbs
 
-Replaces today's topbar. Implemented in `app/web/templates/base.html`
-plus a new `_partials/breadcrumb.html`.
+Replaces today's topbar on both the operator and the reviewer
+surfaces. Implemented in `app/web/templates/base.html` plus a new
+`_partials/breadcrumb.html`.
 
 - **Top left.** Small "Review Robin Web App (version {num})" text
   (not a large heading), linked to `/about`. The version string
-  comes from a single source (e.g. `app.config.APP_VERSION`).
+  comes from a single source (`app.config.APP_VERSION`, set to
+  `"dev"` in 9.4; pipeline-driven version bumping is out of scope).
   Operators navigate to the sessions list via the breadcrumb, not
   the app-identity text.
 - **Top left, just below the app identity.** Breadcrumb trail.
   Each page passes a list of `(label, url|None)` tuples; the last
-  tuple has `url=None` to mark the current page (rendered as plain
-  text).
+  tuple has `url=None` and renders as a plain non-link label
+  marking the current page. Breadcrumb roots:
+  - **Operator pages:** `Sessions` → `/operator/sessions`. On
+    `/operator/sessions`, the trail is the single non-link label
+    `Sessions`.
+  - **Reviewer pages:** `Reviewer` → `/reviewer`. On `/reviewer`,
+    the trail is the single non-link label `Reviewer`.
 - **Top right.** Small card containing "Signed in as {user name}"
   and a **Sign out** button → `/.auth/logout`.
 - **Page H1.** Rendered below the breadcrumb in the page body.
 
 Per-page back links and per-page Sign out controls are removed — the
-chrome carries both.
+chrome carries both. The reviewer surface inherits the chrome too;
+its existing inline navigation stays as-is below the H1.
 
 ## Decisions on open design notes (now closed)
 
@@ -116,7 +124,7 @@ or new buttons:
 
 | Today | 9.4 change |
 |---|---|
-| `GET /operator/sessions` (table with one big link per row) | Replace per-row link with **Access** + **Delete** buttons; replace top "Create session" link with a button below the table. (Sign out lives in the top-right user card now, not below the table.) |
+| `GET /operator/sessions` (table with one big link per row) | Keep today's Name / Code / Status / Deadline / Created columns. Replace the per-row Name link with an **Access** button; add a **Delete** button per row; replace the top "Create session" link with a **Create new session** button below the table. Sign out lives in the top-right user card now, not below the table. |
 | `GET /operator/sessions/{id}` (cards stacked freely) | Restructure into four cards: **Session** (details + Edit details), **Session setup** (table with one row each for Reviewers / Reviewees / Instruments / Assignments / Set up invites), **Run Session** (Validate Session Setup, Manage Invitations, Extract Data), **Danger zone** (Delete Data, Delete Session). |
 | `GET /operator/sessions/{id}/reviewers` (Manage view) | Promote the existing `/reviewers/import` form to a button on the Manage page (POST to a new combined endpoint). Add a disabled **Edit Reviewers** button (placeholder for the inline-editable mode, not yet implemented). |
 | `GET /operator/sessions/{id}/reviewees` | Same shape as reviewers. |
@@ -177,10 +185,18 @@ New surface added by 9.4:
 - Drop the existing "Run setup validation" / "Validate & activate"
   / "Invitations" links from the legacy layout — they live in the
   new **Run Session** card now.
-- "Activate session" / "Revert to draft" buttons keep their
-  endpoints; UI moves into the **Run Session** card (Activate) and a
-  contextual button on the session card (Revert) per existing
-  edit-lock UX.
+- **Validate Session Setup** posts back to the session detail and
+  surfaces an inline summary card (errors / warnings / info counts
+  + readiness verdict) above the Run Session card. The summary
+  card carries a **View detailed validation** button linking to
+  today's `/operator/sessions/{id}/validate` page (no behaviour
+  change to that page itself).
+- The Activate flow moves onto the inline summary card (it needs
+  the readiness verdict anyway): when there are no blocking errors
+  the card renders the **Activate session** form (with the
+  existing `acknowledge_warnings` checkbox path). **Revert to
+  draft** stays as a contextual button on the Session card per the
+  existing edit-lock UX.
 
 ### Slice 3 — Reviewers / reviewees / assignments page reshape
 
@@ -239,7 +255,16 @@ New surface added by 9.4:
      with a Cancel button; toggling does not call any endpoint.
   9. `POST /delete-data` wipes responses and leaves setup rows
      intact; confirm checkbox required.
-  10. Breadcrumb partial renders the expected trail on each page.
+  10. Breadcrumb partial renders the expected trail on each page,
+      with the operator root (`Sessions`) and the reviewer root
+      (`Reviewer`) each rendering as a non-link label on their own
+      root page.
+  11. Chrome renders the app-identity link, the signed-in user
+      name, and a Sign out button on every operator and reviewer
+      page.
+  12. Validate Session Setup on session detail renders an inline
+      summary card with counts + a View detailed validation button
+      that targets `/operator/sessions/{id}/validate`.
   11. Chrome renders the app-identity link, the signed-in user
       name, and a Sign out button on every operator page.
 - `docs/status.md`: add Segment 9.4 row; refresh the operator URL
@@ -266,10 +291,9 @@ New surface added by 9.4:
   keep today's semantics; only the UI placement moves.
 - **Sign-out behavior** — reuses the existing `/.auth/logout` link;
   no auth changes (the chrome's Sign out button targets the same URL).
-- **Version string source** — wire to a single constant or env var;
-  the version-bumping process / release pipeline change is out of
-  scope for 9.4. If no source is wired today, surface the literal
-  `dev` string for now.
+- **Version string source** — `app.config.APP_VERSION = "dev"` for
+  9.4. Pipeline-driven version bumping (e.g. reading the deployed
+  build SHA) is out of scope.
 
 ## Pre-positioned placeholders summary
 
