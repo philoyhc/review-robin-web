@@ -120,12 +120,20 @@ def session_detail(
     if validated:
         issues = validation.validate_session_setup(db, review_session)
         report = lifecycle.build_readiness_report(issues)
+        if report.can_activate and lifecycle.is_draft(review_session):
+            lifecycle.mark_validated(
+                db,
+                review_session=review_session,
+                user=user,
+                report=report,
+                correlation_id=request_correlation_id(),
+            )
         validation_summary = {
             "error_count": len(report.errors),
             "warning_count": len(report.warnings),
             "info_count": len(report.info),
             "can_activate": report.can_activate
-            and lifecycle.is_draft(review_session),
+            and lifecycle.is_validated(review_session),
             "needs_acknowledge": report.has_non_blocking_findings,
         }
     return _templates.TemplateResponse(
@@ -137,6 +145,7 @@ def session_detail(
             "setup_rows": setup_rows,
             "validation_summary": validation_summary,
             "is_draft": lifecycle.is_draft(review_session),
+            "is_validated": lifecycle.is_validated(review_session),
             "is_ready": lifecycle.is_ready(review_session),
             "has_responses": lifecycle.session_has_responses(db, review_session),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
@@ -163,9 +172,11 @@ def validate_session(
             "error_count": len(report.errors),
             "warning_count": len(report.warnings),
             "info_count": len(report.info),
-            "can_activate": report.can_activate and lifecycle.is_draft(review_session),
+            "can_activate": report.can_activate
+            and lifecycle.is_validated(review_session),
             "needs_acknowledge": report.has_non_blocking_findings,
             "is_draft": lifecycle.is_draft(review_session),
+            "is_validated": lifecycle.is_validated(review_session),
             "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Validate setup"
@@ -246,7 +257,7 @@ async def _handle_import(
     parse_fn,
     save_fn,
 ) -> HTMLResponse | RedirectResponse:
-    _require_draft(review_session)
+    _require_editable(review_session)
     content = await file.read()
     result = parse_fn(content)
     existing = existing_count_fn(db, review_session.id)
@@ -291,6 +302,7 @@ async def _handle_import(
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
 
+    _invalidate_if_validated(db, review_session, user, reason=f"{kind}_imported")
     save_fn(
         db,
         session=review_session,
@@ -351,7 +363,7 @@ def assignments_full_matrix(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
-    _require_draft(review_session)
+    _require_editable(review_session)
     exclude_self = exclude_self_review == "true"
     reviewers = assignments.list_reviewers(db, review_session.id)
     reviewees = assignments.list_reviewees(db, review_session.id)
@@ -396,6 +408,9 @@ def assignments_full_matrix(
 
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
+    _invalidate_if_validated(
+        db, review_session, user, reason="assignments_generated"
+    )
     assignments.replace_assignments(
         db,
         review_session=review_session,
@@ -426,7 +441,7 @@ async def assignments_manual_import(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
-    _require_draft(review_session)
+    _require_editable(review_session)
     content = await file.read()
     reviewers = assignments.list_reviewers(db, review_session.id)
     reviewees = assignments.list_reviewees(db, review_session.id)
@@ -474,6 +489,9 @@ async def assignments_manual_import(
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     pairs, contexts, includes = assignments.manual_rows_to_pairs(
         result.rows, reviewers, reviewees
+    )
+    _invalidate_if_validated(
+        db, review_session, user, reason="assignments_imported"
     )
     assignments.replace_assignments(
         db,
@@ -572,7 +590,7 @@ def session_edit_submit(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_draft(review_session)
+    _require_editable(review_session)
     _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     parsed_deadline: datetime | None = None
     if deadline:
@@ -590,6 +608,7 @@ def session_edit_submit(
         description=description or None,
         deadline=parsed_deadline,
     )
+    _invalidate_if_validated(db, review_session, user, reason="session_edited")
     sessions.update_session(
         db,
         review_session=review_session,
@@ -634,7 +653,7 @@ def session_delete(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_draft(review_session)
+    _require_editable(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -660,13 +679,16 @@ def reviewers_delete_all(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_draft(review_session)
+    _require_editable(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="confirm checkbox required",
         )
     _require_response_loss_ack(db, review_session, acknowledge_response_loss)
+    _invalidate_if_validated(
+        db, review_session, user, reason="reviewers_deleted_all"
+    )
     csv_imports.delete_all_reviewers(
         db,
         review_session=review_session,
@@ -687,13 +709,16 @@ def reviewees_delete_all(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_draft(review_session)
+    _require_editable(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="confirm checkbox required",
         )
     _require_response_loss_ack(db, review_session, acknowledge_response_loss)
+    _invalidate_if_validated(
+        db, review_session, user, reason="reviewees_deleted_all"
+    )
     csv_imports.delete_all_reviewees(
         db,
         review_session=review_session,
@@ -714,13 +739,16 @@ def assignments_delete_all(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_draft(review_session)
+    _require_editable(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="confirm checkbox required",
         )
     _require_response_loss_ack(db, review_session, acknowledge_response_loss)
+    _invalidate_if_validated(
+        db, review_session, user, reason="assignments_deleted_all"
+    )
     assignments.delete_all_assignments(
         db,
         review_session=review_session,
@@ -738,14 +766,32 @@ def assignments_delete_all(
 # --------------------------------------------------------------------------- #
 
 
-def _require_draft(review_session: ReviewSession) -> None:
-    """Reject mutating operator actions while session is not draft."""
-    if not lifecycle.is_draft(review_session):
+def _require_editable(review_session: ReviewSession) -> None:
+    """Reject mutating operator actions while session is not draft/validated."""
+    if not lifecycle.is_editable(review_session):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
                 f"Session is {review_session.status}; revert to draft to edit"
             ),
+        )
+
+
+def _invalidate_if_validated(
+    db: Session,
+    review_session: ReviewSession,
+    user: User,
+    *,
+    reason: str,
+) -> None:
+    """Flip ``validated → draft`` so a setup-mutating action can land in ``draft``."""
+    if lifecycle.is_validated(review_session):
+        lifecycle.invalidate_session(
+            db,
+            review_session=review_session,
+            user=user,
+            reason=reason,
+            correlation_id=request_correlation_id(),
         )
 
 

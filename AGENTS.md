@@ -18,9 +18,9 @@
 
 ## Current stage
 
-Segments 1–8 and 9 (9.1, 9.2, 9.3, 9.4A, 9.4B, 9.4C) complete. See `docs/status.md`
-for the authoritative snapshot of what ships today; this section
-summarises only what an agent needs before opening files.
+Segments 1–8 and 9 (9.1, 9.2, 9.3, 9.4A, 9.4B, 9.4C, 9.5A) complete. See
+`docs/status.md` for the authoritative snapshot of what ships today;
+this section summarises only what an agent needs before opening files.
 
 The project has:
 
@@ -87,6 +87,19 @@ The project has:
   forward to Segment 15. `build_setup_rows` re-enables the
   Instruments and Set up invites rows; both render as real Manage
   links from session detail.
+- Setup-readiness lifecycle (Segment 9.5A): adds a stored
+  `validated` value to `SessionStatus` between `draft` and `ready`.
+  `GET /operator/sessions/{id}?validated=1` flips draft→validated
+  as a side-effect when validation has zero errors (idempotent in
+  validated; legacy `/validate` deep-dive stays read-only).
+  `activate_session` now requires `is_validated`; revert from ready
+  still lands on draft. Setup-mutating routes (reviewer/reviewee
+  import + delete-all, assignment generate + manual import +
+  delete-all, session edit) flip validated→draft via a route-level
+  `_invalidate_if_validated` helper before the mutation, emitting
+  dedicated `session.validated` / `session.invalidated` audit
+  events. Instrument open/close/visibility and `POST /delete-data`
+  deliberately do NOT invalidate.
 
 Not yet implemented (do not add unless an issue explicitly asks):
 operator-editable instruments, export, RuleBased assignment,

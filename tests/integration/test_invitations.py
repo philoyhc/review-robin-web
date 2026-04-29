@@ -66,6 +66,7 @@ def _populate(client: TestClient, session_id: int, *, reviewer_email: str) -> No
 
 
 def _activate(client: TestClient, session_id: int) -> None:
+    client.get(f"/operator/sessions/{session_id}?validated=1")
     response = client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},
