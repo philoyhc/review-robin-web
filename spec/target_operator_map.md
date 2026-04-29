@@ -37,3 +37,23 @@ they are specified.
     invitations) stay.
   - **Delete Session** button — removes everything for the session.
 - Back link/button → `/operator/sessions`.
+
+## `/operator/sessions/{id}/reviewers` — Reviewers
+
+- **Reviewers** card: numbers, **Upload CSV** button, **Edit
+  Reviewers** button. **Edit Reviewers** turns the table below into an
+  inline-editable table on the same page (not yet implemented).
+- Table of reviewers.
+- **Danger Zone**: **Delete** button.
+- Back link/button → `/operator/sessions/{id}` (the session page).
+
+## `/operator/sessions/{id}/reviewees` — Reviewees
+
+Analogous to the reviewers page:
+
+- **Reviewees** card: numbers, **Upload CSV** button, **Edit
+  Reviewees** button. **Edit Reviewees** turns the table below into an
+  inline-editable table on the same page (not yet implemented).
+- Table of reviewees.
+- **Danger Zone**: **Delete** button.
+- Back link/button → `/operator/sessions/{id}` (the session page).
