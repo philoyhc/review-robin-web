@@ -105,3 +105,24 @@ button on the session detail._
 _Placeholder — to be specified. Single-instrument sessions still
 address the lone instrument as `.../instruments/1` (etc.); the path
 always includes the instrument id._
+
+## Open design notes
+
+These are alternatives still under consideration; not decided.
+
+- **Note 1 — Inline `setupinvite`.** The content of
+  `/operator/sessions/{id}/setupinvite` could instead live inline on
+  `/operator/sessions/{id}/`, sitting below the Session setup card and
+  above the Danger zone, rather than on its own page.
+- **Note 2 — Inline assignment rules.** The content of
+  `/operator/sessions/{id}/assignments/rules` could instead live
+  inline on `/operator/sessions/{id}/assignments/`: pressing **Assign
+  by Rules** would reveal an additional card above the assignments
+  table; a **Cancel** button on that card would dismiss it.
+- **Note 3 — Single instruments index.** Instead of separate Instrument
+  1…6 rows in Session setup that each link to their own
+  `/operator/sessions/{id}/instruments/{instrument_id}` page, the
+  Session setup table could collapse to a single **Instruments** row
+  whose Manage button goes to `/operator/sessions/{id}/instruments`.
+  That index page would render one card per instrument with the
+  facilities to add, delete, and edit them.
