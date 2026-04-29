@@ -7,7 +7,8 @@ they are specified.
 
 ## Cross-page conventions
 
-Every operator page renders the same chrome before its body:
+Every page (operator and reviewer) renders the same chrome before
+its body:
 
 - **App identity (top left).** The text "Review Robin Web App
   (version {num})" rendered small (not large heading), as a link to
@@ -17,18 +18,29 @@ Every operator page renders the same chrome before its body:
   {user name}" and a **Sign out** button. The Sign out button posts /
   links to `/.auth/logout`.
 - **Breadcrumb trail (top left, just below the app identity).**
-  Reflects the page's position in the operator hierarchy (e.g.
-  `Sessions › {session name} › Reviewers`). Each segment except the
-  current page is a link to that ancestor page. Breadcrumbs replace
-  per-page back-link buttons, so individual page specs below do not
-  list a separate back link, and individual page specs do not list a
-  separate Sign out control either.
+  Reflects the page's position in the surface hierarchy. Each
+  segment except the current page is a link to that ancestor page.
+  The current page renders as a plain non-link label. Breadcrumbs
+  replace per-page back-link buttons, so individual page specs
+  below do not list a separate back link, and individual page specs
+  do not list a separate Sign out control either.
+  - **Operator root.** The operator's perceived home is the
+    sessions list; breadcrumbs start at `Sessions` →
+    `/operator/sessions`. On `/operator/sessions` itself, the trail
+    is the single non-link label `Sessions`.
+  - **Reviewer root.** The reviewer's perceived home is the list of
+    sessions they are invited to (the page at `/reviewer`);
+    breadcrumbs start at `Reviewer` → `/reviewer`. On `/reviewer`
+    itself, the trail is the single non-link label `Reviewer`.
 - **Page title.** The page's H1, rendered below the breadcrumb.
 
 ## `/operator/sessions` — Sessions list
 
-- Table of sessions, one row per session, with two per-row buttons:
-  - **Access**
+- Table of sessions, one row per session. Columns: **Name**,
+  **Code**, **Status**, **Deadline**, **Created**, plus two
+  per-row buttons:
+  - **Access** — replaces the previous Name link; opens the session
+    detail.
   - **Delete**
 - Below the table:
   - **Create new session** button.
@@ -50,7 +62,12 @@ Every operator page renders the same chrome before its body:
   - **Set up invites** row: number, status, **Manage** →
     `/operator/sessions/{id}/setupinvite` (email template).
 - **Run Session** card:
-  - **Validate Session Setup** button.
+  - **Validate Session Setup** — pressing this surfaces an inline
+    summary card on the session detail (error / warning / info
+    counts plus the activate-readiness verdict). The summary card
+    includes a **View detailed validation** button →
+    `/operator/sessions/{id}/validate` for the full per-issue
+    breakdown.
   - **Manage Invitations** button →
     `/operator/sessions/{id}/invitations` (managing the invitations:
     sending, link to outbox, etc.).
