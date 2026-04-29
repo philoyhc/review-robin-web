@@ -3,12 +3,6 @@
 {% block title %}Preview manual import — {{ session.name }}{% endblock %}
 
 {% block content %}
-  <p>
-    <a href="/operator/sessions/{{ session.id }}/assignments">
-      &larr; Back to assignments
-    </a>
-  </p>
-
   <h1>Preview: Manual CSV{% if filename %} ({{ filename }}){% endif %}</h1>
 
   {% if missing_confirm %}

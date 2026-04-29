@@ -1,0 +1,15 @@
+{# Renders a breadcrumb trail from `breadcrumbs` (list of (label, url|None) tuples).
+   The last tuple has url=None and renders as a non-link span marking the current page. #}
+{% set crumbs = breadcrumbs|default([]) %}
+{% if crumbs %}
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    {% for label, url in crumbs %}
+      {% if url %}
+        <a href="{{ url }}">{{ label }}</a>
+      {% else %}
+        <span aria-current="page">{{ label }}</span>
+      {% endif %}
+      {% if not loop.last %}<span class="breadcrumb-sep" aria-hidden="true">/</span>{% endif %}
+    {% endfor %}
+  </nav>
+{% endif %}
