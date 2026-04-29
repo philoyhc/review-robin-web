@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 9.4C (2026-04-29)
+**As of:** end of Segment 9.5A (2026-04-29)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -27,6 +27,7 @@ For the full long-term plan see
 | 2026-04-29 | Segment 9.4A shipped (page chrome + breadcrumbs + sessions list reshape + `/about`) |
 | 2026-04-29 | Segment 9.4B shipped (session detail four-card restructure + inline validate-summary + Delete Data) |
 | 2026-04-29 | Segment 9.4C shipped (Manage-page reshapes + instruments index + `/setupinvite` stub) |
+| 2026-04-29 | Segment 9.5A shipped (`validated` lifecycle state + setup-mutation invalidation hooks) |
 
 ---
 
@@ -48,6 +49,7 @@ For the full long-term plan see
 | 9.4A | Global page chrome (app identity + user card + breadcrumb), `/about` stub, sessions list per-row Access/Delete + Create-new-session button | 2026-04-29 |
 | 9.4B | Session detail four-card layout (Session / Session setup / Run Session / Danger zone), inline validate-summary card via `?validated=1`, `POST /delete-data` with `responses.deleted_all` audit event | 2026-04-29 |
 | 9.4C | Reviewers / reviewees / assignments Manage pages with anchored Upload-CSV cards and disabled Edit buttons; Assign by Rules placeholder card; `/operator/sessions/{id}/instruments` index page; `/operator/sessions/{id}/setupinvite` stub; setup-table Manage buttons for Instruments and Set up invites enabled | 2026-04-29 |
+| 9.5A | `validated` stored state in `SessionStatus` (between `draft` and `ready`); `GET ?validated=1` flips draft→validated when no errors; activation now requires `is_validated`; setup-mutating routes (reviewer/reviewee/assignment import + delete-all + assignment generate + session edit) flip validated→draft via dedicated `session.validated` / `session.invalidated` audit events; instrument open/close/visibility and `/delete-data` deliberately do not invalidate | 2026-04-29 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).

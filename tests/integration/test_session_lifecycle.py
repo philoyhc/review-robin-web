@@ -76,6 +76,7 @@ def _build_ready_session(
     session = _create_session(client, db, code=code)
     _populate_rosters(client, session.id)
     _generate_full_matrix(client, session.id)
+    client.get(f"/operator/sessions/{session.id}?validated=1")
     response = client.post(
         f"/operator/sessions/{session.id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -119,13 +120,17 @@ def test_activate_requires_acknowledge_when_warnings_present(
     session = _create_session(client, db, code="warn-1")
     _populate_rosters(client, session.id)
     _generate_full_matrix(client, session.id)
+    client.get(f"/operator/sessions/{session.id}?validated=1")
+    db.refresh(session)
+    assert session.status == "validated"
+
     no_ack = client.post(
         f"/operator/sessions/{session.id}/activate",
         follow_redirects=False,
     )
     assert no_ack.status_code == 400
     db.refresh(session)
-    assert session.status == "draft"
+    assert session.status == "validated"
 
     with_ack = client.post(
         f"/operator/sessions/{session.id}/activate",

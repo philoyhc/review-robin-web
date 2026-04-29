@@ -28,12 +28,13 @@ from app.services import audit
 class SessionStatus(str, Enum):
     """Canonical session lifecycle values.
 
-    9.1 only writes ``draft`` and ``ready`` from any route. ``expired`` and
+    9.5A adds ``validated`` between ``draft`` and ``ready``. ``expired`` and
     ``archived`` are reserved for later segments — recognised here so the
     string column is constrained at the application layer.
     """
 
     draft = "draft"
+    validated = "validated"
     ready = "ready"
     expired = "expired"  # reserved (Segment 9.3+)
     archived = "archived"  # reserved (Segment 11+)
@@ -45,6 +46,15 @@ def is_ready(review_session: ReviewSession) -> bool:
 
 def is_draft(review_session: ReviewSession) -> bool:
     return review_session.status == SessionStatus.draft.value
+
+
+def is_validated(review_session: ReviewSession) -> bool:
+    return review_session.status == SessionStatus.validated.value
+
+
+def is_editable(review_session: ReviewSession) -> bool:
+    """True when setup-mutating routes are allowed (``draft`` or ``validated``)."""
+    return is_draft(review_session) or is_validated(review_session)
 
 
 @dataclass
@@ -89,6 +99,92 @@ class LifecycleError(Exception):
         self.code = code
 
 
+def mark_validated(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    report: ReadinessReport,
+    correlation_id: str | None = None,
+) -> ReviewSession:
+    """Flip ``draft → validated`` when the readiness report has no errors.
+
+    Idempotent: a no-op when the session is already ``validated``. Raises
+    ``LifecycleError`` if the session is not in ``draft``/``validated`` or
+    if the report still has blocking errors. D3: warnings are implicitly
+    acknowledged at the moment of transition.
+    """
+    if is_validated(review_session):
+        return review_session
+    if not is_draft(review_session):
+        raise LifecycleError(
+            f"Session is {review_session.status}, can only mark validated from draft",
+            code="not_draft",
+        )
+    if not report.can_activate:
+        raise LifecycleError(
+            f"Cannot mark validated: {len(report.errors)} blocking error(s)",
+            code="has_errors",
+        )
+
+    review_session.status = SessionStatus.validated.value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session.validated",
+        summary=f"Session {review_session.code} marked validated",
+        actor_user_id=user.id,
+        session_id=review_session.id,
+        detail={
+            "session_id": review_session.id,
+            "warning_count": len(report.warnings),
+            "info_count": len(report.info),
+        },
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    db.refresh(review_session)
+    return review_session
+
+
+def invalidate_session(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    reason: str,
+    correlation_id: str | None = None,
+) -> ReviewSession:
+    """Flip ``validated → draft`` after a setup-mutating action.
+
+    No-op if the session is already ``draft``. Raises ``LifecycleError`` if
+    the session is in any other status (e.g. ``ready``) — those routes
+    should reject earlier via the editable-state gate.
+    """
+    if is_draft(review_session):
+        return review_session
+    if not is_validated(review_session):
+        raise LifecycleError(
+            f"Session is {review_session.status}, can only invalidate from validated",
+            code="not_validated",
+        )
+
+    review_session.status = SessionStatus.draft.value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session.invalidated",
+        summary=f"Session {review_session.code} invalidated ({reason})",
+        actor_user_id=user.id,
+        session_id=review_session.id,
+        detail={"session_id": review_session.id, "reason": reason},
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    db.refresh(review_session)
+    return review_session
+
+
 def activate_session(
     db: Session,
     *,
@@ -100,13 +196,14 @@ def activate_session(
 ) -> ReviewSession:
     """Flip session to ``ready`` and open every instrument.
 
-    Raises ``LifecycleError`` if the readiness report has errors, or if it
-    has warnings/info and the operator did not pass ``acknowledge_warnings``.
+    Requires the session to be in ``validated`` (T2). Raises ``LifecycleError``
+    if the readiness report has errors, or if it has warnings/info and the
+    operator did not pass ``acknowledge_warnings``.
     """
-    if not is_draft(review_session):
+    if not is_validated(review_session):
         raise LifecycleError(
-            f"Session is {review_session.status}, can only activate from draft",
-            code="not_draft",
+            f"Session is {review_session.status}, can only activate from validated",
+            code="not_validated",
         )
     if not report.can_activate:
         raise LifecycleError(
@@ -417,7 +514,11 @@ __all__ = [
     "LifecycleError",
     "is_draft",
     "is_ready",
+    "is_validated",
+    "is_editable",
     "build_readiness_report",
+    "mark_validated",
+    "invalidate_session",
     "activate_session",
     "revert_session_to_draft",
     "open_instrument",
