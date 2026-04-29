@@ -98,6 +98,32 @@ setup changes; if any `Response` rows already exist, response-loss
 acknowledgment (`acknowledge_response_loss=true`) is required on
 operations that would invalidate them.
 
+### Invitations + dev outbox (Segment 9.2)
+
+`Invitation` rows are operator-issued, per-reviewer access tokens. The
+DB stores only `sha256(token)` in `Invitation.token_hash` — the raw
+token is shown to the operator at outbox-write time (and persisted in
+the `email_outbox.body` so the operator can re-copy the link). Sending
+an invitation always rotates the token, so a previously delivered URL
+becomes stale.
+
+State machine: `pending` → `sent` → `opened`. Generate is idempotent
+(operator-paced, no auto-trigger on activation). All invitation
+actions require `session.status == "ready"` (409 otherwise) so the
+emailed link never points at a draft session.
+
+`/reviewer/invite/{token}` requires Easy Auth sign-in (no magic-link
+anonymous access — that's deferred to Segment 16). The route looks up
+the invitation by token hash, refuses with **403** + a dedicated page
+if the signed-in user's email doesn't match the invitation's reviewer
+email, and otherwise stamps `opened_at` once and 303s to
+`/reviewer/sessions/{id}`.
+
+The `email_outbox` table (Segment 9.2) is the dev-mode replacement
+for SMTP. Rows synchronously flip `queued → sent` when the operator
+clicks Send. Real SMTP / production email is deferred to Segment 15;
+the outbox table itself stays useful for debugging in any environment.
+
 ### Pair-level vs assignment-level context
 
 Manual CSV imports may carry two kinds of per-pair context, both

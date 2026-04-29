@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Invitations — {{ session.name }}{% endblock %}
+
+{% block content %}
+  <p><a href="/operator/sessions/{{ session.id }}">&larr; {{ session.name }}</a></p>
+
+  <h1>Invitations</h1>
+
+  {% if not is_ready %}
+    <div class="card" style="border-color: #d97706; background: #fef3c7;">
+      <p>
+        Invitations can only be issued while the session is
+        <strong>ready</strong>. Activate the session from the validation
+        page to enable these actions.
+      </p>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <p>
+      Eligible reviewers (active + at least one assignment):
+      <strong>{{ eligible_count }}</strong>
+      &middot; Without invitation yet: <strong>{{ uninvited_count }}</strong>
+      &middot; Pending send: <strong>{{ pending_count }}</strong>
+    </p>
+    <p>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/invitations/generate"
+            style="display: inline;">
+        <button class="btn"
+                type="submit"
+                {% if not is_ready or uninvited_count == 0 %}disabled{% endif %}>
+          Generate invitations
+        </button>
+      </form>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/invitations/send-all"
+            style="display: inline;">
+        <button class="btn secondary"
+                type="submit"
+                {% if not is_ready or pending_count == 0 %}disabled{% endif %}>
+          Send all pending
+        </button>
+      </form>
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/outbox">View outbox</a>
+    </p>
+    <p class="muted">
+      Each "Send" rotates the token (the previous URL becomes stale) and
+      writes a fresh row to the dev outbox. Reviewers must sign in with
+      their work email to follow the link.
+    </p>
+  </div>
+
+  {% if rows %}
+    <table>
+      <tr>
+        <th>Reviewer</th>
+        <th>Status</th>
+        <th>Sent</th>
+        <th>Opened</th>
+        <th></th>
+      </tr>
+      {% for row in rows %}
+        <tr>
+          <td>
+            <strong>{{ row.reviewer.name }}</strong><br>
+            <code>{{ row.reviewer.email }}</code>
+          </td>
+          <td>
+            {% if row.invitation.status == "opened" %}
+              <span class="pill pill-info">opened</span>
+            {% elif row.invitation.status == "sent" %}
+              <span class="pill pill-info">sent</span>
+            {% else %}
+              <span class="pill pill-warning">pending</span>
+            {% endif %}
+          </td>
+          <td>{{ row.invitation.sent_at.strftime("%Y-%m-%d %H:%M") if row.invitation.sent_at else "—" }}</td>
+          <td>{{ row.invitation.opened_at.strftime("%Y-%m-%d %H:%M") if row.invitation.opened_at else "—" }}</td>
+          <td style="white-space: nowrap;">
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/send"
+                  style="display: inline;">
+              <button class="btn secondary" type="submit"
+                      {% if not is_ready %}disabled{% endif %}>
+                Send
+              </button>
+            </form>
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/regenerate"
+                  style="display: inline;">
+              <button class="btn secondary" type="submit"
+                      {% if not is_ready %}disabled{% endif %}>
+                Regenerate
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <div class="card">
+      <p class="muted">No invitations yet. Click <em>Generate invitations</em>
+      above to create one row per assigned active reviewer.</p>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,5 +1,6 @@
 from app.db.models.assignment import Assignment
 from app.db.models.audit_event import AuditEvent
+from app.db.models.email_outbox import EmailOutbox
 from app.db.models.instrument import Instrument
 from app.db.models.instrument_field import InstrumentDisplayField, InstrumentResponseField
 from app.db.models.invitation import Invitation
@@ -13,6 +14,7 @@ from app.db.models.user import User
 __all__ = [
     "Assignment",
     "AuditEvent",
+    "EmailOutbox",
     "Instrument",
     "InstrumentDisplayField",
     "InstrumentResponseField",

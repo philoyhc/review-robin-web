@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Outbox — {{ session.name }}{% endblock %}
+
+{% block content %}
+  <p><a href="/operator/sessions/{{ session.id }}/invitations">&larr; Invitations</a></p>
+
+  <h1>Outbox</h1>
+
+  <p class="muted">
+    Dev-mode email outbox for this session. No real SMTP backend is wired
+    up; rows are flipped <code>queued → sent</code> synchronously when an
+    operator clicks <em>Send</em>. The rendered body includes the raw
+    invitation URL so you can copy it into a real client.
+  </p>
+
+  {% if rows %}
+    {% for row in rows %}
+      <div class="card">
+        <p>
+          <strong>{{ row.kind }}</strong>
+          &middot; to <code>{{ row.to_email }}</code>
+          &middot;
+          {% if row.status == "sent" %}
+            <span class="pill pill-info">sent</span>
+            {% if row.sent_at %} at {{ row.sent_at.strftime("%Y-%m-%d %H:%M") }}{% endif %}
+          {% else %}
+            <span class="pill pill-warning">{{ row.status }}</span>
+          {% endif %}
+        </p>
+        <p><strong>Subject:</strong> {{ row.subject }}</p>
+        <pre style="background: #f3f4f6; padding: 12px; border-radius: 4px; white-space: pre-wrap;">{{ row.body }}</pre>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="card">
+      <p class="muted">No outbox rows yet for this session.</p>
+    </div>
+  {% endif %}
+{% endblock %}

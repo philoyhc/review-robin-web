@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 9.1 (2026-04-29)
+**As of:** end of Segment 9.2 (2026-04-29)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -22,6 +22,7 @@ For the full long-term plan see
 | 2026-04-28 | Segments 5–7 shipped (operator session MVP, imports + validation, assignment generation) |
 | 2026-04-29 | Segment 8 shipped (reviewer surface MVP + roster status-filter retrofit) |
 | 2026-04-29 | Segment 9.1 shipped (session activation lifecycle + per-instrument acceptance gates) |
+| 2026-04-29 | Segment 9.2 shipped (per-reviewer invitations + dev outbox + token landing route) |
 
 ---
 
@@ -38,6 +39,7 @@ For the full long-term plan see
 | 7 | FullMatrix + Manual assignment generation + roster Manage views | 2026-04-28 |
 | 8 | Reviewer dashboard + review surface (save / submit / clear / cancel); active-only roster filter retrofit | 2026-04-29 |
 | 9.1 | Session activation lifecycle (draft↔ready), edit-lock, per-instrument open/close, response-window gates | 2026-04-29 |
+| 9.2 | Invitation generation + dev email outbox + `/reviewer/invite/{token}` landing route | 2026-04-29 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
@@ -127,12 +129,19 @@ Migration round-trips on both SQLite (every test session) and Postgres
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/open` | start accepting responses (requires session ready, pre-deadline) |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/close` | stop accepting responses (manual) |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/visibility` | toggle `responses_visible_when_closed` |
+| `GET /operator/sessions/{id}/invitations` | per-reviewer invitation table (status / sent / opened) |
+| `POST /operator/sessions/{id}/invitations/generate` | bulk-create invitations for assigned active reviewers (idempotent; ready-only) |
+| `POST /operator/sessions/{id}/invitations/send-all` | write outbox row per pending invitation (ready-only) |
+| `POST /operator/sessions/{id}/invitations/{iid}/send` | send a single invitation (rotates token; ready-only) |
+| `POST /operator/sessions/{id}/invitations/{iid}/regenerate` | rotate token + reset to pending (ready-only) |
+| `GET /operator/sessions/{id}/outbox` | dev-mode email outbox view for the session |
 
 ### Reviewer-facing app
 
 | URL | What it does |
 |---|---|
 | `GET /reviewer` | dashboard: sessions where user has an active `Reviewer` row; per-session pill (`not started` / `in progress` / `submitted`) |
+| `GET /reviewer/invite/{token}` | invitation token landing — Easy Auth required, email-match check, stamps `opened_at`, 303 to surface |
 | `GET /reviewer/sessions/{id}` | review surface: editable table of assigned reviewees and Default Instrument fields; ?saved=ok / ?submitted=ok flash banners |
 | `POST /reviewer/sessions/{id}/save` | upsert response cells (empty value deletes the row); 303 → surface with `?saved=ok` |
 | `POST /reviewer/sessions/{id}/submit` | persist + validate required; 400 + warn-and-override on missing without acknowledge; else stamps `submitted_at` and 303 → surface with `?submitted=ok` |
@@ -274,6 +283,10 @@ Every destructive operation writes an `audit_events` row with
 | `session.reverted_to_draft` | operator flips session ready→draft (`detail.closed_instrument_ids`, `response_count_at_revert`) |
 | `instrument.opened` | operator manually re-opens a closed instrument |
 | `instrument.closed` | manual or lazy-deadline close (`detail.reason ∈ {manual, deadline}`) |
+| `invitations.generated` | bulk-create invitations on a ready session (`detail.count`, `detail.invitation_ids`, `detail.reviewer_ids`) |
+| `invitation.sent` | outbox row written + invitation flipped to `sent` |
+| `invitation.opened` | first valid token follow with matching email |
+| `invitation.regenerated` | per-row token rotation + reset to `pending` |
 
 `excluded_counts` is a generic map (`{"self_review": N,
 "inactive_reviewer": M, ...}`) so RuleBased exclusions in Segment 12 can
@@ -289,7 +302,7 @@ plug in additional reasons without a schema change. Today's keys are
 | Edit individual reviewer / reviewee / assignment rows (today: bulk operations only via CSV replace or delete-all) | Not yet planned; would slot before activation |
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
-| **Invitations & dev outbox** (email reviewers their links) | **Segment 9.2** |
+| **Real SMTP email backend** (production sending, not the dev outbox) | **Segment 15** |
 | **Monitoring dashboard + reminder send** | **Segment 9.3** |
 | **Instrument builder** (operator-editable response fields on the session's Instrument: add / edit / reorder / delete; field types beyond the seed pair) | **Segment 10** |
 | **Export / audit retention** | **Segment 11** |
