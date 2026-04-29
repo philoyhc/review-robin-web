@@ -13,7 +13,14 @@ from app.db.models import Instrument, Invitation, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
 from app.schemas.sessions import SessionCreate
-from app.services import assignments, csv_imports, invitations, sessions, validation
+from app.services import (
+    assignments,
+    csv_imports,
+    invitations,
+    monitoring,
+    sessions,
+    validation,
+)
 from app.services import session_lifecycle as lifecycle
 from app.web.deps import (
     get_or_create_user,
@@ -1070,4 +1077,87 @@ def outbox_index(
             "session": review_session,
             "rows": rows,
         },
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Monitoring + reminders (Segment 9.3)
+# --------------------------------------------------------------------------- #
+
+
+@router.get(
+    "/sessions/{session_id}/monitoring", response_class=HTMLResponse
+)
+def session_monitoring(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    rows = monitoring.per_reviewer_progress(db, review_session)
+    summary = monitoring.summary_counts(db, review_session)
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_monitoring.html",
+        {
+            "user": user,
+            "session": review_session,
+            "summary": summary,
+            "rows": rows,
+            "is_ready": lifecycle.is_ready(review_session),
+        },
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/invitations/{invitation_id}/remind"
+)
+def invitations_remind_one(
+    request: Request,
+    bundle: tuple[Invitation, ReviewSession] = Depends(
+        _require_invitation_in_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    invitation, review_session = bundle
+    _require_ready(review_session)
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
+    ).scalar_one()
+    invitations.send_reminder(
+        db,
+        invitation=invitation,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=user,
+        request=request,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/monitoring",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/monitoring/remind-incomplete"
+)
+def session_remind_incomplete(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_ready(review_session)
+    invitations.send_reminders_to_incomplete(
+        db,
+        review_session=review_session,
+        user=user,
+        request=request,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/monitoring",
+        status_code=status.HTTP_303_SEE_OTHER,
     )

@@ -124,6 +124,32 @@ for SMTP. Rows synchronously flip `queued → sent` when the operator
 clicks Send. Real SMTP / production email is deferred to Segment 15;
 the outbox table itself stays useful for debugging in any environment.
 
+### Monitoring + reminders (Segment 9.3)
+
+`/operator/sessions/{id}/monitoring` renders a session-level summary
+(assigned / invited / opened / submitted / incomplete) and a
+per-reviewer table with progress counts, invitation status, and a
+per-row "Send reminder" button. Per-reviewee progress is intentionally
+deferred.
+
+A reviewer is **incomplete** iff their session pill is anything other
+than `submitted` — i.e. any of "never opened", "opened but not
+submitted", or "submitted-with-warn-override that still has missing
+required" classify them as incomplete. Bulk
+`/monitoring/remind-incomplete` and per-row `/invitations/{iid}/remind`
+target this set.
+
+Reminders **reuse the URL from the most recent invitation outbox row**
+verbatim — the token is **not** rotated, so the reviewer's previously
+delivered link keeps working. When no prior invitation outbox row
+exists for an invitation (operator never sent the original), the
+reminder action falls back to `send_invitation` (mints a fresh token,
+writes a `kind='invitation'` row); the operator's intent always lands
+as a deliverable message in one click. `Invitation.last_reminder_at`
+stamps every successful reminder. There is no throttle. Bulk reminders
+emit a single `reminders.sent` audit event with `detail.count` and the
+list of invitation/reviewer ids.
+
 ### Pair-level vs assignment-level context
 
 Manual CSV imports may carry two kinds of per-pair context, both

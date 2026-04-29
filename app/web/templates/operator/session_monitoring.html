@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Monitoring — {{ session.name }}{% endblock %}
+
+{% block content %}
+  <p><a href="/operator/sessions/{{ session.id }}">&larr; {{ session.name }}</a></p>
+
+  <h1>Monitoring</h1>
+
+  {% if not is_ready %}
+    <div class="card" style="border-color: #d97706; background: #fef3c7;">
+      <p>
+        Reminder actions require the session to be <strong>ready</strong>.
+        Activate the session from the validation page first.
+      </p>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Summary</h2>
+    <p>
+      <span class="pill pill-info">{{ summary.assigned }} assigned</span>
+      <span class="pill pill-info">{{ summary.invited }} invited</span>
+      <span class="pill pill-info">{{ summary.opened }} opened</span>
+      <span class="pill pill-info">{{ summary.submitted }} submitted</span>
+      <span class="pill pill-warning">{{ summary.incomplete }} incomplete</span>
+    </p>
+    <form method="post"
+          action="/operator/sessions/{{ session.id }}/monitoring/remind-incomplete"
+          style="margin-top: 12px;">
+      <button class="btn"
+              type="submit"
+              {% if not is_ready or summary.incomplete == 0 %}disabled{% endif %}>
+        Send reminders to {{ summary.incomplete }} incomplete reviewer{% if summary.incomplete != 1 %}s{% endif %}
+      </button>
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/outbox">View outbox</a>
+    </form>
+    <p class="muted">
+      Reminders reuse the URL from the most recent invitation send so the
+      reviewer's existing link keeps working. If a reviewer has never been
+      sent the original invitation, the reminder action mints a fresh
+      token and writes an <code>invitation</code> outbox row.
+    </p>
+  </div>
+
+  {% if rows %}
+    <table>
+      <tr>
+        <th>Reviewer</th>
+        <th>Invitation</th>
+        <th>Progress</th>
+        <th>Missing required</th>
+        <th>Last reminder</th>
+        <th></th>
+      </tr>
+      {% for row in rows %}
+        <tr>
+          <td>
+            <strong>{{ row.reviewer.name }}</strong><br>
+            <code>{{ row.reviewer.email }}</code>
+          </td>
+          <td>
+            {% if row.invitation %}
+              {% if row.invitation.status == "opened" %}
+                <span class="pill pill-info">opened</span>
+              {% elif row.invitation.status == "sent" %}
+                <span class="pill pill-info">sent</span>
+              {% else %}
+                <span class="pill pill-warning">pending</span>
+              {% endif %}
+            {% else %}
+              <span class="pill pill-warning">no invitation</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if row.pill_state == "submitted" %}
+              <span class="pill pill-info">submitted</span>
+            {% elif row.pill_state == "in progress" %}
+              <span class="pill pill-warning">in progress</span>
+            {% else %}
+              <span class="pill pill-warning">not started</span>
+            {% endif %}
+            <span class="muted">
+              ({{ row.completed_count }}/{{ row.assignment_count }})
+            </span>
+          </td>
+          <td>{{ row.missing_required_count }}</td>
+          <td>
+            {% if row.last_reminder_at %}
+              {{ row.last_reminder_at.strftime("%Y-%m-%d %H:%M") }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td style="white-space: nowrap;">
+            {% if row.invitation %}
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/remind"
+                    style="display: inline;">
+                <button class="btn secondary" type="submit"
+                        {% if not is_ready or not row.is_incomplete %}disabled{% endif %}>
+                  Send reminder
+                </button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <div class="card">
+      <p class="muted">
+        No assigned reviewers yet — generate assignments before activating
+        the session.
+      </p>
+    </div>
+  {% endif %}
+{% endblock %}
