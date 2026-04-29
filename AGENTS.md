@@ -18,7 +18,7 @@
 
 ## Current stage
 
-Segments 1–8 and 9 (9.1, 9.2, 9.3, 9.4A, 9.4B) complete. See `docs/status.md`
+Segments 1–8 and 9 (9.1, 9.2, 9.3, 9.4A, 9.4B, 9.4C) complete. See `docs/status.md`
 for the authoritative snapshot of what ships today; this section
 summarises only what an agent needs before opening files.
 
@@ -71,6 +71,22 @@ The project has:
   (page is the read-only deep-dive). New `POST /delete-data` wipes
   every Response row for the session, preserves setup, allowed in
   any status, emits `responses.deleted_all`.
+- Manage-page reshape + instruments index + `/setupinvite` stub
+  (Segment 9.4C): reviewers / reviewees / assignments Manage pages
+  use an always-rendered `<section id="upload-csv">` card for CSV
+  upload (the standalone `…/import` GET routes and templates are
+  gone; POST validation errors re-render the parent Manage page).
+  The assignments page also carries an anchored
+  `<section id="rules">` Assign-by-Rules placeholder (Cancel anchor
+  drops the fragment). Edit Reviewers / Reviewees / Assignments
+  buttons render as disabled anchors (`<a class="btn disabled"
+  aria-disabled="true">`). New
+  `GET /operator/sessions/{id}/instruments` lists one card per
+  instrument with Add / Delete instrument disabled (Segment 13);
+  new `GET /operator/sessions/{id}/setupinvite` is a stub pointing
+  forward to Segment 15. `build_setup_rows` re-enables the
+  Instruments and Set up invites rows; both render as real Manage
+  links from session detail.
 
 Not yet implemented (do not add unless an issue explicitly asks):
 operator-editable instruments, export, RuleBased assignment,
