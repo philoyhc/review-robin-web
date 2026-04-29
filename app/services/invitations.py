@@ -9,6 +9,7 @@ flip ``queued → sent`` and are visible on a per-session operator page.
 from __future__ import annotations
 
 import hashlib
+import re
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -349,11 +350,193 @@ def reviewers_eligible_for_invitation(
     )
 
 
+# --------------------------------------------------------------------------- #
+# Reminders (Segment 9.3)
+# --------------------------------------------------------------------------- #
+
+
+REMINDER_KIND = "reminder"
+
+_INVITE_URL_PATTERN = re.compile(r"https?://\S+/reviewer/invite/[A-Za-z0-9_\-]+")
+
+
+def most_recent_invitation_url(
+    db: Session, *, invitation_id: int
+) -> str | None:
+    """Pull the raw token URL from the most recent invitation outbox row.
+
+    Reminders reuse the existing URL so the previously-sent link keeps
+    working. Returns None if the invitation has never been sent.
+    """
+    row = db.execute(
+        select(EmailOutbox)
+        .where(
+            EmailOutbox.invitation_id == invitation_id,
+            EmailOutbox.kind == INVITATION_KIND,
+        )
+        .order_by(EmailOutbox.created_at.desc(), EmailOutbox.id.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if row is None:
+        return None
+    match = _INVITE_URL_PATTERN.search(row.body)
+    return match.group(0) if match else None
+
+
+def _reminder_body(session: ReviewSession, invite_url: str) -> tuple[str, str]:
+    subject = f"Reminder: review for {session.name}"
+    body = (
+        f"Reminder — your review for {session.name} isn't complete yet.\n"
+        f"Open this link (sign in with your work email): {invite_url}\n"
+    )
+    return subject, body
+
+
+@dataclass
+class ReminderResult:
+    outbox_id: int
+    fell_back_to_invitation: bool
+
+
+def send_reminder(
+    db: Session,
+    *,
+    invitation: Invitation,
+    review_session: ReviewSession,
+    reviewer: Reviewer,
+    user: User,
+    request: Request,
+    correlation_id: str | None = None,
+) -> ReminderResult:
+    """Send a reminder reusing the previously-issued invitation URL.
+
+    Falls back to ``send_invitation`` (rotates the token, writes a fresh
+    ``kind='invitation'`` outbox row) when no invitation outbox row exists
+    for this invitation yet — so a single click always results in a
+    deliverable message.
+    """
+    existing_url = most_recent_invitation_url(db, invitation_id=invitation.id)
+    if existing_url is None:
+        result = send_invitation(
+            db,
+            invitation=invitation,
+            review_session=review_session,
+            reviewer=reviewer,
+            user=user,
+            request=request,
+            correlation_id=correlation_id,
+        )
+        invitation.last_reminder_at = datetime.now(timezone.utc)
+        db.flush()
+        db.commit()
+        return ReminderResult(
+            outbox_id=result.outbox_id, fell_back_to_invitation=True
+        )
+
+    subject, body = _reminder_body(review_session, existing_url)
+    outbox = EmailOutbox(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        invitation_id=invitation.id,
+        kind=REMINDER_KIND,
+        to_email=reviewer.email,
+        subject=subject,
+        body=body,
+        status="queued",
+    )
+    db.add(outbox)
+    db.flush()
+
+    now = datetime.now(timezone.utc)
+    outbox.status = "sent"
+    outbox.sent_at = now
+    invitation.last_reminder_at = now
+    db.flush()
+    db.commit()
+    return ReminderResult(outbox_id=outbox.id, fell_back_to_invitation=False)
+
+
+@dataclass
+class ReminderBatchResult:
+    sent_count: int
+    invitation_ids: list[int]
+    reviewer_ids: list[int]
+    fell_back_count: int
+
+
+def send_reminders_to_incomplete(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    request: Request,
+    correlation_id: str | None = None,
+) -> ReminderBatchResult:
+    """Bulk-send reminders to every reviewer classified as incomplete.
+
+    Pulls the incomplete set from ``app.services.monitoring`` (avoids a
+    circular import by importing inline). Writes one batch ``reminders.sent``
+    audit event when at least one reminder was sent.
+    """
+    from app.services import monitoring  # local to avoid circular import
+
+    rows = monitoring.per_reviewer_progress(db, review_session)
+    sent_invitation_ids: list[int] = []
+    sent_reviewer_ids: list[int] = []
+    fell_back = 0
+    for row in rows:
+        if not row.is_incomplete or row.invitation is None:
+            continue
+        result = send_reminder(
+            db,
+            invitation=row.invitation,
+            review_session=review_session,
+            reviewer=row.reviewer,
+            user=user,
+            request=request,
+            correlation_id=correlation_id,
+        )
+        sent_invitation_ids.append(row.invitation.id)
+        sent_reviewer_ids.append(row.reviewer.id)
+        if result.fell_back_to_invitation:
+            fell_back += 1
+
+    if sent_invitation_ids:
+        audit.write_event(
+            db,
+            event_type="reminders.sent",
+            summary=(
+                f"Sent {len(sent_invitation_ids)} reminder"
+                f"{'' if len(sent_invitation_ids) == 1 else 's'}"
+            ),
+            actor_user_id=user.id,
+            session_id=review_session.id,
+            detail={
+                "session_id": review_session.id,
+                "count": len(sent_invitation_ids),
+                "invitation_ids": sent_invitation_ids,
+                "reviewer_ids": sent_reviewer_ids,
+                "fell_back_count": fell_back,
+            },
+            correlation_id=correlation_id,
+        )
+        db.commit()
+    return ReminderBatchResult(
+        sent_count=len(sent_invitation_ids),
+        invitation_ids=sent_invitation_ids,
+        reviewer_ids=sent_reviewer_ids,
+        fell_back_count=fell_back,
+    )
+
+
 __all__ = [
     "INVITATION_KIND",
+    "REMINDER_KIND",
     "GenerateResult",
     "RegenerateResult",
     "SendResult",
+    "ReminderResult",
+    "ReminderBatchResult",
     "InvitationRow",
     "hash_token",
     "generate_invitations",

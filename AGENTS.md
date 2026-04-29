@@ -18,9 +18,9 @@
 
 ## Current stage
 
-Segments 1–8, 9.1, and 9.2 complete. See `docs/status.md` for the
-authoritative snapshot of what ships today; this section summarises
-only what an agent needs before opening files.
+Segments 1–8 and 9 (9.1, 9.2, 9.3) complete. See `docs/status.md`
+for the authoritative snapshot of what ships today; this section
+summarises only what an agent needs before opening files.
 
 The project has:
 
@@ -49,13 +49,19 @@ The project has:
   session; sha256-hashed tokens; `/reviewer/invite/{token}` landing
   route requires Easy Auth + email match (mismatch → 403 page);
   per-session outbox view shows the rendered email + raw token URL.
+- Monitoring + reminders (Segment 9.3): per-session monitoring page
+  with summary counts and per-reviewer progress; per-row and bulk
+  "send reminder to incomplete" actions; reminders reuse the URL
+  from the most recent invitation outbox row (no token rotation),
+  falling back to a fresh send when an invitation has never been
+  sent; single batch `reminders.sent` audit event per bulk send.
 
 Not yet implemented (do not add unless an issue explicitly asks):
-operator-editable instruments, monitoring + reminders (9.3), export,
-RuleBased assignment, multi-instrument sessions, production
-hardening (Key Vault, VNet, soft-delete, real SMTP). These map to
-Segments 9.3–14 — see `guide/segment_NN_*` and `docs/status.md`
-"What's deliberately not yet there."
+operator-editable instruments, export, RuleBased assignment,
+multi-instrument sessions, production hardening (Key Vault, VNet,
+soft-delete, real SMTP). These map to Segments 10–14 — see
+`guide/segment_NN_*` and `docs/status.md` "What's deliberately not
+yet there."
 
 Update `docs/status.md` at the end of each segment; keep the summary
 above in sync.

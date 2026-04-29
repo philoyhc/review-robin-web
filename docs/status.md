@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 9.2 (2026-04-29)
+**As of:** end of Segment 9.3 (2026-04-29)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -23,6 +23,7 @@ For the full long-term plan see
 | 2026-04-29 | Segment 8 shipped (reviewer surface MVP + roster status-filter retrofit) |
 | 2026-04-29 | Segment 9.1 shipped (session activation lifecycle + per-instrument acceptance gates) |
 | 2026-04-29 | Segment 9.2 shipped (per-reviewer invitations + dev outbox + token landing route) |
+| 2026-04-29 | Segment 9.3 shipped (monitoring page + reminder send) |
 
 ---
 
@@ -40,6 +41,7 @@ For the full long-term plan see
 | 8 | Reviewer dashboard + review surface (save / submit / clear / cancel); active-only roster filter retrofit | 2026-04-29 |
 | 9.1 | Session activation lifecycle (draft↔ready), edit-lock, per-instrument open/close, response-window gates | 2026-04-29 |
 | 9.2 | Invitation generation + dev email outbox + `/reviewer/invite/{token}` landing route | 2026-04-29 |
+| 9.3 | Per-session monitoring page + per-row and bulk reminder send | 2026-04-29 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
@@ -135,6 +137,9 @@ Migration round-trips on both SQLite (every test session) and Postgres
 | `POST /operator/sessions/{id}/invitations/{iid}/send` | send a single invitation (rotates token; ready-only) |
 | `POST /operator/sessions/{id}/invitations/{iid}/regenerate` | rotate token + reset to pending (ready-only) |
 | `GET /operator/sessions/{id}/outbox` | dev-mode email outbox view for the session |
+| `GET /operator/sessions/{id}/monitoring` | per-reviewer progress + reminder actions (ready-only for actions) |
+| `POST /operator/sessions/{id}/invitations/{iid}/remind` | send a single reminder reusing the prior invitation URL (ready-only) |
+| `POST /operator/sessions/{id}/monitoring/remind-incomplete` | bulk reminders to every incomplete reviewer (ready-only) |
 
 ### Reviewer-facing app
 
@@ -287,6 +292,7 @@ Every destructive operation writes an `audit_events` row with
 | `invitation.sent` | outbox row written + invitation flipped to `sent` |
 | `invitation.opened` | first valid token follow with matching email |
 | `invitation.regenerated` | per-row token rotation + reset to `pending` |
+| `reminders.sent` | batch reminder send (`detail.count`, `detail.invitation_ids`, `detail.reviewer_ids`, `detail.fell_back_count`) |
 
 `excluded_counts` is a generic map (`{"self_review": N,
 "inactive_reviewer": M, ...}`) so RuleBased exclusions in Segment 12 can
@@ -303,7 +309,6 @@ plug in additional reasons without a schema change. Today's keys are
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
 | **Real SMTP email backend** (production sending, not the dev outbox) | **Segment 15** |
-| **Monitoring dashboard + reminder send** | **Segment 9.3** |
 | **Instrument builder** (operator-editable response fields on the session's Instrument: add / edit / reorder / delete; field types beyond the seed pair) | **Segment 10** |
 | **Export / audit retention** | **Segment 11** |
 | **RuleBased assignment** | **Segment 12** |
