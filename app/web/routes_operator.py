@@ -434,7 +434,6 @@ def assignments_full_matrix_page(
 def assignments_full_matrix(
     request: Request,
     exclude_self_review: str | None = Form(default=None),
-    dry_run: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
@@ -448,43 +447,30 @@ def assignments_full_matrix(
     pairs, excluded_counts = assignments.generate_full_matrix(
         reviewers, reviewees, exclude_self_review=exclude_self
     )
-    stats = assignments.coverage_stats(reviewers, reviewees, pairs)
     existing = assignments.existing_count(db, review_session.id)
-
-    is_dry_run = dry_run == "true"
     needs_confirm = existing > 0 and confirm_replace != "true"
 
-    if is_dry_run or needs_confirm:
-        status_code = (
-            status.HTTP_400_BAD_REQUEST
-            if needs_confirm and not is_dry_run
-            else status.HTTP_200_OK
+    if needs_confirm:
+        assignment_count, pair_sample, truncated_count = _existing_pairs_preview(
+            db, review_session.id
         )
-        pair_sample = pairs[: assignments.PAIR_PREVIEW_LIMIT]
-        truncated_count = max(0, len(pairs) - assignments.PAIR_PREVIEW_LIMIT)
         return _templates.TemplateResponse(
             request,
-            "operator/assignments_preview_full_matrix.html",
+            "operator/session_assignments_full_matrix_setup.html",
             {
                 "user": user,
                 "session": review_session,
-                "exclude_self_review": exclude_self,
-                "excluded_self_count": excluded_counts.get("self_review", 0),
-                "self_review_found": assignments.count_self_review_candidates(
-                    reviewers, reviewees
-                ),
-                "excluded_counts": excluded_counts,
-                "stats": stats,
-                "existing_count": existing,
-                "needs_confirm_replace": existing > 0,
-                "missing_confirm": needs_confirm and not is_dry_run,
+                "assignment_count": assignment_count,
                 "pair_sample": pair_sample,
                 "truncated_count": truncated_count,
+                "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
+                "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
+                "missing_confirm": True,
                 "breadcrumbs": breadcrumbs.operator_session_child(
-                    review_session, "Preview FullMatrix"
+                    review_session, "Full Matrix Assignment"
                 ),
             },
-            status_code=status_code,
+            status_code=status.HTTP_400_BAD_REQUEST,
         )
 
     if existing > 0:
@@ -502,7 +488,7 @@ def assignments_full_matrix(
         excluded_counts=excluded_counts,
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
+        url=f"/operator/sessions/{review_session.id}/assignments/full-matrix",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -515,7 +501,6 @@ def assignments_full_matrix(
 async def assignments_manual_import(
     request: Request,
     file: UploadFile = File(...),
-    dry_run: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
@@ -528,43 +513,33 @@ async def assignments_manual_import(
     reviewees = assignments.list_reviewees(db, review_session.id)
     result = assignments.parse_manual_csv(content, reviewers, reviewees)
     existing = assignments.existing_count(db, review_session.id)
-
-    is_dry_run = dry_run == "true"
     needs_confirm = existing > 0 and confirm_replace != "true"
 
-    def render(status_code: int) -> HTMLResponse:
-        pair_sample = result.rows[: assignments.PAIR_PREVIEW_LIMIT]
-        truncated_count = max(0, len(result.rows) - assignments.PAIR_PREVIEW_LIMIT)
+    if result.is_blocked or needs_confirm:
+        assignment_count, pair_sample, truncated_count = _existing_pairs_preview(
+            db, review_session.id
+        )
         return _templates.TemplateResponse(
             request,
-            "operator/assignments_preview_manual.html",
+            "operator/session_assignments_manual.html",
             {
                 "user": user,
                 "session": review_session,
-                "issues": result.issues,
-                "rows": result.rows,
+                "assignment_count": assignment_count,
                 "pair_sample": pair_sample,
                 "truncated_count": truncated_count,
+                "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
+                "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
+                "issues": result.issues,
                 "filename": file.filename,
-                "existing_count": existing,
-                "needs_confirm_replace": existing > 0,
-                "missing_confirm": needs_confirm and not is_dry_run and not result.is_blocked,
+                "missing_confirm": needs_confirm and not result.is_blocked,
                 "is_blocked": result.is_blocked,
                 "breadcrumbs": breadcrumbs.operator_session_child(
-                    review_session, "Preview manual import"
+                    review_session, "Manual Assignment"
                 ),
             },
-            status_code=status_code,
+            status_code=status.HTTP_400_BAD_REQUEST,
         )
-
-    if result.is_blocked:
-        return render(status.HTTP_400_BAD_REQUEST)
-
-    if is_dry_run:
-        return render(status.HTTP_200_OK)
-
-    if needs_confirm:
-        return render(status.HTTP_400_BAD_REQUEST)
 
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
@@ -586,7 +561,7 @@ async def assignments_manual_import(
         includes=includes,
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
+        url=f"/operator/sessions/{review_session.id}/assignments/manual",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

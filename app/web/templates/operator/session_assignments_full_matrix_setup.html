@@ -5,6 +5,15 @@
 {% block content %}
   <h1>Full Matrix Assignment</h1>
 
+  {% if missing_confirm %}
+    <div class="card" style="border-color: #b91c1c; background: #fee2e2;">
+      <p>
+        <strong>Replace not confirmed.</strong>
+        Tick the confirm checkbox below before generating.
+      </p>
+    </div>
+  {% endif %}
+
   <div class="page-grid">
     <div class="card">
       <h2>FullMatrix</h2>
@@ -20,7 +29,6 @@
               Exclude self-review (when a reviewer's email matches a reviewee's identifier)
             </label>
           </p>
-          <input type="hidden" name="dry_run" value="true">
 
           {% if assignment_count and assignment_count > 0 %}
             <p style="margin-top: 12px;">

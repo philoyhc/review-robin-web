@@ -25,8 +25,10 @@ each page is reviewed.
 - [x] `session_assignments.html` — `/operator/sessions/{id}/assignments`
 - [x] `session_assignments_manual.html` — `/operator/sessions/{id}/assignments/manual`
 - [x] `session_assignments_full_matrix_setup.html` — `/operator/sessions/{id}/assignments/full-matrix`
-- [x] `assignments_preview_full_matrix.html`
-- [ ] `assignments_preview_manual.html`
+  (the previous `assignments_preview_full_matrix.html` and
+  `assignments_preview_manual.html` have been removed; the two
+  setup pages now host both the setup form and the saved-pairs
+  preview)
 - [ ] `instruments_index.html` — `/operator/sessions/{id}/instruments`
 - [ ] `session_setupinvite.html` — `/operator/sessions/{id}/setupinvite` (heading renamed to **Email Invites** only; no layout pass yet)
 - [ ] `session_invitations.html` — `/operator/sessions/{id}/invitations`

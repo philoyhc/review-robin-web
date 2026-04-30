@@ -5,6 +5,26 @@
 {% block content %}
   <h1>Manual Assignment</h1>
 
+  {% if missing_confirm %}
+    <div class="card" style="border-color: #b91c1c; background: #fee2e2;">
+      <p>
+        <strong>Replace not confirmed.</strong>
+        Tick the confirm checkbox below before uploading.
+      </p>
+    </div>
+  {% endif %}
+
+  {% if is_blocked %}
+    <div class="card" style="border-color: #b91c1c; background: #fee2e2;">
+      <p>
+        <strong>Upload blocked.</strong>
+        The CSV has errors that must be resolved before it can be saved.
+      </p>
+    </div>
+  {% endif %}
+
+  {% include "operator/partials/validation_results.html" %}
+
   <div class="page-grid">
     <section class="card" id="upload-csv">
       <h2>Upload Assignments</h2>
@@ -23,7 +43,6 @@
               enctype="multipart/form-data">
           <label for="manual-file">CSV file</label>
           <input type="file" id="manual-file" name="file" accept=".csv,text/csv" required>
-          <input type="hidden" name="dry_run" value="true">
 
           {% if assignment_count and assignment_count > 0 %}
             <p style="margin-top: 12px;">
