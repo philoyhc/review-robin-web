@@ -36,6 +36,33 @@ its body:
     itself, the trail is the single non-link label `Reviewer`.
 - **Page title.** The page's H1, rendered below the breadcrumb.
 
+### Page layout — two-column option
+
+For pages whose content naturally splits into two parallel groupings
+(e.g. session detail's *Session Details + Run Session* alongside
+*Session Setup*), the default layout is a two-column CSS grid via
+`.page-grid` in `base.html`:
+
+- Two equal-width columns (`grid-template-columns: 1fr 1fr`,
+  `gap: 20px`, `align-items: stretch`) so the columns share the
+  page's full width and end at the same vertical position.
+- The left column (`.col-left`) is a flex column with
+  `justify-content: space-between` — its first card pins to the
+  top, its last card to the bottom. The right column (`.col-right`)
+  has its single card grow (`flex: 1`) to fill the column height.
+  Result: top and bottom edges of the two columns are flush.
+- Below 800px viewport, the grid collapses to a single column so
+  the page reads as a vertical stack on mobile.
+- Cards that should sit *outside* the two-column section (full-page
+  width — e.g. context-sensitive overlays, danger zones) are
+  rendered as siblings after the closing `.page-grid` div. Apply
+  `.card-half` (max-width: `calc(50% - 10px)`) when a follow-up
+  card should occupy only half the page width.
+
+This is one valid default; pages whose body is a single linear flow
+(forms, list/detail tables) keep their existing single-column
+layout.
+
 ## `/operator/sessions` — Sessions list
 
 - Table of sessions, one row per session. Columns: **Name**,
