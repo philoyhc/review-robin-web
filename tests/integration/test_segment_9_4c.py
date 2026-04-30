@@ -178,15 +178,6 @@ def test_assignments_hub_inlines_method_forms(
     assert "Rule Based Assignment" in body
     assert "Under Construction" in body
 
-    # Full-matrix setup page renders its setup form
-    fm_body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix"
-    ).text
-    assert (
-        f'action="/operator/sessions/{review_session.id}/assignments/full-matrix"'
-        in fm_body
-    )
-
 
 # ---------------------------------------------------------------------------
 # Slice 3 — instruments index + setup-row re-enable

@@ -175,14 +175,10 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
 
     empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
     assert empty.status_code == 200
-    # Empty state shows the reviewer/reviewee summary; the assignment count
-    # line is hidden until at least one assignment exists. The FullMatrix
-    # entry point is on its own /full-matrix page now.
+    # Empty state shows the reviewer/reviewee summary on the hub; the
+    # FullMatrix Generate button is rendered inline on the same page.
     assert "Reviewers:" in empty.text
-    fm_body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix"
-    ).text
-    assert ">Generate</button>" in fm_body
+    assert ">Generate</button>" in empty.text
 
     client.post(
         f"/operator/sessions/{review_session.id}/assignments/full-matrix",
@@ -216,7 +212,7 @@ def test_non_operator_gets_403_on_assignments_hub_and_post(
     assert post.status_code == 403
 
 
-def test_full_matrix_setup_page_truncates_large_pair_list(
+def test_assignments_hub_truncates_large_pair_list(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db)
@@ -234,9 +230,9 @@ def test_full_matrix_setup_page_truncates_large_pair_list(
         follow_redirects=False,
     )
 
-    # The setup page now hosts the Current pairs preview after save
+    # The hub hosts the Current pairs preview after save
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix"
+        f"/operator/sessions/{review_session.id}/assignments"
     ).text
     assert "Showing first 200 of 217" in body
     assert "and 17 more" in body
@@ -417,7 +413,7 @@ def test_manual_setup_page_shows_saved_pair_after_import(
     assert save.status_code == 303
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments/manual"
+        f"/operator/sessions/{review_session.id}/assignments"
     ).text
     assert "Alice Example" in body
     assert "Carol Example" in body
