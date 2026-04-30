@@ -353,6 +353,16 @@ def assignments_hub(
     )
 
 
+def _existing_pairs_preview(
+    db: Session, session_id: int
+) -> tuple[int, list, int]:
+    """Return (assignment_count, pair_sample, truncated_count) for previews."""
+    assignment_count = assignments.existing_count(db, session_id)
+    pair_sample = assignments.list_pairs(db, session_id) if assignment_count else []
+    truncated_count = max(0, assignment_count - len(pair_sample))
+    return assignment_count, pair_sample, truncated_count
+
+
 @router.get(
     "/sessions/{session_id}/assignments/manual",
     response_class=HTMLResponse,
@@ -363,13 +373,18 @@ def assignments_manual_page(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    assignment_count, pair_sample, truncated_count = _existing_pairs_preview(
+        db, review_session.id
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_assignments_manual.html",
         {
             "user": user,
             "session": review_session,
-            "assignment_count": assignments.existing_count(db, review_session.id),
+            "assignment_count": assignment_count,
+            "pair_sample": pair_sample,
+            "truncated_count": truncated_count,
             "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "breadcrumbs": breadcrumbs.operator_session_child(
@@ -389,13 +404,18 @@ def assignments_full_matrix_page(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    assignment_count, pair_sample, truncated_count = _existing_pairs_preview(
+        db, review_session.id
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_assignments_full_matrix_setup.html",
         {
             "user": user,
             "session": review_session,
-            "assignment_count": assignments.existing_count(db, review_session.id),
+            "assignment_count": assignment_count,
+            "pair_sample": pair_sample,
+            "truncated_count": truncated_count,
             "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "breadcrumbs": breadcrumbs.operator_session_child(
