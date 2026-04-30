@@ -318,6 +318,38 @@ def _is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
     return reviewer.email.casefold() == identifier.casefold()
 
 
+def count_self_review_candidates(
+    reviewers: Iterable[Reviewer],
+    reviewees: Iterable[Reviewee],
+) -> int:
+    """Total self-review pairs across the full reviewer x reviewee matrix.
+
+    Independent of whether the operator chose to exclude self-reviews —
+    this is the population from which exclusion is drawn.
+    """
+    reviewers_list = list(reviewers)
+    reviewees_list = list(reviewees)
+    return sum(
+        1
+        for r in reviewers_list
+        for ree in reviewees_list
+        if _is_self_review(r, ree)
+    )
+
+
+def count_self_reviews_in_assignments(
+    db: Session, session_id: int
+) -> int:
+    """Count saved Assignment rows where reviewer.email matches reviewee identifier."""
+    rows = db.execute(
+        select(Assignment, Reviewer, Reviewee)
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Assignment.session_id == session_id)
+    ).all()
+    return sum(1 for _, reviewer, reviewee in rows if _is_self_review(reviewer, reviewee))
+
+
 def generate_full_matrix(
     reviewers: Iterable[Reviewer],
     reviewees: Iterable[Reviewee],

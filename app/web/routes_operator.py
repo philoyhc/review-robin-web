@@ -335,6 +335,17 @@ def assignments_hub(
         assignments.list_pairs(db, review_session.id) if assignment_count else []
     )
     truncated_count = max(0, assignment_count - len(pair_sample))
+    self_review_found = 0
+    self_review_included = 0
+    if assignment_count:
+        reviewers = assignments.list_reviewers(db, review_session.id)
+        reviewees = assignments.list_reviewees(db, review_session.id)
+        self_review_found = assignments.count_self_review_candidates(
+            reviewers, reviewees
+        )
+        self_review_included = assignments.count_self_reviews_in_assignments(
+            db, review_session.id
+        )
     return _templates.TemplateResponse(
         request,
         "operator/session_assignments.html",
@@ -346,6 +357,9 @@ def assignments_hub(
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "pair_sample": pair_sample,
             "truncated_count": truncated_count,
+            "self_review_found": self_review_found,
+            "self_review_included": self_review_included,
+            "self_review_excluded": self_review_found - self_review_included,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Assignments"
             ),
