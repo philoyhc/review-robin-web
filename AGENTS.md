@@ -35,15 +35,17 @@ The project has:
 - 12-table SQLAlchemy 2.x schema with Alembic migrations.
 - Operator MVP: session CRUD, reviewer/reviewee CSV import + Manage
   views, setup validation, FullMatrix + Manual assignment generation,
-  per-session Default Instrument placeholder, audit log on every
-  destructive op.
+  per-session Default Instrument (10A made it operator-editable;
+  10B-1 added a data-driven reviewer-surface render sourced from
+  `InstrumentDisplayField`), audit log on every destructive op.
 - Reviewer review surface (Segment 8): dashboard, save / submit /
   clear / cancel.
 - Session activation lifecycle (Segment 9.1): draft↔ready transitions
   with audit, edit-lock while ready, per-instrument open/close +
-  visibility sub-page, lazy deadline-driven instrument close,
-  reviewer write-path gated by session status + instrument acceptance
-  + deadline.
+  visibility (originally a sub-page, consolidated into the
+  per-instrument card on `/instruments` by 10A; the legacy URL
+  303s), lazy deadline-driven instrument close, reviewer write-path
+  gated by session status + instrument acceptance + deadline.
 - Per-reviewer invitations + dev email outbox (Segment 9.2):
   operator-paced generate / regenerate / send / send-all on a ready
   session; sha256-hashed tokens; `/reviewer/invite/{token}` landing

@@ -169,9 +169,16 @@ Migration round-trips on both SQLite (every test session) and Postgres
 | `POST /operator/sessions/{id}/assignments/delete-all` | delete every assignment, clear mode |
 | `POST /operator/sessions/{id}/activate` | flip session draft→ready (warn-and-acknowledge for non-blocking findings) |
 | `POST /operator/sessions/{id}/revert` | flip session ready→draft (confirm checkbox; closes all instruments) |
-| `GET /operator/sessions/{id}/instruments` | instruments index — one card per instrument with `accepting_responses` pill + Manage link; Add / Delete instrument disabled until Segment 13 |
+| `GET /operator/sessions/{id}/instruments` | consolidated instruments page — session-wide Settings card (bulk Open all / Close all) + one card per instrument with friendly description, acceptance + visibility toggles, response-fields table (add / edit / delete / reorder, per-field help text + visibility), display-fields table (10B-1 seeded; picker UI lands in 10B-2). Add / Delete instrument disabled until Segment 13 |
 | `GET /operator/sessions/{id}/setupinvite` | stub page — email-template editor lands in Segment 15 |
-| `GET /operator/sessions/{id}/instruments/{instrument_id}` | per-instrument acceptance + visibility sub-page |
+| `GET /operator/sessions/{id}/instruments/{instrument_id}` | legacy redirect — 303 to `/instruments` (back-compat for bookmarks; 10A) |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/edit` | edit friendly description (`Instrument.description`); audit `instrument.described`; invalidates `validated → draft` |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields` | add a response field; auto-derives `field_key` from label when blank; audit `instrument.field_added` |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/{field_id}/edit` | edit a response field (label / required / validation / help text + visibility); audit `instrument.field_updated`; banner-warns when optional → required leaves existing reviewer rows incomplete |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/{field_id}/delete` | delete a response field; cascade-confirm flow when responses exist; audit `instrument.field_deleted` |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/{field_id}/move` | up / down reorder; repacks `0..N-1`; audit `instrument.fields_reordered` |
+| `POST /operator/sessions/{id}/instruments/accepting/all-on` | bulk-open every instrument under the session; audit `instruments.bulk_accepting_responses` (ready-only, pre-deadline; deliberately does NOT invalidate `validated`) |
+| `POST /operator/sessions/{id}/instruments/accepting/all-off` | bulk-close every instrument |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/open` | start accepting responses (requires session ready, pre-deadline) |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/close` | stop accepting responses (manual) |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/visibility` | toggle `responses_visible_when_closed` |
@@ -203,10 +210,13 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
 - Create with name, code (unique per operator), description, deadline.
 - Session creation **also synchronously creates the Default
   Instrument** with two seed response fields (`rating` integer 1–5
-  required; `comments` long text optional). Operator-controlled
-  instrument editing lands later (Segment 10); until then this
-  placeholder is what the reviewer surface renders against. See
-  `ARCHITECTURE.md` "Conceptual hierarchy."
+  required; `comments` long text optional) and three seed display
+  fields (`pair_context_1/2/3`, `visible=true`, `label=''`). Operator
+  edits both kinds via the consolidated `/instruments` page (10A
+  added the response-field builder + friendly description; 10B-1
+  added the data-driven display-field render; 10B-2 will add the
+  display-field picker UI). See `ARCHITECTURE.md` "Conceptual
+  hierarchy."
 - View detail with live counts of reviewers, reviewees, assignments,
   and the current `assignment_mode`.
 - **Edit** name / code / description / deadline; changes recorded as
@@ -277,12 +287,21 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
   with per-session pill (`not started` / `in progress` /
   `submitted`) computed from the reviewer's `Response` rows.
 - **Surface** at `/reviewer/sessions/{id}` renders an editable HTML
-  table: one row per non-excluded assignment (`include = true`),
-  one input per `InstrumentResponseField` on the Default Instrument
-  (today: `rating` integer 1–5 required, `comments` long text
-  optional). Pair-level context (`pair_context_1/2/3`) is shown
-  alongside the reviewee; tags and `assignment_context_*` are
-  hidden by default in this segment.
+  table per instrument (today: N=1, the Default Instrument) with a
+  section heading from `Instrument.description` (fallback to the
+  system handle) and a per-field help block above the table for
+  fields whose `help_text_visible` is true. Each table row is one
+  non-excluded assignment (`include = true`); columns are reviewee
+  identity (name + email_or_identifier, always-first, mandatory)
+  followed by the instrument's visible `InstrumentDisplayField`
+  rows (10B-1 — sourced from `pair_context_1/2/3` today; 10B-2 will
+  let the operator add `reviewee.tag_1/2/3` / `reviewee.profile_link`
+  via a per-instrument picker), then the response-field inputs in
+  stored order, then a row-level submitted-status indicator. Empty
+  / NULL display-field labels fall back to inferred strings from
+  the D6 helper. `profile_link` cells render as plain `<a href>`.
+  `assignment_context_*` is deliberately excluded from the surface
+  per the pair-vs-assignment-context distinction.
 - **Save draft**: form post upserts `Response` rows. Empty value
   deletes the row, so the row's absence == empty answer. Never
   touches `submitted_at`.
@@ -395,11 +414,14 @@ constraints make it necessary.
 
 ### Single-instrument invariant
 
-Every session has exactly one Instrument (`Default`) with seed
-response fields, auto-created at session creation time. Every
-assignment points at it. Multi-instrument operator UI lands in
-Segment 13; until then the schema's per-instrument granularity is
-real but unused. See `ARCHITECTURE.md` "Conceptual hierarchy."
+Every session has exactly one Instrument (system handle `Default`,
+operator-editable `description`) with seed response fields and seed
+`pair_context_1/2/3` display fields, auto-created at session
+creation time via `ensure_default_instrument`. Every assignment
+points at it. The reviewer surface and the operator's `/instruments`
+page already loop over instruments (today: N=1) so multi-instrument
+support (Segment 13) is purely an enable-the-Add/Delete-buttons
+change. See `ARCHITECTURE.md` "Conceptual hierarchy."
 
 ### Pair-level vs assignment-level context
 
