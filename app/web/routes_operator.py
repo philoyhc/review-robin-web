@@ -397,6 +397,9 @@ def assignments_full_matrix(
                 "session": review_session,
                 "exclude_self_review": exclude_self,
                 "excluded_self_count": excluded_counts.get("self_review", 0),
+                "self_review_found": assignments.count_self_review_candidates(
+                    reviewers, reviewees
+                ),
                 "excluded_counts": excluded_counts,
                 "stats": stats,
                 "existing_count": existing,

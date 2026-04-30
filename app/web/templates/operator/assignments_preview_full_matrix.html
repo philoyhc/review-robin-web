@@ -25,9 +25,12 @@
         <li>Total assignments: <strong>{{ stats.total }}</strong></li>
         <li>Reviewers covered: <strong>{{ stats.reviewers_covered }} / {{ stats.reviewers_total }}</strong></li>
         <li>Reviewees covered: <strong>{{ stats.reviewees_covered }} / {{ stats.reviewees_total }}</strong></li>
-        {% if exclude_self_review %}
-          <li>Self-reviews excluded: <strong>{{ excluded_self_count }}</strong></li>
-        {% endif %}
+        <li>
+          Self-reviews:
+          <strong>{{ excluded_self_count }}</strong> excluded /
+          <strong>{{ self_review_found - excluded_self_count }}</strong> included /
+          <strong>{{ self_review_found }}</strong> found
+        </li>
       </ul>
 
       {% if stats.reviewers_uncovered %}
