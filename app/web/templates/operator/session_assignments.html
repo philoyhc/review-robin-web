@@ -6,24 +6,35 @@
   <h1>Assignments</h1>
 
   <div class="card">
-    <p>
-      Reviewers in this session: <strong>{{ reviewer_count }}</strong>
-      &middot;
-      Reviewees: <strong>{{ reviewee_count }}</strong>
-    </p>
-    {% if assignment_count %}
-      <p>
-        <strong>{{ "{:,}".format(assignment_count) }}</strong>
-        assignment{% if assignment_count != 1 %}s{% endif %}
-        {% if truncated_count %}
-          ({{ "{:,}".format(pair_sample | length) }} shown)
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <p style="margin: 0;">
+          Reviewers in this session: <strong>{{ reviewer_count }}</strong>
+          &middot;
+          Reviewees: <strong>{{ reviewee_count }}</strong>
+        </p>
+        {% if assignment_count %}
+          <p style="margin: 6px 0 0 0;">
+            <strong>{{ "{:,}".format(assignment_count) }}</strong>
+            assignment{% if assignment_count != 1 %}s{% endif %}
+            {% if truncated_count %}
+              ({{ "{:,}".format(pair_sample | length) }} shown)
+            {% endif %}
+            {% if session.assignment_mode %}
+              &middot; assigned using
+              <span class="pill pill-info">{{ session.assignment_mode }}</span>
+            {% endif %}
+          </p>
         {% endif %}
-        {% if session.assignment_mode %}
-          &middot; assigned using
-          <span class="pill pill-info">{{ session.assignment_mode }}</span>
-        {% endif %}
-      </p>
-    {% endif %}
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Invites</a>
+      </div>
+    </div>
   </div>
 
   {% if reviewer_count == 0 or reviewee_count == 0 %}
@@ -36,7 +47,7 @@
   {% endif %}
 
   <div class="page-grid">
-    <div class="card card-l">
+    <div class="card">
       <h2>Choose Assignment Method</h2>
       <div class="btn-row">
         <a class="btn-cta"
@@ -49,19 +60,8 @@
       </div>
     </div>
 
-    <div class="card card-tr">
-      <h2>Setup Pages</h2>
-      <div class="btn-row">
-        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Invites</a>
-      </div>
-    </div>
-
     {% if assignment_count %}
-      <div class="card card-br" style="border-color: #b91c1c;">
+      <div class="card" style="border-color: #b91c1c;">
         <h2 style="color: #b91c1c;">Danger Zone</h2>
         <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
           <p>

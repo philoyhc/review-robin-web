@@ -6,14 +6,23 @@
   <h1>Reviewees</h1>
 
   <div class="card">
-    <p>
-      <strong>{{ reviewees | length }}</strong>
-      reviewee{% if reviewees | length != 1 %}s{% endif %} currently loaded
-    </p>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <p style="margin: 0;">
+        <strong>{{ reviewees | length }}</strong>
+        reviewee{% if reviewees | length != 1 %}s{% endif %} currently loaded
+      </p>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
+        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Invites</a>
+      </div>
+    </div>
   </div>
 
   <div class="page-grid">
-    <section class="card card-l" id="upload-csv">
+    <section class="card" id="upload-csv">
       <h2>Upload Reviewees</h2>
       <p class="muted">
         CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
@@ -63,19 +72,8 @@
       </form>
     </section>
 
-    <div class="card card-tr">
-      <h2>Setup Pages</h2>
-      <div class="btn-row">
-        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Invites</a>
-      </div>
-    </div>
-
     {% if reviewees %}
-      <div class="card card-br" style="border-color: #b91c1c;">
+      <div class="card" style="border-color: #b91c1c;">
         <h2 style="color: #b91c1c;">Danger Zone</h2>
         <form method="post" action="/operator/sessions/{{ session.id }}/reviewees/delete-all">
           <p>
