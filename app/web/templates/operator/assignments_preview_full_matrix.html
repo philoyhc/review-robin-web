@@ -27,9 +27,12 @@
         <li>Reviewees covered: <strong>{{ stats.reviewees_covered }} / {{ stats.reviewees_total }}</strong></li>
         <li>
           Self-reviews:
-          <strong>{{ excluded_self_count }}</strong> excluded /
-          <strong>{{ self_review_found - excluded_self_count }}</strong> included /
-          <strong>{{ self_review_found }}</strong> found
+          <strong>{{ self_review_found }}</strong> found /
+          {% if exclude_self_review %}
+            <strong>{{ excluded_self_count }}</strong> excluded
+          {% else %}
+            <strong>{{ self_review_found - excluded_self_count }}</strong> included
+          {% endif %}
         </li>
       </ul>
 
