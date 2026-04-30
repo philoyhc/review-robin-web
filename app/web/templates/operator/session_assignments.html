@@ -79,8 +79,8 @@
 
   {% include "operator/partials/validation_results.html" %}
 
-  <div class="page-grid">
-    <section class="card card-tl" id="upload-csv">
+  <div class="bottom-grid">
+    <section class="card" id="upload-csv">
       <h2>Upload Manual Assignment</h2>
       <p class="muted">
         CSV file in UTF-8, max 5000 rows. One row per assignment. Required
@@ -128,7 +128,7 @@
       {% endif %}
     </section>
 
-    <div class="card card-tr">
+    <div class="card">
       <h2>Full Matrix Assignment</h2>
       <p class="muted">Pair every reviewer with every reviewee.</p>
       {% if reviewer_count == 0 or reviewee_count == 0 %}
@@ -166,13 +166,13 @@
       {% endif %}
     </div>
 
-    <div class="card card-bl">
+    <div class="card">
       <h2>Rule Based Assignment</h2>
       <p class="muted">Under Construction</p>
     </div>
 
     {% if assignment_count %}
-      <div class="card card-br" style="border-color: #b91c1c;">
+      <div class="card" style="border-color: #b91c1c;">
         <h2 style="color: #b91c1c;">Danger Zone</h2>
         <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
           <p>
