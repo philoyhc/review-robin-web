@@ -25,10 +25,11 @@ The styles are realized through the `.btn` family in
 
 - **Primary** — `.btn` (default, no modifier).
 - **Primary Outline** — `.btn.secondary`.
-- **Danger** — currently applied via inline style overrides on
-  `.btn` (e.g. `style="background: #b91c1c; border-color: #b91c1c"`).
-  Candidate to be promoted to a `.btn.danger-solid` modifier when
-  we next touch button CSS.
+- **Danger** — `.btn.danger-solid`. (The danger-zone confirm
+  buttons in `session_detail.html` still use inline-style
+  overrides on `.btn` for the same red fill — candidate to be
+  migrated to `.btn.danger-solid` next time those forms are
+  touched.)
 - **Danger Outline** — `.btn.danger`.
 
 ### CTA variant
