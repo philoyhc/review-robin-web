@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 10B-1 (2026-04-30)
+**As of:** end of Segment 10B-2 (2026-04-30)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -30,6 +30,7 @@ For the full long-term plan see
 | 2026-04-29 | Segment 9.5A shipped (`validated` lifecycle state + setup-mutation invalidation hooks) |
 | 2026-04-30 | Segment 10A shipped (response-field builder + reviewer-surface loop-by-instrument refactor) |
 | 2026-04-30 | Segment 10B-1 shipped (data-driven reviewer-surface render + display-field backfill) |
+| 2026-04-30 | Segment 10B-2 shipped (operator display-field builder + shared field-order bulk form) |
 
 ---
 
@@ -54,6 +55,7 @@ For the full long-term plan see
 | 9.5A | `validated` stored state in `SessionStatus` (between `draft` and `ready`); `GET ?validated=1` flips draft→validated when no errors; activation now requires `is_validated`; setup-mutating routes (reviewer/reviewee/assignment import + delete-all + assignment generate + session edit) flip validated→draft via dedicated `session.validated` / `session.invalidated` audit events; instrument open/close/visibility and `/delete-data` deliberately do not invalidate | 2026-04-29 |
 | 10A | Consolidated `/operator/sessions/{id}/instruments` page: per-instrument card with friendly description, acceptance + visibility toggles, response-fields table (add / edit / delete / reorder, per-field help text + visibility), session-wide Instruments Settings card with bulk Open all / Close all toggles. Migration adds `help_text` (Text, NULL) and `help_text_visible` (Bool, default true) on `instrument_response_fields`. Reviewer surface refactors to loop-by-instrument with section heading from `Instrument.description` (fallback to system handle) and a per-field help block above each table. Empty-instrument validation now blocks activation. Description / field mutations invalidate `validated → draft` via `_invalidate_if_validated`; bulk accepting + per-instrument open/close/visibility deliberately do not invalidate. Body width bumped from 900px to 1400px globally with a `.table-scroll` overflow utility. | 2026-04-30 |
 | 10B-1 | Backfill migration (`c2143bd329c7`) seeds three `InstrumentDisplayField` rows (`source_type='pair_context'`, `source_field='1'|'2'|'3'`, `label=''`, `order=0..2`, `visible=true`) on every existing instrument; destructive within that filter (operator-typed labels on those slots are not preserved across upgrade); operator-added `reviewee` rows left intact. `ensure_default_instrument` seeds the same three rows on new sessions. Reviewer surface renders pair-context values as separate columns sourced from the display-field rows (no longer inline in the identity cell); reviewee identity (name + email) is the always-first column, mandatory and non-toggleable. New service helpers `display_field_label(field)` and `display_field_value(field, assignment)` cover the seven D6 sources (`reviewee.tag_1/2/3`, `reviewee.profile_link`, `pair_context.1/2/3`); empty/NULL labels fall back to inferred strings. `profile_link` cells render as plain `<a>`. No operator UI yet (picker + bulk form land in 10B-2; preview route in 10B-3). No new audit events. | 2026-04-30 |
+| 10B-2 | Per-instrument display-fields card on `/operator/sessions/{id}/instruments`: Add (combined source picker over the seven D6 sources minus those already on the instrument; colon-delimited values like `reviewee:tag_1`), inline Edit (label override + visibility), Delete (no cascade-confirm — display fields carry no per-row dependent data). New shared "Field order & visibility" bulk form covering both display + response fields, interleaved in operator-chosen order, with per-table independent repack to `0..N-1` on save. Four new audit events: `instrument.display_field_added`, `instrument.display_field_updated`, `instrument.display_field_deleted`, `instrument.display_fields_saved` (D11 diff shape; `added` / `removed` always empty since adds + deletes are row-level only). Reuses 10A `instrument.fields_reordered` when bulk save reorders response fields. Display-field mutations invalidate `validated → draft` and 409 when `status=ready` (mirrors 10A). Rank-based change detection on bulk save means submitting current state is a no-op. | 2026-04-30 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
@@ -177,6 +179,10 @@ Migration round-trips on both SQLite (every test session) and Postgres
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/{field_id}/edit` | edit a response field (label / required / validation / help text + visibility); audit `instrument.field_updated`; banner-warns when optional → required leaves existing reviewer rows incomplete |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/{field_id}/delete` | delete a response field; cascade-confirm flow when responses exist; audit `instrument.field_deleted` |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/{field_id}/move` | up / down reorder; repacks `0..N-1`; audit `instrument.fields_reordered` |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/display-fields` | add a display field (one of the seven D6 sources, posted as `source_pair=reviewee:tag_1`); audit `instrument.display_field_added`; invalidates `validated → draft`; `DisplaySourceError` (unknown source / duplicate) redirects with `?display_source_error=<pair>` |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/display-fields/{df_id}/edit` | edit label override + visibility; `(source_type, source_field)` are immutable; audit `instrument.display_field_updated` (diff-shaped) |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/display-fields/{df_id}/delete` | delete a display field; no cascade-confirm; audit `instrument.display_field_deleted` (with snapshot) |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/save` | shared bulk form covering display + response fields — repacks `order` to `0..N-1` per table independently; persists display rows' `visible` + `label`; audit `instrument.fields_reordered` (when response order changes) and / or `instrument.display_fields_saved` (D11 diff shape) |
 | `POST /operator/sessions/{id}/instruments/accepting/all-on` | bulk-open every instrument under the session; audit `instruments.bulk_accepting_responses` (ready-only, pre-deadline; deliberately does NOT invalidate `validated`) |
 | `POST /operator/sessions/{id}/instruments/accepting/all-off` | bulk-close every instrument |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/open` | start accepting responses (requires session ready, pre-deadline) |
@@ -212,11 +218,13 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
   Instrument** with two seed response fields (`rating` integer 1–5
   required; `comments` long text optional) and three seed display
   fields (`pair_context_1/2/3`, `visible=true`, `label=''`). Operator
-  edits both kinds via the consolidated `/instruments` page (10A
-  added the response-field builder + friendly description; 10B-1
-  added the data-driven display-field render; 10B-2 will add the
-  display-field picker UI). See `ARCHITECTURE.md` "Conceptual
-  hierarchy."
+  edits both kinds via the consolidated `/instruments` page (10A:
+  response-field builder + friendly description; 10B-1: data-driven
+  reviewer-surface render; 10B-2: display-field picker + shared
+  field-order bulk form). The seven supported display-field sources
+  are `reviewee.tag_1/2/3`, `reviewee.profile_link`, and
+  `pair_context.1/2/3`; `assignment_context_*` is deliberately
+  excluded. See `ARCHITECTURE.md` "Conceptual hierarchy."
 - View detail with live counts of reviewers, reviewees, assignments,
   and the current `assignment_mode`.
 - **Edit** name / code / description / deadline; changes recorded as
@@ -358,7 +366,11 @@ Every destructive operation writes an `audit_events` row with
 | `instrument.field_added` | operator adds a response field (`detail.field_key`, `label`, `response_type`, `required`, `validation`, `help_text`, `help_text_visible`) |
 | `instrument.field_updated` | operator edits a response field (`detail.changes: {key: [old, new]}` for each changed key only) |
 | `instrument.field_deleted` | operator deletes a response field (`detail.snapshot`, `cascaded_response_count`) |
-| `instrument.fields_reordered` | up/down move (`detail.old_order`, `detail.new_order` as `field_key` lists) |
+| `instrument.fields_reordered` | up/down move OR bulk fields-save when response order changes (`detail.old_order`, `detail.new_order` as `field_key` lists; scoped to response fields) |
+| `instrument.display_field_added` | operator adds a display field (`detail.source_type`, `source_field`, `label`, `order`, `visible`) |
+| `instrument.display_field_updated` | operator edits a display field (`detail.changes: {key: [old, new]}` for each changed key only — `(source_type, source_field)` are immutable) |
+| `instrument.display_field_deleted` | operator deletes a display field (`detail.snapshot`); no cascade since display fields have no per-row dependents |
+| `instrument.display_fields_saved` | bulk fields-save when display rows' label / visibility / order changed (`detail.added` / `removed` always `[]` in 10B-2; `detail.updated` carries `[{source_type, source_field, changes: {key: [old, new]}}, …]`) |
 | `instruments.bulk_accepting_responses` | bulk Open all / Close all (`detail.target`, `detail.changed_instrument_ids`); not duplicated as per-instrument open / close events |
 | `invitations.generated` | bulk-create invitations on a ready session (`detail.count`, `detail.invitation_ids`, `detail.reviewer_ids`) |
 | `invitation.sent` | outbox row written + invitation flipped to `sent` |
@@ -381,7 +393,6 @@ plug in additional reasons without a schema change. Today's keys are
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
 | **Real SMTP email backend** (production sending, not the dev outbox) | **Segment 15** |
-| **Display-fields picker** (operator UI to add / remove / order / toggle visibility / label-override the seven D6 sources on a per-instrument card; row-level + bulk forms; four new audit events) | **Segment 10B-2** |
 | **Operator preview route** (`GET /operator/sessions/{id}/preview` — read-only render of the reviewer surface with synthetic rows, disabled inputs, banner; works in any session status) | **Segment 10B-3** |
 | **Export / audit retention** | **Segment 11** |
 | **RuleBased assignment** | **Segment 12** |
