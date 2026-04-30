@@ -68,7 +68,7 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
 
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix"
+        f"/operator/sessions/{review_session.id}/assignments"
     )
     rows = list(
         db.execute(

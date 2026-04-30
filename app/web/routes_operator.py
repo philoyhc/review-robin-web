@@ -330,6 +330,19 @@ def assignments_hub(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    return _render_assignments_hub(request, db, review_session, user)
+
+
+def _render_assignments_hub(
+    request: Request,
+    db: Session,
+    review_session: ReviewSession,
+    user: User,
+    *,
+    issues: list | None = None,
+    missing_confirm: bool = False,
+    is_blocked: bool = False,
+) -> HTMLResponse:
     assignment_count = assignments.existing_count(db, review_session.id)
     pair_sample = (
         assignments.list_pairs(db, review_session.id) if assignment_count else []
@@ -346,6 +359,9 @@ def assignments_hub(
         self_review_included = assignments.count_self_reviews_in_assignments(
             db, review_session.id
         )
+    status_code = (
+        status.HTTP_400_BAD_REQUEST if (missing_confirm or is_blocked) else status.HTTP_200_OK
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_assignments.html",
@@ -360,10 +376,14 @@ def assignments_hub(
             "self_review_found": self_review_found,
             "self_review_included": self_review_included,
             "self_review_excluded": self_review_found - self_review_included,
+            "issues": issues,
+            "missing_confirm": missing_confirm,
+            "is_blocked": is_blocked,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Assignments"
             ),
         },
+        status_code=status_code,
     )
 
 
@@ -465,26 +485,9 @@ def assignments_full_matrix(
     needs_confirm = existing > 0 and confirm_replace != "true"
 
     if needs_confirm:
-        assignment_count, pair_sample, truncated_count = _existing_pairs_preview(
-            db, review_session.id
-        )
-        return _templates.TemplateResponse(
-            request,
-            "operator/session_assignments_full_matrix_setup.html",
-            {
-                "user": user,
-                "session": review_session,
-                "assignment_count": assignment_count,
-                "pair_sample": pair_sample,
-                "truncated_count": truncated_count,
-                "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
-                "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
-                "missing_confirm": True,
-                "breadcrumbs": breadcrumbs.operator_session_child(
-                    review_session, "Full Matrix Assignment"
-                ),
-            },
-            status_code=status.HTTP_400_BAD_REQUEST,
+        return _render_assignments_hub(
+            request, db, review_session, user,
+            missing_confirm=True,
         )
 
     if existing > 0:
@@ -502,7 +505,7 @@ def assignments_full_matrix(
         excluded_counts=excluded_counts,
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        url=f"/operator/sessions/{review_session.id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -515,6 +518,7 @@ def assignments_full_matrix(
 async def assignments_manual_import(
     request: Request,
     file: UploadFile = File(...),
+    exclude_self_review: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
@@ -530,35 +534,24 @@ async def assignments_manual_import(
     needs_confirm = existing > 0 and confirm_replace != "true"
 
     if result.is_blocked or needs_confirm:
-        assignment_count, pair_sample, truncated_count = _existing_pairs_preview(
-            db, review_session.id
+        return _render_assignments_hub(
+            request, db, review_session, user,
+            issues=result.issues,
+            missing_confirm=needs_confirm and not result.is_blocked,
+            is_blocked=result.is_blocked,
         )
-        return _templates.TemplateResponse(
-            request,
-            "operator/session_assignments_manual.html",
-            {
-                "user": user,
-                "session": review_session,
-                "assignment_count": assignment_count,
-                "pair_sample": pair_sample,
-                "truncated_count": truncated_count,
-                "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
-                "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
-                "issues": result.issues,
-                "filename": file.filename,
-                "missing_confirm": needs_confirm and not result.is_blocked,
-                "is_blocked": result.is_blocked,
-                "breadcrumbs": breadcrumbs.operator_session_child(
-                    review_session, "Manual Assignment"
-                ),
-            },
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+
+    rows = result.rows
+    if exclude_self_review == "true":
+        rows = [
+            r for r in rows
+            if r.reviewer_email.casefold() != r.reviewee_identifier.casefold()
+        ]
 
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     pairs, contexts, includes = assignments.manual_rows_to_pairs(
-        result.rows, reviewers, reviewees
+        rows, reviewers, reviewees
     )
     _invalidate_if_validated(
         db, review_session, user, reason="assignments_imported"
@@ -575,7 +568,7 @@ async def assignments_manual_import(
         includes=includes,
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments/manual",
+        url=f"/operator/sessions/{review_session.id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

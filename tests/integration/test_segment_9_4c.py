@@ -155,7 +155,7 @@ def test_reviewers_import_validation_errors_render_on_manage_page(
 # ---------------------------------------------------------------------------
 
 
-def test_assignments_hub_links_to_method_pages(
+def test_assignments_hub_inlines_method_forms(
     client: TestClient, db: Session
 ) -> None:
     review_session = _seed_pair(client, db, code="a-reshape")
@@ -164,26 +164,19 @@ def test_assignments_hub_links_to_method_pages(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
 
-    # Choose Assignment Method card with three CTAs: Manual, FullMatrix
-    # link to dedicated GET pages; Rule Based is disabled until Segment 12.
-    assert 'href="/operator/sessions/{}/assignments/manual"'.format(
-        review_session.id
-    ) in body
-    assert 'href="/operator/sessions/{}/assignments/full-matrix"'.format(
-        review_session.id
-    ) in body
-    assert "Rule Based" in body
-    assert 'aria-disabled="true"' in body
-
-    # Manual page renders the upload form
-    manual_body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments/manual"
-    ).text
-    assert 'id="upload-csv"' in manual_body
+    # Both Upload Manual and Full Matrix forms now live inline on the hub.
+    assert 'id="upload-csv"' in body
     assert (
         f'action="/operator/sessions/{review_session.id}/assignments/manual/import"'
-        in manual_body
+        in body
     )
+    assert (
+        f'action="/operator/sessions/{review_session.id}/assignments/full-matrix"'
+        in body
+    )
+    # Rule Based card is a placeholder
+    assert "Rule Based Assignment" in body
+    assert "Under Construction" in body
 
     # Full-matrix setup page renders its setup form
     fm_body = client.get(
