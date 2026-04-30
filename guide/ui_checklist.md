@@ -22,7 +22,7 @@ each page is reviewed.
 - [x] `session_edit.html` — `/operator/sessions/{id}/edit`
 - [x] `session_reviewers.html` — `/operator/sessions/{id}/reviewers`
 - [x] `session_reviewees.html` — `/operator/sessions/{id}/reviewees`
-- [ ] `session_assignments.html` — `/operator/sessions/{id}/assignments`
+- [x] `session_assignments.html` — `/operator/sessions/{id}/assignments`
 - [ ] `assignments_preview_full_matrix.html`
 - [ ] `assignments_preview_manual.html`
 - [ ] `instruments_index.html` — `/operator/sessions/{id}/instruments`
