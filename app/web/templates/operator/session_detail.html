@@ -6,14 +6,14 @@
 
 {% block content %}
   <h1>{{ session.name }}</h1>
+  <p class="page-subtitle"><code>{{ session.code }}</code></p>
 
   {# Card 1: Session Details #}
   <div class="card">
     <h2>Session Details</h2>
     <div class="session-meta-row">
-      <div><strong>Code:</strong> <code>{{ session.code }}</code></div>
-      <div><strong>Created by:</strong> {{ session.created_by_user.display_name or session.created_by_user.email }}</div>
       <div><strong>Deadline:</strong> {{ session.deadline.isoformat() if session.deadline else "Not set" }}</div>
+      <div><strong>Created by:</strong> {{ session.created_by_user.display_name or session.created_by_user.email }}</div>
     </div>
     <p><strong>Description:</strong> {{ session.description or "—" }}</p>
     <div class="session-status-row">
