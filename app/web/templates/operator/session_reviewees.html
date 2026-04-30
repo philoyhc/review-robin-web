@@ -11,7 +11,7 @@
       reviewee{% if reviewees | length != 1 %}s{% endif %}
     </p>
     <p>
-      <a class="btn secondary" href="#upload-csv">Upload CSV</a>
+      <a class="btn secondary" href="#upload-csv">Upload Reviewees</a>
       <a class="btn secondary disabled"
          aria-disabled="true"
          title="Inline editing — coming soon">Edit Reviewees</a>
@@ -61,70 +61,72 @@
     </div>
   {% endif %}
 
-  <section class="card" id="upload-csv">
-    <h2>Upload CSV</h2>
-    <p class="muted">
-      Required columns: <code>RevieweeName</code>, <code>RevieweeEmail</code>.
-      Optional: <code>RevieweeProfileLink</code>,
-      <code>RevieweeTag1</code>, <code>RevieweeTag2</code>, <code>RevieweeTag3</code>.
-      Other columns are ignored. UTF-8, max {{ 5000 }} rows.
-    </p>
+  <div class="bottom-grid">
+    <div class="bottom-left">
+      <section class="card" id="upload-csv">
+        <h2>Upload Reviewees</h2>
+        <p class="muted">
+          CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
+          <code>RevieweeName</code>, <code>RevieweeEmail</code>. Optional:
+          <code>RevieweeProfileLink</code>, <code>RevieweeTag1</code>,
+          <code>RevieweeTag2</code>, <code>RevieweeTag3</code>.
+          Other columns are ignored.
+        </p>
 
-    {% include "operator/partials/validation_results.html" %}
+        {% include "operator/partials/validation_results.html" %}
 
-    <form method="post"
-          action="/operator/sessions/{{ session.id }}/reviewees/import"
-          enctype="multipart/form-data">
-      <label for="file">CSV file</label>
-      <input type="file" id="file" name="file" accept=".csv,text/csv" required>
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/reviewees/import"
+              enctype="multipart/form-data">
+          <label for="file">CSV file</label>
+          <input type="file" id="file" name="file" accept=".csv,text/csv" required>
 
-      {% if existing_count and existing_count > 0 %}
-        <div class="card" style="border-color: #d97706; background: #fef3c7;">
-          <p>
-            <strong>This session already has {{ existing_count }} reviewee{% if existing_count != 1 %}s{% endif %}.</strong>
-            Importing will <strong>replace</strong> them.
-          </p>
-          {% if assignment_count and assignment_count > 0 %}
-            <p>
-              Also: <strong>{{ assignment_count }} existing assignment{% if assignment_count != 1 %}s{% endif %}</strong>
-              will be deleted (assignments reference reviewee rows). You'll need to
-              re-generate them after the import.
+          {% if existing_count and existing_count > 0 %}
+            <p style="margin-top: 12px;">
+              <strong>This session already has {{ existing_count }} reviewee{% if existing_count != 1 %}s{% endif %}.</strong>
+              Importing will <strong>replace</strong> them.
+              {% if assignment_count and assignment_count > 0 %}
+                Also: <strong>{{ assignment_count }} existing assignment{% if assignment_count != 1 %}s{% endif %}</strong>
+                will be deleted (assignments reference reviewee rows). You'll need to re-generate them after the import.
+              {% endif %}
             </p>
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm_replace" value="true" required>
+                Yes, replace the existing {{ existing_count }} reviewee{% if existing_count != 1 %}s{% endif %}{% if assignment_count and assignment_count > 0 %} and delete the {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}{% endif %}.
+              </label>
+            </p>
+            <div class="btn-pair" style="margin-top: 20px;">
+              <button class="btn alert-solid" type="submit">Upload</button>
+              <a class="btn alert" href="/operator/sessions/{{ session.id }}/reviewees">Cancel</a>
+            </div>
+          {% else %}
+            <div class="btn-pair" style="margin-top: 20px;">
+              <button class="btn" type="submit">Upload</button>
+              <a class="btn secondary" href="/operator/sessions/{{ session.id }}/reviewees">Cancel</a>
+            </div>
           {% endif %}
+        </form>
+      </section>
+    </div>
+
+    {% if reviewees %}
+      <div class="card" style="border-color: #b91c1c;">
+        <h2 style="color: #b91c1c;">Danger zone</h2>
+        <form method="post" action="/operator/sessions/{{ session.id }}/reviewees/delete-all">
           <p>
             <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm_replace" value="true" required>
-              Yes, replace the existing {{ existing_count }} reviewee{% if existing_count != 1 %}s{% endif %}{% if assignment_count and assignment_count > 0 %} and delete the {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}{% endif %}.
+              <input type="checkbox" name="confirm" value="true" required>
+              Yes, delete all <strong>{{ reviewees | length }}</strong>
+              reviewee{% if reviewees | length != 1 %}s{% endif %} from this session.
+              Any existing assignments referencing them will also be removed.
             </label>
           </p>
-        </div>
-      {% endif %}
-
-      <p style="margin-top: 20px;">
-        <button class="btn" type="submit">Upload</button>
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/reviewees">Cancel</a>
-      </p>
-    </form>
-  </section>
-
-  {% if reviewees %}
-    <div class="card" style="border-color: #b91c1c;">
-      <h2 style="color: #b91c1c;">Danger zone</h2>
-      <form method="post" action="/operator/sessions/{{ session.id }}/reviewees/delete-all">
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required>
-            Yes, delete all <strong>{{ reviewees | length }}</strong>
-            reviewee{% if reviewees | length != 1 %}s{% endif %} from this session.
-            Any existing assignments referencing them will also be removed.
-          </label>
-        </p>
-        <p>
-          <button class="btn"
-                  style="background: #b91c1c; border-color: #b91c1c;"
-                  type="submit">Delete all reviewees</button>
-        </p>
-      </form>
-    </div>
-  {% endif %}
+          <p>
+            <button class="btn danger-solid" type="submit">Delete all reviewees</button>
+          </p>
+        </form>
+      </div>
+    {% endif %}
+  </div>
 {% endblock %}
