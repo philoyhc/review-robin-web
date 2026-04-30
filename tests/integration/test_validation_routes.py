@@ -96,10 +96,10 @@ def test_session_detail_shows_counts_and_validate_link(
     empty_response = client.get(f"/operator/sessions/{review_session.id}")
     assert empty_response.status_code == 200
     body = empty_response.text
-    # Setup table cells for the count rows
-    assert "<td>Reviewers</td>" in body
-    assert "<td>Reviewees</td>" in body
-    assert "<td>Assignments</td>" in body
+    # Setup row labels for the count rows
+    assert "<strong>Reviewers:</strong>" in body
+    assert "<strong>Reviewees:</strong>" in body
+    assert "<strong>Assignments:</strong>" in body
     # Validate Session Setup button targets the ?validated=1 query branch
     assert (
         f'href="/operator/sessions/{review_session.id}?validated=1"' in body

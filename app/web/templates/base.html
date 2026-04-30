@@ -191,6 +191,15 @@
         margin: 0;
       }
       .btn-row > * { flex: 1; }
+      .setup-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        column-gap: 16px;
+        row-gap: 10px;
+        align-items: center;
+      }
+      .setup-grid > .btn-cta { grid-column: 1; }
+      .setup-grid > .setup-content { grid-column: 2 / -1; }
     </style>
   </head>
   <body class="{% block body_class %}{% endblock %}">
