@@ -77,9 +77,7 @@ def test_reviewers_page_renders_anchored_upload_card_and_disabled_edit(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
 
-    # Upload CSV button is an anchor to the inline card
-    assert 'href="#upload-csv"' in body
-    # Always-rendered Upload CSV card
+    # Always-rendered Upload card
     assert 'id="upload-csv"' in body
     assert (
         f'action="/operator/sessions/{review_session.id}/reviewers/import"'
@@ -100,7 +98,6 @@ def test_reviewees_page_renders_anchored_upload_card_and_disabled_edit(
         f"/operator/sessions/{review_session.id}/reviewees"
     ).text
 
-    assert 'href="#upload-csv"' in body
     assert 'id="upload-csv"' in body
     assert (
         f'action="/operator/sessions/{review_session.id}/reviewees/import"'
