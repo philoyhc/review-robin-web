@@ -1,9 +1,11 @@
-# Target operator page map
+# Operator page map
 
-Work-in-progress specification of the *intended* operator-facing page
-surface. This is the design target, not what currently ships — see
-`spec/operator_map.md` for today's implementation. Pages are added as
-they are specified.
+Specification of the operator-facing page surface. Most sections
+describe what currently ships; placeholder sections explicitly call
+out deferred work. For per-route detail with template paths, form
+field schemas, and audit events, see `docs/status.md`'s operator URL
+table. For the segment-by-segment implementation history, see
+`docs/status.md`'s "Segments shipped" table.
 
 ## Cross-page conventions
 
