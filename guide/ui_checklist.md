@@ -23,7 +23,7 @@ each page is reviewed.
 - [x] `session_reviewers.html` — `/operator/sessions/{id}/reviewers`
 - [x] `session_reviewees.html` — `/operator/sessions/{id}/reviewees`
 - [x] `session_assignments.html` — `/operator/sessions/{id}/assignments`
-- [ ] `assignments_preview_full_matrix.html`
+- [x] `assignments_preview_full_matrix.html`
 - [ ] `assignments_preview_manual.html`
 - [ ] `instruments_index.html` — `/operator/sessions/{id}/instruments`
 - [ ] `session_setupinvite.html` — `/operator/sessions/{id}/setupinvite` (heading renamed to **Email Invites** only; no layout pass yet)
