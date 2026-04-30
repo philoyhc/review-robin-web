@@ -317,7 +317,7 @@ async def _handle_import(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}",
+        url=f"/operator/sessions/{review_session.id}/{kind}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

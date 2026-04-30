@@ -45,7 +45,7 @@ def test_reviewer_import_redirects_and_persists_rows(
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == f"/operator/sessions/{review_session.id}"
+    assert response.headers["location"] == f"/operator/sessions/{review_session.id}/reviewers"
     reviewers = list(
         db.execute(
             select(Reviewer).where(Reviewer.session_id == review_session.id)
