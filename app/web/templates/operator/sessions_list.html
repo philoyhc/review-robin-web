@@ -3,7 +3,7 @@
 {% block title %}Sessions — Review Robin Web{% endblock %}
 
 {% block content %}
-  <h1>Your sessions</h1>
+  <h1>Your Sessions</h1>
 
   {% if sessions %}
     <table>
@@ -13,6 +13,7 @@
         <th>Status</th>
         <th>Deadline</th>
         <th>Created</th>
+        <th>Created by</th>
         <th>Actions</th>
       </tr>
       {% for s in sessions %}
@@ -22,9 +23,10 @@
           <td>{{ s.status }}</td>
           <td>{{ s.deadline.isoformat() if s.deadline else "—" }}</td>
           <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
+          <td>{{ s.created_by_user.display_name or s.created_by_user.email }}</td>
           <td>
-            <a class="btn secondary" href="/operator/sessions/{{ s.id }}">Access</a>
-            <a class="btn danger" href="/operator/sessions/{{ s.id }}#danger-zone">Delete</a>
+            <a class="btn" href="/operator/sessions/{{ s.id }}">Access</a>
+            <a class="btn danger-solid" href="/operator/sessions/{{ s.id }}#danger-zone">Delete</a>
           </td>
         </tr>
       {% endfor %}

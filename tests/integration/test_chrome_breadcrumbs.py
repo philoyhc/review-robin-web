@@ -94,11 +94,11 @@ def test_sessions_list_per_row_renders_access_and_delete_buttons(
     response = client.get("/operator/sessions")
     body = response.text
     assert (
-        f'<a class="btn secondary" href="/operator/sessions/{review_session.id}">Access</a>'
+        f'<a class="btn" href="/operator/sessions/{review_session.id}">Access</a>'
         in body
     )
     assert (
-        f'<a class="btn danger" href="/operator/sessions/{review_session.id}#danger-zone">Delete</a>'
+        f'<a class="btn danger-solid" href="/operator/sessions/{review_session.id}#danger-zone">Delete</a>'
         in body
     )
 
