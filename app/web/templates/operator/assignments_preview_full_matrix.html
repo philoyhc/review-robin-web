@@ -22,7 +22,12 @@
     <div class="card">
       <h2>Will generate</h2>
       <ul>
-        <li>Total assignments: <strong>{{ stats.total }}</strong></li>
+        <li>
+          Total assignments: <strong>{{ "{:,}".format(stats.total) }}</strong>
+          {% if truncated_count %}
+            ({{ "{:,}".format(pair_sample | length) }} shown)
+          {% endif %}
+        </li>
         <li>Reviewers covered: <strong>{{ stats.reviewers_covered }} / {{ stats.reviewers_total }}</strong></li>
         <li>Reviewees covered: <strong>{{ stats.reviewees_covered }} / {{ stats.reviewees_total }}</strong></li>
         <li>
