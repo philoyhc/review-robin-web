@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Manual Assignment — {{ session.name }}{% endblock %}
+
+{% block content %}
+  <h1>Manual Assignment</h1>
+
+  <section class="card" id="upload-csv">
+    <h2>Upload Assignments</h2>
+    <p class="muted">
+      CSV file in UTF-8, max 5000 rows. One row per assignment. Required
+      columns: <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
+      Optional: <code>IncludeAssignment</code>,
+      <code>PairContext1/2/3</code>, <code>AssignmentContext1/2/3</code>.
+      Other columns are ignored.
+    </p>
+    {% if reviewer_count == 0 or reviewee_count == 0 %}
+      <p class="muted">Import reviewers and reviewees first.</p>
+    {% else %}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/assignments/manual/import"
+            enctype="multipart/form-data">
+        <label for="manual-file">CSV file</label>
+        <input type="file" id="manual-file" name="file" accept=".csv,text/csv" required>
+        <input type="hidden" name="dry_run" value="true">
+
+        {% if assignment_count and assignment_count > 0 %}
+          <p style="margin-top: 12px;">
+            <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
+            Importing will <strong>replace</strong> them.
+          </p>
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm_replace" value="true" required>
+              Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
+            </label>
+          </p>
+          <div class="btn-pair" style="margin-top: 20px;">
+            <button class="btn alert-solid" type="submit">Upload</button>
+            <a class="btn alert" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+          </div>
+        {% else %}
+          <div class="btn-pair" style="margin-top: 20px;">
+            <button class="btn" type="submit">Upload</button>
+            <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+          </div>
+        {% endif %}
+      </form>
+    {% endif %}
+  </section>
+{% endblock %}

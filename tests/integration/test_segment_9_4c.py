@@ -158,7 +158,7 @@ def test_reviewers_import_validation_errors_render_on_manage_page(
 # ---------------------------------------------------------------------------
 
 
-def test_assignments_page_renders_anchored_upload_and_rules_cards(
+def test_assignments_hub_links_to_method_pages(
     client: TestClient, db: Session
 ) -> None:
     review_session = _seed_pair(client, db, code="a-reshape")
@@ -167,25 +167,35 @@ def test_assignments_page_renders_anchored_upload_and_rules_cards(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
 
-    # Upload CSV anchor + always-rendered card
-    assert 'href="#upload-csv"' in body
-    assert 'id="upload-csv"' in body
+    # Choose Assignment Method card with three CTAs: Manual, FullMatrix
+    # link to dedicated GET pages; Rule Based is disabled until Segment 12.
+    assert 'href="/operator/sessions/{}/assignments/manual"'.format(
+        review_session.id
+    ) in body
+    assert 'href="/operator/sessions/{}/assignments/full-matrix"'.format(
+        review_session.id
+    ) in body
+    assert "Rule Based" in body
+    assert 'aria-disabled="true"' in body
+
+    # Manual page renders the upload form
+    manual_body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments/manual"
+    ).text
+    assert 'id="upload-csv"' in manual_body
     assert (
         f'action="/operator/sessions/{review_session.id}/assignments/manual/import"'
-        in body
+        in manual_body
     )
-    # Assign by Rules anchor + always-rendered placeholder card
-    assert 'href="#rules"' in body
-    assert 'id="rules"' in body
-    assert "Rule editor — Segment 12" in body
-    # Cancel anchor on rules card drops the fragment
+
+    # Full-matrix setup page renders its setup form
+    fm_body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix"
+    ).text
     assert (
-        f'href="/operator/sessions/{review_session.id}/assignments">Cancel'
-        in body
+        f'action="/operator/sessions/{review_session.id}/assignments/full-matrix"'
+        in fm_body
     )
-    # Edit Assignments button disabled
-    assert "Edit Assignments" in body
-    assert 'aria-disabled="true"' in body
 
 
 # ---------------------------------------------------------------------------

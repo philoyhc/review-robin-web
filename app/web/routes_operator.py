@@ -353,6 +353,59 @@ def assignments_hub(
     )
 
 
+@router.get(
+    "/sessions/{session_id}/assignments/manual",
+    response_class=HTMLResponse,
+)
+def assignments_manual_page(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_assignments_manual.html",
+        {
+            "user": user,
+            "session": review_session,
+            "assignment_count": assignments.existing_count(db, review_session.id),
+            "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
+            "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Manual Assignment"
+            ),
+        },
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/assignments/full-matrix",
+    response_class=HTMLResponse,
+)
+def assignments_full_matrix_page(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_assignments_full_matrix_setup.html",
+        {
+            "user": user,
+            "session": review_session,
+            "assignment_count": assignments.existing_count(db, review_session.id),
+            "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
+            "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Full Matrix Assignment"
+            ),
+        },
+    )
+
+
+
 @router.post(
     "/sessions/{session_id}/assignments/full-matrix",
     response_class=HTMLResponse,

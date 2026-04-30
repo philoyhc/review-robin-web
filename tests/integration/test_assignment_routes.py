@@ -203,8 +203,14 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
 
     empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
     assert empty.status_code == 200
-    assert "<strong>0</strong>" in empty.text
-    assert ">Generate</button>" in empty.text
+    # Empty state shows the reviewer/reviewee summary; the assignment count
+    # line is hidden until at least one assignment exists. The FullMatrix
+    # entry point is on its own /full-matrix page now.
+    assert "Reviewers in this session" in empty.text
+    fm_body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix"
+    ).text
+    assert ">Generate</button>" in fm_body
 
     client.post(
         f"/operator/sessions/{review_session.id}/assignments/full-matrix",

@@ -7,24 +7,76 @@
 
   <div class="card">
     <p>
-      <strong>{{ assignment_count }}</strong>
-      assignment{% if assignment_count != 1 %}s{% endif %}
-      {% if session.assignment_mode %}
-        <span class="pill pill-info">{{ session.assignment_mode }}</span>
-      {% endif %}
-    </p>
-    <p class="muted">
       Reviewers in this session: <strong>{{ reviewer_count }}</strong>
       &middot;
       Reviewees: <strong>{{ reviewee_count }}</strong>
     </p>
-    <p>
-      <a class="btn secondary" href="#upload-csv">Upload Assignments</a>
-      <a class="btn secondary" href="#rules">Assign by Rules</a>
-      <a class="btn secondary disabled"
-         aria-disabled="true"
-         title="Inline editing — coming soon">Edit Assignments</a>
-    </p>
+    {% if assignment_count %}
+      <p>
+        <strong>{{ "{:,}".format(assignment_count) }}</strong>
+        assignment{% if assignment_count != 1 %}s{% endif %}
+        {% if truncated_count %}
+          ({{ "{:,}".format(pair_sample | length) }} shown)
+        {% endif %}
+        {% if session.assignment_mode %}
+          &middot; assigned using
+          <span class="pill pill-info">{{ session.assignment_mode }}</span>
+        {% endif %}
+      </p>
+    {% endif %}
+  </div>
+
+  {% if reviewer_count == 0 or reviewee_count == 0 %}
+    <div class="card" style="border-color: #d97706; background: #fef3c7;">
+      <p>
+        Import at least one reviewer and one reviewee before generating
+        assignments.
+      </p>
+      <p>
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}/reviewers">
+           Manage reviewers
+        </a>
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}/reviewees">
+           Manage reviewees
+        </a>
+      </p>
+    </div>
+  {% endif %}
+
+  <div class="bottom-grid">
+    <div class="card">
+      <h2>Choose Assignment Method</h2>
+      <div class="btn-row">
+        <a class="btn-cta"
+           href="/operator/sessions/{{ session.id }}/assignments/manual">Manual<br>Assignment</a>
+        <a class="btn-cta"
+           href="/operator/sessions/{{ session.id }}/assignments/full-matrix">Full Matrix<br>Assignment</a>
+        <a class="btn-cta disabled"
+           aria-disabled="true"
+           title="Rule-based assignment lands in Segment 12">Rule Based<br>Assignment</a>
+      </div>
+    </div>
+
+    {% if assignment_count %}
+      <div class="card" style="border-color: #b91c1c;">
+        <h2 style="color: #b91c1c;">Danger zone</h2>
+        <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required>
+              Yes, delete all <strong>{{ assignment_count }}</strong>
+              assignment{% if assignment_count != 1 %}s{% endif %} for this session.
+              Reviewers and reviewees stay; the assignment mode is cleared.
+            </label>
+          </p>
+          <p>
+            <button class="btn danger-solid" type="submit">Delete all assignments</button>
+          </p>
+        </form>
+      </div>
+    {% endif %}
   </div>
 
   {% if pair_sample %}
@@ -32,7 +84,7 @@
       <h2>Current pairs</h2>
       {% if truncated_count %}
         <p class="muted">
-          Showing first {{ pair_sample | length }} of {{ assignment_count }} pairs.
+          Showing first {{ pair_sample | length }} of {{ "{:,}".format(assignment_count) }} pairs.
         </p>
       {% endif %}
       <table>
@@ -72,140 +124,6 @@
       {% if truncated_count %}
         <p class="muted">…and {{ truncated_count }} more not shown.</p>
       {% endif %}
-    </div>
-  {% endif %}
-
-  <div class="page-grid">
-    <section class="card" id="upload-csv">
-      <h2>Upload Assignments</h2>
-      <p class="muted">
-        CSV file in UTF-8, max 5000 rows. One row per assignment. Required
-        columns: <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
-        Optional: <code>IncludeAssignment</code>,
-        <code>PairContext1/2/3</code>, <code>AssignmentContext1/2/3</code>.
-        Other columns are ignored.
-      </p>
-      {% if reviewer_count == 0 or reviewee_count == 0 %}
-        <p class="muted">Import reviewers and reviewees first.</p>
-      {% else %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/assignments/manual/import"
-              enctype="multipart/form-data">
-          <label for="manual-file">CSV file</label>
-          <input type="file" id="manual-file" name="file" accept=".csv,text/csv" required>
-          <input type="hidden" name="dry_run" value="true">
-
-          {% if assignment_count and assignment_count > 0 %}
-            <p style="margin-top: 12px;">
-              <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
-              Importing will <strong>replace</strong> them.
-            </p>
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm_replace" value="true" required>
-                Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
-              </label>
-            </p>
-            <div class="btn-pair" style="margin-top: 20px;">
-              <button class="btn alert-solid" type="submit">Upload</button>
-              <a class="btn alert" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
-            </div>
-          {% else %}
-            <div class="btn-pair" style="margin-top: 20px;">
-              <button class="btn" type="submit">Upload</button>
-              <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
-            </div>
-          {% endif %}
-        </form>
-      {% endif %}
-    </section>
-
-    {% if reviewer_count == 0 or reviewee_count == 0 %}
-      <div class="card" style="border-color: #d97706; background: #fef3c7;">
-        <p>
-          Import at least one reviewer and one reviewee before generating
-          assignments.
-        </p>
-        <p>
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/reviewers">
-             Manage reviewers
-          </a>
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/reviewees">
-             Manage reviewees
-          </a>
-        </p>
-      </div>
-    {% else %}
-      <div class="card">
-        <h2>FullMatrix</h2>
-        <p class="muted">
-          Pair every reviewer with every reviewee.
-        </p>
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/assignments/full-matrix">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="exclude_self_review" value="true" checked>
-              Exclude self-review (when a reviewer's email matches a reviewee's identifier)
-            </label>
-          </p>
-          <input type="hidden" name="dry_run" value="true">
-
-          {% if assignment_count and assignment_count > 0 %}
-            <p style="margin-top: 12px;">
-              <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
-              Generating will <strong>replace</strong> them.
-            </p>
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm_replace" value="true" required>
-                Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
-              </label>
-            </p>
-            <div class="btn-pair" style="margin-top: 20px;">
-              <button class="btn alert-solid" type="submit">Generate</button>
-              <a class="btn alert" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
-            </div>
-          {% else %}
-            <div style="margin-top: 12px;">
-              <button class="btn" type="submit">Generate</button>
-            </div>
-          {% endif %}
-        </form>
-      </div>
-    {% endif %}
-  </div>
-
-  <section class="card" id="rules">
-    <h2>Assign by Rules</h2>
-    <p class="muted">Rule editor — Segment 12.</p>
-    <p>
-      <a class="btn secondary"
-         href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
-    </p>
-  </section>
-
-  {% if assignment_count %}
-    <div class="bottom-grid">
-      <div></div>
-      <div class="card" style="border-color: #b91c1c;">
-        <h2 style="color: #b91c1c;">Danger zone</h2>
-        <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required>
-              Yes, delete all <strong>{{ assignment_count }}</strong>
-              assignment{% if assignment_count != 1 %}s{% endif %} for this session.
-              Reviewers and reviewees stay; the assignment mode is cleared.
-            </label>
-          </p>
-          <p>
-            <button class="btn danger-solid" type="submit">Delete all assignments</button>
-          </p>
-        </form>
-      </div>
     </div>
   {% endif %}
 {% endblock %}
