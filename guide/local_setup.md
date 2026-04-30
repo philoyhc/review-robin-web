@@ -144,41 +144,6 @@ uvicorn app.main:app --reload
 
 Open `http://127.0.0.1:8000/health` — expect `{"status": "ok"}`.
 
-### Running from local folder (Windows)
-
-PowerShell (one-time setup + run):
-
-```powershell
-cd review-robin-web
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -e .[dev]
-Copy-Item .env.example .env
-# edit .env, then:
-alembic upgrade head
-uvicorn app.main:app --reload
-```
-
-If `Activate.ps1` is blocked by execution policy, run once per machine:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-Command Prompt equivalent:
-
-```cmd
-py -3.12 -m venv .venv
-.venv\Scripts\activate.bat
-pip install -e .[dev]
-copy .env.example .env
-:: edit .env, then:
-alembic upgrade head
-uvicorn app.main:app --reload
-```
-
-For repeat sessions, only the activation + `uvicorn` lines are needed. Reset state any time with `Remove-Item review_robin_web.db; alembic upgrade head` (PowerShell) or `del review_robin_web.db && alembic upgrade head` (CMD).
-
 ---
 
 ## 5. Running the test suite
