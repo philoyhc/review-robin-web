@@ -68,6 +68,10 @@ its body:
     includes a **View detailed validation** button →
     `/operator/sessions/{id}/validate` for the full per-issue
     breakdown.
+  - **Preview reviewer surface** button →
+    `/operator/sessions/{id}/preview` (operator-only read-only
+    render of what reviewers will see; bypasses session-status /
+    deadline / acceptance gates).
   - **Manage Invitations** button →
     `/operator/sessions/{id}/invitations` (managing the invitations:
     sending, link to outbox, etc.).
@@ -110,19 +114,83 @@ Analogous to the reviewers page:
 - Table of assignments.
 - **Danger Zone**: **Delete** button.
 
-## `/operator/sessions/{id}/instruments` — Instruments index
+## `/operator/sessions/{id}/instruments` — Instruments
 
-- **Instruments** card: count, status summary, **Add Instrument**
-  button (deferred until multi-instrument support lands).
-- One card per instrument, each with: instrument name, status pill,
-  **Manage** → `/operator/sessions/{id}/instruments/{instrument_id}`,
-  **Delete** button (the lone first instrument is not deletable).
+A single consolidated page for everything per-instrument: top-level
+count, session-wide settings, and one card per instrument with
+in-place editing for description, response fields, and display
+fields. Multi-instrument support stays deferred to Segment 13;
+single-instrument sessions render exactly one per-instrument card.
 
-## `/operator/sessions/{id}/instruments/{instrument_id}` — Instrument
+- **Instruments header card:** count, **Add instrument** button
+  (deferred until Segment 13), **Preview reviewer surface** button
+  → `/operator/sessions/{id}/preview`.
+- **Instruments Settings card** (session-wide): bulk
+  **Open all instruments** / **Close all instruments** toggles for
+  every instrument's `accepting_responses`. Three-state pill (`all
+  on` / `all off` / `mixed`). Ready-only (visible always; the
+  toggles activate when the session is `ready` and pre-deadline).
+- **One card per instrument** with:
+  - System-handle pill (`Instrument.name`, e.g. `instrument_1`),
+    immutable.
+  - **Friendly description** form — the operator-visible heading
+    that the reviewer surface uses as the section title (falls
+    back to the system handle when empty).
+  - **Acceptance** form — open / close `accepting_responses`;
+    deadline status; `responses_visible_when_closed` toggle on
+    the same card.
+  - **Display fields** table — read-only columns shown to
+    reviewers alongside the always-first reviewee-identity column.
+    Operator manages: per-row inline **Edit** (label override +
+    visibility), per-row **Delete**. Below the table, an **Add
+    display field** form with a single combined source select over
+    the seven D6 sources (`reviewee.tag_1/2/3`,
+    `reviewee.profile_link`, `pair_context.1/2/3`) minus those
+    already on the instrument; the form hides itself when all
+    seven are present.
+  - **Response fields** table — the reviewer-side answer columns.
+    Operator manages: per-row inline **Edit**, per-row **Delete**
+    (cascade-confirms when answers exist), per-row up/down
+    **Move**, plus a per-field **Help text** + visibility toggle.
+    Below the table, an **Add field** form (label, key auto-derived
+    from label when blank, type, validation, required, help text).
+  - **Field order & visibility** bulk form — operator-chosen
+    interleaved order across both display and response fields.
+    Per-row numeric `order`, plus `visible` checkbox + `label`
+    override on display rows; response rows carry only `order`.
+    On save the per-table orders repack to `0..N-1` independently.
+  - **Delete instrument** button (deferred until Segment 13).
+- Description / display-field / response-field mutations (and the
+  bulk save) flip a `validated` session back to `draft`. They
+  return HTTP 409 when the session is `ready`. The Acceptance and
+  bulk-accepting toggles deliberately do **not** invalidate.
 
-_Placeholder — to be specified. Single-instrument sessions still
-address the lone instrument as `.../instruments/1` (etc.); the path
-always includes the instrument id._
+The legacy per-instrument page at
+`/operator/sessions/{id}/instruments/{instrument_id}` 303s to the
+consolidated index for back-compat.
+
+## `/operator/sessions/{id}/preview` — Preview reviewer surface
+
+Operator-only, read-only render of the reviewer surface. Reachable
+from the **Preview reviewer surface** anchor on the instruments
+header card and from the same-named anchor on the session detail's
+Run Session card.
+
+- **"Preview — not visible to reviewers" banner** at the top.
+  Calls out that the page bypasses session-status / deadline /
+  acceptance gates and is operator-only.
+- Renders **three rows**: real assignments first (by
+  `Assignment.id` ascending; up to three), padded with synthetic
+  placeholders (`Sample Reviewee 1/2/3`, `sample1@example.edu`,
+  per-source sample values for display cells) when fewer real
+  assignments exist.
+- Every input renders disabled. The Save / Submit / Clear / Cancel
+  forms are suppressed (the `<form>` wrapper is replaced with a
+  plain `<div>` so no `formaction=` can re-target a write
+  endpoint).
+- Works in any session status (`draft` / `validated` / `ready`).
+- Read-only: does not invalidate, emits no audit events, and
+  deliberately skips the lazy deadline-observation side effect.
 
 ## `/operator/sessions/{id}/setupinvite` — Set up invites
 
