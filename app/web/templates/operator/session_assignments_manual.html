@@ -5,47 +5,116 @@
 {% block content %}
   <h1>Manual Assignment</h1>
 
-  <section class="card" id="upload-csv">
-    <h2>Upload Assignments</h2>
-    <p class="muted">
-      CSV file in UTF-8, max 5000 rows. One row per assignment. Required
-      columns: <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
-      Optional: <code>IncludeAssignment</code>,
-      <code>PairContext1/2/3</code>, <code>AssignmentContext1/2/3</code>.
-      Other columns are ignored.
-    </p>
-    {% if reviewer_count == 0 or reviewee_count == 0 %}
-      <p class="muted">Import reviewers and reviewees first.</p>
-    {% else %}
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/assignments/manual/import"
-            enctype="multipart/form-data">
-        <label for="manual-file">CSV file</label>
-        <input type="file" id="manual-file" name="file" accept=".csv,text/csv" required>
-        <input type="hidden" name="dry_run" value="true">
+  <div class="page-grid">
+    <section class="card" id="upload-csv">
+      <h2>Upload Assignments</h2>
+      <p class="muted">
+        CSV file in UTF-8, max 5000 rows. One row per assignment. Required
+        columns: <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
+        Optional: <code>IncludeAssignment</code>,
+        <code>PairContext1/2/3</code>, <code>AssignmentContext1/2/3</code>.
+        Other columns are ignored.
+      </p>
+      {% if reviewer_count == 0 or reviewee_count == 0 %}
+        <p class="muted">Import reviewers and reviewees first.</p>
+      {% else %}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/assignments/manual/import"
+              enctype="multipart/form-data">
+          <label for="manual-file">CSV file</label>
+          <input type="file" id="manual-file" name="file" accept=".csv,text/csv" required>
+          <input type="hidden" name="dry_run" value="true">
 
-        {% if assignment_count and assignment_count > 0 %}
-          <p style="margin-top: 12px;">
-            <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
-            Importing will <strong>replace</strong> them.
-          </p>
+          {% if assignment_count and assignment_count > 0 %}
+            <p style="margin-top: 12px;">
+              <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
+              Importing will <strong>replace</strong> them.
+            </p>
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm_replace" value="true" required>
+                Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
+              </label>
+            </p>
+            <div class="btn-pair" style="margin-top: 20px;">
+              <button class="btn alert-solid" type="submit">Upload</button>
+              <a class="btn alert" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+            </div>
+          {% else %}
+            <div class="btn-pair" style="margin-top: 20px;">
+              <button class="btn" type="submit">Upload</button>
+              <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+            </div>
+          {% endif %}
+        </form>
+      {% endif %}
+    </section>
+
+    {% if assignment_count %}
+      <div class="card" style="border-color: #b91c1c;">
+        <h2 style="color: #b91c1c;">Danger zone</h2>
+        <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
           <p>
             <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm_replace" value="true" required>
-              Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
+              <input type="checkbox" name="confirm" value="true" required>
+              Yes, delete all <strong>{{ assignment_count }}</strong>
+              assignment{% if assignment_count != 1 %}s{% endif %} for this session.
+              Reviewers and reviewees stay; the assignment mode is cleared.
             </label>
           </p>
-          <div class="btn-pair" style="margin-top: 20px;">
-            <button class="btn alert-solid" type="submit">Upload</button>
-            <a class="btn alert" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
-          </div>
-        {% else %}
-          <div class="btn-pair" style="margin-top: 20px;">
-            <button class="btn" type="submit">Upload</button>
-            <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
-          </div>
-        {% endif %}
-      </form>
+          <p>
+            <button class="btn danger-solid" type="submit">Delete all assignments</button>
+          </p>
+        </form>
+      </div>
     {% endif %}
-  </section>
+  </div>
+
+  {% if pair_sample %}
+    <div class="card">
+      <h2>Current pairs</h2>
+      {% if truncated_count %}
+        <p class="muted">
+          Showing first {{ pair_sample | length }} of {{ "{:,}".format(assignment_count) }} pairs.
+        </p>
+      {% endif %}
+      <table>
+        <tr>
+          <th>Reviewer</th>
+          <th>Reviewee</th>
+          <th>Include</th>
+          {% set has_context = pair_sample | selectattr("context") | list | length > 0 %}
+          {% if has_context %}<th>Context</th>{% endif %}
+        </tr>
+        {% for assignment in pair_sample %}
+          <tr>
+            <td>
+              {{ assignment.reviewer.name }} &middot;
+              <code>{{ assignment.reviewer.email }}</code>
+            </td>
+            <td>
+              {{ assignment.reviewee.name }} &middot;
+              <code>{{ assignment.reviewee.email_or_identifier }}</code>
+            </td>
+            <td>{{ "yes" if assignment.include else "no" }}</td>
+            {% if has_context %}
+              <td>
+                {% if assignment.context %}
+                  {% if assignment.context.pair_context_1 %}P1: {{ assignment.context.pair_context_1 }}<br>{% endif %}
+                  {% if assignment.context.pair_context_2 %}P2: {{ assignment.context.pair_context_2 }}<br>{% endif %}
+                  {% if assignment.context.pair_context_3 %}P3: {{ assignment.context.pair_context_3 }}<br>{% endif %}
+                  {% if assignment.context.assignment_context_1 %}A1: {{ assignment.context.assignment_context_1 }}<br>{% endif %}
+                  {% if assignment.context.assignment_context_2 %}A2: {{ assignment.context.assignment_context_2 }}<br>{% endif %}
+                  {% if assignment.context.assignment_context_3 %}A3: {{ assignment.context.assignment_context_3 }}{% endif %}
+                {% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </table>
+      {% if truncated_count %}
+        <p class="muted">…and {{ truncated_count }} more not shown.</p>
+      {% endif %}
+    </div>
+  {% endif %}
 {% endblock %}
