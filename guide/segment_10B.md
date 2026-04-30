@@ -1,7 +1,10 @@
-# Segment 10B Implementation Plan — Display-fields picker + operator preview
+# Segment 10B Plan — Display-fields picker + operator preview (umbrella)
 
-**Status:** Stub — decisions locked, slice breakdown still to be drafted.
-Second of two PR-sized blocks for Segment 10. See
+**Status:** Umbrella stub — split into three PR-sized sub-stubs.
+Decisions for the segment as a whole are still locked here; per
+sub-PR decisions live in `segment_10B_1.md` / `segment_10B_2.md` /
+`segment_10B_3.md`. Second of two PR-sized blocks for Segment 10
+at the segment level. See
 `guide/segment_10_instrument_builder_mvp_plan.md` §14 for the
 segment-level split, and `guide/segment_10A.md` for the locked
 decisions on the consolidated `/instruments` page that 10B extends.
@@ -14,11 +17,38 @@ decisions on the consolidated `/instruments` page that 10B extends.
   shared "field order & visibility" bulk form covering both display and
   response fields, reviewer-surface display-fields-driven render
   (replaces the hard-coded `pair_context_*` rendering), operator preview
-  route.
+  route. Split into three sub-PRs below.
 
 ---
 
-## Decisions locked for 10B
+## Sub-PR breakdown
+
+10B as originally written is meaningfully larger than 10A in scope
+(migration + reviewer-surface render swap + display-field CRUD +
+bulk interleaved order/visibility form + preview route + four new
+audit events). It is split into three PR-sized blocks:
+
+- **10B-1 (data-driven render)** — `guide/segment_10B_1.md`.
+  Backfill migration, `ensure_default_instrument` seeding the three
+  pair-context rows, reviewer surface refactored to render from
+  `InstrumentDisplayField` (replacing hard-coded `pair_context_*`),
+  identity column (D4), default-label inference (D6). Ships
+  behavior-preserving — no operator UI yet.
+- **10B-2 (operator builder)** — `guide/segment_10B_2.md`.
+  Row-level display-field add / edit / delete POSTs + shared bulk
+  "field order & visibility" form (D3, D5, D7), invalidation +
+  locked-when-ready gating (D10), the four new audit events (D11).
+- **10B-3 (preview)** — `guide/segment_10B_3.md`.
+  `GET /operator/sessions/{id}/preview` with synthetic rows,
+  disabled inputs, banner (D8, D9).
+
+10B-2 cannot land before 10B-1 (the picker writes into rows that
+10B-1's renderer reads). 10B-3 can in principle land after 10B-1
+alone, but is sequenced last so the preview demos the full builder.
+
+---
+
+## Decisions locked for 10B (segment-wide)
 
 ### D1 — Source columns + naming
 
@@ -34,7 +64,11 @@ The display-field picker exposes seven sources, two source types:
 reviewer-facing / logic-engaging distinction; see ARCHITECTURE.md
 "Pair-level vs assignment-level context").
 
-### D2 — Backfill migration scope
+Lands across 10B-1 (default-label coverage of all seven sources;
+seeded `pair_context` rows) and 10B-2 (picker UX exposing the four
+`reviewee` sources for add).
+
+### D2 — Backfill migration scope → 10B-1
 
 Single Alembic revision. For every existing instrument, write three
 `InstrumentDisplayField` rows for `pair_context_1/2/3`
@@ -50,36 +84,13 @@ No new columns on `instrument_display_fields` — the existing schema
 (`label`, `source_type`, `source_field`, `order`, `visible`) is
 already sufficient.
 
-### D3 — Builder UX shape (Option B)
+### D3 — Builder UX shape (Option B) → 10B-2
 
 Display fields and response fields share **one** instrument-level
 "Field order & visibility" bulk form. Structural mutations stay
-row-level.
+row-level. See `segment_10B_2.md` D3 for the full form contract.
 
-- **Bulk form** (one Save button per instrument):
-  - One row per field, **interleaved** display + response fields in
-    operator-chosen order.
-  - Per-row inputs: `order` (numeric), `visible` (checkbox), and for
-    display-field rows only an optional `label` override.
-  - Save action does a single transactional replace: repack `order` to
-    `0..N-1` separately within each table (`instrument_display_fields`
-    and `instrument_response_fields`), persist `visible` on display
-    rows, persist any label override.
-- **Structural mutations stay row-level (10A pattern unchanged):**
-  - Add / Edit / Delete response-field POSTs from 10A keep their
-    URLs and behavior (required-toggle banner, delete-confirm cascade,
-    immutable `field_key`).
-  - Display fields gain analogous row-level POSTs:
-    `POST .../display-fields` (add), `.../display-fields/{dfid}/edit`
-    (edit label override + visibility), `.../display-fields/{dfid}/delete`.
-- **Identity column** (D4) is not represented as a row in either form.
-
-This keeps the required-toggle warning (10A D6), the delete-confirm
-cascade (10A §7.4), and the immutable `field_key` rule (10A §7.1)
-intact, while giving the operator one place to interleave order and
-flip visibility across both kinds.
-
-### D4 — Reviewee identity column is fixed
+### D4 — Reviewee identity column is fixed → 10B-1
 
 Always-first column on the reviewer surface: reviewee `name`
 (primary) with `email_or_identifier` beneath in smaller font, same
@@ -105,7 +116,10 @@ Internally, `order` is repacked `0..N-1` **per table** on save (not
 across tables) — the merged ordering is computed at render time
 from `(table, order)` pairs sorted by a stable composite key.
 
-### D6 — Default labels are inferred
+The render-side merged-sort lands in 10B-1; the operator interleave
+controls land in 10B-2.
+
+### D6 — Default labels are inferred → 10B-1
 
 When a display field's `label` is NULL or empty, the reviewer
 surface column header falls back to an inferred string:
@@ -123,62 +137,28 @@ surface column header falls back to an inferred string:
 No `_DEFAULT_LABEL_MAP` constant needed beyond a small helper.
 Operator-typed labels are stored verbatim and round-tripped.
 
-### D7 — Bulk-save semantics
+### D7 — Bulk-save semantics → 10B-2
 
 `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/save`
-(shared form for display + response field order/visibility).
+(shared form for display + response field order/visibility). See
+`segment_10B_2.md` D7 for the full payload + handler contract.
 
-- Form payload: an ordered list of rows. Each row carries
-  `kind=display|response`, `id`, `order`, `visible` (display only),
-  `label` (display only).
-- Server-side: rows the operator removed from the form simply
-  disappear from the payload. **In 10B, the bulk-save handler does
-  NOT delete missing rows** — deletion goes through the row-level
-  Delete POSTs so the cascade-confirm flow still applies. Rows in
-  the payload that are missing from the database are ignored
-  (defensive).
-- New rows have no `id` — but **adds also go through their row-level
-  POSTs**, not through bulk save. The bulk form is order +
-  visibility + label only; structural mutations stay row-level
-  (D3).
-- After save: repack order `0..N-1` separately per table; emit one
-  `instrument.fields_reordered` event when any order changed (reuses
-  the existing 10A audit type, extended to cover display fields too)
-  and one `instrument.display_fields_saved` event when any display
-  visibility / label changed (D11).
-
-### D8 — Preview row population
+### D8 — Preview row population → 10B-3
 
 `GET /operator/sessions/{id}/preview` renders the reviewer surface
-template with **three rows**:
+template with **three rows**: real assignments where possible,
+synthetic placeholders to fill. Synthetic row shape uses
+`"Sample Reviewee 1/2/3"`, `"sample1@example.edu"`, etc., with
+plausible placeholder values per display-field source.
 
-- If the session has at least three assignments, use the first three
-  by `Assignment.id` ascending.
-- If 1–2 assignments exist, use those plus enough synthetic rows to
-  reach three.
-- If zero assignments exist, render three synthetic rows.
+### D9 — Preview gating → 10B-3
 
-Synthetic row shape: reviewee name `"Sample Reviewee 1"` /
-`"Sample Reviewee 2"` / `"Sample Reviewee 3"`, email
-`"sample1@example.edu"` etc., display-field cells filled with
-plausible placeholder values per source (`"Sample tag value"` for
-reviewee tags, `"Sample pair context"` for pair contexts,
-`"https://example.edu/sample-profile"` for `profile_link`), response
-cells empty.
+Operator-only (`require_session_operator`); works in any status
+(`draft` / `validated` / `ready`); bypasses deadline / acceptance
+gates; all inputs disabled; no save / submit / clear forms; banner
+"Preview — not visible to reviewers" at the top.
 
-### D9 — Preview gating
-
-`GET /operator/sessions/{id}/preview` is operator-only (gated on
-`require_session_operator`) and works in **any** session status
-(`draft` / `validated` / `ready`).
-
-- **Bypasses** the reviewer-surface deadline / acceptance gate.
-- All inputs render disabled (`disabled` attribute on every input,
-  textarea, select).
-- No save / submit / clear forms reachable on the preview surface.
-- Renders a "Preview — not visible to reviewers" banner at the top.
-
-### D10 — Validated → draft invalidation + locked-when-ready
+### D10 — Validated → draft invalidation + locked-when-ready → 10B-2
 
 Same pattern as 10A's response-field mutations:
 
@@ -191,45 +171,20 @@ Same pattern as 10A's response-field mutations:
   HTTP 409 when `session.status == "ready"`.
 - The preview route does **not** invalidate (read-only).
 
-### D11 — `instrument.display_fields_saved` audit shape
+### D11 — `instrument.display_fields_saved` audit shape → 10B-2
 
-Diff-shaped (mirrors 10A's `instrument.field_updated`):
+Diff-shaped, mirrors 10A's `instrument.field_updated`. See
+`segment_10B_2.md` D11 for the detail dict shape.
 
-```python
-detail = {
-    "instrument_id": ...,
-    "session_id": ...,
-    "added": [
-        {"source_type": ..., "source_field": ..., "label": ...,
-         "visible": ..., "order": ...},
-        ...
-    ],
-    "removed": [{"source_type": ..., "source_field": ..., ...}, ...],
-    "updated": [
-        {
-            "source_type": ..., "source_field": ...,
-            "changes": {"label": [old, new], "visible": [old, new], ...},
-        },
-        ...
-    ],
-}
-```
+### D12 — `spec/target_operator_map.md` update → post-10B PR
 
-Single bulk event per save. Per-row Add / Edit / Delete POSTs
-emit their own `instrument.display_field_added` /
-`instrument.display_field_updated` / `instrument.display_field_deleted`
-events with the same shape conventions as 10A's response-field
-events.
+Lands in a **separate PR** after 10B-3 merges. 10B's three sub-PRs
+ship implementation + tests; the spec rewrite is a docs-only
+follow-on that re-frames the `/instruments` page to reflect 10A's
+response-field builder, 10B-2's display-field picker, and 10B-3's
+preview route. Splitting keeps each sub-PR's diff focused.
 
-### D12 — `spec/target_operator_map.md` update
-
-Lands in a **separate PR** after 10B merges. 10B ships
-implementation + tests; the spec rewrite is a docs-only follow-on
-that re-frames the `/instruments` page to reflect both 10A's
-response-field builder and 10B's display-field picker. Splitting
-keeps 10B's diff focused.
-
-### D13 — Reorder UX in the bulk form
+### D13 — Reorder UX in the bulk form → 10B-2
 
 Numeric `<input type="number">` for `order` + Save button. **No
 JavaScript.** Matches AGENTS.md's "no frontend framework" guidance
@@ -240,7 +195,9 @@ polish PR — out of scope here.)
 
 ---
 
-## Audit events added in 10B
+## Audit events added across 10B
+
+Added in 10B-2:
 
 - `instrument.display_field_added`
 - `instrument.display_field_updated`
@@ -248,10 +205,12 @@ polish PR — out of scope here.)
 - `instrument.display_fields_saved` (bulk save with diff per D11)
 
 `instrument.fields_reordered` (existing in 10A) is reused when
-the bulk fields-save POST reorders response fields; its
+10B-2's bulk fields-save POST reorders response fields; its
 `old_order` / `new_order` lists stay scoped to response-field
 keys only. A future cleanup could fold display + response order
 into one event; out of scope for 10B.
+
+10B-1 and 10B-3 add no audit events.
 
 ---
 
@@ -266,15 +225,16 @@ into one event; out of scope for 10B.
   gated on `require_session_operator`.
 - `assignment_context_*` as a display-field source — deliberately
   excluded per D1.
-- Drag-handle reorder UX → out of scope; numeric inputs ship in 10B
-  per D13.
+- Drag-handle reorder UX → out of scope; numeric inputs ship in
+  10B-2 per D13.
 - `spec/target_operator_map.md` rewrite → separate post-10B PR per D12.
 
 ---
 
 ## To draft next
 
-This stub locks the decisions. The implementation slice breakdown
-(parallel to `segment_10A.md` Slices 1–5: migration → service layer
-→ routes → templates → tests with ~10–12 cases per §14.3) is **not
-yet drafted** and is the next deliverable on this branch.
+This umbrella stub locks the segment-wide decisions and points to
+three per-sub-PR stubs. The implementation slice breakdown for each
+sub-PR (parallel to `segment_10A.md` Slices 1–5: migration → service
+layer → routes → templates → tests) is **not yet drafted** in any
+of `segment_10B_1.md` / `segment_10B_2.md` / `segment_10B_3.md`.
