@@ -344,3 +344,190 @@ Minimum tests, ~15 across unit and integration:
 
 Next segment after this PR merges: **Segment 11 — Export, audit,
 and retention MVP**.
+
+---
+
+## 14. Update (2026-04-30) — split into Segments 10A and 10B
+
+After §1–§13 above were drafted, additional decisions emerged that
+broaden Segment 10's scope beyond what fits in a single PR. Segment
+10 is now split into two PR-sized blocks. **Detailed slice plans
+(`guide/segment_10A.md`, `guide/segment_10B.md`) are not yet
+drafted.** This section captures the segment-level split and the
+locked decisions that supersede parts of §1–§13.
+
+The high-level prose summary already lives in `ARCHITECTURE.md`
+under "Conceptual hierarchy → When operator-controlled instrument
+editing lands (Segment 10):" (merged in PR #82, 2026-04-30).
+
+### 14.1 Why split
+
+The original §4 estimate of one ~700–900 LOC PR no longer holds.
+Locked decisions added:
+
+- **Per-field help text** + visibility — schema migration on
+  `instrument_response_fields` (`help_text`, `help_text_visible`).
+- **Display-field picker** — operator-configurable choice of
+  reviewee tags / pair contexts that appear as columns alongside
+  the response fields. Uses the existing `instrument_display_fields`
+  table (no new table; one migration to backfill seed rows).
+- **Operator preview** — read-only `/operator/sessions/{id}/preview`
+  rendering of the reviewer surface.
+- **Reviewer-surface refactor** to loop-by-instrument (forward-compat
+  for Segment 13 multi-instrument) — section heading + per-field
+  help block + table per instrument.
+- **Consolidated `/operator/sessions/{id}/instruments` page** —
+  subsumes the 9.1 sub-page at `/instruments/{instrument_id}` (no
+  separate GET on that URL anymore; action POSTs keep
+  `{instrument_id}` in their path).
+- **Global CSS width bump** from 900px to 1400px in `base.html`
+  with a `.table-scroll` overflow utility for ultra-wide tables.
+
+Two PRs, not one.
+
+### 14.2 Segment 10A — Response-field builder + reviewer-surface refactor
+
+**Goal.** Operator can add / edit / delete / reorder response fields
+on the session's single instrument, set per-field help text + its
+visibility, and edit a friendly description for the instrument.
+Reviewer surface refactors to loop-by-instrument (N=1 today) with
+section heading + per-field help block + table.
+
+**Scope.**
+- Alembic migration: add `help_text` (Text, NULL) and
+  `help_text_visible` (Bool, default `true`) to
+  `instrument_response_fields`.
+- Consolidated `/operator/sessions/{id}/instruments` page —
+  per-instrument card carrying friendly description, accepting /
+  visibility toggles (existing 9.1 behaviours), fields table,
+  add-field form, per-row edit / delete / reorder controls.
+- Action routes:
+  - `POST /operator/sessions/{id}/instruments/{instrument_id}/edit`
+    — edit description (system `name` is immutable).
+  - `POST /operator/sessions/{id}/instruments/{instrument_id}/fields`
+    — add field.
+  - `POST .../fields/{field_id}/edit` — edit field.
+  - `POST .../fields/{field_id}/delete` — delete (warn-and-confirm
+    when responses exist).
+  - `POST .../fields/{field_id}/move` — reorder up / down.
+  - Existing 9.1 POSTs (`open` / `close` / `visibility`) keep their
+    URL but redirect to `/instruments` instead of the now-removed
+    sub-page.
+- `GET /operator/sessions/{id}/instruments/{instrument_id}` — 303
+  to `/instruments` for backward compat with bookmarks.
+- Audit events: `instrument.field_added`, `instrument.field_updated`,
+  `instrument.field_deleted`, `instrument.fields_reordered`,
+  `instrument.described`. All field mutations + `instrument.described`
+  invalidate `validated → draft` via the existing
+  `_invalidate_if_validated` helper. (Open / close / visibility do
+  **not** invalidate, matching 9.5A's existing carve-out.)
+- Reviewer-surface refactor: loop over instruments (today: N=1),
+  render section heading from `Instrument.description` (fallback to
+  system `name`), help block above table listing each response
+  field where `help_text` is non-empty AND `help_text_visible` is
+  true, then the response table.
+- CSS: `body { max-width: 1400px }` globally in
+  `app/web/templates/base.html`; add `.table-scroll { overflow-x:
+  auto }` utility class.
+
+**Out of scope (deferred to 10B).**
+- Display-field picker UI and any change to
+  `instrument_display_fields`.
+- `pair_context_1/2/3` rendering on the reviewer surface stays
+  hard-coded (just hoisted into the per-instrument loop) until 10B
+  switches it to `InstrumentDisplayField`-driven.
+- Operator preview route.
+
+**Deliverable shape.** One PR, ~1000–1100 LOC including tests
+(~15–20 covering routes, audit, reviewer-surface help block,
+locked-when-ready 409, validated invalidation, required-toggle
+banner, width-bump non-regression).
+
+### 14.3 Segment 10B — Display-field picker + operator preview
+
+**Goal.** Operator can choose which reviewee tags / pair contexts
+appear as columns on the reviewer surface alongside the response
+fields, and preview what reviewers will see before activation.
+
+**Scope.**
+- Alembic migration: backfill `InstrumentDisplayField` rows for
+  `pair_context_1/2/3` (visible=true, order 1..3) on every
+  existing instrument. Update `ensure_default_instrument` to seed
+  them on new sessions.
+- Per-instrument card on `/instruments` extends with a display-field
+  picker section: the available sources are reviewee `tag1` /
+  `tag2` / `tag3` / `photo_link` and `pair_context_1` / `2` / `3`.
+  `assignment_context_*` is deliberately excluded (preserves the
+  reviewer-facing / logic-engaging distinction; see ARCHITECTURE.md
+  "Pair-level vs assignment-level context").
+- Bulk-save action `POST .../instruments/{instrument_id}/display-
+  fields/save` replaces the instrument's display-field set in one
+  transaction. Visibility toggle, optional label override, and
+  reorder are part of the same form.
+- Reviewer surface: replace the hard-coded `pair_context_*`
+  rendering with `InstrumentDisplayField`-driven render. Reviewee
+  identity stays as a fixed first column (name + email beneath in
+  smaller font, same cell — matching the current screenshot
+  evidence).
+- New route `GET /operator/sessions/{id}/preview` — read-only
+  render of the reviewer surface with a "Preview — not visible to
+  reviewers" banner. Uses real assignments if any; falls back to
+  one synthetic placeholder row when zero. All inputs disabled /
+  static; no save / submit / clear forms reachable.
+- Audit events: `instrument.display_fields_saved` (single bulk
+  event with old / new comparison). Display-field changes invalidate
+  `validated → draft`.
+
+**Out of scope.**
+- Multi-instrument session support (Segment 13).
+- Operator-driven export of the configured surface (Segment 11).
+- Anonymous-preview link or shareable preview URL — preview is
+  operator-only.
+
+**Deliverable shape.** One PR, ~700–800 LOC including tests
+(~10 covering picker, render, preview, backfill migration,
+assignment_context exclusion).
+
+### 14.4 Locked decisions that supersede §1–§13
+
+When the original §1–§13 disagrees with this section, this section
+wins. Quick map:
+
+| Original | Supersede |
+|---|---|
+| §4 Branch strategy: one PR | Two PRs: `claude/segment-10a-…` then `claude/segment-10b-…`. |
+| §5 Operator surface: `/operator/sessions/{id}/instrument` (singular) | `/operator/sessions/{id}/instruments` (plural, consolidated; one card per instrument). |
+| §6 "No migration needed" | 10A migration adds `help_text` + `help_text_visible`. 10B migration backfills `InstrumentDisplayField` rows. |
+| §7.5 Four field types only | Field types unchanged, but each field also carries `help_text` (Text NULL) + `help_text_visible` (Bool default true). |
+| §7.6 Lock predicate | Keys on `session.status == ready` today. Predicate written as `_can_edit_instrument(instrument, session)` so Segment 13 can refine to per-instrument keying. |
+| §7.7 Default seed fields, instrument named "Default" | System `name` is `instrument_1` (etc.), immutable. Existing rows keep their `"Default"` value (code-only change, no rename migration). Operator-editable friendly text moves to `Instrument.description`. |
+| §9 Routes — singular `/instrument` | All routes consolidated under `/instruments/{instrument_id}/...` for actions; single GET at `/instruments`. Old `GET /instruments/{instrument_id}` 303s to `/instruments`. |
+| §8 Audit event shapes | Add `instrument.described` (description edit). 10B adds `instrument.display_fields_saved`. |
+| §10 Tests (~15 in one PR) | Split: 10A ~15–20, 10B ~10. |
+| §11 Documentation | `docs/status.md` updated at end of 10A, again at end of 10B. `ARCHITECTURE.md` already updated (PR #82). `spec/target_operator_map.md` needs an update to reflect the consolidated `/instruments` page (its current text describes a separate `/instruments/{instrument_id}` page). |
+
+### 14.5 Recommended sequencing
+
+1. **10A** — schema migration, builder, reviewer-surface refactor,
+   CSS width bump. Lands first because it owns the `help_text`
+   migration and the reviewer-surface loop refactor that 10B
+   extends.
+2. **10B** — display-field picker, preview. Builds on 10A's
+   per-instrument card and reviewer-surface loop.
+
+10B cannot land before 10A: the display-field picker UI lives on
+10A's per-instrument card, and the preview route renders 10A's
+reviewer surface.
+
+### 14.6 Cross-references
+
+- `ARCHITECTURE.md` "Conceptual hierarchy" — operator-controlled
+  instrument editing prose (PR #82, 2026-04-30).
+- `ARCHITECTURE.md` "Tabular response artifacts" — within-instrument
+  vs across-instrument framing for the reviewer surface.
+- `guide/segment_09_invitation_monitoring_reminder_split_plan.md` —
+  Segment 9's split-plan, the structural precedent for this update.
+- `guide/segment_10A.md`, `guide/segment_10B.md` — detailed slice
+  plans, **not yet drafted**.
+- `spec/target_operator_map.md` — needs an update to reflect the
+  consolidated `/instruments` page (deferred until 10A lands).
