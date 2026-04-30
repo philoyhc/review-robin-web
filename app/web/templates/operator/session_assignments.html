@@ -59,22 +59,120 @@
     </div>
   {% endif %}
 
+  {% if missing_confirm %}
+    <div class="card" style="border-color: #b91c1c; background: #fee2e2;">
+      <p>
+        <strong>Replace not confirmed.</strong>
+        Tick the confirm checkbox in the form below before submitting.
+      </p>
+    </div>
+  {% endif %}
+
+  {% if is_blocked %}
+    <div class="card" style="border-color: #b91c1c; background: #fee2e2;">
+      <p>
+        <strong>Upload blocked.</strong>
+        The CSV has errors that must be resolved before it can be saved.
+      </p>
+    </div>
+  {% endif %}
+
+  {% include "operator/partials/validation_results.html" %}
+
   <div class="page-grid">
-    <div class="card">
-      <h2>Choose Assignment Method</h2>
-      <div class="btn-row">
-        <a class="btn-cta"
-           href="/operator/sessions/{{ session.id }}/assignments/manual">Manual<br>Assignment</a>
-        <a class="btn-cta"
-           href="/operator/sessions/{{ session.id }}/assignments/full-matrix">Full Matrix<br>Assignment</a>
-        <a class="btn-cta disabled"
-           aria-disabled="true"
-           title="Rule-based assignment lands in Segment 12">Rule Based<br>Assignment</a>
-      </div>
+    <section class="card card-tl" id="upload-csv">
+      <h2>Upload Manual Assignment</h2>
+      <p class="muted">
+        CSV file in UTF-8, max 5000 rows. One row per assignment. Required
+        columns: <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
+        Optional: <code>IncludeAssignment</code>,
+        <code>PairContext1/2/3</code>, <code>AssignmentContext1/2/3</code>.
+        Other columns are ignored.
+      </p>
+      {% if reviewer_count == 0 or reviewee_count == 0 %}
+        <p class="muted">Import reviewers and reviewees first.</p>
+      {% else %}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/assignments/manual/import"
+              enctype="multipart/form-data">
+          <label for="manual-file">CSV file</label>
+          <input type="file" id="manual-file" name="file" accept=".csv,text/csv" required>
+
+          <p style="margin-top: 12px;">
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="exclude_self_review" value="true" checked>
+              Exclude self-review (when a reviewer's email matches a reviewee's identifier)
+            </label>
+          </p>
+
+          {% if assignment_count and assignment_count > 0 %}
+            <p style="margin-top: 12px;">
+              <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
+              Importing will <strong>replace</strong> them.
+            </p>
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm_replace" value="true" required>
+                Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
+              </label>
+            </p>
+            <div style="margin-top: 20px;">
+              <button class="btn alert-solid" type="submit">Upload</button>
+            </div>
+          {% else %}
+            <div style="margin-top: 20px;">
+              <button class="btn" type="submit">Upload</button>
+            </div>
+          {% endif %}
+        </form>
+      {% endif %}
+    </section>
+
+    <div class="card card-tr">
+      <h2>Full Matrix Assignment</h2>
+      <p class="muted">Pair every reviewer with every reviewee.</p>
+      {% if reviewer_count == 0 or reviewee_count == 0 %}
+        <p class="muted">Import reviewers and reviewees first.</p>
+      {% else %}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/assignments/full-matrix">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="exclude_self_review" value="true" checked>
+              Exclude self-review (when a reviewer's email matches a reviewee's identifier)
+            </label>
+          </p>
+
+          {% if assignment_count and assignment_count > 0 %}
+            <p style="margin-top: 12px;">
+              <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
+              Generating will <strong>replace</strong> them.
+            </p>
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm_replace" value="true" required>
+                Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
+              </label>
+            </p>
+            <div style="margin-top: 20px;">
+              <button class="btn alert-solid" type="submit">Generate</button>
+            </div>
+          {% else %}
+            <div style="margin-top: 20px;">
+              <button class="btn" type="submit">Generate</button>
+            </div>
+          {% endif %}
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="card card-bl">
+      <h2>Rule Based Assignment</h2>
+      <p class="muted">Under Construction</p>
     </div>
 
     {% if assignment_count %}
-      <div class="card" style="border-color: #b91c1c;">
+      <div class="card card-br" style="border-color: #b91c1c;">
         <h2 style="color: #b91c1c;">Danger Zone</h2>
         <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
           <p>
