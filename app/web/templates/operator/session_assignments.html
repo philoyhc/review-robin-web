@@ -80,6 +80,7 @@
   {% include "operator/partials/validation_results.html" %}
 
   <div class="bottom-grid">
+    <div class="bottom-left">
     <section class="card" id="upload-csv">
       <h2>Upload Manual Assignment</h2>
       <p class="muted">
@@ -129,6 +130,13 @@
     </section>
 
     <div class="card">
+      <h2>Rule Based Assignment</h2>
+      <p class="muted">Under Construction</p>
+    </div>
+    </div>{# /bottom-left #}
+
+    <div class="bottom-left">
+    <div class="card">
       <h2>Full Matrix Assignment</h2>
       <p class="muted">Pair every reviewer with every reviewee.</p>
       {% if reviewer_count == 0 or reviewee_count == 0 %}
@@ -166,11 +174,6 @@
       {% endif %}
     </div>
 
-    <div class="card">
-      <h2>Rule Based Assignment</h2>
-      <p class="muted">Under Construction</p>
-    </div>
-
     {% if assignment_count %}
       <div class="card" style="border-color: #b91c1c;">
         <h2 style="color: #b91c1c;">Danger Zone</h2>
@@ -189,6 +192,7 @@
         </form>
       </div>
     {% endif %}
+    </div>{# /bottom-left (right column) #}
   </div>
 
   {% if pair_sample %}
