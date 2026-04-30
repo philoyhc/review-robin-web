@@ -9,7 +9,7 @@ Covers:
 - ``/instruments`` index page renders one card per instrument, with
   Add / Delete instrument disabled.
 - ``/setupinvite`` stub renders.
-- ``build_setup_rows`` re-enables Instruments and Set up invites rows.
+- ``build_setup_rows`` re-enables Instruments and Email Invites rows.
 """
 
 from __future__ import annotations
@@ -251,8 +251,8 @@ def test_build_setup_rows_re_enables_instruments_and_setup_invites(
 
     assert by_label["Instruments"].manage_disabled is False
     assert by_label["Instruments"].manage_url.endswith("/instruments")
-    assert by_label["Set up invites"].manage_disabled is False
-    assert by_label["Set up invites"].manage_url.endswith("/setupinvite")
+    assert by_label["Email Invites"].manage_disabled is False
+    assert by_label["Email Invites"].manage_url.endswith("/setupinvite")
 
 
 # ---------------------------------------------------------------------------
@@ -271,7 +271,7 @@ def test_setupinvite_stub_renders(
 
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Set up invites</h1>" in body
+    assert "<h1>Email Invites</h1>" in body
     assert "Segment 15" in body
 
 
@@ -287,7 +287,7 @@ def test_session_detail_links_instruments_and_setupinvite(
 
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    # Manage buttons for Instruments and Set up invites are real anchors
+    # Manage buttons for Instruments and Email Invites are real anchors
     assert (
         f'href="/operator/sessions/{review_session.id}/instruments"' in body
     )

@@ -2,27 +2,35 @@
 
 {% block title %}{{ session.name }} — Review Robin Web{% endblock %}
 
+{% block body_class %}narrow{% endblock %}
+
 {% block content %}
   <h1>{{ session.name }}</h1>
 
-  {# Card 1: Session #}
+  {# Card 1: Session Details #}
   <div class="card">
-    <h2>Session</h2>
-    <p>
-      <strong>Status:</strong>
-      {% if is_ready %}
-        <span class="pill pill-info">ready</span>
-      {% elif is_validated %}
-        <span class="pill pill-info">validated</span>
-      {% else %}
-        <span class="pill pill-warning">{{ session.status }}</span>
-      {% endif %}
-    </p>
-    <p><strong>Code:</strong> <code>{{ session.code }}</code></p>
-    <p><strong>Deadline:</strong> {{ session.deadline.isoformat() if session.deadline else "Not set" }}</p>
+    <h2>Session Details</h2>
+    <div class="session-meta-row">
+      <div><strong>Code:</strong> <code>{{ session.code }}</code></div>
+      <div><strong>Deadline:</strong> {{ session.deadline.isoformat() if session.deadline else "Not set" }}</div>
+      <div><strong>Created by:</strong> {{ session.created_by_user.display_name or session.created_by_user.email }}</div>
+    </div>
     <p><strong>Description:</strong> {{ session.description or "—" }}</p>
+    <div class="session-status-row">
+      <div>
+        <strong>Status:</strong>
+        {% if is_ready %}
+          <span class="pill pill-info">ready</span>
+        {% elif is_validated %}
+          <span class="pill pill-info">validated</span>
+        {% else %}
+          <span class="pill pill-warning">{{ session.status }}</span>
+        {% endif %}
+      </div>
+      <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
+    </div>
     {% if is_ready %}
-      <p class="muted">
+      <p class="muted" style="margin-top: 12px;">
         Session is <strong>ready</strong> — setup edits are locked. Revert to
         draft below to make changes.
       </p>
@@ -39,24 +47,13 @@
                   type="submit">Revert to draft</button>
         </p>
       </form>
-    {% else %}
-      <p>
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit details</a>
-      </p>
     {% endif %}
   </div>
 
-  {# Card 2: Session setup #}
+  {# Card 2: Session Setup #}
   <div class="card">
-    <h2>Session setup</h2>
+    <h2>Session Setup</h2>
     <table>
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </thead>
       <tbody>
         {% for row in setup_rows %}
           <tr>
@@ -134,17 +131,17 @@
   {# Card 3: Run Session #}
   <div class="card">
     <h2>Run Session</h2>
-    <p>
-      <a class="btn secondary"
-         href="/operator/sessions/{{ session.id }}?validated=1">Validate Session Setup</a>
-      <a class="btn secondary"
-         href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
-      <a class="btn secondary"
-         href="/operator/sessions/{{ session.id }}/invitations">Manage Invitations</a>
-      <a class="btn secondary disabled"
+    <div class="btn-row">
+      <a class="btn-cta"
+         href="/operator/sessions/{{ session.id }}?validated=1">Validate<br>Session Setup</a>
+      <a class="btn-cta"
+         href="/operator/sessions/{{ session.id }}/preview">Preview<br>Reviewer Surface</a>
+      <a class="btn-cta"
+         href="/operator/sessions/{{ session.id }}/invitations">Manage<br>Invitations</a>
+      <a class="btn-cta disabled"
          aria-disabled="true"
-         title="Extract Data lands in Segment 11">Extract Data</a>
-    </p>
+         title="Extract Data lands in Segment 11">Extract<br>Data</a>
+    </div>
   </div>
 
   {# Card 4: Danger zone #}

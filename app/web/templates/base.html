@@ -14,6 +14,7 @@
         color: #222;
         line-height: 1.35;
       }
+      body.narrow { max-width: 800px; }
       p { margin: 0 0 6px 0; }
       h1, h2, h3, h4, h5, h6 { margin: 12px 0 6px 0; line-height: 1.25; }
       ul, ol, dl { margin: 0 0 6px 0; }
@@ -153,9 +154,46 @@
       .pill-error { background: #fee2e2; color: #991b1b; }
       .pill-warning { background: #fef3c7; color: #92400e; }
       .pill-info { background: #dbeafe; color: #1e40af; }
+      .session-meta-row {
+        display: flex;
+        gap: 16px;
+        margin: 0 0 6px 0;
+      }
+      .session-meta-row > div { flex: 1; }
+      .session-status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 6px 0 0 0;
+      }
+      .btn-cta {
+        display: block;
+        padding: 8px 14px;
+        border: 1px solid #2563eb;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        text-decoration: none;
+        text-align: center;
+        font-size: 0.95em;
+        font-weight: 700;
+        line-height: 1.25;
+        cursor: pointer;
+      }
+      .btn-cta.disabled {
+        background: #9ca3af;
+        border-color: #9ca3af;
+        cursor: not-allowed;
+      }
+      .btn-row {
+        display: flex;
+        gap: 16px;
+        margin: 0;
+      }
+      .btn-row > * { flex: 1; }
     </style>
   </head>
-  <body>
+  <body class="{% block body_class %}{% endblock %}">
     <div class="chrome">
       <div class="chrome-left">
         <a class="chrome-app-identity" href="/about">Review Robin Web App (version {{ app_version }})</a>

@@ -122,4 +122,4 @@ def test_session_detail_shows_counts_and_validate_link(
     populated = client.get(f"/operator/sessions/{review_session.id}")
     body = populated.text
     # Reviewers count cell now shows 2
-    assert "<td>2</td>" in body
+    assert "Number of reviewers: 2" in body

@@ -107,18 +107,18 @@ def test_build_setup_rows_returns_expected_shape(
     assert list(by_label.keys()) == [
         "Reviewers",
         "Reviewees",
-        "Instruments",
         "Assignments",
-        "Set up invites",
+        "Instruments",
+        "Email Invites",
     ]
-    assert by_label["Reviewers"].value == "1"
+    assert by_label["Reviewers"].value == "Number of reviewers: 1"
     assert by_label["Reviewers"].manage_url.endswith("/reviewers")
     assert by_label["Reviewers"].manage_disabled is False
     assert by_label["Instruments"].manage_disabled is False
     assert by_label["Instruments"].manage_url.endswith("/instruments")
-    assert by_label["Set up invites"].manage_disabled is False
-    assert by_label["Set up invites"].manage_url.endswith("/setupinvite")
-    assert by_label["Assignments"].value == "1"
+    assert by_label["Email Invites"].manage_disabled is False
+    assert by_label["Email Invites"].manage_url.endswith("/setupinvite")
+    assert by_label["Assignments"].value == "Number of assignments: 1"
 
 
 def test_session_detail_renders_four_cards(
@@ -130,8 +130,8 @@ def test_session_detail_renders_four_cards(
     body = response.text
 
     assert response.status_code == 200
-    assert "<h2>Session</h2>" in body
-    assert "<h2>Session setup</h2>" in body
+    assert "<h2>Session Details</h2>" in body
+    assert "<h2>Session Setup</h2>" in body
     assert "<h2>Run Session</h2>" in body
     assert "Danger zone" in body  # heading uses inline color, not exact match
     assert 'id="danger-zone"' in body
@@ -412,9 +412,9 @@ def test_session_card_buttons_when_draft(
     review_session = _make_session(client, db, code="draft-buttons")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    # Edit details button shown
+    # Edit button shown
     assert (
-        f'href="/operator/sessions/{review_session.id}/edit">Edit details'
+        f'href="/operator/sessions/{review_session.id}/edit">Edit</a>'
         in body
     )
     # Revert to draft form NOT present
@@ -441,10 +441,10 @@ def test_session_card_buttons_when_ready(
 
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    # Edit details button hidden
+    # Edit button still shown (lock is enforced server-side on the POST)
     assert (
-        f'href="/operator/sessions/{review_session.id}/edit">Edit details'
-        not in body
+        f'href="/operator/sessions/{review_session.id}/edit">Edit</a>'
+        in body
     )
     # Revert to draft form present
     assert (
