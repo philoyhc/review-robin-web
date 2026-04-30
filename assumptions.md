@@ -8,13 +8,15 @@ scratch.
 
 ## Button styles
 
-The app uses four canonical button styles. Each is described by
-**affordance × treatment** (`primary`/`danger` × `solid`/`outline`):
+The app uses six canonical button styles. Each is described by
+**affordance × treatment** (`primary`/`alert`/`danger` × `solid`/`outline`):
 
 | Name | Fill | Text | Stroke | Use for |
 |---|---|---|---|---|
 | **Primary** | blue (`#2563eb`) | white | blue (`#2563eb`) | Default action: form submit, navigation, "do the thing". |
 | **Primary Outline** | white | blue (`#2563eb`) | blue (`#2563eb`) | Secondary action that lives next to a Primary, or a non-destructive sibling action. |
+| **Alert** | orange (`#d97706`) | white | orange (`#d97706`) | High-attention but non-destructive action that changes session lifecycle state in a meaningful way (e.g. "Revert to draft"). Sits between Primary and Danger. |
+| **Alert Outline** | white | orange (`#d97706`) | orange (`#d97706`) | Cautionary entry point that opens an Alert action; or an inline acknowledgement / dismiss control with a warning tone. |
 | **Danger** | red (`#b91c1c`) | white | red (`#b91c1c`) | Destructive confirm action — final step that actually deletes / wipes data. |
 | **Danger Outline** | white | red (`#b91c1c`) | red (`#b91c1c`) | Destructive entry point that opens a confirmation step (e.g. a "Delete…" link that reveals the real Danger button). |
 
@@ -25,6 +27,11 @@ The styles are realized through the `.btn` family in
 
 - **Primary** — `.btn` (default, no modifier).
 - **Primary Outline** — `.btn.secondary`.
+- **Alert** — `.btn.alert-solid`. (The "Revert to draft" button on
+  `session_detail.html` still uses an inline-style override on
+  `.btn` for the same orange fill — candidate to be migrated to
+  `.btn.alert-solid` next time that form is touched.)
+- **Alert Outline** — `.btn.alert`.
 - **Danger** — `.btn.danger-solid`. (The danger-zone confirm
   buttons in `session_detail.html` still use inline-style
   overrides on `.btn` for the same red fill — candidate to be
