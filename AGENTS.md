@@ -18,9 +18,17 @@
 
 ## Working approach
 
-Break tasks into small focused slices. Never attempt to refactor
-multiple components in a single session. Preferred task size: one
-endpoint, one template, or one database change at a time.
+Land changes as small, reviewable slices. The natural unit is one
+coherent feature step — e.g. a migration + its seed code, a service
+helper set + the routes that call it, a template refactor + its
+tests — sized so a reviewer can model the full contract in one
+sitting.
+
+When a segment plan in `guide/` calls out internal slices, land
+them in order across multiple PRs rather than collapsing them; use
+the plan's "land X first as a self-contained Y" risk notes as the
+cut points. Don't bundle independent changes (e.g. an unrelated bug
+fix) into the same PR.
 
 ## Stack summary
 
