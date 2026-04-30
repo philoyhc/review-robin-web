@@ -26,11 +26,15 @@ perspective:
   Segment 12).
 - **Instruments** are the *response forms* attached to a session. A
   session has one or more instruments, each defining its own set of
-  response fields. **Multi-instrument is a planned future** (Segment
-  12); for now the model invariant is that every session has exactly
-  one auto-created `Default` instrument with seed response fields.
-  When operator-controlled instrument editing lands, that default
-  becomes the starting point operators rename / extend / replace.
+  response fields. **Multi-instrument is Segment 13**; for now the
+  model invariant is that every session has exactly one auto-created
+  instrument (system handle `instrument_1`) with seed response
+  fields. Operator-controlled editing of that instrument's response
+  fields, per-field help text, and friendly description ships in
+  Segment 10A; operator-configurable display columns (which reviewee
+  tags and pair contexts appear on the reviewer surface alongside the
+  response fields) and a read-only operator preview ship in
+  Segment 10B.
 - **Assignments** are `(session, reviewer, reviewee, instrument)`
   rows. They link the assignment matrix (the pair) to the response
   form (the instrument). The same `(reviewer, reviewee)` pair may
@@ -39,6 +43,37 @@ perspective:
 - **Responses** are `(assignment, response_field)` rows: the
   reviewer's answer to one field on one instrument for one assigned
   reviewee.
+
+### Tabular response artifacts
+
+The reviewer surface presents one **tabular response artifact** per
+instrument the reviewer is assigned on. Within a single instrument:
+
+- **Rows** are the assigned reviewees (one per `(reviewer, reviewee,
+  instrument)` assignment).
+- **Columns** are a fixed reviewee identity column (name, with email
+  in smaller font beneath) followed by operator-configured **display
+  fields** (`InstrumentDisplayField` rows — reviewee tags, pair
+  contexts) and the instrument's **response fields**
+  (`InstrumentResponseField` rows — the inputs the reviewer fills
+  in).
+- **Per-field help text** above the table explains each response
+  field in plain prose; visibility is per-field via
+  `InstrumentResponseField.help_text_visible`.
+- **Section heading** is the instrument's operator-editable
+  `description`; the system handle (`instrument_1`, `instrument_2`,
+  …) is internal-only and never reviewer-visible.
+
+Across instruments — a reviewer assigned on multiple instruments for
+the same session sees one such tabular artifact per instrument,
+stacked. Each table is independent: its own rows (assignments scoped
+to that instrument), its own display columns, its own response
+columns. The same `(reviewer, reviewee)` pair may appear in zero,
+one, or many instruments depending on how generation ran. The
+multi-table form ships under Segment 13 (multi-instrument); Segments
+10A and 10B keep the invariant of exactly one instrument per session
+but already render and configure as if N instruments were possible
+(loop-by-instrument with N=1 today).
 
 ### Practical implications today
 
@@ -54,14 +89,31 @@ Because instrument editing has not shipped:
 - The reviewer surface (Segment 8) renders the Default Instrument's
   fields against each assigned reviewee.
 
+When operator-controlled instrument editing lands (Segment 10):
+
+- 10A introduces a consolidated `/operator/sessions/{id}/instruments`
+  page with per-instrument cards: friendly description, response
+  fields (add / edit / delete / reorder), per-field help text,
+  per-field `help_text_visible` toggle, and the existing 9.1
+  acceptance + visibility toggles. The 9.1 sub-page at
+  `/instruments/{instrument_id}` is folded into the consolidated
+  page; action POSTs keep the `{instrument_id}` segment in their
+  path. The reviewer surface refactors to render section heading +
+  help block + table per instrument, looping over an
+  instruments-collection-of-one.
+- 10B adds the display-fields picker (which reviewee tags and pair
+  contexts appear as columns alongside the response fields) and a
+  read-only operator preview at `/operator/sessions/{id}/preview`.
+
 When multi-instrument lands (Segment 13):
 
-- Operators can add more instruments under a session and define
-  per-instrument response fields.
+- Operators can add more instruments under a session via the same
+  consolidated page (the `Add instrument` and `Delete instrument`
+  buttons that ship disabled in 9.4C light up).
 - Assignment generation gains an instrument selector — different
   instruments can have different subsets of pairs.
-- The reviewer surface stacks (or tabs) sections per instrument the
-  reviewer is assigned on for that reviewee. Schema unchanged.
+- The reviewer surface stacks the per-instrument sections 10A
+  already renders. Schema unchanged.
 
 ### Session lifecycle (Segment 9.1)
 
@@ -160,8 +212,10 @@ stored in `Assignment.context` JSON:
   reviewer surface. Never read by assignment-generation logic.
 - **`assignment_context_1/2/3`** is logic-engaging context (e.g.
   "panel-1", a category code). Read by RuleBased rules in Segment
-  11. Hidden from reviewers by default; can become reviewer-visible
-  when an operator opts in via `InstrumentDisplayField` (Segment 13).
+  12. Hidden from reviewers; deliberately excluded from the Segment
+  10B `InstrumentDisplayField` picker so the reviewer-facing /
+  logic-engaging distinction is preserved. (Pair contexts go in the
+  picker; assignment contexts do not.)
 
 CSV columns are `PairContext1/2/3` and `AssignmentContext1/2/3`.
 
