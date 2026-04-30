@@ -205,6 +205,30 @@
       }
       .setup-grid > .btn-cta { grid-column: 1; }
       .setup-grid > .setup-content { grid-column: 2 / -1; }
+      .page-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: stretch;
+      }
+      .page-grid .card { margin-bottom: 0; }
+      .col-left {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        justify-content: space-between;
+      }
+      .col-right {
+        display: flex;
+        flex-direction: column;
+      }
+      .col-right > .card { flex: 1; }
+      .card-half { max-width: calc(50% - 10px); box-sizing: border-box; }
+      #danger-zone button.btn { width: 200px; }
+      @media (max-width: 800px) {
+        .page-grid { grid-template-columns: 1fr; }
+        .card-half { max-width: 100%; }
+      }
     </style>
   </head>
   <body class="{% block body_class %}{% endblock %}">

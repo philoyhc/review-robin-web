@@ -2,11 +2,12 @@
 
 {% block title %}{{ session.name }} — Review Robin Web{% endblock %}
 
-{% block body_class %}narrow{% endblock %}
-
 {% block content %}
   <h1>{{ session.name }}</h1>
   <p class="page-subtitle"><code>{{ session.code }}</code></p>
+
+  <div class="page-grid">
+    <div class="col-left">
 
   {# Card 1: Session Details #}
   <div class="card">
@@ -50,23 +51,44 @@
     {% endif %}
   </div>
 
-  {# Card 2: Session Setup #}
+  {# Card 3: Run Session — sits below Session Details in the left column #}
   <div class="card">
-    <h2>Session Setup</h2>
-    <div class="setup-grid">
-      {% for row in setup_rows %}
-        {% if row.manage_disabled %}
-          <a class="btn-cta disabled"
-             aria-disabled="true"
-             title="{{ row.manage_disabled_reason }}">{{ row.label }}</a>
-        {% else %}
-          <a class="btn-cta"
-             href="{{ row.manage_url }}">{{ row.label }}</a>
-        {% endif %}
-        <div class="setup-content">{{ row.value }}</div>
-      {% endfor %}
+    <h2>Run Session</h2>
+    <div class="btn-row">
+      <a class="btn-cta"
+         href="/operator/sessions/{{ session.id }}?validated=1">Validate<br>Session Setup</a>
+      <a class="btn-cta"
+         href="/operator/sessions/{{ session.id }}/preview">Preview<br>Reviewer Surface</a>
+      <a class="btn-cta"
+         href="/operator/sessions/{{ session.id }}/invitations">Manage<br>Invitations</a>
+      <a class="btn-cta disabled"
+         aria-disabled="true"
+         title="Extract Data lands in Segment 11">Extract<br>Data</a>
     </div>
   </div>
+
+    </div>{# /col-left #}
+
+    <div class="col-right">
+      {# Card 2: Session Setup #}
+      <div class="card">
+        <h2>Session Setup</h2>
+        <div class="setup-grid">
+          {% for row in setup_rows %}
+            {% if row.manage_disabled %}
+              <a class="btn-cta disabled"
+                 aria-disabled="true"
+                 title="{{ row.manage_disabled_reason }}">{{ row.label }}</a>
+            {% else %}
+              <a class="btn-cta"
+                 href="{{ row.manage_url }}">{{ row.label }}</a>
+            {% endif %}
+            <div class="setup-content">{{ row.value }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>{# /col-right #}
+  </div>{# /page-grid #}
 
   {% if has_responses and not is_ready %}
     <div class="card" style="border-color: #d97706; background: #fef3c7;">
@@ -121,27 +143,11 @@
     </div>
   {% endif %}
 
-  {# Card 3: Run Session #}
-  <div class="card">
-    <h2>Run Session</h2>
-    <div class="btn-row">
-      <a class="btn-cta"
-         href="/operator/sessions/{{ session.id }}?validated=1">Validate<br>Session Setup</a>
-      <a class="btn-cta"
-         href="/operator/sessions/{{ session.id }}/preview">Preview<br>Reviewer Surface</a>
-      <a class="btn-cta"
-         href="/operator/sessions/{{ session.id }}/invitations">Manage<br>Invitations</a>
-      <a class="btn-cta disabled"
-         aria-disabled="true"
-         title="Extract Data lands in Segment 11">Extract<br>Data</a>
-    </div>
-  </div>
-
   {# Card 4: Danger zone #}
-  <div class="card" id="danger-zone" style="border-color: #b91c1c;">
+  <div class="card card-half" id="danger-zone" style="border-color: #b91c1c;">
     <h2 style="color: #b91c1c;">Danger zone</h2>
     <p class="muted">
-      Delete data wipes every reviewer response while leaving setup intact.
+      Delete Data wipes every reviewer response while leaving setup intact.
       Delete session removes the entire session and is locked while ready.
     </p>
 
@@ -156,7 +162,7 @@
       <p>
         <button class="btn"
                 style="background: #b91c1c; border-color: #b91c1c;"
-                type="submit">Delete data</button>
+                type="submit">Delete Data</button>
       </p>
     </form>
 
@@ -172,8 +178,7 @@
         <p>
           <label style="font-weight: normal;">
             <input type="checkbox" name="confirm" value="true" required>
-            Yes, delete <strong>{{ session.name }}</strong> ({{ session.code }})
-            and all its data.
+            Yes, delete <strong>{{ session.name }}</strong> and all its data.
           </label>
         </p>
         <p>

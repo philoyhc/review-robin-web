@@ -157,3 +157,38 @@ buttons match the new heavy style.
   the entity, the row content drops the redundant
   `<strong>{label}:</strong>` prefix and shows just the status
   string.
+
+---
+
+## Round 4 — two-column layout + danger-zone polish
+
+### Page width
+
+- Restore the default `1400px` body max-width on session detail
+  (drop the `body_class narrow` override added in round 1).
+
+### Two-column grid
+
+- Refactor session detail into a `1fr 1fr` CSS grid (`.page-grid`):
+  - **Left column** (`.col-left`): Session Details (top), Run
+    Session (bottom). `justify-content: space-between` keeps the
+    Run Session bottom flush with the Session Setup bottom.
+  - **Right column** (`.col-right`): Session Setup card,
+    `flex: 1` so it stretches to the column height.
+- The `has_responses` warning and `validation_summary` cards stay
+  full-width below the grid (context-sensitive overlays).
+- Below 800px viewport, the grid collapses to a single column.
+
+### Danger zone
+
+- Card width is now half (`.card-half` — `max-width: calc(50% - 10px)`,
+  full-width on mobile).
+- "Delete data" button label → **`Delete Data`** (and the muted
+  intro paragraph).
+- "Delete session" button left as **`Delete session`** per the user's
+  literal text (flagged for confirmation).
+- Drop the `({{ session.code }})` from the Delete-session confirm
+  label — now reads "Yes, delete <strong>{name}</strong> and all
+  its data."
+- Equalize the Delete Data and Delete session button widths via
+  `#danger-zone button.btn { width: 200px; }`.
