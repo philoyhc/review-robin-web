@@ -6,19 +6,30 @@
   <h1>Instruments</h1>
 
   <div class="card">
-    <p>
-      <strong>{{ instruments | length }}</strong>
-      instrument{% if instruments | length != 1 %}s{% endif %}
-    </p>
-    <p>
-      <a class="btn secondary disabled"
-         aria-disabled="true"
-         title="Multi-instrument — Segment 13">Add instrument</a>
-      <a class="btn secondary"
-         href="/operator/sessions/{{ session.id }}/preview">
-        Preview reviewer surface
-      </a>
-    </p>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <p style="margin: 0;">
+          <strong>{{ instruments | length }}</strong>
+          instrument{% if instruments | length != 1 %}s{% endif %}
+        </p>
+        <p style="margin: 8px 0 0 0;">
+          <a class="btn secondary disabled"
+             aria-disabled="true"
+             title="Multi-instrument — Segment 13">Add instrument</a>
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.id }}/preview">
+            Preview reviewer surface
+          </a>
+        </p>
+      </div>
+      <div class="setup-nav">
+        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
+        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Email Invites</a>
+      </div>
+    </div>
   </div>
 
   {% if not can_edit %}
