@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 10A (2026-04-30)
+**As of:** end of Segment 10B-1 (2026-04-30)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -29,6 +29,7 @@ For the full long-term plan see
 | 2026-04-29 | Segment 9.4C shipped (Manage-page reshapes + instruments index + `/setupinvite` stub) |
 | 2026-04-29 | Segment 9.5A shipped (`validated` lifecycle state + setup-mutation invalidation hooks) |
 | 2026-04-30 | Segment 10A shipped (response-field builder + reviewer-surface loop-by-instrument refactor) |
+| 2026-04-30 | Segment 10B-1 shipped (data-driven reviewer-surface render + display-field backfill) |
 
 ---
 
@@ -52,6 +53,7 @@ For the full long-term plan see
 | 9.4C | Reviewers / reviewees / assignments Manage pages with anchored Upload-CSV cards and disabled Edit buttons; Assign by Rules placeholder card; `/operator/sessions/{id}/instruments` index page; `/operator/sessions/{id}/setupinvite` stub; setup-table Manage buttons for Instruments and Set up invites enabled | 2026-04-29 |
 | 9.5A | `validated` stored state in `SessionStatus` (between `draft` and `ready`); `GET ?validated=1` flips draft→validated when no errors; activation now requires `is_validated`; setup-mutating routes (reviewer/reviewee/assignment import + delete-all + assignment generate + session edit) flip validated→draft via dedicated `session.validated` / `session.invalidated` audit events; instrument open/close/visibility and `/delete-data` deliberately do not invalidate | 2026-04-29 |
 | 10A | Consolidated `/operator/sessions/{id}/instruments` page: per-instrument card with friendly description, acceptance + visibility toggles, response-fields table (add / edit / delete / reorder, per-field help text + visibility), session-wide Instruments Settings card with bulk Open all / Close all toggles. Migration adds `help_text` (Text, NULL) and `help_text_visible` (Bool, default true) on `instrument_response_fields`. Reviewer surface refactors to loop-by-instrument with section heading from `Instrument.description` (fallback to system handle) and a per-field help block above each table. Empty-instrument validation now blocks activation. Description / field mutations invalidate `validated → draft` via `_invalidate_if_validated`; bulk accepting + per-instrument open/close/visibility deliberately do not invalidate. Body width bumped from 900px to 1400px globally with a `.table-scroll` overflow utility. | 2026-04-30 |
+| 10B-1 | Backfill migration (`c2143bd329c7`) seeds three `InstrumentDisplayField` rows (`source_type='pair_context'`, `source_field='1'|'2'|'3'`, `label=''`, `order=0..2`, `visible=true`) on every existing instrument; destructive within that filter (operator-typed labels on those slots are not preserved across upgrade); operator-added `reviewee` rows left intact. `ensure_default_instrument` seeds the same three rows on new sessions. Reviewer surface renders pair-context values as separate columns sourced from the display-field rows (no longer inline in the identity cell); reviewee identity (name + email) is the always-first column, mandatory and non-toggleable. New service helpers `display_field_label(field)` and `display_field_value(field, assignment)` cover the seven D6 sources (`reviewee.tag_1/2/3`, `reviewee.profile_link`, `pair_context.1/2/3`); empty/NULL labels fall back to inferred strings. `profile_link` cells render as plain `<a>`. No operator UI yet (picker + bulk form land in 10B-2; preview route in 10B-3). No new audit events. | 2026-04-30 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
@@ -360,7 +362,8 @@ plug in additional reasons without a schema change. Today's keys are
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
 | **Real SMTP email backend** (production sending, not the dev outbox) | **Segment 15** |
-| **Display-fields picker + operator preview** (operator-configurable reviewee tags / pair contexts as columns alongside response fields; read-only `/operator/sessions/{id}/preview` route) | **Segment 10B** |
+| **Display-fields picker** (operator UI to add / remove / order / toggle visibility / label-override the seven D6 sources on a per-instrument card; row-level + bulk forms; four new audit events) | **Segment 10B-2** |
+| **Operator preview route** (`GET /operator/sessions/{id}/preview` — read-only render of the reviewer surface with synthetic rows, disabled inputs, banner; works in any session status) | **Segment 10B-3** |
 | **Export / audit retention** | **Segment 11** |
 | **RuleBased assignment** | **Segment 12** |
 | **Multi-instrument sessions** (more than one Instrument under a session) | **Segment 13** |

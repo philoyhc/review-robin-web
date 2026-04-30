@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Assignment,
     Instrument,
+    InstrumentDisplayField,
     InstrumentResponseField,
     Response,
     ReviewSession,
@@ -36,6 +37,22 @@ DEFAULT_RESPONSE_FIELDS: list[dict[str, Any]] = [
         "validation": None,
     },
 ]
+
+_DEFAULT_DISPLAY_FIELDS: list[dict[str, Any]] = [
+    {"source_type": "pair_context", "source_field": "1", "order": 0},
+    {"source_type": "pair_context", "source_field": "2", "order": 1},
+    {"source_type": "pair_context", "source_field": "3", "order": 2},
+]
+
+_DEFAULT_DISPLAY_LABELS: dict[tuple[str, str], str] = {
+    ("reviewee", "tag_1"): "Tag 1",
+    ("reviewee", "tag_2"): "Tag 2",
+    ("reviewee", "tag_3"): "Tag 3",
+    ("reviewee", "profile_link"): "Profile",
+    ("pair_context", "1"): "Pair context 1",
+    ("pair_context", "2"): "Pair context 2",
+    ("pair_context", "3"): "Pair context 3",
+}
 
 _FIELD_KEY_REGEX = re.compile(r"^[a-z][a-z0-9_]*$")
 _FIELD_KEY_MAX_LEN = 64
@@ -148,11 +165,64 @@ def ensure_default_instrument(
             )
         db.flush()
 
+    has_display_fields = (
+        db.execute(
+            select(InstrumentDisplayField.id)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .limit(1)
+        ).first()
+        is not None
+    )
+
+    if not has_display_fields:
+        for spec in _DEFAULT_DISPLAY_FIELDS:
+            db.add(
+                InstrumentDisplayField(
+                    instrument_id=instrument.id,
+                    label="",
+                    source_type=spec["source_type"],
+                    source_field=spec["source_field"],
+                    order=spec["order"],
+                    visible=True,
+                )
+            )
+        db.flush()
+
     return instrument
 
 
 def _instrument_label(instrument: Instrument) -> str:
     return instrument.description.strip() if instrument.description and instrument.description.strip() else instrument.name
+
+
+def display_field_label(field: InstrumentDisplayField) -> str:
+    """Return the operator-typed label, else the inferred default for the source pair."""
+    if field.label and field.label.strip():
+        return field.label.strip()
+    inferred = _DEFAULT_DISPLAY_LABELS.get((field.source_type, field.source_field))
+    if inferred is not None:
+        return inferred
+    return f"{field.source_type}:{field.source_field}"
+
+
+def display_field_value(
+    field: InstrumentDisplayField, assignment: Assignment
+) -> str | None:
+    """Resolve a display field's cell value for an assignment row.
+
+    Returns ``None`` when the source is absent, the value is empty / falsy,
+    or the (source_type, source_field) pair is not recognised.
+    """
+    if field.source_type == "pair_context":
+        ctx = assignment.context or {}
+        value = ctx.get(f"pair_context_{field.source_field}")
+        return value or None
+    if field.source_type == "reviewee":
+        if field.source_field not in {"tag_1", "tag_2", "tag_3", "profile_link"}:
+            return None
+        value = getattr(assignment.reviewee, field.source_field, None)
+        return value or None
+    return None
 
 
 def add_response_field(
