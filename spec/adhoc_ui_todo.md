@@ -97,3 +97,63 @@ placement · Q5 table vs list · Q6 instrument status wording ·
 Q7 setupinvite page title · Q8 new btn class vs inline · Q9 button
 width strategy · Q10 height target · Q11 spacing magnitude ·
 Q12 disabled button styling.
+
+**Decisions (round 1):** Q1 only `session_detail`. Q2 inline
+`Label: value`, equal-width columns. Q3 status left, Edit right
+(space-between). Q4 revert renders as a new row below. Q5 keep
+`<table>`. Q6 `Status: Open` / `Closed` / `Mixed`. Q7 update
+title/heading; final wording: **`Email Invites`**. Q8 reusable
+class (`.btn-cta`). Q9 25% each via flex `flex: 1`. Q10 keep default
+padding, split labels into two lines. Q11 `gap: 16px`. Q12 disabled
+buttons match the new heavy style.
+
+---
+
+## Round 2 — follow-up tweaks
+
+### Session Details
+
+- Reorder row 1 to `Code · Created by · Deadline`.
+
+### Session Setup
+
+- Drop the `<table>` markup; lay each row out flat (mirroring the
+  Session Details meta row).
+- Each row leads with the Manage button. Manage buttons reuse the
+  Run Session `.btn-cta` style (filled-bold) and are equal width to
+  each other and to the Run Session buttons. They do **not** need
+  to be double height (single-line label is fine).
+- Implementation: 4-column CSS grid (`.setup-grid`,
+  `repeat(4, 1fr)`, 16px column gap) so the button column matches
+  one Run Session button's `flex: 1` slot exactly.
+
+---
+
+## Round 3 — title + row-1 trim
+
+### Session card title
+
+- Move the **session code** out of row 1 and render it as a subtitle
+  directly under the page `<h1>` (the session name). Keeps the page
+  identifier visible while freeing space in the meta row.
+
+### Session Details row 1 (revised)
+
+- Now just two items: `Deadline · Created by` (Code now lives in
+  the subtitle).
+- Re-confirmed order from the user's message: **`Deadline`** first,
+  then **`Created by`**.
+
+### Session Setup
+
+- Already shipped in round 2 (4-column grid + `.btn-cta` Manage
+  buttons). User repeated the spec; no further changes needed.
+
+### Session Setup button labels (round 3 follow-up)
+
+- Drop the generic `Manage` label. Each Setup-row button now uses
+  the row's name: `Reviewers`, `Reviewees`, `Assignments`,
+  `Instruments`, `Email Invites`. Since the button already names
+  the entity, the row content drops the redundant
+  `<strong>{label}:</strong>` prefix and shows just the status
+  string.
