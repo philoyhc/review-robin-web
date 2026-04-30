@@ -73,9 +73,14 @@ seeded `pair_context` rows) and 10B-2 (picker UX exposing the four
 Single Alembic revision. For every existing instrument, write three
 `InstrumentDisplayField` rows for `pair_context_1/2/3`
 (`source_type="pair_context"`, `source_field="1"|"2"|"3"`,
-`visible=true`, `order=0..2`, `label=NULL`) **unconditionally** —
+`visible=true`, `order=0..2`, `label=''` — empty string; treated
+identically to NULL by the D6 inference helper) **unconditionally** —
 including instruments that already carry display-field rows. Picks
 option (b) from the open question: destructive-but-consistent.
+
+(`instrument_display_fields.label` is `nullable=False` in the model;
+seeding empty string preserves the umbrella decision intent without
+an `ALTER COLUMN` change.)
 
 `ensure_default_instrument` updates to seed the same three rows on
 every newly created instrument.

@@ -12,6 +12,7 @@ from app.config import settings
 from app.db.models import (
     Assignment,
     Instrument,
+    InstrumentDisplayField,
     InstrumentResponseField,
     Response,
     Reviewer,
@@ -19,6 +20,7 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
+from app.services import instruments as instruments_service
 from app.services import invitations as invitations_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
@@ -161,6 +163,17 @@ def _surface_context(
         for field in db.execute(stmt).scalars():
             fields_by_instrument.setdefault(field.instrument_id, []).append(field)
 
+    display_fields_by_instrument: dict[int, list[InstrumentDisplayField]] = {}
+    if instrument_ids:
+        stmt = (
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id.in_(instrument_ids))
+            .where(InstrumentDisplayField.visible.is_(True))
+            .order_by(InstrumentDisplayField.order, InstrumentDisplayField.id)
+        )
+        for field in db.execute(stmt).scalars():
+            display_fields_by_instrument.setdefault(field.instrument_id, []).append(field)
+
     response_rows: dict[tuple[int, int], Response] = {}
     if assignments:
         stmt = select(Response).where(
@@ -201,12 +214,23 @@ def _surface_context(
         is_complete, missing_count, latest_submitted = (
             responses_service.compute_row_completion(db, assignment)
         )
-        pair_contexts = []
-        ctx = assignment.context or {}
-        for slot in (1, 2, 3):
-            value = ctx.get(f"pair_context_{slot}")
-            if value:
-                pair_contexts.append((slot, value))
+        display_cells = []
+        for display_field in display_fields_by_instrument.get(
+            assignment.instrument_id, []
+        ):
+            display_cells.append(
+                {
+                    "field": display_field,
+                    "label": instruments_service.display_field_label(display_field),
+                    "value": instruments_service.display_field_value(
+                        display_field, assignment
+                    ),
+                    "is_profile_link": (
+                        display_field.source_type == "reviewee"
+                        and display_field.source_field == "profile_link"
+                    ),
+                }
+            )
         rows_by_instrument.setdefault(assignment.instrument_id, []).append(
             {
                 "assignment": assignment,
@@ -214,7 +238,7 @@ def _surface_context(
                 "is_complete": is_complete,
                 "missing_count": missing_count,
                 "submitted_at": latest_submitted,
-                "pair_contexts": pair_contexts,
+                "display_cells": display_cells,
                 "accepting": accepting,
                 "show_values": show_values,
             }
@@ -235,12 +259,21 @@ def _surface_context(
             if instrument.description and instrument.description.strip()
             else instrument.name
         )
+        display_fields = display_fields_by_instrument.get(instrument_id, [])
+        display_field_headers = [
+            {
+                "field": df,
+                "label": instruments_service.display_field_label(df),
+            }
+            for df in display_fields
+        ]
         instrument_groups.append(
             {
                 "instrument": instrument,
                 "heading": heading,
                 "rows": group_rows,
                 "help_block_items": help_block_items,
+                "display_fields": display_field_headers,
             }
         )
         flat_rows.extend(group_rows)

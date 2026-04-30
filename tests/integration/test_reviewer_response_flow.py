@@ -178,7 +178,9 @@ def test_surface_renders_pair_context_and_default_fields(
 
     assert response.status_code == 200
     assert "Carol" in response.text
-    assert "P1: morning" in response.text
+    assert "Pair context 1" in response.text
+    assert "morning" in response.text
+    assert "P1:" not in response.text  # 10B-1 moved pair context out of identity cell
     assert "panel-1" not in response.text  # assignment_context hidden
     assert "Rating" in response.text
     assert "Comments" in response.text

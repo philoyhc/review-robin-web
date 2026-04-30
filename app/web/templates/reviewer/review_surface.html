@@ -85,6 +85,9 @@
           <table>
             <tr>
               <th>Reviewee</th>
+              {% for header in group.display_fields %}
+                <th>{{ header.label }}</th>
+              {% endfor %}
               {% set first_row = group.rows[0] %}
               {% for cell in first_row.cells %}
                 <th>{{ cell.field.label }}{% if cell.field.required %} *{% endif %}</th>
@@ -96,14 +99,16 @@
                 <td>
                   <strong>{{ row.assignment.reviewee.name }}</strong><br>
                   <code>{{ row.assignment.reviewee.email_or_identifier }}</code>
-                  {% if row.pair_contexts %}
-                    <div class="muted" style="margin-top: 6px; font-size: 0.85em;">
-                      {% for slot, value in row.pair_contexts %}
-                        <div>P{{ slot }}: {{ value }}</div>
-                      {% endfor %}
-                    </div>
-                  {% endif %}
                 </td>
+                {% for cell in row.display_cells %}
+                  <td>
+                    {% if cell.is_profile_link %}
+                      {% if cell.value %}<a href="{{ cell.value }}">{{ cell.value }}</a>{% endif %}
+                    {% else %}
+                      {{ cell.value or "" }}
+                    {% endif %}
+                  </td>
+                {% endfor %}
                 {% for cell in row.cells %}
                   <td>
                     {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}

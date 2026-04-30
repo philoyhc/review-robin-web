@@ -18,7 +18,7 @@
 
 ## Current stage
 
-Segments 1–8 and 9 (9.1, 9.2, 9.3, 9.4A, 9.4B, 9.4C, 9.5A) complete. See
+Segments 1–8, 9 (9.1, 9.2, 9.3, 9.4A, 9.4B, 9.4C, 9.5A), 10A, and 10B-1 complete. See
 `docs/status.md` for the authoritative snapshot of what ships today;
 this section summarises only what an agent needs before opening files.
 
@@ -124,19 +124,36 @@ The project has:
   refactors to loop over instruments (today: N=1) with section
   heading from `Instrument.description` (fallback to system
   handle), per-field help block above each table, and `pair_context_*`
-  rendering inside the loop (10B replaces it with display-fields).
+  rendering inside the loop (10B-1 replaces it with display-fields).
   Legacy `GET /operator/sessions/{id}/instruments/{iid}` 303s to
   the consolidated page; the existing 9.1 open / close / visibility
   POSTs keep their URL but redirect to `/instruments`. Body width
   bumped from 900px to 1400px globally with a `.table-scroll`
   utility class.
+- Data-driven reviewer-surface render (Segment 10B-1): pair-context
+  values move out of the reviewee identity cell and render as their
+  own columns sourced from `InstrumentDisplayField` rows. Backfill
+  migration (`c2143bd329c7`) seeds three rows per existing instrument
+  (`source_type='pair_context'`, `source_field='1'|'2'|'3'`,
+  `label=''`, `order=0..2`, `visible=true`) — destructive within
+  that filter (operator-typed labels on those slots are not preserved
+  across upgrade), `reviewee` rows added later are left intact.
+  `ensure_default_instrument` seeds the same three rows on new
+  sessions. Reviewee identity (name + email) is the always-first
+  column, mandatory and non-toggleable. New helpers
+  `display_field_label(field)` and `display_field_value(field,
+  assignment)` cover the seven D6 sources (`reviewee.tag_1/2/3`,
+  `reviewee.profile_link`, `pair_context.1/2/3`); empty/NULL labels
+  fall back to inferred strings. `profile_link` cells render as
+  plain `<a>`. No operator UI yet; picker + bulk form land in 10B-2
+  and the operator preview route in 10B-3. No new audit events.
 
 Not yet implemented (do not add unless an issue explicitly asks):
-display-fields picker + operator preview (10B), export, RuleBased
-assignment, multi-instrument sessions, production hardening (Key
-Vault, VNet, soft-delete, real SMTP). These map to Segments
-10B / 11–14 — see `guide/segment_NN_*` and `docs/status.md`
-"What's deliberately not yet there."
+display-fields picker (10B-2), operator preview (10B-3), export,
+RuleBased assignment, multi-instrument sessions, production hardening
+(Key Vault, VNet, soft-delete, real SMTP). These map to Segments
+10B-2 / 10B-3 / 11–14 — see `guide/segment_NN_*` and
+`docs/status.md` "What's deliberately not yet there."
 
 Update `docs/status.md` at the end of each segment; keep the summary
 above in sync.
