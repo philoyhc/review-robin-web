@@ -17,6 +17,7 @@ from app.schemas.sessions import SessionCreate
 from app.services import (
     assignments,
     csv_imports,
+    instruments as instruments_service,
     invitations,
     monitoring,
     responses,
@@ -898,12 +899,44 @@ def session_revert_to_draft(
     )
 
 
+def _can_edit_instrument(review_session: ReviewSession) -> bool:
+    """Setup-side mutations are blocked while session is ready."""
+    return not lifecycle.is_ready(review_session)
+
+
+def _require_instrument_editable(review_session: ReviewSession) -> None:
+    if not _can_edit_instrument(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Instrument structure is locked while the session is ready"
+            ),
+        )
+
+
+def _bulk_accepting_state(instruments: list[Instrument]) -> str:
+    """Three-state value for the bulk Accepting toggle: all-on, all-off, or mixed."""
+    if not instruments:
+        return "all-off"
+    on = [i for i in instruments if i.accepting_responses]
+    if len(on) == 0:
+        return "all-off"
+    if len(on) == len(instruments):
+        return "all-on"
+    return "mixed"
+
+
 @router.get(
     "/sessions/{session_id}/instruments",
     response_class=HTMLResponse,
 )
 def instruments_index(
     request: Request,
+    required_warning: int | None = Query(default=None),
+    field_id: int | None = Query(default=None),
+    delete_blocked_field_id: int | None = Query(default=None),
+    delete_blocked_count: int | None = Query(default=None),
+    field_key_error: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -913,7 +946,7 @@ def instruments_index(
         db.execute(
             select(Instrument)
             .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.id)
+            .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
     return _templates.TemplateResponse(
@@ -923,6 +956,14 @@ def instruments_index(
             "user": user,
             "session": review_session,
             "instruments": instruments,
+            "is_ready": lifecycle.is_ready(review_session),
+            "can_edit": _can_edit_instrument(review_session),
+            "bulk_accepting_state": _bulk_accepting_state(instruments),
+            "required_warning": required_warning,
+            "required_warning_field_id": field_id,
+            "delete_blocked_field_id": delete_blocked_field_id,
+            "delete_blocked_count": delete_blocked_count,
+            "field_key_error": field_key_error,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Instruments"
             ),
@@ -949,32 +990,279 @@ def setupinvite_stub(
     )
 
 
+def _instruments_redirect(session_id: int) -> RedirectResponse:
+    return RedirectResponse(
+        url=f"/operator/sessions/{session_id}/instruments",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+def _require_response_field_in_instrument(
+    field_id: int, instrument: Instrument, db: Session
+):
+    from app.db.models import InstrumentResponseField
+
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.id == field_id,
+            InstrumentResponseField.instrument_id == instrument.id,
+        )
+    ).scalar_one_or_none()
+    if field is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return field
+
+
 @router.get(
     "/sessions/{session_id}/instruments/{instrument_id}",
-    response_class=HTMLResponse,
 )
-def instrument_detail(
-    request: Request,
+def instrument_detail_redirect(
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+) -> RedirectResponse:
+    """Back-compat: legacy per-instrument page redirects to consolidated view."""
+    _, review_session = bundle
+    return _instruments_redirect(review_session.id)
+
+
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/edit")
+def instrument_edit_description(
+    description: str | None = Form(default=None),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> HTMLResponse:
+) -> RedirectResponse:
     instrument, review_session = bundle
-    lifecycle.observe_deadline(db, review_session)
-    db.refresh(instrument)
-    return _templates.TemplateResponse(
-        request,
-        "operator/instrument_detail.html",
-        {
-            "user": user,
-            "session": review_session,
-            "instrument": instrument,
-            "is_ready": lifecycle.is_ready(review_session),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, instrument.name
-            ),
-        },
+    _require_instrument_editable(review_session)
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_described"
     )
+    instruments_service.update_instrument_description(
+        db,
+        instrument=instrument,
+        description=description,
+        actor=user,
+    )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/fields")
+def instrument_add_field(
+    field_key: str | None = Form(default=None),
+    label: str = Form(...),
+    response_type: str = Form(...),
+    required: str | None = Form(default=None),
+    validation_min: str | None = Form(default=None),
+    validation_max: str | None = Form(default=None),
+    help_text: str | None = Form(default=None),
+    help_text_visible: str | None = Form(default=None),
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+
+    key = (field_key or "").strip()
+    if not key:
+        key = instruments_service.slugify_field_key(label)
+
+    validation_block: dict[str, int] | None = None
+    if response_type == "integer":
+        bounds: dict[str, int] = {}
+        if validation_min:
+            try:
+                bounds["min"] = int(validation_min)
+            except ValueError:
+                pass
+        if validation_max:
+            try:
+                bounds["max"] = int(validation_max)
+            except ValueError:
+                pass
+        validation_block = bounds or None
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_field_added"
+    )
+    try:
+        instruments_service.add_response_field(
+            db,
+            instrument=instrument,
+            field_key=key,
+            label=label,
+            response_type=response_type,
+            required=required == "true",
+            validation=validation_block,
+            help_text=help_text,
+            help_text_visible=(help_text_visible == "true"),
+            actor=user,
+        )
+    except instruments_service.FieldKeyError as exc:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"?field_key_error={int(False)}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+            headers={"X-FieldKey-Error": str(exc)},
+        )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/fields/{field_id}/edit"
+)
+def instrument_edit_field(
+    field_id: int,
+    label: str = Form(...),
+    required: str | None = Form(default=None),
+    validation_min: str | None = Form(default=None),
+    validation_max: str | None = Form(default=None),
+    help_text: str | None = Form(default=None),
+    help_text_visible: str | None = Form(default=None),
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+    field = _require_response_field_in_instrument(field_id, instrument, db)
+
+    validation_block: dict[str, int] | None = None
+    if field.response_type == "integer":
+        bounds: dict[str, int] = {}
+        if validation_min:
+            try:
+                bounds["min"] = int(validation_min)
+            except ValueError:
+                pass
+        if validation_max:
+            try:
+                bounds["max"] = int(validation_max)
+            except ValueError:
+                pass
+        validation_block = bounds or None
+    else:
+        validation_block = field.validation
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_field_updated"
+    )
+    _, warning_count = instruments_service.update_response_field(
+        db,
+        field=field,
+        label=label,
+        required=required == "true",
+        validation=validation_block,
+        help_text=help_text,
+        help_text_visible=(help_text_visible == "true"),
+        actor=user,
+    )
+
+    if warning_count > 0:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"?required_warning={warning_count}&field_id={field.id}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/fields/{field_id}/delete"
+)
+def instrument_delete_field(
+    field_id: int,
+    confirm: str | None = Form(default=None),
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+    field = _require_response_field_in_instrument(field_id, instrument, db)
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_field_deleted"
+    )
+    try:
+        instruments_service.delete_response_field(
+            db,
+            field=field,
+            confirm=(confirm == "true"),
+            actor=user,
+        )
+    except instruments_service.ResponsesPresentError as exc:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"?delete_blocked_field_id={field.id}"
+                f"&delete_blocked_count={exc.cascaded_response_count}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/fields/{field_id}/move"
+)
+def instrument_move_field(
+    field_id: int,
+    direction: str = Form(...),
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+    field = _require_response_field_in_instrument(field_id, instrument, db)
+    if direction not in ("up", "down"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_fields_reordered"
+    )
+    instruments_service.move_response_field(
+        db, field=field, direction=direction, actor=user  # type: ignore[arg-type]
+    )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post("/sessions/{session_id}/instruments/accepting/all-on")
+def instruments_bulk_accept_on(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    if not lifecycle.is_ready(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Bulk accepting toggle requires session to be ready",
+        )
+    instruments_service.bulk_set_accepting(
+        db, review_session=review_session, target=True, actor=user
+    )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post("/sessions/{session_id}/instruments/accepting/all-off")
+def instruments_bulk_accept_off(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    if not lifecycle.is_ready(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Bulk accepting toggle requires session to be ready",
+        )
+    instruments_service.bulk_set_accepting(
+        db, review_session=review_session, target=False, actor=user
+    )
+    return _instruments_redirect(review_session.id)
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/open")
@@ -994,12 +1282,7 @@ def instrument_open(
         )
     except lifecycle.LifecycleError as exc:
         raise _lifecycle_error_response(exc) from exc
-    return RedirectResponse(
-        url=(
-            f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
-        ),
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+    return _instruments_redirect(review_session.id)
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/close")
@@ -1017,12 +1300,7 @@ def instrument_close(
         reason="manual",
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
-        url=(
-            f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
-        ),
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+    return _instruments_redirect(review_session.id)
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/visibility")
@@ -1041,12 +1319,7 @@ def instrument_visibility(
         visible=visible_when_closed == "true",
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
-        url=(
-            f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
-        ),
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+    return _instruments_redirect(review_session.id)
 
 
 # --------------------------------------------------------------------------- #

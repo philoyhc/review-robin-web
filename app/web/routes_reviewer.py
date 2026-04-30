@@ -171,7 +171,7 @@ def _surface_context(
 
     instruments = _instruments_for_session(db, review_session.id)
 
-    rows = []
+    rows_by_instrument: dict[int, list[dict]] = {}
     any_accepting = False
     any_closed_with_hidden_values = False
     for assignment in assignments:
@@ -207,7 +207,7 @@ def _surface_context(
             value = ctx.get(f"pair_context_{slot}")
             if value:
                 pair_contexts.append((slot, value))
-        rows.append(
+        rows_by_instrument.setdefault(assignment.instrument_id, []).append(
             {
                 "assignment": assignment,
                 "cells": cells,
@@ -220,11 +220,37 @@ def _surface_context(
             }
         )
 
+    instrument_groups = []
+    flat_rows = []
+    for instrument_id, group_rows in rows_by_instrument.items():
+        instrument = instruments.get(instrument_id)
+        if instrument is None:
+            continue
+        fields = fields_by_instrument.get(instrument_id, [])
+        help_block_items = [
+            f for f in fields if f.help_text and f.help_text_visible
+        ]
+        heading = (
+            instrument.description.strip()
+            if instrument.description and instrument.description.strip()
+            else instrument.name
+        )
+        instrument_groups.append(
+            {
+                "instrument": instrument,
+                "heading": heading,
+                "rows": group_rows,
+                "help_block_items": help_block_items,
+            }
+        )
+        flat_rows.extend(group_rows)
+
     return {
         "user": user,
         "session": review_session,
         "reviewer": reviewer,
-        "rows": rows,
+        "instrument_groups": instrument_groups,
+        "rows": flat_rows,
         "saved": saved,
         "submitted": submitted,
         "missing": missing or [],

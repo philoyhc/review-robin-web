@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -44,6 +44,8 @@ class InstrumentResponseField(Base):
     required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     validation: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    help_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    help_text_visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     instrument: Mapped[Instrument] = relationship(back_populates="response_fields")
     responses: Mapped[list[Response]] = relationship(

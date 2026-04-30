@@ -215,12 +215,9 @@ def test_instruments_index_renders_one_card_per_instrument(
     instrument = instruments[0]
 
     assert "<h1>Instruments</h1>" in body
+    # System handle pill renders inside the per-instrument card (10A
+    # consolidated the page; per-instrument detail no longer exists).
     assert instrument.name in body
-    # Manage link to per-instrument detail
-    assert (
-        f'href="/operator/sessions/{review_session.id}/instruments/{instrument.id}"'
-        in body
-    )
     # accepting_responses pill matches backing data
     if instrument.accepting_responses:
         assert "accepting responses" in body

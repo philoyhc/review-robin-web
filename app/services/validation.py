@@ -5,7 +5,13 @@ from collections import Counter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewee, Reviewer, ReviewSession
+from app.db.models import (
+    Instrument,
+    InstrumentResponseField,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+)
 from app.schemas.validation import Severity, ValidationIssue
 
 
@@ -85,16 +91,32 @@ def validate_session_setup(
                     )
                 )
 
-    issues.append(
-        ValidationIssue(
-            severity=Severity.info,
-            source="instruments",
-            message=(
-                "Instrument editor lands in Segment 10 — using Default "
-                "Instrument with rating + comments fields"
-            ),
-        )
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
     )
+    for instrument in instruments:
+        field_count = db.execute(
+            select(InstrumentResponseField.id).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).first()
+        if field_count is None:
+            label = (
+                instrument.description.strip()
+                if instrument.description and instrument.description.strip()
+                else instrument.name
+            )
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source="instruments",
+                    message=f"Instrument '{label}' has no response fields",
+                )
+            )
 
     if review_session.assignment_mode is None:
         issues.append(
