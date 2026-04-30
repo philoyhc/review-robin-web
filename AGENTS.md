@@ -77,6 +77,19 @@ architectural notes.
 Current segment: **Segment 11 — export / audit retention** (not yet
 planned). Segment 10B is complete (10B-1 + 10B-2 + 10B-3 shipped).
 
+## Where work runs
+
+- The human author does not run Python, alembic, or a database
+  locally. There is no laptop dev loop.
+- The agent's session container is the primary pre-PR gate: run
+  `pytest` (and lint, once it's wired into CI) there before pushing.
+- End-to-end verification happens on the Azure dev slot after deploy,
+  not in the agent's sandbox. When a change touches UI or anything
+  the test suite can't exercise (templates, redirects, real auth),
+  say so in the PR description rather than claiming it was verified.
+- `guide/local_setup.md` and `ALLOW_FAKE_AUTH=true` exist for the
+  agent's sandbox, not for a human dev loop.
+
 ## Testing expectations
 
 Before considering a change complete, run:
