@@ -46,13 +46,16 @@ For pages whose content naturally splits into two parallel groupings
 - Two equal-width columns (`grid-template-columns: 1fr 1fr`,
   `gap: 20px`, `align-items: stretch`) so the columns share the
   page's full width and end at the same vertical position.
-- The left column (`.col-left`) is a flex column with
-  `justify-content: space-between` — its first card pins to the
-  top, its last card to the bottom. The right column (`.col-right`)
-  has its single card grow (`flex: 1`) to fill the column height.
-  Result: top and bottom edges of the two columns are flush.
-- Below 800px viewport, the grid collapses to a single column so
-  the page reads as a vertical stack on mobile.
+- Cards are direct grid children, with explicit placement classes:
+  `.card-tl` (col 1, row 1), `.card-r` (col 2, spanning rows 1-2),
+  `.card-bl` (col 1, row 2). The right card spans both rows so its
+  top and bottom are flush with the top of the top-left card and
+  the bottom of the bottom-left card.
+- DOM order is `tl` → `r` → `bl`, which is also the desired mobile
+  stacking order. Below 800px viewport the grid collapses to a
+  single column with `grid-row: auto`, and cards stack in DOM
+  order — top-left card first, right card second, bottom-left card
+  third.
 - Cards that should sit *outside* the two-column section (full-page
   width — e.g. context-sensitive overlays, danger zones) are
   rendered as siblings after the closing `.page-grid` div. Apply
