@@ -74,8 +74,8 @@ fix) into the same PR.
 See `docs/status.md` for full implementation status and
 architectural notes.
 
-Current segment: **10B-3** (operator preview route — plan drafted
-in `guide/segment_10B_3.md`, not yet implemented).
+Current segment: **Segment 11 — export / audit retention** (not yet
+planned). Segment 10B is complete (10B-1 + 10B-2 + 10B-3 shipped).
 
 ## Testing expectations
 
