@@ -7,7 +7,7 @@ Covers:
 - ``/validate`` page activate-form removed.
 - ``POST /delete-data`` wipes responses, preserves setup, audits, and is
   allowed in ``ready``.
-- Edit-lock visibility on the Session card and Danger zone.
+- Edit-lock visibility on the Session card and Danger Zone.
 """
 
 from __future__ import annotations
@@ -133,7 +133,7 @@ def test_session_detail_renders_four_cards(
     assert "<h2>Session Details</h2>" in body
     assert "<h2>Session Setup</h2>" in body
     assert "<h2>Run Session</h2>" in body
-    assert "Danger zone" in body  # heading uses inline color, not exact match
+    assert "Danger Zone" in body  # heading uses inline color, not exact match
     assert 'id="danger-zone"' in body
     # Legacy ad-hoc layout markers are gone:
     assert "Run setup validation" not in body
@@ -402,7 +402,7 @@ def test_delete_data_allowed_in_ready_status(
 
 
 # ---------------------------------------------------------------------------
-# Edit-lock visibility on Session card / Danger zone
+# Edit-lock visibility on Session card / Danger Zone
 # ---------------------------------------------------------------------------
 
 
