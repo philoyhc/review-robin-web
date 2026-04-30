@@ -218,6 +218,26 @@
       .page-grid > .card-tl { grid-column: 1; grid-row: 1; }
       .page-grid > .card-r  { grid-column: 2; grid-row: 1 / span 2; }
       .page-grid > .card-bl { grid-column: 1; grid-row: 2; }
+      .bottom-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: start;
+        margin-bottom: 20px;
+      }
+      .bottom-grid .card { margin-bottom: 0; }
+      .bottom-left {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .btn-pair {
+        display: flex;
+        gap: 16px;
+        align-items: stretch;
+        flex-wrap: wrap;
+      }
+      .btn-pair > form { margin: 0; }
       .card-half { max-width: calc(50% - 10px); box-sizing: border-box; }
       #danger-zone button.btn { width: 200px; }
       @media (max-width: 800px) {
@@ -228,6 +248,7 @@
           grid-column: 1;
           grid-row: auto;
         }
+        .bottom-grid { grid-template-columns: 1fr; }
         .card-half { max-width: 100%; }
       }
     </style>

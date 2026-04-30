@@ -56,11 +56,20 @@ For pages whose content naturally splits into two parallel groupings
   single column with `grid-row: auto`, and cards stack in DOM
   order — top-left card first, right card second, bottom-left card
   third.
-- Cards that should sit *outside* the two-column section (full-page
-  width — e.g. context-sensitive overlays, danger zones) are
-  rendered as siblings after the closing `.page-grid` div. Apply
-  `.card-half` (max-width: `calc(50% - 10px)`) when a follow-up
-  card should occupy only half the page width.
+- For pages that also need a *bottom row* of paired cards
+  (e.g. context-sensitive message stack on the left, a pinned
+  danger zone on the right), use the companion `.bottom-grid`
+  pattern after the `.page-grid`:
+  - `.bottom-grid` is a 2-column grid (`1fr 1fr`, 20px gap) with
+    `align-items: start` so each side keeps its natural height
+    (no stretch to match the taller column).
+  - Inside the left column, wrap stacking cards in
+    `.bottom-left` (a vertical flex stack with 20px gap).
+  - The right column holds the persistent card (e.g. danger
+    zone) directly.
+  - On mobile (≤800px), the bottom grid collapses to a single
+    column; cards stack in DOM order — message cards first,
+    danger zone last.
 
 This is one valid default; pages whose body is a single linear flow
 (forms, list/detail tables) keep their existing single-column
