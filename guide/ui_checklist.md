@@ -23,12 +23,13 @@ each page is reviewed.
 - [x] `session_reviewers.html` — `/operator/sessions/{id}/reviewers`
 - [x] `session_reviewees.html` — `/operator/sessions/{id}/reviewees`
 - [x] `session_assignments.html` — `/operator/sessions/{id}/assignments`
-- [x] `session_assignments_manual.html` — `/operator/sessions/{id}/assignments/manual`
-- [x] `session_assignments_full_matrix_setup.html` — `/operator/sessions/{id}/assignments/full-matrix`
-  (the previous `assignments_preview_full_matrix.html` and
-  `assignments_preview_manual.html` have been removed; the two
-  setup pages now host both the setup form and the saved-pairs
-  preview)
+  (every assignment-method form is now inlined on the hub. The
+  previous standalone `session_assignments_manual.html` and
+  `session_assignments_full_matrix_setup.html` GET pages, plus the
+  earlier `assignments_preview_*.html` confirm pages, have all
+  been removed; the POST endpoints
+  `/assignments/manual/import` and `/assignments/full-matrix`
+  remain but redirect back to the hub.)
 - [ ] `instruments_index.html` — `/operator/sessions/{id}/instruments`
 - [ ] `session_setupinvite.html` — `/operator/sessions/{id}/setupinvite` (heading renamed to **Email Invites** only; no layout pass yet)
 - [ ] `session_invitations.html` — `/operator/sessions/{id}/invitations`
