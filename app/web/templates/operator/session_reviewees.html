@@ -11,12 +11,12 @@
         <strong>{{ reviewees | length }}</strong>
         reviewee{% if reviewees | length != 1 %}s{% endif %} currently loaded
       </p>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <div class="setup-nav">
         <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
         <a class="btn secondary" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Invites</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Email Invites</a>
       </div>
     </div>
   </div>
