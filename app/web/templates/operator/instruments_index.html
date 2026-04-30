@@ -24,6 +24,14 @@
     </div>
   {% endif %}
 
+  {% if display_source_error %}
+    <div class="warning-banner">
+      Could not add display field <code>{{ display_source_error }}</code>.
+      Either the source is not in the allowed set or it is already on
+      this instrument.
+    </div>
+  {% endif %}
+
   <div class="card">
     <h2>Instruments Settings</h2>
     <p class="muted">Settings that apply across every instrument under this session.</p>
@@ -171,6 +179,107 @@
           <button class="btn secondary" type="submit">Save visibility</button>
         </p>
       </form>
+
+      <h3 style="margin-top: 20px;">Display fields</h3>
+      <p class="muted">
+        Read-only columns shown to reviewers alongside the reviewee
+        identity column.
+      </p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Label</th>
+              <th>Visible</th>
+              <th>Order</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for df in instrument.display_fields | sort(attribute="order") %}
+              <tr>
+                <td><code>{{ df.source_type }}.{{ df.source_field }}</code></td>
+                <td>
+                  {% if df.label %}
+                    {{ df.label }}
+                  {% else %}
+                    <span class="muted">— ({{ display_field_label(df) }})</span>
+                  {% endif %}
+                </td>
+                <td>{{ "yes" if df.visible else "no" }}</td>
+                <td>{{ df.order }}</td>
+                <td>
+                  <details style="display:inline-block;">
+                    <summary class="btn secondary" style="cursor:pointer;">Edit</summary>
+                    <form method="post" style="margin-top: 8px;"
+                          action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/edit">
+                      <label>Label override (optional)
+                        <input type="text" name="label" value="{{ df.label }}">
+                      </label>
+                      <label style="font-weight: normal;">
+                        <input type="checkbox" name="visible" value="true"
+                               {% if df.visible %}checked{% endif %}>
+                        Visible to reviewers
+                      </label>
+                      <p>
+                        <button class="btn" type="submit"
+                                {% if not can_edit %}disabled{% endif %}>Save display field</button>
+                      </p>
+                    </form>
+                  </details>
+                  <form method="post" style="display:inline;"
+                        action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/delete">
+                    <button class="btn danger" type="submit"
+                            {% if not can_edit %}disabled{% endif %}>Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            {% if not instrument.display_fields %}
+              <tr>
+                <td colspan="5" class="muted">
+                  No display fields. Reviewers will see only the
+                  reviewee identity column and response fields.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <h4 style="margin-top: 16px;">Add display field</h4>
+      {% set available = available_sources_by_instrument.get(instrument.id, []) %}
+      {% if available %}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields">
+          <label>Source
+            <select name="source_pair" {% if not can_edit %}disabled{% endif %}>
+              {% for opt in available %}
+                <option value="{{ opt.value }}">{{ opt.source_type }}.{{ opt.source_field }} — {{ opt.label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Label override (optional)
+            <input type="text" name="label" {% if not can_edit %}disabled{% endif %}>
+          </label>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="visible" value="true" checked
+                   {% if not can_edit %}disabled{% endif %}>
+            Visible to reviewers
+          </label>
+          <p>
+            <button class="btn" type="submit" {% if not can_edit %}disabled{% endif %}>
+              Add display field
+            </button>
+          </p>
+        </form>
+      {% else %}
+        <p class="muted">
+          All seven display-field sources are already on this
+          instrument.
+        </p>
+      {% endif %}
 
       <h3 style="margin-top: 20px;">Response fields</h3>
       <div class="table-scroll">
@@ -328,6 +437,85 @@
             Add field
           </button>
         </p>
+      </form>
+
+      <h3 style="margin-top: 20px;">Field order &amp; visibility</h3>
+      <p class="muted">
+        Set the merged display-and-response column order shown on
+        the reviewer surface. Per-table orders repack to <code>0..N-1</code>
+        on save; change a numeric to re-rank.
+      </p>
+      {% set merged_rows = merged_rows_by_instrument.get(instrument.id, []) %}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Kind</th>
+                <th>Field</th>
+                <th>Order</th>
+                <th>Visible</th>
+                <th>Label</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in merged_rows %}
+                <tr>
+                  <td>
+                    <input type="hidden" name="kind" value="{{ row.kind }}">
+                    {{ row.kind }}
+                  </td>
+                  <td>
+                    <input type="hidden" name="id" value="{{ row.id }}">
+                    {% if row.kind == "display" %}
+                      <code>{{ row.source_type }}.{{ row.source_field }}</code>
+                    {% else %}
+                      <code>{{ row.field_key }}</code>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <input type="number" name="order" value="{{ row.order }}"
+                           min="0" style="width: 6em;"
+                           {% if not can_edit %}disabled{% endif %}>
+                  </td>
+                  <td>
+                    {% if row.kind == "display" %}
+                      <input type="checkbox" name="visible_ids" value="{{ row.id }}"
+                             {% if row.visible %}checked{% endif %}
+                             {% if not can_edit %}disabled{% endif %}>
+                    {% else %}
+                      <span class="muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if row.kind == "display" %}
+                      <input type="text" name="label" value="{{ row.label }}"
+                             {% if not can_edit %}disabled{% endif %}>
+                    {% else %}
+                      <input type="hidden" name="label" value="">
+                      <span class="muted">{{ row.label }}</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+              {% if not merged_rows %}
+                <tr>
+                  <td colspan="5" class="muted">
+                    No fields on this instrument yet.
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+        {% if merged_rows %}
+          <p>
+            <button class="btn" type="submit" {% if not can_edit %}disabled{% endif %}>
+              Save field order &amp; visibility
+            </button>
+          </p>
+        {% endif %}
       </form>
 
       <p>

@@ -74,8 +74,8 @@ fix) into the same PR.
 See `docs/status.md` for full implementation status and
 architectural notes.
 
-Current segment: **10B-2** (operator display-field builder — plan
-drafted in `guide/segment_10B_2.md`, not yet implemented).
+Current segment: **10B-3** (operator preview route — plan drafted
+in `guide/segment_10B_3.md`, not yet implemented).
 
 ## Testing expectations
 

@@ -37,6 +37,9 @@ router = APIRouter(prefix="/operator", tags=["operator"])
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _templates.env.globals["app_version"] = settings.app_version
+_templates.env.globals["display_field_label"] = (
+    instruments_service.display_field_label
+)
 
 
 @router.get("/sessions", response_class=HTMLResponse)
