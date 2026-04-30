@@ -6,21 +6,10 @@
   <h1>Reviewees</h1>
 
   <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
-      <div>
-        <strong>{{ reviewees | length }}</strong>
-        reviewee{% if reviewees | length != 1 %}s{% endif %} currently loaded
-      </div>
-      {% if reviewees %}
-        <a class="btn alert-solid disabled"
-           aria-disabled="true"
-           title="Inline editing — coming soon">Edit Reviewees</a>
-      {% else %}
-        <a class="btn alert disabled"
-           aria-disabled="true"
-           title="Inline editing — coming soon">Edit Reviewees</a>
-      {% endif %}
-    </div>
+    <p>
+      <strong>{{ reviewees | length }}</strong>
+      reviewee{% if reviewees | length != 1 %}s{% endif %} currently loaded
+    </p>
   </div>
 
   <div class="page-grid">
@@ -59,12 +48,16 @@
           </p>
           <div class="btn-pair" style="margin-top: 20px;">
             <button class="btn alert-solid" type="submit">Upload</button>
-            <a class="btn alert" href="/operator/sessions/{{ session.id }}/reviewees">Cancel</a>
+            <a class="btn alert-solid disabled"
+               aria-disabled="true"
+               title="Inline editing — coming soon">Edit Reviewees</a>
           </div>
         {% else %}
           <div class="btn-pair" style="margin-top: 20px;">
             <button class="btn" type="submit">Upload</button>
-            <a class="btn secondary" href="/operator/sessions/{{ session.id }}/reviewees">Cancel</a>
+            <a class="btn alert disabled"
+               aria-disabled="true"
+               title="Inline editing — coming soon">Edit Reviewees</a>
           </div>
         {% endif %}
       </form>
@@ -77,7 +70,7 @@
         <a class="btn secondary" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Email Invites</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Invites</a>
       </div>
     </div>
 
