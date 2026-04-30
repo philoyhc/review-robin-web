@@ -1050,6 +1050,34 @@ def setupinvite_stub(
     )
 
 
+@router.get("/sessions/{session_id}/preview", response_class=HTMLResponse)
+def session_preview(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    """Operator preview of the reviewer surface (Segment 10B-3).
+
+    Operator-only via ``require_session_operator``. Bypasses session-status
+    / deadline / acceptance gates per D9. Pads with up to three synthetic
+    rows when fewer real assignments exist; all inputs render disabled and
+    the reviewer write-path forms are suppressed via the ``preview_mode``
+    template flag.
+    """
+    from app.web.routes_reviewer import build_preview_context
+
+    context = build_preview_context(
+        db=db, user=user, review_session=review_session
+    )
+    context["breadcrumbs"] = breadcrumbs.operator_session_child(
+        review_session, "Preview"
+    )
+    return _templates.TemplateResponse(
+        request, "reviewer/review_surface.html", context
+    )
+
+
 def _instruments_redirect(session_id: int) -> RedirectResponse:
     return RedirectResponse(
         url=f"/operator/sessions/{session_id}/instruments",

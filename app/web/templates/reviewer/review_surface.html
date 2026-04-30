@@ -3,6 +3,15 @@
 {% block title %}{{ session.name }} — Review{% endblock %}
 
 {% block content %}
+  {% if preview_mode %}
+    <div class="warning-banner"
+         style="background: #dbeafe; border-color: #2563eb; color: #1e3a8a;">
+      <strong>Preview</strong> — not visible to reviewers. This page is
+      operator-only and bypasses session-status / deadline / acceptance
+      gates.
+    </div>
+  {% endif %}
+
   <h1>{{ session.name }}</h1>
 
   {% if session.description %}
@@ -61,7 +70,7 @@
       </div>
     {% endif %}
 
-    {% if any_accepting %}
+    {% if any_accepting and not preview_mode %}
       <div class="card">
         <p>
           <a class="btn secondary"
@@ -70,7 +79,7 @@
       </div>
     {% endif %}
 
-    <form method="post" action="/reviewer/sessions/{{ session.id }}/save">
+    {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/save">{% endif %}
       {% for group in instrument_groups %}
         <h2 style="margin-top: 24px;">{{ group.heading }}</h2>
         {% if group.help_block_items %}
@@ -163,7 +172,7 @@
         </div>
       {% endfor %}
 
-      {% if any_accepting %}
+      {% if any_accepting and not preview_mode %}
         <p style="margin-top: 16px;">
           <button class="btn secondary" type="submit">Save draft</button>
           <button class="btn"
@@ -181,9 +190,9 @@
           </p>
         {% endif %}
       {% endif %}
-    </form>
+    {% if preview_mode %}</div>{% else %}</form>{% endif %}
 
-    {% if any_accepting %}
+    {% if any_accepting and not preview_mode %}
       <div class="card" style="border-color: #b91c1c; margin-top: 24px;">
         <h2 style="color: #b91c1c;">Clear all responses</h2>
         <form method="post" action="/reviewer/sessions/{{ session.id }}/clear">
