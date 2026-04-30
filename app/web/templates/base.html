@@ -234,6 +234,9 @@
       .page-grid > .card-tl { grid-column: 1; grid-row: 1; }
       .page-grid > .card-r  { grid-column: 2; grid-row: 1 / span 2; }
       .page-grid > .card-bl { grid-column: 1; grid-row: 2; }
+      .page-grid > .card-l  { grid-column: 1; grid-row: 1 / span 2; }
+      .page-grid > .card-tr { grid-column: 2; grid-row: 1; }
+      .page-grid > .card-br { grid-column: 2; grid-row: 2; }
       .bottom-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -268,7 +271,10 @@
         .page-grid { grid-template-columns: 1fr; }
         .page-grid > .card-tl,
         .page-grid > .card-r,
-        .page-grid > .card-bl {
+        .page-grid > .card-bl,
+        .page-grid > .card-l,
+        .page-grid > .card-tr,
+        .page-grid > .card-br {
           grid-column: 1;
           grid-row: auto;
         }
