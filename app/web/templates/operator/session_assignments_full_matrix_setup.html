@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Full Matrix Assignment — {{ session.name }}{% endblock %}
+
+{% block content %}
+  <h1>Full Matrix Assignment</h1>
+
+  <div class="card">
+    <h2>FullMatrix</h2>
+    <p class="muted">Pair every reviewer with every reviewee.</p>
+    {% if reviewer_count == 0 or reviewee_count == 0 %}
+      <p class="muted">Import reviewers and reviewees first.</p>
+    {% else %}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/assignments/full-matrix">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="exclude_self_review" value="true" checked>
+            Exclude self-review (when a reviewer's email matches a reviewee's identifier)
+          </label>
+        </p>
+        <input type="hidden" name="dry_run" value="true">
+
+        {% if assignment_count and assignment_count > 0 %}
+          <p style="margin-top: 12px;">
+            <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
+            Generating will <strong>replace</strong> them.
+          </p>
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm_replace" value="true" required>
+              Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
+            </label>
+          </p>
+          <div class="btn-pair" style="margin-top: 20px;">
+            <button class="btn alert-solid" type="submit">Generate</button>
+            <a class="btn alert" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+          </div>
+        {% else %}
+          <div class="btn-pair" style="margin-top: 20px;">
+            <button class="btn" type="submit">Generate</button>
+            <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+          </div>
+        {% endif %}
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}
