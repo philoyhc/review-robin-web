@@ -32,21 +32,11 @@
         Import at least one reviewer and one reviewee before generating
         assignments.
       </p>
-      <p>
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/reviewers">
-           Manage reviewers
-        </a>
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/reviewees">
-           Manage reviewees
-        </a>
-      </p>
     </div>
   {% endif %}
 
   <div class="page-grid">
-    <div class="card">
+    <div class="card card-l">
       <h2>Choose Assignment Method</h2>
       <div class="btn-row">
         <a class="btn-cta"
@@ -59,8 +49,19 @@
       </div>
     </div>
 
+    <div class="card card-tr">
+      <h2>Setup Pages</h2>
+      <div class="btn-row">
+        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Invites</a>
+      </div>
+    </div>
+
     {% if assignment_count %}
-      <div class="card" style="border-color: #b91c1c;">
+      <div class="card card-br" style="border-color: #b91c1c;">
         <h2 style="color: #b91c1c;">Danger Zone</h2>
         <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
           <p>
