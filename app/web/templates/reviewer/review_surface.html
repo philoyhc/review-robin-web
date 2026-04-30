@@ -71,73 +71,92 @@
     {% endif %}
 
     <form method="post" action="/reviewer/sessions/{{ session.id }}/save">
-      <table>
-        <tr>
-          <th>Reviewee</th>
-          {% set first_row = rows[0] %}
-          {% for cell in first_row.cells %}
-            <th>{{ cell.field.label }}{% if cell.field.required %} *{% endif %}</th>
-          {% endfor %}
-          <th style="width: 1%;"></th>
-        </tr>
-        {% for row in rows %}
-          <tr>
-            <td>
-              <strong>{{ row.assignment.reviewee.name }}</strong><br>
-              <code>{{ row.assignment.reviewee.email_or_identifier }}</code>
-              {% if row.pair_contexts %}
-                <div class="muted" style="margin-top: 6px; font-size: 0.85em;">
-                  {% for slot, value in row.pair_contexts %}
-                    <div>P{{ slot }}: {{ value }}</div>
-                  {% endfor %}
-                </div>
-              {% endif %}
-            </td>
-            {% for cell in row.cells %}
-              <td>
-                {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
-                {% set disabled_attr = "" if row.accepting else "disabled" %}
-                {% if cell.field.response_type == "long_text" %}
-                  <textarea name="{{ field_name }}"
-                            rows="2"
-                            style="min-height: 44px;"
-                            {{ disabled_attr }}>{{ cell.value }}</textarea>
-                {% elif cell.field.response_type == "integer" %}
-                  {% set validation = cell.field.validation or {} %}
-                  <input type="number"
-                         name="{{ field_name }}"
-                         value="{{ cell.value }}"
-                         {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
-                         {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
-                         {{ disabled_attr }}>
-                {% else %}
-                  <input type="text"
-                         name="{{ field_name }}"
-                         value="{{ cell.value }}"
-                         {{ disabled_attr }}>
-                {% endif %}
-              </td>
+      {% for group in instrument_groups %}
+        <h2 style="margin-top: 24px;">{{ group.heading }}</h2>
+        {% if group.help_block_items %}
+          <dl class="help-block">
+            {% for field in group.help_block_items %}
+              <dt>{{ field.label }}</dt>
+              <dd>{{ field.help_text }}</dd>
             {% endfor %}
-            <td style="width: 1%; white-space: nowrap; text-align: center;">
-              {% if row.submitted_at or show_acknowledge %}
-                {% if row.is_complete %}
-                  <span title="Complete"
-                        style="color: #16a34a; font-weight: bold; font-size: 1.2em;">✓</span>
-                {% else %}
-                  <span title="{{ row.missing_count }} required field{{ '' if row.missing_count == 1 else 's' }} missing"
-                        style="color: #d97706; font-weight: bold; font-size: 1.2em;">⚠</span>
-                {% endif %}
-                {% if row.submitted_at %}
-                  <div class="muted"
-                       style="font-size: 0.85em; margin-top: 4px; white-space: normal;">
-                    submitted {{ row.submitted_at.strftime("%Y-%m-%d %H:%M") }}
-                  </div>
-                {% endif %}
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      </table>
+          </dl>
+        {% endif %}
+        <div class="table-scroll">
+          <table>
+            <tr>
+              <th>Reviewee</th>
+              {% set first_row = group.rows[0] %}
+              {% for cell in first_row.cells %}
+                <th>{{ cell.field.label }}{% if cell.field.required %} *{% endif %}</th>
+              {% endfor %}
+              <th style="width: 1%;"></th>
+            </tr>
+            {% for row in group.rows %}
+              <tr>
+                <td>
+                  <strong>{{ row.assignment.reviewee.name }}</strong><br>
+                  <code>{{ row.assignment.reviewee.email_or_identifier }}</code>
+                  {% if row.pair_contexts %}
+                    <div class="muted" style="margin-top: 6px; font-size: 0.85em;">
+                      {% for slot, value in row.pair_contexts %}
+                        <div>P{{ slot }}: {{ value }}</div>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </td>
+                {% for cell in row.cells %}
+                  <td>
+                    {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
+                    {% set disabled_attr = "" if row.accepting else "disabled" %}
+                    {% if cell.field.response_type == "long_text" %}
+                      <textarea name="{{ field_name }}"
+                                rows="2"
+                                style="min-height: 44px;"
+                                {{ disabled_attr }}>{{ cell.value }}</textarea>
+                    {% elif cell.field.response_type == "integer" %}
+                      {% set validation = cell.field.validation or {} %}
+                      <input type="number"
+                             name="{{ field_name }}"
+                             value="{{ cell.value }}"
+                             {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
+                             {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
+                             {{ disabled_attr }}>
+                    {% elif cell.field.response_type == "yes_no" %}
+                      <select name="{{ field_name }}" {{ disabled_attr }}>
+                        <option value=""{% if not cell.value %} selected{% endif %}>—</option>
+                        <option value="yes"{% if cell.value == "yes" %} selected{% endif %}>yes</option>
+                        <option value="no"{% if cell.value == "no" %} selected{% endif %}>no</option>
+                      </select>
+                    {% else %}
+                      <input type="text"
+                             name="{{ field_name }}"
+                             value="{{ cell.value }}"
+                             {{ disabled_attr }}>
+                    {% endif %}
+                  </td>
+                {% endfor %}
+                <td style="width: 1%; white-space: nowrap; text-align: center;">
+                  {% if row.submitted_at or show_acknowledge %}
+                    {% if row.is_complete %}
+                      <span title="Complete"
+                            style="color: #16a34a; font-weight: bold; font-size: 1.2em;">✓</span>
+                    {% else %}
+                      <span title="{{ row.missing_count }} required field{{ '' if row.missing_count == 1 else 's' }} missing"
+                            style="color: #d97706; font-weight: bold; font-size: 1.2em;">⚠</span>
+                    {% endif %}
+                    {% if row.submitted_at %}
+                      <div class="muted"
+                           style="font-size: 0.85em; margin-top: 4px; white-space: normal;">
+                        submitted {{ row.submitted_at.strftime("%Y-%m-%d %H:%M") }}
+                      </div>
+                    {% endif %}
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </table>
+        </div>
+      {% endfor %}
 
       {% if any_accepting %}
         <p style="margin-top: 16px;">

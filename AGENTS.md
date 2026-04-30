@@ -100,13 +100,43 @@ The project has:
   dedicated `session.validated` / `session.invalidated` audit
   events. Instrument open/close/visibility and `POST /delete-data`
   deliberately do NOT invalidate.
+- Response-field builder + reviewer-surface refactor (Segment 10A):
+  `/operator/sessions/{id}/instruments` is now a consolidated page
+  with a session-wide Instruments Settings card (bulk Open all /
+  Close all) and one card per instrument carrying friendly
+  description (`Instrument.description`), acceptance + visibility
+  toggles (existing 9.1 behaviours), a response-fields table with
+  add / edit / delete / reorder / per-field help text + visibility,
+  and a system-handle pill rendering `Instrument.name`. Migration
+  adds `help_text` (Text NULL) and `help_text_visible` (Bool
+  default true) on `instrument_response_fields`. Field-key format
+  is `^[a-z][a-z0-9_]*$` ≤64; auto-derived from label via
+  `slugify_field_key` when blank; immutable after save. Empty-
+  instrument validation now blocks activation. New audit events:
+  `instrument.described`, `instrument.field_added`,
+  `instrument.field_updated`, `instrument.field_deleted` (with
+  cascaded response count snapshot), `instrument.fields_reordered`,
+  `instruments.bulk_accepting_responses`. Description / field
+  mutations invalidate `validated → draft`; bulk accepting +
+  per-instrument open/close/visibility deliberately do NOT
+  invalidate. Locked when `session.status == ready` via a single
+  `_can_edit_instrument` helper (returns 409). Reviewer surface
+  refactors to loop over instruments (today: N=1) with section
+  heading from `Instrument.description` (fallback to system
+  handle), per-field help block above each table, and `pair_context_*`
+  rendering inside the loop (10B replaces it with display-fields).
+  Legacy `GET /operator/sessions/{id}/instruments/{iid}` 303s to
+  the consolidated page; the existing 9.1 open / close / visibility
+  POSTs keep their URL but redirect to `/instruments`. Body width
+  bumped from 900px to 1400px globally with a `.table-scroll`
+  utility class.
 
 Not yet implemented (do not add unless an issue explicitly asks):
-operator-editable instruments, export, RuleBased assignment,
-multi-instrument sessions, production hardening (Key Vault, VNet,
-soft-delete, real SMTP). These map to Segments 10–14 — see
-`guide/segment_NN_*` and `docs/status.md` "What's deliberately not
-yet there."
+display-fields picker + operator preview (10B), export, RuleBased
+assignment, multi-instrument sessions, production hardening (Key
+Vault, VNet, soft-delete, real SMTP). These map to Segments
+10B / 11–14 — see `guide/segment_NN_*` and `docs/status.md`
+"What's deliberately not yet there."
 
 Update `docs/status.md` at the end of each segment; keep the summary
 above in sync.

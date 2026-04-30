@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 9.5A (2026-04-29)
+**As of:** end of Segment 10A (2026-04-30)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -28,6 +28,7 @@ For the full long-term plan see
 | 2026-04-29 | Segment 9.4B shipped (session detail four-card restructure + inline validate-summary + Delete Data) |
 | 2026-04-29 | Segment 9.4C shipped (Manage-page reshapes + instruments index + `/setupinvite` stub) |
 | 2026-04-29 | Segment 9.5A shipped (`validated` lifecycle state + setup-mutation invalidation hooks) |
+| 2026-04-30 | Segment 10A shipped (response-field builder + reviewer-surface loop-by-instrument refactor) |
 
 ---
 
@@ -50,6 +51,7 @@ For the full long-term plan see
 | 9.4B | Session detail four-card layout (Session / Session setup / Run Session / Danger zone), inline validate-summary card via `?validated=1`, `POST /delete-data` with `responses.deleted_all` audit event | 2026-04-29 |
 | 9.4C | Reviewers / reviewees / assignments Manage pages with anchored Upload-CSV cards and disabled Edit buttons; Assign by Rules placeholder card; `/operator/sessions/{id}/instruments` index page; `/operator/sessions/{id}/setupinvite` stub; setup-table Manage buttons for Instruments and Set up invites enabled | 2026-04-29 |
 | 9.5A | `validated` stored state in `SessionStatus` (between `draft` and `ready`); `GET ?validated=1` flips draft→validated when no errors; activation now requires `is_validated`; setup-mutating routes (reviewer/reviewee/assignment import + delete-all + assignment generate + session edit) flip validated→draft via dedicated `session.validated` / `session.invalidated` audit events; instrument open/close/visibility and `/delete-data` deliberately do not invalidate | 2026-04-29 |
+| 10A | Consolidated `/operator/sessions/{id}/instruments` page: per-instrument card with friendly description, acceptance + visibility toggles, response-fields table (add / edit / delete / reorder, per-field help text + visibility), session-wide Instruments Settings card with bulk Open all / Close all toggles. Migration adds `help_text` (Text, NULL) and `help_text_visible` (Bool, default true) on `instrument_response_fields`. Reviewer surface refactors to loop-by-instrument with section heading from `Instrument.description` (fallback to system handle) and a per-field help block above each table. Empty-instrument validation now blocks activation. Description / field mutations invalidate `validated → draft` via `_invalidate_if_validated`; bulk accepting + per-instrument open/close/visibility deliberately do not invalidate. Body width bumped from 900px to 1400px globally with a `.table-scroll` overflow utility. | 2026-04-30 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
@@ -331,6 +333,12 @@ Every destructive operation writes an `audit_events` row with
 | `session.reverted_to_draft` | operator flips session ready→draft (`detail.closed_instrument_ids`, `response_count_at_revert`) |
 | `instrument.opened` | operator manually re-opens a closed instrument |
 | `instrument.closed` | manual or lazy-deadline close (`detail.reason ∈ {manual, deadline}`) |
+| `instrument.described` | operator edits the friendly description (`detail.description: [old, new]`) |
+| `instrument.field_added` | operator adds a response field (`detail.field_key`, `label`, `response_type`, `required`, `validation`, `help_text`, `help_text_visible`) |
+| `instrument.field_updated` | operator edits a response field (`detail.changes: {key: [old, new]}` for each changed key only) |
+| `instrument.field_deleted` | operator deletes a response field (`detail.snapshot`, `cascaded_response_count`) |
+| `instrument.fields_reordered` | up/down move (`detail.old_order`, `detail.new_order` as `field_key` lists) |
+| `instruments.bulk_accepting_responses` | bulk Open all / Close all (`detail.target`, `detail.changed_instrument_ids`); not duplicated as per-instrument open / close events |
 | `invitations.generated` | bulk-create invitations on a ready session (`detail.count`, `detail.invitation_ids`, `detail.reviewer_ids`) |
 | `invitation.sent` | outbox row written + invitation flipped to `sent` |
 | `invitation.opened` | first valid token follow with matching email |
@@ -352,7 +360,7 @@ plug in additional reasons without a schema change. Today's keys are
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
 | **Real SMTP email backend** (production sending, not the dev outbox) | **Segment 15** |
-| **Instrument builder** (operator-editable response fields on the session's Instrument: add / edit / reorder / delete; field types beyond the seed pair) | **Segment 10** |
+| **Display-fields picker + operator preview** (operator-configurable reviewee tags / pair contexts as columns alongside response fields; read-only `/operator/sessions/{id}/preview` route) | **Segment 10B** |
 | **Export / audit retention** | **Segment 11** |
 | **RuleBased assignment** | **Segment 12** |
 | **Multi-instrument sessions** (more than one Instrument under a session) | **Segment 13** |

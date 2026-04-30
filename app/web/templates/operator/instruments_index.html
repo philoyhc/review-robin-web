@@ -17,9 +17,108 @@
     </p>
   </div>
 
+  {% if not can_edit %}
+    <div class="warning-banner">
+      Instrument structure is locked while the session is <strong>ready</strong>.
+      Revert to draft to edit response fields or descriptions.
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Instruments Settings</h2>
+    <p class="muted">Settings that apply across every instrument under this session.</p>
+    <p>
+      <strong>Accepting responses (all instruments):</strong>
+      {% if bulk_accepting_state == "all-on" %}
+        <span class="pill pill-info">all on</span>
+      {% elif bulk_accepting_state == "all-off" %}
+        <span class="pill pill-warning">all off</span>
+      {% else %}
+        <span class="pill pill-warning">mixed</span>
+      {% endif %}
+    </p>
+    {% if is_ready %}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/instruments/accepting/all-on"
+            style="display:inline-block; margin-right: 8px;">
+        <button class="btn secondary" type="submit"
+                {% if bulk_accepting_state == "all-on" %}disabled{% endif %}>
+          Open all instruments
+        </button>
+      </form>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/instruments/accepting/all-off"
+            style="display:inline-block;">
+        <button class="btn secondary" type="submit"
+                {% if bulk_accepting_state == "all-off" %}disabled{% endif %}>
+          Close all instruments
+        </button>
+      </form>
+    {% else %}
+      <p class="muted">Activate the session to use bulk accepting toggles.</p>
+    {% endif %}
+  </div>
+
   {% for instrument in instruments %}
-    <div class="card">
-      <h2>{{ instrument.name }}</h2>
+    <div class="card" id="instrument-{{ instrument.id }}">
+      <h2>
+        {% if instrument.description %}
+          {{ instrument.description }}
+        {% else %}
+          {{ instrument.name }}
+        {% endif %}
+      </h2>
+      <p>
+        <span class="pill pill-handle">{{ instrument.name }}</span>
+      </p>
+
+      {% if required_warning and required_warning_field_id %}
+        {% for field in instrument.response_fields %}
+          {% if field.id == required_warning_field_id %}
+            <div class="warning-banner">
+              Field <strong>{{ field.label }}</strong> is now required;
+              <strong>{{ required_warning }}</strong> existing reviewer row(s)
+              currently lack an answer.
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+
+      {% if delete_blocked_field_id and delete_blocked_count %}
+        {% for field in instrument.response_fields %}
+          {% if field.id == delete_blocked_field_id %}
+            <div class="danger-banner">
+              <strong>{{ delete_blocked_count }}</strong> existing reviewer
+              response(s) reference field <strong>{{ field.label }}</strong>.
+              Deleting will discard them.
+              <form method="post" style="margin-top: 8px;"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/delete">
+                <input type="hidden" name="confirm" value="true">
+                <button class="btn danger" type="submit">Delete and discard responses</button>
+              </form>
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+
+      <h3 style="margin-top: 20px;">Friendly description</h3>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/edit">
+        <label for="desc-{{ instrument.id }}" style="font-weight: normal;">
+          Shown to reviewers as the instrument's section heading. Leave blank
+          to fall back to the system handle.
+        </label>
+        <textarea id="desc-{{ instrument.id }}" name="description"
+                  {% if not can_edit %}disabled{% endif %}>{{ instrument.description or "" }}</textarea>
+        <p>
+          <button class="btn secondary" type="submit"
+                  {% if not can_edit %}disabled{% endif %}>
+            Save description
+          </button>
+        </p>
+      </form>
+
+      <h3 style="margin-top: 20px;">Acceptance</h3>
       <p>
         <strong>Status:</strong>
         {% if instrument.accepting_responses %}
@@ -29,8 +128,209 @@
         {% endif %}
       </p>
       <p>
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}">Manage</a>
+        <strong>Session deadline:</strong>
+        {% if session.deadline %}
+          <code>{{ session.deadline.isoformat() }}</code>
+          <span class="muted">(session deadline auto-closes this instrument)</span>
+        {% else %}
+          not set
+        {% endif %}
+      </p>
+      {% if instrument.deadline_closed_at %}
+        <p class="muted">
+          Closed by deadline at <code>{{ instrument.deadline_closed_at.isoformat() }}</code>.
+        </p>
+      {% endif %}
+      {% if instrument.accepting_responses %}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close">
+          <button class="btn" type="submit">Stop accepting responses</button>
+        </form>
+      {% else %}
+        {% if is_ready %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open">
+            <button class="btn" type="submit">Resume accepting responses</button>
+          </form>
+        {% else %}
+          <p class="muted">Activate the session before re-opening this instrument.</p>
+        {% endif %}
+      {% endif %}
+
+      <h3 style="margin-top: 20px;">Visibility when closed</h3>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="visible_when_closed" value="true"
+                   {% if instrument.responses_visible_when_closed %}checked{% endif %}>
+            Show reviewers their saved responses while this instrument is closed.
+          </label>
+        </p>
+        <p>
+          <button class="btn secondary" type="submit">Save visibility</button>
+        </p>
+      </form>
+
+      <h3 style="margin-top: 20px;">Response fields</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Label</th>
+              <th>Type</th>
+              <th>Required</th>
+              <th>Validation</th>
+              <th>Help text</th>
+              <th>Help visible</th>
+              <th>Order</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for field in instrument.response_fields %}
+              <tr>
+                <td><code>{{ field.field_key }}</code></td>
+                <td>{{ field.label }}</td>
+                <td>{{ field.response_type }}</td>
+                <td>
+                  {% if field.required %}
+                    <span class="pill pill-warning">required</span>
+                  {% else %}
+                    <span class="muted">optional</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if field.validation %}
+                    <code>{{ field.validation }}</code>
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if field.help_text %}
+                    <pre class="help-preview">{{ field.help_text }}</pre>
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+                <td>{{ "yes" if field.help_text_visible else "no" }}</td>
+                <td>{{ field.order }}</td>
+                <td>
+                  <form method="post" style="display:inline;"
+                        action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/move">
+                    <input type="hidden" name="direction" value="up">
+                    <button class="btn secondary" type="submit"
+                            {% if not can_edit or loop.first %}disabled{% endif %}>↑</button>
+                  </form>
+                  <form method="post" style="display:inline;"
+                        action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/move">
+                    <input type="hidden" name="direction" value="down">
+                    <button class="btn secondary" type="submit"
+                            {% if not can_edit or loop.last %}disabled{% endif %}>↓</button>
+                  </form>
+                  <details style="display:inline-block; margin-left: 8px;">
+                    <summary class="btn secondary" style="cursor:pointer;">Edit</summary>
+                    <form method="post" style="margin-top: 8px;"
+                          action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/edit">
+                      <label>Label
+                        <input type="text" name="label" value="{{ field.label }}" required>
+                      </label>
+                      <label style="font-weight: normal;">
+                        <input type="checkbox" name="required" value="true"
+                               {% if field.required %}checked{% endif %}>
+                        Required
+                      </label>
+                      {% if field.response_type == "integer" %}
+                        <label>Min
+                          <input type="number" name="validation_min"
+                                 value="{{ field.validation.min if field.validation and field.validation.min is not none else '' }}">
+                        </label>
+                        <label>Max
+                          <input type="number" name="validation_max"
+                                 value="{{ field.validation.max if field.validation and field.validation.max is not none else '' }}">
+                        </label>
+                      {% endif %}
+                      <label>Help text
+                        <textarea name="help_text">{{ field.help_text or "" }}</textarea>
+                      </label>
+                      <label style="font-weight: normal;">
+                        <input type="checkbox" name="help_text_visible" value="true"
+                               {% if field.help_text_visible %}checked{% endif %}>
+                        Show help text to reviewers
+                      </label>
+                      <p>
+                        <button class="btn" type="submit"
+                                {% if not can_edit %}disabled{% endif %}>Save field</button>
+                      </p>
+                    </form>
+                  </details>
+                  <form method="post" style="display:inline;"
+                        action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/delete">
+                    <button class="btn danger" type="submit"
+                            {% if not can_edit %}disabled{% endif %}>Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            {% if not instrument.response_fields %}
+              <tr>
+                <td colspan="9" class="muted">
+                  No response fields. Add one below — activation is blocked
+                  until at least one field exists.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 20px;">Add field</h3>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields">
+        <label>Label
+          <input type="text" name="label" required {% if not can_edit %}disabled{% endif %}>
+        </label>
+        <label>Field key (auto-derived from label if blank)
+          <input type="text" name="field_key" {% if not can_edit %}disabled{% endif %}
+                 pattern="[a-z][a-z0-9_]*" maxlength="64">
+        </label>
+        <label>Type
+          <select name="response_type" {% if not can_edit %}disabled{% endif %}>
+            <option value="integer">integer</option>
+            <option value="short_text">short_text</option>
+            <option value="long_text">long_text</option>
+            <option value="yes_no">yes_no</option>
+          </select>
+        </label>
+        <label style="font-weight: normal;">
+          <input type="checkbox" name="required" value="true"
+                 {% if not can_edit %}disabled{% endif %}>
+          Required
+        </label>
+        <label>Min (integer fields only)
+          <input type="number" name="validation_min" {% if not can_edit %}disabled{% endif %}>
+        </label>
+        <label>Max (integer fields only)
+          <input type="number" name="validation_max" {% if not can_edit %}disabled{% endif %}>
+        </label>
+        <label>Help text (optional)
+          <textarea name="help_text" {% if not can_edit %}disabled{% endif %}></textarea>
+        </label>
+        <label style="font-weight: normal;">
+          <input type="checkbox" name="help_text_visible" value="true" checked
+                 {% if not can_edit %}disabled{% endif %}>
+          Show help text to reviewers
+        </label>
+        <p>
+          <button class="btn" type="submit" {% if not can_edit %}disabled{% endif %}>
+            Add field
+          </button>
+        </p>
+      </form>
+
+      <p>
         <a class="btn secondary disabled"
            aria-disabled="true"
            title="Multi-instrument — Segment 13">Delete instrument</a>

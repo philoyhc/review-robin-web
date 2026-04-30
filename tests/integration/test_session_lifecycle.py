@@ -119,7 +119,7 @@ def test_activate_requires_acknowledge_when_warnings_present(
 ) -> None:
     session = _create_session(client, db, code="warn-1")
     _populate_rosters(client, session.id)
-    _generate_full_matrix(client, session.id)
+    # Skip _generate_full_matrix so the assignment_mode-is-None warning fires.
     client.get(f"/operator/sessions/{session.id}?validated=1")
     db.refresh(session)
     assert session.status == "validated"
@@ -157,7 +157,7 @@ def test_activate_opens_all_instruments_and_writes_audit(
         )
     ).scalar_one()
     assert audit.detail is not None
-    assert audit.detail["override_warnings"] is True
+    assert audit.detail["override_warnings"] is False
 
 
 def test_revert_requires_confirm_and_preserves_responses(

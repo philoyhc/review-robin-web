@@ -31,7 +31,6 @@ def test_empty_session_reports_no_reviewers_and_no_reviewees(db: Session) -> Non
     sources = {i.source for i in errors}
     assert "reviewers" in sources
     assert "reviewees" in sources
-    assert any(i.source == "instruments" and i.severity is Severity.info for i in issues)
 
 
 def test_populated_session_has_no_errors(db: Session) -> None:
