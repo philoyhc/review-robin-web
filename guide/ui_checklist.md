@@ -19,7 +19,7 @@ each page is reviewed.
 - [x] `sessions_list.html` — `/operator/sessions`
 - [x] `session_new.html` — `/operator/sessions/new`
 - [x] `session_detail.html` — `/operator/sessions/{id}`
-- [ ] `session_edit.html` — `/operator/sessions/{id}/edit`
+- [x] `session_edit.html` — `/operator/sessions/{id}/edit`
 - [x] `session_reviewers.html` — `/operator/sessions/{id}/reviewers`
 - [x] `session_reviewees.html` — `/operator/sessions/{id}/reviewees`
 - [ ] `session_assignments.html` — `/operator/sessions/{id}/assignments`
