@@ -58,6 +58,10 @@ _FIELD_KEY_REGEX = re.compile(r"^[a-z][a-z0-9_]*$")
 _FIELD_KEY_MAX_LEN = 64
 _VALID_RESPONSE_TYPES = {"integer", "short_text", "long_text", "yes_no"}
 
+_VALID_DISPLAY_SOURCES: frozenset[tuple[str, str]] = frozenset(
+    _DEFAULT_DISPLAY_LABELS.keys()
+)
+
 
 class FieldKeyError(ValueError):
     """Raised when a proposed field_key is invalid or duplicates an existing key."""
@@ -69,6 +73,10 @@ class ResponsesPresentError(Exception):
     def __init__(self, count: int) -> None:
         super().__init__(f"{count} response(s) exist for this field")
         self.cascaded_response_count = count
+
+
+class DisplaySourceError(ValueError):
+    """Raised when a (source_type, source_field) pair is unknown or already on the instrument."""
 
 
 def slugify_field_key(label: str) -> str:
@@ -223,6 +231,327 @@ def display_field_value(
         value = getattr(assignment.reviewee, field.source_field, None)
         return value or None
     return None
+
+
+def _ordered_display_fields(
+    db: Session, instrument: Instrument
+) -> list[InstrumentDisplayField]:
+    return list(
+        db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .order_by(InstrumentDisplayField.order, InstrumentDisplayField.id)
+        ).scalars()
+    )
+
+
+def _repack_display_orders(fields: list[InstrumentDisplayField]) -> None:
+    for index, field in enumerate(fields):
+        if field.order != index:
+            field.order = index
+
+
+def _display_field_snapshot(field: InstrumentDisplayField) -> dict[str, Any]:
+    return {
+        "source_type": field.source_type,
+        "source_field": field.source_field,
+        "label": field.label,
+        "order": field.order,
+        "visible": field.visible,
+    }
+
+
+def add_display_field(
+    db: Session,
+    *,
+    instrument: Instrument,
+    source_type: str,
+    source_field: str,
+    label: str,
+    visible: bool,
+    actor: User,
+) -> InstrumentDisplayField:
+    """Add a display field to an instrument.
+
+    `(source_type, source_field)` must be one of the seven D6 sources and
+    must not already exist on this instrument. `label` is normalised via
+    strip-on-write; an empty string is allowed and means "use the inferred
+    D6 label at render time."
+    """
+    pair = (source_type, source_field)
+    if pair not in _VALID_DISPLAY_SOURCES:
+        raise DisplaySourceError(
+            f"Unknown display-field source: {source_type}.{source_field}"
+        )
+
+    existing = _ordered_display_fields(db, instrument)
+    if any(
+        (f.source_type, f.source_field) == pair for f in existing
+    ):
+        raise DisplaySourceError(
+            f"Display field {source_type}.{source_field} already exists "
+            f"on this instrument."
+        )
+
+    new_field = InstrumentDisplayField(
+        instrument_id=instrument.id,
+        label=(label or "").strip(),
+        source_type=source_type,
+        source_field=source_field,
+        order=len(existing),
+        visible=visible,
+    )
+    db.add(new_field)
+    db.flush()
+
+    existing.append(new_field)
+    _repack_display_orders(existing)
+    db.flush()
+
+    write_event(
+        db,
+        event_type="instrument.display_field_added",
+        summary=(
+            f"Added display field {source_type}.{source_field} "
+            f"to instrument {_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session_id=instrument.session_id,
+        detail={
+            "instrument_id": instrument.id,
+            "session_id": instrument.session_id,
+            **_display_field_snapshot(new_field),
+        },
+    )
+    return new_field
+
+
+def update_display_field(
+    db: Session,
+    *,
+    field: InstrumentDisplayField,
+    label: str,
+    visible: bool,
+    actor: User,
+) -> tuple[InstrumentDisplayField, dict[str, list[Any]]]:
+    """Edit a display field's label override and visibility.
+
+    `(source_type, source_field)` are immutable post-create. Returns
+    `(field, changes)` where `changes` carries only the keys that
+    actually changed.
+    """
+    instrument = field.instrument
+    new_label = (label or "").strip()
+
+    changes: dict[str, list[Any]] = {}
+    if field.label != new_label:
+        changes["label"] = [field.label, new_label]
+    if field.visible != visible:
+        changes["visible"] = [field.visible, visible]
+
+    field.label = new_label
+    field.visible = visible
+    db.flush()
+
+    write_event(
+        db,
+        event_type="instrument.display_field_updated",
+        summary=(
+            f"Updated display field {field.source_type}.{field.source_field} "
+            f"on instrument {_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session_id=instrument.session_id,
+        detail={
+            "instrument_id": instrument.id,
+            "session_id": instrument.session_id,
+            "source_type": field.source_type,
+            "source_field": field.source_field,
+            "changes": changes,
+        },
+    )
+    return field, changes
+
+
+def delete_display_field(
+    db: Session, *, field: InstrumentDisplayField, actor: User
+) -> None:
+    """Delete a display field. No cascade-confirm — display fields carry
+    no per-row dependent data."""
+    instrument = field.instrument
+    snapshot = _display_field_snapshot(field)
+    db.delete(field)
+    db.flush()
+
+    remaining = _ordered_display_fields(db, instrument)
+    _repack_display_orders(remaining)
+    db.flush()
+
+    write_event(
+        db,
+        event_type="instrument.display_field_deleted",
+        summary=(
+            f"Deleted display field {snapshot['source_type']}.{snapshot['source_field']} "
+            f"from instrument {_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session_id=instrument.session_id,
+        detail={
+            "instrument_id": instrument.id,
+            "session_id": instrument.session_id,
+            "snapshot": snapshot,
+        },
+    )
+
+
+def bulk_save_fields(
+    db: Session,
+    *,
+    instrument: Instrument,
+    rows: list[dict[str, Any]],
+    actor: User,
+) -> dict[str, bool]:
+    """Apply order + (display-only) visibility / label across a single
+    interleaved payload covering both display and response fields.
+
+    Per Segment 10B-2 D7: rows missing from the payload are left alone
+    (deletion goes through the row-level Delete POST). Per-table orders
+    are repacked to ``0..N-1`` independently in submission order. Adds
+    + deletes are not handled here — those are row-level POSTs.
+
+    Returns ``{"display_changed": bool, "response_order_changed": bool}``.
+    """
+    display_payload: list[dict[str, Any]] = []
+    response_payload: list[dict[str, Any]] = []
+    for row in rows:
+        kind = row.get("kind")
+        if kind == "display":
+            display_payload.append(row)
+        elif kind == "response":
+            response_payload.append(row)
+
+    # Sort by operator-submitted `order` so changing a numeric reranks
+    # the row; the position in the form is incidental.
+    display_payload.sort(key=lambda r: int(r.get("order", 0)))
+    response_payload.sort(key=lambda r: int(r.get("order", 0)))
+
+    existing_display_list = _ordered_display_fields(db, instrument)
+    existing_response_list = _ordered_fields(db, instrument)
+    existing_display = {f.id: f for f in existing_display_list}
+    existing_response = {f.id: f for f in existing_response_list}
+
+    # Old ranks: position in current ordered listing (0..N-1).
+    response_old_rank = {f.id: i for i, f in enumerate(existing_response_list)}
+    display_old_rank = {f.id: i for i, f in enumerate(existing_display_list)}
+
+    display_updated: list[dict[str, Any]] = []
+
+    new_display_order: list[InstrumentDisplayField] = []
+    for row in display_payload:
+        field = existing_display.get(row.get("id"))
+        if field is None:
+            continue
+        new_label = (row.get("label") or "").strip()
+        new_visible = bool(row.get("visible", field.visible))
+        per_row_changes: dict[str, list[Any]] = {}
+        if field.label != new_label:
+            per_row_changes["label"] = [field.label, new_label]
+        if field.visible != new_visible:
+            per_row_changes["visible"] = [field.visible, new_visible]
+        old_order = field.order
+        field.label = new_label
+        field.visible = new_visible
+        new_display_order.append(field)
+        display_updated.append(
+            {
+                "source_type": field.source_type,
+                "source_field": field.source_field,
+                "_old_order": old_order,
+                "changes": per_row_changes,
+            }
+        )
+
+    new_response_order: list[InstrumentResponseField] = []
+    for row in response_payload:
+        field = existing_response.get(row.get("id"))
+        if field is None:
+            continue
+        new_response_order.append(field)
+
+    # Rank-based change detection: compare each submitted row's prior
+    # rank (position in the existing ordered listing) to its new rank
+    # (position in the submitted-and-sorted listing). This lets the
+    # bulk save normalise non-contiguous order values (e.g. 1, 2 → 0, 1
+    # from a fresh seed) without spuriously emitting a reorder event.
+    response_new_rank = {f.id: i for i, f in enumerate(new_response_order)}
+    display_new_rank = {f.id: i for i, f in enumerate(new_display_order)}
+
+    _repack_display_orders(new_display_order)
+    _repack_orders(new_response_order)
+    db.flush()
+
+    # finalise per-row changes with rank deltas + drop no-op rows
+    final_display_updated: list[dict[str, Any]] = []
+    for entry, field in zip(display_updated, new_display_order):
+        old_order = entry.pop("_old_order")
+        old_rank = display_old_rank.get(field.id)
+        new_rank = display_new_rank.get(field.id)
+        if old_rank != new_rank:
+            entry["changes"]["order"] = [old_order, field.order]
+        if entry["changes"]:
+            final_display_updated.append(entry)
+
+    response_order_changed = any(
+        response_old_rank.get(f.id) != response_new_rank.get(f.id)
+        for f in new_response_order
+    )
+    display_changed = bool(final_display_updated)
+
+    if response_order_changed:
+        # Re-query to capture the post-mutation ordered key list for the
+        # audit event; this includes any unsubmitted rows in their
+        # current positions.
+        new_response_keys = [
+            f.field_key for f in _ordered_fields(db, instrument)
+        ]
+        old_order_keys = [f.field_key for f in existing_response_list]
+        write_event(
+            db,
+            event_type="instrument.fields_reordered",
+            summary=f"Reordered fields on instrument {_instrument_label(instrument)}",
+            actor_user_id=actor.id if actor else None,
+            session_id=instrument.session_id,
+            detail={
+                "instrument_id": instrument.id,
+                "session_id": instrument.session_id,
+                "old_order": old_order_keys,
+                "new_order": new_response_keys,
+            },
+        )
+
+    if display_changed:
+        write_event(
+            db,
+            event_type="instrument.display_fields_saved",
+            summary=(
+                f"Saved display-field order / visibility on "
+                f"instrument {_instrument_label(instrument)}"
+            ),
+            actor_user_id=actor.id if actor else None,
+            session_id=instrument.session_id,
+            detail={
+                "instrument_id": instrument.id,
+                "session_id": instrument.session_id,
+                "added": [],
+                "removed": [],
+                "updated": final_display_updated,
+            },
+        )
+
+    return {
+        "display_changed": display_changed,
+        "response_order_changed": response_order_changed,
+    }
 
 
 def add_response_field(

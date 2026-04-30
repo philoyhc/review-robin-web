@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -937,6 +938,7 @@ def instruments_index(
     delete_blocked_field_id: int | None = Query(default=None),
     delete_blocked_count: int | None = Query(default=None),
     field_key_error: str | None = Query(default=None),
+    display_source_error: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -949,6 +951,58 @@ def instruments_index(
             .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
+
+    available_sources_by_instrument: dict[int, list[dict[str, str]]] = {}
+    merged_rows_by_instrument: dict[int, list[dict[str, Any]]] = {}
+    for instrument in instruments:
+        existing_pairs = {
+            (df.source_type, df.source_field) for df in instrument.display_fields
+        }
+        available = [
+            {
+                "source_type": st,
+                "source_field": sf,
+                "label": label,
+                "value": f"{st}:{sf}",
+            }
+            for (st, sf), label in instruments_service._DEFAULT_DISPLAY_LABELS.items()
+            if (st, sf) not in existing_pairs
+        ]
+        available_sources_by_instrument[instrument.id] = sorted(
+            available, key=lambda x: (x["source_type"], x["source_field"])
+        )
+
+        display_rows = [
+            {
+                "kind": "display",
+                "id": df.id,
+                "order": df.order,
+                "label": df.label,
+                "visible": df.visible,
+                "display_label": instruments_service.display_field_label(df),
+                "source_type": df.source_type,
+                "source_field": df.source_field,
+                "display_field": df,
+            }
+            for df in sorted(
+                instrument.display_fields, key=lambda f: (f.order, f.id)
+            )
+        ]
+        response_rows = [
+            {
+                "kind": "response",
+                "id": rf.id,
+                "order": rf.order,
+                "label": rf.label,
+                "field_key": rf.field_key,
+                "response_field": rf,
+            }
+            for rf in sorted(
+                instrument.response_fields, key=lambda f: (f.order, f.id)
+            )
+        ]
+        merged_rows_by_instrument[instrument.id] = display_rows + response_rows
+
     return _templates.TemplateResponse(
         request,
         "operator/instruments_index.html",
@@ -964,6 +1018,9 @@ def instruments_index(
             "delete_blocked_field_id": delete_blocked_field_id,
             "delete_blocked_count": delete_blocked_count,
             "field_key_error": field_key_error,
+            "display_source_error": display_source_error,
+            "available_sources_by_instrument": available_sources_by_instrument,
+            "merged_rows_by_instrument": merged_rows_by_instrument,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Instruments"
             ),
@@ -1006,6 +1063,22 @@ def _require_response_field_in_instrument(
         select(InstrumentResponseField).where(
             InstrumentResponseField.id == field_id,
             InstrumentResponseField.instrument_id == instrument.id,
+        )
+    ).scalar_one_or_none()
+    if field is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return field
+
+
+def _require_display_field_in_instrument(
+    df_id: int, instrument: Instrument, db: Session
+):
+    from app.db.models import InstrumentDisplayField
+
+    field = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.id == df_id,
+            InstrumentDisplayField.instrument_id == instrument.id,
         )
     ).scalar_one_or_none()
     if field is None:
@@ -1227,6 +1300,155 @@ def instrument_move_field(
     )
     instruments_service.move_response_field(
         db, field=field, direction=direction, actor=user  # type: ignore[arg-type]
+    )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/display-fields")
+def instrument_add_display_field(
+    source_pair: str = Form(...),
+    label: str | None = Form(default=None),
+    visible: str | None = Form(default=None),
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+
+    if ":" not in source_pair:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"?display_source_error=invalid_pair"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    source_type, source_field = source_pair.split(":", 1)
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_display_field_added"
+    )
+    try:
+        instruments_service.add_display_field(
+            db,
+            instrument=instrument,
+            source_type=source_type,
+            source_field=source_field,
+            label=label or "",
+            visible=(visible == "true"),
+            actor=user,
+        )
+    except instruments_service.DisplaySourceError:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"?display_source_error={source_type}:{source_field}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}"
+    "/display-fields/{df_id}/edit"
+)
+def instrument_edit_display_field(
+    df_id: int,
+    label: str | None = Form(default=None),
+    visible: str | None = Form(default=None),
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+    field = _require_display_field_in_instrument(df_id, instrument, db)
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_display_field_updated"
+    )
+    instruments_service.update_display_field(
+        db,
+        field=field,
+        label=label or "",
+        visible=(visible == "true"),
+        actor=user,
+    )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}"
+    "/display-fields/{df_id}/delete"
+)
+def instrument_delete_display_field(
+    df_id: int,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+    field = _require_display_field_in_instrument(df_id, instrument, db)
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_display_field_deleted"
+    )
+    instruments_service.delete_display_field(db, field=field, actor=user)
+    return _instruments_redirect(review_session.id)
+
+
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/fields/save")
+async def instrument_bulk_save_fields(
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+
+    form = await request.form()
+    kinds = [str(v) for v in form.getlist("kind")]
+    ids = [str(v) for v in form.getlist("id")]
+    orders = [str(v) for v in form.getlist("order")]
+    labels = [str(v) for v in form.getlist("label")]
+    visible_ids: set[int] = set()
+    for raw in form.getlist("visible_ids"):
+        try:
+            visible_ids.add(int(str(raw)))
+        except ValueError:
+            continue
+
+    if not (len(kinds) == len(ids) == len(orders) == len(labels)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bulk save row inputs are misaligned.",
+        )
+
+    rows: list[dict[str, Any]] = []
+    for kind, raw_id, raw_order, label in zip(kinds, ids, orders, labels):
+        try:
+            row_id = int(raw_id)
+            row_order = int(raw_order)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bulk save id / order values must be integers.",
+            )
+        row: dict[str, Any] = {"kind": kind, "id": row_id, "order": row_order}
+        if kind == "display":
+            row["label"] = label
+            row["visible"] = row_id in visible_ids
+        rows.append(row)
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_fields_saved"
+    )
+    instruments_service.bulk_save_fields(
+        db, instrument=instrument, rows=rows, actor=user
     )
     return _instruments_redirect(review_session.id)
 
