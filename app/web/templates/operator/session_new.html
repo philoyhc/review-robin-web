@@ -1,26 +1,32 @@
 {% extends "base.html" %}
 
-{% block title %}New session — Review Robin Web{% endblock %}
+{% block title %}Create New Session — Review Robin Web{% endblock %}
 
 {% block content %}
-  <h1>New session</h1>
+  <h1>Create New Session</h1>
 
   <form method="post" action="/operator/sessions">
-    <label for="name">Name</label>
-    <input type="text" id="name" name="name" required maxlength="255">
+    <div class="page-grid">
+      <div>
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required maxlength="255">
 
-    <label for="code">Code</label>
-    <input type="text" id="code" name="code" required maxlength="64">
+        <label for="code">Code</label>
+        <input type="text" id="code" name="code" required maxlength="64">
 
-    <label for="description">Description</label>
-    <textarea id="description" name="description" maxlength="2000"></textarea>
+        <label for="deadline">Deadline (optional)</label>
+        <input type="datetime-local" id="deadline" name="deadline">
+      </div>
 
-    <label for="deadline">Deadline (optional)</label>
-    <input type="datetime-local" id="deadline" name="deadline">
+      <div class="fill-col">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" maxlength="2000"></textarea>
+      </div>
+    </div>
 
-    <p style="margin-top: 20px;">
+    <div class="btn-pair" style="margin-top: 20px;">
       <button class="btn" type="submit">Create session</button>
       <a class="btn secondary" href="/operator/sessions">Cancel</a>
-    </p>
+    </div>
   </form>
 {% endblock %}

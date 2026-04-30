@@ -6,7 +6,6 @@
   <h1>Assignments</h1>
 
   <div class="card">
-    <h2>Current state</h2>
     <p>
       <strong>{{ assignment_count }}</strong>
       assignment{% if assignment_count != 1 %}s{% endif %}
@@ -20,7 +19,7 @@
       Reviewees: <strong>{{ reviewee_count }}</strong>
     </p>
     <p>
-      <a class="btn secondary" href="#upload-csv">Upload CSV</a>
+      <a class="btn secondary" href="#upload-csv">Upload Assignments</a>
       <a class="btn secondary" href="#rules">Assign by Rules</a>
       <a class="btn secondary disabled"
          aria-disabled="true"
@@ -76,70 +75,108 @@
     </div>
   {% endif %}
 
-  {% if reviewer_count == 0 or reviewee_count == 0 %}
-    <div class="card" style="border-color: #d97706; background: #fef3c7;">
-      <p>
-        Import at least one reviewer and one reviewee before generating
-        assignments.
-      </p>
-      <p>
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/reviewers">
-           Manage reviewers
-        </a>
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/reviewees">
-           Manage reviewees
-        </a>
-      </p>
-    </div>
-  {% else %}
-    <div class="card">
-      <h2>FullMatrix</h2>
+  <div class="bottom-grid">
+    <section class="card" id="upload-csv">
+      <h2>Upload Assignments</h2>
       <p class="muted">
-        Pair every reviewer with every reviewee.
+        CSV file in UTF-8, max 5000 rows. One row per assignment. Required
+        columns: <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
+        Optional: <code>IncludeAssignment</code>,
+        <code>PairContext1/2/3</code>, <code>AssignmentContext1/2/3</code>.
+        Other columns are ignored.
       </p>
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/assignments/full-matrix">
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="exclude_self_review" value="true" checked>
-            Exclude self-review (when a reviewer's email matches a reviewee's identifier)
-          </label>
-        </p>
-        <input type="hidden" name="dry_run" value="true">
-        <button class="btn" type="submit">Generate FullMatrix</button>
-      </form>
-    </div>
-  {% endif %}
+      {% if reviewer_count == 0 or reviewee_count == 0 %}
+        <p class="muted">Import reviewers and reviewees first.</p>
+      {% else %}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/assignments/manual/import"
+              enctype="multipart/form-data">
+          <label for="manual-file">CSV file</label>
+          <input type="file" id="manual-file" name="file" accept=".csv,text/csv" required>
+          <input type="hidden" name="dry_run" value="true">
 
-  <section class="card" id="upload-csv">
-    <h2>Upload CSV</h2>
-    <p class="muted">
-      Upload a CSV with one row per assignment. Required columns:
-      <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
-      Optional: <code>IncludeAssignment</code>,
-      <code>AssignmentContext1</code>/<code>2</code>/<code>3</code>.
-    </p>
+          {% if assignment_count and assignment_count > 0 %}
+            <p style="margin-top: 12px;">
+              <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
+              Importing will <strong>replace</strong> them.
+            </p>
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm_replace" value="true" required>
+                Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
+              </label>
+            </p>
+            <div class="btn-pair" style="margin-top: 20px;">
+              <button class="btn alert-solid" type="submit">Upload</button>
+              <a class="btn alert" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+            </div>
+          {% else %}
+            <div class="btn-pair" style="margin-top: 20px;">
+              <button class="btn" type="submit">Upload</button>
+              <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+            </div>
+          {% endif %}
+        </form>
+      {% endif %}
+    </section>
+
     {% if reviewer_count == 0 or reviewee_count == 0 %}
-      <p class="muted">
-        Import reviewers and reviewees first.
-      </p>
-    {% else %}
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/assignments/manual/import"
-            enctype="multipart/form-data">
-        <label for="manual-file">CSV file</label>
-        <input type="file" id="manual-file" name="file" accept=".csv,text/csv" required>
-        <input type="hidden" name="dry_run" value="true">
-        <p style="margin-top: 12px;">
-          <button class="btn" type="submit">Manual Import</button>
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+      <div class="card" style="border-color: #d97706; background: #fef3c7;">
+        <p>
+          Import at least one reviewer and one reviewee before generating
+          assignments.
         </p>
-      </form>
+        <p>
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.id }}/reviewers">
+             Manage reviewers
+          </a>
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.id }}/reviewees">
+             Manage reviewees
+          </a>
+        </p>
+      </div>
+    {% else %}
+      <div class="card">
+        <h2>FullMatrix</h2>
+        <p class="muted">
+          Pair every reviewer with every reviewee.
+        </p>
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/assignments/full-matrix">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="exclude_self_review" value="true" checked>
+              Exclude self-review (when a reviewer's email matches a reviewee's identifier)
+            </label>
+          </p>
+          <input type="hidden" name="dry_run" value="true">
+
+          {% if assignment_count and assignment_count > 0 %}
+            <p style="margin-top: 12px;">
+              <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
+              Generating will <strong>replace</strong> them.
+            </p>
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm_replace" value="true" required>
+                Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
+              </label>
+            </p>
+            <div class="btn-pair" style="margin-top: 20px;">
+              <button class="btn alert-solid" type="submit">Generate</button>
+              <a class="btn alert" href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+            </div>
+          {% else %}
+            <div style="margin-top: 12px;">
+              <button class="btn" type="submit">Generate</button>
+            </div>
+          {% endif %}
+        </form>
+      </div>
     {% endif %}
-  </section>
+  </div>
 
   <section class="card" id="rules">
     <h2>Assign by Rules</h2>
@@ -151,23 +188,24 @@
   </section>
 
   {% if assignment_count %}
-    <div class="card" style="border-color: #b91c1c;">
-      <h2 style="color: #b91c1c;">Danger zone</h2>
-      <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required>
-            Yes, delete all <strong>{{ assignment_count }}</strong>
-            assignment{% if assignment_count != 1 %}s{% endif %} for this session.
-            Reviewers and reviewees stay; the assignment mode is cleared.
-          </label>
-        </p>
-        <p>
-          <button class="btn"
-                  style="background: #b91c1c; border-color: #b91c1c;"
-                  type="submit">Delete all assignments</button>
-        </p>
-      </form>
+    <div class="bottom-grid">
+      <div></div>
+      <div class="card" style="border-color: #b91c1c;">
+        <h2 style="color: #b91c1c;">Danger zone</h2>
+        <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required>
+              Yes, delete all <strong>{{ assignment_count }}</strong>
+              assignment{% if assignment_count != 1 %}s{% endif %} for this session.
+              Reviewers and reviewees stay; the assignment mode is cleared.
+            </label>
+          </p>
+          <p>
+            <button class="btn danger-solid" type="submit">Delete all assignments</button>
+          </p>
+        </form>
+      </div>
     </div>
   {% endif %}
 {% endblock %}

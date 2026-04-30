@@ -1,31 +1,37 @@
 {% extends "base.html" %}
 
-{% block title %}Edit {{ session.name }}{% endblock %}
+{% block title %}Edit Session — {{ session.name }}{% endblock %}
 
 {% block content %}
-  <h1>Edit session</h1>
+  <h1>Edit Session</h1>
 
   <form method="post" action="/operator/sessions/{{ session.id }}/edit">
-    <label for="name">Name</label>
-    <input type="text" id="name" name="name" required maxlength="255" value="{{ session.name }}">
+    <div class="page-grid">
+      <div>
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required maxlength="255" value="{{ session.name }}">
 
-    <label for="code">Code</label>
-    <input type="text" id="code" name="code" required maxlength="64" value="{{ session.code }}">
+        <label for="code">Code</label>
+        <input type="text" id="code" name="code" required maxlength="64" value="{{ session.code }}">
 
-    <label for="description">Description</label>
-    <textarea id="description" name="description" maxlength="2000">{{ session.description or "" }}</textarea>
+        <label for="deadline">Deadline (optional)</label>
+        <input
+          type="datetime-local"
+          id="deadline"
+          name="deadline"
+          value="{{ session.deadline.strftime('%Y-%m-%dT%H:%M') if session.deadline else '' }}"
+        >
+      </div>
 
-    <label for="deadline">Deadline (optional)</label>
-    <input
-      type="datetime-local"
-      id="deadline"
-      name="deadline"
-      value="{{ session.deadline.strftime('%Y-%m-%dT%H:%M') if session.deadline else '' }}"
-    >
+      <div class="fill-col">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" maxlength="2000">{{ session.description or "" }}</textarea>
+      </div>
+    </div>
 
-    <p style="margin-top: 20px;">
+    <div class="btn-pair" style="margin-top: 20px;">
       <button class="btn" type="submit">Save changes</button>
       <a class="btn secondary" href="/operator/sessions/{{ session.id }}">Cancel</a>
-    </p>
+    </div>
   </form>
 {% endblock %}
