@@ -49,34 +49,6 @@ def _seed_roster(
     )
 
 
-def test_full_matrix_dry_run_renders_preview_and_writes_no_rows(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db)
-    _seed_roster(
-        client,
-        review_session.id,
-        reviewer_emails=["alice@example.edu", "bob@example.edu"],
-        reviewee_idents=["carol@example.edu", "dan-2026"],
-    )
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true", "dry_run": "true"},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 200
-    assert "Will generate" in response.text
-    assert "<strong>4</strong>" in response.text
-    assert (
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).first()
-        is None
-    )
-
-
 def test_full_matrix_save_persists_assignments_and_sets_mode(
     client: TestClient, db: Session
 ) -> None:
@@ -96,7 +68,7 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
 
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix"
     )
     rows = list(
         db.execute(
@@ -238,38 +210,13 @@ def test_non_operator_gets_403_on_assignments_hub_and_post(
 
     post = bob_client.post(
         f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true", "dry_run": "true"},
+        data={"exclude_self_review": "true"},
         follow_redirects=False,
     )
     assert post.status_code == 403
 
 
-def test_full_matrix_preview_lists_pairs(client: TestClient, db: Session) -> None:
-    review_session = _make_session(client, db)
-    _seed_roster(
-        client,
-        review_session.id,
-        reviewer_emails=["alice@example.edu", "bob@example.edu"],
-        reviewee_idents=["carol@example.edu", "dan-2026"],
-    )
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "", "dry_run": "true"},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 200
-    body = response.text
-    assert "<h2>Pairs</h2>" in body
-    assert "alice@example.edu" in body
-    assert "bob@example.edu" in body
-    assert "carol@example.edu" in body
-    assert "dan-2026" in body
-    assert "Showing first" not in body
-
-
-def test_full_matrix_preview_truncates_large_pair_list(
+def test_full_matrix_setup_page_truncates_large_pair_list(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db)
@@ -280,52 +227,19 @@ def test_full_matrix_preview_truncates_large_pair_list(
         reviewee_idents=[f"e{i}@example.edu" for i in range(31)],
     )
 
-    response = client.post(
+    # Save 217 pairs
+    client.post(
         f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "", "dry_run": "true"},
+        data={"exclude_self_review": ""},
         follow_redirects=False,
     )
 
-    assert response.status_code == 200
-    body = response.text
+    # The setup page now hosts the Current pairs preview after save
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix"
+    ).text
     assert "Showing first 200 of 217" in body
     assert "and 17 more" in body
-
-
-def test_manual_dry_run_renders_preview_and_writes_no_rows(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="m-dry")
-    _seed_roster(
-        client,
-        review_session.id,
-        reviewer_emails=["alice@example.edu", "bob@example.edu"],
-        reviewee_idents=["carol@example.edu"],
-    )
-
-    csv_body = (
-        b"ReviewerEmail,RevieweeEmail,IncludeAssignment\n"
-        b"alice@example.edu,carol@example.edu,true\n"
-        b"bob@example.edu,carol@example.edu,false\n"
-    )
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        data={"dry_run": "true"},
-        files={"file": ("manual.csv", csv_body, "text/csv")},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 200
-    assert "Will save" in response.text
-    assert "alice@example.edu" in response.text
-    assert "bob@example.edu" in response.text
-    assert (
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).first()
-        is None
-    )
 
 
 def test_manual_save_persists_with_include_and_context(
@@ -395,7 +309,6 @@ def test_manual_import_blocks_unknown_reviewer(
 
     response = client.post(
         f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        data={"dry_run": "true"},
         files={
             "file": (
                 "manual.csv",
@@ -428,7 +341,6 @@ def test_non_operator_gets_403_on_manual_import(
     bob_client = make_client(bob)
     response = bob_client.post(
         f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        data={"dry_run": "true"},
         files={
             "file": (
                 "manual.csv",
@@ -468,7 +380,9 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
     assert "carol@example.edu" in body
 
 
-def test_manual_preview_shows_roster_names(client: TestClient, db: Session) -> None:
+def test_manual_setup_page_shows_saved_pair_after_import(
+    client: TestClient, db: Session
+) -> None:
     review_session = _make_session(client, db, code="m-names")
     reviewer_csv = (
         "ReviewerName,ReviewerEmail\n"
@@ -489,9 +403,8 @@ def test_manual_preview_shows_roster_names(client: TestClient, db: Session) -> N
         follow_redirects=False,
     )
 
-    response = client.post(
+    save = client.post(
         f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        data={"dry_run": "true"},
         files={
             "file": (
                 "manual.csv",
@@ -501,9 +414,11 @@ def test_manual_preview_shows_roster_names(client: TestClient, db: Session) -> N
         },
         follow_redirects=False,
     )
+    assert save.status_code == 303
 
-    assert response.status_code == 200
-    body = response.text
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments/manual"
+    ).text
     assert "Alice Example" in body
     assert "Carol Example" in body
 
