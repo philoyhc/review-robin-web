@@ -14,7 +14,7 @@
         <th>Deadline</th>
         <th>Created</th>
         <th>Created by</th>
-        <th>Actions</th>
+        <th class="col-shrink">Actions</th>
       </tr>
       {% for s in sessions %}
         <tr>
@@ -24,7 +24,7 @@
           <td>{{ s.deadline.isoformat() if s.deadline else "—" }}</td>
           <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
           <td>{{ s.created_by_user.display_name or s.created_by_user.email }}</td>
-          <td>
+          <td class="col-shrink">
             <a class="btn" href="/operator/sessions/{{ s.id }}">Access</a>
             <a class="btn danger-solid" href="/operator/sessions/{{ s.id }}#danger-zone">Delete</a>
           </td>
