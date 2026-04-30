@@ -117,7 +117,7 @@ layout.
     `/operator/sessions/{id}/invitations` (managing the invitations:
     sending, link to outbox, etc.).
   - **Extract Data** button.
-- **Danger zone** card:
+- **Danger Zone** card:
   - **Delete Data** button — wipes collected response data only;
     setup items (reviewers, reviewees, instruments, assignments,
     invitations) stay.
