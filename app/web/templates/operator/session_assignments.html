@@ -7,8 +7,11 @@
 
   <div class="card">
     <p>
-      <strong>{{ assignment_count }}</strong>
+      <strong>{{ "{:,}".format(assignment_count) }}</strong>
       assignment{% if assignment_count != 1 %}s{% endif %}
+      {% if truncated_count %}
+        ({{ "{:,}".format(pair_sample | length) }} shown)
+      {% endif %}
       {% if session.assignment_mode %}
         <span class="pill pill-info">{{ session.assignment_mode }}</span>
       {% endif %}
