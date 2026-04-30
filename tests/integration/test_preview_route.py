@@ -306,4 +306,4 @@ def test_preview_anchor_rendered_on_session_detail(
     assert (
         f'href="/operator/sessions/{review_session.id}/preview"' in body
     )
-    assert "Preview reviewer surface" in body
+    assert "Preview" in body and "Reviewer Surface" in body

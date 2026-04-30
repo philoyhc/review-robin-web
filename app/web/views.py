@@ -28,11 +28,7 @@ class SetupRow:
 def build_setup_rows(
     db: Session, review_session: ReviewSession
 ) -> list[SetupRow]:
-    """Rows for the Session setup card on session detail.
-
-    Instruments and Set up invites render with disabled Manage buttons in
-    9.4B; their Manage targets land in 9.4C.
-    """
+    """Rows for the Session setup card on session detail."""
     sid = review_session.id
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
@@ -42,40 +38,45 @@ def build_setup_rows(
             select(Instrument).where(Instrument.session_id == sid)
         ).scalars()
     )
-    if instruments:
-        any_open = any(i.accepting_responses for i in instruments)
-        if len(instruments) == 1:
-            instrument_status = "open" if any_open else "closed"
-        else:
-            instrument_status = (
-                f"{len(instruments)} ({'some open' if any_open else 'all closed'})"
-            )
+    instrument_count = len(instruments)
+    if instrument_count == 0:
+        instruments_value = "Number of instruments: 0"
     else:
-        instrument_status = "—"
+        any_open = any(i.accepting_responses for i in instruments)
+        all_open = all(i.accepting_responses for i in instruments)
+        if all_open:
+            status_word = "Open"
+        elif not any_open:
+            status_word = "Closed"
+        else:
+            status_word = "Mixed"
+        instruments_value = (
+            f"Number of instruments: {instrument_count}, Status: {status_word}"
+        )
 
     return [
         SetupRow(
             label="Reviewers",
-            value=str(reviewer_count),
+            value=f"Number of reviewers: {reviewer_count}",
             manage_url=f"/operator/sessions/{sid}/reviewers",
         ),
         SetupRow(
             label="Reviewees",
-            value=str(reviewee_count),
+            value=f"Number of reviewees: {reviewee_count}",
             manage_url=f"/operator/sessions/{sid}/reviewees",
         ),
         SetupRow(
-            label="Instruments",
-            value=instrument_status,
-            manage_url=f"/operator/sessions/{sid}/instruments",
-        ),
-        SetupRow(
             label="Assignments",
-            value=str(assignment_count),
+            value=f"Number of assignments: {assignment_count}",
             manage_url=f"/operator/sessions/{sid}/assignments",
         ),
         SetupRow(
-            label="Set up invites",
+            label="Instruments",
+            value=instruments_value,
+            manage_url=f"/operator/sessions/{sid}/instruments",
+        ),
+        SetupRow(
+            label="Email Invites",
             value="—",
             manage_url=f"/operator/sessions/{sid}/setupinvite",
         ),

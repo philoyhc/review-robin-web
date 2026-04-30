@@ -1044,7 +1044,7 @@ def setupinvite_stub(
             "user": user,
             "session": review_session,
             "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Set up invites"
+                review_session, "Email Invites"
             ),
         },
     )
