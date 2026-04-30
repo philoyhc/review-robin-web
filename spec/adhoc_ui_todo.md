@@ -148,3 +148,12 @@ buttons match the new heavy style.
 
 - Already shipped in round 2 (4-column grid + `.btn-cta` Manage
   buttons). User repeated the spec; no further changes needed.
+
+### Session Setup button labels (round 3 follow-up)
+
+- Drop the generic `Manage` label. Each Setup-row button now uses
+  the row's name: `Reviewers`, `Reviewees`, `Assignments`,
+  `Instruments`, `Email Invites`. Since the button already names
+  the entity, the row content drops the redundant
+  `<strong>{label}:</strong>` prefix and shows just the status
+  string.

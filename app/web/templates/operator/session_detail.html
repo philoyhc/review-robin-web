@@ -58,12 +58,12 @@
         {% if row.manage_disabled %}
           <a class="btn-cta disabled"
              aria-disabled="true"
-             title="{{ row.manage_disabled_reason }}">Manage</a>
+             title="{{ row.manage_disabled_reason }}">{{ row.label }}</a>
         {% else %}
           <a class="btn-cta"
-             href="{{ row.manage_url }}">Manage</a>
+             href="{{ row.manage_url }}">{{ row.label }}</a>
         {% endif %}
-        <div class="setup-content"><strong>{{ row.label }}:</strong> {{ row.value }}</div>
+        <div class="setup-content">{{ row.value }}</div>
       {% endfor %}
     </div>
   </div>
