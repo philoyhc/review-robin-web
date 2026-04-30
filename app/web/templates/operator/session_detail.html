@@ -6,6 +6,17 @@
   <h1>{{ session.name }}</h1>
   <p class="page-subtitle"><code>{{ session.code }}</code></p>
 
+  {% if has_responses and not is_ready %}
+    <div class="card" style="border-color: #d97706; background: #fef3c7;">
+      <p>
+        This session has <strong>existing reviewer responses</strong>.
+        Editing the session, replacing rosters, or regenerating assignments
+        may invalidate or delete them. Forms below ask you to acknowledge
+        response loss before proceeding.
+      </p>
+    </div>
+  {% endif %}
+
   <div class="page-grid">
     {# Card 1: Session Details — top-left on desktop, first on mobile #}
     <div class="card card-tl">
@@ -72,7 +83,7 @@
       <h2>Run Session</h2>
       <div class="btn-row">
         <a class="btn-cta"
-           href="/operator/sessions/{{ session.id }}?validated=1">Validate<br>Session<br>Setup</a>
+           href="/operator/sessions/{{ session.id }}?validated=1">Validate<br>Session Setup</a>
         <a class="btn-cta"
            href="/operator/sessions/{{ session.id }}/preview">Preview<br>Reviewer Surface</a>
         <a class="btn-cta"
@@ -84,103 +95,98 @@
     </div>
   </div>{# /page-grid #}
 
-  {% if has_responses and not is_ready %}
-    <div class="card" style="border-color: #d97706; background: #fef3c7;">
-      <p>
-        This session has <strong>existing reviewer responses</strong>.
-        Editing the session, replacing rosters, or regenerating assignments
-        may invalidate or delete them. Forms below ask you to acknowledge
-        response loss before proceeding.
-      </p>
-    </div>
-  {% endif %}
-
-  {# Inline validate-summary card (rendered when ?validated=1) #}
-  {% if validation_summary %}
-    <div class="card" id="validation-summary">
-      <h2>Validation summary</h2>
-      <p>
-        <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
-        <span class="pill pill-warning">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
-        <span class="pill pill-info">{{ validation_summary.info_count }} info</span>
-      </p>
-      {% if is_ready %}
-        <p class="muted">
-          Session is already <strong>ready</strong>. Reviewers can save and
-          submit responses on the open instruments.
-        </p>
-      {% elif validation_summary.can_activate %}
-        <form method="post" action="/operator/sessions/{{ session.id }}/activate">
-          {% if validation_summary.needs_acknowledge %}
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="acknowledge_warnings" value="true" required>
-                I have reviewed the warnings/info and want to activate anyway.
-              </label>
-            </p>
-          {% endif %}
+  <div class="bottom-grid">
+    <div class="bottom-left">
+      {# Inline validate-summary card (rendered when ?validated=1) #}
+      {% if validation_summary %}
+        <div class="card" id="validation-summary">
+          <h2>Validation summary</h2>
           <p>
-            <button class="btn" type="submit">Activate session</button>
+            <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
+            <span class="pill pill-warning">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
+            <span class="pill pill-info">{{ validation_summary.info_count }} info</span>
           </p>
-        </form>
-      {% else %}
-        <p class="muted">
-          Cannot activate while {{ validation_summary.error_count }}
-          error{% if validation_summary.error_count != 1 %}s remain{% else %} remains{% endif %}.
-          Resolve the errors above and re-run validation.
-        </p>
+          {% if is_ready %}
+            <p class="muted">
+              Session is already <strong>ready</strong>. Reviewers can save and
+              submit responses on the open instruments.
+            </p>
+            <a class="btn secondary"
+               href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
+          {% elif validation_summary.can_activate %}
+            <form method="post" action="/operator/sessions/{{ session.id }}/activate">
+              {% if validation_summary.needs_acknowledge %}
+                <p>
+                  <label style="font-weight: normal;">
+                    <input type="checkbox" name="acknowledge_warnings" value="true" required>
+                    I have reviewed the warnings/info and want to activate anyway.
+                  </label>
+                </p>
+              {% endif %}
+              <div class="btn-pair">
+                <button class="btn" type="submit">Activate session</button>
+                <a class="btn secondary"
+                   href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
+              </div>
+            </form>
+          {% else %}
+            <p class="muted">
+              Cannot activate while {{ validation_summary.error_count }}
+              error{% if validation_summary.error_count != 1 %}s remain{% else %} remains{% endif %}.
+              Resolve the errors above and re-run validation.
+            </p>
+            <a class="btn secondary"
+               href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
+          {% endif %}
+        </div>
       {% endif %}
-      <p>
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
-      </p>
     </div>
-  {% endif %}
 
-  {# Card 4: Danger zone #}
-  <div class="card card-half" id="danger-zone" style="border-color: #b91c1c;">
-    <h2 style="color: #b91c1c;">Danger zone</h2>
-    <p class="muted">
-      Delete Data wipes every reviewer response while leaving setup intact.
-      Delete session removes the entire session and is locked while ready.
-    </p>
-
-    <form method="post" action="/operator/sessions/{{ session.id }}/delete-data">
-      <p>
-        <label style="font-weight: normal;">
-          <input type="checkbox" name="confirm" value="true" required>
-          Yes, delete every reviewer response on
-          <strong>{{ session.name }}</strong>. Setup data is preserved.
-        </label>
-      </p>
-      <p>
-        <button class="btn"
-                style="background: #b91c1c; border-color: #b91c1c;"
-                type="submit">Delete Data</button>
-      </p>
-    </form>
-
-    <hr>
-
-    {% if is_ready %}
+    {# Card 4: Danger zone — pinned bottom-right #}
+    <div class="card" id="danger-zone" style="border-color: #b91c1c;">
+      <h2 style="color: #b91c1c;">Danger zone</h2>
       <p class="muted">
-        Session deletion is locked while status is <strong>ready</strong>.
-        Revert to draft first.
+        Delete Data wipes every reviewer response while leaving setup intact.
+        Delete session removes the entire session and is locked while ready.
       </p>
-    {% else %}
-      <form method="post" action="/operator/sessions/{{ session.id }}/delete">
+
+      <form method="post" action="/operator/sessions/{{ session.id }}/delete-data">
         <p>
           <label style="font-weight: normal;">
             <input type="checkbox" name="confirm" value="true" required>
-            Yes, delete <strong>{{ session.name }}</strong> and all its data.
+            Yes, delete every reviewer response on
+            <strong>{{ session.name }}</strong>. Setup data is preserved.
           </label>
         </p>
         <p>
           <button class="btn"
                   style="background: #b91c1c; border-color: #b91c1c;"
-                  type="submit">Delete session</button>
+                  type="submit">Delete Data</button>
         </p>
       </form>
-    {% endif %}
+
+      <hr>
+
+      {% if is_ready %}
+        <p class="muted">
+          Session deletion is locked while status is <strong>ready</strong>.
+          Revert to draft first.
+        </p>
+      {% else %}
+        <form method="post" action="/operator/sessions/{{ session.id }}/delete">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required>
+              Yes, delete <strong>{{ session.name }}</strong> and all its data.
+            </label>
+          </p>
+          <p>
+            <button class="btn"
+                    style="background: #b91c1c; border-color: #b91c1c;"
+                    type="submit">Delete session</button>
+          </p>
+        </form>
+      {% endif %}
+    </div>
   </div>
 {% endblock %}
