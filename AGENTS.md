@@ -13,6 +13,12 @@
 - Add or update tests for every behavior change.
 - Prefer explicit types and clear names.
 - Do not introduce a full frontend framework unless explicitly requested.
+- When working on a page, migrate any inline-styled buttons on it
+  to the canonical `.btn` modifier classes defined in
+  `assumptions.md` (Primary / Primary Outline / Alert / Alert
+  Outline / Danger / Danger Outline). Ask first if a button
+  doesn't cleanly fit one of those six named styles — don't invent
+  a new one without confirmation.
 - Do not implement Microsoft authentication in app code unless explicitly requested; assume Azure App Service Easy Auth will provide authenticated identity headers in deployed environments.
 - Keep changes small and PR-sized.
 
