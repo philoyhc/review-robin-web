@@ -9,7 +9,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
       <div>
         <p style="margin: 0;">
-          Reviewers in this session: <strong>{{ reviewer_count }}</strong>
+          Reviewers: <strong>{{ reviewer_count }}</strong>
           &middot;
           Reviewees: <strong>{{ reviewee_count }}</strong>
         </p>
@@ -23,6 +23,19 @@
             {% if session.assignment_mode %}
               &middot; assigned using
               <span class="pill pill-info">{{ session.assignment_mode }}</span>
+            {% endif %}
+          </p>
+          <p style="margin: 6px 0 0 0;">
+            {% if self_review_found == 0 %}
+              Self-review: <strong>0</strong> found
+            {% elif self_review_included == 0 %}
+              Self-review: <strong>{{ self_review_excluded }}</strong> excluded
+            {% elif self_review_excluded == 0 %}
+              Self-review: <strong>{{ self_review_included }}</strong> included
+            {% else %}
+              Self-review:
+              <strong>{{ self_review_included }}</strong> included,
+              <strong>{{ self_review_excluded }}</strong> excluded
             {% endif %}
           </p>
         {% endif %}
