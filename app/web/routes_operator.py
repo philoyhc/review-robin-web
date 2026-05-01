@@ -1237,6 +1237,26 @@ def instrument_add_field(
 
 
 @router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}/fields/add-row"
+)
+def instrument_add_default_field(
+    after: int | None = Form(default=None),
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_field_added"
+    )
+    instruments_service.add_default_response_field(
+        db, instrument=instrument, after_field_id=after, actor=user
+    )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post(
     "/sessions/{session_id}/instruments/{instrument_id}/fields/{field_id}/edit"
 )
 def instrument_edit_field(
