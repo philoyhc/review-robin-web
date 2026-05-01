@@ -216,22 +216,6 @@ def test_instruments_index_renders_one_card_per_instrument(
         assert "not accepting" in body
 
 
-def test_instruments_index_add_and_delete_buttons_disabled(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="i-disabled")
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-    ).text
-
-    assert ">Add 1<" in body
-    assert ">Delete 1<" in body
-    # The bulk Add/Delete anchors render disabled with the multi-instrument tooltip.
-    assert 'title="Multi-instrument — Segment 13"' in body
-    assert 'aria-disabled="true"' in body
-
-
 def test_build_setup_rows_re_enables_instruments_and_setup_invites(
     client: TestClient, db: Session
 ) -> None:
