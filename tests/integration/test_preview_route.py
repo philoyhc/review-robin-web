@@ -281,21 +281,6 @@ def test_reviewer_side_surface_still_renders_write_path(
     )
 
 
-def test_preview_anchor_rendered_on_instruments_page(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="prev-anchor-instr")
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-    ).text
-
-    assert (
-        f'href="/operator/sessions/{review_session.id}/preview"' in body
-    )
-    assert "Preview Reviewer Surface" in body
-
-
 def test_preview_anchor_rendered_on_session_detail(
     client: TestClient, db: Session
 ) -> None:

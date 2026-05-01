@@ -131,6 +131,10 @@
         cursor: pointer;
       }
       .btn[hidden], button.btn[hidden], a.btn[hidden] { display: none; }
+      .btn:disabled, button.btn:disabled, a.btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
       .btn.secondary {
         background: #fff;
         color: #2563eb;
