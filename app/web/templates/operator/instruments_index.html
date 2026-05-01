@@ -18,11 +18,24 @@
     </div>
   </div>
 
-  {% if not can_edit %}
-    <div class="warning-banner">
-      Structure is locked while the session is on going. Revert session
-      to draft to edit response fields or descriptions, or add/delete
-      instruments.
+  {% if is_ready %}
+    <div class="card" style="border-color: #d97706; background: #fef3c7;">
+      <p style="margin: 0 0 12px 0;">
+        The instruments cannot be modified while the session is ongoing.
+        Revert the session to draft if you wish to modify anything.
+      </p>
+      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
+        <input type="hidden" name="return_to" value="instruments">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required>
+            Yes, revert <strong>{{ session.name }}</strong> to draft.
+          </label>
+        </p>
+        <p style="margin-bottom: 0;">
+          <button class="btn alert-solid" type="submit">Revert to draft</button>
+        </p>
+      </form>
     </div>
   {% endif %}
 
