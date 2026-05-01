@@ -874,4 +874,5 @@ def bulk_set_accepting(
                 "changed_instrument_ids": changed,
             },
         )
+        db.commit()
     return changed
