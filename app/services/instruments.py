@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    AuditEvent,
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
@@ -17,6 +18,43 @@ from app.db.models import (
     User,
 )
 from app.services.audit import write_event
+
+# Audit-event types that signal "this instrument's field tables were
+# saved by the operator" — used by ``saved_state_for_session`` to
+# render the per-instrument-card status pill.
+_SAVED_STATE_EVENT_TYPES: frozenset[str] = frozenset({
+    "instrument.display_fields_saved",
+    "instrument.display_field_added",
+    "instrument.display_field_updated",
+    "instrument.display_field_deleted",
+    "instrument.display_field_moved",
+    "instrument.field_added",
+    "instrument.field_updated",
+    "instrument.field_deleted",
+    "instrument.fields_reordered",
+})
+
+
+def saved_state_for_session(
+    db: Session, *, session_id: int
+) -> dict[int, bool]:
+    """Map ``instrument_id`` → True if the instrument has any audit
+    event indicating an operator-driven save of its field tables; False
+    otherwise. Instruments with no qualifying audit history render as
+    "not saved" on the operator's status sub-card."""
+    rows = db.execute(
+        select(AuditEvent.event_type, AuditEvent.detail)
+        .where(AuditEvent.session_id == session_id)
+        .where(AuditEvent.event_type.in_(_SAVED_STATE_EVENT_TYPES))
+    ).all()
+    saved: dict[int, bool] = {}
+    for event_type, detail in rows:
+        if not detail:
+            continue
+        instrument_id = detail.get("instrument_id")
+        if isinstance(instrument_id, int):
+            saved[instrument_id] = True
+    return saved
 
 DEFAULT_INSTRUMENT_NAME = "Default"
 

@@ -988,6 +988,16 @@ def instruments_index(
     # everything — every per-instrument card stays locked.
     editing_instrument_id = None if is_ready else editing
 
+    # "Saved" / "not saved" pill on each per-instrument card's status
+    # sub-card. An instrument is "saved" if it has at least one audit
+    # event indicating an operator-driven persistence of its field
+    # tables (display fields saved via bulk save, edit, add, delete, or
+    # move). Pure draft instruments — only seeded rows, never touched —
+    # render as "not saved".
+    instrument_saved_state = instruments_service.saved_state_for_session(
+        db, session_id=review_session.id
+    )
+
     return _templates.TemplateResponse(
         request,
         "operator/instruments_index.html",
@@ -1000,6 +1010,7 @@ def instruments_index(
             "bulk_accepting_state": _bulk_accepting_state(instruments),
             "bulk_visibility_state": _bulk_visibility_state(instruments),
             "editing_instrument_id": editing_instrument_id,
+            "instrument_saved_state": instrument_saved_state,
             "saved_instrument_id": saved,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Instruments"
