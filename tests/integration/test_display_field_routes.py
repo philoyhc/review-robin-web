@@ -633,6 +633,149 @@ def test_saved_state_pill_flips_after_save(
     assert ">not saved</span>" not in after
 
 
+def test_response_field_label_and_required_persist_via_bulk_save(
+    client: TestClient, db: Session
+) -> None:
+    """Slice 2 — operator types a Friendly Label on a Response Fields
+    row and toggles Required, hits Save, the values stick on reload."""
+    review_session = _make_session(client, db, code="rf-save")
+    instrument = _instrument(db, review_session.id)
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+
+    # Submit a bulk save touching Response Fields only: rename rating
+    # to "Score", flip comments' Required from off to on.
+    save = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "kind": ["response", "response"],
+            "id": [str(rating.id), str(comments.id)],
+            "order": ["0", "1"],
+            "label": ["Score", "Comments"],
+            "required_ids": [str(rating.id), str(comments.id)],
+        },
+        follow_redirects=False,
+    )
+    assert save.status_code == 303
+
+    db.refresh(rating)
+    db.refresh(comments)
+    assert rating.label == "Score"
+    assert rating.required is True
+    assert comments.required is True
+
+
+def test_response_field_add_row_preserves_editing_param(
+    client: TestClient, db: Session
+) -> None:
+    """Slice 2 — clicking ➕ on the Response Fields table redirects
+    back with ``?editing={iid}`` so the operator stays in edit mode."""
+    review_session = _make_session(client, db, code="rf-add")
+    instrument = _instrument(db, review_session.id)
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/add-row",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert f"editing={instrument.id}" in response.headers["location"]
+
+    keys = sorted(
+        r.field_key
+        for r in db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    )
+    assert "rating3" in keys
+
+
+def test_response_field_delete_preserves_editing_param(
+    client: TestClient, db: Session
+) -> None:
+    """Slice 2 — clicking ✗ on a Response Fields row redirects back
+    with ``?editing={iid}``."""
+    review_session = _make_session(client, db, code="rf-del")
+    instrument = _instrument(db, review_session.id)
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/fields/{comments.id}/delete",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert f"editing={instrument.id}" in response.headers["location"]
+
+
+def test_response_field_move_preserves_editing_param(
+    client: TestClient, db: Session
+) -> None:
+    """Slice 2 — clicking ▲ / ▼ on a Response Fields row swaps and
+    redirects back with ``?editing={iid}``."""
+    review_session = _make_session(client, db, code="rf-move")
+    instrument = _instrument(db, review_session.id)
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/fields/{rating.id}/move",
+        data={"direction": "down"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert f"editing={instrument.id}" in response.headers["location"]
+
+    keys_in_order = [
+        r.field_key
+        for r in db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == instrument.id)
+            .order_by(InstrumentResponseField.order)
+        ).scalars()
+    ]
+    assert keys_in_order == ["comments", "rating"]
+
+
+def test_state_machine_response_fields_render_inputs_in_edit_mode(
+    client: TestClient, db: Session
+) -> None:
+    """In edit mode the Response Fields table renders editable label
+    inputs + required checkboxes + ➕ / ✗ buttons."""
+    review_session = _make_session(client, db, code="rf-edit-render")
+    instrument = _instrument(db, review_session.id)
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    # Inputs for label + required participate in the bulk-save form.
+    assert f'form="dfsave-{instrument.id}"' in body
+    assert 'name="required_ids"' in body
+    # ✗ delete + ➕ add forms are present per row.
+    assert "/fields/" in body and "/delete" in body
+    assert "/fields/add-row" in body
+
+
 def test_friendly_label_persistence_round_trip_via_edit_route(
     client: TestClient, db: Session
 ) -> None:

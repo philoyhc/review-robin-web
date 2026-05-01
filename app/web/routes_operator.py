@@ -1218,7 +1218,15 @@ def instrument_add_default_field(
     instruments_service.add_default_response_field(
         db, instrument=instrument, after_field_id=after, actor=user
     )
-    return _instruments_redirect(review_session.id)
+    # Preserve editing state: the ➕ button is only rendered while
+    # editing, so the operator stays in editing mode after the add.
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments"
+            f"?editing={instrument.id}#instrument-{instrument.id}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.post(
@@ -1310,12 +1318,21 @@ def instrument_delete_field(
         return RedirectResponse(
             url=(
                 f"/operator/sessions/{review_session.id}/instruments"
-                f"?delete_blocked_field_id={field.id}"
+                f"?editing={instrument.id}"
+                f"&delete_blocked_field_id={field.id}"
                 f"&delete_blocked_count={exc.cascaded_response_count}"
+                f"#instrument-{instrument.id}"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    return _instruments_redirect(review_session.id)
+    # Preserve editing state on the redirect.
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments"
+            f"?editing={instrument.id}#instrument-{instrument.id}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.post(
@@ -1340,7 +1357,15 @@ def instrument_move_field(
     instruments_service.move_response_field(
         db, field=field, direction=direction, actor=user  # type: ignore[arg-type]
     )
-    return _instruments_redirect(review_session.id)
+    # Preserve editing state: the ▲ / ▼ buttons are only rendered
+    # while editing.
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments"
+            f"?editing={instrument.id}#instrument-{instrument.id}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/display-fields")
@@ -1512,6 +1537,12 @@ async def instrument_bulk_save_fields(
             visible_ids.add(int(str(raw)))
         except ValueError:
             continue
+    required_ids: set[int] = set()
+    for raw in form.getlist("required_ids"):
+        try:
+            required_ids.add(int(str(raw)))
+        except ValueError:
+            continue
 
     if not (len(kinds) == len(ids) == len(orders) == len(labels)):
         raise HTTPException(
@@ -1533,6 +1564,9 @@ async def instrument_bulk_save_fields(
         if kind == "display":
             row["label"] = label
             row["visible"] = row_id in visible_ids
+        elif kind == "response":
+            row["label"] = label
+            row["required"] = row_id in required_ids
         rows.append(row)
 
     _invalidate_if_validated(
