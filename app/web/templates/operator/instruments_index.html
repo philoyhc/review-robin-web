@@ -413,6 +413,46 @@
         </div>
       </div>
 
+      {# Section B continued — Response Fields Help (full-width
+         placeholder; bulk-save wiring deferred per
+         guide/instruments.md). #}
+      <div class="card" style="border: none; background: transparent; padding: 0; margin-top: 12px;">
+        <h3 style="margin-top: 0;">Response Fields Help</h3>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Text</th>
+                <th>Show</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for field in sorted_response_fields %}
+                <tr>
+                  <td><code>{{ field.field_key }}</code></td>
+                  <td class="muted" style="font-style: italic;">{{ field.help_text or "" }}</td>
+                  <td>
+                    <input type="checkbox" disabled
+                           {% if field.help_text_visible %}checked{% endif %}>
+                  </td>
+                </tr>
+              {% endfor %}
+              {% if not sorted_response_fields %}
+                <tr>
+                  <td colspan="3" class="muted" style="font-style: italic;">
+                    No response fields.
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+        <p class="muted" style="font-style: italic; margin-top: 8px;">
+          Wiring lands in a follow-up slice.
+        </p>
+      </div>
+
       {# Section C — separator. #}
       <hr>
 
