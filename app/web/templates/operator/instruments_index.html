@@ -92,24 +92,13 @@
       <div class="bottom-grid">
         <div class="card instrument-edit" style="border-color: transparent; background: transparent; padding: 0;">
           <h2 style="margin-top: 0; font-size: 1.6rem;">Instrument #{{ loop.index }}</h2>
-          <p class="description-text">{{ instrument.description or "(no description)" }}</p>
-          <details>
-            <summary style="list-style: none; cursor: pointer; text-align: right;">
-              <span class="btn alert-solid">Edit</span>
-            </summary>
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/edit"
-                  style="margin-top: 12px;">
-              <textarea id="desc-{{ instrument.id }}" name="description"
-                        {% if not can_edit %}disabled{% endif %}>{{ instrument.description or "" }}</textarea>
-              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                <a class="btn alert"
-                   href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
-                <button class="btn alert-solid" type="submit"
-                        {% if not can_edit %}disabled{% endif %}>Save</button>
-              </div>
-            </form>
-          </details>
+          {% if is_editing %}
+            <textarea form="dfsave-{{ instrument.id }}" name="description"
+                      placeholder="(no description)"
+                      style="width: 100%;">{{ instrument.description or "" }}</textarea>
+          {% else %}
+            <p class="description-text">{{ instrument.description or "(no description)" }}</p>
+          {% endif %}
         </div>
 
         <div class="card" style="background: #fff;">
@@ -486,17 +475,6 @@
           </tr>
         </template>
       {% endif %}
-
-      {# Section C — separator. #}
-      <hr>
-
-      {# Section D — Preview Instrument #N (frame stub). #}
-      <div class="card" style="border: none; background: transparent; padding: 0;">
-        <h3 style="margin-top: 0;">Preview Instrument #{{ loop.index }}</h3>
-        <p class="muted" style="font-style: italic;">
-          Preview rendering lands in Slice 3.
-        </p>
-      </div>
 
       {# Section E — action buttons. #}
       <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;">
