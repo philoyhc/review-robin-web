@@ -219,8 +219,12 @@
                     {% set is_locked_row = is_locked_display_source(df.source_type, df.source_field) %}
                     {% set inferred_label = display_field_label(df) %}
                     {% set first_movable_index = (sorted_display_fields | rejectattr('source_field', 'in', ['name', 'email_or_identifier']) | list | length) %}
+                    {# Display-only abbreviation: ``email_or_identifier`` →
+                       ``email``. The DB column / source_field stays
+                       ``email_or_identifier``. #}
+                    {% set source_label_field = 'email' if df.source_field == 'email_or_identifier' else df.source_field %}
                     <tr data-source="{{ df.source_type }}.{{ df.source_field }}">
-                      <td><code>{{ df.source_type }}.{{ df.source_field }}</code></td>
+                      <td><code>{{ df.source_type }}.{{ source_label_field }}</code></td>
                       <td>
                         {% if is_editing %}
                           <input form="dfsave-{{ instrument.id }}" type="text" name="label"
@@ -235,11 +239,18 @@
                       </td>
                       <td>
                         {% if is_locked_row %}
-                          <span class="pill pill-info" title="Always shown to reviewers.">Required</span>
                           {% if is_editing %}
+                            {# Locked rows render as a greyed-out
+                               always-checked checkbox during edit
+                               mode so the column stays visually
+                               consistent with the editable rows. #}
+                            <input type="checkbox" checked disabled
+                                   title="Always shown to reviewers.">
                             {# Server-side defense: locked rows always
                                post visible=true via visible_ids. #}
                             <input form="dfsave-{{ instrument.id }}" type="hidden" name="visible_ids" value="{{ df.id }}">
+                          {% else %}
+                            <span class="pill pill-info" title="Always shown to reviewers.">Required</span>
                           {% endif %}
                         {% elif is_editing %}
                           <input form="dfsave-{{ instrument.id }}" type="checkbox"
