@@ -10,9 +10,8 @@ becomes a historical record, move it into `guide/archive/`.
 | Path | Covers |
 |---|---|
 | `low_intensity_workplan_review_robin_web.md` | Master long-term plan — segment overview and ordering. |
-| `segment_*.md` | Plans for the current and upcoming segments. |
+| `segment_*.md` | Plans for the current and upcoming segments. `segment_10D.md` is the rolling stabilization todo (operator model + engine cleanups carried over from 1–10C). |
 | `ui_checklist.md` | Cross-cutting UI primitives + per-page restructure checklist. |
-| `adhoc_todo.md` | Catch-all for follow-up items that don't yet have a segment. |
 | `archive/` | Shipped segment plans (kept for historical reference; not the source of truth for current behavior — see `docs/status.md` for that). |
 
 Sibling folders:
