@@ -48,18 +48,20 @@ rows, top to bottom:
 3. **Action row** (right-aligned). One flex row containing, in
    left-to-right order:
    - `Show all when closed` / `Don't show any when closed` —
-     Primary. Toggles the bulk visibility-when-closed flag across
+     Alert. Toggles the bulk visibility-when-closed flag across
      every instrument. Which of the two is shown follows the
      current state: when at least one instrument is hidden, show
      `Show all when closed`; when every instrument is showing,
      show `Don't show any when closed`.
-   - `Preview reviewer surface` — Primary. Opens the operator's
+   - `Preview reviewer surface` — Alert. Opens the operator's
      preview of the reviewer surface for this session.
    - The 6 setup-nav buttons (`Session`, `Reviewers`, `Reviewees`,
      `Assignments`, `Instruments`, `Email Invites`) inside
-     `.setup-nav`. The `Instruments` button is rendered as Primary
-     Outline; the rest are Primary. See `spec/operator_map.md`
-     "Setup nav" for the canonical contract.
+     `.setup-nav`, with a small extra left margin so the bulk
+     action group reads as visually separate from the nav. The
+     `Instruments` button is rendered as Primary Outline; the
+     rest are Primary. See `spec/operator_map.md` "Setup nav"
+     for the canonical contract.
 
 The standalone "All Instrument Status" card from earlier drafts
 of the spec is **gone** — its status reporting moves into rows 1

@@ -36,18 +36,18 @@
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
               style="margin: 0;">
-          <button class="btn" type="submit">Show all when closed</button>
+          <button class="btn alert-solid" type="submit">Show all when closed</button>
         </form>
       {% else %}
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/visibility/all-off"
               style="margin: 0;">
-          <button class="btn" type="submit">Don't show any when closed</button>
+          <button class="btn alert-solid" type="submit">Don't show any when closed</button>
         </form>
       {% endif %}
-      <a class="btn"
+      <a class="btn alert-solid"
          href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
-      <div class="setup-nav">
+      <div class="setup-nav" style="margin-left: 16px;">
         <a class="btn" href="/operator/sessions/{{ session.id }}">Session</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
