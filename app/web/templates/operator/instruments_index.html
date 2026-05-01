@@ -8,19 +8,10 @@
   <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
       <div>
-        <p style="margin: 0;">
-          <strong>{{ instruments | length }}</strong>
-          instrument{% if instruments | length != 1 %}s{% endif %}
-        </p>
-        <p style="margin: 8px 0 0 0;">
-          <a class="btn secondary disabled"
-             aria-disabled="true"
-             title="Multi-instrument — Segment 13">Add instrument</a>
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/preview">
-            Preview reviewer surface
-          </a>
-        </p>
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}/preview">
+          Preview Reviewer Surface
+        </a>
       </div>
       <div class="setup-nav">
         <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
@@ -47,39 +38,62 @@
     </div>
   {% endif %}
 
-  <div class="card">
-    <h2>Instrument Status</h2>
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-      <p style="margin: 0;">
-        Accepting responses (all instruments):
-        {% if bulk_accepting_state == "all-on" %}
-          <span class="pill pill-info">all on</span>
-        {% elif bulk_accepting_state == "all-off" %}
-          <span class="pill pill-warning">all off</span>
-        {% else %}
-          <span class="pill pill-warning">mixed</span>
-        {% endif %}
-      </p>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        {% set open_solid = is_ready and bulk_accepting_state != "all-on" %}
-        {% set close_solid = is_ready and bulk_accepting_state == "all-on" %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/accepting/all-on"
-              style="margin: 0;">
-          <button class="btn {{ 'alert-solid' if open_solid else 'alert' }}" type="submit"
-                  {% if not is_ready or bulk_accepting_state == "all-on" %}disabled{% endif %}>
-            Open all instruments
-          </button>
-        </form>
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/accepting/all-off"
-              style="margin: 0;">
-          <button class="btn {{ 'alert-solid' if close_solid else 'alert' }}" type="submit"
-                  {% if not is_ready or bulk_accepting_state == "all-off" %}disabled{% endif %}>
-            Close all instruments
-          </button>
-        </form>
+  <div class="bottom-grid">
+    <div class="card">
+      <h2>Instrument Status</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <p style="margin: 0;">
+          Accepting responses (all instruments):
+          {% if bulk_accepting_state == "all-on" %}
+            <span class="pill pill-info">all on</span>
+          {% elif bulk_accepting_state == "all-off" %}
+            <span class="pill pill-warning">all off</span>
+          {% else %}
+            <span class="pill pill-warning">mixed</span>
+          {% endif %}
+        </p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          {% set open_solid = is_ready and bulk_accepting_state != "all-on" %}
+          {% set close_solid = is_ready and bulk_accepting_state == "all-on" %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/accepting/all-on"
+                style="margin: 0;">
+            <button class="btn {{ 'alert-solid' if open_solid else 'alert' }}" type="submit"
+                    {% if not is_ready or bulk_accepting_state == "all-on" %}disabled{% endif %}>
+              Open all instruments
+            </button>
+          </form>
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/accepting/all-off"
+                style="margin: 0;">
+            <button class="btn {{ 'alert-solid' if close_solid else 'alert' }}" type="submit"
+                    {% if not is_ready or bulk_accepting_state == "all-off" %}disabled{% endif %}>
+              Close all instruments
+            </button>
+          </form>
+        </div>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Add/Delete Instruments</h2>
+      <p>This session has <strong>{{ instruments | length }}</strong>
+        instrument{% if instruments | length != 1 %}s{% endif %}.</p>
+      <p style="margin: 8px 0;">
+        <a class="btn alert disabled"
+           aria-disabled="true"
+           title="Multi-instrument — Segment 13">Add Instrument</a>
+        <a class="btn alert disabled"
+           aria-disabled="true"
+           title="Multi-instrument — Segment 13">Remove Instrument</a>
+      </p>
+      {% if instruments %}
+        <p style="margin: 8px 0 0 0;">
+          {% for instrument in instruments %}
+            <a class="btn" href="#instrument-{{ instrument.id }}">Go to #{{ loop.index }}</a>
+          {% endfor %}
+        </p>
+      {% endif %}
     </div>
   </div>
 

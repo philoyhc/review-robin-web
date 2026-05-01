@@ -293,7 +293,7 @@ def test_preview_anchor_rendered_on_instruments_page(
     assert (
         f'href="/operator/sessions/{review_session.id}/preview"' in body
     )
-    assert "Preview reviewer surface" in body
+    assert "Preview Reviewer Surface" in body
 
 
 def test_preview_anchor_rendered_on_session_detail(
