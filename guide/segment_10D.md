@@ -45,44 +45,54 @@ Out (deferred to later segments / follow-ups):
 - **Sort column UX** — semantics ("default row order on reviewer
   surface") not yet decided. Will reuse the same `▲`/`▼` reorder
   convention once the rule is pinned down.
-- **Help text placement** — `instrument_response_fields.help_text`
-  / `help_text_visible` exist per row in the schema; the spec
-  doesn't yet say where they go in the new UI.
 
 ## Dependency map
 
 ```
-                ┌──────────┐
-                │ Slice 1  │  Display Fields + state machine
-                └────┬─────┘
-                     │
-                     ▼
-                ┌──────────┐
-                │ Slice 2  │  Response Fields (hardcoded 4 types)
-                └────┬─────┘
-                     │
-                     ▼
-                ┌──────────┐
-                │ Slice 4  │  Response Type Definitions card
-                └────┬─────┘    (swaps Type column to RTD dropdown)
-                     │
-                     ▼
-                ┌──────────┐
-                │ Slice 3  │  Preview Instrument #N
-                └────┬─────┘
-                     │
-                     ▼
-                ┌──────────┐
-                │ Slice 5  │  Multi-instrument enable (P0 #18)
-                └──────────┘
+        ┌──────────┐
+        │ Slice 1  │  Display Fields + state machine ✅
+        └────┬─────┘
+             │
+             ▼
+        ┌──────────┐
+        │ Slice 2  │  Response Fields (hardcoded 4 types) ✅
+        └────┬─────┘
+             │
+             ▼
+        ┌──────────┐
+        │ Slice 3  │  Response Fields Help (textarea + Show) ✅
+        └────┬─────┘    [retroactively numbered — shipped via #232]
+             │
+             ▼
+        ┌──────────┐
+        │ Slice 4  │  Response Type Definitions card
+        └────┬─────┘    (swaps Type column to RTD dropdown)
+             │
+             ▼
+        ┌──────────┐
+        │ Slice 5  │  Multi-instrument enable (P0 #18)
+        └──────────┘
 ```
 
-Slice 3 (preview) intentionally lands after Slice 4 even though
-it could ship earlier — the preview is more useful once both
-field tables can actually be configured against the RTD catalog.
-Slice 5 is small enough to ride at any point after Slice 1 but
-sits at the end so the multi-instrument promotion behaviour can
-be observed against a fully-wired single-instrument card first.
+Slice 4 (RTD) is the next focus after the field-builder slices;
+Response Fields' Type column switches from the four hardcoded
+types to a dropdown over the per-session RTD catalog, and the
+Save path writes the resolved validation block to
+`instrument_response_fields.validation`. Slice 5 (multi-
+instrument) is small enough to ride at any point after Slice 1
+but sits at the end so the multi-instrument promotion behaviour
+can be observed against a fully-wired single-instrument card
+first.
+
+The original Slice 3 ("Preview Instrument #N rendering" — a
+per-instrument inline preview table with mock-data padding)
+**dropped from the plan** when the spec rethought the preview
+surface (see `guide/instruments.md` Section D placeholder). The
+shared `/operator/sessions/{id}/preview` page already renders the
+reviewer surface for the whole session; how that integrates with
+the per-instrument card is open and explicitly out of scope for
+this segment. Section D of the spec stays as a placeholder until
+that integration is decided.
 
 ---
 
@@ -236,35 +246,29 @@ dropdown.
 
 ---
 
-## Slice 3 — Preview Instrument #N rendering
+## Slice 3 — Response Fields Help
 
-**Estimated effort:** ~2 hrs. Lands **after** Slice 4 (preview is
-more useful once both field tables are configurable against RTD).
+**Status:** ✅ shipped in
+[PR #232](https://github.com/philoyhc/review-robin-web/pull/232)
+(retroactively numbered — landed alongside the Slice 2 polish
+sequence).
 
-**Service:**
+The `Response Fields Help` card had been spec'd
+([#231](https://github.com/philoyhc/review-robin-web/pull/231))
+as a deferred placeholder and then wired up the same day:
+each row in the card hosts a 2-row textarea (`name="help_text"`)
++ a Show checkbox (`name="help_text_visible_ids"`), bound to the
+shared `dfsave-{iid}` bulk-save form. The bulk-save route reads
+parallel `help_text_id` / `help_text` arrays plus the visible-ids
+set, builds a per-id lookup, and passes `help_text` +
+`help_text_visible` into the response rows handed to
+`bulk_save_fields`. The service applies them with the existing
+dict-of-changes pattern; the audit event
+`instrument.response_fields_saved` carries the diff.
 
-- Reuse the preview-helper code from
-  `app/web/routes_reviewer.py::build_preview_context` and adapt
-  for in-page rendering: real reviewees up to three, padded with
-  mock rows.
-
-**Template:**
-
-- Server-rendered preview table (no JS preview re-render needed).
-  Re-renders on each Save (page reload via the state-machine
-  transition).
-- Display Fields columns by `Order` × `Include`; Response Fields
-  columns by `Order`; `*` suffix on required Response Fields
-  column headers.
-- `RevieweeName` / `RevieweeEmail` Display Fields rows are folded
-  into the Name / Email column (not duplicated).
-- Profile-link cells render as `<a target="_blank">View</a>`
-  (matching existing reviewer-surface convention).
-
-**Tests:**
-
-- Snapshot-style assertions on column order, presence of
-  asterisks, profile-link rendering, the three-row guarantee.
+Recording it as Slice 3 keeps the chronological history clear —
+useful when the next reader is tracing how each piece of the
+field-builder came together.
 
 ---
 
