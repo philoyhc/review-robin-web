@@ -15,6 +15,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    Reviewee,
     ReviewSession,
 )
 
@@ -543,6 +544,53 @@ def test_state_machine_editing_param_renders_save_cancel(
     assert ">Save</button>" in body
     # Section E Cancel is the only Cancel anchor on the page.
     assert ">Cancel</a>" in body
+
+
+def test_instruments_get_backfills_lazy_seeded_display_fields(
+    client: TestClient, db: Session
+) -> None:
+    """Sessions whose reviewees / assignments were imported before the
+    lazy-seeding logic landed end up missing the corresponding Display
+    Fields rows. Hitting GET /instruments idempotently backfills them
+    so the operator doesn't have to re-import to recover."""
+    review_session = _make_session(client, db, code="backfill-on-get")
+    instrument = _instrument(db, review_session.id)
+
+    # Insert a reviewee with tag_1 + profile_link directly (skipping
+    # the import path that would auto-seed).
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Carol",
+            email_or_identifier="carol@example.edu",
+            tag_1="Cohort A",
+            profile_link="https://example.edu/c",
+        )
+    )
+    db.commit()
+
+    # Pre-condition: only the locked Name + Email rows from
+    # ensure_default_instrument exist. No tag_1 / profile_link rows.
+    pre = db.execute(
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .order_by(InstrumentDisplayField.order)
+    ).scalars().all()
+    assert [(r.source_type, r.source_field) for r in pre] == [
+        ("reviewee", "name"),
+        ("reviewee", "email_or_identifier"),
+    ]
+
+    client.get(f"/operator/sessions/{review_session.id}/instruments")
+
+    post = db.execute(
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .order_by(InstrumentDisplayField.order)
+    ).scalars().all()
+    pairs = [(r.source_type, r.source_field) for r in post]
+    assert ("reviewee", "tag_1") in pairs
+    assert ("reviewee", "profile_link") in pairs
 
 
 def test_state_machine_default_renders_edit_only(
