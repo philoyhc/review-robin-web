@@ -413,6 +413,8 @@
         <table class="preview-table"></table>
       </div>
       <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;">
+        <button class="btn" type="button"
+                onclick="window.scrollTo({top: 0, behavior: 'smooth'});">Back</button>
         <button class="btn save-instrument-btn" type="button"
                 onclick="lockFields(this);">Save</button>
         <button class="btn alert-solid edit-instrument-btn" type="button"
@@ -424,6 +426,15 @@
           <button class="btn alert-solid" type="submit"
                   {% if not can_edit %}disabled{% endif %}>Add an instrument</button>
         </form>
+        {% if instruments | length > 1 %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"
+                style="margin: 0;"
+                onsubmit="return confirm('Delete Instrument #{{ loop.index }} and all its data? This cannot be undone.');">
+            <button class="btn danger-solid" type="submit"
+                    {% if not can_edit %}disabled{% endif %}>Delete</button>
+          </form>
+        {% endif %}
       </div>
     </div>
   {% endfor %}
