@@ -34,7 +34,7 @@ Top to bottom:
 
 A single full-width card. Same shape pattern as the other
 session-scoped operator pages (e.g. `session_assignments.html`):
-status text rows on the left, action rows right-aligned. Four
+status text rows on the left, action row right-aligned. Three
 rows, top to bottom:
 
 1. **Session deadline + instrument-count summary** (left-aligned).
@@ -45,29 +45,30 @@ rows, top to bottom:
 2. **Visibility-when-closed summary** (left-aligned). Format:
    `Visibility when closed: {N instrument(s) showing} · {N
    instrument(s) not showing}`. Pluralisation follows count.
-3. **Setup nav** (right-aligned). The 6 setup-nav buttons
-   (`Session`, `Reviewers`, `Reviewees`, `Assignments`,
-   `Instruments`, `Email Invites`) inside `.setup-nav`. The
-   `Instruments` button is rendered as Primary Outline; the rest
-   are Primary. See `spec/operator_map.md` "Setup nav" for the
-   canonical contract.
-4. **Bulk action buttons** (right-aligned). Two buttons:
+3. **Action row** (right-aligned). One flex row containing, in
+   left-to-right order:
    - `Show all when closed` / `Don't show any when closed` —
-     Alert. Toggles the bulk visibility-when-closed flag across
+     Primary. Toggles the bulk visibility-when-closed flag across
      every instrument. Which of the two is shown follows the
      current state: when at least one instrument is hidden, show
      `Show all when closed`; when every instrument is showing,
      show `Don't show any when closed`.
-   - `Preview reviewer surface` — Alert. Opens the operator's
+   - `Preview reviewer surface` — Primary. Opens the operator's
      preview of the reviewer surface for this session.
+   - The 6 setup-nav buttons (`Session`, `Reviewers`, `Reviewees`,
+     `Assignments`, `Instruments`, `Email Invites`) inside
+     `.setup-nav`. The `Instruments` button is rendered as Primary
+     Outline; the rest are Primary. See `spec/operator_map.md`
+     "Setup nav" for the canonical contract.
 
 The standalone "All Instrument Status" card from earlier drafts
 of the spec is **gone** — its status reporting moves into rows 1
 and 2 of this header card, and its bulk visibility / preview
-buttons move into row 4. The bulk `Open all instruments` /
-`Close all instruments` buttons are **dropped** in this revision;
-operators open and close instruments individually via the
-per-instrument card's status sub-card.
+buttons sit on the left of the action row. The bulk
+`Open all instruments` / `Close all instruments` buttons are
+**dropped** in this revision; operators open and close
+instruments individually via the per-instrument card's status
+sub-card.
 
 ## Per-instrument card
 
