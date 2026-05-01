@@ -71,7 +71,7 @@ def test_upgrade_replaces_pair_context_rows_and_seeds_three_per_instrument() -> 
             )
             connection.commit()
 
-            command.upgrade(cfg, "head")
+            command.upgrade(cfg, "c2143bd329c7")
             connection.commit()
 
             rows = connection.execute(

@@ -210,6 +210,35 @@ stored in `Assignment.context` JSON:
 
 CSV columns are `PairContext1/2/3` and `AssignmentContext1/2/3`.
 
+#### Lazy display-field seeding (2026-05-01, item #14)
+
+`InstrumentDisplayField` rows are seeded **lazily** from import data,
+never unconditionally on session creation. This avoids the
+data-loss-by-illusion shape where reviewers saw three blank
+`Pair Context` columns on full-matrix sessions because the legacy
+default seed assumed manual mode would always populate them.
+
+- `ensure_default_instrument` and `create_instrument` create no
+  display-field rows.
+- After a successful reviewees CSV import, `save_reviewees` calls
+  `seed_display_fields_from_reviewees`, which adds a row for any
+  reviewee column (`profile_link`, `tag_1/2/3`) with at least one
+  populated value across the imported set. Idempotent — re-importing
+  reviewees does not duplicate rows.
+- After a successful manual-assignment CSV import,
+  `replace_assignments` calls `seed_display_fields_from_assignments`,
+  which adds a `pair_context_N` row for any slot with at least one
+  populated value. Full-matrix mode (no contexts) is a no-op.
+- Reviewee Name and Email are not display fields; they're rendered
+  by the hardcoded reviewee-identity column in `review_surface.html`.
+  The Display Fields card on the Instruments page surfaces only the
+  configurable extras.
+
+The `dfedd22a38da` migration cleans up legacy unconditional seeds —
+for every existing instrument, drops `pair_context_N` rows whose
+slot is unpopulated across the session's assignments. Rows whose
+slot has data (including operator-typed labels) are preserved.
+
 ## Implementation principles
 
 - Keep routes thin.

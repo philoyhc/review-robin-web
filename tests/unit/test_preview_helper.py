@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    Instrument,
+    InstrumentDisplayField,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -30,6 +32,25 @@ def _session(db: Session, user: User, *, code: str) -> ReviewSession:
     db.add(s)
     db.flush()
     return s
+
+
+def _seed_pair_context_display_fields(db: Session, instrument: Instrument) -> None:
+    """Pair-context display fields used to be seeded unconditionally by
+    ensure_default_instrument; after the 2026-05-01 lazy-seed change
+    (item #14), tests in this module that exercise pair_context preview
+    rendering must seed them explicitly."""
+    for slot, order in (("1", 0), ("2", 1), ("3", 2)):
+        db.add(
+            InstrumentDisplayField(
+                instrument_id=instrument.id,
+                label="",
+                source_type="pair_context",
+                source_field=slot,
+                order=order,
+                visible=True,
+            )
+        )
+    db.flush()
 
 
 def _add_real_assignment(
@@ -68,6 +89,7 @@ def test_make_synthetic_row_shape(db: Session) -> None:
     user = _user(db)
     session = _session(db, user, code="syn-row")
     instrument = ensure_default_instrument(db, session)
+    _seed_pair_context_display_fields(db, instrument)
     response_fields = list(instrument.response_fields)
     display_fields = sorted(
         instrument.display_fields, key=lambda f: f.order
@@ -116,7 +138,8 @@ def test_build_preview_context_zero_assignments_pads_three_synthetic(
 ) -> None:
     user = _user(db)
     session = _session(db, user, code="prev-zero")
-    ensure_default_instrument(db, session)
+    instrument = ensure_default_instrument(db, session)
+    _seed_pair_context_display_fields(db, instrument)
 
     context = build_preview_context(db=db, user=user, review_session=session)
 
@@ -135,7 +158,8 @@ def test_build_preview_context_zero_assignments_pads_three_synthetic(
 def test_build_preview_context_one_real_pads_to_three(db: Session) -> None:
     user = _user(db)
     session = _session(db, user, code="prev-one")
-    ensure_default_instrument(db, session)
+    instrument = ensure_default_instrument(db, session)
+    _seed_pair_context_display_fields(db, instrument)
     real = _add_real_assignment(db, session, reviewee_email="carol@example.edu")
 
     context = build_preview_context(db=db, user=user, review_session=session)
@@ -159,7 +183,8 @@ def test_build_preview_context_three_or_more_real_uses_only_real(
 ) -> None:
     user = _user(db)
     session = _session(db, user, code="prev-many")
-    ensure_default_instrument(db, session)
+    instrument = ensure_default_instrument(db, session)
+    _seed_pair_context_display_fields(db, instrument)
     a1 = _add_real_assignment(db, session, reviewee_email="c1@example.edu")
     a2 = _add_real_assignment(db, session, reviewee_email="c2@example.edu")
     a3 = _add_real_assignment(db, session, reviewee_email="c3@example.edu")
@@ -183,6 +208,7 @@ def test_build_preview_context_forces_accepting_false_on_every_row(
     user = _user(db)
     session = _session(db, user, code="prev-accept")
     instrument = ensure_default_instrument(db, session)
+    _seed_pair_context_display_fields(db, instrument)
     instrument.accepting_responses = True  # would normally show inputs enabled
     db.flush()
     _add_real_assignment(db, session, reviewee_email="c@example.edu")
@@ -198,6 +224,8 @@ def test_build_preview_context_excludes_invisible_display_fields(
     user = _user(db)
     session = _session(db, user, code="prev-vis")
     instrument = ensure_default_instrument(db, session)
+    _seed_pair_context_display_fields(db, instrument)
+    db.refresh(instrument)
     pair_two = next(
         f for f in instrument.display_fields if f.source_field == "2"
     )
