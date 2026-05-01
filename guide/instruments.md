@@ -133,12 +133,37 @@ classes from `spec/assumptions.md`:
 at a time. When the two tables are open for editing, `Save` is
 shown; when the two tables are locked, `Edit` is shown.
 
+## Add / Delete semantics
+
+The Add / Delete semantics in this section apply to **instrument
+cards** only. The Response Type Definitions card itself is
+permanent — it cannot be added or removed.
+
+**Add new instrument** appends a new instrument card below the
+current one. The underlying database row is created immediately
+(no draft / unsaved state). The new card seeds with the default
+Reviewee Fields and Response Fields rows defined above.
+
+**Delete this instrument** removes the instrument and all its
+dependent rows (display fields, response fields, assignments,
+responses) via cascade. The on-screen confirmation must mention
+the cascade so the operator isn't surprised.
+
+After a deletion, the surviving instruments are **promoted** —
+their `Instrument #N` numbering reflects their post-deletion
+position. Example: if `Instrument #2` is deleted and `Instrument
+#3` exists, `Instrument #3` becomes `Instrument #2` (both in the
+database `Instrument.order` and in the on-screen `#N` header).
+This matches the existing service-layer repack in
+`delete_instrument` (`app/services/instruments.py`).
+
 ## Response Type Definitions card
 
 Full-width card. Title: `Response Type Definitions`. Catalog of
 response types referenced by every instrument's Response Fields
 table; the Response Fields `Type` column is a dropdown over this
-card's `Response Type` column.
+card's `Response Type` column. The card itself cannot be deleted
+— it's a permanent fixture of the page.
 
 Columns:
 
@@ -167,26 +192,6 @@ Operator-added rows are deletable. Editing a Response Type that's
 in use by an instrument's Response Fields row propagates the new
 validation to that row on save (the engine writes the resulting
 constraints to `instrument_response_fields.validation`).
-
-## Add / Delete semantics
-
-**Add new instrument** appends a new instrument card below the
-current one. The underlying database row is created immediately
-(no draft / unsaved state). The new card seeds with the default
-Reviewee Fields and Response Fields rows defined above.
-
-**Delete this instrument** removes the instrument and all its
-dependent rows (display fields, response fields, assignments,
-responses) via cascade. The on-screen confirmation must mention
-the cascade so the operator isn't surprised.
-
-After a deletion, the surviving instruments are **promoted** —
-their `Instrument #N` numbering reflects their post-deletion
-position. Example: if `Instrument #2` is deleted and `Instrument
-#3` exists, `Instrument #3` becomes `Instrument #2` (both in the
-database `Instrument.order` and in the on-screen `#N` header).
-This matches the existing service-layer repack in
-`delete_instrument` (`app/services/instruments.py`).
 
 ## Open / deferred
 
