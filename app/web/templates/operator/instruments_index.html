@@ -268,10 +268,10 @@
               <tbody>
                 {% for code, label, mandatory in display_source_rows %}
                   {% set has_data = display_source_presence.get(code, False) %}
-                  <tr>
-                    <td><code>{{ code }}</code></td>
-                    <td>
-                      {% if has_data %}
+                  {% if has_data %}
+                    <tr>
+                      <td><code>{{ code }}</code></td>
+                      <td>
                         <details class="display-edit">
                           <summary style="list-style: none; cursor: pointer;">
                             <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
@@ -289,22 +289,18 @@
                                style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 4px;">&#10007;</a>
                           </form>
                         </details>
-                      {% else %}
-                        <span class="muted">(Not used)</span>
-                      {% endif %}
-                    </td>
-                    <td>
-                      {% if mandatory %}
-                        <span class="muted">always</span>
-                      {% elif has_data %}
-                        <input type="checkbox" checked>
-                      {% else %}
-                        <span class="muted">—</span>
-                      {% endif %}
-                    </td>
-                    <td>{{ loop.index0 }}</td>
-                    <td><span class="muted">—</span></td>
-                  </tr>
+                      </td>
+                      <td>
+                        {% if mandatory %}
+                          <span class="muted">always</span>
+                        {% else %}
+                          <input type="checkbox" checked>
+                        {% endif %}
+                      </td>
+                      <td>{{ loop.index0 }}</td>
+                      <td><span class="muted">—</span></td>
+                    </tr>
+                  {% endif %}
                 {% endfor %}
               </tbody>
             </table>
@@ -329,10 +325,10 @@
                   <th>Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="rf-tbody">
                 {% for key, rlabel, rtype, required, order in response_field_rows %}
                   <tr>
-                    <td><code>{{ key }}</code></td>
+                    <td><code class="rf-key">{{ key }}</code></td>
                     <td>
                       <details class="display-edit">
                         <summary style="list-style: none; cursor: pointer;">
@@ -361,13 +357,62 @@
                       </select>
                     </td>
                     <td><input type="checkbox" {% if required %}checked{% endif %}></td>
-                    <td>{{ order }}</td>
-                    <td><span class="muted">—</span></td>
+                    <td class="rf-order">{{ order }}</td>
+                    <td>
+                      <a href="#" title="Delete row"
+                         onclick="event.preventDefault(); deleteResponseRow(this);"
+                         style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 6px;">&#10007;</a>
+                      <a href="#" title="Add row after"
+                         onclick="event.preventDefault(); addResponseRow(this);"
+                         style="color: #2563eb; text-decoration: none; font-size: 1.2em; padding: 0 6px;">&#10133;</a>
+                    </td>
                   </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
+          <template class="rf-row-template">
+            <tr>
+              <td><code class="rf-key">rating</code></td>
+              <td>
+                <details class="display-edit">
+                  <summary style="list-style: none; cursor: pointer;">
+                    <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                      <span class="display-text">Rating</span>
+                      <span title="Edit" style="color: #6b7280;">&#9998;</span>
+                    </span>
+                  </summary>
+                  <form onsubmit="event.preventDefault(); var d=this.closest('details'); d.querySelector('.display-text').textContent=this.label.value; d.removeAttribute('open');"
+                        style="display: flex; gap: 8px; align-items: center; margin: 0;">
+                    <input type="text" name="label" value="Rating" style="flex: 1;">
+                    <button type="submit" title="Save"
+                            style="background: none; border: none; color: #16a34a; font-size: 1.2em; cursor: pointer; padding: 0 4px;">&#10003;</button>
+                    <a href="#" title="Cancel"
+                       onclick="event.preventDefault(); this.closest('details').removeAttribute('open');"
+                       style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 4px;">&#10007;</a>
+                  </form>
+                </details>
+              </td>
+              <td>
+                <select>
+                  <option selected>Integer</option>
+                  <option>Half</option>
+                  <option>Decimal</option>
+                  <option>Text</option>
+                </select>
+              </td>
+              <td><input type="checkbox" checked></td>
+              <td class="rf-order"></td>
+              <td>
+                <a href="#" title="Delete row"
+                   onclick="event.preventDefault(); deleteResponseRow(this);"
+                   style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 6px;">&#10007;</a>
+                <a href="#" title="Add row after"
+                   onclick="event.preventDefault(); addResponseRow(this);"
+                   style="color: #2563eb; text-decoration: none; font-size: 1.2em; padding: 0 6px;">&#10133;</a>
+              </td>
+            </tr>
+          </template>
         </div>
       </div>
 
@@ -717,4 +762,29 @@
       </p>
     </div>
   {% endfor %}
+
+  <script>
+    function deleteResponseRow(btn) {
+      var row = btn.closest('tr');
+      if (row) row.remove();
+    }
+    function addResponseRow(btn) {
+      var row = btn.closest('tr');
+      var tbody = btn.closest('tbody');
+      var card = btn.closest('.card');
+      var template = card ? card.querySelector('.rf-row-template') : null;
+      if (!template) return;
+      var clone = template.content.firstElementChild.cloneNode(true);
+      var nextNum = tbody.querySelectorAll('tr').length + 1;
+      var keyEl = clone.querySelector('.rf-key');
+      if (keyEl) keyEl.textContent = 'rating' + nextNum;
+      var labelEl = clone.querySelector('.display-text');
+      if (labelEl) labelEl.textContent = 'Rating' + nextNum;
+      var labelInput = clone.querySelector('input[name="label"]');
+      if (labelInput) labelInput.value = 'Rating' + nextNum;
+      var orderEl = clone.querySelector('.rf-order');
+      if (orderEl) orderEl.textContent = nextNum;
+      row.after(clone);
+    }
+  </script>
 {% endblock %}
