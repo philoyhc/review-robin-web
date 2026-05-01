@@ -918,6 +918,18 @@ def _bulk_accepting_state(instruments: list[Instrument]) -> str:
     return "mixed"
 
 
+def _bulk_visibility_state(instruments: list[Instrument]) -> str:
+    """Three-state value for the bulk Visibility toggle: all-on, all-off, or mixed."""
+    if not instruments:
+        return "all-off"
+    on = [i for i in instruments if i.responses_visible_when_closed]
+    if len(on) == 0:
+        return "all-off"
+    if len(on) == len(instruments):
+        return "all-on"
+    return "mixed"
+
+
 @router.get(
     "/sessions/{session_id}/instruments",
     response_class=HTMLResponse,
@@ -1004,6 +1016,7 @@ def instruments_index(
             "is_ready": lifecycle.is_ready(review_session),
             "can_edit": _can_edit_instrument(review_session),
             "bulk_accepting_state": _bulk_accepting_state(instruments),
+            "bulk_visibility_state": _bulk_visibility_state(instruments),
             "required_warning": required_warning,
             "required_warning_field_id": field_id,
             "delete_blocked_field_id": delete_blocked_field_id,
@@ -1501,6 +1514,30 @@ def instruments_bulk_accept_off(
             detail="Bulk accepting toggle requires session to be ready",
         )
     instruments_service.bulk_set_accepting(
+        db, review_session=review_session, target=False, actor=user
+    )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post("/sessions/{session_id}/instruments/visibility/all-on")
+def instruments_bulk_visibility_on(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instruments_service.bulk_set_visibility(
+        db, review_session=review_session, target=True, actor=user
+    )
+    return _instruments_redirect(review_session.id)
+
+
+@router.post("/sessions/{session_id}/instruments/visibility/all-off")
+def instruments_bulk_visibility_off(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instruments_service.bulk_set_visibility(
         db, review_session=review_session, target=False, actor=user
     )
     return _instruments_redirect(review_session.id)

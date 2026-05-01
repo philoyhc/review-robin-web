@@ -877,3 +877,43 @@ def bulk_set_accepting(
         )
         db.commit()
     return changed
+
+
+def bulk_set_visibility(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    target: bool,
+    actor: User,
+) -> list[int]:
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    changed: list[int] = []
+    for instrument in instruments:
+        if instrument.responses_visible_when_closed != target:
+            instrument.responses_visible_when_closed = target
+            changed.append(instrument.id)
+    if changed:
+        db.flush()
+        write_event(
+            db,
+            event_type="instruments.bulk_visibility_when_closed",
+            summary=(
+                f"Set responses_visible_when_closed={target} on "
+                f"{len(changed)} instrument(s)"
+            ),
+            actor_user_id=actor.id if actor else None,
+            session_id=review_session.id,
+            detail={
+                "session_id": review_session.id,
+                "target": target,
+                "changed_instrument_ids": changed,
+            },
+        )
+        db.commit()
+    return changed
