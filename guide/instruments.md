@@ -82,15 +82,16 @@ Title: `Response Fields`. Columns:
 | **Key** | The system name for the row. Read-only `<code>`. |
 | **Friendly Label** | Operator-editable text. Save persists. |
 | **Type** | One of the four response types. Read-only post-create. |
+| **Required** | Checkbox. When checked, the field is mandatory for reviewers and the column header in the Preview table is appended with an asterisk (e.g. `Rating*`). |
 | **Order** | Integer (1-based, contiguous). |
 | **Action** | A delete cross icon (✗) and an add-row plus icon (➕). Both fire immediately — no on-screen warning or confirmation. The delete removes this row; the add inserts a new default row immediately below. |
 
 Default seed (two rows, applied to a freshly-created instrument):
 
-| Key | Friendly Label | Type | Order |
-|---|---|---|---|
-| `rating1` | `Rating` | `1-to-5` | 1 |
-| `comments1` | `Comments` | `Long_Text` | 2 |
+| Key | Friendly Label | Type | Required | Order |
+|---|---|---|---|---|
+| `rating1` | `Rating` | `1-to-5` | ✓ | 1 |
+| `comments1` | `Comments` | `Long_Text` |  | 2 |
 
 ### C. Horizontal rule
 
@@ -109,6 +110,9 @@ Renders a table with one synthetic row per sample reviewee. Columns:
    into the Name / Email column above and not duplicated here.)
 3. **One column per Response Fields row**, ordered by the row's
    `Order` value, header rendered as the row's `Friendly Label`.
+   When the row's `Required` checkbox is checked, the column
+   header is appended with an asterisk (e.g. `Rating*`) to signal
+   to the operator that the field will be mandatory for reviewers.
 
 ### E. Action buttons (right-aligned)
 
