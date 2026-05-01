@@ -249,10 +249,10 @@ vs `parse_reviewee_csv` (~189).
 ### 9. Refresh rotted docstring on `get_or_create_default_instrument`
 · [doc] · tiny
 
-**Why now.** `app/services/assignments.py:296` calls itself a
+**Why now.** `app/services/assignments.py:402` calls itself a
 "backwards-compatible wrapper", but it's the live path called from
-`replace_assignments` (line 411). The rotted comment will mislead
-the next person reading the assignments service.
+`replace_assignments`. The rotted comment will mislead the next
+person reading the assignments service.
 
 **Plan.**
 - Replace the docstring with what the function actually does today.
@@ -286,16 +286,22 @@ audit row to carry the request's correlation id. Cheap to add now.
 ### 11. Extract instruments-index template context to `views.py`
 · [refactor] · small
 
-**Why now.** `app/web/routes_operator.py:937–1031` (~94 lines)
+**Why now.** `app/web/routes_operator.py:956–1056` (~100 lines)
 builds display-field + response-field row context for the
 instruments index inline. It's the only operator handler that does
 meaningful template-context shaping in the route. The same shaping
 will be reused by the preview route; pulling it into `views.py`
 sets up the reuse.
 
-**Where.** `app/web/routes_operator.py:937–1031`. Move into
-`app/web/views.py` next to the existing `build_setup_rows` helper
-(verify the helper name on read).
+**Order dependency:** land **after** items 13 and 14 (Display
+Fields placeholder fix + default-seed rework) — those will reshape
+exactly the context this handler builds today (the new
+`merged_rows_by_instrument` and `available_sources_by_instrument`
+keys may go away or change shape). Doing 11 first means the
+extracted helper gets ripped up.
+
+**Where.** `app/web/routes_operator.py:956–1056`. Move into
+`app/web/views.py` next to the existing `build_setup_rows` helper.
 
 **Plan.**
 - Define `build_instruments_context(db, review_session) -> dict[...]`
@@ -352,6 +358,217 @@ email + same name, cross-table same email + different name).
 
 ---
 
+## P0 — Instruments UI ↔ data drift (added 2026-05-01)
+
+A round-3 audit found that the operator's per-instrument
+**Display Fields** card and the underlying schema have drifted
+apart in 5+ ways. Items 13–14 are the user-facing fixes; item 18
+is the related multi-instrument-button decision. See `docs/status.md`
+audit-table + `spec/operator_map.md` "Instruments" for the
+contracts these items are correcting.
+
+### 13. Fix the Display Fields placeholder (no-persistence + bad sources) · [bug] · small
+
+**Why now.** Two confirmed mismatches between
+`app/web/templates/operator/instruments_index.html:227–286` (the
+Display Fields placeholder card) and the schema:
+
+- **Mismatch 1**: the operator UI lists rows for `RevieweeName`,
+  `RevieweeEmail`, `PhotoLink`, `RevieweeTag1/2/3`, but
+  `_VALID_DISPLAY_SOURCES` (`app/services/instruments.py:61–63`)
+  only allows `(reviewee, tag_1/2/3 | profile_link)` and
+  `(pair_context, 1/2/3)` — there is no `(reviewee, name)` /
+  `(reviewee, email)` source. Even if the form POSTed, the
+  server would `raise DisplaySourceError`.
+- **Mismatch 6**: `lockFields(btn)` (line 544) is JS-only — no
+  `fetch()`, no form submit. Friendly-Label edits, the Visible
+  checkbox, and the Order column on the Display Fields placeholder
+  **persist nothing**. The operator types a label, ticks Save,
+  navigates away and back — it's gone. (The Response Fields side
+  *does* persist via per-row hidden forms; this is Display Fields
+  only.)
+
+User-visible symptom: data-loss-by-illusion. **Risk: high.**
+
+**Plan.** Pick one of:
+
+1. **Label honestly as preview-only** (~30 min). Replace the
+   `<details class="display-edit">` interaction with a static
+   row, add a "Preview only — display-field persistence ships in
+   [next slice]" banner above the card, and remove the Visible
+   checkbox from the placeholder rows. The hardcoded 6-row list
+   stays as a teaser of what the configurable surface will look
+   like. Use this if Display Fields wiring is going to slip
+   beyond Segment 11.
+2. **Wire to existing routes** (~half day, the right long-term
+   move). Extend `_VALID_DISPLAY_SOURCES` and
+   `_DEFAULT_DISPLAY_LABELS` (`app/services/instruments.py:47–63`)
+   with `(reviewee, name)` and `(reviewee, email_or_identifier)`;
+   extend `display_field_value` to resolve them; either delete
+   the hardcoded `Reviewee` column from
+   `review_surface.html:108–111` or keep it and document that the
+   display-field rows for those sources are no-ops on the
+   reviewer side. POST every row through the existing
+   `/display-fields/{df_id}/edit` and
+   `/display-fields/{df_id}/delete` endpoints (already in
+   `routes_operator.py`). Adds a `_CSV_COL_TO_SOURCE` mapping
+   (e.g. `RevieweeTag1 → ("reviewee", "tag_1")`) — the operator
+   UI vocabulary uses CSV column names, the schema uses tuples.
+
+Recommend **option 1 first**, with option 2 scheduled into
+Segment 11 or its own 10x slice.
+
+---
+
+### 14. Drop the `pair_context_*` default seed; seed display fields from import data · [bug] · medium
+
+**Why now.** This is the headline data fix.
+`ensure_default_instrument` (`app/services/instruments.py:185–197`)
+seeds three `InstrumentDisplayField` rows for `pair_context.1/2/3`
+on every new session, with `visible=True`. But:
+
+- **Mismatch 5**: `pair_context_*` lives on `Assignment.context`,
+  populated *only* by manual assignments CSV. For sessions that
+  use full-matrix assignments (the common case), no pair context
+  exists — so the reviewer surface renders three blank
+  `Pair Context` columns and zero tag columns, even when the
+  reviewees CSV has tag data.
+- **Mismatch 4**: `parse_reviewee_csv`
+  (`app/services/csv_imports.py:271–273`) imports `tag_1/2/3`
+  into reviewee rows, but `ensure_default_instrument` does not
+  create display fields for them. Tag data lands in the DB and
+  is invisible to reviewers unless the operator hand-uses the
+  legacy `POST /display-fields` route, which the new template
+  doesn't expose.
+- **Mismatch 2**: even when pair_context data *is* present, the
+  operator can't deselect the seeded columns from the UI (item 13
+  blocks that path), so the seed becomes sticky regardless of
+  whether it's helpful.
+
+User-visible symptom: reviewer sees `[blank][blank][blank]`
+instead of `[Group A][Senior][Track 1]`. The "Display Fields"
+feature is silently broken for the most common session shape.
+**Risk: high.**
+
+**Where.**
+- `app/services/instruments.py::ensure_default_instrument`
+  (`_DEFAULT_DISPLAY_FIELDS` constant + the seed loop).
+- `app/services/csv_imports.py` — reviewee-import path.
+- `app/services/assignments.py` — manual-assignment-import path.
+
+**Plan.**
+1. Drop `_DEFAULT_DISPLAY_FIELDS`. `ensure_default_instrument`
+   creates no display rows at instrument creation time.
+2. After a successful reviewee CSV import, idempotently create
+   `InstrumentDisplayField` rows for any `tag_N` /
+   `profile_link` slot with at least one populated value
+   (across the imported reviewees). Use the existing
+   `display_source_presence` helper as the source of truth for
+   "populated."
+3. After a successful manual-assignment CSV import, idempotently
+   create `InstrumentDisplayField` rows for any `pair_context_N`
+   slot with at least one populated value.
+4. Migration: a one-shot patch that, for every existing
+   instrument, drops `pair_context_*` rows where the slot is
+   unpopulated across that session's assignments. (Deliberately
+   destructive within that filter; pair_context labels typed by
+   the operator are preserved when slot has data.)
+5. Update `spec/architecture.md` "Pair-level vs assignment-level
+   context" to reflect the lazy seeding.
+6. New tests:
+   - Full-matrix session with tag-rich reviewees: reviewer
+     surface shows tag columns, no pair-context columns.
+   - Manual-assignment session with pair-context CSV: reviewer
+     surface shows pair-context columns.
+   - Re-import of reviewees doesn't double-seed display fields.
+   - Migration round-trip on a session with stale pair_context
+     seeds drops them.
+
+**Order:** lands after item 13 (so the operator surface stops
+showing the wrong sources before the seed semantics change
+underneath it).
+
+---
+
+## P0/P1 — Other findings from the round-3 audit
+
+### 15. Backfill integration tests for shipped 10C functionality · [test] · small
+
+**Why now.** Four 10C-shipped surfaces have no integration test
+coverage:
+- `delete_instrument` (route + service + cascade).
+- `bulk_set_visibility` (`/instruments/visibility/all-on` and
+  `/all-off`) and the `instruments.bulk_visibility_when_closed`
+  audit event.
+- `add_default_response_field` (`/fields/add-row`).
+- "Cannot delete the last instrument" 400 guard.
+
+The upcoming arch refactors (items 3, 11) will touch this code;
+without tests, regressions ship silently.
+
+**Plan.** One PR per surface, mirroring existing
+`tests/integration/test_*` patterns. Cap each test at the
+happy path + one boundary (e.g. for delete: "delete the last
+instrument 400s"; for bulk: "no-op when already at target").
+
+---
+
+### 16. Decide bulk_visibility_when_closed invalidation policy · [arch] · tiny
+
+**Why now.** `instruments_bulk_visibility_on/off`
+(`routes_operator.py:1621–1642`) is the only bulk instrument
+mutation that does **not** call `_invalidate_if_validated`
+— compare to `bulk_set_accepting`. Visibility-when-closed isn't
+structural so this may be intentional, but it's inconsistent and
+undocumented. Naturally bundles with item 3 (move
+`_invalidate_if_validated` to the service layer).
+
+**Plan.** Either add the invalidation call (matching
+`bulk_set_accepting`) or add a one-line comment + status.md note
+explaining why it's deliberately exempt. Decide and document.
+
+---
+
+### 17. Investigate `Assignment.include` filter divergence · [arch] · small
+
+**Why now.** `monitoring._reviewer_completion`
+(`app/services/monitoring.py:76`) filters assignments with
+`Assignment.include.is_(True)`. `responses.session_pill_for_reviewer`
+(`app/services/responses.py:439`) does **not** filter on `include`.
+This is the exact drift item 4 (extract a single
+reviewer-session-state helper) is meant to catch — but verify
+which filter is correct *before* consolidating, or item 4 will
+ship the wrong unified rule.
+
+**Plan.** Trace one reviewer through both paths in a test session
+with `include=False` rows; document the intended semantics; pick
+one and align both. Then proceed with item 4.
+
+---
+
+### 18. Decide fate of disabled "Add an instrument" button vs live route · [decision] · tiny
+
+**Why now.** `instruments_index.html:418–419` ships a
+`disabled` Add-an-instrument button with tooltip
+"Multi-instrument support is still in progress"; meanwhile
+`routes_operator.py:1530` defines a working `POST /instruments/add`
+endpoint and `delete_instrument` is wired and tested-via-cascade.
+Item 11 (extract template context) will trip over this
+inconsistency.
+
+**Plan.** Pick one:
+- **Enable the button** with a confirm step. The schema and
+  services are ready; the only missing piece was a UI design
+  decision and that's now mostly defined by the per-instrument
+  card layout.
+- **Delete the route** (and `instruments_add` handler) until
+  Segment 13 actually wants it. Reduces dead surface area; route
+  comes back when the multi-instrument UI lands.
+
+Decide before item 11.
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
@@ -360,8 +577,3 @@ email + same name, cross-table same email + different name).
   handlers is fine. Item 11 is the one carve-out worth doing now.
 - `bulk_save_fields` (`app/services/instruments.py:407–554`) — long
   but stable; revisit if Segment 12/13 force changes to it.
-- Display Fields persistence on the per-instrument card placeholder
-  — owned by the next round of UI work (a future 10x slice or
-  folded into Segment 11), not by this stabilization list. See
-  `spec/operator_map.md` "Deferred" and `docs/status.md`
-  "What's deliberately not yet there".
