@@ -6,41 +6,45 @@
   <h1>Assignments</h1>
 
   <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-      <div>
-        <p style="margin: 0;">
-          Reviewers: <strong>{{ reviewer_count }}</strong>
-          &middot;
-          Reviewees: <strong>{{ reviewee_count }}</strong>
-        </p>
-        {% if assignment_count %}
-          <p style="margin: 6px 0 0 0;">
-            <strong>{{ "{:,}".format(assignment_count) }}</strong>
-            assignment{% if assignment_count != 1 %}s{% endif %}
-            {% if truncated_count %}
-              ({{ "{:,}".format(pair_sample | length) }} shown)
-            {% endif %}
-            {% if session.assignment_mode %}
-              using
-              <span class="pill pill-info">{{ session.assignment_mode }}</span>
-            {% endif %}
-          </p>
-          <p style="margin: 6px 0 0 0;">
-            {% if self_review_found == 0 %}
-              Self-review: <strong>0</strong> found
-            {% elif self_review_included == 0 %}
-              Self-review: <strong>{{ self_review_excluded }}</strong> excluded
-            {% elif self_review_excluded == 0 %}
-              Self-review: <strong>{{ self_review_included }}</strong> included
-            {% else %}
-              Self-review:
-              <strong>{{ self_review_included }}</strong> included,
-              <strong>{{ self_review_excluded }}</strong> excluded
-            {% endif %}
-          </p>
+    <p style="margin: 0;">
+      Number of reviewers:
+      <span class="pill pill-info">{{ reviewer_count }}</span>
+      &middot;
+      reviewees:
+      <span class="pill pill-info">{{ reviewee_count }}</span>
+      {% if assignment_count %}
+        &middot;
+        <span class="pill pill-info">{{ "{:,}".format(assignment_count) }}</span>
+        assignment{% if assignment_count != 1 %}s{% endif %}
+        {% if session.assignment_mode %}
+          using
+          <span class="pill pill-info">{{ session.assignment_mode }}</span>
         {% endif %}
-      </div>
+        &middot;
+        Self-review:
+        {% if self_review_found == 0 %}
+          <span class="pill pill-info">0 found</span>
+        {% elif self_review_included == 0 %}
+          <span class="pill pill-info">{{ self_review_excluded }} excluded</span>
+        {% elif self_review_excluded == 0 %}
+          <span class="pill pill-info">{{ self_review_included }} included</span>
+        {% else %}
+          <span class="pill pill-info">{{ self_review_included }} included</span>
+          <span class="pill pill-info">{{ self_review_excluded }} excluded</span>
+        {% endif %}
+      {% endif %}
+    </p>
+    <p style="margin: 4px 0 0 0;">
+      Fields with data:
+      {% for label in fields_with_data %}
+        <span class="pill pill-info">{{ label }}</span>
+      {% else %}
+        <span class="muted">—</span>
+      {% endfor %}
+    </p>
+    <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
       <div class="setup-nav">
+        <a class="btn" href="/operator/sessions/{{ session.id }}">Session</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
         <a class="btn secondary" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
