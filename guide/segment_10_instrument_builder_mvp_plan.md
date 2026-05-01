@@ -534,5 +534,5 @@ reviewer surface.
 
 > **Note (2026-05-01).** What was once §15 of this plan
 > (Reviewer/Reviewee CSV cross-table identity check) moved into
-> `guide/segment_10D.md` item 12 as part of the stabilization
-> sweep — that's where it'll actually ship.
+> `guide/unfinished_business.md` item 12 as part of the
+> stabilization sweep — that's where it'll actually ship.

@@ -311,7 +311,7 @@ alert variants override.
   dash. Probably ties into the existing `bulk_save_fields`
   endpoint or a new lightweight per-row order setter.
 - **Cross-table CSV identity check** — tracked in
-  `guide/segment_10D.md` item 12 (moved there from
+  `guide/unfinished_business.md` item 12 (moved there from
   `segment_10_instrument_builder_mvp_plan.md` §15 as part of the
   stabilization sweep).
 - **Multi-instrument operator UI** — Add an instrument button is
@@ -333,5 +333,5 @@ alert variants override.
   migration rule.
 - `guide/segment_10_instrument_builder_mvp_plan.md` §14 — the
   umbrella that 10A / 10B / now 10C sit under.
-- `guide/segment_10D.md` — stabilization todo (CSV identity check
-  carried over there as item 12).
+- `guide/unfinished_business.md` — stabilization todo (CSV
+  identity check carried over there as item 12).

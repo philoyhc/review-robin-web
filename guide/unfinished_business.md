@@ -1,25 +1,28 @@
-# Segment 10D — Stabilization (Operator Model + Engine)
+# Unfinished business
 
-**Role.** Rolling todo of cross-cutting cleanups carried over from
-Segments 1–10C. Lands the unfinished items needed to stabilize the
-operator model and engine before Segment 11 (export / audit
-retention) builds new surface on top.
+**Role.** Rolling todo of cross-cutting cleanups carried over
+from earlier segments — the unfinished items needed to stabilize
+the operator model and engine before new feature segments build
+fresh surface on top. Items are not gated to a single segment;
+when one ships, tick it and move on. New cleanups identified
+during later segments land here too.
 
 This file replaces the former `guide/adhoc_todo.md` (originally
-captured during the mid-Segment-10B health review on 2026-04-30).
-Items are ordered by priority given the project's actual workflow:
-**no local Python or database; the agent's sandbox is the pre-PR
-gate; end-to-end verification happens on the Azure dev slot after
-deploy.** That workflow makes CI gaps and hard-to-test invariants
-more expensive than they would be on a project with a human dev
-loop.
+captured during the mid-Segment-10B health review on 2026-04-30)
+and the short-lived `guide/segment_10D.md` framing. Items are
+ordered by priority given the project's actual workflow: **no
+local Python or database; the agent's sandbox is the pre-PR
+gate; end-to-end verification happens on the Azure dev slot
+after deploy.** That workflow makes CI gaps and hard-to-test
+invariants more expensive than they would be on a project with a
+human dev loop.
 
 When picking up an item: read its "Why" and "Plan" sections,
 confirm the file pointers still match `main`, and land it on its
 own branch. Don't bundle multiple items into one PR — the cut
-points below are the natural slice sizes. Tick items as they ship
-and update `docs/status.md`'s segments-shipped table when the
-segment overall lands.
+points below are the natural slice sizes. Tick items as they
+ship; update `docs/status.md`'s segments-shipped table when the
+shipping segment lands.
 
 ---
 
@@ -352,12 +355,13 @@ email + same name, cross-table same email + different name).
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
-  — those are owned by their assigned segments, not 10D.
+  — those are owned by their assigned segments, not by this list.
 - `routes_operator.py` overall size: 1849 lines of mostly thin
   handlers is fine. Item 11 is the one carve-out worth doing now.
 - `bulk_save_fields` (`app/services/instruments.py:407–554`) — long
   but stable; revisit if Segment 12/13 force changes to it.
 - Display Fields persistence on the per-instrument card placeholder
-  — owned by the next round of UI work (likely a 10E or folded into
-  11), not 10D. See `spec/operator_map.md` "Deferred" and
-  `docs/status.md` "What's deliberately not yet there".
+  — owned by the next round of UI work (a future 10x slice or
+  folded into Segment 11), not by this stabilization list. See
+  `spec/operator_map.md` "Deferred" and `docs/status.md`
+  "What's deliberately not yet there".
