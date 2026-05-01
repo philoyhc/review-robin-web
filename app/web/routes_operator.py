@@ -1507,6 +1507,26 @@ async def instrument_bulk_save_fields(
     return _instruments_redirect(review_session.id)
 
 
+@router.post("/sessions/{session_id}/instruments/add")
+def instruments_add(
+    after: int | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_instrument_editable(review_session)
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_added"
+    )
+    instrument = instruments_service.create_instrument(
+        db, review_session=review_session, after_instrument_id=after, actor=user
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/instruments#instrument-{instrument.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @router.post("/sessions/{session_id}/instruments/accepting/all-on")
 def instruments_bulk_accept_on(
     review_session: ReviewSession = Depends(require_session_operator),
