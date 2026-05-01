@@ -90,14 +90,6 @@
     <div class="card" id="instrument-{{ instrument.id }}"
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
 
-      {% if was_saved %}
-        <div class="card" style="border-color: #16a34a; background: #dcfce7; margin-bottom: 12px;">
-          <p style="margin: 0;">
-            Instrument #{{ loop.index }} saved.
-          </p>
-        </div>
-      {% endif %}
-
       {# Section A — Identity + status. #}
       <div class="bottom-grid">
         <div class="card instrument-edit" style="border-color: transparent; background: transparent; padding: 0;">
@@ -131,13 +123,7 @@
             {% else %}
               <span class="pill pill-warning">not accepting</span>
             {% endif %}
-          </p>
-          {% if instrument.deadline_closed_at %}
-            <p class="muted">
-              Closed by deadline at <code>{{ instrument.deadline_closed_at.isoformat() }}</code>.
-            </p>
-          {% endif %}
-          <p>
+            &middot;
             Visibility when closed:
             {% if instrument.responses_visible_when_closed %}
               <span class="pill pill-info">showing</span>
@@ -145,6 +131,19 @@
               <span class="pill pill-warning">not showing</span>
             {% endif %}
           </p>
+          <p>
+            Instrument details:
+            {% if instrument_saved_state.get(instrument.id) %}
+              <span class="pill pill-info">saved</span>
+            {% else %}
+              <span class="pill pill-warning">not saved</span>
+            {% endif %}
+          </p>
+          {% if instrument.deadline_closed_at %}
+            <p class="muted" style="margin-top: 4px;">
+              Closed by deadline at <code>{{ instrument.deadline_closed_at.isoformat() }}</code>.
+            </p>
+          {% endif %}
           <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
             {% if is_ready and not instrument.accepting_responses %}
               <form method="post"
@@ -236,7 +235,7 @@
                       </td>
                       <td>
                         {% if is_locked_row %}
-                          <span class="muted" title="Always shown to reviewers.">always</span>
+                          <span class="pill pill-info" title="Always shown to reviewers.">Required</span>
                           {% if is_editing %}
                             {# Server-side defense: locked rows always
                                post visible=true via visible_ids. #}

@@ -584,6 +584,55 @@ def test_state_machine_locked_when_session_ready(
     assert f'form="dfsave-{instrument.id}"' not in body
 
 
+def test_saved_state_pill_flips_after_save(
+    client: TestClient, db: Session
+) -> None:
+    """A fresh instrument renders the ``not saved`` pill; after the
+    operator submits a bulk save (touches a Display Fields label), the
+    pill flips to ``saved``."""
+    review_session = _make_session(client, db, code="saved-pill")
+    instrument = _instrument(db, review_session.id)
+
+    fresh = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "not saved</span>" in fresh
+    assert ">saved</span>" not in fresh
+
+    # Submit a bulk save touching the locked Name row's label.
+    name_row = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id,
+            InstrumentDisplayField.source_field == "name",
+        )
+    ).scalar_one()
+    email_row = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id,
+            InstrumentDisplayField.source_field == "email_or_identifier",
+        )
+    ).scalar_one()
+
+    save = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "kind": ["display", "display"],
+            "id": [str(name_row.id), str(email_row.id)],
+            "order": ["0", "1"],
+            "label": ["Reviewee Name", "Reviewee Email"],
+            "visible_ids": [str(name_row.id), str(email_row.id)],
+        },
+        follow_redirects=False,
+    )
+    assert save.status_code == 303
+
+    after = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert ">saved</span>" in after
+    assert ">not saved</span>" not in after
+
+
 def test_friendly_label_persistence_round_trip_via_edit_route(
     client: TestClient, db: Session
 ) -> None:
