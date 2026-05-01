@@ -303,6 +303,52 @@ sets up the reuse.
 
 ---
 
+### 12. Reviewer/Reviewee CSV cross-table identity check · [bug] · small
+
+**Why now.** Carried over from
+`guide/segment_10_instrument_builder_mvp_plan.md` §15 as a
+deferred follow-up. The upload validators in
+`app/services/csv_imports.py` treat reviewers and reviewees as
+independent tables; a person who appears in both with the same
+email but different names imports cleanly today and surfaces as a
+mismatch downstream (assignment-context joins, monitoring email
+lookups). Tightening the rules now — while the validator surface
+is small — costs less than retrofitting after Segment 11's
+export consumes the data.
+
+**Where.** `app/services/csv_imports.py` — `parse_reviewer_csv`
+(~99) and `parse_reviewee_csv` (~189). Adjacent to item 8 (email
+validation drift) and naturally lands as the next slice on top
+of it.
+
+**Plan.** Tighten the validators so that **email is the unique
+person-identifier across both reviewer and reviewee tables in
+the same session**, while name is treated purely as the
+human-facing label. Rules to enforce on upload:
+
+- Every row must have non-empty Name and Email (already
+  enforced).
+- Within the uploaded CSV, the same email may not appear with
+  different names → error. (Same email + same name still
+  collapses to a duplicate-row error as today.)
+- **Cross-table:** when uploading reviewers, look up each row's
+  email in the existing reviewees of the same session — if found
+  with a *different* name, error. Same name = allow (the person
+  is both reviewer and reviewee, common in peer review). Vice
+  versa for reviewee uploads.
+- The same name may appear with multiple distinct emails — no
+  uniqueness on name.
+
+Out of scope here but adjacent: assignments-CSV emails imply a
+person; same cross-table consistency could be checked there in a
+later pass.
+
+New tests cover the four cases (intra-CSV same name + same
+email, intra-CSV same email + different name, cross-table same
+email + same name, cross-table same email + different name).
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"

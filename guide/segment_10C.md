@@ -310,8 +310,10 @@ alert variants override.
 - **Sort / Order column** on Display Fields. Currently a muted
   dash. Probably ties into the existing `bulk_save_fields`
   endpoint or a new lightweight per-row order setter.
-- **Cross-table CSV identity check** noted in
-  `guide/segment_10_instrument_builder_mvp_plan.md` §15.
+- **Cross-table CSV identity check** — tracked in
+  `guide/segment_10D.md` item 12 (moved there from
+  `segment_10_instrument_builder_mvp_plan.md` §15 as part of the
+  stabilization sweep).
 - **Multi-instrument operator UI** — Add an instrument button is
   disabled; Add 1 / Delete 1 / Go to #N controls are removed.
   Reintroduce when the multi-instrument flow is designed.
@@ -329,6 +331,7 @@ alert variants override.
 - `guide/ui_checklist.md` — page-by-page restructure checklist.
 - `CLAUDE.md` / `AGENTS.md` — refreshed conventions, button
   migration rule.
-- `guide/segment_10_instrument_builder_mvp_plan.md` §14 / §15 —
-  the umbrella that 10A / 10B / now 10C sit under, plus the
-  follow-up CSV identity-check stub.
+- `guide/segment_10_instrument_builder_mvp_plan.md` §14 — the
+  umbrella that 10A / 10B / now 10C sit under.
+- `guide/segment_10D.md` — stabilization todo (CSV identity check
+  carried over there as item 12).
