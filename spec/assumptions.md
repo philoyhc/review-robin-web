@@ -69,10 +69,7 @@ The styles are realized through the `.btn` family in
 
 - **Primary** — `.btn` (default, no modifier).
 - **Primary Outline** — `.btn.secondary`.
-- **Alert** — `.btn.alert-solid`. (The "Revert to draft" button on
-  `session_detail.html` still uses an inline-style override on
-  `.btn` for the same orange fill — candidate to be migrated to
-  `.btn.alert-solid` next time that form is touched.)
+- **Alert** — `.btn.alert-solid`.
 - **Alert Outline** — `.btn.alert`.
 - **Danger** — `.btn.danger-solid`. (The danger-zone confirm
   buttons in `session_detail.html` still use inline-style
@@ -103,8 +100,35 @@ and add it explicitly to this taxonomy.
 
 ### Layout
 
-- Pages whose body splits into two parallel groupings use the
-  `.page-grid` two-column pattern documented in
-  `spec/operator_map.md` ("Page layout — two-column option").
-- Pages whose body is a single linear flow keep the default
-  single-column layout — no wrapper grid needed.
+All layout primitives live as classes in
+`app/web/templates/base.html`. Pages whose body splits into two
+parallel groupings use the `.page-grid` two-column pattern
+(documented in detail in `spec/operator_map.md` "Page layout —
+two-column option"). Pages whose body is a single linear flow
+keep the default single-column layout — no wrapper grid needed.
+
+#### Primitives reference
+
+| Class | Purpose |
+|---|---|
+| `.page-grid` | Two-column desktop grid with `align-items: stretch` for equal-height cards. Collapses to one column ≤800px. |
+| `.bottom-grid` | Two-column grid with `align-items: start` for natural-height pairs (bottom row of cards, or any side-by-side that shouldn't stretch). |
+| `.card-tl` / `.card-r` / `.card-bl` / `.card-l` / `.card-tr` / `.card-br` | Placement classes inside `.page-grid` for L-shape layouts (e.g. session detail's Session Details / Session Setup / Run Session). |
+| `.bottom-left` | Vertical flex stack inside the left column of a `.bottom-grid`. |
+| `.setup-nav` | Equal-width 140px nav buttons row, right-aligned, wraps on narrow viewports. The 6-button setup nav at the top of every session-scoped operator page. |
+| `.setup-grid` | 4-column grid for setup-row Manage CTAs + content, used in the Session Setup card. |
+| `.btn-row` | Equal-flex row of buttons (each child gets `flex: 1`). Used for the 4-up Run Session card and similar. |
+| `.btn-pair` | Inline button pair (e.g. Cancel + Save). |
+| `.btn-cta` / `.btn-cta.disabled` | Layout-and-prominence variant of Primary (centered flex container, multi-line labels). Used on Session Setup / Run Session cards. See "CTA variant" above. |
+| `.fill-col` | Flex column where the last child grows (e.g. textarea fills card height). |
+| `.col-shrink` | `width: 1%; white-space: nowrap` — makes table action cells hug the right edge. |
+| `.card-half` | `max-width: calc(50% - 10px)` for cards that should never exceed half their container. |
+| `.session-meta-row` / `.session-status-row` | Inline meta rows on Session Details (deadline / created-by; status pill + Edit). |
+| `.field-builder` (+ `.field-builder.locked`) | Wrapper for the Display + Response Fields side-by-side cards on a per-instrument card. `.locked` disables all inputs and hides edit/add/delete affordances. |
+| `.display-edit` | `<details>` shell for inline label edit forms (tick/cross pattern). CSS hides the closed-state summary when open. |
+| `.table-scroll` | Wrapper that adds `overflow-x: auto` so wide tables scroll horizontally instead of breaking layout. |
+| `.page-subtitle` | Small muted subtitle rendered just below an H1 (e.g. session code under session name on session detail). |
+
+Mobile (≤800px) collapses every grid to a single column and
+stacks cards in DOM order; `.card-half`'s max-width is dropped
+in the same breakpoint.
