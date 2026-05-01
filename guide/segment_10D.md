@@ -173,6 +173,36 @@ that Slices 2 / 4 will reuse.
 
 ## Slice 2 — Response Fields table
 
+**Status:** ✅ shipped in
+[PR #227](https://github.com/philoyhc/review-robin-web/pull/227).
+Polish PRs that landed on top: action-cell single-row layout
+([#228](https://github.com/philoyhc/review-robin-web/pull/228)),
+action button compression + lazy-seed backfill on every GET
+([#229](https://github.com/philoyhc/review-robin-web/pull/229)),
+prune unpopulated Display Fields rows + canonical
+reviewee-before-pair_context order
+([#230](https://github.com/philoyhc/review-robin-web/pull/230)),
+spec for Response Fields Help placeholder card
+([#231](https://github.com/philoyhc/review-robin-web/pull/231)),
+and Display Fields.Include checkbox simplification + full
+Response Fields Help wiring
+([#232](https://github.com/philoyhc/review-robin-web/pull/232)).
+
+PR #232 landed the **Response Fields Help** card — originally
+spec'd as a deferred follow-up. The Help card renders below the
+Section B grid with one row per Response Fields row; in edit
+mode each row has a textarea for help text + a Show checkbox,
+both bound to the same ``dfsave-{iid}`` bulk-save form via
+``help_text_id`` / ``help_text`` parallel arrays and a
+``help_text_visible_ids`` set. ``bulk_save_fields`` applies the
+two fields on response rows when present in the payload, rolling
+into the ``instrument.response_fields_saved`` audit detail.
+
+Slice 2 also dropped the original spec point
+"`Required` checkbox stays read-only post-create": the rebuilt
+table makes Required toggleable in edit mode (spec wording
+already allowed it). Type stays read-only.
+
 **Estimated effort:** ~2-3 hrs.
 
 Reuses the state machine from Slice 1. Type column ships with the
