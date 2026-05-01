@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -1525,6 +1525,43 @@ def instruments_add(
         url=f"/operator/sessions/{review_session.id}/instruments#instrument-{instrument.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/delete")
+def instruments_delete(
+    instrument_id: int,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_instrument_editable(review_session)
+    instrument = db.execute(
+        select(Instrument)
+        .where(Instrument.id == instrument_id)
+        .where(Instrument.session_id == review_session.id)
+    ).scalar_one_or_none()
+    if instrument is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Instrument not found",
+        )
+    total = db.execute(
+        select(func.count())
+        .select_from(Instrument)
+        .where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    if total <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete the last instrument",
+        )
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_deleted"
+    )
+    instruments_service.delete_instrument(
+        db, instrument=instrument, actor=user
+    )
+    return _instruments_redirect(review_session.id)
 
 
 @router.post("/sessions/{session_id}/instruments/accepting/all-on")

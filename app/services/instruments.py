@@ -291,6 +291,54 @@ def _instrument_label(instrument: Instrument) -> str:
     return instrument.description.strip() if instrument.description and instrument.description.strip() else instrument.name
 
 
+def delete_instrument(
+    db: Session,
+    *,
+    instrument: Instrument,
+    actor: User,
+) -> int:
+    """Delete an instrument plus all its dependent rows (display/response
+    fields, assignments, responses) via cascade, then re-pack the
+    surviving instruments' ``order`` values to ``0..N-1``. Returns the
+    deleted instrument's id.
+    """
+    session_id = instrument.session_id
+    deleted_id = instrument.id
+    deleted_name = instrument.name
+    deleted_order = instrument.order
+
+    db.delete(instrument)
+    db.flush()
+
+    remaining = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == session_id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars().all()
+    )
+    for idx, inst in enumerate(remaining):
+        if inst.order != idx:
+            inst.order = idx
+    db.flush()
+
+    write_event(
+        db,
+        event_type="instrument.deleted",
+        summary=f"Deleted instrument {deleted_name}",
+        actor_user_id=actor.id if actor else None,
+        session_id=session_id,
+        detail={
+            "instrument_id": deleted_id,
+            "session_id": session_id,
+            "name": deleted_name,
+            "order": deleted_order,
+        },
+    )
+    db.commit()
+    return deleted_id
+
+
 def display_field_label(field: InstrumentDisplayField) -> str:
     """Return the operator-typed label, else the inferred default for the source pair."""
     if field.label and field.label.strip():
