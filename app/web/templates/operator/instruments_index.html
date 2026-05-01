@@ -20,8 +20,7 @@
         <span class="pill pill-warning">not set</span>
       {% endif %}
       &middot;
-      <span class="pill pill-info">{{ instruments | length }}</span>
-      instrument{% if instruments | length != 1 %}s{% endif %}:
+      <span class="pill pill-info">{{ instruments | length }} instrument{% if instruments | length != 1 %}s{% endif %}</span>:
       <span class="pill pill-info">{{ accepting_count }} accepting</span>
       &middot;
       <span class="pill pill-warning">{{ not_accepting_count }} not accepting</span>
