@@ -239,6 +239,19 @@
       <hr>
       <div class="card card-half" style="border: none; background: transparent; padding: 0;">
         <h3 style="margin-top: 0;">Display Fields</h3>
+        {% set display_source_rows = [
+          ('Reviewer.Name', 'Name', True),
+          ('Reviewee.Email', 'Email', False),
+          ('Reviewee.Tag1', 'Tag 1', False),
+          ('Reviewee.Tag2', 'Tag 2', False),
+          ('Reviewee.Tag3', 'Tag 3', False),
+          ('PairContext1', 'Pair Context 1', False),
+          ('PairContext2', 'Pair Context 2', False),
+          ('PairContext3', 'Pair Context 3', False),
+          ('AssignmentContext1', 'Assignment Context 1', False),
+          ('AssignmentContext2', 'Assignment Context 2', False),
+          ('AssignmentContext3', 'Assignment Context 3', False),
+        ] %}
         <div class="table-scroll">
           <table>
             <thead>
@@ -251,83 +264,35 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td><code>Reviewer.Name</code></td>
-                <td>Name</td>
-                <td><span class="muted">always</span></td>
-                <td>0</td>
-                <td><span class="muted">—</span></td>
-              </tr>
-              <tr>
-                <td><code>Reviewee.Email</code></td>
-                <td>Email</td>
-                <td><input type="checkbox" checked></td>
-                <td>1</td>
-                <td><span class="muted">—</span></td>
-              </tr>
-              <tr>
-                <td><code>Reviewee.Tag1</code></td>
-                <td>Tag 1</td>
-                <td><input type="checkbox" checked></td>
-                <td>2</td>
-                <td><span class="muted">—</span></td>
-              </tr>
-              <tr>
-                <td><code>Reviewee.Tag2</code></td>
-                <td>Tag 2</td>
-                <td><input type="checkbox" checked></td>
-                <td>3</td>
-                <td><span class="muted">—</span></td>
-              </tr>
-              <tr>
-                <td><code>Reviewee.Tag3</code></td>
-                <td>Tag 3</td>
-                <td><input type="checkbox" checked></td>
-                <td>4</td>
-                <td><span class="muted">—</span></td>
-              </tr>
-              <tr>
-                <td><code>PairContext1</code></td>
-                <td>Pair Context 1</td>
-                <td><input type="checkbox" checked></td>
-                <td>5</td>
-                <td><span class="muted">—</span></td>
-              </tr>
-              <tr>
-                <td><code>PairContext2</code></td>
-                <td>Pair Context 2</td>
-                <td><input type="checkbox" checked></td>
-                <td>6</td>
-                <td><span class="muted">—</span></td>
-              </tr>
-              <tr>
-                <td><code>PairContext3</code></td>
-                <td>Pair Context 3</td>
-                <td><input type="checkbox" checked></td>
-                <td>7</td>
-                <td><span class="muted">—</span></td>
-              </tr>
-              <tr>
-                <td><code>AssignmentContext1</code></td>
-                <td>Assignment Context 1</td>
-                <td><input type="checkbox" checked></td>
-                <td>8</td>
-                <td><span class="muted">—</span></td>
-              </tr>
-              <tr>
-                <td><code>AssignmentContext2</code></td>
-                <td>Assignment Context 2</td>
-                <td><input type="checkbox" checked></td>
-                <td>9</td>
-                <td><span class="muted">—</span></td>
-              </tr>
-              <tr>
-                <td><code>AssignmentContext3</code></td>
-                <td>Assignment Context 3</td>
-                <td><input type="checkbox" checked></td>
-                <td>10</td>
-                <td><span class="muted">—</span></td>
-              </tr>
+              {% for code, label, mandatory in display_source_rows %}
+                {% set has_data = display_source_presence.get(code, False) %}
+                <tr>
+                  <td><code>{{ code }}</code></td>
+                  <td>
+                    {% if has_data %}
+                      <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                        <span>{{ label }}</span>
+                        <a href="#" title="Edit"
+                           style="color: #6b7280; text-decoration: none; cursor: pointer;"
+                           onclick="event.preventDefault();">&#9998;</a>
+                      </span>
+                    {% else %}
+                      <span class="muted">(Not used)</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if mandatory %}
+                      <span class="muted">always</span>
+                    {% elif has_data %}
+                      <input type="checkbox" checked>
+                    {% else %}
+                      <span class="muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ loop.index0 }}</td>
+                  <td><span class="muted">—</span></td>
+                </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>

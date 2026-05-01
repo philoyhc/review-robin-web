@@ -6,12 +6,21 @@
   <h1>Reviewers</h1>
 
   <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-      <p style="margin: 0;">
-        <strong>{{ reviewers | length }}</strong>
-        reviewer{% if reviewers | length != 1 %}s{% endif %} currently loaded
-      </p>
+    <p style="margin: 0;">
+      Number of reviewers:
+      <span class="pill pill-info">{{ reviewers | length }}</span>
+    </p>
+    <p style="margin: 4px 0 0 0;">
+      Fields with data:
+      {% for label in fields_with_data %}
+        <span class="pill pill-info">{{ label }}</span>
+      {% else %}
+        <span class="muted">—</span>
+      {% endfor %}
+    </p>
+    <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
       <div class="setup-nav">
+        <a class="btn" href="/operator/sessions/{{ session.id }}">Session</a>
         <a class="btn secondary" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>

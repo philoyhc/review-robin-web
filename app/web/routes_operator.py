@@ -523,6 +523,9 @@ def reviewers_list(
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
             "is_ready": lifecycle.is_ready(review_session),
+            "fields_with_data": assignments.reviewer_fields_with_data(
+                db, review_session.id
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Reviewers"
             ),
@@ -1035,6 +1038,9 @@ def instruments_index(
             "display_source_error": display_source_error,
             "available_sources_by_instrument": available_sources_by_instrument,
             "merged_rows_by_instrument": merged_rows_by_instrument,
+            "display_source_presence": assignments.display_source_presence(
+                db, review_session.id
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Instruments"
             ),
