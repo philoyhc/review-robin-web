@@ -71,7 +71,7 @@ Title: `Reviewee Fields`. Columns:
 | **Friendly Label** | Operator-editable text. Save persists to the underlying database. |
 | **Include** | Checkbox. `RevieweeName` and `RevieweeEmail` are mandatory-checked and the checkbox is locked (operator cannot uncheck). All other rows are operator-toggleable. |
 | **Order** | Integer. Initial seed: `RevieweeName=0`, `RevieweeEmail=1`, then the present reviewee columns in the order `PhotoLink`, `RevieweeTag1`, `RevieweeTag2`, `RevieweeTag3`. |
-| **Sort** | Empty for now. Placeholder for a future row-reorder control. |
+| **Sort** | Empty for now. Placeholder for a future default row order on reviewer surface. |
 
 #### Response Fields (right)
 
@@ -81,7 +81,7 @@ Title: `Response Fields`. Columns:
 |---|---|
 | **Key** | The system name for the row. Read-only `<code>`. |
 | **Friendly Label** | Operator-editable text. Save persists. |
-| **Type** | One of the four response types. Read-only post-create. |
+| **Type** | One of the response types defined by the Response Type definitions card. Read-only post-create. |
 | **Required** | Checkbox. When checked, the field is mandatory for reviewers and the column header in the Preview table is appended with an asterisk (e.g. `Rating*`). |
 | **Order** | Integer (1-based, contiguous). |
 | **Action** | A delete cross icon (✗) and an add-row plus icon (➕). Both fire immediately — no on-screen warning or confirmation. The delete removes this row; the add inserts a new default row immediately below. |
@@ -100,7 +100,9 @@ A single `<hr>` separating the field-builder from the preview.
 ### D. Preview Instrument #{N}
 
 Full-width card, invisible borders. Title: `Preview Instrument #{N}`.
-Renders a table with one synthetic row per sample reviewee. Columns:
+Renders a table populated with **three rows of mock data** so the
+operator can see how the configured columns will look on the
+reviewer surface without needing real reviewees imported. Columns:
 
 1. **Name / Email** — name on top, email as subtitle beneath
    (matches the Reviewer / Reviewee preview rendering elsewhere).
