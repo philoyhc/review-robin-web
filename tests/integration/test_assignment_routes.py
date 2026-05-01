@@ -177,7 +177,7 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
     assert empty.status_code == 200
     # Empty state shows the reviewer/reviewee summary on the hub; the
     # FullMatrix Generate button is rendered inline on the same page.
-    assert "Reviewers:" in empty.text
+    assert "Number of reviewers:" in empty.text
     assert ">Generate</button>" in empty.text
 
     client.post(
@@ -187,7 +187,7 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
     )
 
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
-    assert "<strong>1</strong>" in populated.text
+    assert 'pill-info">1</span>' in populated.text
     assert "full_matrix" in populated.text
 
 

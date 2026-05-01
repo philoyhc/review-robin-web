@@ -380,6 +380,9 @@ def _render_assignments_hub(
             "missing_confirm": missing_confirm,
             "is_blocked": is_blocked,
             "is_ready": lifecycle.is_ready(review_session),
+            "fields_with_data": assignments.assignment_fields_with_data(
+                db, review_session.id
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Assignments"
             ),
