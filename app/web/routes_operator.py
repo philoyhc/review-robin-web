@@ -379,6 +379,7 @@ def _render_assignments_hub(
             "issues": issues,
             "missing_confirm": missing_confirm,
             "is_blocked": is_blocked,
+            "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Assignments"
             ),
@@ -521,6 +522,7 @@ def reviewers_list(
             "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
+            "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Reviewers"
             ),
@@ -546,6 +548,7 @@ def reviewees_list(
             "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
+            "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Reviewees"
             ),
