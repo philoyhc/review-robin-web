@@ -5,8 +5,35 @@
 {% block content %}
   <h1>Instruments</h1>
 
+  {# Header card: status rows on the left, nav + bulk actions
+     right-aligned. Same shape as session_assignments.html. #}
   <div class="card">
-    <div style="display: flex; justify-content: flex-end;">
+    {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
+    {% set not_accepting_count = instruments | length - accepting_count %}
+    {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
+    {% set not_showing_count = instruments | length - showing_count %}
+    <p style="margin: 0;">
+      Session deadline (auto-close):
+      {% if session.deadline %}
+        <span class="pill pill-info">{{ session.deadline.isoformat() }}</span>
+      {% else %}
+        <span class="pill pill-warning">not set</span>
+      {% endif %}
+      &middot;
+      This session has
+      <span class="pill pill-info">{{ instruments | length }}</span>
+      instrument{% if instruments | length != 1 %}s{% endif %}:
+      <span class="pill pill-info">{{ accepting_count }} accepting</span>
+      &middot;
+      <span class="pill pill-warning">{{ not_accepting_count }} not accepting</span>
+    </p>
+    <p style="margin: 4px 0 0 0;">
+      Visibility when closed:
+      <span class="pill pill-info">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
+      &middot;
+      <span class="pill pill-warning">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
+    </p>
+    <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
       <div class="setup-nav">
         <a class="btn" href="/operator/sessions/{{ session.id }}">Session</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
@@ -15,6 +42,23 @@
         <a class="btn secondary" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Email Invites</a>
       </div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+      {% if bulk_visibility_state != "all-on" %}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
+              style="margin: 0;">
+          <button class="btn alert-solid" type="submit">Show all when closed</button>
+        </form>
+      {% else %}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/visibility/all-off"
+              style="margin: 0;">
+          <button class="btn alert-solid" type="submit">Don't show any when closed</button>
+        </form>
+      {% endif %}
+      <a class="btn alert-solid"
+         href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
     </div>
   </div>
 
@@ -39,72 +83,12 @@
     </div>
   {% endif %}
 
-  <div class="card">
-    <h2>All Instrument Status</h2>
-    {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
-    {% set not_accepting_count = instruments | length - accepting_count %}
-    {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
-    {% set not_showing_count = instruments | length - showing_count %}
-    <p>
-      Session deadline (auto-close):
-      {% if session.deadline %}
-        <span class="pill pill-info">{{ session.deadline.isoformat() }}</span>
-      {% else %}
-        <span class="pill pill-warning">not set</span>
-      {% endif %}
-    </p>
-    <p>
-      This session has
-      <span class="pill pill-info">{{ instruments | length }}</span>
-      instrument{% if instruments | length != 1 %}s{% endif %}:
-      <span class="pill pill-info">{{ accepting_count }} accepting</span>
-      &middot;
-      <span class="pill pill-warning">{{ not_accepting_count }} not accepting</span>
-    </p>
-    <p>
-      Visibility when closed:
-      <span class="pill pill-info">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
-      &middot;
-      <span class="pill pill-warning">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
-    </p>
-    <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
-      {% if is_ready and bulk_accepting_state != "all-on" %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/accepting/all-on"
-              style="margin: 0;">
-          <button class="btn alert-solid" type="submit">Open all instruments</button>
-        </form>
-      {% endif %}
-      {% if is_ready and bulk_accepting_state == "all-on" %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/accepting/all-off"
-              style="margin: 0;">
-          <button class="btn alert-solid" type="submit">Close all instruments</button>
-        </form>
-      {% endif %}
-      {% if bulk_visibility_state != "all-on" %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
-              style="margin: 0;">
-          <button class="btn alert-solid" type="submit">Show all when closed</button>
-        </form>
-      {% endif %}
-      {% if bulk_visibility_state == "all-on" %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/visibility/all-off"
-              style="margin: 0;">
-          <button class="btn alert-solid" type="submit">Don't show any when closed</button>
-        </form>
-      {% endif %}
-      <button class="btn alert-solid" type="button" disabled
-              title="Coming soon.">Preview reviewer surface</button>
-    </div>
-  </div>
-
   {% set instrument_palette = ['#f0f9ff', '#d1fae5', '#ede9fe', '#ffedd5', '#ffe4e6', '#fef3c7'] %}
   {% for instrument in instruments %}
     <div class="card" id="instrument-{{ instrument.id }}"
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
+
+      {# Section A — Identity + status. #}
       <div class="bottom-grid">
         <div class="card instrument-edit" style="border-color: transparent; background: transparent; padding: 0;">
           <h2 style="margin-top: 0; font-size: 1.6rem;">Instrument #{{ loop.index }}</h2>
@@ -183,6 +167,127 @@
           </div>
         </div>
       </div>
+
+      {# Section B — Display Fields + Response Fields (frame stubs). #}
+      <div class="bottom-grid field-builder">
+        <div class="card" style="border: none; background: transparent; padding: 0;">
+          <h3 style="margin-top: 0;">Display Fields</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Source</th>
+                  <th>Friendly Label</th>
+                  <th>Include</th>
+                  <th>Order</th>
+                  <th>Sort</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr data-source="RevieweeName">
+                  <td><code>RevieweeName</code></td>
+                  <td></td>
+                  <td><input type="checkbox" checked disabled title="Always shown to reviewers."></td>
+                  <td>1</td>
+                  <td></td>
+                </tr>
+                <tr data-source="RevieweeEmail">
+                  <td><code>RevieweeEmail</code></td>
+                  <td></td>
+                  <td><input type="checkbox" checked disabled title="Always shown to reviewers."></td>
+                  <td>2</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td colspan="5" class="muted" style="font-style: italic;">
+                    Other reviewee columns (PhotoLink, RevieweeTag1/2/3) and
+                    pair-context columns (PairContext1/2/3) appear here once
+                    populated. Wiring lands in a follow-up slice.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="border: none; background: transparent; padding: 0;">
+          <h3 style="margin-top: 0;">Response Fields</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Friendly Label</th>
+                  <th>Type</th>
+                  <th>Required</th>
+                  <th>Order</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for field in instrument.response_fields | sort(attribute='order') %}
+                  <tr>
+                    <td><code>{{ field.field_key }}</code></td>
+                    <td>{{ field.label }}</td>
+                    <td>{{ field.response_type }}</td>
+                    <td>
+                      <input type="checkbox" disabled
+                             {% if field.required %}checked{% endif %}>
+                    </td>
+                    <td>{{ loop.index }}</td>
+                    <td class="muted">—</td>
+                  </tr>
+                {% endfor %}
+                {% if not instrument.response_fields %}
+                  <tr>
+                    <td colspan="6" class="muted" style="font-style: italic;">
+                      No response fields. Wiring lands in a follow-up slice.
+                    </td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {# Section C — separator. #}
+      <hr>
+
+      {# Section D — Preview Instrument #N (frame stub). #}
+      <div class="card" style="border: none; background: transparent; padding: 0;">
+        <h3 style="margin-top: 0;">Preview Instrument #{{ loop.index }}</h3>
+        <p class="muted" style="font-style: italic;">
+          Three rows of preview data render here once Display Fields and
+          Response Fields are wired. Real reviewees fill the rows when
+          available; mock rows pad to three when fewer than three reviewees
+          are imported.
+        </p>
+      </div>
+
+      {# Section E — action buttons. All disabled in this frame slice
+         until wiring lands. #}
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;">
+        <button class="btn alert-solid" type="button" disabled
+                title="Wiring lands in a follow-up slice.">Edit</button>
+        <button class="btn alert-solid" type="button" disabled
+                title="Multi-instrument support is still in progress; coming back later.">Add new instrument</button>
+        {% if instruments | length > 1 %}
+          <button class="btn danger-solid" type="button" disabled
+                  title="Wiring lands in a follow-up slice.">Delete this instrument</button>
+        {% endif %}
+      </div>
     </div>
   {% endfor %}
+
+  {# Response Type Definitions card (frame stub). #}
+  <div class="card">
+    <h2 style="margin-top: 0;">Response Type Definitions</h2>
+    <p class="muted" style="font-style: italic;">
+      The Response Fields <code>Type</code> column picks from this catalog.
+      Six seeded types (Long_text, Short_text, Grade, 1-to-5int,
+      1-to-5half, 1-to-5dec) plus operator-added types. Full table
+      and persistence wiring land in a follow-up slice.
+    </p>
+  </div>
 {% endblock %}

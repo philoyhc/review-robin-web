@@ -107,7 +107,11 @@ def test_instruments_index_renders_settings_and_per_instrument_card(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert "All Instrument Status" in body
+    # Header card now folds the deadline + accepting + visibility status
+    # into the same card as the setup nav (per the rebuild spec at
+    # guide/instruments.md). Verify the status content rendered.
+    assert "Session deadline (auto-close):" in body
+    assert "Visibility when closed:" in body
     assert "Status:" in body
     instrument = _instrument(db, review_session.id)  # noqa: F841
     assert ">Instrument #1</h2>" in body
