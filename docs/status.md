@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 10B (2026-04-30)
+**As of:** end of Segment 10C (2026-05-01)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -32,6 +32,7 @@ For the full long-term plan see
 | 2026-04-30 | Segment 10B-1 shipped (data-driven reviewer-surface render + display-field backfill) |
 | 2026-04-30 | Segment 10B-2 shipped (operator display-field builder + shared field-order bulk form) |
 | 2026-04-30 | Segment 10B-3 shipped (operator preview route — completes Segment 10B) |
+| 2026-05-01 | Segment 10C shipped (operator UI clean-up: page-grid layouts, six-button setup nav, yellow lock-card pattern, per-instrument card refactor with live preview + Save/Edit lock toggle, multi-instrument schema/services landed UI-disabled) |
 
 ---
 
@@ -57,7 +58,8 @@ For the full long-term plan see
 | 10A | Consolidated `/operator/sessions/{id}/instruments` page: per-instrument card with friendly description, acceptance + visibility toggles, response-fields table (add / edit / delete / reorder, per-field help text + visibility), session-wide Instruments Settings card with bulk Open all / Close all toggles. Migration adds `help_text` (Text, NULL) and `help_text_visible` (Bool, default true) on `instrument_response_fields`. Reviewer surface refactors to loop-by-instrument with section heading from `Instrument.description` (fallback to system handle) and a per-field help block above each table. Empty-instrument validation now blocks activation. Description / field mutations invalidate `validated → draft` via `_invalidate_if_validated`; bulk accepting + per-instrument open/close/visibility deliberately do not invalidate. Body width bumped from 900px to 1400px globally with a `.table-scroll` overflow utility. | 2026-04-30 |
 | 10B-1 | Backfill migration (`c2143bd329c7`) seeds three `InstrumentDisplayField` rows (`source_type='pair_context'`, `source_field='1'|'2'|'3'`, `label=''`, `order=0..2`, `visible=true`) on every existing instrument; destructive within that filter (operator-typed labels on those slots are not preserved across upgrade); operator-added `reviewee` rows left intact. `ensure_default_instrument` seeds the same three rows on new sessions. Reviewer surface renders pair-context values as separate columns sourced from the display-field rows (no longer inline in the identity cell); reviewee identity (name + email) is the always-first column, mandatory and non-toggleable. New service helpers `display_field_label(field)` and `display_field_value(field, assignment)` cover the seven D6 sources (`reviewee.tag_1/2/3`, `reviewee.profile_link`, `pair_context.1/2/3`); empty/NULL labels fall back to inferred strings. `profile_link` cells render as plain `<a>`. No operator UI yet (picker + bulk form land in 10B-2; preview route in 10B-3). No new audit events. | 2026-04-30 |
 | 10B-2 | Per-instrument display-fields card on `/operator/sessions/{id}/instruments`: Add (combined source picker over the seven D6 sources minus those already on the instrument; colon-delimited values like `reviewee:tag_1`), inline Edit (label override + visibility), Delete (no cascade-confirm — display fields carry no per-row dependent data). New shared "Field order & visibility" bulk form covering both display + response fields, interleaved in operator-chosen order, with per-table independent repack to `0..N-1` on save. Four new audit events: `instrument.display_field_added`, `instrument.display_field_updated`, `instrument.display_field_deleted`, `instrument.display_fields_saved` (D11 diff shape; `added` / `removed` always empty since adds + deletes are row-level only). Reuses 10A `instrument.fields_reordered` when bulk save reorders response fields. Display-field mutations invalidate `validated → draft` and 409 when `status=ready` (mirrors 10A). Rank-based change detection on bulk save means submitting current state is a no-op. | 2026-04-30 |
-| 10B-3 | New `GET /operator/sessions/{id}/preview` route renders the reviewer surface in operator-only preview mode — pads with up to three synthetic rows (`Sample Reviewee 1/2/3`, `sample1@example.edu`, …) when fewer real assignments exist; bypasses session-status / deadline / acceptance gates; all inputs render disabled (via the existing `accepting=False` template branch); save / submit / clear / cancel forms suppressed via a single `preview_mode` template flag; "Preview — not visible to reviewers" banner at the top. Two operator-side entry-point anchors: instruments page header and session detail's Run Session card. No new audit events (read-only — also skips the `lifecycle.observe_deadline` lazy-close side-effect). Completes Segment 10B. | 2026-04-30 |
+| 10B-3 | New `GET /operator/sessions/{id}/preview` route renders the reviewer surface in operator-only preview mode — pads with up to three synthetic rows (`Sample Reviewee 1/2/3`, `sample1@example.edu`, …) when fewer real assignments exist; bypasses session-status / deadline / acceptance gates; all inputs render disabled (via the existing `accepting=False` template branch); save / submit / clear / cancel forms suppressed via a single `preview_mode` template flag; "Preview — not visible to reviewers" banner at the top. Two operator-side entry-point anchors at ship time (instruments page header + session detail's Run Session card); the instruments-page anchor was disabled in 10C. No new audit events (read-only — also skips the `lifecycle.observe_deadline` lazy-close side-effect). Completes Segment 10B. | 2026-04-30 |
+| 10C | Operator UI clean-up consolidating the post-10B surface: every session-scoped operator page renders a 6-button **setup nav** header card (Session / Reviewers / Reviewees / Assignments / Instruments / Email Invites); session detail adopts a `.page-grid` two-column layout (Session Details / Session Setup / Run Session) with Danger Zone in `.bottom-grid`; the inline session-detail revert form is replaced by a reusable yellow lock card pattern (with `return_to` allowlist `{reviewers, reviewees, assignments, instruments}`) shared across the four mutating setup pages; sessions list adds a `Created by` column; reviewers / reviewees / assignments pages standardise on info-card + status-pill rows + `#upload-csv` anchored card + Danger Zone, with upload + Danger Zone hidden while locked. Instruments page restructured: All Instrument Status full-width card carries three pill rows + bulk Open/Close + bulk Show/Don't-show + a disabled Preview button; per-instrument card uses pastel-tint cycling, a top `.bottom-grid` (description + per-instrument status), a `.field-builder` `.bottom-grid` of Display + Response Fields half-cards, and a live client-rendered Preview Instrument table; bottom button row (Back / Save / Edit / Add an instrument / Delete) with a JS-only Save/Edit `field-builder.locked` toggle. Response Fields gains inline label edit (per-row hidden form via HTML5 `form=` attribute), Required auto-submit, row-level Add (`/fields/add-row`) + Delete; Type stays read-only by design. Display Fields renders a hardcoded 6-row CSV-named placeholder; persistence is deferred. Multi-instrument data layer fully shipped (`Instrument.session_id`, `order`, FK cascades, `create_instrument` / `delete_instrument` services + routes + `instrument.created` / `instrument.deleted` audit events) with the operator UI behind a disabled Add button; Delete is reachable when more than one instrument exists. Bulk visibility toggles emit `instruments.bulk_visibility_when_closed`. Cross-cutting primitives in `base.html`: `.page-grid`, `.bottom-grid`, `.card-tl/r/bl/l/tr/br`, `.setup-nav`, `.setup-grid`, `.btn-row` / `.btn-pair`, `.fill-col`, `.col-shrink`, `.session-meta-row`, `.session-status-row`, `.field-builder` (+ `.locked`), `.display-edit`. `.btn[hidden]` honours the standard hidden attribute. | 2026-05-01 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
 (every PR via the `ci-postgres-migration` smoke job).
@@ -121,24 +123,42 @@ Migration round-trips on both SQLite (every test session) and Postgres
   fragment. **Edit Reviewers / Reviewees / Assignments** buttons
   render as disabled anchors (`<a class="btn disabled"
   aria-disabled="true">`) per the 9.4B disabled-affordance
-  convention. New `/operator/sessions/{id}/instruments` index lists
-  one card per instrument with the `accepting_responses` pill,
-  Manage link to the per-instrument page, and disabled
-  Add / Delete instrument buttons (Multi-instrument — Segment 13).
-  New `/operator/sessions/{id}/setupinvite` is a stub (Email
-  template editor — Segment 15). Session-detail Setup table Manage
-  buttons for Instruments and Set up invites are now real links.
+  convention. New `/operator/sessions/{id}/instruments` index
+  introduced (Segment 10C reshaped this page substantially — see
+  the Segments-shipped 10C entry and the operator URL table for
+  the current contract). New `/operator/sessions/{id}/setupinvite`
+  is a stub (Email template editor — Segment 15). Session-detail
+  Setup table Manage buttons for Instruments and Set up invites
+  are now real links.
 - **Page chrome (Segment 9.4A)** in `app/web/templates/base.html`:
   top-left "Review Robin Web App (version {num})" link to `/about`,
   breadcrumb trail rendered just below, top-right user card with
-  "Signed in as ..." + Sign out. Per-page back-links are removed —
-  the breadcrumb replaces them. Operator-page crumbs root at
-  `Sessions → /operator/sessions`; reviewer-page crumbs root at
-  `Reviewer → /reviewer`. Crumb factories live in
-  `app/web/breadcrumbs.py`; the partial is
+  "Signed in as ..." + Sign out. Per-page back-links across pages
+  are removed — the breadcrumb replaces them. (Segment 10C
+  reintroduced one in-page Back affordance: the per-instrument
+  card's bottom button row carries a Back button that
+  smooth-scrolls to the top of the Instruments page. This is a
+  same-page navigation aid, not a cross-page back-link.)
+  Operator-page crumbs root at `Sessions → /operator/sessions`;
+  reviewer-page crumbs root at `Reviewer → /reviewer`. Crumb
+  factories live in `app/web/breadcrumbs.py`; the partial is
   `app/web/templates/_partials/breadcrumb.html`. Version string
   comes from `app.config.app_version` (`"dev"` for now;
   pipeline-driven version bumping is a Segment 14 concern).
+- **Setup nav + lock card (Segment 10C)**: every session-scoped
+  operator page (Session detail, Reviewers, Reviewees,
+  Assignments, Instruments, Set up invites) renders a 6-button
+  `.setup-nav` header card and — when the session is `ready` — a
+  reusable yellow lock card immediately below it. The lock card
+  posts to `/operator/sessions/{id}/revert` with a hidden
+  `return_to` field; the route allowlists
+  `{reviewers, reviewees, assignments, instruments}` so the
+  operator lands back on the same page. The session-detail lock
+  card omits `return_to`. While locked, each page hides its own
+  mutation affordances (upload cards, Danger Zone, per-instrument
+  Save button); `<input>` / `<select>` elements inside
+  `.field-builder` are disabled. See `spec/operator_map.md` for
+  the per-page contract and `assumptions.md` for the markup.
 - Card-based layout, monospace tabular code spans, severity pills
   (`error` / `warning` / `info`) for validation issues. All inline
   `<style>` in `base.html`. CSS framework / extraction is a Segment
@@ -173,7 +193,7 @@ Migration round-trips on both SQLite (every test session) and Postgres
 | `POST /operator/sessions/{id}/assignments/delete-all` | delete every assignment, clear mode |
 | `POST /operator/sessions/{id}/activate` | flip session draft→ready (warn-and-acknowledge for non-blocking findings) |
 | `POST /operator/sessions/{id}/revert` | flip session ready→draft (confirm checkbox; closes all instruments) |
-| `GET /operator/sessions/{id}/instruments` | consolidated instruments page — session-wide Settings card (bulk Open all / Close all) + one card per instrument with friendly description, acceptance + visibility toggles, response-fields table (add / edit / delete / reorder, per-field help text + visibility), display-fields table (10B-1 seeded; picker UI lands in 10B-2). Add / Delete instrument disabled until Segment 13 |
+| `GET /operator/sessions/{id}/instruments` | consolidated instruments page (post-10C shape) — setup nav header, yellow lock card when ready, full-width **All Instrument Status** card (deadline + accepting + visibility pill rows; bulk Open/Close + bulk Show/Don't-show; disabled Preview button), then one pastel-tinted card per instrument with a top `.bottom-grid` (description + per-instrument status), a `.field-builder` `.bottom-grid` of Display + Response Fields half-cards, a live client-rendered Preview Instrument #N table, and a Back / Save / Edit / Add an instrument / Delete button row. Multi-instrument schema + services ship; the `Add an instrument` button is the single UI gate (disabled with tooltip). Display Fields render a hardcoded 6-row CSV-named placeholder; the schema-level display-field routes still exist server-side but the template doesn't post to them. See `spec/operator_map.md` for the per-section contract. |
 | `GET /operator/sessions/{id}/setupinvite` | stub page — email-template editor lands in Segment 15 |
 | `GET /operator/sessions/{id}/instruments/{instrument_id}` | legacy redirect — 303 to `/instruments` (back-compat for bookmarks; 10A) |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/edit` | edit friendly description (`Instrument.description`); audit `instrument.described`; invalidates `validated → draft` |
@@ -188,9 +208,14 @@ Migration round-trips on both SQLite (every test session) and Postgres
 | `GET /operator/sessions/{id}/preview` | operator-only preview of the reviewer surface; works in any session status; bypasses deadline / acceptance gates; renders synthetic rows when fewer than three real assignments exist; all inputs disabled; save / submit / clear forms suppressed via the `preview_mode` template flag |
 | `POST /operator/sessions/{id}/instruments/accepting/all-on` | bulk-open every instrument under the session; audit `instruments.bulk_accepting_responses` (ready-only, pre-deadline; deliberately does NOT invalidate `validated`) |
 | `POST /operator/sessions/{id}/instruments/accepting/all-off` | bulk-close every instrument |
+| `POST /operator/sessions/{id}/instruments/visibility/all-on` | bulk-flip `responses_visible_when_closed=True` on every instrument; audit `instruments.bulk_visibility_when_closed` (always available; deliberately does NOT invalidate `validated`) |
+| `POST /operator/sessions/{id}/instruments/visibility/all-off` | bulk-flip `responses_visible_when_closed=False` on every instrument |
+| `POST /operator/sessions/{id}/instruments/add` | create a new instrument under the session (optional `after={instrument_id}` for placement); audit `instrument.created`; invalidates `validated → draft`. UI button currently disabled — multi-instrument operator UI is intentionally deferred |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/delete` | delete an instrument and its dependents (cascades response fields, display fields, and assignments via FK delete-orphan); audit `instrument.deleted`; invalidates `validated → draft`. UI button only renders when more than one instrument exists; 400 when deleting the last instrument |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/open` | start accepting responses (requires session ready, pre-deadline) |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/close` | stop accepting responses (manual) |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/visibility` | toggle `responses_visible_when_closed` |
+| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/add-row` | append a new response field with a default key/label/type after `after={field_id}` (or at the end when omitted); audit `instrument.field_added`; invalidates `validated → draft`. Powers the Response Fields ➕ button on the per-instrument card |
 | `GET /operator/sessions/{id}/invitations` | per-reviewer invitation table (status / sent / opened) |
 | `POST /operator/sessions/{id}/invitations/generate` | bulk-create invitations for assigned active reviewers (idempotent; ready-only) |
 | `POST /operator/sessions/{id}/invitations/send-all` | write outbox row per pending invitation (ready-only) |
@@ -224,8 +249,13 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
   edits both kinds via the consolidated `/instruments` page (10A:
   response-field builder + friendly description; 10B-1: data-driven
   reviewer-surface render; 10B-2: display-field picker + shared
-  field-order bulk form). The seven supported display-field sources
-  are `reviewee.tag_1/2/3`, `reviewee.profile_link`, and
+  field-order bulk form, replaced by the 10C per-instrument card
+  shape — Display Fields renders a hardcoded 6-row CSV-named
+  placeholder with persistence deferred, while the 10B-2
+  schema-level routes remain in place; Response Fields inline edit
+  + Required auto-submit + row-level Add/Delete are wired). The
+  seven supported display-field sources at the schema layer are
+  `reviewee.tag_1/2/3`, `reviewee.profile_link`, and
   `pair_context.1/2/3`; `assignment_context_*` is deliberately
   excluded. See `ARCHITECTURE.md` "Conceptual hierarchy."
 - View detail with live counts of reviewers, reviewees, assignments,
@@ -281,8 +311,6 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
   (no draft table). Blocking errors for unknown / inactive roster
   references and duplicates. See `docs/imports.md` for the
   pair-vs-assignment-context distinction.
-- **Default Instrument** auto-created per session (placeholder until
-  Segment 8 ships real instruments).
 - **`assignment_mode`** column on `sessions` records the strategy
   used; `Assignment.created_by_mode` records the same per row.
 - **Delete all** assignments from the hub with explicit confirm.
@@ -305,10 +333,12 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
   non-excluded assignment (`include = true`); columns are reviewee
   identity (name + email_or_identifier, always-first, mandatory)
   followed by the instrument's visible `InstrumentDisplayField`
-  rows (10B-1 — sourced from `pair_context_1/2/3` today; 10B-2 will
-  let the operator add `reviewee.tag_1/2/3` / `reviewee.profile_link`
-  via a per-instrument picker), then the response-field inputs in
-  stored order, then a row-level submitted-status indicator. Empty
+  rows (10B-1 — sourced from `pair_context_1/2/3` today; the
+  10B-2 add-display-field route over `reviewee.tag_1/2/3` /
+  `reviewee.profile_link` exists server-side but the 10C per-
+  instrument card placeholder doesn't reach it yet), then the
+  response-field inputs in stored order, then a row-level
+  submitted-status indicator. Empty
   / NULL display-field labels fall back to inferred strings from
   the D6 helper. `profile_link` cells render as plain `<a href>`.
   `assignment_context_*` is deliberately excluded from the surface
@@ -375,6 +405,9 @@ Every destructive operation writes an `audit_events` row with
 | `instrument.display_field_deleted` | operator deletes a display field (`detail.snapshot`); no cascade since display fields have no per-row dependents |
 | `instrument.display_fields_saved` | bulk fields-save when display rows' label / visibility / order changed (`detail.added` / `removed` always `[]` in 10B-2; `detail.updated` carries `[{source_type, source_field, changes: {key: [old, new]}}, …]`) |
 | `instruments.bulk_accepting_responses` | bulk Open all / Close all (`detail.target`, `detail.changed_instrument_ids`); not duplicated as per-instrument open / close events |
+| `instruments.bulk_visibility_when_closed` | bulk Show all / Don't show any (`detail.target`, `detail.changed_instrument_ids`); not duplicated as per-instrument visibility events |
+| `instrument.created` | operator creates a new instrument via `/instruments/add` (`detail.instrument_id`, `detail.session_id`, `detail.order`, `detail.after_instrument_id`); UI button currently disabled, route active for when multi-instrument UI lifts |
+| `instrument.deleted` | operator deletes an instrument via `/instruments/{id}/delete` (`detail.instrument_id`, `detail.session_id`, `detail.name`, `detail.order`); cascade to response fields / display fields / assignments / responses runs via FK delete-orphan |
 | `invitations.generated` | bulk-create invitations on a ready session (`detail.count`, `detail.invitation_ids`, `detail.reviewer_ids`) |
 | `invitation.sent` | outbox row written + invitation flipped to `sent` |
 | `invitation.opened` | first valid token follow with matching email |
@@ -394,6 +427,7 @@ plug in additional reasons without a schema change. Today's keys are
 |---|---|
 | Edit individual reviewer / reviewee / assignment rows (today: bulk operations only via CSV replace or delete-all) | Not yet planned; would slot before activation |
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
+| Display Fields persistence on the Instruments page placeholder rows (Friendly Label edit, Visible toggle, Order column don't POST yet; the 10B-2 schema-level routes still exist server-side). Wiring up requires extending `_VALID_DISPLAY_SOURCES` / `_DEFAULT_DISPLAY_LABELS` with reviewee name + email, extending `display_field_value` and the reviewer-surface render path, and pointing the placeholder cells at the existing endpoints. | Next round of UI work (likely 10D or folded into 11) |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
 | **Real SMTP email backend** (production sending, not the dev outbox) | **Segment 15** |
 | **Export / audit retention** | **Segment 11** |
@@ -425,16 +459,27 @@ event records old count, new count, and any cascaded downstream
 deletions. No append/merge for now — defer until activation
 constraints make it necessary.
 
-### Single-instrument invariant
+### Single-instrument UI invariant
 
-Every session has exactly one Instrument (system handle `Default`,
-operator-editable `description`) with seed response fields and seed
-`pair_context_1/2/3` display fields, auto-created at session
-creation time via `ensure_default_instrument`. Every assignment
-points at it. The reviewer surface and the operator's `/instruments`
-page already loop over instruments (today: N=1) so multi-instrument
-support (Segment 13) is purely an enable-the-Add/Delete-buttons
-change. See `ARCHITECTURE.md` "Conceptual hierarchy."
+The data layer is fully multi-instrument-aware. Every session
+seeds one Instrument at creation time via
+`ensure_default_instrument` (system handle `Default`,
+operator-editable `description`, two seed response fields, three
+seed `pair_context_1/2/3` display fields). The schema columns
+(`Instrument.session_id`, `Instrument.order`,
+`Assignment.instrument_id`) and the FK delete-orphan cascades are
+in place; `create_instrument(after_instrument_id=…)` and
+`delete_instrument(...)` exist as service helpers and emit the
+`instrument.created` / `instrument.deleted` audit events; the
+reviewer surface and the operator's `/instruments` page already
+loop over instruments. The remaining gap is the operator UI: the
+`Add an instrument` button is disabled with a "still in progress"
+tooltip, so today every session renders exactly one
+per-instrument card. The Delete button does render when more than
+one instrument exists (reachable, e.g., via direct POSTs to
+`/instruments/add` followed by a UI delete). Lifting the
+single-instrument-UI restriction is what Segment 13 will do. See
+`ARCHITECTURE.md` "Conceptual hierarchy."
 
 ### Pair-level vs assignment-level context
 
