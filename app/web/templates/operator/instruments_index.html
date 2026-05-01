@@ -90,7 +90,7 @@
     </div>
   </div>
 
-  {% set instrument_palette = ['#e0f2fe', '#d1fae5', '#ede9fe', '#ffedd5', '#ffe4e6', '#fef3c7'] %}
+  {% set instrument_palette = ['#f0f9ff', '#d1fae5', '#ede9fe', '#ffedd5', '#ffe4e6', '#fef3c7'] %}
   {% for instrument in instruments %}
     <div class="card" id="instrument-{{ instrument.id }}"
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
@@ -128,10 +128,9 @@
             {% endif %}
           </p>
           <p>
-            Session deadline:
+            Session deadline (auto-close):
             {% if session.deadline %}
               <span class="pill pill-info">{{ session.deadline.isoformat() }}</span>
-              <span class="muted">(auto-close)</span>
             {% else %}
               <span class="pill pill-warning">not set</span>
             {% endif %}
