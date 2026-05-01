@@ -33,8 +33,8 @@ that affect what reviewers actually see today.
 
 | Order | Item | Why this position |
 |---|---|---|
-| 1 | **#13 — Fix Display Fields placeholder** (no-persistence + bad sources) | Data-loss-by-illusion: operator types a Friendly Label, ticks Save, the value disappears on next page load. Pick "label preview-only" (~30 min) or "wire to existing routes" (~half day). The cheap fix is sufficient for now. |
-| 2 | **#14 — Drop `pair_context_*` default seed; seed from import data** | The headline data fix. Today, full-matrix sessions with tag-rich reviewees show `[blank][blank][blank]` instead of `[Group A][Senior][Track 1]`. Lands after #13 so the operator UI stops advertising the wrong sources before the seed semantics change beneath them. |
+| 1 | ~~**#13 — Fix Display Fields placeholder**~~ ✅ shipped 2026-05-01 (option 2: wired to existing routes). |
+| 2 | ~~**#14 — Drop `pair_context_*` default seed; seed from import data**~~ ✅ shipped 2026-05-01 (lazy-seed + Alembic data migration). |
 | 3 | **#18 — Decide "Add an instrument" button vs route** | Tiny decision but it gates item 11. Schema + services are ready; pick "enable the button" or "delete the dead route." |
 
 After P0 ships, reviewers see the right columns, operators don't

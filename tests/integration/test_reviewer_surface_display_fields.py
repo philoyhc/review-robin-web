@@ -60,8 +60,8 @@ def _operator_creates_session_with_pair(
             "file": (
                 "m.csv",
                 (
-                    f"ReviewerEmail,RevieweeEmail,PairContext1,PairContext2\n"
-                    f"{reviewer_email},{reviewee_ident},morning,roomA\n"
+                    f"ReviewerEmail,RevieweeEmail,PairContext1,PairContext2,PairContext3\n"
+                    f"{reviewer_email},{reviewee_ident},morning,roomA,cohortX\n"
                 ).encode(),
                 "text/csv",
             )

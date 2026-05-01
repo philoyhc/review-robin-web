@@ -35,10 +35,31 @@ def _session(db: Session, user: User, *, code: str) -> ReviewSession:
     return s
 
 
+def _seed_pair_context_display_fields(db: Session, instrument: Instrument) -> None:
+    for slot, order in (("1", 0), ("2", 1), ("3", 2)):
+        db.add(
+            InstrumentDisplayField(
+                instrument_id=instrument.id,
+                label="",
+                source_type="pair_context",
+                source_field=slot,
+                order=order,
+                visible=True,
+            )
+        )
+    db.flush()
+
+
 def _seed_instrument(db: Session, code: str) -> tuple[User, Instrument]:
     user = _user(db)
     session = _session(db, user, code=code)
     instrument = ensure_default_instrument(db, session)
+    # Most tests in this module assume the legacy behaviour where the
+    # three pair_context display fields exist post-creation. After the
+    # 2026-05-01 lazy-seed change (item #14), the fixture seeds them
+    # explicitly so individual tests stay focused on the behaviour they
+    # exercise.
+    _seed_pair_context_display_fields(db, instrument)
     return user, instrument
 
 

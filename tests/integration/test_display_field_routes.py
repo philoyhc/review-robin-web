@@ -95,17 +95,35 @@ def _instrument(db: Session, session_id: int) -> Instrument:
     ).scalar_one()
 
 
+def _seed_pair_context_display_fields(db: Session, instrument: Instrument) -> None:
+    """Pair-context display fields are no longer auto-seeded by
+    ensure_default_instrument (item #14, 2026-05-01). Tests that
+    exercise edit/delete on those rows seed them explicitly."""
+    for slot, order in (("1", 0), ("2", 1), ("3", 2)):
+        db.add(
+            InstrumentDisplayField(
+                instrument_id=instrument.id,
+                label="",
+                source_type="pair_context",
+                source_field=slot,
+                order=order,
+                visible=True,
+            )
+        )
+    db.commit()
+
+
 def test_add_display_field_appends_row_and_invalidates_validated(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="add-disp")
     _populate_rosters(client, review_session.id)
     _generate_full_matrix(client, review_session.id)
+    instrument = _instrument(db, review_session.id)
+    _seed_pair_context_display_fields(db, instrument)
     _validate(client, db, review_session.id)
     db.refresh(review_session)
     assert review_session.status == "validated"
-
-    instrument = _instrument(db, review_session.id)
 
     response = client.post(
         f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
@@ -169,7 +187,7 @@ def test_add_display_field_duplicate_source_redirects_with_error(
 ) -> None:
     review_session = _make_session(client, db, code="add-dup")
     instrument = _instrument(db, review_session.id)
-    # pair_context.1 is already on the instrument from ensure_default_instrument
+    _seed_pair_context_display_fields(db, instrument)
 
     response = client.post(
         f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
@@ -196,6 +214,7 @@ def test_edit_display_field_updates_label_and_visibility(
 ) -> None:
     review_session = _make_session(client, db, code="edit-disp")
     instrument = _instrument(db, review_session.id)
+    _seed_pair_context_display_fields(db, instrument)
     pair_one = db.execute(
         select(InstrumentDisplayField).where(
             InstrumentDisplayField.instrument_id == instrument.id,
@@ -232,6 +251,7 @@ def test_delete_display_field_removes_row_and_repacks(
 ) -> None:
     review_session = _make_session(client, db, code="del-disp")
     instrument = _instrument(db, review_session.id)
+    _seed_pair_context_display_fields(db, instrument)
     pair_two = db.execute(
         select(InstrumentDisplayField).where(
             InstrumentDisplayField.instrument_id == instrument.id,
@@ -260,11 +280,12 @@ def test_locked_when_ready_returns_409_for_display_field_routes(
     review_session = _make_session(client, db, code="lock-disp")
     _populate_rosters(client, review_session.id)
     _generate_full_matrix(client, review_session.id)
+    instrument = _instrument(db, review_session.id)
+    _seed_pair_context_display_fields(db, instrument)
     _activate(client, db, review_session.id)
     db.refresh(review_session)
     assert review_session.status == "ready"
 
-    instrument = _instrument(db, review_session.id)
     pair_one = db.execute(
         select(InstrumentDisplayField).where(
             InstrumentDisplayField.instrument_id == instrument.id,
@@ -304,6 +325,126 @@ def test_locked_when_ready_returns_409_for_display_field_routes(
     assert bulk.status_code == 409
 
 
+def test_reviewees_import_lazy_seeds_display_fields(
+    client: TestClient, db: Session
+) -> None:
+    """After uploading reviewees with populated tag/profile columns, the
+    Default instrument should gain corresponding display-field rows
+    automatically — no operator action required (item #14)."""
+    review_session = _make_session(client, db, code="seed-on-import")
+    instrument = _instrument(db, review_session.id)
+    # Pre-condition: ensure_default_instrument no longer seeds anything.
+    pre_rows = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id
+        )
+    ).scalars().all()
+    assert pre_rows == []
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                (
+                    b"RevieweeName,RevieweeEmail,RevieweeTag1,PhotoLink\n"
+                    b"Carol,carol@example.edu,Cohort A,https://example.edu/c\n"
+                ),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    rows = db.execute(
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .order_by(InstrumentDisplayField.order)
+    ).scalars().all()
+    pairs = [(r.source_type, r.source_field) for r in rows]
+    assert pairs == [
+        ("reviewee", "profile_link"),
+        ("reviewee", "tag_1"),
+    ]
+
+
+def test_manual_assignments_import_lazy_seeds_pair_context_display_fields(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="seed-asgn-import")
+    _populate_rosters(client, review_session.id)
+    instrument = _instrument(db, review_session.id)
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/manual/import",
+        files={
+            "file": (
+                "m.csv",
+                (
+                    b"ReviewerEmail,RevieweeEmail,PairContext1,PairContext2\n"
+                    b"r@example.edu,carol@example.edu,morning,roomA\n"
+                ),
+                "text/csv",
+            )
+        },
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+
+    rows = db.execute(
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .order_by(InstrumentDisplayField.order)
+    ).scalars().all()
+    pairs = [(r.source_type, r.source_field) for r in rows]
+    assert ("pair_context", "1") in pairs
+    assert ("pair_context", "2") in pairs
+    assert ("pair_context", "3") not in pairs
+
+
+def test_friendly_label_persistence_round_trip_via_edit_route(
+    client: TestClient, db: Session
+) -> None:
+    """The headline P0 fix: an operator-typed Friendly Label survives a
+    page reload — it persists via the existing ``/display-fields/{id}/edit``
+    route, not via the JS-only placeholder of yore (item #13)."""
+    review_session = _make_session(client, db, code="lbl-persist")
+    instrument = _instrument(db, review_session.id)
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="",
+            source_type="reviewee",
+            source_field="tag_1",
+            order=0,
+            visible=True,
+        )
+    )
+    db.commit()
+    df = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/display-fields/{df.id}/edit",
+        data={"label": "Cohort", "visible": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    db.refresh(df)
+    assert df.label == "Cohort"
+
+    # Re-render the page; the operator's typed label should be visible
+    # (not lost to a JS-only round-trip).
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "Cohort" in body
+
+
 def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
     db: Session,
     alice: AuthenticatedUser,
@@ -316,6 +457,7 @@ def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
     _generate_full_matrix(operator, review_session.id)
 
     instrument = _instrument(db, review_session.id)
+    _seed_pair_context_display_fields(db, instrument)
     pair_one = db.execute(
         select(InstrumentDisplayField).where(
             InstrumentDisplayField.instrument_id == instrument.id,

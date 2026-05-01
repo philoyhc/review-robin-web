@@ -12,6 +12,7 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     Response,
+    Reviewee,
     ReviewSession,
     User,
 )
@@ -38,12 +39,6 @@ DEFAULT_RESPONSE_FIELDS: list[dict[str, Any]] = [
     },
 ]
 
-_DEFAULT_DISPLAY_FIELDS: list[dict[str, Any]] = [
-    {"source_type": "pair_context", "source_field": "1", "order": 0},
-    {"source_type": "pair_context", "source_field": "2", "order": 1},
-    {"source_type": "pair_context", "source_field": "3", "order": 2},
-]
-
 _DEFAULT_DISPLAY_LABELS: dict[tuple[str, str], str] = {
     ("reviewee", "tag_1"): "Tag 1",
     ("reviewee", "tag_2"): "Tag 2",
@@ -52,6 +47,19 @@ _DEFAULT_DISPLAY_LABELS: dict[tuple[str, str], str] = {
     ("pair_context", "1"): "Pair context 1",
     ("pair_context", "2"): "Pair context 2",
     ("pair_context", "3"): "Pair context 3",
+}
+
+# Operator UI vocabulary uses CSV column names; the schema uses
+# (source_type, source_field) tuples. This map is the canonical
+# translation used by lazy-seeding (Segment 10D / item #14).
+_CSV_COL_TO_SOURCE: dict[str, tuple[str, str]] = {
+    "PhotoLink": ("reviewee", "profile_link"),
+    "RevieweeTag1": ("reviewee", "tag_1"),
+    "RevieweeTag2": ("reviewee", "tag_2"),
+    "RevieweeTag3": ("reviewee", "tag_3"),
+    "PairContext1": ("pair_context", "1"),
+    "PairContext2": ("pair_context", "2"),
+    "PairContext3": ("pair_context", "3"),
 }
 
 _FIELD_KEY_REGEX = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -173,29 +181,6 @@ def ensure_default_instrument(
             )
         db.flush()
 
-    has_display_fields = (
-        db.execute(
-            select(InstrumentDisplayField.id)
-            .where(InstrumentDisplayField.instrument_id == instrument.id)
-            .limit(1)
-        ).first()
-        is not None
-    )
-
-    if not has_display_fields:
-        for spec in _DEFAULT_DISPLAY_FIELDS:
-            db.add(
-                InstrumentDisplayField(
-                    instrument_id=instrument.id,
-                    label="",
-                    source_type=spec["source_type"],
-                    source_field=spec["source_field"],
-                    order=spec["order"],
-                    visible=True,
-                )
-            )
-        db.flush()
-
     return instrument
 
 
@@ -255,17 +240,6 @@ def create_instrument(
                 required=spec["required"],
                 order=spec["order"],
                 validation=spec["validation"],
-            )
-        )
-    for spec in _DEFAULT_DISPLAY_FIELDS:
-        db.add(
-            InstrumentDisplayField(
-                instrument_id=instrument.id,
-                label="",
-                source_type=spec["source_type"],
-                source_field=spec["source_field"],
-                order=spec["order"],
-                visible=True,
             )
         )
     db.flush()
@@ -538,6 +512,137 @@ def delete_display_field(
             "snapshot": snapshot,
         },
     )
+
+
+def _seed_display_fields_for_instrument(
+    db: Session,
+    *,
+    instrument: Instrument,
+    sources: list[tuple[str, str]],
+) -> int:
+    """Idempotently add display-field rows for the given sources.
+
+    Skips any (source_type, source_field) pair already on the instrument.
+    Returns the number of new rows created. New rows append after any
+    existing rows preserving operator-typed labels and order.
+    """
+    if not sources:
+        return 0
+    existing = _ordered_display_fields(db, instrument)
+    existing_pairs = {(f.source_type, f.source_field) for f in existing}
+    next_order = len(existing)
+    created = 0
+    for source_type, source_field in sources:
+        if (source_type, source_field) in existing_pairs:
+            continue
+        db.add(
+            InstrumentDisplayField(
+                instrument_id=instrument.id,
+                label="",
+                source_type=source_type,
+                source_field=source_field,
+                order=next_order,
+                visible=True,
+            )
+        )
+        next_order += 1
+        created += 1
+    if created:
+        db.flush()
+    return created
+
+
+def _instruments_for_session(
+    db: Session, review_session: ReviewSession
+) -> list[Instrument]:
+    return list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+
+
+def seed_display_fields_from_reviewees(
+    db: Session, review_session: ReviewSession
+) -> int:
+    """Create reviewee-side display fields for any populated import slots.
+
+    Inspects the session's reviewees for non-empty ``profile_link`` and
+    ``tag_1/2/3`` values; for each instrument in the session, idempotently
+    adds an ``InstrumentDisplayField`` row for each populated slot.
+    Returns the total number of new display-field rows created.
+    """
+    sources: list[tuple[str, str]] = []
+    has_profile = db.execute(
+        select(Reviewee.id)
+        .where(Reviewee.session_id == review_session.id)
+        .where(Reviewee.profile_link.is_not(None))
+        .where(Reviewee.profile_link != "")
+        .limit(1)
+    ).first()
+    if has_profile is not None:
+        sources.append(("reviewee", "profile_link"))
+    for slot in (1, 2, 3):
+        col = getattr(Reviewee, f"tag_{slot}")
+        found = db.execute(
+            select(Reviewee.id)
+            .where(Reviewee.session_id == review_session.id)
+            .where(col.is_not(None))
+            .where(col != "")
+            .limit(1)
+        ).first()
+        if found is not None:
+            sources.append(("reviewee", f"tag_{slot}"))
+
+    if not sources:
+        return 0
+    total = 0
+    for instrument in _instruments_for_session(db, review_session):
+        total += _seed_display_fields_for_instrument(
+            db, instrument=instrument, sources=sources
+        )
+    return total
+
+
+def seed_display_fields_from_assignments(
+    db: Session, review_session: ReviewSession
+) -> int:
+    """Create pair_context display fields for any populated assignment slots.
+
+    Inspects the session's assignments for non-empty ``pair_context_N``
+    values; for each instrument in the session, idempotently adds an
+    ``InstrumentDisplayField`` row for each populated slot. Returns the
+    total number of new display-field rows created.
+    """
+    pair_present = {1: False, 2: False, 3: False}
+    for (ctx,) in db.execute(
+        select(Assignment.context).where(
+            Assignment.session_id == review_session.id
+        )
+    ).all():
+        if not ctx:
+            continue
+        for slot in (1, 2, 3):
+            if ctx.get(f"pair_context_{slot}"):
+                pair_present[slot] = True
+        if all(pair_present.values()):
+            break
+
+    sources = [
+        ("pair_context", str(slot))
+        for slot, present in pair_present.items()
+        if present
+    ]
+    if not sources:
+        return 0
+    total = 0
+    for instrument in _instruments_for_session(db, review_session):
+        total += _seed_display_fields_for_instrument(
+            db, instrument=instrument, sources=sources
+        )
+    return total
 
 
 def bulk_save_fields(

@@ -322,7 +322,7 @@ def save_reviewees(
     filename: str,
     correlation_id: str,
 ) -> tuple[int, int]:
-    return _save(
+    result = _save(
         db,
         session=session,
         user=user,
@@ -334,6 +334,13 @@ def save_reviewees(
         correlation_id=correlation_id,
         to_kwargs=_reviewee_to_kwargs,
     )
+    # Lazy-seed display fields for any populated reviewee slots
+    # (profile_link / tag_1..3) — see guide/unfinished_business item #14.
+    from app.services.instruments import seed_display_fields_from_reviewees
+
+    if seed_display_fields_from_reviewees(db, session):
+        db.commit()
+    return result
 
 
 def _reviewer_to_kwargs(row: ReviewerImportRow, session_id: int) -> dict[str, Any]:

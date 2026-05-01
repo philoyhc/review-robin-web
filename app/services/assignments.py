@@ -587,6 +587,13 @@ def replace_assignments(
     )
 
     db.commit()
+
+    # Lazy-seed pair_context display fields for any populated slots
+    # — see guide/unfinished_business item #14.
+    from app.services.instruments import seed_display_fields_from_assignments
+
+    if seed_display_fields_from_assignments(db, review_session):
+        db.commit()
     return replaced, len(pairs)
 
 

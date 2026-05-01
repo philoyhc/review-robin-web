@@ -367,7 +367,7 @@ is the related multi-instrument-button decision. See `docs/status.md`
 audit-table + `spec/operator_map.md` "Instruments" for the
 contracts these items are correcting.
 
-### 13. Fix the Display Fields placeholder (no-persistence + bad sources) · [bug] · small
+### 13. ~~Fix the Display Fields placeholder (no-persistence + bad sources)~~ ✅ shipped 2026-05-01 · [bug] · small
 
 **Why now.** Two confirmed mismatches between
 `app/web/templates/operator/instruments_index.html:227–286` (the
@@ -420,7 +420,7 @@ Segment 11 or its own 10x slice.
 
 ---
 
-### 14. Drop the `pair_context_*` default seed; seed display fields from import data · [bug] · medium
+### 14. ~~Drop the `pair_context_*` default seed; seed display fields from import data~~ ✅ shipped 2026-05-01 · [bug] · medium
 
 **Why now.** This is the headline data fix.
 `ensure_default_instrument` (`app/services/instruments.py:185–197`)
