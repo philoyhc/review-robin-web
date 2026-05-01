@@ -29,9 +29,10 @@ Top to bottom:
    and bulk action buttons. Subject to revision in a later slice.
 5. **One full-width per-instrument card per instrument**, in
    `Instrument.order`. Card layout in the next section.
-6. **Half-width "Response Type definitions" card** on the left.
-   Content TBD; placeholder for a static reference of the four
-   response types (`Integer`, `Short Text`, `Long Text`, `Yes/No`).
+6. **Full-width "Response Type Definitions" card**. Catalog of
+   response types (with validation rules) referenced by every
+   instrument's Response Fields table. Layout in
+   "Response Type Definitions card" below.
 
 ## Per-instrument card
 
@@ -132,6 +133,41 @@ classes from `spec/assumptions.md`:
 at a time. When the two tables are open for editing, `Save` is
 shown; when the two tables are locked, `Edit` is shown.
 
+## Response Type Definitions card
+
+Full-width card. Title: `Response Type Definitions`. Catalog of
+response types referenced by every instrument's Response Fields
+table; the Response Fields `Type` column is a dropdown over this
+card's `Response Type` column.
+
+Columns:
+
+| Column | Behaviour |
+|---|---|
+| **Response Type** | Operator-typed name. The value referenced by Response Fields rows. Operator-editable for non-seeded rows; the seeded rows below are name-locked. |
+| **Data Type** | One of `String`, `Decimal`, `Integer`, `List`. Drives which of the trailing columns apply. |
+| **Min** | Applies when Data Type is `Decimal`, `Integer`, or `String`. For `Decimal` / `Integer`: minimum value. For `String`: minimum number of characters. Rendered as `NA` and read-only when not applicable. |
+| **Max** | Applies when Data Type is `Decimal`, `Integer`, or `String`. For `Decimal` / `Integer`: maximum value. For `String`: maximum number of characters. Rendered as `NA` and read-only when not applicable. |
+| **Step** | Applies when Data Type is `Decimal` or `Integer`. The allowed increment between Min and Max. Rendered as `NA` and read-only when not applicable. |
+| **List** | Applies when Data Type is `List`. Comma-separated list of allowed items. Rendered as `NA` and read-only when not applicable. |
+| **Action** | A delete cross icon (✗) and an add-row plus icon (➕). Same pattern as the Response Fields Action column — both fire immediately, no confirmation. The delete is **suppressed for seeded rows** (operator can't remove a seeded type); the add inserts a new row immediately below. |
+
+Default seed (six rows; cannot be deleted):
+
+| Response Type | Data Type | Min | Max | Step | List |
+|---|---|---|---|---|---|
+| `Long_text` | `String` | 0 | 500 | NA | NA |
+| `Short_text` | `String` | 0 | 59 | NA | NA |
+| `Grade` | `List` | NA | NA | NA | `A+, A, A-, B+, B, B-, C+, C, D+, D, F` |
+| `1-to-5int` | `Integer` | 1 | 5 | 1 | NA |
+| `1-to-5half` | `Decimal` | 1 | 5 | 0.5 | NA |
+| `1-to-5dec` | `Decimal` | 1 | 5 | 0.1 | NA |
+
+Operator-added rows are deletable. Editing a Response Type that's
+in use by an instrument's Response Fields row propagates the new
+validation to that row on save (the engine writes the resulting
+constraints to `instrument_response_fields.validation`).
+
 ## Add / Delete semantics
 
 **Add new instrument** appends a new instrument card below the
@@ -158,9 +194,11 @@ This matches the existing service-layer repack in
   subject to revision; the current shape (deadline pill, accepting
   count, visibility count, bulk action buttons) carries over until
   that revision lands.
-- **Response Type definitions card** — content TBD; layout
-  question (does the half-width card sit alone with empty space on
-  the right, or pair with something else?).
+- **Response Type Definitions persistence** — the card is now
+  spec'd but unwired. The rebuild slice that lands it needs a new
+  `response_type_definitions` table (or equivalent) keyed by
+  session, with the seeded six rows guaranteed present and
+  un-deletable.
 - **Multi-instrument support** — `Add new instrument` is disabled
   on `main` today (per `unfinished_business.md` item #18). The
   decision to enable / delete is the next P0 unblock.
