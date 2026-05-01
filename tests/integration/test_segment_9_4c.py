@@ -206,9 +206,9 @@ def test_instruments_index_renders_one_card_per_instrument(
     instrument = instruments[0]
 
     assert "<h1>Instruments</h1>" in body
-    # System handle pill renders inside the per-instrument card (10A
-    # consolidated the page; per-instrument detail no longer exists).
-    assert instrument.name in body
+    # Per-instrument card now uses 'Instrument #N' as its title; the
+    # system handle is no longer surfaced in the card.
+    assert ">Instrument #1</h2>" in body
     # accepting_responses pill matches backing data
     if instrument.accepting_responses:
         assert "accepting responses" in body

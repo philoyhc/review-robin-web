@@ -109,8 +109,8 @@ def test_instruments_index_renders_settings_and_per_instrument_card(
     ).text
     assert "Instrument Status" in body
     assert "Accepting responses:" in body
-    instrument = _instrument(db, review_session.id)
-    assert instrument.name in body  # system handle pill
+    instrument = _instrument(db, review_session.id)  # noqa: F841
+    assert ">Instrument #1</h2>" in body
 
 
 def test_legacy_per_instrument_get_redirects_to_consolidated(

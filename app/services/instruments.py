@@ -835,6 +835,7 @@ def update_instrument_description(
             "description": [old_value, new_value],
         },
     )
+    db.commit()
     return instrument
 
 
