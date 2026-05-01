@@ -92,6 +92,12 @@ the row immediately below. The arrow is disabled at the boundary
 arrows is informational — it always reflects the row's current
 position post-swap and is not directly editable.
 
+The arrows are also suppressed for rows whose position is fixed
+by spec. Today that's the `RevieweeName` and `RevieweeEmail` rows
+in Display Fields: they always sit at positions 1 and 2 (in that
+order) and cannot be reordered. Every other row in either table
+is freely reorderable.
+
 #### Display Fields (left)
 
 Title: `Display Fields`. Columns:
@@ -101,7 +107,7 @@ Title: `Display Fields`. Columns:
 | **Source** | System name. Read-only `<code>`. Eligible rows, in default order: `RevieweeName`, `RevieweeEmail`, then any reviewee data column with at least one populated value (`PhotoLink`, `RevieweeTag1/2/3`), then any pair-context slot with at least one populated value across the session's assignments (`PairContext1/2/3`). `AssignmentContext1/2/3` is deliberately **excluded** — it's logic-engaging and hidden from reviewers (see `spec/architecture.md` "Pair-level vs assignment-level context"). |
 | **Friendly Label** | Operator-editable text. Save persists to the underlying database. |
 | **Include** | Checkbox. `RevieweeName` and `RevieweeEmail` are mandatory-checked and the checkbox is locked (operator cannot uncheck). All other rows are operator-toggleable. |
-| **Order** | Integer (1-based) plus the `▲` / `▼` arrow controls described above. Initial seed: `RevieweeName=1`, `RevieweeEmail=2`, then the present rows in the order `PhotoLink`, `RevieweeTag1/2/3`, `PairContext1/2/3` (skipping any that have no data). |
+| **Order** | Integer (1-based) plus the `▲` / `▼` arrow controls described above. The arrows are suppressed for the `RevieweeName` and `RevieweeEmail` rows — they're locked at positions 1 and 2 respectively. Initial seed: `RevieweeName=1`, `RevieweeEmail=2`, then the present rows in the order `PhotoLink`, `RevieweeTag1/2/3`, `PairContext1/2/3` (skipping any that have no data). |
 | **Sort** | Empty for now. Placeholder for a future default row order on reviewer surface; will use the same `▲` / `▼` reorder convention when it lands. |
 
 #### Response Fields (right)
