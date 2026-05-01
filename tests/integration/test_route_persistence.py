@@ -74,11 +74,15 @@ def test_add_display_field_route_persists(
 
     with Session(committed_engine) as s:
         rows = s.execute(
-            select(InstrumentDisplayField).where(
-                InstrumentDisplayField.instrument_id == instrument_id
-            )
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument_id)
+            .order_by(InstrumentDisplayField.order)
         ).scalars().all()
+    # Locked Name + Email rows are seeded on session creation; the
+    # newly-added tag_1 row appends at order 2.
     assert [(r.source_type, r.source_field, r.label) for r in rows] == [
+        ("reviewee", "name", ""),
+        ("reviewee", "email_or_identifier", ""),
         ("reviewee", "tag_1", "Cohort"),
     ]
 
@@ -99,7 +103,8 @@ def test_update_display_field_label_persists(
     with Session(committed_engine) as s:
         df_id = s.execute(
             select(InstrumentDisplayField.id).where(
-                InstrumentDisplayField.instrument_id == instrument_id
+                InstrumentDisplayField.instrument_id == instrument_id,
+                InstrumentDisplayField.source_field == "tag_1",
             )
         ).scalar_one()
 
@@ -131,7 +136,8 @@ def test_delete_display_field_persists(
     with Session(committed_engine) as s:
         df_id = s.execute(
             select(InstrumentDisplayField.id).where(
-                InstrumentDisplayField.instrument_id == instrument_id
+                InstrumentDisplayField.instrument_id == instrument_id,
+                InstrumentDisplayField.source_field == "tag_1",
             )
         ).scalar_one()
 
@@ -143,12 +149,20 @@ def test_delete_display_field_persists(
     assert response.status_code == 303
 
     with Session(committed_engine) as s:
-        rows = s.execute(
-            select(InstrumentDisplayField).where(
-                InstrumentDisplayField.instrument_id == instrument_id
-            )
-        ).scalars().all()
-    assert rows == []
+        # Locked Name + Email rows persist; only the operator-added
+        # tag_1 row should be gone.
+        sources = sorted(
+            (r.source_type, r.source_field)
+            for r in s.execute(
+                select(InstrumentDisplayField).where(
+                    InstrumentDisplayField.instrument_id == instrument_id
+                )
+            ).scalars()
+        )
+    assert sources == [
+        ("reviewee", "email_or_identifier"),
+        ("reviewee", "name"),
+    ]
 
 
 def test_delete_response_field_persists(
@@ -294,7 +308,8 @@ def test_bulk_save_fields_label_persists(
     with Session(committed_engine) as s:
         df_id = s.execute(
             select(InstrumentDisplayField.id).where(
-                InstrumentDisplayField.instrument_id == instrument_id
+                InstrumentDisplayField.instrument_id == instrument_id,
+                InstrumentDisplayField.source_field == "tag_1",
             )
         ).scalar_one()
         rating_id = s.execute(

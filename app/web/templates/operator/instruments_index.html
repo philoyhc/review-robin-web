@@ -83,8 +83,20 @@
 
   {% set instrument_palette = ['#f0f9ff', '#d1fae5', '#ede9fe', '#ffedd5', '#ffe4e6', '#fef3c7'] %}
   {% for instrument in instruments %}
+    {% set is_editing = (editing_instrument_id == instrument.id) %}
+    {% set was_saved = (saved_instrument_id == instrument.id) %}
+    {% set sorted_display_fields = instrument.display_fields | sort(attribute='order') %}
+
     <div class="card" id="instrument-{{ instrument.id }}"
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
+
+      {% if was_saved %}
+        <div class="card" style="border-color: #16a34a; background: #dcfce7; margin-bottom: 12px;">
+          <p style="margin: 0;">
+            Instrument #{{ loop.index }} saved.
+          </p>
+        </div>
+      {% endif %}
 
       {# Section A — Identity + status. #}
       <div class="bottom-grid">
@@ -166,46 +178,102 @@
         </div>
       </div>
 
-      {# Section B — Display Fields + Response Fields (frame stubs). #}
+      {# Section B — Display Fields + Response Fields. #}
+      {# Per-row hidden move forms (referenced by ▲/▼ buttons via the
+         HTML5 ``form`` attribute). #}
+      {% if is_editing %}
+        {% for df in sorted_display_fields %}
+          {% if not is_locked_display_source(df.source_type, df.source_field) %}
+            <form id="dfmoveup-{{ df.id }}" method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/move"
+                  style="display: none;">
+              <input type="hidden" name="direction" value="up">
+            </form>
+            <form id="dfmovedown-{{ df.id }}" method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/move"
+                  style="display: none;">
+              <input type="hidden" name="direction" value="down">
+            </form>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+
       <div class="bottom-grid field-builder">
         <div class="card" style="border: none; background: transparent; padding: 0;">
           <h3 style="margin-top: 0;">Display Fields</h3>
-          <div class="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Source</th>
-                  <th>Friendly Label</th>
-                  <th>Include</th>
-                  <th>Order</th>
-                  <th>Sort</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr data-source="RevieweeName">
-                  <td><code>RevieweeName</code></td>
-                  <td></td>
-                  <td><input type="checkbox" checked disabled title="Always shown to reviewers."></td>
-                  <td>1</td>
-                  <td></td>
-                </tr>
-                <tr data-source="RevieweeEmail">
-                  <td><code>RevieweeEmail</code></td>
-                  <td></td>
-                  <td><input type="checkbox" checked disabled title="Always shown to reviewers."></td>
-                  <td>2</td>
-                  <td></td>
-                </tr>
-                <tr>
-                  <td colspan="5" class="muted" style="font-style: italic;">
-                    Other reviewee columns (PhotoLink, RevieweeTag1/2/3) and
-                    pair-context columns (PairContext1/2/3) appear here once
-                    populated. Wiring lands in a follow-up slice.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <form id="dfsave-{{ instrument.id }}" method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save"
+                style="margin: 0;">
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Friendly Label</th>
+                    <th>Include</th>
+                    <th>Order</th>
+                    <th>Sort</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for df in sorted_display_fields %}
+                    {% set is_locked_row = is_locked_display_source(df.source_type, df.source_field) %}
+                    {% set inferred_label = display_field_label(df) %}
+                    {% set first_movable_index = (sorted_display_fields | rejectattr('source_field', 'in', ['name', 'email_or_identifier']) | list | length) %}
+                    <tr data-source="{{ df.source_type }}.{{ df.source_field }}">
+                      <td><code>{{ df.source_type }}.{{ df.source_field }}</code></td>
+                      <td>
+                        {% if is_editing %}
+                          <input form="dfsave-{{ instrument.id }}" type="text" name="label"
+                                 value="{{ df.label }}" placeholder="{{ inferred_label }}"
+                                 style="width: 100%;">
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="display">
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="{{ df.id }}">
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ loop.index0 }}">
+                        {% else %}
+                          {{ inferred_label }}
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if is_locked_row %}
+                          <span class="muted" title="Always shown to reviewers.">always</span>
+                          {% if is_editing %}
+                            {# Server-side defense: locked rows always
+                               post visible=true via visible_ids. #}
+                            <input form="dfsave-{{ instrument.id }}" type="hidden" name="visible_ids" value="{{ df.id }}">
+                          {% endif %}
+                        {% elif is_editing %}
+                          <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                                 name="visible_ids" value="{{ df.id }}"
+                                 {% if df.visible %}checked{% endif %}>
+                        {% else %}
+                          {% if df.visible %}<span class="pill pill-info">included</span>{% else %}<span class="muted">excluded</span>{% endif %}
+                        {% endif %}
+                      </td>
+                      <td>
+                        {{ loop.index }}
+                        {% if is_editing and not is_locked_row %}
+                          {# ▲ disabled if this row is right after the
+                             locked rows (i.e. swapping up would put it
+                             into the locked region). #}
+                          {% set arrows_top_index = 2 %}
+                          {% set is_top_movable = (loop.index0 == arrows_top_index) %}
+                          {% set is_bottom = loop.last %}
+                          <button form="dfmoveup-{{ df.id }}" type="submit"
+                                  class="btn-icon" title="Move up"
+                                  {% if is_top_movable %}disabled{% endif %}>&#9650;</button>
+                          <button form="dfmovedown-{{ df.id }}" type="submit"
+                                  class="btn-icon" title="Move down"
+                                  {% if is_bottom %}disabled{% endif %}>&#9660;</button>
+                        {% endif %}
+                      </td>
+                      <td><span class="muted">—</span></td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </form>
         </div>
 
         <div class="card" style="border: none; background: transparent; padding: 0;">
@@ -239,13 +307,16 @@
                 {% if not instrument.response_fields %}
                   <tr>
                     <td colspan="6" class="muted" style="font-style: italic;">
-                      No response fields. Wiring lands in a follow-up slice.
+                      No response fields. Wiring lands in Slice 2.
                     </td>
                   </tr>
                 {% endif %}
               </tbody>
             </table>
           </div>
+          <p class="muted" style="font-style: italic; margin-top: 8px;">
+            Response Fields wiring lands in Slice 2. Read-only here.
+          </p>
         </div>
       </div>
 
@@ -256,36 +327,38 @@
       <div class="card" style="border: none; background: transparent; padding: 0;">
         <h3 style="margin-top: 0;">Preview Instrument #{{ loop.index }}</h3>
         <p class="muted" style="font-style: italic;">
-          Three rows of preview data render here once Display Fields and
-          Response Fields are wired. Real reviewees fill the rows when
-          available; mock rows pad to three when fewer than three reviewees
-          are imported.
+          Preview rendering lands in Slice 3.
         </p>
       </div>
 
-      {# Section E — action buttons. All disabled in this frame slice
-         until wiring lands. #}
+      {# Section E — action buttons. #}
       <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;">
-        <button class="btn alert-solid" type="button" disabled
-                title="Wiring lands in a follow-up slice.">Edit</button>
+        {% if is_editing %}
+          <button form="dfsave-{{ instrument.id }}" type="submit" class="btn"
+                  {% if is_ready %}disabled{% endif %}>Save</button>
+          <a class="btn alert"
+             href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
+             {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
+        {% else %}
+          <a class="btn alert-solid"
+             href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+             {% if is_ready %}aria-disabled="true" style="opacity: 0.5; pointer-events: none;"{% endif %}>Edit</a>
+        {% endif %}
         <button class="btn alert-solid" type="button" disabled
                 title="Multi-instrument support is still in progress; coming back later.">Add new instrument</button>
         {% if instruments | length > 1 %}
           <button class="btn danger-solid" type="button" disabled
-                  title="Wiring lands in a follow-up slice.">Delete this instrument</button>
+                  title="Wiring lands in Slice 5.">Delete this instrument</button>
         {% endif %}
       </div>
     </div>
   {% endfor %}
 
-  {# Response Type Definitions card (frame stub). #}
+  {# Response Type Definitions card (frame stub — Slice 4). #}
   <div class="card">
     <h2 style="margin-top: 0;">Response Type Definitions</h2>
     <p class="muted" style="font-style: italic;">
-      The Response Fields <code>Type</code> column picks from this catalog.
-      Six seeded types (Long_text, Short_text, Grade, 1-to-5int,
-      1-to-5half, 1-to-5dec) plus operator-added types. Full table
-      and persistence wiring land in a follow-up slice.
+      Full table + persistence wiring lands in Slice 4.
     </p>
   </div>
 {% endblock %}

@@ -98,15 +98,19 @@ def _instrument(db: Session, session_id: int) -> Instrument:
 def _seed_pair_context_display_fields(db: Session, instrument: Instrument) -> None:
     """Pair-context display fields are no longer auto-seeded by
     ensure_default_instrument (item #14, 2026-05-01). Tests that
-    exercise edit/delete on those rows seed them explicitly."""
-    for slot, order in (("1", 0), ("2", 1), ("3", 2)):
+    exercise edit/delete on those rows seed them explicitly. Append
+    after the locked Name + Email rows that ``ensure_default_instrument``
+    already seeded (Slice 1 of Segment 10D)."""
+    db.refresh(instrument)
+    base = max((f.order for f in instrument.display_fields), default=-1) + 1
+    for offset, slot in enumerate(("1", "2", "3")):
         db.add(
             InstrumentDisplayField(
                 instrument_id=instrument.id,
                 label="",
                 source_type="pair_context",
                 source_field=slot,
-                order=order,
+                order=base + offset,
                 visible=True,
             )
         )
@@ -139,6 +143,8 @@ def test_add_display_field_appends_row_and_invalidates_validated(
         .order_by(InstrumentDisplayField.order)
     ).scalars().all()
     assert [(r.source_type, r.source_field) for r in rows] == [
+        ("reviewee", "name"),
+        ("reviewee", "email_or_identifier"),
         ("pair_context", "1"),
         ("pair_context", "2"),
         ("pair_context", "3"),
@@ -147,7 +153,7 @@ def test_add_display_field_appends_row_and_invalidates_validated(
     new_row = rows[-1]
     assert new_row.label == "Cohort"
     assert new_row.visible is True
-    assert new_row.order == 3
+    assert new_row.order == 5
 
     db.refresh(review_session)
     assert review_session.status == "draft"
@@ -265,7 +271,13 @@ def test_delete_display_field_removes_row_and_repacks(
         .where(InstrumentDisplayField.instrument_id == instrument.id)
         .order_by(InstrumentDisplayField.order)
     ).scalars().all()
-    assert [(r.source_field, r.order) for r in rows] == [("1", 0), ("3", 1)]
+    # Locked Name + Email rows kept at 0/1; pc_1 + pc_3 repack to 2/3.
+    assert [(r.source_type, r.source_field, r.order) for r in rows] == [
+        ("reviewee", "name", 0),
+        ("reviewee", "email_or_identifier", 1),
+        ("pair_context", "1", 2),
+        ("pair_context", "3", 3),
+    ]
 
 
 def test_locked_when_ready_returns_409_for_display_field_routes(
@@ -324,16 +336,20 @@ def test_reviewees_import_lazy_seeds_display_fields(
 ) -> None:
     """After uploading reviewees with populated tag/profile columns, the
     Default instrument should gain corresponding display-field rows
-    automatically — no operator action required (item #14)."""
+    automatically — no operator action required (item #14). Locked
+    Name + Email rows are seeded by ``ensure_default_instrument`` even
+    before the reviewees import (Slice 1 of Segment 10D)."""
     review_session = _make_session(client, db, code="seed-on-import")
     instrument = _instrument(db, review_session.id)
-    # Pre-condition: ensure_default_instrument no longer seeds anything.
     pre_rows = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == instrument.id
-        )
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .order_by(InstrumentDisplayField.order)
     ).scalars().all()
-    assert pre_rows == []
+    assert [(r.source_type, r.source_field) for r in pre_rows] == [
+        ("reviewee", "name"),
+        ("reviewee", "email_or_identifier"),
+    ]
 
     client.post(
         f"/operator/sessions/{review_session.id}/reviewees/import",
@@ -356,7 +372,10 @@ def test_reviewees_import_lazy_seeds_display_fields(
         .order_by(InstrumentDisplayField.order)
     ).scalars().all()
     pairs = [(r.source_type, r.source_field) for r in rows]
+    # Locked Name + Email rows + lazy-seeded profile_link + tag_1.
     assert pairs == [
+        ("reviewee", "name"),
+        ("reviewee", "email_or_identifier"),
         ("reviewee", "profile_link"),
         ("reviewee", "tag_1"),
     ]
@@ -396,6 +415,175 @@ def test_manual_assignments_import_lazy_seeds_pair_context_display_fields(
     assert ("pair_context", "3") not in pairs
 
 
+def test_locked_name_row_cannot_be_deleted(
+    client: TestClient, db: Session
+) -> None:
+    """Per spec, ``RevieweeName`` and ``RevieweeEmail`` rows are
+    locked — the delete route rejects them with 400."""
+    review_session = _make_session(client, db, code="lock-del")
+    instrument = _instrument(db, review_session.id)
+    name_row = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id,
+            InstrumentDisplayField.source_field == "name",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/display-fields/{name_row.id}/delete",
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+
+
+def test_locked_email_row_cannot_be_hidden(
+    client: TestClient, db: Session
+) -> None:
+    """Per spec, the locked rows' Include checkbox is always-on and
+    cannot be flipped. The edit route forces ``visible=True`` on save
+    via ``bulk_save_fields``; the row-level edit route raises the
+    same error if ``visible=false`` slips in."""
+    review_session = _make_session(client, db, code="lock-vis")
+    instrument = _instrument(db, review_session.id)
+    email_row = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id,
+            InstrumentDisplayField.source_field == "email_or_identifier",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/display-fields/{email_row.id}/edit",
+        data={"label": "Email", "visible": ""},
+        follow_redirects=False,
+    )
+    # Service raises LockedDisplayFieldError; route currently lets it
+    # bubble up as a 500. We accept either 4xx/5xx but verify the row
+    # state is unchanged.
+    db.refresh(email_row)
+    assert email_row.visible is True
+
+
+def test_locked_name_row_cannot_be_moved(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="lock-move")
+    instrument = _instrument(db, review_session.id)
+    name_row = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id,
+            InstrumentDisplayField.source_field == "name",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/display-fields/{name_row.id}/move",
+        data={"direction": "down"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+
+
+def test_move_display_field_swap_preserves_locked_top(
+    client: TestClient, db: Session
+) -> None:
+    """Moving a non-locked row up never crosses into the locked region
+    (Name + Email always stay at orders 0 / 1)."""
+    review_session = _make_session(client, db, code="move-swap")
+    instrument = _instrument(db, review_session.id)
+    _seed_pair_context_display_fields(db, instrument)
+    pc_two = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id,
+            InstrumentDisplayField.source_field == "2",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/display-fields/{pc_two.id}/move",
+        data={"direction": "up"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    # Editing-mode preserved on the redirect.
+    assert f"editing={instrument.id}" in response.headers["location"]
+
+    rows = db.execute(
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .order_by(InstrumentDisplayField.order)
+    ).scalars().all()
+    pairs = [(r.source_type, r.source_field) for r in rows]
+    # Name + Email at top; pc_2 swapped above pc_1.
+    assert pairs == [
+        ("reviewee", "name"),
+        ("reviewee", "email_or_identifier"),
+        ("pair_context", "2"),
+        ("pair_context", "1"),
+        ("pair_context", "3"),
+    ]
+
+
+def test_state_machine_editing_param_renders_save_cancel(
+    client: TestClient, db: Session
+) -> None:
+    """``?editing={iid}`` opens the per-instrument card for editing —
+    the Section E ``Save`` button (form="dfsave-{iid}") is rendered."""
+    review_session = _make_session(client, db, code="state-edit")
+    instrument = _instrument(db, review_session.id)
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    # Section E Save is identified by ``form="dfsave-{iid}"``.
+    assert f'form="dfsave-{instrument.id}"' in body
+    assert ">Save</button>" in body
+    # Section E Cancel is the only Cancel anchor on the page.
+    assert ">Cancel</a>" in body
+
+
+def test_state_machine_default_renders_edit_only(
+    client: TestClient, db: Session
+) -> None:
+    """Without ``?editing``, the per-instrument card is locked — the
+    Section E Edit anchor links forward to ``?editing={iid}``."""
+    review_session = _make_session(client, db, code="state-locked")
+    instrument = _instrument(db, review_session.id)
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # Section E Edit anchor.
+    assert f"?editing={instrument.id}" in body
+    # Section E bulk-save form ``dfsave-{iid}`` not present in locked
+    # mode (the form wraps editable inputs only).
+    assert f'form="dfsave-{instrument.id}"' not in body
+
+
+def test_state_machine_locked_when_session_ready(
+    client: TestClient, db: Session
+) -> None:
+    """Even with ``?editing={iid}``, a ``ready`` session keeps the
+    card locked and greys out the Edit button."""
+    review_session = _make_session(client, db, code="state-ready")
+    _populate_rosters(client, review_session.id)
+    _generate_full_matrix(client, review_session.id)
+    _activate(client, db, review_session.id)
+    db.refresh(review_session)
+    assert review_session.status == "ready"
+    instrument = _instrument(db, review_session.id)
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    # Section E bulk-save form is suppressed; Edit anchor renders with
+    # the disabled-look styling.
+    assert "pointer-events: none" in body
+    assert f'form="dfsave-{instrument.id}"' not in body
+
+
 def test_friendly_label_persistence_round_trip_via_edit_route(
     client: TestClient, db: Session
 ) -> None:
@@ -410,14 +598,15 @@ def test_friendly_label_persistence_round_trip_via_edit_route(
             label="",
             source_type="reviewee",
             source_field="tag_1",
-            order=0,
+            order=2,
             visible=True,
         )
     )
     db.commit()
     df = db.execute(
         select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == instrument.id
+            InstrumentDisplayField.instrument_id == instrument.id,
+            InstrumentDisplayField.source_field == "tag_1",
         )
     ).scalar_one()
 

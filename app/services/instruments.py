@@ -40,6 +40,8 @@ DEFAULT_RESPONSE_FIELDS: list[dict[str, Any]] = [
 ]
 
 _DEFAULT_DISPLAY_LABELS: dict[tuple[str, str], str] = {
+    ("reviewee", "name"): "Name",
+    ("reviewee", "email_or_identifier"): "Email",
     ("reviewee", "tag_1"): "Tag 1",
     ("reviewee", "tag_2"): "Tag 2",
     ("reviewee", "tag_3"): "Tag 3",
@@ -53,6 +55,8 @@ _DEFAULT_DISPLAY_LABELS: dict[tuple[str, str], str] = {
 # (source_type, source_field) tuples. This map is the canonical
 # translation used by lazy-seeding (Segment 10D / item #14).
 _CSV_COL_TO_SOURCE: dict[str, tuple[str, str]] = {
+    "RevieweeName": ("reviewee", "name"),
+    "RevieweeEmail": ("reviewee", "email_or_identifier"),
     "PhotoLink": ("reviewee", "profile_link"),
     "RevieweeTag1": ("reviewee", "tag_1"),
     "RevieweeTag2": ("reviewee", "tag_2"),
@@ -62,6 +66,21 @@ _CSV_COL_TO_SOURCE: dict[str, tuple[str, str]] = {
     "PairContext3": ("pair_context", "3"),
 }
 
+# Locked rows in the Display Fields table. Per
+# guide/instruments.md, ``RevieweeName`` and ``RevieweeEmail``
+# always sit at positions 1 and 2 (orders 0 and 1) on every
+# instrument. Their visible flag is locked-checked, their order
+# is locked, and they cannot be deleted.
+_LOCKED_DISPLAY_SOURCES: frozenset[tuple[str, str]] = frozenset({
+    ("reviewee", "name"),
+    ("reviewee", "email_or_identifier"),
+})
+
+_LOCKED_DISPLAY_ORDER: dict[tuple[str, str], int] = {
+    ("reviewee", "name"): 0,
+    ("reviewee", "email_or_identifier"): 1,
+}
+
 _FIELD_KEY_REGEX = re.compile(r"^[a-z][a-z0-9_]*$")
 _FIELD_KEY_MAX_LEN = 64
 _VALID_RESPONSE_TYPES = {"integer", "short_text", "long_text", "yes_no"}
@@ -69,6 +88,18 @@ _VALID_RESPONSE_TYPES = {"integer", "short_text", "long_text", "yes_no"}
 _VALID_DISPLAY_SOURCES: frozenset[tuple[str, str]] = frozenset(
     _DEFAULT_DISPLAY_LABELS.keys()
 )
+
+
+def is_locked_display_source(source_type: str, source_field: str) -> bool:
+    """Return True for the two Display Fields rows that are locked at
+    fixed positions / always-visible (RevieweeName, RevieweeEmail)."""
+    return (source_type, source_field) in _LOCKED_DISPLAY_SOURCES
+
+
+class LockedDisplayFieldError(ValueError):
+    """Raised when a locked Display Fields row (Name / Email) is the
+    target of an operation that's not permitted on locked rows
+    (delete, hide, reorder)."""
 
 
 class FieldKeyError(ValueError):
@@ -139,7 +170,8 @@ def ensure_default_instrument(
     db: Session, review_session: ReviewSession
 ) -> Instrument:
     """Return the session's Default Instrument, creating it if missing,
-    and ensuring it carries the default response fields."""
+    and ensuring it carries the default response fields and the locked
+    Name / Email Display Fields rows."""
     instrument = db.execute(
         select(Instrument)
         .where(Instrument.session_id == review_session.id)
@@ -181,7 +213,57 @@ def ensure_default_instrument(
             )
         db.flush()
 
+    ensure_locked_display_fields(db, instrument=instrument)
+
     return instrument
+
+
+def ensure_locked_display_fields(
+    db: Session, *, instrument: Instrument
+) -> int:
+    """Idempotently seed the two locked Display Fields rows
+    (RevieweeName, RevieweeEmail) on the given instrument. Returns the
+    number of new rows created (0, 1, or 2). Rows that already exist
+    are left alone — including their operator-typed labels."""
+    existing_pairs = {
+        (f.source_type, f.source_field) for f in instrument.display_fields
+    }
+    created = 0
+    if ("reviewee", "name") not in existing_pairs:
+        # New locked rows shift any existing rows up by 2 (or 1 if only
+        # one is missing) so Name / Email always sit at the top.
+        for f in instrument.display_fields:
+            f.order = f.order + 1
+        db.add(
+            InstrumentDisplayField(
+                instrument_id=instrument.id,
+                label="",
+                source_type="reviewee",
+                source_field="name",
+                order=0,
+                visible=True,
+            )
+        )
+        created += 1
+    if ("reviewee", "email_or_identifier") not in existing_pairs:
+        for f in instrument.display_fields:
+            if (f.source_type, f.source_field) != ("reviewee", "name"):
+                f.order = f.order + 1
+        db.add(
+            InstrumentDisplayField(
+                instrument_id=instrument.id,
+                label="",
+                source_type="reviewee",
+                source_field="email_or_identifier",
+                order=1,
+                visible=True,
+            )
+        )
+        created += 1
+    if created:
+        db.flush()
+        db.refresh(instrument)
+    return created
 
 
 def create_instrument(
@@ -243,6 +325,7 @@ def create_instrument(
             )
         )
     db.flush()
+    ensure_locked_display_fields(db, instrument=instrument)
 
     write_event(
         db,
@@ -336,7 +419,14 @@ def display_field_value(
         value = ctx.get(f"pair_context_{field.source_field}")
         return value or None
     if field.source_type == "reviewee":
-        if field.source_field not in {"tag_1", "tag_2", "tag_3", "profile_link"}:
+        if field.source_field not in {
+            "name",
+            "email_or_identifier",
+            "tag_1",
+            "tag_2",
+            "tag_3",
+            "profile_link",
+        }:
             return None
         value = getattr(assignment.reviewee, field.source_field, None)
         return value or None
@@ -450,7 +540,18 @@ def update_display_field(
     `(source_type, source_field)` are immutable post-create. Returns
     `(field, changes)` where `changes` carries only the keys that
     actually changed.
+
+    Locked rows (`RevieweeName`, `RevieweeEmail`) cannot have
+    ``visible`` flipped to False. Their label is freely editable.
     """
+    if (
+        is_locked_display_source(field.source_type, field.source_field)
+        and not visible
+    ):
+        raise LockedDisplayFieldError(
+            f"Display field {field.source_type}.{field.source_field} "
+            f"is always shown to reviewers and cannot be hidden."
+        )
     instrument = field.instrument
     new_label = (label or "").strip()
 
@@ -489,7 +590,15 @@ def delete_display_field(
     db: Session, *, field: InstrumentDisplayField, actor: User
 ) -> None:
     """Delete a display field. No cascade-confirm — display fields carry
-    no per-row dependent data."""
+    no per-row dependent data.
+
+    Locked rows (`RevieweeName`, `RevieweeEmail`) cannot be deleted.
+    """
+    if is_locked_display_source(field.source_type, field.source_field):
+        raise LockedDisplayFieldError(
+            f"Display field {field.source_type}.{field.source_field} "
+            f"is locked and cannot be deleted."
+        )
     instrument = field.instrument
     snapshot = _display_field_snapshot(field)
     db.delete(field)
@@ -512,6 +621,66 @@ def delete_display_field(
             "instrument_id": instrument.id,
             "session_id": instrument.session_id,
             "snapshot": snapshot,
+        },
+    )
+    db.commit()
+
+
+def move_display_field(
+    db: Session,
+    *,
+    field: InstrumentDisplayField,
+    direction: Literal["up", "down"],
+    actor: User,
+) -> None:
+    """Swap a display field with its neighbour. Locked rows
+    (RevieweeName, RevieweeEmail) cannot be moved; their neighbours
+    can be moved but never *into* the locked region (i.e. a
+    non-locked row's ``up`` is rejected if the row above it is
+    locked)."""
+    if direction not in ("up", "down"):
+        raise ValueError("direction must be 'up' or 'down'")
+    if is_locked_display_source(field.source_type, field.source_field):
+        raise LockedDisplayFieldError(
+            f"Display field {field.source_type}.{field.source_field} "
+            f"is locked and cannot be reordered."
+        )
+
+    instrument = field.instrument
+    fields = _ordered_display_fields(db, instrument)
+    index = next((i for i, f in enumerate(fields) if f.id == field.id), None)
+    if index is None:
+        raise ValueError("Display field not found on instrument")
+
+    swap_with = index - 1 if direction == "up" else index + 1
+    if swap_with < 0 or swap_with >= len(fields):
+        return  # at boundary; no-op
+    target = fields[swap_with]
+    if is_locked_display_source(target.source_type, target.source_field):
+        # Cannot swap with a locked row.
+        raise LockedDisplayFieldError(
+            "Cannot move into the locked region of the Display Fields table."
+        )
+
+    fields[index], fields[swap_with] = fields[swap_with], fields[index]
+    _repack_display_orders(fields)
+    db.flush()
+
+    write_event(
+        db,
+        event_type="instrument.display_field_moved",
+        summary=(
+            f"Moved display field {field.source_type}.{field.source_field} "
+            f"{direction} on instrument {_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session_id=instrument.session_id,
+        detail={
+            "instrument_id": instrument.id,
+            "session_id": instrument.session_id,
+            "source_type": field.source_type,
+            "source_field": field.source_field,
+            "direction": direction,
         },
     )
     db.commit()
@@ -697,6 +866,13 @@ def bulk_save_fields(
             continue
         new_label = (row.get("label") or "").strip()
         new_visible = bool(row.get("visible", field.visible))
+        # Locked rows (RevieweeName, RevieweeEmail) are forced
+        # ``visible=True`` on save regardless of submitted state. The
+        # operator UI suppresses the checkbox + arrows for these rows;
+        # this is a server-side defense in case a forged form ever
+        # arrives.
+        if is_locked_display_source(field.source_type, field.source_field):
+            new_visible = True
         per_row_changes: dict[str, list[Any]] = {}
         if field.label != new_label:
             per_row_changes["label"] = [field.label, new_label]
@@ -715,6 +891,36 @@ def bulk_save_fields(
             }
         )
 
+    # Locked rows (Name + Email) must always sit at the top in
+    # (Name, Email) order regardless of what the form submitted, and
+    # rows missing from the display payload must keep their relative
+    # order below. Rebuild the post-save display order from scratch:
+    #
+    #   1. All locked rows on the instrument, in canonical order.
+    #   2. Submitted non-locked rows, in submitted order.
+    #   3. Any non-locked rows missing from the payload, in their
+    #      pre-save order.
+    submitted_ids = {f.id for f in new_display_order}
+    locked_existing = sorted(
+        [
+            f for f in existing_display_list
+            if is_locked_display_source(f.source_type, f.source_field)
+        ],
+        key=lambda f: _LOCKED_DISPLAY_ORDER[(f.source_type, f.source_field)],
+    )
+    payload_non_locked = [
+        f for f in new_display_order
+        if not is_locked_display_source(f.source_type, f.source_field)
+    ]
+    unsubmitted_non_locked = [
+        f for f in existing_display_list
+        if f.id not in submitted_ids
+        and not is_locked_display_source(f.source_type, f.source_field)
+    ]
+    rebuilt_display_order = (
+        locked_existing + payload_non_locked + unsubmitted_non_locked
+    )
+
     new_response_order: list[InstrumentResponseField] = []
     for row in response_payload:
         field = existing_response.get(row.get("id"))
@@ -724,13 +930,13 @@ def bulk_save_fields(
 
     # Rank-based change detection: compare each submitted row's prior
     # rank (position in the existing ordered listing) to its new rank
-    # (position in the submitted-and-sorted listing). This lets the
-    # bulk save normalise non-contiguous order values (e.g. 1, 2 → 0, 1
-    # from a fresh seed) without spuriously emitting a reorder event.
+    # (position in the rebuilt listing). This lets the bulk save
+    # normalise non-contiguous order values (e.g. 1, 2 → 0, 1 from a
+    # fresh seed) without spuriously emitting a reorder event.
     response_new_rank = {f.id: i for i, f in enumerate(new_response_order)}
-    display_new_rank = {f.id: i for i, f in enumerate(new_display_order)}
+    display_new_rank = {f.id: i for i, f in enumerate(rebuilt_display_order)}
 
-    _repack_display_orders(new_display_order)
+    _repack_display_orders(rebuilt_display_order)
     _repack_orders(new_response_order)
     db.flush()
 

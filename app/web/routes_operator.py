@@ -37,6 +37,12 @@ router = APIRouter(prefix="/operator", tags=["operator"])
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _templates.env.globals["app_version"] = settings.app_version
+_templates.env.globals["display_field_label"] = (
+    instruments_service.display_field_label
+)
+_templates.env.globals["is_locked_display_source"] = (
+    instruments_service.is_locked_display_source
+)
 
 
 @router.get("/sessions", response_class=HTMLResponse)
@@ -952,6 +958,8 @@ def _bulk_visibility_state(instruments: list[Instrument]) -> str:
 )
 def instruments_index(
     request: Request,
+    editing: int | None = Query(default=None),
+    saved: int | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -964,6 +972,22 @@ def instruments_index(
             .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
+    # Make sure every instrument has its locked Name / Email Display
+    # Fields rows. The Alembic migration backfills existing instruments;
+    # this is the per-request safety net for any sessions that slip
+    # through (e.g. created before the migration ran).
+    for instrument in instruments:
+        instruments_service.ensure_locked_display_fields(
+            db, instrument=instrument
+        )
+    db.commit()
+
+    is_ready = lifecycle.is_ready(review_session)
+    # State machine: ``?editing={instrument_id}`` opens that card for
+    # editing. The yellow lock card on a ``ready`` session overrides
+    # everything — every per-instrument card stays locked.
+    editing_instrument_id = None if is_ready else editing
+
     return _templates.TemplateResponse(
         request,
         "operator/instruments_index.html",
@@ -971,10 +995,12 @@ def instruments_index(
             "user": user,
             "session": review_session,
             "instruments": instruments,
-            "is_ready": lifecycle.is_ready(review_session),
+            "is_ready": is_ready,
             "can_edit": _can_edit_instrument(review_session),
             "bulk_accepting_state": _bulk_accepting_state(instruments),
             "bulk_visibility_state": _bulk_visibility_state(instruments),
+            "editing_instrument_id": editing_instrument_id,
+            "saved_instrument_id": saved,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Instruments"
             ),
@@ -1371,13 +1397,19 @@ def instrument_edit_display_field(
     _invalidate_if_validated(
         db, review_session, user, reason="instrument_display_field_updated"
     )
-    instruments_service.update_display_field(
-        db,
-        field=field,
-        label=label or "",
-        visible=(visible == "true"),
-        actor=user,
-    )
+    try:
+        instruments_service.update_display_field(
+            db,
+            field=field,
+            label=label or "",
+            visible=(visible == "true"),
+            actor=user,
+        )
+    except instruments_service.LockedDisplayFieldError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Locked display fields cannot be hidden.",
+        )
     return _instruments_redirect(review_session.id)
 
 
@@ -1398,8 +1430,54 @@ def instrument_delete_display_field(
     _invalidate_if_validated(
         db, review_session, user, reason="instrument_display_field_deleted"
     )
-    instruments_service.delete_display_field(db, field=field, actor=user)
+    try:
+        instruments_service.delete_display_field(db, field=field, actor=user)
+    except instruments_service.LockedDisplayFieldError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Locked display fields cannot be deleted.",
+        )
     return _instruments_redirect(review_session.id)
+
+
+@router.post(
+    "/sessions/{session_id}/instruments/{instrument_id}"
+    "/display-fields/{df_id}/move"
+)
+def instrument_move_display_field(
+    df_id: int,
+    direction: str = Form(...),
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    instrument, review_session = bundle
+    _require_instrument_editable(review_session)
+    field = _require_display_field_in_instrument(df_id, instrument, db)
+    if direction not in ("up", "down"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_display_field_moved"
+    )
+    try:
+        instruments_service.move_display_field(
+            db, field=field, direction=direction, actor=user
+        )
+    except instruments_service.LockedDisplayFieldError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Locked display fields cannot be reordered.",
+        )
+    # Preserve editing state on the redirect so the operator stays in
+    # the editable view after moving a row.
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments"
+            f"?editing={instrument.id}#instrument-{instrument.id}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/fields/save")
@@ -1452,7 +1530,16 @@ async def instrument_bulk_save_fields(
     instruments_service.bulk_save_fields(
         db, instrument=instrument, rows=rows, actor=user
     )
-    return _instruments_redirect(review_session.id)
+    # Redirect with ``?saved={iid}`` so the page renders a flash
+    # confirmation. The ``?editing`` param is intentionally cleared —
+    # per spec, a successful Save locks the tables.
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments"
+            f"?saved={instrument.id}#instrument-{instrument.id}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.post("/sessions/{session_id}/instruments/add")

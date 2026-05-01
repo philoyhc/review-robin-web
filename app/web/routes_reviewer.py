@@ -307,6 +307,8 @@ def _surface_context(
 # assignments. Keys cover the seven D6 sources; pair_context.* and
 # reviewee.tag_* share copy-text per the segment plan.
 _SYNTHETIC_VALUES_BY_SOURCE: dict[tuple[str, str], str] = {
+    ("reviewee", "name"): "",  # rendered in the dedicated Reviewee cell
+    ("reviewee", "email_or_identifier"): "",
     ("reviewee", "tag_1"): "Sample tag value",
     ("reviewee", "tag_2"): "Sample tag value",
     ("reviewee", "tag_3"): "Sample tag value",
