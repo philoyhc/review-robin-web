@@ -42,25 +42,29 @@
   <div class="page-grid">
     <div class="card">
       <h2>All Instrument Status</h2>
+      {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
+      {% set not_accepting_count = instruments | length - accepting_count %}
+      {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
+      {% set not_showing_count = instruments | length - showing_count %}
       <p>
-        Accepting responses:
-        {% if bulk_accepting_state == "all-on" %}
-          <span class="pill pill-info">all on</span>
-        {% elif bulk_accepting_state == "all-off" %}
-          <span class="pill pill-warning">all off</span>
+        Status:
+        <span class="pill pill-info">{{ accepting_count }} accepting</span>
+        &middot;
+        <span class="pill pill-warning">{{ not_accepting_count }} not accepting</span>
+      </p>
+      <p>
+        Session deadline (auto-close):
+        {% if session.deadline %}
+          <span class="pill pill-info">{{ session.deadline.isoformat() }}</span>
         {% else %}
-          <span class="pill pill-warning">mixed</span>
+          <span class="pill pill-warning">not set</span>
         {% endif %}
       </p>
       <p>
         Visibility when closed:
-        {% if bulk_visibility_state == "all-on" %}
-          <span class="pill pill-info">all showing</span>
-        {% elif bulk_visibility_state == "all-off" %}
-          <span class="pill pill-warning">all not showing</span>
-        {% else %}
-          <span class="pill pill-warning">mixed</span>
-        {% endif %}
+        <span class="pill pill-info">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
+        &middot;
+        <span class="pill pill-warning">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
       </p>
       <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
         {% if is_ready and bulk_accepting_state != "all-on" %}
@@ -147,14 +151,6 @@
               <span class="pill pill-info">accepting responses</span>
             {% else %}
               <span class="pill pill-warning">not accepting</span>
-            {% endif %}
-          </p>
-          <p>
-            Session deadline (auto-close):
-            {% if session.deadline %}
-              <span class="pill pill-info">{{ session.deadline.isoformat() }}</span>
-            {% else %}
-              <span class="pill pill-warning">not set</span>
             {% endif %}
           </p>
           {% if instrument.deadline_closed_at %}
