@@ -36,7 +36,26 @@ Top to bottom:
 
 ## Per-instrument card
 
-Five sections, top to bottom, inside one full-width card:
+Five sections, top to bottom, inside one full-width card. Each
+instrument card uses a distinct light-tinted background so the
+operator can tell adjacent cards apart at a glance. The palette
+cycles in `Instrument.order` order:
+
+| `#N` | Background |
+|---|---|
+| 1 | light blue (`#f0f9ff`) |
+| 2 | light green (`#d1fae5`) |
+| 3 | light purple (`#ede9fe`) |
+| 4 | light orange (`#ffedd5`) |
+| 5 | light pink (`#ffe4e6`) |
+| 6 | light yellow (`#fef3c7`) |
+
+For sessions with more than six instruments the palette wraps —
+`#7` reuses the `#1` background and so on. The inner sub-cards
+(identity, status, field tables, preview) keep their own
+backgrounds (white for status; transparent / invisible-borders
+for the rest) so the per-instrument tint reads as a frame, not as
+the body of the inner content.
 
 ### A. Identity + status (two half-width cards side by side)
 
