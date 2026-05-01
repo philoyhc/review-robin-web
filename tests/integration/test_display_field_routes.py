@@ -890,9 +890,12 @@ def test_state_machine_response_fields_render_inputs_in_edit_mode(
     # Inputs for label + required participate in the bulk-save form.
     assert f'form="dfsave-{instrument.id}"' in body
     assert 'name="required_ids"' in body
-    # ✗ delete + ➕ add forms are present per row.
-    assert "/fields/" in body and "/delete" in body
-    assert "/fields/add-row" in body
+    # ✗ delete + ➕ add are JS-driven; clicks defer to the bulk-save
+    # form so Cancel discards the row mutation.
+    assert "deleteRow(this" in body
+    assert "addRow(this" in body
+    assert f'id="rf-template-{instrument.id}"' in body
+    assert f'id="rfhelp-template-{instrument.id}"' in body
 
 
 def test_response_field_help_text_and_visible_persist_via_bulk_save(
@@ -1073,3 +1076,161 @@ def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
         )
     ).scalars().all()
     assert len(saved_event) == 1
+
+
+def test_bulk_save_deletes_rows_listed_in_response_delete_ids(
+    client: TestClient, db: Session
+) -> None:
+    """JS-deferred ✗ on Response Fields adds the row id to the bulk-
+    save form's ``response_delete_ids`` set; the route deletes those
+    rows before applying the rest of the payload, so Cancel (which
+    just navigates away) discards the deletion."""
+    review_session = _make_session(client, db, code="bulk-del")
+    instrument = _instrument(db, review_session.id)
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    comments_id = comments.id
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "kind": ["response", "response"],
+            "id": [str(rating.id), str(comments.id)],
+            "order": ["0", "1"],
+            "label": ["Rating", "Comments"],
+            "required_ids": [str(rating.id)],
+            "response_delete_ids": [str(comments.id)],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    remaining = [
+        f.field_key
+        for f in db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == instrument.id)
+            .order_by(InstrumentResponseField.order)
+        ).scalars()
+    ]
+    assert remaining == ["rating"]
+    assert db.get(InstrumentResponseField, comments_id) is None
+
+
+def test_bulk_save_creates_rows_for_new_id_placeholders(
+    client: TestClient, db: Session
+) -> None:
+    """JS-deferred ➕ on Response Fields inserts a row with ``id=new_N``
+    on the bulk-save form. The route allocates a real field via
+    ``add_default_response_field`` and applies the operator's typed
+    label / required / help to that new row."""
+    review_session = _make_session(client, db, code="bulk-add")
+    instrument = _instrument(db, review_session.id)
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "kind": ["response", "response", "response"],
+            "id": [str(rating.id), "new_1", str(comments.id)],
+            "order": ["0", "1", "2"],
+            "label": ["Rating", "Quality", "Comments"],
+            "required_ids": [str(rating.id), "new_1"],
+            "help_text_id": [str(rating.id), "new_1", str(comments.id)],
+            "help_text": ["", "Rate quality 1-5.", ""],
+            "help_text_visible_ids": ["new_1"],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    fields = list(
+        db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == instrument.id)
+            .order_by(InstrumentResponseField.order)
+        ).scalars()
+    )
+    labels = [f.label for f in fields]
+    assert labels == ["Rating", "Quality", "Comments"]
+    quality = fields[1]
+    assert quality.required is True
+    assert quality.help_text == "Rate quality 1-5."
+    assert quality.help_text_visible is True
+
+
+def test_bulk_save_skips_new_row_marked_for_delete_in_same_submit(
+    client: TestClient, db: Session
+) -> None:
+    """If the operator adds a row (id=new_N) and then ✗-deletes it
+    before clicking Save, the bulk-save route does not create + delete
+    a stub row — the new id is silently dropped."""
+    review_session = _make_session(client, db, code="bulk-add-del")
+    instrument = _instrument(db, review_session.id)
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+
+    before_keys = {
+        f.field_key
+        for f in db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    }
+
+    # JS-side, the row's id="new_1" is removed from DOM entirely on
+    # ✗ — so the form simply omits new_1 from the rows list. We model
+    # that here by leaving new_1 out of the payload.
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "kind": ["response", "response"],
+            "id": [str(rating.id), str(comments.id)],
+            "order": ["0", "1"],
+            "label": ["Rating", "Comments"],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    after_keys = {
+        f.field_key
+        for f in db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    }
+    assert before_keys == after_keys
