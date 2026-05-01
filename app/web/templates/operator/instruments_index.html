@@ -261,7 +261,7 @@
                 <th>Friendly Label</th>
                 <th>Visible</th>
                 <th>Order</th>
-                <th>Sort Priority</th>
+                <th>Sort</th>
               </tr>
             </thead>
             <tbody>
@@ -272,12 +272,13 @@
                   <td>
                     {% if has_data %}
                       <details class="display-edit">
-                        <summary style="list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                          <span>{{ label }}</span>
-                          <span title="Edit"
-                                style="color: #6b7280;">&#9998;</span>
+                        <summary style="list-style: none; cursor: pointer;">
+                          <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <span class="display-text">{{ label }}</span>
+                            <span title="Edit" style="color: #6b7280;">&#9998;</span>
+                          </span>
                         </summary>
-                        <form onsubmit="event.preventDefault(); this.closest('details').removeAttribute('open');"
+                        <form onsubmit="event.preventDefault(); var d=this.closest('details'); d.querySelector('.display-text').textContent=this.label.value; d.removeAttribute('open');"
                               style="display: flex; gap: 8px; align-items: center; margin: 0;">
                           <input type="text" name="label" value="{{ label }}" style="flex: 1;">
                           <button type="submit" title="Save"
@@ -301,14 +302,7 @@
                     {% endif %}
                   </td>
                   <td>{{ loop.index0 }}</td>
-                  <td>
-                    {% if has_data %}
-                      <input type="number" min="0" value="{{ loop.index0 }}"
-                             style="width: 4em;">
-                    {% else %}
-                      <span class="muted">—</span>
-                    {% endif %}
-                  </td>
+                  <td><span class="muted">—</span></td>
                 </tr>
               {% endfor %}
             </tbody>
