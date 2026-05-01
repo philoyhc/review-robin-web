@@ -176,24 +176,9 @@
       </div>
 
       {# Section B — Display Fields + Response Fields. #}
-      {# Per-row hidden move forms (referenced by ▲/▼ buttons via the
-         HTML5 ``form`` attribute). #}
-      {% if is_editing %}
-        {% for df in sorted_display_fields %}
-          {% if not is_locked_display_source(df.source_type, df.source_field) %}
-            <form id="dfmoveup-{{ df.id }}" method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/move"
-                  style="display: none;">
-              <input type="hidden" name="direction" value="up">
-            </form>
-            <form id="dfmovedown-{{ df.id }}" method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/move"
-                  style="display: none;">
-              <input type="hidden" name="direction" value="down">
-            </form>
-          {% endif %}
-        {% endfor %}
-      {% endif %}
+      {# Order ▲ / ▼ buttons swap rows client-side via ``moveRow``;
+         the new order rides along with the bulk-save form on Save.
+         No per-row server-side move POST, so Cancel discards. #}
 
       <div class="bottom-grid field-builder">
         <div class="card" style="border: none; background: transparent; padding: 0;">
@@ -258,7 +243,7 @@
                         {% endif %}
                       </td>
                       <td>
-                        {{ loop.index }}
+                        <span class="order-num">{{ loop.index }}</span>
                         {% if is_editing and not is_locked_row %}
                           {# ▲ disabled if this row is right after the
                              locked rows (i.e. swapping up would put it
@@ -266,11 +251,11 @@
                           {% set arrows_top_index = 2 %}
                           {% set is_top_movable = (loop.index0 == arrows_top_index) %}
                           {% set is_bottom = loop.last %}
-                          <button form="dfmoveup-{{ df.id }}" type="submit"
-                                  class="btn-icon" title="Move up"
+                          <button type="button" onclick="moveRow(this, 'up')"
+                                  class="btn-icon move-up" title="Move up"
                                   {% if is_top_movable %}disabled{% endif %}>&#9650;</button>
-                          <button form="dfmovedown-{{ df.id }}" type="submit"
-                                  class="btn-icon" title="Move down"
+                          <button type="button" onclick="moveRow(this, 'down')"
+                                  class="btn-icon move-down" title="Move down"
                                   {% if is_bottom %}disabled{% endif %}>&#9660;</button>
                         {% endif %}
                       </td>
@@ -292,22 +277,9 @@
             'long_text': 'Long Text',
             'yes_no': 'Yes / No',
           } %}
-          {# Per-row hidden move forms for the ▲ / ▼ buttons; referenced
-             by the buttons' HTML5 ``form`` attribute. #}
-          {% if is_editing %}
-            {% for field in sorted_response_fields %}
-              <form id="rfmoveup-{{ field.id }}" method="post"
-                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/move"
-                    style="display: none;">
-                <input type="hidden" name="direction" value="up">
-              </form>
-              <form id="rfmovedown-{{ field.id }}" method="post"
-                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/move"
-                    style="display: none;">
-                <input type="hidden" name="direction" value="down">
-              </form>
-            {% endfor %}
-          {% endif %}
+          {# Order ▲ / ▼ swap rows client-side and update the bulk-
+             save form's hidden ``order`` inputs so the new order
+             only commits on Save (Cancel discards). #}
           <div class="table-scroll">
             <table>
               <thead>
@@ -356,13 +328,13 @@
                       {% endif %}
                     </td>
                     <td>
-                      {{ loop.index }}
+                      <span class="order-num">{{ loop.index }}</span>
                       {% if is_editing %}
-                        <button form="rfmoveup-{{ field.id }}" type="submit"
-                                class="btn-icon" title="Move up"
+                        <button type="button" onclick="moveRow(this, 'up')"
+                                class="btn-icon move-up" title="Move up"
                                 {% if loop.first %}disabled{% endif %}>&#9650;</button>
-                        <button form="rfmovedown-{{ field.id }}" type="submit"
-                                class="btn-icon" title="Move down"
+                        <button type="button" onclick="moveRow(this, 'down')"
+                                class="btn-icon move-down" title="Move down"
                                 {% if loop.last %}disabled{% endif %}>&#9660;</button>
                       {% endif %}
                     </td>
@@ -506,4 +478,63 @@
       Full table + persistence wiring lands in Slice 4.
     </p>
   </div>
+
+  <script>
+    // Order ▲ / ▼ buttons swap the row with its sibling client-side
+    // and update the bulk-save form's hidden ``order`` inputs so the
+    // new order only commits when the operator clicks Save. Cancel
+    // (which just navigates away without submitting) discards the
+    // change. Locked Display Fields rows (RevieweeName,
+    // RevieweeEmail) stay at the top — non-locked rows skip them when
+    // looking for a swap target.
+    function moveRow(button, direction) {
+      var row = button.closest('tr');
+      if (!row) return;
+      var sibling = direction === 'up'
+        ? row.previousElementSibling
+        : row.nextElementSibling;
+      // Skip rows that don't carry their own ▲ / ▼ buttons (locked
+      // Display Fields rows). Currently locked rows always sit at the
+      // top, so the only case where this matters is ``up`` from the
+      // first movable row, which is already disabled by the boundary
+      // check below.
+      while (sibling && !sibling.querySelector('.move-up')) {
+        sibling = direction === 'up'
+          ? sibling.previousElementSibling
+          : sibling.nextElementSibling;
+      }
+      if (!sibling) return;
+      if (direction === 'up') {
+        row.parentNode.insertBefore(row, sibling);
+      } else {
+        row.parentNode.insertBefore(sibling, row);
+      }
+      _refreshOrderColumn(row.parentNode);
+    }
+    function _refreshOrderColumn(tbody) {
+      var rows = Array.prototype.slice.call(tbody.children);
+      // Find the boundary indices for the move-up / move-down disabled
+      // states: the first row with a .move-up button, and the last row
+      // with a .move-down button.
+      var firstMovable = null;
+      var lastMovable = null;
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].querySelector('.move-up')) {
+          if (firstMovable === null) firstMovable = i;
+          lastMovable = i;
+        }
+      }
+      for (var i = 0; i < rows.length; i++) {
+        var tr = rows[i];
+        var orderInput = tr.querySelector('input[name="order"]');
+        if (orderInput) orderInput.value = i;
+        var orderText = tr.querySelector('.order-num');
+        if (orderText) orderText.textContent = i + 1;
+        var up = tr.querySelector('.move-up');
+        var down = tr.querySelector('.move-down');
+        if (up) up.disabled = (i === firstMovable);
+        if (down) down.disabled = (i === lastMovable);
+      }
+    }
+  </script>
 {% endblock %}
