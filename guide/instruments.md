@@ -81,6 +81,17 @@ Equal-height, top + bottom aligned (`.bottom-grid`).
 Equal-height, top + bottom aligned (`.bottom-grid`). Both cards
 have invisible borders.
 
+#### Reordering convention
+
+Both tables in this section let the operator reorder rows. Rather
+than asking the operator to type integers, each row carries two
+small arrow buttons (`▲` and `▼`) in its `Order` cell. Clicking
+`▲` swaps this row with the row immediately above; `▼` swaps with
+the row immediately below. The arrow is disabled at the boundary
+(top row's `▲`, bottom row's `▼`). The integer to the left of the
+arrows is informational — it always reflects the row's current
+position post-swap and is not directly editable.
+
 #### Display Fields (left)
 
 Title: `Display Fields`. Columns:
@@ -90,8 +101,8 @@ Title: `Display Fields`. Columns:
 | **Source** | System name. Read-only `<code>`. Eligible rows, in default order: `RevieweeName`, `RevieweeEmail`, then any reviewee data column with at least one populated value (`PhotoLink`, `RevieweeTag1/2/3`), then any pair-context slot with at least one populated value across the session's assignments (`PairContext1/2/3`). `AssignmentContext1/2/3` is deliberately **excluded** — it's logic-engaging and hidden from reviewers (see `spec/architecture.md` "Pair-level vs assignment-level context"). |
 | **Friendly Label** | Operator-editable text. Save persists to the underlying database. |
 | **Include** | Checkbox. `RevieweeName` and `RevieweeEmail` are mandatory-checked and the checkbox is locked (operator cannot uncheck). All other rows are operator-toggleable. |
-| **Order** | Integer. Initial seed: `RevieweeName=0`, `RevieweeEmail=1`, then the present rows in the order `PhotoLink`, `RevieweeTag1/2/3`, `PairContext1/2/3` (skipping any that have no data). |
-| **Sort** | Empty for now. Placeholder for a future default row order on reviewer surface. |
+| **Order** | Integer (1-based) plus the `▲` / `▼` arrow controls described above. Initial seed: `RevieweeName=1`, `RevieweeEmail=2`, then the present rows in the order `PhotoLink`, `RevieweeTag1/2/3`, `PairContext1/2/3` (skipping any that have no data). |
+| **Sort** | Empty for now. Placeholder for a future default row order on reviewer surface; will use the same `▲` / `▼` reorder convention when it lands. |
 
 #### Response Fields (right)
 
@@ -103,8 +114,8 @@ Title: `Response Fields`. Columns:
 | **Friendly Label** | Operator-editable text. Save persists. |
 | **Type** | One of the response types defined by the Response Type definitions card. Read-only post-create. The Type carries its own validation rules (e.g. `1-to-5` implies `min=1, max=5`); the engine writes them to `instrument_response_fields.validation` on save and the operator does **not** see a validation cell in this table. |
 | **Required** | Checkbox. When checked, the field is mandatory for reviewers and the column header in the Preview table is appended with an asterisk (e.g. `Rating*`). |
-| **Order** | Integer (1-based, contiguous). |
-| **Action** | A delete cross icon (✗) and an add-row plus icon (➕). Both fire immediately — no on-screen warning or confirmation. The delete removes this row; the add inserts a new default row immediately below. |
+| **Order** | Integer (1-based) plus the `▲` / `▼` arrow controls described above. |
+| **Action** | A delete cross icon (✗) and an add-row plus icon (➕). Both fire immediately — no on-screen warning or confirmation. The delete removes this row; the add inserts a new default row immediately below. New rows seed with auto-generated `Rating{N}` label, `rating{N}` key, `Integer` type, `Required = ✓`. |
 
 Default seed (two rows, applied to a freshly-created instrument):
 
@@ -120,9 +131,21 @@ A single `<hr>` separating the field-builder from the preview.
 ### D. Preview Instrument #{N}
 
 Full-width card, invisible borders. Title: `Preview Instrument #{N}`.
-Renders a table populated with **three rows of mock data** so the
-operator can see how the configured columns will look on the
-reviewer surface without needing real reviewees imported. Columns:
+Renders a table populated with **three rows of preview data** so
+the operator can see how the configured columns will look on the
+reviewer surface. Source of those three rows:
+
+- If the session has three or more reviewees imported, use the
+  first three reviewees (matching their real `name` /
+  `email_or_identifier` and any populated tag / profile / pair-
+  context values).
+- If the session has fewer than three reviewees, show the real
+  ones first (in import order) and pad with mock rows up to three
+  total. The mock rows use plausible-looking placeholder values
+  (`Sample Reviewee 1` / `sample1@example.edu`, etc.).
+- If the session has zero reviewees, show three mock rows.
+
+Columns:
 
 1. **Name / Email** — name on top, email as subtitle beneath
    (matches the Reviewer / Reviewee preview rendering elsewhere).
@@ -138,19 +161,42 @@ reviewer surface without needing real reviewees imported. Columns:
 
 ### E. Action buttons (right-aligned)
 
-Four buttons, in this order, using the canonical `.btn` modifier
+Five buttons, in this order, using the canonical `.btn` modifier
 classes from `spec/assumptions.md`:
 
 | Button | Style | Behaviour |
 |---|---|---|
-| `Save` | Primary | Writes the current Display Fields and Response Fields tables to the database, then locks both tables for editing. The button is replaced by `Edit`. |
-| `Edit` | Alert | Re-opens both tables for editing. The button is replaced by `Save`. |
+| `Save` | Primary | Writes the current Display Fields and Response Fields tables to the database. On success, the page **stays in place**, both tables lock, and a flash message confirms the save. The button is replaced by `Edit`. |
+| `Cancel` | Alert Outline | Discards any unsaved edits in the two tables, reverts them to the last-saved state, and locks them. The button is replaced by `Edit`. Only shown alongside `Save` (i.e. while the tables are open for editing). |
+| `Edit` | Alert | Re-opens both tables for editing. The button is replaced by the `Save` + `Cancel` pair. |
 | `Add new instrument` | Alert | Adds a new Instrument card immediately below this one and persists the new instrument to the database. |
 | `Delete this instrument` | Danger | Deletes this instrument. Triggers an on-screen warning + confirmation before the request fires. |
 
-`Save` and `Edit` are **mutually exclusive** — only one is visible
-at a time. When the two tables are open for editing, `Save` is
-shown; when the two tables are locked, `Edit` is shown.
+`Save` + `Cancel` and `Edit` are **mutually exclusive** — only
+one of the two states is shown at a time. When the two tables are
+open for editing, `Save` and `Cancel` are shown; when the two
+tables are locked, only `Edit` is shown.
+
+#### Initial state
+
+- A **brand-new instrument** card (operator just clicked
+  `Add new instrument`, or the session was just created and the
+  default instrument was seeded) starts in the **editable** state
+  — `Save` + `Cancel` shown, tables open.
+- An **existing instrument** with previously-saved field rows
+  starts in the **locked** state — `Edit` shown, tables read-only.
+
+#### Locked when session is `ready`
+
+While the session is `ready` (the yellow lock card at the top of
+the page is visible), every per-instrument card stays in the
+**locked** state regardless of saved-vs-new, and the `Save` /
+`Cancel` / `Edit` buttons render greyed-out (disabled) so the
+operator cannot toggle into edit mode. The operator must
+`Revert to draft` (via the lock card) before any of the
+field-table buttons become usable. The `Add new instrument` and
+`Delete this instrument` buttons follow the same lock — both are
+disabled while `ready`.
 
 ## Add / Delete semantics
 
@@ -288,9 +334,11 @@ above re-apply on commit.
   `response_type_definitions` table (or equivalent) keyed by
   session, with the seeded six rows guaranteed present and
   un-deletable.
-- **Multi-instrument support** — `Add new instrument` is disabled
-  on `main` today (per `unfinished_business.md` item #18). The
-  decision to enable / delete is the next P0 unblock.
+- **Multi-instrument support** — `Add new instrument` ships
+  **disabled** in the first rebuild slice (with the same
+  "Multi-instrument support is still in progress" tooltip the
+  current `main` carries) and gets enabled in a follow-up. Per
+  `unfinished_business.md` item #18.
 - **Display Fields persistence** — the table was stripped in
   #206. The rebuild slice that wires this is the first that
   consumes `InstrumentDisplayField` rows again from the operator
