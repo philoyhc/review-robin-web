@@ -114,10 +114,15 @@ Equal-height, top + bottom aligned (`.bottom-grid`).
 - Action buttons for visibility-to-reviewers (open / close,
   show-when-closed / don't-show-when-closed).
 
-### B. Display Fields + Response Fields (two half-width cards side by side)
+### B. Display Fields + Response Fields + Response Fields Help
 
-Equal-height, top + bottom aligned (`.bottom-grid`). Both cards
-have invisible borders.
+A two-half-width grid (Display Fields | Response Fields) followed
+by a full-width Response Fields Help table below.
+
+The two top cards are equal-height, top + bottom aligned
+(`.bottom-grid`). Both cards have invisible borders. The Response
+Fields Help card sits directly below the grid, full width, also
+invisible borders.
 
 #### Reordering convention
 
@@ -167,6 +172,23 @@ Default seed (two rows, applied to a freshly-created instrument):
 |---|---|---|---|---|
 | `rating1` | `Rating` | `1-to-5` | ✓ | 1 |
 | `comments1` | `Comments` | `Long_Text` |  | 2 |
+
+#### Response Fields Help (full-width, below)
+
+Title: `Response Fields Help`. Full-width card sitting directly
+below the Display Fields + Response Fields grid, invisible
+borders. Placeholder for now — full wiring is deferred to a later
+slice. Columns:
+
+| Column | Behaviour |
+|---|---|
+| **Field** | Identifies which Response Fields row this help row attaches to. Read-only `<code>` (matches the row's `field_key`). |
+| **Text** | Operator-typed help text for that Response Fields row. The schema's ``instrument_response_fields.help_text`` already carries this per row; the rebuilt UI surfaces it here. |
+| **Show** | Checkbox — whether the help text should appear next to the field on the reviewer surface. Maps to ``instrument_response_fields.help_text_visible``. |
+
+When wiring lands, this card replaces the deferred "Help text
+placement" item in §Open / deferred. The schema is already in
+place; the slice is template + bulk-save plumbing only.
 
 ### C. Horizontal rule
 
@@ -388,6 +410,10 @@ above re-apply on commit.
   can persist as ordinary display-field rows.
 - **Sort column** — placeholder; the *default row order on
   reviewer surface* UX is open.
-- **Help text** — `instrument_response_fields.help_text` and
-  `help_text_visible` exist per row but the spec doesn't yet
-  surface them in the Response Fields table; placement is open.
+- **Response Fields Help wiring** — placement is now spec'd as a
+  full-width `Response Fields Help` card below the Section B grid
+  (see "Response Fields Help (full-width, below)" above). The
+  schema's `instrument_response_fields.help_text` /
+  `help_text_visible` already carry the data; the rebuild slice
+  that wires this surface adds the bulk-save plumbing for the
+  three columns.
