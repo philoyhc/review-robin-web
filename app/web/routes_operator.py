@@ -1035,6 +1035,9 @@ def instruments_index(
             "display_source_error": display_source_error,
             "available_sources_by_instrument": available_sources_by_instrument,
             "merged_rows_by_instrument": merged_rows_by_instrument,
+            "display_source_presence": assignments.display_source_presence(
+                db, review_session.id
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Instruments"
             ),
