@@ -286,6 +286,29 @@
 
         <div class="card" style="border: none; background: transparent; padding: 0;">
           <h3 style="margin-top: 0;">Response Fields</h3>
+          {% set sorted_response_fields = instrument.response_fields | sort(attribute='order') %}
+          {% set _response_type_labels = {
+            'integer': 'Integer',
+            'short_text': 'Short Text',
+            'long_text': 'Long Text',
+            'yes_no': 'Yes / No',
+          } %}
+          {# Per-row hidden move forms for the ▲ / ▼ buttons; referenced
+             by the buttons' HTML5 ``form`` attribute. #}
+          {% if is_editing %}
+            {% for field in sorted_response_fields %}
+              <form id="rfmoveup-{{ field.id }}" method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/move"
+                    style="display: none;">
+                <input type="hidden" name="direction" value="up">
+              </form>
+              <form id="rfmovedown-{{ field.id }}" method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/move"
+                    style="display: none;">
+                <input type="hidden" name="direction" value="down">
+              </form>
+            {% endfor %}
+          {% endif %}
           <div class="table-scroll">
             <table>
               <thead>
@@ -299,32 +322,92 @@
                 </tr>
               </thead>
               <tbody>
-                {% for field in instrument.response_fields | sort(attribute='order') %}
+                {% for field in sorted_response_fields %}
                   <tr>
                     <td><code>{{ field.field_key }}</code></td>
-                    <td>{{ field.label }}</td>
-                    <td>{{ field.response_type }}</td>
                     <td>
-                      <input type="checkbox" disabled
-                             {% if field.required %}checked{% endif %}>
+                      {% if is_editing %}
+                        <input form="dfsave-{{ instrument.id }}" type="text" name="label"
+                               value="{{ field.label }}"
+                               style="width: 100%;">
+                        <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="response">
+                        <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="{{ field.id }}">
+                        <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ loop.index0 }}">
+                      {% else %}
+                        {{ field.label }}
+                      {% endif %}
                     </td>
-                    <td>{{ loop.index }}</td>
-                    <td class="muted">—</td>
+                    <td>
+                      <select disabled
+                              title="Type cannot be changed after a field is created.">
+                        <option selected>{{ _response_type_labels.get(field.response_type, field.response_type) }}</option>
+                      </select>
+                    </td>
+                    <td>
+                      {% if is_editing %}
+                        {# The hidden ``required_ids`` input is keyed
+                           per row id; the bulk-save route reads it as
+                           a set. #}
+                        <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                               name="required_ids" value="{{ field.id }}"
+                               {% if field.required %}checked{% endif %}>
+                      {% else %}
+                        <input type="checkbox" disabled
+                               {% if field.required %}checked{% endif %}>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {{ loop.index }}
+                      {% if is_editing %}
+                        <button form="rfmoveup-{{ field.id }}" type="submit"
+                                class="btn-icon" title="Move up"
+                                {% if loop.first %}disabled{% endif %}>&#9650;</button>
+                        <button form="rfmovedown-{{ field.id }}" type="submit"
+                                class="btn-icon" title="Move down"
+                                {% if loop.last %}disabled{% endif %}>&#9660;</button>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if is_editing %}
+                        {% if sorted_response_fields | length > 1 %}
+                          <form method="post"
+                                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/delete"
+                                style="display: inline; margin: 0;">
+                            <button type="submit" title="Delete row"
+                                    style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.2em; padding: 0 6px;">&#10007;</button>
+                          </form>
+                        {% endif %}
+                        <form method="post"
+                              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/add-row"
+                              style="display: inline; margin: 0;">
+                          <input type="hidden" name="after" value="{{ field.id }}">
+                          <button type="submit" title="Add row after"
+                                  style="background: none; border: none; color: #2563eb; cursor: pointer; font-size: 1.2em; padding: 0 6px;">&#10133;</button>
+                        </form>
+                      {% else %}
+                        <span class="muted">—</span>
+                      {% endif %}
+                    </td>
                   </tr>
                 {% endfor %}
-                {% if not instrument.response_fields %}
+                {% if not sorted_response_fields %}
                   <tr>
                     <td colspan="6" class="muted" style="font-style: italic;">
-                      No response fields. Wiring lands in Slice 2.
+                      {% if is_editing %}
+                        <form method="post"
+                              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/add-row"
+                              style="margin: 0;">
+                          <button class="btn" type="submit">Add a response field</button>
+                        </form>
+                      {% else %}
+                        No response fields.
+                      {% endif %}
                     </td>
                   </tr>
                 {% endif %}
               </tbody>
             </table>
           </div>
-          <p class="muted" style="font-style: italic; margin-top: 8px;">
-            Response Fields wiring lands in Slice 2. Read-only here.
-          </p>
         </div>
       </div>
 

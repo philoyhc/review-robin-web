@@ -32,6 +32,7 @@ _SAVED_STATE_EVENT_TYPES: frozenset[str] = frozenset({
     "instrument.field_updated",
     "instrument.field_deleted",
     "instrument.fields_reordered",
+    "instrument.response_fields_saved",
 })
 
 
@@ -960,10 +961,29 @@ def bulk_save_fields(
     )
 
     new_response_order: list[InstrumentResponseField] = []
+    response_updated: list[dict[str, Any]] = []
     for row in response_payload:
         field = existing_response.get(row.get("id"))
         if field is None:
             continue
+        per_row_changes: dict[str, list[Any]] = {}
+        if "label" in row:
+            new_label = (row.get("label") or "").strip()
+            if new_label and field.label != new_label:
+                per_row_changes["label"] = [field.label, new_label]
+                field.label = new_label
+        if "required" in row:
+            new_required = bool(row["required"])
+            if field.required != new_required:
+                per_row_changes["required"] = [field.required, new_required]
+                field.required = new_required
+        if per_row_changes:
+            response_updated.append(
+                {
+                    "field_key": field.field_key,
+                    "changes": per_row_changes,
+                }
+            )
         new_response_order.append(field)
 
     # Rank-based change detection: compare each submitted row's prior
@@ -1036,9 +1056,28 @@ def bulk_save_fields(
             },
         )
 
+    response_changed = bool(response_updated)
+    if response_changed:
+        write_event(
+            db,
+            event_type="instrument.response_fields_saved",
+            summary=(
+                f"Saved response-field labels / required on "
+                f"instrument {_instrument_label(instrument)}"
+            ),
+            actor_user_id=actor.id if actor else None,
+            session_id=instrument.session_id,
+            detail={
+                "instrument_id": instrument.id,
+                "session_id": instrument.session_id,
+                "updated": response_updated,
+            },
+        )
+
     db.commit()
     return {
         "display_changed": display_changed,
+        "response_changed": response_changed,
         "response_order_changed": response_order_changed,
     }
 

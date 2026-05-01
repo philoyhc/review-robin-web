@@ -285,7 +285,7 @@ def test_bulk_save_fields_repacks_per_table_independently(db: Session) -> None:
     # change (rating was at rank 0, comments at rank 1; they end at the
     # same ranks but with different absolute values), so
     # ``response_order_changed`` is False.
-    assert summary == {"display_changed": False, "response_order_changed": False}
+    assert summary == {"display_changed": False, "response_changed": False, "response_order_changed": False}
 
 
 def test_bulk_save_fields_emits_fields_reordered_when_response_order_changes(
@@ -378,7 +378,7 @@ def test_bulk_save_fields_no_op_emits_zero_events(db: Session) -> None:
     ]
     summary = bulk_save_fields(db, instrument=instrument, rows=rows, actor=user)
 
-    assert summary == {"display_changed": False, "response_order_changed": False}
+    assert summary == {"display_changed": False, "response_changed": False, "response_order_changed": False}
 
     events = db.execute(
         select(AuditEvent)
