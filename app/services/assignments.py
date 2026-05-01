@@ -30,42 +30,8 @@ _TRUTHY = {"true", "yes", "1"}
 _FALSY = {"false", "no", "0"}
 
 
-def reviewee_fields_with_data(db: Session, session_id: int) -> list[str]:
-    """Friendly names of reviewee columns that hold at least one value."""
-    labels: list[str] = []
-    has_any = (
-        db.execute(
-            select(Reviewee.id).where(Reviewee.session_id == session_id).limit(1)
-        ).first()
-        is not None
-    )
-    if has_any:
-        labels.extend(["Name", "Email"])
-    profile_found = db.execute(
-        select(Reviewee.id)
-        .where(Reviewee.session_id == session_id)
-        .where(Reviewee.profile_link.is_not(None))
-        .where(Reviewee.profile_link != "")
-        .limit(1)
-    ).first()
-    if profile_found is not None:
-        labels.append("Profile")
-    for slot, friendly in ((1, "Tag 1"), (2, "Tag 2"), (3, "Tag 3")):
-        col = getattr(Reviewee, f"tag_{slot}")
-        found = db.execute(
-            select(Reviewee.id)
-            .where(Reviewee.session_id == session_id)
-            .where(col.is_not(None))
-            .where(col != "")
-            .limit(1)
-        ).first()
-        if found is not None:
-            labels.append(friendly)
-    return labels
-
-
 def reviewer_fields_with_data(db: Session, session_id: int) -> list[str]:
-    """Friendly names of reviewer columns that hold at least one value."""
+    """CSV column names of reviewer fields that hold at least one value."""
     labels: list[str] = []
     has_any = (
         db.execute(
@@ -74,8 +40,8 @@ def reviewer_fields_with_data(db: Session, session_id: int) -> list[str]:
         is not None
     )
     if has_any:
-        labels.extend(["Name", "Email"])
-    for slot, friendly in ((1, "Tag 1"), (2, "Tag 2"), (3, "Tag 3")):
+        labels.extend(["ReviewerName", "ReviewerEmail"])
+    for slot in (1, 2, 3):
         col = getattr(Reviewer, f"tag_{slot}")
         found = db.execute(
             select(Reviewer.id)
@@ -85,21 +51,30 @@ def reviewer_fields_with_data(db: Session, session_id: int) -> list[str]:
             .limit(1)
         ).first()
         if found is not None:
-            labels.append(friendly)
+            labels.append(f"ReviewerTag{slot}")
     return labels
 
 
-def display_source_presence(db: Session, session_id: int) -> dict[str, bool]:
-    """Which Display-Fields source codes have at least one non-empty value.
-
-    Reviewer.Name and Reviewee.Email are mandatory and always considered
-    present. Tag1..3 inspect the reviewee rows; PairContext1..3 and
-    AssignmentContext1..3 inspect the JSON ``context`` blob on assignments.
-    """
-    presence: dict[str, bool] = {
-        "Reviewer.Name": True,
-        "Reviewee.Email": True,
-    }
+def reviewee_fields_with_data(db: Session, session_id: int) -> list[str]:
+    """CSV column names of reviewee fields that hold at least one value."""
+    labels: list[str] = []
+    has_any = (
+        db.execute(
+            select(Reviewee.id).where(Reviewee.session_id == session_id).limit(1)
+        ).first()
+        is not None
+    )
+    if has_any:
+        labels.extend(["RevieweeName", "RevieweeEmail"])
+    profile_found = db.execute(
+        select(Reviewee.id)
+        .where(Reviewee.session_id == session_id)
+        .where(Reviewee.profile_link.is_not(None))
+        .where(Reviewee.profile_link != "")
+        .limit(1)
+    ).first()
+    if profile_found is not None:
+        labels.append("PhotoLink")
     for slot in (1, 2, 3):
         col = getattr(Reviewee, f"tag_{slot}")
         found = db.execute(
@@ -109,8 +84,23 @@ def display_source_presence(db: Session, session_id: int) -> dict[str, bool]:
             .where(col != "")
             .limit(1)
         ).first()
-        presence[f"Reviewee.Tag{slot}"] = found is not None
+        if found is not None:
+            labels.append(f"RevieweeTag{slot}")
+    return labels
 
+
+def assignment_fields_with_data(db: Session, session_id: int) -> list[str]:
+    """CSV column names of assignment fields that hold at least one value."""
+    labels: list[str] = []
+    has_any = (
+        db.execute(
+            select(Assignment.id).where(Assignment.session_id == session_id).limit(1)
+        ).first()
+        is not None
+    )
+    if not has_any:
+        return labels
+    labels.extend(["ReviewerEmail", "RevieweeEmail", "IncludeAssignment"])
     pair_present = {1: False, 2: False, 3: False}
     asgn_present = {1: False, 2: False, 3: False}
     for (ctx,) in db.execute(
@@ -124,9 +114,26 @@ def display_source_presence(db: Session, session_id: int) -> dict[str, bool]:
             if ctx.get(f"assignment_context_{slot}"):
                 asgn_present[slot] = True
     for slot in (1, 2, 3):
-        presence[f"PairContext{slot}"] = pair_present[slot]
-        presence[f"AssignmentContext{slot}"] = asgn_present[slot]
-    return presence
+        if pair_present[slot]:
+            labels.append(f"PairContext{slot}")
+    for slot in (1, 2, 3):
+        if asgn_present[slot]:
+            labels.append(f"AssignmentContext{slot}")
+    return labels
+
+
+def display_source_presence(db: Session, session_id: int) -> dict[str, bool]:
+    """Composed view: which display-source CSV column names are populated.
+
+    Reuses the three per-table helpers so we don't run a parallel set of
+    queries dedicated to the instruments page.
+    """
+    fields = (
+        set(reviewer_fields_with_data(db, session_id))
+        | set(reviewee_fields_with_data(db, session_id))
+        | set(assignment_fields_with_data(db, session_id))
+    )
+    return {key: True for key in fields}
 
 
 @dataclass
