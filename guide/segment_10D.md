@@ -88,6 +88,29 @@ be observed against a fully-wired single-instrument card first.
 
 ## Slice 1 — Display Fields table + Save / Cancel / Edit state machine
 
+**Status:** ✅ shipped in
+[PR #220](https://github.com/philoyhc/review-robin-web/pull/220).
+Polish PRs that landed on top: pill colour /
+status-row / flash banner clean-up
+([#221](https://github.com/philoyhc/review-robin-web/pull/221)),
+``email_or_identifier`` source label abbreviation + locked-row
+checkbox in edit mode
+([#222](https://github.com/philoyhc/review-robin-web/pull/222)),
+new ``pill-success`` green for the ``Required`` pill
+([#223](https://github.com/philoyhc/review-robin-web/pull/223)),
+header-card action row consolidation
+([#224](https://github.com/philoyhc/review-robin-web/pull/224)),
+and equal-height button + restore-Alert + nav-spacing
+([#225](https://github.com/philoyhc/review-robin-web/pull/225)).
+
+Two slice-plan items were intentionally **deferred** in #220:
+
+- The "fresh instrument starts in editable state" UX nicety —
+  Slice 1 ships always-locked-unless-`?editing` instead. Operator
+  clicks Edit explicitly. Revisit if the UX becomes a problem.
+- The post-save flash message — replaced by the ``saved /
+  not saved`` pill on the per-instrument status sub-card (#221).
+
 **Estimated effort:** ~3-4 hrs.
 
 This slice fixes the original P0 bug (Friendly Label persistence)
