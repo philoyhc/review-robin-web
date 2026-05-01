@@ -428,13 +428,8 @@
                 onclick="lockFields(this);">Save</button>
         <button class="btn alert-solid edit-instrument-btn" type="button"
                 onclick="unlockFields(this);" hidden>Edit</button>
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/add"
-              style="margin: 0;">
-          <input type="hidden" name="after" value="{{ instrument.id }}">
-          <button class="btn alert-solid" type="submit"
-                  {% if not can_edit %}disabled{% endif %}>Add an instrument</button>
-        </form>
+        <button class="btn alert-solid" type="button" disabled
+                title="Multi-instrument support is still in progress; coming back later.">Add an instrument</button>
         {% if instruments | length > 1 %}
           <form method="post"
                 action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"
