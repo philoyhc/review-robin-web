@@ -1,18 +1,25 @@
-# Adhoc todo list
+# Segment 10D — Stabilization (Operator Model + Engine)
 
-Rolling list of cross-cutting cleanups identified during the
-mid-Segment-10B health review (2026-04-30). Each item is sized to
-land as its own small PR. Items are ordered by priority given the
-project's actual workflow: **no local Python or database; the agent's
-sandbox is the pre-PR gate; end-to-end verification happens on the
-Azure dev slot after deploy.** That workflow makes CI gaps and
-hard-to-test invariants more expensive than they would be on a
-project with a human dev loop.
+**Role.** Rolling todo of cross-cutting cleanups carried over from
+Segments 1–10C. Lands the unfinished items needed to stabilize the
+operator model and engine before Segment 11 (export / audit
+retention) builds new surface on top.
 
-When picking up an item: read its "Why" and "Plan" sections, confirm
-the file pointers still match `main`, and land it on its own branch.
-Don't bundle multiple items into one PR — the cut points below are
-the natural slice sizes.
+This file replaces the former `guide/adhoc_todo.md` (originally
+captured during the mid-Segment-10B health review on 2026-04-30).
+Items are ordered by priority given the project's actual workflow:
+**no local Python or database; the agent's sandbox is the pre-PR
+gate; end-to-end verification happens on the Azure dev slot after
+deploy.** That workflow makes CI gaps and hard-to-test invariants
+more expensive than they would be on a project with a human dev
+loop.
+
+When picking up an item: read its "Why" and "Plan" sections,
+confirm the file pointers still match `main`, and land it on its
+own branch. Don't bundle multiple items into one PR — the cut
+points below are the natural slice sizes. Tick items as they ship
+and update `docs/status.md`'s segments-shipped table when the
+segment overall lands.
 
 ---
 
@@ -299,8 +306,12 @@ sets up the reuse.
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
-  — those are owned by their assigned segments, not adhoc.
+  — those are owned by their assigned segments, not 10D.
 - `routes_operator.py` overall size: 1849 lines of mostly thin
   handlers is fine. Item 11 is the one carve-out worth doing now.
 - `bulk_save_fields` (`app/services/instruments.py:407–554`) — long
   but stable; revisit if Segment 12/13 force changes to it.
+- Display Fields persistence on the per-instrument card placeholder
+  — owned by the next round of UI work (likely a 10E or folded into
+  11), not 10D. See `spec/operator_map.md` "Deferred" and
+  `docs/status.md` "What's deliberately not yet there".
