@@ -2,7 +2,7 @@
 
 Tracks which page templates have been brought through the recent UI
 restructure (two-column layout where applicable, canonical button
-classes from `assumptions.md`, refreshed copy, etc.). Tick items as
+classes from `spec/assumptions.md`, refreshed copy, etc.). Tick items as
 each page is reviewed.
 
 ## Cross-cutting
@@ -63,7 +63,7 @@ restyled in this round, including:
    naturally splits into two parallel groupings; otherwise stays
    single-column on purpose.
 2. **Buttons.** Every button uses one of the six canonical
-   `.btn` modifiers from `assumptions.md` — no inline
+   `.btn` modifiers from `spec/assumptions.md` — no inline
    `style="background: …; border-color: …"` overrides.
 3. **Copy.** Heading + instruction copy reviewed; capitalisation
    matches the surrounding pages.

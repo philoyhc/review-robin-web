@@ -86,7 +86,7 @@ Migration round-trips on both SQLite (every test session) and Postgres
   isolation so service-layer commits don't leak across tests;
   `make_client` factory for multi-user integration tests.
 - **Documentation**: `docs/{authentication,database,imports}.md`,
-  `deployment_dev.md` (incl. one-time Postgres GRANT bootstrap),
+  `docs/deployment_dev.md` (incl. one-time Postgres GRANT bootstrap),
   segment plans in `guide/`.
 
 ### Authentication & permissions
@@ -158,7 +158,7 @@ Migration round-trips on both SQLite (every test session) and Postgres
   mutation affordances (upload cards, Danger Zone, per-instrument
   Save button); `<input>` / `<select>` elements inside
   `.field-builder` are disabled. See `spec/operator_map.md` for
-  the per-page contract and `assumptions.md` for the markup.
+  the per-page contract and `spec/assumptions.md` for the markup.
 - Card-based layout, monospace tabular code spans, severity pills
   (`error` / `warning` / `info`) for validation issues. All inline
   `<style>` in `base.html`. CSS framework / extraction is a Segment
@@ -257,7 +257,7 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
   seven supported display-field sources at the schema layer are
   `reviewee.tag_1/2/3`, `reviewee.profile_link`, and
   `pair_context.1/2/3`; `assignment_context_*` is deliberately
-  excluded. See `ARCHITECTURE.md` "Conceptual hierarchy."
+  excluded. See `spec/architecture.md` "Conceptual hierarchy."
 - View detail with live counts of reviewers, reviewees, assignments,
   and the current `assignment_mode`.
 - **Edit** name / code / description / deadline; changes recorded as
@@ -479,7 +479,7 @@ per-instrument card. The Delete button does render when more than
 one instrument exists (reachable, e.g., via direct POSTs to
 `/instruments/add` followed by a UI delete). Lifting the
 single-instrument-UI restriction is what Segment 13 will do. See
-`ARCHITECTURE.md` "Conceptual hierarchy."
+`spec/architecture.md` "Conceptual hierarchy."
 
 ### Pair-level vs assignment-level context
 
@@ -488,4 +488,4 @@ Manual CSV imports carry two distinct kinds of per-pair context
 `Assignment.context`. Pair-level is reviewer-facing informational
 metadata; assignment-level is logic-engaging metadata that
 RuleBased (Segment 12) will read. See `docs/imports.md` and
-`ARCHITECTURE.md` "Pair-level vs assignment-level context."
+`spec/architecture.md` "Pair-level vs assignment-level context."

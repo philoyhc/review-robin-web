@@ -61,7 +61,7 @@ The display-field picker exposes seven sources, two source types:
   — the slot key into `Assignment.context["pair_context_<slot>"]`.
 
 `assignment_context_*` is deliberately excluded (preserves the
-reviewer-facing / logic-engaging distinction; see ARCHITECTURE.md
+reviewer-facing / logic-engaging distinction; see `spec/architecture.md`
 "Pair-level vs assignment-level context").
 
 Lands across 10B-1 (default-label coverage of all seven sources;

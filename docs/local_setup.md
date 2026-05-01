@@ -229,9 +229,9 @@ this stage.
   `/me` and `/me/debug` routes do.
 - `docs/database.md` — model conventions, migration generation rules, the
   cross-dialect type policy, where Postgres lands.
-- `deployment_dev.md` — the dev Azure App Service deployment.
-- `guide/` — segment-by-segment workplan; `guide/segment_04A.md` is the
-  most recent agreed implementation contract.
+- `docs/deployment_dev.md` — the dev Azure App Service deployment.
+- `guide/` — segment-by-segment workplan (current and upcoming);
+  shipped segment plans live in `guide/archive/`.
 - `CONTRIBUTING.md` — branch and PR workflow.
 - `AGENTS.md` / `CLAUDE.md` — conventions if you are pairing with an AI
   coding agent.

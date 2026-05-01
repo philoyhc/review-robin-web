@@ -33,11 +33,17 @@ pytest
 
 ## Project documents
 
-- `FUNCTIONAL_SPEC.md`
-- `TECH_STACK.md`
-- `ARCHITECTURE.md`
-- `AGENTS.md`
-- `CONTRIBUTING.md`
-- `deployment_dev.md`
-- `docs/authentication.md`
-- `docs/database.md`
+Documentation is split across three folders, each with its own README:
+
+- **`spec/`** — surface specifications and design intent (`spec/README.md`).
+  Includes `architecture.md`, `functional_spec.md`, `assumptions.md`,
+  `operator_map.md`.
+- **`docs/`** — reference material about the running system (`docs/README.md`).
+  Includes `status.md`, `authentication.md`, `database.md`, `imports.md`,
+  `local_setup.md`, `deployment_dev.md`.
+- **`guide/`** — forward-looking plans, segment workplans, todos
+  (`guide/README.md`). Shipped segment plans are in `guide/archive/`.
+
+Top-level docs at the repo root: `CLAUDE.md` / `AGENTS.md` (kept as
+byte-identical twins; AI-agent guidance), `CONTRIBUTING.md`,
+`README.md` (this file).
