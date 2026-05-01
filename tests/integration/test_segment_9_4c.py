@@ -225,7 +225,8 @@ def test_instruments_index_add_and_delete_buttons_disabled(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
 
-    assert "Add Instrument" in body
+    assert ">Add 1<" in body
+    assert ">Delete 1<" in body
     assert "Delete instrument" in body
     # Both render as disabled anchors with the multi-instrument tooltip
     assert 'title="Multi-instrument — Segment 13"' in body
