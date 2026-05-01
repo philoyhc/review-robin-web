@@ -54,24 +54,20 @@
           {% endif %}
         </p>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          {% set open_solid = is_ready and bulk_accepting_state != "all-on" %}
-          {% set close_solid = is_ready and bulk_accepting_state == "all-on" %}
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/accepting/all-on"
-                style="margin: 0;">
-            <button class="btn {{ 'alert-solid' if open_solid else 'alert' }}" type="submit"
-                    {% if not is_ready or bulk_accepting_state == "all-on" %}disabled{% endif %}>
-              Open all instruments
-            </button>
-          </form>
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/accepting/all-off"
-                style="margin: 0;">
-            <button class="btn {{ 'alert-solid' if close_solid else 'alert' }}" type="submit"
-                    {% if not is_ready or bulk_accepting_state == "all-off" %}disabled{% endif %}>
-              Close all instruments
-            </button>
-          </form>
+          {% if is_ready and bulk_accepting_state != "all-on" %}
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/accepting/all-on"
+                  style="margin: 0;">
+              <button class="btn alert-solid" type="submit">Open All Instruments</button>
+            </form>
+          {% endif %}
+          {% if is_ready and bulk_accepting_state == "all-on" %}
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/accepting/all-off"
+                  style="margin: 0;">
+              <button class="btn alert-solid" type="submit">Close All Instruments</button>
+            </form>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -143,28 +139,6 @@
               Closed by deadline at <code>{{ instrument.deadline_closed_at.isoformat() }}</code>.
             </p>
           {% endif %}
-          <div style="display: flex; justify-content: flex-end; gap: 8px;">
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
-                  style="margin: 0;">
-              <button class="btn {% if is_ready and not instrument.accepting_responses %}alert-solid{% else %}alert{% endif %}"
-                      type="submit"
-                      {% if not is_ready or instrument.accepting_responses %}disabled{% endif %}>
-                Open
-              </button>
-            </form>
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close"
-                  style="margin: 0;">
-              <button class="btn {% if is_ready and instrument.accepting_responses %}alert-solid{% else %}alert{% endif %}"
-                      type="submit"
-                      {% if not is_ready or not instrument.accepting_responses %}disabled{% endif %}>
-                Close
-              </button>
-            </form>
-          </div>
-
-          <hr>
           <p>
             <strong>Visibility when closed:</strong>
             {% if instrument.responses_visible_when_closed %}
@@ -173,26 +147,35 @@
               Not Showing
             {% endif %}
           </p>
-          <div style="display: flex; justify-content: flex-end; gap: 8px;">
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
-                  style="margin: 0;">
-              <input type="hidden" name="visible_when_closed" value="true">
-              <button class="btn {% if not instrument.responses_visible_when_closed %}alert-solid{% else %}alert{% endif %}"
-                      type="submit"
-                      {% if instrument.responses_visible_when_closed %}disabled{% endif %}>
-                Show
-              </button>
-            </form>
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
-                  style="margin: 0;">
-              <button class="btn {% if instrument.responses_visible_when_closed %}alert-solid{% else %}alert{% endif %}"
-                      type="submit"
-                      {% if not instrument.responses_visible_when_closed %}disabled{% endif %}>
-                Don't show
-              </button>
-            </form>
+          <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
+            {% if is_ready and not instrument.accepting_responses %}
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
+                    style="margin: 0;">
+                <button class="btn alert-solid" type="submit">Open</button>
+              </form>
+            {% endif %}
+            {% if is_ready and instrument.accepting_responses %}
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close"
+                    style="margin: 0;">
+                <button class="btn alert-solid" type="submit">Close</button>
+              </form>
+            {% endif %}
+            {% if not instrument.responses_visible_when_closed %}
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
+                    style="margin: 0;">
+                <input type="hidden" name="visible_when_closed" value="true">
+                <button class="btn alert-solid" type="submit">Show When Closed</button>
+              </form>
+            {% else %}
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
+                    style="margin: 0;">
+                <button class="btn alert-solid" type="submit">Don't Show When Closed</button>
+              </form>
+            {% endif %}
           </div>
         </div>
       </div>
