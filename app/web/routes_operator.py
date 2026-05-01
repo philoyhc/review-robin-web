@@ -1549,57 +1549,132 @@ async def instrument_bulk_save_fields(
 
     form = await request.form()
     kinds = [str(v) for v in form.getlist("kind")]
-    ids = [str(v) for v in form.getlist("id")]
+    raw_ids = [str(v) for v in form.getlist("id")]
     orders = [str(v) for v in form.getlist("order")]
     labels = [str(v) for v in form.getlist("label")]
-    visible_ids: set[int] = set()
-    for raw in form.getlist("visible_ids"):
+    # ``visible_ids`` and ``required_ids`` are submitted as raw row
+    # ids so they can carry either real ints or ``new_N`` placeholders
+    # for JS-added rows.
+    visible_id_strs: set[str] = {
+        str(v) for v in form.getlist("visible_ids")
+    }
+    required_id_strs: set[str] = {
+        str(v) for v in form.getlist("required_ids")
+    }
+    # JS-deferred deletes: each ✗ click appends a hidden
+    # ``response_delete_ids`` input on the bulk-save form so Cancel
+    # discards the deletion.
+    response_delete_ids: set[int] = set()
+    for raw in form.getlist("response_delete_ids"):
         try:
-            visible_ids.add(int(str(raw)))
-        except ValueError:
-            continue
-    required_ids: set[int] = set()
-    for raw in form.getlist("required_ids"):
-        try:
-            required_ids.add(int(str(raw)))
+            response_delete_ids.add(int(str(raw)))
         except ValueError:
             continue
     # Response Fields Help: per-row help_text + help_text_visible.
     # The Help card emits parallel ``help_text_id`` + ``help_text``
-    # arrays plus a ``help_text_visible_ids`` set. Build a lookup
-    # keyed by response field id and merge into the response rows
-    # below.
-    help_text_ids = [str(v) for v in form.getlist("help_text_id")]
+    # arrays plus a ``help_text_visible_ids`` set. Help ids may also
+    # be ``new_N`` placeholders for JS-added rows.
+    help_text_id_strs = [str(v) for v in form.getlist("help_text_id")]
     help_texts = [str(v) for v in form.getlist("help_text")]
-    help_text_visible_ids: set[int] = set()
-    for raw in form.getlist("help_text_visible_ids"):
-        try:
-            help_text_visible_ids.add(int(str(raw)))
-        except ValueError:
-            continue
-    help_by_id: dict[int, str] = {}
-    if len(help_text_ids) == len(help_texts):
-        for raw_id, text in zip(help_text_ids, help_texts):
-            try:
-                help_by_id[int(raw_id)] = text
-            except ValueError:
-                continue
+    help_text_visible_id_strs: set[str] = {
+        str(v) for v in form.getlist("help_text_visible_ids")
+    }
+    help_by_id_str: dict[str, str] = {}
+    if len(help_text_id_strs) == len(help_texts):
+        for raw_id, text in zip(help_text_id_strs, help_texts):
+            help_by_id_str[raw_id] = text
 
-    if not (len(kinds) == len(ids) == len(orders) == len(labels)):
+    if not (len(kinds) == len(raw_ids) == len(orders) == len(labels)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bulk save row inputs are misaligned.",
         )
 
-    rows: list[dict[str, Any]] = []
-    for kind, raw_id, raw_order, label in zip(kinds, ids, orders, labels):
+    _invalidate_if_validated(
+        db, review_session, user, reason="instrument_fields_saved"
+    )
+
+    # 1. Apply JS-deferred deletes first so the bulk-save step below
+    #    sees a clean existing-rows list. Use ``confirm=True`` since
+    #    the page is only editable while the session is in setup; no
+    #    responses can exist yet.
+    for delete_id in response_delete_ids:
+        field = db.get(instruments_service.InstrumentResponseField, delete_id)
+        if field is None or field.instrument_id != instrument.id:
+            continue
         try:
-            row_id = int(raw_id)
+            instruments_service.delete_response_field(
+                db, field=field, confirm=True, actor=user
+            )
+        except instruments_service.ResponsesPresentError:
+            # Defensive: if a concurrent edit made the session ongoing
+            # between the GET and POST, just skip this row.
+            continue
+
+    # 2. Allocate real ids for any ``new_*`` response rows. The route
+    #    creates them via ``add_default_response_field`` (which picks a
+    #    fresh field_key + label) and remembers the temp→real id map;
+    #    the bulk-save step below then applies the operator-typed
+    #    label / required / help to the new row.
+    new_id_map: dict[str, int] = {}
+    for kind, raw_id in zip(kinds, raw_ids):
+        if kind != "response":
+            continue
+        if not raw_id.startswith("new_") or raw_id in new_id_map:
+            continue
+        if raw_id in {str(d) for d in response_delete_ids}:
+            continue  # added then deleted before save — skip
+        new_field = instruments_service.add_default_response_field(
+            db, instrument=instrument, after_field_id=None, actor=user
+        )
+        new_id_map[raw_id] = new_field.id
+
+    def _resolve_id(raw: str) -> int | None:
+        if raw.startswith("new_"):
+            return new_id_map.get(raw)
+        try:
+            return int(raw)
+        except ValueError:
+            return None
+
+    visible_ids: set[int] = set()
+    for s in visible_id_strs:
+        rid = _resolve_id(s)
+        if rid is not None:
+            visible_ids.add(rid)
+    required_ids: set[int] = set()
+    for s in required_id_strs:
+        rid = _resolve_id(s)
+        if rid is not None:
+            required_ids.add(rid)
+    help_text_visible_ids: set[int] = set()
+    for s in help_text_visible_id_strs:
+        rid = _resolve_id(s)
+        if rid is not None:
+            help_text_visible_ids.add(rid)
+    help_by_id: dict[int, str] = {}
+    for raw_id, text in help_by_id_str.items():
+        rid = _resolve_id(raw_id)
+        if rid is not None:
+            help_by_id[rid] = text
+
+    rows: list[dict[str, Any]] = []
+    for kind, raw_id, raw_order, label in zip(kinds, raw_ids, orders, labels):
+        row_id = _resolve_id(raw_id)
+        if row_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bulk save id values must be integers or new_*.",
+            )
+        # Skip rows the operator marked deleted in this same submit.
+        if kind == "response" and row_id in response_delete_ids:
+            continue
+        try:
             row_order = int(raw_order)
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Bulk save id / order values must be integers.",
+                detail="Bulk save order values must be integers.",
             )
         row: dict[str, Any] = {"kind": kind, "id": row_id, "order": row_order}
         if kind == "display":
@@ -1613,9 +1688,6 @@ async def instrument_bulk_save_fields(
                 row["help_text_visible"] = row_id in help_text_visible_ids
         rows.append(row)
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_fields_saved"
-    )
     instruments_service.bulk_save_fields(
         db, instrument=instrument, rows=rows, actor=user
     )

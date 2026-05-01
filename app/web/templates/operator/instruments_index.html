@@ -292,9 +292,9 @@
                   <th>Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody data-rf-tbody="{{ instrument.id }}">
                 {% for field in sorted_response_fields %}
-                  <tr>
+                  <tr class="rf-row" data-rf-id="{{ field.id }}">
                     <td><code>{{ field.field_key }}</code></td>
                     <td>
                       {% if is_editing %}
@@ -341,21 +341,14 @@
                     <td style="white-space: nowrap; width: 1%;">
                       {% if is_editing %}
                         <div style="display: inline-flex; gap: 0; align-items: center;">
-                          {% if sorted_response_fields | length > 1 %}
-                            <form method="post"
-                                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/delete"
-                                  style="margin: 0;">
-                              <button type="submit" title="Delete row"
-                                      style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1;">&#10007;</button>
-                            </form>
-                          {% endif %}
-                          <form method="post"
-                                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/add-row"
-                                style="margin: 0;">
-                            <input type="hidden" name="after" value="{{ field.id }}">
-                            <button type="submit" title="Add row after"
-                                    style="background: none; border: none; color: #2563eb; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1;">&#10133;</button>
-                          </form>
+                          <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
+                                  class="rf-delete"
+                                  title="Delete row (applied on Save)"
+                                  style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1;">&#10007;</button>
+                          <button type="button" onclick="addRow(this, {{ instrument.id }})"
+                                  class="rf-add"
+                                  title="Add row after (applied on Save)"
+                                  style="background: none; border: none; color: #2563eb; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1;">&#10133;</button>
                         </div>
                       {% else %}
                         <span class="muted">—</span>
@@ -363,21 +356,16 @@
                     </td>
                   </tr>
                 {% endfor %}
-                {% if not sorted_response_fields %}
-                  <tr>
-                    <td colspan="6" class="muted" style="font-style: italic;">
-                      {% if is_editing %}
-                        <form method="post"
-                              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/add-row"
-                              style="margin: 0;">
-                          <button class="btn" type="submit">Add a response field</button>
-                        </form>
-                      {% else %}
-                        No response fields.
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% endif %}
+                <tr class="rf-empty"{% if sorted_response_fields %} style="display: none;"{% endif %}>
+                  <td colspan="6" class="muted" style="font-style: italic;">
+                    {% if is_editing %}
+                      <button type="button" class="btn"
+                              onclick="addRow(this, {{ instrument.id }})">Add a response field</button>
+                    {% else %}
+                      No response fields.
+                    {% endif %}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -399,9 +387,9 @@
                 <th>Show</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody data-rfhelp-tbody="{{ instrument.id }}">
               {% for field in sorted_response_fields %}
-                <tr>
+                <tr class="rfhelp-row" data-rfhelp-for="{{ field.id }}">
                   <td><code>{{ field.field_key }}</code></td>
                   <td>
                     {% if is_editing %}
@@ -425,17 +413,79 @@
                   </td>
                 </tr>
               {% endfor %}
-              {% if not sorted_response_fields %}
-                <tr>
-                  <td colspan="3" class="muted" style="font-style: italic;">
-                    No response fields.
-                  </td>
-                </tr>
-              {% endif %}
+              <tr class="rfhelp-empty"{% if sorted_response_fields %} style="display: none;"{% endif %}>
+                <td colspan="3" class="muted" style="font-style: italic;">
+                  No response fields.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
+
+      {% if is_editing %}
+        {# Hidden templates cloned by ``addRow`` JS to insert a new
+           Response Fields row + matching Help row. The ``__TEMP_ID__``
+           placeholder is replaced with a fresh ``new_{counter}`` id;
+           the route's bulk-save handler creates a real field for any
+           ``new_*`` id and applies the operator's typed label /
+           required / help. Cancel discards them by never submitting. #}
+        <template id="rf-template-{{ instrument.id }}">
+          <tr class="rf-row" data-rf-id="__TEMP_ID__" data-rf-new="1">
+            <td><code class="muted">(new)</code></td>
+            <td>
+              <input form="dfsave-{{ instrument.id }}" type="text" name="label"
+                     value="__DEFAULT_LABEL__" style="width: 100%;">
+              <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="response">
+              <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="__TEMP_ID__">
+              <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="0">
+            </td>
+            <td>
+              <select disabled title="Type cannot be changed after a field is created.">
+                <option selected>Integer</option>
+              </select>
+            </td>
+            <td>
+              <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                     name="required_ids" value="__TEMP_ID__" checked>
+            </td>
+            <td>
+              <span class="order-num">0</span>
+              <button type="button" onclick="moveRow(this, 'up')"
+                      class="btn-icon move-up" title="Move up">&#9650;</button>
+              <button type="button" onclick="moveRow(this, 'down')"
+                      class="btn-icon move-down" title="Move down">&#9660;</button>
+            </td>
+            <td style="white-space: nowrap; width: 1%;">
+              <div style="display: inline-flex; gap: 0; align-items: center;">
+                <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
+                        class="rf-delete"
+                        title="Delete row (applied on Save)"
+                        style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1;">&#10007;</button>
+                <button type="button" onclick="addRow(this, {{ instrument.id }})"
+                        class="rf-add"
+                        title="Add row after (applied on Save)"
+                        style="background: none; border: none; color: #2563eb; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1;">&#10133;</button>
+              </div>
+            </td>
+          </tr>
+        </template>
+        <template id="rfhelp-template-{{ instrument.id }}">
+          <tr class="rfhelp-row" data-rfhelp-for="__TEMP_ID__" data-rfhelp-new="1">
+            <td><code class="muted">(new)</code></td>
+            <td>
+              <input form="dfsave-{{ instrument.id }}" type="hidden"
+                     name="help_text_id" value="__TEMP_ID__">
+              <textarea form="dfsave-{{ instrument.id }}" name="help_text"
+                        rows="2" style="width: 100%;"></textarea>
+            </td>
+            <td>
+              <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                     name="help_text_visible_ids" value="__TEMP_ID__" checked>
+            </td>
+          </tr>
+        </template>
+      {% endif %}
 
       {# Section C — separator. #}
       <hr>
@@ -494,11 +544,11 @@
         ? row.previousElementSibling
         : row.nextElementSibling;
       // Skip rows that don't carry their own ▲ / ▼ buttons (locked
-      // Display Fields rows). Currently locked rows always sit at the
-      // top, so the only case where this matters is ``up`` from the
-      // first movable row, which is already disabled by the boundary
-      // check below.
-      while (sibling && !sibling.querySelector('.move-up')) {
+      // Display Fields rows) and rows hidden via JS-deferred delete.
+      while (sibling && (
+        !sibling.querySelector('.move-up')
+        || sibling.style.display === 'none'
+      )) {
         sibling = direction === 'up'
           ? sibling.previousElementSibling
           : sibling.nextElementSibling;
@@ -513,27 +563,141 @@
     }
     function _refreshOrderColumn(tbody) {
       var rows = Array.prototype.slice.call(tbody.children);
-      // Find the boundary indices for the move-up / move-down disabled
-      // states: the first row with a .move-up button, and the last row
-      // with a .move-down button.
+      // Find boundary indices among *visible* movable rows.
       var firstMovable = null;
       var lastMovable = null;
       for (var i = 0; i < rows.length; i++) {
-        if (rows[i].querySelector('.move-up')) {
+        if (rows[i].querySelector('.move-up') && rows[i].style.display !== 'none') {
           if (firstMovable === null) firstMovable = i;
           lastMovable = i;
         }
       }
+      var visibleIndex = 0;
       for (var i = 0; i < rows.length; i++) {
         var tr = rows[i];
+        if (tr.style.display === 'none') continue;
         var orderInput = tr.querySelector('input[name="order"]');
-        if (orderInput) orderInput.value = i;
+        if (orderInput) orderInput.value = visibleIndex;
         var orderText = tr.querySelector('.order-num');
-        if (orderText) orderText.textContent = i + 1;
+        if (orderText) orderText.textContent = visibleIndex + 1;
         var up = tr.querySelector('.move-up');
         var down = tr.querySelector('.move-down');
         if (up) up.disabled = (i === firstMovable);
         if (down) down.disabled = (i === lastMovable);
+        visibleIndex += 1;
+      }
+    }
+    // ✗ delete is deferred: existing rows are hidden + their id added
+    // to a ``response_delete_ids`` hidden input on the bulk-save form,
+    // so Cancel discards the deletion. JS-added rows (id="new_*") are
+    // simply removed from the DOM since they were never persisted.
+    function deleteRow(button, instrumentId) {
+      var row = button.closest('tr');
+      if (!row) return;
+      var rowId = row.getAttribute('data-rf-id');
+      var helpRow = document.querySelector(
+        '[data-rfhelp-tbody="' + instrumentId + '"] [data-rfhelp-for="' + rowId + '"]'
+      );
+      var tbody = row.parentNode;
+      if (rowId && rowId.indexOf('new_') === 0) {
+        if (helpRow && helpRow.parentNode) helpRow.parentNode.removeChild(helpRow);
+        tbody.removeChild(row);
+      } else {
+        row.style.display = 'none';
+        if (helpRow) helpRow.style.display = 'none';
+        var form = document.getElementById('dfsave-' + instrumentId);
+        if (form) {
+          var hidden = document.createElement('input');
+          hidden.type = 'hidden';
+          hidden.name = 'response_delete_ids';
+          hidden.value = rowId;
+          hidden.setAttribute('data-rf-delete-for', rowId);
+          form.appendChild(hidden);
+        }
+        // Strip the row's ``id`` / ``label`` / ``order`` / etc. from
+        // the form so the bulk-save handler doesn't try to update a
+        // row we just told it to delete. Disabling the inputs prevents
+        // submission.
+        var inputs = row.querySelectorAll('input, textarea, select');
+        for (var i = 0; i < inputs.length; i++) inputs[i].disabled = true;
+      }
+      _showOrHideEmptyState(tbody);
+      var helpTbody = document.querySelector(
+        '[data-rfhelp-tbody="' + instrumentId + '"]'
+      );
+      if (helpTbody) _showOrHideEmptyState(helpTbody);
+      _refreshOrderColumn(tbody);
+    }
+    // ➕ add is deferred: a row is cloned from a hidden <template> and
+    // inserted into the DOM with id ``new_{counter}``. The bulk-save
+    // route creates a real field for any ``new_*`` id on Save and
+    // applies the operator's typed values; Cancel discards it.
+    var _newRowCounter = 0;
+    function addRow(button, instrumentId) {
+      var rfTemplate = document.getElementById('rf-template-' + instrumentId);
+      var helpTemplate = document.getElementById('rfhelp-template-' + instrumentId);
+      if (!rfTemplate || !helpTemplate) return;
+      _newRowCounter += 1;
+      var tempId = 'new_' + _newRowCounter;
+      // Default label numbering: count current visible response rows
+      // + 1, matching the server-side ``add_default_response_field``.
+      var tbody = document.querySelector('[data-rf-tbody="' + instrumentId + '"]');
+      var visibleCount = 0;
+      if (tbody) {
+        var rfRows = tbody.querySelectorAll('.rf-row');
+        for (var i = 0; i < rfRows.length; i++) {
+          if (rfRows[i].style.display !== 'none') visibleCount += 1;
+        }
+      }
+      var defaultLabel = 'Rating' + (visibleCount + 1);
+      var rfHtml = rfTemplate.innerHTML
+        .split('__TEMP_ID__').join(tempId)
+        .split('__DEFAULT_LABEL__').join(defaultLabel);
+      var helpHtml = helpTemplate.innerHTML
+        .split('__TEMP_ID__').join(tempId);
+      var rfWrap = document.createElement('tbody');
+      rfWrap.innerHTML = rfHtml;
+      var helpWrap = document.createElement('tbody');
+      helpWrap.innerHTML = helpHtml;
+      var newRfRow = rfWrap.firstElementChild;
+      var newHelpRow = helpWrap.firstElementChild;
+      // Insert the response row immediately after the clicked row (or
+      // at the end if the click came from the empty-state button).
+      var clickedRow = button.closest('tr');
+      if (clickedRow && clickedRow.classList.contains('rf-row')) {
+        clickedRow.parentNode.insertBefore(newRfRow, clickedRow.nextSibling);
+      } else if (tbody) {
+        var emptyRow = tbody.querySelector('.rf-empty');
+        if (emptyRow) tbody.insertBefore(newRfRow, emptyRow);
+        else tbody.appendChild(newRfRow);
+      }
+      // Help row: append before the ``.rfhelp-empty`` placeholder.
+      var helpTbody = document.querySelector('[data-rfhelp-tbody="' + instrumentId + '"]');
+      if (helpTbody) {
+        var helpEmpty = helpTbody.querySelector('.rfhelp-empty');
+        if (helpEmpty) helpTbody.insertBefore(newHelpRow, helpEmpty);
+        else helpTbody.appendChild(newHelpRow);
+        _showOrHideEmptyState(helpTbody);
+      }
+      if (newRfRow.parentNode) {
+        _showOrHideEmptyState(newRfRow.parentNode);
+        _refreshOrderColumn(newRfRow.parentNode);
+      }
+    }
+    function _showOrHideEmptyState(tbody) {
+      var rows = Array.prototype.slice.call(tbody.children);
+      var hasVisibleData = false;
+      var emptyRow = null;
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        if (r.classList.contains('rf-empty') || r.classList.contains('rfhelp-empty')) {
+          emptyRow = r;
+        } else if (r.style.display !== 'none') {
+          hasVisibleData = true;
+        }
+      }
+      if (emptyRow) {
+        emptyRow.style.display = hasVisibleData ? 'none' : '';
       }
     }
   </script>
