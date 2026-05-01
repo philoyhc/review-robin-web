@@ -227,8 +227,7 @@ def test_instruments_index_add_and_delete_buttons_disabled(
 
     assert ">Add 1<" in body
     assert ">Delete 1<" in body
-    assert "Delete instrument" in body
-    # Both render as disabled anchors with the multi-instrument tooltip
+    # The bulk Add/Delete anchors render disabled with the multi-instrument tooltip.
     assert 'title="Multi-instrument — Segment 13"' in body
     assert 'aria-disabled="true"' in body
 

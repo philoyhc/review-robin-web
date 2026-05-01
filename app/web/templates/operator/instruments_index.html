@@ -234,7 +234,7 @@
         {% endfor %}
       {% endif %}
 
-      <div class="bottom-grid">
+      <div class="bottom-grid field-builder">
         <div class="card" style="border: none; background: transparent; padding: 0;">
           <h3 style="margin-top: 0;">Display Fields</h3>
           {% set display_source_rows = [
@@ -412,351 +412,12 @@
       <div class="table-scroll">
         <table class="preview-table"></table>
       </div>
-      <br><br><br>
-
-      <h3 style="margin-top: 20px;">Old Display Fields</h3>
-      <p class="muted">
-        Read-only columns shown to reviewers alongside the reviewee
-        identity column.
-      </p>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Source</th>
-              <th>Label</th>
-              <th>Visible</th>
-              <th>Order</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for df in instrument.display_fields | sort(attribute="order") %}
-              <tr>
-                <td><code>{{ df.source_type }}.{{ df.source_field }}</code></td>
-                <td>
-                  {% if df.label %}
-                    {{ df.label }}
-                  {% else %}
-                    <span class="muted">— ({{ display_field_label(df) }})</span>
-                  {% endif %}
-                </td>
-                <td>{{ "yes" if df.visible else "no" }}</td>
-                <td>{{ df.order }}</td>
-                <td>
-                  <details style="display:inline-block;">
-                    <summary class="btn secondary" style="cursor:pointer;">Edit</summary>
-                    <form method="post" style="margin-top: 8px;"
-                          action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/edit">
-                      <label>Label override (optional)
-                        <input type="text" name="label" value="{{ df.label }}">
-                      </label>
-                      <label style="font-weight: normal;">
-                        <input type="checkbox" name="visible" value="true"
-                               {% if df.visible %}checked{% endif %}>
-                        Visible to reviewers
-                      </label>
-                      <p>
-                        <button class="btn" type="submit"
-                                {% if not can_edit %}disabled{% endif %}>Save display field</button>
-                      </p>
-                    </form>
-                  </details>
-                  <form method="post" style="display:inline;"
-                        action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/delete">
-                    <button class="btn danger" type="submit"
-                            {% if not can_edit %}disabled{% endif %}>Delete</button>
-                  </form>
-                </td>
-              </tr>
-            {% endfor %}
-            {% if not instrument.display_fields %}
-              <tr>
-                <td colspan="5" class="muted">
-                  No display fields. Reviewers will see only the
-                  reviewee identity column and response fields.
-                </td>
-              </tr>
-            {% endif %}
-          </tbody>
-        </table>
+      <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+        <button class="btn save-instrument-btn" type="button"
+                onclick="lockFields(this);">Save</button>
+        <button class="btn alert edit-instrument-btn" type="button"
+                onclick="unlockFields(this);" hidden>Edit</button>
       </div>
-
-      <h4 style="margin-top: 16px;">Add display field</h4>
-      {% set available = available_sources_by_instrument.get(instrument.id, []) %}
-      {% if available %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields">
-          <label>Source
-            <select name="source_pair" {% if not can_edit %}disabled{% endif %}>
-              {% for opt in available %}
-                <option value="{{ opt.value }}">{{ opt.source_type }}.{{ opt.source_field }} — {{ opt.label }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label>Label override (optional)
-            <input type="text" name="label" {% if not can_edit %}disabled{% endif %}>
-          </label>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="visible" value="true" checked
-                   {% if not can_edit %}disabled{% endif %}>
-            Visible to reviewers
-          </label>
-          <p>
-            <button class="btn" type="submit" {% if not can_edit %}disabled{% endif %}>
-              Add display field
-            </button>
-          </p>
-        </form>
-      {% else %}
-        <p class="muted">
-          All seven display-field sources are already on this
-          instrument.
-        </p>
-      {% endif %}
-
-      <h3 style="margin-top: 20px;">Old Response Fields</h3>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Key</th>
-              <th>Label</th>
-              <th>Type</th>
-              <th>Required</th>
-              <th>Validation</th>
-              <th>Help text</th>
-              <th>Help visible</th>
-              <th>Order</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for field in instrument.response_fields %}
-              <tr>
-                <td><code>{{ field.field_key }}</code></td>
-                <td>{{ field.label }}</td>
-                <td>{{ field.response_type }}</td>
-                <td>
-                  {% if field.required %}
-                    <span class="pill pill-warning">required</span>
-                  {% else %}
-                    <span class="muted">optional</span>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if field.validation %}
-                    <code>{{ field.validation }}</code>
-                  {% else %}
-                    <span class="muted">—</span>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if field.help_text %}
-                    <pre class="help-preview">{{ field.help_text }}</pre>
-                  {% else %}
-                    <span class="muted">—</span>
-                  {% endif %}
-                </td>
-                <td>{{ "yes" if field.help_text_visible else "no" }}</td>
-                <td>{{ field.order }}</td>
-                <td>
-                  <form method="post" style="display:inline;"
-                        action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/move">
-                    <input type="hidden" name="direction" value="up">
-                    <button class="btn secondary" type="submit"
-                            {% if not can_edit or loop.first %}disabled{% endif %}>↑</button>
-                  </form>
-                  <form method="post" style="display:inline;"
-                        action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/move">
-                    <input type="hidden" name="direction" value="down">
-                    <button class="btn secondary" type="submit"
-                            {% if not can_edit or loop.last %}disabled{% endif %}>↓</button>
-                  </form>
-                  <details style="display:inline-block; margin-left: 8px;">
-                    <summary class="btn secondary" style="cursor:pointer;">Edit</summary>
-                    <form method="post" style="margin-top: 8px;"
-                          action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/edit">
-                      <label>Label
-                        <input type="text" name="label" value="{{ field.label }}" required>
-                      </label>
-                      <label style="font-weight: normal;">
-                        <input type="checkbox" name="required" value="true"
-                               {% if field.required %}checked{% endif %}>
-                        Required
-                      </label>
-                      {% if field.response_type == "integer" %}
-                        <label>Min
-                          <input type="number" name="validation_min"
-                                 value="{{ field.validation.min if field.validation and field.validation.min is not none else '' }}">
-                        </label>
-                        <label>Max
-                          <input type="number" name="validation_max"
-                                 value="{{ field.validation.max if field.validation and field.validation.max is not none else '' }}">
-                        </label>
-                      {% endif %}
-                      <label>Help text
-                        <textarea name="help_text">{{ field.help_text or "" }}</textarea>
-                      </label>
-                      <label style="font-weight: normal;">
-                        <input type="checkbox" name="help_text_visible" value="true"
-                               {% if field.help_text_visible %}checked{% endif %}>
-                        Show help text to reviewers
-                      </label>
-                      <p>
-                        <button class="btn" type="submit"
-                                {% if not can_edit %}disabled{% endif %}>Save field</button>
-                      </p>
-                    </form>
-                  </details>
-                  <form method="post" style="display:inline;"
-                        action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/delete">
-                    <button class="btn danger" type="submit"
-                            {% if not can_edit %}disabled{% endif %}>Delete</button>
-                  </form>
-                </td>
-              </tr>
-            {% endfor %}
-            {% if not instrument.response_fields %}
-              <tr>
-                <td colspan="9" class="muted">
-                  No response fields. Add one below — activation is blocked
-                  until at least one field exists.
-                </td>
-              </tr>
-            {% endif %}
-          </tbody>
-        </table>
-      </div>
-
-      <h3 style="margin-top: 20px;">Add field</h3>
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields">
-        <label>Label
-          <input type="text" name="label" required {% if not can_edit %}disabled{% endif %}>
-        </label>
-        <label>Field key (auto-derived from label if blank)
-          <input type="text" name="field_key" {% if not can_edit %}disabled{% endif %}
-                 pattern="[a-z][a-z0-9_]*" maxlength="64">
-        </label>
-        <label>Type
-          <select name="response_type" {% if not can_edit %}disabled{% endif %}>
-            <option value="integer">integer</option>
-            <option value="short_text">short_text</option>
-            <option value="long_text">long_text</option>
-            <option value="yes_no">yes_no</option>
-          </select>
-        </label>
-        <label style="font-weight: normal;">
-          <input type="checkbox" name="required" value="true"
-                 {% if not can_edit %}disabled{% endif %}>
-          Required
-        </label>
-        <label>Min (integer fields only)
-          <input type="number" name="validation_min" {% if not can_edit %}disabled{% endif %}>
-        </label>
-        <label>Max (integer fields only)
-          <input type="number" name="validation_max" {% if not can_edit %}disabled{% endif %}>
-        </label>
-        <label>Help text (optional)
-          <textarea name="help_text" {% if not can_edit %}disabled{% endif %}></textarea>
-        </label>
-        <label style="font-weight: normal;">
-          <input type="checkbox" name="help_text_visible" value="true" checked
-                 {% if not can_edit %}disabled{% endif %}>
-          Show help text to reviewers
-        </label>
-        <p>
-          <button class="btn" type="submit" {% if not can_edit %}disabled{% endif %}>
-            Add field
-          </button>
-        </p>
-      </form>
-
-      <h3 style="margin-top: 20px;">Old Field Order and Visibility</h3>
-      <p class="muted">
-        Set the merged display-and-response column order shown on
-        the reviewer surface. Per-table orders repack to <code>0..N-1</code>
-        on save; change a numeric to re-rank.
-      </p>
-      {% set merged_rows = merged_rows_by_instrument.get(instrument.id, []) %}
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save">
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Kind</th>
-                <th>Field</th>
-                <th>Order</th>
-                <th>Visible</th>
-                <th>Label</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in merged_rows %}
-                <tr>
-                  <td>
-                    <input type="hidden" name="kind" value="{{ row.kind }}">
-                    {{ row.kind }}
-                  </td>
-                  <td>
-                    <input type="hidden" name="id" value="{{ row.id }}">
-                    {% if row.kind == "display" %}
-                      <code>{{ row.source_type }}.{{ row.source_field }}</code>
-                    {% else %}
-                      <code>{{ row.field_key }}</code>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <input type="number" name="order" value="{{ row.order }}"
-                           min="0" style="width: 6em;"
-                           {% if not can_edit %}disabled{% endif %}>
-                  </td>
-                  <td>
-                    {% if row.kind == "display" %}
-                      <input type="checkbox" name="visible_ids" value="{{ row.id }}"
-                             {% if row.visible %}checked{% endif %}
-                             {% if not can_edit %}disabled{% endif %}>
-                    {% else %}
-                      <span class="muted">—</span>
-                    {% endif %}
-                  </td>
-                  <td>
-                    {% if row.kind == "display" %}
-                      <input type="text" name="label" value="{{ row.label }}"
-                             {% if not can_edit %}disabled{% endif %}>
-                    {% else %}
-                      <input type="hidden" name="label" value="">
-                      <span class="muted">{{ row.label }}</span>
-                    {% endif %}
-                  </td>
-                </tr>
-              {% endfor %}
-              {% if not merged_rows %}
-                <tr>
-                  <td colspan="5" class="muted">
-                    No fields on this instrument yet.
-                  </td>
-                </tr>
-              {% endif %}
-            </tbody>
-          </table>
-        </div>
-        {% if merged_rows %}
-          <p>
-            <button class="btn" type="submit" {% if not can_edit %}disabled{% endif %}>
-              Save field order &amp; visibility
-            </button>
-          </p>
-        {% endif %}
-      </form>
-
-      <p>
-        <a class="btn secondary disabled"
-           aria-disabled="true"
-           title="Multi-instrument — Segment 13">Delete instrument</a>
-      </p>
     </div>
   {% endfor %}
 
@@ -887,6 +548,39 @@
       if (orderEl) orderEl.textContent = nextNum;
       row.after(clone);
       renderPreview(card);
+    }
+    function lockFields(btn) {
+      var card = _findCard(btn);
+      if (!card) return;
+      var grid = card.querySelector('.field-builder');
+      if (grid) {
+        grid.querySelectorAll('input, select').forEach(function(el) {
+          el.disabled = true;
+        });
+        grid.querySelectorAll('details[open]').forEach(function(d) {
+          d.removeAttribute('open');
+        });
+        grid.classList.add('locked');
+      }
+      var saveBtn = card.querySelector('.save-instrument-btn');
+      var editBtn = card.querySelector('.edit-instrument-btn');
+      if (saveBtn) saveBtn.hidden = true;
+      if (editBtn) editBtn.hidden = false;
+    }
+    function unlockFields(btn) {
+      var card = _findCard(btn);
+      if (!card) return;
+      var grid = card.querySelector('.field-builder');
+      if (grid) {
+        grid.querySelectorAll('input, select').forEach(function(el) {
+          el.disabled = false;
+        });
+        grid.classList.remove('locked');
+      }
+      var saveBtn = card.querySelector('.save-instrument-btn');
+      var editBtn = card.querySelector('.edit-instrument-btn');
+      if (saveBtn) saveBtn.hidden = false;
+      if (editBtn) editBtn.hidden = true;
     }
     document.addEventListener('DOMContentLoaded', function() {
       document.querySelectorAll('[id^="instrument-"]').forEach(function(card) {
