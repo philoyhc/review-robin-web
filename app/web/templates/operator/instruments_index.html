@@ -276,7 +276,7 @@
                             <button type="submit" title="Save"
                                     style="background: none; border: none; color: #16a34a; font-size: 1.2em; cursor: pointer; padding: 0 4px;">&#10003;</button>
                             <a href="#" title="Cancel"
-                               onclick="event.preventDefault(); this.closest('details').removeAttribute('open');"
+                               onclick="event.preventDefault(); cancelLabelEdit(this);"
                                style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 4px;">&#10007;</a>
                           </form>
                         </details>
@@ -300,10 +300,27 @@
 
         <div class="card" style="border: none; background: transparent; padding: 0;">
           <h3 style="margin-top: 0;">Response Fields</h3>
-          {% set response_field_rows = [
-            ('rating', 'Rating', 'Integer', True, 1),
-            ('comments', 'Evaluative Comments', 'Text', False, 2),
-          ] %}
+          {% set _response_type_labels = {
+            'integer': 'Integer',
+            'short_text': 'Short Text',
+            'long_text': 'Long Text',
+            'yes_no': 'Yes / No',
+          } %}
+          {# Per-row hidden forms so cells in different <td>s can submit
+             together via the form attribute. #}
+          {% for field in instrument.response_fields | sort(attribute='order') %}
+            <form id="rf-edit-{{ field.id }}" method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/edit"
+                  style="display: none;">
+              <input type="hidden" name="validation_min"
+                     value="{{ field.validation.min if field.validation and field.validation.min is not none else '' }}">
+              <input type="hidden" name="validation_max"
+                     value="{{ field.validation.max if field.validation and field.validation.max is not none else '' }}">
+              <input type="hidden" name="help_text" value="{{ field.help_text or '' }}">
+              <input type="hidden" name="help_text_visible"
+                     value="{{ 'true' if field.help_text_visible else '' }}">
+            </form>
+          {% endfor %}
           <div class="table-scroll">
             <table>
               <thead>
@@ -317,93 +334,85 @@
                 </tr>
               </thead>
               <tbody class="rf-tbody">
-                {% for key, rlabel, rtype, required, order in response_field_rows %}
-                  <tr>
-                    <td><code class="rf-key">{{ key }}</code></td>
+                {% for field in instrument.response_fields | sort(attribute='order') %}
+                  <tr data-response-type="{{ field.response_type }}">
+                    <td><code class="rf-key">{{ field.field_key }}</code></td>
                     <td>
                       <details class="display-edit">
                         <summary style="list-style: none; cursor: pointer;">
                           <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                            <span class="display-text">{{ rlabel }}</span>
+                            <span class="display-text">{{ field.label }}</span>
                             <span title="Edit" style="color: #6b7280;">&#9998;</span>
                           </span>
                         </summary>
-                        <form onsubmit="event.preventDefault(); applyLabelEdit(this);"
-                              style="display: flex; gap: 8px; align-items: center; margin: 0;">
-                          <input type="text" name="label" value="{{ rlabel }}" style="flex: 1;">
-                          <button type="submit" title="Save"
-                                  style="background: none; border: none; color: #16a34a; font-size: 1.2em; cursor: pointer; padding: 0 4px;">&#10003;</button>
+                        <div style="display: flex; gap: 8px; align-items: center; margin: 0;">
+                          <input form="rf-edit-{{ field.id }}" type="text" name="label"
+                                 value="{{ field.label }}" style="flex: 1;"
+                                 {% if not can_edit %}disabled{% endif %}>
+                          <button form="rf-edit-{{ field.id }}" type="submit" title="Save"
+                                  style="background: none; border: none; color: #16a34a; font-size: 1.2em; cursor: pointer; padding: 0 4px;"
+                                  {% if not can_edit %}disabled{% endif %}>&#10003;</button>
                           <a href="#" title="Cancel"
-                             onclick="event.preventDefault(); this.closest('details').removeAttribute('open');"
+                             onclick="event.preventDefault(); cancelLabelEdit(this);"
                              style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 4px;">&#10007;</a>
-                        </form>
+                        </div>
                       </details>
                     </td>
                     <td>
-                      <select>
-                        <option {% if rtype == 'Integer' %}selected{% endif %}>Integer</option>
-                        <option {% if rtype == 'Half' %}selected{% endif %}>Half</option>
-                        <option {% if rtype == 'Decimal' %}selected{% endif %}>Decimal</option>
-                        <option {% if rtype == 'Text' %}selected{% endif %}>Text</option>
+                      <select disabled
+                              title="Type cannot be changed after a field is created.">
+                        <option selected>{{ _response_type_labels.get(field.response_type, field.response_type) }}</option>
                       </select>
                     </td>
-                    <td><input type="checkbox" {% if required %}checked{% endif %}></td>
-                    <td class="rf-order">{{ order }}</td>
                     <td>
-                      <a href="#" title="Delete row"
-                         onclick="event.preventDefault(); deleteResponseRow(this);"
-                         style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 6px;">&#10007;</a>
-                      <a href="#" title="Add row after"
-                         onclick="event.preventDefault(); addResponseRow(this);"
-                         style="color: #2563eb; text-decoration: none; font-size: 1.2em; padding: 0 6px;">&#10133;</a>
+                      <input form="rf-edit-{{ field.id }}" type="checkbox"
+                             name="required" value="true"
+                             onchange="this.form.submit();"
+                             {% if field.required %}checked{% endif %}
+                             {% if not can_edit %}disabled{% endif %}>
+                    </td>
+                    <td class="rf-order">{{ loop.index }}</td>
+                    <td>
+                      {% if instrument.response_fields | length > 1 %}
+                        <form method="post"
+                              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/delete"
+                              style="display: inline; margin: 0;"
+                              onsubmit="return confirm('Delete response field {{ field.field_key }}?');">
+                          <button type="submit" title="Delete row"
+                                  style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.2em; padding: 0 6px;"
+                                  {% if not can_edit %}disabled{% endif %}>&#10007;</button>
+                        </form>
+                      {% endif %}
+                      <form method="post"
+                            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/add-row"
+                            style="display: inline; margin: 0;">
+                        <input type="hidden" name="after" value="{{ field.id }}">
+                        <button type="submit" title="Add row after"
+                                style="background: none; border: none; color: #2563eb; cursor: pointer; font-size: 1.2em; padding: 0 6px;"
+                                {% if not can_edit %}disabled{% endif %}>&#10133;</button>
+                      </form>
                     </td>
                   </tr>
                 {% endfor %}
+                {% if not instrument.response_fields %}
+                  <tr>
+                    <td colspan="6" class="muted">
+                      No response fields. Add one below.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="6">
+                      <form method="post"
+                            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/add-row">
+                        <button class="btn" type="submit"
+                                {% if not can_edit %}disabled{% endif %}>Add a response field</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endif %}
               </tbody>
             </table>
           </div>
-          <template class="rf-row-template">
-            <tr>
-              <td><code class="rf-key">rating</code></td>
-              <td>
-                <details class="display-edit">
-                  <summary style="list-style: none; cursor: pointer;">
-                    <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                      <span class="display-text">Rating</span>
-                      <span title="Edit" style="color: #6b7280;">&#9998;</span>
-                    </span>
-                  </summary>
-                  <form onsubmit="event.preventDefault(); applyLabelEdit(this);"
-                        style="display: flex; gap: 8px; align-items: center; margin: 0;">
-                    <input type="text" name="label" value="Rating" style="flex: 1;">
-                    <button type="submit" title="Save"
-                            style="background: none; border: none; color: #16a34a; font-size: 1.2em; cursor: pointer; padding: 0 4px;">&#10003;</button>
-                    <a href="#" title="Cancel"
-                       onclick="event.preventDefault(); this.closest('details').removeAttribute('open');"
-                       style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 4px;">&#10007;</a>
-                  </form>
-                </details>
-              </td>
-              <td>
-                <select>
-                  <option selected>Integer</option>
-                  <option>Half</option>
-                  <option>Decimal</option>
-                  <option>Text</option>
-                </select>
-              </td>
-              <td><input type="checkbox" checked></td>
-              <td class="rf-order"></td>
-              <td>
-                <a href="#" title="Delete row"
-                   onclick="event.preventDefault(); deleteResponseRow(this);"
-                   style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 6px;">&#10007;</a>
-                <a href="#" title="Add row after"
-                   onclick="event.preventDefault(); addResponseRow(this);"
-                   style="color: #2563eb; text-decoration: none; font-size: 1.2em; padding: 0 6px;">&#10133;</a>
-              </td>
-            </tr>
-          </template>
         </div>
       </div>
 
@@ -455,12 +464,12 @@
       RevieweeTag3:  ['Track 1', 'Track 2', 'Track 1']
     };
     var RESPONSE_MOCK = {
-      Integer: [5, 7, 9],
-      Half:    [4.5, 5, 6.5],
-      Decimal: [4.7, 5.3, 6.1],
-      Text:    ['Strong work overall.',
-                'Could be tightened in places.',
-                'Excellent contributions throughout.']
+      integer:    [5, 7, 9],
+      short_text: ['Met goals', 'On track', 'Exceeds'],
+      long_text:  ['Strong work overall.',
+                   'Could be tightened in places.',
+                   'Excellent contributions throughout.'],
+      yes_no:     ['Yes', 'No', 'Yes']
     };
     function renderPreview(card) {
       var preview = card.querySelector('.preview-table');
@@ -490,10 +499,9 @@
           var keyEl = row.querySelector('.rf-key');
           if (!keyEl) return;
           var labelEl = row.querySelector('.display-text');
-          var sel = row.querySelector('select');
           responseCols.push({key: keyEl.textContent.trim(),
                              label: labelEl ? labelEl.textContent : '',
-                             type: sel ? sel.value : 'Text'});
+                             type: row.dataset.responseType || 'long_text'});
         });
       }
       var headerCells = '';
@@ -501,7 +509,7 @@
         headerCells += '<th>' + _escape(col.label) + '</th>';
       });
       responseCols.forEach(function(col) {
-        var widthAttr = col.type === 'Text' ? ' style="min-width: 240px;"' : '';
+        var widthAttr = col.type === 'long_text' ? ' style="min-width: 240px;"' : '';
         headerCells += '<th' + widthAttr + '>' + _escape(col.label) + '</th>';
       });
       var bodyRows = '';
@@ -536,47 +544,34 @@
       var d = form.closest('details');
       if (d) {
         var t = d.querySelector('.display-text');
-        if (t) t.textContent = form.label.value;
+        var input = d.querySelector('input[name="label"]');
+        if (t && input) t.textContent = input.value;
         d.removeAttribute('open');
       }
       var card = _findCard(form);
       if (card) renderPreview(card);
     }
-    function deleteResponseRow(btn) {
-      var row = btn.closest('tr');
-      var card = _findCard(btn);
-      if (row) row.remove();
-      if (card) renderPreview(card);
-    }
-    function addResponseRow(btn) {
-      var row = btn.closest('tr');
-      var tbody = btn.closest('tbody');
-      var card = _findCard(btn);
-      var template = card ? card.querySelector('.rf-row-template') : null;
-      if (!template) return;
-      var clone = template.content.firstElementChild.cloneNode(true);
-      var nextNum = tbody.querySelectorAll('tr').length + 1;
-      var keyEl = clone.querySelector('.rf-key');
-      if (keyEl) keyEl.textContent = 'rating' + nextNum;
-      var labelEl = clone.querySelector('.display-text');
-      if (labelEl) labelEl.textContent = 'Rating' + nextNum;
-      var labelInput = clone.querySelector('input[name="label"]');
-      if (labelInput) labelInput.value = 'Rating' + nextNum;
-      var orderEl = clone.querySelector('.rf-order');
-      if (orderEl) orderEl.textContent = nextNum;
-      row.after(clone);
-      renderPreview(card);
+    function cancelLabelEdit(link) {
+      var d = link.closest('details');
+      if (!d) return;
+      var input = d.querySelector('input[name="label"]');
+      var displayText = d.querySelector('.display-text');
+      if (input && displayText) input.value = displayText.textContent;
+      d.removeAttribute('open');
     }
     function lockFields(btn) {
       var card = _findCard(btn);
       if (!card) return;
       var grid = card.querySelector('.field-builder');
       if (grid) {
+        grid.querySelectorAll('details[open]').forEach(function(d) {
+          var input = d.querySelector('input[name="label"]');
+          var displayText = d.querySelector('.display-text');
+          if (input && displayText) input.value = displayText.textContent;
+          d.removeAttribute('open');
+        });
         grid.querySelectorAll('input, select').forEach(function(el) {
           el.disabled = true;
-        });
-        grid.querySelectorAll('details[open]').forEach(function(d) {
-          d.removeAttribute('open');
         });
         grid.classList.add('locked');
       }

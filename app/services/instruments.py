@@ -757,6 +757,80 @@ def add_response_field(
     return new_field
 
 
+def add_default_response_field(
+    db: Session,
+    *,
+    instrument: Instrument,
+    after_field_id: int | None = None,
+    actor: User,
+) -> InstrumentResponseField:
+    """Append a fresh Rating{n}/integer/required response field. If
+    ``after_field_id`` is given, slot the new field immediately after that
+    one and bump subsequent ``order`` values; otherwise append at the end.
+    Auto-derives a non-conflicting field_key.
+    """
+    fields = _ordered_fields(db, instrument)
+
+    base_num = len(fields) + 1
+    new_label = f"Rating{base_num}"
+    candidate = f"rating{base_num}"
+    existing_keys = {f.field_key for f in fields}
+    while candidate in existing_keys:
+        base_num += 1
+        new_label = f"Rating{base_num}"
+        candidate = f"rating{base_num}"
+
+    new_order: int
+    if after_field_id is None:
+        new_order = len(fields)
+    else:
+        anchor = next((f for f in fields if f.id == after_field_id), None)
+        if anchor is None:
+            new_order = len(fields)
+        else:
+            new_order = anchor.order + 1
+            for f in fields:
+                if f.order >= new_order:
+                    f.order += 1
+
+    new_field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key=candidate,
+        label=new_label,
+        response_type="integer",
+        required=True,
+        order=new_order,
+        validation=None,
+        help_text=None,
+        help_text_visible=True,
+    )
+    db.add(new_field)
+    db.flush()
+
+    write_event(
+        db,
+        event_type="instrument.field_added",
+        summary=(
+            f"Added field '{new_field.label}' ({new_field.field_key}) "
+            f"to instrument {_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session_id=instrument.session_id,
+        detail={
+            "instrument_id": instrument.id,
+            "session_id": instrument.session_id,
+            "field_key": new_field.field_key,
+            "label": new_field.label,
+            "response_type": new_field.response_type,
+            "required": new_field.required,
+            "order": new_order,
+            "after_field_id": after_field_id,
+        },
+    )
+    db.commit()
+    return new_field
+
+
 def _count_now_missing_required(
     db: Session, *, instrument: Instrument, field: InstrumentResponseField
 ) -> int:
