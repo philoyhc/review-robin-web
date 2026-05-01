@@ -47,11 +47,6 @@
       {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
       {% set not_showing_count = instruments | length - showing_count %}
       <p>
-        This session has
-        <span class="pill pill-info">{{ instruments | length }}</span>
-        instrument{% if instruments | length != 1 %}s{% endif %}.
-      </p>
-      <p>
         Session deadline (auto-close):
         {% if session.deadline %}
           <span class="pill pill-info">{{ session.deadline.isoformat() }}</span>
@@ -60,7 +55,9 @@
         {% endif %}
       </p>
       <p>
-        Status:
+        This session has
+        <span class="pill pill-info">{{ instruments | length }}</span>
+        instrument{% if instruments | length != 1 %}s{% endif %}:
         <span class="pill pill-info">{{ accepting_count }} accepting</span>
         &middot;
         <span class="pill pill-warning">{{ not_accepting_count }} not accepting</span>
@@ -116,7 +113,8 @@
       {% if instruments %}
         <p style="margin: 8px 0 0 0;">
           {% for instrument in instruments %}
-            <a class="btn" href="#instrument-{{ instrument.id }}">Go to #{{ loop.index }}</a>
+            <a class="btn" href="#instrument-{{ instrument.id }}"
+               style="width: 84px; box-sizing: border-box; white-space: nowrap;">Go to #{{ loop.index }}</a>
           {% endfor %}
         </p>
       {% endif %}
