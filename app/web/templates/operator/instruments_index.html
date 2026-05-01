@@ -39,36 +39,62 @@
     </div>
   {% endif %}
 
-  <div class="bottom-grid">
+  <div class="page-grid">
     <div class="card">
       <h2>All Instrument Status</h2>
-      <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-        <p style="margin: 0;">
-          Accepting responses:
-          {% if bulk_accepting_state == "all-on" %}
-            <span class="pill pill-info">all on</span>
-          {% elif bulk_accepting_state == "all-off" %}
-            <span class="pill pill-warning">all off</span>
-          {% else %}
-            <span class="pill pill-warning">mixed</span>
-          {% endif %}
-        </p>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          {% if is_ready and bulk_accepting_state != "all-on" %}
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/accepting/all-on"
-                  style="margin: 0;">
-              <button class="btn alert-solid" type="submit">Open All Instruments</button>
-            </form>
-          {% endif %}
-          {% if is_ready and bulk_accepting_state == "all-on" %}
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/accepting/all-off"
-                  style="margin: 0;">
-              <button class="btn alert-solid" type="submit">Close All Instruments</button>
-            </form>
-          {% endif %}
-        </div>
+      {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
+      {% set not_accepting_count = instruments | length - accepting_count %}
+      {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
+      {% set not_showing_count = instruments | length - showing_count %}
+      <p>
+        Status:
+        <span class="pill pill-info">{{ accepting_count }} accepting</span>
+        &middot;
+        <span class="pill pill-warning">{{ not_accepting_count }} not accepting</span>
+      </p>
+      <p>
+        Session deadline (auto-close):
+        {% if session.deadline %}
+          <span class="pill pill-info">{{ session.deadline.isoformat() }}</span>
+        {% else %}
+          <span class="pill pill-warning">not set</span>
+        {% endif %}
+      </p>
+      <p>
+        Visibility when closed:
+        <span class="pill pill-info">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
+        &middot;
+        <span class="pill pill-warning">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
+      </p>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
+        {% if is_ready and bulk_accepting_state != "all-on" %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/accepting/all-on"
+                style="margin: 0;">
+            <button class="btn alert-solid" type="submit">Open all instruments</button>
+          </form>
+        {% endif %}
+        {% if is_ready and bulk_accepting_state == "all-on" %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/accepting/all-off"
+                style="margin: 0;">
+            <button class="btn alert-solid" type="submit">Close all instruments</button>
+          </form>
+        {% endif %}
+        {% if bulk_visibility_state != "all-on" %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
+                style="margin: 0;">
+            <button class="btn alert-solid" type="submit">Show all when closed</button>
+          </form>
+        {% endif %}
+        {% if bulk_visibility_state == "all-on" %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/visibility/all-off"
+                style="margin: 0;">
+            <button class="btn alert-solid" type="submit">Don't show any when closed</button>
+          </form>
+        {% endif %}
       </div>
     </div>
 
@@ -127,14 +153,6 @@
               <span class="pill pill-warning">not accepting</span>
             {% endif %}
           </p>
-          <p>
-            Session deadline (auto-close):
-            {% if session.deadline %}
-              <span class="pill pill-info">{{ session.deadline.isoformat() }}</span>
-            {% else %}
-              <span class="pill pill-warning">not set</span>
-            {% endif %}
-          </p>
           {% if instrument.deadline_closed_at %}
             <p class="muted">
               Closed by deadline at <code>{{ instrument.deadline_closed_at.isoformat() }}</code>.
@@ -168,13 +186,13 @@
                     action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
                     style="margin: 0;">
                 <input type="hidden" name="visible_when_closed" value="true">
-                <button class="btn alert-solid" type="submit">Show When Closed</button>
+                <button class="btn alert-solid" type="submit">Show when closed</button>
               </form>
             {% else %}
               <form method="post"
                     action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
                     style="margin: 0;">
-                <button class="btn alert-solid" type="submit">Don't Show When Closed</button>
+                <button class="btn alert-solid" type="submit">Don't show when closed</button>
               </form>
             {% endif %}
           </div>

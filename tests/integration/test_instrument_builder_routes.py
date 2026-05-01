@@ -107,8 +107,8 @@ def test_instruments_index_renders_settings_and_per_instrument_card(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert "Instrument Status" in body
-    assert "Accepting responses:" in body
+    assert "All Instrument Status" in body
+    assert "Status:" in body
     instrument = _instrument(db, review_session.id)  # noqa: F841
     assert ">Instrument #1</h2>" in body
 
