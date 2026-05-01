@@ -25,8 +25,9 @@
 
   {% if not can_edit %}
     <div class="warning-banner">
-      Instrument structure is locked while the session is <strong>ready</strong>.
-      Revert to draft to edit response fields or descriptions.
+      Structure is locked while the session is on going. Revert session
+      to draft to edit response fields or descriptions, or add/delete
+      instruments.
     </div>
   {% endif %}
 
@@ -80,10 +81,10 @@
       <p>This session has <strong>{{ instruments | length }}</strong>
         instrument{% if instruments | length != 1 %}s{% endif %}.</p>
       <p style="margin: 8px 0 0 0;">
-        <a class="btn alert disabled" style="min-width: 90px;"
+        <a class="btn alert disabled" style="width: 78px; box-sizing: border-box;"
            aria-disabled="true"
            title="Multi-instrument — Segment 13">Add 1</a>
-        <a class="btn alert disabled" style="min-width: 90px;"
+        <a class="btn alert disabled" style="width: 78px; box-sizing: border-box;"
            aria-disabled="true"
            title="Multi-instrument — Segment 13">Delete 1</a>
         {% for instrument in instruments %}
