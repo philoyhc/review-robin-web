@@ -367,23 +367,25 @@
                                 {% if loop.last %}disabled{% endif %}>&#9660;</button>
                       {% endif %}
                     </td>
-                    <td>
+                    <td style="white-space: nowrap;">
                       {% if is_editing %}
-                        {% if sorted_response_fields | length > 1 %}
+                        <div style="display: inline-flex; gap: 4px; align-items: center;">
+                          {% if sorted_response_fields | length > 1 %}
+                            <form method="post"
+                                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/delete"
+                                  style="margin: 0;">
+                              <button type="submit" title="Delete row"
+                                      style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.2em; padding: 0 6px;">&#10007;</button>
+                            </form>
+                          {% endif %}
                           <form method="post"
-                                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/{{ field.id }}/delete"
-                                style="display: inline; margin: 0;">
-                            <button type="submit" title="Delete row"
-                                    style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.2em; padding: 0 6px;">&#10007;</button>
+                                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/add-row"
+                                style="margin: 0;">
+                            <input type="hidden" name="after" value="{{ field.id }}">
+                            <button type="submit" title="Add row after"
+                                    style="background: none; border: none; color: #2563eb; cursor: pointer; font-size: 1.2em; padding: 0 6px;">&#10133;</button>
                           </form>
-                        {% endif %}
-                        <form method="post"
-                              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/add-row"
-                              style="display: inline; margin: 0;">
-                          <input type="hidden" name="after" value="{{ field.id }}">
-                          <button type="submit" title="Add row after"
-                                  style="background: none; border: none; color: #2563eb; cursor: pointer; font-size: 1.2em; padding: 0 6px;">&#10133;</button>
-                        </form>
+                        </div>
                       {% else %}
                         <span class="muted">—</span>
                       {% endif %}
