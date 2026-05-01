@@ -96,16 +96,25 @@
 
   {% for instrument in instruments %}
     <div class="card" id="instrument-{{ instrument.id }}">
-      <h2>
-        {% if instrument.description %}
-          {{ instrument.description }}
-        {% else %}
-          {{ instrument.name }}
-        {% endif %}
-      </h2>
-      <p>
-        <span class="pill pill-handle">{{ instrument.name }}</span>
-      </p>
+      <h2>Instrument #{{ loop.index }}</h2>
+      <p>{{ instrument.description or "(no description)" }}</p>
+      <details>
+        <summary style="list-style: none; cursor: pointer; text-align: right;">
+          <span class="btn alert">Edit</span>
+        </summary>
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/edit"
+              style="margin-top: 12px;">
+          <textarea id="desc-{{ instrument.id }}" name="description"
+                    {% if not can_edit %}disabled{% endif %}>{{ instrument.description or "" }}</textarea>
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+            <a class="btn alert"
+               href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
+            <button class="btn alert-solid" type="submit"
+                    {% if not can_edit %}disabled{% endif %}>Save</button>
+          </div>
+        </form>
+      </details>
 
       {% if required_warning and required_warning_field_id %}
         {% for field in instrument.response_fields %}
@@ -135,23 +144,6 @@
           {% endif %}
         {% endfor %}
       {% endif %}
-
-      <h3 style="margin-top: 20px;">Friendly description</h3>
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/edit">
-        <label for="desc-{{ instrument.id }}" style="font-weight: normal;">
-          Shown to reviewers as the instrument's section heading. Leave blank
-          to fall back to the system handle.
-        </label>
-        <textarea id="desc-{{ instrument.id }}" name="description"
-                  {% if not can_edit %}disabled{% endif %}>{{ instrument.description or "" }}</textarea>
-        <p>
-          <button class="btn secondary" type="submit"
-                  {% if not can_edit %}disabled{% endif %}>
-            Save description
-          </button>
-        </p>
-      </form>
 
       <h3 style="margin-top: 20px;">Acceptance</h3>
       <p>
