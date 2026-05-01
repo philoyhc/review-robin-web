@@ -107,7 +107,7 @@ def test_instruments_index_renders_settings_and_per_instrument_card(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert "Instruments Settings" in body
+    assert "Instrument Status" in body
     assert "Accepting responses (all instruments)" in body
     instrument = _instrument(db, review_session.id)
     assert instrument.name in body  # system handle pill
