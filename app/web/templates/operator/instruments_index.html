@@ -96,25 +96,85 @@
 
   {% for instrument in instruments %}
     <div class="card" id="instrument-{{ instrument.id }}">
-      <h2>Instrument #{{ loop.index }}</h2>
-      <p>{{ instrument.description or "(no description)" }}</p>
-      <details>
-        <summary style="list-style: none; cursor: pointer; text-align: right;">
-          <span class="btn alert">Edit</span>
-        </summary>
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/edit"
-              style="margin-top: 12px;">
-          <textarea id="desc-{{ instrument.id }}" name="description"
-                    {% if not can_edit %}disabled{% endif %}>{{ instrument.description or "" }}</textarea>
-          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-            <a class="btn alert"
-               href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
-            <button class="btn alert-solid" type="submit"
-                    {% if not can_edit %}disabled{% endif %}>Save</button>
-          </div>
-        </form>
-      </details>
+      <div class="bottom-grid">
+        <div class="card instrument-edit" style="border-color: transparent;">
+          <h2 style="margin-top: 0;">Instrument #{{ loop.index }}</h2>
+          <p class="description-text">{{ instrument.description or "(no description)" }}</p>
+          <details>
+            <summary style="list-style: none; cursor: pointer; text-align: right;">
+              <span class="btn alert-solid">Edit</span>
+            </summary>
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/edit"
+                  style="margin-top: 12px;">
+              <textarea id="desc-{{ instrument.id }}" name="description"
+                        {% if not can_edit %}disabled{% endif %}>{{ instrument.description or "" }}</textarea>
+              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                <a class="btn alert"
+                   href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
+                <button class="btn alert-solid" type="submit"
+                        {% if not can_edit %}disabled{% endif %}>Save</button>
+              </div>
+            </form>
+          </details>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top: 0;">Acceptance</h3>
+          <p>
+            <strong>Status:</strong>
+            {% if instrument.accepting_responses %}
+              <span class="pill pill-info">accepting responses</span>
+            {% else %}
+              <span class="pill pill-warning">not accepting</span>
+            {% endif %}
+          </p>
+          <p>
+            <strong>Session deadline:</strong>
+            {% if session.deadline %}
+              <code>{{ session.deadline.isoformat() }}</code>
+              <span class="muted">(session deadline auto-closes this instrument)</span>
+            {% else %}
+              not set
+            {% endif %}
+          </p>
+          {% if instrument.deadline_closed_at %}
+            <p class="muted">
+              Closed by deadline at <code>{{ instrument.deadline_closed_at.isoformat() }}</code>.
+            </p>
+          {% endif %}
+          {% if instrument.accepting_responses %}
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close">
+              <button class="btn" type="submit">Stop accepting responses</button>
+            </form>
+          {% else %}
+            {% if is_ready %}
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open">
+                <button class="btn" type="submit">Resume accepting responses</button>
+              </form>
+            {% else %}
+              <p class="muted">Activate the session before re-opening this instrument.</p>
+            {% endif %}
+          {% endif %}
+
+          <h3 style="margin-top: 20px;">Visibility when closed</h3>
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility">
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="visible_when_closed" value="true"
+                       {% if instrument.responses_visible_when_closed %}checked{% endif %}>
+                Show reviewers their saved responses while this instrument is closed.
+              </label>
+            </p>
+            <p>
+              <button class="btn secondary" type="submit">Save visibility</button>
+            </p>
+          </form>
+        </div>
+      </div>
 
       {% if required_warning and required_warning_field_id %}
         {% for field in instrument.response_fields %}
@@ -144,60 +204,6 @@
           {% endif %}
         {% endfor %}
       {% endif %}
-
-      <h3 style="margin-top: 20px;">Acceptance</h3>
-      <p>
-        <strong>Status:</strong>
-        {% if instrument.accepting_responses %}
-          <span class="pill pill-info">accepting responses</span>
-        {% else %}
-          <span class="pill pill-warning">not accepting</span>
-        {% endif %}
-      </p>
-      <p>
-        <strong>Session deadline:</strong>
-        {% if session.deadline %}
-          <code>{{ session.deadline.isoformat() }}</code>
-          <span class="muted">(session deadline auto-closes this instrument)</span>
-        {% else %}
-          not set
-        {% endif %}
-      </p>
-      {% if instrument.deadline_closed_at %}
-        <p class="muted">
-          Closed by deadline at <code>{{ instrument.deadline_closed_at.isoformat() }}</code>.
-        </p>
-      {% endif %}
-      {% if instrument.accepting_responses %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close">
-          <button class="btn" type="submit">Stop accepting responses</button>
-        </form>
-      {% else %}
-        {% if is_ready %}
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open">
-            <button class="btn" type="submit">Resume accepting responses</button>
-          </form>
-        {% else %}
-          <p class="muted">Activate the session before re-opening this instrument.</p>
-        {% endif %}
-      {% endif %}
-
-      <h3 style="margin-top: 20px;">Visibility when closed</h3>
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility">
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="visible_when_closed" value="true"
-                   {% if instrument.responses_visible_when_closed %}checked{% endif %}>
-            Show reviewers their saved responses while this instrument is closed.
-          </label>
-        </p>
-        <p>
-          <button class="btn secondary" type="submit">Save visibility</button>
-        </p>
-      </form>
 
       <h3 style="margin-top: 20px;">Display fields</h3>
       <p class="muted">
