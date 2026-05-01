@@ -552,6 +552,9 @@ def reviewees_list(
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
             "is_ready": lifecycle.is_ready(review_session),
+            "fields_with_data": assignments.reviewee_fields_with_data(
+                db, review_session.id
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Reviewees"
             ),

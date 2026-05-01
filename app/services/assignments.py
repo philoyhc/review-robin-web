@@ -30,6 +30,40 @@ _TRUTHY = {"true", "yes", "1"}
 _FALSY = {"false", "no", "0"}
 
 
+def reviewee_fields_with_data(db: Session, session_id: int) -> list[str]:
+    """Friendly names of reviewee columns that hold at least one value."""
+    labels: list[str] = []
+    has_any = (
+        db.execute(
+            select(Reviewee.id).where(Reviewee.session_id == session_id).limit(1)
+        ).first()
+        is not None
+    )
+    if has_any:
+        labels.extend(["Name", "Email"])
+    profile_found = db.execute(
+        select(Reviewee.id)
+        .where(Reviewee.session_id == session_id)
+        .where(Reviewee.profile_link.is_not(None))
+        .where(Reviewee.profile_link != "")
+        .limit(1)
+    ).first()
+    if profile_found is not None:
+        labels.append("Profile")
+    for slot, friendly in ((1, "Tag 1"), (2, "Tag 2"), (3, "Tag 3")):
+        col = getattr(Reviewee, f"tag_{slot}")
+        found = db.execute(
+            select(Reviewee.id)
+            .where(Reviewee.session_id == session_id)
+            .where(col.is_not(None))
+            .where(col != "")
+            .limit(1)
+        ).first()
+        if found is not None:
+            labels.append(friendly)
+    return labels
+
+
 def reviewer_fields_with_data(db: Session, session_id: int) -> list[str]:
     """Friendly names of reviewer columns that hold at least one value."""
     labels: list[str] = []
