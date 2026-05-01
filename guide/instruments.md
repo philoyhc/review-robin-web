@@ -177,18 +177,16 @@ Default seed (two rows, applied to a freshly-created instrument):
 
 Title: `Response Fields Help`. Full-width card sitting directly
 below the Display Fields + Response Fields grid, invisible
-borders. Placeholder for now — full wiring is deferred to a later
-slice. Columns:
+borders. One row per Response Fields row. Columns:
 
 | Column | Behaviour |
 |---|---|
 | **Field** | Identifies which Response Fields row this help row attaches to. Read-only `<code>` (matches the row's `field_key`). |
-| **Text** | Operator-typed help text for that Response Fields row. The schema's ``instrument_response_fields.help_text`` already carries this per row; the rebuilt UI surfaces it here. |
-| **Show** | Checkbox — whether the help text should appear next to the field on the reviewer surface. Maps to ``instrument_response_fields.help_text_visible``. |
+| **Text** | Operator-typed help text for that Response Fields row. In edit mode renders as a 2-row textarea joined to the bulk-save form via `name="help_text"` + sibling `name="help_text_id"` parallel arrays. Persists to `instrument_response_fields.help_text` on Save. |
+| **Show** | Checkbox — whether the help text should appear next to the field on the reviewer surface. In edit mode bound to the bulk-save form via `name="help_text_visible_ids"`. Persists to `instrument_response_fields.help_text_visible`. |
 
-When wiring lands, this card replaces the deferred "Help text
-placement" item in §Open / deferred. The schema is already in
-place; the slice is template + bulk-save plumbing only.
+In locked mode the Text cell shows the help text (or `—` when
+empty) and the Show checkbox is disabled.
 
 ### C. Horizontal rule
 
@@ -410,10 +408,3 @@ above re-apply on commit.
   can persist as ordinary display-field rows.
 - **Sort column** — placeholder; the *default row order on
   reviewer surface* UX is open.
-- **Response Fields Help wiring** — placement is now spec'd as a
-  full-width `Response Fields Help` card below the Section B grid
-  (see "Response Fields Help (full-width, below)" above). The
-  schema's `instrument_response_fields.help_text` /
-  `help_text_visible` already carry the data; the rebuild slice
-  that wires this surface adds the bulk-save plumbing for the
-  three columns.

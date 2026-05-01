@@ -237,25 +237,24 @@
                       </td>
                       <td>
                         {% if is_locked_row %}
+                          {# Locked rows render as a greyed-out always-
+                             checked checkbox in both edit + locked
+                             modes — same visual treatment as
+                             Response Fields ``Required``. #}
+                          <input type="checkbox" checked disabled
+                                 title="Always shown to reviewers.">
                           {% if is_editing %}
-                            {# Locked rows render as a greyed-out
-                               always-checked checkbox during edit
-                               mode so the column stays visually
-                               consistent with the editable rows. #}
-                            <input type="checkbox" checked disabled
-                                   title="Always shown to reviewers.">
                             {# Server-side defense: locked rows always
                                post visible=true via visible_ids. #}
                             <input form="dfsave-{{ instrument.id }}" type="hidden" name="visible_ids" value="{{ df.id }}">
-                          {% else %}
-                            <span class="pill pill-success" title="Always shown to reviewers.">Required</span>
                           {% endif %}
                         {% elif is_editing %}
                           <input form="dfsave-{{ instrument.id }}" type="checkbox"
                                  name="visible_ids" value="{{ df.id }}"
                                  {% if df.visible %}checked{% endif %}>
                         {% else %}
-                          {% if df.visible %}<span class="pill pill-info">included</span>{% else %}<span class="muted">excluded</span>{% endif %}
+                          <input type="checkbox" disabled
+                                 {% if df.visible %}checked{% endif %}>
                         {% endif %}
                       </td>
                       <td>
@@ -413,9 +412,10 @@
         </div>
       </div>
 
-      {# Section B continued — Response Fields Help (full-width
-         placeholder; bulk-save wiring deferred per
-         guide/instruments.md). #}
+      {# Section B continued — Response Fields Help (full-width).
+         Editable in edit mode; the inputs join the same
+         ``dfsave-{iid}`` bulk-save form via per-row ``help_*``
+         parallel arrays. #}
       <div class="card" style="border: none; background: transparent; padding: 0; margin-top: 12px;">
         <h3 style="margin-top: 0;">Response Fields Help</h3>
         <div class="table-scroll">
@@ -431,10 +431,25 @@
               {% for field in sorted_response_fields %}
                 <tr>
                   <td><code>{{ field.field_key }}</code></td>
-                  <td class="muted" style="font-style: italic;">{{ field.help_text or "" }}</td>
                   <td>
-                    <input type="checkbox" disabled
-                           {% if field.help_text_visible %}checked{% endif %}>
+                    {% if is_editing %}
+                      <input form="dfsave-{{ instrument.id }}" type="hidden"
+                             name="help_text_id" value="{{ field.id }}">
+                      <textarea form="dfsave-{{ instrument.id }}" name="help_text"
+                                rows="2" style="width: 100%;">{{ field.help_text or "" }}</textarea>
+                    {% else %}
+                      {% if field.help_text %}{{ field.help_text }}{% else %}<span class="muted">—</span>{% endif %}
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if is_editing %}
+                      <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                             name="help_text_visible_ids" value="{{ field.id }}"
+                             {% if field.help_text_visible %}checked{% endif %}>
+                    {% else %}
+                      <input type="checkbox" disabled
+                             {% if field.help_text_visible %}checked{% endif %}>
+                    {% endif %}
                   </td>
                 </tr>
               {% endfor %}
@@ -448,9 +463,6 @@
             </tbody>
           </table>
         </div>
-        <p class="muted" style="font-style: italic; margin-top: 8px;">
-          Wiring lands in a follow-up slice.
-        </p>
       </div>
 
       {# Section C — separator. #}

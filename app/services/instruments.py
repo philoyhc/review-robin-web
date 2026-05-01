@@ -1062,6 +1062,19 @@ def bulk_save_fields(
             if field.required != new_required:
                 per_row_changes["required"] = [field.required, new_required]
                 field.required = new_required
+        if "help_text" in row:
+            new_help_text = row.get("help_text") or ""
+            new_help_text = new_help_text.strip() or None
+            if (field.help_text or None) != new_help_text:
+                per_row_changes["help_text"] = [field.help_text, new_help_text]
+                field.help_text = new_help_text
+        if "help_text_visible" in row:
+            new_help_visible = bool(row["help_text_visible"])
+            if field.help_text_visible != new_help_visible:
+                per_row_changes["help_text_visible"] = [
+                    field.help_text_visible, new_help_visible,
+                ]
+                field.help_text_visible = new_help_visible
         if per_row_changes:
             response_updated.append(
                 {
