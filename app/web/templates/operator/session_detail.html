@@ -17,6 +17,26 @@
     </div>
   {% endif %}
 
+  {% if is_ready %}
+    <div class="card" style="border-color: #d97706; background: #fef3c7;">
+      <p style="margin: 0 0 12px 0;">
+        Session details cannot be modified while the session is ongoing.
+        Revert the session to draft if you wish to modify anything.
+      </p>
+      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required>
+            Yes, revert <strong>{{ session.name }}</strong> to draft.
+          </label>
+        </p>
+        <p style="margin-bottom: 0;">
+          <button class="btn alert-solid" type="submit">Revert to draft</button>
+        </p>
+      </form>
+    </div>
+  {% endif %}
+
   <div class="page-grid">
     {# Card 1: Session Details — top-left on desktop, first on mobile #}
     <div class="card card-tl">
@@ -39,25 +59,6 @@
         </div>
         <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
       </div>
-      {% if is_ready %}
-        <p class="muted" style="margin-top: 12px;">
-          Session is <strong>ready</strong> — setup edits are locked. Revert to
-          draft below to make changes.
-        </p>
-        <form method="post" action="/operator/sessions/{{ session.id }}/revert">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required>
-              Yes, revert <strong>{{ session.name }}</strong> to draft.
-            </label>
-          </p>
-          <p>
-            <button class="btn"
-                    style="background: #d97706; border-color: #d97706;"
-                    type="submit">Revert to draft</button>
-          </p>
-        </form>
-      {% endif %}
     </div>
 
     {# Card 2: Session Setup — right column on desktop, second on mobile #}
