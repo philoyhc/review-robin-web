@@ -1,8 +1,35 @@
 # Review Robin Web Application — Technology-Neutral Functional Specification
 
-**Status:** Draft functional specification  
-**Scope:** Platform-independent specification for a web-based successor to Review Robin  
-**Purpose:** Describe what the system must do regardless of implementation technology  
+> ## ⚠ Pre-implementation forward-looking spec
+>
+> This document was drafted **before any segment shipped** and
+> describes the long-range functional model the system is being
+> built toward. It is **not** the source of truth for what
+> currently works:
+>
+> - For what ships today (URL by URL, audit event by audit event),
+>   read **`docs/status.md`**.
+> - For the operator-page surface contract, read
+>   **`spec/operator_map.md`**.
+> - For the reviewer-page surface contract, read
+>   **`spec/reviewer_map.md`**.
+> - For the conceptual data model and layering, read
+>   **`spec/architecture.md`**.
+>
+> Concrete divergences between this spec and what ships today
+> include (non-exhaustive): magic-link-without-Microsoft-sign-in
+> access (§8.2 — Easy Auth required today; magic-link is
+> Segment 16); sortable / filterable reviewer tables and
+> save-state indicators (§9.1 — not implemented); async
+> invitation sending with progress UI (§7.2 — synchronous outbox
+> today); the full invitation-template editor (§6.6 — ships only
+> as a stub); export and retention (§§11–12 — entirely
+> Segment 11). Treat this document as the destination, not the
+> map of where the road goes today.
+
+**Status:** Draft functional specification (pre-implementation)
+**Scope:** Platform-independent specification for a web-based successor to Review Robin
+**Purpose:** Describe what the system must do regardless of implementation technology
 **Starting point:** Existing Review Robin v1.40 functional model, with the review artefact moved from generated Excel workbooks to an online, server-generated tabular review surface
 
 ---

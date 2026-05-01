@@ -351,10 +351,11 @@ and retention MVP**.
 
 After §1–§13 above were drafted, additional decisions emerged that
 broaden Segment 10's scope beyond what fits in a single PR. Segment
-10 is now split into two PR-sized blocks. **Detailed slice plans
-(`guide/segment_10A.md`, `guide/segment_10B.md`) are not yet
-drafted.** This section captures the segment-level split and the
-locked decisions that supersede parts of §1–§13.
+10 was split into two PR-sized blocks; detailed slice plans
+shipped as `guide/archive/segment_10A.md` and
+`guide/archive/segment_10B.md` (with sub-plans 10B-1 / 10B-2 /
+10B-3 alongside). This section captures the segment-level split
+and the locked decisions that supersede parts of §1–§13.
 
 The high-level prose summary already lives in `spec/architecture.md`
 under "Conceptual hierarchy → When operator-controlled instrument
@@ -504,7 +505,7 @@ wins. Quick map:
 | §9 Routes — singular `/instrument` | All routes consolidated under `/instruments/{instrument_id}/...` for actions; single GET at `/instruments`. Old `GET /instruments/{instrument_id}` 303s to `/instruments`. |
 | §8 Audit event shapes | Add `instrument.described` (description edit). 10B adds `instrument.display_fields_saved`. |
 | §10 Tests (~15 in one PR) | Split: 10A ~15–20, 10B ~10. |
-| §11 Documentation | `docs/status.md` updated at end of 10A, again at end of 10B. `spec/architecture.md` already updated (PR #82). `spec/target_operator_map.md` needs an update to reflect the consolidated `/instruments` page (its current text describes a separate `/instruments/{instrument_id}` page). |
+| §11 Documentation | `docs/status.md` updated at end of 10A, again at end of 10B. `spec/architecture.md` already updated (PR #82). `spec/operator_map.md` needs an update to reflect the consolidated `/instruments` page (its current text describes a separate `/instruments/{instrument_id}` page). |
 
 ### 14.5 Recommended sequencing
 
@@ -527,10 +528,13 @@ reviewer surface.
   vs across-instrument framing for the reviewer surface.
 - `guide/archive/segment_09_invitation_monitoring_reminder_split_plan.md` —
   Segment 9's split-plan, the structural precedent for this update.
-- `guide/segment_10A.md`, `guide/segment_10B.md` — detailed slice
-  plans, **not yet drafted**.
-- `spec/target_operator_map.md` — needs an update to reflect the
-  consolidated `/instruments` page (deferred until 10A lands).
+- `guide/archive/segment_10A.md`, `guide/archive/segment_10B.md`,
+  and the 10B-1/10B-2/10B-3 sub-plans alongside — detailed slice
+  plans (all shipped, archived).
+- `spec/operator_map.md` — reflects the consolidated `/instruments`
+  page after the 10A/10B/10C builder + UI work landed (rewritten
+  end-of-10C; see `guide/segment_10C.md` for the cross-cutting
+  recap).
 
 > **Note (2026-05-01).** What was once §15 of this plan
 > (Reviewer/Reviewee CSV cross-table identity check) moved into
