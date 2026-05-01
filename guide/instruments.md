@@ -17,22 +17,58 @@ also wires the route + service + persistence.
 Top to bottom:
 
 1. **Page title** (H1) — `Instruments`.
-2. **Full-width info card** containing the 6-button setup nav
-   (`Session`, `Reviewers`, `Reviewees`, `Assignments`,
-   `Instruments`, `Email Invites`). The Instruments button is
-   rendered as Primary Outline; the rest are Primary. See
-   `spec/operator_map.md` "Setup nav" for the canonical contract.
+2. **Full-width header card** combining session-wide status, the
+   6-button setup nav, and bulk visibility / preview actions.
+   Layout in "Header card" below.
 3. **Full-width yellow "session ongoing" lock card**, only when
    the session status is `ready`. See `spec/operator_map.md`
    "Session ongoing yellow lock card".
-4. **Full-width "All Instrument Status" card** with summary pills
-   and bulk action buttons. Subject to revision in a later slice.
-5. **One full-width per-instrument card per instrument**, in
-   `Instrument.order`. Card layout in the next section.
-6. **Full-width "Response Type Definitions" card**. Catalog of
+4. **One full-width per-instrument card per instrument**, in
+   `Instrument.order`. Card layout in "Per-instrument card" below.
+5. **Full-width "Response Type Definitions" card**. Catalog of
    response types (with validation rules) referenced by every
    instrument's Response Fields table. Layout in
    "Response Type Definitions card" below.
+
+## Header card
+
+A single full-width card. Same shape pattern as the other
+session-scoped operator pages (e.g. `session_assignments.html`):
+status text rows on the left, action rows right-aligned. Four
+rows, top to bottom:
+
+1. **Session deadline + instrument-count summary** (left-aligned).
+   Format: `Session deadline (auto-close): {deadline pill} ·
+   This session has {N instrument(s)}: {N accepting} · {N not
+   accepting}`. The deadline pill renders the ISO-formatted
+   deadline if set, else `not set`. Pluralisation follows
+   instrument count.
+2. **Visibility-when-closed summary** (left-aligned). Format:
+   `Visibility when closed: {N instrument(s) showing} · {N
+   instrument(s) not showing}`. Pluralisation follows count.
+3. **Setup nav** (right-aligned). The 6 setup-nav buttons
+   (`Session`, `Reviewers`, `Reviewees`, `Assignments`,
+   `Instruments`, `Email Invites`) inside `.setup-nav`. The
+   `Instruments` button is rendered as Primary Outline; the rest
+   are Primary. See `spec/operator_map.md` "Setup nav" for the
+   canonical contract.
+4. **Bulk action buttons** (right-aligned). Two buttons:
+   - `Show all when closed` / `Don't show any when closed` —
+     Alert. Toggles the bulk visibility-when-closed flag across
+     every instrument. Which of the two is shown follows the
+     current state: when at least one instrument is hidden, show
+     `Show all when closed`; when every instrument is showing,
+     show `Don't show any when closed`.
+   - `Preview reviewer surface` — Alert. Opens the operator's
+     preview of the reviewer surface for this session.
+
+The standalone "All Instrument Status" card from earlier drafts
+of the spec is **gone** — its status reporting moves into rows 1
+and 2 of this header card, and its bulk visibility / preview
+buttons move into row 4. The bulk `Open all instruments` /
+`Close all instruments` buttons are **dropped** in this revision;
+operators open and close instruments individually via the
+per-instrument card's status sub-card.
 
 ## Per-instrument card
 
@@ -331,10 +367,6 @@ above re-apply on commit.
 
 ## Open / deferred
 
-- **All Instrument Status card** — content and action buttons
-  subject to revision; the current shape (deadline pill, accepting
-  count, visibility count, bulk action buttons) carries over until
-  that revision lands.
 - **Response Type Definitions persistence** — the card is now
   spec'd but unwired. The rebuild slice that lands it needs a new
   `response_type_definitions` table (or equivalent) keyed by
