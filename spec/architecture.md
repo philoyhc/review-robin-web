@@ -26,15 +26,17 @@ perspective:
   Segment 12).
 - **Instruments** are the *response forms* attached to a session. A
   session has one or more instruments, each defining its own set of
-  response fields. **Multi-instrument is Segment 13**; for now the
-  model invariant is that every session has exactly one auto-created
-  instrument (system handle `instrument_1`) with seed response
-  fields. Operator-controlled editing of that instrument's response
-  fields, per-field help text, and friendly description ships in
-  Segment 10A; operator-configurable display columns (which reviewee
-  tags and pair contexts appear on the reviewer surface alongside the
-  response fields) and a read-only operator preview ship in
-  Segment 10B.
+  response fields and display fields. The schema, services, and
+  audit events are fully multi-instrument-aware
+  (`Instrument.session_id`, `Instrument.order`, FK delete-orphan
+  cascades, `create_instrument` / `delete_instrument` services with
+  `instrument.created` / `instrument.deleted` events). Today every
+  session is auto-created with one instrument (system handle
+  `Default`, operator-editable `description`) and the operator UI
+  gates `Add an instrument` behind a disabled button — the
+  "single-instrument" property is a UI invariant only, not a model
+  invariant. Lifting that UI gate is what **Segment 13
+  (multi-instrument sessions)** will do.
 - **Assignments** are `(session, reviewer, reviewee, instrument)`
   rows. They link the assignment matrix (the pair) to the response
   form (the instrument). The same `(reviewer, reviewee)` pair may
@@ -61,8 +63,9 @@ instrument the reviewer is assigned on. Within a single instrument:
   field in plain prose; visibility is per-field via
   `InstrumentResponseField.help_text_visible`.
 - **Section heading** is the instrument's operator-editable
-  `description`; the system handle (`instrument_1`, `instrument_2`,
-  …) is internal-only and never reviewer-visible.
+  `description`; the system handle (`Default` on the auto-created
+  instrument; operator-chosen on any future ones) is internal-only
+  and never reviewer-visible.
 
 Across instruments — a reviewer assigned on multiple instruments for
 the same session sees one such tabular artifact per instrument,
@@ -70,50 +73,38 @@ stacked. Each table is independent: its own rows (assignments scoped
 to that instrument), its own display columns, its own response
 columns. The same `(reviewer, reviewee)` pair may appear in zero,
 one, or many instruments depending on how generation ran. The
-multi-table form ships under Segment 13 (multi-instrument); Segments
-10A and 10B keep the invariant of exactly one instrument per session
-but already render and configure as if N instruments were possible
-(loop-by-instrument with N=1 today).
+reviewer-surface render path already loops by instrument; the operator
+UI for actually creating multiple instruments per session is what
+Segment 13 will unlock.
 
 ### Practical implications today
 
-Because instrument editing has not shipped:
+As of end-of-Segment-10C the operator-controlled instrument layer
+is in place:
 
-- `create_session` synchronously creates the Default Instrument and
-  seeds it with two response fields (`rating`, integer 1–5,
-  required; `comments`, long text, optional). See
-  `app/services/instruments.py`.
-- Every `Assignment` row points at that single Default Instrument,
-  so the assignments matrix is effectively per-session in user-
-  visible terms today.
-- The reviewer surface (Segment 8) renders the Default Instrument's
-  fields against each assigned reviewee.
+- Session creation auto-seeds one instrument (system handle
+  `Default`) with two response fields (`rating` integer 1–5
+  required, `comments` long text optional) and three pair-context
+  display fields. See `app/services/instruments.py`
+  (`ensure_default_instrument`).
+- `/operator/sessions/{id}/instruments` is the single consolidated
+  page for everything per-instrument: All Instrument Status card +
+  one card per instrument (description, acceptance + visibility
+  toggles, response-fields builder, display-fields placeholder,
+  live preview). See `spec/operator_map.md` for the per-section
+  contract and `docs/status.md` for the URL table + audit events.
+- The reviewer surface renders one tabular artifact per instrument
+  in DOM order, with section heading from `Instrument.description`
+  (fallback to handle) and a per-field help block above each table.
+- Schema + services are multi-instrument-aware
+  (`create_instrument`, `delete_instrument`, FK cascades). The UI
+  gates new-instrument creation behind a disabled button.
 
-When operator-controlled instrument editing lands (Segment 10):
-
-- 10A introduces a consolidated `/operator/sessions/{id}/instruments`
-  page with per-instrument cards: friendly description, response
-  fields (add / edit / delete / reorder), per-field help text,
-  per-field `help_text_visible` toggle, and the existing 9.1
-  acceptance + visibility toggles. The 9.1 sub-page at
-  `/instruments/{instrument_id}` is folded into the consolidated
-  page; action POSTs keep the `{instrument_id}` segment in their
-  path. The reviewer surface refactors to render section heading +
-  help block + table per instrument, looping over an
-  instruments-collection-of-one.
-- 10B adds the display-fields picker (which reviewee tags and pair
-  contexts appear as columns alongside the response fields) and a
-  read-only operator preview at `/operator/sessions/{id}/preview`.
-
-When multi-instrument lands (Segment 13):
-
-- Operators can add more instruments under a session via the same
-  consolidated page (the `Add instrument` and `Delete instrument`
-  buttons that ship disabled in 9.4C light up).
-- Assignment generation gains an instrument selector — different
-  instruments can have different subsets of pairs.
-- The reviewer surface stacks the per-instrument sections 10A
-  already renders. Schema unchanged.
+Items still deliberately deferred (see `docs/status.md` "What's
+deliberately not yet there"): Display Fields persistence on the
+per-instrument card placeholder; operator UI for adding additional
+instruments (Segment 13); response-field type changes after
+creation (data migration concern).
 
 ### Session lifecycle (Segment 9.1)
 
