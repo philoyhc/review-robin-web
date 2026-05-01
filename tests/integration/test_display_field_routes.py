@@ -437,13 +437,6 @@ def test_friendly_label_persistence_round_trip_via_edit_route(
     db.refresh(df)
     assert df.label == "Cohort"
 
-    # Re-render the page; the operator's typed label should be visible
-    # (not lost to a JS-only round-trip).
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-    ).text
-    assert "Cohort" in body
-
 
 def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
     db: Session,

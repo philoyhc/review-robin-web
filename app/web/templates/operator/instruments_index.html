@@ -223,107 +223,39 @@
 
       <div class="bottom-grid field-builder">
         <div class="card" style="border: none; background: transparent; padding: 0;">
-          <h3 style="margin-top: 0;">Display Fields</h3>
-          <p class="muted" style="margin-top: 0;">
-            Reviewee Name and Email are always shown to reviewers.
-            Display fields below add extra columns (tags, profile links,
-            pair context) populated from your imported CSVs.
-          </p>
-          {% set sorted_display_fields = instrument.display_fields | sort(attribute='order') %}
+          <h3 style="margin-top: 0;">Reviewee Fields</h3>
+          {% set reviewee_field_sources = [
+            'RevieweeName',
+            'RevieweeEmail',
+            'PhotoLink',
+            'RevieweeTag1',
+            'RevieweeTag2',
+            'RevieweeTag3',
+          ] %}
           <div class="table-scroll">
             <table>
               <thead>
                 <tr>
                   <th>Source</th>
                   <th>Friendly Label</th>
-                  <th>Visible</th>
+                  <th>Visibility</th>
                   <th>Order</th>
-                  <th>Action</th>
+                  <th>Sort</th>
                 </tr>
               </thead>
-              <tbody class="df-tbody">
-                {% for df in sorted_display_fields %}
-                  {% set inferred_label = display_field_label(df) %}
-                  <tr data-source-type="{{ df.source_type }}"
-                      data-source-field="{{ df.source_field }}">
-                    <td><code>{{ df.source_type }}.{{ df.source_field }}</code></td>
-                    <td>
-                      <details class="display-edit">
-                        <summary style="list-style: none; cursor: pointer;">
-                          <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                            <span class="display-text">{{ inferred_label }}</span>
-                            <span title="Edit" style="color: #6b7280;">&#9998;</span>
-                          </span>
-                        </summary>
-                        <form method="post"
-                              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/edit"
-                              style="display: flex; gap: 8px; align-items: center; margin: 0;">
-                          <input type="text" name="label" value="{{ df.label }}"
-                                 placeholder="{{ inferred_label }}" style="flex: 1;"
-                                 {% if not can_edit %}disabled{% endif %}>
-                          <input type="hidden" name="visible" value="{{ 'true' if df.visible else '' }}">
-                          <button type="submit" title="Save"
-                                  style="background: none; border: none; color: #16a34a; font-size: 1.2em; cursor: pointer; padding: 0 4px;"
-                                  {% if not can_edit %}disabled{% endif %}>&#10003;</button>
-                          <a href="#" title="Cancel"
-                             onclick="event.preventDefault(); cancelLabelEdit(this);"
-                             style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 4px;">&#10007;</a>
-                        </form>
-                      </details>
-                    </td>
-                    <td>
-                      <form method="post"
-                            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/edit"
-                            style="margin: 0;">
-                        <input type="hidden" name="label" value="{{ df.label }}">
-                        <input type="checkbox" name="visible" value="true"
-                               onchange="this.form.submit();"
-                               {% if df.visible %}checked{% endif %}
-                               {% if not can_edit %}disabled{% endif %}>
-                      </form>
-                    </td>
-                    <td>{{ loop.index }}</td>
-                    <td>
-                      <form method="post"
-                            action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields/{{ df.id }}/delete"
-                            style="display: inline; margin: 0;"
-                            onsubmit="return confirm('Delete display field {{ df.source_type }}.{{ df.source_field }}?');">
-                        <button type="submit" title="Delete row"
-                                style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.2em; padding: 0 6px;"
-                                {% if not can_edit %}disabled{% endif %}>&#10007;</button>
-                      </form>
-                    </td>
+              <tbody class="rvf-tbody">
+                {% for source in reviewee_field_sources %}
+                  <tr data-source="{{ source }}">
+                    <td><code>{{ source }}</code></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                   </tr>
                 {% endfor %}
-                {% if not sorted_display_fields %}
-                  <tr>
-                    <td colspan="5" class="muted">
-                      No display fields yet. Add one below to show extra
-                      columns to reviewers.
-                    </td>
-                  </tr>
-                {% endif %}
               </tbody>
             </table>
           </div>
-          {% set available = available_sources_by_instrument.get(instrument.id, []) %}
-          {% if available %}
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/display-fields"
-                  style="display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap;">
-              <label style="font-weight: normal; margin: 0;">
-                Add display field:
-                <select name="source_pair" {% if not can_edit %}disabled{% endif %}>
-                  {% for src in available %}
-                    <option value="{{ src.value }}">{{ src.label }} ({{ src.source_type }}.{{ src.source_field }})</option>
-                  {% endfor %}
-                </select>
-              </label>
-              <input type="hidden" name="visible" value="true">
-              <button class="btn" type="submit"
-                      {% if not can_edit %}disabled{% endif %}>Add</button>
-            </form>
-          {% endif %}
         </div>
 
         <div class="card" style="border: none; background: transparent; padding: 0;">
@@ -480,17 +412,6 @@
       name:  ['Alice Chen', 'Bob Patel', 'Carol Yi'],
       email: ['alice@example.edu', 'bob@example.edu', 'carol@example.edu']
     };
-    var DISPLAY_MOCK = {
-      'reviewee.profile_link': ['https://example.edu/photos/alice.jpg',
-                                'https://example.edu/photos/bob.jpg',
-                                'https://example.edu/photos/carol.jpg'],
-      'reviewee.tag_1':        ['Group A', 'Group B', 'Group A'],
-      'reviewee.tag_2':        ['Senior', 'Junior', 'Senior'],
-      'reviewee.tag_3':        ['Track 1', 'Track 2', 'Track 1'],
-      'pair_context.1':        ['morning', 'afternoon', 'evening'],
-      'pair_context.2':        ['room A', 'room B', 'room C'],
-      'pair_context.3':        ['cohort 1', 'cohort 2', 'cohort 3']
-    };
     var RESPONSE_MOCK = {
       integer:    [5, 7, 9],
       short_text: ['Met goals', 'On track', 'Exceeds'],
@@ -502,24 +423,6 @@
     function renderPreview(card) {
       var preview = card.querySelector('.preview-table');
       if (!preview) return;
-      var displayCols = [];
-      var dfBody = card.querySelector('.df-tbody');
-      if (dfBody) {
-        dfBody.querySelectorAll('tr').forEach(function(row) {
-          var sourceType = row.dataset.sourceType;
-          var sourceField = row.dataset.sourceField;
-          if (!sourceType || !sourceField) return;
-          var labelEl = row.querySelector('.display-text');
-          var visibleCell = row.cells[2];
-          var checkbox = visibleCell ? visibleCell.querySelector('input[type=checkbox]') : null;
-          if (checkbox && checkbox.checked) {
-            displayCols.push({source: sourceType + '.' + sourceField,
-                              sourceType: sourceType,
-                              sourceField: sourceField,
-                              label: labelEl ? labelEl.textContent : ''});
-          }
-        });
-      }
       var responseCols = [];
       var rfBody = card.querySelector('.rf-tbody');
       if (rfBody) {
@@ -533,9 +436,6 @@
         });
       }
       var headerCells = '<th>Reviewee</th>';
-      displayCols.forEach(function(col) {
-        headerCells += '<th>' + _escape(col.label) + '</th>';
-      });
       responseCols.forEach(function(col) {
         var widthAttr = col.type === 'long_text' ? ' style="min-width: 240px;"' : '';
         headerCells += '<th' + widthAttr + '>' + _escape(col.label) + '</th>';
@@ -544,15 +444,6 @@
       for (var i = 0; i < 3; i++) {
         var rowCells = '<td><strong>' + _escape(REVIEWEE_MOCK.name[i])
           + '</strong><br><code>' + _escape(REVIEWEE_MOCK.email[i]) + '</code></td>';
-        displayCols.forEach(function(col) {
-          var values = DISPLAY_MOCK[col.source] || ['', '', ''];
-          if (col.sourceType === 'reviewee' && col.sourceField === 'profile_link') {
-            rowCells += '<td><a href="' + _escape(values[i])
-              + '" target="_blank" rel="noopener">View</a></td>';
-          } else {
-            rowCells += '<td>' + _escape(values[i]) + '</td>';
-          }
-        });
         responseCols.forEach(function(col) {
           var values = RESPONSE_MOCK[col.type] || ['', '', ''];
           rowCells += '<td>' + _escape(values[i]) + '</td>';
