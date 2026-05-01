@@ -227,6 +227,10 @@
       .instrument-edit:has(details[open]) .description-text { display: none; }
       .instrument-edit details[open] > summary { display: none; }
       .display-edit[open] > summary { display: none; }
+      .field-builder.locked details > summary { pointer-events: none; cursor: default; }
+      .field-builder.locked details summary span[title="Edit"],
+      .field-builder.locked a[title="Delete row"],
+      .field-builder.locked a[title="Add row after"] { display: none; }
       .setup-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
