@@ -830,7 +830,12 @@
         var rowCells = '';
         displayCols.forEach(function(col) {
           var values = DISPLAY_MOCK[col.source] || ['', '', ''];
-          rowCells += '<td>' + _escape(values[i]) + '</td>';
+          if (col.source === 'PhotoLink') {
+            rowCells += '<td><a href="' + _escape(values[i])
+              + '" target="_blank" rel="noopener">View</a></td>';
+          } else {
+            rowCells += '<td>' + _escape(values[i]) + '</td>';
+          }
         });
         responseCols.forEach(function(col) {
           var values = RESPONSE_MOCK[col.type] || ['', '', ''];
