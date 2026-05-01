@@ -256,7 +256,7 @@
                   <th>Sort</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="df-tbody">
                 {% for code, label, mandatory in display_source_rows %}
                   {% set has_data = display_source_presence.get(code, False) %}
                   {% if mandatory or has_data %}
@@ -270,7 +270,7 @@
                               <span title="Edit" style="color: #6b7280;">&#9998;</span>
                             </span>
                           </summary>
-                          <form onsubmit="event.preventDefault(); var d=this.closest('details'); d.querySelector('.display-text').textContent=this.label.value; d.removeAttribute('open');"
+                          <form onsubmit="event.preventDefault(); applyLabelEdit(this);"
                                 style="display: flex; gap: 8px; align-items: center; margin: 0;">
                             <input type="text" name="label" value="{{ label }}" style="flex: 1;">
                             <button type="submit" title="Save"
@@ -328,7 +328,7 @@
                             <span title="Edit" style="color: #6b7280;">&#9998;</span>
                           </span>
                         </summary>
-                        <form onsubmit="event.preventDefault(); var d=this.closest('details'); d.querySelector('.display-text').textContent=this.label.value; d.removeAttribute('open');"
+                        <form onsubmit="event.preventDefault(); applyLabelEdit(this);"
                               style="display: flex; gap: 8px; align-items: center; margin: 0;">
                           <input type="text" name="label" value="{{ rlabel }}" style="flex: 1;">
                           <button type="submit" title="Save"
@@ -373,7 +373,7 @@
                       <span title="Edit" style="color: #6b7280;">&#9998;</span>
                     </span>
                   </summary>
-                  <form onsubmit="event.preventDefault(); var d=this.closest('details'); d.querySelector('.display-text').textContent=this.label.value; d.removeAttribute('open');"
+                  <form onsubmit="event.preventDefault(); applyLabelEdit(this);"
                         style="display: flex; gap: 8px; align-items: center; margin: 0;">
                     <input type="text" name="label" value="Rating" style="flex: 1;">
                     <button type="submit" title="Save"
@@ -409,6 +409,9 @@
 
       <hr>
       <h3 style="margin-top: 20px;">Preview Instrument #{{ loop.index }}</h3>
+      <div class="table-scroll">
+        <table class="preview-table"></table>
+      </div>
       <br><br><br>
 
       <h3 style="margin-top: 20px;">Old Display Fields</h3>
@@ -758,14 +761,113 @@
   {% endfor %}
 
   <script>
+    function _escape(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    var DISPLAY_MOCK = {
+      RevieweeName:  ['Alice Chen', 'Bob Patel', 'Carol Yi'],
+      RevieweeEmail: ['alice@example.edu', 'bob@example.edu', 'carol@example.edu'],
+      PhotoLink:     ['https://example.edu/photos/alice.jpg',
+                      'https://example.edu/photos/bob.jpg',
+                      'https://example.edu/photos/carol.jpg'],
+      RevieweeTag1:  ['Group A', 'Group B', 'Group A'],
+      RevieweeTag2:  ['Senior', 'Junior', 'Senior'],
+      RevieweeTag3:  ['Track 1', 'Track 2', 'Track 1']
+    };
+    var RESPONSE_MOCK = {
+      Integer: [5, 7, 9],
+      Half:    [4.5, 5, 6.5],
+      Decimal: [4.7, 5.3, 6.1],
+      Text:    ['Strong work overall.',
+                'Could be tightened in places.',
+                'Excellent contributions throughout.']
+    };
+    function renderPreview(card) {
+      var preview = card.querySelector('.preview-table');
+      if (!preview) return;
+      var displayCols = [];
+      var dfBody = card.querySelector('.df-tbody');
+      if (dfBody) {
+        dfBody.querySelectorAll('tr').forEach(function(row) {
+          var codeEl = row.querySelector('code');
+          if (!codeEl) return;
+          var labelEl = row.querySelector('.display-text');
+          var visibleCell = row.cells[2];
+          var checkbox = visibleCell ? visibleCell.querySelector('input[type=checkbox]') : null;
+          var alwaysSpan = visibleCell ? visibleCell.querySelector('.muted') : null;
+          var visible = (checkbox && checkbox.checked)
+                        || (alwaysSpan && alwaysSpan.textContent.trim() === 'always');
+          if (visible) {
+            displayCols.push({source: codeEl.textContent.trim(),
+                              label: labelEl ? labelEl.textContent : ''});
+          }
+        });
+      }
+      var responseCols = [];
+      var rfBody = card.querySelector('.rf-tbody');
+      if (rfBody) {
+        rfBody.querySelectorAll('tr').forEach(function(row) {
+          var keyEl = row.querySelector('.rf-key');
+          if (!keyEl) return;
+          var labelEl = row.querySelector('.display-text');
+          var sel = row.querySelector('select');
+          responseCols.push({key: keyEl.textContent.trim(),
+                             label: labelEl ? labelEl.textContent : '',
+                             type: sel ? sel.value : 'Text'});
+        });
+      }
+      var headerCells = '';
+      displayCols.forEach(function(col) {
+        headerCells += '<th>' + _escape(col.label) + '</th>';
+      });
+      responseCols.forEach(function(col) {
+        var widthAttr = col.type === 'Text' ? ' style="min-width: 240px;"' : '';
+        headerCells += '<th' + widthAttr + '>' + _escape(col.label) + '</th>';
+      });
+      var bodyRows = '';
+      for (var i = 0; i < 3; i++) {
+        var rowCells = '';
+        displayCols.forEach(function(col) {
+          var values = DISPLAY_MOCK[col.source] || ['', '', ''];
+          rowCells += '<td>' + _escape(values[i]) + '</td>';
+        });
+        responseCols.forEach(function(col) {
+          var values = RESPONSE_MOCK[col.type] || ['', '', ''];
+          rowCells += '<td>' + _escape(values[i]) + '</td>';
+        });
+        bodyRows += '<tr>' + rowCells + '</tr>';
+      }
+      preview.innerHTML = '<thead><tr>' + headerCells + '</tr></thead><tbody>' + bodyRows + '</tbody>';
+    }
+    function _findCard(el) {
+      var n = el;
+      while (n && n.parentNode) {
+        if (n.id && n.id.indexOf('instrument-') === 0) return n;
+        n = n.parentNode;
+      }
+      return null;
+    }
+    function applyLabelEdit(form) {
+      var d = form.closest('details');
+      if (d) {
+        var t = d.querySelector('.display-text');
+        if (t) t.textContent = form.label.value;
+        d.removeAttribute('open');
+      }
+      var card = _findCard(form);
+      if (card) renderPreview(card);
+    }
     function deleteResponseRow(btn) {
       var row = btn.closest('tr');
+      var card = _findCard(btn);
       if (row) row.remove();
+      if (card) renderPreview(card);
     }
     function addResponseRow(btn) {
       var row = btn.closest('tr');
       var tbody = btn.closest('tbody');
-      var card = btn.closest('.card');
+      var card = _findCard(btn);
       var template = card ? card.querySelector('.rf-row-template') : null;
       if (!template) return;
       var clone = template.content.firstElementChild.cloneNode(true);
@@ -779,6 +881,17 @@
       var orderEl = clone.querySelector('.rf-order');
       if (orderEl) orderEl.textContent = nextNum;
       row.after(clone);
+      renderPreview(card);
     }
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('[id^="instrument-"]').forEach(function(card) {
+        renderPreview(card);
+        card.addEventListener('change', function(e) {
+          if (e.target.matches('input[type=checkbox], select')) {
+            renderPreview(card);
+          }
+        });
+      });
+    });
   </script>
 {% endblock %}
