@@ -593,6 +593,77 @@ def test_instruments_get_backfills_lazy_seeded_display_fields(
     assert ("reviewee", "profile_link") in pairs
 
 
+def test_instruments_get_prunes_unpopulated_display_fields(
+    client: TestClient, db: Session
+) -> None:
+    """If a Display Fields row's underlying data source has no data
+    in the session (e.g. pair_context_1 was seeded by a prior import
+    that's since been replaced), the row disappears on next GET.
+    Locked Name + Email are kept regardless."""
+    review_session = _make_session(client, db, code="prune-stale")
+    instrument = _instrument(db, review_session.id)
+    # Manually insert pair_context.1/2 + reviewee.tag_1 rows simulating
+    # state from a prior import.
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="P1",
+            source_type="pair_context",
+            source_field="1",
+            order=2,
+            visible=True,
+        )
+    )
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="P2",
+            source_type="pair_context",
+            source_field="2",
+            order=3,
+            visible=True,
+        )
+    )
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="Cohort",
+            source_type="reviewee",
+            source_field="tag_1",
+            order=4,
+            visible=True,
+        )
+    )
+    # Reviewee with tag_1 populated; no assignments → no pair_context.
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Carol",
+            email_or_identifier="carol@example.edu",
+            tag_1="Cohort A",
+        )
+    )
+    db.commit()
+
+    client.get(f"/operator/sessions/{review_session.id}/instruments")
+
+    rows = db.execute(
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .order_by(InstrumentDisplayField.order)
+    ).scalars().all()
+    pairs = [(r.source_type, r.source_field) for r in rows]
+    # pair_context.1/2 dropped (no data); locked rows + tag_1 kept.
+    assert pairs == [
+        ("reviewee", "name"),
+        ("reviewee", "email_or_identifier"),
+        ("reviewee", "tag_1"),
+    ]
+    # Operator-typed label on tag_1 ("Cohort") survives the prune.
+    tag_1 = next(r for r in rows if r.source_field == "tag_1")
+    assert tag_1.label == "Cohort"
+
+
 def test_state_machine_default_renders_edit_only(
     client: TestClient, db: Session
 ) -> None:

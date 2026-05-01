@@ -856,6 +856,91 @@ def seed_display_fields_from_assignments(
     return total
 
 
+def _populated_display_sources_for_session(
+    db: Session, review_session: ReviewSession
+) -> set[tuple[str, str]]:
+    """Return the set of ``(source_type, source_field)`` pairs that
+    currently have at least one populated value across the session's
+    reviewees + assignments. Locked rows (Name + Email) are always
+    counted as populated."""
+    populated: set[tuple[str, str]] = set(_LOCKED_DISPLAY_SOURCES)
+
+    has_profile = db.execute(
+        select(Reviewee.id)
+        .where(Reviewee.session_id == review_session.id)
+        .where(Reviewee.profile_link.is_not(None))
+        .where(Reviewee.profile_link != "")
+        .limit(1)
+    ).first()
+    if has_profile is not None:
+        populated.add(("reviewee", "profile_link"))
+    for slot in (1, 2, 3):
+        col = getattr(Reviewee, f"tag_{slot}")
+        found = db.execute(
+            select(Reviewee.id)
+            .where(Reviewee.session_id == review_session.id)
+            .where(col.is_not(None))
+            .where(col != "")
+            .limit(1)
+        ).first()
+        if found is not None:
+            populated.add(("reviewee", f"tag_{slot}"))
+
+    pair_present = {1: False, 2: False, 3: False}
+    for (ctx,) in db.execute(
+        select(Assignment.context).where(
+            Assignment.session_id == review_session.id
+        )
+    ).all():
+        if not ctx:
+            continue
+        for slot in (1, 2, 3):
+            if ctx.get(f"pair_context_{slot}"):
+                pair_present[slot] = True
+        if all(pair_present.values()):
+            break
+    for slot, present in pair_present.items():
+        if present:
+            populated.add(("pair_context", str(slot)))
+
+    return populated
+
+
+def prune_unpopulated_display_fields(
+    db: Session, review_session: ReviewSession
+) -> int:
+    """Drop Display Fields rows whose underlying data source has no
+    populated value across the session — except locked rows (Name,
+    Email), which are always kept regardless of data presence.
+    Repacks the remaining rows' ``order`` to ``0..N-1`` per
+    instrument. Returns the total number of rows dropped across all
+    instruments in the session.
+
+    Used by the ``instruments_index`` route on every GET to keep the
+    Display Fields surface in sync with the actual reviewee /
+    assignment data; if an operator deletes reviewees or re-imports
+    assignments and a slot loses its data, the corresponding row
+    disappears from the table.
+    """
+    populated = _populated_display_sources_for_session(db, review_session)
+    dropped = 0
+    for instrument in _instruments_for_session(db, review_session):
+        deleted_any = False
+        for f in list(instrument.display_fields):
+            pair = (f.source_type, f.source_field)
+            if pair in populated:
+                continue
+            db.delete(f)
+            deleted_any = True
+            dropped += 1
+        if deleted_any:
+            db.flush()
+            remaining = _ordered_display_fields(db, instrument)
+            _repack_display_orders(remaining)
+            db.flush()
+    return dropped
+
+
 def bulk_save_fields(
     db: Session,
     *,
