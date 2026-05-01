@@ -193,6 +193,71 @@ in use by an instrument's Response Fields row propagates the new
 validation to that row on save (the engine writes the resulting
 constraints to `instrument_response_fields.validation`).
 
+### Validation derivation
+
+Each row's Data Type + applicable cells map unambiguously to the
+JSON `validation` block written to `instrument_response_fields.validation`
+when an instrument's Response Fields row references this Response Type:
+
+| Data Type | `validation` JSON shape |
+|---|---|
+| `Integer` | `{"min": <int>, "max": <int>, "step": <int>}` |
+| `Decimal` | `{"min": <float>, "max": <float>, "step": <float>}` |
+| `String` | `{"min_length": <int>, "max_length": <int>}` |
+| `List` | `{"choices": [<str>, ...]}` (CSV split, each item trimmed of leading / trailing whitespace) |
+
+Worked examples for the seeded rows:
+
+- `Long_text` → `{"min_length": 0, "max_length": 500}`
+- `Short_text` → `{"min_length": 0, "max_length": 59}`
+- `Grade` → `{"choices": ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "D+", "D", "F"]}`
+- `1-to-5int` → `{"min": 1, "max": 5, "step": 1}`
+- `1-to-5half` → `{"min": 1, "max": 5, "step": 0.5}`
+- `1-to-5dec` → `{"min": 1, "max": 5, "step": 0.1}`
+
+#### Save-time validation rules
+
+The Definitions card rejects a row at save time if any of the
+following hold (operator must fix before the row commits):
+
+- **List with zero items** when Data Type is `List`.
+- **Min > Max** when Data Type is `Integer`, `Decimal`, or `String`.
+- **Step does not evenly divide (Max − Min)** when Data Type is
+  `Integer` or `Decimal`. (E.g. `Min=1, Max=5, Step=0.3` is
+  rejected — the operator is expected to do the math.)
+
+### Editing flow (gated, left-to-right)
+
+Cells must be filled in column order. A cell is locked (not
+editable) until the cell(s) to its left are filled validly:
+
+1. **`Response Type`** — free text. Must be non-empty before
+   `Data Type` unlocks.
+2. **`Data Type`** — picker (`String` / `Decimal` / `Integer` /
+   `List`). Picking a Data Type immediately determines which of
+   the trailing columns become editable; the others render as
+   `NA` and are read-only:
+
+   | Data Type | Editable trailing columns (in order) | NA / read-only |
+   |---|---|---|
+   | `Integer` | `Min` → `Max` → `Step` | `List` |
+   | `Decimal` | `Min` → `Max` → `Step` | `List` |
+   | `String` | `Min` → `Max` | `Step`, `List` |
+   | `List` | `List` | `Min`, `Max`, `Step` |
+
+3. Within the editable trailing columns, each cell is locked
+   until the previous one in that order is filled validly.
+
+A row is **incomplete** until all applicable cells are filled. An
+incomplete row is not committed to the underlying database; the
+operator either completes the row or removes it via the Action
+column ✗.
+
+If an operator changes a previously-saved row's Data Type, the
+trailing cells reset (per the new Data Type's editable list) and
+the row re-enters the gated flow. The save-time validation rules
+above re-apply on commit.
+
 ## Open / deferred
 
 - **All Instrument Status card** — content and action buttons
