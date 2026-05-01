@@ -1234,3 +1234,69 @@ def test_bulk_save_skips_new_row_marked_for_delete_in_same_submit(
         ).scalars()
     }
     assert before_keys == after_keys
+
+
+def test_bulk_save_persists_instrument_description(
+    client: TestClient, db: Session
+) -> None:
+    """Section A description rides along with the bulk-save form so a
+    single Save commits description + table edits together. Plain
+    text in non-editing mode; textarea joined to ``dfsave-{iid}`` in
+    editing mode."""
+    review_session = _make_session(client, db, code="bulk-desc")
+    instrument = _instrument(db, review_session.id)
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "description": "Spring 2026 Peer Review",
+            "kind": ["response"],
+            "id": [str(rating.id)],
+            "order": ["0"],
+            "label": ["Rating"],
+            "required_ids": [str(rating.id)],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    db.refresh(instrument)
+    assert instrument.description == "Spring 2026 Peer Review"
+
+
+def test_instruments_page_unifies_edit_under_section_e(
+    client: TestClient, db: Session
+) -> None:
+    """The legacy ``<details>`` Edit toggle in Section A is gone; the
+    description is plain text when not editing, and renders as a
+    textarea joined to the ``dfsave-{iid}`` bulk-save form when the
+    Section E Edit button has put the card in edit mode."""
+    review_session = _make_session(client, db, code="edit-unified")
+    instrument = _instrument(db, review_session.id)
+
+    locked = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # Section A: no inline ``<details>`` Edit toggle, no description form.
+    assert "<details>" not in locked
+    assert (
+        f'action="/operator/sessions/{review_session.id}/instruments/{instrument.id}/edit"'
+        not in locked
+    )
+    # Preview Instrument stub + Section C separator are gone.
+    assert "Preview rendering lands" not in locked
+    assert "Preview Instrument" not in locked
+
+    editing = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    # In edit mode, description renders as a textarea on the bulk-save form.
+    assert (
+        f'<textarea form="dfsave-{instrument.id}" name="description"'
+        in editing
+    )

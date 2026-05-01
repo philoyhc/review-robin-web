@@ -1691,6 +1691,18 @@ async def instrument_bulk_save_fields(
     instruments_service.bulk_save_fields(
         db, instrument=instrument, rows=rows, actor=user
     )
+    # Section A — instrument description shares the same Save / Cancel
+    # state machine as the tables. Only push the update when the value
+    # actually changed to avoid an audit-event for a no-op edit.
+    if "description" in form:
+        submitted_desc = form.get("description")
+        cleaned = (
+            submitted_desc.strip() if isinstance(submitted_desc, str) else None
+        ) or None
+        if cleaned != instrument.description:
+            instruments_service.update_instrument_description(
+                db, instrument=instrument, description=cleaned, actor=user
+            )
     # Redirect with ``?saved={iid}`` so the page renders a flash
     # confirmation. The ``?editing`` param is intentionally cleared —
     # per spec, a successful Save locks the tables.
