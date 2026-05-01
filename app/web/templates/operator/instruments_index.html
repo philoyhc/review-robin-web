@@ -6,14 +6,15 @@
   <h1>Instruments</h1>
 
   <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-      <div>
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/preview">
-          Preview Reviewer Surface
-        </a>
-      </div>
+    <div>
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/preview">
+        Preview Reviewer Surface
+      </a>
+    </div>
+    <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
       <div class="setup-nav">
+        <a class="btn" href="/operator/sessions/{{ session.id }}">Session</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
         <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
@@ -260,7 +261,7 @@
                 <th>Friendly Label</th>
                 <th>Visible</th>
                 <th>Order</th>
-                <th>Actions</th>
+                <th>Sort Priority</th>
               </tr>
             </thead>
             <tbody>
@@ -270,12 +271,22 @@
                   <td><code>{{ code }}</code></td>
                   <td>
                     {% if has_data %}
-                      <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                        <span>{{ label }}</span>
-                        <a href="#" title="Edit"
-                           style="color: #6b7280; text-decoration: none; cursor: pointer;"
-                           onclick="event.preventDefault();">&#9998;</a>
-                      </span>
+                      <details class="display-edit">
+                        <summary style="list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                          <span>{{ label }}</span>
+                          <span title="Edit"
+                                style="color: #6b7280;">&#9998;</span>
+                        </summary>
+                        <form onsubmit="event.preventDefault(); this.closest('details').removeAttribute('open');"
+                              style="display: flex; gap: 8px; align-items: center; margin: 0;">
+                          <input type="text" name="label" value="{{ label }}" style="flex: 1;">
+                          <button type="submit" title="Save"
+                                  style="background: none; border: none; color: #16a34a; font-size: 1.2em; cursor: pointer; padding: 0 4px;">&#10003;</button>
+                          <a href="#" title="Cancel"
+                             onclick="event.preventDefault(); this.closest('details').removeAttribute('open');"
+                             style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 4px;">&#10007;</a>
+                        </form>
+                      </details>
                     {% else %}
                       <span class="muted">(Not used)</span>
                     {% endif %}
@@ -290,7 +301,14 @@
                     {% endif %}
                   </td>
                   <td>{{ loop.index0 }}</td>
-                  <td><span class="muted">—</span></td>
+                  <td>
+                    {% if has_data %}
+                      <input type="number" min="0" value="{{ loop.index0 }}"
+                             style="width: 4em;">
+                    {% else %}
+                      <span class="muted">—</span>
+                    {% endif %}
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>
