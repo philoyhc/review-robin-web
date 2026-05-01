@@ -37,9 +37,6 @@ router = APIRouter(prefix="/operator", tags=["operator"])
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _templates.env.globals["app_version"] = settings.app_version
-_templates.env.globals["display_field_label"] = (
-    instruments_service.display_field_label
-)
 
 
 @router.get("/sessions", response_class=HTMLResponse)
@@ -955,12 +952,6 @@ def _bulk_visibility_state(instruments: list[Instrument]) -> str:
 )
 def instruments_index(
     request: Request,
-    required_warning: int | None = Query(default=None),
-    field_id: int | None = Query(default=None),
-    delete_blocked_field_id: int | None = Query(default=None),
-    delete_blocked_count: int | None = Query(default=None),
-    field_key_error: str | None = Query(default=None),
-    display_source_error: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -973,58 +964,6 @@ def instruments_index(
             .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
-
-    available_sources_by_instrument: dict[int, list[dict[str, str]]] = {}
-    merged_rows_by_instrument: dict[int, list[dict[str, Any]]] = {}
-    for instrument in instruments:
-        existing_pairs = {
-            (df.source_type, df.source_field) for df in instrument.display_fields
-        }
-        available = [
-            {
-                "source_type": st,
-                "source_field": sf,
-                "label": label,
-                "value": f"{st}:{sf}",
-            }
-            for (st, sf), label in instruments_service._DEFAULT_DISPLAY_LABELS.items()
-            if (st, sf) not in existing_pairs
-        ]
-        available_sources_by_instrument[instrument.id] = sorted(
-            available, key=lambda x: (x["source_type"], x["source_field"])
-        )
-
-        display_rows = [
-            {
-                "kind": "display",
-                "id": df.id,
-                "order": df.order,
-                "label": df.label,
-                "visible": df.visible,
-                "display_label": instruments_service.display_field_label(df),
-                "source_type": df.source_type,
-                "source_field": df.source_field,
-                "display_field": df,
-            }
-            for df in sorted(
-                instrument.display_fields, key=lambda f: (f.order, f.id)
-            )
-        ]
-        response_rows = [
-            {
-                "kind": "response",
-                "id": rf.id,
-                "order": rf.order,
-                "label": rf.label,
-                "field_key": rf.field_key,
-                "response_field": rf,
-            }
-            for rf in sorted(
-                instrument.response_fields, key=lambda f: (f.order, f.id)
-            )
-        ]
-        merged_rows_by_instrument[instrument.id] = display_rows + response_rows
-
     return _templates.TemplateResponse(
         request,
         "operator/instruments_index.html",
@@ -1036,17 +975,6 @@ def instruments_index(
             "can_edit": _can_edit_instrument(review_session),
             "bulk_accepting_state": _bulk_accepting_state(instruments),
             "bulk_visibility_state": _bulk_visibility_state(instruments),
-            "required_warning": required_warning,
-            "required_warning_field_id": field_id,
-            "delete_blocked_field_id": delete_blocked_field_id,
-            "delete_blocked_count": delete_blocked_count,
-            "field_key_error": field_key_error,
-            "display_source_error": display_source_error,
-            "available_sources_by_instrument": available_sources_by_instrument,
-            "merged_rows_by_instrument": merged_rows_by_instrument,
-            "display_source_presence": assignments.display_source_presence(
-                db, review_session.id
-            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Instruments"
             ),

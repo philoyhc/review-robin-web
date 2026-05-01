@@ -216,10 +216,6 @@ def test_edit_field_required_warning_redirects_with_query(
     assert "required_warning=" in location
     assert f"field_id={comments.id}" in location
 
-    follow_up = client.get(location).text
-    assert "is now required" in follow_up
-    assert "Comments" in follow_up
-
 
 def test_delete_field_with_responses_blocks_then_confirms(
     client: TestClient, db: Session

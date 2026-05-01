@@ -175,12 +175,6 @@ def test_add_display_field_unknown_source_redirects_with_error(
     assert response.status_code == 303
     assert "display_source_error=reviewee:phone" in response.headers["location"]
 
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-        f"?display_source_error=reviewee:phone"
-    ).text
-    assert "Could not add display field" in body
-
 
 def test_add_display_field_duplicate_source_redirects_with_error(
     client: TestClient, db: Session
