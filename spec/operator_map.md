@@ -5,7 +5,9 @@ describe what currently ships; placeholder sections explicitly call
 out deferred work. For per-route detail with template paths, form
 field schemas, and audit events, see `docs/status.md`'s operator URL
 table. For the segment-by-segment implementation history, see
-`docs/status.md`'s "Segments shipped" table.
+`docs/status.md`'s "Segments shipped" table. For the
+reviewer-facing surface (dashboard, review surface, invitation
+landing), see `spec/reviewer_map.md`.
 
 ## Cross-page conventions
 
