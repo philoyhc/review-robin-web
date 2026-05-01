@@ -10,7 +10,10 @@ deliberately as part of a feature change, never silently).
 
 | File | Covers |
 |---|---|
+| `architecture.md` | Domain entities, layering, conceptual hierarchy, pair-vs-assignment context. |
+| `functional_spec.md` | Technology-neutral functional specification — what the system must do regardless of implementation. |
 | `operator_map.md` | Operator-facing page surface — chrome, setup nav, lock card, per-page layout and affordances. |
+| `assumptions.md` | UI vocabulary — six canonical button styles, typography knob, layout defaults, load-bearing assumptions. |
 
 Sibling folders:
 

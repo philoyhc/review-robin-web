@@ -155,7 +155,7 @@ means rewriting every emitter.
 
 **Plan.**
 - Pick a small set of conventions and document them in
-  `ARCHITECTURE.md`:
+  `spec/architecture.md`:
   - Snapshots go under a `"snapshot"` key.
   - Per-key diffs go under a `"changes": {key: [old, new]}` key.
   - Counts go under named integer keys (`deleted_count`,

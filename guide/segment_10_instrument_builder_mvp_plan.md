@@ -310,7 +310,7 @@ Minimum tests, ~15 across unit and integration:
   add the four new audit event types to the audit table, remove
   the "Instrument builder" row from "What's deliberately not yet
   there".
-- `ARCHITECTURE.md`: update "When operator-controlled instrument
+- `spec/architecture.md`: update "When operator-controlled instrument
   editing lands" prose to "Operator-controlled instrument editing
   ships in Segment 10" with a back-reference to this file.
 - A `docs/instruments.md` user-facing guide is **not** added in
@@ -356,7 +356,7 @@ broaden Segment 10's scope beyond what fits in a single PR. Segment
 drafted.** This section captures the segment-level split and the
 locked decisions that supersede parts of §1–§13.
 
-The high-level prose summary already lives in `ARCHITECTURE.md`
+The high-level prose summary already lives in `spec/architecture.md`
 under "Conceptual hierarchy → When operator-controlled instrument
 editing lands (Segment 10):" (merged in PR #82, 2026-04-30).
 
@@ -458,7 +458,7 @@ fields, and preview what reviewers will see before activation.
   picker section: the available sources are reviewee `tag1` /
   `tag2` / `tag3` / `photo_link` and `pair_context_1` / `2` / `3`.
   `assignment_context_*` is deliberately excluded (preserves the
-  reviewer-facing / logic-engaging distinction; see ARCHITECTURE.md
+  reviewer-facing / logic-engaging distinction; see `spec/architecture.md`
   "Pair-level vs assignment-level context").
 - Bulk-save action `POST .../instruments/{instrument_id}/display-
   fields/save` replaces the instrument's display-field set in one
@@ -504,7 +504,7 @@ wins. Quick map:
 | §9 Routes — singular `/instrument` | All routes consolidated under `/instruments/{instrument_id}/...` for actions; single GET at `/instruments`. Old `GET /instruments/{instrument_id}` 303s to `/instruments`. |
 | §8 Audit event shapes | Add `instrument.described` (description edit). 10B adds `instrument.display_fields_saved`. |
 | §10 Tests (~15 in one PR) | Split: 10A ~15–20, 10B ~10. |
-| §11 Documentation | `docs/status.md` updated at end of 10A, again at end of 10B. `ARCHITECTURE.md` already updated (PR #82). `spec/target_operator_map.md` needs an update to reflect the consolidated `/instruments` page (its current text describes a separate `/instruments/{instrument_id}` page). |
+| §11 Documentation | `docs/status.md` updated at end of 10A, again at end of 10B. `spec/architecture.md` already updated (PR #82). `spec/target_operator_map.md` needs an update to reflect the consolidated `/instruments` page (its current text describes a separate `/instruments/{instrument_id}` page). |
 
 ### 14.5 Recommended sequencing
 
@@ -521,9 +521,9 @@ reviewer surface.
 
 ### 14.6 Cross-references
 
-- `ARCHITECTURE.md` "Conceptual hierarchy" — operator-controlled
+- `spec/architecture.md` "Conceptual hierarchy" — operator-controlled
   instrument editing prose (PR #82, 2026-04-30).
-- `ARCHITECTURE.md` "Tabular response artifacts" — within-instrument
+- `spec/architecture.md` "Tabular response artifacts" — within-instrument
   vs across-instrument framing for the reviewer surface.
 - `guide/archive/segment_09_invitation_monitoring_reminder_split_plan.md` —
   Segment 9's split-plan, the structural precedent for this update.

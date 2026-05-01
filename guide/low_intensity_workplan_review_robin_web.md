@@ -131,9 +131,8 @@ A repository exists with:
 
 - basic folder structure;
 - `README.md`;
-- `AGENTS.md`;
-- `TECH_STACK.md`;
-- `FUNCTIONAL_SPEC.md`;
+- `AGENTS.md` / `CLAUDE.md` (byte-identical twins);
+- `spec/functional_spec.md`;
 - Python project configuration;
 - empty app skeleton;
 - initial test skeleton.
@@ -153,7 +152,7 @@ A repository exists with:
 
 Useful prompts for this segment:
 
-> Create a minimal FastAPI project skeleton using Python 3.12, pytest, and the folder structure described in TECH_STACK.md.
+> Create a minimal FastAPI project skeleton using Python 3.12, pytest, and the folder structure described in `AGENTS.md` / `CLAUDE.md` (Stack summary).
 
 > Review this repository layout for consistency with AGENTS.md. Do not add functionality. Identify missing files or confusing names.
 
@@ -972,7 +971,7 @@ Write or update:
 
 Useful prompt:
 
-> Read AGENTS.md, TECH_STACK.md, and the issue below. Propose a minimal implementation plan. Do not write code yet.
+> Read AGENTS.md (or its twin CLAUDE.md) and the issue below. Propose a minimal implementation plan. Do not write code yet.
 
 ### 20.3 Ask for implementation in small patches
 

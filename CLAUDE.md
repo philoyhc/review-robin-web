@@ -1,8 +1,50 @@
-# CLAUDE.md
+# CLAUDE.md / AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code), OpenAI Codex, Cursor, and any
+other AI coding agent working in this repository.
 
-@AGENTS.md
+> **`AGENTS.md` and `CLAUDE.md` are byte-identical twins.** Edit one,
+> copy it to the other — they must stay in sync. No automation enforces
+> this yet; if you change one, run `cp CLAUDE.md AGENTS.md` (or the
+> reverse) before committing.
+
+## Project conventions
+
+- Use Python 3.12+.
+- Use FastAPI for the backend.
+- Use Pydantic for request/response schemas.
+- Use SQLAlchemy 2.x declarative style with `Mapped[]` and `mapped_column`.
+  Do not import from `sqlalchemy.dialects.postgresql` in `app/db/models/` —
+  Postgres-specific column types are deferred to Segment 14.
+- Keep route handlers thin.
+- Put business logic in service modules.
+- Add or update tests for every behavior change.
+- Prefer explicit types and clear names.
+- Do not introduce a full frontend framework unless explicitly requested.
+- When working on a page, migrate any inline-styled buttons on it
+  to the canonical `.btn` modifier classes defined in
+  `spec/assumptions.md` (Primary / Primary Outline / Alert / Alert
+  Outline / Danger / Danger Outline). Ask first if a button
+  doesn't cleanly fit one of those six named styles — don't invent
+  a new one without confirmation.
+- Do not implement Microsoft authentication in app code unless
+  explicitly requested; assume Azure App Service Easy Auth will provide
+  authenticated identity headers in deployed environments.
+- Keep changes small and PR-sized.
+
+## Working approach
+
+Land changes as small, reviewable slices. The natural unit is one
+coherent feature step — e.g. a migration + its seed code, a service
+helper set + the routes that call it, a template refactor + its
+tests — sized so a reviewer can model the full contract in one
+sitting.
+
+When a segment plan in `guide/` calls out internal slices, land
+them in order across multiple PRs rather than collapsing them; use
+the plan's "land X first as a self-contained Y" risk notes as the
+cut points. Don't bundle independent changes (e.g. an unrelated bug
+fix) into the same PR.
 
 ## Common commands
 
@@ -46,8 +88,8 @@ A small but important fourth seam:
 
 ### Templating conventions
 
-- Templates extend `app/web/templates/base.html`. The base owns inline CSS for the entire app (no separate stylesheet, no JS build step). When adding new visual primitives, add a class to `base.html` rather than inline styles on individual templates.
-- The four canonical button styles (Primary, Primary Outline, Danger, Danger Outline) and the two-column / bottom-grid layout patterns are documented in `assumptions.md` and `spec/operator_map.md` — refer to those names when editing UI.
+- Templates extend `app/web/templates/base.html`. The base owns inline CSS for the entire app (no separate stylesheet, no JS build step beyond targeted progressive-enhancement scripts inline in templates). When adding new visual primitives, add a class to `base.html` rather than inline styles on individual templates.
+- The six canonical button styles (Primary, Primary Outline, Alert, Alert Outline, Danger, Danger Outline) and the `.page-grid` / `.bottom-grid` layout patterns are documented in `spec/assumptions.md` and `spec/operator_map.md` — refer to those names when editing UI.
 - Operator pages render breadcrumbs via `app/web/breadcrumbs.py` helpers (`operator_root`, `operator_session_child`). Don't hand-roll breadcrumb HTML — call these.
 
 ### Database
@@ -55,15 +97,87 @@ A small but important fourth seam:
 - One `database_url` in `app/config.py` (Pydantic settings). Production reads Azure Postgres via `psycopg[binary]`; local dev uses SQLite. The same `alembic env.py` works for both.
 - CI runs migrations against a real `postgres:16` service container (`ci-postgres-migration` job) on every PR, so dialect-only failures show up in CI even though tests run on SQLite.
 
+## Stack summary
+
+- **Language.** Python 3.12+.
+- **Web framework.** FastAPI on Starlette ASGI; uvicorn for local
+  dev, gunicorn + uvicorn workers in production.
+- **Templates.** Jinja2, server-rendered. **No frontend framework
+  and no JS build step.** Forms are plain `<form method="post">`;
+  navigation state lives in URL fragments / query params
+  (e.g. `?validated=1`, `#upload-csv`). Targeted inline JS for
+  progressive enhancement (e.g. the Save/Edit lock toggle and
+  live-preview render on the Instruments page) is fine; framework
+  / build pipeline is not. Inline `<style>` in `base.html`; CSS
+  extraction is a Segment 14 concern.
+- **Schemas / config.** Pydantic 2 (`pydantic` for request /
+  response shapes, `pydantic-settings` for env config).
+- **ORM + migrations.** SQLAlchemy 2.x declarative
+  (`Mapped[]` + `mapped_column`); Alembic for migrations. No
+  `sqlalchemy.dialects.postgresql` imports in `app/db/models/`
+  per the convention above.
+- **Database.** Postgres 16 (Azure Postgres Flexible Server,
+  Burstable B1ms, Southeast Asia) in deployed environments;
+  in-memory SQLite per test session for `pytest`. Both
+  round-tripped on every PR via the `ci-postgres-migration`
+  smoke job.
+- **Postgres driver.** psycopg 3 (`psycopg[binary]`).
+- **Auth.** Microsoft Entra ID via Azure Easy Auth in deployed
+  environments; `ALLOW_FAKE_AUTH=true` fallback for local dev.
+  Identity headers (`X-MS-CLIENT-PRINCIPAL` /
+  `X-MS-CLIENT-PRINCIPAL-{NAME,ID,IDP}`) parsed by
+  `app/auth/identity.py`.
+- **Hosting.** Azure App Service (Linux, Python 3.12) + Azure
+  Postgres Flexible Server. Public access with firewall
+  allow-list; VNet integration is a Segment 14 concern.
+- **Deploy.** GitHub Actions, OIDC-authenticated; three jobs
+  (`build` → `migrate` → `deploy`). Migrations land via
+  `alembic upgrade head` against Azure Postgres before the App
+  Service swap; deploy is skipped if migration fails.
+- **CI.** SQLite `pytest` job + a `postgres-migration` smoke job
+  that round-trips Alembic against a `postgres:16` service
+  container on every PR.
+- **Tooling.** `pytest` + `httpx` (TestClient), `ruff` (lint).
+
 ## Where to look
 
 - **`docs/status.md`** — current implementation state and segment history. Authoritative.
+- **`spec/operator_map.md`** — operator-page surface and cross-page conventions (chrome, setup nav, lock card, layout patterns).
+- **`spec/assumptions.md`** — UI vocabulary (button styles, typography knob, layout defaults).
+- **`spec/architecture.md`** — domain entities, layering, conceptual hierarchy.
+- **`spec/functional_spec.md`** — technology-neutral functional spec.
 - **`guide/segment_*.md`** — segment-by-segment plans (current and upcoming). The latest one names the current segment's contract. Older / shipped segment plans live in `guide/archive/`.
-- **`spec/operator_map.md`** — operator-page surface and cross-page conventions (chrome, breadcrumbs, layout patterns).
-- **`assumptions.md`** — UI vocabulary (button styles, typography knob, layout defaults).
-- **`docs/authentication.md`** / **`docs/database.md`** — deeper dives on those subsystems.
+- **`docs/authentication.md`** / **`docs/database.md`** / **`docs/imports.md`** — deeper dives on those subsystems.
+- **`docs/local_setup.md`** / **`docs/deployment_dev.md`** — developer setup and dev-deploy notes.
+
+The three doc folders each have their own README (`spec/README.md`,
+`docs/README.md`, `guide/README.md`) that spell out the role and list
+the contents.
 
 ## Workflow notes
 
 - The human author does not run Python locally for routine work. The agent's session container is the pre-PR gate — `pytest` (and `ruff` once wired into CI) must pass there before pushing. End-to-end verification happens on the Azure dev slot after deploy; if a change touches UI/redirects/auth that the test suite can't exercise, say so explicitly in the PR description rather than claiming verification.
 - Land changes as small, reviewable slices following the plans in `guide/`. Don't bundle independent concerns (e.g. an unrelated bug fix) into a feature PR.
+
+## Where work runs
+
+- The human author does not run Python, alembic, or a database
+  locally. There is no laptop dev loop.
+- The agent's session container is the primary pre-PR gate: run
+  `pytest` (and lint, once it's wired into CI) there before pushing.
+- End-to-end verification happens on the Azure dev slot after deploy,
+  not in the agent's sandbox. When a change touches UI or anything
+  the test suite can't exercise (templates, redirects, real auth),
+  say so in the PR description rather than claiming it was verified.
+- `docs/local_setup.md` and `ALLOW_FAKE_AUTH=true` exist for the
+  agent's sandbox, not for a human dev loop.
+
+## Testing expectations
+
+Before considering a change complete, run:
+
+```bash
+pytest
+```
+
+If dependencies or tooling change, update `README.md`.
