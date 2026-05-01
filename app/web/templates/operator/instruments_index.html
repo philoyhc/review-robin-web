@@ -47,10 +47,9 @@
       {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
       {% set not_showing_count = instruments | length - showing_count %}
       <p>
-        Status:
-        <span class="pill pill-info">{{ accepting_count }} accepting</span>
-        &middot;
-        <span class="pill pill-warning">{{ not_accepting_count }} not accepting</span>
+        This session has
+        <span class="pill pill-info">{{ instruments | length }}</span>
+        instrument{% if instruments | length != 1 %}s{% endif %}.
       </p>
       <p>
         Session deadline (auto-close):
@@ -59,6 +58,12 @@
         {% else %}
           <span class="pill pill-warning">not set</span>
         {% endif %}
+      </p>
+      <p>
+        Status:
+        <span class="pill pill-info">{{ accepting_count }} accepting</span>
+        &middot;
+        <span class="pill pill-warning">{{ not_accepting_count }} not accepting</span>
       </p>
       <p>
         Visibility when closed:
@@ -100,8 +105,6 @@
 
     <div class="card">
       <h2>Add/Delete Instruments</h2>
-      <p>This session has <strong>{{ instruments | length }}</strong>
-        instrument{% if instruments | length != 1 %}s{% endif %}.</p>
       <p style="margin: 8px 0 0 0;">
         <a class="btn alert disabled" style="width: 84px; box-sizing: border-box; white-space: nowrap;"
            aria-disabled="true"
@@ -109,10 +112,14 @@
         <a class="btn alert disabled" style="width: 84px; box-sizing: border-box; white-space: nowrap;"
            aria-disabled="true"
            title="Multi-instrument — Segment 13">Delete 1</a>
-        {% for instrument in instruments %}
-          <a class="btn" href="#instrument-{{ instrument.id }}">Go to #{{ loop.index }}</a>
-        {% endfor %}
       </p>
+      {% if instruments %}
+        <p style="margin: 8px 0 0 0;">
+          {% for instrument in instruments %}
+            <a class="btn" href="#instrument-{{ instrument.id }}">Go to #{{ loop.index }}</a>
+          {% endfor %}
+        </p>
+      {% endif %}
     </div>
   </div>
 
@@ -121,8 +128,8 @@
     <div class="card" id="instrument-{{ instrument.id }}"
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
       <div class="bottom-grid">
-        <div class="card instrument-edit" style="border-color: transparent; background: transparent;">
-          <h2 style="margin-top: 0;">Instrument #{{ loop.index }}</h2>
+        <div class="card instrument-edit" style="border-color: transparent; background: transparent; padding: 0;">
+          <h2 style="margin-top: 0; font-size: 1.6rem;">Instrument #{{ loop.index }}</h2>
           <p class="description-text">{{ instrument.description or "(no description)" }}</p>
           <details>
             <summary style="list-style: none; cursor: pointer; text-align: right;">
@@ -144,7 +151,7 @@
         </div>
 
         <div class="card" style="background: #fff;">
-          <h3 style="margin-top: 0;">Instrument Status</h3>
+          <h3 style="margin-top: 0;">This Instrument's Status</h3>
           <p>
             Status:
             {% if instrument.accepting_responses %}
