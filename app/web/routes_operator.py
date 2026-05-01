@@ -980,6 +980,15 @@ def instruments_index(
         instruments_service.ensure_locked_display_fields(
             db, instrument=instrument
         )
+    # Prune Display Fields rows whose underlying data source no longer
+    # has any populated value (locked Name / Email rows are exempt and
+    # always kept). Runs before the lazy seeds so the canonical seed
+    # order — reviewee.* before pair_context.* — falls out naturally:
+    # any stale rows are gone, then the seeds append fresh in the
+    # canonical sequence the route hands them down in.
+    instruments_service.prune_unpopulated_display_fields(
+        db, review_session
+    )
     # Per-request idempotent backfill of the lazy-seeded display
     # fields. The reviewee / assignment imports already trigger these
     # in the happy path; calling them on every GET catches sessions
