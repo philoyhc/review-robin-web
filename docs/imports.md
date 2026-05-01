@@ -5,7 +5,7 @@ CSV files. Reviewer and reviewee imports are independent: a failed
 reviewee parse cannot affect the reviewers table, and vice versa.
 
 The implementation contract for this feature lives in
-`guide/segment_06A.md`. This document is the operator-facing how-to.
+`guide/archive/segment_06A.md`. This document is the operator-facing how-to.
 
 ## Reviewer CSV
 

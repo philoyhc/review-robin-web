@@ -52,7 +52,7 @@ Do not include:
 
 ## 3.1 Inherited from Segment 4A
 
-Segment 4 (per `guide/segment_04A.md`) deliberately used cross-dialect column
+Segment 4 (per `guide/archive/segment_04A.md`) deliberately used cross-dialect column
 types so the same migration runs on SQLite (tests) and PostgreSQL (deployed).
 The following Postgres-specific optimizations were deferred here:
 
@@ -83,7 +83,7 @@ heading toward a real internal pilot.
 
 ## 3.2 Inherited from Segment 5A
 
-Segment 5 (per `guide/segment_05A.md`) provisioned dev Postgres with the
+Segment 5 (per `guide/archive/segment_05A.md`) provisioned dev Postgres with the
 simplest acceptable infrastructure choices. The following hardening items
 were deferred here:
 
