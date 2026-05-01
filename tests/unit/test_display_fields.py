@@ -185,25 +185,30 @@ def test_display_field_value_reviewee_returns_none_when_column_unset(
     assert display_field_value(field, assignment) is None
 
 
-def test_ensure_default_instrument_seeds_no_display_fields(
+def test_ensure_default_instrument_seeds_locked_name_and_email_only(
     db: Session,
 ) -> None:
-    """Per item #14, display fields are now seeded lazily from import data,
-    not unconditionally on session creation."""
+    """Per item #14 + Segment 10D Slice 1: display fields for tags /
+    profile / pair_context are seeded lazily from import data, but the
+    two locked rows (RevieweeName, RevieweeEmail) are seeded
+    unconditionally on session creation so they're always at the top."""
     user = _user(db)
     session = _session(db, user, code="seed-display")
 
     instrument = ensure_default_instrument(db, session)
 
     rows = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == instrument.id
-        )
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .order_by(InstrumentDisplayField.order)
     ).scalars().all()
-    assert rows == []
+    assert [(r.source_type, r.source_field, r.order, r.visible) for r in rows] == [
+        ("reviewee", "name", 0, True),
+        ("reviewee", "email_or_identifier", 1, True),
+    ]
 
 
-def test_ensure_default_instrument_does_not_revive_deleted_display_fields(
+def test_ensure_default_instrument_idempotent_for_locked_rows(
     db: Session,
 ) -> None:
     user = _user(db)
@@ -213,7 +218,11 @@ def test_ensure_default_instrument_does_not_revive_deleted_display_fields(
     ensure_default_instrument(db, session)
 
     rows = db.execute(select(InstrumentDisplayField)).scalars().all()
-    assert rows == []
+    pairs = sorted((r.source_type, r.source_field) for r in rows)
+    assert pairs == [
+        ("reviewee", "email_or_identifier"),
+        ("reviewee", "name"),
+    ]
 
 
 def test_seed_display_fields_from_reviewees_creates_rows_for_populated_slots(
@@ -249,11 +258,15 @@ def test_seed_display_fields_from_reviewees_creates_rows_for_populated_slots(
         .where(InstrumentDisplayField.instrument_id == instrument.id)
         .order_by(InstrumentDisplayField.order)
     ).scalars().all()
-    pairs = [(r.source_type, r.source_field, r.label, r.visible) for r in rows]
+    # The two locked rows (Name + Email) sit at the top from
+    # ensure_default_instrument; the lazy-seeded rows append after.
+    pairs = [(r.source_type, r.source_field) for r in rows]
     assert pairs == [
-        ("reviewee", "profile_link", "", True),
-        ("reviewee", "tag_1", "", True),
-        ("reviewee", "tag_3", "", True),
+        ("reviewee", "name"),
+        ("reviewee", "email_or_identifier"),
+        ("reviewee", "profile_link"),
+        ("reviewee", "tag_1"),
+        ("reviewee", "tag_3"),
     ]
 
 
@@ -280,7 +293,8 @@ def test_seed_display_fields_from_reviewees_is_idempotent(db: Session) -> None:
             InstrumentDisplayField.instrument_id == instrument.id
         )
     ).scalars().all()
-    assert len(rows) == 1
+    # 2 locked rows + 1 tag_1 lazy seed = 3.
+    assert len(rows) == 3
 
 
 def test_seed_display_fields_from_reviewees_preserves_operator_label(
@@ -289,12 +303,14 @@ def test_seed_display_fields_from_reviewees_preserves_operator_label(
     user = _user(db)
     session = _session(db, user, code="seed-rev-preserve")
     instrument = ensure_default_instrument(db, session)
+    # Manually insert a tag_1 row with an operator-typed label after
+    # the locked Name + Email rows; lazy seed should leave it alone.
     existing = InstrumentDisplayField(
         instrument_id=instrument.id,
         label="Cohort",
         source_type="reviewee",
         source_field="tag_1",
-        order=0,
+        order=2,
         visible=False,
     )
     db.add(existing)
@@ -316,11 +332,12 @@ def test_seed_display_fields_from_reviewees_preserves_operator_label(
         .where(InstrumentDisplayField.instrument_id == instrument.id)
         .order_by(InstrumentDisplayField.order)
     ).scalars().all()
-    pairs = [(r.source_field, r.label, r.visible) for r in rows]
-    assert pairs == [
-        ("tag_1", "Cohort", False),
-        ("tag_2", "", True),
-    ]
+    by_source = {r.source_field: (r.label, r.visible) for r in rows}
+    assert by_source["tag_1"] == ("Cohort", False)
+    assert by_source["tag_2"] == ("", True)
+    # Locked rows still present.
+    assert "name" in by_source
+    assert "email_or_identifier" in by_source
 
 
 def test_seed_display_fields_from_assignments_creates_pair_context_rows(
@@ -357,7 +374,13 @@ def test_seed_display_fields_from_assignments_creates_pair_context_rows(
         .order_by(InstrumentDisplayField.order)
     ).scalars().all()
     pairs = [(r.source_type, r.source_field) for r in rows]
-    assert pairs == [("pair_context", "1"), ("pair_context", "3")]
+    # Locked rows seed first, pair_context rows appended.
+    assert pairs == [
+        ("reviewee", "name"),
+        ("reviewee", "email_or_identifier"),
+        ("pair_context", "1"),
+        ("pair_context", "3"),
+    ]
 
 
 def test_seed_display_fields_from_assignments_no_op_for_full_matrix(
@@ -395,4 +418,10 @@ def test_seed_display_fields_from_assignments_no_op_for_full_matrix(
             InstrumentDisplayField.instrument_id == instrument.id
         )
     ).scalars().all()
-    assert rows == []
+    # Locked Name + Email rows are still seeded, but no pair_context rows
+    # are added when ``context`` is None.
+    pairs = sorted((r.source_type, r.source_field) for r in rows)
+    assert pairs == [
+        ("reviewee", "email_or_identifier"),
+        ("reviewee", "name"),
+    ]

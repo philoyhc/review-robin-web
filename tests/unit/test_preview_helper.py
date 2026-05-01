@@ -110,9 +110,15 @@ def test_make_synthetic_row_shape(db: Session) -> None:
     assert row["missing_count"] == 0
     assert row["submitted_at"] is None
 
-    # display_cells: three pair_context entries with the placeholder string.
-    assert len(row["display_cells"]) == 3
-    for cell in row["display_cells"]:
+    # Five display_cells: Name + Email (locked rows from
+    # ensure_default_instrument) + three pair_context entries.
+    assert len(row["display_cells"]) == 5
+    pair_context_cells = [
+        c for c in row["display_cells"]
+        if c["field"].source_type == "pair_context"
+    ]
+    assert len(pair_context_cells) == 3
+    for cell in pair_context_cells:
         assert cell["value"] == "Sample pair context"
         assert cell["is_profile_link"] is False
 
@@ -120,8 +126,10 @@ def test_make_synthetic_row_shape(db: Session) -> None:
     assert [c["value"] for c in row["cells"]] == ["", ""]
 
 
-def test_synthetic_values_cover_all_seven_d6_sources() -> None:
+def test_synthetic_values_cover_all_d6_sources() -> None:
     expected_pairs = {
+        ("reviewee", "name"),
+        ("reviewee", "email_or_identifier"),
         ("reviewee", "tag_1"),
         ("reviewee", "tag_2"),
         ("reviewee", "tag_3"),

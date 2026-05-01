@@ -159,9 +159,14 @@ def test_drop_unpopulated_pair_context_keeps_populated_slots() -> None:
                 ),
                 {"iid": instrument_id},
             ).fetchall()
+            # The follow-up migration ``543aa71cd452`` inserts the locked
+            # Name + Email rows at orders 0/1 and shifts existing rows by
+            # 2, so the surviving pair_context rows end up at orders 2/3.
             assert [tuple(r) for r in rows] == [
-                ("pair_context", "1", "P1", 0),
-                ("pair_context", "3", "", 1),
+                ("reviewee", "name", "", 0),
+                ("reviewee", "email_or_identifier", "", 1),
+                ("pair_context", "1", "P1", 2),
+                ("pair_context", "3", "", 3),
             ]
     finally:
         eng.dispose()
@@ -191,11 +196,18 @@ def test_drop_unpopulated_pair_context_drops_all_when_no_assignments() -> None:
                 text(
                     "SELECT source_type, source_field "
                     "FROM instrument_display_fields "
-                    "WHERE instrument_id = :iid"
+                    "WHERE instrument_id = :iid "
+                    "ORDER BY \"order\""
                 ),
                 {"iid": instrument_id},
             ).fetchall()
-            assert rows == []
+            # The drop-pair_context migration removes all three slots
+            # (no assignments populated them); the follow-up
+            # ``543aa71cd452`` then inserts the locked Name + Email rows.
+            assert [tuple(r) for r in rows] == [
+                ("reviewee", "name"),
+                ("reviewee", "email_or_identifier"),
+            ]
     finally:
         eng.dispose()
 
@@ -238,7 +250,11 @@ def test_drop_unpopulated_pair_context_preserves_reviewee_rows() -> None:
                 ),
                 {"iid": instrument_id},
             ).fetchall()
+            # ``543aa71cd452`` follows: locked rows seed at 0/1, the
+            # operator-typed tag_1 row keeps its label and is shifted up.
             assert [tuple(r) for r in rows] == [
+                ("reviewee", "name", ""),
+                ("reviewee", "email_or_identifier", ""),
                 ("reviewee", "tag_1", "Cohort"),
             ]
     finally:

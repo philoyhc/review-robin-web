@@ -36,29 +36,35 @@ def _session(db: Session, user: User, *, code: str) -> ReviewSession:
 
 
 def _seed_pair_context_display_fields(db: Session, instrument: Instrument) -> None:
-    for slot, order in (("1", 0), ("2", 1), ("3", 2)):
+    """Append pair_context_1/2/3 display fields after any existing rows
+    (``ensure_default_instrument`` seeds two locked Name + Email rows
+    at the top, so pair_context rows here start at order 2)."""
+    base = max(
+        (f.order for f in instrument.display_fields), default=-1
+    ) + 1
+    for offset, slot in enumerate(("1", "2", "3")):
         db.add(
             InstrumentDisplayField(
                 instrument_id=instrument.id,
                 label="",
                 source_type="pair_context",
                 source_field=slot,
-                order=order,
+                order=base + offset,
                 visible=True,
             )
         )
     db.flush()
+    db.refresh(instrument)
 
 
 def _seed_instrument(db: Session, code: str) -> tuple[User, Instrument]:
     user = _user(db)
     session = _session(db, user, code=code)
     instrument = ensure_default_instrument(db, session)
-    # Most tests in this module assume the legacy behaviour where the
-    # three pair_context display fields exist post-creation. After the
-    # 2026-05-01 lazy-seed change (item #14), the fixture seeds them
-    # explicitly so individual tests stay focused on the behaviour they
-    # exercise.
+    # Tests in this module exercise the pair_context display fields, so
+    # seed them explicitly. ``ensure_default_instrument`` seeds the two
+    # locked Name + Email rows at orders 0–1; pair_context rows append
+    # after at orders 2–4.
     _seed_pair_context_display_fields(db, instrument)
     return user, instrument
 
@@ -113,7 +119,7 @@ def test_add_display_field_rejects_duplicate_pair(db: Session) -> None:
 
 def test_add_display_field_appends_packed_order_and_audits(db: Session) -> None:
     user, instrument = _seed_instrument(db, code="add-append")
-    # seeded: pair_context 1/2/3 at orders 0/1/2
+    # seeded: Name@0, Email@1 (locked), pair_context 1/2/3 at orders 2/3/4.
 
     new_field = add_display_field(
         db,
@@ -125,7 +131,7 @@ def test_add_display_field_appends_packed_order_and_audits(db: Session) -> None:
         actor=user,
     )
 
-    assert new_field.order == 3
+    assert new_field.order == 5
     assert new_field.label == "Cohort"
 
     rows = db.execute(
@@ -133,7 +139,7 @@ def test_add_display_field_appends_packed_order_and_audits(db: Session) -> None:
         .where(InstrumentDisplayField.instrument_id == instrument.id)
         .order_by(InstrumentDisplayField.order)
     ).scalars().all()
-    assert [r.order for r in rows] == [0, 1, 2, 3]
+    assert [r.order for r in rows] == [0, 1, 2, 3, 4, 5]
 
     events = db.execute(
         select(AuditEvent).where(
@@ -145,7 +151,7 @@ def test_add_display_field_appends_packed_order_and_audits(db: Session) -> None:
     assert detail["source_type"] == "reviewee"
     assert detail["source_field"] == "tag_1"
     assert detail["label"] == "Cohort"
-    assert detail["order"] == 3
+    assert detail["order"] == 5
     assert detail["visible"] is True
 
 
@@ -207,7 +213,16 @@ def test_delete_display_field_repacks_and_audits(db: Session) -> None:
         .where(InstrumentDisplayField.instrument_id == instrument.id)
         .order_by(InstrumentDisplayField.order)
     ).scalars().all()
-    assert [(r.source_field, r.order) for r in rows] == [("1", 0), ("3", 1)]
+    # After delete + repack: locked Name/Email at 0/1, pair_context_1
+    # and pair_context_3 at 2/3.
+    assert [
+        (r.source_type, r.source_field, r.order) for r in rows
+    ] == [
+        ("reviewee", "name", 0),
+        ("reviewee", "email_or_identifier", 1),
+        ("pair_context", "1", 2),
+        ("pair_context", "3", 3),
+    ]
 
     events = db.execute(
         select(AuditEvent).where(
@@ -222,8 +237,12 @@ def test_delete_display_field_repacks_and_audits(db: Session) -> None:
 
 def test_bulk_save_fields_repacks_per_table_independently(db: Session) -> None:
     user, instrument = _seed_instrument(db, code="bulk-repack")
-    # response fields seeded: rating @ order=0 (after 10A repack), comments @ 1
-    # display fields seeded: pair_context 1/2/3 @ 0/1/2
+    # Display fields seeded by ``ensure_default_instrument`` +
+    # ``_seed_pair_context_display_fields``:
+    #   Name@0, Email@1 (locked), pair_context 1/2/3 @ 2/3/4.
+    # Response fields seeded by ``ensure_default_instrument``:
+    #   rating @ 1, comments @ 2 (Segment 10A repack hasn't run yet on
+    #   freshly-seeded rows, so they keep their default-spec orders).
 
     rating = next(
         f for f in instrument.response_fields if f.field_key == "rating"
@@ -240,11 +259,10 @@ def test_bulk_save_fields_repacks_per_table_independently(db: Session) -> None:
         if (f.source_type, f.source_field) == ("pair_context", "2")
     )
 
-    # Submit only some rows in an interleaved order:
-    # [display(pc_one) @ submitted-pos 0, response(rating) @ 1,
-    #  display(pc_two) @ 2, response(comments) @ 3]
-    # bulk_save_fields uses submission order — each per-table list should
-    # repack to 0..N-1 independently regardless of the absolute positions.
+    # Submit only the two pair_context rows + the two response rows.
+    # The locked Name/Email rows are NOT in the payload, so the service
+    # should preserve them at orders 0/1 and pack the submitted display
+    # rows starting at order 2.
     rows = [
         {"kind": "display", "id": pc_one.id, "order": 0, "label": "", "visible": True},
         {"kind": "response", "id": rating.id, "order": 1},
@@ -257,10 +275,16 @@ def test_bulk_save_fields_repacks_per_table_independently(db: Session) -> None:
     db.refresh(pc_two)
     db.refresh(rating)
     db.refresh(comments)
-    assert pc_one.order == 0
-    assert pc_two.order == 1
+    # Locked rows kept at 0/1 → pc_one and pc_two get 2 and 3.
+    assert pc_one.order == 2
+    assert pc_two.order == 3
     assert rating.order == 0
     assert comments.order == 1
+    # Display rows didn't change (only re-packed within their slot);
+    # response rows moved from spec orders 1/2 → 0/1, which is a rank
+    # change (rating was at rank 0, comments at rank 1; they end at the
+    # same ranks but with different absolute values), so
+    # ``response_order_changed`` is False.
     assert summary == {"display_changed": False, "response_order_changed": False}
 
 
