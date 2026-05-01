@@ -39,10 +39,9 @@ rows, top to bottom:
 
 1. **Session deadline + instrument-count summary** (left-aligned).
    Format: `Session deadline (auto-close): {deadline pill} ·
-   This session has {N instrument(s)}: {N accepting} · {N not
-   accepting}`. The deadline pill renders the ISO-formatted
-   deadline if set, else `not set`. Pluralisation follows
-   instrument count.
+   {N instrument(s)}: {N accepting} · {N not accepting}`. The
+   deadline pill renders the ISO-formatted deadline if set, else
+   `not set`. Pluralisation follows instrument count.
 2. **Visibility-when-closed summary** (left-aligned). Format:
    `Visibility when closed: {N instrument(s) showing} · {N
    instrument(s) not showing}`. Pluralisation follows count.
