@@ -250,7 +250,7 @@
                                post visible=true via visible_ids. #}
                             <input form="dfsave-{{ instrument.id }}" type="hidden" name="visible_ids" value="{{ df.id }}">
                           {% else %}
-                            <span class="pill pill-info" title="Always shown to reviewers.">Required</span>
+                            <span class="pill pill-success" title="Always shown to reviewers.">Required</span>
                           {% endif %}
                         {% elif is_editing %}
                           <input form="dfsave-{{ instrument.id }}" type="checkbox"
