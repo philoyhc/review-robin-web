@@ -174,6 +174,68 @@ buttons stay visible (the session is meant to be running).
     invitations) stay.
   - **Delete Session** button — removes everything for the session.
 
+## `/operator/sessions/new` — Create new session
+
+Single-page form. No setup nav (the session doesn't exist yet);
+breadcrumb reads `Sessions → Create New Session`.
+
+- **Two-column form** in a `.page-grid`:
+  - **Left column** (`.card-tl` slot, plain `<div>`): Name
+    (required, max 255), Code (required, max 64; unique per
+    operator), Deadline (optional, `datetime-local`).
+  - **Right column** (`.fill-col`): Description textarea
+    (optional, max 2000), grows to fill column height.
+- **Action row** (`.btn-pair` below the grid): **Create
+  session** (Primary) submits to `POST /operator/sessions` →
+  inserts the session + a `SessionOperator` row + a
+  `session.created` audit event + 303 to `/operator/sessions/{id}`.
+  **Cancel** (Primary Outline) → `/operator/sessions`.
+
+## `/operator/sessions/{id}/edit` — Edit session
+
+Same shape as the create form, with pre-populated values; no
+setup nav (the page doesn't fit the per-session setup-mutation
+pattern — it's the meta-edit). Breadcrumb is
+`Sessions → {session.name} → Edit Session`.
+
+- Same 4 fields as create (Name, Code, Deadline, Description),
+  pre-filled from the session.
+- **Action row**: **Save changes** (Primary) submits to
+  `POST /operator/sessions/{id}/edit` → emits a `session.updated`
+  audit event with `changes: {field: [old, new]}` for each
+  changed field, invalidates `validated → draft`, and 303 back to
+  session detail. **Cancel** (Primary Outline) → session detail.
+
+The route returns **HTTP 409** when the session is `ready` —
+operators must revert to draft first via the lock card on
+session detail.
+
+## `/operator/sessions/{id}/validate` — Setup validation deep-dive
+
+Read-only deep-dive of every setup issue. The lightweight inline
+summary card on session detail (triggered by
+`?validated=1`) is the primary entry point for the activate
+decision; this page is the click-through for full per-issue
+detail. No setup nav (it's a read-only side page); breadcrumb is
+`Sessions → {session.name} → Setup validation`.
+
+- **Page intro** (muted text): "Read-only view of setup
+  readiness for this session. Errors must be cleared before
+  activation. Warnings can be acknowledged and overridden.
+  Activate from the inline summary card on the session detail
+  page."
+- **Severity counts** (three pills inline): error / warning /
+  info counts.
+- **Per-issue list** (rendered via the
+  `operator/partials/validation_results.html` partial) — one
+  entry per issue, with severity pill, source (e.g.
+  "Reviewers", "Assignments"), and human description.
+
+There is no Activate button on this page; activation lives only
+in the inline summary card on session detail (so the activate
+contract — "no errors, warnings acknowledged" — is enforced at a
+single place).
+
 ## Reviewers / Reviewees / Assignments — shared info-card pattern
 
 The three setup-roster pages (Reviewers, Reviewees, Assignments)
@@ -403,9 +465,124 @@ session detail._
 
 ## `/operator/sessions/{id}/invitations` — Manage invitations
 
-_Placeholder — to be specified. Hosts invitation management:
-sending, link to outbox, etc. Reached from the **Manage Invitations**
-button on the session detail._
+The operator's invitation control panel — generate invitations for
+assigned reviewers, send the pending ones, and rotate tokens. No
+setup nav (the page is post-activation, not part of setup mutation);
+breadcrumb is `Sessions → {session.name} → Invitations`. Reached
+from the **Manage Invitations** button on the session detail's Run
+Session card.
+
+- **Not-ready banner** (yellow card) when the session isn't
+  `ready`: "Invitations can only be issued while the session is
+  **ready**. Activate the session from the validation page to
+  enable these actions." All POST actions on this page require
+  ready (409 otherwise).
+- **Summary card** (3 inline counts): eligible reviewers (active +
+  at least one assignment), uninvited count, pending-send count.
+  Action row:
+  - **Generate invitations** (Primary) →
+    `POST /…/invitations/generate`. Bulk-creates one invitation
+    per uninvited eligible reviewer. Idempotent. Disabled when
+    `uninvited_count == 0` or session not ready. Audit:
+    `invitations.generated`.
+  - **Send all pending** (Primary Outline) →
+    `POST /…/invitations/send-all`. Writes one outbox row per
+    pending invitation; flips them to `sent`. Disabled when
+    `pending_count == 0` or not ready. Audit: one
+    `invitation.sent` per row.
+  - **View outbox** (Primary Outline) →
+    `/…/outbox`.
+  - Muted footnote: "Each Send rotates the token (the previous
+    URL becomes stale) and writes a fresh row to the dev outbox.
+    Reviewers must sign in with their work email to follow the
+    link."
+- **Per-reviewer table** (always rendered when invitations
+  exist). Columns:
+  - **Reviewer** — name in bold, email in `<code>`.
+  - **Status** — pill (`pending` warning / `sent` info /
+    `opened` info).
+  - **Sent** — ISO timestamp or `—`.
+  - **Opened** — ISO timestamp or `—`.
+  - **Actions** (right-aligned, no header):
+    **Send** (Primary Outline) → `POST /…/invitations/{iid}/send`
+    rotates the token + writes outbox + flips to `sent`.
+    **Regenerate** (Primary Outline) →
+    `POST /…/invitations/{iid}/regenerate` rotates the token +
+    resets to `pending` (`invitation.regenerated`).
+- **Empty state** — "No invitations yet. Click *Generate
+  invitations* above to create one row per assigned active
+  reviewer."
+
+## `/operator/sessions/{id}/monitoring` — Monitoring
+
+Per-reviewer progress + reminder actions for the live session.
+No setup nav; breadcrumb is
+`Sessions → {session.name} → Monitoring`. Reminder actions
+require ready; the page itself renders in any status (so an
+operator can review counts post-deadline).
+
+- **Not-ready banner** (yellow card) when the session isn't
+  `ready`: "Reminder actions require the session to be **ready**.
+  Activate the session from the validation page first."
+- **Summary card** (5 inline pills): assigned / invited / opened
+  / submitted (info) and incomplete (warning) counts. Action row:
+  - **Send reminders to N incomplete reviewer(s)** (Primary) →
+    `POST /…/monitoring/remind-incomplete`. Bulk reminder to
+    every reviewer whose pill is anything other than `submitted`.
+    Disabled when not ready or when `incomplete == 0`. Audit:
+    one `reminders.sent` event with `count` + `invitation_ids`
+    + `reviewer_ids` + `fell_back_count`.
+  - **View outbox** (Primary Outline) → `/…/outbox`.
+  - Muted footnote explains the reminder reuse semantics:
+    reminders reuse the URL from the most recent invitation send
+    so the reviewer's existing link keeps working; if a reviewer
+    has never been sent the original invitation, the reminder
+    action mints a fresh token and writes an `invitation`-kind
+    outbox row.
+- **Per-reviewer table** (rendered when at least one assignment
+  exists). Columns:
+  - **Reviewer** — name in bold, email in `<code>`.
+  - **Invitation** — pill (`opened` / `sent` info; `pending` /
+    `no invitation` warning).
+  - **Progress** — pill (`submitted` info / `in progress` /
+    `not started` warning) plus muted `(completed/assignments)`
+    count.
+  - **Missing required** — integer count of required fields
+    without a saved response.
+  - **Last reminder** — ISO timestamp or `—`.
+  - **Actions** (right-aligned, no header): **Send reminder**
+    (Primary Outline) → `POST /…/invitations/{iid}/remind`.
+    Disabled when not ready or when the reviewer is not
+    incomplete.
+- **Empty state** — "No assigned reviewers yet — generate
+  assignments before activating the session."
+
+A reviewer is **incomplete** iff their session pill is anything
+other than `submitted` (i.e. "never opened", "opened but not
+submitted", or "submitted-with-warn-override that still has
+missing required" all classify them as incomplete).
+
+## `/operator/sessions/{id}/outbox` — Email outbox
+
+Dev-mode email outbox view for the session. Read-only; no actions
+on this page. Breadcrumb is
+`Sessions → {session.name} → Outbox`. Reached from the **View
+outbox** button on the Invitations and Monitoring pages.
+
+- **Page intro** (muted text): "Dev-mode email outbox for this
+  session. No real SMTP backend is wired up; rows are flipped
+  `queued → sent` synchronously when an operator clicks *Send*.
+  The rendered body includes the raw invitation URL so you can
+  copy it into a real client."
+- **Per-row card** (one card per outbox row, newest first):
+  header line shows kind (`invitation` / `reminder`), recipient
+  email in `<code>`, status pill (`sent` info or `queued`/other
+  warning), and sent-at timestamp. Then the rendered email
+  subject and body (`<pre>` block, `white-space: pre-wrap`).
+- **Empty state** — "No outbox rows yet for this session."
+
+Real SMTP / production email is **deferred to Segment 15**; the
+outbox table itself stays useful for debugging in any environment.
 
 ## `/about` — About
 
