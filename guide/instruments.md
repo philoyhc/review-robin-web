@@ -190,38 +190,32 @@ empty) and the Show checkbox is disabled.
 
 ### C. Horizontal rule
 
-A single `<hr>` separating the field-builder from the preview.
+A single `<hr>` separating the field-builder from the preview
+placeholder + action button row below.
 
-### D. Preview Instrument #{N}
+### D. Preview Instrument #{N} (placeholder)
 
-Full-width card, invisible borders. Title: `Preview Instrument #{N}`.
-Renders a table populated with **three rows of preview data** so
-the operator can see how the configured columns will look on the
-reviewer surface. Source of those three rows:
+Full-width card, invisible borders. Title:
+`Preview Instrument #{N}`. **Placeholder only** — the per-
+instrument inline preview from earlier drafts of the spec is
+deferred. The shared `Preview reviewer surface` page at
+`/operator/sessions/{id}/preview` already renders the reviewer
+surface for the whole session; how it integrates with the
+per-instrument card is open and will be revisited in a follow-up
+slice.
 
-- If the session has three or more reviewees imported, use the
-  first three reviewees (matching their real `name` /
-  `email_or_identifier` and any populated tag / profile / pair-
-  context values).
-- If the session has fewer than three reviewees, show the real
-  ones first (in import order) and pad with mock rows up to three
-  total. The mock rows use plausible-looking placeholder values
-  (`Sample Reviewee 1` / `sample1@example.edu`, etc.).
-- If the session has zero reviewees, show three mock rows.
+Open questions:
 
-Columns:
+- Should each card carry a `Preview this instrument` action
+  button that links into the appropriate section of the shared
+  `/preview` page?
+- Should the shared `/preview` page extend to render help text
+  alongside response fields?
+- Or should the per-instrument card host an inline summary of
+  what the reviewer sees (no mock data, no help text)?
 
-1. **Name / Email** — name on top, email as subtitle beneath
-   (matches the Reviewer / Reviewee preview rendering elsewhere).
-2. **One column per included Display Fields row**, ordered by the
-   row's `Order` value, header rendered as the row's
-   `Friendly Label`. (`RevieweeName` / `RevieweeEmail` are folded
-   into the Name / Email column above and not duplicated here.)
-3. **One column per Response Fields row**, ordered by the row's
-   `Order` value, header rendered as the row's `Friendly Label`.
-   When the row's `Required` checkbox is checked, the column
-   header is appended with an asterisk (e.g. `Rating*`) to signal
-   to the operator that the field will be mandatory for reviewers.
+For now the placeholder section just announces itself; nothing
+renders.
 
 ### E. Action buttons (right-aligned)
 
