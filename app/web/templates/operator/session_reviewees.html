@@ -28,6 +28,7 @@
         Revert the session to draft if you wish to modify anything.
       </p>
       <form method="post" action="/operator/sessions/{{ session.id }}/revert">
+        <input type="hidden" name="return_to" value="reviewees">
         <p>
           <label style="font-weight: normal;">
             <input type="checkbox" name="confirm" value="true" required>
