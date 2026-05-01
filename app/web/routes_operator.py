@@ -1564,6 +1564,26 @@ async def instrument_bulk_save_fields(
             required_ids.add(int(str(raw)))
         except ValueError:
             continue
+    # Response Fields Help: per-row help_text + help_text_visible.
+    # The Help card emits parallel ``help_text_id`` + ``help_text``
+    # arrays plus a ``help_text_visible_ids`` set. Build a lookup
+    # keyed by response field id and merge into the response rows
+    # below.
+    help_text_ids = [str(v) for v in form.getlist("help_text_id")]
+    help_texts = [str(v) for v in form.getlist("help_text")]
+    help_text_visible_ids: set[int] = set()
+    for raw in form.getlist("help_text_visible_ids"):
+        try:
+            help_text_visible_ids.add(int(str(raw)))
+        except ValueError:
+            continue
+    help_by_id: dict[int, str] = {}
+    if len(help_text_ids) == len(help_texts):
+        for raw_id, text in zip(help_text_ids, help_texts):
+            try:
+                help_by_id[int(raw_id)] = text
+            except ValueError:
+                continue
 
     if not (len(kinds) == len(ids) == len(orders) == len(labels)):
         raise HTTPException(
@@ -1588,6 +1608,9 @@ async def instrument_bulk_save_fields(
         elif kind == "response":
             row["label"] = label
             row["required"] = row_id in required_ids
+            if row_id in help_by_id:
+                row["help_text"] = help_by_id[row_id]
+                row["help_text_visible"] = row_id in help_text_visible_ids
         rows.append(row)
 
     _invalidate_if_validated(

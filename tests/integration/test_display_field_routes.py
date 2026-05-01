@@ -895,6 +895,52 @@ def test_state_machine_response_fields_render_inputs_in_edit_mode(
     assert "/fields/add-row" in body
 
 
+def test_response_field_help_text_and_visible_persist_via_bulk_save(
+    client: TestClient, db: Session
+) -> None:
+    """Section B Response Fields Help: editing a row's help text +
+    Show checkbox persists via the same bulk-save form as the rest
+    of the field-builder."""
+    review_session = _make_session(client, db, code="rf-help")
+    instrument = _instrument(db, review_session.id)
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+
+    save = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "kind": ["response", "response"],
+            "id": [str(rating.id), str(comments.id)],
+            "order": ["0", "1"],
+            "label": ["Rating", "Comments"],
+            "required_ids": [str(rating.id)],
+            "help_text_id": [str(rating.id), str(comments.id)],
+            "help_text": ["Score 1-5", "Free-form remarks"],
+            # Show only checked for rating.
+            "help_text_visible_ids": [str(rating.id)],
+        },
+        follow_redirects=False,
+    )
+    assert save.status_code == 303
+
+    db.refresh(rating)
+    db.refresh(comments)
+    assert rating.help_text == "Score 1-5"
+    assert rating.help_text_visible is True
+    assert comments.help_text == "Free-form remarks"
+    assert comments.help_text_visible is False
+
+
 def test_friendly_label_persistence_round_trip_via_edit_route(
     client: TestClient, db: Session
 ) -> None:
