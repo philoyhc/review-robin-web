@@ -41,7 +41,7 @@
 
   <div class="bottom-grid">
     <div class="card">
-      <h2>Instrument Status</h2>
+      <h2>All Instrument Status</h2>
       <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
         <p style="margin: 0;">
           Accepting responses:
@@ -90,10 +90,12 @@
     </div>
   </div>
 
+  {% set instrument_palette = ['#e0f2fe', '#d1fae5', '#ede9fe', '#ffedd5', '#ffe4e6', '#fef3c7'] %}
   {% for instrument in instruments %}
-    <div class="card" id="instrument-{{ instrument.id }}">
+    <div class="card" id="instrument-{{ instrument.id }}"
+         style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
       <div class="bottom-grid">
-        <div class="card instrument-edit" style="border-color: transparent;">
+        <div class="card instrument-edit" style="border-color: transparent; background: transparent;">
           <h2 style="margin-top: 0;">Instrument #{{ loop.index }}</h2>
           <p class="description-text">{{ instrument.description or "(no description)" }}</p>
           <details>
@@ -115,10 +117,10 @@
           </details>
         </div>
 
-        <div class="card">
+        <div class="card" style="background: #fff;">
           <h3 style="margin-top: 0;">Instrument Status</h3>
           <p>
-            <strong>Status:</strong>
+            Status:
             {% if instrument.accepting_responses %}
               <span class="pill pill-info">accepting responses</span>
             {% else %}
@@ -126,12 +128,12 @@
             {% endif %}
           </p>
           <p>
-            <strong>Session deadline:</strong>
+            Session deadline:
             {% if session.deadline %}
-              <code>{{ session.deadline.isoformat() }}</code>
+              <span class="pill pill-info">{{ session.deadline.isoformat() }}</span>
               <span class="muted">(auto-close)</span>
             {% else %}
-              not set
+              <span class="pill pill-warning">not set</span>
             {% endif %}
           </p>
           {% if instrument.deadline_closed_at %}
@@ -140,11 +142,11 @@
             </p>
           {% endif %}
           <p>
-            <strong>Visibility when closed:</strong>
+            Visibility when closed:
             {% if instrument.responses_visible_when_closed %}
-              Showing
+              <span class="pill pill-info">showing</span>
             {% else %}
-              Not Showing
+              <span class="pill pill-warning">not showing</span>
             {% endif %}
           </p>
           <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
@@ -152,14 +154,14 @@
               <form method="post"
                     action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
                     style="margin: 0;">
-                <button class="btn alert-solid" type="submit">Open</button>
+                <button class="btn alert-solid" type="submit">Open this Instrument</button>
               </form>
             {% endif %}
             {% if is_ready and instrument.accepting_responses %}
               <form method="post"
                     action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close"
                     style="margin: 0;">
-                <button class="btn alert-solid" type="submit">Close</button>
+                <button class="btn alert-solid" type="submit">Close this instrument</button>
               </form>
             {% endif %}
             {% if not instrument.responses_visible_when_closed %}
