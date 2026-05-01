@@ -56,21 +56,21 @@ Equal-height, top + bottom aligned (`.bottom-grid`).
 - Action buttons for visibility-to-reviewers (open / close,
   show-when-closed / don't-show-when-closed).
 
-### B. Reviewee Fields + Response Fields (two half-width cards side by side)
+### B. Display Fields + Response Fields (two half-width cards side by side)
 
 Equal-height, top + bottom aligned (`.bottom-grid`). Both cards
 have invisible borders.
 
-#### Reviewee Fields (left)
+#### Display Fields (left)
 
-Title: `Reviewee Fields`. Columns:
+Title: `Display Fields`. Columns:
 
 | Column | Behaviour |
 |---|---|
-| **Source** | System name. Read-only `<code>`. Rows are `RevieweeName`, `RevieweeEmail`, plus every reviewee data column that has at least one populated value (`PhotoLink`, `RevieweeTag1/2/3`). |
+| **Source** | System name. Read-only `<code>`. Eligible rows, in default order: `RevieweeName`, `RevieweeEmail`, then any reviewee data column with at least one populated value (`PhotoLink`, `RevieweeTag1/2/3`), then any pair-context slot with at least one populated value across the session's assignments (`PairContext1/2/3`). `AssignmentContext1/2/3` is deliberately **excluded** — it's logic-engaging and hidden from reviewers (see `spec/architecture.md` "Pair-level vs assignment-level context"). |
 | **Friendly Label** | Operator-editable text. Save persists to the underlying database. |
 | **Include** | Checkbox. `RevieweeName` and `RevieweeEmail` are mandatory-checked and the checkbox is locked (operator cannot uncheck). All other rows are operator-toggleable. |
-| **Order** | Integer. Initial seed: `RevieweeName=0`, `RevieweeEmail=1`, then the present reviewee columns in the order `PhotoLink`, `RevieweeTag1`, `RevieweeTag2`, `RevieweeTag3`. |
+| **Order** | Integer. Initial seed: `RevieweeName=0`, `RevieweeEmail=1`, then the present rows in the order `PhotoLink`, `RevieweeTag1/2/3`, `PairContext1/2/3` (skipping any that have no data). |
 | **Sort** | Empty for now. Placeholder for a future default row order on reviewer surface. |
 
 #### Response Fields (right)
@@ -81,7 +81,7 @@ Title: `Response Fields`. Columns:
 |---|---|
 | **Key** | The system name for the row. Read-only `<code>`. |
 | **Friendly Label** | Operator-editable text. Save persists. |
-| **Type** | One of the response types defined by the Response Type definitions card. Read-only post-create. |
+| **Type** | One of the response types defined by the Response Type definitions card. Read-only post-create. The Type carries its own validation rules (e.g. `1-to-5` implies `min=1, max=5`); the engine writes them to `instrument_response_fields.validation` on save and the operator does **not** see a validation cell in this table. |
 | **Required** | Checkbox. When checked, the field is mandatory for reviewers and the column header in the Preview table is appended with an asterisk (e.g. `Rating*`). |
 | **Order** | Integer (1-based, contiguous). |
 | **Action** | A delete cross icon (✗) and an add-row plus icon (➕). Both fire immediately — no on-screen warning or confirmation. The delete removes this row; the add inserts a new default row immediately below. |
@@ -106,7 +106,7 @@ reviewer surface without needing real reviewees imported. Columns:
 
 1. **Name / Email** — name on top, email as subtitle beneath
    (matches the Reviewer / Reviewee preview rendering elsewhere).
-2. **One column per included Reviewee Fields row**, ordered by the
+2. **One column per included Display Fields row**, ordered by the
    row's `Order` value, header rendered as the row's
    `Friendly Label`. (`RevieweeName` / `RevieweeEmail` are folded
    into the Name / Email column above and not duplicated here.)
@@ -123,7 +123,7 @@ classes from `spec/assumptions.md`:
 
 | Button | Style | Behaviour |
 |---|---|---|
-| `Save` | Primary | Writes the current Reviewee Fields and Response Fields tables to the database, then locks both tables for editing. The button is replaced by `Edit`. |
+| `Save` | Primary | Writes the current Display Fields and Response Fields tables to the database, then locks both tables for editing. The button is replaced by `Edit`. |
 | `Edit` | Alert | Re-opens both tables for editing. The button is replaced by `Save`. |
 | `Add new instrument` | Alert | Adds a new Instrument card immediately below this one and persists the new instrument to the database. |
 | `Delete this instrument` | Danger | Deletes this instrument. Triggers an on-screen warning + confirmation before the request fires. |
@@ -137,7 +137,7 @@ shown; when the two tables are locked, `Edit` is shown.
 **Add new instrument** appends a new instrument card below the
 current one. The underlying database row is created immediately
 (no draft / unsaved state). The new card seeds with the default
-Reviewee Fields and Response Fields rows defined above.
+Display Fields and Response Fields rows defined above.
 
 **Delete this instrument** removes the instrument and all its
 dependent rows (display fields, response fields, assignments,
@@ -164,11 +164,15 @@ This matches the existing service-layer repack in
 - **Multi-instrument support** — `Add new instrument` is disabled
   on `main` today (per `unfinished_business.md` item #18). The
   decision to enable / delete is the next P0 unblock.
-- **Reviewee Fields persistence** — the table is currently a
-  static placeholder (PR #205 → stripped in #206). The rebuild
-  slice that wires this is the first that consumes
-  `InstrumentDisplayField` rows again from the operator UI.
-- **Sort column** — placeholder; the row-reorder UX is open. The
-  service-layer `bulk_save_fields` already supports per-table
-  rank changes, so when the UI lands it can use the existing
-  endpoint.
+- **Display Fields persistence** — the table was stripped in
+  #206. The rebuild slice that wires this is the first that
+  consumes `InstrumentDisplayField` rows again from the operator
+  UI; it also extends `_VALID_DISPLAY_SOURCES` in
+  `app/services/instruments.py` with `(reviewee, name)` and
+  `(reviewee, email_or_identifier)` so the two mandatory rows
+  can persist as ordinary display-field rows.
+- **Sort column** — placeholder; the *default row order on
+  reviewer surface* UX is open.
+- **Help text** — `instrument_response_fields.help_text` and
+  `help_text_visible` exist per row but the spec doesn't yet
+  surface them in the Response Fields table; placement is open.
