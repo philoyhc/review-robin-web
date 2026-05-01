@@ -3,16 +3,16 @@
 Review Robin Web uses **SQLAlchemy 2.x** with **Alembic** for migrations.
 
 The implementation contract for this segment lives in
-`guide/segment_04A.md`. This document is the operator-facing how-to.
+`guide/archive/segment_04A.md`. This document is the operator-facing how-to.
 
 ## Local development
 
 The default `database_url` is `sqlite:///./review_robin_web.db`. SQLite is
 sufficient for unit tests and most local development through Segment 5.
 
-**Local Postgres is intentionally deferred** (see `guide/segment_05A.md`
+**Local Postgres is intentionally deferred** (see `guide/archive/segment_05A.md`
 §3.5). The repo no longer ships a `docker-compose.yml` for Postgres, and
-`guide/local_setup.md` does not require Docker. Postgres-vs-SQLite parity
+`docs/local_setup.md` does not require Docker. Postgres-vs-SQLite parity
 is enforced by the CI smoke job at `.github/workflows/ci-postgres-migration.yml`
 (every PR) and by the migration-on-deploy step in
 `.github/workflows/main_app-review-robin-web-dev.yml` (every deploy).
@@ -94,7 +94,7 @@ teardown, so tests do not pollute each other.
 ## Where Postgres lives
 
 - **Local Postgres for development** — deferred (see §3.5 of
-  `guide/segment_05A.md`). SQLite is the local default; install your own
+  `guide/archive/segment_05A.md`). SQLite is the local default; install your own
   Postgres only when a Postgres-only bug demands it.
 - **Azure Database for PostgreSQL Flexible Server** — provisioned in
   Segment 5. The dev App Service runs migrations against it on every

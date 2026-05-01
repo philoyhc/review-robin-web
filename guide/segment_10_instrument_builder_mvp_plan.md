@@ -525,7 +525,7 @@ reviewer surface.
   instrument editing prose (PR #82, 2026-04-30).
 - `ARCHITECTURE.md` "Tabular response artifacts" — within-instrument
   vs across-instrument framing for the reviewer surface.
-- `guide/segment_09_invitation_monitoring_reminder_split_plan.md` —
+- `guide/archive/segment_09_invitation_monitoring_reminder_split_plan.md` —
   Segment 9's split-plan, the structural precedent for this update.
 - `guide/segment_10A.md`, `guide/segment_10B.md` — detailed slice
   plans, **not yet drafted**.

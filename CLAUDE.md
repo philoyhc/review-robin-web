@@ -58,7 +58,7 @@ A small but important fourth seam:
 ## Where to look
 
 - **`docs/status.md`** — current implementation state and segment history. Authoritative.
-- **`guide/segment_*.md`** — segment-by-segment plans. The latest one names the current segment's contract.
+- **`guide/segment_*.md`** — segment-by-segment plans (current and upcoming). The latest one names the current segment's contract. Older / shipped segment plans live in `guide/archive/`.
 - **`spec/operator_map.md`** — operator-page surface and cross-page conventions (chrome, breadcrumbs, layout patterns).
 - **`assumptions.md`** — UI vocabulary (button styles, typography knob, layout defaults).
 - **`docs/authentication.md`** / **`docs/database.md`** — deeper dives on those subsystems.
