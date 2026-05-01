@@ -427,7 +427,7 @@ plug in additional reasons without a schema change. Today's keys are
 |---|---|
 | Edit individual reviewer / reviewee / assignment rows (today: bulk operations only via CSV replace or delete-all) | Not yet planned; would slot before activation |
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
-| Display Fields persistence on the Instruments page placeholder rows (Friendly Label edit, Visible toggle, Order column don't POST yet; the 10B-2 schema-level routes still exist server-side). Wiring up requires extending `_VALID_DISPLAY_SOURCES` / `_DEFAULT_DISPLAY_LABELS` with reviewee name + email, extending `display_field_value` and the reviewer-surface render path, and pointing the placeholder cells at the existing endpoints. | Next round of UI work (likely 10D or folded into 11) |
+| Display Fields persistence on the Instruments page placeholder rows (Friendly Label edit, Visible toggle, Order column don't POST yet; the 10B-2 schema-level routes still exist server-side). Wiring up requires extending `_VALID_DISPLAY_SOURCES` / `_DEFAULT_DISPLAY_LABELS` with reviewee name + email, extending `display_field_value` and the reviewer-surface render path, and pointing the placeholder cells at the existing endpoints. | Next round of UI work (a future 10x slice or folded into Segment 11) |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
 | **Real SMTP email backend** (production sending, not the dev outbox) | **Segment 15** |
 | **Export / audit retention** | **Segment 11** |
