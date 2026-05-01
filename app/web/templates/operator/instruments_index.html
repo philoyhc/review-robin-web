@@ -164,20 +164,36 @@
             </form>
           </div>
 
-          <h3 style="margin-top: 20px;">Visibility when closed</h3>
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility">
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="visible_when_closed" value="true"
-                       {% if instrument.responses_visible_when_closed %}checked{% endif %}>
-                Show reviewers their saved responses while this instrument is closed.
-              </label>
-            </p>
-            <p>
-              <button class="btn secondary" type="submit">Save visibility</button>
-            </p>
-          </form>
+          <hr>
+          <p>
+            <strong>Visibility when closed:</strong>
+            {% if instrument.responses_visible_when_closed %}
+              Showing
+            {% else %}
+              Not Showing
+            {% endif %}
+          </p>
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
+                  style="margin: 0;">
+              <input type="hidden" name="visible_when_closed" value="true">
+              <button class="btn {% if not instrument.responses_visible_when_closed %}alert-solid{% else %}alert{% endif %}"
+                      type="submit"
+                      {% if instrument.responses_visible_when_closed %}disabled{% endif %}>
+                Show
+              </button>
+            </form>
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
+                  style="margin: 0;">
+              <button class="btn {% if instrument.responses_visible_when_closed %}alert-solid{% else %}alert{% endif %}"
+                      type="submit"
+                      {% if not instrument.responses_visible_when_closed %}disabled{% endif %}>
+                Don't show
+              </button>
+            </form>
+          </div>
         </div>
       </div>
 
