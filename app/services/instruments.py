@@ -199,6 +199,94 @@ def ensure_default_instrument(
     return instrument
 
 
+def create_instrument(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    after_instrument_id: int | None = None,
+    actor: User,
+) -> Instrument:
+    """Create a new instrument seeded with default response and display
+    fields. If ``after_instrument_id`` is given, slot the new instrument
+    immediately after that one and bump subsequent ``order`` values; else
+    append at the end.
+    """
+    existing = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars().all()
+    )
+
+    new_order: int
+    if after_instrument_id is None:
+        new_order = (existing[-1].order + 1) if existing else 0
+    else:
+        anchor = next(
+            (i for i in existing if i.id == after_instrument_id), None
+        )
+        if anchor is None:
+            new_order = (existing[-1].order + 1) if existing else 0
+        else:
+            new_order = anchor.order + 1
+            for inst in existing:
+                if inst.order >= new_order:
+                    inst.order += 1
+
+    next_num = len(existing) + 1
+    instrument = Instrument(
+        session_id=review_session.id,
+        name=f"instrument_{next_num}",
+        order=new_order,
+        accepting_responses=False,
+        responses_visible_when_closed=False,
+    )
+    db.add(instrument)
+    db.flush()
+
+    for spec in DEFAULT_RESPONSE_FIELDS:
+        db.add(
+            InstrumentResponseField(
+                instrument_id=instrument.id,
+                field_key=spec["field_key"],
+                label=spec["label"],
+                response_type=spec["response_type"],
+                required=spec["required"],
+                order=spec["order"],
+                validation=spec["validation"],
+            )
+        )
+    for spec in _DEFAULT_DISPLAY_FIELDS:
+        db.add(
+            InstrumentDisplayField(
+                instrument_id=instrument.id,
+                label="",
+                source_type=spec["source_type"],
+                source_field=spec["source_field"],
+                order=spec["order"],
+                visible=True,
+            )
+        )
+    db.flush()
+
+    write_event(
+        db,
+        event_type="instrument.created",
+        summary=f"Created instrument {instrument.name}",
+        actor_user_id=actor.id if actor else None,
+        session_id=review_session.id,
+        detail={
+            "instrument_id": instrument.id,
+            "session_id": review_session.id,
+            "order": new_order,
+            "after_instrument_id": after_instrument_id,
+        },
+    )
+    db.commit()
+    return instrument
+
+
 def _instrument_label(instrument: Instrument) -> str:
     return instrument.description.strip() if instrument.description and instrument.description.strip() else instrument.name
 
