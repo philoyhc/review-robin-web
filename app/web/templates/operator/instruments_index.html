@@ -276,7 +276,7 @@
                             <button type="submit" title="Save"
                                     style="background: none; border: none; color: #16a34a; font-size: 1.2em; cursor: pointer; padding: 0 4px;">&#10003;</button>
                             <a href="#" title="Cancel"
-                               onclick="event.preventDefault(); this.closest('details').removeAttribute('open');"
+                               onclick="event.preventDefault(); cancelLabelEdit(this);"
                                style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 4px;">&#10007;</a>
                           </form>
                         </details>
@@ -334,7 +334,7 @@
                           <button type="submit" title="Save"
                                   style="background: none; border: none; color: #16a34a; font-size: 1.2em; cursor: pointer; padding: 0 4px;">&#10003;</button>
                           <a href="#" title="Cancel"
-                             onclick="event.preventDefault(); this.closest('details').removeAttribute('open');"
+                             onclick="event.preventDefault(); cancelLabelEdit(this);"
                              style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 4px;">&#10007;</a>
                         </form>
                       </details>
@@ -379,7 +379,7 @@
                     <button type="submit" title="Save"
                             style="background: none; border: none; color: #16a34a; font-size: 1.2em; cursor: pointer; padding: 0 4px;">&#10003;</button>
                     <a href="#" title="Cancel"
-                       onclick="event.preventDefault(); this.closest('details').removeAttribute('open');"
+                       onclick="event.preventDefault(); cancelLabelEdit(this);"
                        style="color: #dc2626; text-decoration: none; font-size: 1.2em; padding: 0 4px;">&#10007;</a>
                   </form>
                 </details>
@@ -536,11 +536,20 @@
       var d = form.closest('details');
       if (d) {
         var t = d.querySelector('.display-text');
-        if (t) t.textContent = form.label.value;
+        var input = d.querySelector('input[name="label"]');
+        if (t && input) t.textContent = input.value;
         d.removeAttribute('open');
       }
       var card = _findCard(form);
       if (card) renderPreview(card);
+    }
+    function cancelLabelEdit(link) {
+      var d = link.closest('details');
+      if (!d) return;
+      var input = d.querySelector('input[name="label"]');
+      var displayText = d.querySelector('.display-text');
+      if (input && displayText) input.value = displayText.textContent;
+      d.removeAttribute('open');
     }
     function deleteResponseRow(btn) {
       var row = btn.closest('tr');
@@ -572,11 +581,14 @@
       if (!card) return;
       var grid = card.querySelector('.field-builder');
       if (grid) {
+        grid.querySelectorAll('details[open]').forEach(function(d) {
+          var input = d.querySelector('input[name="label"]');
+          var displayText = d.querySelector('.display-text');
+          if (input && displayText) input.value = displayText.textContent;
+          d.removeAttribute('open');
+        });
         grid.querySelectorAll('input, select').forEach(function(el) {
           el.disabled = true;
-        });
-        grid.querySelectorAll('details[open]').forEach(function(d) {
-          d.removeAttribute('open');
         });
         grid.classList.add('locked');
       }
