@@ -980,6 +980,18 @@ def instruments_index(
         instruments_service.ensure_locked_display_fields(
             db, instrument=instrument
         )
+    # Per-request idempotent backfill of the lazy-seeded display
+    # fields. The reviewee / assignment imports already trigger these
+    # in the happy path; calling them on every GET catches sessions
+    # whose roster or assignments were imported before the lazy-seed
+    # logic landed (PR #203). Cheap — both helpers short-circuit when
+    # there's nothing to seed.
+    instruments_service.seed_display_fields_from_reviewees(
+        db, review_session
+    )
+    instruments_service.seed_display_fields_from_assignments(
+        db, review_session
+    )
     db.commit()
 
     is_ready = lifecycle.is_ready(review_session)
