@@ -433,6 +433,7 @@ def add_display_field(
             **_display_field_snapshot(new_field),
         },
     )
+    db.commit()
     return new_field
 
 
@@ -480,6 +481,7 @@ def update_display_field(
             "changes": changes,
         },
     )
+    db.commit()
     return field, changes
 
 
@@ -512,6 +514,7 @@ def delete_display_field(
             "snapshot": snapshot,
         },
     )
+    db.commit()
 
 
 def _seed_display_fields_for_instrument(
@@ -789,6 +792,7 @@ def bulk_save_fields(
             },
         )
 
+    db.commit()
     return {
         "display_changed": display_changed,
         "response_order_changed": response_order_changed,
@@ -858,6 +862,7 @@ def add_response_field(
             "help_text_visible": new_field.help_text_visible,
         },
     )
+    db.commit()
 
     return new_field
 
@@ -1028,6 +1033,7 @@ def update_response_field(
             "changes": changes,
         },
     )
+    db.commit()
 
     return field, required_warning_count
 
@@ -1082,6 +1088,7 @@ def delete_response_field(
             "cascaded_response_count": response_count,
         },
     )
+    db.commit()
 
 
 def move_response_field(
@@ -1123,6 +1130,7 @@ def move_response_field(
             "new_order": new_keys,
         },
     )
+    db.commit()
 
 
 def update_instrument_description(
