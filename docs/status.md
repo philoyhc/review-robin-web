@@ -64,7 +64,8 @@ For the full long-term plan see
 | 10C | Operator UI clean-up consolidating the post-10B surface: every session-scoped operator page renders a 6-button **setup nav** header card (Session / Reviewers / Reviewees / Assignments / Instruments / Email Invites); session detail adopts a `.page-grid` two-column layout (Session Details / Session Setup / Run Session) with Danger Zone in `.bottom-grid`; the inline session-detail revert form is replaced by a reusable yellow lock card pattern (with `return_to` allowlist `{reviewers, reviewees, assignments, instruments}`) shared across the four mutating setup pages; sessions list adds a `Created by` column; reviewers / reviewees / assignments pages standardise on info-card + status-pill rows + `#upload-csv` anchored card + Danger Zone, with upload + Danger Zone hidden while locked. Instruments page restructured: All Instrument Status full-width card carries three pill rows + bulk Open/Close + bulk Show/Don't-show + a disabled Preview button; per-instrument card uses pastel-tint cycling, a top `.bottom-grid` (description + per-instrument status), a `.field-builder` `.bottom-grid` of Display + Response Fields half-cards, and a live client-rendered Preview Instrument table; bottom button row (Back / Save / Edit / Add an instrument / Delete) with a JS-only Save/Edit `field-builder.locked` toggle. Response Fields gains inline label edit (per-row hidden form via HTML5 `form=` attribute), Required auto-submit, row-level Add (`/fields/add-row`) + Delete; Type stays read-only by design. Display Fields renders a hardcoded 6-row CSV-named placeholder; persistence is deferred. Multi-instrument data layer fully shipped (`Instrument.session_id`, `order`, FK cascades, `create_instrument` / `delete_instrument` services + routes + `instrument.created` / `instrument.deleted` audit events) with the operator UI behind a disabled Add button; Delete is reachable when more than one instrument exists. Bulk visibility toggles emit `instruments.bulk_visibility_when_closed`. Cross-cutting primitives in `base.html`: `.page-grid`, `.bottom-grid`, `.card-tl/r/bl/l/tr/br`, `.setup-nav`, `.setup-grid`, `.btn-row` / `.btn-pair`, `.fill-col`, `.col-shrink`, `.session-meta-row`, `.session-status-row`, `.field-builder` (+ `.locked`), `.display-edit`. `.btn[hidden]` honours the standard hidden attribute. | 2026-05-01 |
 
 Migration round-trips on both SQLite (every test session) and Postgres
-(every PR via the `ci-postgres-migration` smoke job).
+(every PR via the `ci-postgres` job, which also runs the full pytest
+suite against a `postgres:16` service container).
 
 ---
 
@@ -80,9 +81,11 @@ Migration round-trips on both SQLite (every test session) and Postgres
   `deploy`. The `migrate` job runs `alembic upgrade head` against
   Azure Postgres before the App Service swap; deploy is skipped if
   migration fails.
-- **CI on every PR**: SQLite pytest plus a `postgres-migration` smoke
-  job that applies and round-trips migrations against a `postgres:16`
-  service container.
+- **CI on every PR**: SQLite pytest plus a `ci-postgres` job that
+  applies and round-trips migrations and runs the full pytest suite
+  against a `postgres:16` service container. The `engine` fixture in
+  `tests/conftest.py` honours `TEST_DATABASE_URL` / `DATABASE_URL` so
+  the same suite covers both dialects without duplication.
 - **Test infrastructure**: in-memory SQLite engine running real
   Alembic migrations once per session; per-test savepoint-based
   isolation so service-layer commits don't leak across tests;
