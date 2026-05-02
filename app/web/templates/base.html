@@ -331,13 +331,20 @@
         border-right: 1px solid #e5e7eb;
       }
       /* Understated right-arrow after each row label, pointing
-         from the label toward the tabs it labels. */
+         from the label toward the tabs it labels. CSS-drawn
+         triangle (rather than the Unicode glyph U+25B8 which
+         renders smaller than the em box) so the triangle's
+         height matches the surrounding cap-height. */
       .row-label::after {
-        content: "\25B8"; /* ▸ U+25B8 BLACK RIGHT-POINTING SMALL TRIANGLE */
-        margin-left: 8px;
-        font-size: 1em;
-        color: #cbd5e1;
-        font-weight: 400;
+        content: "";
+        display: inline-block;
+        margin-left: 10px;
+        width: 0;
+        height: 0;
+        border-top: 0.5em solid transparent;
+        border-bottom: 0.5em solid transparent;
+        border-left: 0.55em solid #cbd5e1;
+        vertical-align: middle;
       }
       /* Tab strip rows — group tint sits on the strip itself.
          Setup row sits in grid row 1; Operations row in row 2. */
