@@ -569,7 +569,7 @@
       {% endif %}
       <div class="bottom-grid" style="margin-top: 12px;">
         <div class="card" style="border: none; background: transparent; padding: 0;">
-          <div style="display: flex; justify-content: space-between; gap: 8px;">
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
             <div style="display: flex; gap: 8px;">
               {% if is_editing %}
                 <button form="dfsave-{{ instrument.id }}" type="submit" class="btn"
@@ -842,25 +842,32 @@
       {% set add_disabled = (editing_rtd_id is not none) or is_some_instrument_editing %}
       <div style="margin-top: 16px; display: flex; justify-content: flex-end;"
            id="rtd-add-card">
-        <div style="padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc; min-width: 24em;">
-          <p style="margin: 0 0 8px 0; font-weight: bold; text-align: right;">Add a Response Type</p>
-          <p class="muted" style="margin: 0 0 8px 0; font-size: 0.85em; text-align: right;">
-            Click <strong>Add</strong> to start a new row in the table above.
+        <div class="card card-half" style="margin-bottom: 0;">
+          <h2 style="margin-top: 0;">Add a Response Type</h2>
+          <p class="muted" style="margin: 0 0 12px 0;">
+            Click <strong>Add</strong> to start a new row in the table
+            above after choosing a name and selecting the data type.
+            Note that the data type of an added row cannot be changed,
+            though the row can be deleted.
           </p>
-          <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-bottom: 8px;">
-            <label for="new-rtd-name" style="font-weight: normal;">Name</label>
-            <input type="text" id="new-rtd-name" style="width: 12em;"
-                   {% if add_disabled %}disabled{% endif %}>
+          <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 12px;">
+            <label for="new-rtd-name" style="font-weight: normal; display: flex; gap: 8px; align-items: center;">
+              Name
+              <input type="text" id="new-rtd-name" style="width: 12em; position: relative; top: 2px;"
+                     {% if add_disabled %}disabled{% endif %}>
+            </label>
+            <label for="new-rtd-data-type" style="font-weight: normal; display: flex; gap: 8px; align-items: center;">
+              Data Type
+              <select id="new-rtd-data-type" style="position: relative; top: 2px;"
+                      {% if add_disabled %}disabled{% endif %}>
+                <option value="String">String</option>
+                <option value="Integer">Integer</option>
+                <option value="Decimal">Decimal</option>
+                <option value="List">List</option>
+              </select>
+            </label>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
-            <label for="new-rtd-data-type" style="font-weight: normal;">Data Type</label>
-            <select id="new-rtd-data-type"
-                    {% if add_disabled %}disabled{% endif %}>
-              <option value="String">String</option>
-              <option value="Integer">Integer</option>
-              <option value="Decimal">Decimal</option>
-              <option value="List">List</option>
-            </select>
+          <div style="display: flex; justify-content: flex-end;">
             <button id="rtd-add-button"
                     type="button" class="btn alert-solid"
                     style="width: 6em; box-sizing: border-box;"
