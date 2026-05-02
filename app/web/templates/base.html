@@ -242,20 +242,26 @@
         flex: 0 0 140px;
         box-sizing: border-box;
       }
-      /* Session-scoped top card: folder-tab nav + status row.
-         Implements the navigation model spec'd in
-         spec/ui_concept.md "Navigation model". Three pieces:
-           1. .session-nav-card — the wrapper with rounded
-              corners and a single border around the whole.
-           2. .tab-strip — the row of nav tabs at the top,
-              tinted by group (.setup-tint / .ops-tint).
-           3. .status-row — the setup-todo overview pills,
-              same content across all session-scoped pages.
-         Active tab is marked with a 3px coloured bottom
-         border + body-coloured background, reading as a
-         folder-tab without skeuomorphic shape. Home tab is
-         offset and slightly larger so it stands out as the
-         universal anchor. */
+      /* Session-scoped top card: two-row chrome with double-height
+         Home anchor on the left. Implements the navigation model
+         spec'd in `spec/ui_concept.md` "Navigation model".
+
+         Layout:
+         - `.session-nav-card` — outer wrapper with rounded corners.
+         - `.session-nav-grid` — CSS grid with three columns
+           (home anchor / row label / tab strip) and two rows. The
+           home anchor cell spans both rows on the left.
+         - `.row-label` — neutral-tinted left-edge label
+           ("Setup" / "Operations") next to each tab strip.
+         - `.tab-strip` — the row of phase tabs; each row carries
+           a subtle tint (grey for setup, light green for ops).
+         - `.status-row` — the setup-todo overview pills below
+           the nav grid, same content across all session-scoped
+           pages.
+
+         Active tab is marked with a body-white background +
+         bolder text + a short inset underline in a single unified
+         colour (`--tab-marker-color`, blue by default). */
       .session-nav-card {
         border: 1px solid #d1d5db;
         border-radius: 8px;
@@ -263,72 +269,107 @@
         margin-bottom: 20px;
         background: #fff;
       }
+      .session-nav-grid {
+        display: grid;
+        grid-template-columns: minmax(180px, 220px) auto 1fr;
+        grid-template-rows: auto auto;
+        --tab-marker-color: #93c5fd;
+      }
+      /* Home anchor: spans both rows on the left, blue tint,
+         carries session identity (label, name, lifecycle pill). */
+      .session-home-anchor {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        background: #eff6ff;
+        border-right: 1px solid #d1d5db;
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 6px;
+        text-decoration: none;
+        color: #111827;
+      }
+      .session-home-anchor:hover { background: #dbeafe; }
+      .session-home-anchor.active { background: #fff; }
+      .home-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .home-session-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #111827;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .home-lifecycle-pill {
+        align-self: flex-start;
+        margin: 0;
+      }
+      /* Row labels — neutral, sit between the home anchor and the
+         tab strip. */
+      .row-label {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #4b5563;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        background: #fff;
+        border-right: 1px solid #e5e7eb;
+      }
+      /* Tab strip rows — group tint sits on the strip itself. */
       .tab-strip {
         display: flex;
         align-items: stretch;
-        border-bottom: 1px solid #d1d5db;
-        background: transparent;
       }
-      /* Equal-width slot variant: 7 equal slots — Home, gap, 5 setup
-         pages — used by the title-below-nav layout iteration. */
-      .tab-strip.equal-slots .nav-tab.home { flex: 1 1 0; margin-right: 0; }
+      .tab-strip-setup { background: #f3f4f6; }
+      .tab-strip-ops   { background: #f0fdf4; }
+      /* Setup row gets a bottom border to separate from Ops row. */
+      .session-nav-grid > .row-setup { border-bottom: 1px solid #d1d5db; }
+      /* Phase tabs — same shape across both rows. */
       .nav-tab {
         flex: 1 1 0;
         padding: 12px 14px;
         text-align: center;
-        color: #6b7280;
+        color: #4b5563;
         text-decoration: none;
         font-size: 0.92rem;
         background: transparent;
-        margin-bottom: -1px;
         position: relative;
       }
-      .nav-tab.tint-blue { background: #eff6ff; }
-      .nav-tab.tint-grey { background: #f3f4f6; }
       .nav-tab:hover {
-        background: rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.7);
         color: #1f2937;
       }
-      .nav-tab.home {
-        flex: 2 1 0;
-        padding: 12px 22px;
-        margin-right: 18px;
-        font-size: 1rem;
-        font-weight: 500;
-      }
-      /* Untinted gap slot used in the equal-slots variant. Behaves
-         visually like a placeholder, not a tab — no hover, no
-         pointer events. */
-      .nav-tab.nav-gap {
-        flex: 1 1 0;
-        background: transparent;
-        pointer-events: none;
-      }
-      .nav-tab.nav-gap:hover { background: transparent; }
       .nav-tab.active {
         background: #fff;
+        color: #1e40af;
         font-weight: 500;
       }
-      .nav-tab.tint-blue.active { color: #1e40af; }
-      .nav-tab.tint-grey.active { color: #374151; }
-      .nav-tab.home.active { color: #111827; }
-      /* Optional understated underline marker for active tab — opt
-         in via `.tab-strip.with-underline`. Inset from the tab's
-         left/right edges so the line doesn't span the full width. */
-      .tab-strip.with-underline .nav-tab.active::after {
+      .nav-tab.active::after {
         content: "";
         position: absolute;
         left: 18px;
         right: 18px;
         bottom: 0;
         height: 4px;
-        background: #93c5fd;
+        background: var(--tab-marker-color);
         border-radius: 2px;
       }
       .status-row {
         padding: 12px 16px;
         font-size: 0.9rem;
         background: #fff;
+        border-top: 1px solid #e5e7eb;
       }
       .status-row p { margin: 0; }
       .status-row p + p { margin-top: 4px; }
