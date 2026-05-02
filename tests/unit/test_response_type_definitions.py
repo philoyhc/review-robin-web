@@ -13,6 +13,8 @@ from app.db.models import (
 )
 from app.services.instruments import (
     SEEDED_RESPONSE_TYPE_DEFINITIONS,
+    RTDPrecisionError,
+    assert_rtd_precision,
     ensure_default_instrument,
     ensure_default_response_type_definitions,
     get_session_rtds,
@@ -208,6 +210,55 @@ def test_session_cascade_drops_rtds(db: Session) -> None:
         )
     ).scalars().all()
     assert remaining == []
+
+
+def test_assert_rtd_precision_accepts_seeded_rows() -> None:
+    """The ten seeded rows comply with the precision rule (Integer:
+    no fractional part; Decimal: ≤ 1 decimal place)."""
+    for spec in SEEDED_RESPONSE_TYPE_DEFINITIONS:
+        # Should not raise.
+        assert_rtd_precision(
+            data_type=spec["data_type"],
+            min=spec["min"],
+            max=spec["max"],
+            step=spec["step"],
+        )
+
+
+def test_assert_rtd_precision_rejects_integer_with_fraction() -> None:
+    with pytest.raises(RTDPrecisionError, match="integer"):
+        assert_rtd_precision(
+            data_type="Integer", min=0, max=10, step=0.5
+        )
+
+
+def test_assert_rtd_precision_rejects_decimal_over_one_dp() -> None:
+    with pytest.raises(RTDPrecisionError, match="decimal place"):
+        assert_rtd_precision(
+            data_type="Decimal", min=1.0, max=5.0, step=0.05
+        )
+
+
+def test_assert_rtd_precision_accepts_decimal_one_dp() -> None:
+    # 0.5 and 0.1 are exactly one decimal place; 1.0 and 5.0 also
+    # satisfy "at most one decimal place".
+    assert_rtd_precision(
+        data_type="Decimal", min=1.0, max=5.0, step=0.5
+    )
+    assert_rtd_precision(
+        data_type="Decimal", min=1.0, max=5.0, step=0.1
+    )
+
+
+def test_assert_rtd_precision_skips_string_and_list() -> None:
+    # String / List rows go through different validation paths; the
+    # precision rule does not apply to them. Should not raise.
+    assert_rtd_precision(
+        data_type="String", min=0, max=200, step=None
+    )
+    assert_rtd_precision(
+        data_type="List", min=None, max=None, step=None
+    )
 
 
 def test_response_field_carries_response_type_id_fk_with_cascade() -> None:

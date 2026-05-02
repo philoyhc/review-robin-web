@@ -547,12 +547,21 @@
         </thead>
         <tbody>
           {% for rtd in rtds %}
+            {# Min / Max / Step format by Data Type:
+               - Integer + String → plain int (no decimal point).
+               - Decimal → exactly one decimal place. #}
+            {% macro fmt_num(value, dt) -%}
+              {%- if value is none -%}—
+              {%- elif dt == "Decimal" -%}{{ '%.1f' | format(value) }}
+              {%- else -%}{{ value | int }}
+              {%- endif -%}
+            {%- endmacro %}
             <tr class="muted">
               <td><code>{{ rtd.response_type }}</code></td>
               <td>{{ rtd.data_type }}</td>
-              <td>{% if rtd.data_type == "List" %}NA{% else %}{{ rtd.min if rtd.min is not none else "—" }}{% endif %}</td>
-              <td>{% if rtd.data_type == "List" %}NA{% else %}{{ rtd.max if rtd.max is not none else "—" }}{% endif %}</td>
-              <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ rtd.step if rtd.step is not none else "—" }}{% else %}NA{% endif %}</td>
+              <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.min, rtd.data_type) }}{% endif %}</td>
+              <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.max, rtd.data_type) }}{% endif %}</td>
+              <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ fmt_num(rtd.step, rtd.data_type) }}{% else %}NA{% endif %}</td>
               <td>{% if rtd.data_type == "List" %}{{ rtd.list_csv or "—" }}{% else %}NA{% endif %}</td>
             </tr>
           {% endfor %}
