@@ -271,7 +271,7 @@
       }
       .session-nav-grid {
         display: grid;
-        grid-template-columns: minmax(180px, 220px) 1fr auto;
+        grid-template-columns: minmax(180px, 220px) auto 1fr;
         grid-template-rows: auto auto;
         --tab-marker-color: #93c5fd;
       }
@@ -311,11 +311,15 @@
         overflow: hidden;
         word-wrap: break-word;
       }
-      /* Row labels — neutral, sit on the right edge of each row
-         (after the tabs). */
+      /* Row labels — neutral, sit between Home and the tab strip.
+         Both cells share the auto-sized column, so the cell width
+         is dictated by the longer label ("Operations"); text inside
+         is right-aligned so the shorter label ("Setup") sits flush
+         against the first tab. */
       .row-label {
         display: flex;
         align-items: center;
+        justify-content: flex-end;
         padding: 12px 16px;
         font-size: 0.78rem;
         font-weight: 700;
@@ -324,7 +328,7 @@
         letter-spacing: 0.06em;
         white-space: nowrap;
         background: #fff;
-        border-left: 1px solid #e5e7eb;
+        border-right: 1px solid #e5e7eb;
       }
       /* Tab strip rows — group tint sits on the strip itself.
          Setup row sits in grid row 1; Operations row in row 2. */
@@ -332,10 +336,10 @@
         display: flex;
         align-items: stretch;
       }
-      .tab-strip-setup { background: #f3f4f6; grid-column: 2; grid-row: 1; }
-      .tab-strip-ops   { background: #f0fdf4; grid-column: 2; grid-row: 2; }
-      .row-label.setup-row { grid-column: 3; grid-row: 1; }
-      .row-label.ops-row   { grid-column: 3; grid-row: 2; }
+      .tab-strip-setup { background: #f3f4f6; grid-column: 3; grid-row: 1; }
+      .tab-strip-ops   { background: #f0fdf4; grid-column: 3; grid-row: 2; }
+      .row-label.setup-row { grid-column: 2; grid-row: 1; }
+      .row-label.ops-row   { grid-column: 2; grid-row: 2; }
       /* Setup row gets a bottom border to separate from Ops row. */
       .session-nav-grid > .row-setup { border-bottom: 1px solid #d1d5db; }
       /* Phase tabs — same shape across both rows. */
