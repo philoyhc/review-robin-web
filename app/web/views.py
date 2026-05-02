@@ -8,12 +8,19 @@ markup-only.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, ReviewSession
-from app.services import assignments, csv_imports
+from app.db.models import Instrument, ReviewSession, User
+from app.services import (
+    assignments,
+    csv_imports,
+    instruments as instruments_service,
+    session_lifecycle as lifecycle,
+)
+from app.web import breadcrumbs
 
 
 @dataclass
@@ -95,6 +102,165 @@ class SessionStatusPills:
     assignment_count: int
     instrument_count: int
     email_invites_set_up: bool
+
+
+def _bulk_state(values: list[bool]) -> str:
+    """Three-state value for a bulk toggle: ``all-on`` / ``all-off`` / ``mixed``."""
+    if not values:
+        return "all-off"
+    on = sum(1 for v in values if v)
+    if on == 0:
+        return "all-off"
+    if on == len(values):
+        return "all-on"
+    return "mixed"
+
+
+def build_instruments_context(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    editing: int | None = None,
+    saved: int | None = None,
+    rtd_error: str | None = None,
+    rtd_id: int | None = None,
+    rf_save_error: str | None = None,
+    editing_rtd_id: int | None = None,
+    rtd_delete_blocked_id: int | None = None,
+    rtd_delete_blocked_rfs: int | None = None,
+    rtd_delete_blocked_instruments: int | None = None,
+    rtd_delete_blocked_responses: int | None = None,
+    rtd_delete_blocked_assignments: int | None = None,
+    rtd_would_empty_id: int | None = None,
+    rtd_would_empty_instruments: str | None = None,
+) -> dict[str, Any]:
+    """Build the template context for the operator instruments index.
+
+    Runs the per-request idempotent display-field / RTD backfills
+    (locked-row safety net + lazy seeds + stale-row prune + RTD seed),
+    derives the editing-state machine, and packages the URL-driven
+    error / cascade query params into the dict the template expects.
+    Commits the backfill side-effects before returning so subsequent
+    queries see the seeded rows.
+    """
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    # Make sure every instrument has its locked Name / Email Display
+    # Fields rows. The Alembic migration backfills existing instruments;
+    # this is the per-request safety net for any sessions that slip
+    # through (e.g. created before the migration ran).
+    for instrument in instruments:
+        instruments_service.ensure_locked_display_fields(
+            db, instrument=instrument
+        )
+    # Prune Display Fields rows whose underlying data source no longer
+    # has any populated value (locked Name / Email rows are exempt and
+    # always kept). Runs before the lazy seeds so the canonical seed
+    # order — reviewee.* before pair_context.* — falls out naturally:
+    # any stale rows are gone, then the seeds append fresh in the
+    # canonical sequence.
+    instruments_service.prune_unpopulated_display_fields(db, review_session)
+    # Per-request idempotent backfill of the lazy-seeded display
+    # fields. The reviewee / assignment imports already trigger these
+    # in the happy path; calling them on every GET catches sessions
+    # whose roster or assignments were imported before the lazy-seed
+    # logic landed (PR #203). Cheap — both helpers short-circuit when
+    # there's nothing to seed.
+    instruments_service.seed_display_fields_from_reviewees(db, review_session)
+    instruments_service.seed_display_fields_from_assignments(db, review_session)
+    # Idempotent per-request backfill of the seeded RTD catalog.
+    # Existing sessions get the rows from the Slice 4a migration; this
+    # call covers any session created without going through
+    # ``ensure_default_instrument`` (e.g. raw fixtures in tests).
+    instruments_service.ensure_default_response_type_definitions(
+        db, review_session
+    )
+    db.commit()
+
+    is_ready = lifecycle.is_ready(review_session)
+    can_edit = not is_ready
+    # State machine: ``?editing={instrument_id}`` opens that card for
+    # editing. The yellow lock card on a ``ready`` session overrides
+    # everything — every per-instrument card stays locked.
+    editing_instrument_id = None if is_ready else editing
+    # Slice 4d: the per-instrument editing state and the RTD editing
+    # state are mutually exclusive — one editing context on the page
+    # at a time. If both URL params are set (e.g. via a stale link),
+    # the per-instrument card wins; the RTD card stays locked.
+    effective_editing_rtd_id: int | None = None
+    if not is_ready and editing_instrument_id is None:
+        effective_editing_rtd_id = editing_rtd_id
+
+    # "Saved" / "not saved" pill on each per-instrument card's status
+    # sub-card. An instrument is "saved" if it has at least one audit
+    # event indicating an operator-driven persistence of its field
+    # tables (display fields saved via bulk save, edit, add, delete,
+    # or move). Pure draft instruments — only seeded rows, never
+    # touched — render as "not saved".
+    instrument_saved_state = instruments_service.saved_state_for_session(
+        db, session_id=review_session.id
+    )
+    rtds = instruments_service.get_session_rtds(
+        db, session_id=review_session.id
+    )
+
+    rtd_delete_blocked = (
+        {
+            "id": rtd_delete_blocked_id,
+            "response_field_count": rtd_delete_blocked_rfs or 0,
+            "instrument_count": rtd_delete_blocked_instruments or 0,
+            "response_count": rtd_delete_blocked_responses or 0,
+            "assignment_count": rtd_delete_blocked_assignments or 0,
+        }
+        if rtd_delete_blocked_id is not None
+        else None
+    )
+    rtd_would_empty = (
+        {
+            "id": rtd_would_empty_id,
+            "instrument_numbers": [
+                n for n in (rtd_would_empty_instruments or "").split(",") if n
+            ],
+        }
+        if rtd_would_empty_id is not None
+        else None
+    )
+
+    return {
+        "user": user,
+        "session": review_session,
+        "status_pills": session_status_pills(db, review_session),
+        "instruments": instruments,
+        "is_ready": is_ready,
+        "can_edit": can_edit,
+        "bulk_accepting_state": _bulk_state(
+            [i.accepting_responses for i in instruments]
+        ),
+        "bulk_visibility_state": _bulk_state(
+            [i.responses_visible_when_closed for i in instruments]
+        ),
+        "editing_instrument_id": editing_instrument_id,
+        "instrument_saved_state": instrument_saved_state,
+        "saved_instrument_id": saved,
+        "rtds": rtds,
+        "rtd_error": rtd_error,
+        "rtd_error_id": rtd_id,
+        "rf_save_error": rf_save_error,
+        "editing_rtd_id": effective_editing_rtd_id,
+        "is_some_instrument_editing": editing_instrument_id is not None,
+        "is_some_rtd_unlocked": effective_editing_rtd_id is not None,
+        "rtd_delete_blocked": rtd_delete_blocked,
+        "rtd_would_empty": rtd_would_empty,
+        "breadcrumbs": breadcrumbs.operator_session_child(
+            review_session, "Instruments"
+        ),
+    }
 
 
 def session_status_pills(
