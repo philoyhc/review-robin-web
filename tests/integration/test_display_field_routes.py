@@ -1562,9 +1562,11 @@ def test_rtd_locked_when_session_ready(
     assert response.status_code == 409
 
 
-def test_rtd_card_renders_per_row_edit_form_for_operator_added_row(
+def test_rtd_card_renders_edit_and_delete_for_operator_added_row(
     client: TestClient, db: Session
 ) -> None:
+    """Saved operator-defined rows render inline Edit + Delete
+    buttons in the Action column. Seeded rows render ``locked``."""
     review_session = _make_session(client, db, code="rtd-row-form")
     client.post(
         f"/operator/sessions/{review_session.id}/response-types",
@@ -1587,7 +1589,75 @@ def test_rtd_card_renders_per_row_edit_form_for_operator_added_row(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    # Per-row edit form for the operator-added row.
-    assert f'id="rtd-edit-{custom.id}"' in body
+    # Saved row renders an Edit anchor (links into ``editing_rtd_id``)
+    # and a Delete form button.
+    assert f"editing_rtd_id={custom.id}" in body
+    assert (
+        f'/operator/sessions/{review_session.id}/response-types/{custom.id}/delete'
+        in body
+    )
     # Seeded rows render ``locked`` not editable inputs.
     assert "locked" in body
+    # The per-row edit form should NOT yet render — that requires
+    # the operator to click Edit (i.e. ?editing_rtd_id={id}).
+    assert f'id="rtd-edit-{custom.id}"' not in body
+
+
+def test_rtd_card_renders_per_row_edit_form_when_editing_rtd_id_matches(
+    client: TestClient, db: Session
+) -> None:
+    """Clicking Edit lands on the same page with
+    ``?editing_rtd_id={id}``; the matching row swaps into the editable
+    state with parameter inputs + Save / Cancel buttons. Other
+    operator-defined rows stay in the saved (locked) state."""
+    review_session = _make_session(client, db, code="rtd-edit-mode")
+    client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "EditTarget",
+            "data_type": "Integer",
+            "min": "0",
+            "max": "5",
+            "step": "1",
+        },
+        follow_redirects=False,
+    )
+    custom = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.session_id == review_session.id,
+            ResponseTypeDefinition.response_type == "EditTarget",
+        )
+    ).scalar_one()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+        f"?editing_rtd_id={custom.id}"
+    ).text
+    assert f'id="rtd-edit-{custom.id}"' in body
+    # The Save button submits to the edit route; Cancel anchors back
+    # to the page without the editing param.
+    assert (
+        f'/operator/sessions/{review_session.id}/response-types/{custom.id}/edit'
+        in body
+    )
+
+
+def test_rtd_card_renders_draft_templates_for_js_add_flow(
+    client: TestClient, db: Session
+) -> None:
+    """The Add a Response Type footer renders only Name + Data Type
+    inputs; the actual draft row is cloned client-side from the
+    ``rtd-draft-row-template`` / ``rtd-draft-form-template`` <template>
+    elements when the operator clicks Add."""
+    review_session = _make_session(client, db, code="rtd-draft-tmpl")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert 'id="rtd-draft-row-template"' in body
+    assert 'id="rtd-draft-form-template"' in body
+    assert 'id="new-rtd-name"' in body
+    assert 'id="new-rtd-data-type"' in body
+    # The footer Add form is intentionally minimal — only Name +
+    # Data Type. Min / Max / Step / List inputs live in the draft
+    # row template and only appear after Add is clicked.
+    assert 'onclick="addRtdDraft()"' in body
