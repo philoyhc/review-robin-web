@@ -346,6 +346,21 @@
         border-left: 0.55em solid #cbd5e1;
         vertical-align: middle;
       }
+      /* Emphasised state for the row-label of the active group:
+         applies when the operator is on a page in that group OR
+         when hovering any tab in that group's strip. The label
+         text and its arrow darken to match the session-name
+         colour in the Home anchor. */
+      .row-label.active-group,
+      .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row,
+      .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row {
+        color: #111827;
+      }
+      .row-label.active-group::after,
+      .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row::after,
+      .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row::after {
+        border-left-color: #111827;
+      }
       /* Tab strip rows — group tint sits on the strip itself.
          Setup row sits in grid row 1; Operations row in row 2. */
       .tab-strip {
