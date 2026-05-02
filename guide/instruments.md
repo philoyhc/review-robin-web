@@ -227,9 +227,21 @@ borders. One row per Response Fields row. Columns:
 In locked mode the Text cell shows the help text (or `—` when
 empty) and the Show checkbox is disabled.
 
-### C. Action buttons (right-aligned)
+### C. Action row (two half-width cards)
 
-Five buttons, in this order, using the canonical `.btn` modifier
+The per-instrument card's bottom action row is a `.bottom-grid` of
+two half-width cards:
+
+- **Left card — invisible** (`border: none; background: transparent;
+  padding: 0`). Hosts the per-instrument state-machine buttons
+  (`Save` / `Cancel` / `Edit`) flushed left and the
+  `Add new instrument` button flushed right.
+- **Right card — Danger Zone**. Standard danger-zone styling: red
+  border (`#b91c1c`), white inner background (`#fff`, matching the
+  *This Instrument's Status* card), red `Danger Zone` heading, muted
+  cascade warning copy. Hosts the `Delete this instrument` button.
+
+Five buttons across the row, using the canonical `.btn` modifier
 classes from `spec/assumptions.md`:
 
 | Button | Style | Behaviour |
@@ -238,7 +250,7 @@ classes from `spec/assumptions.md`:
 | `Cancel` | Alert Outline | Discards any unsaved edits across description + tables and locks them. The button is replaced by `Edit`. Only shown alongside `Save` (i.e. while the card is open for editing). |
 | `Edit` | Alert | Re-opens the description textarea and both tables for editing. The button is replaced by the `Save` + `Cancel` pair. |
 | `Add new instrument` | Alert | Adds a new Instrument card immediately below this one and persists the new instrument to the database. |
-| `Delete this instrument` | Danger | Deletes this instrument. Triggers an on-screen warning + confirmation before the request fires. |
+| `Delete this instrument` | Danger | Deletes this instrument. Triggers an on-screen warning + confirmation before the request fires. Lives in the right-hand Danger Zone card. |
 
 `Save` + `Cancel` and `Edit` are **mutually exclusive** — only
 one of the two states is shown at a time. When the card is open
