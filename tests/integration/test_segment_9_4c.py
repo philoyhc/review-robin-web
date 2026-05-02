@@ -205,7 +205,9 @@ def test_instruments_index_renders_one_card_per_instrument(
     assert len(instruments) == 1
     instrument = instruments[0]
 
-    assert "<h1>Instruments</h1>" in body
+    # Page title now lives in the active "Instruments" nav tab, not a
+    # separate <h1>. The active tab carries the page name.
+    assert ">Instruments<" in body
     # Per-instrument card now uses 'Instrument #N' as its title; the
     # system handle is no longer surfaced in the card.
     assert ">Instrument #1</h2>" in body
