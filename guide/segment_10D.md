@@ -65,8 +65,13 @@ Out (deferred to later segments / follow-ups):
              │
              ▼
         ┌──────────┐
-        │ Slice 4  │  Response Type Definitions card
-        └────┬─────┘    (swaps Type column to RTD dropdown)
+        │ Slice 4a │  RTD schema + 8 seeds + FK migration
+        └────┬─────┘    (RF Type renders as RTD dropdown, read-only)
+             │
+             ▼
+        ┌──────────┐
+        │ Slice 4b │  RTD operator-add / -edit / -delete
+        └────┬─────┘    (gated editing + cascade-on-delete UX)
              │
              ▼
         ┌──────────┐
@@ -74,11 +79,13 @@ Out (deferred to later segments / follow-ups):
         └──────────┘
 ```
 
-Slice 4 (RTD) is the next focus after the field-builder slices;
-Response Fields' Type column switches from the four hardcoded
-types to a dropdown over the per-session RTD catalog, and the
-Save path writes the resolved validation block to
-`instrument_response_fields.validation`. Slice 5 (multi-
+Slice 4 splits into 4a (schema, seed, FK migration of the
+existing `response_type` column, read-only render of the RTD
+catalog + Response Fields `Type` rendered as a dropdown over RTD
+names) and 4b (operator-add / -edit / -delete on the RTD card,
+including the gated left-to-right editing flow and the
+cascade-on-delete confirmation UX). The split lets the schema
+change ship before the largest blob of UI logic. Slice 5 (multi-
 instrument) is small enough to ride at any point after Slice 1
 but sits at the end so the multi-instrument promotion behaviour
 can be observed against a fully-wired single-instrument card
@@ -300,10 +307,24 @@ field-builder came together.
 
 ## Slice 4 — Response Type Definitions card
 
-**Estimated effort:** ~5-6 hrs (largest slice). Optionally split
-into 4a (read-only render of seeded rows + Response Fields uses
-RTD dropdown) and 4b (gated editing flow + save-time validation +
-operator-add / -edit / -delete).
+**Estimated effort:** ~5-6 hrs total. **Split into 4a + 4b** so
+the schema change ships before the largest blob of UI logic, and
+each PR can be reviewed against a smaller surface area.
+
+### Slice 4a — Schema, seed, FK migration, read-only render
+
+**Estimated effort:** ~3-4 hrs.
+
+In: New table + seed + FK migration of existing
+`instrument_response_fields.response_type` data; new
+`Response Type Definitions` card on the Instruments page rendered
+as a **read-only catalog** of the eight seeded rows; Response
+Fields `Type` cell rendered as a `<select disabled>` over the
+session's RTD names (still read-only post-create per spec).
+
+Out (deferred to 4b): operator-add / -edit / -delete on RTD
+rows; gated left-to-right editing flow; cascade-on-delete
+confirmation UX.
 
 **Schema / migration:**
 
@@ -312,60 +333,129 @@ operator-add / -edit / -delete).
   | Column | Type | Notes |
   |---|---|---|
   | `id` | int PK | autoincrement |
-  | `session_id` | int FK | `sessions.id`, indexed |
+  | `session_id` | int FK | `sessions.id`, ON DELETE CASCADE, indexed |
   | `response_type` | str(64) | unique per session |
   | `data_type` | str(16) | one of `String` / `Decimal` / `Integer` / `List` |
   | `min` | float (nullable) | meaning depends on `data_type` |
   | `max` | float (nullable) | meaning depends on `data_type` |
   | `step` | float (nullable) | applies to Decimal / Integer only |
   | `list_csv` | text (nullable) | comma-separated for List |
-  | `is_seeded` | bool | true for the six baseline rows; un-deletable |
+  | `is_seeded` | bool | true for the eight baseline rows; un-deletable |
 
-- Alembic migration backfills the six seeded rows
-  (`Long_text`, `Short_text`, `Grade`, `1-to-5int`, `1-to-5half`,
-  `1-to-5dec`) into every existing session.
+- Alembic migration backfills the **eight** seeded rows
+  (`Long_text`, `Short_text`, `Grade`, `Yes_no`, `0-to-2int`,
+  `1-to-5int`, `1-to-5half`, `1-to-5dec`) into every existing
+  session via `op.execute(...)` over each `sessions.id`.
+
+- Same migration replaces the `instrument_response_fields.response_type`
+  text column with `response_type_id`, a FK into
+  `response_type_definitions.id` with **`ON DELETE CASCADE`**.
+  The column starts NULL-able, the migration backfills via the
+  per-session map below, and a follow-up `ALTER COLUMN ... NOT
+  NULL` makes it required:
+
+  | Old `response_type` value | New RTD row referenced |
+  |---|---|
+  | `integer` | `1-to-5int` (canonical default for ambiguous integer rows) |
+  | `short_text` | `Short_text` |
+  | `long_text` | `Long_text` |
+  | `yes_no` | `Yes_no` |
+
+  After backfill the old column drops. The cascade through the
+  `responses → instrument_response_fields → response_type_definitions`
+  FK chain is the natural way to drop dependent rows when an
+  operator-defined RTD is deleted in 4b — no application-level
+  cascade code needed.
 
 **Service:**
 
-- CRUD per the gated editing flow (cells unlock left-to-right).
-- Seed-on-session-create alongside the existing
-  `ensure_default_instrument` call in `create_session`.
-- `validation_block_for_type(rtd_row) -> dict` maps an RTD row to
+- Seed-on-session-create: `ensure_default_response_type_definitions(session)`
+  runs alongside `ensure_default_instrument(session)` inside
+  `create_session`, idempotent so reruns are safe.
+- `validation_block_for_rtd(rtd_row) -> dict` maps an RTD row to
   the JSON shape that `instrument_response_fields.validation`
   expects:
   - `Integer` / `Decimal` → `{"min": …, "max": …, "step": …}`
   - `String` → `{"min_length": …, "max_length": …}`
-  - `List` → `{"choices": […]}`
-- Save-time rejection: empty list, Min > Max, Step doesn't divide
-  evenly. (Per the spec — the operator's expected to do their
-  math.)
+  - `List` → `{"choices": [...]}`
+- `ensure_default_instrument` updated: the two seeded Response
+  Fields rows now reference RTD rows by `response_type_id`
+  instead of literal strings — `rating1` → `1-to-5int`, `comments1`
+  → `Long_text`. (Matches the spec table in
+  [`guide/instruments.md`](./instruments.md) Slice 2.)
 
 **Routes / template:**
 
-- Full table on the Instruments page below the per-instrument
-  cards. Operator-add / -edit / -delete via per-row forms.
-- Gated editing implemented as server-driven (the cell-by-cell
-  unlock is a UI nicety; the server enforces the shape on save).
-  Optionally enhance with disabled-state JS toggles to make the
-  gating visible client-side too.
-- Response Fields Type column switches from hardcoded `<select>`
-  to a dropdown over
-  `response_type_definitions.response_type` (per-session).
-- On a Response Fields Save, the engine looks up the chosen
-  Type's RTD row and writes the resulting validation block to
-  `instrument_response_fields.validation`.
+- Full-width `Response Type Definitions` card rendered below the
+  per-instrument cards. Read-only table over the session's RTD
+  rows (sorted: seeded rows first in spec order, operator-added
+  rows after by `id`). All eight cells `disabled` / muted; no
+  Action column yet (4b).
+- Response Fields `Type` column switches from the hardcoded
+  four-value `<select>` to a `<select disabled>` over the
+  session's RTD names. The selected option is the row's current
+  `response_type_id`. Type stays read-only post-create per spec.
+- Bulk-save form's payload now writes `response_type_id` instead
+  of `response_type`. Newly-added Response Fields rows
+  (`id="new_N"` from the JS-deferred ➕) carry the operator's
+  selected RTD id from the dropdown; bulk-save resolves it on
+  Save.
 
 **Tests:**
 
-- Schema + migration round-trip (seeded rows present on every
-  session).
-- Service-layer CRUD + save-time validation.
-- Gated editing — server-side enforcement (incomplete row =
-  reject; Data Type change resets trailing cells).
-- Response Fields Type dropdown reflects the session's RTD rows.
-- Type cascade — editing an in-use Type's parameters propagates
-  to `instrument_response_fields.validation` on the next
-  Response Fields Save.
+- Migration round-trip (SQLite + Postgres CI smoke):
+  pre-migration mock data with all four legacy `response_type`
+  values gets mapped to the right RTD rows; the post-migration
+  `response_type_id` is non-NULL for every RF row.
+- `ensure_default_response_type_definitions` is idempotent
+  (re-running on a session already seeded is a no-op).
+- `ensure_default_instrument` seeds `rating1 → 1-to-5int` and
+  `comments1 → Long_text` on a fresh session.
+- Response Fields render carries the seeded RTD name in the
+  `<select disabled>` for both default rows.
+- The cascade chain works: SQL-level delete of an RTD row drops
+  dependent RF rows and their Response children. (Tested
+  service-side; the operator UX wraps this in 4b.)
+
+### Slice 4b — RTD editing + cascade-on-delete UX
+
+**Estimated effort:** ~2-3 hrs.
+
+- Operator-add (➕) on RTD rows lands a fresh empty row that
+  enters the gated left-to-right editing flow per
+  [`guide/instruments.md`](./instruments.md) "Editing flow".
+  Server-side enforcement is the source of truth (Save rejects
+  incomplete or invalid rows); JS adds disabled-state toggles so
+  the gating reads visibly client-side too.
+- Edits to operator-defined rows: name + Data Type lock once
+  saved (rendered as read-only `<select>` / disabled text).
+  Min / Max / Step / List stay editable; Save propagates the new
+  validation block to every Response Fields row that references
+  this RTD (`bulk_save_fields` re-derives validation when the
+  row's `response_type_id` is operator-defined and its parameters
+  changed since last save).
+- Operator-delete (✗) on operator-defined RTD rows in use:
+  confirmation dialog showing cascade preview (`N response field
+  row(s) on M instrument(s), X response(s) across Y reviewer
+  assignment(s)`). On confirm, the FK `ON DELETE CASCADE` from
+  4a takes care of the actual cascade. Operator-delete on
+  operator-defined RTD rows not in use: no confirmation. Seeded
+  rows: ✗ suppressed entirely.
+- Save-time rejection on RTD save: empty list when Data Type is
+  `List`; Min > Max for Integer / Decimal / String; Step doesn't
+  evenly divide (Max − Min) for Integer / Decimal.
+
+**Tests:**
+
+- Service: gated editing — incomplete operator-added row is
+  rejected on save; once complete it commits.
+- Service: edits to an in-use operator-defined RTD propagate to
+  the dependent RF rows' `validation` on the next bulk-save.
+- Route: cascade-confirm dialog on operator-defined RTD delete
+  when in use; immediate delete when not in use.
+- Server-side defenses: forged form attempting to rename a
+  seeded row, change a row's Data Type post-create, or delete a
+  seeded row all 400/409.
 
 ---
 
