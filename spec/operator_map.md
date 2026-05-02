@@ -38,53 +38,137 @@ its body:
     itself, the trail is the single non-link label `Reviewer`.
 - **Page title.** The page's H1, rendered below the breadcrumb.
 
-### Setup nav
+### Session top nav
 
-Every session-scoped operator page (Session detail, Reviewers,
-Reviewees, Assignments, Instruments, Set up invites) renders a
-single header card whose only contents are a 6-button **setup nav**,
-right-aligned. The buttons are, in order:
+Every session-scoped operator page (Home, Setup Pages, Operations
+Pages, and their sub-pages) renders a **session top nav** at the
+top of the page. The top nav implements the navigation model
+spec'd in [`spec/ui_concept.md`](./ui_concept.md) "Navigation
+model" — both phase rows (Setup, Operations) always visible, Home
+as a double-height anchor on the left.
 
-1. `Session` → `/operator/sessions/{id}`
-2. `Reviewers` → `/operator/sessions/{id}/reviewers`
-3. `Reviewees` → `/operator/sessions/{id}/reviewees`
-4. `Assignments` → `/operator/sessions/{id}/assignments`
-5. `Instruments` → `/operator/sessions/{id}/instruments`
-6. `Email Invites` → `/operator/sessions/{id}/setupinvite`
+#### Layout
 
-The nav lives in `.setup-nav` (140px equal-width buttons, wraps on
-narrow viewports). The button corresponding to the current page is
-rendered with `.btn.secondary` (Primary Outline) so the operator
-sees where they are; the others are `.btn` (Primary). Setup-nav
-replaces per-page jump links and hand-rolled top breadcrumbs.
+```
+┌────────┬──────────┬──────────────────────────────────────────────────────────┐
+│        │   Setup ▶│ [Reviewers][Reviewees][Assignments][Instruments][Email Template] │
+│  HOME  ├──────────┼──────────────────────────────────────────────────────────┤
+│        │  Ops ▶   │ [Invitations][Monitoring][Outbox]                        │
+└────────┴──────────┴──────────────────────────────────────────────────────────┘
+```
 
-Where the page also wants the standardized session-status pills
-(reviewer / reviewee / assignment / instrument counts + Email
-Invites Set up / Not set up), the partial
-`operator/partials/session_status_card.html` (PR
-[#252](https://github.com/philoyhc/review-robin-web/pull/252))
-renders the whole top card — three rows of pills + the setup
-nav — with a `current_page` parameter so the right button gets
-outlined. Used today on the Session detail and Email Invites
-pages; rolling the Reviewers / Reviewees / Assignments / Instruments
-pages onto it is a separate cleanup.
+CSS grid (in `base.html`, class `.session-nav-grid`) with three
+columns:
+
+1. **Home anchor** — `minmax(180px, 220px)`, spans both rows. Blue
+   tint (`#eff6ff`). Carries a small `HOME` caption + the session
+   name (allowed to wrap to two lines via
+   `-webkit-line-clamp: 2`). The session lifecycle is shown as the
+   first pill in the status row below, **not** inside the anchor.
+   `.session-home-anchor`.
+2. **Row labels** — auto-width column. Both row-label cells share
+   the same column track, so the column sizes to the wider label
+   (`OPERATIONS`); inside each cell, text is right-aligned via
+   `justify-content: flex-end` so the shorter `SETUP` label sits
+   flush against the first tab. Each label is followed by a
+   CSS-drawn right-pointing triangle (`::after` with `border-left`
+   trick, sized in `em` so it matches cap-height) pointing toward
+   the tabs. Default text colour `#9ca3af`; triangle colour
+   `#cbd5e1`. `.row-label` + `.setup-row` / `.ops-row`.
+3. **Tab strip** — `1fr` column. Each row of tabs gets a subtle
+   group tint (`.tab-strip-setup` = grey `#f3f4f6`,
+   `.tab-strip-ops` = light green `#f0fdf4`). Tabs (`.nav-tab`)
+   are equal-width (`flex: 1 1 0`), text-only, padded `12px 14px`,
+   colour `#4b5563`. Same shape across both rows.
+
+The Setup row gets a 1px bottom border (via `.row-setup`) to
+separate visually from the Operations row.
+
+#### Active tab marker
+
+The tab corresponding to the current page renders with:
+
+- White background (`#fff`), overriding the row's tint.
+- Bolder text (`font-weight: 500`) and the accent colour `#1e40af`.
+- A short understated underline `4px` tall, inset `18px` from each
+  edge so it doesn't span the full tab width. The colour is the
+  CSS custom property `--tab-marker-color` (default `#93c5fd`,
+  defined on `.session-nav-grid`); future variants can override
+  the property to recolour the marker without redefining the
+  rule.
+
+Sub-pages of Home (Edit Session, Validate detail) render the nav
+with **no tab active** — the home anchor visually owns the chrome
+on those pages but doesn't get the tab-active treatment. Preview
+Pages render with the **parent Setup tab active** (e.g. on
+`/preview`, the Instruments tab is highlighted).
+
+#### Active-group emphasis
+
+The `SETUP ▶` / `OPERATIONS ▶` row label darkens to the
+session-name colour (`#111827`) when:
+
+- the operator is on a page in that group (the partial sets an
+  `.active-group` class on the matching label based on
+  `current_page`), or
+- the mouse is hovering any tab in that group's strip (handled
+  via `:has(.tab-strip-setup .nav-tab:hover)` /
+  `:has(.tab-strip-ops .nav-tab:hover)` on the grid).
+
+The same emphasised colour applies to the label text and its
+triangle (the `::after` rule recolours `border-left-color`).
+
+#### Status row
+
+Below the nav grid, the partial `session_setup_status_row.html`
+renders the at-a-glance session status. Same content on every
+session-scoped page: lifecycle pill first, then the setup-todo
+counts.
+
+```
+Session: DRAFT · Reviewers: 8 · Reviewees: 13 · Assignments: NONE · Instruments: 1 · Email Template: NOT SET UP
+```
+
+The whole nav grid + status row sit inside a `.session-nav-card`
+wrapper (1px border, 8px radius). The page title is **not**
+rendered as a separate `<h1>` — the active tab already names the
+page; an additional title is redundant. (Sub-pages without an
+active tab — Edit, Validate detail — name themselves in the page
+body.)
+
+#### Partials
+
+- `operator/partials/session_top_nav.html` — the grid (Home anchor
+  + row labels + both tab strips). Takes `current_page` (one of
+  the 9 page names). Sub-pages of Home pass `"Home"`; Preview
+  pages pass their parent Setup name.
+- `operator/partials/session_setup_status_row.html` — the status
+  row. Takes `session` and `status_pills`.
 
 ### "Session ongoing" yellow lock card
 
 Whenever a session is `ready`, every page that exposes setup
-mutations renders a yellow lock card just below the setup-nav. The
-card explains that the page can't be edited while the session is
-ongoing and offers a confirm-checkbox + `Revert to draft` button
-that posts to `POST /operator/sessions/{id}/revert`. The form
-includes a hidden `return_to` field so the operator lands back on
-the same page after the round-trip; the route allowlists
-`reviewers`, `reviewees`, `assignments`, `instruments` (the session
-detail's revert form omits the field and lands on session detail).
+mutations renders a yellow lock card just below the session top
+nav + status row. The card explains that the page can't be edited
+while the session is ongoing and offers a confirm-checkbox +
+`Revert to draft` button that posts to
+`POST /operator/sessions/{id}/revert`. The form includes a hidden
+`return_to` field so the operator lands back on the same page
+after the round-trip; the route allowlists `reviewers`,
+`reviewees`, `assignments`, `instruments` (the session detail's
+revert form omits the field and lands on session detail).
 
 While the lock card is shown, each page is responsible for hiding
 its own mutation affordances (upload cards, Danger Zone, Edit /
 Save buttons) per the per-page specs below. The session-detail
 lock card sits above the `.page-grid`.
+
+Per P4 ("lifecycle disables, never hides") in
+`spec/ui_concept.md`: the **tabs themselves stay clickable** in
+every lifecycle state — operations tabs on a `draft` session,
+setup tabs on a `ready` session. Lifecycle disabling lives inside
+the destination page (yellow lock card + greyed buttons), not on
+the chrome.
 
 ### Page layout — two-column option
 
