@@ -91,11 +91,22 @@
   {% endif %}
 
   {% if rf_save_error %}
-    <div class="card" style="border-color: #dc2626; background: #fee2e2;">
+    <div class="card banner-scroll-target" id="rf-save-error-banner"
+         style="border-color: #dc2626; background: #fee2e2;">
       <p style="margin: 0 0 8px 0;"><strong>Could not save:</strong> {{ rf_save_error }}</p>
       <div style="display: flex; justify-content: flex-end;">
-        <a class="btn alert"
-           href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
+        {# Cancel returns to the source row (the instrument card the
+           bulk-save POST came from), preserving editing mode so the
+           operator can fix the row set. The natural fragment-jump
+           lands the operator back at where they were before the
+           banner appeared. Slice 4d / banner-scroll convention. #}
+        {% if editing_instrument_id %}
+          <a class="btn alert"
+             href="/operator/sessions/{{ session.id }}/instruments?editing={{ editing_instrument_id }}#instrument-{{ editing_instrument_id }}">Cancel</a>
+        {% else %}
+          <a class="btn alert"
+             href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
+        {% endif %}
       </div>
     </div>
   {% endif %}
@@ -585,17 +596,24 @@
     </p>
 
     {% if rtd_error %}
-      <div class="card" style="border-color: #dc2626; background: #fee2e2; margin-bottom: 12px;">
+      <div class="card banner-scroll-target" id="rtd-error-banner"
+           style="border-color: #dc2626; background: #fee2e2; margin-bottom: 12px;">
         <p style="margin: 0 0 8px 0;"><strong>Could not save Response Type:</strong> {{ rtd_error }}</p>
         <div style="display: flex; justify-content: flex-end;">
-          <a class="btn alert"
-             href="/operator/sessions/{{ session.id }}/instruments#rtd-card">Cancel</a>
+          {% if rtd_error_id %}
+            <a class="btn alert"
+               href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd_error_id }}#rtd-row-{{ rtd_error_id }}">Cancel</a>
+          {% else %}
+            <a class="btn alert"
+               href="/operator/sessions/{{ session.id }}/instruments#rtd-card">Cancel</a>
+          {% endif %}
         </div>
       </div>
     {% endif %}
 
     {% if rtd_would_empty %}
-      <div class="card" style="border-color: #b91c1c; background: #fee2e2; margin-bottom: 12px;">
+      <div class="card banner-scroll-target" id="rtd-would-empty-banner"
+           style="border-color: #b91c1c; background: #fee2e2; margin-bottom: 12px;">
         <p style="margin: 0 0 8px 0;">
           <strong>Cannot delete this Response Type.</strong>
           {% set count = rtd_would_empty.instrument_numbers | length %}
@@ -609,13 +627,14 @@
         </p>
         <div style="display: flex; gap: 8px; justify-content: flex-end;">
           <a class="btn alert"
-             href="/operator/sessions/{{ session.id }}/instruments#rtd-card">Cancel</a>
+             href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd_would_empty.id }}">Cancel</a>
         </div>
       </div>
     {% endif %}
 
     {% if rtd_delete_blocked %}
-      <div class="card" style="border-color: #d97706; background: #fef3c7; margin-bottom: 12px;">
+      <div class="card banner-scroll-target" id="rtd-delete-blocked-banner"
+           style="border-color: #d97706; background: #fef3c7; margin-bottom: 12px;">
         <p style="margin: 0 0 8px 0;">
           Deleting this Response Type will drop
           <strong>{{ rtd_delete_blocked.response_field_count }}</strong>
@@ -630,7 +649,7 @@
         </p>
         <div style="display: flex; gap: 8px; justify-content: flex-end;">
           <a class="btn alert"
-             href="/operator/sessions/{{ session.id }}/instruments#rtd-card">Cancel</a>
+             href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd_delete_blocked.id }}">Cancel</a>
           <form method="post"
                 action="/operator/sessions/{{ session.id }}/response-types/{{ rtd_delete_blocked.id }}/delete"
                 style="margin: 0;">
