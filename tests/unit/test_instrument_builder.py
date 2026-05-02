@@ -47,7 +47,14 @@ def _session(db: Session, user: User, *, code: str = "code") -> ReviewSession:
 
 
 def _bare_instrument(db: Session, session: ReviewSession) -> Instrument:
-    """Create an instrument with NO seeded fields."""
+    """Create an instrument with NO seeded fields. Seeds the RTD
+    catalog on the session so service calls that look up an RTD by
+    name (e.g. ``add_response_field(response_type=...)``) can find
+    it; the catalog is logically per-session, not per-instrument."""
+    from app.services.instruments import (
+        ensure_default_response_type_definitions,
+    )
+    ensure_default_response_type_definitions(db, session)
     instrument = Instrument(
         session_id=session.id,
         name="instrument_1",
@@ -79,9 +86,8 @@ def test_add_response_field_rejects_invalid_key(db: Session) -> None:
             instrument=instrument,
             field_key="Bad-Key!",
             label="Bad",
-            response_type="short_text",
+            response_type="Short_text",
             required=False,
-            validation=None,
             help_text=None,
             help_text_visible=True,
             actor=user,
@@ -105,9 +111,8 @@ def test_add_response_field_rejects_duplicate_key(db: Session) -> None:
         instrument=instrument,
         field_key="rating",
         label="Rating",
-        response_type="integer",
+        response_type="1-to-5int",
         required=True,
-        validation={"min": 1, "max": 5},
         help_text=None,
         help_text_visible=True,
         actor=user,
@@ -119,9 +124,8 @@ def test_add_response_field_rejects_duplicate_key(db: Session) -> None:
             instrument=instrument,
             field_key="rating",
             label="Rating Again",
-            response_type="integer",
+            response_type="1-to-5int",
             required=False,
-            validation=None,
             help_text=None,
             help_text_visible=True,
             actor=user,
@@ -145,9 +149,8 @@ def test_add_response_field_appends_with_packed_order_and_audits(db: Session) ->
         instrument=instrument,
         field_key="decision",
         label="Decision",
-        response_type="yes_no",
+        response_type="Yes_no",
         required=False,
-        validation=None,
         help_text="Pick yes or no.",
         help_text_visible=True,
         actor=user,

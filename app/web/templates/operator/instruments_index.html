@@ -280,12 +280,6 @@
         <div class="card" style="border: none; background: transparent; padding: 0;">
           <h3 style="margin-top: 0;">Response Fields</h3>
           {% set sorted_response_fields = instrument.response_fields | sort(attribute='order') %}
-          {% set _response_type_labels = {
-            'integer': 'Integer',
-            'short_text': 'Short Text',
-            'long_text': 'Long Text',
-            'yes_no': 'Yes / No',
-          } %}
           {# Order ▲ / ▼ swap rows client-side and update the bulk-
              save form's hidden ``order`` inputs so the new order
              only commits on Save (Cancel discards). #}
@@ -320,7 +314,9 @@
                     <td>
                       <select disabled
                               title="Type cannot be changed after a field is created.">
-                        <option selected>{{ _response_type_labels.get(field.response_type, field.response_type) }}</option>
+                        {% for rtd in rtds %}
+                          <option value="{{ rtd.id }}"{% if rtd.id == field.response_type_id %} selected{% endif %}>{{ rtd.response_type }}</option>
+                        {% endfor %}
                       </select>
                     </td>
                     <td>
@@ -450,8 +446,15 @@
               <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="0">
             </td>
             <td>
+              {# Type is read-only post-create per spec; new rows are
+                 server-side seeded with the ``1-to-5int`` RTD by
+                 ``add_default_response_field`` on Save. The operator
+                 sees the full RTD dropdown but cannot change the
+                 selection. #}
               <select disabled title="Type cannot be changed after a field is created.">
-                <option selected>Integer</option>
+                {% for rtd in rtds %}
+                  <option value="{{ rtd.id }}"{% if rtd.response_type == "1-to-5int" %} selected{% endif %}>{{ rtd.response_type }}</option>
+                {% endfor %}
               </select>
             </td>
             <td>
@@ -519,12 +522,43 @@
     </div>
   {% endfor %}
 
-  {# Response Type Definitions card (frame stub — Slice 4). #}
+  {# Response Type Definitions card — read-only catalog (Slice 4a).
+     Operator-add / -edit / -delete lands in 4b; for now every cell
+     is muted and the table is a reference for the Response Fields
+     Type column above. #}
   <div class="card">
     <h2 style="margin-top: 0;">Response Type Definitions</h2>
-    <p class="muted" style="font-style: italic;">
-      Full table + persistence wiring lands in Slice 4.
+    <p class="muted" style="margin: 0 0 12px 0; font-size: 0.9em;">
+      Catalog of Response Types referenced by every instrument's
+      Response Fields. Seeded rows are locked.
+      Operator-add / -edit / -delete lands in a follow-up slice.
     </p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Response Type</th>
+            <th>Data Type</th>
+            <th>Min</th>
+            <th>Max</th>
+            <th>Step</th>
+            <th>List</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rtd in rtds %}
+            <tr class="muted">
+              <td><code>{{ rtd.response_type }}</code></td>
+              <td>{{ rtd.data_type }}</td>
+              <td>{% if rtd.data_type == "List" %}NA{% else %}{{ rtd.min if rtd.min is not none else "—" }}{% endif %}</td>
+              <td>{% if rtd.data_type == "List" %}NA{% else %}{{ rtd.max if rtd.max is not none else "—" }}{% endif %}</td>
+              <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ rtd.step if rtd.step is not none else "—" }}{% else %}NA{% endif %}</td>
+              <td>{% if rtd.data_type == "List" %}{{ rtd.list_csv or "—" }}{% else %}NA{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <script>

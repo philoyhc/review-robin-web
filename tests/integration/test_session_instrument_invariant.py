@@ -45,15 +45,17 @@ def test_session_creation_yields_default_instrument_with_seed_fields(
 
     rating, comments = fields
     assert rating.field_key == "rating"
-    assert rating.response_type == "integer"
+    assert rating.response_type == "1-to-5int"
+    assert rating.data_type == "Integer"
     assert rating.required is True
-    assert rating.validation == {"min": 1, "max": 5}
+    assert rating.validation == {"min": 1, "max": 5, "step": 1}
     assert rating.order == 1
 
     assert comments.field_key == "comments"
-    assert comments.response_type == "long_text"
+    assert comments.response_type == "Long_text"
+    assert comments.data_type == "String"
     assert comments.required is False
-    assert comments.validation is None
+    assert comments.validation == {"min_length": 0, "max_length": 200}
     assert comments.order == 2
 
 

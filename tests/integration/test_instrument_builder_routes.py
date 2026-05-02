@@ -174,7 +174,7 @@ def test_add_field_auto_slugifies_blank_field_key(
         data={
             "field_key": "",
             "label": "Decision Point",
-            "response_type": "yes_no",
+            "response_type": "Yes_no",
             "help_text_visible": "true",
         },
         follow_redirects=False,
@@ -446,7 +446,7 @@ def test_reviewer_surface_renders_yes_no_field_added_via_route(
         data={
             "field_key": "decision",
             "label": "Decision",
-            "response_type": "yes_no",
+            "response_type": "Yes_no",
         },
         follow_redirects=False,
     )

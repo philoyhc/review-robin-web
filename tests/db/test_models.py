@@ -93,6 +93,11 @@ def test_can_add_an_instrument_with_display_and_response_fields(db: Session) -> 
     db.add(instrument)
     db.flush()
 
+    from app.services.instruments import (
+        ensure_default_response_type_definitions,
+    )
+
+    rtds = ensure_default_response_type_definitions(db, review)
     db.add_all(
         [
             InstrumentDisplayField(
@@ -106,7 +111,7 @@ def test_can_add_an_instrument_with_display_and_response_fields(db: Session) -> 
                 instrument_id=instrument.id,
                 field_key="rating",
                 label="Rating (1-5)",
-                response_type="integer",
+                response_type_id=rtds["1-to-5int"].id,
                 required=True,
                 order=0,
                 validation={"min": 1, "max": 5},
@@ -115,7 +120,7 @@ def test_can_add_an_instrument_with_display_and_response_fields(db: Session) -> 
                 instrument_id=instrument.id,
                 field_key="comments",
                 label="Comments",
-                response_type="text",
+                response_type_id=rtds["Long_text"].id,
                 required=False,
                 order=1,
             ),
@@ -172,11 +177,15 @@ def test_can_create_a_response_for_an_assignment_field(db: Session) -> None:
     db.add_all([reviewer, reviewee, instrument])
     db.flush()
 
+    from app.services.instruments import (
+        ensure_default_response_type_definitions,
+    )
+    rtds = ensure_default_response_type_definitions(db, review)
     response_field = InstrumentResponseField(
         instrument_id=instrument.id,
         field_key="rating",
         label="Rating",
-        response_type="integer",
+        response_type_id=rtds["1-to-5int"].id,
         required=True,
     )
     db.add(response_field)
