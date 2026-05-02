@@ -673,22 +673,36 @@
          runs JS that inserts a draft row into the main table (above)
          in the editable state; Save POSTs the full row,
          Cancel removes the draft from the DOM (no DB write). #}
+      {# Add Response Type. Disabled while any operator-defined row is
+         unsaved — either because a saved row is in editing mode
+         (``editing_rtd_id`` query param matches) or because a draft
+         row was added via the JS button below and not yet saved /
+         canceled. The disabled-on-render branch handles editing mode;
+         ``_updateRtdAddButtonState`` toggles the disabled flag when
+         drafts come and go. #}
+      {% set add_disabled = editing_rtd_id is not none %}
       <div style="margin-top: 16px; padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc;"
            id="rtd-add-card">
         <p style="margin: 0 0 8px 0; font-weight: bold;">Add a Response Type</p>
         <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: end;">
           <label>Name
-            <input type="text" id="new-rtd-name" style="width: 12em;">
+            <input type="text" id="new-rtd-name" style="width: 12em;"
+                   {% if add_disabled %}disabled{% endif %}>
           </label>
           <label>Data Type
-            <select id="new-rtd-data-type">
+            <select id="new-rtd-data-type"
+                    {% if add_disabled %}disabled{% endif %}>
               <option value="String">String</option>
               <option value="Integer">Integer</option>
               <option value="Decimal">Decimal</option>
               <option value="List">List</option>
             </select>
           </label>
-          <button type="button" class="btn alert-solid" onclick="addRtdDraft()">Add</button>
+          <button id="rtd-add-button"
+                  type="button" class="btn alert-solid"
+                  onclick="addRtdDraft()"
+                  {% if add_disabled %}disabled data-server-disabled="1"
+                  title="Save or cancel the row in progress before adding another."{% endif %}>Add</button>
         </div>
         <p class="muted" style="margin: 8px 0 0 0; font-size: 0.85em;">
           Click <strong>Add</strong> to start a new row in the table
@@ -722,7 +736,7 @@
           <td style="white-space: nowrap;">
             <div style="display: inline-flex; gap: 6px;">
               <button form="rtd-draft-form-__DRAFT_ID__" type="submit" class="btn">Save</button>
-              <button type="button" class="btn alert" onclick="cancelRtdDraft(__DRAFT_ID__)">Cancel</button>
+              <button type="button" class="btn alert" onclick="cancelRtdDraft('__DRAFT_ID__')">Cancel</button>
             </div>
           </td>
         </tr>
@@ -977,10 +991,11 @@
       var card = document.getElementById('rtd-card');
       if (card) card.appendChild(newForm);
 
-      // Reset Add inputs.
+      // Reset Add inputs and lock the Add button until the draft is
+      // saved or canceled.
       nameInput.value = '';
       dataTypeInput.selectedIndex = 0;
-      nameInput.focus();
+      _updateRtdAddButtonState();
     }
     function cancelRtdDraft(draftId) {
       var row = document.querySelector(
@@ -991,6 +1006,27 @@
       );
       if (row && row.parentNode) row.parentNode.removeChild(row);
       if (form && form.parentNode) form.parentNode.removeChild(form);
+      _updateRtdAddButtonState();
+    }
+    function _updateRtdAddButtonState() {
+      var anyDraft = document.querySelector('.rtd-draft-row') !== null;
+      var btn = document.getElementById('rtd-add-button');
+      var nameInput = document.getElementById('new-rtd-name');
+      var dataTypeInput = document.getElementById('new-rtd-data-type');
+      if (!btn) return;
+      // Don't fight the server-rendered disabled state when an
+      // existing saved row is in editing mode (``editing_rtd_id``).
+      // The page reload after Save / Cancel will clear that.
+      var serverDisabled = btn.hasAttribute('data-server-disabled');
+      var disable = anyDraft || serverDisabled;
+      btn.disabled = disable;
+      if (nameInput) nameInput.disabled = disable;
+      if (dataTypeInput) dataTypeInput.disabled = disable;
+      if (disable) {
+        btn.title = 'Save or cancel the row in progress before adding another.';
+      } else {
+        btn.removeAttribute('title');
+      }
     }
   </script>
 {% endblock %}
