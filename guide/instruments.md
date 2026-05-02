@@ -202,6 +202,16 @@ Default seed (two rows, applied to a freshly-created instrument):
 | `rating1` | `Rating` | `1-to-5` | ✓ | 1 |
 | `comments1` | `Comments` | `Long_Text` |  | 2 |
 
+**Save-time guard (Slice 4d).** The bulk-save handler refuses to
+commit an instrument with **zero** Response Fields rows. If the
+operator's pending edits would leave the table empty, Save
+redirects back to the page with an inline error banner —
+*"An instrument must have at least one response field. Add one,
+or undo the delete."* — and the editing context stays open so
+the operator can fix the row set without losing their other
+edits. This is symmetric with the cascade-side guard on the
+Response Type Definitions card (see "Cascade-on-delete").
+
 #### Response Fields Help (full-width, below)
 
 Title: `Response Fields Help`. Full-width card sitting directly
@@ -242,6 +252,19 @@ card. The pairs share the same underlying state machine
 (`?editing={iid}` URL param + the shared `dfsave-{iid}` form), so
 the operator can flip in or out of edit mode from either pair
 without scrolling past the tables.
+
+**One editing context at a time (Slice 4d).** The per-instrument
+card's editing state and the Response Type Definitions card's
+editing state are **mutually exclusive** — only one editing
+context can be open on the page at a time. While any
+per-instrument card is in edit mode, every operator-defined RTD
+row's `Edit` and `Delete` buttons + the `Add a Response Type`
+block all render disabled (with a tooltip pointing back to the
+open instrument). The reverse holds too: while an RTD row is
+unlocked, every per-instrument card's `Edit` button greys out.
+This stops the cross-table cascade-edits problem (operator
+deletes an in-use ODT mid-instrument-edit; the cascade rewrites
+RF rows the browser still has open in inputs).
 
 #### Initial state
 
@@ -356,6 +379,19 @@ on confirm. The cascade itself runs through the
 `ON DELETE CASCADE`, which propagates to `responses` via the
 existing FK. Seeded rows can never be deleted (no cascade ever
 fires from a seeded row).
+
+**Hard-block exception (Slice 4d): would-empty instrument.** If
+the cascade would leave any instrument with **zero** Response
+Fields rows (because the row referencing this RTD is that
+instrument's only RF row), the delete is **blocked outright**
+— the operator sees a banner naming the affected instrument(s)
+in plain language: *"Cannot delete Response Type 'Foo': it is
+the only Response Field on Instrument #2. Add or change a row
+on that instrument first, then come back."* The banner has no
+Continue button; the operator must either add a non-ODT row to
+the affected instrument first or pick a different ODT to
+delete. This guard is symmetric with the bulk-save side guard
+that blocks "Save with zero RF rows" on direct deletes.
 
 ### Validation derivation
 

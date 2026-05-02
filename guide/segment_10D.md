@@ -80,6 +80,11 @@ Out (deferred to later segments / follow-ups):
              │
              ▼
         ┌──────────┐
+        │ Slice 4d │  Cross-cutting consistency guards
+        └────┬─────┘    (mutual-edit lock + zero-RF block + would-empty block)
+             │
+             ▼
+        ┌──────────┐
         │ Slice 5  │  Multi-instrument enable (P0 #18)
         └──────────┘
 ```
@@ -656,6 +661,143 @@ label. This slice closes both gaps before Slice 5 lands.
 "Read-only post-create". Add one sentence: *"For newly-added rows
 the Type is operator-picked from the session's RTD catalog (the
 ``<select>`` is enabled until Save commits the row)."*
+
+---
+
+## Slice 4d — Cross-cutting consistency guards before Slice 5
+
+**Status:** Pending. Three coordination gaps surfaced while
+reviewing the Slice 4 surface end-to-end. None block existing
+flows, but all let the operator land the system in a confusing
+or invalid state without a clear diagnosis. Slice 4d closes
+them before multi-instrument support lands.
+
+**Estimated effort:** ~2 hrs.
+
+### Gap 1 — Both editing state machines can be active at once
+
+Today the per-instrument card uses `?editing={iid}` and the
+RTD card uses `?editing_rtd_id={rtd_id}`. The two are
+independent — an operator can be mid-edit on instrument #1 *and*
+mid-edit on an in-use ODT row, then delete the ODT and have the
+cascade silently rewrite the rows their browser still has open
+in inputs. The mutating bulk-save / RTD-save handlers don't
+notice the conflict.
+
+**What lands:**
+
+- Mutual-exclusion between the two state machines on the GET
+  handler. When `editing` is set on one, the other's edit
+  affordances render disabled with a tooltip pointing at the
+  open editing context (e.g. *"Save or cancel the edits on
+  Instrument #1 before editing the Response Type Definitions."*).
+- The disabled state covers: every instrument card's Section A
+  Edit button + Section C Edit button (when an RTD row is
+  unlocked); every operator-defined RTD row's Edit + Delete
+  buttons + the `Add a Response Type` block (when an instrument
+  card is unlocked).
+- Server-side defence — the bulk-save and RTD-save / -delete
+  routes refuse if the *other* state machine's editing context
+  is non-empty in the form's `Referer` or in the DB-side state.
+  (Pure-UI lock is the front line; this is the second line in
+  case of forged form posts.)
+
+We're explicitly not greying out Edit / Delete on in-use ODTs —
+the propagation pattern (RTD parameter edit → dependent RF
+validation re-derived) is the value-add of operator-defined
+types, and forcing the operator to remove every reference
+before editing defeats it.
+
+### Gap 2 — Bulk-save accepts an instrument with zero Response Fields
+
+Today the bulk-save handler will happily commit an instrument
+with zero RF rows (e.g. operator deletes every RF row, hits
+Save). The session-level validation at activation time blocks
+the session from going `ready`, but until then the operator
+sees an empty Response Fields table on the per-instrument card
+without a clear "this is broken" indication.
+
+**What lands:**
+
+- Bulk-save handler counts post-save RF rows per instrument. If
+  zero, it raises an inline error and redirects back to the
+  page with a banner: *"An instrument must have at least one
+  response field. Add one, or undo the delete."* The
+  ``editing_instrument_id`` query param stays set so the
+  operator's edits don't vanish on the redirect.
+- Symmetric with the existing RTD save-time validation — both
+  paths use a blocking banner instead of "save first, validate
+  later".
+
+### Gap 3 — Cascade-delete on an in-use ODT can empty an instrument
+
+The cascade-confirm banner today previews "N response field
+rows on M instruments". If a particular instrument's *only*
+remaining RF row references the ODT being deleted, the cascade
+would leave it with zero rows — same broken-instrument state
+as Gap 2, but reached indirectly.
+
+**What lands:**
+
+- Extend `count_rtd_dependents` to also return a list of
+  `instruments_would_be_emptied: list[(int, str)]` — `(id,
+  display_name)` for every instrument whose RF row count after
+  the cascade would be zero.
+- New service-layer error `RTDDeleteWouldEmptyInstrumentError`
+  preempting `RTDInUseError` when the list is non-empty.
+- Route translates this into a banner naming the affected
+  instrument(s) by `Instrument #N`: *"Cannot delete Response
+  Type 'Foo': it is the only Response Field on Instrument #2.
+  Add or change a row on that instrument first, then come
+  back."* Operator can't confirm-cascade past this — the banner
+  has no Continue button, only a Cancel-style anchor back to
+  the locked state.
+- If the cascade would *not* empty any instrument, the existing
+  cascade-confirm banner (with the four counts +
+  Continue / Cancel buttons) still fires.
+
+### Tests
+
+- Mutual exclusion (Gap 1):
+  - GET ``?editing=1`` renders RTD card Edit + Add greyed.
+  - GET ``?editing_rtd_id=N`` renders instrument card Edit
+    buttons greyed.
+  - POST RTD edit while ``?editing=1`` 409s (server defence).
+  - POST bulk-save while another card is open 409s (server
+    defence).
+- Zero-RF block (Gap 2):
+  - Bulk-save POST that empties an instrument's RF set
+    redirects with the new banner; row count unchanged in DB.
+- Would-empty-instrument block (Gap 3):
+  - Service: `count_rtd_dependents` returns the would-empty
+    list correctly.
+  - Service: `delete_response_type_definition` raises
+    `RTDDeleteWouldEmptyInstrumentError` when applicable, even
+    with `confirm=True`.
+  - Route: cascade-confirm banner is replaced with the would-
+    empty banner; no Continue button.
+
+### Spec touch-ups
+
+- `guide/instruments.md` Response Type Definitions card —
+  "Cascade-on-delete" subsection: add the would-empty-instrument
+  exception ("if cascade would leave any instrument with 0
+  response fields, the delete is blocked outright; operator must
+  add a non-ODT row to that instrument first").
+- `guide/instruments.md` Per-instrument card "Section C / Action
+  buttons" — add a sentence about the mutual-exclusion lock with
+  the RTD card.
+
+### Out of scope (deferred)
+
+- Auto-re-seeding the default RF rows when the last row is
+  deleted. The blocking-error pattern is preferred over magical
+  recovery (decided post-Slice-4c review).
+- Greying out Edit / Delete on in-use ODTs. The propagation
+  pattern is the feature, not a bug.
+- Cross-page edit lock for Reviewers / Reviewees / Assignments
+  pages — those don't share editing state with Instruments
+  today; if that changes a future slice can extend.
 
 ---
 
