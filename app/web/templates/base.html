@@ -276,8 +276,10 @@
         --tab-marker-color: #93c5fd;
       }
       /* Home anchor: spans both rows on the left, blue tint,
-         carries session identity (label + name; lifecycle pill is
-         in the status row below). */
+         shows a single centered "Session Home" label. (Session
+         name lives in the page <title>, the chrome's `title`
+         tooltip, and is otherwise one click away on the
+         Operator's Overview.) */
       .session-home-anchor {
         grid-column: 1;
         grid-row: 1 / span 2;
@@ -285,31 +287,18 @@
         border-right: 1px solid #d1d5db;
         padding: 12px 16px;
         display: flex;
-        flex-direction: column;
+        align-items: center;
         justify-content: center;
-        gap: 6px;
+        text-align: center;
         text-decoration: none;
         color: #111827;
       }
       .session-home-anchor:hover { background: #dbeafe; }
       .session-home-anchor.active { background: #fff; }
-      .home-label {
-        font-size: 0.7rem;
-        font-weight: 700;
-        color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-      }
-      .home-session-name {
+      .home-anchor-text {
         font-size: 1rem;
         font-weight: 600;
         color: #111827;
-        line-height: 1.25;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        word-wrap: break-word;
       }
       /* Row labels — neutral, sit between Home and the tab strip.
          Both cells share the auto-sized column, so the cell width
