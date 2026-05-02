@@ -97,20 +97,31 @@ the body of the inner content.
 
 ### A. Identity + status (two half-width cards side by side)
 
-Equal-height, top + bottom aligned (`.bottom-grid`).
+Equal-height, top + bottom aligned (`.bottom-grid` with
+`align-items: stretch`).
 
-**Left card** — invisible borders.
+**Left card** — invisible borders, flex column.
 
 - Header: `Instrument #{N}` rendered in a font size larger than
   normal card titles but smaller than the page H1.
-- Friendly description (free text, operator-typed).
-- `Edit` button → opens an inline form for editing the description.
+- Friendly description (free text, operator-typed). In **locked**
+  mode renders as plain text (`(no description)` when empty); in
+  **edit** mode renders as a `<textarea form="dfsave-{iid}"
+  name="description">` joined to the same bulk-save form as the
+  Section B tables.
+- Bottom-left **Edit / Save+Cancel** button pair, mirroring the
+  pair in Section C below. The two pairs are interchangeable —
+  the operator can flip into edit mode (or commit / discard) from
+  either pair without scrolling. See "Section C — Action buttons"
+  below for the canonical wiring.
 
 **Right card** — `This Instrument's Status`.
 
 - Instrument-specific status pills (accepting / not accepting,
   visibility-when-closed showing / not showing,
   deadline-closed-at if present).
+- A `saved` / `not saved` pill summarising whether the operator
+  has ever pressed Save on the field tables for this instrument.
 - Action buttons for visibility-to-reviewers (open / close,
   show-when-closed / don't-show-when-closed).
 
@@ -134,6 +145,11 @@ the row immediately below. The arrow is disabled at the boundary
 (top row's `▲`, bottom row's `▼`). The integer to the left of the
 arrows is informational — it always reflects the row's current
 position post-swap and is not directly editable.
+
+The swap is **client-side**: it reorders the DOM rows and
+rewrites each row's hidden `order` input on the bulk-save form,
+so the new positions only commit when the operator clicks Save.
+Cancel discards them.
 
 The arrows are also suppressed for rows whose position is fixed
 by spec. Today that's the `RevieweeName` and `RevieweeEmail` rows
@@ -164,7 +180,7 @@ Title: `Response Fields`. Columns:
 | **Type** | One of the response types defined by the Response Type definitions card. Read-only post-create. The Type carries its own validation rules (e.g. `1-to-5` implies `min=1, max=5`); the engine writes them to `instrument_response_fields.validation` on save and the operator does **not** see a validation cell in this table. |
 | **Required** | Checkbox. When checked, the field is mandatory for reviewers and the column header in the Preview table is appended with an asterisk (e.g. `Rating*`). |
 | **Order** | Integer (1-based) plus the `▲` / `▼` arrow controls described above. |
-| **Action** | A delete cross icon (✗) and an add-row plus icon (➕). Both fire immediately — no on-screen warning or confirmation. The delete removes this row; the add inserts a new default row immediately below. New rows seed with auto-generated `Rating{N}` label, `rating{N}` key, `Integer` type, `Required = ✓`. |
+| **Action** | A delete cross icon (✗) and an add-row plus icon (➕). Both are **client-side** — same deferral pattern as the `▲` / `▼` arrows. ✗ hides the row and queues its id in a hidden `response_delete_ids` input on the bulk-save form (or just removes the row from the DOM if it was JS-added). ➕ clones a hidden `<template>` and inserts a new row with id `new_{N}` immediately below the clicked row; on Save the route allocates a real field via `add_default_response_field` and applies the operator-typed label / required / help. New rows seed with auto-generated `Rating{N}` label, `rating{N}` key, `Integer` type, `Required = ✓`. Cancel discards both add and delete. The matching Response Fields Help row follows along — added or hidden in lockstep with its parent response row. |
 
 Default seed (two rows, applied to a freshly-created instrument):
 
@@ -188,52 +204,31 @@ borders. One row per Response Fields row. Columns:
 In locked mode the Text cell shows the help text (or `—` when
 empty) and the Show checkbox is disabled.
 
-### C. Horizontal rule
-
-A single `<hr>` separating the field-builder from the preview
-placeholder + action button row below.
-
-### D. Preview Instrument #{N} (placeholder)
-
-Full-width card, invisible borders. Title:
-`Preview Instrument #{N}`. **Placeholder only** — the per-
-instrument inline preview from earlier drafts of the spec is
-deferred. The shared `Preview reviewer surface` page at
-`/operator/sessions/{id}/preview` already renders the reviewer
-surface for the whole session; how it integrates with the
-per-instrument card is open and will be revisited in a follow-up
-slice.
-
-Open questions:
-
-- Should each card carry a `Preview this instrument` action
-  button that links into the appropriate section of the shared
-  `/preview` page?
-- Should the shared `/preview` page extend to render help text
-  alongside response fields?
-- Or should the per-instrument card host an inline summary of
-  what the reviewer sees (no mock data, no help text)?
-
-For now the placeholder section just announces itself; nothing
-renders.
-
-### E. Action buttons (right-aligned)
+### C. Action buttons (right-aligned)
 
 Five buttons, in this order, using the canonical `.btn` modifier
 classes from `spec/assumptions.md`:
 
 | Button | Style | Behaviour |
 |---|---|---|
-| `Save` | Primary | Writes the current Display Fields and Response Fields tables to the database. On success, the page **stays in place**, both tables lock, and a flash message confirms the save. The button is replaced by `Edit`. |
-| `Cancel` | Alert Outline | Discards any unsaved edits in the two tables, reverts them to the last-saved state, and locks them. The button is replaced by `Edit`. Only shown alongside `Save` (i.e. while the tables are open for editing). |
-| `Edit` | Alert | Re-opens both tables for editing. The button is replaced by the `Save` + `Cancel` pair. |
+| `Save` | Primary | Writes the current friendly description, Display Fields, Response Fields, and Response Fields Help to the database in one bulk-save round-trip. On success, the page **stays in place**, the description and both tables lock, and a `saved` pill on the per-instrument status sub-card replaces the `not saved` pill. The button is replaced by `Edit`. |
+| `Cancel` | Alert Outline | Discards any unsaved edits across description + tables and locks them. The button is replaced by `Edit`. Only shown alongside `Save` (i.e. while the card is open for editing). |
+| `Edit` | Alert | Re-opens the description textarea and both tables for editing. The button is replaced by the `Save` + `Cancel` pair. |
 | `Add new instrument` | Alert | Adds a new Instrument card immediately below this one and persists the new instrument to the database. |
 | `Delete this instrument` | Danger | Deletes this instrument. Triggers an on-screen warning + confirmation before the request fires. |
 
 `Save` + `Cancel` and `Edit` are **mutually exclusive** — only
-one of the two states is shown at a time. When the two tables are
-open for editing, `Save` and `Cancel` are shown; when the two
-tables are locked, only `Edit` is shown.
+one of the two states is shown at a time. When the card is open
+for editing, `Save` and `Cancel` are shown; when the card is
+locked, only `Edit` is shown.
+
+**Two avenues, same state.** The `Save` / `Cancel` / `Edit` set
+appears in **two places** on the per-instrument card — bottom-
+right of this row, and bottom-left of the Section A description
+card. The pairs share the same underlying state machine
+(`?editing={iid}` URL param + the shared `dfsave-{iid}` form), so
+the operator can flip in or out of edit mode from either pair
+without scrolling past the tables.
 
 #### Initial state
 
@@ -402,3 +397,15 @@ above re-apply on commit.
   can persist as ordinary display-field rows.
 - **Sort column** — placeholder; the *default row order on
   reviewer surface* UX is open.
+- **Per-instrument preview integration** — earlier drafts of
+  this spec carried a Section D `Preview Instrument #{N}` card
+  (a per-instrument inline preview). The shared
+  `Preview reviewer surface` page at
+  `/operator/sessions/{id}/preview` already renders the reviewer
+  surface for the whole session, so the per-instrument card no
+  longer renders a preview placeholder. How the two integrate is
+  open: should each card carry a `Preview this instrument` action
+  that links into the appropriate section of `/preview`? Should
+  `/preview` extend to render help text alongside response
+  fields? Should the per-instrument card host a no-mock-data
+  inline summary instead? Revisit in a follow-up segment.
