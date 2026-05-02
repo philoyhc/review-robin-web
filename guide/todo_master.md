@@ -12,10 +12,11 @@ purposes:**
 When you ship an item, tick it off in **both** files.
 
 The sequence is shaped by three forces: (a) finish the chrome
-rollout that #19 spawned (#20 + #21) before the operator
+work that #19 spawned (#20 + #21 + #22) before the operator
 surface ships into Segment 11, (b) some items must land in a
 specific order because they touch the same code (#16 bundles
-with #10; #12 follows #8), and (c) defensive CI hardening
+with #10; #12 follows #8; #22 follows #21 because Home rebuild
+uses the buttons #21 restyles), and (c) defensive CI hardening
 (Postgres pytest) should land before the big arch refactors
 themselves.
 
@@ -56,8 +57,8 @@ through the same code, the test gaps need to close first.
 |---|---|---|
 | 4 | ~~**#15 — Backfill 10C integration tests**~~ | ✅ shipped 2026-05-02 — `bulk_set_visibility` + `instruments.bulk_visibility_when_closed` audit covered in `tests/integration/test_bulk_visibility.py` (4 cases). The other three originally-listed surfaces had been silently covered during Segment 10D (re-audit 2026-05-02). |
 | 5 | ~~**#1 — Wire `ruff check` into CI**~~ | ✅ shipped 2026-05-02 — `ci.yml` now runs `ruff check .` between dependency install and pytest. Pre-existing 10 findings (8 unused imports + 2 unused locals) cleaned up in the same PR. |
-| 6 | ~~**#19 — Roll session-status partial onto Reviewers / Reviewees / Assignments / Instruments**~~ | ✅ shipped 2026-05-02 — chrome system rebuilt and rolled out to all 6 main session-scoped pages (Home + 5 setup). Original literal scope satisfied; actual scope grew into a full chrome redesign (PRs #272 / #279 / #280–#290). Two follow-ons spawned: #20 (remaining pages) and #21 (Home body rebuild + Option F). |
-| 7 | ~~**#20 — Complete chrome rollout to remaining session-scoped pages**~~ | ✅ Operations Pages shipped 2026-05-02 (Invitations / Monitoring / Outbox now carry the chrome with their own tab active). The two Home sub-pages (Edit Session / Validate detail) are **deferred** — their status / function / location is being rethought as part of #21 (Home body rebuild). Adopting the chrome on those two now would risk locking in placement decisions the rethink might overturn. |
+| 6 | ~~**#19 — Roll session-status partial onto Reviewers / Reviewees / Assignments / Instruments**~~ | ✅ shipped 2026-05-02 — chrome system rebuilt and rolled out to all 6 main session-scoped pages (Home + 5 setup). Original literal scope satisfied; actual scope grew into a full chrome redesign (PRs #272 / #279 / #280–#290). Three follow-ons spawned: #20 (remaining pages), #21 (UI consistency updates), and #22 (Home body rebuild + Option F). |
+| 7 | ~~**#20 — Complete chrome rollout to remaining session-scoped pages**~~ | ✅ Operations Pages shipped 2026-05-02 (Invitations / Monitoring / Outbox now carry the chrome with their own tab active). The two Home sub-pages (Edit Session / Validate detail) are **deferred** — their status / function / location is being rethought as part of #22 (Home body rebuild). Adopting the chrome on those two now would risk locking in placement decisions the rethink might overturn. |
 | 8 | **#2 — Run pytest against Postgres in CI** | The `ci-postgres-migration` job today only round-trips Alembic; it never imports `app/` and never runs a test. SQLite-only test runs hide JSON coercion / dialect divergence until the dev-slot deploy. Higher-cost than #1 but high-value before Segment 11 introduces export. |
 
 ---
@@ -75,7 +76,8 @@ schema, so settle the arch story first.
 | 11 | **#16 — Decide bulk_visibility_when_closed invalidation policy** | Bundle with #10. The policy question is whether `bulk_set_visibility` should flip `validated → draft` (the previously-cited "compare to bulk_set_accepting" framing was misleading — that route requires session=ready and never sees a validated session). |
 | 12 | **#11 — Extract instruments-index template context to `views.py`** | Now safe (P0 prerequisites #13–14 shipped 2026-05-01). Re-grepped 2026-05-02: handler at `routes_operator.py:960–1100`, ~48 lines (10D shrunk from ~100). |
 | 13 | **#5 — Define audit-event `detail` schema convention** | Document in `spec/architecture.md`. Migrate emitters incrementally — one PR per emitter family. Segment 11 will export these, so the convention needs to settle first. |
-| 14 | **#21 — Home body rebuild + Option F relocation** | Sits in P2 because it's pre-Segment-11 work but feature-shaped rather than test/CI hardening. After #20 lands, the chrome system is fully deployed but the Home body still uses the old four-card layout (not the launch-point framing in `spec/ui_concept.md`), and page-specific status content (`fields_with_data`, self-review breakdown, etc.) is parked in sub-cards instead of relocated next to its relevant action per Option F. 4–6 small PRs total. Worth landing before Segment 11 so the operator surface is settled when export ships. |
+| 14 | **#21 — UI consistency updates aligning with the new chrome** | Umbrella for follow-on UI cleanups that align the surface with the chrome's visual language. First sub-task: restyle the six canonical button modifiers (Primary / Primary Outline / Alert / Alert Outline / Danger / Danger Outline) — they now read as jarringly contrastive against the chrome's understated tints. Move them to softer fills / lighter borders / lighten-on-hover. Update `spec/assumptions.md` once settled. Sequenced before #22 because the Home rebuild will use these buttons, so getting the visual right first saves rework. |
+| 15 | **#22 — Home body rebuild + Option F relocation** | After #20 / #21, the chrome system is fully deployed and the visual vocabulary is settled, but Home's body still uses the old four-card layout (not the launch-point framing in `spec/ui_concept.md`), and page-specific status content (`fields_with_data`, self-review breakdown, etc.) is parked in sub-cards instead of relocated next to its relevant action per Option F. 4–6 small PRs total. Worth landing before Segment 11 so the operator surface is settled when export ships. |
 
 **#17 (filter divergence) — resolved on re-audit 2026-05-02; removed from sequence.**
 
@@ -88,12 +90,12 @@ land before they age into harder problems.
 
 | Order | Item | Why this position |
 |---|---|---|
-| 15 | **#8 — Fix CSV email-validation drift** | Sets up #16 (cross-table identity check) cleanly — same code path. |
-| 16 | **#12 — Reviewer/Reviewee CSV cross-table identity check** | Builds on #8's shared `_parse_email` helper. Tightens the rule that email is the unique person-identifier across reviewer + reviewee tables in the same session. |
-| 17 | **#10 — Thread `correlation_id` into deadline lazy-close** | Cheap. Bundle with whichever route refactor next touches `observe_deadline`. |
-| 18 | **#9 — Refresh `get_or_create_default_instrument` docstring** | Tiny. (Pointer corrected to `app/services/assignments.py:402`.) |
-| 19 | **#6 — Decouple `invitations.py` from `Request`** | Only matters when Segment 15 (real SMTP) lands and sends from a background worker. Worth fixing now while the surface is small. |
-| 20 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
+| 16 | **#8 — Fix CSV email-validation drift** | Sets up #17 (cross-table identity check) cleanly — same code path. |
+| 17 | **#12 — Reviewer/Reviewee CSV cross-table identity check** | Builds on #8's shared `_parse_email` helper. Tightens the rule that email is the unique person-identifier across reviewer + reviewee tables in the same session. |
+| 18 | **#10 — Thread `correlation_id` into deadline lazy-close** | Cheap. Bundle with whichever route refactor next touches `observe_deadline`. |
+| 19 | **#9 — Refresh `get_or_create_default_instrument` docstring** | Tiny. (Pointer corrected to `app/services/assignments.py:402`.) |
+| 20 | **#6 — Decouple `invitations.py` from `Request`** | Only matters when Segment 15 (real SMTP) lands and sends from a background worker. Worth fixing now while the surface is small. |
+| 21 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
 
 ---
 
@@ -111,17 +113,23 @@ land before they age into harder problems.
   items.** Without Postgres-flavoured pytest, the arch
   refactors below ship silently-broken code on every PR until
   the dev-slot deploy. And the chrome rollout to remaining
-  pages is small enough that it's cheaper to finish it now than
-  to leave a half-built chrome system through the arch work.
+  pages was small enough that it was cheaper to finish at the
+  time than to leave a half-built chrome system through the
+  arch work.
 - **Why #19's actual scope dwarfed its catalog framing.** The
   original "roll a partial onto 4 pages" turned into a full
   chrome redesign (PRs #272 / #279 / #280–#290). The catalog
   entry now reflects the larger work; the follow-on items
-  (#20, #21) capture what's left.
-- **Why #21 (Home body rebuild) sits in P2.** It's
-  feature-shaped rather than test/CI hardening, but it's
-  pre-Segment-11 work — settling the operator surface before
-  export ships. Sized 4–6 small PRs total.
+  (#20, #21, #22) capture what's left.
+- **Why #21 (UI consistency) precedes #22 (Home rebuild).**
+  The Home body rebuild will use the canonical buttons that
+  #21 restyles. Settling the visual vocabulary first saves
+  rework on the buttons that Home's lifecycle-transition
+  primary, sub-page links, etc. will use.
+- **Why #21 / #22 sit in P2.** Feature-shaped rather than
+  test/CI hardening, but pre-Segment-11 work — settling the
+  operator surface (visually and structurally) before export
+  ships.
 - **Why item 17 dropped out.** Re-audit 2026-05-02: the cited
   `Assignment.include` filter divergence between
   `responses.session_pill_for_reviewer` and
