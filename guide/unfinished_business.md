@@ -662,7 +662,7 @@ session-scoped pages with the chrome.
 
 Two follow-on items spun off from this work and are tracked
 separately: #20 (chrome rollout to the remaining Operations
-Pages + Home sub-pages) and #21 (Home body rebuild + Option F
+Pages + Home sub-pages) and #22 (Home body rebuild + Option F
 relocation of parked sub-cards).
 
 (Original framing preserved below for archaeology.)
@@ -710,10 +710,10 @@ holds across the Operations side.
 The two Home sub-pages (Edit Session, Validate detail) are
 **deferred** — their status, function, and location in the
 session-scoped page taxonomy are being rethought as part of the
-Home body rebuild (item #21). Adopting the new chrome on those
+Home body rebuild (item #22). Adopting the new chrome on those
 two pages now would lock in placement decisions that the
 rethink might overturn. They'll get the chrome when their fate
-settles, as part of #21 or a successor item.
+settles, as part of #22 or a successor item.
 
 (Original framing preserved below for archaeology.)
 
@@ -751,7 +751,64 @@ softened.
 
 ---
 
-### 21. Home body rebuild + Option F relocation · [feature/chrome] · medium
+### 21. UI consistency updates aligning with the new chrome · [chrome] · varied
+
+**Why now.** The new two-row session top nav (item #19) sets a
+refined visual baseline — understated tints, soft accents,
+modern inset underlines, hover states that lighten rather than
+darken. Against that baseline, the rest of the operator
+surface now reads as inconsistent in places.
+
+This is the **umbrella item** for follow-on UI cleanups that
+align the surface with the new chrome's visual language.
+Capture additional sub-tasks here as they surface during
+subsequent PRs (e.g. during the Home rebuild in #22) rather
+than spinning a new catalog item per cleanup.
+
+**Sub-tasks queued so far:**
+
+1. **Restyle the six canonical button modifiers.** The buttons
+   defined in
+   [`spec/assumptions.md`](../spec/assumptions.md) (Primary,
+   Primary Outline, Alert, Alert Outline, Danger, Danger
+   Outline) now read as jarringly contrastive against the
+   chrome — saturated solid fills, hard borders, full-strength
+   colours throughout. The new chrome's vocabulary is
+   understated tints + softer accents + lighten-on-hover.
+   Move the canonical buttons to a more understated modern
+   look matching the chrome:
+   - Lighter / more transparent fills.
+   - Less saturated colours (especially on Alert and Danger
+     solids — currently shouty oranges and reds).
+   - Hover affordances that lighten rather than darken (matches
+     the chrome's `.session-home-anchor:hover` and
+     `.nav-tab:hover` direction).
+   - Smaller / less prominent in default state, with the
+     accent only fully visible on hover or active.
+   - Update `spec/assumptions.md` with the new visuals once the
+     restyle settles on the dev slot.
+
+(Other UI-consistency items will be appended below as they
+surface.)
+
+**Where.** `app/web/templates/base.html` (`.btn` / `.btn.secondary` /
+`.btn.danger` / `.btn.danger-solid` / `.btn.alert` /
+`.btn.alert-solid` rules) plus `spec/assumptions.md`. Visual
+review touches every page that uses these buttons (i.e. all of
+them).
+
+**Plan.**
+
+- First PR — button restyle. Iterate on dev slot until the
+  new visual reads well across the chrome'd pages.
+- Second PR — update `spec/assumptions.md` with the settled
+  values + rationale.
+- Subsequent PRs — fold in any other UI inconsistencies that
+  surface as the chrome rolls into more pages or as #22 lands.
+
+---
+
+### 22. Home body rebuild + Option F relocation · [feature/chrome] · medium
 
 **Why now.** PR
 [#287](https://github.com/philoyhc/review-robin-web/pull/287)
