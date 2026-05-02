@@ -538,8 +538,9 @@
     <p class="muted" style="margin: 0 0 12px 0; font-size: 0.9em;">
       Catalog of Response Types referenced by every instrument's
       Response Fields. Seeded rows are locked. Operator-added rows
-      can be edited (Min / Max / Step / List) or deleted; the
-      Response Type name and Data Type lock once saved.
+      can be edited or deleted; the Response Type name and Data Type
+      lock once added. The Decimal Data Type takes at most up to one
+      decimal place.
     </p>
 
     {% if rtd_error %}
@@ -632,7 +633,7 @@
                            style="width: 100%;">
                   {% else %}NA{% endif %}
                 </td>
-                <td style="white-space: nowrap;">
+                <td style="white-space: nowrap; text-align: right;">
                   <div style="display: inline-flex; gap: 6px;">
                     <button form="rtd-edit-{{ rtd.id }}" type="submit"
                             class="btn" style="{{ _rtd_btn_style }}">Save</button>
@@ -656,7 +657,7 @@
                 <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.max, rtd.data_type) }}{% endif %}</td>
                 <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ fmt_num(rtd.step, rtd.data_type) }}{% else %}NA{% endif %}</td>
                 <td>{% if rtd.data_type == "List" %}{{ rtd.list_csv or "—" }}{% else %}NA{% endif %}</td>
-                <td style="white-space: nowrap;">
+                <td style="white-space: nowrap; text-align: right;">
                   {% if rtd.is_seeded or is_ready %}
                     {# Seeded rows: no buttons. Ready-session lock:
                        no buttons either (mirrors instrument cards). #}
@@ -692,14 +693,17 @@
       {% set add_disabled = editing_rtd_id is not none %}
       <div style="margin-top: 16px; display: flex; justify-content: flex-end;"
            id="rtd-add-card">
-        <div style="padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc; min-width: 22em;">
+        <div style="padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc; min-width: 24em;">
           <p style="margin: 0 0 8px 0; font-weight: bold; text-align: right;">Add a Response Type</p>
+          <p class="muted" style="margin: 0 0 8px 0; font-size: 0.85em; text-align: right;">
+            Click <strong>Add</strong> to start a new row in the table above.
+          </p>
           <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-bottom: 8px;">
             <label for="new-rtd-name" style="font-weight: normal;">Name</label>
             <input type="text" id="new-rtd-name" style="width: 12em;"
                    {% if add_disabled %}disabled{% endif %}>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-bottom: 8px;">
+          <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
             <label for="new-rtd-data-type" style="font-weight: normal;">Data Type</label>
             <select id="new-rtd-data-type"
                     {% if add_disabled %}disabled{% endif %}>
@@ -708,8 +712,6 @@
               <option value="Decimal">Decimal</option>
               <option value="List">List</option>
             </select>
-          </div>
-          <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
             <button id="rtd-add-button"
                     type="button" class="btn alert-solid"
                     style="width: 6em; box-sizing: border-box;"
@@ -717,10 +719,6 @@
                     {% if add_disabled %}disabled data-server-disabled="1"
                     title="Save or cancel the row in progress before adding another."{% endif %}>Add</button>
           </div>
-          <p class="muted" style="margin: 0; font-size: 0.85em; text-align: right;">
-            Click <strong>Add</strong> to start a new row in the table
-            above. Decimal values can have at most one decimal place.
-          </p>
         </div>
       </div>
 
