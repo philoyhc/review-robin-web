@@ -340,7 +340,7 @@ class RTDInUseError(Exception):
     has dependent ``instrument_response_fields`` rows without the
     operator confirming the cascade preview."""
 
-    def __init__(self, dependents: dict[str, int]) -> None:
+    def __init__(self, dependents: dict[str, Any]) -> None:
         super().__init__(
             f"{dependents['response_field_count']} response field(s) "
             f"reference this Response Type"
@@ -348,11 +348,28 @@ class RTDInUseError(Exception):
         self.dependents = dependents
 
 
+class RTDDeleteWouldEmptyInstrumentError(Exception):
+    """Raised when a cascade-delete on an operator-defined RTD would
+    leave at least one instrument with **zero** Response Fields rows.
+    The route translates this into a hard-block banner naming the
+    affected instrument(s); operator must add a non-ODT row to that
+    instrument first. Slice 4d Gap 3."""
+
+    def __init__(self, would_empty: list[dict[str, Any]]) -> None:
+        names = ", ".join(f"#{e['instrument_number']}" for e in would_empty)
+        super().__init__(
+            f"Cascade would leave instrument(s) {names} with no Response Fields"
+        )
+        self.would_empty = would_empty
+
+
 def count_rtd_dependents(
     db: Session, *, rtd: ResponseTypeDefinition
-) -> dict[str, int]:
+) -> dict[str, Any]:
     """Count the rows that would be cascade-dropped if this RTD is
-    deleted. Used by the operator-delete confirmation dialog."""
+    deleted, plus the list of instruments that would be left with
+    zero Response Fields rows after the cascade. Used by the
+    operator-delete confirmation dialog and the hard-block check."""
     rf_rows = list(
         db.execute(
             select(InstrumentResponseField.id, InstrumentResponseField.instrument_id)
@@ -381,11 +398,42 @@ def count_rtd_dependents(
             ).scalar_one()
         )
 
+    # For each instrument that has any RF row referencing this RTD,
+    # count the *other* RF rows on that instrument (rows not
+    # referencing this RTD). If zero, the cascade would empty it.
+    would_empty: list[dict[str, Any]] = []
+    if instrument_ids:
+        instruments_in_session = list(
+            db.execute(
+                select(Instrument)
+                .where(Instrument.session_id == rtd.session_id)
+                .order_by(Instrument.order, Instrument.id)
+            ).scalars()
+        )
+        position_by_id = {inst.id: idx for idx, inst in enumerate(instruments_in_session, start=1)}
+        for instrument_id in instrument_ids:
+            other_rf_count = int(
+                db.execute(
+                    select(func.count(InstrumentResponseField.id)).where(
+                        InstrumentResponseField.instrument_id == instrument_id,
+                        InstrumentResponseField.response_type_id != rtd.id,
+                    )
+                ).scalar_one()
+            )
+            if other_rf_count == 0:
+                would_empty.append({
+                    "instrument_id": instrument_id,
+                    "instrument_number": position_by_id.get(instrument_id, 0),
+                })
+        # Sort by on-screen number so the banner reads in card order.
+        would_empty.sort(key=lambda e: e["instrument_number"])
+
     return {
         "response_field_count": len(rf_ids),
         "instrument_count": len(instrument_ids),
         "response_count": response_count,
         "assignment_count": assignment_count,
+        "would_empty_instruments": would_empty,
     }
 
 
@@ -621,19 +669,28 @@ def delete_response_type_definition(
     rtd: ResponseTypeDefinition,
     confirm: bool,
     actor: User,
-) -> dict[str, int]:
+) -> dict[str, Any]:
     """Delete an operator-defined RTD. Seeded rows are spec-locked
-    (raises ``RTDLockedError``). When the row has dependent Response
-    Fields rows and ``confirm`` is False, raises ``RTDInUseError``
-    so the route can render the cascade-preview confirmation. The
-    actual cascade fires through the FK ``ON DELETE CASCADE`` from
-    Slice 4a."""
+    (raises ``RTDLockedError``). When the cascade would leave at
+    least one instrument with zero Response Fields rows, raises
+    ``RTDDeleteWouldEmptyInstrumentError`` (Slice 4d Gap 3) — this
+    preempts the in-use check and is *not* overridable via
+    ``confirm`` (the operator must add a non-ODT row to the
+    affected instrument first). When the row has dependent
+    Response Fields rows and ``confirm`` is False, raises
+    ``RTDInUseError`` so the route can render the cascade-preview
+    confirmation. The actual cascade fires through the FK
+    ``ON DELETE CASCADE`` from Slice 4a."""
     if rtd.is_seeded:
         raise RTDLockedError(
             f"Seeded Response Type {rtd.response_type!r} cannot be deleted."
         )
 
     dependents = count_rtd_dependents(db, rtd=rtd)
+    if dependents["would_empty_instruments"]:
+        raise RTDDeleteWouldEmptyInstrumentError(
+            dependents["would_empty_instruments"]
+        )
     if dependents["response_field_count"] > 0 and not confirm:
         raise RTDInUseError(dependents)
 

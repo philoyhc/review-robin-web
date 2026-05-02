@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
@@ -1896,3 +1896,183 @@ def test_bulk_save_ignores_response_type_id_for_existing_rows(
         ).scalars()
     )
     assert len(fields) == 2  # rating + comments only
+
+
+# --- Slice 4d: cross-cutting consistency guards --------------------
+
+
+def test_instrument_edit_locks_rtd_card_affordances(
+    client: TestClient, db: Session
+) -> None:
+    """Slice 4d Gap 1 — when ``?editing={iid}`` is set, every operator-
+    defined RTD row's Edit + the Add a Response Type Add button
+    render disabled with the mutual-exclusion tooltip."""
+    review_session = _make_session(client, db, code="mx-instr")
+    instrument = _instrument(db, review_session.id)
+    # Operator-add an ODT so we have an Edit button to assert against.
+    client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "MX",
+            "data_type": "Integer",
+            "min": "0",
+            "max": "5",
+            "step": "1",
+        },
+        follow_redirects=False,
+    )
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    # The would-be Edit anchor is replaced with a disabled <a>.
+    assert "Save or cancel the instrument edit before editing a Response Type" in body
+    # Add card's Add button is disabled.
+    add_button = body.split('id="rtd-add-button"', 1)[1].split(">", 1)[0]
+    assert "disabled" in add_button
+
+
+def test_rtd_edit_locks_instrument_card_affordances(
+    client: TestClient, db: Session
+) -> None:
+    """Slice 4d Gap 1 — when ``?editing_rtd_id={id}`` is set, every
+    per-instrument card's Edit anchors render disabled."""
+    review_session = _make_session(client, db, code="mx-rtd")
+    client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "MXrtd",
+            "data_type": "Integer",
+            "min": "0",
+            "max": "5",
+            "step": "1",
+        },
+        follow_redirects=False,
+    )
+    custom = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.response_type == "MXrtd"
+        )
+    ).scalar_one()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing_rtd_id={custom.id}"
+    ).text
+    assert (
+        "Save or cancel the Response Type Definitions edit before editing an instrument"
+        in body
+    )
+
+
+def test_bulk_save_blocks_when_post_save_rf_count_is_zero(
+    client: TestClient, db: Session
+) -> None:
+    """Slice 4d Gap 2 — saving an instrument with all RF rows queued
+    for delete redirects back with the rf_save_error banner; row count
+    in DB unchanged."""
+    review_session = _make_session(client, db, code="zero-rf-block")
+    instrument = _instrument(db, review_session.id)
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    before_count = db.execute(
+        select(func.count(InstrumentResponseField.id)).where(
+            InstrumentResponseField.instrument_id == instrument.id
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "kind": ["response", "response"],
+            "id": [str(rating.id), str(comments.id)],
+            "order": ["0", "1"],
+            "label": ["Rating", "Comments"],
+            "response_delete_ids": [str(rating.id), str(comments.id)],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    loc = response.headers["location"]
+    assert "rf_save_error=" in loc
+    assert f"editing={instrument.id}" in loc
+
+    # Banner renders on the redirected page.
+    body = client.get(loc).text
+    assert "Could not save" in body
+    assert "must have at least one response field" in body
+
+    # Row count unchanged in DB.
+    after_count = db.execute(
+        select(func.count(InstrumentResponseField.id)).where(
+            InstrumentResponseField.instrument_id == instrument.id
+        )
+    ).scalar_one()
+    assert before_count == after_count
+
+
+def test_rtd_delete_blocks_when_cascade_would_empty_instrument(
+    client: TestClient, db: Session
+) -> None:
+    """Slice 4d Gap 3 — operator-delete on an in-use ODT whose cascade
+    would empty an instrument bounces back with the would-empty banner;
+    the row + dependent RF rows survive."""
+    review_session = _make_session(client, db, code="would-empty-route")
+    instrument = _instrument(db, review_session.id)
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "OnlyType",
+            "data_type": "Integer",
+            "min": "0",
+            "max": "5",
+            "step": "1",
+        },
+        follow_redirects=False,
+    )
+    custom = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.response_type == "OnlyType"
+        )
+    ).scalar_one()
+    # Point both default RF rows at the operator-defined RTD so the
+    # cascade would leave the instrument empty.
+    rfs = list(
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    )
+    for rf in rfs:
+        rf.response_type_id = custom.id
+    db.commit()
+
+    blocked = client.post(
+        f"/operator/sessions/{review_session.id}/response-types/{custom.id}/delete",
+        data={"confirm": "true"},  # operator confirms — should still block
+        follow_redirects=False,
+    )
+    assert blocked.status_code == 303
+    loc = blocked.headers["location"]
+    assert f"rtd_would_empty_id={custom.id}" in loc
+    assert "rtd_would_empty_instruments=1" in loc
+
+    # Banner renders on the redirected page.
+    body = client.get(loc).text
+    assert "Cannot delete this Response Type" in body
+    assert "instrument <strong>#1</strong>" in body or "instrument" in body
+
+    # Row + dependents survive.
+    db.expire_all()
+    assert db.get(ResponseTypeDefinition, custom.id) is not None

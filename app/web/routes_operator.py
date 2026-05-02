@@ -963,12 +963,15 @@ def instruments_index(
     saved: int | None = Query(default=None),
     rtd_error: str | None = Query(default=None),
     rtd_id: int | None = Query(default=None),
+    rf_save_error: str | None = Query(default=None),
     editing_rtd_id: int | None = Query(default=None),
     rtd_delete_blocked_id: int | None = Query(default=None),
     rtd_delete_blocked_rfs: int | None = Query(default=None),
     rtd_delete_blocked_instruments: int | None = Query(default=None),
     rtd_delete_blocked_responses: int | None = Query(default=None),
     rtd_delete_blocked_assignments: int | None = Query(default=None),
+    rtd_would_empty_id: int | None = Query(default=None),
+    rtd_would_empty_instruments: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1024,6 +1027,13 @@ def instruments_index(
     # editing. The yellow lock card on a ``ready`` session overrides
     # everything — every per-instrument card stays locked.
     editing_instrument_id = None if is_ready else editing
+    # Slice 4d: the per-instrument editing state and the RTD editing
+    # state are mutually exclusive — one editing context on the page
+    # at a time. If both URL params are set (e.g. via a stale link),
+    # the per-instrument card wins; the RTD card stays locked.
+    effective_editing_rtd_id: int | None = None
+    if not is_ready and editing_instrument_id is None:
+        effective_editing_rtd_id = editing_rtd_id
 
     # "Saved" / "not saved" pill on each per-instrument card's status
     # sub-card. An instrument is "saved" if it has at least one audit
@@ -1056,7 +1066,10 @@ def instruments_index(
             "rtds": rtds,
             "rtd_error": rtd_error,
             "rtd_error_id": rtd_id,
-            "editing_rtd_id": None if is_ready else editing_rtd_id,
+            "rf_save_error": rf_save_error,
+            "editing_rtd_id": effective_editing_rtd_id,
+            "is_some_instrument_editing": editing_instrument_id is not None,
+            "is_some_rtd_unlocked": effective_editing_rtd_id is not None,
             "rtd_delete_blocked": (
                 {
                     "id": rtd_delete_blocked_id,
@@ -1066,6 +1079,16 @@ def instruments_index(
                     "assignment_count": rtd_delete_blocked_assignments or 0,
                 }
                 if rtd_delete_blocked_id is not None
+                else None
+            ),
+            "rtd_would_empty": (
+                {
+                    "id": rtd_would_empty_id,
+                    "instrument_numbers": [
+                        n for n in (rtd_would_empty_instruments or "").split(",") if n
+                    ],
+                }
+                if rtd_would_empty_id is not None
                 else None
             ),
             "breadcrumbs": breadcrumbs.operator_session_child(
@@ -1606,6 +1629,51 @@ async def instrument_bulk_save_fields(
             detail="Bulk save row inputs are misaligned.",
         )
 
+    # Slice 4d Gap 2: refuse to save an instrument with zero
+    # Response Fields rows. Compute the post-save RF count up-front
+    # (existing - deletes + new_* draft adds) and bounce back to the
+    # editing context with an inline error banner if it would be
+    # zero. Symmetric with the cascade-side guard on the Response
+    # Type Definitions card.
+    existing_rf_count = int(
+        db.execute(
+            select(func.count(instruments_service.InstrumentResponseField.id)).where(
+                instruments_service.InstrumentResponseField.instrument_id
+                == instrument.id
+            )
+        ).scalar_one()
+    )
+    new_response_count = sum(
+        1
+        for kind, raw_id in zip(kinds, raw_ids)
+        if kind == "response"
+        and raw_id.startswith("new_")
+        and raw_id not in {str(d) for d in response_delete_ids}
+    )
+    # Deduplicate ``new_*`` ids — duplicates in the form payload
+    # don't create extra rows.
+    new_unique_ids = {
+        raw_id
+        for kind, raw_id in zip(kinds, raw_ids)
+        if kind == "response"
+        and raw_id.startswith("new_")
+        and raw_id not in {str(d) for d in response_delete_ids}
+    }
+    new_response_count = len(new_unique_ids)
+    post_save_rf_count = (
+        existing_rf_count - len(response_delete_ids) + new_response_count
+    )
+    if post_save_rf_count <= 0:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"?editing={instrument.id}"
+                f"&rf_save_error=An+instrument+must+have+at+least+one+response+field."
+                f"#instrument-{instrument.id}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
     _invalidate_if_validated(
         db, review_session, user, reason="instrument_fields_saved"
     )
@@ -1961,6 +2029,22 @@ def response_type_delete(
     try:
         instruments_service.delete_response_type_definition(
             db, rtd=rtd, confirm=(confirm == "true"), actor=user
+        )
+    except instruments_service.RTDDeleteWouldEmptyInstrumentError as exc:
+        # Slice 4d Gap 3: hard-block. The cascade would leave at
+        # least one instrument with zero RF rows; operator must add
+        # a non-ODT row to that instrument first.
+        names = ",".join(
+            str(e["instrument_number"]) for e in exc.would_empty
+        )
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"?rtd_would_empty_id={rtd.id}"
+                f"&rtd_would_empty_instruments={names}"
+                f"#rtd-row-{rtd.id}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
         )
     except instruments_service.RTDInUseError as exc:
         d = exc.dependents

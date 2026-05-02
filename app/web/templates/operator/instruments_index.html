@@ -90,6 +90,12 @@
     </div>
   {% endif %}
 
+  {% if rf_save_error %}
+    <div class="card" style="border-color: #dc2626; background: #fee2e2;">
+      <p style="margin: 0;"><strong>Could not save:</strong> {{ rf_save_error }}</p>
+    </div>
+  {% endif %}
+
   {% set instrument_palette = ['#f0f9ff', '#d1fae5', '#ede9fe', '#ffedd5', '#ffe4e6', '#fef3c7'] %}
   {% for instrument in instruments %}
     {% set is_editing = (editing_instrument_id == instrument.id) %}
@@ -124,6 +130,15 @@
               <a class="btn alert"
                  href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
                  {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
+            {% elif is_some_rtd_unlocked %}
+              {# Slice 4d mutual-exclusion: a Response Type
+                 Definitions row is currently unlocked. Lock this
+                 instrument's Edit so the operator can't open two
+                 editing contexts at once. #}
+              <a class="btn alert-solid"
+                 aria-disabled="true"
+                 style="opacity: 0.5; pointer-events: none;"
+                 title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
             {% else %}
               <a class="btn alert-solid"
                  href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
@@ -524,6 +539,11 @@
           <a class="btn alert"
              href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
              {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
+        {% elif is_some_rtd_unlocked %}
+          <a class="btn alert-solid"
+             aria-disabled="true"
+             style="opacity: 0.5; pointer-events: none;"
+             title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
         {% else %}
           <a class="btn alert-solid"
              href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
@@ -563,6 +583,26 @@
     {% if rtd_error %}
       <div class="card" style="border-color: #dc2626; background: #fee2e2; margin-bottom: 12px;">
         <p style="margin: 0;"><strong>Could not save Response Type:</strong> {{ rtd_error }}</p>
+      </div>
+    {% endif %}
+
+    {% if rtd_would_empty %}
+      <div class="card" style="border-color: #b91c1c; background: #fee2e2; margin-bottom: 12px;">
+        <p style="margin: 0 0 8px 0;">
+          <strong>Cannot delete this Response Type.</strong>
+          {% set count = rtd_would_empty.instrument_numbers | length %}
+          Doing so would leave instrument{{ "" if count == 1 else "s" }}
+          {% for num in rtd_would_empty.instrument_numbers -%}
+            <strong>#{{ num }}</strong>{% if not loop.last %}{% if loop.revindex == 2 %} and {% else %}, {% endif %}{% endif %}
+          {%- endfor %}
+          with no Response Fields. Add or change a row on
+          {{ "that instrument" if count == 1 else "those instruments" }}
+          first, then come back.
+        </p>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <a class="btn alert"
+             href="/operator/sessions/{{ session.id }}/instruments#rtd-card">Cancel</a>
+        </div>
       </div>
     {% endif %}
 
@@ -683,6 +723,15 @@
                        aria-disabled="true"
                        style="{{ _rtd_btn_style }} opacity: 0.5; pointer-events: none;"
                        title="Save or cancel the row in progress before editing another.">Edit</a>
+                  {% elif is_some_instrument_editing %}
+                    {# Slice 4d mutual-exclusion: a per-instrument card
+                       is currently in edit mode. Lock RTD edits so
+                       cascade-deletes can't silently rewrite the RF
+                       rows the operator's browser still has open. #}
+                    <a class="btn alert-solid disabled"
+                       aria-disabled="true"
+                       style="{{ _rtd_btn_style }} opacity: 0.5; pointer-events: none;"
+                       title="Save or cancel the instrument edit before editing a Response Type.">Edit</a>
                   {% else %}
                     <a class="btn alert-solid" style="{{ _rtd_btn_style }}"
                        href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd.id }}#rtd-row-{{ rtd.id }}">Edit</a>
@@ -707,7 +756,9 @@
          canceled. The disabled-on-render branch handles editing mode;
          ``_updateRtdAddButtonState`` toggles the disabled flag when
          drafts come and go. #}
-      {% set add_disabled = editing_rtd_id is not none %}
+      {# Slice 4d: also lock the Add card while a per-instrument
+         card is being edited (mutual exclusion). #}
+      {% set add_disabled = (editing_rtd_id is not none) or is_some_instrument_editing %}
       <div style="margin-top: 16px; display: flex; justify-content: flex-end;"
            id="rtd-add-card">
         <div style="padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc; min-width: 24em;">
