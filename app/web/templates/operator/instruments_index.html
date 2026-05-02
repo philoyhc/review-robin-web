@@ -88,9 +88,13 @@
     <div class="card" id="instrument-{{ instrument.id }}"
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
 
-      {# Section A — Identity + status. #}
-      <div class="bottom-grid">
-        <div class="card instrument-edit" style="border-color: transparent; background: transparent; padding: 0;">
+      {# Section A — Identity + status. ``align-items: stretch`` makes
+         the two cards equal-height so the description-card Edit pair
+         can sit bottom-left aligned with the status card's bottom edge. #}
+      <div class="bottom-grid" style="align-items: stretch;">
+        <div class="card instrument-edit"
+             style="border-color: transparent; background: transparent; padding: 0;
+                    display: flex; flex-direction: column;">
           <h2 style="margin-top: 0; font-size: 1.6rem;">Instrument #{{ loop.index }}</h2>
           {% if is_editing %}
             <textarea form="dfsave-{{ instrument.id }}" name="description"
@@ -99,6 +103,22 @@
           {% else %}
             <p class="description-text">{{ instrument.description or "(no description)" }}</p>
           {% endif %}
+          {# Mirror of the Section E Edit / Save+Cancel pair, anchored
+             to the card's bottom-left so the operator has a second
+             affordance without scrolling past the tables. #}
+          <div style="display: flex; gap: 8px; justify-content: flex-start; margin-top: auto; padding-top: 12px;">
+            {% if is_editing %}
+              <button form="dfsave-{{ instrument.id }}" type="submit" class="btn"
+                      {% if is_ready %}disabled{% endif %}>Save</button>
+              <a class="btn alert"
+                 href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
+                 {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
+            {% else %}
+              <a class="btn alert-solid"
+                 href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+                 {% if is_ready %}aria-disabled="true" style="opacity: 0.5; pointer-events: none;"{% endif %}>Edit</a>
+            {% endif %}
+          </div>
         </div>
 
         <div class="card" style="background: #fff;">
