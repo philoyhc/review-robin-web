@@ -274,6 +274,18 @@ Segment 12) with a Cancel anchor that drops the fragment.
 
 ## `/operator/sessions/{id}/instruments` — Instruments
 
+> **Snapshot note.** The detailed per-section description below
+> reflects the **end-of-Segment-10C** surface (live preview
+> table, `<details>` inline label edits, hardcoded Display Fields
+> placeholder, etc.). Segment 10D Slices 1-3 plus the polish
+> sequence ([#235](https://github.com/philoyhc/review-robin-web/pull/235)
+> through [#238](https://github.com/philoyhc/review-robin-web/pull/238))
+> have since rebuilt the per-instrument card around a single
+> bulk-save form (`dfsave-{iid}`) and a `?editing={iid}` URL state
+> machine. The locked spec for the rebuilt surface lives in
+> [`guide/instruments.md`](../guide/instruments.md). This file
+> will be reconciled on Segment 10D close.
+
 A single consolidated page for everything per-instrument:
 session-wide status + bulk toggles, then one card per instrument
 with in-place editing for description, response fields, and

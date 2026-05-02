@@ -208,6 +208,32 @@ both bound to the same ``dfsave-{iid}`` bulk-save form via
 two fields on response rows when present in the payload, rolling
 into the ``instrument.response_fields_saved`` audit detail.
 
+A four-PR **state-machine completion polish** sequence then
+closed the Save / Cancel contract on the per-instrument card:
+
+- [#235](https://github.com/philoyhc/review-robin-web/pull/235)
+  — Order ``▲`` / ``▼`` on both tables now reorder rows
+  client-side and rewrite the bulk-save form's hidden ``order``
+  inputs, so the new order only commits on Save (Cancel
+  discards).
+- [#236](https://github.com/philoyhc/review-robin-web/pull/236)
+  — Response Fields ``✗`` / ``➕`` defer to the same bulk-save
+  form: ``✗`` queues a ``response_delete_ids`` hidden input, ``➕``
+  clones a hidden ``<template>`` with id ``new_{N}`` that the
+  route resolves to a real field on Save via
+  ``add_default_response_field``. Help rows follow along.
+- [#237](https://github.com/philoyhc/review-robin-web/pull/237)
+  — Section A's separate ``<details>`` Edit toggle for the
+  description is gone; description rides along with the
+  bulk-save form via a textarea joined to ``dfsave-{iid}``. The
+  ``<hr>`` and ``Preview Instrument #N`` placeholder block from
+  Sections C / D are removed.
+- [#238](https://github.com/philoyhc/review-robin-web/pull/238)
+  — Mirrored Edit / Save+Cancel pair anchored bottom-left of
+  the Section A description card so the operator has a second
+  affordance without scrolling past the tables. Both pairs
+  share the same ``?editing={iid}`` state machine.
+
 Slice 2 also dropped the original spec point
 "`Required` checkbox stays read-only post-create": the rebuilt
 table makes Required toggleable in edit mode (spec wording
