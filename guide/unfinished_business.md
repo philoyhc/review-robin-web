@@ -499,7 +499,29 @@ underneath it).
 
 ## P0/P1 — Other findings from the round-3 audit
 
-### 15. Backfill integration tests for shipped 10C functionality · [test] · tiny
+### 15. ~~Backfill integration tests for shipped 10C functionality~~ — ✅ closed 2026-05-02 · [test] · tiny
+
+**Resolution (2026-05-02).** All four originally-listed surfaces
+are now covered:
+
+- ✅ `delete_instrument` — Slice 5
+  ([`tests/integration/test_segment_10d_slice_5.py`](../tests/integration/test_segment_10d_slice_5.py)).
+- ✅ `bulk_set_visibility` + `instruments.bulk_visibility_when_closed`
+  audit event — covered in
+  [`tests/integration/test_bulk_visibility.py`](../tests/integration/test_bulk_visibility.py)
+  (4 cases: all-on flips mixed state + audit, symmetric all-off,
+  idempotency no-op, locked-in "deliberately doesn't invalidate
+  `validated`" assertion that will fail loudly when item #16
+  ships).
+- ✅ `add_default_response_field` — covered by
+  [`tests/integration/test_route_persistence.py:272`](../tests/integration/test_route_persistence.py)
+  + 5 unit tests in
+  [`tests/unit/test_response_type_definitions.py:584-686`](../tests/unit/test_response_type_definitions.py).
+- ✅ "Cannot delete the last instrument" 400 guard — Slice 5.
+
+(Original framing preserved below for archaeology.)
+
+
 
 **Why now.** Of four 10C-shipped surfaces originally listed as
 having no integration test coverage, three are now covered by
