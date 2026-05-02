@@ -2282,6 +2282,7 @@ def invitations_index(
         {
             "user": user,
             "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
             "rows": rows,
             "eligible_count": len(eligible),
             "uninvited_count": sum(1 for r in eligible if r.id not in invited_ids),
@@ -2405,6 +2406,7 @@ def outbox_index(
         {
             "user": user,
             "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
             "rows": rows,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Outbox"
@@ -2435,6 +2437,7 @@ def session_monitoring(
         {
             "user": user,
             "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
             "summary": summary,
             "rows": rows,
             "is_ready": lifecycle.is_ready(review_session),
