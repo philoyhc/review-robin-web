@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.db.models.audit_event import AuditEvent
     from app.db.models.instrument import Instrument
     from app.db.models.invitation import Invitation
+    from app.db.models.response_type_definition import ResponseTypeDefinition
     from app.db.models.reviewee import Reviewee
     from app.db.models.reviewer import Reviewer
     from app.db.models.session_operator import SessionOperator
@@ -56,6 +57,10 @@ class ReviewSession(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
     invitations: Mapped[list[Invitation]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
+    response_type_definitions: Mapped[list[ResponseTypeDefinition]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",
     )

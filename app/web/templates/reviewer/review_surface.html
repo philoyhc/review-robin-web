@@ -122,24 +122,44 @@
                   <td>
                     {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
                     {% set disabled_attr = "" if row.accepting else "disabled" %}
-                    {% if cell.field.response_type == "long_text" %}
-                      <textarea name="{{ field_name }}"
-                                rows="2"
-                                style="min-height: 44px;"
-                                {{ disabled_attr }}>{{ cell.value }}</textarea>
-                    {% elif cell.field.response_type == "integer" %}
-                      {% set validation = cell.field.validation or {} %}
+                    {# Render is driven by the RTD's ``data_type`` —
+                       any String row with max_length > 100 gets a
+                       textarea, smaller String rows get a text input,
+                       Integer / Decimal get a number input, List gets
+                       a <select> over the RTD's ``choices``. Slice 4a
+                       contract; pre-Slice-4a rendering branched on
+                       legacy literal type names. #}
+                    {% set validation = cell.field.validation or {} %}
+                    {% set data_type = cell.field.data_type %}
+                    {% if data_type == "String" %}
+                      {% set max_len = validation.max_length or 0 %}
+                      {% if max_len > 100 %}
+                        <textarea name="{{ field_name }}"
+                                  rows="2"
+                                  style="min-height: 44px;"
+                                  {% if max_len %}maxlength="{{ max_len }}"{% endif %}
+                                  {{ disabled_attr }}>{{ cell.value }}</textarea>
+                      {% else %}
+                        <input type="text"
+                               name="{{ field_name }}"
+                               value="{{ cell.value }}"
+                               {% if max_len %}maxlength="{{ max_len }}"{% endif %}
+                               {{ disabled_attr }}>
+                      {% endif %}
+                    {% elif data_type == "Integer" or data_type == "Decimal" %}
                       <input type="number"
                              name="{{ field_name }}"
                              value="{{ cell.value }}"
                              {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
                              {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
+                             {% if validation.step is defined %}step="{{ validation.step }}"{% endif %}
                              {{ disabled_attr }}>
-                    {% elif cell.field.response_type == "yes_no" %}
+                    {% elif data_type == "List" %}
                       <select name="{{ field_name }}" {{ disabled_attr }}>
                         <option value=""{% if not cell.value %} selected{% endif %}>—</option>
-                        <option value="yes"{% if cell.value == "yes" %} selected{% endif %}>yes</option>
-                        <option value="no"{% if cell.value == "no" %} selected{% endif %}>no</option>
+                        {% for choice in (validation.choices or []) %}
+                          <option value="{{ choice }}"{% if cell.value == choice %} selected{% endif %}>{{ choice }}</option>
+                        {% endfor %}
                       </select>
                     {% else %}
                       <input type="text"

@@ -13,6 +13,7 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     Response,
+    ResponseTypeDefinition,
     Reviewee,
     ReviewSession,
     User,
@@ -63,18 +64,16 @@ DEFAULT_RESPONSE_FIELDS: list[dict[str, Any]] = [
     {
         "field_key": "rating",
         "label": "Rating",
-        "response_type": "integer",
+        "rtd_name": "1-to-5int",
         "required": True,
         "order": 1,
-        "validation": {"min": 1, "max": 5},
     },
     {
         "field_key": "comments",
         "label": "Comments",
-        "response_type": "long_text",
+        "rtd_name": "Long_text",
         "required": False,
         "order": 2,
-        "validation": None,
     },
 ]
 
@@ -122,11 +121,151 @@ _LOCKED_DISPLAY_ORDER: dict[tuple[str, str], int] = {
 
 _FIELD_KEY_REGEX = re.compile(r"^[a-z][a-z0-9_]*$")
 _FIELD_KEY_MAX_LEN = 64
-_VALID_RESPONSE_TYPES = {"integer", "short_text", "long_text", "yes_no"}
 
 _VALID_DISPLAY_SOURCES: frozenset[tuple[str, str]] = frozenset(
     _DEFAULT_DISPLAY_LABELS.keys()
 )
+
+# Response Type Definitions — the per-session catalog of types
+# referenced by ``InstrumentResponseField.response_type_id``. The
+# ten rows below are seeded on every session and are fully locked
+# (name + data_type + parameters; cannot be deleted). Operator-
+# defined rows land in 4b.
+_VALID_DATA_TYPES: frozenset[str] = frozenset(
+    {"String", "Integer", "Decimal", "List"}
+)
+
+SEEDED_RESPONSE_TYPE_DEFINITIONS: list[dict[str, Any]] = [
+    {"response_type": "Long_text",  "data_type": "String",  "min": 0,    "max": 200,  "step": None, "list_csv": None},
+    {"response_type": "Short_text", "data_type": "String",  "min": 0,    "max": 50,   "step": None, "list_csv": None},
+    {"response_type": "Yes_no",     "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Yes, No"},
+    {"response_type": "Grade",      "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "A+, A, A-, B+, B, B-, C+, C, D+, D, F"},
+    {"response_type": "Likert5",    "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Strongly Disagree, Disagree, Neutral, Agree, Strongly Agree"},
+    {"response_type": "100int",     "data_type": "Integer", "min": 0,    "max": 100,  "step": 1,    "list_csv": None},
+    {"response_type": "0-to-2int",  "data_type": "Integer", "min": 0,    "max": 2,    "step": 1,    "list_csv": None},
+    {"response_type": "1-to-5int",  "data_type": "Integer", "min": 1,    "max": 5,    "step": 1,    "list_csv": None},
+    {"response_type": "1-to-5half", "data_type": "Decimal", "min": 1.0,  "max": 5.0,  "step": 0.5,  "list_csv": None},
+    {"response_type": "1-to-5dec",  "data_type": "Decimal", "min": 1.0,  "max": 5.0,  "step": 0.1,  "list_csv": None},
+]
+
+
+def ensure_default_response_type_definitions(
+    db: Session, review_session: ReviewSession
+) -> dict[str, ResponseTypeDefinition]:
+    """Idempotently seed the ten baseline RTD rows on the given
+    session. Returns a dict keyed by ``response_type`` name covering
+    every seeded row currently in the DB for the session.
+
+    Re-running on a session that already has the seeds is a no-op.
+    Operator-defined rows are left untouched."""
+    existing = {
+        rtd.response_type: rtd
+        for rtd in db.execute(
+            select(ResponseTypeDefinition).where(
+                ResponseTypeDefinition.session_id == review_session.id
+            )
+        ).scalars()
+    }
+
+    added = False
+    for index, spec in enumerate(SEEDED_RESPONSE_TYPE_DEFINITIONS):
+        if spec["response_type"] in existing:
+            continue
+        rtd = ResponseTypeDefinition(
+            session_id=review_session.id,
+            response_type=spec["response_type"],
+            data_type=spec["data_type"],
+            min=spec["min"],
+            max=spec["max"],
+            step=spec["step"],
+            list_csv=spec["list_csv"],
+            is_seeded=True,
+            seed_order=index,
+        )
+        db.add(rtd)
+        existing[spec["response_type"]] = rtd
+        added = True
+
+    if added:
+        db.flush()
+
+    return existing
+
+
+def validation_block_for_rtd(
+    rtd: ResponseTypeDefinition,
+) -> dict[str, Any] | None:
+    """Map an RTD row to the JSON shape written to
+    ``instrument_response_fields.validation`` per
+    ``guide/instruments.md`` "Validation derivation"."""
+    if rtd.data_type == "List":
+        if not rtd.list_csv:
+            return {"choices": []}
+        return {
+            "choices": [
+                item.strip()
+                for item in rtd.list_csv.split(",")
+                if item.strip()
+            ]
+        }
+    if rtd.data_type == "String":
+        block: dict[str, Any] = {}
+        if rtd.min is not None:
+            block["min_length"] = int(rtd.min)
+        if rtd.max is not None:
+            block["max_length"] = int(rtd.max)
+        return block or None
+    if rtd.data_type in ("Integer", "Decimal"):
+        cast = int if rtd.data_type == "Integer" else float
+        block = {}
+        if rtd.min is not None:
+            block["min"] = cast(rtd.min)
+        if rtd.max is not None:
+            block["max"] = cast(rtd.max)
+        if rtd.step is not None:
+            block["step"] = cast(rtd.step)
+        return block or None
+    return None
+
+
+def get_session_rtds(
+    db: Session, *, session_id: int
+) -> list[ResponseTypeDefinition]:
+    """Return the session's RTDs, sorted: seeded rows first in their
+    canonical seed order, then operator-defined rows by id."""
+    rows = list(
+        db.execute(
+            select(ResponseTypeDefinition).where(
+                ResponseTypeDefinition.session_id == session_id
+            )
+        ).scalars()
+    )
+    return sorted(
+        rows,
+        key=lambda r: (0 if r.is_seeded else 1, r.seed_order, r.id),
+    )
+
+
+def _rtd_by_id(
+    db: Session, *, session_id: int, rtd_id: int
+) -> ResponseTypeDefinition | None:
+    return db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.id == rtd_id,
+            ResponseTypeDefinition.session_id == session_id,
+        )
+    ).scalar_one_or_none()
+
+
+def _rtd_by_name(
+    db: Session, *, session_id: int, name: str
+) -> ResponseTypeDefinition | None:
+    return db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.session_id == session_id,
+            ResponseTypeDefinition.response_type == name,
+        )
+    ).scalar_one_or_none()
 
 
 def is_locked_display_source(source_type: str, source_field: str) -> bool:
@@ -228,6 +367,8 @@ def ensure_default_instrument(
         db.add(instrument)
         db.flush()
 
+    rtds_by_name = ensure_default_response_type_definitions(db, review_session)
+
     has_fields = (
         db.execute(
             select(InstrumentResponseField.id)
@@ -239,15 +380,16 @@ def ensure_default_instrument(
 
     if not has_fields:
         for spec in DEFAULT_RESPONSE_FIELDS:
+            rtd = rtds_by_name[spec["rtd_name"]]
             db.add(
                 InstrumentResponseField(
                     instrument_id=instrument.id,
                     field_key=spec["field_key"],
                     label=spec["label"],
-                    response_type=spec["response_type"],
+                    response_type_id=rtd.id,
                     required=spec["required"],
                     order=spec["order"],
-                    validation=spec["validation"],
+                    validation=validation_block_for_rtd(rtd),
                 )
             )
         db.flush()
@@ -351,16 +493,18 @@ def create_instrument(
     db.add(instrument)
     db.flush()
 
+    rtds_by_name = ensure_default_response_type_definitions(db, review_session)
     for spec in DEFAULT_RESPONSE_FIELDS:
+        rtd = rtds_by_name[spec["rtd_name"]]
         db.add(
             InstrumentResponseField(
                 instrument_id=instrument.id,
                 field_key=spec["field_key"],
                 label=spec["label"],
-                response_type=spec["response_type"],
+                response_type_id=rtd.id,
                 required=spec["required"],
                 order=spec["order"],
-                validation=spec["validation"],
+                validation=validation_block_for_rtd(rtd),
             )
         )
     db.flush()
@@ -1188,16 +1332,19 @@ def add_response_field(
     label: str,
     response_type: str,
     required: bool,
-    validation: dict[str, Any] | None,
     help_text: str | None,
     help_text_visible: bool,
     actor: User,
 ) -> InstrumentResponseField:
     _validate_field_key(field_key)
-    if response_type not in _VALID_RESPONSE_TYPES:
-        raise ValueError(f"Unknown response_type: {response_type}")
     if not label or not label.strip():
         raise ValueError("Label is required.")
+
+    rtd = _rtd_by_name(
+        db, session_id=instrument.session_id, name=response_type
+    )
+    if rtd is None:
+        raise ValueError(f"Unknown response_type: {response_type}")
 
     fields = _ordered_fields(db, instrument)
     if any(existing.field_key == field_key for existing in fields):
@@ -1209,10 +1356,10 @@ def add_response_field(
         instrument_id=instrument.id,
         field_key=field_key,
         label=label.strip(),
-        response_type=response_type,
+        response_type_id=rtd.id,
         required=required,
         order=len(fields),
-        validation=validation,
+        validation=validation_block_for_rtd(rtd),
         help_text=(help_text or None),
         help_text_visible=help_text_visible,
     )
@@ -1236,7 +1383,8 @@ def add_response_field(
             "session_id": instrument.session_id,
             "field_key": new_field.field_key,
             "label": new_field.label,
-            "response_type": new_field.response_type,
+            "response_type": rtd.response_type,
+            "response_type_id": rtd.id,
             "required": new_field.required,
             "validation": new_field.validation,
             "help_text": new_field.help_text,
@@ -1255,12 +1403,17 @@ def add_default_response_field(
     after_field_id: int | None = None,
     actor: User,
 ) -> InstrumentResponseField:
-    """Append a fresh Rating{n}/integer/required response field. If
-    ``after_field_id`` is given, slot the new field immediately after that
-    one and bump subsequent ``order`` values; otherwise append at the end.
-    Auto-derives a non-conflicting field_key.
-    """
+    """Append a fresh ``Rating{n}`` row with the seeded ``1-to-5int``
+    Response Type and ``required=True``. If ``after_field_id`` is given,
+    slot the new field immediately after that one and bump subsequent
+    ``order`` values; otherwise append at the end. Auto-derives a
+    non-conflicting field_key."""
     fields = _ordered_fields(db, instrument)
+
+    rtds_by_name = ensure_default_response_type_definitions(
+        db, instrument.session
+    )
+    default_rtd = rtds_by_name["1-to-5int"]
 
     base_num = len(fields) + 1
     new_label = f"Rating{base_num}"
@@ -1288,10 +1441,10 @@ def add_default_response_field(
         instrument_id=instrument.id,
         field_key=candidate,
         label=new_label,
-        response_type="integer",
+        response_type_id=default_rtd.id,
         required=True,
         order=new_order,
-        validation=None,
+        validation=validation_block_for_rtd(default_rtd),
         help_text=None,
         help_text_visible=True,
     )
@@ -1312,7 +1465,8 @@ def add_default_response_field(
             "session_id": instrument.session_id,
             "field_key": new_field.field_key,
             "label": new_field.label,
-            "response_type": new_field.response_type,
+            "response_type": default_rtd.response_type,
+            "response_type_id": default_rtd.id,
             "required": new_field.required,
             "order": new_order,
             "after_field_id": after_field_id,

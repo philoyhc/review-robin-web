@@ -1300,3 +1300,62 @@ def test_instruments_page_unifies_edit_under_section_e(
         f'<textarea form="dfsave-{instrument.id}" name="description"'
         in editing
     )
+
+
+def test_response_type_definitions_card_renders_seeded_catalog(
+    client: TestClient, db: Session
+) -> None:
+    """The Instruments page renders the Response Type Definitions card
+    as a read-only catalog of the ten seeded rows in canonical order.
+    Slice 4a contract; operator add / edit / delete lands in 4b."""
+    review_session = _make_session(client, db, code="rtd-card")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert "Response Type Definitions" in body
+    # Every seeded row appears, in spec order.
+    expected_in_order = [
+        "Long_text", "Short_text", "Yes_no", "Grade", "Likert5",
+        "100int", "0-to-2int", "1-to-5int", "1-to-5half", "1-to-5dec",
+    ]
+    last_idx = -1
+    for name in expected_in_order:
+        idx = body.find(f"<code>{name}</code>")
+        assert idx > last_idx, (
+            f"{name} missing or out of order in RTD card"
+        )
+        last_idx = idx
+    # 4b features are not yet present.
+    assert "Operator-add" in body or "follow-up slice" in body
+
+
+def test_response_fields_type_cell_renders_rtd_select(
+    client: TestClient, db: Session
+) -> None:
+    """Each Response Fields row's Type cell renders a disabled
+    ``<select>`` over the session's RTD names, with the row's current
+    RTD pre-selected."""
+    review_session = _make_session(client, db, code="rf-rtd-select")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # The default seeded ``rating`` row uses ``1-to-5int``.
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.field_key == "rating"
+        )
+    ).scalar_one()
+    assert (
+        f'<option value="{rating.response_type_id}" selected>1-to-5int</option>'
+        in body
+    )
+    # The default seeded ``comments`` row uses ``Long_text``.
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.field_key == "comments"
+        )
+    ).scalar_one()
+    assert (
+        f'<option value="{comments.response_type_id}" selected>Long_text</option>'
+        in body
+    )

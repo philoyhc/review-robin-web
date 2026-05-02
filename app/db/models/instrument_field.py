@@ -10,6 +10,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.db.models.instrument import Instrument
     from app.db.models.response import Response
+    from app.db.models.response_type_definition import ResponseTypeDefinition
 
 
 class InstrumentDisplayField(Base):
@@ -40,7 +41,11 @@ class InstrumentResponseField(Base):
     )
     field_key: Mapped[str] = mapped_column(String(255), nullable=False)
     label: Mapped[str] = mapped_column(String(255), nullable=False)
-    response_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    response_type_id: Mapped[int] = mapped_column(
+        ForeignKey("response_type_definitions.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
     required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     validation: Mapped[dict[str, Any] | None] = mapped_column(JSON)
@@ -48,7 +53,18 @@ class InstrumentResponseField(Base):
     help_text_visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     instrument: Mapped[Instrument] = relationship(back_populates="response_fields")
+    response_type_definition: Mapped[ResponseTypeDefinition] = relationship(
+        back_populates="response_fields",
+    )
     responses: Mapped[list[Response]] = relationship(
         back_populates="response_field",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def response_type(self) -> str:
+        return self.response_type_definition.response_type
+
+    @property
+    def data_type(self) -> str:
+        return self.response_type_definition.data_type

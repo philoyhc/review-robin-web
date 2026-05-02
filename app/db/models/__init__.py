@@ -5,6 +5,7 @@ from app.db.models.instrument import Instrument
 from app.db.models.instrument_field import InstrumentDisplayField, InstrumentResponseField
 from app.db.models.invitation import Invitation
 from app.db.models.response import Response
+from app.db.models.response_type_definition import ResponseTypeDefinition
 from app.db.models.review_session import ReviewSession
 from app.db.models.reviewee import Reviewee
 from app.db.models.reviewer import Reviewer
@@ -20,6 +21,7 @@ __all__ = [
     "InstrumentResponseField",
     "Invitation",
     "Response",
+    "ResponseTypeDefinition",
     "ReviewSession",
     "Reviewee",
     "Reviewer",

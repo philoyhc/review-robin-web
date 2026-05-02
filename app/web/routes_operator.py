@@ -1001,6 +1001,13 @@ def instruments_index(
     instruments_service.seed_display_fields_from_assignments(
         db, review_session
     )
+    # Idempotent per-request backfill of the seeded RTD catalog.
+    # Existing sessions get the rows from the Slice 4a migration; this
+    # call covers any session created without going through
+    # ``ensure_default_instrument`` (e.g. raw fixtures in tests).
+    instruments_service.ensure_default_response_type_definitions(
+        db, review_session
+    )
     db.commit()
 
     is_ready = lifecycle.is_ready(review_session)
@@ -1019,6 +1026,10 @@ def instruments_index(
         db, session_id=review_session.id
     )
 
+    rtds = instruments_service.get_session_rtds(
+        db, session_id=review_session.id
+    )
+
     return _templates.TemplateResponse(
         request,
         "operator/instruments_index.html",
@@ -1033,6 +1044,7 @@ def instruments_index(
             "editing_instrument_id": editing_instrument_id,
             "instrument_saved_state": instrument_saved_state,
             "saved_instrument_id": saved,
+            "rtds": rtds,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Instruments"
             ),
@@ -1179,20 +1191,10 @@ def instrument_add_field(
     if not key:
         key = instruments_service.slugify_field_key(label)
 
-    validation_block: dict[str, int] | None = None
-    if response_type == "integer":
-        bounds: dict[str, int] = {}
-        if validation_min:
-            try:
-                bounds["min"] = int(validation_min)
-            except ValueError:
-                pass
-        if validation_max:
-            try:
-                bounds["max"] = int(validation_max)
-            except ValueError:
-                pass
-        validation_block = bounds or None
+    # Validation is now derived from the chosen Response Type
+    # Definition (Slice 4a); the legacy ``validation_min`` /
+    # ``validation_max`` form fields are accepted but ignored.
+    _ = validation_min, validation_max  # silence unused-arg
 
     _invalidate_if_validated(
         db, review_session, user, reason="instrument_field_added"
@@ -1205,7 +1207,6 @@ def instrument_add_field(
             label=label,
             response_type=response_type,
             required=required == "true",
-            validation=validation_block,
             help_text=help_text,
             help_text_visible=(help_text_visible == "true"),
             actor=user,
@@ -1269,22 +1270,12 @@ def instrument_edit_field(
     _require_instrument_editable(review_session)
     field = _require_response_field_in_instrument(field_id, instrument, db)
 
-    validation_block: dict[str, int] | None = None
-    if field.response_type == "integer":
-        bounds: dict[str, int] = {}
-        if validation_min:
-            try:
-                bounds["min"] = int(validation_min)
-            except ValueError:
-                pass
-        if validation_max:
-            try:
-                bounds["max"] = int(validation_max)
-            except ValueError:
-                pass
-        validation_block = bounds or None
-    else:
-        validation_block = field.validation
+    # Validation now derives from the field's Response Type
+    # Definition (Slice 4a); the legacy ``validation_min`` /
+    # ``validation_max`` form fields are accepted but ignored, and
+    # the existing derived block on the row is preserved as-is.
+    _ = validation_min, validation_max  # silence unused-arg
+    validation_block = field.validation
 
     _invalidate_if_validated(
         db, review_session, user, reason="instrument_field_updated"
