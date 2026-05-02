@@ -457,12 +457,18 @@
               <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="0">
             </td>
             <td>
-              {# Type is read-only post-create per spec; new rows are
-                 server-side seeded with the ``1-to-5int`` RTD by
-                 ``add_default_response_field`` on Save. The operator
-                 sees the full RTD dropdown but cannot change the
-                 selection. #}
-              <select disabled title="Type cannot be changed after a field is created.">
+              {# Type is operator-picked on new rows (Slice 4c) — the
+                 ``<select>`` is enabled until Save commits the row,
+                 then locks per the read-only-post-create rule. The
+                 hidden ``new_rtd_target`` input pairs the chosen RTD
+                 with the row's draft id; the bulk-save route reads
+                 the parallel ``new_rtd_target`` / ``new_rtd_id``
+                 arrays to wire the new field at its right Type. #}
+              <input form="dfsave-{{ instrument.id }}" type="hidden"
+                     name="new_rtd_target" value="__TEMP_ID__">
+              <select form="dfsave-{{ instrument.id }}"
+                      name="new_rtd_id"
+                      title="Pick the Response Type for this new field. Locks once saved.">
                 {% for rtd in rtds %}
                   <option value="{{ rtd.id }}"{% if rtd.response_type == "1-to-5int" %} selected{% endif %}>{{ rtd.response_type }}</option>
                 {% endfor %}

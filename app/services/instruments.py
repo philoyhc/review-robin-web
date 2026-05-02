@@ -1803,28 +1803,68 @@ def add_default_response_field(
     *,
     instrument: Instrument,
     after_field_id: int | None = None,
+    rtd_id: int | None = None,
+    label: str | None = None,
+    field_key: str | None = None,
+    required: bool | None = None,
     actor: User,
 ) -> InstrumentResponseField:
-    """Append a fresh ``Rating{n}`` row with the seeded ``1-to-5int``
-    Response Type and ``required=True``. If ``after_field_id`` is given,
-    slot the new field immediately after that one and bump subsequent
-    ``order`` values; otherwise append at the end. Auto-derives a
-    non-conflicting field_key."""
+    """Append a fresh response field to an instrument.
+
+    Default behaviour (no overrides) preserves the Slice 2 contract:
+    auto-generated ``Rating{N}`` label, ``rating{N}`` field_key,
+    ``required=True``, pointing at the seeded ``1-to-5int`` RTD.
+
+    Slice 4c overrides:
+    - ``rtd_id`` — operator-picked RTD from the session catalog. Must
+      belong to ``instrument.session``; falls back to ``1-to-5int`` if
+      the id is unknown.
+    - ``label`` — operator-typed Friendly Label. Stripped of leading /
+      trailing whitespace; non-empty wins over the auto default.
+    - ``field_key`` — explicit key. When omitted, derives via
+      ``slugify_field_key(label)`` if the operator typed a label,
+      otherwise the auto ``rating{N}`` series. Conflicts with existing
+      keys on the instrument get an ascending numeric suffix.
+    - ``required`` — explicit override of the default ``True``.
+
+    If ``after_field_id`` is given, the new field slots immediately
+    after that one and bumps subsequent ``order`` values; otherwise
+    appends at the end."""
     fields = _ordered_fields(db, instrument)
 
     rtds_by_name = ensure_default_response_type_definitions(
         db, instrument.session
     )
-    default_rtd = rtds_by_name["1-to-5int"]
+    chosen_rtd: ResponseTypeDefinition | None = None
+    if rtd_id is not None:
+        chosen_rtd = _rtd_by_id(
+            db, session_id=instrument.session_id, rtd_id=rtd_id
+        )
+    if chosen_rtd is None:
+        chosen_rtd = rtds_by_name["1-to-5int"]
 
+    cleaned_label = (label or "").strip()
     base_num = len(fields) + 1
-    new_label = f"Rating{base_num}"
-    candidate = f"rating{base_num}"
+    auto_label = f"Rating{base_num}"
+    auto_key = f"rating{base_num}"
     existing_keys = {f.field_key for f in fields}
-    while candidate in existing_keys:
-        base_num += 1
-        new_label = f"Rating{base_num}"
-        candidate = f"rating{base_num}"
+
+    new_label = cleaned_label or auto_label
+    if field_key:
+        candidate = field_key.strip()
+    elif cleaned_label:
+        candidate = slugify_field_key(cleaned_label) or auto_key
+    else:
+        candidate = auto_key
+    # Bump the trailing number until we find an unused key.
+    if candidate in existing_keys:
+        suffix = 2
+        base = candidate
+        while f"{base}{suffix}" in existing_keys:
+            suffix += 1
+        candidate = f"{base}{suffix}"
+    if not candidate:
+        candidate = auto_key
 
     new_order: int
     if after_field_id is None:
@@ -1839,14 +1879,16 @@ def add_default_response_field(
                 if f.order >= new_order:
                     f.order += 1
 
+    is_required = True if required is None else bool(required)
+
     new_field = InstrumentResponseField(
         instrument_id=instrument.id,
         field_key=candidate,
         label=new_label,
-        response_type_id=default_rtd.id,
-        required=True,
+        response_type_id=chosen_rtd.id,
+        required=is_required,
         order=new_order,
-        validation=validation_block_for_rtd(default_rtd),
+        validation=validation_block_for_rtd(chosen_rtd),
         help_text=None,
         help_text_visible=True,
     )
@@ -1867,8 +1909,8 @@ def add_default_response_field(
             "session_id": instrument.session_id,
             "field_key": new_field.field_key,
             "label": new_field.label,
-            "response_type": default_rtd.response_type,
-            "response_type_id": default_rtd.id,
+            "response_type": chosen_rtd.response_type,
+            "response_type_id": chosen_rtd.id,
             "required": new_field.required,
             "order": new_order,
             "after_field_id": after_field_id,

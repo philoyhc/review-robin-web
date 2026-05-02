@@ -1628,10 +1628,27 @@ async def instrument_bulk_save_fields(
             continue
 
     # 2. Allocate real ids for any ``new_*`` response rows. The route
-    #    creates them via ``add_default_response_field`` (which picks a
-    #    fresh field_key + label) and remembers the temp→real id map;
-    #    the bulk-save step below then applies the operator-typed
-    #    label / required / help to the new row.
+    #    creates them via ``add_default_response_field``, passing the
+    #    operator-chosen RTD (Slice 4c), the typed label, and the
+    #    Required flag so the new row lands at the right shape on
+    #    Save. ``add_default_response_field`` slugifies the label
+    #    into a non-conflicting ``field_key`` (falling back to the
+    #    auto ``rating{N}`` series when the label is blank).
+    #    The bulk-save step below then folds in any subsequent edits.
+    new_rtd_targets = [str(v) for v in form.getlist("new_rtd_target")]
+    new_rtd_ids = [str(v) for v in form.getlist("new_rtd_id")]
+    new_rtd_by_draft: dict[str, int] = {}
+    if len(new_rtd_targets) == len(new_rtd_ids):
+        for target, rtd_id_str in zip(new_rtd_targets, new_rtd_ids):
+            try:
+                new_rtd_by_draft[target] = int(rtd_id_str)
+            except ValueError:
+                continue
+    new_label_by_draft: dict[str, str] = {}
+    for kind, raw_id, label_value in zip(kinds, raw_ids, labels):
+        if kind == "response" and raw_id.startswith("new_"):
+            new_label_by_draft[raw_id] = label_value
+
     new_id_map: dict[str, int] = {}
     for kind, raw_id in zip(kinds, raw_ids):
         if kind != "response":
@@ -1641,7 +1658,13 @@ async def instrument_bulk_save_fields(
         if raw_id in {str(d) for d in response_delete_ids}:
             continue  # added then deleted before save — skip
         new_field = instruments_service.add_default_response_field(
-            db, instrument=instrument, after_field_id=None, actor=user
+            db,
+            instrument=instrument,
+            after_field_id=None,
+            rtd_id=new_rtd_by_draft.get(raw_id),
+            label=new_label_by_draft.get(raw_id),
+            required=raw_id in required_id_strs,
+            actor=user,
         )
         new_id_map[raw_id] = new_field.id
 
