@@ -700,7 +700,22 @@ them onto the partial settles the visual contract.
 
 ---
 
-### 20. Complete chrome rollout to remaining session-scoped pages · [chrome] · small
+### 20. ~~Complete chrome rollout to remaining session-scoped pages~~ — ✅ Operations Pages shipped 2026-05-02; Home sub-pages deferred · [chrome] · small
+
+**Resolution (2026-05-02).** The three Operations Pages
+(Invitations, Monitoring, Outbox) now render the new chrome
+with their own tab active. P2 ("both phases always reachable")
+holds across the Operations side.
+
+The two Home sub-pages (Edit Session, Validate detail) are
+**deferred** — their status, function, and location in the
+session-scoped page taxonomy are being rethought as part of the
+Home body rebuild (item #21). Adopting the new chrome on those
+two pages now would lock in placement decisions that the
+rethink might overturn. They'll get the chrome when their fate
+settles, as part of #21 or a successor item.
+
+(Original framing preserved below for archaeology.)
 
 **Why now.** The new two-row session top nav (item #19) is live
 on Home, the 5 Setup Pages, and Email Template. Per **P2** in
