@@ -1329,6 +1329,42 @@ def test_response_type_definitions_card_renders_seeded_catalog(
     assert "Operator-add" in body or "follow-up slice" in body
 
 
+def test_response_type_definitions_card_formats_min_max_step_by_data_type(
+    client: TestClient, db: Session
+) -> None:
+    """Min / Max / Step on the read-only RTD catalog render as plain
+    integers for Integer + String rows (no decimal point) and as one
+    decimal place for Decimal rows."""
+    review_session = _make_session(client, db, code="rtd-fmt")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+
+    # Integer / String rows: no decimal point in Min / Max / Step.
+    # Use ``Long_text`` (String, 0..200) and ``100int`` (Integer, 0..100).
+    long_text_block = body.split("<code>Long_text</code>", 1)[1].split(
+        "</tr>", 1
+    )[0]
+    assert ">0<" in long_text_block and ">200<" in long_text_block
+    assert "0.0" not in long_text_block
+    assert "200.0" not in long_text_block
+
+    int_100_block = body.split("<code>100int</code>", 1)[1].split(
+        "</tr>", 1
+    )[0]
+    assert ">100<" in int_100_block
+    assert "100.0" not in int_100_block
+
+    # Decimal rows: exactly one decimal place. ``1-to-5half``
+    # (Decimal, 1..5 step 0.5).
+    half_block = body.split("<code>1-to-5half</code>", 1)[1].split(
+        "</tr>", 1
+    )[0]
+    assert ">1.0<" in half_block
+    assert ">5.0<" in half_block
+    assert ">0.5<" in half_block
+
+
 def test_response_fields_type_cell_renders_rtd_select(
     client: TestClient, db: Session
 ) -> None:

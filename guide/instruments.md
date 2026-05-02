@@ -380,6 +380,23 @@ following hold (operator must fix before the row commits):
 - **Step does not evenly divide (Max − Min)** when Data Type is
   `Integer` or `Decimal`. (E.g. `Min=1, Max=5, Step=0.3` is
   rejected — the operator is expected to do the math.)
+- **Decimal `Min` / `Max` / `Step` carries more than one decimal
+  place** when Data Type is `Decimal`. (E.g. `Step=0.05` is
+  rejected; `Step=0.1` is accepted. The display is also pinned to
+  one decimal place — see "Display formatting" below.)
+- **Integer `Min` / `Max` / `Step` is non-integer** when Data Type
+  is `Integer`. The cell rejects any value with a fractional
+  component on save.
+
+#### Display formatting
+
+`Min`, `Max`, and `Step` cells in the Response Type Definitions
+card render numerically by Data Type:
+
+- `Integer` and `String` (where applicable) — plain integer with
+  no decimal point. E.g. `100int` → `Min=0`, `Max=100`, `Step=1`.
+- `Decimal` — exactly one decimal place. E.g. `1-to-5half` →
+  `Min=1.0`, `Max=5.0`, `Step=0.5`.
 
 ### Editing flow (gated, left-to-right)
 

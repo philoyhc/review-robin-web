@@ -228,6 +228,58 @@ def validation_block_for_rtd(
     return None
 
 
+class RTDPrecisionError(ValueError):
+    """Raised when an operator-defined RTD's numeric cell violates
+    the precision rule for its Data Type. Per
+    ``guide/instruments.md`` "Save-time validation rules":
+
+    - ``Integer`` ``Min`` / ``Max`` / ``Step`` must have no
+      fractional part.
+    - ``Decimal`` ``Min`` / ``Max`` / ``Step`` must have at most
+      one decimal place.
+    """
+
+
+def _has_fractional_part(value: float) -> bool:
+    return value != int(value)
+
+
+def _exceeds_one_decimal_place(value: float) -> bool:
+    # Guard against float drift: round to one decimal place and
+    # compare against ten times the value (which should be an
+    # integer if the input had ≤ 1dp).
+    scaled = round(value * 10)
+    return abs(value * 10 - scaled) > 1e-9
+
+
+def assert_rtd_precision(
+    *, data_type: str, min: float | None, max: float | None, step: float | None
+) -> None:
+    """Validate the numeric cells on an operator-defined RTD against
+    the Data Type's precision rule. No-op for ``String`` and ``List``
+    rows; those have their own validation paths. Raises
+    ``RTDPrecisionError`` on the first violation."""
+    cells = [("Min", min), ("Max", max), ("Step", step)]
+    if data_type == "Integer":
+        for label, value in cells:
+            if value is None:
+                continue
+            if _has_fractional_part(float(value)):
+                raise RTDPrecisionError(
+                    f"{label} must be an integer for Integer Response Types "
+                    f"(got {value})."
+                )
+    elif data_type == "Decimal":
+        for label, value in cells:
+            if value is None:
+                continue
+            if _exceeds_one_decimal_place(float(value)):
+                raise RTDPrecisionError(
+                    f"{label} must have at most one decimal place for "
+                    f"Decimal Response Types (got {value})."
+                )
+
+
 def get_session_rtds(
     db: Session, *, session_id: int
 ) -> list[ResponseTypeDefinition]:
