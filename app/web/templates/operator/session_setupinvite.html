@@ -5,6 +5,10 @@
 {% block content %}
   <h1>Email Invites</h1>
 
+  {% with current_page = "Email Invites" %}
+    {% include "operator/partials/session_status_card.html" %}
+  {% endwith %}
+
   <div class="card">
     <p class="muted">
       The email-template editor lands in Segment 15.

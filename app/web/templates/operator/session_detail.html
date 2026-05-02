@@ -3,8 +3,14 @@
 {% block title %}{{ session.name }} — Review Robin Web{% endblock %}
 
 {% block content %}
-  <h1>{{ session.name }}</h1>
-  <p class="page-subtitle"><code>{{ session.code }}</code></p>
+  <h1 style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px;">
+    {{ session.name }}
+    <span style="font-size: 1rem; font-weight: normal;"><code>{{ session.code }}</code></span>
+  </h1>
+
+  {% with current_page = "Session" %}
+    {% include "operator/partials/session_status_card.html" %}
+  {% endwith %}
 
   {% if has_responses and not is_ready %}
     <div class="card" style="border-color: #d97706; background: #fef3c7;">
