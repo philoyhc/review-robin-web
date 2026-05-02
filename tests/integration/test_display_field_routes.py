@@ -1661,3 +1661,51 @@ def test_rtd_card_renders_draft_templates_for_js_add_flow(
     # Data Type. Min / Max / Step / List inputs live in the draft
     # row template and only appear after Add is clicked.
     assert 'onclick="addRtdDraft()"' in body
+    # The draft-row template's Cancel button must pass the draft id
+    # as a quoted string — passing it bare (``cancelRtdDraft(d1)``)
+    # would treat ``d1`` as a JS identifier and silently fail.
+    assert "cancelRtdDraft('__DRAFT_ID__')" in body
+
+
+def test_rtd_add_button_disabled_when_editing_an_existing_row(
+    client: TestClient, db: Session
+) -> None:
+    """``Add a Response Type`` is locked while a saved operator-defined
+    row is in editing mode (``?editing_rtd_id=...``); the operator
+    must Save or Cancel that row first."""
+    review_session = _make_session(client, db, code="rtd-add-lock")
+    client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "ToEdit",
+            "data_type": "Integer",
+            "min": "0",
+            "max": "5",
+            "step": "1",
+        },
+        follow_redirects=False,
+    )
+    custom = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.session_id == review_session.id,
+            ResponseTypeDefinition.response_type == "ToEdit",
+        )
+    ).scalar_one()
+
+    # Not editing — Add is enabled.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    button_html = body.split('id="rtd-add-button"', 1)[1].split(">", 1)[0]
+    assert "disabled" not in button_html
+
+    # Editing — Add is server-rendered disabled.
+    body_editing = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+        f"?editing_rtd_id={custom.id}"
+    ).text
+    button_html_editing = body_editing.split(
+        'id="rtd-add-button"', 1
+    )[1].split(">", 1)[0]
+    assert "disabled" in button_html_editing
+    assert 'data-server-disabled="1"' in button_html_editing
