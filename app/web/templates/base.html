@@ -292,9 +292,20 @@
         text-align: center;
         text-decoration: none;
         color: #111827;
+        position: relative;
       }
       .session-home-anchor:hover { background: #dbeafe; }
       .session-home-anchor.active { background: #fff; }
+      .session-home-anchor.active::after {
+        content: "";
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        bottom: 0;
+        height: 4px;
+        background: var(--tab-marker-color);
+        border-radius: 2px;
+      }
       .home-anchor-text {
         font-size: 1rem;
         font-weight: 600;
