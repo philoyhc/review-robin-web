@@ -3,20 +3,14 @@
 {% block title %}Email Template — {{ session.name }}{% endblock %}
 
 {% block content %}
-  {% if title_position != 'below' %}
-    <h1>Email Template</h1>
-  {% endif %}
-
   <div class="session-nav-card">
     {% with current_page = "Email Template" %}
-      {% include "operator/partials/session_setup_nav.html" %}
+      {% include "operator/partials/session_top_nav.html" %}
     {% endwith %}
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {% if title_position == 'below' %}
-    <h1>Email Template</h1>
-  {% endif %}
+  <h1>Email Template</h1>
 
   <div class="card">
     <p class="muted">

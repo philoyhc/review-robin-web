@@ -1,0 +1,46 @@
+{# Session-scoped top nav: double-height Home anchor on the left,
+   Setup row top-right, Operations row bottom-right. Used by every
+   session-scoped page. Implements `spec/ui_concept.md` "Navigation
+   model".
+
+   Required context:
+     - session: ReviewSession
+     - current_page: one of "Home" / "Reviewers" / "Reviewees" /
+                     "Assignments" / "Instruments" / "Email Template" /
+                     "Invitations" / "Monitoring" / "Outbox".
+                     Sub-pages of Home (Edit, Validate detail) and
+                     Preview Pages pass the parent's name (or "Home"
+                     for Home sub-pages).
+#}
+<div class="session-nav-grid">
+  <a class="session-home-anchor{% if current_page == 'Home' %} active{% endif %}"
+     href="/operator/sessions/{{ session.id }}">
+    <div class="home-label">Home</div>
+    <div class="home-session-name" title="{{ session.name }}">{{ session.name }}</div>
+    <span class="pill pill-info home-lifecycle-pill">{{ session.status }}</span>
+  </a>
+
+  <div class="row-label row-setup">Setup</div>
+  <div class="tab-strip tab-strip-setup row-setup">
+    <a class="nav-tab{% if current_page == 'Reviewers' %} active{% endif %}"
+       href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
+    <a class="nav-tab{% if current_page == 'Reviewees' %} active{% endif %}"
+       href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+    <a class="nav-tab{% if current_page == 'Assignments' %} active{% endif %}"
+       href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
+    <a class="nav-tab{% if current_page == 'Instruments' %} active{% endif %}"
+       href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
+    <a class="nav-tab{% if current_page == 'Email Template' %} active{% endif %}"
+       href="/operator/sessions/{{ session.id }}/setupinvite">Email Template</a>
+  </div>
+
+  <div class="row-label">Operations</div>
+  <div class="tab-strip tab-strip-ops">
+    <a class="nav-tab{% if current_page == 'Invitations' %} active{% endif %}"
+       href="/operator/sessions/{{ session.id }}/invitations">Invitations</a>
+    <a class="nav-tab{% if current_page == 'Monitoring' %} active{% endif %}"
+       href="/operator/sessions/{{ session.id }}/monitoring">Monitoring</a>
+    <a class="nav-tab{% if current_page == 'Outbox' %} active{% endif %}"
+       href="/operator/sessions/{{ session.id }}/outbox">Outbox</a>
+  </div>
+</div>

@@ -1105,10 +1105,6 @@ def setupinvite_stub(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    # Variant A: title above nav, Home blue + setup grey, flex-grow
-    # layout (Home 2x a setup tab), short inset blue underline marks
-    # the active tab. Chrome iteration parameters are temporary
-    # scaffolding — they collapse once the final design is picked.
     return _templates.TemplateResponse(
         request,
         "operator/session_setupinvite.html",
@@ -1119,41 +1115,6 @@ def setupinvite_stub(
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Email Template"
             ),
-            "title_position": "above",
-            "home_tint": "blue",
-            "setup_tint": "grey",
-            "equal_slots": False,
-            "active_underline": True,
-        },
-    )
-
-
-@router.get("/sessions/{session_id}/setupinvite1", response_class=HTMLResponse)
-def setupinvite_stub_variant_below(
-    request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    # Variant B: title below nav, Home grey + setup blue, equal-
-    # slots layout (7 equal slots: Home, untinted gap, 5 setup
-    # tabs), no underline marker. Chrome iteration parameters are
-    # temporary scaffolding.
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_setupinvite.html",
-        {
-            "user": user,
-            "session": review_session,
-            "status_pills": views.session_status_pills(db, review_session),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Email Template"
-            ),
-            "title_position": "below",
-            "home_tint": "grey",
-            "setup_tint": "blue",
-            "equal_slots": True,
-            "active_underline": False,
         },
     )
 
