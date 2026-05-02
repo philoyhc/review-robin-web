@@ -455,7 +455,7 @@ def test_locked_email_row_cannot_be_hidden(
         )
     ).scalar_one()
 
-    response = client.post(
+    client.post(
         f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
         f"/display-fields/{email_row.id}/edit",
         data={"label": "Email", "visible": ""},

@@ -13,7 +13,6 @@ from app.db.models import (
     AuditEvent,
     Instrument,
     Response,
-    Reviewer,
     ReviewSession,
 )
 from app.services import session_lifecycle as lifecycle

@@ -54,7 +54,7 @@ def test_can_create_a_user(db: Session) -> None:
 
 def test_can_create_a_session_owned_by_a_user(db: Session) -> None:
     user = _make_user(db)
-    review = _make_session(db, user)
+    _make_session(db, user)
 
     refreshed = db.scalars(
         select(ReviewSession).where(ReviewSession.code == "SESS-001")
