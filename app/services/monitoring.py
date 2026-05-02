@@ -17,8 +17,6 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Assignment,
     Invitation,
-    InstrumentResponseField,
-    Response,
     Reviewer,
     ReviewSession,
 )
@@ -64,57 +62,6 @@ def _invitations_by_reviewer(
     return {inv.reviewer_id: inv for inv in rows}
 
 
-def _reviewer_completion(
-    db: Session, *, reviewer: Reviewer, session_id: int
-) -> tuple[int, int, int]:
-    """Return ``(assignment_count, completed_count, missing_required_count)``."""
-    assignments = list(
-        db.execute(
-            select(Assignment).where(
-                Assignment.session_id == session_id,
-                Assignment.reviewer_id == reviewer.id,
-                Assignment.include.is_(True),
-            )
-        ).scalars()
-    )
-    if not assignments:
-        return 0, 0, 0
-
-    instrument_ids = {a.instrument_id for a in assignments}
-    fields_by_instrument: dict[int, list[InstrumentResponseField]] = {}
-    if instrument_ids:
-        for field in db.execute(
-            select(InstrumentResponseField).where(
-                InstrumentResponseField.instrument_id.in_(instrument_ids)
-            )
-        ).scalars():
-            fields_by_instrument.setdefault(field.instrument_id, []).append(field)
-
-    completed = 0
-    missing_required = 0
-    for assignment in assignments:
-        required = [
-            f for f in fields_by_instrument.get(assignment.instrument_id, []) if f.required
-        ]
-        rows = list(
-            db.execute(
-                select(Response).where(Response.assignment_id == assignment.id)
-            ).scalars()
-        )
-        present_required = {
-            r.response_field_id for r in rows if (r.value or "") != ""
-        }
-        row_missing = sum(1 for f in required if f.id not in present_required)
-        missing_required += row_missing
-        if not required:
-            if rows:
-                completed += 1
-        elif row_missing == 0:
-            completed += 1
-
-    return len(assignments), completed, missing_required
-
-
 def per_reviewer_progress(
     db: Session, review_session: ReviewSession
 ) -> list[ReviewerProgress]:
@@ -122,10 +69,7 @@ def per_reviewer_progress(
     invitations = _invitations_by_reviewer(db, review_session.id)
     out: list[ReviewerProgress] = []
     for reviewer in reviewers:
-        assignment_count, completed_count, missing_required = _reviewer_completion(
-            db, reviewer=reviewer, session_id=review_session.id
-        )
-        pill = responses_service.session_pill_for_reviewer(
+        state = responses_service.reviewer_session_state(
             db, reviewer=reviewer, session_id=review_session.id
         )
         invitation = invitations.get(reviewer.id)
@@ -133,10 +77,10 @@ def per_reviewer_progress(
             ReviewerProgress(
                 reviewer=reviewer,
                 invitation=invitation,
-                assignment_count=assignment_count,
-                completed_count=completed_count,
-                missing_required_count=missing_required,
-                pill_state=pill.state,
+                assignment_count=state.total_assignments,
+                completed_count=state.completed_count,
+                missing_required_count=state.missing_required_count,
+                pill_state=state.pill_state,
                 last_reminder_at=invitation.last_reminder_at if invitation else None,
             )
         )

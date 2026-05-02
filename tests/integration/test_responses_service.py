@@ -179,3 +179,108 @@ def test_submit_missing_required_returns_warning_without_audit(db: Session) -> N
     assert result.submitted_count == 0
     assert any(m.field_key == "rating" for m in result.missing)
     assert result.missing[0].reviewee_name == "Carol"
+
+
+def test_reviewer_session_state_no_assignments(db: Session) -> None:
+    op, reviewer, review_session, assignment = _seed(db)
+    # Drop the only assignment — reviewer is left with no active rows.
+    assignment.include = False
+    db.flush()
+
+    state = responses_service.reviewer_session_state(
+        db, reviewer=reviewer, session_id=review_session.id
+    )
+
+    assert state.total_assignments == 0
+    assert state.completed_count == 0
+    assert state.missing_required_count == 0
+    assert state.pill_state == "not started"
+
+
+def test_reviewer_session_state_no_responses_yet(db: Session) -> None:
+    op, reviewer, review_session, _ = _seed(db)
+
+    state = responses_service.reviewer_session_state(
+        db, reviewer=reviewer, session_id=review_session.id
+    )
+
+    assert state.total_assignments == 1
+    assert state.completed_count == 0
+    # The default instrument has one required field ("rating").
+    assert state.missing_required_count == 1
+    assert state.pill_state == "not started"
+
+
+def test_reviewer_session_state_draft_in_progress(db: Session) -> None:
+    op, reviewer, review_session, assignment = _seed(db)
+    responses_service.save_draft(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=op,
+        upserts=[
+            ResponseUpsert(assignment_id=assignment.id, field_key="rating", value="4"),
+        ],
+        correlation_id="c1",
+    )
+
+    state = responses_service.reviewer_session_state(
+        db, reviewer=reviewer, session_id=review_session.id
+    )
+
+    # All required fields are filled but never submitted.
+    assert state.total_assignments == 1
+    assert state.completed_count == 1
+    assert state.missing_required_count == 0
+    assert state.pill_state == "in progress"
+
+
+def test_reviewer_session_state_submitted(db: Session) -> None:
+    op, reviewer, review_session, assignment = _seed(db)
+    responses_service.submit(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=op,
+        upserts=[
+            ResponseUpsert(assignment_id=assignment.id, field_key="rating", value="4"),
+        ],
+        acknowledge_missing=False,
+        correlation_id="c1",
+    )
+
+    state = responses_service.reviewer_session_state(
+        db, reviewer=reviewer, session_id=review_session.id
+    )
+
+    assert state.total_assignments == 1
+    assert state.completed_count == 1
+    assert state.missing_required_count == 0
+    assert state.pill_state == "submitted"
+
+
+def test_reviewer_session_state_session_pill_projection(db: Session) -> None:
+    """``session_pill_for_reviewer`` is now a thin projection of
+    ``reviewer_session_state``. Verify they agree end-to-end."""
+    op, reviewer, review_session, assignment = _seed(db)
+    responses_service.save_draft(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=op,
+        upserts=[
+            ResponseUpsert(assignment_id=assignment.id, field_key="rating", value="3"),
+        ],
+        correlation_id="c1",
+    )
+
+    state = responses_service.reviewer_session_state(
+        db, reviewer=reviewer, session_id=review_session.id
+    )
+    pill = responses_service.session_pill_for_reviewer(
+        db, reviewer=reviewer, session_id=review_session.id
+    )
+
+    assert pill.state == state.pill_state
+    assert pill.total_assignments == state.total_assignments
+    assert pill.completed_rows == state.completed_count
