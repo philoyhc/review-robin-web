@@ -291,31 +291,45 @@ audit row to carry the request's correlation id. Cheap to add now.
 
 ---
 
-### 11. Extract instruments-index template context to `views.py`
-· [refactor] · small
+### 11. Extract instruments-index template context to `views.py` · [refactor] · small · ✅ shipped 2026-05-02
 
-**Why now.** `app/web/routes_operator.py:960–1100` (~48 lines —
-re-grepped 2026-05-02; Segment 10D shrunk this from ~100 lines)
-builds display-field + response-field row context for the
-instruments index inline. It's the only operator handler that does
-meaningful template-context shaping in the route. The same shaping
-will be reused by the preview route; pulling it into `views.py`
-sets up the reuse.
+**Outcome.** New `build_instruments_context()` in
+`app/web/views.py` (next to `build_setup_rows` /
+`session_status_pills`). Owns:
+- Five idempotent per-request backfills
+  (`ensure_locked_display_fields`,
+  `prune_unpopulated_display_fields`,
+  `seed_display_fields_from_reviewees`,
+  `seed_display_fields_from_assignments`,
+  `ensure_default_response_type_definitions`) plus the
+  `db.commit()` that lands them.
+- Editing-state machine (`is_ready` / `editing_instrument_id` /
+  `effective_editing_rtd_id` mutual-exclusion).
+- Bulk Accepting / Visibility three-state derivation (factored
+  into a private `_bulk_state(values)` helper since the two were
+  mechanical duplicates).
+- URL-driven `rtd_delete_blocked` and `rtd_would_empty` query-param
+  packaging.
 
-**Order dependency** (now resolved): items 13–14 (Display Fields
-placeholder fix + default-seed rework) shipped 2026-05-01, and
-the Slice 4 ladder of Segment 10D (#220 → #259) reshaped exactly
-the context this handler builds. The extract is now safe to land.
+The route handler shrank from 140 lines → 46 lines (query-param
+declarations + `lifecycle.observe_deadline` + 1 view call +
+render).
 
-**Where.** `app/web/routes_operator.py:960–1100`. Move into
-`app/web/views.py` next to the existing `build_setup_rows` helper.
-
-**Plan.**
-- Define `build_instruments_context(db, review_session) -> dict[...]`
-  in `views.py`.
-- Replace the inline body of the instruments-index handler with a
-  single call.
-- No behavioural change — existing tests should pass without edits.
+**Notes / catalog corrections surfaced during the refactor.**
+- The catalog claim "the same shaping will be reused by the
+  preview route" was stale — the preview route uses
+  `routes_reviewer.build_preview_context`, a different view
+  function shaping the reviewer surface. Motivation reduced to
+  "thin the route" per the CLAUDE.md services/routes/views
+  split.
+- The catalog's "~48 lines" figure was a low estimate; the
+  pre-refactor handler was 140 lines (including 14 query params
+  + ~70 lines of context shaping + a 50-line return dict). The
+  refactor still cuts most of the substance.
+- `_bulk_accepting_state` and `_bulk_visibility_state` were
+  mechanical duplicates of the same three-state pattern;
+  collapsed into one `_bulk_state(values: list[bool])` helper
+  inside `views.py`.
 
 ---
 
