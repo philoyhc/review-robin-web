@@ -546,13 +546,24 @@ one and align both. Then proceed with item 4.
 
 ---
 
-### 18. ~~Decide fate of disabled "Add an instrument" button vs live route~~ — decided; implementation queued as Slice 5 of Segment 10D · [decision] · tiny
+### 18. ~~Decide fate of disabled "Add an instrument" button vs live route~~ — ✅ shipped 2026-05-02 as Slice 5 of Segment 10D · [decision] · tiny
 
 **Decision (2026-05-02):** **Enable** the button with a confirm
 step. The schema, services, and cascade behaviour are ready
 (Segment 10C); Slice 5 of Segment 10D is the implementation
 slice — flip the button live, add the JS confirm dialog, and
 land the segment-close updates to `docs/status.md`.
+
+**Shipped (2026-05-02):** Both `Add new instrument` and `Delete
+this instrument` are now wired through their existing POST routes
+(`/instruments/add`, `/instruments/{iid}/delete`). Native
+`confirm()` fires on Delete; Add submits directly (it's
+reversible). Both buttons share an `is_ready` /
+`is_some_instrument_editing` / `is_some_rtd_unlocked` disable gate
+matching the per-instrument Edit button; Delete additionally
+disables itself when the session has only one instrument.
+Integration coverage in
+[`tests/integration/test_segment_10d_slice_5.py`](../tests/integration/test_segment_10d_slice_5.py).
 
 **Why now.** `instruments_index.html` ships a
 `disabled` Add-an-instrument button with tooltip
