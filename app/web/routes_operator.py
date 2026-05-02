@@ -151,6 +151,7 @@ def session_detail(
             "user": user,
             "session": review_session,
             "setup_rows": setup_rows,
+            "status_pills": views.session_status_pills(db, review_session),
             "validation_summary": validation_summary,
             "is_draft": lifecycle.is_draft(review_session),
             "is_validated": lifecycle.is_validated(review_session),
@@ -1079,6 +1080,7 @@ def setupinvite_stub(
     request: Request,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
 ) -> HTMLResponse:
     return _templates.TemplateResponse(
         request,
@@ -1086,6 +1088,7 @@ def setupinvite_stub(
         {
             "user": user,
             "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Email Invites"
             ),

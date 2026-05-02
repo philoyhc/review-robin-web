@@ -5,8 +5,10 @@
 {% block content %}
   <h1>Instruments</h1>
 
-  {# Header card: status rows on the left, nav + bulk actions
-     right-aligned. Same shape as session_assignments.html. #}
+  {# Header card: instrument-specific status rows on the left, nav
+     right-aligned. The bulk-visibility + Preview buttons used to
+     live here too — they moved to the ``Instrument Actions`` card
+     below. #}
   <div class="card">
     {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
     {% set not_accepting_count = instruments | length - accepting_count %}
@@ -32,6 +34,23 @@
       <span class="pill pill-warning">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
     </p>
     <div style="display: flex; justify-content: flex-end; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px;">
+      <div class="setup-nav">
+        <a class="btn" href="/operator/sessions/{{ session.id }}">Session</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
+        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
+        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Email Invites</a>
+      </div>
+    </div>
+  </div>
+
+  {# Instrument Actions card: bulk-visibility toggle + Preview
+     reviewer surface link, left-aligned. Operates on the entire
+     session's instrument set, not on any single one. #}
+  <div class="card">
+    <h2 style="margin-top: 0;">Instrument Actions</h2>
+    <div style="display: flex; justify-content: flex-start; gap: 8px; align-items: center; flex-wrap: wrap;">
       {% if bulk_visibility_state != "all-on" %}
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
@@ -47,14 +66,6 @@
       {% endif %}
       <a class="btn alert-solid"
          href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
-      <div class="setup-nav" style="margin-left: 16px;">
-        <a class="btn" href="/operator/sessions/{{ session.id }}">Session</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Email Invites</a>
-      </div>
     </div>
   </div>
 

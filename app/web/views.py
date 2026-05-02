@@ -81,3 +81,40 @@ def build_setup_rows(
             manage_url=f"/operator/sessions/{sid}/setupinvite",
         ),
     ]
+
+
+@dataclass
+class SessionStatusPills:
+    """Counts shown on the standardized session-level top card
+    (rendered by ``partials/session_status_card.html``). The same
+    five numbers / flags appear on Session, Reviewers, Reviewees,
+    Assignments, and Email Invites pages so the chrome reads as a
+    single contract."""
+
+    reviewer_count: int
+    reviewee_count: int
+    assignment_count: int
+    instrument_count: int
+    email_invites_set_up: bool
+
+
+def session_status_pills(
+    db: Session, review_session: ReviewSession
+) -> SessionStatusPills:
+    sid = review_session.id
+    return SessionStatusPills(
+        reviewer_count=csv_imports.existing_reviewer_count(db, sid),
+        reviewee_count=csv_imports.existing_reviewee_count(db, sid),
+        assignment_count=assignments.existing_count(db, sid),
+        instrument_count=len(
+            list(
+                db.execute(
+                    select(Instrument).where(Instrument.session_id == sid)
+                ).scalars()
+            )
+        ),
+        # The Email Invites editor lands in Segment 15 — for now no
+        # session is "set up" yet. When the editor ships, swap this
+        # for a real check (e.g. a non-empty email template row).
+        email_invites_set_up=False,
+    )
