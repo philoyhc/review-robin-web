@@ -546,30 +546,53 @@
         </template>
       {% endif %}
 
-      {# Section E — action buttons. #}
-      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;">
-        {% if is_editing %}
-          <button form="dfsave-{{ instrument.id }}" type="submit" class="btn"
-                  {% if is_ready %}disabled{% endif %}>Save</button>
-          <a class="btn alert"
-             href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
-             {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
-        {% elif is_some_rtd_unlocked %}
-          <a class="btn alert-solid"
-             aria-disabled="true"
-             style="opacity: 0.5; pointer-events: none;"
-             title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
-        {% else %}
-          <a class="btn alert-solid"
-             href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-             {% if is_ready %}aria-disabled="true" style="opacity: 0.5; pointer-events: none;"{% endif %}>Edit</a>
-        {% endif %}
-        <button class="btn alert-solid" type="button" disabled
-                title="Multi-instrument support is still in progress; coming back later.">Add new instrument</button>
-        {% if instruments | length > 1 %}
-          <button class="btn danger-solid" type="button" disabled
-                  title="Wiring lands in Slice 5.">Delete this instrument</button>
-        {% endif %}
+      {# Section E — action row. Two half-width cards sit side by side:
+         the left card is visually invisible and hosts the per-instrument
+         state-machine buttons (Save / Cancel / Edit, flushed left) plus
+         the `Add new instrument` button (flushed right). The right card
+         is a standard Danger Zone hosting `Delete this instrument`.
+         Wiring on Add + Delete lands in Slice 5; both render disabled
+         here as a UI prep pass. #}
+      <div class="bottom-grid" style="margin-top: 12px;">
+        <div class="card" style="border: none; background: transparent; padding: 0;">
+          <div style="display: flex; justify-content: space-between; gap: 8px;">
+            <div style="display: flex; gap: 8px;">
+              {% if is_editing %}
+                <button form="dfsave-{{ instrument.id }}" type="submit" class="btn"
+                        {% if is_ready %}disabled{% endif %}>Save</button>
+                <a class="btn alert"
+                   href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
+                   {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
+              {% elif is_some_rtd_unlocked %}
+                <a class="btn alert-solid"
+                   aria-disabled="true"
+                   style="opacity: 0.5; pointer-events: none;"
+                   title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
+              {% else %}
+                <a class="btn alert-solid"
+                   href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+                   {% if is_ready %}aria-disabled="true" style="opacity: 0.5; pointer-events: none;"{% endif %}>Edit</a>
+              {% endif %}
+            </div>
+            <div>
+              <button class="btn alert-solid" type="button" disabled
+                      title="Multi-instrument support is still in progress; wiring lands in Slice 5.">Add new instrument</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="border-color: #b91c1c;">
+          <h2 style="color: #b91c1c;">Danger Zone</h2>
+          <p class="muted">
+            Deleting this instrument cascades to its display fields,
+            response fields, assignments referencing it, and any reviewer
+            responses already submitted. This cannot be undone.
+          </p>
+          <p>
+            <button class="btn danger-solid" type="button" disabled
+                    title="Wiring lands in Slice 5.">Delete this instrument</button>
+          </p>
+        </div>
       </div>
     </div>
   {% endfor %}
