@@ -140,6 +140,99 @@ The two principles together pin down: **the operator is always
 "inside" exactly one session, or in the Overview**. There is no
 multi-session view of session-scoped state.
 
+### P3 — No direct navigation between Setup Pages and Operations Pages
+
+Setup and Operations are **separate phases** of working with a
+session. To switch phases, the operator goes back through Home
+(the Control Panel). There is no nav shortcut from a Setup Page
+into an Operations Page or vice versa.
+
+The Control Panel is the **bridge**: it's the single page that
+launches both phases. Within each phase, free movement between
+sibling pages is fine and expected. Across phases, the path
+always goes through Home.
+
+## Navigation model
+
+The chrome that implements the principles above. The page-level
+implementation lives in `spec/operator_map.md`; the conceptual
+contract is here.
+
+### Home as the universal anchor
+
+The Control Panel is **Home**. Home is reachable from every
+session-scoped page via a `Home` tab in the nav chrome — the
+single tab that's universally present regardless of which
+phase the operator is in.
+
+Home is visually distinct from the other tabs:
+
+- Slightly larger label.
+- Offset from the rest of the nav by an extra gap.
+  Approximate sizing: the visual width of `[Home]` plus the
+  trailing gap equals two normal tab widths. This makes the
+  "Home is special" affordance obvious without inventing a new
+  shape.
+
+### Phase-specific group nav (alternate slot)
+
+The rest of the nav row carries the **active phase's group tabs**:
+
+- **On a Setup Page:** `[Home]` + Setup group:
+  `[Reviewers][Reviewees][Assignments][Instruments][Email Template]`.
+- **On an Operations Page:** `[Home]` + Operations group:
+  `[Invitations][Monitoring][Outbox]`.
+
+The two groups occupy the **same slot in the nav row** — they
+don't co-render. Whichever phase you're in is the only group
+visible. To change phase, the operator goes back to Home and
+launches the other phase from there.
+
+The two groups are visually distinct via a **subtle color tint**
+(one accent per group; same tab shape across both). The tint
+signals which phase the operator is in at a glance, before they
+read any tab label.
+
+### Home page itself
+
+When the operator is **on Home**, the nav shows only the `Home`
+tab (active). The page body — not the chrome — does the
+launching into Setup and Operations. Cards in the Control Panel
+body name the two phases and link into them.
+
+This keeps Home minimal in the chrome and keeps the chrome's
+role consistent: chrome is the "where am I and where can I go
+*within this phase*" affordance, not a phase selector. The phase
+selector lives in the Control Panel body.
+
+### Sub-pages and Preview Pages
+
+- **Sub-pages of Home** (Edit Session, Validate): nav renders
+  `[Home]` only (no group), Home tab active. The sub-page name
+  appears as a breadcrumb-like label inside the page body, not
+  in the chrome.
+- **Preview Pages** (currently the reviewer-surface preview at
+  `/preview`, child of Instruments): nav renders the Setup group
+  with the parent tab active (e.g. `Instruments` highlighted
+  while the operator is on Preview). The Preview surface is
+  conceptually still "inside" its parent Setup Page.
+
+### Lifecycle awareness
+
+Operations Pages remain reachable from Home regardless of
+session lifecycle (`draft` / `validated` / `ready` / `closed`).
+On `draft` / `validated` sessions, Operations Pages render with
+their actions disabled (yellow lock card pattern, greyed-out
+buttons). Hiding pages until activation surprises the operator
+when things appear later; a disabled state is clearer pedagogy
+about what activation unlocks.
+
+The same applies in reverse: Setup Pages remain reachable from
+Home on `ready` / `closed` sessions, but render locked behind
+the existing yellow lock card. The operator must `Revert to
+draft` to mutate setup, but the pages themselves don't
+disappear.
+
 ## Out of scope / forward-looking notes
 
 Recorded for visibility; **none are committed**. Capture additional
@@ -158,6 +251,14 @@ to accommodate them later.
   tagging / grouping. These compose with the Overview surface —
   none would force a redesign of the Setup / Control / Operations
   groupings.
+- **Validate as an Operations Page (alternative placement).** The
+  Validate page currently sits as a sub-page of Home. Plausible
+  alternative: re-cast it as one of the Operations Pages, since
+  validation is the gate the operator crosses to *run* the
+  session. Recorded for revisit if the Operations group ever
+  feels under-populated or if Validate's "readiness" framing
+  reads more naturally next to Invitations / Monitoring than
+  next to Edit.
 
 ## Cross-references
 
