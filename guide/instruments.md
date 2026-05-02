@@ -239,7 +239,10 @@ two half-width cards:
 - **Right card — Danger Zone**. Standard danger-zone styling: red
   border (`#b91c1c`), white inner background (`#fff`, matching the
   *This Instrument's Status* card), red `Danger Zone` heading, muted
-  cascade warning copy. Hosts the `Delete this instrument` button.
+  cascade warning copy: *"Deleting this instrument cascades to its
+  display and response fields, assignments referencing it, and any
+  submitted reviewer responses. This cannot be undone."* Hosts the
+  `Delete this instrument` button.
 
 Five buttons across the row, using the canonical `.btn` modifier
 classes from `spec/assumptions.md`:
