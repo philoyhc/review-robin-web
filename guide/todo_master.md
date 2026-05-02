@@ -35,11 +35,16 @@ that affect what reviewers actually see today.
 |---|---|---|
 | 1 | ~~**#13 — Fix Display Fields placeholder**~~ ✅ shipped 2026-05-01 (option 2: wired to existing routes). |
 | 2 | ~~**#14 — Drop `pair_context_*` default seed; seed from import data**~~ ✅ shipped 2026-05-01 (lazy-seed + Alembic data migration). |
-| 3 | **#18 — Decide "Add an instrument" button vs route** | Tiny decision but it gates item 11. Schema + services are ready; pick "enable the button" or "delete the dead route." |
+| 3 | ~~**#18 — Decide "Add an instrument" button vs route**~~ ✅ decided 2026-05-02 — **enable the button**. Implementation is Slice 5 of Segment 10D (the segment-closing slice; ~1 hr). |
 
-After P0 ships, reviewers see the right columns, operators don't
-get gaslit, and the Instruments page surface area matches the
-backing routes.
+P0 in this catalog is now functionally closed. The Slice-4 ladder
+of Segment 10D (#242 → #257 + banner-convention follow-ups #258 /
+#259) reshaped the per-instrument card and the Response Type
+Definitions card around a single editing state machine, mutual-
+exclusion edit lock, save-time RF / RTD guards, and a banner
+auto-scroll convention. After Slice 5 ships, reviewers see the
+right columns, operators don't get gaslit, and the Instruments
+page surface area matches the backing routes end-to-end.
 
 ---
 
@@ -86,6 +91,7 @@ land before they age into harder problems.
 | 16 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
 | 17 | **#10 — Thread `correlation_id` into deadline lazy-close** | Cheap. Bundle with whichever route refactor next touches `observe_deadline`. |
 | 18 | **#9 — Refresh `get_or_create_default_instrument` docstring** | Tiny. (Pointer corrected to `app/services/assignments.py:402`.) |
+| 19 | **#19 — Roll session-status top card onto Reviewers / Reviewees / Assignments / Instruments** | Pure chrome cleanup. Partial shipped in #252 (used by Session detail + Email Invites today); the four other session-scoped pages still hand-roll their top cards. Land per-page so each PR stays small. |
 
 ---
 
