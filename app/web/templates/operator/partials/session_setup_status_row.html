@@ -1,0 +1,47 @@
+{# Setup-todo overview pills, rendered below the nav tabs on every
+   session-scoped page. Same content regardless of which page or
+   which phase — answers "what's still left to set up?" at a
+   glance no matter where the operator is. See
+   `spec/ui_concept.md` "Navigation model" / Option F.
+
+   Required context:
+     - session: ReviewSession
+     - status_pills: SessionStatusPills (see app/web/views.py)
+#}
+<div class="status-row">
+  <p>
+    Reviewers:
+    {% if status_pills.reviewer_count %}
+      <span class="pill pill-info">{{ status_pills.reviewer_count }}</span>
+    {% else %}
+      <span class="pill pill-warning">none</span>
+    {% endif %}
+    &middot;
+    Reviewees:
+    {% if status_pills.reviewee_count %}
+      <span class="pill pill-info">{{ status_pills.reviewee_count }}</span>
+    {% else %}
+      <span class="pill pill-warning">none</span>
+    {% endif %}
+    &middot;
+    Assignments:
+    {% if status_pills.assignment_count %}
+      <span class="pill pill-info">{{ "{:,}".format(status_pills.assignment_count) }}</span>
+      {% if session.assignment_mode %}
+        <span class="pill pill-info">{{ session.assignment_mode }}</span>
+      {% endif %}
+    {% else %}
+      <span class="pill pill-warning">none</span>
+    {% endif %}
+    &middot;
+    Instruments:
+    <span class="pill pill-info">{{ status_pills.instrument_count }}</span>
+    &middot;
+    Email Template:
+    {% if status_pills.email_invites_set_up %}
+      <span class="pill pill-info">Set up</span>
+    {% else %}
+      <span class="pill pill-warning">Not set up</span>
+    {% endif %}
+  </p>
+</div>

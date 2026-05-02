@@ -1,13 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Email Invites — {{ session.name }}{% endblock %}
+{% block title %}Email Template — {{ session.name }}{% endblock %}
 
 {% block content %}
-  <h1>Email Invites</h1>
+  <h1>Email Template</h1>
 
-  {% with current_page = "Email Invites" %}
-    {% include "operator/partials/session_status_card.html" %}
-  {% endwith %}
+  <div class="session-nav-card">
+    {% with current_page = "Email Template" %}
+      {% include "operator/partials/session_setup_nav.html" %}
+    {% endwith %}
+    {% include "operator/partials/session_setup_status_row.html" %}
+  </div>
 
   <div class="card">
     <p class="muted">

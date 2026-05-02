@@ -1,0 +1,29 @@
+{# Session setup-phase nav: Home tab + 5 Setup Page tabs. Used by
+   every Setup Page (Reviewers, Reviewees, Assignments, Instruments,
+   Email Template). Implements `spec/ui_concept.md` "Navigation
+   model" — phase-specific group nav with Home as the universal
+   anchor.
+
+   Required context:
+     - session: ReviewSession
+     - current_page: one of "Home" / "Reviewers" / "Reviewees" /
+                     "Assignments" / "Instruments" / "Email Template"
+                     — the matching tab renders as `.active`. On a
+                     Setup Page, current_page should match the page
+                     itself; the Home tab activates only when the
+                     operator is on the Control Panel.
+#}
+<div class="tab-strip setup-tint">
+  <a class="nav-tab home{% if current_page == 'Home' %} active{% endif %}"
+     href="/operator/sessions/{{ session.id }}">Home</a>
+  <a class="nav-tab{% if current_page == 'Reviewers' %} active{% endif %}"
+     href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
+  <a class="nav-tab{% if current_page == 'Reviewees' %} active{% endif %}"
+     href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+  <a class="nav-tab{% if current_page == 'Assignments' %} active{% endif %}"
+     href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
+  <a class="nav-tab{% if current_page == 'Instruments' %} active{% endif %}"
+     href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
+  <a class="nav-tab{% if current_page == 'Email Template' %} active{% endif %}"
+     href="/operator/sessions/{{ session.id }}/setupinvite">Email Template</a>
+</div>
