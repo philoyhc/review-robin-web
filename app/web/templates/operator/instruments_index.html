@@ -607,14 +607,14 @@
             response fields, assignments referencing it, and any
             submitted reviewer responses. This cannot be undone.
           </p>
-          <p>
-            {% set is_only_instrument = (instruments | length == 1) %}
-            {% set delete_disabled = add_delete_disabled or is_only_instrument %}
-            {% if is_only_instrument %}
-              {% set delete_title = "Cannot delete the only instrument on this session." %}
-            {% else %}
-              {% set delete_title = add_delete_disabled_title %}
-            {% endif %}
+          {% set is_only_instrument = (instruments | length == 1) %}
+          {% set delete_disabled = add_delete_disabled or is_only_instrument %}
+          {% if is_only_instrument %}
+            {% set delete_title = "Cannot delete the only instrument on this session." %}
+          {% else %}
+            {% set delete_title = add_delete_disabled_title %}
+          {% endif %}
+          <div style="display: flex; justify-content: flex-end;">
             <form method="post"
                   action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"
                   onsubmit="return confirm('Delete this instrument? This will also delete its display fields, response fields, assignments referencing it, and any submitted reviewer responses. This cannot be undone.');"
@@ -622,7 +622,7 @@
               <button class="btn danger-solid" type="submit"
                       {% if delete_disabled %}disabled title="{{ delete_title }}"{% endif %}>Delete this instrument</button>
             </form>
-          </p>
+          </div>
         </div>
       </div>
     </div>
