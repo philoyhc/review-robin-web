@@ -269,9 +269,6 @@
         border-bottom: 1px solid #d1d5db;
         background: transparent;
       }
-      /* Equal-width slot variant: 7 equal slots — Home, gap, 5 setup
-         pages — used by the title-below-nav layout iteration. */
-      .tab-strip.equal-slots .nav-tab.home { flex: 1 1 0; margin-right: 0; }
       .nav-tab {
         flex: 1 1 0;
         padding: 12px 14px;
@@ -292,19 +289,9 @@
       .nav-tab.home {
         flex: 2 1 0;
         padding: 12px 22px;
-        margin-right: 18px;
         font-size: 1rem;
         font-weight: 500;
       }
-      /* Untinted gap slot used in the equal-slots variant. Behaves
-         visually like a placeholder, not a tab — no hover, no
-         pointer events. */
-      .nav-tab.nav-gap {
-        flex: 1 1 0;
-        background: transparent;
-        pointer-events: none;
-      }
-      .nav-tab.nav-gap:hover { background: transparent; }
       .nav-tab.active {
         background: #fff;
         font-weight: 500;
@@ -312,17 +299,20 @@
       .nav-tab.tint-blue.active { color: #1e40af; }
       .nav-tab.tint-grey.active { color: #374151; }
       .nav-tab.home.active { color: #111827; }
-      /* Optional understated underline marker for active tab — opt
-         in via `.tab-strip.with-underline`. Inset from the tab's
-         left/right edges so the line doesn't span the full width. */
-      .tab-strip.with-underline .nav-tab.active::after {
+      /* Active tab marker: a short understated coloured bar inset
+         from the tab's left/right edges so it doesn't span the full
+         width. Inherits the bar colour from `--tab-marker-color` on
+         the strip; per-group nav partials set it (blue for setup
+         nav, future ops nav can swap to green). */
+      .tab-strip { --tab-marker-color: #93c5fd; }
+      .nav-tab.active::after {
         content: "";
         position: absolute;
         left: 18px;
         right: 18px;
         bottom: 0;
         height: 4px;
-        background: #93c5fd;
+        background: var(--tab-marker-color);
         border-radius: 2px;
       }
       .status-row {
