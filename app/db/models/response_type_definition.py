@@ -40,4 +40,9 @@ class ResponseTypeDefinition(Base):
     )
     response_fields: Mapped[list[InstrumentResponseField]] = relationship(
         back_populates="response_type_definition",
+        # ``passive_deletes`` lets the database FK ``ON DELETE CASCADE``
+        # handle dependent-row removal instead of having SQLAlchemy
+        # NULL-out the FK column before the parent delete fires (which
+        # would violate the column's NOT NULL constraint).
+        passive_deletes=True,
     )

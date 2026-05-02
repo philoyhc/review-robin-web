@@ -522,17 +522,59 @@
     </div>
   {% endfor %}
 
-  {# Response Type Definitions card — read-only catalog (Slice 4a).
-     Operator-add / -edit / -delete lands in 4b; for now every cell
-     is muted and the table is a reference for the Response Fields
-     Type column above. #}
-  <div class="card">
+  {# Response Type Definitions card. Slice 4a shipped read-only;
+     Slice 4b adds operator-add / -edit / -delete on operator-defined
+     rows. Seeded rows stay fully locked (name + Data Type + every
+     parameter; cannot be deleted). Per-row Edit form: Min / Max /
+     Step / List editable; name + Data Type rendered as <code>. #}
+  {% macro fmt_num(value, dt) -%}
+    {%- if value is none -%}—
+    {%- elif dt == "Decimal" -%}{{ '%.1f' | format(value) }}
+    {%- else -%}{{ value | int }}
+    {%- endif -%}
+  {%- endmacro %}
+  <div class="card" id="rtd-card">
     <h2 style="margin-top: 0;">Response Type Definitions</h2>
     <p class="muted" style="margin: 0 0 12px 0; font-size: 0.9em;">
       Catalog of Response Types referenced by every instrument's
-      Response Fields. Seeded rows are locked.
-      Operator-add / -edit / -delete lands in a follow-up slice.
+      Response Fields. Seeded rows are locked. Operator-added rows
+      can be edited (Min / Max / Step / List) or deleted; the
+      Response Type name and Data Type lock once saved.
     </p>
+
+    {% if rtd_error %}
+      <div class="card" style="border-color: #dc2626; background: #fee2e2; margin-bottom: 12px;">
+        <p style="margin: 0;"><strong>Could not save Response Type:</strong> {{ rtd_error }}</p>
+      </div>
+    {% endif %}
+
+    {% if rtd_delete_blocked %}
+      <div class="card" style="border-color: #d97706; background: #fef3c7; margin-bottom: 12px;">
+        <p style="margin: 0 0 8px 0;">
+          Deleting this Response Type will drop
+          <strong>{{ rtd_delete_blocked.response_field_count }}</strong>
+          response field row{{ "" if rtd_delete_blocked.response_field_count == 1 else "s" }} on
+          <strong>{{ rtd_delete_blocked.instrument_count }}</strong>
+          instrument{{ "" if rtd_delete_blocked.instrument_count == 1 else "s" }} and
+          <strong>{{ rtd_delete_blocked.response_count }}</strong>
+          recorded response{{ "" if rtd_delete_blocked.response_count == 1 else "s" }} across
+          <strong>{{ rtd_delete_blocked.assignment_count }}</strong>
+          reviewer assignment{{ "" if rtd_delete_blocked.assignment_count == 1 else "s" }}.
+          Continue?
+        </p>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <a class="btn alert"
+             href="/operator/sessions/{{ session.id }}/instruments#rtd-card">Cancel</a>
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/response-types/{{ rtd_delete_blocked.id }}/delete"
+                style="margin: 0;">
+            <input type="hidden" name="confirm" value="true">
+            <button class="btn danger-solid" type="submit">Delete + cascade</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+
     <div class="table-scroll">
       <table>
         <thead>
@@ -543,31 +585,124 @@
             <th>Max</th>
             <th>Step</th>
             <th>List</th>
+            <th style="width: 1%;">Action</th>
           </tr>
         </thead>
         <tbody>
           {% for rtd in rtds %}
-            {# Min / Max / Step format by Data Type:
-               - Integer + String → plain int (no decimal point).
-               - Decimal → exactly one decimal place. #}
-            {% macro fmt_num(value, dt) -%}
-              {%- if value is none -%}—
-              {%- elif dt == "Decimal" -%}{{ '%.1f' | format(value) }}
-              {%- else -%}{{ value | int }}
-              {%- endif -%}
-            {%- endmacro %}
-            <tr class="muted">
+            <tr id="rtd-row-{{ rtd.id }}" class="muted">
               <td><code>{{ rtd.response_type }}</code></td>
               <td>{{ rtd.data_type }}</td>
-              <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.min, rtd.data_type) }}{% endif %}</td>
-              <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.max, rtd.data_type) }}{% endif %}</td>
-              <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ fmt_num(rtd.step, rtd.data_type) }}{% else %}NA{% endif %}</td>
-              <td>{% if rtd.data_type == "List" %}{{ rtd.list_csv or "—" }}{% else %}NA{% endif %}</td>
+              {% if rtd.is_seeded or is_ready %}
+                <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.min, rtd.data_type) }}{% endif %}</td>
+                <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.max, rtd.data_type) }}{% endif %}</td>
+                <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ fmt_num(rtd.step, rtd.data_type) }}{% else %}NA{% endif %}</td>
+                <td>{% if rtd.data_type == "List" %}{{ rtd.list_csv or "—" }}{% else %}NA{% endif %}</td>
+                <td style="white-space: nowrap;">
+                  {% if rtd.is_seeded %}
+                    <span class="muted" title="Seeded Response Types cannot be edited or deleted.">locked</span>
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+              {% else %}
+                {# Operator-defined row, editable. Each row hosts its
+                   own per-row form with Min / Max / Step / List
+                   inputs (those applicable to its locked Data Type)
+                   and a Save + Delete pair. #}
+                <form method="post"
+                      action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/edit"
+                      id="rtd-edit-{{ rtd.id }}"
+                      style="display: contents; margin: 0;"></form>
+                <td>
+                  {% if rtd.data_type in ("Integer", "Decimal", "String") %}
+                    <input form="rtd-edit-{{ rtd.id }}" type="text" name="min"
+                           value="{{ fmt_num(rtd.min, rtd.data_type) if rtd.min is not none else '' }}"
+                           style="width: 6em;">
+                  {% else %}NA{% endif %}
+                </td>
+                <td>
+                  {% if rtd.data_type in ("Integer", "Decimal", "String") %}
+                    <input form="rtd-edit-{{ rtd.id }}" type="text" name="max"
+                           value="{{ fmt_num(rtd.max, rtd.data_type) if rtd.max is not none else '' }}"
+                           style="width: 6em;">
+                  {% else %}NA{% endif %}
+                </td>
+                <td>
+                  {% if rtd.data_type in ("Integer", "Decimal") %}
+                    <input form="rtd-edit-{{ rtd.id }}" type="text" name="step"
+                           value="{{ fmt_num(rtd.step, rtd.data_type) if rtd.step is not none else '' }}"
+                           style="width: 6em;">
+                  {% else %}NA{% endif %}
+                </td>
+                <td>
+                  {% if rtd.data_type == "List" %}
+                    <input form="rtd-edit-{{ rtd.id }}" type="text" name="list_csv"
+                           value="{{ rtd.list_csv or '' }}"
+                           style="width: 100%;">
+                  {% else %}NA{% endif %}
+                </td>
+                <td style="white-space: nowrap;">
+                  <button form="rtd-edit-{{ rtd.id }}" type="submit"
+                          class="btn">Save</button>
+                  <form method="post"
+                        action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/delete"
+                        style="display: inline; margin: 0;">
+                    <button type="submit"
+                            class="btn-icon"
+                            title="Delete Response Type"
+                            style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.2em; padding: 0 6px;">&#10007;</button>
+                  </form>
+                </td>
+              {% endif %}
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
+    {% if not is_ready %}
+      {# Add Response Type form — server-side validation enforces the
+         spec's save-time rules. Form submission redirects back here
+         with ?rtd_error=... if the payload is rejected. #}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/response-types"
+            style="margin-top: 16px; padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc;">
+        <p style="margin: 0 0 8px 0; font-weight: bold;">Add a Response Type</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label>Name
+            <input type="text" name="response_type" required style="width: 10em;">
+          </label>
+          <label>Data Type
+            <select name="data_type" required>
+              <option value="String">String</option>
+              <option value="Integer">Integer</option>
+              <option value="Decimal">Decimal</option>
+              <option value="List">List</option>
+            </select>
+          </label>
+          <label>Min
+            <input type="text" name="min" style="width: 5em;">
+          </label>
+          <label>Max
+            <input type="text" name="max" style="width: 5em;">
+          </label>
+          <label>Step
+            <input type="text" name="step" style="width: 5em;">
+          </label>
+          <label style="flex: 1; min-width: 14em;">List (comma-separated)
+            <input type="text" name="list_csv" style="width: 100%;">
+          </label>
+          <button class="btn alert-solid" type="submit">Add</button>
+        </div>
+        <p class="muted" style="margin: 8px 0 0 0; font-size: 0.85em;">
+          Fill the cells that apply to your Data Type. Min / Max /
+          Step are for Integer, Decimal, or String (String uses Min / Max
+          as character lengths). List uses the comma-separated cell.
+          Decimal values must have at most one decimal place.
+        </p>
+      </form>
+    {% endif %}
   </div>
 
   <script>

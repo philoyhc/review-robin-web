@@ -13,11 +13,18 @@ from app.db.models import (
 )
 from app.services.instruments import (
     SEEDED_RESPONSE_TYPE_DEFINITIONS,
+    RTDInUseError,
+    RTDLockedError,
     RTDPrecisionError,
+    RTDValidationError,
+    add_response_type_definition,
     assert_rtd_precision,
+    count_rtd_dependents,
+    delete_response_type_definition,
     ensure_default_instrument,
     ensure_default_response_type_definitions,
     get_session_rtds,
+    update_response_type_definition,
     validation_block_for_rtd,
 )
 
@@ -278,3 +285,291 @@ def test_response_field_carries_response_type_id_fk_with_cascade() -> None:
     )
     assert rtd_fk is not None, "response_type_id FK should exist"
     assert rtd_fk.ondelete == "CASCADE"
+
+
+# --- Slice 4b: operator add / edit / delete on RTD card --------------
+
+
+def test_add_rtd_integer_persists_and_is_not_seeded(db: Session) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-add-int")
+
+    rtd = add_response_type_definition(
+        db,
+        review_session=review,
+        response_type="MyIntScale",
+        data_type="Integer",
+        min=0,
+        max=10,
+        step=2,
+        list_csv=None,
+        actor=user,
+    )
+    assert rtd.id is not None
+    assert rtd.is_seeded is False
+    assert rtd.response_type == "MyIntScale"
+    assert rtd.list_csv is None
+
+
+def test_add_rtd_list_persists_with_choices(db: Session) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-add-list")
+
+    rtd = add_response_type_definition(
+        db,
+        review_session=review,
+        response_type="Stoplight",
+        data_type="List",
+        min=None,
+        max=None,
+        step=None,
+        list_csv="Red, Yellow, Green",
+        actor=user,
+    )
+    assert validation_block_for_rtd(rtd) == {
+        "choices": ["Red", "Yellow", "Green"],
+    }
+
+
+def test_add_rtd_rejects_step_not_dividing_span(db: Session) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-step-rej")
+    with pytest.raises(RTDValidationError, match="evenly divide"):
+        add_response_type_definition(
+            db,
+            review_session=review,
+            response_type="BadStep",
+            data_type="Integer",
+            min=1,
+            max=5,
+            step=3,
+            list_csv=None,
+            actor=user,
+        )
+
+
+def test_add_rtd_rejects_min_greater_than_max(db: Session) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-mm-rej")
+    with pytest.raises(RTDValidationError, match="cannot exceed"):
+        add_response_type_definition(
+            db,
+            review_session=review,
+            response_type="Reversed",
+            data_type="Integer",
+            min=10,
+            max=1,
+            step=1,
+            list_csv=None,
+            actor=user,
+        )
+
+
+def test_add_rtd_rejects_decimal_with_too_many_dp(db: Session) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-dp-rej")
+    with pytest.raises(RTDPrecisionError):
+        add_response_type_definition(
+            db,
+            review_session=review,
+            response_type="Hi-precision",
+            data_type="Decimal",
+            min=0.0,
+            max=1.0,
+            step=0.05,
+            list_csv=None,
+            actor=user,
+        )
+
+
+def test_add_rtd_rejects_empty_list(db: Session) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-empty-list")
+    with pytest.raises(RTDValidationError, match="at least one"):
+        add_response_type_definition(
+            db,
+            review_session=review,
+            response_type="Empty",
+            data_type="List",
+            min=None,
+            max=None,
+            step=None,
+            list_csv="",
+            actor=user,
+        )
+
+
+def test_add_rtd_rejects_duplicate_name_on_session(db: Session) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-dup")
+    ensure_default_response_type_definitions(db, review)
+    with pytest.raises(RTDValidationError, match="already exists"):
+        add_response_type_definition(
+            db,
+            review_session=review,
+            response_type="Long_text",
+            data_type="String",
+            min=0,
+            max=100,
+            step=None,
+            list_csv=None,
+            actor=user,
+        )
+
+
+def test_update_rtd_propagates_validation_to_dependent_rf(
+    db: Session,
+) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-prop")
+    instrument = ensure_default_instrument(db, review)
+
+    custom = add_response_type_definition(
+        db,
+        review_session=review,
+        response_type="Custom-1-to-3",
+        data_type="Integer",
+        min=1,
+        max=3,
+        step=1,
+        list_csv=None,
+        actor=user,
+    )
+    # Point the seeded ``rating`` field at our new RTD so we can
+    # verify propagation.
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    rating.response_type_id = custom.id
+    rating.validation = {"min": 1, "max": 3, "step": 1}
+    db.commit()
+
+    update_response_type_definition(
+        db,
+        rtd=custom,
+        min=0,
+        max=10,
+        step=2,
+        list_csv=None,
+        actor=user,
+    )
+    db.refresh(rating)
+    assert rating.validation == {"min": 0, "max": 10, "step": 2}
+
+
+def test_update_rtd_seeded_row_is_locked(db: Session) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-locked-edit")
+    rtds = ensure_default_response_type_definitions(db, review)
+    seeded = rtds["1-to-5int"]
+    with pytest.raises(RTDLockedError):
+        update_response_type_definition(
+            db,
+            rtd=seeded,
+            min=0,
+            max=20,
+            step=1,
+            list_csv=None,
+            actor=user,
+        )
+
+
+def test_delete_rtd_seeded_row_is_locked(db: Session) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-locked-del")
+    rtds = ensure_default_response_type_definitions(db, review)
+    with pytest.raises(RTDLockedError):
+        delete_response_type_definition(
+            db, rtd=rtds["Long_text"], confirm=False, actor=user
+        )
+
+
+def test_delete_rtd_not_in_use_drops_immediately(db: Session) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-del-free")
+
+    custom = add_response_type_definition(
+        db,
+        review_session=review,
+        response_type="Throwaway",
+        data_type="Integer",
+        min=0,
+        max=10,
+        step=1,
+        list_csv=None,
+        actor=user,
+    )
+    custom_id = custom.id
+
+    delete_response_type_definition(
+        db, rtd=custom, confirm=False, actor=user
+    )
+    remaining = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.id == custom_id
+        )
+    ).scalar_one_or_none()
+    assert remaining is None
+
+
+def test_delete_rtd_in_use_without_confirm_raises_with_dependent_counts(
+    db: Session,
+) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-del-in-use")
+    instrument = ensure_default_instrument(db, review)
+
+    custom = add_response_type_definition(
+        db,
+        review_session=review,
+        response_type="In-Use",
+        data_type="Integer",
+        min=0,
+        max=5,
+        step=1,
+        list_csv=None,
+        actor=user,
+    )
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    rating.response_type_id = custom.id
+    db.commit()
+
+    with pytest.raises(RTDInUseError) as excinfo:
+        delete_response_type_definition(
+            db, rtd=custom, confirm=False, actor=user
+        )
+    assert excinfo.value.dependents["response_field_count"] == 1
+    assert excinfo.value.dependents["instrument_count"] == 1
+
+
+def test_count_rtd_dependents_returns_zero_for_unused_rtd(
+    db: Session,
+) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rtd-count")
+    custom = add_response_type_definition(
+        db,
+        review_session=review,
+        response_type="Quiet",
+        data_type="Integer",
+        min=0,
+        max=5,
+        step=1,
+        list_csv=None,
+        actor=user,
+    )
+    counts = count_rtd_dependents(db, rtd=custom)
+    assert counts == {
+        "response_field_count": 0,
+        "instrument_count": 0,
+        "response_count": 0,
+        "assignment_count": 0,
+    }
