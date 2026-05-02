@@ -14,8 +14,8 @@ the first file to update — the chrome decisions in
 
 ## Page taxonomy
 
-The operator's pages fall into five active groupings plus two
-forward-looking placeholders.
+The operator's pages fall into five active groupings plus one
+forward-looking placeholder.
 
 ### 1. Operator's Overview
 
@@ -32,24 +32,21 @@ from this page):
 - `session_new.html` — `GET /operator/sessions/new` — the
   Create-Session form.
 
-### 2. Per Session Control Panel
+### 2. Per Session Home / Control Panel
 
 Once an operator is **inside a session**, the Control Panel is
 that session's home. It's the session-level dashboard that names
-the session, summarises its setup state, and acts as the launch
-point for the session's Setup Pages, Operations Pages, and
-supplementary views.
+the session, summarises its setup state, and provides the
+session's identity and short-form session-metadata edit.
 
 - `session_detail.html` — `GET /operator/sessions/{id}`.
 
-**Child pages of the Control Panel** (session-scoped, supplementary
-views or sub-forms of the Control Panel itself):
-
-- `session_edit.html` — `GET /operator/sessions/{id}/edit` —
-  edit form for session metadata (name, code, deadline, …).
-- `session_validate.html` — `GET /operator/sessions/{id}/validate`
-  — read-only setup-readiness view. Also rendered inline on the
-  Control Panel via `?validated=1`.
+Home has **no child pages of its own** — affordances that would
+have lived as separate pages (the Edit Session form, the
+short-form readiness summary) render inline in the Control Panel
+body. Pages that belong to the session but cover specific work
+or run-time concerns are children of a Setup Page or an
+Operations Page (P5).
 
 ### 3. Per Session Setup Pages
 
@@ -85,7 +82,7 @@ Today there is one Preview Page:
   `GET /operator/sessions/{id}/preview`, conceptually a child of
   the Instruments Setup Page (it renders what reviewers will see
   for the session's instruments). Reachable from Instruments and
-  from the Control Panel's Run Session card.
+  from the Control Panel.
 
 The category is plural because additional Preview Pages are
 anticipated (e.g. per-instrument preview integration is open per
@@ -93,64 +90,80 @@ anticipated (e.g. per-instrument preview integration is open per
 
 ### 5. Per Session Operations Pages
 
-Surfaces for monitoring a running session and intervening when
-needed (sending invitations, sending reminders, pulling status).
-Conceptually they are siblings of the Control Panel for the
-"running session" phase — too much content for a single page, so
-they're split out by concern.
+Surfaces for running a session and intervening when needed —
+gating activation, sending invitations, monitoring progress,
+debugging email delivery. The set is currently four pages:
 
 | Page | Template | URL |
 |---|---|---|
+| Validate | `session_validate.html` | `/sessions/{id}/validate` |
 | Invitations | `session_invitations.html` | `/sessions/{id}/invitations` |
 | Monitoring | `session_monitoring.html` | `/sessions/{id}/monitoring` |
 | Outbox | `session_outbox.html` | `/sessions/{id}/outbox` |
 
-The **Outbox** is a "sysadmin mode enabled" Operations Page —
-visible only when dev-mode SMTP is in play (no real outbox once
-Segment 15 ships). It's reachable from the other Operations Pages
-as a diagnostic affordance, not its own first-class entry point.
+Notes:
+
+- **Validate** is the gate the operator crosses to *run* the
+  session — sits next to Invitations / Monitoring rather than
+  next to session metadata. The short-form readiness summary
+  also renders inline on Home (via the existing `?validated=1`
+  branch on the Control Panel).
+- **Outbox** is a per-session Operations Page **with system
+  powers** (read raw email-outbox rows, useful for debugging
+  send paths). Despite the "system" framing it is *not* a
+  cross-session admin surface — it's per-session. A future
+  cross-session admin surface would belong to the System Admin
+  group below.
 
 ### 6. System Admin / System Setup Pages (placeholder)
 
-A future grouping for cross-session admin (operator permissioning,
-system-wide settings). Empty today; flagged here so the taxonomy
-has a slot for it when the work surfaces.
+A future grouping for **cross-session** admin (operator
+permissioning, system-wide settings). Empty today; flagged here
+so the taxonomy has a slot for it when the work surfaces. If a
+cross-session admin page is added, it sits at the Operator's
+Overview level (or above), not inside a session.
 
 ## Design principles
 
-### P1 — No cross-session navigation between Setup Pages
+### P1 — One session at a time
 
-The operator cannot navigate directly from one session's Setup
-Page to another session's Setup Page. To switch sessions while
-in setup, they go back to the Operator's Overview and click into
-a different session.
+The operator is always **inside exactly one session, or in the
+Overview**. Session-scoped chrome never offers cross-session
+navigation; to switch sessions, the operator returns to the
+Overview.
 
-This means session-level nav chrome (folder tabs, breadcrumbs)
-is **always single-session** — no cross-session selectors live
-inside the chrome of a session-scoped page.
+### P2 — Both phases always reachable
 
-### P2 — No cross-session navigation between Control Panel / Operations Pages
+Within a session, **Setup and Operations are both navigable
+from the chrome on every session-scoped page**. The operator is
+never required to traverse Home to switch phases.
 
-Same rule for the running-session phase. From inside session A's
-Control Panel or Operations Pages, the operator cannot jump to
-session B's equivalent surfaces — they go back to the Overview
-first.
+### P3 — Home is the anchor, not a gate
 
-The two principles together pin down: **the operator is always
-"inside" exactly one session, or in the Overview**. There is no
-multi-session view of session-scoped state.
+Home (the Control Panel) is **the session's identity and
+dashboard**. It is reachable from every session-scoped page,
+but it is not on the path between phases.
 
-### P3 — No direct navigation between Setup Pages and Operations Pages
+### P4 — Lifecycle disables, never hides
 
-Setup and Operations are **separate phases** of working with a
-session. To switch phases, the operator goes back through Home
-(the Control Panel). There is no nav shortcut from a Setup Page
-into an Operations Page or vice versa.
+**Pages remain reachable across all session lifecycle states.**
+Affordances that don't apply to the current state render
+disabled (yellow lock card pattern), not removed.
 
-The Control Panel is the **bridge**: it's the single page that
-launches both phases. Within each phase, free movement between
-sibling pages is fine and expected. Across phases, the path
-always goes through Home.
+### P5 — Every session-scoped page has a parent
+
+**Outside the pages associated with the Operator's Overview,
+every page in the app is either a Setup Page, an Operations
+Page, or a child of one of those.** The Per Session Home /
+Control Panel is the single exception — it is the session's
+identity page, not a child surface, and it does not host its
+own children.
+
+The four-line shape of P1–P4: two principles about *where the
+operator can go* (P1 and P2), one about *what stays put* (P3),
+one about *what stays reachable* (P4). P5 is the structural
+guarantee that keeps the page set tidy as new pages are added
+— every new page has to declare which parent it belongs to.
 
 ## Navigation model
 
@@ -158,107 +171,96 @@ The chrome that implements the principles above. The page-level
 implementation lives in `spec/operator_map.md`; the conceptual
 contract is here.
 
-### Home as the universal anchor
+### Two-row chrome with double-height Home
 
-The Control Panel is **Home**. Home is reachable from every
-session-scoped page via a `Home` tab in the nav chrome — the
-single tab that's universally present regardless of which
-phase the operator is in.
+Every session-scoped page renders the same chrome:
 
-Home is visually distinct from the other tabs:
+```
+┌────────┬──────────────────────────────────────────────────────────┐
+│        │  Setup row:   Reviewers · Reviewees · Assignments ·      │
+│        │               Instruments · Email Template               │
+│  HOME  ├──────────────────────────────────────────────────────────┤
+│        │  Operations row:  Validate · Invitations ·               │
+│        │                   Monitoring · Outbox                    │
+└────────┴──────────────────────────────────────────────────────────┘
+```
 
-- Slightly larger label.
-- Offset from the rest of the nav by an extra gap.
-  Approximate sizing: the visual width of `[Home]` plus the
-  trailing gap equals two normal tab widths. This makes the
-  "Home is special" affordance obvious without inventing a new
-  shape.
+- **Home** anchors the left, spanning both rows (double-height).
+  Implements P3: Home is reachable from every session-scoped
+  page without competing for tab-row width on either row.
+- **Setup row** (top right) carries the five Setup tabs.
+- **Operations row** (bottom right) carries the four Operations
+  tabs.
+- **Both rows are always visible** on every session-scoped
+  page. Implements P2 — phase switching is one click from
+  anywhere, never via Home.
 
-### Phase-specific group nav (alternate slot)
+### Group identity and active marker
 
-The rest of the nav row carries the **active phase's group tabs**:
+- **Tab tint = group identity.** Home tab carries one tint,
+  Setup tabs another, Operations tabs another. The tint tells
+  the operator at a glance which group a tab belongs to.
+- **Active marker is a single colour everywhere.** The active
+  tab gets a short understated underline (or equivalent) in one
+  unified colour, regardless of group. The tint already carries
+  the group; the active marker just says *"you are here"*.
 
-- **On a Setup Page:** `[Home]` + Setup group:
-  `[Reviewers][Reviewees][Assignments][Instruments][Email Template]`.
-- **On an Operations Page:** `[Home]` + Operations group:
-  `[Invitations][Monitoring][Outbox]`.
-
-The two groups occupy the **same slot in the nav row** — they
-don't co-render. Whichever phase you're in is the only group
-visible. To change phase, the operator goes back to Home and
-launches the other phase from there.
-
-The two groups are visually distinct via a **subtle color tint**
-(one accent per group; same tab shape across both). The tint
-signals which phase the operator is in at a glance, before they
-read any tab label.
-
-### Home page itself
-
-When the operator is **on Home**, the nav shows only the `Home`
-tab (active). The page body — not the chrome — does the
-launching into Setup and Operations. Cards in the Control Panel
-body name the two phases and link into them.
-
-This keeps Home minimal in the chrome and keeps the chrome's
-role consistent: chrome is the "where am I and where can I go
-*within this phase*" affordance, not a phase selector. The phase
-selector lives in the Control Panel body.
+The exact tints are an `operator_map.md` concern; see that file
+for current values.
 
 ### Sub-pages and Preview Pages
 
-- **Sub-pages of Home** (Edit Session, Validate): nav renders
-  `[Home]` only (no group), Home tab active. The sub-page name
-  appears as a breadcrumb-like label inside the page body, not
-  in the chrome.
-- **Preview Pages** (currently the reviewer-surface preview at
-  `/preview`, child of Instruments): nav renders the Setup group
-  with the parent tab active (e.g. `Instruments` highlighted
-  while the operator is on Preview). The Preview surface is
-  conceptually still "inside" its parent Setup Page.
+- **Preview Pages** render the chrome with their **parent
+  Setup tab active** (e.g. on `/preview`, the Instruments tab
+  is highlighted). The Preview surface is "still inside"
+  Instruments.
+- **The Control Panel's inline Edit-Session form** stays inline
+  on Home; clicking the form shows the editor without
+  leaving the Home page. (Per P5, Home has no separate child
+  pages — Edit lives on Home.)
 
-### Lifecycle awareness
+### Lifecycle behaviour (P4 in chrome)
 
-Operations Pages remain reachable from Home regardless of
-session lifecycle (`draft` / `validated` / `ready` / `closed`).
-On `draft` / `validated` sessions, Operations Pages render with
-their actions disabled (yellow lock card pattern, greyed-out
-buttons). Hiding pages until activation surprises the operator
-when things appear later; a disabled state is clearer pedagogy
-about what activation unlocks.
+Tabs themselves stay clickable in every session lifecycle
+state. Lifecycle disabling lives **inside the destination page**
+— typically the yellow lock card explaining what state change
+will unlock the page's actions, plus disabled buttons / forms.
+The chrome is for *navigation*; lifecycle is for *what you can
+do once you're there*.
 
-The same applies in reverse: Setup Pages remain reachable from
-Home on `ready` / `closed` sessions, but render locked behind
-the existing yellow lock card. The operator must `Revert to
-draft` to mutate setup, but the pages themselves don't
-disappear.
+This is a deliberate choice: greying out the tab itself would
+hide the existence of the page until the lifecycle moved
+forward, which contradicts P4's "disables, never hides" framing.
 
 ## Out of scope / forward-looking notes
 
-Recorded for visibility; **none are committed**. Capture additional
-ideas here as they surface so the taxonomy doesn't get redesigned
-to accommodate them later.
+Recorded for visibility; **none are committed**. Capture
+additional ideas here as they surface so the taxonomy doesn't
+get redesigned to accommodate them later.
 
 - **Central Control and Operations Panel** — a cross-session
   operator surface that aggregates run-state across all of an
-  operator's sessions. Conceivable but ROI unclear, and the
-  single-session principles P1 / P2 are stronger when the whole
-  app respects them. Not on any segment plan.
-- **Adjacent capabilities likely to land sooner**: shared operator
-  permissions on a session, session duplication (sans response
-  data), shared setup data between sessions (e.g. reusable
-  reviewer rosters or instrument templates), session
+  operator's sessions. Conceivable but ROI unclear, and P1
+  ("one session at a time") is stronger when the whole app
+  respects it. Not on any segment plan.
+- **Adjacent capabilities likely to land sooner**: shared
+  operator permissions on a session, session duplication (sans
+  response data), shared setup data between sessions (e.g.
+  reusable reviewer rosters or instrument templates), session
   tagging / grouping. These compose with the Overview surface —
-  none would force a redesign of the Setup / Control / Operations
-  groupings.
-- **Validate as an Operations Page (alternative placement).** The
-  Validate page currently sits as a sub-page of Home. Plausible
-  alternative: re-cast it as one of the Operations Pages, since
-  validation is the gate the operator crosses to *run* the
-  session. Recorded for revisit if the Operations group ever
-  feels under-populated or if Validate's "readiness" framing
-  reads more naturally next to Invitations / Monitoring than
-  next to Edit.
+  none would force a redesign of the Setup / Control /
+  Operations groupings.
+- **Operations row consolidation.** If a future iteration folds
+  Invitations + Monitoring into a single page (and Validate's
+  inline-on-Home rendering stays sufficient), the Operations
+  row could shrink to one or two tabs. At which point the
+  two-row chrome could collapse to a **single row** (Setup tabs
+  only, with the residual Operations tab(s) appended). This is
+  a possible future, not a plan.
+- **Cross-session System Admin** — when added, sits at
+  Operator's Overview level (or above), not inside a session.
+  Implies its own chrome (different from the per-session two-row
+  nav). Not a per-session Operations Page.
 
 ## Cross-references
 
