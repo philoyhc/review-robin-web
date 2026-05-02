@@ -59,7 +59,7 @@ through the same code, the test gaps need to close first.
 | 5 | ~~**#1 — Wire `ruff check` into CI**~~ | ✅ shipped 2026-05-02 — `ci.yml` now runs `ruff check .` between dependency install and pytest. Pre-existing 10 findings (8 unused imports + 2 unused locals) cleaned up in the same PR. |
 | 6 | ~~**#19 — Roll session-status partial onto Reviewers / Reviewees / Assignments / Instruments**~~ | ✅ shipped 2026-05-02 — chrome system rebuilt and rolled out to all 6 main session-scoped pages (Home + 5 setup). Original literal scope satisfied; actual scope grew into a full chrome redesign (PRs #272 / #279 / #280–#290). Three follow-ons spawned: #20 (remaining pages), #21 (UI consistency updates), and #22 (Home body rebuild + Option F). |
 | 7 | ~~**#20 — Complete chrome rollout to remaining session-scoped pages**~~ | ✅ Operations Pages shipped 2026-05-02 (Invitations / Monitoring / Outbox now carry the chrome with their own tab active). The two Home sub-pages (Edit Session / Validate detail) are **deferred** — their status / function / location is being rethought as part of #22 (Home body rebuild). Adopting the chrome on those two now would risk locking in placement decisions the rethink might overturn. |
-| 8 | **#2 — Run pytest against Postgres in CI** | The `ci-postgres-migration` job today only round-trips Alembic; it never imports `app/` and never runs a test. SQLite-only test runs hide JSON coercion / dialect divergence until the dev-slot deploy. Higher-cost than #1 but high-value before Segment 11 introduces export. |
+| 8 | ~~**#2 — Run pytest against Postgres in CI**~~ | ✅ shipped 2026-05-02 — `ci-postgres-migration.yml` renamed to `ci-postgres.yml`; the `engine` fixture in `tests/conftest.py` now honours `TEST_DATABASE_URL` / `DATABASE_URL` (defaults to in-memory SQLite); CI runs the full 405-test suite against a `postgres:16` service container after the Alembic round-trip. The `committed_engine` fixture in `tests/integration/conftest.py` was deliberately left on SQLite (its purpose is commit-vs-rollback semantics, not dialect coverage). No dialect-only test failures surfaced on first run. |
 
 ---
 
@@ -112,11 +112,9 @@ land before they age into harder problems.
   cleanup.
 - **Why CI items (#2) and chrome cleanups (#20) precede arch
   items.** Without Postgres-flavoured pytest, the arch
-  refactors below ship silently-broken code on every PR until
-  the dev-slot deploy. And the chrome rollout to remaining
-  pages was small enough that it was cheaper to finish at the
-  time than to leave a half-built chrome system through the
-  arch work.
+  refactors below would have shipped silently-broken code on
+  every PR until the dev-slot deploy. #2 closed 2026-05-02; the
+  arch slate (#4 / #3+#16 / #11 / #5) is now safe to touch.
 - **Why #19's actual scope dwarfed its catalog framing.** The
   original "roll a partial onto 4 pages" turned into a full
   chrome redesign (PRs #272 / #279 / #280–#290). The catalog

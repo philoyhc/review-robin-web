@@ -13,8 +13,9 @@ sufficient for unit tests and most local development through Segment 5.
 **Local Postgres is intentionally deferred** (see `guide/archive/segment_05A.md`
 §3.5). The repo no longer ships a `docker-compose.yml` for Postgres, and
 `docs/local_setup.md` does not require Docker. Postgres-vs-SQLite parity
-is enforced by the CI smoke job at `.github/workflows/ci-postgres-migration.yml`
-(every PR) and by the migration-on-deploy step in
+is enforced by the CI job at `.github/workflows/ci-postgres.yml` (every
+PR — runs Alembic round-trip *and* the full pytest suite against Postgres)
+and by the migration-on-deploy step in
 `.github/workflows/main_app-review-robin-web-dev.yml` (every deploy).
 
 If you do need a local Postgres for a Postgres-only investigation, install
@@ -100,10 +101,11 @@ teardown, so tests do not pollute each other.
   Segment 5. The dev App Service runs migrations against it on every
   deploy via the `migrate` job in
   `.github/workflows/main_app-review-robin-web-dev.yml`.
-- **Postgres-against-Docker CI smoke** — `ci-postgres-migration.yml`
-  applies and round-trips migrations against a `postgres:16` service
-  container on every PR. The full Postgres pytest matrix is still a
-  Segment 14 concern.
+- **Postgres-against-Docker CI** — `ci-postgres.yml` applies and
+  round-trips migrations *and* runs the full pytest suite against a
+  `postgres:16` service container on every PR. The `engine` fixture
+  in `tests/conftest.py` honours `TEST_DATABASE_URL` / `DATABASE_URL`
+  so the same test bodies cover both dialects.
 
 ## Adding a new model
 

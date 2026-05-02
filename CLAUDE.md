@@ -95,7 +95,7 @@ A small but important fourth seam:
 ### Database
 
 - One `database_url` in `app/config.py` (Pydantic settings). Production reads Azure Postgres via `psycopg[binary]`; local dev uses SQLite. The same `alembic env.py` works for both.
-- CI runs migrations against a real `postgres:16` service container (`ci-postgres-migration` job) on every PR, so dialect-only failures show up in CI even though tests run on SQLite.
+- CI runs migrations *and* the full pytest suite against a real `postgres:16` service container (`ci-postgres` job in `.github/workflows/ci-postgres.yml`) on every PR, so dialect-only failures show up in CI alongside the SQLite pytest job.
 
 ## Stack summary
 
@@ -118,9 +118,12 @@ A small but important fourth seam:
   per the convention above.
 - **Database.** Postgres 16 (Azure Postgres Flexible Server,
   Burstable B1ms, Southeast Asia) in deployed environments;
-  in-memory SQLite per test session for `pytest`. Both
-  round-tripped on every PR via the `ci-postgres-migration`
-  smoke job.
+  in-memory SQLite per test session for `pytest` by default.
+  CI also runs the full pytest suite against a `postgres:16`
+  service container (the `ci-postgres` workflow), and the
+  `engine` fixture in `tests/conftest.py` honours
+  `TEST_DATABASE_URL` / `DATABASE_URL` so the same suite covers
+  both dialects.
 - **Postgres driver.** psycopg 3 (`psycopg[binary]`).
 - **Auth.** Microsoft Entra ID via Azure Easy Auth in deployed
   environments; `ALLOW_FAKE_AUTH=true` fallback for local dev.
@@ -134,9 +137,9 @@ A small but important fourth seam:
   (`build` → `migrate` → `deploy`). Migrations land via
   `alembic upgrade head` against Azure Postgres before the App
   Service swap; deploy is skipped if migration fails.
-- **CI.** SQLite `pytest` job + a `postgres-migration` smoke job
-  that round-trips Alembic against a `postgres:16` service
-  container on every PR.
+- **CI.** SQLite `pytest` job + a `ci-postgres` job that
+  round-trips Alembic and runs the full `pytest` suite against
+  a `postgres:16` service container on every PR.
 - **Tooling.** `pytest` + `httpx` (TestClient), `ruff` (lint).
 
 ## Where to look

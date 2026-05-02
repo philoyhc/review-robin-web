@@ -41,31 +41,34 @@ on the locals.
 
 ---
 
-### 2. Run pytest against Postgres in CI · [CI] · medium
+### 2. Run pytest against Postgres in CI · [CI] · medium · ✅ shipped 2026-05-02
 
-**Why now.** The `ci-postgres-migration` job only does
-`alembic upgrade head` / `downgrade base` / `upgrade head`. It never
-imports `app/` and never runs a test. SQLite-only test runs hide
-real divergence (JSON coercion, datetime tz handling, dialect
-functions) until the dev-slot deploy, which is the only place the
-human can observe failures. A second pytest job against a Postgres
-service container collapses that feedback loop.
+**Outcome.** The renamed `ci-postgres.yml` workflow (was
+`ci-postgres-migration.yml`) now runs `pytest -q` against the
+`postgres:16` service container after the Alembic round-trip, on every
+PR. The `engine` fixture in `tests/conftest.py` honours
+`TEST_DATABASE_URL` / `DATABASE_URL` (default still in-memory SQLite),
+drops + recreates `public` before applying migrations on Postgres so
+the schema starts clean, and skips the SQLite-only `PRAGMA foreign_keys`
+event listener when it sees a Postgres URL. CLAUDE.md / AGENTS.md /
+docs/status.md / docs/database.md updated to match.
 
-**Where.** `.github/workflows/ci-postgres-migration.yml` — add a
-pytest step after the migration round-trip, with the `DATABASE_URL`
-already pointing at the service container. Or a sibling
-`ci-postgres-tests.yml`. Reuse the `postgres:16` service container
-config that's already there.
-
-**Plan.**
-- Decide whether tests run with `DATABASE_URL=postgresql+psycopg://...`
-  injected, or via a pytest marker. The simpler route is the env var
-  — `tests/conftest.py` already honours `DATABASE_URL` for the
-  engine fixture (verify before assuming).
-- Run the full suite. Triage and fix any tests that pass on SQLite
-  but fail on Postgres. Likely candidates: anything that compares
-  datetime equality, anything that relies on lexicographic ordering
-  of inserted rows.
+**Notes / gotchas for future work.**
+- The catalog's pre-ship hint that `tests/conftest.py` already honoured
+  `DATABASE_URL` was wrong; the fixture had hard-coded
+  `sqlite+pysqlite:///:memory:`. Verify-before-assume kicked in.
+- `committed_engine` in `tests/integration/conftest.py` was
+  deliberately *not* migrated to Postgres. Its purpose is
+  commit-vs-rollback semantics (catching routes that forget to
+  `db.commit()`), which is dialect-independent — making it
+  Postgres-aware would require per-test DB / schema cleanup for no
+  added coverage. Only 8 tests use it; they continue to run on
+  SQLite even in the Postgres CI job, and that's fine.
+- The full 405-test suite passed against Postgres on first try — no
+  JSON-coercion / tz-equality / row-ordering divergence surfaced.
+  Future Postgres-only failures should be fixed at the root cause
+  (add `ORDER BY`, normalise tz at the boundary), not by skipping the
+  test.
 
 ---
 
