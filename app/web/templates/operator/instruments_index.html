@@ -92,7 +92,11 @@
 
   {% if rf_save_error %}
     <div class="card" style="border-color: #dc2626; background: #fee2e2;">
-      <p style="margin: 0;"><strong>Could not save:</strong> {{ rf_save_error }}</p>
+      <p style="margin: 0 0 8px 0;"><strong>Could not save:</strong> {{ rf_save_error }}</p>
+      <div style="display: flex; justify-content: flex-end;">
+        <a class="btn alert"
+           href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
+      </div>
     </div>
   {% endif %}
 
@@ -582,7 +586,11 @@
 
     {% if rtd_error %}
       <div class="card" style="border-color: #dc2626; background: #fee2e2; margin-bottom: 12px;">
-        <p style="margin: 0;"><strong>Could not save Response Type:</strong> {{ rtd_error }}</p>
+        <p style="margin: 0 0 8px 0;"><strong>Could not save Response Type:</strong> {{ rtd_error }}</p>
+        <div style="display: flex; justify-content: flex-end;">
+          <a class="btn alert"
+             href="/operator/sessions/{{ session.id }}/instruments#rtd-card">Cancel</a>
+        </div>
       </div>
     {% endif %}
 
