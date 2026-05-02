@@ -35,25 +35,65 @@ from this page):
 ### 2. Per Session Home / Control Panel
 
 Once an operator is **inside a session**, the Control Panel is
-that session's home. It's the session-level dashboard that names
-the session, summarises its setup state, and provides the
-session's identity and short-form session-metadata edit.
+that session's home. It is the **launch point for lifecycle
+transitions**, not a control centre for ongoing work.
 
 - `session_detail.html` — `GET /operator/sessions/{id}`.
 
-Home has **no child pages of its own** — affordances that would
-have lived as separate pages (the Edit Session form, the
-short-form readiness summary) render inline in the Control Panel
-body. Pages that belong to the session but cover specific work
-or run-time concerns are children of a Setup Page or an
-Operations Page (P5).
+A session moves through a small, well-defined lifecycle: `draft`
+→ `validated` → `ready` → `closed`. Most of the operator's time
+is spent doing **phase work** — configuring setup, then
+monitoring operations — on the phase pages where that work
+belongs. But the **transitions between lifecycle states** are
+session-level commits, not phase-level work: validating a setup
+is the act of declaring setup done; activating is the act of
+going live; closing is the act of ending the run. These belong
+to the session itself, so they live on the session's Home page.
+
+Home is therefore visited *at transitions*, not during phase
+work. Phase work is decentralised across the phase pages;
+lifecycle commits are centralised on Home.
+
+#### What Home's body holds
+
+- **Session identity** — name, code, deadline, lifecycle state.
+- **The next transition action**, prominent and contextual to
+  lifecycle state: Validate setup (`draft`) → Activate session
+  (`validated`) → Close session (`ready`) → Reopen (`closed`).
+  One primary button at a time.
+- **Setup-readiness summary** — the existing setup-state badges,
+  as the at-a-glance answer to *"is the next transition going to
+  succeed?"*
+- **Pointers into Operations** once running — terse status lines
+  (e.g. *"12 invitations sent, 4 responses in"*) that link to
+  the Operations pages, not live dashboards.
+- **Sub-page links** — Edit Session, Validate detail view.
+
+#### What Home's body does not hold
+
+- Phase launchers in the body (the chrome does that).
+- Live operational dashboards.
+- Anything the operator would return to mid-phase.
+
+The test for whether something belongs on Home: *is this a
+lifecycle transition, or is it phase work?* Lifecycle transitions
+belong on Home. Phase work belongs on the phase pages.
+
+#### Sub-pages of Home
+
+- `session_edit.html` — `GET /operator/sessions/{id}/edit` —
+  edit form for session metadata (name, code, deadline). Reached
+  from a link on Home.
+- `session_validate.html` — `GET /operator/sessions/{id}/validate`
+  — the read-only Validate detail view. Reached from a link on
+  Home; the at-a-glance summary stays inline on Home itself.
 
 ### 3. Per Session Setup Pages
 
-The five surfaces where the operator does the work needed to make
-the session run properly. Each one has full edit affordance while
-the session is `draft` / `validated`, and locks down once the
-session is `ready` (yellow lock card pattern).
+The five surfaces where the operator does the work needed to
+make the session run properly. Each one has full edit affordance
+while the session is `draft` / `validated`, and locks down once
+the session is `ready` (yellow lock card pattern).
 
 | Page | Template | URL |
 |---|---|---|
@@ -81,8 +121,7 @@ Today there is one Preview Page:
 - The **reviewer-surface preview** at
   `GET /operator/sessions/{id}/preview`, conceptually a child of
   the Instruments Setup Page (it renders what reviewers will see
-  for the session's instruments). Reachable from Instruments and
-  from the Control Panel.
+  for the session's instruments). Reachable from Instruments.
 
 The category is plural because additional Preview Pages are
 anticipated (e.g. per-instrument preview integration is open per
@@ -91,29 +130,24 @@ anticipated (e.g. per-instrument preview integration is open per
 ### 5. Per Session Operations Pages
 
 Surfaces for running a session and intervening when needed —
-gating activation, sending invitations, monitoring progress,
-debugging email delivery. The set is currently four pages:
+sending invitations, monitoring progress, debugging email
+delivery. Three pages:
 
 | Page | Template | URL |
 |---|---|---|
-| Validate | `session_validate.html` | `/sessions/{id}/validate` |
 | Invitations | `session_invitations.html` | `/sessions/{id}/invitations` |
 | Monitoring | `session_monitoring.html` | `/sessions/{id}/monitoring` |
 | Outbox | `session_outbox.html` | `/sessions/{id}/outbox` |
 
-Notes:
+Validation is *not* an Operations Page — the Validate detail
+view is a sub-page of Home (the act of validating is a lifecycle
+transition, not phase work).
 
-- **Validate** is the gate the operator crosses to *run* the
-  session — sits next to Invitations / Monitoring rather than
-  next to session metadata. The short-form readiness summary
-  also renders inline on Home (via the existing `?validated=1`
-  branch on the Control Panel).
-- **Outbox** is a per-session Operations Page **with system
-  powers** (read raw email-outbox rows, useful for debugging
-  send paths). Despite the "system" framing it is *not* a
-  cross-session admin surface — it's per-session. A future
-  cross-session admin surface would belong to the System Admin
-  group below.
+**Outbox** is a per-session Operations Page **with system
+powers** (read raw email-outbox rows, useful for debugging send
+paths). Despite the "system" framing it is *not* a cross-session
+admin surface — it's per-session. A future cross-session admin
+surface would belong to the System Admin group below.
 
 ### 6. System Admin / System Setup Pages (placeholder)
 
@@ -138,32 +172,22 @@ Within a session, **Setup and Operations are both navigable
 from the chrome on every session-scoped page**. The operator is
 never required to traverse Home to switch phases.
 
-### P3 — Home is the anchor, not a gate
+### P3 — Home is the launch point for lifecycle transitions
 
-Home (the Control Panel) is **the session's identity and
-dashboard**. It is reachable from every session-scoped page,
-but it is not on the path between phases.
+Home is the session's **identity** and the place where
+**lifecycle-advancing actions** live (Validate, Activate, Close,
+Reopen). Phase work happens on the phase pages; Home is visited
+*at transitions*, not during phase work.
 
 ### P4 — Lifecycle disables, never hides
 
-**Pages remain reachable across all session lifecycle states.**
+Pages remain reachable across all session lifecycle states.
 Affordances that don't apply to the current state render
 disabled (yellow lock card pattern), not removed.
 
-### P5 — Every session-scoped page has a parent
-
-**Outside the pages associated with the Operator's Overview,
-every page in the app is either a Setup Page, an Operations
-Page, or a child of one of those.** The Per Session Home /
-Control Panel is the single exception — it is the session's
-identity page, not a child surface, and it does not host its
-own children.
-
-The four-line shape of P1–P4: two principles about *where the
-operator can go* (P1 and P2), one about *what stays put* (P3),
-one about *what stays reachable* (P4). P5 is the structural
-guarantee that keeps the page set tidy as new pages are added
-— every new page has to declare which parent it belongs to.
+The four-line shape: two principles about *where the operator
+can go* (P1, P2), one about *what Home is for* (P3), one about
+*what stays reachable* (P4). None of them overlap.
 
 ## Navigation model
 
@@ -171,66 +195,74 @@ The chrome that implements the principles above. The page-level
 implementation lives in `spec/operator_map.md`; the conceptual
 contract is here.
 
-### Two-row chrome with double-height Home
+### Chrome layout
 
-Every session-scoped page renders the same chrome:
+A double-height **Home** anchor on the left, two rows of phase
+tabs to its right:
 
 ```
-┌────────┬──────────────────────────────────────────────────────────┐
-│        │  Setup row:   Reviewers · Reviewees · Assignments ·      │
-│        │               Instruments · Email Template               │
-│  HOME  ├──────────────────────────────────────────────────────────┤
-│        │  Operations row:  Validate · Invitations ·               │
-│        │                   Monitoring · Outbox                    │
-└────────┴──────────────────────────────────────────────────────────┘
+┌────────┬─ Setup       [Reviewers][Reviewees][Assignments][Instruments][Email Template]
+│  Home  │
+└────────┴─ Operations  [Invitations][Monitoring][Outbox]
 ```
 
-- **Home** anchors the left, spanning both rows (double-height).
-  Implements P3: Home is reachable from every session-scoped
-  page without competing for tab-row width on either row.
-- **Setup row** (top right) carries the five Setup tabs.
-- **Operations row** (bottom right) carries the four Operations
-  tabs.
-- **Both rows are always visible** on every session-scoped
-  page. Implements P2 — phase switching is one click from
-  anywhere, never via Home.
+- **Home** is double-height to span both rows, signalling that
+  it's one level up from the phase tabs rather than a peer of
+  any of them. It carries the session's identity (name,
+  lifecycle state) compactly, so the chrome itself answers
+  *"which session am I in, and where in its life is it?"*
+- **Row labels** (`Setup`, `Operations`) sit at the left edge
+  of each row. Labels carry the row-identity job; colour tints
+  can reinforce but shouldn't be the only signal.
+- **Same tab shape across rows.** The labels and rows do the
+  grouping work; tabs themselves don't need to differ in shape.
+- **Active tab** uses a clear underline (or equivalent),
+  independent of which row it's in. The marker uses one
+  unified colour — the tab's row already carries the group
+  identity; the marker just says *"you are here"*.
 
-### Group identity and active marker
+The exact tints and marker colour are an `operator_map.md`
+concern; see that file for current values.
 
-- **Tab tint = group identity.** Home tab carries one tint,
-  Setup tabs another, Operations tabs another. The tint tells
-  the operator at a glance which group a tab belongs to.
-- **Active marker is a single colour everywhere.** The active
-  tab gets a short understated underline (or equivalent) in one
-  unified colour, regardless of group. The tint already carries
-  the group; the active marker just says *"you are here"*.
+### Behaviour
 
-The exact tints are an `operator_map.md` concern; see that file
-for current values.
+- **From any phase page**, both rows are visible and any tab is
+  one click away. No traversal through Home is required to
+  switch phases — the operator works fluidly within and across
+  Setup and Operations as phase work demands.
+- **From Home**, the chrome renders the same way, with no tab
+  active. The phase rows remain visible and clickable; Home's
+  body is what's distinctive, not its chrome.
+- **Lifecycle states don't hide pages.** Setup tabs remain
+  visible and reachable when the session is `ready` or
+  `closed`, but their pages render locked behind the yellow
+  lock card. Operations tabs remain visible and reachable when
+  the session is `draft` or `validated`, but their actions
+  render disabled. The chrome is stable across the lifecycle;
+  the page bodies adapt.
 
-### Sub-pages and Preview Pages
+### Sub-pages and Preview
 
-- **Preview Pages** render the chrome with their **parent
-  Setup tab active** (e.g. on `/preview`, the Instruments tab
-  is highlighted). The Preview surface is "still inside"
-  Instruments.
-- **The Control Panel's inline Edit-Session form** stays inline
-  on Home; clicking the form shows the editor without
-  leaving the Home page. (Per P5, Home has no separate child
-  pages — Edit lives on Home.)
+- **Sub-pages of Home** (Edit Session, Validate detail): chrome
+  renders the two phase rows normally, with no tab active. The
+  sub-page identifies itself in the page body.
+- **Preview Pages** (child of a Setup page): chrome renders
+  normally, with the parent Setup tab active. Preview is
+  conceptually inside its parent.
 
-### Lifecycle behaviour (P4 in chrome)
+### What the chrome does not do
 
-Tabs themselves stay clickable in every session lifecycle
-state. Lifecycle disabling lives **inside the destination page**
-— typically the yellow lock card explaining what state change
-will unlock the page's actions, plus disabled buttons / forms.
-The chrome is for *navigation*; lifecycle is for *what you can
-do once you're there*.
-
-This is a deliberate choice: greying out the tab itself would
-hide the existence of the page until the lifecycle moved
-forward, which contradicts P4's "disables, never hides" framing.
+- It doesn't carry **lifecycle-transition actions**. Validate,
+  Activate, and Close are body-level actions on Home, not
+  chrome buttons. Putting them in the chrome would make them
+  reachable from every page, which contradicts the launch-point
+  framing — transitions are deliberate acts the operator
+  returns to Home for.
+- It doesn't carry **cross-session navigation**. Switching
+  sessions means returning to the Overview.
+- It doesn't **change shape** based on lifecycle state or
+  sysadmin mode. Stability matters; the operator should learn
+  the chrome once.
 
 ## Out of scope / forward-looking notes
 
@@ -251,16 +283,15 @@ get redesigned to accommodate them later.
   none would force a redesign of the Setup / Control /
   Operations groupings.
 - **Operations row consolidation.** If a future iteration folds
-  Invitations + Monitoring into a single page (and Validate's
-  inline-on-Home rendering stays sufficient), the Operations
+  Invitations + Monitoring into a single page, the Operations
   row could shrink to one or two tabs. At which point the
   two-row chrome could collapse to a **single row** (Setup tabs
   only, with the residual Operations tab(s) appended). This is
   a possible future, not a plan.
 - **Cross-session System Admin** — when added, sits at
   Operator's Overview level (or above), not inside a session.
-  Implies its own chrome (different from the per-session two-row
-  nav). Not a per-session Operations Page.
+  Implies its own chrome (different from the per-session
+  two-row nav). Not a per-session Operations Page.
 
 ## Cross-references
 
