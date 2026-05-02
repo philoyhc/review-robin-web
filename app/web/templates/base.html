@@ -333,5 +333,36 @@
     </div>
 
     {% block content %}{% endblock %}
+
+    <script>
+      // Operator-page convention: every redirect-back-with-banner card
+      // (or any inline error / confirmation banner) carries the
+      // ``banner-scroll-target`` class so the page can jump to it on
+      // load. Without this the natural URL fragment may scroll the
+      // operator past the banner (the banner sits at the top of the
+      // page; the redirect URL fragment often points at the source
+      // row). Smooth scroll on a small ``setTimeout`` so the natural
+      // fragment-jump runs first; we override it. Cancel / dismiss
+      // buttons on banners restore the source-row fragment, so
+      // navigating away from the banner naturally returns the
+      // operator to where they were before the jump. See
+      // ``spec/assumptions.md`` "Inline error / warning banners".
+      (function () {
+        function scrollFirstBannerIntoView() {
+          var banner = document.querySelector(".banner-scroll-target");
+          if (!banner) return;
+          // ``setTimeout`` lets the browser's native fragment-jump run
+          // first; we then override.
+          setTimeout(function () {
+            banner.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 0);
+        }
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", scrollFirstBannerIntoView);
+        } else {
+          scrollFirstBannerIntoView();
+        }
+      })();
+    </script>
   </body>
 </html>

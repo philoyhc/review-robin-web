@@ -2076,3 +2076,92 @@ def test_rtd_delete_blocks_when_cascade_would_empty_instrument(
     # Row + dependents survive.
     db.expire_all()
     assert db.get(ResponseTypeDefinition, custom.id) is not None
+
+
+# --- Banner scroll-target convention --------------------------------
+
+
+def test_rf_save_error_banner_carries_scroll_target_and_source_cancel(
+    client: TestClient, db: Session
+) -> None:
+    """The rf_save_error banner carries the banner-scroll-target
+    class + a unique id (so the page-wide JS scrolls to it), and its
+    Cancel button anchors back to the source instrument card with
+    editing mode preserved."""
+    review_session = _make_session(client, db, code="banner-rf-scroll")
+    instrument = _instrument(db, review_session.id)
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "kind": ["response", "response"],
+            "id": [str(rating.id), str(comments.id)],
+            "order": ["0", "1"],
+            "label": ["Rating", "Comments"],
+            "response_delete_ids": [str(rating.id), str(comments.id)],
+        },
+        follow_redirects=False,
+    )
+    body = client.get(response.headers["location"]).text
+    assert 'id="rf-save-error-banner"' in body
+    assert "banner-scroll-target" in body
+    assert (
+        f"?editing={instrument.id}#instrument-{instrument.id}" in body
+    )
+
+
+def test_rtd_would_empty_banner_carries_scroll_target_and_source_cancel(
+    client: TestClient, db: Session
+) -> None:
+    """The rtd_would_empty banner carries the banner-scroll-target
+    class + unique id, and its Cancel button anchors back to the
+    source RTD row."""
+    review_session = _make_session(client, db, code="banner-rtd-scroll")
+    instrument = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "OnlyType2",
+            "data_type": "Integer",
+            "min": "0",
+            "max": "5",
+            "step": "1",
+        },
+        follow_redirects=False,
+    )
+    custom = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.response_type == "OnlyType2"
+        )
+    ).scalar_one()
+    rfs = list(
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    )
+    for rf in rfs:
+        rf.response_type_id = custom.id
+    db.commit()
+
+    blocked = client.post(
+        f"/operator/sessions/{review_session.id}/response-types/{custom.id}/delete",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    body = client.get(blocked.headers["location"]).text
+    assert 'id="rtd-would-empty-banner"' in body
+    assert "banner-scroll-target" in body
+    assert f"#rtd-row-{custom.id}" in body

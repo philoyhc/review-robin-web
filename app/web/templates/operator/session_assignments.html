@@ -85,7 +85,8 @@
   {% endif %}
 
   {% if missing_confirm %}
-    <div class="card" style="border-color: #b91c1c; background: #fee2e2;">
+    <div class="card banner-scroll-target" id="missing-confirm-banner"
+         style="border-color: #b91c1c; background: #fee2e2;">
       <p>
         <strong>Replace not confirmed.</strong>
         Tick the confirm checkbox in the form below before submitting.
@@ -94,7 +95,8 @@
   {% endif %}
 
   {% if is_blocked %}
-    <div class="card" style="border-color: #b91c1c; background: #fee2e2;">
+    <div class="card banner-scroll-target" id="upload-blocked-banner"
+         style="border-color: #b91c1c; background: #fee2e2;">
       <p>
         <strong>Upload blocked.</strong>
         The CSV has errors that must be resolved before it can be saved.
