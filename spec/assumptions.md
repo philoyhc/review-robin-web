@@ -91,6 +91,28 @@ Buttons should not stack a `.btn-cta` modifier with `.danger`;
 if a CTA is destructive, treat that as a new red-fill CTA variant
 and add it explicitly to this taxonomy.
 
+### Inline error / warning banners
+
+Operator-page mutating routes (Save / Add / Delete) commonly
+reject a payload with a redirect-back-with-banner pattern: the
+route 303s to the GET page with a query-string flag, and the GET
+template renders an inline banner card describing what went
+wrong.
+
+**Convention.** Every such banner — both red error banners
+("Could not save…", "Could not delete…") and amber confirmation
+banners ("Cascade preview…") — must carry a **Cancel button**
+(`.btn.alert`) right-aligned at the bottom of the card. The
+Cancel button links back to the page **without** the
+query-string flag, so the operator has a one-click way to
+dismiss the banner and return to the table state.
+
+For confirmation-style banners (e.g. cascade-preview before a
+destructive action), Cancel sits next to the confirm button
+(usually `.btn.danger-solid`). For pure error banners (no
+confirm path — the operator must fix the underlying issue),
+Cancel is the only button.
+
 ### Typography
 
 - Root font size is set on `html` as a percentage so all
