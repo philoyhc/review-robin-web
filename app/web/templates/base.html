@@ -291,11 +291,17 @@
         justify-content: center;
         text-align: center;
         text-decoration: none;
-        color: #111827;
+        color: #4b5563;
         position: relative;
       }
-      .session-home-anchor:hover { background: #dbeafe; }
-      .session-home-anchor.active { background: #fff; }
+      .session-home-anchor:hover {
+        background: #fafcff;
+        color: #1f2937;
+      }
+      .session-home-anchor.active {
+        background: #fff;
+        color: #111827;
+      }
       .session-home-anchor.active::after {
         content: "";
         position: absolute;
@@ -309,7 +315,6 @@
       .home-anchor-text {
         font-size: 1rem;
         font-weight: 600;
-        color: #111827;
       }
       /* Row labels — neutral, sit between Home and the tab strip.
          Both cells share the auto-sized column, so the cell width
