@@ -74,41 +74,52 @@ docs/status.md / docs/database.md updated to match.
 
 ## P2 — Architectural debt to land before Segment 11 (export / audit retention)
 
-### 3. Move `_invalidate_if_validated` policy out of routes · [arch] · medium
+### 3. Move `_invalidate_if_validated` policy out of routes · [arch] · medium · ✅ shipped 2026-05-02
 
-**Why now.** The `validated → draft` invariant is enforced by a
-helper defined in `app/web/routes_operator.py:789` and called from
-22 sites in the same file (314, 433, 494, 620, 698, 728, 758,
-1209, 1247, 1285, 1328, 1367, 1414, 1453, 1493, 1526, 1556, 1677,
-1833, 1908, 1979, 2026, 2099 — re-grepped 2026-05-02 after
-Segment 10D drift). The corresponding service functions in
-`app/services/instruments.py` and `app/services/csv_imports.py`
-know nothing about the rule. With no local dev loop and a thin
-pytest gate, a new route that forgets the wrapper silently breaks
-the invariant and ships. Segment 11 will add more setup-mutation
-surfaces (export config, retention rules); the fragility
-compounds.
+**Outcome.** The `validated → draft` invariant now lives at the
+service boundary. New public helper
+`app/services/session_lifecycle.py::invalidate_if_validated(db, *,
+review_session, user, reason, correlation_id=None)` is idempotent
+(no-op on draft / ready / etc.) and is called at the top of every
+setup-mutating service:
 
-**Where.**
-- Caller list: `grep -n _invalidate_if_validated
-  app/web/routes_operator.py`.
-- Helper definition: `app/web/routes_operator.py:789`.
-- Lifecycle service: `app/services/session_lifecycle.py` (the
-  `invalidate_session(...)` it ultimately calls).
+- `csv_imports._save` / `_delete_all` (covers reviewer + reviewee
+  imports + delete-all)
+- `assignments.replace_assignments` / `delete_all_assignments`
+- `sessions.update_session`
+- `instruments.create_instrument` / `delete_instrument` /
+  `update_instrument_description` / `add_response_field` /
+  `add_default_response_field` / `update_response_field` /
+  `delete_response_field` / `move_response_field` /
+  `bulk_save_fields` / `add_display_field` /
+  `update_display_field` / `delete_display_field` /
+  `move_display_field` / `add_response_type_definition` /
+  `update_response_type_definition` /
+  `delete_response_type_definition`
 
-**Plan.**
-- Push the policy into the service layer: each mutating service
-  function takes the `review_session` and `actor_user` it already
-  touches and decides for itself whether to invalidate. The status.md
-  table is the source of truth for which mutations invalidate vs
-  don't (e.g. instrument open/close deliberately doesn't).
-- Or: a single decorator / context-manager applied at the service
-  boundary that observes whether the function ran a mutating
-  side-effect and invalidates if so.
-- Keep the route helper as a thin shim during migration. Delete it
-  once all callsites resolve through the service.
-- Update tests to assert the invariant via the service, not via the
-  route — drives the abstraction in the right direction.
+Routes no longer thread the rule. The 23 explicit
+`_invalidate_if_validated` calls in `routes_operator.py` and the
+route helper at `:789` are gone.
+
+Tests: new
+`tests/integration/test_invalidation_on_setup_mutation.py` (13
+tests) covers the helper's idempotency, one mutating-service
+example per category, and the two visibility-services exemption
+(item #16 — see below).
+
+**Notes / follow-ups.**
+- The instruments-service mutations don't thread `correlation_id`
+  through to `invalidate_if_validated` (their existing audit
+  events also don't carry it). The `session.invalidated` audit
+  event raised from those mutations therefore has a NULL
+  correlation_id. That's a small audit-trace regression, not
+  worth threading the param through 14 instruments_service
+  signatures. If correlation_id continuity becomes important for
+  trace-on-export work in Segment 11, fix it then.
+- The `mutate_setup` decorator alternative was considered and
+  rejected — services have wildly different signatures
+  (`instrument`, `field`, `rtd`, `review_session`), so a
+  single-shape decorator would have been awkward.
 
 ---
 
@@ -554,26 +565,31 @@ ship silently.
 
 ---
 
-### 16. Decide bulk_visibility_when_closed invalidation policy · [arch] · tiny
+### 16. Decide bulk_visibility_when_closed invalidation policy · [arch] · tiny · ✅ shipped 2026-05-02
 
-**Why now.** `instruments_bulk_visibility_on/off`
-(`routes_operator.py:2143–2163` — re-grepped 2026-05-02) does
-not call `_invalidate_if_validated`. Visibility-when-closed
-isn't structural, so this may be intentional, but the choice is
-undocumented. Naturally bundles with item 3 (move
-`_invalidate_if_validated` to the service layer).
+**Decision.** Visibility-when-closed is **deliberately exempt**
+from the `validated → draft` rule — it's a display flag (does
+the reviewer see other reviewers' responses after the deadline)
+that doesn't change anything captured in the validation snapshot
+(assignments, fields, instruments). `docs/status.md:216` had
+already documented this; #3's service-layer migration is where
+the policy was formally pinned.
 
-(Note: the previously-cited "compare to `bulk_set_accepting`"
-framing was misleading. `bulk_set_accepting` requires the session
-to already be `ready` — `routes_operator.py:2114, 2131` raise 409
-otherwise — so it never sees a `validated` session in the first
-place. The real question for #16 is just whether
-`bulk_set_visibility` should flip `validated → draft` when the
-operator toggles visibility-when-closed on a `validated` session.)
+Pinned in code at:
+- `app/services/instruments.py::bulk_set_visibility` —
+  `# #16` comment + deliberate omission of
+  `lifecycle.invalidate_if_validated`.
+- `app/services/session_lifecycle.py::set_responses_visible_when_closed`
+  — same comment + omission.
 
-**Plan.** Either add the invalidation call or add a one-line
-comment + status.md note explaining why it's deliberately
-exempt. Decide and document.
+Pinned in tests at:
+- `tests/integration/test_bulk_visibility.py::test_bulk_visibility_does_not_invalidate_validated_session`
+  (existed before; docstring updated since the policy is now
+  decided rather than provisional).
+- `tests/integration/test_invalidation_on_setup_mutation.py::test_bulk_set_visibility_does_not_invalidate`
+  and `::test_set_responses_visible_when_closed_does_not_invalidate`
+  (new — co-located with the rest of the service-layer invariant
+  tests).
 
 ---
 

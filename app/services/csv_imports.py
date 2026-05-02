@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewee, Reviewer, ReviewSession, User
 from app.schemas.imports import ReviewerImportRow, RevieweeImportRow
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit
+from app.services import audit, session_lifecycle as lifecycle
 
 MAX_BYTES = 1 * 1024 * 1024
 MAX_ROWS = 5000
@@ -379,6 +379,13 @@ def _save(
     correlation_id: str,
     to_kwargs: Any,
 ) -> tuple[int, int]:
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=session,
+        user=user,
+        reason=f"{source_label}_imported",
+        correlation_id=correlation_id,
+    )
     cascaded_assignment_count = _count_assignments(db, session.id)
 
     existing_rows = list(
@@ -470,6 +477,13 @@ def _delete_all(
     source_label: str,
     correlation_id: str,
 ) -> tuple[int, int]:
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=review_session,
+        user=user,
+        reason=f"{source_label}_deleted_all",
+        correlation_id=correlation_id,
+    )
     cascaded = _count_assignments(db, review_session.id)
     rows = list(
         db.execute(

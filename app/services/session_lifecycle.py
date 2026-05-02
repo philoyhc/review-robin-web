@@ -147,6 +147,37 @@ def mark_validated(
     return review_session
 
 
+def invalidate_if_validated(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    reason: str,
+    correlation_id: str | None = None,
+) -> None:
+    """Idempotent ``validated → draft`` flip used by setup-mutating services.
+
+    No-op for any other status (``draft``, ``ready``, ``expired``,
+    ``archived``). Mutating services call this at their entry point so
+    the ``validated → draft`` invariant is enforced where the mutation
+    happens, not where the request happens — a route that forgets to
+    wrap its service call no longer silently breaks the invariant.
+
+    Visibility-when-closed services (``bulk_set_visibility``,
+    ``set_responses_visible_when_closed``) deliberately do **not** call
+    this helper: ``responses_visible_when_closed`` is a display flag
+    that doesn't affect the validation snapshot. See ``docs/status.md``.
+    """
+    if is_validated(review_session):
+        invalidate_session(
+            db,
+            review_session=review_session,
+            user=user,
+            reason=reason,
+            correlation_id=correlation_id,
+        )
+
+
 def invalidate_session(
     db: Session,
     *,
@@ -393,6 +424,9 @@ def set_responses_visible_when_closed(
     visible: bool,
     correlation_id: str | None = None,
 ) -> Instrument:
+    # #16 — visibility-when-closed is a display flag, not part of the
+    # validation snapshot. Deliberately does NOT call
+    # ``invalidate_if_validated``.
     instrument.responses_visible_when_closed = bool(visible)
     db.flush()
     db.commit()
@@ -518,6 +552,7 @@ __all__ = [
     "is_editable",
     "build_readiness_report",
     "mark_validated",
+    "invalidate_if_validated",
     "invalidate_session",
     "activate_session",
     "revert_session_to_draft",
