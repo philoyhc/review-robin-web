@@ -589,7 +589,7 @@
           </tr>
         </thead>
         <tbody data-rtd-tbody>
-          {% set _rtd_btn_style = "width: 7em; box-sizing: border-box;" %}
+          {% set _rtd_btn_style = "width: 6em; box-sizing: border-box;" %}
           {% set is_some_row_unlocked = (editing_rtd_id is not none) and not is_ready %}
           {% for rtd in rtds %}
             {% set is_editing_this = (editing_rtd_id == rtd.id) and not rtd.is_seeded and not is_ready %}
@@ -690,15 +690,17 @@
          ``_updateRtdAddButtonState`` toggles the disabled flag when
          drafts come and go. #}
       {% set add_disabled = editing_rtd_id is not none %}
-      <div style="margin-top: 16px; padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc;"
+      <div style="margin-top: 16px; display: flex; justify-content: flex-end;"
            id="rtd-add-card">
-        <p style="margin: 0 0 8px 0; font-weight: bold;">Add a Response Type</p>
-        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: end;">
-          <label>Name
+        <div style="padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc; min-width: 22em;">
+          <p style="margin: 0 0 8px 0; font-weight: bold; text-align: right;">Add a Response Type</p>
+          <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-bottom: 8px;">
+            <label for="new-rtd-name" style="font-weight: normal;">Name</label>
             <input type="text" id="new-rtd-name" style="width: 12em;"
                    {% if add_disabled %}disabled{% endif %}>
-          </label>
-          <label>Data Type
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-bottom: 8px;">
+            <label for="new-rtd-data-type" style="font-weight: normal;">Data Type</label>
             <select id="new-rtd-data-type"
                     {% if add_disabled %}disabled{% endif %}>
               <option value="String">String</option>
@@ -706,21 +708,20 @@
               <option value="Decimal">Decimal</option>
               <option value="List">List</option>
             </select>
-          </label>
-          <button id="rtd-add-button"
-                  type="button" class="btn alert-solid"
-                  style="width: 7em; box-sizing: border-box;"
-                  onclick="addRtdDraft()"
-                  {% if add_disabled %}disabled data-server-disabled="1"
-                  title="Save or cancel the row in progress before adding another."{% endif %}>Add</button>
+          </div>
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+            <button id="rtd-add-button"
+                    type="button" class="btn alert-solid"
+                    style="width: 6em; box-sizing: border-box;"
+                    onclick="addRtdDraft()"
+                    {% if add_disabled %}disabled data-server-disabled="1"
+                    title="Save or cancel the row in progress before adding another."{% endif %}>Add</button>
+          </div>
+          <p class="muted" style="margin: 0; font-size: 0.85em; text-align: right;">
+            Click <strong>Add</strong> to start a new row in the table
+            above. Decimal values can have at most one decimal place.
+          </p>
         </div>
-        <p class="muted" style="margin: 8px 0 0 0; font-size: 0.85em;">
-          Click <strong>Add</strong> to start a new row in the table
-          above. Fill the parameter cells that apply to your Data Type
-          (Min / Max for Integer / Decimal / String, Step for Integer
-          / Decimal, List for List), then click <strong>Save</strong>.
-          Decimal values must have at most one decimal place.
-        </p>
       </div>
 
       {# Hidden draft-row template cloned by ``addRtdDraft`` JS. The
@@ -746,9 +747,9 @@
           <td style="white-space: nowrap;">
             <div style="display: inline-flex; gap: 6px;">
               <button form="rtd-draft-form-__DRAFT_ID__" type="submit" class="btn"
-                      style="width: 7em; box-sizing: border-box;">Save</button>
+                      style="width: 6em; box-sizing: border-box;">Save</button>
               <button type="button" class="btn alert"
-                      style="width: 7em; box-sizing: border-box;"
+                      style="width: 6em; box-sizing: border-box;"
                       onclick="cancelRtdDraft('__DRAFT_ID__')">Cancel</button>
             </div>
           </td>
