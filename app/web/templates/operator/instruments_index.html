@@ -589,14 +589,17 @@
           </tr>
         </thead>
         <tbody data-rtd-tbody>
+          {% set _rtd_btn_style = "min-width: 5.5em;" %}
+          {% set is_some_row_unlocked = (editing_rtd_id is not none) and not is_ready %}
           {% for rtd in rtds %}
             {% set is_editing_this = (editing_rtd_id == rtd.id) and not rtd.is_seeded and not is_ready %}
             <tr id="rtd-row-{{ rtd.id }}" class="muted">
               <td><code>{{ rtd.response_type }}</code></td>
               <td>{{ rtd.data_type }}</td>
               {% if is_editing_this %}
-                {# Editing state: per-row form, Min / Max / Step / List
-                   editable per Data Type. Save + Cancel inline. #}
+                {# Unlocked state: per-row form, Min / Max / Step / List
+                   editable per Data Type. Save + Cancel + Delete
+                   inline (equal-width). #}
                 <form method="post"
                       action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/edit"
                       id="rtd-edit-{{ rtd.id }}"
@@ -632,33 +635,39 @@
                 <td style="white-space: nowrap;">
                   <div style="display: inline-flex; gap: 6px;">
                     <button form="rtd-edit-{{ rtd.id }}" type="submit"
-                            class="btn">Save</button>
-                    <a class="btn alert"
+                            class="btn" style="{{ _rtd_btn_style }}">Save</button>
+                    <a class="btn alert" style="{{ _rtd_btn_style }}"
                        href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd.id }}">Cancel</a>
+                    <form method="post"
+                          action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/delete"
+                          onsubmit="return confirm('Delete Response Type {{ rtd.response_type }}? This cannot be undone.');"
+                          style="display: inline; margin: 0;">
+                      <button class="btn danger-solid" type="submit"
+                              style="{{ _rtd_btn_style }}">Delete</button>
+                    </form>
                   </div>
                 </td>
               {% else %}
-                {# Saved (locked) state — both seeded rows and saved
-                   operator-defined rows render parameters as text. #}
+                {# Locked state — read-only parameter cells. Action
+                   column carries the Edit button on operator-defined
+                   rows, greyed out when another row is currently
+                   unlocked. Seeded rows have an empty Action cell. #}
                 <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.min, rtd.data_type) }}{% endif %}</td>
                 <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.max, rtd.data_type) }}{% endif %}</td>
                 <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ fmt_num(rtd.step, rtd.data_type) }}{% else %}NA{% endif %}</td>
                 <td>{% if rtd.data_type == "List" %}{{ rtd.list_csv or "—" }}{% else %}NA{% endif %}</td>
                 <td style="white-space: nowrap;">
-                  {% if rtd.is_seeded %}
-                    <span class="muted" title="Seeded Response Types cannot be edited or deleted.">locked</span>
-                  {% elif is_ready %}
-                    <span class="muted">—</span>
+                  {% if rtd.is_seeded or is_ready %}
+                    {# Seeded rows: no buttons. Ready-session lock:
+                       no buttons either (mirrors instrument cards). #}
+                  {% elif is_some_row_unlocked %}
+                    <a class="btn alert-solid disabled"
+                       aria-disabled="true"
+                       style="{{ _rtd_btn_style }} opacity: 0.5; pointer-events: none;"
+                       title="Save or cancel the row in progress before editing another.">Edit</a>
                   {% else %}
-                    <div style="display: inline-flex; gap: 6px;">
-                      <a class="btn"
-                         href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd.id }}#rtd-row-{{ rtd.id }}">Edit</a>
-                      <form method="post"
-                            action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/delete"
-                            style="display: inline; margin: 0;">
-                        <button class="btn danger-solid" type="submit">Delete</button>
-                      </form>
-                    </div>
+                    <a class="btn alert-solid" style="{{ _rtd_btn_style }}"
+                       href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd.id }}#rtd-row-{{ rtd.id }}">Edit</a>
                   {% endif %}
                 </td>
               {% endif %}
@@ -735,8 +744,10 @@
           </td>
           <td style="white-space: nowrap;">
             <div style="display: inline-flex; gap: 6px;">
-              <button form="rtd-draft-form-__DRAFT_ID__" type="submit" class="btn">Save</button>
-              <button type="button" class="btn alert" onclick="cancelRtdDraft('__DRAFT_ID__')">Cancel</button>
+              <button form="rtd-draft-form-__DRAFT_ID__" type="submit" class="btn"
+                      style="min-width: 5.5em;">Save</button>
+              <button type="button" class="btn alert" style="min-width: 5.5em;"
+                      onclick="cancelRtdDraft('__DRAFT_ID__')">Cancel</button>
             </div>
           </td>
         </tr>

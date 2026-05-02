@@ -1562,11 +1562,13 @@ def test_rtd_locked_when_session_ready(
     assert response.status_code == 409
 
 
-def test_rtd_card_renders_edit_and_delete_for_operator_added_row(
+def test_rtd_card_renders_edit_only_in_locked_state_for_operator_added_row(
     client: TestClient, db: Session
 ) -> None:
-    """Saved operator-defined rows render inline Edit + Delete
-    buttons in the Action column. Seeded rows render ``locked``."""
+    """In the locked (default) state, every saved operator-defined
+    row renders **only** an Edit button (Alert style). Delete moves
+    into the unlocked state — operator must click Edit first to
+    expose Save / Cancel / Delete on that row."""
     review_session = _make_session(client, db, code="rtd-row-form")
     client.post(
         f"/operator/sessions/{review_session.id}/response-types",
@@ -1589,18 +1591,61 @@ def test_rtd_card_renders_edit_and_delete_for_operator_added_row(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    # Saved row renders an Edit anchor (links into ``editing_rtd_id``)
-    # and a Delete form button.
+    # Locked state: Edit anchor rendered; per-row delete form should
+    # NOT appear (Delete only in unlocked state).
     assert f"editing_rtd_id={custom.id}" in body
     assert (
         f'/operator/sessions/{review_session.id}/response-types/{custom.id}/delete'
-        in body
+        not in body
     )
-    # Seeded rows render ``locked`` not editable inputs.
-    assert "locked" in body
     # The per-row edit form should NOT yet render — that requires
     # the operator to click Edit (i.e. ?editing_rtd_id={id}).
     assert f'id="rtd-edit-{custom.id}"' not in body
+
+
+def test_rtd_card_other_row_edit_is_disabled_when_one_row_unlocked(
+    client: TestClient, db: Session
+) -> None:
+    """While one operator-defined row is in the unlocked state, every
+    other operator-defined row's Edit button renders disabled (the
+    operator must Save / Cancel / Delete the unlocked row first)."""
+    review_session = _make_session(client, db, code="rtd-one-edit")
+    for name in ("RowA", "RowB"):
+        client.post(
+            f"/operator/sessions/{review_session.id}/response-types",
+            data={
+                "response_type": name,
+                "data_type": "Integer",
+                "min": "0",
+                "max": "5",
+                "step": "1",
+            },
+            follow_redirects=False,
+        )
+    rows = list(
+        db.execute(
+            select(ResponseTypeDefinition).where(
+                ResponseTypeDefinition.session_id == review_session.id,
+                ResponseTypeDefinition.is_seeded.is_(False),
+            )
+        ).scalars()
+    )
+    assert len(rows) == 2
+    a, b = rows[0], rows[1]
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+        f"?editing_rtd_id={a.id}"
+    ).text
+    # The unlocked row carries the Save / Cancel / Delete trio.
+    assert f'id="rtd-edit-{a.id}"' in body
+    assert (
+        f'/operator/sessions/{review_session.id}/response-types/{a.id}/delete'
+        in body
+    )
+    # The other locked row's Edit button is rendered but disabled
+    # (greyed out) — no link into ``editing_rtd_id={b.id}``.
+    assert f"editing_rtd_id={b.id}" not in body
 
 
 def test_rtd_card_renders_per_row_edit_form_when_editing_rtd_id_matches(
