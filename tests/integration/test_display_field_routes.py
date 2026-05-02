@@ -15,6 +15,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    ResponseTypeDefinition,
     Reviewee,
     ReviewSession,
 )
@@ -1395,3 +1396,198 @@ def test_response_fields_type_cell_renders_rtd_select(
         f'<option value="{comments.response_type_id}" selected>Long_text</option>'
         in body
     )
+
+
+# --- Slice 4b: operator add / edit / delete on RTD card --------------
+
+
+def test_rtd_add_route_persists_operator_defined_row(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="rtd-route-add")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "MyScale",
+            "data_type": "Integer",
+            "min": "0",
+            "max": "10",
+            "step": "2",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "rtd-card" in response.headers["location"]
+
+    rtd = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.session_id == review_session.id,
+            ResponseTypeDefinition.response_type == "MyScale",
+        )
+    ).scalar_one()
+    assert rtd.is_seeded is False
+    assert (rtd.min, rtd.max, rtd.step) == (0, 10, 2)
+
+
+def test_rtd_add_route_renders_error_banner_on_invalid_payload(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="rtd-route-bad")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "BadDecimal",
+            "data_type": "Decimal",
+            "min": "0",
+            "max": "1",
+            "step": "0.05",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "rtd_error=" in response.headers["location"]
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?rtd_error=Step+must+have+at+most+one+decimal+place"
+    ).text
+    assert "Could not save Response Type" in body
+
+
+def test_rtd_edit_route_locks_seeded_rows(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="rtd-edit-lock")
+    seeded = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.session_id == review_session.id,
+            ResponseTypeDefinition.response_type == "1-to-5int",
+        )
+    ).scalar_one()
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/response-types/{seeded.id}/edit",
+        data={"min": "0", "max": "10", "step": "1"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+
+
+def test_rtd_delete_route_blocks_in_use_then_confirm_cascades(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="rtd-cascade-route")
+    instrument = _instrument(db, review_session.id)
+
+    # Operator adds a custom RTD and rebinds the seeded ``rating`` row
+    # so it depends on that RTD.
+    client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "Cascade-Test",
+            "data_type": "Integer",
+            "min": "0",
+            "max": "5",
+            "step": "1",
+        },
+        follow_redirects=False,
+    )
+    custom = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.session_id == review_session.id,
+            ResponseTypeDefinition.response_type == "Cascade-Test",
+        )
+    ).scalar_one()
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    rating.response_type_id = custom.id
+    db.commit()
+    rating_id = rating.id  # capture before cascade invalidates the row
+    custom_id = custom.id
+
+    # First delete attempt without confirm: redirect with cascade-block
+    # query params; row stays in DB.
+    blocked = client.post(
+        f"/operator/sessions/{review_session.id}/response-types/{custom_id}/delete",
+        follow_redirects=False,
+    )
+    assert blocked.status_code == 303
+    loc = blocked.headers["location"]
+    assert f"rtd_delete_blocked_id={custom_id}" in loc
+    assert "rtd_delete_blocked_rfs=1" in loc
+    assert db.get(ResponseTypeDefinition, custom_id) is not None
+
+    # Operator confirms.
+    confirmed = client.post(
+        f"/operator/sessions/{review_session.id}/response-types/{custom_id}/delete",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert confirmed.status_code == 303
+
+    db.expire_all()
+    assert db.get(ResponseTypeDefinition, custom_id) is None
+    # Cascade dropped the dependent RF row.
+    assert db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.id == rating_id
+        )
+    ).scalar_one_or_none() is None
+
+
+def test_rtd_locked_when_session_ready(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="rtd-ready-lock")
+    _populate_rosters(client, review_session.id)
+    _generate_full_matrix(client, review_session.id)
+    _validate(client, db, review_session.id)
+    _activate(client, db, review_session.id)
+    db.refresh(review_session)
+    assert review_session.status == "ready"
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "Blocked",
+            "data_type": "Integer",
+            "min": "0",
+            "max": "5",
+            "step": "1",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+
+
+def test_rtd_card_renders_per_row_edit_form_for_operator_added_row(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="rtd-row-form")
+    client.post(
+        f"/operator/sessions/{review_session.id}/response-types",
+        data={
+            "response_type": "Editable",
+            "data_type": "Integer",
+            "min": "0",
+            "max": "5",
+            "step": "1",
+        },
+        follow_redirects=False,
+    )
+    custom = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.session_id == review_session.id,
+            ResponseTypeDefinition.response_type == "Editable",
+        )
+    ).scalar_one()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    # Per-row edit form for the operator-added row.
+    assert f'id="rtd-edit-{custom.id}"' in body
+    # Seeded rows render ``locked`` not editable inputs.
+    assert "locked" in body

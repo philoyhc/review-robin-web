@@ -20,6 +20,11 @@ def engine() -> Iterator[Engine]:
         connect_args={"check_same_thread": False},
         future=True,
     )
+    # Mirror the production-side FK enforcement so ``ON DELETE CASCADE``
+    # actually fires in tests. SQLite ships with FKs off by default.
+    from app.db.session import _enable_sqlite_fk_enforcement
+
+    _enable_sqlite_fk_enforcement(eng)
 
     cfg = Config(str(REPO_ROOT / "alembic.ini"))
     cfg.set_main_option("script_location", str(REPO_ROOT / "alembic"))

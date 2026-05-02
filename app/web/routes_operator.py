@@ -960,6 +960,13 @@ def instruments_index(
     request: Request,
     editing: int | None = Query(default=None),
     saved: int | None = Query(default=None),
+    rtd_error: str | None = Query(default=None),
+    rtd_id: int | None = Query(default=None),
+    rtd_delete_blocked_id: int | None = Query(default=None),
+    rtd_delete_blocked_rfs: int | None = Query(default=None),
+    rtd_delete_blocked_instruments: int | None = Query(default=None),
+    rtd_delete_blocked_responses: int | None = Query(default=None),
+    rtd_delete_blocked_assignments: int | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1045,6 +1052,19 @@ def instruments_index(
             "instrument_saved_state": instrument_saved_state,
             "saved_instrument_id": saved,
             "rtds": rtds,
+            "rtd_error": rtd_error,
+            "rtd_error_id": rtd_id,
+            "rtd_delete_blocked": (
+                {
+                    "id": rtd_delete_blocked_id,
+                    "response_field_count": rtd_delete_blocked_rfs or 0,
+                    "instrument_count": rtd_delete_blocked_instruments or 0,
+                    "response_count": rtd_delete_blocked_responses or 0,
+                    "assignment_count": rtd_delete_blocked_assignments or 0,
+                }
+                if rtd_delete_blocked_id is not None
+                else None
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Instruments"
             ),
@@ -1722,6 +1742,204 @@ def instruments_add(
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/instruments#instrument-{instrument.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+# --- Slice 4b: operator add / edit / delete on Response Type
+# Definitions card. ``response_type`` (name) + ``data_type`` are
+# spec-locked once a row is saved, so the edit route only accepts
+# Min / Max / Step / List. Cascade-on-delete confirmation is
+# handled via a redirect-with-query when the dependent count is
+# nonzero and ``confirm`` is not set.
+
+def _parse_optional_float(raw: str | None) -> float | None:
+    if raw is None:
+        return None
+    cleaned = raw.strip()
+    if not cleaned:
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not parse {raw!r} as a number.",
+        )
+
+
+def _rtd_redirect_with_error(
+    session_id: int, *, error: str, rtd_id: int | None = None
+) -> RedirectResponse:
+    fragment = "rtd-card" if rtd_id is None else f"rtd-row-{rtd_id}"
+    encoded = error.replace("&", "%26").replace(" ", "+")
+    rtd_param = f"&rtd_id={rtd_id}" if rtd_id is not None else ""
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{session_id}/instruments"
+            f"?rtd_error={encoded}{rtd_param}#{fragment}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/response-types")
+def response_type_add(
+    response_type: str = Form(...),
+    data_type: str = Form(...),
+    min: str | None = Form(default=None),
+    max: str | None = Form(default=None),
+    step: str | None = Form(default=None),
+    list_csv: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_instrument_editable(review_session)
+    min_value = _parse_optional_float(min)
+    max_value = _parse_optional_float(max)
+    step_value = _parse_optional_float(step)
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="response_type_added"
+    )
+    try:
+        instruments_service.add_response_type_definition(
+            db,
+            review_session=review_session,
+            response_type=response_type,
+            data_type=data_type,
+            min=min_value,
+            max=max_value,
+            step=step_value,
+            list_csv=list_csv,
+            actor=user,
+        )
+    except (
+        instruments_service.RTDValidationError,
+        instruments_service.RTDPrecisionError,
+    ) as exc:
+        return _rtd_redirect_with_error(review_session.id, error=str(exc))
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments#rtd-card"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+def _require_rtd_in_session(
+    rtd_id: int,
+    review_session: ReviewSession,
+    db: Session,
+):
+    rtd = db.execute(
+        select(instruments_service.ResponseTypeDefinition).where(
+            instruments_service.ResponseTypeDefinition.id == rtd_id,
+            instruments_service.ResponseTypeDefinition.session_id
+            == review_session.id,
+        )
+    ).scalar_one_or_none()
+    if rtd is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Response Type Definition not found",
+        )
+    return rtd
+
+
+@router.post("/sessions/{session_id}/response-types/{rtd_id}/edit")
+def response_type_edit(
+    rtd_id: int,
+    min: str | None = Form(default=None),
+    max: str | None = Form(default=None),
+    step: str | None = Form(default=None),
+    list_csv: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_instrument_editable(review_session)
+    rtd = _require_rtd_in_session(rtd_id, review_session, db)
+    if rtd.is_seeded:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Seeded Response Types are spec-locked and cannot be edited.",
+        )
+
+    min_value = _parse_optional_float(min)
+    max_value = _parse_optional_float(max)
+    step_value = _parse_optional_float(step)
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="response_type_updated"
+    )
+    try:
+        instruments_service.update_response_type_definition(
+            db,
+            rtd=rtd,
+            min=min_value,
+            max=max_value,
+            step=step_value,
+            list_csv=list_csv,
+            actor=user,
+        )
+    except (
+        instruments_service.RTDValidationError,
+        instruments_service.RTDPrecisionError,
+    ) as exc:
+        return _rtd_redirect_with_error(
+            review_session.id, error=str(exc), rtd_id=rtd.id
+        )
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments#rtd-card"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/response-types/{rtd_id}/delete")
+def response_type_delete(
+    rtd_id: int,
+    confirm: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_instrument_editable(review_session)
+    rtd = _require_rtd_in_session(rtd_id, review_session, db)
+    if rtd.is_seeded:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Seeded Response Types are spec-locked and cannot be deleted.",
+        )
+
+    _invalidate_if_validated(
+        db, review_session, user, reason="response_type_deleted"
+    )
+    try:
+        instruments_service.delete_response_type_definition(
+            db, rtd=rtd, confirm=(confirm == "true"), actor=user
+        )
+    except instruments_service.RTDInUseError as exc:
+        d = exc.dependents
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"?rtd_delete_blocked_id={rtd.id}"
+                f"&rtd_delete_blocked_rfs={d['response_field_count']}"
+                f"&rtd_delete_blocked_instruments={d['instrument_count']}"
+                f"&rtd_delete_blocked_responses={d['response_count']}"
+                f"&rtd_delete_blocked_assignments={d['assignment_count']}"
+                f"#rtd-row-{rtd.id}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/instruments#rtd-card"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
