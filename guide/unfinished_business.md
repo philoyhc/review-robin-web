@@ -28,24 +28,16 @@ shipping segment lands.
 
 ## P1 — CI gaps (no local dev loop magnifies these)
 
-### 1. Wire `ruff check` into CI · [CI] · small
+### 1. ~~Wire `ruff check` into CI~~ — ✅ shipped 2026-05-02 · [CI] · small
 
-**Why now.** `ruff` is in `pyproject.toml`'s dev deps and listed under
-"Tooling" in AGENTS.md, but no workflow runs it. With no human dev
-loop, CI is the only place lint will ever execute. 5-minute change,
-permanent signal.
-
-**Where.** `.github/workflows/ci.yml` — single pytest step today,
-add a `ruff check .` step before it (or as a separate job). Fail the
-build on lint errors.
-
-**Plan.**
-- Add `ruff check .` step in `ci.yml` after `pip install -e .[dev]`
-  and before `pytest`.
-- Run locally first (in the agent sandbox) to fix any pre-existing
-  ruff findings the codebase has accumulated. Land those fixes in
-  the same PR or a precursor PR — don't merge a CI step that is
-  already red.
+**Resolution (2026-05-02).** `.github/workflows/ci.yml` now runs
+`ruff check .` between dependency install and `pytest`. Lint
+failures abort before the slower test job. The 10 pre-existing
+findings (8 unused imports across 6 test files + 2 unused locals
+in `tests/db/test_models.py:57` and
+`tests/integration/test_display_field_routes.py:458`) were
+cleaned up in the same PR — auto-fix on the imports, hand-edit
+on the locals.
 
 ---
 

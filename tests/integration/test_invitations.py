@@ -12,10 +12,8 @@ from app.db.models import (
     AuditEvent,
     EmailOutbox,
     Invitation,
-    Reviewer,
     ReviewSession,
 )
-from app.services import invitations as invitations_service
 
 
 # --------------------------------------------------------------------------- #

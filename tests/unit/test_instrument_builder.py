@@ -15,7 +15,6 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import instruments as instruments_service
 from app.services.instruments import (
     FieldKeyError,
     ResponsesPresentError,

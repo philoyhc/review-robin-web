@@ -16,11 +16,8 @@ from app.db.models import (
     Instrument,
     InstrumentResponseField,
     Response,
-    Reviewee,
-    Reviewer,
     ReviewSession,
 )
-from app.services import session_lifecycle as lifecycle
 
 
 @pytest.fixture
