@@ -962,6 +962,7 @@ def instruments_index(
     saved: int | None = Query(default=None),
     rtd_error: str | None = Query(default=None),
     rtd_id: int | None = Query(default=None),
+    editing_rtd_id: int | None = Query(default=None),
     rtd_delete_blocked_id: int | None = Query(default=None),
     rtd_delete_blocked_rfs: int | None = Query(default=None),
     rtd_delete_blocked_instruments: int | None = Query(default=None),
@@ -1054,6 +1055,7 @@ def instruments_index(
             "rtds": rtds,
             "rtd_error": rtd_error,
             "rtd_error_id": rtd_id,
+            "editing_rtd_id": None if is_ready else editing_rtd_id,
             "rtd_delete_blocked": (
                 {
                     "id": rtd_delete_blocked_id,
@@ -1769,15 +1771,24 @@ def _parse_optional_float(raw: str | None) -> float | None:
 
 
 def _rtd_redirect_with_error(
-    session_id: int, *, error: str, rtd_id: int | None = None
+    session_id: int,
+    *,
+    error: str,
+    rtd_id: int | None = None,
+    keep_editing: bool = False,
 ) -> RedirectResponse:
     fragment = "rtd-card" if rtd_id is None else f"rtd-row-{rtd_id}"
     encoded = error.replace("&", "%26").replace(" ", "+")
     rtd_param = f"&rtd_id={rtd_id}" if rtd_id is not None else ""
+    editing_param = (
+        f"&editing_rtd_id={rtd_id}"
+        if (keep_editing and rtd_id is not None)
+        else ""
+    )
     return RedirectResponse(
         url=(
             f"/operator/sessions/{session_id}/instruments"
-            f"?rtd_error={encoded}{rtd_param}#{fragment}"
+            f"?rtd_error={encoded}{rtd_param}{editing_param}#{fragment}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -1889,7 +1900,10 @@ def response_type_edit(
         instruments_service.RTDPrecisionError,
     ) as exc:
         return _rtd_redirect_with_error(
-            review_session.id, error=str(exc), rtd_id=rtd.id
+            review_session.id,
+            error=str(exc),
+            rtd_id=rtd.id,
+            keep_editing=True,
         )
     return RedirectResponse(
         url=(

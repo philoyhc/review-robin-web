@@ -588,28 +588,15 @@
             <th style="width: 1%;">Action</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody data-rtd-tbody>
           {% for rtd in rtds %}
+            {% set is_editing_this = (editing_rtd_id == rtd.id) and not rtd.is_seeded and not is_ready %}
             <tr id="rtd-row-{{ rtd.id }}" class="muted">
               <td><code>{{ rtd.response_type }}</code></td>
               <td>{{ rtd.data_type }}</td>
-              {% if rtd.is_seeded or is_ready %}
-                <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.min, rtd.data_type) }}{% endif %}</td>
-                <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.max, rtd.data_type) }}{% endif %}</td>
-                <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ fmt_num(rtd.step, rtd.data_type) }}{% else %}NA{% endif %}</td>
-                <td>{% if rtd.data_type == "List" %}{{ rtd.list_csv or "—" }}{% else %}NA{% endif %}</td>
-                <td style="white-space: nowrap;">
-                  {% if rtd.is_seeded %}
-                    <span class="muted" title="Seeded Response Types cannot be edited or deleted.">locked</span>
-                  {% else %}
-                    <span class="muted">—</span>
-                  {% endif %}
-                </td>
-              {% else %}
-                {# Operator-defined row, editable. Each row hosts its
-                   own per-row form with Min / Max / Step / List
-                   inputs (those applicable to its locked Data Type)
-                   and a Save + Delete pair. #}
+              {% if is_editing_this %}
+                {# Editing state: per-row form, Min / Max / Step / List
+                   editable per Data Type. Save + Cancel inline. #}
                 <form method="post"
                       action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/edit"
                       id="rtd-edit-{{ rtd.id }}"
@@ -643,16 +630,36 @@
                   {% else %}NA{% endif %}
                 </td>
                 <td style="white-space: nowrap;">
-                  <button form="rtd-edit-{{ rtd.id }}" type="submit"
-                          class="btn">Save</button>
-                  <form method="post"
-                        action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/delete"
-                        style="display: inline; margin: 0;">
-                    <button type="submit"
-                            class="btn-icon"
-                            title="Delete Response Type"
-                            style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.2em; padding: 0 6px;">&#10007;</button>
-                  </form>
+                  <div style="display: inline-flex; gap: 6px;">
+                    <button form="rtd-edit-{{ rtd.id }}" type="submit"
+                            class="btn">Save</button>
+                    <a class="btn alert"
+                       href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd.id }}">Cancel</a>
+                  </div>
+                </td>
+              {% else %}
+                {# Saved (locked) state — both seeded rows and saved
+                   operator-defined rows render parameters as text. #}
+                <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.min, rtd.data_type) }}{% endif %}</td>
+                <td>{% if rtd.data_type == "List" %}NA{% else %}{{ fmt_num(rtd.max, rtd.data_type) }}{% endif %}</td>
+                <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ fmt_num(rtd.step, rtd.data_type) }}{% else %}NA{% endif %}</td>
+                <td>{% if rtd.data_type == "List" %}{{ rtd.list_csv or "—" }}{% else %}NA{% endif %}</td>
+                <td style="white-space: nowrap;">
+                  {% if rtd.is_seeded %}
+                    <span class="muted" title="Seeded Response Types cannot be edited or deleted.">locked</span>
+                  {% elif is_ready %}
+                    <span class="muted">—</span>
+                  {% else %}
+                    <div style="display: inline-flex; gap: 6px;">
+                      <a class="btn"
+                         href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd.id }}#rtd-row-{{ rtd.id }}">Edit</a>
+                      <form method="post"
+                            action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/delete"
+                            style="display: inline; margin: 0;">
+                        <button class="btn danger-solid" type="submit">Delete</button>
+                      </form>
+                    </div>
+                  {% endif %}
                 </td>
               {% endif %}
             </tr>
@@ -662,46 +669,74 @@
     </div>
 
     {% if not is_ready %}
-      {# Add Response Type form — server-side validation enforces the
-         spec's save-time rules. Form submission redirects back here
-         with ?rtd_error=... if the payload is rejected. #}
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/response-types"
-            style="margin-top: 16px; padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc;">
+      {# "Add a Response Type" — only Name + Data Type. Click ``Add``
+         runs JS that inserts a draft row into the main table (above)
+         in the editable state; Save POSTs the full row,
+         Cancel removes the draft from the DOM (no DB write). #}
+      <div style="margin-top: 16px; padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc;"
+           id="rtd-add-card">
         <p style="margin: 0 0 8px 0; font-weight: bold;">Add a Response Type</p>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: end;">
           <label>Name
-            <input type="text" name="response_type" required style="width: 10em;">
+            <input type="text" id="new-rtd-name" style="width: 12em;">
           </label>
           <label>Data Type
-            <select name="data_type" required>
+            <select id="new-rtd-data-type">
               <option value="String">String</option>
               <option value="Integer">Integer</option>
               <option value="Decimal">Decimal</option>
               <option value="List">List</option>
             </select>
           </label>
-          <label>Min
-            <input type="text" name="min" style="width: 5em;">
-          </label>
-          <label>Max
-            <input type="text" name="max" style="width: 5em;">
-          </label>
-          <label>Step
-            <input type="text" name="step" style="width: 5em;">
-          </label>
-          <label style="flex: 1; min-width: 14em;">List (comma-separated)
-            <input type="text" name="list_csv" style="width: 100%;">
-          </label>
-          <button class="btn alert-solid" type="submit">Add</button>
+          <button type="button" class="btn alert-solid" onclick="addRtdDraft()">Add</button>
         </div>
         <p class="muted" style="margin: 8px 0 0 0; font-size: 0.85em;">
-          Fill the cells that apply to your Data Type. Min / Max /
-          Step are for Integer, Decimal, or String (String uses Min / Max
-          as character lengths). List uses the comma-separated cell.
+          Click <strong>Add</strong> to start a new row in the table
+          above. Fill the parameter cells that apply to your Data Type
+          (Min / Max for Integer / Decimal / String, Step for Integer
+          / Decimal, List for List), then click <strong>Save</strong>.
           Decimal values must have at most one decimal place.
         </p>
-      </form>
+      </div>
+
+      {# Hidden draft-row template cloned by ``addRtdDraft`` JS. The
+         row's inputs reference the matching draft <form> element
+         (rendered by the form-template below) via HTML5 ``form="..."``
+         so they submit together when the operator clicks Save. #}
+      <template id="rtd-draft-row-template">
+        <tr class="muted rtd-draft-row" data-draft-id="__DRAFT_ID__">
+          <td><code>__NAME__</code></td>
+          <td>__DATA_TYPE__</td>
+          <td class="rtd-draft-cell-min">
+            <input form="rtd-draft-form-__DRAFT_ID__" type="text" name="min" style="width: 6em;">
+          </td>
+          <td class="rtd-draft-cell-max">
+            <input form="rtd-draft-form-__DRAFT_ID__" type="text" name="max" style="width: 6em;">
+          </td>
+          <td class="rtd-draft-cell-step">
+            <input form="rtd-draft-form-__DRAFT_ID__" type="text" name="step" style="width: 6em;">
+          </td>
+          <td class="rtd-draft-cell-list">
+            <input form="rtd-draft-form-__DRAFT_ID__" type="text" name="list_csv" style="width: 100%;">
+          </td>
+          <td style="white-space: nowrap;">
+            <div style="display: inline-flex; gap: 6px;">
+              <button form="rtd-draft-form-__DRAFT_ID__" type="submit" class="btn">Save</button>
+              <button type="button" class="btn alert" onclick="cancelRtdDraft(__DRAFT_ID__)">Cancel</button>
+            </div>
+          </td>
+        </tr>
+      </template>
+      <template id="rtd-draft-form-template">
+        <form id="rtd-draft-form-__DRAFT_ID__" method="post"
+              action="/operator/sessions/{{ session.id }}/response-types"
+              class="rtd-draft-form"
+              data-draft-id="__DRAFT_ID__"
+              style="display: none;">
+          <input type="hidden" name="response_type" value="__NAME__">
+          <input type="hidden" name="data_type" value="__DATA_TYPE__">
+        </form>
+      </template>
     {% endif %}
   </div>
 
@@ -875,6 +910,87 @@
       if (emptyRow) {
         emptyRow.style.display = hasVisibleData ? 'none' : '';
       }
+    }
+
+    // ``Add a Response Type`` clones a draft row + its matching <form>
+    // into the RTD card. The row's parameter inputs reference the
+    // hidden form via HTML5 ``form="..."`` so they submit together
+    // when the operator clicks Save. Cancel removes both. Cells not
+    // applicable to the chosen Data Type render ``NA``.
+    var _rtdDraftCounter = 0;
+    var _RTD_APPLICABLE_CELLS = {
+      Integer: ['min', 'max', 'step'],
+      Decimal: ['min', 'max', 'step'],
+      String: ['min', 'max'],
+      List: ['list']
+    };
+    function addRtdDraft() {
+      var nameInput = document.getElementById('new-rtd-name');
+      var dataTypeInput = document.getElementById('new-rtd-data-type');
+      if (!nameInput || !dataTypeInput) return;
+      var name = nameInput.value.trim();
+      var dataType = dataTypeInput.value;
+      if (!name) {
+        alert('Name is required.');
+        nameInput.focus();
+        return;
+      }
+      _rtdDraftCounter += 1;
+      var draftId = 'd' + _rtdDraftCounter;
+
+      var rowTemplate = document.getElementById('rtd-draft-row-template');
+      var formTemplate = document.getElementById('rtd-draft-form-template');
+      if (!rowTemplate || !formTemplate) return;
+
+      var rowHtml = rowTemplate.innerHTML
+        .split('__DRAFT_ID__').join(draftId)
+        .split('__NAME__').join(name)
+        .split('__DATA_TYPE__').join(dataType);
+      var formHtml = formTemplate.innerHTML
+        .split('__DRAFT_ID__').join(draftId)
+        .split('__NAME__').join(name)
+        .split('__DATA_TYPE__').join(dataType);
+
+      var rowWrap = document.createElement('tbody');
+      rowWrap.innerHTML = rowHtml;
+      var newRow = rowWrap.firstElementChild;
+
+      // Hide the parameter cells that don't apply to the chosen Data
+      // Type. Replace the input with ``NA`` so the row reads as a
+      // fully-formed catalog row even when the cell is inert.
+      var applicable = _RTD_APPLICABLE_CELLS[dataType] || [];
+      var cells = ['min', 'max', 'step', 'list'];
+      cells.forEach(function (cell) {
+        var td = newRow.querySelector('.rtd-draft-cell-' + cell);
+        if (!td) return;
+        if (applicable.indexOf(cell) === -1) {
+          td.textContent = 'NA';
+        }
+      });
+
+      var tbody = document.querySelector('[data-rtd-tbody]');
+      if (tbody) tbody.appendChild(newRow);
+
+      var formWrap = document.createElement('div');
+      formWrap.innerHTML = formHtml;
+      var newForm = formWrap.firstElementChild;
+      var card = document.getElementById('rtd-card');
+      if (card) card.appendChild(newForm);
+
+      // Reset Add inputs.
+      nameInput.value = '';
+      dataTypeInput.selectedIndex = 0;
+      nameInput.focus();
+    }
+    function cancelRtdDraft(draftId) {
+      var row = document.querySelector(
+        '[data-draft-id="' + draftId + '"].rtd-draft-row'
+      );
+      var form = document.querySelector(
+        'form.rtd-draft-form[data-draft-id="' + draftId + '"]'
+      );
+      if (row && row.parentNode) row.parentNode.removeChild(row);
+      if (form && form.parentNode) form.parentNode.removeChild(form);
     }
   </script>
 {% endblock %}
