@@ -318,7 +318,7 @@ each PR can be reviewed against a smaller surface area.
 In: New table + seed + FK migration of existing
 `instrument_response_fields.response_type` data; new
 `Response Type Definitions` card on the Instruments page rendered
-as a **read-only catalog** of the eight seeded rows; Response
+as a **read-only catalog** of the ten seeded rows; Response
 Fields `Type` cell rendered as a `<select disabled>` over the
 session's RTD names (still read-only post-create per spec).
 
@@ -340,12 +340,15 @@ confirmation UX.
   | `max` | float (nullable) | meaning depends on `data_type` |
   | `step` | float (nullable) | applies to Decimal / Integer only |
   | `list_csv` | text (nullable) | comma-separated for List |
-  | `is_seeded` | bool | true for the eight baseline rows; un-deletable |
+  | `is_seeded` | bool | true for the ten baseline rows; un-deletable |
 
-- Alembic migration backfills the **eight** seeded rows
-  (`Long_text`, `Short_text`, `Grade`, `Yes_no`, `0-to-2int`,
-  `1-to-5int`, `1-to-5half`, `1-to-5dec`) into every existing
-  session via `op.execute(...)` over each `sessions.id`.
+- Alembic migration backfills the **ten** seeded rows
+  (`Long_text`, `Short_text`, `Yes_no`, `Grade`, `Likert5`,
+  `100int`, `0-to-2int`, `1-to-5int`, `1-to-5half`, `1-to-5dec`,
+  in that order) into every existing session via
+  `op.execute(...)` over each `sessions.id`. See
+  [`guide/instruments.md`](./instruments.md) "Default seed" for
+  the full row contents (Min / Max / Step / List values).
 
 - Same migration replaces the `instrument_response_fields.response_type`
   text column with `response_type_id`, a FK into
@@ -389,8 +392,8 @@ confirmation UX.
 - Full-width `Response Type Definitions` card rendered below the
   per-instrument cards. Read-only table over the session's RTD
   rows (sorted: seeded rows first in spec order, operator-added
-  rows after by `id`). All eight cells `disabled` / muted; no
-  Action column yet (4b).
+  rows after by `id`). Every cell in the row renders `disabled` /
+  muted; no Action column yet (4b).
 - Response Fields `Type` column switches from the hardcoded
   four-value `<select>` to a `<select disabled>` over the
   session's RTD names. The selected option is the row's current
