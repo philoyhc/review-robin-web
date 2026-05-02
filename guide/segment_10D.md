@@ -75,6 +75,11 @@ Out (deferred to later segments / follow-ups):
              │
              ▼
         ┌──────────┐
+        │ Slice 4c │  Wire RF↔RTD on add (operator-pickable Type)
+        └────┬─────┘
+             │
+             ▼
+        ┌──────────┐
         │ Slice 5  │  Multi-instrument enable (P0 #18)
         └──────────┘
 ```
@@ -516,6 +521,141 @@ precision rules); route + render coverage in
 blocked → confirmed → cascade, ready-session lock, per-row
 edit form rendered when ``editing_rtd_id`` matches, draft
 templates render, Add disabled while editing).
+
+---
+
+## Slice 4c — Wire Response Fields ↔ RTD on add (operator-pickable Type)
+
+**Status:** Pending. Discovered post-Slice-4b: the
+``Response Fields`` ``Type`` cell renders as ``<select disabled>``
+for *both* saved rows (correct, per spec — read-only post-create)
+*and* JS-added draft rows (a gap — operators can't actually pick
+the Type for a new field). Today every JS-added row gets
+hardcoded to ``1-to-5int`` server-side via
+``add_default_response_field``, and the ``field_key`` stays
+``rating{N}`` regardless of what the operator types as the
+label. This slice closes both gaps before Slice 5 lands.
+
+**Estimated effort:** ~1.5-2 hrs.
+
+### Audit — what's wired vs. not, post-Slice-4b
+
+✅ Wired correctly:
+
+- ``response_type_definitions`` schema + the 10 seeded rows on
+  every session.
+- ``instrument_response_fields.response_type_id`` FK with
+  ``ON DELETE CASCADE`` (database + ``passive_deletes=True``).
+- Read-only RTD catalog card on the Instruments page.
+- Operator add / edit / delete on the RTD card with cascade-
+  preview confirmation.
+- ``update_response_type_definition`` propagates a re-derived
+  validation block to every dependent ``InstrumentResponseField``
+  on save.
+- Reviewer surface renders inputs from ``data_type`` + the
+  RTD-derived validation block (``min`` / ``max`` / ``step`` /
+  ``choices`` / ``min_length`` / ``max_length``).
+- ``ensure_default_instrument`` seeds new instruments with
+  ``rating1 → 1-to-5int`` and ``comments1 → Long_text``.
+
+⚠ Gaps:
+
+- **Response Fields ``Type`` cell on JS-added new rows is
+  ``<select disabled>``** — same render as saved rows. The
+  operator sees the full RTD list but can't pick from it. (The
+  comment on the template even says "the operator sees the full
+  RTD dropdown but cannot change the selection".)
+- **Bulk-save route always calls ``add_default_response_field``
+  for ``new_*`` ids**, which hardcodes ``response_type_id`` to
+  ``1-to-5int`` and seeds a ``Rating{N}`` label.
+- **``field_key`` for operator-typed labels** stays
+  ``rating{N}`` because the route doesn't re-slugify after the
+  bulk-save loop applies the label. Operator picks "Decision" as
+  label → key remains ``rating1``.
+
+### What lands
+
+**Template (`instruments_index.html`):**
+
+- The new-row ``rf-template-{iid}`` cell for Type renders the
+  ``<select>`` **enabled** (drop the ``disabled`` attribute).
+  Add the field-attribute wiring so the picker submits along the
+  bulk-save form: ``form="dfsave-{iid}" name="response_type_id"``.
+  Saved rows keep their existing ``<select disabled>`` render.
+
+**Route (`bulk_save_fields` handler):**
+
+- Read parallel ``new_response_type_ids`` array (or a
+  ``response_type_id_for_new[<draft_id>]`` map) from the form,
+  per ``new_*`` id.
+- Replace the hardcoded ``add_default_response_field`` call for
+  ``new_*`` ids with a path that:
+  1. Resolves the operator-chosen RTD via ``_rtd_by_id``,
+     defaulting to ``1-to-5int`` if missing.
+  2. Slugifies the operator-typed label (also submitted in the
+     bulk payload) into a non-conflicting field_key — fall back
+     to ``rating{N}``-style auto-numbering when label is blank.
+  3. Calls a new ``add_response_field_with_rtd`` helper (or
+     extends ``add_default_response_field`` with optional
+     ``rtd_id`` + ``label`` + ``field_key`` arguments) that
+     returns a row already pointing at the chosen RTD with the
+     derived validation block.
+
+**Service (`app/services/instruments.py`):**
+
+- Either:
+  - **(a)** Extend ``add_default_response_field`` to accept
+    optional ``rtd_id`` + ``label`` + ``field_key``; default
+    behaviour (no overrides) stays today's contract so existing
+    callers don't move.
+  - **(b)** Land a new ``add_operator_response_field(...)``
+    helper alongside ``add_default_response_field`` and route
+    the bulk-save path through it.
+
+  Recommend (a) — smaller surface area; avoid splitting the
+  audit-event emission.
+
+- Rules preserved per spec:
+  - ``Type`` stays read-only post-create on saved rows
+    (server-side defence: 4c never accepts a ``response_type_id``
+    for a non-``new_*`` row in the bulk-save payload).
+  - Validation block on the new row derived from
+    ``validation_block_for_rtd`` of the chosen RTD.
+  - The new RF row's ``field_key`` is unique within the
+    instrument (existing ``FieldKeyError`` path).
+
+**Tests:**
+
+- Service: ``add_default_response_field(rtd_id=..., label=...)``
+  honours the RTD; validation block matches; field_key derives
+  from label and falls back when blank.
+- Route: bulk-save POST with a ``new_*`` row carrying a
+  non-default ``response_type_id`` persists the new RF row
+  pointing at the chosen RTD.
+- Server-side defence: forged form POSTing
+  ``response_type_id`` for a non-``new_*`` row is silently
+  ignored (Type is locked post-create).
+- Render: the new-row ``Type`` ``<select>`` is rendered enabled
+  (no ``disabled`` attribute) when the row id is a ``new_*``
+  draft; saved rows still render disabled.
+
+### Out of scope (deferred)
+
+- **Type-change on saved rows** — explicitly locked by spec
+  (`guide/instruments.md` Response Fields ``Type`` row).
+  Editing Type post-create would need data-migration UX and is a
+  separate decision.
+- **Smart label/key defaults per Data Type** — e.g. swap the
+  ``Rating{N}`` JS-side default to ``Decision{N}`` for ``Yes_no``
+  picks. Not strictly necessary; the operator can type whatever
+  label they want before Save.
+
+### Spec touch-up
+
+`guide/instruments.md` Response Fields ``Type`` row already says
+"Read-only post-create". Add one sentence: *"For newly-added rows
+the Type is operator-picked from the session's RTD catalog (the
+``<select>`` is enabled until Save commits the row)."*
 
 ---
 
