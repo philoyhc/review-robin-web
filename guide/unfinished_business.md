@@ -112,38 +112,32 @@ compounds.
 
 ---
 
-### 4. Extract a single reviewer-session-state helper · [arch] · small
+### 4. Extract a single reviewer-session-state helper · [arch] · small · ✅ shipped 2026-05-02
 
-**Why now.** Two functions independently walk `assignments → fields
-→ responses` to compute related state:
-- `app/services/responses.py:435` — `session_pill_for_reviewer`
-  (returns `not started` / `in progress` / `submitted`; checks
-  `Response.submitted_at` on required fields at line 474).
-- `app/services/monitoring.py:67` — `_reviewer_completion`
-  (returns `(assignment_count, completed_count,
-  missing_required_count)`).
+**Outcome.** New public helper
+`app/services/responses.py::reviewer_session_state(db, *, reviewer,
+session_id) -> ReviewerSessionState` walks `assignments → fields →
+responses` once and returns
+`(total_assignments, completed_count, missing_required_count,
+pill_state)`. `session_pill_for_reviewer` is now a thin projection.
+`monitoring._reviewer_completion` deleted; `per_reviewer_progress`
+calls the new helper once per reviewer (was calling
+`_reviewer_completion` *and* `session_pill_for_reviewer` per
+reviewer, walking the same data twice). 5 new unit tests
+(`test_responses_service.py::test_reviewer_session_state_*`) cover
+the 4 pill states + projection equivalence.
 
-The previously-cited `Assignment.include` filter divergence
-(item #17) is **already resolved** — both functions now route
-through the same `_reviewer_assignments()` filter at
-`app/services/responses.py:54` (verified 2026-05-02). What
-remains is duplication: two separate iteration loops computing
-overlapping projections of the same per-reviewer state. Segment
-11 export will want a third copy for "incomplete at deadline"
-cohorts. Consolidate before that lands.
-
-**Where.** `app/services/responses.py:435–495` and
-`app/services/monitoring.py:67–115`.
-
-**Plan.**
-- Define one private helper that returns a richer dataclass:
-  per-assignment status + required-field coverage + submitted-at
-  state. Both existing public functions become thin projections of
-  it.
-- Tests already cover the two existing call paths
-  (`tests/integration/test_monitoring.py`,
-  `tests/integration/test_reviewer_response_flow.py`). Add a unit
-  test for the new helper directly.
+**Notes / gotchas surfaced during the refactor.**
+- The catalog's pre-ship claim that "both functions now route
+  through the same `_reviewer_assignments()` filter" was wrong —
+  `monitoring._reviewer_completion` was inlining its own
+  `select(Assignment).where(...)` query without the
+  `.order_by(Assignment.id)` from the shared filter. Verify-before-
+  assume saved a debugging cycle. The new helper centralises the
+  filter call, so a future caller can't drift.
+- Segment 11 export's "incomplete at deadline" cohort can now
+  consume `reviewer_session_state` directly; no third walker
+  needed.
 
 ---
 

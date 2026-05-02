@@ -432,13 +432,33 @@ class SessionPill:
     completed_rows: int
 
 
-def session_pill_for_reviewer(
+@dataclass
+class ReviewerSessionState:
+    """Aggregate per-reviewer-per-session state.
+
+    Single source of truth shared by the reviewer-dashboard pill
+    (``session_pill_for_reviewer``) and the operator monitoring page
+    (``monitoring.per_reviewer_progress``). Segment 11 export will read
+    the same shape for "incomplete at deadline" cohorts.
+    """
+
+    total_assignments: int
+    completed_count: int
+    missing_required_count: int
+    pill_state: str  # "not started" | "in progress" | "submitted"
+
+
+def reviewer_session_state(
     db: Session, *, reviewer: Reviewer, session_id: int
-) -> SessionPill:
-    """`not started`, `in progress`, or `submitted`."""
+) -> ReviewerSessionState:
     assignments = _reviewer_assignments(db, reviewer, session_id)
     if not assignments:
-        return SessionPill(state="not started", total_assignments=0, completed_rows=0)
+        return ReviewerSessionState(
+            total_assignments=0,
+            completed_count=0,
+            missing_required_count=0,
+            pill_state="not started",
+        )
 
     fields_by_instrument = _instrument_fields_by_id(
         db, {a.instrument_id for a in assignments}
@@ -446,10 +466,12 @@ def session_pill_for_reviewer(
 
     any_response = False
     all_required_with_submitted = True
-    completed_rows = 0
+    completed_count = 0
+    missing_required_count = 0
+
     for assignment in assignments:
         fields = fields_by_instrument.get(assignment.instrument_id, [])
-        required = [f for f in fields if f.required]
+        required_ids = {f.id for f in fields if f.required}
         rows = list(
             db.execute(
                 select(Response).where(Response.assignment_id == assignment.id)
@@ -458,38 +480,46 @@ def session_pill_for_reviewer(
         if rows:
             any_response = True
         present_required = {
-            r.response_field_id
-            for r in rows
-            if (r.value or "") != ""
+            r.response_field_id for r in rows if (r.value or "") != ""
         }
-        is_complete = all(f.id in present_required for f in required) if required else (
-            len(rows) > 0
-        )
-        if is_complete:
-            completed_rows += 1
-        for f in required:
-            if f.id not in present_required:
-                all_required_with_submitted = False
+        row_missing = sum(1 for fid in required_ids if fid not in present_required)
+        missing_required_count += row_missing
+        if not required_ids:
+            if rows:
+                completed_count += 1
+        elif row_missing == 0:
+            completed_count += 1
+        if row_missing > 0:
+            all_required_with_submitted = False
         for r in rows:
-            if r.submitted_at is None and r.response_field_id in {f.id for f in required}:
+            if (
+                r.submitted_at is None
+                and r.response_field_id in required_ids
+            ):
                 all_required_with_submitted = False
 
     if not any_response:
-        return SessionPill(
-            state="not started",
-            total_assignments=len(assignments),
-            completed_rows=0,
-        )
+        pill_state = "not started"
+    elif all_required_with_submitted:
+        pill_state = "submitted"
+    else:
+        pill_state = "in progress"
 
-    if all_required_with_submitted:
-        return SessionPill(
-            state="submitted",
-            total_assignments=len(assignments),
-            completed_rows=completed_rows,
-        )
-
-    return SessionPill(
-        state="in progress",
+    return ReviewerSessionState(
         total_assignments=len(assignments),
-        completed_rows=completed_rows,
+        completed_count=completed_count,
+        missing_required_count=missing_required_count,
+        pill_state=pill_state,
+    )
+
+
+def session_pill_for_reviewer(
+    db: Session, *, reviewer: Reviewer, session_id: int
+) -> SessionPill:
+    """`not started`, `in progress`, or `submitted`."""
+    state = reviewer_session_state(db, reviewer=reviewer, session_id=session_id)
+    return SessionPill(
+        state=state.pill_state,
+        total_assignments=state.total_assignments,
+        completed_rows=state.completed_count,
     )
