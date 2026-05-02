@@ -55,7 +55,7 @@ def test_session_creation_yields_default_instrument_with_seed_fields(
     assert comments.response_type == "Long_text"
     assert comments.data_type == "String"
     assert comments.required is False
-    assert comments.validation == {"min_length": 0, "max_length": 200}
+    assert comments.validation == {"min_length": 0, "max_length": 2000}
     assert comments.order == 2
 
 

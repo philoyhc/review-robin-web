@@ -63,8 +63,8 @@ def test_seeded_constants_match_spec_count_and_order() -> None:
         "1-to-5dec",
     ]
     by_name = {r["response_type"]: r for r in SEEDED_RESPONSE_TYPE_DEFINITIONS}
-    assert by_name["Long_text"]["max"] == 200
-    assert by_name["Short_text"]["max"] == 50
+    assert by_name["Long_text"]["max"] == 2000
+    assert by_name["Short_text"]["max"] == 100
     assert by_name["100int"] == {
         "response_type": "100int", "data_type": "Integer",
         "min": 0, "max": 100, "step": 1, "list_csv": None,
@@ -97,10 +97,10 @@ def test_validation_block_for_rtd_covers_all_data_types(db: Session) -> None:
     rtds = ensure_default_response_type_definitions(db, review)
 
     assert validation_block_for_rtd(rtds["Long_text"]) == {
-        "min_length": 0, "max_length": 200,
+        "min_length": 0, "max_length": 2000,
     }
     assert validation_block_for_rtd(rtds["Short_text"]) == {
-        "min_length": 0, "max_length": 50,
+        "min_length": 0, "max_length": 100,
     }
     assert validation_block_for_rtd(rtds["Yes_no"]) == {
         "choices": ["Yes", "No"],
@@ -176,7 +176,7 @@ def test_ensure_default_instrument_seeds_rating_to_5int_and_comments_to_long_tex
     assert rating.validation == {"min": 1, "max": 5, "step": 1}
     assert comments.response_type == "Long_text"
     assert comments.data_type == "String"
-    assert comments.validation == {"min_length": 0, "max_length": 200}
+    assert comments.validation == {"min_length": 0, "max_length": 2000}
 
 
 def test_seeded_rows_have_unique_names_per_session(db: Session) -> None:

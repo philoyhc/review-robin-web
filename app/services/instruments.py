@@ -136,8 +136,8 @@ _VALID_DATA_TYPES: frozenset[str] = frozenset(
 )
 
 SEEDED_RESPONSE_TYPE_DEFINITIONS: list[dict[str, Any]] = [
-    {"response_type": "Long_text",  "data_type": "String",  "min": 0,    "max": 200,  "step": None, "list_csv": None},
-    {"response_type": "Short_text", "data_type": "String",  "min": 0,    "max": 50,   "step": None, "list_csv": None},
+    {"response_type": "Long_text",  "data_type": "String",  "min": 0,    "max": 2000, "step": None, "list_csv": None},
+    {"response_type": "Short_text", "data_type": "String",  "min": 0,    "max": 100,  "step": None, "list_csv": None},
     {"response_type": "Yes_no",     "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Yes, No"},
     {"response_type": "Grade",      "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "A+, A, A-, B+, B, B-, C+, C, D+, D, F"},
     {"response_type": "Likert5",    "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Strongly Disagree, Disagree, Neutral, Agree, Strongly Agree"},

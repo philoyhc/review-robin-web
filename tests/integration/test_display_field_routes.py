@@ -1342,13 +1342,13 @@ def test_response_type_definitions_card_formats_min_max_step_by_data_type(
     ).text
 
     # Integer / String rows: no decimal point in Min / Max / Step.
-    # Use ``Long_text`` (String, 0..200) and ``100int`` (Integer, 0..100).
+    # Use ``Long_text`` (String, 0..2000) and ``100int`` (Integer, 0..100).
     long_text_block = body.split("<code>Long_text</code>", 1)[1].split(
         "</tr>", 1
     )[0]
-    assert ">0<" in long_text_block and ">200<" in long_text_block
+    assert ">0<" in long_text_block and ">2000<" in long_text_block
     assert "0.0" not in long_text_block
-    assert "200.0" not in long_text_block
+    assert "2000.0" not in long_text_block
 
     int_100_block = body.split("<code>100int</code>", 1)[1].split(
         "</tr>", 1

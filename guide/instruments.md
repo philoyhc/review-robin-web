@@ -371,8 +371,8 @@ For operator-added rows:
 
 | Response Type | Data Type | Min | Max | Step | List |
 |---|---|---|---|---|---|
-| `Long_text` | `String` | 0 | 200 | NA | NA |
-| `Short_text` | `String` | 0 | 50 | NA | NA |
+| `Long_text` | `String` | 0 | 2000 | NA | NA |
+| `Short_text` | `String` | 0 | 100 | NA | NA |
 | `Yes_no` | `List` | NA | NA | NA | `Yes, No` |
 | `Grade` | `List` | NA | NA | NA | `A+, A, A-, B+, B, B-, C+, C, D+, D, F` |
 | `Likert5` | `List` | NA | NA | NA | `Strongly Disagree, Disagree, Neutral, Agree, Strongly Agree` |
@@ -424,8 +424,8 @@ when an instrument's Response Fields row references this Response Type:
 
 Worked examples for the seeded rows:
 
-- `Long_text` → `{"min_length": 0, "max_length": 200}`
-- `Short_text` → `{"min_length": 0, "max_length": 50}`
+- `Long_text` → `{"min_length": 0, "max_length": 2000}`
+- `Short_text` → `{"min_length": 0, "max_length": 100}`
 - `Yes_no` → `{"choices": ["Yes", "No"]}`
 - `Grade` → `{"choices": ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "D+", "D", "F"]}`
 - `Likert5` → `{"choices": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}`
