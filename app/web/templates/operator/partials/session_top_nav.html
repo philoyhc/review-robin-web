@@ -19,9 +19,9 @@
 {% set _ops_active = current_page in _ops_pages %}
 <div class="session-nav-grid">
   <a class="session-home-anchor{% if current_page == 'Home' %} active{% endif %}"
-     href="/operator/sessions/{{ session.id }}">
-    <div class="home-label">Home</div>
-    <div class="home-session-name" title="{{ session.name }}">{{ session.name }}</div>
+     href="/operator/sessions/{{ session.id }}"
+     title="{{ session.name }}">
+    <span class="home-anchor-text">Session Home</span>
   </a>
 
   <div class="row-label setup-row row-setup{% if _setup_active %} active-group{% endif %}">Setup</div>
