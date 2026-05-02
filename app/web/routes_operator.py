@@ -1115,6 +1115,34 @@ def setupinvite_stub(
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Email Template"
             ),
+            "title_position": "above",
+        },
+    )
+
+
+# Temporary chrome-iteration variant: same page, title below the nav
+# instead of above. Mounted alongside ``/setupinvite`` so the operator
+# can flip between them in two browser tabs and pick the layout. Drop
+# this route (and the ``title_position`` template branch) once the
+# choice is made.
+@router.get("/sessions/{session_id}/setupinvite1", response_class=HTMLResponse)
+def setupinvite_stub_variant_below(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_setupinvite.html",
+        {
+            "user": user,
+            "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Email Template"
+            ),
+            "title_position": "below",
         },
     )
 
