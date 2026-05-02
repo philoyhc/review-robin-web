@@ -75,12 +75,12 @@ Out (deferred to later segments / follow-ups):
              │
              ▼
         ┌──────────┐
-        │ Slice 4c │  Wire RF↔RTD on add (operator-pickable Type)
+        │ Slice 4c │  Wire RF↔RTD on add (operator-pickable Type) ✅
         └────┬─────┘
              │
              ▼
         ┌──────────┐
-        │ Slice 4d │  Cross-cutting consistency guards
+        │ Slice 4d │  Cross-cutting consistency guards ✅
         └────┬─────┘    (mutual-edit lock + zero-RF block + would-empty block)
              │
              ▼
@@ -531,7 +531,22 @@ templates render, Add disabled while editing).
 
 ## Slice 4c — Wire Response Fields ↔ RTD on add (operator-pickable Type)
 
-**Status:** Pending. Discovered post-Slice-4b: the
+**Status:** ✅ shipped in
+[PR #256](https://github.com/philoyhc/review-robin-web/pull/256).
+``add_default_response_field`` extended with optional ``rtd_id``
+/ ``label`` / ``field_key`` / ``required`` kwargs (default
+behaviour preserves the Slice 2 contract verbatim). The bulk-
+save handler reads parallel ``new_rtd_target`` / ``new_rtd_id``
+form arrays to map each ``new_*`` draft id to its operator-
+chosen RTD; saved rows ignore any ``new_rtd_*`` inputs (Type
+stays read-only post-create per spec, server-side defence
+against forged forms). The draft row's ``Type`` ``<select>`` is
+now enabled until Save commits the row.
+
+The slice plan below documents the audit + decisions made on
+the way to that PR.
+
+Discovered post-Slice-4b: the
 ``Response Fields`` ``Type`` cell renders as ``<select disabled>``
 for *both* saved rows (correct, per spec — read-only post-create)
 *and* JS-added draft rows (a gap — operators can't actually pick
@@ -666,7 +681,27 @@ the Type is operator-picked from the session's RTD catalog (the
 
 ## Slice 4d — Cross-cutting consistency guards before Slice 5
 
-**Status:** Pending. Three coordination gaps surfaced while
+**Status:** ✅ shipped in
+[PR #257](https://github.com/philoyhc/review-robin-web/pull/257).
+All three gaps closed: per-instrument and RTD card editing
+state machines mutually exclusive; bulk-save refuses to commit
+an instrument with zero RF rows; cascade-delete that would
+empty an instrument is hard-blocked with a banner naming the
+affected instrument(s). The original plan called for a server-
+side defence on top of the UI lock for Gap 1 — the shipped UI
+lock plus the route-level resilience to stale data already in
+the codebase covers that scenario, so the additional defence
+was deferred.
+
+Two banner-polish PRs followed on top:
+[#258](https://github.com/philoyhc/review-robin-web/pull/258)
+adds a Cancel button to the new error banners and writes the
+convention into ``spec/assumptions.md``.
+[#259](https://github.com/philoyhc/review-robin-web/pull/259)
+extends the convention with auto-scroll-to-banner on display
+and Cancel-returns-to-source-row.
+
+Three coordination gaps surfaced while
 reviewing the Slice 4 surface end-to-end. None block existing
 flows, but all let the operator land the system in a confusing
 or invalid state without a clear diagnosis. Slice 4d closes

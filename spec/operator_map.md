@@ -58,6 +58,17 @@ rendered with `.btn.secondary` (Primary Outline) so the operator
 sees where they are; the others are `.btn` (Primary). Setup-nav
 replaces per-page jump links and hand-rolled top breadcrumbs.
 
+Where the page also wants the standardized session-status pills
+(reviewer / reviewee / assignment / instrument counts + Email
+Invites Set up / Not set up), the partial
+`operator/partials/session_status_card.html` (PR
+[#252](https://github.com/philoyhc/review-robin-web/pull/252))
+renders the whole top card — three rows of pills + the setup
+nav — with a `current_page` parameter so the right button gets
+outlined. Used today on the Session detail and Email Invites
+pages; rolling the Reviewers / Reviewees / Assignments / Instruments
+pages onto it is a separate cleanup.
+
 ### "Session ongoing" yellow lock card
 
 Whenever a session is `ready`, every page that exposes setup
@@ -277,14 +288,25 @@ Segment 12) with a Cancel anchor that drops the fragment.
 > **Snapshot note.** The detailed per-section description below
 > reflects the **end-of-Segment-10C** surface (live preview
 > table, `<details>` inline label edits, hardcoded Display Fields
-> placeholder, etc.). Segment 10D Slices 1-3 plus the polish
-> sequence ([#235](https://github.com/philoyhc/review-robin-web/pull/235)
-> through [#238](https://github.com/philoyhc/review-robin-web/pull/238))
-> have since rebuilt the per-instrument card around a single
-> bulk-save form (`dfsave-{iid}`) and a `?editing={iid}` URL state
-> machine. The locked spec for the rebuilt surface lives in
+> placeholder, etc.). Segment 10D Slices 1-4 (Display + Response
+> Fields + Help, Response Type Definitions card with operator
+> add/edit/delete + cascade-confirm + would-empty guard, plus the
+> mutual-exclusion edit lock and the zero-RF save guard) have
+> since rebuilt the per-instrument card around a single bulk-
+> save form (`dfsave-{iid}`) and a `?editing={iid}` URL state
+> machine. Polish sequence:
+> [#235](https://github.com/philoyhc/review-robin-web/pull/235)
+> -[#238](https://github.com/philoyhc/review-robin-web/pull/238)
+> on Slices 1-3; the Slice 4 ladder runs from
+> [#242](https://github.com/philoyhc/review-robin-web/pull/242)
+> (4a) through
+> [#257](https://github.com/philoyhc/review-robin-web/pull/257)
+> (4d) and the banner-convention follow-ups
+> [#258](https://github.com/philoyhc/review-robin-web/pull/258)-[#259](https://github.com/philoyhc/review-robin-web/pull/259).
+> The locked spec for the rebuilt surface lives in
 > [`guide/instruments.md`](../guide/instruments.md). This file
-> will be reconciled on Segment 10D close.
+> will be reconciled on Segment 10D close (i.e. when Slice 5
+> ships).
 
 A single consolidated page for everything per-instrument:
 session-wide status + bulk toggles, then one card per instrument
