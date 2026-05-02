@@ -11,15 +11,13 @@ purposes:**
 
 When you ship an item, tick it off in **both** files.
 
-The sequence is shaped by three forces: (a) close test gaps that
-Segment 10D opened up before the upcoming arch refactors trip
-over them, (b) some items must land in a specific order because
-they touch the same code (item 12 follows item 13, item 16
-bundles with item 9; item 11's previous "wait for P0" gate has
-already cleared, item 4's previous "wait for #17" gate is also
-gone after the 2026-05-02 re-audit), and (c) defensive CI
-hardening (lint, Postgres pytest) should land before the big
-refactors themselves.
+The sequence is shaped by three forces: (a) finish the chrome
+rollout that #19 spawned (#20 + #21) before the operator
+surface ships into Segment 11, (b) some items must land in a
+specific order because they touch the same code (#16 bundles
+with #10; #12 follows #8), and (c) defensive CI hardening
+(Postgres pytest) should land before the big arch refactors
+themselves.
 
 ---
 
@@ -58,8 +56,9 @@ through the same code, the test gaps need to close first.
 |---|---|---|
 | 4 | ~~**#15 — Backfill 10C integration tests**~~ | ✅ shipped 2026-05-02 — `bulk_set_visibility` + `instruments.bulk_visibility_when_closed` audit covered in `tests/integration/test_bulk_visibility.py` (4 cases). The other three originally-listed surfaces had been silently covered during Segment 10D (re-audit 2026-05-02). |
 | 5 | ~~**#1 — Wire `ruff check` into CI**~~ | ✅ shipped 2026-05-02 — `ci.yml` now runs `ruff check .` between dependency install and pytest. Pre-existing 10 findings (8 unused imports + 2 unused locals) cleaned up in the same PR. |
-| 6 | **#19 — Roll session-status partial onto Reviewers / Reviewees / Assignments / Instruments** | Pure chrome cleanup. The shared `operator/partials/session_status_card.html` partial (#252) lives on Session detail + Email Invites; the four other session-scoped pages still hand-roll their top cards and drift in subtle ways. Land per-page (4 small PRs); Instruments is the most careful — it keeps its own status sub-rows. Settles the visual contract before Segment 11 planning. |
-| 7 | **#2 — Run pytest against Postgres in CI** | The `ci-postgres-migration` job today only round-trips Alembic; it never imports `app/` and never runs a test. SQLite-only test runs hide JSON coercion / dialect divergence until the dev-slot deploy. Higher-cost than #1 but high-value before Segment 11 introduces export. |
+| 6 | ~~**#19 — Roll session-status partial onto Reviewers / Reviewees / Assignments / Instruments**~~ | ✅ shipped 2026-05-02 — chrome system rebuilt and rolled out to all 6 main session-scoped pages (Home + 5 setup). Original literal scope satisfied; actual scope grew into a full chrome redesign (PRs #272 / #279 / #280–#290). Two follow-ons spawned: #20 (remaining pages) and #21 (Home body rebuild + Option F). |
+| 7 | **#20 — Complete chrome rollout to remaining session-scoped pages** | Direct continuation of #19. Adopt the new chrome on the three Operations Pages (Invitations / Monitoring / Outbox) and the two Home sub-pages (Edit Session / Validate detail). Per-page like #19, smaller surface (each page just wraps its body in the chrome card). Operations Pages get their tab active; Home sub-pages render with no tab active. |
+| 8 | **#2 — Run pytest against Postgres in CI** | The `ci-postgres-migration` job today only round-trips Alembic; it never imports `app/` and never runs a test. SQLite-only test runs hide JSON coercion / dialect divergence until the dev-slot deploy. Higher-cost than #1 but high-value before Segment 11 introduces export. |
 
 ---
 
@@ -71,11 +70,12 @@ schema, so settle the arch story first.
 
 | Order | Item | Why this position |
 |---|---|---|
-| 8 | **#4 — Extract a single reviewer-session-state helper** | Two functions in `responses.py:435` + `monitoring.py:67` compute overlapping projections. The previously-cited `Assignment.include` filter divergence (item #17) is **already resolved** — both paths now route through the shared `_reviewer_assignments()` filter at `responses.py:54`, so consolidation can proceed directly. |
-| 9 | **#3 — Move `_invalidate_if_validated` into the service layer** | 22 caller sites across `routes_operator.py` (re-grepped 2026-05-02; helper at `:789`). Naturally bundles with **#16** (decide bulk_visibility invalidation policy) since both touch the invalidation surface. |
-| 10 | **#16 — Decide bulk_visibility_when_closed invalidation policy** | Bundle with #9. The policy question is whether `bulk_set_visibility` should flip `validated → draft` (the previously-cited "compare to bulk_set_accepting" framing was misleading — that route requires session=ready and never sees a validated session). |
-| 11 | **#11 — Extract instruments-index template context to `views.py`** | Now safe (P0 prerequisites #13–14 shipped 2026-05-01). Re-grepped 2026-05-02: handler at `routes_operator.py:960–1100`, ~48 lines (10D shrunk from ~100). |
-| 12 | **#5 — Define audit-event `detail` schema convention** | Document in `spec/architecture.md`. Migrate emitters incrementally — one PR per emitter family. Segment 11 will export these, so the convention needs to settle first. |
+| 9 | **#4 — Extract a single reviewer-session-state helper** | Two functions in `responses.py:435` + `monitoring.py:67` compute overlapping projections. The previously-cited `Assignment.include` filter divergence (item #17) is **already resolved** — both paths now route through the shared `_reviewer_assignments()` filter at `responses.py:54`, so consolidation can proceed directly. |
+| 10 | **#3 — Move `_invalidate_if_validated` into the service layer** | 22 caller sites across `routes_operator.py` (re-grepped 2026-05-02; helper at `:789`). Naturally bundles with **#16** (decide bulk_visibility invalidation policy) since both touch the invalidation surface. |
+| 11 | **#16 — Decide bulk_visibility_when_closed invalidation policy** | Bundle with #10. The policy question is whether `bulk_set_visibility` should flip `validated → draft` (the previously-cited "compare to bulk_set_accepting" framing was misleading — that route requires session=ready and never sees a validated session). |
+| 12 | **#11 — Extract instruments-index template context to `views.py`** | Now safe (P0 prerequisites #13–14 shipped 2026-05-01). Re-grepped 2026-05-02: handler at `routes_operator.py:960–1100`, ~48 lines (10D shrunk from ~100). |
+| 13 | **#5 — Define audit-event `detail` schema convention** | Document in `spec/architecture.md`. Migrate emitters incrementally — one PR per emitter family. Segment 11 will export these, so the convention needs to settle first. |
+| 14 | **#21 — Home body rebuild + Option F relocation** | Sits in P2 because it's pre-Segment-11 work but feature-shaped rather than test/CI hardening. After #20 lands, the chrome system is fully deployed but the Home body still uses the old four-card layout (not the launch-point framing in `spec/ui_concept.md`), and page-specific status content (`fields_with_data`, self-review breakdown, etc.) is parked in sub-cards instead of relocated next to its relevant action per Option F. 4–6 small PRs total. Worth landing before Segment 11 so the operator surface is settled when export ships. |
 
 **#17 (filter divergence) — resolved on re-audit 2026-05-02; removed from sequence.**
 
@@ -88,32 +88,40 @@ land before they age into harder problems.
 
 | Order | Item | Why this position |
 |---|---|---|
-| 13 | **#8 — Fix CSV email-validation drift** | Sets up #14 (cross-table identity check) cleanly — same code path. |
-| 14 | **#12 — Reviewer/Reviewee CSV cross-table identity check** | Builds on #8's shared `_parse_email` helper. Tightens the rule that email is the unique person-identifier across reviewer + reviewee tables in the same session. |
-| 15 | **#10 — Thread `correlation_id` into deadline lazy-close** | Cheap. Bundle with whichever route refactor next touches `observe_deadline`. |
-| 16 | **#9 — Refresh `get_or_create_default_instrument` docstring** | Tiny. (Pointer corrected to `app/services/assignments.py:402`.) |
-| 17 | **#6 — Decouple `invitations.py` from `Request`** | Only matters when Segment 15 (real SMTP) lands and sends from a background worker. Worth fixing now while the surface is small. |
-| 18 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
+| 15 | **#8 — Fix CSV email-validation drift** | Sets up #16 (cross-table identity check) cleanly — same code path. |
+| 16 | **#12 — Reviewer/Reviewee CSV cross-table identity check** | Builds on #8's shared `_parse_email` helper. Tightens the rule that email is the unique person-identifier across reviewer + reviewee tables in the same session. |
+| 17 | **#10 — Thread `correlation_id` into deadline lazy-close** | Cheap. Bundle with whichever route refactor next touches `observe_deadline`. |
+| 18 | **#9 — Refresh `get_or_create_default_instrument` docstring** | Tiny. (Pointer corrected to `app/services/assignments.py:402`.) |
+| 19 | **#6 — Decouple `invitations.py` from `Request`** | Only matters when Segment 15 (real SMTP) lands and sends from a background worker. Worth fixing now while the surface is small. |
+| 20 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
 
 ---
 
 ## Notes on the order
 
-- **Why #15 (test backfill) is the next concrete PR.** The
-  Slice-5 PR (#265) just established a fresh test pattern for
-  the Instruments routes; #15 is a direct continuation of that
-  momentum, no design decisions, and defends against #3 / #11
-  rippling through the same code.
-- **Why CI items (#1, #2) precede arch items.** Without lint and
-  Postgres-flavoured pytest, the arch refactors below ship
-  silently-broken code on every PR until the dev-slot deploy.
-  Land the safety net before the churn.
-- **Why item #19 (chrome) sits inside P1.** It's pure chrome but
-  it touches every session-scoped operator page, so it
-  competes for the same review attention as the arch items
-  below. Better to land it as a bounded follow-up to Segment
-  10D's chrome work than to delay until after the P2 arch
-  surgery.
+- **Why #20 (chrome rollout completion) is the next concrete
+  PR.** Direct continuation of #19 — the chrome system is built
+  and live on 6 of the 11 session-scoped pages. Adopting it on
+  the remaining 5 (Operations Pages + Home sub-pages) is
+  mechanical and small. Per **P2** in `spec/ui_concept.md`,
+  *"both phases always reachable"* requires the chrome on
+  Operations Pages, so #20 is a P2-correctness fix as much as a
+  cleanup.
+- **Why CI items (#2) and chrome cleanups (#20) precede arch
+  items.** Without Postgres-flavoured pytest, the arch
+  refactors below ship silently-broken code on every PR until
+  the dev-slot deploy. And the chrome rollout to remaining
+  pages is small enough that it's cheaper to finish it now than
+  to leave a half-built chrome system through the arch work.
+- **Why #19's actual scope dwarfed its catalog framing.** The
+  original "roll a partial onto 4 pages" turned into a full
+  chrome redesign (PRs #272 / #279 / #280–#290). The catalog
+  entry now reflects the larger work; the follow-on items
+  (#20, #21) capture what's left.
+- **Why #21 (Home body rebuild) sits in P2.** It's
+  feature-shaped rather than test/CI hardening, but it's
+  pre-Segment-11 work — settling the operator surface before
+  export ships. Sized 4–6 small PRs total.
 - **Why item 17 dropped out.** Re-audit 2026-05-02: the cited
   `Assignment.include` filter divergence between
   `responses.session_pill_for_reviewer` and

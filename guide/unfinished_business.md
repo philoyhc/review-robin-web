@@ -645,7 +645,27 @@ ships and the segment closes.
 
 ---
 
-### 19. Roll session-status top card onto Reviewers / Reviewees / Assignments / Instruments · [chrome] · small
+### 19. ~~Roll session-status top card onto Reviewers / Reviewees / Assignments / Instruments~~ — ✅ shipped 2026-05-02 · [chrome] · small
+
+**Resolution (2026-05-02).** Original literal scope shipped:
+all four pages (Reviewers, Reviewees, Assignments, Instruments)
+now use the new chrome, alongside Session detail and Email
+Template. Actual scope grew well beyond the original framing —
+the legacy `session_status_card.html` partial was scrapped in
+favour of an entirely new chrome system (two-row folder tabs
+with double-height Home anchor + status row), spec'd through
+[PR #272](https://github.com/philoyhc/review-robin-web/pull/272)
+/ [PR #279](https://github.com/philoyhc/review-robin-web/pull/279)
+/ [PR #286](https://github.com/philoyhc/review-robin-web/pull/286)
+and implemented through PRs #280–#290. Live on all six
+session-scoped pages with the chrome.
+
+Two follow-on items spun off from this work and are tracked
+separately: #20 (chrome rollout to the remaining Operations
+Pages + Home sub-pages) and #21 (Home body rebuild + Option F
+relocation of parked sub-cards).
+
+(Original framing preserved below for archaeology.)
 
 **Why now.** PR
 [#252](https://github.com/philoyhc/review-robin-web/pull/252)
@@ -677,6 +697,95 @@ them onto the partial settles the visual contract.
   two extra instrument-specific status rows (deadline,
   accepting/not, visibility-when-closed) — those stay; the
   partial replaces only the nav row + maybe the count rows.
+
+---
+
+### 20. Complete chrome rollout to remaining session-scoped pages · [chrome] · small
+
+**Why now.** The new two-row session top nav (item #19) is live
+on Home, the 5 Setup Pages, and Email Template. Per **P2** in
+[`spec/ui_concept.md`](./ui_concept.md) (*"both phases always
+reachable"*), the chrome should also appear on:
+
+- **The three Operations Pages** (Invitations, Monitoring,
+  Outbox) — currently render with no top chrome at all. Each
+  should adopt the chrome with its own tab active.
+- **The two Home sub-pages** (Edit Session, Validate detail) —
+  should adopt the chrome and render with **no tab active** per
+  the spec's "Sub-pages and Preview Pages" section.
+
+Until this lands, P2 is partially violated for those five
+pages: the chrome is missing on Operations Pages, and Home
+sub-pages still carry stale chrome.
+
+**Where.**
+- Templates: `session_invitations.html`, `session_monitoring.html`,
+  `session_outbox.html`, `session_edit.html`,
+  `session_validate.html`.
+- Routes: each GET handler needs to thread `status_pills` if it
+  doesn't already
+  (`grep -n session_status_pills app/web/routes_operator.py`).
+
+**Plan.** Per-page like #19. Adopt the chrome wrapper, drop the
+redundant page `<h1>` (active tab carries the title), keep page
+body otherwise unchanged. For Operations Pages, pass
+`current_page` matching ("Invitations" / "Monitoring" /
+"Outbox"). For Home sub-pages, pass `current_page = "Home"` (no
+tab active). Tests will need their `<h1>X</h1>` assertions
+softened.
+
+---
+
+### 21. Home body rebuild + Option F relocation · [feature/chrome] · medium
+
+**Why now.** PR
+[#287](https://github.com/philoyhc/review-robin-web/pull/287)
+left two cleanups deferred:
+
+1. **Option F relocation.** Page-specific status content
+   (Reviewers / Reviewees `fields_with_data`, Assignments
+   self-review breakdown + fields-with-data, Instruments
+   deadline + accepting/visibility breakdowns) is currently
+   parked in a small standalone card directly below the chrome.
+   Per the design discussion, this content should live next to
+   the action it relates to — `fields_with_data` next to the
+   Upload card; self-review breakdown in the Current pairs
+   section; instrument breakdowns in the *Actions for All
+   Instruments* card.
+2. **Home body rebuild around the launch-point framing.** Per
+   [`spec/ui_concept.md`](./ui_concept.md) "Per Session Home /
+   Control Panel", Home should hold: session identity (now in
+   chrome anchor), the next lifecycle-transition action
+   (Validate / Activate / Close / Reopen — one primary button
+   at a time, contextual to lifecycle state), setup-readiness
+   summary, terse Operations pointers (e.g. *"12 invitations
+   sent, 4 responses in"*), sub-page links (Edit, Validate
+   detail). Today's Home body still has the old four-card
+   layout from before the spec rewrite.
+
+Bundling because both touch the body of session-scoped pages
+and are downstream of the chrome work in #19/#20.
+
+**Where.**
+- Templates: `session_detail.html` (Home rebuild),
+  `session_reviewers.html` / `session_reviewees.html` /
+  `session_assignments.html` / `instruments_index.html` (Option
+  F relocation, four pages).
+- Routes: `session_detail` handler likely needs additional
+  context (Operations-pointer counts, lifecycle-transition
+  affordance state).
+
+**Plan.** Likely 4–6 small PRs:
+
+- One Option F relocation per page (4 PRs).
+- One Home body restructure PR (drop the four-card grid; add
+  identity row, lifecycle-transition primary button section,
+  Operations-pointer terse status, sub-page link block).
+- One Home wiring PR for the lifecycle-transition button (or
+  fold into the body restructure).
+
+Done before Segment 11 starts so the operator surface is
+settled.
 
 ---
 
