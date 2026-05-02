@@ -589,7 +589,7 @@
           </tr>
         </thead>
         <tbody data-rtd-tbody>
-          {% set _rtd_btn_style = "min-width: 5.5em;" %}
+          {% set _rtd_btn_style = "width: 7em; box-sizing: border-box;" %}
           {% set is_some_row_unlocked = (editing_rtd_id is not none) and not is_ready %}
           {% for rtd in rtds %}
             {% set is_editing_this = (editing_rtd_id == rtd.id) and not rtd.is_seeded and not is_ready %}
@@ -709,6 +709,7 @@
           </label>
           <button id="rtd-add-button"
                   type="button" class="btn alert-solid"
+                  style="width: 7em; box-sizing: border-box;"
                   onclick="addRtdDraft()"
                   {% if add_disabled %}disabled data-server-disabled="1"
                   title="Save or cancel the row in progress before adding another."{% endif %}>Add</button>
@@ -745,8 +746,9 @@
           <td style="white-space: nowrap;">
             <div style="display: inline-flex; gap: 6px;">
               <button form="rtd-draft-form-__DRAFT_ID__" type="submit" class="btn"
-                      style="min-width: 5.5em;">Save</button>
-              <button type="button" class="btn alert" style="min-width: 5.5em;"
+                      style="width: 7em; box-sizing: border-box;">Save</button>
+              <button type="button" class="btn alert"
+                      style="width: 7em; box-sizing: border-box;"
                       onclick="cancelRtdDraft('__DRAFT_ID__')">Cancel</button>
             </div>
           </td>
