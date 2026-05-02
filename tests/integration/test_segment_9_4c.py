@@ -246,7 +246,8 @@ def test_setupinvite_stub_renders(
 
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Email Template</h1>" in body
+    # Page title now lives in the active nav tab, not a separate <h1>.
+    assert ">Email Template<" in body
     assert "Segment 15" in body
 
 

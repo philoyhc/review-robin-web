@@ -1,7 +1,7 @@
 {# Session-scoped top nav: double-height Home anchor on the left,
-   Setup row top-right, Operations row bottom-right. Used by every
-   session-scoped page. Implements `spec/ui_concept.md` "Navigation
-   model".
+   Setup row top-right (label flushed right), Operations row
+   bottom-right (label flushed right). Used by every session-scoped
+   page. Implements `spec/ui_concept.md` "Navigation model".
 
    Required context:
      - session: ReviewSession
@@ -17,10 +17,8 @@
      href="/operator/sessions/{{ session.id }}">
     <div class="home-label">Home</div>
     <div class="home-session-name" title="{{ session.name }}">{{ session.name }}</div>
-    <span class="pill pill-info home-lifecycle-pill">{{ session.status }}</span>
   </a>
 
-  <div class="row-label row-setup">Setup</div>
   <div class="tab-strip tab-strip-setup row-setup">
     <a class="nav-tab{% if current_page == 'Reviewers' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
@@ -33,8 +31,8 @@
     <a class="nav-tab{% if current_page == 'Email Template' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/setupinvite">Email Template</a>
   </div>
+  <div class="row-label setup-row row-setup">Setup</div>
 
-  <div class="row-label">Operations</div>
   <div class="tab-strip tab-strip-ops">
     <a class="nav-tab{% if current_page == 'Invitations' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/invitations">Invitations</a>
@@ -43,4 +41,5 @@
     <a class="nav-tab{% if current_page == 'Outbox' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/outbox">Outbox</a>
   </div>
+  <div class="row-label ops-row">Operations</div>
 </div>
