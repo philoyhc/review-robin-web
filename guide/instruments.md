@@ -288,28 +288,59 @@ Columns:
 | Column | Behaviour |
 |---|---|
 | **Response Type** | Operator-typed name. The value referenced by Response Fields rows. Operator-editable for non-seeded rows; the seeded rows below are name-locked. |
-| **Data Type** | One of `String`, `Decimal`, `Integer`, `List`. Drives which of the trailing columns apply. |
+| **Data Type** | One of `String`, `Decimal`, `Integer`, `List`. Drives which of the trailing columns apply. **Locked once set** — operator cannot change Data Type after a row is saved (seeded or operator-added). To change a row's Data Type, delete it (if operator-added) and re-add. |
 | **Min** | Applies when Data Type is `Decimal`, `Integer`, or `String`. For `Decimal` / `Integer`: minimum value. For `String`: minimum number of characters. Rendered as `NA` and read-only when not applicable. |
 | **Max** | Applies when Data Type is `Decimal`, `Integer`, or `String`. For `Decimal` / `Integer`: maximum value. For `String`: maximum number of characters. Rendered as `NA` and read-only when not applicable. |
 | **Step** | Applies when Data Type is `Decimal` or `Integer`. The allowed increment between Min and Max. Rendered as `NA` and read-only when not applicable. |
 | **List** | Applies when Data Type is `List`. Comma-separated list of allowed items. Rendered as `NA` and read-only when not applicable. |
-| **Action** | A delete cross icon (✗) and an add-row plus icon (➕). Same pattern as the Response Fields Action column — both fire immediately, no confirmation. The delete is **suppressed for seeded rows** (operator can't remove a seeded type); the add inserts a new row immediately below. |
+| **Action** | A delete cross icon (✗) and an add-row plus icon (➕). The add inserts a new row immediately below; ➕ fires immediately and the new row is incomplete (gated editing flow below) until all applicable cells are filled. The delete is **suppressed for seeded rows** (operator can't remove a seeded type), and **gated by a confirmation dialog for operator-added rows in use by any Response Fields row** — see "Cascade-on-delete" below. Operator-added rows that are not in use can be deleted without confirmation. |
 
-Default seed (six rows; cannot be deleted):
+#### Locked vs. operator-added rows
+
+The seeded rows below are **fully locked**: name is locked, Data
+Type is locked, all Min / Max / Step / List parameters are
+locked, and the row cannot be deleted. They are read-only
+catalogs; operators reference them from Response Fields and
+nothing else.
+
+For operator-added rows:
+
+- **Name** is locked once set (see "Editing flow" below for the
+  gated commit). Renaming would shift the contract on every
+  Response Fields row that references it.
+- **Data Type** is locked once set, per the column note above.
+- **Min / Max / Step / List** stay editable. Edits propagate to
+  every Response Fields row that references this Response Type:
+  on the next bulk-save round-trip the engine re-derives the
+  validation block from the (updated) RTD row and writes it to
+  `instrument_response_fields.validation`.
+
+#### Default seed (eight rows; cannot be deleted, edited, or renamed)
 
 | Response Type | Data Type | Min | Max | Step | List |
 |---|---|---|---|---|---|
 | `Long_text` | `String` | 0 | 500 | NA | NA |
 | `Short_text` | `String` | 0 | 59 | NA | NA |
 | `Grade` | `List` | NA | NA | NA | `A+, A, A-, B+, B, B-, C+, C, D+, D, F` |
+| `Yes_no` | `List` | NA | NA | NA | `Yes, No` |
+| `0-to-2int` | `Integer` | 0 | 2 | 1 | NA |
 | `1-to-5int` | `Integer` | 1 | 5 | 1 | NA |
 | `1-to-5half` | `Decimal` | 1 | 5 | 0.5 | NA |
 | `1-to-5dec` | `Decimal` | 1 | 5 | 0.1 | NA |
 
-Operator-added rows are deletable. Editing a Response Type that's
-in use by an instrument's Response Fields row propagates the new
-validation to that row on save (the engine writes the resulting
-constraints to `instrument_response_fields.validation`).
+#### Cascade-on-delete
+
+Deleting an **operator-added** Response Type that is referenced
+by at least one Response Fields row triggers a confirmation
+dialog before the request fires. The dialog states the cascade
+in plain language — `Deleting "{name}" will drop N response
+field row(s) on M instrument(s) and X recorded response(s)
+across Y reviewer assignment(s). Continue?` — and only commits
+on confirm. The cascade itself runs through the
+`instrument_response_fields.response_type_id` foreign key with
+`ON DELETE CASCADE`, which propagates to `responses` via the
+existing FK. Seeded rows can never be deleted (no cascade ever
+fires from a seeded row).
 
 ### Validation derivation
 
@@ -329,6 +360,8 @@ Worked examples for the seeded rows:
 - `Long_text` → `{"min_length": 0, "max_length": 500}`
 - `Short_text` → `{"min_length": 0, "max_length": 59}`
 - `Grade` → `{"choices": ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "D+", "D", "F"]}`
+- `Yes_no` → `{"choices": ["Yes", "No"]}`
+- `0-to-2int` → `{"min": 0, "max": 2, "step": 1}`
 - `1-to-5int` → `{"min": 1, "max": 5, "step": 1}`
 - `1-to-5half` → `{"min": 1, "max": 5, "step": 0.5}`
 - `1-to-5dec` → `{"min": 1, "max": 5, "step": 0.1}`
@@ -371,18 +404,25 @@ incomplete row is not committed to the underlying database; the
 operator either completes the row or removes it via the Action
 column ✗.
 
-If an operator changes a previously-saved row's Data Type, the
-trailing cells reset (per the new Data Type's editable list) and
-the row re-enters the gated flow. The save-time validation rules
-above re-apply on commit.
+A previously-saved operator-added row's Data Type **cannot be
+changed** (the picker renders as a read-only `<select>` showing
+the original value). The same applies to the Response Type name
+itself. Min / Max / Step / List remain editable — and edits
+propagate to every Response Fields row that references this
+Response Type on the next bulk-save round-trip.
 
 ## Open / deferred
 
 - **Response Type Definitions persistence** — the card is now
-  spec'd but unwired. The rebuild slice that lands it needs a new
-  `response_type_definitions` table (or equivalent) keyed by
-  session, with the seeded six rows guaranteed present and
-  un-deletable.
+  spec'd but unwired. The rebuild slice that lands it (Slice 4 of
+  Segment 10D) introduces a new `response_type_definitions` table
+  keyed by session, with the eight seeded rows above guaranteed
+  present, fully locked (name + Data Type + parameters), and
+  un-deletable. `instrument_response_fields.response_type`
+  becomes `response_type_id` — a foreign key into the new table
+  with `ON DELETE CASCADE`. See `guide/segment_10D.md` Slice 4
+  for the 4a (schema + read-only render) / 4b (gated editing +
+  cascade-on-delete UX) split.
 - **Multi-instrument support** — `Add new instrument` ships
   **disabled** in the first rebuild slice (with the same
   "Multi-instrument support is still in progress" tooltip the
