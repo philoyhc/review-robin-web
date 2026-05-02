@@ -1754,3 +1754,145 @@ def test_rtd_add_button_disabled_when_editing_an_existing_row(
     )[1].split(">", 1)[0]
     assert "disabled" in button_html_editing
     assert 'data-server-disabled="1"' in button_html_editing
+
+
+# --- Slice 4c: operator-pickable Type on new RF rows --------------
+
+
+def test_rf_draft_template_renders_enabled_type_select_with_rtd_target(
+    client: TestClient, db: Session
+) -> None:
+    """The hidden ``rf-template-{iid}`` for a new Response Field row
+    renders an enabled (no ``disabled`` attribute) ``<select>`` over
+    the session's RTDs, paired with a hidden ``new_rtd_target`` input
+    that lets the bulk-save route key the chosen RTD by draft id."""
+    review_session = _make_session(client, db, code="rf-draft-rtd")
+    instrument = _instrument(db, review_session.id)
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+
+    template_block = body.split(
+        f'id="rf-template-{instrument.id}"', 1
+    )[1].split("</template>", 1)[0]
+    assert 'name="new_rtd_target"' in template_block
+    assert 'name="new_rtd_id"' in template_block
+    # The select is *not* disabled (saved-row Type stays disabled).
+    select_block = template_block.split('name="new_rtd_id"', 1)[1].split(
+        ">", 1
+    )[0]
+    assert "disabled" not in select_block
+    # Every seeded RTD shows up as an option.
+    for name in [
+        "Long_text", "Short_text", "Yes_no", "Grade", "Likert5",
+        "100int", "0-to-2int", "1-to-5int", "1-to-5half", "1-to-5dec",
+    ]:
+        assert f">{name}</option>" in template_block
+
+
+def test_bulk_save_creates_new_rf_row_with_operator_chosen_rtd_and_label(
+    client: TestClient, db: Session
+) -> None:
+    """The bulk-save handler routes a ``new_*`` row through
+    ``add_default_response_field(rtd_id=..., label=..., required=...)``
+    so the new RF row lands at the operator-chosen Type, with a
+    field_key derived from the typed label."""
+    review_session = _make_session(client, db, code="bulk-add-rtd")
+    instrument = _instrument(db, review_session.id)
+    rtds = {
+        r.response_type: r
+        for r in db.execute(
+            select(ResponseTypeDefinition).where(
+                ResponseTypeDefinition.session_id == review_session.id
+            )
+        ).scalars()
+    }
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    comments = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "kind": ["response", "response", "response"],
+            "id": [str(rating.id), "new_1", str(comments.id)],
+            "order": ["0", "1", "2"],
+            "label": ["Rating", "Decision", "Comments"],
+            "required_ids": [str(rating.id), "new_1"],
+            "new_rtd_target": ["new_1"],
+            "new_rtd_id": [str(rtds["Yes_no"].id)],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    new_field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.label == "Decision",
+        )
+    ).scalar_one()
+    assert new_field.response_type == "Yes_no"
+    assert new_field.field_key == "decision"
+    assert new_field.required is True
+    assert new_field.validation == {"choices": ["Yes", "No"]}
+
+
+def test_bulk_save_ignores_response_type_id_for_existing_rows(
+    client: TestClient, db: Session
+) -> None:
+    """Server-side defence: the bulk-save handler only honours
+    ``new_rtd_target`` / ``new_rtd_id`` for rows whose id starts
+    with ``new_`` — Type stays read-only post-create on saved rows
+    even if a forged form attempts to flip it."""
+    review_session = _make_session(client, db, code="bulk-rtd-defence")
+    instrument = _instrument(db, review_session.id)
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    original_rtd_id = rating.response_type_id
+    other_rtd = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.session_id == review_session.id,
+            ResponseTypeDefinition.response_type == "Yes_no",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "kind": ["response"],
+            "id": [str(rating.id)],
+            "order": ["0"],
+            "label": ["Rating"],
+            # Forged: target an existing row id with a different RTD.
+            "new_rtd_target": [str(rating.id)],
+            "new_rtd_id": [str(other_rtd.id)],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    db.refresh(rating)
+    assert rating.response_type_id == original_rtd_id
+    # And no rogue field crept in.
+    fields = list(
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    )
+    assert len(fields) == 2  # rating + comments only

@@ -17,6 +17,7 @@ from app.services.instruments import (
     RTDLockedError,
     RTDPrecisionError,
     RTDValidationError,
+    add_default_response_field,
     add_response_type_definition,
     assert_rtd_precision,
     count_rtd_dependents,
@@ -573,3 +574,118 @@ def test_count_rtd_dependents_returns_zero_for_unused_rtd(
         "response_count": 0,
         "assignment_count": 0,
     }
+
+
+# --- Slice 4c: operator-pickable Type on new RF rows ----------------
+
+
+def test_add_default_response_field_default_args_preserves_slice2_contract(
+    db: Session,
+) -> None:
+    """No-override call still gives the seeded ``1-to-5int`` RTD,
+    auto ``RatingN`` label, ``ratingN`` key, ``required=True``."""
+    user = _user(db)
+    review = _session(db, user, code="rf-default-add")
+    instrument = ensure_default_instrument(db, review)
+
+    new = add_default_response_field(
+        db, instrument=instrument, after_field_id=None, actor=user
+    )
+    assert new.response_type == "1-to-5int"
+    assert new.label.startswith("Rating")
+    assert new.field_key.startswith("rating")
+    assert new.required is True
+    assert new.validation == {"min": 1, "max": 5, "step": 1}
+
+
+def test_add_default_response_field_with_rtd_id_picks_chosen_rtd(
+    db: Session,
+) -> None:
+    user = _user(db)
+    review = _session(db, user, code="rf-rtd-pick")
+    instrument = ensure_default_instrument(db, review)
+    rtds = ensure_default_response_type_definitions(db, review)
+
+    new = add_default_response_field(
+        db,
+        instrument=instrument,
+        after_field_id=None,
+        rtd_id=rtds["Yes_no"].id,
+        label="Decision",
+        required=False,
+        actor=user,
+    )
+    assert new.response_type == "Yes_no"
+    assert new.label == "Decision"
+    # field_key derived from label via slugify_field_key.
+    assert new.field_key == "decision"
+    assert new.required is False
+    assert new.validation == {"choices": ["Yes", "No"]}
+
+
+def test_add_default_response_field_falls_back_to_default_rtd_when_unknown(
+    db: Session,
+) -> None:
+    """A bogus rtd_id (e.g. forged form post) silently falls back to
+    the seeded ``1-to-5int`` rather than raising."""
+    user = _user(db)
+    review = _session(db, user, code="rf-rtd-bogus")
+    instrument = ensure_default_instrument(db, review)
+
+    new = add_default_response_field(
+        db,
+        instrument=instrument,
+        after_field_id=None,
+        rtd_id=999_999,
+        label="Salvage",
+        actor=user,
+    )
+    assert new.response_type == "1-to-5int"
+    assert new.label == "Salvage"
+
+
+def test_add_default_response_field_blank_label_uses_auto_rating_key(
+    db: Session,
+) -> None:
+    """If the operator left the label blank, fall back to the
+    classic ``RatingN`` / ``ratingN`` auto numbering."""
+    user = _user(db)
+    review = _session(db, user, code="rf-blank-label")
+    instrument = ensure_default_instrument(db, review)
+
+    new = add_default_response_field(
+        db,
+        instrument=instrument,
+        after_field_id=None,
+        rtd_id=None,
+        label="   ",  # whitespace only
+        actor=user,
+    )
+    assert new.label.startswith("Rating")
+    assert new.field_key.startswith("rating")
+
+
+def test_add_default_response_field_field_key_collision_gets_numeric_suffix(
+    db: Session,
+) -> None:
+    """Two operator-typed labels that slugify to the same key get
+    distinct ``field_key`` values via numeric suffixing."""
+    user = _user(db)
+    review = _session(db, user, code="rf-key-collide")
+    instrument = ensure_default_instrument(db, review)
+
+    add_default_response_field(
+        db,
+        instrument=instrument,
+        after_field_id=None,
+        label="Quality",
+        actor=user,
+    )
+    second = add_default_response_field(
+        db,
+        instrument=instrument,
+        after_field_id=None,
+        label="Quality",
+        actor=user,
+    )
+    assert second.field_key == "quality2"
