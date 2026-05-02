@@ -551,8 +551,22 @@
          state-machine buttons (Save / Cancel / Edit, flushed left) plus
          the `Add new instrument` button (flushed right). The right card
          is a standard Danger Zone hosting `Delete this instrument`.
-         Wiring on Add + Delete lands in Slice 5; both render disabled
-         here as a UI prep pass. #}
+         Add + Delete share the same disable gates as the per-instrument
+         Edit button (session ready, another card editing, RTD unlocked).
+         Delete additionally hides itself when this is the only
+         instrument on the session. #}
+      {% set add_delete_disabled = is_ready or is_some_instrument_editing or is_some_rtd_unlocked %}
+      {% if is_ready %}
+        {% set add_delete_disabled_title = "Revert to draft to add or delete instruments." %}
+      {% elif is_some_instrument_editing and not is_editing %}
+        {% set add_delete_disabled_title = "Save or cancel the open instrument edit first." %}
+      {% elif is_editing %}
+        {% set add_delete_disabled_title = "Save or cancel this instrument's edits first." %}
+      {% elif is_some_rtd_unlocked %}
+        {% set add_delete_disabled_title = "Save or cancel the Response Type Definitions edit first." %}
+      {% else %}
+        {% set add_delete_disabled_title = "" %}
+      {% endif %}
       <div class="bottom-grid" style="margin-top: 12px;">
         <div class="card" style="border: none; background: transparent; padding: 0;">
           <div style="display: flex; justify-content: space-between; gap: 8px;">
@@ -575,8 +589,13 @@
               {% endif %}
             </div>
             <div>
-              <button class="btn alert-solid" type="button" disabled
-                      title="Multi-instrument support is still in progress; wiring lands in Slice 5.">Add new instrument</button>
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/instruments/add"
+                    style="display: inline; margin: 0;">
+                <input type="hidden" name="after" value="{{ instrument.id }}">
+                <button class="btn alert-solid" type="submit"
+                        {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add new instrument</button>
+              </form>
             </div>
           </div>
         </div>
@@ -589,8 +608,20 @@
             submitted reviewer responses. This cannot be undone.
           </p>
           <p>
-            <button class="btn danger-solid" type="button" disabled
-                    title="Wiring lands in Slice 5.">Delete this instrument</button>
+            {% set is_only_instrument = (instruments | length == 1) %}
+            {% set delete_disabled = add_delete_disabled or is_only_instrument %}
+            {% if is_only_instrument %}
+              {% set delete_title = "Cannot delete the only instrument on this session." %}
+            {% else %}
+              {% set delete_title = add_delete_disabled_title %}
+            {% endif %}
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"
+                  onsubmit="return confirm('Delete this instrument? This will also delete its display fields, response fields, assignments referencing it, and any submitted reviewer responses. This cannot be undone.');"
+                  style="margin: 0;">
+              <button class="btn danger-solid" type="submit"
+                      {% if delete_disabled %}disabled title="{{ delete_title }}"{% endif %}>Delete this instrument</button>
+            </form>
           </p>
         </div>
       </div>

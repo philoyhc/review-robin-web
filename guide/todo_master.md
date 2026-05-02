@@ -35,7 +35,7 @@ that affect what reviewers actually see today.
 |---|---|---|
 | 1 | ~~**#13 — Fix Display Fields placeholder**~~ ✅ shipped 2026-05-01 (option 2: wired to existing routes). |
 | 2 | ~~**#14 — Drop `pair_context_*` default seed; seed from import data**~~ ✅ shipped 2026-05-01 (lazy-seed + Alembic data migration). |
-| 3 | ~~**#18 — Decide "Add an instrument" button vs route**~~ ✅ decided 2026-05-02 — **enable the button**. Implementation is Slice 5 of Segment 10D (the segment-closing slice; ~1 hr). |
+| 3 | ~~**#18 — Decide "Add an instrument" button vs route**~~ ✅ shipped 2026-05-02 as Slice 5 of Segment 10D — Add + Delete enabled with mutual-exclusion / `is_ready` / single-instrument gates and a native `confirm()` on Delete. |
 
 P0 in this catalog is now functionally closed. The Slice-4 ladder
 of Segment 10D (#242 → #257 + banner-convention follow-ups #258 /
