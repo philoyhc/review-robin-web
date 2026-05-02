@@ -546,26 +546,64 @@ one and align both. Then proceed with item 4.
 
 ---
 
-### 18. Decide fate of disabled "Add an instrument" button vs live route · [decision] · tiny
+### 18. ~~Decide fate of disabled "Add an instrument" button vs live route~~ — decided; implementation queued as Slice 5 of Segment 10D · [decision] · tiny
 
-**Why now.** `instruments_index.html:418–419` ships a
+**Decision (2026-05-02):** **Enable** the button with a confirm
+step. The schema, services, and cascade behaviour are ready
+(Segment 10C); Slice 5 of Segment 10D is the implementation
+slice — flip the button live, add the JS confirm dialog, and
+land the segment-close updates to `docs/status.md`.
+
+**Why now.** `instruments_index.html` ships a
 `disabled` Add-an-instrument button with tooltip
 "Multi-instrument support is still in progress"; meanwhile
-`routes_operator.py:1530` defines a working `POST /instruments/add`
+`routes_operator.py` defines a working `POST /instruments/add`
 endpoint and `delete_instrument` is wired and tested-via-cascade.
-Item 11 (extract template context) will trip over this
-inconsistency.
+The Slice-4 ladder (RTD card, ODT cascade-delete UX,
+mutual-exclusion edit lock, banner conventions) is now shipped,
+so the per-instrument-card surface is settled enough that
+multi-instrument promotion behaviour can be observed without
+bumping into other Slice-4 work.
 
-**Plan.** Pick one:
-- **Enable the button** with a confirm step. The schema and
-  services are ready; the only missing piece was a UI design
-  decision and that's now mostly defined by the per-instrument
-  card layout.
-- **Delete the route** (and `instruments_add` handler) until
-  Segment 13 actually wants it. Reduces dead surface area; route
-  comes back when the multi-instrument UI lands.
+**Plan.** Slice 5 of Segment 10D — see
+[`guide/segment_10D.md`](./segment_10D.md) "Slice 5 — Multi-
+instrument enable" for the contract. Tick this item when Slice 5
+ships and the segment closes.
 
-Decide before item 11.
+---
+
+### 19. Roll session-status top card onto Reviewers / Reviewees / Assignments / Instruments · [chrome] · small
+
+**Why now.** PR
+[#252](https://github.com/philoyhc/review-robin-web/pull/252)
+shipped the shared
+`operator/partials/session_status_card.html` partial — three
+rows of pills (reviewer / reviewee / assignment counts;
+instrument count + Email Invites Set up / Not set up; setup-nav)
+— and rolled it onto Session detail and Email Invites. The
+remaining four session-scoped operator pages (Reviewers,
+Reviewees, Assignments, Instruments) still hand-roll their own
+top cards. Consolidating onto the partial is pure chrome
+cleanup but the four pages currently drift in subtle ways
+(pill phrasing, layout, what counts they show) — collapsing
+them onto the partial settles the visual contract.
+
+**Where.**
+- Templates: `app/web/templates/operator/session_reviewers.html`,
+  `session_reviewees.html`, `session_assignments.html`,
+  `instruments_index.html` (the last one keeps its
+  instrument-specific second-row pills + the
+  "Actions for All Instruments" card below).
+- Routes: each GET handler builds + passes
+  `views.session_status_pills(db, session)` to the template.
+
+**Plan.**
+- Land per-page so each PR has a small surface area.
+- Reviewers / Reviewees / Assignments are straightforward swap-
+  outs. Instruments needs more care because its top card has
+  two extra instrument-specific status rows (deadline,
+  accepting/not, visibility-when-closed) — those stay; the
+  partial replaces only the nav row + maybe the count rows.
 
 ---
 
