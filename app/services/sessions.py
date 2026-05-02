@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 from app.schemas.sessions import SessionCreate
-from app.services import audit
+from app.services import audit, session_lifecycle as lifecycle
 from app.services.instruments import ensure_default_instrument
 
 
@@ -92,6 +92,13 @@ def update_session(
     correlation_id: str | None = None,
 ) -> ReviewSession:
     """Apply payload to ``review_session`` and record changed fields in audit."""
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=review_session,
+        user=user,
+        reason="session_edited",
+        correlation_id=correlation_id,
+    )
     changes: dict[str, list[Any]] = {}
     for field in ("name", "code", "description", "deadline"):
         old = getattr(review_session, field)

@@ -19,7 +19,7 @@ from app.db.models import (
 )
 from app.schemas.assignments import AssignmentMode, ManualAssignmentRow
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit
+from app.services import audit, session_lifecycle as lifecycle
 
 PAIR_PREVIEW_LIMIT = 200
 
@@ -546,6 +546,18 @@ def replace_assignments(
     if includes is not None and len(includes) != len(pairs):
         raise ValueError("includes length must match pairs length")
 
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=review_session,
+        user=user,
+        reason=(
+            "assignments_imported"
+            if mode == AssignmentMode.manual
+            else "assignments_generated"
+        ),
+        correlation_id=correlation_id,
+    )
+
     instrument = get_or_create_default_instrument(db, review_session)
 
     replaced = existing_count(db, review_session.id)
@@ -642,6 +654,13 @@ def delete_all_assignments(
     correlation_id: str,
 ) -> int:
     """Remove every Assignment for the session. Clears assignment_mode."""
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=review_session,
+        user=user,
+        reason="assignments_deleted_all",
+        correlation_id=correlation_id,
+    )
     rows = list(
         db.execute(
             select(Assignment).where(Assignment.session_id == review_session.id)

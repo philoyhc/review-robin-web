@@ -312,7 +312,6 @@ async def _handle_import(
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
 
-    _invalidate_if_validated(db, review_session, user, reason=f"{kind}_imported")
     save_fn(
         db,
         session=review_session,
@@ -432,9 +431,6 @@ def assignments_full_matrix(
 
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    _invalidate_if_validated(
-        db, review_session, user, reason="assignments_generated"
-    )
     assignments.replace_assignments(
         db,
         review_session=review_session,
@@ -492,9 +488,6 @@ async def assignments_manual_import(
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     pairs, contexts, includes = assignments.manual_rows_to_pairs(
         rows, reviewers, reviewees
-    )
-    _invalidate_if_validated(
-        db, review_session, user, reason="assignments_imported"
     )
     assignments.replace_assignments(
         db,
@@ -621,7 +614,6 @@ def session_edit_submit(
         description=description or None,
         deadline=parsed_deadline,
     )
-    _invalidate_if_validated(db, review_session, user, reason="session_edited")
     sessions.update_session(
         db,
         review_session=review_session,
@@ -699,9 +691,6 @@ def reviewers_delete_all(
             detail="confirm checkbox required",
         )
     _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    _invalidate_if_validated(
-        db, review_session, user, reason="reviewers_deleted_all"
-    )
     csv_imports.delete_all_reviewers(
         db,
         review_session=review_session,
@@ -729,9 +718,6 @@ def reviewees_delete_all(
             detail="confirm checkbox required",
         )
     _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    _invalidate_if_validated(
-        db, review_session, user, reason="reviewees_deleted_all"
-    )
     csv_imports.delete_all_reviewees(
         db,
         review_session=review_session,
@@ -759,9 +745,6 @@ def assignments_delete_all(
             detail="confirm checkbox required",
         )
     _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    _invalidate_if_validated(
-        db, review_session, user, reason="assignments_deleted_all"
-    )
     assignments.delete_all_assignments(
         db,
         review_session=review_session,
@@ -787,24 +770,6 @@ def _require_editable(review_session: ReviewSession) -> None:
             detail=(
                 f"Session is {review_session.status}; revert to draft to edit"
             ),
-        )
-
-
-def _invalidate_if_validated(
-    db: Session,
-    review_session: ReviewSession,
-    user: User,
-    *,
-    reason: str,
-) -> None:
-    """Flip ``validated → draft`` so a setup-mutating action can land in ``draft``."""
-    if lifecycle.is_validated(review_session):
-        lifecycle.invalidate_session(
-            db,
-            review_session=review_session,
-            user=user,
-            reason=reason,
-            correlation_id=request_correlation_id(),
         )
 
 
@@ -1211,9 +1176,6 @@ def instrument_edit_description(
 ) -> RedirectResponse:
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_described"
-    )
     instruments_service.update_instrument_description(
         db,
         instrument=instrument,
@@ -1249,9 +1211,6 @@ def instrument_add_field(
     # ``validation_max`` form fields are accepted but ignored.
     _ = validation_min, validation_max  # silence unused-arg
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_field_added"
-    )
     try:
         instruments_service.add_response_field(
             db,
@@ -1287,9 +1246,6 @@ def instrument_add_default_field(
 ) -> RedirectResponse:
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_field_added"
-    )
     instruments_service.add_default_response_field(
         db, instrument=instrument, after_field_id=after, actor=user
     )
@@ -1330,9 +1286,6 @@ def instrument_edit_field(
     _ = validation_min, validation_max  # silence unused-arg
     validation_block = field.validation
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_field_updated"
-    )
     _, warning_count = instruments_service.update_response_field(
         db,
         field=field,
@@ -1369,9 +1322,6 @@ def instrument_delete_field(
     _require_instrument_editable(review_session)
     field = _require_response_field_in_instrument(field_id, instrument, db)
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_field_deleted"
-    )
     try:
         instruments_service.delete_response_field(
             db,
@@ -1416,9 +1366,6 @@ def instrument_move_field(
     if direction not in ("up", "down"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_fields_reordered"
-    )
     instruments_service.move_response_field(
         db, field=field, direction=direction, actor=user  # type: ignore[arg-type]
     )
@@ -1455,9 +1402,6 @@ def instrument_add_display_field(
         )
     source_type, source_field = source_pair.split(":", 1)
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_display_field_added"
-    )
     try:
         instruments_service.add_display_field(
             db,
@@ -1495,9 +1439,6 @@ def instrument_edit_display_field(
     _require_instrument_editable(review_session)
     field = _require_display_field_in_instrument(df_id, instrument, db)
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_display_field_updated"
-    )
     try:
         instruments_service.update_display_field(
             db,
@@ -1528,9 +1469,6 @@ def instrument_delete_display_field(
     _require_instrument_editable(review_session)
     field = _require_display_field_in_instrument(df_id, instrument, db)
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_display_field_deleted"
-    )
     try:
         instruments_service.delete_display_field(db, field=field, actor=user)
     except instruments_service.LockedDisplayFieldError:
@@ -1558,9 +1496,6 @@ def instrument_move_display_field(
     if direction not in ("up", "down"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_display_field_moved"
-    )
     try:
         instruments_service.move_display_field(
             db, field=field, direction=direction, actor=user
@@ -1679,9 +1614,6 @@ async def instrument_bulk_save_fields(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_fields_saved"
-    )
 
     # 1. Apply JS-deferred deletes first so the bulk-save step below
     #    sees a clean existing-rows list. Use ``confirm=True`` since
@@ -1835,9 +1767,6 @@ def instruments_add(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     _require_instrument_editable(review_session)
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_added"
-    )
     instrument = instruments_service.create_instrument(
         db, review_session=review_session, after_instrument_id=after, actor=user
     )
@@ -1910,9 +1839,6 @@ def response_type_add(
     max_value = _parse_optional_float(max)
     step_value = _parse_optional_float(step)
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="response_type_added"
-    )
     try:
         instruments_service.add_response_type_definition(
             db,
@@ -1981,9 +1907,6 @@ def response_type_edit(
     max_value = _parse_optional_float(max)
     step_value = _parse_optional_float(step)
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="response_type_updated"
-    )
     try:
         instruments_service.update_response_type_definition(
             db,
@@ -2028,9 +1951,6 @@ def response_type_delete(
             detail="Seeded Response Types are spec-locked and cannot be deleted.",
         )
 
-    _invalidate_if_validated(
-        db, review_session, user, reason="response_type_deleted"
-    )
     try:
         instruments_service.delete_response_type_definition(
             db, rtd=rtd, confirm=(confirm == "true"), actor=user
@@ -2101,9 +2021,6 @@ def instruments_delete(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete the last instrument",
         )
-    _invalidate_if_validated(
-        db, review_session, user, reason="instrument_deleted"
-    )
     instruments_service.delete_instrument(
         db, instrument=instrument, actor=user
     )

@@ -193,13 +193,12 @@ def test_bulk_visibility_is_idempotent_no_audit_when_already_target(
 def test_bulk_visibility_does_not_invalidate_validated_session(
     client: TestClient, db: Session
 ) -> None:
-    """Locks in the current "doesn't flip validated→draft" behaviour.
-
-    `bulk_set_visibility` route deliberately skips
-    `_invalidate_if_validated` today — see
-    `guide/unfinished_business.md` item #16. When that policy
-    decision lands, this test fails loudly, forcing the change to
-    be conscious instead of silent.
+    """Pins the visibility-when-closed exemption from the
+    ``validated → draft`` rule. Settled 2026-05-02 (PR for items
+    #3 + #16): visibility-when-closed is a display flag, not part
+    of the validation snapshot. The exemption is documented in
+    code at ``app/services/instruments.py::bulk_set_visibility``
+    and ``app/services/session_lifecycle.py::set_responses_visible_when_closed``.
     """
     session = _create_session(client, db, code="bv-validated")
     _populate_rosters(client, session.id)

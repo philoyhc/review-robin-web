@@ -18,6 +18,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.services import session_lifecycle as lifecycle
 from app.services.audit import write_event
 
 # Audit-event types that signal "this instrument's field tables were
@@ -512,6 +513,9 @@ def add_response_type_definition(
     the save-time rules; raises ``RTDValidationError`` /
     ``RTDPrecisionError`` on a bad payload, or ``RTDValidationError``
     if the name collides with an existing row on the session."""
+    lifecycle.invalidate_if_validated(
+        db, review_session=review_session, user=actor, reason="response_type_added"
+    )
     cleaned_name = response_type.strip()
     _validate_rtd_payload(
         response_type=cleaned_name,
@@ -592,6 +596,10 @@ def update_response_type_definition(
         max=max,
         step=step,
         list_csv=list_csv,
+    )
+
+    lifecycle.invalidate_if_validated(
+        db, review_session=rtd.session, user=actor, reason="response_type_updated"
     )
 
     changes: dict[str, list[Any]] = {}
@@ -693,6 +701,10 @@ def delete_response_type_definition(
         )
     if dependents["response_field_count"] > 0 and not confirm:
         raise RTDInUseError(dependents)
+
+    lifecycle.invalidate_if_validated(
+        db, review_session=rtd.session, user=actor, reason="response_type_deleted"
+    )
 
     snapshot = {
         "response_type": rtd.response_type,
@@ -918,6 +930,9 @@ def create_instrument(
     immediately after that one and bump subsequent ``order`` values; else
     append at the end.
     """
+    lifecycle.invalidate_if_validated(
+        db, review_session=review_session, user=actor, reason="instrument_added"
+    )
     existing = list(
         db.execute(
             select(Instrument)
@@ -1001,6 +1016,9 @@ def delete_instrument(
     surviving instruments' ``order`` values to ``0..N-1``. Returns the
     deleted instrument's id.
     """
+    lifecycle.invalidate_if_validated(
+        db, review_session=instrument.session, user=actor, reason="instrument_deleted"
+    )
     session_id = instrument.session_id
     deleted_id = instrument.id
     deleted_name = instrument.name
@@ -1126,6 +1144,13 @@ def add_display_field(
             f"Unknown display-field source: {source_type}.{source_field}"
         )
 
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_display_field_added",
+    )
+
     existing = _ordered_display_fields(db, instrument)
     if any(
         (f.source_type, f.source_field) == pair for f in existing
@@ -1195,6 +1220,12 @@ def update_display_field(
             f"is always shown to reviewers and cannot be hidden."
         )
     instrument = field.instrument
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_display_field_updated",
+    )
     new_label = (label or "").strip()
 
     changes: dict[str, list[Any]] = {}
@@ -1242,6 +1273,12 @@ def delete_display_field(
             f"is locked and cannot be deleted."
         )
     instrument = field.instrument
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_display_field_deleted",
+    )
     snapshot = _display_field_snapshot(field)
     db.delete(field)
     db.flush()
@@ -1303,6 +1340,13 @@ def move_display_field(
         raise LockedDisplayFieldError(
             "Cannot move into the locked region of the Display Fields table."
         )
+
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_display_field_moved",
+    )
 
     fields[index], fields[swap_with] = fields[swap_with], fields[index]
     _repack_display_orders(fields)
@@ -1561,6 +1605,12 @@ def bulk_save_fields(
 
     Returns ``{"display_changed": bool, "response_order_changed": bool}``.
     """
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_fields_saved",
+    )
     display_payload: list[dict[str, Any]] = []
     response_payload: list[dict[str, Any]] = []
     for row in rows:
@@ -1811,6 +1861,13 @@ def add_response_field(
             f"A field with key '{field_key}' already exists on this instrument."
         )
 
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_field_added",
+    )
+
     new_field = InstrumentResponseField(
         instrument_id=instrument.id,
         field_key=field_key,
@@ -1887,6 +1944,12 @@ def add_default_response_field(
     If ``after_field_id`` is given, the new field slots immediately
     after that one and bumps subsequent ``order`` values; otherwise
     appends at the end."""
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_field_added",
+    )
     fields = _ordered_fields(db, instrument)
 
     rtds_by_name = ensure_default_response_type_definitions(
@@ -2028,6 +2091,12 @@ def update_response_field(
         raise ValueError("Label is required.")
 
     instrument = field.instrument
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_field_updated",
+    )
     new_label = label.strip()
     new_help_text = help_text or None
 
@@ -2092,6 +2161,13 @@ def delete_response_field(
     if response_count > 0 and not confirm:
         raise ResponsesPresentError(response_count)
 
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_field_deleted",
+    )
+
     snapshot = {
         "field_key": field.field_key,
         "label": field.label,
@@ -2148,6 +2224,13 @@ def move_response_field(
     if swap_with < 0 or swap_with >= len(fields):
         return  # at boundary; no-op (route returns 400)
 
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_fields_reordered",
+    )
+
     fields[index], fields[swap_with] = fields[swap_with], fields[index]
     _repack_orders(fields)
     db.flush()
@@ -2176,6 +2259,12 @@ def update_instrument_description(
     description: str | None,
     actor: User,
 ) -> Instrument:
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_described",
+    )
     cleaned = description.strip() if isinstance(description, str) else None
     new_value = cleaned or None
     old_value = instrument.description
@@ -2245,6 +2334,10 @@ def bulk_set_visibility(
     target: bool,
     actor: User,
 ) -> list[int]:
+    # #16 — visibility-when-closed is a display flag, not part of the
+    # validation snapshot. Deliberately does NOT call
+    # ``lifecycle.invalidate_if_validated``. See ``docs/status.md`` and
+    # ``test_invalidation_on_setup_mutation.py`` for the regression test.
     instruments = list(
         db.execute(
             select(Instrument)
