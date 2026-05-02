@@ -242,6 +242,80 @@
         flex: 0 0 140px;
         box-sizing: border-box;
       }
+      /* Session-scoped top card: folder-tab nav + status row.
+         Implements the navigation model spec'd in
+         spec/ui_concept.md "Navigation model". Three pieces:
+           1. .session-nav-card — the wrapper with rounded
+              corners and a single border around the whole.
+           2. .tab-strip — the row of nav tabs at the top,
+              tinted by group (.setup-tint / .ops-tint).
+           3. .status-row — the setup-todo overview pills,
+              same content across all session-scoped pages.
+         Active tab is marked with a 3px coloured bottom
+         border + body-coloured background, reading as a
+         folder-tab without skeuomorphic shape. Home tab is
+         offset and slightly larger so it stands out as the
+         universal anchor. */
+      .session-nav-card {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 20px;
+        background: #fff;
+      }
+      .tab-strip {
+        display: flex;
+        align-items: stretch;
+        border-bottom: 1px solid #d1d5db;
+      }
+      .tab-strip.setup-tint { background: #eff6ff; }
+      .tab-strip.ops-tint   { background: #f0fdf4; }
+      .nav-tab {
+        flex: 1 1 0;
+        padding: 12px 14px;
+        text-align: center;
+        color: #6b7280;
+        text-decoration: none;
+        font-size: 0.92rem;
+        background: transparent;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -1px;
+      }
+      .nav-tab:hover {
+        background: rgba(255, 255, 255, 0.6);
+        color: #1f2937;
+      }
+      .nav-tab.home {
+        flex: 0 0 auto;
+        padding: 12px 22px;
+        margin-right: 18px;
+        font-size: 1rem;
+        font-weight: 500;
+      }
+      .tab-strip.setup-tint .nav-tab.active {
+        background: #fff;
+        color: #1e40af;
+        font-weight: 500;
+        border-bottom-color: #2563eb;
+      }
+      .tab-strip.ops-tint .nav-tab.active {
+        background: #fff;
+        color: #166534;
+        font-weight: 500;
+        border-bottom-color: #16a34a;
+      }
+      .nav-tab.home.active {
+        background: #fff;
+        color: #111827;
+        border-bottom-color: #6b7280;
+      }
+      .status-row {
+        padding: 12px 16px;
+        font-size: 0.9rem;
+        background: #fff;
+      }
+      .status-row p { margin: 0; }
+      .status-row p + p { margin-top: 4px; }
       .instrument-edit:has(details[open]) .description-text { display: none; }
       .instrument-edit details[open] > summary { display: none; }
       .display-edit[open] > summary { display: none; }

@@ -1113,7 +1113,7 @@ def setupinvite_stub(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Email Invites"
+                review_session, "Email Template"
             ),
         },
     )

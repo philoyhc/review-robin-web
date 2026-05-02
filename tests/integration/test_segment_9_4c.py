@@ -246,7 +246,7 @@ def test_setupinvite_stub_renders(
 
     assert response.status_code == 200
     body = response.text
-    assert "<h1>Email Invites</h1>" in body
+    assert "<h1>Email Template</h1>" in body
     assert "Segment 15" in body
 
 
