@@ -3,14 +3,15 @@
 {% block title %}Reviewees — {{ session.name }}{% endblock %}
 
 {% block content %}
-  <h1>Reviewees</h1>
+  <div class="session-nav-card">
+    {% with current_page = "Reviewees" %}
+      {% include "operator/partials/session_top_nav.html" %}
+    {% endwith %}
+    {% include "operator/partials/session_setup_status_row.html" %}
+  </div>
 
   <div class="card">
     <p style="margin: 0;">
-      Number of reviewees:
-      <span class="pill pill-info">{{ reviewees | length }}</span>
-    </p>
-    <p style="margin: 4px 0 0 0;">
       Fields with data:
       {% for label in fields_with_data %}
         <span class="pill pill-info">{{ label }}</span>
@@ -18,16 +19,6 @@
         <span class="muted">—</span>
       {% endfor %}
     </p>
-    <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
-      <div class="setup-nav">
-        <a class="btn" href="/operator/sessions/{{ session.id }}">Session</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Email Invites</a>
-      </div>
-    </div>
   </div>
 
   {% if is_ready %}

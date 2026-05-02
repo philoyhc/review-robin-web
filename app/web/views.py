@@ -85,11 +85,10 @@ def build_setup_rows(
 
 @dataclass
 class SessionStatusPills:
-    """Counts shown on the standardized session-level top card
-    (rendered by ``partials/session_status_card.html``). The same
-    five numbers / flags appear on Session, Reviewers, Reviewees,
-    Assignments, and Email Invites pages so the chrome reads as a
-    single contract."""
+    """Counts shown on the standardized session-level status row
+    (rendered by ``partials/session_setup_status_row.html``). The
+    same five numbers / flags appear on every session-scoped page
+    so the chrome reads as a single contract."""
 
     reviewer_count: int
     reviewee_count: int

@@ -175,9 +175,9 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
 
     empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
     assert empty.status_code == 200
-    # Empty state shows the reviewer/reviewee summary on the hub; the
-    # FullMatrix Generate button is rendered inline on the same page.
-    assert "Number of reviewers:" in empty.text
+    # Empty state shows the reviewer/reviewee counts in the chrome status
+    # row; the FullMatrix Generate button is rendered inline on the page.
+    assert "Reviewers:" in empty.text
     assert ">Generate</button>" in empty.text
 
     client.post(

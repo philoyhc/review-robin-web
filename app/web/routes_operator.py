@@ -290,6 +290,7 @@ async def _handle_import(
             {
                 "user": user,
                 "session": review_session,
+                "status_pills": views.session_status_pills(db, review_session),
                 list_key: list_items,
                 "existing_count": existing,
                 "assignment_count": assignment_count,
@@ -372,6 +373,7 @@ def _render_assignments_hub(
         {
             "user": user,
             "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
             "assignment_count": assignment_count,
             "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
@@ -525,6 +527,7 @@ def reviewers_list(
         {
             "user": user,
             "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
             "reviewers": reviewers,
             "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
@@ -554,6 +557,7 @@ def reviewees_list(
         {
             "user": user,
             "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
             "reviewees": reviewees,
             "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
@@ -1055,6 +1059,7 @@ def instruments_index(
         {
             "user": user,
             "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
             "instruments": instruments,
             "is_ready": is_ready,
             "can_edit": _can_edit_instrument(review_session),

@@ -3,12 +3,17 @@
 {% block title %}Instruments — {{ session.name }}{% endblock %}
 
 {% block content %}
-  <h1>Instruments</h1>
+  <div class="session-nav-card">
+    {% with current_page = "Instruments" %}
+      {% include "operator/partials/session_top_nav.html" %}
+    {% endwith %}
+    {% include "operator/partials/session_setup_status_row.html" %}
+  </div>
 
-  {# Header card: instrument-specific status rows on the left, nav
-     right-aligned. The bulk-visibility + Preview buttons used to
-     live here too — they moved to the ``Actions for All Instruments`` card
-     below. #}
+  {# Page-specific status (deadline + accepting/visibility breakdowns
+     across the session's instruments). The setup-todo overview in
+     the chrome only shows the instrument count; the per-instrument
+     breakdown lives here. #}
   <div class="card">
     {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
     {% set not_accepting_count = instruments | length - accepting_count %}
@@ -22,7 +27,6 @@
         <span class="pill pill-warning">not set</span>
       {% endif %}
       &middot;
-      <span class="pill pill-info">{{ instruments | length }} instrument{% if instruments | length != 1 %}s{% endif %}</span>:
       <span class="pill pill-info">{{ accepting_count }} accepting</span>
       &middot;
       <span class="pill pill-warning">{{ not_accepting_count }} not accepting</span>
@@ -33,16 +37,6 @@
       &middot;
       <span class="pill pill-warning">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
     </p>
-    <div style="display: flex; justify-content: flex-end; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px;">
-      <div class="setup-nav">
-        <a class="btn" href="/operator/sessions/{{ session.id }}">Session</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
-        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/instruments">Instruments</a>
-        <a class="btn" href="/operator/sessions/{{ session.id }}/setupinvite">Email Invites</a>
-      </div>
-    </div>
   </div>
 
   {# Actions for All Instruments: bulk-visibility toggle + Preview
