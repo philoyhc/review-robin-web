@@ -11,112 +11,122 @@ purposes:**
 
 When you ship an item, tick it off in **both** files.
 
-The sequence is shaped by three forces: (a) user-facing
-correctness comes first (data-loss-by-illusion in the Display
-Fields card is the headline), (b) some items must land in a
-specific order because they touch the same code (item 11 has to
-follow items 13–14, item 4 has to follow item 17, item 12 has to
-follow item 8), and (c) items that defend against regressions
-during big refactors (CI lint, Postgres tests, missing 10C tests)
-should land before the big refactors themselves.
+The sequence is shaped by three forces: (a) close test gaps that
+Segment 10D opened up before the upcoming arch refactors trip
+over them, (b) some items must land in a specific order because
+they touch the same code (item 12 follows item 13, item 16
+bundles with item 9; item 11's previous "wait for P0" gate has
+already cleared, item 4's previous "wait for #17" gate is also
+gone after the 2026-05-02 re-audit), and (c) defensive CI
+hardening (lint, Postgres pytest) should land before the big
+refactors themselves.
 
 ---
 
-## P0 — Stop the bleeding (Instruments UI ↔ data drift)
+## P0 — Stop the bleeding (Instruments UI ↔ data drift) — ✅ closed
 
 The round-3 audit (2026-05-01) found that the operator's per-
-instrument **Display Fields** card and the underlying schema have
-drifted apart in ways that silently lose user input and silently
-hide imported reviewee data. Land these before anything else,
-including the CI hardening items, because they're the only items
-that affect what reviewers actually see today.
+instrument **Display Fields** card and the underlying schema had
+drifted apart in ways that silently lost user input and silently
+hid imported reviewee data. The full slice ladder now ships.
 
-| Order | Item | Why this position |
+| Order | Item | Outcome |
 |---|---|---|
-| 1 | ~~**#13 — Fix Display Fields placeholder**~~ ✅ shipped 2026-05-01 (option 2: wired to existing routes). |
-| 2 | ~~**#14 — Drop `pair_context_*` default seed; seed from import data**~~ ✅ shipped 2026-05-01 (lazy-seed + Alembic data migration). |
-| 3 | ~~**#18 — Decide "Add an instrument" button vs route**~~ ✅ shipped 2026-05-02 as Slice 5 of Segment 10D — Add + Delete enabled with mutual-exclusion / `is_ready` / single-instrument gates and a native `confirm()` on Delete. |
+| 1 | ~~**#13 — Fix Display Fields placeholder**~~ | ✅ shipped 2026-05-01 (option 2: wired to existing routes). |
+| 2 | ~~**#14 — Drop `pair_context_*` default seed; seed from import data**~~ | ✅ shipped 2026-05-01 (lazy-seed + Alembic data migration). |
+| 3 | ~~**#18 — Decide "Add an instrument" button vs route**~~ | ✅ shipped 2026-05-02 as Slice 5 of Segment 10D — Add + Delete enabled with mutual-exclusion / `is_ready` / single-instrument gates and a native `confirm()` on Delete. |
 
-P0 in this catalog is now functionally closed. The Slice-4 ladder
-of Segment 10D (#242 → #257 + banner-convention follow-ups #258 /
-#259) reshaped the per-instrument card and the Response Type
-Definitions card around a single editing state machine, mutual-
-exclusion edit lock, save-time RF / RTD guards, and a banner
-auto-scroll convention. After Slice 5 ships, reviewers see the
-right columns, operators don't get gaslit, and the Instruments
-page surface area matches the backing routes end-to-end.
+Segment 10D (#220 → #268) closed P0 end-to-end: the per-instrument
+card and Response Type Definitions card are now built around a
+single editing state machine, mutual-exclusion edit lock, save-
+time RF / RTD guards, banner auto-scroll convention, and live
+multi-instrument support. Reviewers see the right columns,
+operators don't get gaslit, and the Instruments-page surface
+matches the backing routes end-to-end.
 
 ---
 
-## P1 — Defend against regressions before refactoring
+## P1 — Close test gaps + ship CI hardening (immediate next)
 
-These don't fix bugs themselves, but they catch the regressions
-the upcoming arch refactors (P2) would otherwise ship silently.
+The Slice-5 PR (#265) added route-level coverage for
+`create_instrument` / `delete_instrument`; the rest of the 10C
+surface still has no integration test floor. With the planned
+arch refactors below (item 3 in particular) about to ripple
+through the same code, the test gaps need to close first.
 
 | Order | Item | Why this position |
 |---|---|---|
-| 4 | **#15 — Backfill 10C integration tests** | `delete_instrument`, `bulk_set_visibility`, `add-row`, last-instrument-guard all shipped without tests. Land before item 3 / item 11 ripple through the same code. |
-| 5 | **#1 — Wire `ruff check` into CI** | 5-minute change. Catches lint regressions in the arch churn that's about to start. Easy bundle: fix any pre-existing ruff findings as a precursor PR. |
-| 6 | **#2 — Run pytest against Postgres in CI** | The seed-from-import-data work in item 14 will exercise JSON / context handling that's most likely to diverge between SQLite and Postgres. This is the cheapest place to catch dialect drift before deploy. |
+| 4 | **#15 — Backfill 10C integration tests** | After the 2026-05-02 re-audit only `bulk_set_visibility` + the `instruments.bulk_visibility_when_closed` audit event remain uncovered. Three of the four originally-listed surfaces shipped tests during Segment 10D (Slice 5 covered `delete_instrument` + last-instrument 400; the persistence harness + RTD unit suite cover `add_default_response_field`). Tiny single-PR scope (~3 cases). Land before items 8 / 10 ripple through the code. |
+| 5 | **#1 — Wire `ruff check` into CI** | 5-minute change, but two-PR sequence: clean up the ~10 pre-existing ruff findings in unrelated files first (mostly unused imports + unused locals), then add a `ruff check .` step to `ci.yml`. Without this, lint never executes anywhere. Catches regressions in the arch churn that's about to start. |
+| 6 | **#19 — Roll session-status partial onto Reviewers / Reviewees / Assignments / Instruments** | Pure chrome cleanup. The shared `operator/partials/session_status_card.html` partial (#252) lives on Session detail + Email Invites; the four other session-scoped pages still hand-roll their top cards and drift in subtle ways. Land per-page (4 small PRs); Instruments is the most careful — it keeps its own status sub-rows. Settles the visual contract before Segment 11 planning. |
+| 7 | **#2 — Run pytest against Postgres in CI** | The `ci-postgres-migration` job today only round-trips Alembic; it never imports `app/` and never runs a test. SQLite-only test runs hide JSON coercion / dialect divergence until the dev-slot deploy. Higher-cost than #1 but high-value before Segment 11 introduces export. |
 
 ---
 
 ## P2 — Architectural debt before Segment 11
 
-Segment 11 (export / audit retention) will read `Assignment.context`
-and write a stable `audit_events.detail` schema, so settle the
-arch story first.
+Segment 11 (export / audit retention) will read
+`Assignment.context` and write a stable `audit_events.detail`
+schema, so settle the arch story first.
 
 | Order | Item | Why this position |
 |---|---|---|
-| 7 | **#17 — Investigate `Assignment.include` filter divergence** | Sequenced before item 4 because consolidating the helpers (item 4) requires knowing which filter is right. Trace one reviewer through both paths and pick one. |
-| 8 | **#4 — Extract a single reviewer-session-state helper** | Now safe to do — the right semantics are decided in #17. Two functions in `responses.py:435` + `monitoring.py:67` collapse to one private helper + two thin projections. |
-| 9 | **#3 — Move `_invalidate_if_validated` into the service layer** | 17 caller sites across `routes_operator.py`. Naturally bundles with **#16** (decide bulk_visibility invalidation policy) since both touch the invalidation surface. |
-| 10 | **#16 — Decide bulk_visibility_when_closed invalidation policy** | Bundle with #9. Either align with `bulk_set_accepting` or document why exempt. |
-| 11 | **#11 — Extract instruments-index template context to `views.py`** | Lands *after* P0 (#13–14) so the extracted helper builds the right shape. Update line numbers (now `routes_operator.py:956–1056`). |
-| 12 | **#8 — Fix CSV email-validation drift** | Sets up #12 (cross-table identity check) cleanly — same code path. |
-| 13 | **#12 — Reviewer/Reviewee CSV cross-table identity check** | Builds on #8's shared `_parse_email` helper. Tightens the rule that email is the unique person-identifier across reviewer + reviewee tables in the same session. |
+| 8 | **#4 — Extract a single reviewer-session-state helper** | Two functions in `responses.py:435` + `monitoring.py:67` compute overlapping projections. The previously-cited `Assignment.include` filter divergence (item #17) is **already resolved** — both paths now route through the shared `_reviewer_assignments()` filter at `responses.py:54`, so consolidation can proceed directly. |
+| 9 | **#3 — Move `_invalidate_if_validated` into the service layer** | 22 caller sites across `routes_operator.py` (re-grepped 2026-05-02; helper at `:789`). Naturally bundles with **#16** (decide bulk_visibility invalidation policy) since both touch the invalidation surface. |
+| 10 | **#16 — Decide bulk_visibility_when_closed invalidation policy** | Bundle with #9. The policy question is whether `bulk_set_visibility` should flip `validated → draft` (the previously-cited "compare to bulk_set_accepting" framing was misleading — that route requires session=ready and never sees a validated session). |
+| 11 | **#11 — Extract instruments-index template context to `views.py`** | Now safe (P0 prerequisites #13–14 shipped 2026-05-01). Re-grepped 2026-05-02: handler at `routes_operator.py:960–1100`, ~48 lines (10D shrunk from ~100). |
+| 12 | **#5 — Define audit-event `detail` schema convention** | Document in `spec/architecture.md`. Migrate emitters incrementally — one PR per emitter family. Segment 11 will export these, so the convention needs to settle first. |
+
+**#17 (filter divergence) — resolved on re-audit 2026-05-02; removed from sequence.**
 
 ---
 
-## P3 — Pre-Segment-15 + small cleanups
+## P3 — Small cleanups + pre-Segment-15
 
 Items that aren't blocking the next feature segment but should
 land before they age into harder problems.
 
 | Order | Item | Why this position |
 |---|---|---|
-| 14 | **#5 — Define audit-event `detail` schema convention** | Document in `spec/architecture.md`. Migrate emitters incrementally — one PR per emitter family. Segment 11 will export these, so the convention needs to settle first. |
-| 15 | **#6 — Decouple `invitations.py` from `Request`** | Only matters when Segment 15 (real SMTP) lands and sends from a background worker. Worth fixing now while the surface is small. |
-| 16 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
-| 17 | **#10 — Thread `correlation_id` into deadline lazy-close** | Cheap. Bundle with whichever route refactor next touches `observe_deadline`. |
-| 18 | **#9 — Refresh `get_or_create_default_instrument` docstring** | Tiny. (Pointer corrected to `app/services/assignments.py:402`.) |
-| 19 | **#19 — Roll session-status top card onto Reviewers / Reviewees / Assignments / Instruments** | Pure chrome cleanup. Partial shipped in #252 (used by Session detail + Email Invites today); the four other session-scoped pages still hand-roll their top cards. Land per-page so each PR stays small. |
+| 13 | **#8 — Fix CSV email-validation drift** | Sets up #14 (cross-table identity check) cleanly — same code path. |
+| 14 | **#12 — Reviewer/Reviewee CSV cross-table identity check** | Builds on #8's shared `_parse_email` helper. Tightens the rule that email is the unique person-identifier across reviewer + reviewee tables in the same session. |
+| 15 | **#10 — Thread `correlation_id` into deadline lazy-close** | Cheap. Bundle with whichever route refactor next touches `observe_deadline`. |
+| 16 | **#9 — Refresh `get_or_create_default_instrument` docstring** | Tiny. (Pointer corrected to `app/services/assignments.py:402`.) |
+| 17 | **#6 — Decouple `invitations.py` from `Request`** | Only matters when Segment 15 (real SMTP) lands and sends from a background worker. Worth fixing now while the surface is small. |
+| 18 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
 
 ---
 
 ## Notes on the order
 
-- **Why P0 jumps the CI items.** Item 1 (ruff in CI) and item 2
-  (Postgres pytest) are normally first by priority, but the
-  Instruments mess is actively misleading users *today* — every
-  day that ships is a day of operators thinking they configured
-  display fields they didn't. CI gaps don't have that
-  active-cost-per-day shape.
-- **Why item 17 jumps item 4.** Item 4 wants to consolidate
+- **Why #15 (test backfill) is the next concrete PR.** The
+  Slice-5 PR (#265) just established a fresh test pattern for
+  the Instruments routes; #15 is a direct continuation of that
+  momentum, no design decisions, and defends against #3 / #11
+  rippling through the same code.
+- **Why CI items (#1, #2) precede arch items.** Without lint and
+  Postgres-flavoured pytest, the arch refactors below ship
+  silently-broken code on every PR until the dev-slot deploy.
+  Land the safety net before the churn.
+- **Why item #19 (chrome) sits inside P1.** It's pure chrome but
+  it touches every session-scoped operator page, so it
+  competes for the same review attention as the arch items
+  below. Better to land it as a bounded follow-up to Segment
+  10D's chrome work than to delay until after the P2 arch
+  surgery.
+- **Why item 17 dropped out.** Re-audit 2026-05-02: the cited
+  `Assignment.include` filter divergence between
   `responses.session_pill_for_reviewer` and
-  `monitoring._reviewer_completion` into one helper. They use
-  different `Assignment.include` filters today; if you
-  consolidate without first deciding which filter is right, you
-  ship the wrong unified rule.
+  `monitoring._reviewer_completion` is gone. Both now route
+  through the shared `_reviewer_assignments()` filter at
+  `responses.py:54`. Item #4 (consolidation) can proceed without
+  the prerequisite investigation.
 - **Why item 11 waits for P0.** The instruments-index handler
-  builds context (`merged_rows_by_instrument`,
-  `available_sources_by_instrument`) that the new template
-  doesn't currently consume, and items 13–14 will reshape both.
-  Extracting the helper before that change is throwaway work.
-- **Why item 18 sits inside P0 instead of P3.** It's a tiny
-  decision but it directly gates item 11's scope. Rolling it
-  forward would mean re-doing item 11.
+  builds context that items 13–14 reshaped substantially.
+  Extracting the helper any earlier was throwaway work; now it's
+  the right time. (Re-audit 2026-05-02: handler is now at
+  `routes_operator.py:960–1100`, ~48 lines — Segment 10D shrank
+  it from ~100.)
 
 ---
 
@@ -126,6 +136,5 @@ Anything in `docs/status.md` "What's deliberately not yet there"
 — those are owned by their assigned future segments. The
 "Display Fields persistence" entry there *was* one of those
 deferred items, but the round-3 audit promoted the user-facing
-correctness slice to item 13 because the placeholder is
-silently destructive. Persistence proper still lives in a future
-slice (Segment 11 or a 10x patch).
+correctness slice to item 13. Persistence proper is now part of
+the shipped Segment 10D surface.

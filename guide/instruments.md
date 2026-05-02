@@ -234,15 +234,16 @@ two half-width cards:
 
 - **Left card — invisible** (`border: none; background: transparent;
   padding: 0`). Hosts the per-instrument state-machine buttons
-  (`Save` / `Cancel` / `Edit`) flushed left and the
-  `Add new instrument` button flushed right.
+  (`Save` / `Cancel` / `Edit`) and the `Add new instrument` button
+  on a single right-flushed row, with the state-machine pair
+  immediately to the left of `Add new instrument`.
 - **Right card — Danger Zone**. Standard danger-zone styling: red
   border (`#b91c1c`), white inner background (`#fff`, matching the
   *This Instrument's Status* card), red `Danger Zone` heading, muted
   cascade warning copy: *"Deleting this instrument cascades to its
   display and response fields, assignments referencing it, and any
   submitted reviewer responses. This cannot be undone."* Hosts the
-  `Delete this instrument` button.
+  `Delete this instrument` button, flushed right.
 
 Five buttons across the row, using the canonical `.btn` modifier
 classes from `spec/assumptions.md`:
@@ -481,12 +482,19 @@ The card has two states:
   also disables.
 
 A new operator-defined row enters via a separate
-`Add a Response Type` block (right-aligned, below the table).
-The block takes only the **Name** and **Data Type**. Clicking
-**Add** clones a draft row into the main table — applicable
-parameter cells become text inputs, with `Save` and `Cancel`
-inline. The draft row is **not persisted** until Save commits
-it; Cancel removes it from the DOM with no DB write.
+`Add a Response Type` card (half-width `.card .card-half`,
+flushed right inside the Response Type Definitions card; same
+rounded-corners + border styling as other operator cards).
+The card has a `<h2>` title, a muted helper paragraph (*"Click
+Add to start a new row in the table above after choosing a name
+and selecting the data type. Note that the data type of an
+added row cannot be changed, though the row can be deleted."*),
+and a single right-flushed inline row carrying the **Name**
+input, the **Data Type** dropdown, and the **Add** button.
+Clicking **Add** clones a draft row into the main table —
+applicable parameter cells become text inputs, with `Save` and
+`Cancel` inline. The draft row is **not persisted** until Save
+commits it; Cancel removes it from the DOM with no DB write.
 
 Per Data Type, the applicable parameter cells (those that
 become text inputs in the draft / edit row) are:

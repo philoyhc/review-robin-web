@@ -82,20 +82,22 @@ config that's already there.
 ### 3. Move `_invalidate_if_validated` policy out of routes · [arch] · medium
 
 **Why now.** The `validated → draft` invariant is enforced by a
-helper defined in `app/web/routes_operator.py:785` and called from
-~16 sites in the same file (193, 310, 416, 498, 616, 694, 724, 754,
-1140, 1188, 1252, 1291, 1329, 1360, 1400, 1427, 1478). The
-corresponding service functions in `app/services/instruments.py` and
-`app/services/csv_imports.py` know nothing about the rule. With no
-local dev loop and a thin pytest gate, a new route that forgets the
-wrapper silently breaks the invariant and ships. Segment 11 will add
-more setup-mutation surfaces (export config, retention rules); the
-fragility compounds.
+helper defined in `app/web/routes_operator.py:789` and called from
+22 sites in the same file (314, 433, 494, 620, 698, 728, 758,
+1209, 1247, 1285, 1328, 1367, 1414, 1453, 1493, 1526, 1556, 1677,
+1833, 1908, 1979, 2026, 2099 — re-grepped 2026-05-02 after
+Segment 10D drift). The corresponding service functions in
+`app/services/instruments.py` and `app/services/csv_imports.py`
+know nothing about the rule. With no local dev loop and a thin
+pytest gate, a new route that forgets the wrapper silently breaks
+the invariant and ships. Segment 11 will add more setup-mutation
+surfaces (export config, retention rules); the fragility
+compounds.
 
 **Where.**
 - Caller list: `grep -n _invalidate_if_validated
   app/web/routes_operator.py`.
-- Helper definition: `app/web/routes_operator.py:785`.
+- Helper definition: `app/web/routes_operator.py:789`.
 - Lifecycle service: `app/services/session_lifecycle.py` (the
   `invalidate_session(...)` it ultimately calls).
 
@@ -118,7 +120,7 @@ fragility compounds.
 ### 4. Extract a single reviewer-session-state helper · [arch] · small
 
 **Why now.** Two functions independently walk `assignments → fields
-→ responses` to compute the same state with subtly different rules:
+→ responses` to compute related state:
 - `app/services/responses.py:435` — `session_pill_for_reviewer`
   (returns `not started` / `in progress` / `submitted`; checks
   `Response.submitted_at` on required fields at line 474).
@@ -126,8 +128,14 @@ fragility compounds.
   (returns `(assignment_count, completed_count,
   missing_required_count)`).
 
-They will drift. Segment 11 export will want a third copy for
-"incomplete at deadline" cohorts. Consolidate before that lands.
+The previously-cited `Assignment.include` filter divergence
+(item #17) is **already resolved** — both functions now route
+through the same `_reviewer_assignments()` filter at
+`app/services/responses.py:54` (verified 2026-05-02). What
+remains is duplication: two separate iteration loops computing
+overlapping projections of the same per-reviewer state. Segment
+11 export will want a third copy for "incomplete at deadline"
+cohorts. Consolidate before that lands.
 
 **Where.** `app/services/responses.py:435–495` and
 `app/services/monitoring.py:67–115`.
@@ -286,21 +294,20 @@ audit row to carry the request's correlation id. Cheap to add now.
 ### 11. Extract instruments-index template context to `views.py`
 · [refactor] · small
 
-**Why now.** `app/web/routes_operator.py:956–1056` (~100 lines)
+**Why now.** `app/web/routes_operator.py:960–1100` (~48 lines —
+re-grepped 2026-05-02; Segment 10D shrunk this from ~100 lines)
 builds display-field + response-field row context for the
 instruments index inline. It's the only operator handler that does
 meaningful template-context shaping in the route. The same shaping
 will be reused by the preview route; pulling it into `views.py`
 sets up the reuse.
 
-**Order dependency:** land **after** items 13 and 14 (Display
-Fields placeholder fix + default-seed rework) — those will reshape
-exactly the context this handler builds today (the new
-`merged_rows_by_instrument` and `available_sources_by_instrument`
-keys may go away or change shape). Doing 11 first means the
-extracted helper gets ripped up.
+**Order dependency** (now resolved): items 13–14 (Display Fields
+placeholder fix + default-seed rework) shipped 2026-05-01, and
+the Slice 4 ladder of Segment 10D (#220 → #259) reshaped exactly
+the context this handler builds. The extract is now safe to land.
 
-**Where.** `app/web/routes_operator.py:956–1056`. Move into
+**Where.** `app/web/routes_operator.py:960–1100`. Move into
 `app/web/views.py` next to the existing `build_setup_rows` helper.
 
 **Plan.**
@@ -492,46 +499,91 @@ underneath it).
 
 ## P0/P1 — Other findings from the round-3 audit
 
-### 15. Backfill integration tests for shipped 10C functionality · [test] · small
+### 15. Backfill integration tests for shipped 10C functionality · [test] · tiny
 
-**Why now.** Four 10C-shipped surfaces have no integration test
-coverage:
-- `delete_instrument` (route + service + cascade).
-- `bulk_set_visibility` (`/instruments/visibility/all-on` and
-  `/all-off`) and the `instruments.bulk_visibility_when_closed`
-  audit event.
-- `add_default_response_field` (`/fields/add-row`).
-- "Cannot delete the last instrument" 400 guard.
+**Why now.** Of four 10C-shipped surfaces originally listed as
+having no integration test coverage, three are now covered by
+work that landed during Segment 10D (re-audited 2026-05-02):
 
-The upcoming arch refactors (items 3, 11) will touch this code;
-without tests, regressions ship silently.
+- ✅ `delete_instrument` (route + service + cascade) — covered by
+  Slice 5 in `tests/integration/test_segment_10d_slice_5.py` (5
+  cases: cascade + repack, last-instrument 400, validated→draft
+  invalidation, cross-session 404, ready-state 409).
+- ❌ **`bulk_set_visibility`** (`/instruments/visibility/all-on`
+  and `/all-off`) and the `instruments.bulk_visibility_when_closed`
+  audit event — **still uncovered**.
+- ✅ `add_default_response_field` (`/fields/add-row`) — covered
+  by `tests/integration/test_route_persistence.py:272`
+  (route persistence) plus 5 unit tests in
+  `tests/unit/test_response_type_definitions.py:584-686` (Slice
+  4c coverage: default args, `rtd_id` wiring, default-RTD
+  fallback, blank-label auto-rating key, field_key collision
+  handling).
+- ✅ "Cannot delete the last instrument" 400 guard — covered by
+  Slice 5 (`test_delete_instrument_refuses_last_instrument`).
 
-**Plan.** One PR per surface, mirroring existing
-`tests/integration/test_*` patterns. Cap each test at the
-happy path + one boundary (e.g. for delete: "delete the last
-instrument 400s"; for bulk: "no-op when already at target").
+The upcoming arch refactors (items 3, 11) will touch the
+remaining `bulk_set_visibility` route; without tests, regressions
+ship silently.
+
+**Plan.** Single small PR adding 3-4 cases for `bulk_set_visibility`:
+
+- Happy path — mixed initial state → `POST /visibility/all-on`
+  flips both instruments' `responses_visible_when_closed` to
+  True; `instruments.bulk_visibility_when_closed` audit event
+  fires with `target=True` and the right `changed_instrument_ids`.
+- Symmetric all-off — start all-on → `/all-off` flips back; audit
+  event with `target=False`.
+- Idempotency — start already-on → `/all-on` writes no audit row
+  (the service only emits when `changed` is non-empty).
+- (Optional) lock in current "deliberately doesn't invalidate
+  `validated → draft`" behaviour as a coupled assertion. When
+  item #16 ships and changes the policy, the test fails loudly,
+  forcing an explicit decision rather than silent change.
 
 ---
 
 ### 16. Decide bulk_visibility_when_closed invalidation policy · [arch] · tiny
 
 **Why now.** `instruments_bulk_visibility_on/off`
-(`routes_operator.py:1621–1642`) is the only bulk instrument
-mutation that does **not** call `_invalidate_if_validated`
-— compare to `bulk_set_accepting`. Visibility-when-closed isn't
-structural so this may be intentional, but it's inconsistent and
+(`routes_operator.py:2143–2163` — re-grepped 2026-05-02) does
+not call `_invalidate_if_validated`. Visibility-when-closed
+isn't structural, so this may be intentional, but the choice is
 undocumented. Naturally bundles with item 3 (move
 `_invalidate_if_validated` to the service layer).
 
-**Plan.** Either add the invalidation call (matching
-`bulk_set_accepting`) or add a one-line comment + status.md note
-explaining why it's deliberately exempt. Decide and document.
+(Note: the previously-cited "compare to `bulk_set_accepting`"
+framing was misleading. `bulk_set_accepting` requires the session
+to already be `ready` — `routes_operator.py:2114, 2131` raise 409
+otherwise — so it never sees a `validated` session in the first
+place. The real question for #16 is just whether
+`bulk_set_visibility` should flip `validated → draft` when the
+operator toggles visibility-when-closed on a `validated` session.)
+
+**Plan.** Either add the invalidation call or add a one-line
+comment + status.md note explaining why it's deliberately
+exempt. Decide and document.
 
 ---
 
-### 17. Investigate `Assignment.include` filter divergence · [arch] · small
+### 17. ~~Investigate `Assignment.include` filter divergence~~ — ✅ resolved on re-audit 2026-05-02 · [arch] · small
 
-**Why now.** `monitoring._reviewer_completion`
+**Resolution (2026-05-02 re-audit).** The cited divergence is
+gone. `monitoring._reviewer_completion`
+(`app/services/monitoring.py:76`) filters
+`Assignment.include.is_(True)`; `responses.session_pill_for_reviewer`
+calls `_reviewer_assignments()` at `app/services/responses.py:439`,
+which **also** filters `Assignment.include.is_(True)` (same
+helper, line 54). Both paths now apply the same inclusion rule.
+
+This unblocks item #4 — consolidating the two functions into a
+single helper no longer requires an investigation step first.
+
+(The original concern below remains preserved for archaeology;
+historical context for why item #4 was previously sequenced
+behind this one.)
+
+**Original framing.** `monitoring._reviewer_completion`
 (`app/services/monitoring.py:76`) filters assignments with
 `Assignment.include.is_(True)`. `responses.session_pill_for_reviewer`
 (`app/services/responses.py:439`) does **not** filter on `include`.
@@ -539,10 +591,6 @@ This is the exact drift item 4 (extract a single
 reviewer-session-state helper) is meant to catch — but verify
 which filter is correct *before* consolidating, or item 4 will
 ship the wrong unified rule.
-
-**Plan.** Trace one reviewer through both paths in a test session
-with `include=False` rows; document the intended semantics; pick
-one and align both. Then proceed with item 4.
 
 ---
 
