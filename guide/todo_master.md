@@ -90,12 +90,13 @@ land before they age into harder problems.
 
 | Order | Item | Why this position |
 |---|---|---|
-| 16 | **#8 — Fix CSV email-validation drift** | Sets up #17 (cross-table identity check) cleanly — same code path. |
-| 17 | **#12 — Reviewer/Reviewee CSV cross-table identity check** | Builds on #8's shared `_parse_email` helper. Tightens the rule that email is the unique person-identifier across reviewer + reviewee tables in the same session. |
-| 18 | **#10 — Thread `correlation_id` into deadline lazy-close** | Cheap. Bundle with whichever route refactor next touches `observe_deadline`. |
-| 19 | **#9 — Refresh `get_or_create_default_instrument` docstring** | Tiny. (Pointer corrected to `app/services/assignments.py:402`.) |
-| 20 | **#6 — Decouple `invitations.py` from `Request`** | Only matters when Segment 15 (real SMTP) lands and sends from a background worker. Worth fixing now while the surface is small. |
-| 21 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
+| 16 | **#23 — Sessions-list Delete button doesn't actually delete** | UX bug: the per-row `Delete` button on `/operator/sessions` is a navigation link to the session's Home `#danger-zone`, not a real one-click delete. Operators click it, see nothing happen, conclude the wiring is broken. Fix: convert to a real POST form with `onsubmit` confirm, mirroring the per-instrument Delete pattern. Small surface, high visibility. |
+| 17 | **#8 — Fix CSV email-validation drift** | Sets up #18 (cross-table identity check) cleanly — same code path. |
+| 18 | **#12 — Reviewer/Reviewee CSV cross-table identity check** | Builds on #8's shared `_parse_email` helper. Tightens the rule that email is the unique person-identifier across reviewer + reviewee tables in the same session. |
+| 19 | **#10 — Thread `correlation_id` into deadline lazy-close** | Cheap. Bundle with whichever route refactor next touches `observe_deadline`. |
+| 20 | **#9 — Refresh `get_or_create_default_instrument` docstring** | Tiny. (Pointer corrected to `app/services/assignments.py:402`.) |
+| 21 | **#6 — Decouple `invitations.py` from `Request`** | Only matters when Segment 15 (real SMTP) lands and sends from a background worker. Worth fixing now while the surface is small. |
+| 22 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
 
 ---
 

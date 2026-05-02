@@ -861,6 +861,57 @@ settled.
 
 ---
 
+### 23. Sessions-list Delete button doesn't actually delete · [bug/UX] · small
+
+**Why now.** The Delete button on every row of
+`/operator/sessions` reads as a one-click delete affordance
+(red `danger-solid` button labeled "Delete") but is actually
+just an anchor to `/operator/sessions/{id}#danger-zone`. The
+operator clicks it, lands on the session's Home page with the
+fragment scroll, then has to find and tick a confirm checkbox
++ click another "Delete session" button to actually delete.
+
+From a user's perspective, the first click *looks* like it
+did nothing — the session is still in their sessions list
+when they navigate back. Reads as broken wiring.
+
+**Where.**
+
+- Template: `app/web/templates/operator/sessions_list.html:29` —
+  the `<a class="btn danger-solid" href=".../#danger-zone">Delete</a>`.
+- Route: `app/web/routes_operator.py:662` — the existing
+  `POST /operator/sessions/{session_id}/delete` handler is
+  fine; just call it directly.
+- Reference pattern: per-instrument Delete on the Instruments
+  page (PR #265) — `<form method="post" action=".../delete"
+  onsubmit="return confirm(...)">` with a `confirm=true`
+  hidden input.
+
+**Plan.**
+
+- Convert each row's Delete `<a>` to a `<form>` posting to
+  `/operator/sessions/{id}/delete` with `confirm=true` hidden
+  input + native `onsubmit="return confirm(...)"`.
+- Confirm copy includes the session name + code so the
+  operator knows what they're deleting.
+- For sessions in `ready` state (where the route 409s via
+  `_require_editable`), render the Delete button disabled
+  with a tooltip pointing at "Revert to draft first" —
+  mirrors the per-instrument-Delete `is_ready` lock pattern.
+- Drop the `#danger-zone` fragment from the URL since it's
+  no longer needed.
+- Tests: integration test that POSTing the row's Delete form
+  (with confirm checked) deletes the session and 303s back to
+  `/operator/sessions`; render test that confirms the button
+  renders disabled on `ready` sessions.
+
+The Home page's own "Delete session" form (inside the Danger
+Zone card on `session_detail.html`) stays — operators on Home
+who want to delete can still do it there. This item only
+fixes the sessions-list-button surprise.
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
