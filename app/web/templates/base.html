@@ -267,9 +267,11 @@
         display: flex;
         align-items: stretch;
         border-bottom: 1px solid #d1d5db;
+        background: transparent;
       }
-      .tab-strip.setup-tint { background: #eff6ff; }
-      .tab-strip.ops-tint   { background: #f0fdf4; }
+      /* Equal-width slot variant: 7 equal slots — Home, gap, 5 setup
+         pages — used by the title-below-nav layout iteration. */
+      .tab-strip.equal-slots .nav-tab.home { flex: 1 1 0; margin-right: 0; }
       .nav-tab {
         flex: 1 1 0;
         padding: 12px 14px;
@@ -278,9 +280,11 @@
         text-decoration: none;
         font-size: 0.92rem;
         background: transparent;
-        border-bottom: 3px solid transparent;
         margin-bottom: -1px;
+        position: relative;
       }
+      .nav-tab.tint-blue { background: #eff6ff; }
+      .nav-tab.tint-grey { background: #f3f4f6; }
       .nav-tab:hover {
         background: rgba(255, 255, 255, 0.6);
         color: #1f2937;
@@ -292,19 +296,34 @@
         font-size: 1rem;
         font-weight: 500;
       }
-      .tab-strip.setup-tint .nav-tab.active {
+      /* Untinted gap slot used in the equal-slots variant. Behaves
+         visually like a placeholder, not a tab — no hover, no
+         pointer events. */
+      .nav-tab.nav-gap {
+        flex: 1 1 0;
+        background: transparent;
+        pointer-events: none;
+      }
+      .nav-tab.nav-gap:hover { background: transparent; }
+      .nav-tab.active {
         background: #fff;
-        color: #1e40af;
         font-weight: 500;
       }
-      .tab-strip.ops-tint .nav-tab.active {
-        background: #fff;
-        color: #166534;
-        font-weight: 500;
-      }
-      .nav-tab.home.active {
-        background: #fff;
-        color: #111827;
+      .nav-tab.tint-blue.active { color: #1e40af; }
+      .nav-tab.tint-grey.active { color: #374151; }
+      .nav-tab.home.active { color: #111827; }
+      /* Optional understated underline marker for active tab — opt
+         in via `.tab-strip.with-underline`. Inset from the tab's
+         left/right edges so the line doesn't span the full width. */
+      .tab-strip.with-underline .nav-tab.active::after {
+        content: "";
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        bottom: 0;
+        height: 4px;
+        background: #93c5fd;
+        border-radius: 2px;
       }
       .status-row {
         padding: 12px 16px;
