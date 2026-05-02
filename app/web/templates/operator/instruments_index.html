@@ -7,7 +7,7 @@
 
   {# Header card: instrument-specific status rows on the left, nav
      right-aligned. The bulk-visibility + Preview buttons used to
-     live here too — they moved to the ``Instrument Actions`` card
+     live here too — they moved to the ``Actions for All Instruments`` card
      below. #}
   <div class="card">
     {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
@@ -45,11 +45,11 @@
     </div>
   </div>
 
-  {# Instrument Actions card: bulk-visibility toggle + Preview
+  {# Actions for All Instruments: bulk-visibility toggle + Preview
      reviewer surface link, left-aligned. Operates on the entire
      session's instrument set, not on any single one. #}
   <div class="card">
-    <h2 style="margin-top: 0;">Instrument Actions</h2>
+    <h2 style="margin-top: 0;">Actions for All Instruments</h2>
     <div style="display: flex; justify-content: flex-start; gap: 8px; align-items: center; flex-wrap: wrap;">
       {% if bulk_visibility_state != "all-on" %}
         <form method="post"

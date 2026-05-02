@@ -17,15 +17,18 @@ also wires the route + service + persistence.
 Top to bottom:
 
 1. **Page title** (H1) — `Instruments`.
-2. **Full-width header card** combining session-wide status, the
-   6-button setup nav, and bulk visibility / preview actions.
-   Layout in "Header card" below.
-3. **Full-width yellow "session ongoing" lock card**, only when
+2. **Full-width header card** combining session-wide instrument
+   status with the 6-button setup nav. Layout in "Header card"
+   below.
+3. **Full-width "Actions for All Instruments" card**. Bulk
+   visibility toggle + Preview reviewer surface action,
+   left-aligned. See "Actions for All Instruments" below.
+4. **Full-width yellow "session ongoing" lock card**, only when
    the session status is `ready`. See `spec/operator_map.md`
    "Session ongoing yellow lock card".
-4. **One full-width per-instrument card per instrument**, in
+5. **One full-width per-instrument card per instrument**, in
    `Instrument.order`. Card layout in "Per-instrument card" below.
-5. **Full-width "Response Type Definitions" card**. Catalog of
+6. **Full-width "Response Type Definitions" card**. Catalog of
    response types (with validation rules) referenced by every
    instrument's Response Fields table. Layout in
    "Response Type Definitions card" below.
@@ -34,8 +37,8 @@ Top to bottom:
 
 A single full-width card. Same shape pattern as the other
 session-scoped operator pages (e.g. `session_assignments.html`):
-status text rows on the left, action row right-aligned. Three
-rows, top to bottom:
+status text rows on the left, nav row right-aligned. Three rows,
+top to bottom:
 
 1. **Session deadline + instrument-count summary** (left-aligned).
    Format: `Session deadline (auto-close): {deadline pill} ·
@@ -45,32 +48,42 @@ rows, top to bottom:
 2. **Visibility-when-closed summary** (left-aligned). Format:
    `Visibility when closed: {N instrument(s) showing} · {N
    instrument(s) not showing}`. Pluralisation follows count.
-3. **Action row** (right-aligned). One flex row containing, in
-   left-to-right order:
-   - `Show all when closed` / `Don't show any when closed` —
-     Alert. Toggles the bulk visibility-when-closed flag across
-     every instrument. Which of the two is shown follows the
-     current state: when at least one instrument is hidden, show
-     `Show all when closed`; when every instrument is showing,
-     show `Don't show any when closed`.
-   - `Preview reviewer surface` — Alert. Opens the operator's
-     preview of the reviewer surface for this session.
-   - The 6 setup-nav buttons (`Session`, `Reviewers`, `Reviewees`,
-     `Assignments`, `Instruments`, `Email Invites`) inside
-     `.setup-nav`, with a small extra left margin so the bulk
-     action group reads as visually separate from the nav. The
-     `Instruments` button is rendered as Primary Outline; the
-     rest are Primary. See `spec/operator_map.md` "Setup nav"
-     for the canonical contract.
+3. **Setup nav** (right-aligned). The 6 setup-nav buttons
+   (`Session`, `Reviewers`, `Reviewees`, `Assignments`,
+   `Instruments`, `Email Invites`) inside `.setup-nav`. The
+   `Instruments` button is rendered as Primary Outline; the
+   rest are Primary. See `spec/operator_map.md` "Setup nav"
+   for the canonical contract.
 
 The standalone "All Instrument Status" card from earlier drafts
 of the spec is **gone** — its status reporting moves into rows 1
-and 2 of this header card, and its bulk visibility / preview
-buttons sit on the left of the action row. The bulk
-`Open all instruments` / `Close all instruments` buttons are
-**dropped** in this revision; operators open and close
-instruments individually via the per-instrument card's status
-sub-card.
+and 2 of this header card. The bulk visibility / preview
+buttons no longer sit on the header card either; they live in
+the dedicated `Actions for All Instruments` card below (see
+next section). The bulk `Open all instruments` / `Close all
+instruments` buttons are **dropped** in this revision; operators
+open and close instruments individually via the per-instrument
+card's status sub-card.
+
+## Actions for All Instruments
+
+A full-width card immediately below the header. Title:
+`Actions for All Instruments`. Buttons sit left-aligned, in this
+order:
+
+- `Show all when closed` / `Don't show any when closed` —
+  Alert. Toggles the bulk visibility-when-closed flag across
+  every instrument. Which of the two is shown follows the
+  current state: when at least one instrument is hidden, show
+  `Show all when closed`; when every instrument is showing,
+  show `Don't show any when closed`.
+- `Preview reviewer surface` — Alert. Opens the operator's
+  preview of the reviewer surface for this session.
+
+The card isolates session-wide bulk actions from the per-card
+details so the header card can focus on at-a-glance instrument
+status, and the per-instrument cards can focus on the
+field-builder + RTD work.
 
 ## Per-instrument card
 
