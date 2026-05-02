@@ -293,7 +293,7 @@ Columns:
 | **Max** | Applies when Data Type is `Decimal`, `Integer`, or `String`. For `Decimal` / `Integer`: maximum value. For `String`: maximum number of characters. Rendered as `NA` and read-only when not applicable. |
 | **Step** | Applies when Data Type is `Decimal` or `Integer`. The allowed increment between Min and Max. Rendered as `NA` and read-only when not applicable. |
 | **List** | Applies when Data Type is `List`. Comma-separated list of allowed items. Rendered as `NA` and read-only when not applicable. |
-| **Action** | A delete cross icon (✗) and an add-row plus icon (➕). The add inserts a new row immediately below; ➕ fires immediately and the new row is incomplete (gated editing flow below) until all applicable cells are filled. The delete is **suppressed for seeded rows** (operator can't remove a seeded type), and **gated by a confirmation dialog for operator-added rows in use by any Response Fields row** — see "Cascade-on-delete" below. Operator-added rows that are not in use can be deleted without confirmation. |
+| **Action** | Inline buttons depending on row state. Seeded rows render an empty cell (no buttons). Saved operator-defined rows render an `Edit` button (Alert). Clicking `Edit` flips that row into the unlocked state — its Action cell swaps to `Save` (Primary), `Cancel` (Alert outline), and `Delete` (Danger). While one row is unlocked, every other operator-defined row's `Edit` greys out. Delete on an in-use row routes through the cascade-confirm flow ("Cascade-on-delete" below); delete on a not-in-use row is gated by a JS `confirm()` warning before the immediate drop. Adding a new operator-defined row goes through the separate `Add a Response Type` block below the table. |
 
 #### Locked vs. operator-added rows
 
@@ -398,39 +398,53 @@ card render numerically by Data Type:
 - `Decimal` — exactly one decimal place. E.g. `1-to-5half` →
   `Min=1.0`, `Max=5.0`, `Step=0.5`.
 
-### Editing flow (gated, left-to-right)
+### Editing flow
 
-Cells must be filled in column order. A cell is locked (not
-editable) until the cell(s) to its left are filled validly:
+The card has two states:
 
-1. **`Response Type`** — free text. Must be non-empty before
-   `Data Type` unlocks.
-2. **`Data Type`** — picker (`String` / `Decimal` / `Integer` /
-   `List`). Picking a Data Type immediately determines which of
-   the trailing columns become editable; the others render as
-   `NA` and are read-only:
+- **Locked (default).** Each operator-defined row's Action
+  column carries an `Edit` button (Alert style). Seeded rows
+  have an empty Action cell — they are read-only catalog
+  entries.
+- **Unlocked.** Clicking `Edit` on an operator-defined row
+  opens that row for editing: Min / Max / Step / List become
+  text inputs; the Action column shows `Save` (Primary),
+  `Cancel` (Alert outline), and `Delete` (Danger) inline.
+  While one row is unlocked, **every other operator-defined
+  row's `Edit` button greys out** — the operator must
+  Save / Cancel / Delete the unlocked row before unlocking
+  another. The `Add a Response Type` form below the table
+  also disables.
 
-   | Data Type | Editable trailing columns (in order) | NA / read-only |
-   |---|---|---|
-   | `Integer` | `Min` → `Max` → `Step` | `List` |
-   | `Decimal` | `Min` → `Max` → `Step` | `List` |
-   | `String` | `Min` → `Max` | `Step`, `List` |
-   | `List` | `List` | `Min`, `Max`, `Step` |
+A new operator-defined row enters via a separate
+`Add a Response Type` block (right-aligned, below the table).
+The block takes only the **Name** and **Data Type**. Clicking
+**Add** clones a draft row into the main table — applicable
+parameter cells become text inputs, with `Save` and `Cancel`
+inline. The draft row is **not persisted** until Save commits
+it; Cancel removes it from the DOM with no DB write.
 
-3. Within the editable trailing columns, each cell is locked
-   until the previous one in that order is filled validly.
+Per Data Type, the applicable parameter cells (those that
+become text inputs in the draft / edit row) are:
 
-A row is **incomplete** until all applicable cells are filled. An
-incomplete row is not committed to the underlying database; the
-operator either completes the row or removes it via the Action
-column ✗.
+| Data Type | Applicable cells | NA / read-only |
+|---|---|---|
+| `Integer` | `Min`, `Max`, `Step` | `List` |
+| `Decimal` | `Min`, `Max`, `Step` | `List` |
+| `String` | `Min`, `Max` | `Step`, `List` |
+| `List` | `List` | `Min`, `Max`, `Step` |
 
-A previously-saved operator-added row's Data Type **cannot be
-changed** (the picker renders as a read-only `<select>` showing
-the original value). The same applies to the Response Type name
-itself. Min / Max / Step / List remain editable — and edits
-propagate to every Response Fields row that references this
-Response Type on the next bulk-save round-trip.
+Once a row is saved, the **Response Type name** and
+**Data Type** are locked — both render as plain text. Min /
+Max / Step / List remain editable on subsequent unlocks, and
+edits propagate to every Response Fields row that references
+this Response Type by re-deriving the validation block on save.
+
+**Server-side enforcement is the source of truth.** Save
+rejects an incomplete or invalid payload (per "Save-time
+validation rules" above) and the page redirects back with an
+inline error banner; the operator's typed values stay in the
+inputs to be fixed.
 
 ## Open / deferred
 

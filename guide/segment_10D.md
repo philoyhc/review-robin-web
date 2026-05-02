@@ -65,13 +65,13 @@ Out (deferred to later segments / follow-ups):
              │
              ▼
         ┌──────────┐
-        │ Slice 4a │  RTD schema + 8 seeds + FK migration
+        │ Slice 4a │  RTD schema + 10 seeds + FK migration ✅
         └────┬─────┘    (RF Type renders as RTD dropdown, read-only)
              │
              ▼
         ┌──────────┐
-        │ Slice 4b │  RTD operator-add / -edit / -delete
-        └────┬─────┘    (gated editing + cascade-on-delete UX)
+        │ Slice 4b │  RTD operator-add / -edit / -delete ✅
+        └────┬─────┘    (cascade-on-delete UX)
              │
              ▼
         ┌──────────┐
@@ -313,6 +313,23 @@ each PR can be reviewed against a smaller surface area.
 
 ### Slice 4a — Schema, seed, FK migration, read-only render
 
+**Status:** ✅ shipped in
+[PR #242](https://github.com/philoyhc/review-robin-web/pull/242).
+The migration backfilled the **ten** seeded rows on every existing
+session and rewrote `instrument_response_fields.response_type`
+(text) into `response_type_id` (FK with `ON DELETE CASCADE`).
+``passive_deletes=True`` on the RTD → RF relationship lets the
+database FK cascade fire instead of having SQLAlchemy NULL the
+column first; ``app/db/session.py`` flips on
+``PRAGMA foreign_keys = ON`` for SQLite engines so dev + test
+behave like the Postgres production setup.
+
+A precision-rules polish PR landed on top:
+[PR #243](https://github.com/philoyhc/review-robin-web/pull/243)
+formats Min / Max / Step display by Data Type (Integer + String →
+plain int; Decimal → exactly one decimal place) and ships an
+``assert_rtd_precision`` helper Slice 4b's editor wires in.
+
 **Estimated effort:** ~3-4 hrs.
 
 In: New table + seed + FK migration of existing
@@ -422,43 +439,83 @@ confirmation UX.
 
 ### Slice 4b — RTD editing + cascade-on-delete UX
 
-**Estimated effort:** ~2-3 hrs.
+**Status:** ✅ shipped in
+[PR #244](https://github.com/philoyhc/review-robin-web/pull/244).
+Operator-add / -edit / -delete on the Response Type Definitions
+card landed alongside the cascade-confirm UX. Six iterative UX
+polish PRs followed on top:
 
-- Operator-add (➕) on RTD rows lands a fresh empty row that
-  enters the gated left-to-right editing flow per
-  [`guide/instruments.md`](./instruments.md) "Editing flow".
+- [#245](https://github.com/philoyhc/review-robin-web/pull/245) —
+  Three-state per-row UX (saved / editing / drafting). The
+  ``Add a Response Type`` footer is now Name + Data Type only;
+  the actual draft row gets cloned client-side from a hidden
+  ``<template>`` so an incomplete row never persists.
+- [#246](https://github.com/philoyhc/review-robin-web/pull/246) —
+  Fix draft-row Cancel button (the ``__DRAFT_ID__`` placeholder
+  was substituted unquoted, treating ``d1`` as a JS identifier);
+  lock the Add button + inputs while any row is unsaved.
+- [#247](https://github.com/philoyhc/review-robin-web/pull/247) —
+  One operator-defined row unlocked at a time. Locked state
+  shows only ``Edit`` (Alert); unlocked state shows
+  ``Save`` + ``Cancel`` (Alert outline) + ``Delete`` (Danger).
+  Other rows' ``Edit`` greys out while one is unlocked. ``Delete``
+  goes through a JS ``confirm`` warning before posting; in-use
+  rows still surface the cascade banner. Seeded rows render an
+  empty Action cell (no buttons).
+- [#248](https://github.com/philoyhc/review-robin-web/pull/248)
+  / [#249](https://github.com/philoyhc/review-robin-web/pull/249)
+  / [#250](https://github.com/philoyhc/review-robin-web/pull/250)
+  — Inline button width tightened to ``6em`` and applied uniformly
+  (incl. ``Add``); Add card pushed right-aligned and stacked into
+  a tidier four-row block; Action TDs right-aligned; intro
+  paragraph rewritten.
+
+The original Slice 4b plan called for a fully gated left-to-
+right editing flow (cells unlock as the operator fills the
+preceding ones). The shipped UI takes a simpler tack: the draft
+row exposes every applicable cell up front, validation runs
+server-side on Save, and incomplete / invalid payloads bounce
+back with an inline error banner. Same correctness contract,
+materially less JS surface area.
+
+**Estimated effort:** ~2-3 hrs (shipped over a longer iteration
+arc due to the polish PRs above).
+
+- Operator-add (➕) on RTD rows: the JS-deferred draft pattern
+  (cloned ``<template>`` row + ``<form>`` linked via HTML5
+  ``form="..."``) writes only on Save. Cancel removes the row.
   Server-side enforcement is the source of truth (Save rejects
-  incomplete or invalid rows); JS adds disabled-state toggles so
-  the gating reads visibly client-side too.
+  incomplete or invalid rows); the disabled / locked Add button
+  prevents starting another row while one is unsaved.
 - Edits to operator-defined rows: name + Data Type lock once
-  saved (rendered as read-only `<select>` / disabled text).
-  Min / Max / Step / List stay editable; Save propagates the new
-  validation block to every Response Fields row that references
-  this RTD (`bulk_save_fields` re-derives validation when the
-  row's `response_type_id` is operator-defined and its parameters
-  changed since last save).
-- Operator-delete (✗) on operator-defined RTD rows in use:
+  saved (rendered as plain text). Min / Max / Step / List stay
+  editable; Save propagates the new validation block to every
+  Response Fields row that references this RTD
+  (``update_response_type_definition`` re-derives the validation
+  block when the row's parameters change).
+- Operator-delete on operator-defined RTD rows in use:
   confirmation dialog showing cascade preview (`N response field
   row(s) on M instrument(s), X response(s) across Y reviewer
   assignment(s)`). On confirm, the FK `ON DELETE CASCADE` from
   4a takes care of the actual cascade. Operator-delete on
-  operator-defined RTD rows not in use: no confirmation. Seeded
-  rows: ✗ suppressed entirely.
+  operator-defined RTD rows not in use: a JS ``confirm()``
+  warning (added in #247) before the immediate drop. Seeded
+  rows: Delete suppressed entirely.
 - Save-time rejection on RTD save: empty list when Data Type is
   `List`; Min > Max for Integer / Decimal / String; Step doesn't
-  evenly divide (Max − Min) for Integer / Decimal.
+  evenly divide (Max − Min) for Integer / Decimal; Decimal
+  Min / Max / Step with more than one decimal place; Integer
+  Min / Max / Step with a fractional component.
 
-**Tests:**
-
-- Service: gated editing — incomplete operator-added row is
-  rejected on save; once complete it commits.
-- Service: edits to an in-use operator-defined RTD propagate to
-  the dependent RF rows' `validation` on the next bulk-save.
-- Route: cascade-confirm dialog on operator-defined RTD delete
-  when in use; immediate delete when not in use.
-- Server-side defenses: forged form attempting to rename a
-  seeded row, change a row's Data Type post-create, or delete a
-  seeded row all 400/409.
+**Tests shipped:** unit coverage in
+[`tests/unit/test_response_type_definitions.py`](../tests/unit/test_response_type_definitions.py)
+(add / update / delete service + cascade-count helper +
+precision rules); route + render coverage in
+[`tests/integration/test_display_field_routes.py`](../tests/integration/test_display_field_routes.py)
+(add route, add-error banner, edit-route 409 on seeded, delete
+blocked → confirmed → cascade, ready-session lock, per-row
+edit form rendered when ``editing_rtd_id`` matches, draft
+templates render, Add disabled while editing).
 
 ---
 
