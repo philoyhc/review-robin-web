@@ -13,6 +13,7 @@ from app.db.models import (
 )
 from app.services.instruments import (
     SEEDED_RESPONSE_TYPE_DEFINITIONS,
+    RTDDeleteWouldEmptyInstrumentError,
     RTDInUseError,
     RTDLockedError,
     RTDPrecisionError,
@@ -573,6 +574,7 @@ def test_count_rtd_dependents_returns_zero_for_unused_rtd(
         "instrument_count": 0,
         "response_count": 0,
         "assignment_count": 0,
+        "would_empty_instruments": [],
     }
 
 
@@ -689,3 +691,126 @@ def test_add_default_response_field_field_key_collision_gets_numeric_suffix(
         actor=user,
     )
     assert second.field_key == "quality2"
+
+
+# --- Slice 4d: would-empty-instrument cascade-delete block ---------
+
+
+def test_count_rtd_dependents_lists_would_be_emptied_instruments(
+    db: Session,
+) -> None:
+    """When the cascade would leave an instrument with zero RF rows,
+    ``count_rtd_dependents`` returns the would-empty list with the
+    instrument's display number (1-indexed by ``Instrument.order``)."""
+    user = _user(db)
+    review = _session(db, user, code="rtd-empty-count")
+    instrument = ensure_default_instrument(db, review)
+
+    custom = add_response_type_definition(
+        db,
+        review_session=review,
+        response_type="OnlyType",
+        data_type="Integer",
+        min=0,
+        max=5,
+        step=1,
+        list_csv=None,
+        actor=user,
+    )
+
+    # Replace BOTH default RF rows so the only remaining ones reference
+    # ``custom`` — cascade-delete would empty the instrument.
+    rfs = list(
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    )
+    for rf in rfs:
+        rf.response_type_id = custom.id
+    db.commit()
+
+    counts = count_rtd_dependents(db, rtd=custom)
+    assert counts["would_empty_instruments"] == [
+        {"instrument_id": instrument.id, "instrument_number": 1},
+    ]
+
+
+def test_delete_rtd_blocks_when_cascade_would_empty_instrument(
+    db: Session,
+) -> None:
+    """``delete_response_type_definition`` raises
+    ``RTDDeleteWouldEmptyInstrumentError`` even with ``confirm=True``
+    — the operator can't override the would-empty-instrument guard."""
+    user = _user(db)
+    review = _session(db, user, code="rtd-empty-delete")
+    instrument = ensure_default_instrument(db, review)
+    custom = add_response_type_definition(
+        db,
+        review_session=review,
+        response_type="OnlyType",
+        data_type="Integer",
+        min=0,
+        max=5,
+        step=1,
+        list_csv=None,
+        actor=user,
+    )
+    rfs = list(
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    )
+    for rf in rfs:
+        rf.response_type_id = custom.id
+    db.commit()
+
+    with pytest.raises(RTDDeleteWouldEmptyInstrumentError) as excinfo:
+        delete_response_type_definition(
+            db, rtd=custom, confirm=True, actor=user
+        )
+    assert excinfo.value.would_empty == [
+        {"instrument_id": instrument.id, "instrument_number": 1},
+    ]
+    # The RTD row + its dependents are still there.
+    assert db.get(ResponseTypeDefinition, custom.id) is not None
+
+
+def test_delete_rtd_in_use_but_other_rows_remain_still_raises_in_use_error(
+    db: Session,
+) -> None:
+    """When the cascade would leave the instrument with at least one
+    remaining (non-cascaded) RF row, the would-empty guard does NOT
+    fire — the existing ``RTDInUseError`` cascade-confirm flow runs."""
+    user = _user(db)
+    review = _session(db, user, code="rtd-in-use-still")
+    instrument = ensure_default_instrument(db, review)
+    custom = add_response_type_definition(
+        db,
+        review_session=review,
+        response_type="OneOfMany",
+        data_type="Integer",
+        min=0,
+        max=5,
+        step=1,
+        list_csv=None,
+        actor=user,
+    )
+    # Replace only the ``rating`` row's RTD; ``comments`` keeps its
+    # ``Long_text`` reference and survives the cascade.
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    rating.response_type_id = custom.id
+    db.commit()
+
+    with pytest.raises(RTDInUseError):
+        delete_response_type_definition(
+            db, rtd=custom, confirm=False, actor=user
+        )
