@@ -26,12 +26,14 @@
         --accent-blue: #2563eb;
         --accent-blue-bg: #dbeafe;
         --accent-blue-bg-soft: #eff6ff;
+        --accent-blue-bg-faint: #fafcff;
         --accent-blue-light: #3b82f6;
         --accent-blue-dark: #1d4ed8;
         --accent-green: #059669;
         --accent-green-bg: #d1fae5;
         --accent-amber: #d97706;
         --accent-amber-bg: #fef3c7;
+        --accent-amber-bg-mid: #fde68a;
         --accent-amber-dark: #92400e;
         --accent-red: #dc2626;
         --accent-red-bg: #fee2e2;
@@ -626,15 +628,23 @@
         padding: var(--space-4);
         margin-bottom: var(--space-4);
       }
+      /* Page-grid / bottom-grid wrappers default to a 20px
+         margin-bottom (off the spacing scale) — bring them onto
+         space-4 so the gap below a grid matches the gap between
+         two stacked cards. */
+      body.ui-v2 .page-grid,
+      body.ui-v2 .bottom-grid {
+        margin-bottom: var(--space-4);
+      }
       body.ui-v2 .card h2 {
         margin: 0 0 var(--space-3) 0;
       }
       body.ui-v2 .card.lock {
-        border-color: var(--accent-amber);
+        border-color: var(--accent-amber-dark);
         background: var(--accent-amber-bg);
       }
       body.ui-v2 .card.danger-zone {
-        border-color: var(--accent-red-soft);
+        border-color: var(--accent-amber-dark);
         background: var(--bg-page);
       }
       body.ui-v2 .card.danger-zone h2 {
@@ -680,6 +690,15 @@
         border-color: var(--accent-blue);
         color: #fff;
       }
+      /* Alert (outline brown) — for the recovery action inside a
+         lock card. Uses the same brown that frames the lock card
+         so the action sits in the card's color family rather than
+         clashing as a Primary blue would. */
+      body.ui-v2 .btn.alert {
+        background: var(--bg-page);
+        color: var(--accent-amber-dark);
+        border-color: var(--accent-amber-dark);
+      }
       /* Hover — signal interactivity by tonal step on-palette.
          Convention (matches the chrome's Home anchor pattern):
          filled buttons LIGHTEN on hover; outline buttons darken
@@ -707,6 +726,11 @@
         background: var(--accent-blue-light);
         border-color: var(--accent-blue-light);
         color: #fff;
+      }
+      body.ui-v2 .btn.alert:hover {
+        background: var(--accent-amber-bg-mid);
+        color: var(--accent-amber-dark);
+        border-color: var(--accent-amber-dark);
       }
       /* Unified disabled state — covers <button disabled>,
          <a class="btn disabled"> and aria-disabled. */
@@ -869,12 +893,12 @@
         border-color: var(--border-subtle);
       }
       body.ui-v2 .session-home-anchor {
-        background: var(--accent-blue-bg);
+        background: var(--accent-blue-bg-soft);
         border-right-color: var(--border-subtle);
         color: var(--text-secondary);
       }
       body.ui-v2 .session-home-anchor:hover {
-        background: var(--accent-blue-bg-soft);
+        background: var(--accent-blue-bg-faint);
         color: var(--text-primary);
       }
       body.ui-v2 .session-home-anchor.active { color: var(--text-primary); }
@@ -882,12 +906,27 @@
         border-right-color: var(--border-subtle);
         color: var(--text-muted);
       }
+      /* Row-label emphasis — applies when the operator is on a
+         page in this group OR when hovering any tab in the group's
+         strip. The v1 :has() rules are shadowed by the v2 base
+         row-label rule on equal specificity, so we re-emit them
+         under body.ui-v2 to win on source order. */
+      body.ui-v2 .row-label.active-group,
+      body.ui-v2 .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row,
+      body.ui-v2 .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row {
+        color: var(--text-primary);
+      }
+      body.ui-v2 .row-label.active-group::after,
+      body.ui-v2 .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row::after,
+      body.ui-v2 .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row::after {
+        border-left-color: var(--text-primary);
+      }
       body.ui-v2 .tab-strip-setup { background: rgba(37, 99, 235, 0.05); }
       body.ui-v2 .tab-strip-ops   { background: rgba(5, 150, 105, 0.05); }
       body.ui-v2 .session-nav-grid > .row-setup {
         border-bottom-color: var(--border-subtle);
       }
-      body.ui-v2 .nav-tab { color: var(--text-secondary); }
+      body.ui-v2 .nav-tab { color: var(--text-secondary); font-weight: 600; }
       body.ui-v2 .nav-tab.active { color: var(--text-primary); }
       body.ui-v2 .tab-strip-setup .nav-tab.active::after {
         background: var(--accent-blue);
