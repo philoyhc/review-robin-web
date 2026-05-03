@@ -443,6 +443,7 @@ plug in additional reasons without a schema change. Today's keys are
 | Multi-instrument sessions: FullMatrix per-instrument target picker, Manual CSV `Instrument` column, reviewer dashboard per-instrument grouping | Schema + reviewer-surface multi-instrument support shipped 2026-05-02 in Segment 10D Slice 5; the three remaining items are tracked at `guide/unfinished_business.md` #27 / #28 / #29 (Segment 13 plan archived as `guide/archive/segment_13_multi_instrument_sessions_superseded.md`) |
 | **Production hardening** (Key Vault, VNet, soft-delete, full Postgres pytest matrix) | **Segment 14** |
 | Local Postgres docker-compose for dev (SQLite + the `ci-postgres` job + migration-on-deploy is the parity story today) | **Segment 15** (officially deferred 2026-05-03; tracked at `guide/unfinished_business.md` #26 — likely settles "won't fix" via the developer setup guide work) |
+| Sessions-list per-row Delete button posts directly (today: anchor link to `#danger-zone` on the session's Home page, where the operator confirms + clicks the real Delete) | **Segment 15** (officially deferred 2026-05-03; tracked at `guide/unfinished_business.md` #23 — small fix, bundles with whatever `/operator/sessions` UI work this segment touches) |
 
 ---
 
