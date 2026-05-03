@@ -33,6 +33,7 @@
         --accent-green-bg: #d1fae5;
         --accent-amber: #d97706;
         --accent-amber-bg: #fef3c7;
+        --accent-amber-bg-mid: #fde68a;
         --accent-amber-dark: #92400e;
         --accent-red: #dc2626;
         --accent-red-bg: #fee2e2;
@@ -639,11 +640,11 @@
         margin: 0 0 var(--space-3) 0;
       }
       body.ui-v2 .card.lock {
-        border-color: var(--accent-amber);
+        border-color: var(--accent-amber-dark);
         background: var(--accent-amber-bg);
       }
       body.ui-v2 .card.danger-zone {
-        border-color: var(--accent-red-soft);
+        border-color: var(--accent-amber-dark);
         background: var(--bg-page);
       }
       body.ui-v2 .card.danger-zone h2 {
@@ -689,6 +690,15 @@
         border-color: var(--accent-blue);
         color: #fff;
       }
+      /* Alert (outline brown) — for the recovery action inside a
+         lock card. Uses the same brown that frames the lock card
+         so the action sits in the card's color family rather than
+         clashing as a Primary blue would. */
+      body.ui-v2 .btn.alert {
+        background: var(--bg-page);
+        color: var(--accent-amber-dark);
+        border-color: var(--accent-amber-dark);
+      }
       /* Hover — signal interactivity by tonal step on-palette.
          Convention (matches the chrome's Home anchor pattern):
          filled buttons LIGHTEN on hover; outline buttons darken
@@ -716,6 +726,11 @@
         background: var(--accent-blue-light);
         border-color: var(--accent-blue-light);
         color: #fff;
+      }
+      body.ui-v2 .btn.alert:hover {
+        background: var(--accent-amber-bg-mid);
+        color: var(--accent-amber-dark);
+        border-color: var(--accent-amber-dark);
       }
       /* Unified disabled state — covers <button disabled>,
          <a class="btn disabled"> and aria-disabled. */
