@@ -35,21 +35,12 @@
         margin: 0;
       }
       /*
-       * Reviewer-surface card primitives — visual_style.md-aligned
-       * (white bg, 1px subtle border, 8px radius, 24px padding) wrapping
-       * each instrument group's heading + help text + response table.
-       * Help text inside the card lives in a 2-col grid of bg-muted
-       * tinted blocks (rs-help-card) for readability; single-item case
-       * collapses to one full-width block (.rs-help-card-solo).
+       * Reviewer-surface help-text primitives — visual_style.md-aligned
+       * bg-muted tinted blocks for the per-instrument response-field help
+       * text. Two or more items render in a 2-col grid (rs-help-grid);
+       * single-item case collapses to one full-width block
+       * (.rs-help-card-solo).
        */
-      .rs-card {
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 24px;
-        margin-bottom: 16px;
-      }
-      .rs-card h2 { margin: 0 0 16px 0; font-size: 1.125rem; }
       .rs-help-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -60,7 +51,6 @@
         background: #f5f5f7;
         padding: 10px 14px;
         border-radius: 6px;
-        white-space: pre-wrap;
         color: #444;
       }
       .rs-help-card strong { color: #111827; }

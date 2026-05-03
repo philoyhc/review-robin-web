@@ -81,24 +81,19 @@
 
     {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/save">{% endif %}
       {% for group in instrument_groups %}
-        <div class="rs-card">
         {% if group.heading %}
-          <h2>{{ group.heading }}</h2>
+          <h2 style="margin-top: 24px;">{{ group.heading }}</h2>
         {% endif %}
         {% if group.help_block_items %}
           {% if group.help_block_items|length > 1 %}
             <div class="rs-help-grid">
               {% for field in group.help_block_items %}
-                <div class="rs-help-card">
-                  <strong>{{ field.label }}</strong> — {{ field.help_text }}
-                </div>
+                <div class="rs-help-card"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>
               {% endfor %}
             </div>
           {% else %}
             {% set field = group.help_block_items[0] %}
-            <div class="rs-help-card rs-help-card-solo">
-              <strong>{{ field.label }}</strong> — {{ field.help_text }}
-            </div>
+            <div class="rs-help-card rs-help-card-solo"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>
           {% endif %}
         {% endif %}
         <div class="table-scroll">
@@ -209,7 +204,6 @@
               </tr>
             {% endfor %}
           </table>
-        </div>
         </div>
       {% endfor %}
 

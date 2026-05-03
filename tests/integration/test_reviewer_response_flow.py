@@ -271,18 +271,24 @@ def test_surface_help_text_multi_items_render_in_grid(
     assert 'class="rs-help-card rs-help-card-solo"' not in body
 
 
-def test_surface_wraps_each_group_in_card(
+def test_surface_does_not_wrap_groups_in_outer_card(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Each instrument group is wrapped in a `.rs-card` container."""
+    """No outer .rs-card wrapper around each instrument group.
+
+    Tried briefly during the visual_style.md alignment work and dropped:
+    the outer card was visually redundant with the help-text grid + table
+    inside it. Help text cards (rs-help-card) and the response table stand
+    on their own.
+    """
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
         db,
-        code="rae-card",
+        code="rae-no-outer-card",
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
     )
@@ -290,7 +296,8 @@ def test_surface_wraps_each_group_in_card(
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
 
-    assert '<div class="rs-card">' in body
+    assert '<div class="rs-card">' not in body
+    assert ".rs-card {" not in body  # CSS rule also removed
 
 
 def test_surface_status_column_hidden_pre_submission(
