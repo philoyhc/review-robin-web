@@ -71,10 +71,12 @@
 
         {% if existing_count and existing_count > 0 %}
           <p style="margin-top: 12px;">
-            <strong>This session already has {{ existing_count }} reviewer{% if existing_count != 1 %}s{% endif %}.</strong>
-            Importing will <strong>replace</strong> them.
+            This session already has
+            <span class="pill pill-count">{{ existing_count }} reviewer{% if existing_count != 1 %}s{% endif %}</span>.
+            Importing will replace them.
             {% if assignment_count and assignment_count > 0 %}
-              Also: <strong>{{ assignment_count }} existing assignment{% if assignment_count != 1 %}s{% endif %}</strong>
+              Also,
+              <span class="pill pill-count">{{ assignment_count }} existing assignment{% if assignment_count != 1 %}s{% endif %}</span>
               will be deleted (assignments reference reviewer rows). You'll need to re-generate them after the import.
             {% endif %}
           </p>
