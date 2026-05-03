@@ -100,6 +100,53 @@ Human-readable page that renders:
 Both routes are diagnostic. Later segments may restrict, remove, or replace
 them with a richer user-profile surface.
 
+## CSRF defense (decided 2026-05-03)
+
+Review Robin **relies on Easy Auth + SameSite cookies for CSRF protection**;
+it does not implement CSRF tokens in app code.
+
+**Threat model.** Authenticated session cookies are the only thing a forged
+cross-origin POST could replay. Easy Auth's session cookie
+(`AppServiceAuthSession`) is set by the Azure App Service platform with
+`HttpOnly`, `Secure` (HTTPS-only), and `SameSite=Lax` (the modern browser
+default). A `SameSite=Lax` cookie is **not** sent on cross-origin POST,
+PUT, DELETE, or PATCH requests — so a forged form submit from another
+origin reaches the app with no auth cookie, fails Easy Auth's gate, and
+never hits a route handler. Top-level cross-origin GET navigation still
+sends the cookie (the `Lax` exception), but every state-changing route in
+the app is gated on POST, never on GET, so the GET exception isn't
+exploitable.
+
+**Verification.** The `SameSite=Lax` default has been Azure App Service's
+behaviour since 2020 (when Chrome 80 forced the change). Confirm on the
+dev slot when next deploying by inspecting the `Set-Cookie` header on
+the auth response — search dev-slot HTTP traffic for
+`AppServiceAuthSession=` and verify the attribute. If Microsoft ever
+changes the platform default, this section is the canonical place to
+revisit the decision.
+
+**What this rules out (and why that's fine).**
+
+- **CSRF tokens per form.** Would need a token-mint-and-verify middleware
+  + per-form template plumbing across every state-changing POST in the
+  app (~20+ forms across the operator and reviewer surfaces). Defense
+  in depth, but redundant with `SameSite=Lax` for a single-tenant pilot
+  deployment behind Easy Auth.
+- **Origin / Referer header checks.** Possible without tokens, but again
+  redundant with the cookie's `SameSite=Lax`.
+- **Custom request headers (e.g. `X-Requested-With`).** Useful when
+  defending AJAX endpoints; the app's POSTs are all `<form>`-based,
+  not AJAX, so no benefit here.
+
+If the deployment model ever shifts (multi-tenant, embedded iframe with a
+foreign origin, etc.) this decision should be revisited and CSRF tokens
+likely added at that point.
+
+**Local-dev / `ALLOW_FAKE_AUTH=true`.** The fake auth path uses request
+headers, not cookies, so SameSite-on-the-cookie doesn't apply. Local dev
+is single-origin (`127.0.0.1:8000`) so cross-origin CSRF isn't a
+realistic threat anyway.
+
 ## What this segment does not implement
 
 - No database-backed user records.

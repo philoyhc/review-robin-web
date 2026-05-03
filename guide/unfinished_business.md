@@ -210,25 +210,28 @@ request. Worth fixing while the surface is small.
 
 ## P4 — Decisions to write down
 
-### 7. Make a deliberate CSRF decision · [doc] · small
+### 7. ~~Make a deliberate CSRF decision~~ — ✅ shipped 2026-05-03 · [doc] · small
 
-**Why now.** `app/main.py` mounts no CSRF middleware; templates have
+**Resolution (2026-05-03).** Decided: **rely on Easy Auth + SameSite
+cookies for CSRF protection**; do not implement CSRF tokens in app
+code. Decision + rationale + threat model + verification note
+written into `docs/authentication.md` under a new "CSRF defense"
+section. Short version: Easy Auth's `AppServiceAuthSession` cookie
+is set with `SameSite=Lax` (Azure platform default since 2020), so
+forged cross-origin POSTs reach the app with no auth cookie and
+fail Easy Auth's gate before hitting any route. The `Lax` exception
+for top-level cross-origin GET isn't exploitable because every
+state-changing route is POST-gated.
+
+(Original framing preserved below for archaeology.)
+
+**Why now (originally).** `app/main.py` mounts no CSRF middleware; templates have
 no token. Easy Auth gives authentication, not CSRF protection. A
 logged-in operator's browser is theoretically inducible to POST
 `/operator/sessions/{id}/delete` from another origin. Whether that's
 acceptable depends on threat model — but it should be an explicit
 decision, not an oversight. With no local dev loop, this is the kind
 of invariant that's easy to forget exists.
-
-**Where.** `docs/authentication.md`.
-
-**Plan.**
-- Decide: rely on Easy Auth + SameSite cookies, or add CSRF tokens.
-- Write the decision into `docs/authentication.md` with one
-  paragraph of rationale. If the decision is "rely on SameSite",
-  verify the cookie attributes Easy Auth sets and document them.
-- If the decision is "add tokens", that becomes its own segment of
-  work — slot it explicitly.
 
 ---
 
@@ -982,27 +985,31 @@ operators click it expecting an editor and get a stub.
 - Setup-nav button hardcoded label: search `base.html` /
   `_partials/session_top_nav.html` for `setupinvite`
 
-**Open question (must settle before the editor lands).** The
-"help contact" merge field needs a source. Three plausible
-shapes:
+**Decision on help-contact source (2026-05-03).** **Path 1** — per-session field on `ReviewSession`. Reframed during the §24 decision: the operational help contact (who a confused reviewer asks about the review process) is genuinely session-specific — different sessions taught by different professors / programs / departments — so it doesn't compress to a per-operator value or a global env var.
 
-1. **Per-session field** on `ReviewSession` (operator types it
-   in alongside name / code / description / deadline). Most
-   flexible; one extra column on the create / edit form.
-2. **Per-operator field** on `User` (set once, applies to every
-   session that operator owns). Lighter UX; awkward when
-   multiple operators share a session.
-3. **Global env var** (`HELP_CONTACT_EMAIL` in `app.config`).
-   Cheapest; assumes one help contact for the whole installation.
-   Reasonable for a single-tenant pilot.
+**Primary surface for the value: the response form**, not the email. A reviewer staring at the form mid-review has no in-app way to know who to ask, and that's the gap this fills. The email merge field (`{{help_contact}}`) is a secondary convenience — operators could hand-type the value into the email body if they preferred, but the merge field saves them retyping.
 
-Recommend (1) for parity with the workplan's "merge field"
-framing, but (3) is a defensible scope-cut if the editor is
-otherwise simple. Decide before coding.
+A *separate* technical-support contact (for "the app is broken / my link is invalid" cases — distinct from "I have questions about the review process") is a global concern, tracked at `unfinished_business.md` #35, target Segment 15.
+
+(Original three-option discussion preserved below for archaeology.)
+
+> ~~The "help contact" merge field needs a source. Three plausible shapes:~~
+>
+> 1. **Per-session field** on `ReviewSession` (operator types it
+>    in alongside name / code / description / deadline). Most
+>    flexible; one extra column on the create / edit form.
+> 2. **Per-operator field** on `User` (set once, applies to every
+>    session that operator owns). Lighter UX; awkward when
+>    multiple operators share a session.
+> 3. **Global env var** (`HELP_CONTACT_EMAIL` in `app.config`).
+>    Cheapest; assumes one help contact for the whole installation.
+>    Reasonable for a single-tenant pilot.
+
+**Future merge fields.** This won't be the last merge field — additional reviewer-facing or operator-facing values may surface as merge fields over time (e.g. session-specific deadline-extension policy, sender display name, custom signature line). The pattern lands once with `{{help_contact}}` and applies per the same shape: per-session column where the value varies by session; global env var where it's a deployment-level constant. Add them to this entry as they're identified.
 
 **Plan.**
 
-- Decide help-contact source (above).
+- Add a `help_contact` column to `ReviewSession` (per the 2026-05-03 decision above). Surfaces in the session create / edit form, the response form (small "Questions? Contact X" line in the surface header / footer), and as the `{{help_contact}}` merge field in the editor.
 - Add an `EmailTemplate` model OR a JSON column on `ReviewSession`.
   Prefer the JSON column since templates are 1:1 with sessions
   and no separate lifecycle is needed; schema column called
@@ -1495,6 +1502,107 @@ handling, reminder emails (Segment 9), export generation
 
 **Cross-ref.** Mirror entry in `docs/status.md` "What's
 deliberately not yet there" pointing here.
+
+---
+
+### 34. Queue-based batch invitation sending · [feature] · medium · target Segment 15
+
+**Status.** Filed 2026-05-03 from the Segment 11 Tier 2 §2.3
+"Queue-based batch invitation sending" decision — target
+**Segment 15** (operator polish + documentation), bundled with
+real SMTP. Picks up workplan §12 work item #7 ("Add queue-based
+batch sending") that was named but never implemented.
+
+**Why now (originally).** `POST /operator/sessions/{id}/invitations/send-all`
+(`app/web/routes_operator.py:2121`) and the parallel reminder
+endpoint loop through every eligible reviewer and call
+`send_invitation()` / `send_reminder()` synchronously inside the
+HTTP request handler. With the dev outbox (today) each call is a
+~1ms DB insert — even a 200-reviewer batch finishes in 1–2s and
+the synchronous loop is fine.
+
+With **real SMTP** (Segment 15) each call becomes a 100–500ms
+network round-trip plus provider rate-limiting (Microsoft Graph
+throttles ~30 sends/sec). A 200-reviewer batch becomes 1–2 minutes,
+which exceeds typical reverse-proxy timeouts (30s–2min); the
+operator's browser hangs; partial-failure recovery has no
+mechanism; transient SMTP failures aren't retried.
+
+**Where.**
+- Synchronous send loops:
+  `app/web/routes_operator.py::invitations_send_all` (~`:2121`),
+  parallel reminder endpoint.
+- Send service:
+  `app/services/invitations.py::send_invitation` and
+  `send_reminders_to_incomplete`.
+- Prerequisite refactor: **#6** (decouple `invitations.py` from
+  `Request`) — a background worker has no live request, so
+  `send_invitation(request=...)` needs a `build_invite_url`
+  callable instead.
+
+**Plan (sketch — full design lands in Segment 15 with real-SMTP
+work).**
+- Job table: `email_send_job(id, session_id, kind, status='pending'
+  | 'in_progress' | 'done' | 'failed', created_at, ...)`. Per-row
+  state for individual invitation sends, or one parent row + child
+  per-invitation rows — design call.
+- Operator action: "Send all" writes the parent job row + 303s to
+  a status page (no synchronous wait).
+- Worker: Azure WebJob / Functions Timer Trigger / dedicated worker
+  dyno polls the job table, processes pending rows one at a time
+  with rate-limiting + retry-on-transient-failure.
+- Operator UI: invitations page polls or refreshes to show
+  per-invitation status (already wired for the synchronous case).
+
+**Sequencing.**
+- Lands as part of Segment 15 real-SMTP work; one infrastructure
+  decision (worker setup + job table) covers both real-SMTP and
+  batch queueing.
+- Depends on **#6** (decouple `invitations.py` from `Request`)
+  shipping first — currently scheduled in Segment 11 Tier 3.
+
+**Out of scope.** Polished job-status UI beyond
+"in-progress / done / failed" indicators, retry policy
+configuration, multi-tenant rate-limit tuning.
+
+**Cross-ref.** Mirror entry in `docs/status.md` "What's
+deliberately not yet there" pointing here.
+
+---
+
+### 35. Technical-support contact (global) · [chrome] · small · target Segment 15
+
+**Status.** Filed 2026-05-03 from the Segment 11 Tier 2 §24 reframe — distinct from the operational help-contact merge field on `ReviewSession` (which lives in `unfinished_business.md` #24). Target **Segment 15** (operator polish + documentation).
+
+**Why now (originally).** "Help contact" naturally splits into two contacts with different lifecycles:
+
+- **Operational help contact** (per-session) — who a confused reviewer asks about the review process. Tracked at `#24`.
+- **Technical support contact** (global) — who a reviewer reaches when something looks **broken**: auth fails, 500 error, "I clicked the link and got a weird page." This is the app maintainer / deployment owner's address, not session-specific.
+
+The app today has neither — error pages, the `/about` stub, the invalid-link page all render with no contact pointer. A confused-or-blocked reviewer has nowhere to go.
+
+**Where.**
+
+- Config: new `support_contact_email` field on `app/config.py` Pydantic settings, optional with a default of `None` for local dev.
+- Surfaces:
+  - App chrome footer (currently absent on the reviewer side; would land alongside this work).
+  - 500 / generic error template.
+  - Invalid-token / expired-link reviewer landing page.
+  - `/about` stub.
+- Optional: surface in the operator chrome too (so an operator who hits a server error knows who to ping).
+
+**Plan.**
+
+- Add the env var to `app/config.py` Settings.
+- Render in error templates + footer with conditional: only show when set, so local dev (where the env var is empty) doesn't render a misleading link.
+- Document in `docs/deployment_dev.md` and the eventual operator/admin guide (Segment 15 §18 work item #7) as a required-for-production env var.
+
+**Out of scope.**
+
+- A whole "help center" surface. This is one address, not a structured FAQ.
+- Per-session technical support overrides. The whole point is that this contact is deployment-level, not session-level.
+
+**Cross-ref.** Mirror entry in `docs/status.md` "What's deliberately not yet there" pointing here. Cross-references `unfinished_business.md` #24 (operational help contact) for context.
 
 ---
 
