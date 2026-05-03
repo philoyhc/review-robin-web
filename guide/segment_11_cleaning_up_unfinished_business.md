@@ -4,10 +4,11 @@
 renumber promoted it. Cross-references in older docs may still
 point to "10E" by name.)
 
-**Status:** Tier 1 closed (2026-05-03). Tiers 2–4 remain forward-
-looking. The original framing — "land these before Segment 12 (export
-/ audit retention) starts so the operator surface settles cleanly" —
-still applies to the remaining tiers.
+**Status:** Tiers 1 + 2 closed (2026-05-03). Tier 1 shipped its work
+items; Tier 2's four decisions are all made and recorded. Tiers 3–4
+remain forward-looking. The original framing — "land these before
+Segment 12 (export / audit retention) starts so the operator surface
+settles cleanly" — still applies to those tiers.
 
 This is a punch list, not a feature segment. Most items are small;
 each lands as its own PR. Items with detail in
@@ -47,14 +48,16 @@ Five clusters resolved — three from the original audit plus a reviewer-surface
 | **#23 — Sessions-list Delete button** | Deferred to **Segment 15** alongside the other `/operator/sessions` UI work (PR #316). Tracked at `unfinished_business.md` #23. |
 | **§2.6 — Sort-column UX status note** | Promoted from sketch to a real feature spec at `guide/sort_by_reviewee.md`, target **Segment 13** (PR #317). Catalog entry at `unfinished_business.md` #31. |
 
-### Tier 2 — Decisions (each unblocks Tier 3 or 4 work)
+### Tier 2 — Closed (2026-05-03)
 
-| Item | Source | Decision needed |
-|------|--------|-----------------|
-| **2.1 — AG Grid fate** | This file (was §2.1) | ✅ **decided 2026-05-03** — still on the roadmap, target **Segment 15** (operator polish + documentation). Filed at `unfinished_business.md` #33. Unblocks #2.2 (autosave bundles into AG Grid). |
-| **2.3 — Queue-based batch invitation sending** | This file (was §2.3) | ✅ **decided 2026-05-03** — bundle with **Segment 15** real-SMTP work. Filed at `unfinished_business.md` #34. Depends on #6 (decouple `invitations.py` from `Request`) shipping first. |
-| **#7 — CSRF decision write-up** | `unfinished_business.md` #7 | Easy Auth + SameSite cookies, or CSRF tokens? If "tokens," that becomes its own segment. |
-| **#24 — Help-contact merge field source** | `unfinished_business.md` #24 (decision section) | ✅ **decided 2026-05-03** — per-session column on `ReviewSession`. Reframed: primary surface is the response form (where reviewers go when stuck), email merge field is a secondary convenience. Separate technical-support contact (global) split out as new `unfinished_business.md` #35, target **Segment 15**. |
+All four decisions made:
+
+| Decision | Outcome |
+|----------|---------|
+| **2.1 — AG Grid fate** | Still on the roadmap → **Segment 15**. Filed at `unfinished_business.md` #33. Unblocks Tier 4 #2.2 (autosave bundles into AG Grid). |
+| **2.3 — Queue-based batch invitation sending** | Bundle with Segment 15 real-SMTP work. Filed at `unfinished_business.md` #34. Depends on Tier 3 **#6** (decouple `invitations.py` from `Request`) shipping first. |
+| **#24 — Help-contact merge field source** | Per-session column on `ReviewSession` (path 1). Reframed: primary surface is the response form, email merge field is a secondary convenience. Separate technical-support contact (global) split out as new `unfinished_business.md` #35 → Segment 15. |
+| **#7 — CSRF decision write-up** | Rely on Easy Auth + `SameSite=Lax` cookies; no CSRF tokens in app code. Decision + rationale + verification note in `docs/authentication.md` "CSRF defense" section. `unfinished_business.md` #7 marked shipped. |
 
 ### Tier 3 — Small features
 

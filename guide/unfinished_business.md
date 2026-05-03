@@ -210,25 +210,28 @@ request. Worth fixing while the surface is small.
 
 ## P4 — Decisions to write down
 
-### 7. Make a deliberate CSRF decision · [doc] · small
+### 7. ~~Make a deliberate CSRF decision~~ — ✅ shipped 2026-05-03 · [doc] · small
 
-**Why now.** `app/main.py` mounts no CSRF middleware; templates have
+**Resolution (2026-05-03).** Decided: **rely on Easy Auth + SameSite
+cookies for CSRF protection**; do not implement CSRF tokens in app
+code. Decision + rationale + threat model + verification note
+written into `docs/authentication.md` under a new "CSRF defense"
+section. Short version: Easy Auth's `AppServiceAuthSession` cookie
+is set with `SameSite=Lax` (Azure platform default since 2020), so
+forged cross-origin POSTs reach the app with no auth cookie and
+fail Easy Auth's gate before hitting any route. The `Lax` exception
+for top-level cross-origin GET isn't exploitable because every
+state-changing route is POST-gated.
+
+(Original framing preserved below for archaeology.)
+
+**Why now (originally).** `app/main.py` mounts no CSRF middleware; templates have
 no token. Easy Auth gives authentication, not CSRF protection. A
 logged-in operator's browser is theoretically inducible to POST
 `/operator/sessions/{id}/delete` from another origin. Whether that's
 acceptable depends on threat model — but it should be an explicit
 decision, not an oversight. With no local dev loop, this is the kind
 of invariant that's easy to forget exists.
-
-**Where.** `docs/authentication.md`.
-
-**Plan.**
-- Decide: rely on Easy Auth + SameSite cookies, or add CSRF tokens.
-- Write the decision into `docs/authentication.md` with one
-  paragraph of rationale. If the decision is "rely on SameSite",
-  verify the cookie attributes Easy Auth sets and document them.
-- If the decision is "add tokens", that becomes its own segment of
-  work — slot it explicitly.
 
 ---
 
