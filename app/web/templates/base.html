@@ -25,6 +25,8 @@
         /* Semantic accents (emphasis / background pairs) */
         --accent-blue: #2563eb;
         --accent-blue-bg: #dbeafe;
+        --accent-blue-bg-soft: #eff6ff;
+        --accent-blue-light: #3b82f6;
         --accent-blue-dark: #1d4ed8;
         --accent-green: #059669;
         --accent-green-bg: #d1fae5;
@@ -678,15 +680,16 @@
         border-color: var(--accent-blue);
         color: #fff;
       }
-      /* Hover — darken to signal interactivity. Each role gets a
-         tonal step rather than a generic filter so the darkened
-         tones stay on-palette. Disabled buttons skip the rule via
+      /* Hover — signal interactivity by tonal step on-palette.
+         Convention (matches the chrome's Home anchor pattern):
+         filled buttons LIGHTEN on hover; outline buttons darken
+         with a subtle background tint. Disabled buttons skip via
          `pointer-events: none` below. */
       body.ui-v2 .btn:hover,
       body.ui-v2 button.btn:hover,
       body.ui-v2 a.btn:hover {
-        background: var(--accent-blue-dark);
-        border-color: var(--accent-blue-dark);
+        background: var(--accent-blue-light);
+        border-color: var(--accent-blue-light);
         color: #fff;
       }
       body.ui-v2 .btn.secondary:hover {
@@ -701,8 +704,8 @@
         border-color: var(--accent-red);
       }
       body.ui-v2 .btn.alert-solid:hover {
-        background: var(--accent-blue-dark);
-        border-color: var(--accent-blue-dark);
+        background: var(--accent-blue-light);
+        border-color: var(--accent-blue-light);
         color: #fff;
       }
       /* Unified disabled state — covers <button disabled>,
@@ -869,6 +872,10 @@
         background: var(--accent-blue-bg);
         border-right-color: var(--border-subtle);
         color: var(--text-secondary);
+      }
+      body.ui-v2 .session-home-anchor:hover {
+        background: var(--accent-blue-bg-soft);
+        color: var(--text-primary);
       }
       body.ui-v2 .session-home-anchor.active { color: var(--text-primary); }
       body.ui-v2 .row-label {
