@@ -80,6 +80,36 @@ def test_valid_reviewee_csv_with_photolink_populates_profile_link() -> None:
     assert result.rows[1].email_or_identifier == "dan-2026"
 
 
+def test_reviewee_non_email_identifier_is_accepted() -> None:
+    """No-`@` reviewee values import as identifiers (asymmetric mode)."""
+    csv_text = (
+        "RevieweeName,RevieweeEmail\n"
+        "Dan,dan-2026\n"
+        "Eve,student-id-7\n"
+    )
+    result = parse_reviewee_csv(_b(csv_text))
+
+    assert result.issues == []
+    assert {r.email_or_identifier for r in result.rows} == {"dan-2026", "student-id-7"}
+
+
+def test_reviewee_malformed_at_containing_identifier_is_blocking() -> None:
+    """`foo@` / `@bar` were importing cleanly and dying later on send."""
+    csv_text = (
+        "RevieweeName,RevieweeEmail\n"
+        "Carol,foo@\n"
+        "Dan,@bar\n"
+        "Eve,no-at-sign\n"
+    )
+    result = parse_reviewee_csv(_b(csv_text))
+
+    assert result.is_blocked
+    bad = [i for i in result.issues if "not a valid email" in i.message]
+    assert {i.row_number for i in bad} == {1, 2}
+    assert all(i.field == "RevieweeEmail" for i in bad)
+    assert {r.email_or_identifier for r in result.rows} == {"no-at-sign"}
+
+
 def test_reviewee_missing_name_column_blocks() -> None:
     csv_text = "RevieweeEmail\ncarol@example.edu\n"
 
