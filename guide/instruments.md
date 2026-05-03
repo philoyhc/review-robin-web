@@ -527,7 +527,7 @@ inputs to be fixed.
   present, fully locked (name + Data Type + parameters), and
   un-deletable. `instrument_response_fields.response_type`
   becomes `response_type_id` — a foreign key into the new table
-  with `ON DELETE CASCADE`. See `guide/segment_10D.md` Slice 4
+  with `ON DELETE CASCADE`. See `guide/archive/segment_10D.md` Slice 4
   for the 4a (schema + read-only render) / 4b (gated editing +
   cascade-on-delete UX) split.
 - **Multi-instrument support** — `Add new instrument` ships

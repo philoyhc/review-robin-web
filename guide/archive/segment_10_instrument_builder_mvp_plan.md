@@ -533,7 +533,7 @@ reviewer surface.
   plans (all shipped, archived).
 - `spec/operator_map.md` — reflects the consolidated `/instruments`
   page after the 10A/10B/10C builder + UI work landed (rewritten
-  end-of-10C; see `guide/segment_10C.md` for the cross-cutting
+  end-of-10C; see `guide/archive/segment_10C.md` for the cross-cutting
   recap).
 
 > **Note (2026-05-01).** What was once §15 of this plan

@@ -4,7 +4,7 @@
 Last of three PR-sized blocks for Segment 10B (display-fields picker
 + operator preview). See `guide/segment_10B.md` for the umbrella stub
 that breaks 10B into 10B-1 / 10B-2 / 10B-3, and
-`guide/segment_10_instrument_builder_mvp_plan.md` §14 for the
+`guide/archive/segment_10_instrument_builder_mvp_plan.md` §14 for the
 segment-level split. 10B-3 follows 10B-1 (data-driven render) and
 10B-2 (operator builder).
 

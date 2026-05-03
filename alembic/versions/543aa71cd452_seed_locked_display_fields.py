@@ -7,7 +7,7 @@ shift any existing display-field rows up by 2 and insert the
 locked rows at orders 0 and 1.
 
 Idempotent: skips instruments that already have both locked rows.
-Slice 1 of Segment 10D — see ``guide/segment_10D.md`` and
+Slice 1 of Segment 10D — see ``guide/archive/segment_10D.md`` and
 ``guide/instruments.md`` for the spec.
 
 Revision ID: 543aa71cd452

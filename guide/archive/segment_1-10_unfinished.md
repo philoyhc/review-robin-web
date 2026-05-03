@@ -2,8 +2,8 @@
 
 **As of:** 2026-05-02
 **Source:** `guide/low_intensity_workplan_review_robin_web.md` cross-referenced
-with the per-segment plans in `guide/archive/segment_*` and
-`guide/segment_10*.md`, the current `docs/status.md`, and
+with the per-segment plans in `guide/archive/segment_*`, the
+current `docs/status.md`, and
 `guide/unfinished_business.md`.
 
 **Purpose.** The workplan declared segments 1–10 as the run-up to the

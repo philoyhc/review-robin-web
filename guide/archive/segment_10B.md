@@ -5,7 +5,7 @@ Decisions for the segment as a whole are still locked here; per
 sub-PR decisions live in `segment_10B_1.md` / `segment_10B_2.md` /
 `segment_10B_3.md`. Second of two PR-sized blocks for Segment 10
 at the segment level. See
-`guide/segment_10_instrument_builder_mvp_plan.md` §14 for the
+`guide/archive/segment_10_instrument_builder_mvp_plan.md` §14 for the
 segment-level split, and `guide/segment_10A.md` for the locked
 decisions on the consolidated `/instruments` page that 10B extends.
 
