@@ -1,12 +1,17 @@
 # UI elements catalogue
 
-> **Status (2026-05-03):** Initial draft. Derived from an audit of every
-> operator and reviewer template against `app/web/templates/base.html`
-> and `spec/visual_style.md`. Intended to be the canonical reference
-> for every onscreen element in the app — what it's called, what it
-> looks like today, what it should look like after the
-> `unfinished_business.md` #21 restyle, and which PR in the restyle
-> bundle owns the migration.
+> **Status (2026-05-03):** Pilot-validated. Initial audit-derived draft;
+> then iterated through `/operator/sessions/{id}/reviewers1` (the
+> first page on `body.ui-v2`) over PRs #333 → #341. Pilot-derived
+> principles have been folded back into `spec/visual_style.md`. This
+> doc is now the implementation catalogue: it tracks per-element
+> current state, canonical naming, and the rollout status across the
+> seven-PR migration plan in Part 3.
+>
+> **Reference implementation.** `app/web/templates/operator/session_reviewers1.html`
+> + the `body.ui-v2`-scoped block in `app/web/templates/base.html`
+> together show every primitive in this catalogue in working form.
+> When porting a page to v2, mirror that template's class usage.
 
 This document expands `unfinished_business.md` #21 from a buttons-only
 restyle into a full operator-surface settling pass covering navigation
@@ -149,45 +154,46 @@ Each element entry follows the same shape:
 
 ### 4. Cards
 
-> **`.card` (default)** — white surface with subtle border,
-> 16–24px padding, `border-radius: 8px`, no shadow.
-> *Current:* `.card` rule in `base.html` uses
-> `border: 2px solid #bbb; border-radius: 12px; padding: 20px`.
-> Heavier border, larger radius, and saturated grey vs. spec.
-> *Canonical:* `border: 1px solid border-subtle; border-radius: 8px;
-> padding: 16-24px`.
-> *Migration delta:* re-tune to spec.
-> *PR:* C (cards & banners).
+> **`.card` (default)** — white surface, `border-default` 2px border,
+> `border-radius: 8px`, 16px padding.
+> *v1:* `border: 2px solid #bbb; border-radius: 12px; padding: 20px`.
+> *v2 (pilot-validated):* `border: 2px solid var(--border-default);
+> border-radius: var(--radius-card); padding: var(--space-4)`. The
+> 1px border in the original spec was visually swallowed by table
+> grid lines and form borders — bumped to 2px during the pilot.
+> *Migration delta:* sweep page-by-page; the v2 rule already lives
+> under `body.ui-v2` so any opted-in template picks it up.
+> *PR:* C (cards & banners) — landed in pilot.
 
-> **Lock card (yellow)** — same shape as `.card`, with
-> `accent-amber` light background and `accent-amber` border. Used
-> when a surface is reachable but locked by lifecycle.
-> *Current:* not a class. Templates simulate it with
-> inline-styled `.card` (e.g. `style="border-color: #d97706;
-> background: #fef3c7;"` on the "session is ready" warning card on
-> several Setup pages).
-> *Canonical:* `.card.lock` (or `.card-lock`) — single class,
-> consistent across every locked surface listed in
-> `visual_style.md` Part 2 "Yellow lock card pattern".
-> *Migration delta:* introduce class; sweep templates to replace
-> inline-styled amber cards.
-> *PR:* C (cards & banners).
+> **`.card.lock` (warning-framed, lifecycle-locked)** — same shape
+> as `.card`, with `accent-amber-bg` background and
+> `accent-amber-dark` border (the warning brown). Recovery action
+> inside uses outline-amber button (see §6).
+> *v1:* not a class — inline-styled `.card` with bespoke amber
+> border + bg per page.
+> *v2 (pilot-validated):* `.card.lock` rule under `body.ui-v2`.
+> *Migration delta:* sweep templates to replace inline amber cards
+> with `.card.lock`.
+> *PR:* C (cards & banners) — class landed; per-template sweep
+> still pending for the rest of the operator surface.
 
-> **Danger Zone card** — bordered card grouping destructive
-> actions (Delete data, Delete session, Delete instrument).
-> *Current:* not a class. Each occurrence uses inline
-> `style="border-color: #b91c1c;"` (and sometimes
-> `background: #fff;`) on a `.card`. Locations:
-> `session_detail.html` (`#danger-zone`), `session_reviewers.html`,
+> **`.card.danger-zone` (warning-framed, destructive grouping)** —
+> same shape as `.card`, white background, `accent-amber-dark`
+> border (same warning brown as `.card.lock` — both warning
+> surfaces share one visual language), H2 in `accent-amber-dark`.
+> Destructive button inside stays outline-`accent-red` (the action
+> that actually deletes data) — the brown frames the surface, the
+> red marks the action.
+> *v1:* not a class — inline-styled `.card` with bespoke red
+> border (and inconsistent backgrounds) per page.
+> *v2 (pilot-validated):* `.card.danger-zone` rule under
+> `body.ui-v2`.
+> *Migration delta:* sweep `session_detail.html`,
 > `session_reviewees.html`, `session_assignments.html`,
-> `instruments_index.html`. Inconsistent: some set background,
-> some don't.
-> *Canonical:* `.card.danger-zone` — `accent-red` border,
-> white background, optional H2 in `accent-red`. Destructive
-> buttons inside use Destructive variant (see §6).
-> *Migration delta:* introduce class; sweep templates; remove
-> inline `style="color: #b91c1c"` H2 overrides.
-> *PR:* C (cards & banners).
+> `instruments_index.html` to use the class; drop inline
+> `style="color: #b91c1c"` H2 overrides.
+> *PR:* C (cards & banners) — class landed; per-template sweep
+> still pending.
 
 > **Reviewer help cards (`.rs-help-card` family)** — bg-muted
 > tinted blocks listing per-instrument response-field help text.
@@ -242,21 +248,26 @@ Each element entry follows the same shape:
 
 ### 6. Buttons
 
-The original #21 brief. Six canonical affordance × treatment styles
-listed in `assumptions.md` map onto `visual_style.md`'s
-Primary / Secondary / Destructive trio as follows.
+The original #21 brief. Pilot-validated. Six v1 affordance × treatment
+styles map onto a refined Primary / Secondary / Destructive / Outline-amber
+vocabulary as follows.
 
-| Today (`.btn` modifier) | Canonical name (visual_style.md) | Notes |
+| v1 (`.btn` modifier) | v2 canonical | Notes |
 |---|---|---|
-| `.btn` (no modifier) | **Primary** | Solid `accent-blue`, white text. Lower saturation than today. |
-| `.btn.secondary` | **Secondary** | White bg, `border-default`, `text-primary`. *Today this renders blue text on white — visual_style retires the colored secondary in favor of neutral text.* |
-| `.btn.alert` | **Secondary (warning context)** or retire | visual_style.md does not define a free-standing "alert outline" button. Resolve case-by-case — most usages (banner Cancel) become Secondary; lifecycle-state changers become Primary. |
-| `.btn.alert-solid` | **Primary** for lifecycle-changing actions ("Revert to draft", "Activate session") | visual_style.md collapses the orange solid into Primary. The action's gravity is communicated by the surrounding context (lock card, confirm-step), not the button color. |
-| `.btn.danger-solid` | **Destructive** | White bg, `accent-red` border + text. *Today renders red fill — visual_style flips it to outline.* Used as the **confirmation step** of destructive actions. |
+| `.btn` (no modifier) | **Primary** | Solid `accent-blue`, white text. Reserved for the page's *single* main affirmative action — at most one per page region. "Submit this form" doesn't qualify; routine submits use Secondary. |
+| `.btn.secondary` | **Secondary** | White bg, `border-default`, `text-primary`. The default button. Used for routine submits (Upload, Save), Cancel, View detail, etc. |
+| `.btn.alert` | **Outline-amber (recovery in lock card)** | White bg, `accent-amber-dark` border + text. Per `visual_style.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
+| `.btn.alert-solid` | **Primary** | The orange solid collapses to Primary. The action's gravity is communicated by the surrounding context (lock card, confirm-step), not the button color. |
+| `.btn.danger-solid` | **Destructive** | White bg, `accent-red` border + text. Used as the **confirmation step** of destructive actions. Lives inside `.card.danger-zone` — the brown frames the surface, the red marks the action. |
 | `.btn.danger` | **Destructive** (entry point) or **Secondary** | Where `.danger` is the entry into a confirmation, prefer Secondary; the destructive treatment lands on the confirm step. |
 | `.btn-cta` | **Primary (large / centered variant)** | Layout variant only. Keep, but normalize fill to Primary. |
-| `.btn-cta.disabled` | **Primary (disabled)** | Opacity 0.5, no fill change beyond opacity. |
+| `.btn-cta.disabled` | **Primary (disabled)** | Opacity 0.5, `pointer-events: none`. Same disabled rule as the regular Primary. |
 | `.btn-icon` | **Icon button** | Borderless inline action (move-up / move-down / delete-row). Keep; add canonical disabled treatment. |
+
+**Hover** (per `visual_style.md` P6 — pilot-validated):
+- *Filled buttons* (Primary, `.alert-solid`): bg/border move from `accent-blue` to `accent-blue-light` (lighten).
+- *Outline buttons* (Secondary, Destructive, Outline-amber): subtle background tint in the role's family (`bg-muted`, `accent-red-bg`, `accent-amber-bg-mid`).
+- Disabled buttons skip via `pointer-events: none`.
 
 > **Disabled anchor-as-button** — anchors used as buttons that
 > render disabled (Edit Reviewers / Edit Reviewees on the manage
@@ -386,14 +397,19 @@ Primary / Secondary / Destructive trio as follows.
 
 ### 9. Badges / pills
 
-| Today (`.pill` modifier) | Canonical name | Notes |
+Pilot-validated. Pill shape (`9999px` radius, tiny uppercase text,
+medium weight 500). Used both standalone (status indicators) and
+inline in copy — e.g. confirm labels wrap count phrases as pills so
+the eye lands on the numbers without bolding the whole sentence.
+
+| v1 (`.pill` modifier) | v2 canonical | Notes |
 |---|---|---|
-| `.pill` (base) | base pill — pill shape, tiny medium-weight text | shape stays, palette tokenized |
-| `.pill-info` (blue) | overloaded today — used for counts AND for "ready"/"opened"/etc. lifecycle-ish state | split into **`.pill-count`** (`bg-muted` / `text-primary`, neutral) and **`.pill-state-ready`** (`accent-green`) — see lifecycle table below |
-| `.pill-warning` (amber) | **`.pill-empty`** for missing/empty counts; **`.pill-state-draft`** for draft lifecycle (visual_style.md Part 2 makes draft neutral grey, so revisit) | |
-| `.pill-success` (green) | **`.pill-state-ready`** | |
-| `.pill-error` (red) | **`.pill-error-count`** — used in validation summary for error counts. Keep `accent-red` light. | |
-| `.pill-handle` (grey monospace) | **`.pill-handle`** — keep, tokenize | |
+| `.pill` (base) | base pill — uppercase tiny text, weight 500 | text-transform: uppercase kept from v1 |
+| `.pill-info` (blue) | aliased to **`.pill-count`** under v2 — `accent-blue-bg` background, `text-primary` text | the blue tint signals "this is information" without implying state. Existing `.pill-info` markup picks up the new treatment. |
+| `.pill-warning` (amber) | aliased to **`.pill-empty`** under v2 — `accent-amber-bg` background, `accent-amber-dark` text | warning brown, matches the `.card.lock` / `.card.danger-zone` border color so chips and surfaces share one warning language. Existing `.pill-warning` markup picks up the new treatment. |
+| `.pill-success` (green) | **`.pill-state-ready`** (or `.pill-success`) — `accent-green-bg`, `accent-green` text | unchanged from v1 in spirit |
+| `.pill-error` (red) | **`.pill-error-count`** — `accent-red-bg`, `accent-red` text | for validation-summary error counts |
+| `.pill-handle` (grey monospace) | **`.pill-handle`** — keep | tokenize colors |
 
 > **Lifecycle badges (specific to status strip)** — per
 > `visual_style.md` Part 2:
@@ -531,84 +547,62 @@ cards in `instruments_index.html`. Out of scope for the restyle
 
 ## Part 3 — Restyle bundle PR split
 
-Expanded scope of `unfinished_business.md` #21. Suggested order is
-**A → B → C → D → E → F → G**. Each PR is independently shippable
-once A lands.
+Expanded scope of `unfinished_business.md` #21. The seven PRs land
+in order **A → B → C → D → E → F → G**. The pilot drove all seven
+through `/operator/sessions/{id}/reviewers1` — the foundation +
+canonical primitives are in place under `body.ui-v2`. The remaining
+work is a per-template **sweep**: replicate the `/reviewers1` recipe
+on every other operator (and reviewer) page, then promote the
+`body.ui-v2` rules to default and retire the wrapper.
 
-**PR A — Tokens & primitives (foundation).**
-Introduce CSS custom properties for the visual_style palette,
-type scale, and spacing scale at the top of `base.html`'s
-`<style>` block. Rewrite the global rules that consume them
-(`body`, `h1`, `h2`, `a`, `label`, `.muted`, `.page-subtitle`,
-the `.page-grid` / `.bottom-grid` gap values). No visible
-template change beyond a small overall recoloring; sets the
-groundwork every later PR depends on.
+| PR | Scope | Status |
+|---|---|---|
+| **A** | Tokens & primitives (palette / type / spacing custom properties; global rule rewrites) | **Foundation landed in pilot.** Token shade ladders extended through the iteration (PRs #334, #336, #337, #338, #341). |
+| **B** | Buttons — Primary / Secondary / Destructive / Outline-amber vocabulary; unified `.btn.disabled`; inline-style sweep | **Classes landed**, applied on `/reviewers1`. Per-template sweep across the rest of the operator surface still pending. |
+| **C** | Cards & banners — `.card`, `.card.lock`, `.card.danger-zone`, four-variant `.banner` family | **`.card` / `.card.lock` / `.card.danger-zone` landed**, applied on `/reviewers1`. Banner family defined but not yet used on a page (next pilot target: a page with a real banner, e.g. `instruments_index.html`). |
+| **D** | Navigation chrome — `.session-nav-card` recolor, lighter Home anchor, bold tab text, lighter active-tab markers, restored row-label emphasis, status-row white background | **Landed in pilot** (PRs #336, #338, #341). The `session_setup_status_row.html` middle-dot rewrite + lifecycle-badge lift was deferred — strip is already close to spec on structure; revisit if visual feedback warrants. |
+| **E** | Tables — row-only borders, `12 / 16` padding, `bg-muted` header, subtle hover tint | **Landed in pilot.** Table on `/reviewers1` uses the v2 treatment. `.table-dense` opt-in for the Instruments-page tables not yet needed. |
+| **F** | Forms — input padding `8 / 12`, tokenized borders, `.form-help` / `.form-error`, label medium weight | **Landed in pilot.** `/reviewers1` uses `.form-help` for the CSV instructions; file input + checkboxes carry the v2 treatment. |
+| **G** | Badges — `.pill-count` (neutral) and lifecycle classes (`.pill-lifecycle-{draft\|validated\|ready\|closed}`), reviewer-surface `.status-icon-*` | **`.pill-count` and `.pill-empty` landed** with the refined blue-tint / brown-on-yellow treatments. Lifecycle classes still pending — `session_setup_status_row.html` still emits generic `.pill-info` for the lifecycle badge; the v2 treatment of `.pill-info` is "count" which is acceptable as a placeholder. Reviewer status icons not yet introduced. |
 
-**PR B — Buttons.**
-Migrate the `.btn` family to the visual_style Primary / Secondary
-/ Destructive vocabulary per the table in §6. Adopt one
-`.btn.disabled` rule for both `<button>` and anchor-as-button
-disabled states. Sweep every inline-styled button (the three
-locations called out in the drift catalogue) onto canonical
-classes. Touches every operator and reviewer template that
-renders a button — the largest mechanical sweep in the bundle.
-
-**PR C — Cards & banners.**
-Re-tune `.card` to spec (1px border, 8px radius, palette token);
-introduce `.card.lock`, `.card.danger-zone`, and the four-variant
-`.banner` family; sweep templates to retire every inline-styled
-card / banner. Promote the outbox `<pre>` to `.code-block`.
-
-**PR D — Navigation chrome.**
-Repaint `.session-nav-card` row tints to per-row accent (5% of
-`accent-blue` and `accent-green`); recolor the active-tab
-underline; tighten `.row-label` typography; rewrite
-`session_setup_status_row.html` to the canonical middle-dot
-status strip; lift the lifecycle badge into the strip; recolor
-the breadcrumb separator and chrome border to palette tokens;
-restyle the chrome Sign-out as a Secondary button. Delete
-unused `.setup-nav` rule once verified.
-
-**PR E — Tables.**
-Switch the global `th, td` rule from full-grid to row-only
-borders, bump cell padding to `12px / 16px`, recolor the header
-background to `bg-muted`, add the subtle hover tint. Add a
-`.table-dense` opt-in for the three Instruments-page tables if
-the new padding makes them too tall.
-
-**PR F — Forms.**
-Tune input padding to `8px / 12px`, tokenize border colors,
-align focus state with spec, restyle `label` to medium weight
-with 4px gap, introduce `.form-help` and `.form-error` classes
-and sweep usages. Lightly normalize `<select>` to match.
-
-**PR G — Badges.**
-Split `.pill-info` into `.pill-count` (neutral) and lifecycle
-classes; introduce `.pill-lifecycle-{draft|validated|ready|closed}`
-and the reviewer-surface `.status-icon-{complete|incomplete}`;
-sweep every lifecycle-pill site to use the new classes.
-
-After G ships, the prerequisites for #22 (Home body rebuild +
-Option F sub-card relocation) and #30 (Quick Setup card on Home)
-are met: every primitive #22/#30 want to compose with is in place
-and named.
+Once the sweep across the rest of the operator surface lands (the
+mechanical work to replicate `/reviewers1` page-by-page), the
+prerequisites for #22 (Home body rebuild) and #30 (Quick Setup
+card on Home) are met: every primitive #22/#30 want to compose
+with is in place and named.
 
 ---
 
-## Open questions
+## Pilot decisions worth remembering
 
-- **Session-scoped chrome on the reviewer surface?** Audit
-  confirmed the reviewer surface has no `.session-nav-card` and
-  uses a flat heading layout. visual_style.md is silent on this.
-  Likely correct as-is (reviewers are not navigating the session;
-  they're filling in one form), but worth confirming before PR D.
-- **`.alert` outline button retire path.** visual_style.md
-  doesn't define an "alert outline" tier. Most current `.alert`
-  usages (banner Cancel buttons) become Secondary; but the
-  Inactivate / lifecycle-edge buttons may want a distinct
-  treatment. Decide during PR B.
-- **Tab-row tints — `accent-blue`/`accent-green` at 5% or stay
-  neutral grey?** visual_style.md Part 2 specifies the per-row
-  accent tint, but the current neutral-grey + light-green pairing
-  (`#f3f4f6` / `#f0fdf4`) reads calmer in practice. Trial both
-  during PR D and pick.
+The pilot resolved the original Open questions and surfaced a few
+new patterns:
+
+- **Hover by fill** (now `visual_style.md` P6). Filled controls
+  lighten on hover; outline controls darken with a subtle bg
+  tint in their role's color. One direction across buttons,
+  nav anchors, tinted cells.
+- **Recovery actions in colored cards** (now `visual_style.md`
+  P7). Action picks up the card's color family rather than
+  reasserting Primary blue. Two concrete cases: outline-amber
+  Revert-to-draft inside `.card.lock`; outline-red Destructive
+  inside `.card.danger-zone`.
+- **Warning surfaces share one brown.** Lock card and danger
+  zone both border in `accent-amber-dark`. The interior
+  treatments differ but the framing is one.
+- **Primary used sparingly.** "Submit this form" doesn't qualify
+  as Primary; routine submits like Upload are Secondary.
+  Reserve Primary for the page's single main affirmative
+  action.
+- **Pills inline in copy.** Confirm labels wrap count phrases as
+  `.pill-empty` chips so the eye lands on the numbers without
+  bolding the whole sentence.
+- **`.bottom-grid` for natural-height pairs.** When two cards in
+  a 2-column layout don't carry the same weight, prefer
+  `.bottom-grid` over `.page-grid`. `.page-grid`'s
+  equal-height stretch is for the L-shape patterns that
+  actually need it (`session_detail.html`).
+- **Reviewer-surface chrome is intentionally minimal.** No
+  `.session-nav-card` — reviewers fill one form, they don't
+  navigate the session. Confirmed during the audit; left
+  alone in the pilot.
