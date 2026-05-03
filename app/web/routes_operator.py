@@ -2137,7 +2137,9 @@ def invitations_send_all(
             review_session=review_session,
             reviewer=row.reviewer,
             user=user,
-            request=request,
+            build_invite_url=lambda token: str(
+                request.url_for("reviewer_invite", token=token)
+            ),
             correlation_id=request_correlation_id(),
         )
     return RedirectResponse(
@@ -2188,7 +2190,9 @@ def invitations_send_one(
         review_session=review_session,
         reviewer=reviewer,
         user=user,
-        request=request,
+        build_invite_url=lambda token: str(
+            request.url_for("reviewer_invite", token=token)
+        ),
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
@@ -2275,7 +2279,9 @@ def invitations_remind_one(
         review_session=review_session,
         reviewer=reviewer,
         user=user,
-        request=request,
+        build_invite_url=lambda token: str(
+            request.url_for("reviewer_invite", token=token)
+        ),
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
@@ -2298,7 +2304,9 @@ def session_remind_incomplete(
         db,
         review_session=review_session,
         user=user,
-        request=request,
+        build_invite_url=lambda token: str(
+            request.url_for("reviewer_invite", token=token)
+        ),
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(

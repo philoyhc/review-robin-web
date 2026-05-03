@@ -11,10 +11,10 @@ from __future__ import annotations
 import hashlib
 import re
 import secrets
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from fastapi import Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -39,10 +39,6 @@ def hash_token(raw: str) -> str:
 def _new_token() -> tuple[str, str]:
     raw = secrets.token_urlsafe(32)
     return raw, hash_token(raw)
-
-
-def _invite_url(request: Request, raw_token: str) -> str:
-    return str(request.url_for("reviewer_invite", token=raw_token))
 
 
 def _email_body(session: ReviewSession, invite_url: str) -> tuple[str, str]:
@@ -195,7 +191,7 @@ def send_invitation(
     review_session: ReviewSession,
     reviewer: Reviewer,
     user: User,
-    request: Request,
+    build_invite_url: Callable[[str], str],
     correlation_id: str | None = None,
 ) -> SendResult:
     """Mint a fresh token, write an outbox row, flip invitation to ``sent``.
@@ -203,11 +199,15 @@ def send_invitation(
     The DB only ever stores the sha256 hash, so each send rotates the token
     and the previous URL (if any) becomes stale. The raw token is preserved
     in the outbox row body so the operator can re-copy the link.
+
+    ``build_invite_url`` takes a raw token and returns the absolute invite
+    URL. Routes pass ``request.url_for`` closed over the route name; a
+    background worker (Segment 15 #34) passes a deployment-base-URL closure.
     """
     raw_token, token_hash = _new_token()
     invitation.token_hash = token_hash
 
-    invite_url = _invite_url(request, raw_token)
+    invite_url = build_invite_url(raw_token)
     subject, body = _email_body(review_session, invite_url)
 
     outbox = EmailOutbox(
@@ -405,7 +405,7 @@ def send_reminder(
     review_session: ReviewSession,
     reviewer: Reviewer,
     user: User,
-    request: Request,
+    build_invite_url: Callable[[str], str],
     correlation_id: str | None = None,
 ) -> ReminderResult:
     """Send a reminder reusing the previously-issued invitation URL.
@@ -423,7 +423,7 @@ def send_reminder(
             review_session=review_session,
             reviewer=reviewer,
             user=user,
-            request=request,
+            build_invite_url=build_invite_url,
             correlation_id=correlation_id,
         )
         invitation.last_reminder_at = datetime.now(timezone.utc)
@@ -469,7 +469,7 @@ def send_reminders_to_incomplete(
     *,
     review_session: ReviewSession,
     user: User,
-    request: Request,
+    build_invite_url: Callable[[str], str],
     correlation_id: str | None = None,
 ) -> ReminderBatchResult:
     """Bulk-send reminders to every reviewer classified as incomplete.
@@ -493,7 +493,7 @@ def send_reminders_to_incomplete(
             review_session=review_session,
             reviewer=row.reviewer,
             user=user,
-            request=request,
+            build_invite_url=build_invite_url,
             correlation_id=correlation_id,
         )
         sent_invitation_ids.append(row.invitation.id)
