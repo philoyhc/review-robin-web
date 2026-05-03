@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Invitations — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
   <div class="session-nav-card">
@@ -11,11 +12,11 @@
   </div>
 
   {% if not is_ready %}
-    <div class="card" style="border-color: #d97706; background: #fef3c7;">
-      <p>
-        Invitations can only be issued while the session is
-        <strong>ready</strong>. Activate the session from the validation
-        page to enable these actions.
+    <div class="card lock">
+      <p style="margin: 0;">
+        Invitations can only be issued while the session is ready.
+        Activate the session from the validation page to enable these
+        actions.
       </p>
     </div>
   {% endif %}
@@ -23,9 +24,11 @@
   <div class="card">
     <p>
       Eligible reviewers (active + at least one assignment):
-      <strong>{{ eligible_count }}</strong>
-      &middot; Without invitation yet: <strong>{{ uninvited_count }}</strong>
-      &middot; Pending send: <strong>{{ pending_count }}</strong>
+      <span class="pill pill-count">{{ eligible_count }}</span>
+      &middot; Without invitation yet:
+      <span class="pill pill-count">{{ uninvited_count }}</span>
+      &middot; Pending send:
+      <span class="pill pill-count">{{ pending_count }}</span>
     </p>
     <p>
       <form method="post"
@@ -49,7 +52,7 @@
       <a class="btn secondary"
          href="/operator/sessions/{{ session.id }}/outbox">View outbox</a>
     </p>
-    <p class="muted">
+    <p class="form-help">
       Each "Send" rotates the token (the previous URL becomes stale) and
       writes a fresh row to the dev outbox. Reviewers must sign in with
       their work email to follow the link.
@@ -57,52 +60,54 @@
   </div>
 
   {% if rows %}
-    <table>
-      <tr>
-        <th>Reviewer</th>
-        <th>Status</th>
-        <th>Sent</th>
-        <th>Opened</th>
-        <th></th>
-      </tr>
-      {% for row in rows %}
+    <div class="card">
+      <table>
         <tr>
-          <td>
-            <strong>{{ row.reviewer.name }}</strong><br>
-            <code>{{ row.reviewer.email }}</code>
-          </td>
-          <td>
-            {% if row.invitation.status == "opened" %}
-              <span class="pill pill-info">opened</span>
-            {% elif row.invitation.status == "sent" %}
-              <span class="pill pill-info">sent</span>
-            {% else %}
-              <span class="pill pill-warning">pending</span>
-            {% endif %}
-          </td>
-          <td>{{ row.invitation.sent_at.strftime("%Y-%m-%d %H:%M") if row.invitation.sent_at else "—" }}</td>
-          <td>{{ row.invitation.opened_at.strftime("%Y-%m-%d %H:%M") if row.invitation.opened_at else "—" }}</td>
-          <td style="white-space: nowrap;">
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/send"
-                  style="display: inline;">
-              <button class="btn secondary" type="submit"
-                      {% if not is_ready %}disabled{% endif %}>
-                Send
-              </button>
-            </form>
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/regenerate"
-                  style="display: inline;">
-              <button class="btn secondary" type="submit"
-                      {% if not is_ready %}disabled{% endif %}>
-                Regenerate
-              </button>
-            </form>
-          </td>
+          <th>Reviewer</th>
+          <th>Status</th>
+          <th>Sent</th>
+          <th>Opened</th>
+          <th class="col-shrink"></th>
         </tr>
-      {% endfor %}
-    </table>
+        {% for row in rows %}
+          <tr>
+            <td>
+              <strong>{{ row.reviewer.name }}</strong><br>
+              <code>{{ row.reviewer.email }}</code>
+            </td>
+            <td>
+              {% if row.invitation.status == "opened" %}
+                <span class="pill pill-count">opened</span>
+              {% elif row.invitation.status == "sent" %}
+                <span class="pill pill-count">sent</span>
+              {% else %}
+                <span class="pill pill-empty">pending</span>
+              {% endif %}
+            </td>
+            <td>{{ row.invitation.sent_at.strftime("%Y-%m-%d %H:%M") if row.invitation.sent_at else "—" }}</td>
+            <td>{{ row.invitation.opened_at.strftime("%Y-%m-%d %H:%M") if row.invitation.opened_at else "—" }}</td>
+            <td class="col-shrink">
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/send"
+                    style="display: inline;">
+                <button class="btn secondary" type="submit"
+                        {% if not is_ready %}disabled{% endif %}>
+                  Send
+                </button>
+              </form>
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/regenerate"
+                    style="display: inline;">
+                <button class="btn secondary" type="submit"
+                        {% if not is_ready %}disabled{% endif %}>
+                  Regenerate
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
   {% else %}
     <div class="card">
       <p class="muted">No invitations yet. Click <em>Generate invitations</em>

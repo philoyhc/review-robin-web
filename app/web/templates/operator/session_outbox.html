@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Outbox — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
   <div class="session-nav-card">
@@ -25,14 +26,14 @@
           &middot; to <code>{{ row.to_email }}</code>
           &middot;
           {% if row.status == "sent" %}
-            <span class="pill pill-info">sent</span>
+            <span class="pill pill-count">sent</span>
             {% if row.sent_at %} at {{ row.sent_at.strftime("%Y-%m-%d %H:%M") }}{% endif %}
           {% else %}
-            <span class="pill pill-warning">{{ row.status }}</span>
+            <span class="pill pill-empty">{{ row.status }}</span>
           {% endif %}
         </p>
         <p><strong>Subject:</strong> {{ row.subject }}</p>
-        <pre style="background: #f3f4f6; padding: 12px; border-radius: 4px; white-space: pre-wrap;">{{ row.body }}</pre>
+        <pre class="code-block">{{ row.body }}</pre>
       </div>
     {% endfor %}
   {% else %}
