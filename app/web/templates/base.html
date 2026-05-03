@@ -26,6 +26,7 @@
         --accent-blue: #2563eb;
         --accent-blue-bg: #dbeafe;
         --accent-blue-bg-soft: #eff6ff;
+        --accent-blue-bg-faint: #fafcff;
         --accent-blue-light: #3b82f6;
         --accent-blue-dark: #1d4ed8;
         --accent-green: #059669;
@@ -869,12 +870,12 @@
         border-color: var(--border-subtle);
       }
       body.ui-v2 .session-home-anchor {
-        background: var(--accent-blue-bg);
+        background: var(--accent-blue-bg-soft);
         border-right-color: var(--border-subtle);
         color: var(--text-secondary);
       }
       body.ui-v2 .session-home-anchor:hover {
-        background: var(--accent-blue-bg-soft);
+        background: var(--accent-blue-bg-faint);
         color: var(--text-primary);
       }
       body.ui-v2 .session-home-anchor.active { color: var(--text-primary); }
@@ -882,12 +883,27 @@
         border-right-color: var(--border-subtle);
         color: var(--text-muted);
       }
+      /* Row-label emphasis — applies when the operator is on a
+         page in this group OR when hovering any tab in the group's
+         strip. The v1 :has() rules are shadowed by the v2 base
+         row-label rule on equal specificity, so we re-emit them
+         under body.ui-v2 to win on source order. */
+      body.ui-v2 .row-label.active-group,
+      body.ui-v2 .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row,
+      body.ui-v2 .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row {
+        color: var(--text-primary);
+      }
+      body.ui-v2 .row-label.active-group::after,
+      body.ui-v2 .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row::after,
+      body.ui-v2 .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row::after {
+        border-left-color: var(--text-primary);
+      }
       body.ui-v2 .tab-strip-setup { background: rgba(37, 99, 235, 0.05); }
       body.ui-v2 .tab-strip-ops   { background: rgba(5, 150, 105, 0.05); }
       body.ui-v2 .session-nav-grid > .row-setup {
         border-bottom-color: var(--border-subtle);
       }
-      body.ui-v2 .nav-tab { color: var(--text-secondary); }
+      body.ui-v2 .nav-tab { color: var(--text-secondary); font-weight: 600; }
       body.ui-v2 .nav-tab.active { color: var(--text-primary); }
       body.ui-v2 .tab-strip-setup .nav-tab.active::after {
         background: var(--accent-blue);
