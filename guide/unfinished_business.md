@@ -946,7 +946,7 @@ hardcoded `_email_body` / `_reminder_body` helpers (each a
 two-line plain-text string with the session name + invite URL
 spliced in inline) plus a stub `/operator/sessions/{id}/setupinvite`
 page that says "lands in Segment 15." The audit in
-`guide/segment_1-10_unfinished.md` (2026-05-03) flagged this
+`guide/archive/segment_1-10_unfinished.md` (2026-05-03) flagged this
 as `[tracked-status]` "owned by Segment 15," but the editor
 itself is **independent of real SMTP** — it just shapes the body
 that the dev outbox already renders. Pulling it back into
