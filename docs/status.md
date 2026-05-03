@@ -432,7 +432,7 @@ plug in additional reasons without a schema change. Today's keys are
 
 | Capability | Lands in |
 |---|---|
-| Edit individual reviewer / reviewee / assignment rows (today: bulk operations only via CSV replace or delete-all) | Not yet planned; would slot before activation |
+| Edit individual reviewer / reviewee / assignment rows (today: bulk operations only via CSV replace or delete-all) | **Segment 15** (officially deferred 2026-05-03; tracked at `guide/unfinished_business.md` #25 — needs a design pass before code) |
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
 | Display Fields persistence on the Instruments page placeholder rows (Friendly Label edit, Visible toggle, Order column don't POST yet; the 10B-2 schema-level routes still exist server-side). Wiring up requires extending `_VALID_DISPLAY_SOURCES` / `_DEFAULT_DISPLAY_LABELS` with reviewee name + email, extending `display_field_value` and the reviewer-surface render path, and pointing the placeholder cells at the existing endpoints. | Next round of UI work (a future 10x slice or folded into Segment 11) |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
@@ -442,6 +442,7 @@ plug in additional reasons without a schema change. Today's keys are
 | **RuleBased assignment** | **Segment 12** |
 | **Multi-instrument sessions** (more than one Instrument under a session) | **Segment 13** |
 | **Production hardening** (Key Vault, VNet, soft-delete, full Postgres pytest matrix) | **Segment 14** |
+| Local Postgres docker-compose for dev (SQLite + the `ci-postgres` job + migration-on-deploy is the parity story today) | **Segment 15** (officially deferred 2026-05-03; tracked at `guide/unfinished_business.md` #26 — likely settles "won't fix" via the developer setup guide work) |
 
 ---
 
