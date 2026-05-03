@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Assignments — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
   <div class="session-nav-card">
@@ -15,20 +16,20 @@
       <p style="margin: 0;">
         Self-review:
         {% if self_review_found == 0 %}
-          <span class="pill pill-info">0 found</span>
+          <span class="pill pill-count">0 found</span>
         {% elif self_review_included == 0 %}
-          <span class="pill pill-info">{{ self_review_excluded }} excluded</span>
+          <span class="pill pill-count">{{ self_review_excluded }} excluded</span>
         {% elif self_review_excluded == 0 %}
-          <span class="pill pill-info">{{ self_review_included }} included</span>
+          <span class="pill pill-count">{{ self_review_included }} included</span>
         {% else %}
-          <span class="pill pill-info">{{ self_review_included }} included</span>
-          <span class="pill pill-info">{{ self_review_excluded }} excluded</span>
+          <span class="pill pill-count">{{ self_review_included }} included</span>
+          <span class="pill pill-count">{{ self_review_excluded }} excluded</span>
         {% endif %}
       </p>
       <p style="margin: 4px 0 0 0;">
         Fields with data:
         {% for label in fields_with_data %}
-          <span class="pill pill-info">{{ label }}</span>
+          <span class="pill pill-count">{{ label }}</span>
         {% else %}
           <span class="muted">—</span>
         {% endfor %}
@@ -37,7 +38,7 @@
       <p style="margin: 0;">
         Fields with data:
         {% for label in fields_with_data %}
-          <span class="pill pill-info">{{ label }}</span>
+          <span class="pill pill-count">{{ label }}</span>
         {% else %}
           <span class="muted">—</span>
         {% endfor %}
@@ -46,7 +47,7 @@
   </div>
 
   {% if is_ready %}
-    <div class="card" style="border-color: #d97706; background: #fef3c7;">
+    <div class="card lock">
       <p style="margin: 0 0 12px 0;">
         The assignments cannot be modified while the session is ongoing.
         Revert the session to draft if you wish to modify anything.
@@ -60,15 +61,15 @@
           </label>
         </p>
         <p style="margin-bottom: 0;">
-          <button class="btn alert-solid" type="submit">Revert to draft</button>
+          <button class="btn alert" type="submit">Revert to draft</button>
         </p>
       </form>
     </div>
   {% endif %}
 
   {% if not is_ready and (reviewer_count == 0 or reviewee_count == 0) %}
-    <div class="card" style="border-color: #d97706; background: #fef3c7;">
-      <p>
+    <div class="card lock">
+      <p style="margin: 0;">
         Import at least one reviewer and one reviewee before generating
         assignments.
       </p>
@@ -76,21 +77,17 @@
   {% endif %}
 
   {% if missing_confirm %}
-    <div class="card banner-scroll-target" id="missing-confirm-banner"
-         style="border-color: #b91c1c; background: #fee2e2;">
-      <p>
-        <strong>Replace not confirmed.</strong>
-        Tick the confirm checkbox in the form below before submitting.
+    <div class="banner banner-error banner-scroll-target" id="missing-confirm-banner">
+      <p style="margin: 0;">
+        Replace not confirmed. Tick the confirm checkbox in the form below before submitting.
       </p>
     </div>
   {% endif %}
 
   {% if is_blocked %}
-    <div class="card banner-scroll-target" id="upload-blocked-banner"
-         style="border-color: #b91c1c; background: #fee2e2;">
-      <p>
-        <strong>Upload blocked.</strong>
-        The CSV has errors that must be resolved before it can be saved.
+    <div class="banner banner-error banner-scroll-target" id="upload-blocked-banner">
+      <p style="margin: 0;">
+        Upload blocked. The CSV has errors that must be resolved before it can be saved.
       </p>
     </div>
   {% endif %}
@@ -102,7 +99,7 @@
     <div class="bottom-left">
     <section class="card" id="upload-csv">
       <h2>Upload Manual Assignment</h2>
-      <p class="muted">
+      <p class="form-help">
         CSV file in UTF-8, max 5000 rows. One row per assignment. Required
         columns: <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
         Optional: <code>IncludeAssignment</code>,
@@ -110,13 +107,13 @@
         Other columns are ignored.
       </p>
       {% if reviewer_count == 0 or reviewee_count == 0 %}
-        <p class="muted">Import reviewers and reviewees first.</p>
+        <p class="form-help">Import reviewers and reviewees first.</p>
       {% else %}
         <form method="post"
               action="/operator/sessions/{{ session.id }}/assignments/manual/import"
               enctype="multipart/form-data">
-          <label for="manual-file">CSV file</label>
-          <input type="file" id="manual-file" name="file" accept=".csv,text/csv" required>
+          <input type="file" id="manual-file" name="file" accept=".csv,text/csv"
+                 aria-label="CSV file" required>
 
           <p style="margin-top: 12px;">
             <label style="font-weight: normal;">
@@ -126,40 +123,34 @@
           </p>
 
           {% if assignment_count and assignment_count > 0 %}
-            <p style="margin-top: 12px;">
-              <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
-              Importing will <strong>replace</strong> them.
-            </p>
             <p>
               <label style="font-weight: normal;">
                 <input type="checkbox" name="confirm_replace" value="true" required>
-                Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
+                Yes, replace the existing
+                <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>.
               </label>
             </p>
-            <div style="margin-top: 20px;">
-              <button class="btn alert-solid" type="submit">Upload</button>
-            </div>
-          {% else %}
-            <div style="margin-top: 20px;">
-              <button class="btn" type="submit">Upload</button>
-            </div>
           {% endif %}
+
+          <div style="margin-top: 20px;">
+            <button class="btn secondary" type="submit">Upload</button>
+          </div>
         </form>
       {% endif %}
     </section>
 
     <div class="card">
       <h2>Rule Based Assignment</h2>
-      <p class="muted">Under Construction</p>
+      <p class="form-help">Under construction.</p>
     </div>
     </div>{# /bottom-left #}
 
     <div class="bottom-left">
     <div class="card">
       <h2>Full Matrix Assignment</h2>
-      <p class="muted">Pair every reviewer with every reviewee.</p>
+      <p class="form-help">Pair every reviewer with every reviewee.</p>
       {% if reviewer_count == 0 or reviewee_count == 0 %}
-        <p class="muted">Import reviewers and reviewees first.</p>
+        <p class="form-help">Import reviewers and reviewees first.</p>
       {% else %}
         <form method="post"
               action="/operator/sessions/{{ session.id }}/assignments/full-matrix">
@@ -171,42 +162,36 @@
           </p>
 
           {% if assignment_count and assignment_count > 0 %}
-            <p style="margin-top: 12px;">
-              <strong>This session already has {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.</strong>
-              Generating will <strong>replace</strong> them.
-            </p>
             <p>
               <label style="font-weight: normal;">
                 <input type="checkbox" name="confirm_replace" value="true" required>
-                Yes, replace the existing {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}.
+                Yes, replace the existing
+                <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>.
               </label>
             </p>
-            <div style="margin-top: 20px;">
-              <button class="btn alert-solid" type="submit">Generate</button>
-            </div>
-          {% else %}
-            <div style="margin-top: 20px;">
-              <button class="btn" type="submit">Generate</button>
-            </div>
           {% endif %}
+
+          <div style="margin-top: 20px;">
+            <button class="btn secondary" type="submit">Generate</button>
+          </div>
         </form>
       {% endif %}
     </div>
 
     {% if assignment_count %}
-      <div class="card" style="border-color: #b91c1c;">
-        <h2 style="color: #b91c1c;">Danger Zone</h2>
+      <div class="card danger-zone">
+        <h2>Danger Zone</h2>
         <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
           <p>
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required>
-              Yes, delete all <strong>{{ assignment_count }}</strong>
-              assignment{% if assignment_count != 1 %}s{% endif %} for this session.
+              Yes, delete the existing
+              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>.
               Reviewers and reviewees stay; the assignment mode is cleared.
             </label>
           </p>
           <p>
-            <button class="btn danger-solid" type="submit">Delete all assignments</button>
+            <button class="btn destructive" type="submit">Delete all assignments</button>
           </p>
         </form>
       </div>
@@ -219,7 +204,7 @@
     <div class="card">
       <h2>Current pairs</h2>
       {% if truncated_count %}
-        <p class="muted">
+        <p class="form-help">
           Showing first {{ pair_sample | length }} of {{ "{:,}".format(assignment_count) }} pairs.
         </p>
       {% endif %}
@@ -258,7 +243,7 @@
         {% endfor %}
       </table>
       {% if truncated_count %}
-        <p class="muted">…and {{ truncated_count }} more not shown.</p>
+        <p class="form-help">…and {{ truncated_count }} more not shown.</p>
       {% endif %}
     </div>
   {% endif %}

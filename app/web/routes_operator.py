@@ -545,36 +545,6 @@ def reviewers_list(
     )
 
 
-@router.get("/sessions/{session_id}/reviewers1", response_class=HTMLResponse)
-def reviewers_list_v2(
-    request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    reviewers = assignments.list_reviewers(db, review_session.id)
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_reviewers1.html",
-        {
-            "user": user,
-            "session": review_session,
-            "status_pills": views.session_status_pills(db, review_session),
-            "reviewers": reviewers,
-            "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
-            "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
-            "issues": [],
-            "is_ready": lifecycle.is_ready(review_session),
-            "fields_with_data": assignments.reviewer_fields_with_data(
-                db, review_session.id
-            ),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Reviewers"
-            ),
-        },
-    )
-
-
 @router.get("/sessions/{session_id}/reviewees", response_class=HTMLResponse)
 def reviewees_list(
     request: Request,
