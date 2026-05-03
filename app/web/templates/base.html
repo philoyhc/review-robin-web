@@ -841,7 +841,12 @@
         background: var(--accent-amber-bg);
         color: var(--accent-amber-dark);
       }
-      body.ui-v2 .pill-lifecycle-draft,
+      /* draft = "not ready for action" — same warning treatment as
+         .pill-empty so the status badge reads as "needs work". */
+      body.ui-v2 .pill-lifecycle-draft {
+        background: var(--accent-amber-bg);
+        color: var(--accent-amber-dark);
+      }
       body.ui-v2 .pill-lifecycle-closed {
         background: var(--bg-muted);
         color: var(--text-secondary);
