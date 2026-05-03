@@ -40,7 +40,7 @@ def test_reviewer_duplicate_email_is_blocking_with_row_number() -> None:
     csv_text = (
         "ReviewerName,ReviewerEmail\n"
         "Alice,dup@example.edu\n"
-        "Alice2,dup@example.edu\n"
+        "Alice,dup@example.edu\n"
     )
     result = parse_reviewer_csv(_b(csv_text))
 
@@ -155,6 +155,38 @@ def test_reviewer_empty_required_cell_is_blocking() -> None:
         "ReviewerName",
         "ReviewerEmail",
     }
+
+
+def test_reviewer_same_email_different_name_is_blocking() -> None:
+    """Email is the unique person-id; same email + different name errors."""
+    csv_text = (
+        "ReviewerName,ReviewerEmail\n"
+        "Alice,shared@example.edu\n"
+        "Alex,shared@example.edu\n"
+    )
+    result = parse_reviewer_csv(_b(csv_text))
+
+    assert result.is_blocked
+    mismatch = next(i for i in result.issues if "names must match" in i.message)
+    assert mismatch.row_number == 2
+    assert "row 1" in mismatch.message
+    assert "Alice" in mismatch.message
+
+
+def test_reviewee_same_identifier_different_name_is_blocking() -> None:
+    """Same rule for reviewees; works for both email and non-email identifiers."""
+    csv_text = (
+        "RevieweeName,RevieweeEmail\n"
+        "Carol,shared@example.edu\n"
+        "Caroline,shared@example.edu\n"
+        "Dan,dan-2026\n"
+        "Daniel,dan-2026\n"
+    )
+    result = parse_reviewee_csv(_b(csv_text))
+
+    assert result.is_blocked
+    mismatches = [i for i in result.issues if "names must match" in i.message]
+    assert {i.row_number for i in mismatches} == {2, 4}
 
 
 def test_reviewer_oversize_file_is_blocking() -> None:
