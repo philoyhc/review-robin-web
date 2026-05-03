@@ -1,5 +1,18 @@
 # Operator page map
 
+> **Note (2026-05-03):** This file overlaps with three newer specs that
+> are now authoritative for the areas they cover:
+> - `spec/visual_style.md` — chrome, status strip, lock card, button
+>   styles, page headers.
+> - `spec/preview_hub.md` — folds the standalone
+>   `/operator/sessions/{id}/preview` page into a new Operations hub
+>   at `/sessions/{id}/preview`.
+> - `spec/quick_setup_card_spec.md` — new card on Session Home not yet
+>   reflected in this file's Home layout.
+>
+> Where this file disagrees with any of them, the newer spec wins.
+> A reconciliation pass is pending.
+
 Specification of the operator-facing page surface. Most sections
 describe what currently ships; placeholder sections explicitly call
 out deferred work. For per-route detail with template paths, form

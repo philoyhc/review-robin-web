@@ -1,5 +1,11 @@
 # Assumptions
 
+> **Note (2026-05-03):** The visual sections (button styles, layout
+> primitives, typography) overlap with `spec/visual_style.md`, which
+> is now authoritative for the visual design system. Where this file
+> disagrees with it, `visual_style.md` wins. A reconciliation pass is
+> pending.
+
 A living record of the load-bearing assumptions — both domain
 shape and visual conventions — that the app is built around.
 Update this file when you introduce a new structure or named
