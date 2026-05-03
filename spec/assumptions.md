@@ -56,6 +56,15 @@ Instrument automatically closes upon session deadline.
 
 ### Button styles
 
+> **Superseded (2026-05-03).** The six-style affordance×treatment
+> matrix below describes the *current* CSS in `base.html`, which
+> `spec/visual_style.md` retires. `visual_style.md` is now
+> authoritative for button styling and replaces this hierarchy with
+> a muted Primary / Secondary / Destructive vocabulary. The
+> migration to those new styles is tracked as
+> `unfinished_business.md` #21. Until that ships, the table below
+> still describes what's in the templates today.
+
 The app uses six canonical button styles. Each is described by
 **affordance × treatment** (`primary`/`alert`/`danger` × `solid`/`outline`):
 
