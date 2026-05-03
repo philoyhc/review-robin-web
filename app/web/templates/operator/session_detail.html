@@ -42,8 +42,69 @@
     </div>
   {% endif %}
 
-  <div class="bottom-grid">
-    <div class="card">
+  <div class="page-grid">
+    {# 1 — Run Session, top-left #}
+    <div class="card card-tl">
+      <h2>Run Session</h2>
+      <div class="btn-row">
+        <a class="btn-cta"
+           href="/operator/sessions/{{ session.id }}?validated=1">Validate<br>Session Setup</a>
+        <a class="btn-cta"
+           href="/operator/sessions/{{ session.id }}/preview">Preview<br>Reviewer Surface</a>
+        <a class="btn-cta"
+           href="/operator/sessions/{{ session.id }}/invitations">Manage<br>Invitations</a>
+        <a class="btn-cta disabled"
+           aria-disabled="true"
+           title="Extract Data lands in Segment 12">Extract<br>Data</a>
+      </div>
+    </div>
+
+    {# 2 — Validation summary, bottom-left (conditional) #}
+    {% if validation_summary %}
+      <div class="card card-bl" id="validation-summary">
+        <h2>Validation summary</h2>
+        <p>
+          <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
+          <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
+          <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
+        </p>
+        {% if is_ready %}
+          <p class="form-help">
+            Session is already ready. Reviewers can save and submit
+            responses on the open instruments.
+          </p>
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
+        {% elif validation_summary.can_activate %}
+          <form method="post" action="/operator/sessions/{{ session.id }}/activate">
+            {% if validation_summary.needs_acknowledge %}
+              <p>
+                <label style="font-weight: normal;">
+                  <input type="checkbox" name="acknowledge_warnings" value="true" required>
+                  I have reviewed the warnings/info and want to activate anyway.
+                </label>
+              </p>
+            {% endif %}
+            <div class="btn-pair">
+              <button class="btn" type="submit">Activate session</button>
+              <a class="btn secondary"
+                 href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
+            </div>
+          </form>
+        {% else %}
+          <p class="form-help">
+            Cannot activate while {{ validation_summary.error_count }}
+            error{% if validation_summary.error_count != 1 %}s remain{% else %} remains{% endif %}.
+            Resolve the errors above and re-run validation.
+          </p>
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {# 3 — Session Details, top-right #}
+    <div class="card card-tr">
       <h2>Session Details</h2>
       <div class="session-meta-row">
         <div><strong>Deadline:</strong> {{ session.deadline.isoformat() if session.deadline else "Not set" }}</div>
@@ -59,69 +120,8 @@
       </div>
     </div>
 
-    <div class="card">
-      <h2>Run Session</h2>
-      <div class="btn-row">
-        <a class="btn-cta"
-           href="/operator/sessions/{{ session.id }}?validated=1">Validate<br>Session Setup</a>
-        <a class="btn-cta"
-           href="/operator/sessions/{{ session.id }}/preview">Preview<br>Reviewer Surface</a>
-        <a class="btn-cta"
-           href="/operator/sessions/{{ session.id }}/invitations">Manage<br>Invitations</a>
-        <a class="btn-cta disabled"
-           aria-disabled="true"
-           title="Extract Data lands in Segment 12">Extract<br>Data</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="bottom-grid">
-    <div class="bottom-left">
-      {% if validation_summary %}
-        <div class="card" id="validation-summary">
-          <h2>Validation summary</h2>
-          <p>
-            <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
-            <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
-            <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
-          </p>
-          {% if is_ready %}
-            <p class="form-help">
-              Session is already ready. Reviewers can save and submit
-              responses on the open instruments.
-            </p>
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
-          {% elif validation_summary.can_activate %}
-            <form method="post" action="/operator/sessions/{{ session.id }}/activate">
-              {% if validation_summary.needs_acknowledge %}
-                <p>
-                  <label style="font-weight: normal;">
-                    <input type="checkbox" name="acknowledge_warnings" value="true" required>
-                    I have reviewed the warnings/info and want to activate anyway.
-                  </label>
-                </p>
-              {% endif %}
-              <div class="btn-pair">
-                <button class="btn" type="submit">Activate session</button>
-                <a class="btn secondary"
-                   href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
-              </div>
-            </form>
-          {% else %}
-            <p class="form-help">
-              Cannot activate while {{ validation_summary.error_count }}
-              error{% if validation_summary.error_count != 1 %}s remain{% else %} remains{% endif %}.
-              Resolve the errors above and re-run validation.
-            </p>
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
-          {% endif %}
-        </div>
-      {% endif %}
-    </div>
-
-    <div class="card danger-zone" id="danger-zone">
+    {# 4 — Danger Zone, bottom-right #}
+    <div class="card card-br danger-zone" id="danger-zone">
       <h2>Danger Zone</h2>
       <p class="form-help">
         Delete Data wipes every reviewer response while leaving setup intact.
