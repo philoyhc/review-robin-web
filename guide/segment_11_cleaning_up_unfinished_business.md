@@ -4,10 +4,10 @@
 renumber promoted it. Cross-references in older docs may still
 point to "10E" by name.)
 
-**Status:** Forward-looking plan. Picks up the loose ends the audit at
-`guide/archive/segment_1-10_unfinished.md` (2026-05-03) surfaced
-across Segments 1–10. Land these before Segment 12 (export / audit
-retention) starts so the operator surface settles cleanly.
+**Status:** Tier 1 closed (2026-05-03). Tiers 2–4 remain forward-
+looking. The original framing — "land these before Segment 12 (export
+/ audit retention) starts so the operator surface settles cleanly" —
+still applies to the remaining tiers.
 
 This is a punch list, not a feature segment. Most items are small;
 each lands as its own PR. Items with detail in
@@ -34,20 +34,17 @@ decision answers a "should we X?" that Tier 3 work depends on). Tier 4
 is the medium-sized work that wants the chrome / arch / surface
 already settled.
 
-### Tier 1 — Tiny / 5-minute cleanups
+### Tier 1 — Closed (2026-05-03)
 
-| Item | Source | Notes |
-|------|--------|-------|
-| **#9 — `get_or_create_default_instrument` docstring refresh** | `unfinished_business.md` #9 | Pointer fix at `app/services/assignments.py:402`. |
-| **#8 + #12 — CSV email-validation drift + cross-table identity check** | `unfinished_business.md` #8 + #12 | Bundle: same `_parse_email` helper. #8 sets up #12. |
+All four originally-listed items resolved:
 
-**Scope cuts (2026-05-03, second pass).**
-- **#23 — Sessions-list Delete button** deferred to **Segment 15**
-  alongside the other `/operator/sessions` UI work. See
-  `unfinished_business.md` #23 status note.
-- **§2.6 — Sort-column UX** promoted to a real feature spec at
-  `guide/sort_by_reviewee.md`, target **Segment 13**. Catalog
-  entry at `unfinished_business.md` #31.
+| Item | Outcome |
+|------|---------|
+| **#9 — `get_or_create_default_instrument` docstring refresh** | ✅ shipped via PR #309 |
+| **#8 — CSV email-validation drift** (shared `_parse_email` helper) | ✅ shipped via PR #314 |
+| **#12 — CSV cross-table identity check** | ✅ shipped via PR #315 |
+| **#23 — Sessions-list Delete button** | Deferred to **Segment 15** alongside the other `/operator/sessions` UI work (PR #316). Tracked at `unfinished_business.md` #23. |
+| **§2.6 — Sort-column UX status note** | Promoted from sketch to a real feature spec at `guide/sort_by_reviewee.md`, target **Segment 13** (PR #317). Catalog entry at `unfinished_business.md` #31. |
 
 ### Tier 2 — Decisions (each unblocks Tier 3 or 4 work)
 
