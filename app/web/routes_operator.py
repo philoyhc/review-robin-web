@@ -977,6 +977,33 @@ def setupinvite_stub(
     )
 
 
+@router.get("/sessions/{session_id}/previews", response_class=HTMLResponse)
+def previews_stub(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    """Placeholder for the Operations-row Previews tab.
+
+    Distinct from ``/preview`` (singular), which is the operator's
+    preview of the reviewer surface. ``/previews`` (plural) lands the
+    operator on a hub for surfaces under construction.
+    """
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_previews.html",
+        {
+            "user": user,
+            "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Previews"
+            ),
+        },
+    )
+
+
 @router.get("/sessions/{session_id}/preview", response_class=HTMLResponse)
 def session_preview(
     request: Request,
