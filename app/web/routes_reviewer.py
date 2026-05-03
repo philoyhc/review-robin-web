@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import and_, not_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
@@ -25,7 +25,7 @@ from app.services import instruments as instruments_service
 from app.services import invitations as invitations_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
-from app.web import breadcrumbs
+from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -95,6 +95,18 @@ def _load_assignments_with_relations(
         .order_by(Assignment.id)
     )
     return list(db.execute(stmt).scalars())
+
+
+_NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD = not_(
+    and_(
+        InstrumentDisplayField.source_type == "reviewee",
+        InstrumentDisplayField.source_field.in_(["name", "email_or_identifier"]),
+    )
+)
+"""Filter expression: exclude display fields that duplicate the always-rendered
+Reviewee identity column (name + email). The operator can still configure these
+on the Instruments page; they're just not rendered as separate columns on the
+reviewer surface since the Reviewee column already shows both."""
 
 
 def _instruments_for_session(db: Session, session_id: int) -> dict[int, Instrument]:
@@ -170,6 +182,7 @@ def _surface_context(
             select(InstrumentDisplayField)
             .where(InstrumentDisplayField.instrument_id.in_(instrument_ids))
             .where(InstrumentDisplayField.visible.is_(True))
+            .where(_NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD)
             .order_by(InstrumentDisplayField.order, InstrumentDisplayField.id)
         )
         for field in db.execute(stmt).scalars():
@@ -254,6 +267,7 @@ def _surface_context(
             start=1,
         )
     }
+    total_instrument_count = len(instruments)
     for instrument_id, group_rows in rows_by_instrument.items():
         instrument = instruments.get(instrument_id)
         if instrument is None:
@@ -262,10 +276,10 @@ def _surface_context(
         help_block_items = [
             f for f in fields if f.help_text and f.help_text_visible
         ]
-        heading = (
-            instrument.description.strip()
-            if instrument.description and instrument.description.strip()
-            else f"Instrument #{position_by_id[instrument_id]}"
+        heading = views.reviewer_instrument_heading(
+            description=instrument.description,
+            position=position_by_id[instrument_id],
+            total_count=total_instrument_count,
         )
         display_fields = display_fields_by_instrument.get(instrument_id, [])
         display_field_headers = [
@@ -439,6 +453,7 @@ def build_preview_context(
         select(InstrumentDisplayField)
         .where(InstrumentDisplayField.instrument_id.in_(instrument_ids))
         .where(InstrumentDisplayField.visible.is_(True))
+        .where(_NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD)
         .order_by(InstrumentDisplayField.order, InstrumentDisplayField.id)
     )
     for field in db.execute(stmt).scalars():
@@ -519,6 +534,7 @@ def build_preview_context(
 
     instrument_groups: list[dict] = []
     flat_rows: list[dict] = []
+    total_instrument_count = len(instruments)
     for position, instrument in enumerate(instruments, start=1):
         group_rows = rows_by_instrument.get(instrument.id, [])
         if not group_rows:
@@ -527,10 +543,10 @@ def build_preview_context(
         help_block_items = [
             f for f in fields if f.help_text and f.help_text_visible
         ]
-        heading = (
-            instrument.description.strip()
-            if instrument.description and instrument.description.strip()
-            else f"Instrument #{position}"
+        heading = views.reviewer_instrument_heading(
+            description=instrument.description,
+            position=position,
+            total_count=total_instrument_count,
         )
         display_fields = display_fields_by_instrument.get(instrument.id, [])
         display_field_headers = [

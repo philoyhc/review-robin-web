@@ -81,14 +81,15 @@
 
     {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/save">{% endif %}
       {% for group in instrument_groups %}
-        <h2 style="margin-top: 24px;">{{ group.heading }}</h2>
+        {% if group.heading %}
+          <h2 style="margin-top: 24px;">{{ group.heading }}</h2>
+        {% endif %}
         {% if group.help_block_items %}
-          <dl class="help-block">
+          <ul class="help-block">
             {% for field in group.help_block_items %}
-              <dt>{{ field.label }}</dt>
-              <dd>{{ field.help_text }}</dd>
+              <li><strong>{{ field.label }}</strong> — {{ field.help_text }}</li>
             {% endfor %}
-          </dl>
+          </ul>
         {% endif %}
         <div class="table-scroll">
           <table>
@@ -112,7 +113,7 @@
                 {% for cell in row.display_cells %}
                   <td>
                     {% if cell.is_profile_link %}
-                      {% if cell.value %}<a href="{{ cell.value }}">{{ cell.value }}</a>{% endif %}
+                      {% if cell.value %}<a href="{{ cell.value }}">View</a>{% endif %}
                     {% else %}
                       {{ cell.value or "" }}
                     {% endif %}

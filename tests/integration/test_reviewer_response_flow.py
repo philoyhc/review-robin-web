@@ -186,25 +186,88 @@ def test_surface_renders_pair_context_and_default_fields(
     assert "Comments" in response.text
 
 
-def test_surface_heading_uses_position_not_system_name(
+def test_surface_help_text_renders_as_inline_list(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Reviewer-surface heading is position-based when description is empty.
+    """Help text renders as ``<ul><li><strong>Label</strong> — text</li>``."""
+    from app.db.models import InstrumentResponseField
 
-    Regression: Instrument.name is a stable system handle (used for Manual
-    CSV cross-references per item #28). After earlier instruments are
-    deleted, a survivor named e.g. "instrument_4" can sit at position 1.
-    The reviewer-surface heading must show "Instrument #1" (matching the
-    operator surface's loop-index render), not the historical name.
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-helpfmt",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.field_key == "rating"
+        )
+    ).scalar_one()
+    rating.help_text = "1 (poor) to 5 (excellent)."
+    rating.help_text_visible = True
+    db.commit()
+    _activate(operator, db, review_session)
+
+    rae_client = make_client(rae)
+    body = make_client(rae).get(f"/reviewer/sessions/{review_session.id}").text
+    del rae_client
+
+    assert '<ul class="help-block">' in body
+    assert "<strong>Rating</strong> — 1 (poor) to 5 (excellent)." in body
+    assert "<dl class=\"help-block\">" not in body
+
+
+def test_surface_dedupes_reviewee_name_and_email_display_fields(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Display fields for (reviewee, name|email_or_identifier) are not rendered
+    as separate columns — the always-rendered Reviewee identity column shows
+    them already."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-dedup",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+
+    # Reviewee column header is present (always rendered).
+    assert "<th>Reviewee</th>" in body
+    # The seeded name + email Display Fields no longer render as <th>.
+    assert "<th>Name</th>" not in body
+    assert "<th>Email</th>" not in body
+
+
+def test_surface_single_instrument_no_description_renders_no_heading(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Single instrument + empty description → no `<h2>` heading at all.
+
+    Regression: Instrument.name (e.g. "instrument_4" after deletions) used
+    to leak through as the heading. The contract is now: single-instrument
+    sessions show no per-instrument heading when description is empty.
     """
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
         db,
-        code="rae-heading",
+        code="rae-noheading",
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
         activate=False,
@@ -221,8 +284,8 @@ def test_surface_heading_uses_position_not_system_name(
     response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
 
     assert response.status_code == 200
-    assert "Instrument #1" in response.text
     assert "instrument_4" not in response.text
+    assert "Instrument #1" not in response.text
 
 
 def test_surface_filters_out_excluded_assignments(
