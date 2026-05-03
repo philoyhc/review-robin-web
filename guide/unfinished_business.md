@@ -1606,6 +1606,33 @@ The app today has neither — error pages, the `/about` stub, the invalid-link p
 
 ---
 
+### 36. Operator Inactivate UI for reviewer / reviewee rows · [feature] · small · officially deferred
+
+**Status.** Officially deferred (2026-05-03) from Segment 11 Tier 3 §2.4 to **Segment 15**. The schema already supports inactivation — `Reviewer.status` and `Reviewee.status` are queryable and the assignment-generation filter at `app/services/assignments.py::_is_active` already excludes inactive rows defensively. What's missing is the operator-facing affordance to flip the status.
+
+**Why now (originally).** `docs/status.md` listed "Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today)" as "Not yet planned" — easy to surprise an operator who expects an Inactivate button. Either ship the button or surface the gap explicitly.
+
+**Where.**
+
+- Templates: `app/web/templates/operator/session_reviewers.html` and `session_reviewees.html` — per-row Inactivate / Reactivate button, probably alongside the existing per-row affordances.
+- Service: `app/services/reviewers.py` / `reviewees.py` (or `assignments.py` if status flips live there) — new `set_reviewer_status(...)` / `set_reviewee_status(...)` helpers with audit emission.
+- Audit events: new `reviewer.status_changed` / `reviewee.status_changed` with `{old, new}` detail.
+- Lifecycle: status flip should follow the same `validated → draft` invalidation path as other roster mutations (per item #3). Already-invalidated path: `lifecycle.invalidate_if_validated`.
+
+**Plan.**
+
+- Single per-row button `Inactivate` (state-flipping to `Reactivate` when the row is already inactive). Native confirm copy mentions the cascade implication: "Inactive reviewers won't appear in new full-matrix generations and don't receive invitations" (etc.).
+- Audit event on flip captures actor + before / after.
+- Lifecycle invalidates `validated → draft` per the existing convention.
+- Tests:
+  - Operator flips reviewer to inactive → row's status column shows it; assignment-generation excludes it on next run; audit event written.
+  - Reactivate does the same in reverse.
+  - Lifecycle: status flip on a validated session bumps it back to draft.
+
+**Cross-ref.** Mirror entry in `docs/status.md` "What's deliberately not yet there" pointing here.
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"

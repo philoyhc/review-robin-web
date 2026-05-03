@@ -107,6 +107,11 @@ documentation pass:
   from the Segment 11 Tier 2 §24 reframe; tracked at
   `guide/unfinished_business.md` #35. Small `[chrome]` item:
   new env var + footer + error-page surfaces.
+- **Operator Inactivate UI for reviewer / reviewee rows** —
+  per-row Inactivate / Reactivate button on the Reviewers and
+  Reviewees Manage pages. Schema already supports it; affordance
+  is missing. Deferred 2026-05-03 from Segment 11 Tier 3 §2.4;
+  tracked at `guide/unfinished_business.md` #36.
 - **Local Postgres docker-compose for dev** — officially deferred
   from Segment 11 (originally 10E §2.7); tracked at
   `guide/unfinished_business.md` #26. The developer-setup-guide
