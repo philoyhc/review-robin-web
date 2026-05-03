@@ -1372,6 +1372,55 @@ deliberately not yet there" pointing here and at the spec.
 
 ---
 
+### 32. Further refinement of the reviewer surface · [polish] · varied · target Segment 15
+
+**Status.** Forward-looking catch-all for reviewer-surface polish
+beyond the Segment 11 Tier 1 batch (PRs #319 → #324). Target
+**Segment 15** (operator polish + documentation) — same theme,
+naturally absorbs reviewer-side polish alongside the operator-side
+polish items already slated there (#23, #25, #26).
+
+**Why now (originally).** The Segment 11 Tier 1 closeout shipped six
+reviewer-surface tweaks surfaced from a single local-run inspection
+(heading mismatch, position-based heading, help-text inline list,
+Reviewee column dedup, Photo "View" link, column-width hints,
+trailing-status-column hide-when-empty, card framing experiment +
+revert, help-text indentation fix). Pilot use will surface more of
+the same kind of low-priority-but-high-impact polish. This entry is
+the bucket those land in.
+
+**Known sub-items.**
+
+- **Multi-instrument preview** — `build_preview_context` in
+  `app/web/routes_reviewer.py` is single-instrument-only today
+  (picks an "anchor" instrument and pads to 3 rows; other
+  instruments are skipped at render). Plan was sketched on
+  2026-05-03 and explicitly deferred from the Segment 11 Tier 1
+  batch. Approach: iterate the full ordered `instruments` list,
+  synthesize ~2 rows per instrument, build `instrument_groups`
+  with one entry per instrument. ~50–80 line restructure plus 2
+  integration tests. Carries the column-width hints and card
+  framing decisions from the Tier 1 batch through unchanged.
+- **Pilot-feedback-driven polish** — placeholder. Specific
+  refinements added here as they surface from real operator use.
+
+**Where (high-level).** `app/web/routes_reviewer.py`,
+`app/web/templates/reviewer/review_surface.html`, `app/web/views.py`
+(reviewer_instrument_heading and any new helpers), and
+`app/web/templates/base.html` for any new shared CSS primitives.
+
+**Sequencing notes.** This sits alongside but doesn't depend on
+**#31** (sort by reviewee, target Segment 13 — see
+`guide/sort_by_reviewee.md`). The sort feature implements its own
+reviewer-surface changes (clickable column headers, server-side
+default sort) and lands in Segment 13; this catch-all picks up
+everything else.
+
+**Cross-ref.** Mirror entry in `docs/status.md` "What's
+deliberately not yet there" pointing here.
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"

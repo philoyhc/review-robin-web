@@ -85,6 +85,12 @@ documentation pass:
   `guide/unfinished_business.md` #23. Small fix (`<a>` → POST form
   with confirm); bundles naturally with whatever other
   `/operator/sessions` UI work this segment touches.
+- **Further refinement of the reviewer surface** — catch-all for
+  reviewer-surface polish beyond the Segment 11 Tier 1 batch
+  (PRs #319 → #324). Tracked at `guide/unfinished_business.md`
+  #32. Known sub-item: multi-instrument preview (the
+  `build_preview_context` extension explicitly deferred from
+  Segment 11). Pilot-feedback-driven polish lands here too.
 - **Local Postgres docker-compose for dev** — officially deferred
   from Segment 11 (originally 10E §2.7); tracked at
   `guide/unfinished_business.md` #26. The developer-setup-guide
