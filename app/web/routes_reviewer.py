@@ -120,7 +120,9 @@ def _require_session_accepting(
     db: Session, review_session: ReviewSession, reviewer: Reviewer
 ) -> None:
     """Raise 403 unless every instrument the reviewer would write to is accepting."""
-    lifecycle.observe_deadline(db, review_session)
+    lifecycle.observe_deadline(
+        db, review_session, correlation_id=request_correlation_id()
+    )
     db.refresh(review_session)
     assignments = db.execute(
         select(Assignment).where(
@@ -160,7 +162,9 @@ def _surface_context(
     missing: list[responses_service.MissingPosition] | None = None,
     show_acknowledge: bool = False,
 ) -> dict:
-    lifecycle.observe_deadline(db, review_session)
+    lifecycle.observe_deadline(
+        db, review_session, correlation_id=request_correlation_id()
+    )
     db.refresh(review_session)
     assignments = _load_assignments_with_relations(
         db, session_id=review_session.id, reviewer_id=reviewer.id

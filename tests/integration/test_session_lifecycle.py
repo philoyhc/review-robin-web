@@ -460,6 +460,44 @@ def test_lazy_deadline_close_fires_once(
     assert len(deadline_only) == 1
 
 
+def test_lazy_deadline_close_audit_carries_correlation_id(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """observe_deadline's audit row carries the request's correlation_id.
+
+    Regression for unfinished_business.md #10: the deadline lazy-close
+    audit was emitted with correlation_id=None, leaving "which request
+    tripped the close?" undebuggable. Now correlation_id is threaded
+    through from each observe_deadline caller (operator instruments
+    GET, reviewer surface GET, reviewer pre-write check).
+    """
+    operator = make_client(alice)
+    session = _build_ready_session(operator, db, code="lazy-close-cid")
+    session.deadline = datetime.now(timezone.utc) - timedelta(seconds=1)
+    db.commit()
+
+    rae = AuthenticatedUser(
+        principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
+    )
+    rae_client = make_client(rae)
+    rae_client.get(f"/reviewer/sessions/{session.id}")
+
+    deadline_events = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "instrument.closed",
+            AuditEvent.session_id == session.id,
+        )
+    ).scalars().all()
+    deadline_only = [
+        e for e in deadline_events if (e.detail or {}).get("reason") == "deadline"
+    ]
+    assert len(deadline_only) == 1
+    assert deadline_only[0].correlation_id is not None
+    assert deadline_only[0].correlation_id != ""
+
+
 def test_instrument_close_open_visibility_audits(
     client: TestClient, db: Session
 ) -> None:

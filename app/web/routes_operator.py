@@ -930,7 +930,9 @@ def instruments_index(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    lifecycle.observe_deadline(db, review_session)
+    lifecycle.observe_deadline(
+        db, review_session, correlation_id=request_correlation_id()
+    )
     context = views.build_instruments_context(
         db,
         review_session=review_session,

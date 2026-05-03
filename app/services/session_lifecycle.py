@@ -468,6 +468,7 @@ def observe_deadline(
     review_session: ReviewSession,
     *,
     now: datetime | None = None,
+    correlation_id: str | None = None,
 ) -> int:
     """Lazy deadline-close. Idempotent.
 
@@ -475,6 +476,12 @@ def observe_deadline(
     deadline has passed and stamps ``deadline_closed_at``. Emits one
     ``instrument.closed reason=deadline`` audit event per transition.
     Returns the number of instruments closed by this call.
+
+    ``correlation_id`` is the request-scoped UUID minted by the
+    ``request_correlation_id`` dependency; threading it through here is
+    the only way to trace which reviewer's GET (or operator's GET)
+    tripped the close, since the close itself runs anonymously
+    (``actor_user_id=None``).
     """
     if review_session.deadline is None:
         return 0
@@ -509,7 +516,7 @@ def observe_deadline(
                 "reason": "deadline",
                 "deadline": review_session.deadline.isoformat(),
             },
-            correlation_id=None,
+            correlation_id=correlation_id,
         )
         closed += 1
     db.flush()
