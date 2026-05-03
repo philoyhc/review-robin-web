@@ -444,6 +444,7 @@ plug in additional reasons without a schema change. Today's keys are
 | **Production hardening** (Key Vault, VNet, soft-delete, full Postgres pytest matrix) | **Segment 14** |
 | Local Postgres docker-compose for dev (SQLite + the `ci-postgres` job + migration-on-deploy is the parity story today) | **Segment 15** (officially deferred 2026-05-03; tracked at `guide/unfinished_business.md` #26 — likely settles "won't fix" via the developer setup guide work) |
 | Sessions-list per-row Delete button posts directly (today: anchor link to `#danger-zone` on the session's Home page, where the operator confirms + clicks the real Delete) | **Segment 15** (officially deferred 2026-05-03; tracked at `guide/unfinished_business.md` #23 — small fix, bundles with whatever `/operator/sessions` UI work this segment touches) |
+| Sort by reviewee on the reviewer surface — operator picks up to 3 default sort columns from the Display Fields table; reviewer can override at view time via clickable column headers (today: rows render in implicit insertion order) | **Segment 13** (promoted 2026-05-03 from Segment 11 §2.6 sketch; full design spec at `guide/sort_by_reviewee.md`; tracked at `guide/unfinished_business.md` #31) |
 
 ---
 

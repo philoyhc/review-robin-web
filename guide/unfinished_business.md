@@ -1343,6 +1343,35 @@ assignments after a roster replacement, undo, save-as-template).
 
 ---
 
+### 31. Sort by reviewee on the reviewer surface · [feature] · medium · target Segment 13
+
+**Status.** Promoted from Segment 11 §2.6 sketch (2026-05-03).
+Full design spec at `guide/sort_by_reviewee.md`. Target segment:
+**13** (RuleBased assignment builder) — the natural touch-up of
+the per-instrument card during that segment's work.
+
+**Why now (originally).** The reviewer surface table renders
+rows in implicit insertion order; the operator has no way to
+set a deliberate default, and the reviewer has no way to re-sort
+during their working flow. Segment 10D flagged the sort
+affordance as "semantics not yet decided" and it never landed.
+
+**Where (high-level).** Operator side: a new Sort column on the
+per-instrument card's Display Fields table (no new card).
+Reviewer side: clickable column headers on the review-surface
+table for live, non-persisted override.
+
+**Spec.** See `guide/sort_by_reviewee.md` for the full design —
+storage shape, click semantics on the operator widget, reviewer-
+side override behaviour, cascade rules, audit event,
+lifecycle-invalidation, out-of-scope items, and implementation
+pointers.
+
+**Cross-ref.** Mirror entry in `docs/status.md` "What's
+deliberately not yet there" pointing here and at the spec.
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
