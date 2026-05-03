@@ -29,8 +29,10 @@
         --accent-blue-bg-faint: #fafcff;
         --accent-blue-light: #3b82f6;
         --accent-blue-dark: #1d4ed8;
+        --accent-blue-marker: #93c5fd;
         --accent-green: #059669;
         --accent-green-bg: #d1fae5;
+        --accent-green-marker: #6ee7b7;
         --accent-amber: #d97706;
         --accent-amber-bg: #fef3c7;
         --accent-amber-bg-mid: #fde68a;
@@ -927,15 +929,24 @@
         border-bottom-color: var(--border-subtle);
       }
       body.ui-v2 .nav-tab { color: var(--text-secondary); font-weight: 600; }
+      /* Hover emphasises the tab text; the v1 :hover rule is
+         shadowed by the v2 base on equal specificity, so re-emit. */
+      body.ui-v2 .nav-tab:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.7);
+      }
       body.ui-v2 .nav-tab.active { color: var(--text-primary); }
+      /* Active-tab underline — lighter tones (Tailwind 300) than
+         the saturated accent-blue / accent-green so the marker
+         signals position without competing with the tab label. */
       body.ui-v2 .tab-strip-setup .nav-tab.active::after {
-        background: var(--accent-blue);
+        background: var(--accent-blue-marker);
       }
       body.ui-v2 .tab-strip-ops .nav-tab.active::after {
-        background: var(--accent-green);
+        background: var(--accent-green-marker);
       }
       body.ui-v2 .session-home-anchor.active::after {
-        background: var(--accent-blue);
+        background: var(--accent-blue-marker);
       }
       body.ui-v2 .status-row {
         background: var(--bg-page);
