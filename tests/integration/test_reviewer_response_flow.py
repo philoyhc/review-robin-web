@@ -218,9 +218,79 @@ def test_surface_help_text_renders_as_inline_list(
     body = make_client(rae).get(f"/reviewer/sessions/{review_session.id}").text
     del rae_client
 
-    assert '<ul class="help-block">' in body
+    # Single help item collapses to a full-width tinted block (no grid).
+    assert 'class="rs-help-card rs-help-card-solo"' in body
     assert "<strong>Rating</strong> — 1 (poor) to 5 (excellent)." in body
     assert "<dl class=\"help-block\">" not in body
+    assert '<ul class="help-block">' not in body
+
+
+def test_surface_help_text_multi_items_render_in_grid(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Two+ help items render in the 2-col rs-help-grid; not a solo block."""
+    from app.db.models import InstrumentResponseField
+
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-helpgrid",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    fields = list(
+        db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == instrument.id)
+            .order_by(InstrumentResponseField.id)
+        ).scalars()
+    )
+    fields[0].help_text = "Rating help."
+    fields[0].help_text_visible = True
+    fields[1].help_text = "Comments help."
+    fields[1].help_text_visible = True
+    db.commit()
+    _activate(operator, db, review_session)
+
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+
+    assert '<div class="rs-help-grid">' in body
+    assert "Rating help." in body
+    assert "Comments help." in body
+    # Solo block class should not be applied when there's more than one item
+    # (the bare class appears in the inline CSS, but no element uses it).
+    assert 'class="rs-help-card rs-help-card-solo"' not in body
+
+
+def test_surface_wraps_each_group_in_card(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Each instrument group is wrapped in a `.rs-card` container."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-card",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+
+    assert '<div class="rs-card">' in body
 
 
 def test_surface_status_column_hidden_pre_submission(
