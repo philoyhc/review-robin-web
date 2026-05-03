@@ -40,13 +40,14 @@ already settled.
 |------|--------|-------|
 | **#9 — `get_or_create_default_instrument` docstring refresh** | `unfinished_business.md` #9 | Pointer fix at `app/services/assignments.py:402`. |
 | **#8 + #12 — CSV email-validation drift + cross-table identity check** | `unfinished_business.md` #8 + #12 | Bundle: same `_parse_email` helper. #8 sets up #12. |
-| **2.6 — Sort-column UX status note** | This file (was §2.6) | Decide & document in `docs/status.md`; semantics never landed. |
 
-**Scope cut (2026-05-03, second pass).** **#23 — Sessions-list Delete
-button** has been deferred to **Segment 15** alongside the other
-sessions-list / Manage-pages UI work (no segment plans the
-`/operator/sessions` surface specifically until then). See
-`unfinished_business.md` #23 status note.
+**Scope cuts (2026-05-03, second pass).**
+- **#23 — Sessions-list Delete button** deferred to **Segment 15**
+  alongside the other `/operator/sessions` UI work. See
+  `unfinished_business.md` #23 status note.
+- **§2.6 — Sort-column UX** promoted to a real feature spec at
+  `guide/sort_by_reviewee.md`, target **Segment 13**. Catalog
+  entry at `unfinished_business.md` #31.
 
 ### Tier 2 — Decisions (each unblocks Tier 3 or 4 work)
 
