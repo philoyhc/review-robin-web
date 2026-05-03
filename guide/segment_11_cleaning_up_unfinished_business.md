@@ -63,16 +63,17 @@ All four decisions made:
 
 | Item | Source | Notes |
 |------|--------|-------|
-| **#21 — Six canonical button restyle** | `unfinished_business.md` #21 | Sequenced before #22 per existing roadmap (Home rebuild uses these buttons). |
-| **2.4 — Operator Inactivate UI** | This file (was §2.4) | Per-row Inactivate button on Reviewers / Reviewees Manage pages with audit event on flip. |
-| **#10 — `correlation_id` into deadline lazy-close** | `unfinished_business.md` #10 | Bundle with whichever route refactor next touches `observe_deadline`. |
-| **#6 + #24 — Decouple `invitations.py` from `Request` + email template editor** | `unfinished_business.md` #6 + #24 | Bundle: #6 cleans the surface that #24 then extends. Depends on Tier 2 #24 help-contact decision. |
+| **#10 — `correlation_id` into deadline lazy-close** | `unfinished_business.md` #10 | Standalone PR; ~30 min. The "bundle with whichever route refactor next touches `observe_deadline`" framing has been waiting for an opportunistic bundling that hasn't materialised — ship it on its own. |
+| **#6 — Decouple `invitations.py` from `Request`** | `unfinished_business.md` #6 | Standalone PR. Gates the Segment 15 queue-based send work (`unfinished_business.md` #34) and unblocks Tier 4 #24 (email template editor). Worth shipping early. |
+
+**Scope cut (2026-05-03).** **#2.4 — Operator Inactivate UI** deferred to **Segment 15** (officially deferred — schema already supports inactivation, only the operator-facing button is missing; fits the Segment 15 polish theme). Promoted from sketch to full catalog entry at `unfinished_business.md` #36.
 
 ### Tier 4 — Medium features
 
 | Item | Source | Notes |
 |------|--------|-------|
-| **#22 + #30 — Home body rebuild + Quick Setup card** | `unfinished_business.md` #22 + #30, spec at `spec/quick_setup_card_spec.md` | Bundle: both restructure Home's body, share CSS primitives, and depend on Tier 3 #21 (chrome buttons settled first). Doing them in one Home-body restructure pass avoids touching the template twice. ~6–8 small PRs total (4–6 for #22's Option F relocation + 3–4 for #30's three slots). |
+| **#21 + #22 + #30 — UI clean up (multi-part)** | `unfinished_business.md` #21 + #22 + #30, spec at `spec/quick_setup_card_spec.md` | Bundle restructured 2026-05-03 — three pieces shipping in sequence as one UI-clean-up pass: <ul><li>**#21** — six canonical button restyle. Visual_style.md migration on the operator-side `.btn` family, extending the reviewer-surface visual_style.md alignment work shipped in PRs #319 → #324. **Ships first** — #22 and #30 reuse the new button vocabulary.</li><li>**#22** — Home body rebuild + Option F relocation of parked sub-cards from chrome PR #287.</li><li>**#30** — Quick Setup card on Session Home (three slots: Reviewers, Reviewees, Assignments-or-rule). Spec at `spec/quick_setup_card_spec.md`.</li></ul> Estimated ~7–10 small PRs total (1–2 for #21 button restyle + spec/assumptions.md update; 4–6 for #22's Option F relocation + Home body restructure; 3–4 for #30's three slots). All three restructure operator chrome / Home body, so doing them as one pass avoids touching the same templates multiple times. |
+| **#24 — Operator-editable email template editor** | `unfinished_business.md` #24 | Ships **after** the UI clean up bundle above. Operator-facing surface (textarea per body field, merge-field hint copy, Save / Cancel, "Reset to default" link, "Preview as Rae Reviewer" panel) at `/operator/sessions/{id}/setupinvite` — currently a stub. Help-contact merge field source decided 2026-05-03 as path 1 (per-session column on `ReviewSession`) per the Tier 2 §24 decision. **Depends on Tier 3 #6** (decouple `invitations.py` from `Request`) shipping first — #6 cleans the body-render surface that this extends. New schema column `email_template_overrides` (JSON on `ReviewSession`); body render moves from hardcoded `_email_body` / `_reminder_body` to template + merge fields. |
 | **#5 — Audit-event `detail` schema convention** | `unfinished_business.md` #5 | Spec write-up in `spec/architecture.md` then incremental emitter migration. Segment 12 export needs this stable. |
 | **2.2 — Vanilla-JS autosave on `/save`** | This file (was §2.2) | Bundles with the AG Grid replacement (`unfinished_business.md` #33, target **Segment 15**) per the 2026-05-03 §2.1 decision — autosave folds into AG Grid's cell-edit lifecycle rather than landing as a standalone debounce. |
 
