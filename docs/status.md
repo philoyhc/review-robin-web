@@ -132,7 +132,9 @@ suite against a `postgres:16` service container).
   introduced (Segment 10C reshaped this page substantially — see
   the Segments-shipped 10C entry and the operator URL table for
   the current contract). New `/operator/sessions/{id}/setupinvite`
-  is a stub (Email template editor — Segment 15). Session-detail
+  is a stub (Email template editor tracked as
+  `guide/unfinished_business.md` #24, no longer auto-deferred to
+  Segment 15). Session-detail
   Setup table Manage buttons for Instruments and Set up invites
   are now real links.
 - **Page chrome (Segment 9.4A)** in `app/web/templates/base.html`:
@@ -199,7 +201,7 @@ suite against a `postgres:16` service container).
 | `POST /operator/sessions/{id}/activate` | flip session draft→ready (warn-and-acknowledge for non-blocking findings) |
 | `POST /operator/sessions/{id}/revert` | flip session ready→draft (confirm checkbox; closes all instruments) |
 | `GET /operator/sessions/{id}/instruments` | consolidated instruments page (post-10C shape) — setup nav header, yellow lock card when ready, full-width **All Instrument Status** card (deadline + accepting + visibility pill rows; bulk Open/Close + bulk Show/Don't-show; disabled Preview button), then one pastel-tinted card per instrument with a top `.bottom-grid` (description + per-instrument status), a `.field-builder` `.bottom-grid` of Display + Response Fields half-cards, a live client-rendered Preview Instrument #N table, and a Back / Save / Edit / Add an instrument / Delete button row. Multi-instrument schema + services ship; the `Add an instrument` button is the single UI gate (disabled with tooltip). Display Fields render a hardcoded 6-row CSV-named placeholder; the schema-level display-field routes still exist server-side but the template doesn't post to them. See `spec/operator_map.md` for the per-section contract. |
-| `GET /operator/sessions/{id}/setupinvite` | stub page — email-template editor lands in Segment 15 |
+| `GET /operator/sessions/{id}/setupinvite` | stub page — email-template editor is now tracked as `guide/unfinished_business.md` #24 (was previously auto-deferred to Segment 15) |
 | `GET /operator/sessions/{id}/instruments/{instrument_id}` | legacy redirect — 303 to `/instruments` (back-compat for bookmarks; 10A) |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/edit` | edit friendly description (`Instrument.description`); audit `instrument.described`; invalidates `validated → draft` |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/fields` | add a response field; auto-derives `field_key` from label when blank; audit `instrument.field_added` |
@@ -435,6 +437,7 @@ plug in additional reasons without a schema change. Today's keys are
 | Display Fields persistence on the Instruments page placeholder rows (Friendly Label edit, Visible toggle, Order column don't POST yet; the 10B-2 schema-level routes still exist server-side). Wiring up requires extending `_VALID_DISPLAY_SOURCES` / `_DEFAULT_DISPLAY_LABELS` with reviewee name + email, extending `display_field_value` and the reviewer-surface render path, and pointing the placeholder cells at the existing endpoints. | Next round of UI work (a future 10x slice or folded into Segment 11) |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
 | **Real SMTP email backend** (production sending, not the dev outbox) | **Segment 15** |
+| Operator-editable email template editor + merge fields (`{{reviewer_name}}` / `{{deadline}}` / `{{help_contact}}` etc.); the `/setupinvite` stub today | Tracked as `guide/unfinished_business.md` #24 (independent of real SMTP — the editor shapes the body the dev outbox already renders) |
 | **Export / audit retention** | **Segment 11** |
 | **RuleBased assignment** | **Segment 12** |
 | **Multi-instrument sessions** (more than one Instrument under a session) | **Segment 13** |

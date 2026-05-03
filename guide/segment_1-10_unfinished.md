@@ -17,8 +17,9 @@ in-scope for that segment, that did **not** ship as part of that
 segment. Items the workplan explicitly listed as "Keep deliberately
 out of scope" — and that are owned by a clearly named later segment
 (11+) — are noted only when they're load-bearing for the surface
-shipped today (e.g. `/setupinvite` is a stub now because email
-templates moved to Segment 15).
+shipped today (e.g. `/setupinvite` is a stub today; the editor was
+previously deferred to Segment 15 and has since been pulled back as
+unfinished business — see `unfinished_business.md` #24).
 
 For each item the audit notes whether it is:
 - **`[tracked-uf #N]`** — already an entry in
@@ -252,14 +253,16 @@ with email-match check, `invitation.sent` / `invitation.opened` /
 
 **Unfinished items.**
 
-- **Email template editor (operator-editable)** — `[tracked-status]`
-  ("**Real SMTP email backend**" + the `/setupinvite` stub note).
+- **Email template editor (operator-editable)** — `[tracked-uf #24]`.
   Workplan §12 work item #5 ("Add invitation email template"); AI
   prompt called for "merge fields for reviewer name, session name,
   deadline, **help contact**, and review link." Today
   `/operator/sessions/{id}/setupinvite` is a stub page; merge-field
-  rendering is hardcoded inside the dev outbox; no operator-editable
-  template. **Owned by Segment 15.**
+  rendering is hardcoded in `invitations._email_body` /
+  `_reminder_body`; no operator-editable template. Pulled back from
+  Segment 15 (where it had been auto-bundled with real SMTP) since
+  the editor and the dev outbox are independent — the editor shapes
+  the body the existing outbox already renders.
 - **Real SMTP / Azure email backend** — `[tracked-status]`. Owned by
   Segment 15.
 - **Queue-based batch invitation sending** — `[unfiled]`. Workplan
@@ -270,11 +273,11 @@ with email-match check, `invitation.sent` / `invitation.opened` /
 - **`invitations.py` coupling to FastAPI `Request`** —
   `[tracked-uf #6]`. Mostly matters when real SMTP lands and
   invitation send moves out of the request lifecycle.
-- **"Help contact" merge field** — implicit `[unfiled]`. Workplan
-  §12 listed it but the spec doesn't define where the help contact
-  comes from (per-session? per-operator? global env var?). When
-  Segment 15 picks up the email template editor, this needs a
-  decision.
+- **"Help contact" merge field** — `[tracked-uf #24]`. Workplan §12
+  listed it but the spec doesn't define where the help contact
+  comes from (per-session? per-operator? global env var?). The
+  open question is now folded into #24 as the prerequisite
+  decision before the editor lands.
 
 ### Segment 9.3 — Monitoring + reminders
 
@@ -426,7 +429,10 @@ rebuild, `#15` 10C backfill tests) are separately tracked in
    second half of Segment 8 in plain English. Either fold it back
    into a future segment plan or update the workplan + status.md to
    make "plain HTML table is the design" explicit.
-3. **Define the "help contact" merge field's source** before Segment
-   15 picks up the email template editor. Per-session field on
-   `ReviewSession`? Per-operator on `User`? Global env var? Decision
-   needed before the editor lands.
+3. **Define the "help contact" merge field's source** before the
+   email template editor lands. Per-session field on `ReviewSession`?
+   Per-operator on `User`? Global env var? Decision needed before
+   the editor work starts. **Update 2026-05-03:** the editor is now
+   tracked as `unfinished_business.md` #24 (no longer auto-deferred
+   to Segment 15); the help-contact decision is folded into it as
+   the prerequisite open question.
