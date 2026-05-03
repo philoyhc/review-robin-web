@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Email Template — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
   <div class="session-nav-card">
@@ -11,8 +12,8 @@
   </div>
 
   <div class="card">
-    <p class="muted">
-      The email-template editor lands in Segment 15.
+    <p class="form-help">
+      Email template — placeholder. The editor lands in Segment 15.
     </p>
   </div>
 {% endblock %}
