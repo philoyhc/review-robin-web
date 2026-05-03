@@ -96,6 +96,45 @@ def _none_if_blank(row: dict[str, str], key: str) -> str | None:
     return value or None
 
 
+def _parse_email(
+    value: str,
+    *,
+    strict: bool,
+    source: str,
+    row_number: int,
+    field: str,
+) -> str | ValidationIssue:
+    """Validate ``value`` as an email address.
+
+    With ``strict=True`` the value must match ``_EMAIL_RE`` — the
+    reviewer path, where every reviewer needs an institutional email
+    for auth.
+
+    With ``strict=False`` non-email identifiers are accepted (no
+    ``@``); but if an ``@`` is present the value must still match
+    ``_EMAIL_RE`` so typos like ``foo@`` or ``@bar`` are caught
+    rather than imported and dying later on send. This is the
+    reviewee path today, where reviewees aren't expected to use the
+    app.
+
+    The ``strict`` flag is the seam for the future symmetric mode
+    where reviewees use the app and require institutional email; at
+    that point the reviewee call site flips ``strict=True`` (or
+    threads it from a per-session toggle).
+    """
+    if not strict and "@" not in value:
+        return value
+    if not _EMAIL_RE.fullmatch(value):
+        return ValidationIssue(
+            severity=Severity.error,
+            source=source,
+            row_number=row_number,
+            field=field,
+            message=f"{field} '{value}' is not a valid email address",
+        )
+    return value
+
+
 def parse_reviewer_csv(content: bytes) -> ParseResult:
     source = "reviewers"
     issues: list[ValidationIssue] = []
@@ -147,16 +186,15 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
                 )
             )
             continue
-        if not _EMAIL_RE.fullmatch(email):
-            issues.append(
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    row_number=index,
-                    field="ReviewerEmail",
-                    message=f"ReviewerEmail '{email}' is not a valid email address",
-                )
-            )
+        email_check = _parse_email(
+            email,
+            strict=True,
+            source=source,
+            row_number=index,
+            field="ReviewerEmail",
+        )
+        if isinstance(email_check, ValidationIssue):
+            issues.append(email_check)
             continue
         if email.lower() in seen_emails:
             issues.append(
@@ -237,16 +275,15 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
                 )
             )
             continue
-        if "@" in identifier and not _EMAIL_RE.fullmatch(identifier):
-            issues.append(
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    row_number=index,
-                    field="RevieweeEmail",
-                    message=f"RevieweeEmail '{identifier}' is not a valid email address",
-                )
-            )
+        identifier_check = _parse_email(
+            identifier,
+            strict=False,
+            source=source,
+            row_number=index,
+            field="RevieweeEmail",
+        )
+        if isinstance(identifier_check, ValidationIssue):
+            issues.append(identifier_check)
             continue
         if identifier.lower() in seen_identifiers:
             issues.append(
