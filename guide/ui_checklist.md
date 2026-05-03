@@ -47,9 +47,9 @@ separately.
 - [ ] `session_detail.html` — `/operator/sessions/{id}`
 - [ ] `session_edit.html` — `/operator/sessions/{id}/edit`
 - [ ] `instruments_index.html` — `/operator/sessions/{id}/instruments`
-- [ ] `session_invitations.html` — `/operator/sessions/{id}/invitations`
-- [ ] `session_outbox.html` — `/operator/sessions/{id}/outbox`
-- [ ] `session_monitoring.html` — `/operator/sessions/{id}/monitoring`
+- [x] `session_invitations.html` — `/operator/sessions/{id}/invitations`
+- [x] `session_outbox.html` — `/operator/sessions/{id}/outbox`
+- [x] `session_monitoring.html` — `/operator/sessions/{id}/monitoring`
 - [ ] `session_validate.html` — `/operator/sessions/{id}/validate`
 
 ### Operator partials

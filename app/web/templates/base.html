@@ -830,6 +830,18 @@
         color: var(--accent-red);
         margin: var(--space-1) 0 0 0;
       }
+      /* Code block — bg-muted-tinted block for monospace content
+         (e.g. rendered email bodies on the Outbox page). */
+      body.ui-v2 .code-block {
+        background: var(--bg-muted);
+        padding: var(--space-3);
+        border-radius: var(--radius-button);
+        white-space: pre-wrap;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: var(--fs-small);
+        color: var(--text-primary);
+        margin: 0;
+      }
       /* Pills — count (blue tint, bold dark text) for normal
          reporting, empty (yellow tint, bold red text) for missing
          data, plus four lifecycle variants. .pill-info maps to

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Monitoring — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
   <div class="session-nav-card">
@@ -11,10 +12,10 @@
   </div>
 
   {% if not is_ready %}
-    <div class="card" style="border-color: #d97706; background: #fef3c7;">
-      <p>
-        Reminder actions require the session to be <strong>ready</strong>.
-        Activate the session from the validation page first.
+    <div class="card lock">
+      <p style="margin: 0;">
+        Reminder actions require the session to be ready. Activate the
+        session from the validation page first.
       </p>
     </div>
   {% endif %}
@@ -22,11 +23,11 @@
   <div class="card">
     <h2>Summary</h2>
     <p>
-      <span class="pill pill-info">{{ summary.assigned }} assigned</span>
-      <span class="pill pill-info">{{ summary.invited }} invited</span>
-      <span class="pill pill-info">{{ summary.opened }} opened</span>
-      <span class="pill pill-info">{{ summary.submitted }} submitted</span>
-      <span class="pill pill-warning">{{ summary.incomplete }} incomplete</span>
+      <span class="pill pill-count">{{ summary.assigned }} assigned</span>
+      <span class="pill pill-count">{{ summary.invited }} invited</span>
+      <span class="pill pill-count">{{ summary.opened }} opened</span>
+      <span class="pill pill-count">{{ summary.submitted }} submitted</span>
+      <span class="pill pill-empty">{{ summary.incomplete }} incomplete</span>
     </p>
     <form method="post"
           action="/operator/sessions/{{ session.id }}/monitoring/remind-incomplete"
@@ -39,7 +40,7 @@
       <a class="btn secondary"
          href="/operator/sessions/{{ session.id }}/outbox">View outbox</a>
     </form>
-    <p class="muted">
+    <p class="form-help">
       Reminders reuse the URL from the most recent invitation send so the
       reviewer's existing link keeps working. If a reviewer has never been
       sent the original invitation, the reminder action mints a fresh
@@ -48,69 +49,71 @@
   </div>
 
   {% if rows %}
-    <table>
-      <tr>
-        <th>Reviewer</th>
-        <th>Invitation</th>
-        <th>Progress</th>
-        <th>Missing required</th>
-        <th>Last reminder</th>
-        <th></th>
-      </tr>
-      {% for row in rows %}
+    <div class="card">
+      <table>
         <tr>
-          <td>
-            <strong>{{ row.reviewer.name }}</strong><br>
-            <code>{{ row.reviewer.email }}</code>
-          </td>
-          <td>
-            {% if row.invitation %}
-              {% if row.invitation.status == "opened" %}
-                <span class="pill pill-info">opened</span>
-              {% elif row.invitation.status == "sent" %}
-                <span class="pill pill-info">sent</span>
-              {% else %}
-                <span class="pill pill-warning">pending</span>
-              {% endif %}
-            {% else %}
-              <span class="pill pill-warning">no invitation</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if row.pill_state == "submitted" %}
-              <span class="pill pill-info">submitted</span>
-            {% elif row.pill_state == "in progress" %}
-              <span class="pill pill-warning">in progress</span>
-            {% else %}
-              <span class="pill pill-warning">not started</span>
-            {% endif %}
-            <span class="muted">
-              ({{ row.completed_count }}/{{ row.assignment_count }})
-            </span>
-          </td>
-          <td>{{ row.missing_required_count }}</td>
-          <td>
-            {% if row.last_reminder_at %}
-              {{ row.last_reminder_at.strftime("%Y-%m-%d %H:%M") }}
-            {% else %}
-              —
-            {% endif %}
-          </td>
-          <td style="white-space: nowrap;">
-            {% if row.invitation %}
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/remind"
-                    style="display: inline;">
-                <button class="btn secondary" type="submit"
-                        {% if not is_ready or not row.is_incomplete %}disabled{% endif %}>
-                  Send reminder
-                </button>
-              </form>
-            {% endif %}
-          </td>
+          <th>Reviewer</th>
+          <th>Invitation</th>
+          <th>Progress</th>
+          <th>Missing required</th>
+          <th>Last reminder</th>
+          <th class="col-shrink"></th>
         </tr>
-      {% endfor %}
-    </table>
+        {% for row in rows %}
+          <tr>
+            <td>
+              <strong>{{ row.reviewer.name }}</strong><br>
+              <code>{{ row.reviewer.email }}</code>
+            </td>
+            <td>
+              {% if row.invitation %}
+                {% if row.invitation.status == "opened" %}
+                  <span class="pill pill-count">opened</span>
+                {% elif row.invitation.status == "sent" %}
+                  <span class="pill pill-count">sent</span>
+                {% else %}
+                  <span class="pill pill-empty">pending</span>
+                {% endif %}
+              {% else %}
+                <span class="pill pill-empty">no invitation</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if row.pill_state == "submitted" %}
+                <span class="pill pill-count">submitted</span>
+              {% elif row.pill_state == "in progress" %}
+                <span class="pill pill-empty">in progress</span>
+              {% else %}
+                <span class="pill pill-empty">not started</span>
+              {% endif %}
+              <span class="muted">
+                ({{ row.completed_count }}/{{ row.assignment_count }})
+              </span>
+            </td>
+            <td>{{ row.missing_required_count }}</td>
+            <td>
+              {% if row.last_reminder_at %}
+                {{ row.last_reminder_at.strftime("%Y-%m-%d %H:%M") }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td class="col-shrink">
+              {% if row.invitation %}
+                <form method="post"
+                      action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/remind"
+                      style="display: inline;">
+                  <button class="btn secondary" type="submit"
+                          {% if not is_ready or not row.is_incomplete %}disabled{% endif %}>
+                    Send reminder
+                  </button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
   {% else %}
     <div class="card">
       <p class="muted">
