@@ -286,6 +286,10 @@ def _surface_context(
             {
                 "field": df,
                 "label": instruments_service.display_field_label(df),
+                "is_profile_link": (
+                    df.source_type == "reviewee"
+                    and df.source_field == "profile_link"
+                ),
             }
             for df in display_fields
         ]
@@ -553,6 +557,10 @@ def build_preview_context(
             {
                 "field": df,
                 "label": instruments_service.display_field_label(df),
+                "is_profile_link": (
+                    df.source_type == "reviewee"
+                    and df.source_field == "profile_link"
+                ),
             }
             for df in display_fields
         ]

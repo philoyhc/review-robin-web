@@ -223,6 +223,34 @@ def test_surface_help_text_renders_as_inline_list(
     assert "<dl class=\"help-block\">" not in body
 
 
+def test_surface_applies_column_classes_by_response_type(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Numeric response columns get rs-narrow; long-text columns get rs-textlong."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-cols",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+
+    # Default seeded fields: 1-to-5int Rating (numeric → rs-narrow) +
+    # Long_text Comments (textarea → rs-textlong).
+    assert 'class="rs-narrow">Rating' in body
+    assert 'class="rs-textlong">Comments' in body
+    # Per-cell <td> classes match.
+    assert '<td class="rs-narrow">' in body
+    assert '<td class="rs-textlong">' in body
+
+
 def test_surface_dedupes_reviewee_name_and_email_display_fields(
     db: Session,
     alice: AuthenticatedUser,
@@ -245,10 +273,10 @@ def test_surface_dedupes_reviewee_name_and_email_display_fields(
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
 
     # Reviewee column header is present (always rendered).
-    assert "<th>Reviewee</th>" in body
+    assert 'class="rs-reviewee">Reviewee</th>' in body
     # The seeded name + email Display Fields no longer render as <th>.
-    assert "<th>Name</th>" not in body
-    assert "<th>Email</th>" not in body
+    assert ">Name</th>" not in body
+    assert ">Email</th>" not in body
 
 
 def test_surface_single_instrument_no_description_renders_no_heading(
