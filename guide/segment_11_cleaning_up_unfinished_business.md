@@ -54,7 +54,7 @@ Five clusters resolved — three from the original audit plus a reviewer-surface
 | **2.1 — AG Grid fate** | This file (was §2.1) | ✅ **decided 2026-05-03** — still on the roadmap, target **Segment 15** (operator polish + documentation). Filed at `unfinished_business.md` #33. Unblocks #2.2 (autosave bundles into AG Grid). |
 | **2.3 — Queue-based batch invitation sending** | This file (was §2.3) | ✅ **decided 2026-05-03** — bundle with **Segment 15** real-SMTP work. Filed at `unfinished_business.md` #34. Depends on #6 (decouple `invitations.py` from `Request`) shipping first. |
 | **#7 — CSRF decision write-up** | `unfinished_business.md` #7 | Easy Auth + SameSite cookies, or CSRF tokens? If "tokens," that becomes its own segment. |
-| **#24 — Help-contact merge field source** | `unfinished_business.md` #24 (open question section) | Per-session field on `ReviewSession`, per-operator field on `User`, or global env var? Settles before email template editor coding starts. |
+| **#24 — Help-contact merge field source** | `unfinished_business.md` #24 (decision section) | ✅ **decided 2026-05-03** — per-session column on `ReviewSession`. Reframed: primary surface is the response form (where reviewers go when stuck), email merge field is a secondary convenience. Separate technical-support contact (global) split out as new `unfinished_business.md` #35, target **Segment 15**. |
 
 ### Tier 3 — Small features
 

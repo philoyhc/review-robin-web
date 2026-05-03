@@ -448,6 +448,7 @@ plug in additional reasons without a schema change. Today's keys are
 | Further refinement of the reviewer surface — catch-all for polish beyond the Segment 11 Tier 1 batch (PRs #319 → #324). Known sub-item: multi-instrument preview (`build_preview_context` extension explicitly deferred from Tier 1). Pilot-feedback-driven polish lands here too. | **Segment 15** (filed 2026-05-03; tracked at `guide/unfinished_business.md` #32) |
 | AG Grid replacement of the reviewer-surface table (today: plain HTML `<input>` / `<textarea>` / `<select>` per cell, form-based save). Second half of workplan §11 that never landed; decided as still-on-roadmap 2026-05-03. | **Segment 15** (decided 2026-05-03 from Segment 11 Tier 2 §2.1; tracked at `guide/unfinished_business.md` #33) |
 | Queue-based batch invitation sending (today: synchronous in-request loop over eligible reviewers; fine with the dev outbox, doesn't survive real SMTP latency + provider rate limits). Picks up workplan §12 work item #7. | **Segment 15** (decided 2026-05-03 from Segment 11 Tier 2 §2.3, bundled with real SMTP; tracked at `guide/unfinished_business.md` #34; depends on #6 shipping first) |
+| Technical-support contact (global env var, surfaces on app chrome footer + error pages + invalid-link landing). Distinct from the operational help contact on `ReviewSession` (which lives in #24). | **Segment 15** (filed 2026-05-03 from Segment 11 Tier 2 §24 reframe; tracked at `guide/unfinished_business.md` #35) |
 
 ---
 

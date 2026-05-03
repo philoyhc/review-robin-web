@@ -100,6 +100,13 @@ documentation pass:
   vanilla-JS autosave (Segment 11 Tier 4 #2.2) and absorbs the
   multi-instrument preview sub-item of #32 if AG Grid grouping
   handles it natively.
+- **Technical-support contact (global)** — distinct from the
+  operational help contact tracked at `#24` (which lives on
+  `ReviewSession`). Address a reviewer reaches when something
+  looks broken (auth fail, 500, invalid link). Filed 2026-05-03
+  from the Segment 11 Tier 2 §24 reframe; tracked at
+  `guide/unfinished_business.md` #35. Small `[chrome]` item:
+  new env var + footer + error-page surfaces.
 - **Local Postgres docker-compose for dev** — officially deferred
   from Segment 11 (originally 10E §2.7); tracked at
   `guide/unfinished_business.md` #26. The developer-setup-guide

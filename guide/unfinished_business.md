@@ -982,27 +982,31 @@ operators click it expecting an editor and get a stub.
 - Setup-nav button hardcoded label: search `base.html` /
   `_partials/session_top_nav.html` for `setupinvite`
 
-**Open question (must settle before the editor lands).** The
-"help contact" merge field needs a source. Three plausible
-shapes:
+**Decision on help-contact source (2026-05-03).** **Path 1** — per-session field on `ReviewSession`. Reframed during the §24 decision: the operational help contact (who a confused reviewer asks about the review process) is genuinely session-specific — different sessions taught by different professors / programs / departments — so it doesn't compress to a per-operator value or a global env var.
 
-1. **Per-session field** on `ReviewSession` (operator types it
-   in alongside name / code / description / deadline). Most
-   flexible; one extra column on the create / edit form.
-2. **Per-operator field** on `User` (set once, applies to every
-   session that operator owns). Lighter UX; awkward when
-   multiple operators share a session.
-3. **Global env var** (`HELP_CONTACT_EMAIL` in `app.config`).
-   Cheapest; assumes one help contact for the whole installation.
-   Reasonable for a single-tenant pilot.
+**Primary surface for the value: the response form**, not the email. A reviewer staring at the form mid-review has no in-app way to know who to ask, and that's the gap this fills. The email merge field (`{{help_contact}}`) is a secondary convenience — operators could hand-type the value into the email body if they preferred, but the merge field saves them retyping.
 
-Recommend (1) for parity with the workplan's "merge field"
-framing, but (3) is a defensible scope-cut if the editor is
-otherwise simple. Decide before coding.
+A *separate* technical-support contact (for "the app is broken / my link is invalid" cases — distinct from "I have questions about the review process") is a global concern, tracked at `unfinished_business.md` #35, target Segment 15.
+
+(Original three-option discussion preserved below for archaeology.)
+
+> ~~The "help contact" merge field needs a source. Three plausible shapes:~~
+>
+> 1. **Per-session field** on `ReviewSession` (operator types it
+>    in alongside name / code / description / deadline). Most
+>    flexible; one extra column on the create / edit form.
+> 2. **Per-operator field** on `User` (set once, applies to every
+>    session that operator owns). Lighter UX; awkward when
+>    multiple operators share a session.
+> 3. **Global env var** (`HELP_CONTACT_EMAIL` in `app.config`).
+>    Cheapest; assumes one help contact for the whole installation.
+>    Reasonable for a single-tenant pilot.
+
+**Future merge fields.** This won't be the last merge field — additional reviewer-facing or operator-facing values may surface as merge fields over time (e.g. session-specific deadline-extension policy, sender display name, custom signature line). The pattern lands once with `{{help_contact}}` and applies per the same shape: per-session column where the value varies by session; global env var where it's a deployment-level constant. Add them to this entry as they're identified.
 
 **Plan.**
 
-- Decide help-contact source (above).
+- Add a `help_contact` column to `ReviewSession` (per the 2026-05-03 decision above). Surfaces in the session create / edit form, the response form (small "Questions? Contact X" line in the surface header / footer), and as the `{{help_contact}}` merge field in the editor.
 - Add an `EmailTemplate` model OR a JSON column on `ReviewSession`.
   Prefer the JSON column since templates are 1:1 with sessions
   and no separate lifecycle is needed; schema column called
@@ -1560,6 +1564,42 @@ configuration, multi-tenant rate-limit tuning.
 
 **Cross-ref.** Mirror entry in `docs/status.md` "What's
 deliberately not yet there" pointing here.
+
+---
+
+### 35. Technical-support contact (global) · [chrome] · small · target Segment 15
+
+**Status.** Filed 2026-05-03 from the Segment 11 Tier 2 §24 reframe — distinct from the operational help-contact merge field on `ReviewSession` (which lives in `unfinished_business.md` #24). Target **Segment 15** (operator polish + documentation).
+
+**Why now (originally).** "Help contact" naturally splits into two contacts with different lifecycles:
+
+- **Operational help contact** (per-session) — who a confused reviewer asks about the review process. Tracked at `#24`.
+- **Technical support contact** (global) — who a reviewer reaches when something looks **broken**: auth fails, 500 error, "I clicked the link and got a weird page." This is the app maintainer / deployment owner's address, not session-specific.
+
+The app today has neither — error pages, the `/about` stub, the invalid-link page all render with no contact pointer. A confused-or-blocked reviewer has nowhere to go.
+
+**Where.**
+
+- Config: new `support_contact_email` field on `app/config.py` Pydantic settings, optional with a default of `None` for local dev.
+- Surfaces:
+  - App chrome footer (currently absent on the reviewer side; would land alongside this work).
+  - 500 / generic error template.
+  - Invalid-token / expired-link reviewer landing page.
+  - `/about` stub.
+- Optional: surface in the operator chrome too (so an operator who hits a server error knows who to ping).
+
+**Plan.**
+
+- Add the env var to `app/config.py` Settings.
+- Render in error templates + footer with conditional: only show when set, so local dev (where the env var is empty) doesn't render a misleading link.
+- Document in `docs/deployment_dev.md` and the eventual operator/admin guide (Segment 15 §18 work item #7) as a required-for-production env var.
+
+**Out of scope.**
+
+- A whole "help center" surface. This is one address, not a structured FAQ.
+- Per-session technical support overrides. The whole point is that this contact is deployment-level, not session-level.
+
+**Cross-ref.** Mirror entry in `docs/status.md` "What's deliberately not yet there" pointing here. Cross-references `unfinished_business.md` #24 (operational help contact) for context.
 
 ---
 
