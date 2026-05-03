@@ -176,7 +176,7 @@ def test_assignments_hub_inlines_method_forms(
     )
     # Rule Based card is a placeholder
     assert "Rule Based Assignment" in body
-    assert "Under Construction" in body
+    assert "Under construction" in body
 
 
 # ---------------------------------------------------------------------------

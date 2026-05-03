@@ -549,8 +549,12 @@ def test_reviewer_import_form_warns_about_cascade(
     )
 
     assert page.status_code == 200
-    assert "1 existing assignment" in page.text
-    assert "will be deleted" in page.text
+    # The cascade warning now lives inline in the confirm-replace
+    # label: "Yes, replace the existing N reviewer and delete the M
+    # assignment." (with N/M wrapped as pills).
+    assert "1 reviewer" in page.text
+    assert "1 assignment" in page.text
+    assert "delete the" in page.text
 
 
 def test_reviewers_page_lists_imported_rows(client: TestClient, db: Session) -> None:
