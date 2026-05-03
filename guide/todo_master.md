@@ -95,8 +95,9 @@ land before they age into harder problems.
 | 18 | **#12 — Reviewer/Reviewee CSV cross-table identity check** | Builds on #8's shared `_parse_email` helper. Tightens the rule that email is the unique person-identifier across reviewer + reviewee tables in the same session. |
 | 19 | **#10 — Thread `correlation_id` into deadline lazy-close** | Cheap. Bundle with whichever route refactor next touches `observe_deadline`. |
 | 20 | **#9 — Refresh `get_or_create_default_instrument` docstring** | Tiny. (Pointer corrected to `app/services/assignments.py:402`.) |
-| 21 | **#6 — Decouple `invitations.py` from `Request`** | Only matters when Segment 15 (real SMTP) lands and sends from a background worker. Worth fixing now while the surface is small. |
-| 22 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
+| 21 | **#6 — Decouple `invitations.py` from `Request`** | Only matters when Segment 15 (real SMTP) lands and sends from a background worker. Worth fixing now while the surface is small. Bundles naturally with #24. |
+| 22 | **#24 — Operator-editable email template editor** | Pulled back from Segment 15 (where it had been auto-bundled with real SMTP). The editor is independent of SMTP — it shapes the body the dev outbox already renders. Workplan §12 work item #5 specified merge fields for reviewer name / session name / deadline / help contact / review link; today's hardcoded bodies carry only session name + invite URL. Operators landing on `/setupinvite` from the setup-nav today get a stub. Has one open question (help-contact source: per-session field, per-operator field, or global env var) to settle before coding. |
+| 23 | **#7 — CSRF decision write-up** | One paragraph in `docs/authentication.md`. Decide between Easy Auth + SameSite cookies vs. CSRF tokens. If "tokens", that becomes its own segment. |
 
 ---
 

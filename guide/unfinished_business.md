@@ -939,6 +939,103 @@ fixes the sessions-list-button surprise.
 
 ---
 
+### 24. Operator-editable email template editor · [feature] · medium
+
+**Why now.** The operator-side email surface today is two
+hardcoded `_email_body` / `_reminder_body` helpers (each a
+two-line plain-text string with the session name + invite URL
+spliced in inline) plus a stub `/operator/sessions/{id}/setupinvite`
+page that says "lands in Segment 15." The audit in
+`guide/segment_1-10_unfinished.md` (2026-05-03) flagged this
+as `[tracked-status]` "owned by Segment 15," but the editor
+itself is **independent of real SMTP** — it just shapes the body
+that the dev outbox already renders. Pulling it back into
+unfinished business so it can be picked up before Segment 15.
+
+The workplan §12 work item #5 specified merge fields for
+"reviewer name, session name, deadline, **help contact**, and
+review link." Today's bodies only carry session name + invite
+URL — no reviewer name, no deadline, no help contact. Operators
+who run pilots end up writing follow-up emails by hand to
+supply the missing context. The friction compounds with the
+fact that `/setupinvite` is in the six-button setup nav, so
+operators click it expecting an editor and get a stub.
+
+**Where.**
+
+- Stub page: `app/web/templates/operator/session_setupinvite.html`
+- Stub route: `app/web/routes_operator.py::setupinvite_stub`
+- Hardcoded bodies: `app/services/invitations.py:48` (`_email_body`),
+  `app/services/invitations.py:386` (`_reminder_body`)
+- Send sites that consume those bodies:
+  `invitations.py::send_invitation` (~`:201`),
+  `invitations.py::send_reminder` (~`:436`),
+  `invitations.py::send_reminders_to_incomplete` (~`:467`)
+- Setup-nav button hardcoded label: search `base.html` /
+  `_partials/session_top_nav.html` for `setupinvite`
+
+**Open question (must settle before the editor lands).** The
+"help contact" merge field needs a source. Three plausible
+shapes:
+
+1. **Per-session field** on `ReviewSession` (operator types it
+   in alongside name / code / description / deadline). Most
+   flexible; one extra column on the create / edit form.
+2. **Per-operator field** on `User` (set once, applies to every
+   session that operator owns). Lighter UX; awkward when
+   multiple operators share a session.
+3. **Global env var** (`HELP_CONTACT_EMAIL` in `app.config`).
+   Cheapest; assumes one help contact for the whole installation.
+   Reasonable for a single-tenant pilot.
+
+Recommend (1) for parity with the workplan's "merge field"
+framing, but (3) is a defensible scope-cut if the editor is
+otherwise simple. Decide before coding.
+
+**Plan.**
+
+- Decide help-contact source (above).
+- Add an `EmailTemplate` model OR a JSON column on `ReviewSession`.
+  Prefer the JSON column since templates are 1:1 with sessions
+  and no separate lifecycle is needed; schema column called
+  `email_template_overrides` carrying
+  `{invitation_subject, invitation_body, reminder_subject,
+  reminder_body}`. Defaults live in code; `NULL` / missing keys
+  fall through to the default. This avoids a new table and a new
+  migration concern.
+- Build the editor at `/operator/sessions/{id}/setupinvite`:
+  textarea per field with merge-field hint copy
+  (`{{reviewer_name}}`, `{{session_name}}`, `{{deadline}}`,
+  `{{help_contact}}`, `{{invite_url}}`), Save / Cancel buttons,
+  a "Reset to default" link per field, and a "Preview as Rae
+  Reviewer" panel rendering the merged body.
+- Refactor `_email_body` / `_reminder_body` to read the override
+  + render with `string.Template` (or Jinja `from_string` with a
+  fixed env). Reviewer-row context (name, email) injected at
+  send time from the `Invitation.reviewer` row.
+- Update audit events: `email_template.updated` with a `changes`
+  diff (mirroring `session.updated`).
+- The `/setupinvite` stub page swap is the operator-visible
+  delivery; once the editor is in place, the row in `docs/status.md`
+  for `/setupinvite` flips from "stub" to its real description.
+- Tests: editor-page render (loads defaults), save round-trip
+  (override persists), reset-to-default (override clears),
+  send-invitation uses the override, fall-through (NULL key
+  uses default), preview-mode merge.
+
+**Sequencing.** Bundles naturally with **#6** (decouple
+`invitations.py` from `Request`). The Request coupling lives
+in the URL-builder used by both `_email_body` and the editor's
+preview pane; settling that helper first means the template
+work doesn't spawn a third caller of the broken pattern.
+
+**Out of scope.** Real SMTP / Azure email backend stays
+**Segment 15**. This item is the editor + merge-field rendering
+only — it lands the operator-facing surface that the existing
+dev outbox will then carry into Segment 15 unchanged.
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
