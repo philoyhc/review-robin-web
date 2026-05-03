@@ -636,11 +636,12 @@
       body.ui-v2 .card.danger-zone h2 {
         color: var(--accent-red);
       }
-      /* Buttons — Primary / Secondary / Destructive vocabulary.
-         Same shape, role expressed by tonal variation only.
-         Primary is a soft accent-blue tint (not solid) so it reads
-         as "an action" rather than "a beacon" — matches the calmer
-         tone the rest of the v2 palette aims for. */
+      /* Buttons — Primary / Secondary / Destructive vocabulary
+         per spec/visual_style.md. Same shape, role expressed by
+         tonal variation only. Primary is solid accent-blue and is
+         reserved for the page's single main affirmative action
+         (P1 — "color where it carries meaning"); routine submits
+         like Upload should use Secondary. */
       body.ui-v2 .btn,
       body.ui-v2 button.btn,
       body.ui-v2 a.btn {
@@ -648,8 +649,8 @@
         padding: var(--space-2) var(--space-4);
         border: 1px solid var(--accent-blue);
         border-radius: var(--radius-button);
-        background: var(--accent-blue-bg);
-        color: var(--accent-blue);
+        background: var(--accent-blue);
+        color: #fff;
         text-decoration: none;
         text-align: center;
         font-family: inherit;
@@ -671,9 +672,9 @@
       }
       /* Spec collapses .alert-solid into Primary. */
       body.ui-v2 .btn.alert-solid {
-        background: var(--accent-blue-bg);
+        background: var(--accent-blue);
         border-color: var(--accent-blue);
-        color: var(--accent-blue);
+        color: #fff;
       }
       /* Unified disabled state — covers <button disabled>,
          <a class="btn disabled"> and aria-disabled. */
@@ -768,7 +769,7 @@
         padding: 2px var(--space-2);
         border-radius: var(--radius-pill);
         font-size: var(--fs-tiny);
-        font-weight: 700;
+        font-weight: 500;
         text-transform: none;
         letter-spacing: 0;
         margin-right: var(--space-1);
