@@ -26,7 +26,7 @@ Public access is enabled with a firewall allow-list:
   networks that block outbound 5432 will need to use Azure Cloud Shell
   / Cloud CLI instead — that's the verified working path today.
 
-VNet integration and private endpoints are deferred to Segment 13.
+VNet integration and private endpoints are deferred to Segment 14 (production hardening).
 
 ## App startup
 
@@ -75,7 +75,8 @@ Format:
 postgresql+psycopg://rrw_app:<password>@<server>.postgres.database.azure.com:5432/rrw?sslmode=require
 ```
 
-Key Vault references for App Settings are deferred to Segment 13. Until
+Key Vault references for App Settings are deferred to Segment 14
+(production hardening). Until
 then, rotate by updating both secrets together.
 
 ## First-time database bootstrap

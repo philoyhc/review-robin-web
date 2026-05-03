@@ -488,9 +488,8 @@ def build_preview_context(
         )
 
     # Pad with synthetic rows. Anchor synthetic rows to the first instrument
-    # that has real rows (single-instrument today; multi-instrument is
-    # Segment 13). When no real assignments exist, anchor to the session's
-    # first instrument.
+    # that has real rows. When no real assignments exist, anchor to the
+    # session's first instrument.
     needed = 3 - len(real_assignments)
     if needed > 0:
         if rows_by_instrument:

@@ -342,7 +342,7 @@ Minimum tests, ~15 across unit and integration:
   §8.
 - All ~15 new tests pass; full suite green.
 
-Next segment after this PR merges: **Segment 11 — Export, audit,
+Next segment after this PR merges: **Segment 12 — Export, audit,
 and retention MVP**.
 
 ---
@@ -481,7 +481,7 @@ fields, and preview what reviewers will see before activation.
 
 **Out of scope.**
 - Multi-instrument session support (Segment 13).
-- Operator-driven export of the configured surface (Segment 11).
+- Operator-driven export of the configured surface (Segment 12).
 - Anonymous-preview link or shareable preview URL — preview is
   operator-only.
 

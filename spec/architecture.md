@@ -23,20 +23,24 @@ perspective:
   matrix that determines which reviewer-reviewee pairs are reviewed.
   The matrix is computed once per session — manually (Manual import)
   or via a deterministic preset (FullMatrix today, RuleBased in
-  Segment 12).
+  Segment 13).
 - **Instruments** are the *response forms* attached to a session. A
   session has one or more instruments, each defining its own set of
   response fields and display fields. The schema, services, and
   audit events are fully multi-instrument-aware
   (`Instrument.session_id`, `Instrument.order`, FK delete-orphan
   cascades, `create_instrument` / `delete_instrument` services with
-  `instrument.created` / `instrument.deleted` events). Today every
+  `instrument.created` / `instrument.deleted` events). Every
   session is auto-created with one instrument (system handle
-  `Default`, operator-editable `description`) and the operator UI
-  gates `Add an instrument` behind a disabled button — the
-  "single-instrument" property is a UI invariant only, not a model
-  invariant. Lifting that UI gate is what **Segment 13
-  (multi-instrument sessions)** will do.
+  `Default`, operator-editable `description`); the operator's
+  `Add an instrument` and `Delete this instrument` buttons are
+  wired (Segment 10D Slice 5, 2026-05-02) with mutual-exclusion +
+  single-instrument-floor gates. Three remaining multi-instrument
+  items (FullMatrix per-instrument target picker; Manual CSV
+  `Instrument` column; reviewer dashboard per-instrument grouping)
+  are tracked at `guide/unfinished_business.md` #27 / #28 / #29
+  (the original Segment 13 plan is archived as
+  `guide/archive/segment_13_multi_instrument_sessions_superseded.md`).
 - **Assignments** are `(session, reviewer, reviewee, instrument)`
   rows. They link the assignment matrix (the pair) to the response
   form (the instrument). The same `(reviewer, reviewee)` pair may
@@ -73,9 +77,10 @@ stacked. Each table is independent: its own rows (assignments scoped
 to that instrument), its own display columns, its own response
 columns. The same `(reviewer, reviewee)` pair may appear in zero,
 one, or many instruments depending on how generation ran. The
-reviewer-surface render path already loops by instrument; the operator
-UI for actually creating multiple instruments per session is what
-Segment 13 will unlock.
+reviewer-surface render path loops by instrument and the operator
+UI for creating / deleting instruments shipped in Segment 10D
+Slice 5 (2026-05-02). The remaining multi-instrument items are
+tracked at `guide/unfinished_business.md` #27 / #28 / #29.
 
 ### Practical implications today
 
@@ -96,15 +101,16 @@ is in place:
 - The reviewer surface renders one tabular artifact per instrument
   in DOM order, with section heading from `Instrument.description`
   (fallback to handle) and a per-field help block above each table.
-- Schema + services are multi-instrument-aware
-  (`create_instrument`, `delete_instrument`, FK cascades). The UI
-  gates new-instrument creation behind a disabled button.
+- Schema + services + operator UI are multi-instrument-aware
+  (`create_instrument`, `delete_instrument`, FK cascades; the
+  `Add an instrument` and `Delete this instrument` buttons shipped
+  in Segment 10D Slice 5).
 
 Items still deliberately deferred (see `docs/status.md` "What's
-deliberately not yet there"): Display Fields persistence on the
-per-instrument card placeholder; operator UI for adding additional
-instruments (Segment 13); response-field type changes after
-creation (data migration concern).
+deliberately not yet there"): FullMatrix per-instrument target
+picker, Manual CSV `Instrument` column, and reviewer-dashboard
+per-instrument grouping (`unfinished_business.md` #27 / #28 / #29);
+response-field type changes after creation (data migration concern).
 
 ### Session lifecycle (Segment 9.1)
 

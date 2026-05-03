@@ -438,7 +438,7 @@ class ReviewerSessionState:
 
     Single source of truth shared by the reviewer-dashboard pill
     (``session_pill_for_reviewer``) and the operator monitoring page
-    (``monitoring.per_reviewer_progress``). Segment 11 export will read
+    (``monitoring.per_reviewer_progress``). Segment 12 export will read
     the same shape for "incomplete at deadline" cohorts.
     """
 

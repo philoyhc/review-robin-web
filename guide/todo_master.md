@@ -13,7 +13,7 @@ When you ship an item, tick it off in **both** files.
 
 The sequence is shaped by three forces: (a) finish the chrome
 work that #19 spawned (#20 + #21 + #22) before the operator
-surface ships into Segment 11, (b) some items must land in a
+surface ships into Segment 12, (b) some items must land in a
 specific order because they touch the same code (#16 bundles
 with #10; #12 follows #8; #22 follows #21 because Home rebuild
 uses the buttons #21 restyles), and (c) defensive CI hardening
@@ -63,9 +63,9 @@ through the same code, the test gaps need to close first.
 
 ---
 
-## P2 — Architectural debt before Segment 11
+## P2 — Architectural debt before Segment 12
 
-Segment 11 (export / audit retention) will read
+Segment 12 (export / audit retention) will read
 `Assignment.context` and write a stable `audit_events.detail`
 schema, so settle the arch story first.
 
@@ -75,9 +75,9 @@ schema, so settle the arch story first.
 | 10 | ~~**#3 — Move `_invalidate_if_validated` into the service layer**~~ | ✅ shipped 2026-05-02 — new public `lifecycle.invalidate_if_validated()` helper (idempotent, no-op on non-validated). Every mutating service in `csv_imports.py`, `assignments.py`, `sessions.py`, `instruments.py` calls it at the top with a service-local `reason` constant; routes no longer thread the rule. The 23 explicit `_invalidate_if_validated` calls in `routes_operator.py` and the route helper itself are gone. 11 new service-layer invariant tests pin the rule (one per mutating service category); full 423-test suite passes on both dialects. |
 | 11 | ~~**#16 — Decide bulk_visibility_when_closed invalidation policy**~~ | ✅ shipped 2026-05-02 alongside #3. **Decision: visibility-when-closed is exempt** — it's a display flag, not part of the validation snapshot. Pinned in code at `instruments.bulk_set_visibility` and `lifecycle.set_responses_visible_when_closed` (each carries a `# #16` comment) and in two regression tests (one each for the bulk and per-instrument toggle). The previously-existing `test_bulk_visibility_does_not_invalidate_validated_session` had its docstring updated since the policy is now decided rather than provisional. |
 | 12 | ~~**#11 — Extract instruments-index template context to `views.py`**~~ | ✅ shipped 2026-05-02 — new `build_instruments_context()` in `app/web/views.py` owns the 5 idempotent display-field / RTD backfills, the editing-state machine, the bulk Accepting / Visibility three-state derivation, and the URL-driven `rtd_delete_blocked` / `rtd_would_empty` packaging. Handler shrank from 140 lines → 46 lines (query-param declarations + 1 view call + render). The catalog's "preview route reuse" framing turned out to be stale (preview uses `routes_reviewer.build_preview_context`); motivation reduced to "thin the route" per the CLAUDE.md services/routes/views split. No behaviour change; full 423-test suite passes on both dialects. |
-| 13 | **#5 — Define audit-event `detail` schema convention** | Document in `spec/architecture.md`. Migrate emitters incrementally — one PR per emitter family. Segment 11 will export these, so the convention needs to settle first. |
+| 13 | **#5 — Define audit-event `detail` schema convention** | Document in `spec/architecture.md`. Migrate emitters incrementally — one PR per emitter family. Segment 12 will export these, so the convention needs to settle first. |
 | 14 | **#21 — UI consistency updates aligning with the new chrome** | Umbrella for follow-on UI cleanups that align the surface with the chrome's visual language. First sub-task: restyle the six canonical button modifiers (Primary / Primary Outline / Alert / Alert Outline / Danger / Danger Outline) — they now read as jarringly contrastive against the chrome's understated tints. Move them to softer fills / lighter borders / lighten-on-hover. Update `spec/assumptions.md` once settled. Sequenced before #22 because the Home rebuild will use these buttons, so getting the visual right first saves rework. |
-| 15 | **#22 — Home body rebuild + Option F relocation** | After #20 / #21, the chrome system is fully deployed and the visual vocabulary is settled, but Home's body still uses the old four-card layout (not the launch-point framing in `spec/ui_concept.md`), and page-specific status content (`fields_with_data`, self-review breakdown, etc.) is parked in sub-cards instead of relocated next to its relevant action per Option F. 4–6 small PRs total. Worth landing before Segment 11 so the operator surface is settled when export ships. |
+| 15 | **#22 — Home body rebuild + Option F relocation** | After #20 / #21, the chrome system is fully deployed and the visual vocabulary is settled, but Home's body still uses the old four-card layout (not the launch-point framing in `spec/ui_concept.md`), and page-specific status content (`fields_with_data`, self-review breakdown, etc.) is parked in sub-cards instead of relocated next to its relevant action per Option F. 4–6 small PRs total. Worth landing before Segment 12 so the operator surface is settled when export ships. |
 
 **#17 (filter divergence) — resolved on re-audit 2026-05-02; removed from sequence.**
 

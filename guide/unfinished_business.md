@@ -72,7 +72,7 @@ docs/status.md / docs/database.md updated to match.
 
 ---
 
-## P2 — Architectural debt to land before Segment 11 (export / audit retention)
+## P2 — Architectural debt to land before Segment 12 (export / audit retention)
 
 ### 3. Move `_invalidate_if_validated` policy out of routes · [arch] · medium · ✅ shipped 2026-05-02
 
@@ -115,7 +115,7 @@ example per category, and the two visibility-services exemption
   correlation_id. That's a small audit-trace regression, not
   worth threading the param through 14 instruments_service
   signatures. If correlation_id continuity becomes important for
-  trace-on-export work in Segment 11, fix it then.
+  trace-on-export work in Segment 12, fix it then.
 - The `mutate_setup` decorator alternative was considered and
   rejected — services have wildly different signatures
   (`instrument`, `field`, `rtd`, `review_session`), so a
@@ -146,7 +146,7 @@ the 4 pill states + projection equivalence.
   `.order_by(Assignment.id)` from the shared filter. Verify-before-
   assume saved a debugging cycle. The new helper centralises the
   filter call, so a future caller can't drift.
-- Segment 11 export's "incomplete at deadline" cohort can now
+- Segment 12 export's "incomplete at deadline" cohort can now
   consume `reviewer_session_state` directly; no third walker
   needed.
 
@@ -164,7 +164,7 @@ JSON shape:
   `removed` / `updated` keys.
 
 `docs/status.md`'s "Audit log" section is the only place these are
-reconciled. Segment 11 is "export / audit retention" — the export
+reconciled. Segment 12 is "export / audit retention" — the export
 consumer will need a stable schema, and defining it after the fact
 means rewriting every emitter.
 
@@ -343,7 +343,7 @@ independent tables; a person who appears in both with the same
 email but different names imports cleanly today and surfaces as a
 mismatch downstream (assignment-context joins, monitoring email
 lookups). Tightening the rules now — while the validator surface
-is small — costs less than retrofitting after Segment 11's
+is small — costs less than retrofitting after Segment 12's
 export consumes the data.
 
 **Where.** `app/services/csv_imports.py` — `parse_reviewer_csv`
@@ -420,7 +420,7 @@ User-visible symptom: data-loss-by-illusion. **Risk: high.**
    checkbox from the placeholder rows. The hardcoded 6-row list
    stays as a teaser of what the configurable surface will look
    like. Use this if Display Fields wiring is going to slip
-   beyond Segment 11.
+   beyond Segment 12.
 2. **Wire to existing routes** (~half day, the right long-term
    move). Extend `_VALID_DISPLAY_SOURCES` and
    `_DEFAULT_DISPLAY_LABELS` (`app/services/instruments.py:47–63`)
@@ -437,7 +437,7 @@ User-visible symptom: data-loss-by-illusion. **Risk: high.**
    UI vocabulary uses CSV column names, the schema uses tuples.
 
 Recommend **option 1 first**, with option 2 scheduled into
-Segment 11 or its own 10x slice.
+Segment 12 or its own 10x slice.
 
 ---
 
@@ -883,7 +883,7 @@ and are downstream of the chrome work in #19/#20.
 - One Home wiring PR for the lifecycle-transition button (or
   fold into the body restructure).
 
-Done before Segment 11 starts so the operator surface is
+Done before Segment 12 starts so the operator surface is
 settled.
 
 ---
@@ -1038,7 +1038,8 @@ dev outbox will then carry into Segment 15 unchanged.
 
 ### 25. Inline-editable rows on reviewers / reviewees / assignments Manage pages · [feature] · medium · officially deferred
 
-**Status.** Officially deferred from `guide/segment_10E_*.md` §2.5.
+**Status.** Officially deferred from `guide/segment_11_*.md` §2.5
+(originally surfaced in 10E before Segment 11 was renamed).
 Slated for **Segment 15** (operator polish + documentation) since
 it needs a design pass before code, and the polish segment is the
 right home for that pass. Catalogued here so a future operator
@@ -1082,7 +1083,8 @@ deliberately not yet there" pointing here.
 
 ### 26. Local Postgres docker-compose for dev · [dev-loop] · small · officially deferred
 
-**Status.** Officially deferred from `guide/segment_10E_*.md` §2.7.
+**Status.** Officially deferred from `guide/segment_11_*.md` §2.7
+(originally surfaced in 10E before Segment 11 was renamed).
 Slated for **Segment 15** (developer setup guide work item) since
 the developer-setup-guide work in §18 is the natural place for the
 Postgres-vs-SQLite local-dev story to settle. Catalogued here so
@@ -1125,6 +1127,142 @@ explicit either way.
 
 ---
 
+### 27. FullMatrix generation: per-instrument target picker · [feature] · small
+
+**Status.** Carried over from the now-superseded
+`guide/archive/segment_13_multi_instrument_sessions_superseded.md`
+§7.1. The success criterion "FullMatrix can generate assignments
+by instrument" never landed; the rest of multi-instrument support
+shipped in Segment 10D Slice 5.
+
+**Why now.** `assignments.replace_assignments` at
+`app/services/assignments.py:561` calls
+`get_or_create_default_instrument(...)` and assigns every generated
+pair to one instrument. On a session with two instruments, the
+operator has no way to ask "generate FullMatrix for instrument 2";
+they get the default. Mostly invisible today because operators
+running multi-instrument sessions tend to use Manual import — but
+the moment a real pilot uses FullMatrix on a 2-instrument session,
+the gap surfaces.
+
+**Where.**
+
+- `app/services/assignments.py:561` — `replace_assignments`
+  hardcodes `instrument = get_or_create_default_instrument(...)`.
+- `app/web/routes_operator.py::assignments_full_matrix_generate`
+  (~`:412`) — POST handler; needs a target-instrument form
+  field.
+- `app/web/templates/operator/assignments_list.html` — the
+  FullMatrix form lives here; needs an instrument picker when
+  more than one instrument exists.
+
+**Plan.**
+
+- Decide UX shape: single-target picker (one instrument per
+  generation; operator runs once per instrument they want to
+  populate) or multi-select (one POST creates assignments
+  across N instruments). Single-target is simpler and matches
+  Manual's pattern (one CSV per intent).
+- Add `target_instrument_id` form field to the FullMatrix form;
+  default to the only instrument when there's just one (and
+  hide the picker).
+- `replace_assignments(... target_instrument_id=...)` — when
+  None, fall back to `get_or_create_default_instrument` (current
+  behaviour).
+- Audit detail: include `target_instrument_id` in
+  `assignments.generated`.
+- Tests: 2-instrument session with FullMatrix targeting
+  instrument 1 leaves instrument 2 untouched.
+
+---
+
+### 28. ManualAssignment CSV: `Instrument` column · [feature] · small
+
+**Status.** Carried over from the now-superseded
+`guide/archive/segment_13_multi_instrument_sessions_superseded.md`
+§7.2.
+
+**Why now.** `ManualAssignmentRow` at
+`app/schemas/assignments.py:14` carries `reviewer_id`,
+`reviewee_id`, `include`, `pair_context_*`, and
+`assignment_context_*` — but no `instrument`. On a multi-instrument
+session, the manual CSV importer routes every row to the default
+instrument (same shape as #27). Same invisible-today / gap-on-pilot
+dynamic.
+
+**Where.**
+
+- `app/schemas/assignments.py:14` — `ManualAssignmentRow` schema.
+- `app/services/assignments.py::parse_manual_csv` (~`:300`) — CSV
+  parser; needs to read an optional `Instrument` column.
+- `app/services/assignments.py::manual_rows_to_pairs` (~`:480`)
+  — needs to thread `instrument_id` per row.
+- `app/services/assignments.py::replace_assignments` —
+  `Assignment.instrument_id` should come from the parsed row,
+  not the default.
+- `docs/imports.md` — Manual CSV format spec; needs the new
+  column.
+
+**Plan.**
+
+- Add optional `Instrument` column to the manual CSV format.
+- Validation rules:
+  - If session has exactly one instrument: column optional;
+    missing rows get the default; populated rows must match.
+  - If session has >1 instrument: column required; blocking
+    error when missing or unknown.
+- Match instruments by `Instrument.name` (the system handle —
+  mostly `Default`, plus operator-added like `Instrument 2`)
+  case-insensitive.
+- Audit detail on `assignments.generated` includes a
+  `per_instrument_count: {instrument_id: count}` map.
+- Tests: 2-instrument session imports rows targeting both;
+  rows with unknown instrument blocked; missing-column blocked
+  on multi-instrument.
+
+---
+
+### 29. Reviewer dashboard: per-instrument grouping · [feature] · small
+
+**Status.** Carried over from the now-superseded
+`guide/archive/segment_13_multi_instrument_sessions_superseded.md`
+§8 (success criterion 6).
+
+**Why now.** `app/web/templates/reviewer/dashboard.html` shows one
+row per session with a single per-session pill (`not started` /
+`in progress` / `submitted`). On a 2-instrument session a reviewer
+who's submitted instrument 1 but not started instrument 2 sees
+"in progress" with no breakdown — they have to open the surface
+to learn which instrument is which. The surface itself already
+groups by instrument (`instrument_groups` template loop in
+`review_surface.html` since 10A); the dashboard never picked up
+the same shape.
+
+**Where.**
+
+- `app/web/templates/reviewer/dashboard.html` — single per-session
+  row + pill.
+- `app/web/routes_reviewer.py::dashboard` — the handler;
+  currently calls `responses_service.session_pill_for_reviewer`
+  which collapses across instruments.
+- Reuse: `responses_service.reviewer_session_state(...)` (added
+  in PR #298) — extend to per-instrument projection, or wrap
+  with a new `reviewer_instrument_state(...)` helper.
+
+**Plan.**
+
+- Add `reviewer_instrument_state()` helper returning a list of
+  per-instrument `(instrument_id, instrument_name,
+  pill_state, completed_count, total_count)` tuples.
+- Dashboard renders a sub-row per instrument under each session
+  row when the session has >1 instrument; collapses to the
+  current single-pill shape when there's exactly one.
+- Tests: dashboard render for single-instrument session
+  (unchanged); 2-instrument session with mixed completion
+  shows two pills.
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
@@ -1132,4 +1270,4 @@ explicit either way.
 - `routes_operator.py` overall size: 1849 lines of mostly thin
   handlers is fine. Item 11 is the one carve-out worth doing now.
 - `bulk_save_fields` (`app/services/instruments.py:407–554`) — long
-  but stable; revisit if Segment 12/13 force changes to it.
+  but stable; revisit if Segment 13 (RuleBased) forces changes to it.

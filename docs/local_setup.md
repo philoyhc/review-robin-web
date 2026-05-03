@@ -252,7 +252,8 @@ it's deferred to a later segment:
 | Assignment generation               | Segment 7  |
 | Reviewer tabular response surface   | Segment 8  |
 | Email invitations + reminders       | Segment 9  |
-| CSV / Excel exports                 | Segment 11 |
-| Rule-based assignment builder       | Segment 12 |
-| Multi-instrument sessions           | Segment 13 |
-| Production hardening (`JSONB`, native `UUID`, Postgres CI job, structured logging, monitoring, runbooks) | Segment 14 |
+| Multi-instrument sessions           | Shipped in Segment 10D Slice 5; remainder at `guide/unfinished_business.md` #27 / #28 / #29 |
+| Cleaning up unfinished business     | Segment 11 |
+| CSV / Excel exports                 | Segment 12 |
+| Rule-based assignment builder       | Segment 13 |
+| Production hardening (`JSONB`, native `UUID`, structured logging, monitoring, runbooks) | Segment 14 |
