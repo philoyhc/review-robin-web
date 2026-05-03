@@ -25,10 +25,14 @@
         /* Semantic accents (emphasis / background pairs) */
         --accent-blue: #2563eb;
         --accent-blue-bg: #dbeafe;
+        --accent-blue-bg-soft: #eff6ff;
+        --accent-blue-light: #3b82f6;
+        --accent-blue-dark: #1d4ed8;
         --accent-green: #059669;
         --accent-green-bg: #d1fae5;
         --accent-amber: #d97706;
         --accent-amber-bg: #fef3c7;
+        --accent-amber-dark: #92400e;
         --accent-red: #dc2626;
         --accent-red-bg: #fee2e2;
         --accent-red-soft: #ef4444;
@@ -676,6 +680,34 @@
         border-color: var(--accent-blue);
         color: #fff;
       }
+      /* Hover — signal interactivity by tonal step on-palette.
+         Convention (matches the chrome's Home anchor pattern):
+         filled buttons LIGHTEN on hover; outline buttons darken
+         with a subtle background tint. Disabled buttons skip via
+         `pointer-events: none` below. */
+      body.ui-v2 .btn:hover,
+      body.ui-v2 button.btn:hover,
+      body.ui-v2 a.btn:hover {
+        background: var(--accent-blue-light);
+        border-color: var(--accent-blue-light);
+        color: #fff;
+      }
+      body.ui-v2 .btn.secondary:hover {
+        background: var(--bg-muted);
+        color: var(--text-primary);
+        border-color: var(--border-default);
+      }
+      body.ui-v2 .btn.destructive:hover,
+      body.ui-v2 .btn.danger-solid:hover {
+        background: var(--accent-red-bg);
+        color: var(--accent-red);
+        border-color: var(--accent-red);
+      }
+      body.ui-v2 .btn.alert-solid:hover {
+        background: var(--accent-blue-light);
+        border-color: var(--accent-blue-light);
+        color: #fff;
+      }
       /* Unified disabled state — covers <button disabled>,
          <a class="btn disabled"> and aria-disabled. */
       body.ui-v2 .btn:disabled,
@@ -770,8 +802,7 @@
         border-radius: var(--radius-pill);
         font-size: var(--fs-tiny);
         font-weight: 500;
-        text-transform: none;
-        letter-spacing: 0;
+        text-transform: uppercase;
         margin-right: var(--space-1);
       }
       body.ui-v2 .pill-count,
@@ -782,7 +813,7 @@
       body.ui-v2 .pill-empty,
       body.ui-v2 .pill.pill-warning {
         background: var(--accent-amber-bg);
-        color: var(--accent-red);
+        color: var(--accent-amber-dark);
       }
       body.ui-v2 .pill-lifecycle-draft,
       body.ui-v2 .pill-lifecycle-closed {
@@ -841,6 +872,10 @@
         background: var(--accent-blue-bg);
         border-right-color: var(--border-subtle);
         color: var(--text-secondary);
+      }
+      body.ui-v2 .session-home-anchor:hover {
+        background: var(--accent-blue-bg-soft);
+        color: var(--text-primary);
       }
       body.ui-v2 .session-home-anchor.active { color: var(--text-primary); }
       body.ui-v2 .row-label {
