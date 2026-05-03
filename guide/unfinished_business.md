@@ -1272,7 +1272,7 @@ flow, and its own status indicator. The Quick Setup card unifies
 all three into a single Home-body element — three independent
 slots (Reviewers / Reviewees / Assignments-or-rule) with shared
 confirm + cascade + lifecycle-lock semantics. The full spec lives
-at `guide/quick_setup_card_spec.md` (PR #307).
+at `spec/quick_setup_card_spec.md` (PR #307).
 
 This is genuinely new operator-surface scope — not from the
 segments-1–10 audit. Filed in Segment 11 because it bundles with
@@ -1285,7 +1285,7 @@ before the heavier feature segments.
 
 **Where.**
 
-- Spec: `guide/quick_setup_card_spec.md` (full functional spec).
+- Spec: `spec/quick_setup_card_spec.md` (full functional spec).
 - Template surface: `app/web/templates/operator/session_detail.html`
   — the Home page; the card lands in the body alongside #22's
   rebuild work.
@@ -1329,7 +1329,7 @@ before the heavier feature segments.
   `draft` (matches existing per-entity behaviour).
 
 **Out of scope.** All the explicit out-of-scope items in
-`guide/quick_setup_card_spec.md` (per-record editing, CSV preview,
+`spec/quick_setup_card_spec.md` (per-record editing, CSV preview,
 wizard stepping, cross-entity validation, auto-regeneration of
 assignments after a roster replacement, undo, save-as-template).
 

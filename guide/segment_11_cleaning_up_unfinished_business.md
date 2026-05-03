@@ -65,7 +65,7 @@ already settled.
 
 | Item | Source | Notes |
 |------|--------|-------|
-| **#22 + #30 — Home body rebuild + Quick Setup card** | `unfinished_business.md` #22 + #30, spec at `guide/quick_setup_card_spec.md` | Bundle: both restructure Home's body, share CSS primitives, and depend on Tier 3 #21 (chrome buttons settled first). Doing them in one Home-body restructure pass avoids touching the template twice. ~6–8 small PRs total (4–6 for #22's Option F relocation + 3–4 for #30's three slots). |
+| **#22 + #30 — Home body rebuild + Quick Setup card** | `unfinished_business.md` #22 + #30, spec at `spec/quick_setup_card_spec.md` | Bundle: both restructure Home's body, share CSS primitives, and depend on Tier 3 #21 (chrome buttons settled first). Doing them in one Home-body restructure pass avoids touching the template twice. ~6–8 small PRs total (4–6 for #22's Option F relocation + 3–4 for #30's three slots). |
 | **#5 — Audit-event `detail` schema convention** | `unfinished_business.md` #5 | Spec write-up in `spec/architecture.md` then incremental emitter migration. Segment 12 export needs this stable. |
 | **2.2 — Vanilla-JS autosave on `/save`** | This file (was §2.2) | Depends on Tier 2 #2.1 AG Grid decision: bundle if grid lands; otherwise standalone debounce + last-saved-indicator PR. |
 
