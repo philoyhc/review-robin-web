@@ -235,10 +235,10 @@ Setup and Operations are two parallel series of pages (see UI concept doc for th
 
 Sessions move through four lifecycle states. Each renders as a badge in the status strip and (where relevant) inline elsewhere:
 
-- **`draft`** — neutral grey (`text-secondary` on `bg-muted`). The default working state.
-- **`validated`** — muted blue (`accent-blue` text on `accent-blue` light background). Setup is complete and validated; ready to activate.
-- **`ready`** — muted green (`accent-green` text on `accent-green` light background). The session is live.
-- **`closed`** — neutral grey, slightly darker than draft to indicate finality.
+- **`draft`** — warning amber (`accent-amber-dark` text on `accent-amber-bg` background). Same treatment as `.pill-empty`. The session is *not ready for action* — setup work remains, the operator's eye should land on the badge as a "needs work" cue rather than a neutral "nothing happening here" grey.
+- **`validated`** — muted blue (`accent-blue` text on `accent-blue-bg` background). Setup is complete and validated; ready to activate.
+- **`ready`** — muted green (`accent-green` text on `accent-green-bg` background). The session is live.
+- **`closed`** — neutral grey (`text-secondary` on `bg-muted`). Indicates finality; the work is done and the surface is no longer actionable.
 
 Lifecycle state always appears first in the status strip, leftmost, before per-entity counts.
 
