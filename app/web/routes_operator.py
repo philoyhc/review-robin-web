@@ -269,6 +269,15 @@ async def _handle_import(
     _require_editable(review_session)
     content = await file.read()
     result = parse_fn(content)
+    if not result.is_blocked:
+        result.issues.extend(
+            csv_imports.check_cross_table_identity(
+                db,
+                session_id=review_session.id,
+                rows=result.rows,
+                kind=kind,
+            )
+        )
     existing = existing_count_fn(db, review_session.id)
     assignment_count = csv_imports.existing_assignment_count(db, review_session.id)
 

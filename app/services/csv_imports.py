@@ -159,7 +159,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
         return ParseResult(rows=[], issues=issues)
 
     parsed: list[ReviewerImportRow] = []
-    seen_emails: dict[str, int] = {}
+    seen_emails: dict[str, tuple[int, str]] = {}
 
     for index, raw in enumerate(raw_rows, start=1):
         name = _cell(raw, "ReviewerName")
@@ -196,21 +196,30 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
         if isinstance(email_check, ValidationIssue):
             issues.append(email_check)
             continue
-        if email.lower() in seen_emails:
+        prior = seen_emails.get(email.lower())
+        if prior is not None:
+            prior_index, prior_name = prior
+            if prior_name == name:
+                message = (
+                    f"Duplicate ReviewerEmail '{email}' "
+                    f"(also on row {prior_index})"
+                )
+            else:
+                message = (
+                    f"ReviewerEmail '{email}' was used for '{prior_name}' "
+                    f"on row {prior_index} — names must match."
+                )
             issues.append(
                 ValidationIssue(
                     severity=Severity.error,
                     source=source,
                     row_number=index,
                     field="ReviewerEmail",
-                    message=(
-                        f"Duplicate ReviewerEmail '{email}' "
-                        f"(also on row {seen_emails[email.lower()]})"
-                    ),
+                    message=message,
                 )
             )
             continue
-        seen_emails[email.lower()] = index
+        seen_emails[email.lower()] = (index, name)
         parsed.append(
             ReviewerImportRow(
                 name=name,
@@ -248,7 +257,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
         return ParseResult(rows=[], issues=issues)
 
     parsed: list[RevieweeImportRow] = []
-    seen_identifiers: dict[str, int] = {}
+    seen_identifiers: dict[str, tuple[int, str]] = {}
 
     for index, raw in enumerate(raw_rows, start=1):
         name = _cell(raw, "RevieweeName")
@@ -285,21 +294,30 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
         if isinstance(identifier_check, ValidationIssue):
             issues.append(identifier_check)
             continue
-        if identifier.lower() in seen_identifiers:
+        prior = seen_identifiers.get(identifier.lower())
+        if prior is not None:
+            prior_index, prior_name = prior
+            if prior_name == name:
+                message = (
+                    f"Duplicate RevieweeEmail '{identifier}' "
+                    f"(also on row {prior_index})"
+                )
+            else:
+                message = (
+                    f"RevieweeEmail '{identifier}' was used for '{prior_name}' "
+                    f"on row {prior_index} — names must match."
+                )
             issues.append(
                 ValidationIssue(
                     severity=Severity.error,
                     source=source,
                     row_number=index,
                     field="RevieweeEmail",
-                    message=(
-                        f"Duplicate RevieweeEmail '{identifier}' "
-                        f"(also on row {seen_identifiers[identifier.lower()]})"
-                    ),
+                    message=message,
                 )
             )
             continue
-        seen_identifiers[identifier.lower()] = index
+        seen_identifiers[identifier.lower()] = (index, name)
         parsed.append(
             RevieweeImportRow(
                 name=name,
@@ -312,6 +330,86 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
         )
 
     return ParseResult(rows=parsed, issues=issues)
+
+
+def check_cross_table_identity(
+    db: Session,
+    *,
+    session_id: int,
+    rows: list[ReviewerImportRow] | list[RevieweeImportRow],
+    kind: str,
+) -> list[ValidationIssue]:
+    """Block CSV uploads where a row's email is already present in the
+    *other* table (within the same session) under a different name.
+
+    Email is the unique person-identifier across both tables; name is
+    just the human-facing label. Same email + same name across tables
+    is allowed (the person is both reviewer and reviewee, common in
+    peer review). Same email + different name is a blocking error.
+
+    Reviewees without an ``@`` in their identifier are skipped — those
+    are non-email handles in the asymmetric mode and can't collide
+    with reviewer emails by construction. When the symmetric mode
+    lands (see ``spec/preview_hub.md``), every reviewee will have a
+    real email and this filter becomes a no-op.
+    """
+    issues: list[ValidationIssue] = []
+    if kind == "reviewers":
+        existing = {
+            r.email_or_identifier.lower(): r.name
+            for r in db.execute(
+                select(Reviewee).where(Reviewee.session_id == session_id)
+            )
+            .scalars()
+            .all()
+            if "@" in r.email_or_identifier
+        }
+        for index, row in enumerate(rows, start=1):
+            assert isinstance(row, ReviewerImportRow)
+            prior_name = existing.get(row.email.lower())
+            if prior_name is not None and prior_name != row.name:
+                issues.append(
+                    ValidationIssue(
+                        severity=Severity.error,
+                        source="reviewers",
+                        row_number=index,
+                        field="ReviewerEmail",
+                        message=(
+                            f"ReviewerEmail '{row.email}' is already used by "
+                            f"reviewee '{prior_name}' in this session — "
+                            f"names must match (got '{row.name}')."
+                        ),
+                    )
+                )
+    elif kind == "reviewees":
+        existing = {
+            r.email.lower(): r.name
+            for r in db.execute(
+                select(Reviewer).where(Reviewer.session_id == session_id)
+            )
+            .scalars()
+            .all()
+        }
+        for index, row in enumerate(rows, start=1):
+            assert isinstance(row, RevieweeImportRow)
+            if "@" not in row.email_or_identifier:
+                continue
+            prior_name = existing.get(row.email_or_identifier.lower())
+            if prior_name is not None and prior_name != row.name:
+                issues.append(
+                    ValidationIssue(
+                        severity=Severity.error,
+                        source="reviewees",
+                        row_number=index,
+                        field="RevieweeEmail",
+                        message=(
+                            f"RevieweeEmail '{row.email_or_identifier}' is already "
+                            f"used by reviewer '{prior_name}' in this session — "
+                            f"names must match (got '{row.name}')."
+                        ),
+                    )
+                )
+    return issues
 
 
 def existing_reviewer_count(db: Session, session_id: int) -> int:

@@ -213,6 +213,88 @@ def test_non_operator_gets_403_on_reviewer_import(
     assert response.status_code == 403
 
 
+def _reviewee_csv(*rows: tuple[str, str]) -> bytes:
+    body = "RevieweeName,RevieweeEmail\n" + "".join(f"{n},{e}\n" for n, e in rows)
+    return body.encode("utf-8")
+
+
+def _post_reviewers(client: TestClient, sid: int, *rows: tuple[str, str]):
+    return client.post(
+        f"/operator/sessions/{sid}/reviewers/import",
+        files={"file": ("reviewers.csv", _reviewer_csv(*rows), "text/csv")},
+        follow_redirects=False,
+    )
+
+
+def _post_reviewees(client: TestClient, sid: int, *rows: tuple[str, str]):
+    return client.post(
+        f"/operator/sessions/{sid}/reviewees/import",
+        files={"file": ("reviewees.csv", _reviewee_csv(*rows), "text/csv")},
+        follow_redirects=False,
+    )
+
+
+def test_cross_table_reviewer_matches_reviewee_same_name_is_allowed(
+    client: TestClient, db: Session
+) -> None:
+    """Person who is both reviewer + reviewee imports cleanly when names match."""
+    review_session = _make_session(client, db)
+    assert _post_reviewees(client, review_session.id, ("Alice", "alice@example.edu")).status_code == 303
+
+    response = _post_reviewers(client, review_session.id, ("Alice", "alice@example.edu"))
+
+    assert response.status_code == 303
+    reviewers = list(
+        db.execute(
+            select(Reviewer).where(Reviewer.session_id == review_session.id)
+        ).scalars()
+    )
+    assert {r.email for r in reviewers} == {"alice@example.edu"}
+
+
+def test_cross_table_reviewer_matches_reviewee_different_name_blocks(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db)
+    assert _post_reviewees(client, review_session.id, ("Alice", "alice@example.edu")).status_code == 303
+
+    response = _post_reviewers(client, review_session.id, ("Alex", "alice@example.edu"))
+
+    assert response.status_code == 400
+    body = response.text
+    assert "names must match" in body
+    reviewers = list(
+        db.execute(
+            select(Reviewer).where(Reviewer.session_id == review_session.id)
+        ).scalars()
+    )
+    assert reviewers == []
+
+
+def test_cross_table_reviewee_matches_reviewer_different_name_blocks(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db)
+    assert _post_reviewers(client, review_session.id, ("Alice", "alice@example.edu")).status_code == 303
+
+    response = _post_reviewees(client, review_session.id, ("Alex", "alice@example.edu"))
+
+    assert response.status_code == 400
+    assert "names must match" in response.text
+
+
+def test_cross_table_reviewee_non_email_identifier_never_collides(
+    client: TestClient, db: Session
+) -> None:
+    """Reviewees without @ in identifier can't collide with reviewer emails."""
+    review_session = _make_session(client, db)
+    assert _post_reviewers(client, review_session.id, ("Alice", "alice@example.edu")).status_code == 303
+
+    response = _post_reviewees(client, review_session.id, ("Different Person", "alice"))
+
+    assert response.status_code == 303
+
+
 def test_reviewee_import_persists_with_photolink(
     client: TestClient, db: Session
 ) -> None:
