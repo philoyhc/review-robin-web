@@ -80,6 +80,11 @@ documentation pass:
   Manage pages** — officially deferred from Segment 11 (originally
   10E §2.5); tracked at `guide/unfinished_business.md` #25. Needs a
   design pass before code; the polish segment is the right home.
+- **Sessions-list Delete button fix** — officially deferred from
+  Segment 11 Tier 1 (2026-05-03); tracked at
+  `guide/unfinished_business.md` #23. Small fix (`<a>` → POST form
+  with confirm); bundles naturally with whatever other
+  `/operator/sessions` UI work this segment touches.
 - **Local Postgres docker-compose for dev** — officially deferred
   from Segment 11 (originally 10E §2.7); tracked at
   `guide/unfinished_business.md` #26. The developer-setup-guide

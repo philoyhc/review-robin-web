@@ -888,9 +888,17 @@ settled.
 
 ---
 
-### 23. Sessions-list Delete button doesn't actually delete · [bug/UX] · small
+### 23. Sessions-list Delete button doesn't actually delete · [bug/UX] · small · officially deferred
 
-**Why now.** The Delete button on every row of
+**Status.** Officially deferred (2026-05-03) to **Segment 15**
+alongside the rest of the `/operator/sessions` surface UI work
+(no segment plans that surface specifically until then). The
+fix is small and the route is in place — picking it up earlier
+is fine if anything else nudges the sessions-list template
+first. Catalogued here so the deferral isn't mistaken for a
+silent drop.
+
+**Why now (originally).** The Delete button on every row of
 `/operator/sessions` reads as a one-click delete affordance
 (red `danger-solid` button labeled "Delete") but is actually
 just an anchor to `/operator/sessions/{id}#danger-zone`. The
