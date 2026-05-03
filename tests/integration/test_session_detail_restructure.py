@@ -121,20 +121,23 @@ def test_build_setup_rows_returns_expected_shape(
     assert by_label["Assignments"].value == "Number of assignments: 1"
 
 
-def test_session_detail_renders_four_cards(
+def test_session_detail_renders_session_layout(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="four-cards")
+    review_session = _make_session(client, db, code="layout-cards")
 
     response = client.get(f"/operator/sessions/{review_session.id}")
     body = response.text
 
     assert response.status_code == 200
     assert "<h2>Session Details</h2>" in body
-    assert "<h2>Session Setup</h2>" in body
     assert "<h2>Run Session</h2>" in body
-    assert "Danger Zone" in body  # heading uses inline color, not exact match
+    assert "Danger Zone" in body
     assert 'id="danger-zone"' in body
+    # The standalone "Session Setup" card was retired — its five Manage
+    # links live in the chrome top-nav now (see chrome partial), so the
+    # body no longer needs an in-page card duplicating them.
+    assert "<h2>Session Setup</h2>" not in body
     # Legacy ad-hoc layout markers are gone:
     assert "Run setup validation" not in body
     assert "Validate &amp; activate" not in body

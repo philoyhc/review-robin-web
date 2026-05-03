@@ -44,7 +44,7 @@ separately.
 - [x] `session_previews.html` — `/operator/sessions/{id}/previews` (new placeholder; Operations row)
 - [ ] `sessions_list.html` — `/operator/sessions`
 - [ ] `session_new.html` — `/operator/sessions/new`
-- [ ] `session_detail.html` — `/operator/sessions/{id}`
+- [x] `session_detail.html` — `/operator/sessions/{id}` (Session Setup card retired; its five Manage links live in the chrome top-nav now)
 - [ ] `session_edit.html` — `/operator/sessions/{id}/edit`
 - [ ] `instruments_index.html` — `/operator/sessions/{id}/instruments`
 - [x] `session_invitations.html` — `/operator/sessions/{id}/invitations`
