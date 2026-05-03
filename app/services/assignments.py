@@ -402,10 +402,11 @@ def manual_rows_to_pairs(
 def get_or_create_default_instrument(
     db: Session, review_session: ReviewSession
 ) -> Instrument:
-    """Backwards-compatible wrapper around ``ensure_default_instrument``.
+    """Return the session's default instrument, creating it if missing.
 
-    Kept so existing tests and call sites that import this name still
-    work; the canonical helper is now ``app.services.instruments``.
+    Thin alias for ``app.services.instruments.ensure_default_instrument``;
+    kept here as the seam ``replace_assignments`` uses to pick the target
+    instrument for newly generated rows.
     """
     from app.services.instruments import ensure_default_instrument
 
