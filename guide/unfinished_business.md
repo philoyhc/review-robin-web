@@ -9,7 +9,7 @@ during later segments land here too.
 
 This file replaces the former `guide/adhoc_todo.md` (originally
 captured during the mid-Segment-10B health review on 2026-04-30)
-and the short-lived `guide/segment_10D.md` framing. Items are
+and the short-lived `guide/archive/segment_10D.md` framing. Items are
 ordered by priority given the project's actual workflow: **no
 local Python or database; the agent's sandbox is the pre-PR
 gate; end-to-end verification happens on the Azure dev slot
@@ -336,7 +336,7 @@ render).
 ### 12. Reviewer/Reviewee CSV cross-table identity check · [bug] · small
 
 **Why now.** Carried over from
-`guide/segment_10_instrument_builder_mvp_plan.md` §15 as a
+`guide/archive/segment_10_instrument_builder_mvp_plan.md` §15 as a
 deferred follow-up. The upload validators in
 `app/services/csv_imports.py` treat reviewers and reviewees as
 independent tables; a person who appears in both with the same
@@ -666,7 +666,7 @@ multi-instrument promotion behaviour can be observed without
 bumping into other Slice-4 work.
 
 **Plan.** Slice 5 of Segment 10D — see
-[`guide/segment_10D.md`](./segment_10D.md) "Slice 5 — Multi-
+[`guide/archive/segment_10D.md`](./archive/segment_10D.md) "Slice 5 — Multi-
 instrument enable" for the contract. Tick this item when Slice 5
 ships and the segment closes.
 

@@ -544,7 +544,7 @@ consolidated index for back-compat.
   instrument in `ensure_default_instrument` /
   `create_instrument`, and pointing the placeholder cells at the
   existing `display-fields/{df_id}/edit` route. See
-  `guide/segment_10C.md` §5.
+  `guide/archive/segment_10C.md` §5.
 - Response Fields type change. Out of scope; type-change is a
   data-migration concern (no segment owner today).
 

@@ -1,7 +1,7 @@
 # Segment 10A Implementation Plan — Response-field builder + reviewer-surface refactor
 
 **Status:** First of two PR-sized blocks for Segment 10. See
-`guide/segment_10_instrument_builder_mvp_plan.md` §14 for the
+`guide/archive/segment_10_instrument_builder_mvp_plan.md` §14 for the
 segment-level split.
 
 - **10A (this doc):** consolidated `/operator/sessions/{id}/instruments`

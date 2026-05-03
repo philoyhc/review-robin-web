@@ -331,7 +331,7 @@ alert variants override.
 - `guide/ui_checklist.md` — page-by-page restructure checklist.
 - `CLAUDE.md` / `AGENTS.md` — refreshed conventions, button
   migration rule.
-- `guide/segment_10_instrument_builder_mvp_plan.md` §14 — the
+- `guide/archive/segment_10_instrument_builder_mvp_plan.md` §14 — the
   umbrella that 10A / 10B / now 10C sit under.
 - `guide/unfinished_business.md` — stabilization todo (CSV
   identity check carried over there as item 12).

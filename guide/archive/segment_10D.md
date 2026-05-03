@@ -902,7 +902,7 @@ as Gap 2, but reached indirectly.
 - [`spec/architecture.md`](../spec/architecture.md) "Pair-level vs
   assignment-level context" + "Lazy display-field seeding" — the
   data-side rules the rebuild relies on.
-- [`guide/segment_10C.md`](./segment_10C.md) — first-round operator
+- [`guide/archive/segment_10C.md`](./segment_10C.md) — first-round operator
   UI clean-up (the slice that 10D builds on).
 - [`guide/unfinished_business.md`](./unfinished_business.md) item
   #18 — multi-instrument enable (Slice 5).
