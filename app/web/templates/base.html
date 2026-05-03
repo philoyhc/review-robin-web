@@ -747,6 +747,29 @@
         color: var(--accent-amber-dark);
         border-color: var(--accent-amber-dark);
       }
+      /* CTA — Primary style applied to the layout-and-prominence
+         .btn-cta variant. Same token palette + hover convention as
+         body.ui-v2 .btn (filled lightens on hover); the layout
+         properties (flex centering, multi-line label support) come
+         from the v1 .btn-cta rule above and aren't repeated. */
+      body.ui-v2 .btn-cta {
+        background: var(--accent-blue);
+        border-color: var(--accent-blue);
+        color: #fff;
+      }
+      body.ui-v2 .btn-cta:hover {
+        background: var(--accent-blue-light);
+        border-color: var(--accent-blue-light);
+        color: #fff;
+      }
+      body.ui-v2 .btn-cta.disabled,
+      body.ui-v2 .btn-cta[aria-disabled="true"] {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+        background: var(--accent-blue);
+        border-color: var(--accent-blue);
+      }
       /* Unified disabled state — covers <button disabled>,
          <a class="btn disabled"> and aria-disabled. */
       body.ui-v2 .btn:disabled,
