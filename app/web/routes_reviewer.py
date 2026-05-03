@@ -247,6 +247,13 @@ def _surface_context(
 
     instrument_groups = []
     flat_rows = []
+    position_by_id = {
+        inst.id: idx
+        for idx, inst in enumerate(
+            sorted(instruments.values(), key=lambda i: (i.order, i.id)),
+            start=1,
+        )
+    }
     for instrument_id, group_rows in rows_by_instrument.items():
         instrument = instruments.get(instrument_id)
         if instrument is None:
@@ -258,7 +265,7 @@ def _surface_context(
         heading = (
             instrument.description.strip()
             if instrument.description and instrument.description.strip()
-            else instrument.name
+            else f"Instrument #{position_by_id[instrument_id]}"
         )
         display_fields = display_fields_by_instrument.get(instrument_id, [])
         display_field_headers = [
@@ -512,7 +519,7 @@ def build_preview_context(
 
     instrument_groups: list[dict] = []
     flat_rows: list[dict] = []
-    for instrument in instruments:
+    for position, instrument in enumerate(instruments, start=1):
         group_rows = rows_by_instrument.get(instrument.id, [])
         if not group_rows:
             continue
@@ -523,7 +530,7 @@ def build_preview_context(
         heading = (
             instrument.description.strip()
             if instrument.description and instrument.description.strip()
-            else instrument.name
+            else f"Instrument #{position}"
         )
         display_fields = display_fields_by_instrument.get(instrument.id, [])
         display_field_headers = [

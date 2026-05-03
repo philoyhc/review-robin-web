@@ -36,13 +36,14 @@ already settled.
 
 ### Tier 1 — Closed (2026-05-03)
 
-All four originally-listed items resolved:
+Five items resolved — four from the original audit plus one surfaced during the Tier 1 work itself:
 
 | Item | Outcome |
 |------|---------|
 | **#9 — `get_or_create_default_instrument` docstring refresh** | ✅ shipped via PR #309 |
 | **#8 — CSV email-validation drift** (shared `_parse_email` helper) | ✅ shipped via PR #314 |
 | **#12 — CSV cross-table identity check** | ✅ shipped via PR #315 |
+| **Reviewer surface heading mismatch** (surfaced 2026-05-03 from a local-run inspection — operator showed `Instrument #N` while reviewer fell through to `instrument.name`, the system handle, which can drift after deletions) | ✅ shipped: reviewer surface now uses position-based fallback (`Instrument #N`) matching the operator surface. `Instrument.name` retained as the stable internal handle for Manual CSV cross-references (item #28). |
 | **#23 — Sessions-list Delete button** | Deferred to **Segment 15** alongside the other `/operator/sessions` UI work (PR #316). Tracked at `unfinished_business.md` #23. |
 | **§2.6 — Sort-column UX status note** | Promoted from sketch to a real feature spec at `guide/sort_by_reviewee.md`, target **Segment 13** (PR #317). Catalog entry at `unfinished_business.md` #31. |
 

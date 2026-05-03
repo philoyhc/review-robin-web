@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Assignment, AuditEvent, Reviewer, ReviewSession
+from app.db.models import Assignment, AuditEvent, Instrument, Reviewer, ReviewSession
 
 
 def _operator_creates_session_with_pair(
@@ -184,6 +184,45 @@ def test_surface_renders_pair_context_and_default_fields(
     assert "panel-1" not in response.text  # assignment_context hidden
     assert "Rating" in response.text
     assert "Comments" in response.text
+
+
+def test_surface_heading_uses_position_not_system_name(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Reviewer-surface heading is position-based when description is empty.
+
+    Regression: Instrument.name is a stable system handle (used for Manual
+    CSV cross-references per item #28). After earlier instruments are
+    deleted, a survivor named e.g. "instrument_4" can sit at position 1.
+    The reviewer-surface heading must show "Instrument #1" (matching the
+    operator surface's loop-index render), not the historical name.
+    """
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-heading",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    only_instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    only_instrument.name = "instrument_4"
+    only_instrument.description = None
+    db.commit()
+    _activate(operator, db, review_session)
+
+    rae_client = make_client(rae)
+    response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+
+    assert response.status_code == 200
+    assert "Instrument #1" in response.text
+    assert "instrument_4" not in response.text
 
 
 def test_surface_filters_out_excluded_assignments(
