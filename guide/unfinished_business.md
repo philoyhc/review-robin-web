@@ -1263,6 +1263,78 @@ the same shape.
 
 ---
 
+### 30. Quick Setup card on Session Home · [feature] · medium
+
+**Why now.** Operators bulk-loading a session today have to
+navigate three separate pages (Reviewers, Reviewees, Assignments)
+in sequence. Each carries its own upload card, its own confirm
+flow, and its own status indicator. The Quick Setup card unifies
+all three into a single Home-body element — three independent
+slots (Reviewers / Reviewees / Assignments-or-rule) with shared
+confirm + cascade + lifecycle-lock semantics. The full spec lives
+at `guide/quick_setup_card_spec.md` (PR #307).
+
+This is genuinely new operator-surface scope — not from the
+segments-1–10 audit. Filed in Segment 11 because it bundles with
+**#22** (Home body rebuild + Option F relocation): both
+restructure Home's body, both share CSS primitives, both depend
+on the chrome-button restyle (#21) settling first. Doing them in
+the same pass avoids touching Home twice. The card is also
+pre-Segment-12 (export) work — it settles the operator surface
+before the heavier feature segments.
+
+**Where.**
+
+- Spec: `guide/quick_setup_card_spec.md` (full functional spec).
+- Template surface: `app/web/templates/operator/session_detail.html`
+  — the Home page; the card lands in the body alongside #22's
+  rebuild work.
+- Reuses, per the spec's "Implementation pointers":
+  - Existing per-entity CSV parsers in `app/services/csv_imports.py`
+    + `app/services/assignments.py` (`save_reviewers`,
+    `save_reviewees`, `parse_manual_csv`).
+  - Existing `replace_assignments` for the rule path (with #27
+    if FullMatrix per-instrument target picker has shipped by
+    then).
+  - Cascading-clearance pattern that already runs inside the
+    CSV-import services (`_count_assignments`,
+    delete-on-replace).
+  - Lifecycle-lock pattern from the yellow lock card (Segment
+    10C `.field-builder.locked`).
+  - Confirmation pattern from Edit Session / per-instrument
+    Delete inline confirms.
+
+**Plan.**
+
+- Sequence after **#21** (button restyle settles the visual
+  vocabulary the card uses) and **bundle with #22** (Home body
+  rebuild — same template surface, same restructure pass).
+- Probably 3–4 PRs: (a) data-and-counts shape (the passive
+  indicators pull from existing `csv_imports.existing_*_count` /
+  `assignments.existing_count` — wire them into a Home view
+  function); (b) Slot 1 + Slot 2 (Reviewers + Reviewees, simpler
+  pair); (c) Slot 3 (Assignments — rule selector + CSV upload
+  toggle); (d) confirmation + cascade copy + lifecycle-lock
+  polish.
+- Settle one open question early: where the Slot 3 rule selector
+  lives once **#28** (Manual CSV `Instrument` column) and
+  **#27** (FullMatrix per-instrument target picker) ship — does
+  the Quick Setup rule selector pick a single instrument, all
+  instruments, or expose the same picker the per-entity page
+  exposes? Probably "single instrument with default-only when
+  N=1, picker when N>1" to match #27.
+- Tests: per-slot success + parse-error + validation-error
+  paths, cascade clearance copy, lifecycle-lock states, and
+  re-uploading on a `validated` session re-invalidates back to
+  `draft` (matches existing per-entity behaviour).
+
+**Out of scope.** All the explicit out-of-scope items in
+`guide/quick_setup_card_spec.md` (per-record editing, CSV preview,
+wizard stepping, cross-entity validation, auto-regeneration of
+assignments after a roster replacement, undo, save-as-template).
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
