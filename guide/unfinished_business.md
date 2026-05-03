@@ -1498,6 +1498,71 @@ deliberately not yet there" pointing here.
 
 ---
 
+### 34. Queue-based batch invitation sending · [feature] · medium · target Segment 15
+
+**Status.** Filed 2026-05-03 from the Segment 11 Tier 2 §2.3
+"Queue-based batch invitation sending" decision — target
+**Segment 15** (operator polish + documentation), bundled with
+real SMTP. Picks up workplan §12 work item #7 ("Add queue-based
+batch sending") that was named but never implemented.
+
+**Why now (originally).** `POST /operator/sessions/{id}/invitations/send-all`
+(`app/web/routes_operator.py:2121`) and the parallel reminder
+endpoint loop through every eligible reviewer and call
+`send_invitation()` / `send_reminder()` synchronously inside the
+HTTP request handler. With the dev outbox (today) each call is a
+~1ms DB insert — even a 200-reviewer batch finishes in 1–2s and
+the synchronous loop is fine.
+
+With **real SMTP** (Segment 15) each call becomes a 100–500ms
+network round-trip plus provider rate-limiting (Microsoft Graph
+throttles ~30 sends/sec). A 200-reviewer batch becomes 1–2 minutes,
+which exceeds typical reverse-proxy timeouts (30s–2min); the
+operator's browser hangs; partial-failure recovery has no
+mechanism; transient SMTP failures aren't retried.
+
+**Where.**
+- Synchronous send loops:
+  `app/web/routes_operator.py::invitations_send_all` (~`:2121`),
+  parallel reminder endpoint.
+- Send service:
+  `app/services/invitations.py::send_invitation` and
+  `send_reminders_to_incomplete`.
+- Prerequisite refactor: **#6** (decouple `invitations.py` from
+  `Request`) — a background worker has no live request, so
+  `send_invitation(request=...)` needs a `build_invite_url`
+  callable instead.
+
+**Plan (sketch — full design lands in Segment 15 with real-SMTP
+work).**
+- Job table: `email_send_job(id, session_id, kind, status='pending'
+  | 'in_progress' | 'done' | 'failed', created_at, ...)`. Per-row
+  state for individual invitation sends, or one parent row + child
+  per-invitation rows — design call.
+- Operator action: "Send all" writes the parent job row + 303s to
+  a status page (no synchronous wait).
+- Worker: Azure WebJob / Functions Timer Trigger / dedicated worker
+  dyno polls the job table, processes pending rows one at a time
+  with rate-limiting + retry-on-transient-failure.
+- Operator UI: invitations page polls or refreshes to show
+  per-invitation status (already wired for the synchronous case).
+
+**Sequencing.**
+- Lands as part of Segment 15 real-SMTP work; one infrastructure
+  decision (worker setup + job table) covers both real-SMTP and
+  batch queueing.
+- Depends on **#6** (decouple `invitations.py` from `Request`)
+  shipping first — currently scheduled in Segment 11 Tier 3.
+
+**Out of scope.** Polished job-status UI beyond
+"in-progress / done / failed" indicators, retry policy
+configuration, multi-tenant rate-limit tuning.
+
+**Cross-ref.** Mirror entry in `docs/status.md` "What's
+deliberately not yet there" pointing here.
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"

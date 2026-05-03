@@ -71,11 +71,13 @@ documentation pass:
 - **Real SMTP email backend** — `docs/status.md` "What's deliberately
   not yet there." The dev outbox stays the only mail sink until this
   segment lights up the production path.
-- **Queue-based batch invitation sending** —
-  `guide/segment_11_cleaning_up_unfinished_business.md` §2 (Tier 2
-  decision) originally floated this as Segment 11 scope; out-of-
-  request send only becomes load-bearing when real SMTP lands, so
-  it bundles here.
+- **Queue-based batch invitation sending** — decided 2026-05-03 from
+  Segment 11 Tier 2 §2.3; tracked at
+  `guide/unfinished_business.md` #34. Out-of-request send only
+  becomes load-bearing when real SMTP lands, so it bundles with
+  the SMTP work above. Depends on #6 (decouple `invitations.py`
+  from `Request`) shipping first — currently scheduled in
+  Segment 11 Tier 3.
 - **Inline-editable rows for reviewers / reviewees / assignments
   Manage pages** — officially deferred from Segment 11 (originally
   10E §2.5); tracked at `guide/unfinished_business.md` #25. Needs a
