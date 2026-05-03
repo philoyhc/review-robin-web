@@ -188,7 +188,7 @@ def test_profile_link_renders_as_anchor(
     assert response.status_code == 200
     body = response.text
     assert "<th>Profile</th>" in body
-    assert '<a href="https://example.edu/carol">https://example.edu/carol</a>' in body
+    assert '<a href="https://example.edu/carol">View</a>' in body
 
 
 def test_profile_link_empty_renders_empty_cell(

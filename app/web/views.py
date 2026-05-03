@@ -104,6 +104,25 @@ class SessionStatusPills:
     email_invites_set_up: bool
 
 
+def reviewer_instrument_heading(
+    *, description: str | None, position: int, total_count: int
+) -> str:
+    """Heading for a single instrument group on the reviewer surface.
+
+    - One instrument total: description if set, else empty string (template
+      skips the ``<h2>`` when empty).
+    - More than one: ``#{n} {description}`` if description is set, else
+      ``Instrument #{n}`` (matching the operator surface's loop.index render
+      so the same instrument carries the same label across surfaces).
+    """
+    desc = (description or "").strip()
+    if total_count == 1:
+        return desc
+    if desc:
+        return f"#{position} {desc}"
+    return f"Instrument #{position}"
+
+
 def _bulk_state(values: list[bool]) -> str:
     """Three-state value for a bulk toggle: ``all-on`` / ``all-off`` / ``mixed``."""
     if not values:
