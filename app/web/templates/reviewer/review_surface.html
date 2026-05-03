@@ -106,7 +106,7 @@
                 {% elif cell.field.data_type == 'String' and max_len > 100 %}{% set col_class = 'rs-textlong' %}{% endif %}
                 <th{% if col_class %} class="{{ col_class }}"{% endif %}>{{ cell.field.label }}{% if cell.field.required %} *{% endif %}</th>
               {% endfor %}
-              <th style="width: 1%;"></th>
+              {% if group.show_status_col %}<th class="rs-narrow"></th>{% endif %}
             </tr>
             {% for row in group.rows %}
               <tr>
@@ -177,23 +177,25 @@
                     {% endif %}
                   </td>
                 {% endfor %}
-                <td style="width: 1%; white-space: nowrap; text-align: center;">
-                  {% if row.submitted_at or show_acknowledge %}
-                    {% if row.is_complete %}
-                      <span title="Complete"
-                            style="color: #16a34a; font-weight: bold; font-size: 1.2em;">✓</span>
-                    {% else %}
-                      <span title="{{ row.missing_count }} required field{{ '' if row.missing_count == 1 else 's' }} missing"
-                            style="color: #d97706; font-weight: bold; font-size: 1.2em;">⚠</span>
+                {% if group.show_status_col %}
+                  <td style="width: 1%; white-space: nowrap; text-align: center;">
+                    {% if row.submitted_at or show_acknowledge %}
+                      {% if row.is_complete %}
+                        <span title="Complete"
+                              style="color: #16a34a; font-weight: bold; font-size: 1.2em;">✓</span>
+                      {% else %}
+                        <span title="{{ row.missing_count }} required field{{ '' if row.missing_count == 1 else 's' }} missing"
+                              style="color: #d97706; font-weight: bold; font-size: 1.2em;">⚠</span>
+                      {% endif %}
+                      {% if row.submitted_at %}
+                        <div class="muted"
+                             style="font-size: 0.85em; margin-top: 4px; white-space: normal;">
+                          submitted {{ row.submitted_at.strftime("%Y-%m-%d %H:%M") }}
+                        </div>
+                      {% endif %}
                     {% endif %}
-                    {% if row.submitted_at %}
-                      <div class="muted"
-                           style="font-size: 0.85em; margin-top: 4px; white-space: normal;">
-                        submitted {{ row.submitted_at.strftime("%Y-%m-%d %H:%M") }}
-                      </div>
-                    {% endif %}
-                  {% endif %}
-                </td>
+                  </td>
+                {% endif %}
               </tr>
             {% endfor %}
           </table>

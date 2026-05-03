@@ -223,6 +223,37 @@ def test_surface_help_text_renders_as_inline_list(
     assert "<dl class=\"help-block\">" not in body
 
 
+def test_surface_status_column_hidden_pre_submission(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The trailing ✓/⚠ status column is suppressed when no row needs it.
+
+    Pre-submission with show_acknowledge=False, every row has
+    submitted_at=None — the column would render empty and just leave a
+    thin empty bar at the right of the table. Hide it entirely.
+    """
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-status-hidden",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+
+    # The trailing status column has no marker text; the easiest pin is the
+    # presence of its container styles. Pre-submission, neither the empty
+    # <th class="rs-narrow"> trailer nor the centered status <td> should
+    # appear.
+    assert 'style="width: 1%; white-space: nowrap; text-align: center;"' not in body
+
+
 def test_surface_applies_column_classes_by_response_type(
     db: Session,
     alice: AuthenticatedUser,

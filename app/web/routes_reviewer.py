@@ -300,6 +300,8 @@ def _surface_context(
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
+                "show_status_col": show_acknowledge
+                or any(r.get("submitted_at") for r in group_rows),
             }
         )
         flat_rows.extend(group_rows)
@@ -571,6 +573,7 @@ def build_preview_context(
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
+                "show_status_col": False,
             }
         )
         flat_rows.extend(group_rows)
