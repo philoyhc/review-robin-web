@@ -1036,6 +1036,95 @@ dev outbox will then carry into Segment 15 unchanged.
 
 ---
 
+### 25. Inline-editable rows on reviewers / reviewees / assignments Manage pages · [feature] · medium · officially deferred
+
+**Status.** Officially deferred from `guide/segment_10E_*.md` §2.5.
+Slated for **Segment 15** (operator polish + documentation) since
+it needs a design pass before code, and the polish segment is the
+right home for that pass. Catalogued here so a future operator
+runbook update or workplan revision doesn't lose track of it.
+
+**Why now (originally).** The disabled "Edit Reviewers / Reviewees /
+Assignments" buttons render as placeholders on all three Manage
+pages today (Segment 9.4 deferred scope). Whatever pattern lands
+here will likely apply to all three; design once, reuse three
+times.
+
+**Where.**
+
+- `app/web/templates/operator/reviewers_list.html` —
+  Edit Reviewers button (currently `<a class="btn disabled"
+  aria-disabled="true">`).
+- `app/web/templates/operator/reviewees_list.html` — same
+  shape.
+- `app/web/templates/operator/assignments_list.html` — same
+  shape.
+- `docs/status.md` "What's deliberately not yet there" entry
+  — links here.
+
+**Plan.** Design pass before code:
+- Decide the editing pattern: inline-row toggle (HTMX-style
+  `<details>`-per-row?), modal per row, or dedicated `/edit`
+  page per row?
+- Decide the conflict model: optimistic (last-write-wins) or
+  pessimistic (lock the row while editing)?
+- Decide the validation surface: same as CSV import (re-run
+  the validators on save), or per-field?
+- Decide whether editing is allowed in `validated` / `ready`
+  states or only `draft`.
+- Once decided, ship the pattern on Reviewers first, then
+  rinse and repeat on Reviewees + Assignments.
+
+**Cross-ref.** Mirror entry in `docs/status.md` "What's
+deliberately not yet there" pointing here.
+
+---
+
+### 26. Local Postgres docker-compose for dev · [dev-loop] · small · officially deferred
+
+**Status.** Officially deferred from `guide/segment_10E_*.md` §2.7.
+Slated for **Segment 15** (developer setup guide work item) since
+the developer-setup-guide work in §18 is the natural place for the
+Postgres-vs-SQLite local-dev story to settle. Catalogued here so
+the deferral isn't mistaken for a silent drop.
+
+**Why now (originally).** `segment_05A.md` §3.5 deferred local
+Postgres in favour of SQLite + the `ci-postgres` job + migration-
+on-deploy as the parity story. The reasoning held through Segments
+6–10 and the `ci-postgres` job (PR #297) closed the dialect-coverage
+gap. Local Postgres still has occasional value for Postgres-only
+debugging, but it has stayed deferred because the workflow gap
+hasn't bitten anyone hard.
+
+**Where.**
+
+- `segment_05A.md` §3.5 — original deferral reasoning.
+- `docs/database.md` — currently says "install your own Postgres
+  only when a Postgres-only bug demands it." That stance stays
+  unless this item lands.
+- Reference: the `ci-postgres.yml` workflow that already
+  provisions `postgres:16` as a service container — the
+  docker-compose form would mirror that config.
+
+**Plan.** When (or if) this lands:
+- Add `docker-compose.yml` at repo root with the
+  `postgres:16` image + `rrw_app` user + `rrw` database (mirror
+  the CI job).
+- Add `make pg-up` / `make pg-down` shortcuts (or just document
+  `docker compose up -d postgres`).
+- Update `docs/database.md` and the developer setup guide
+  (Segment 15 §18 work item #8) to point at it as an option,
+  with SQLite still the default.
+- No code changes; the existing dialect-detecting `engine`
+  fixture in `tests/conftest.py` already honours `DATABASE_URL`.
+
+**Likely fate.** Probably never lands; the developer-setup-guide
+work in Segment 15 may decide "won't fix" and update the workplan
++ `docs/status.md` accordingly. Catalogued so the decision is
+explicit either way.
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"

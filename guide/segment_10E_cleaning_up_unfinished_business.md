@@ -9,134 +9,81 @@ This is a punch list, not a feature segment. Most items are small;
 each lands as its own PR. Items with detail in
 `guide/unfinished_business.md` are cross-referenced; new items the
 audit surfaced are sketched here in just enough depth to act on, with
-a note where they belong long-term.
+the convention that each gets a full `unfinished_business.md` entry
+the moment work starts.
+
+**Scope cut (2026-05-03).** Two items originally listed here have
+been officially deferred to Segment 15 and removed from the queue
+below: inline-editable rows on the Manage pages (now
+`unfinished_business.md` #25) and local Postgres docker-compose
+(now `unfinished_business.md` #26). Both also appear in
+`docs/status.md` "What's deliberately not yet there" with Segment 15
+as the named target.
 
 ---
 
-## 1. Items already tracked in `guide/unfinished_business.md`
+## Combined punch list (recommended grouping + ordering)
 
-These have full Why / Where / Plan write-ups in the catalog. 10E pulls
-them into a single segment-scoped queue.
+Tier 1 lands first because each item is genuinely 5 minutes and clears
+review bandwidth for the bigger items. Tier 2 unblocks Tier 3 (each
+decision answers a "should we X?" that Tier 3 work depends on). Tier 4
+is the medium-sized work that wants the chrome / arch / surface
+already settled.
 
-| # | Item | Tier | Notes |
-|---|------|------|-------|
-| #5 | Audit-event `detail` schema convention | medium | spec/architecture.md write-up + incremental emitter migration |
-| #6 | Decouple `invitations.py` from `Request` | small | bundles with #24 |
-| #7 | CSRF decision write-up | small | one paragraph in `docs/authentication.md` |
-| #8 | CSV email-validation drift | tiny | sets up #12 |
-| #9 | `get_or_create_default_instrument` docstring refresh | tiny | 5-min cleanup |
-| #10 | Thread `correlation_id` into deadline lazy-close | small | bundle with whichever route next touches `observe_deadline` |
-| #12 | Reviewer/Reviewee CSV cross-table identity check | small | builds on #8 |
-| #21 | UI consistency updates aligning with the new chrome | varied | umbrella for restyling the six canonical buttons + follow-ons |
-| #22 | Home body rebuild + Option F relocation | medium | depends on #21 |
-| #23 | Sessions-list Delete button doesn't actually delete | small | UX bug; route + template |
-| #24 | Operator-editable email template editor | medium | has a help-contact source decision to settle first |
+### Tier 1 — Tiny / 5-minute cleanups
 
-Tracking continues to live in `unfinished_business.md`. 10E only
-ratifies the order — see §3 below.
+| Item | Source | Notes |
+|------|--------|-------|
+| **#9 — `get_or_create_default_instrument` docstring refresh** | `unfinished_business.md` #9 | Pointer fix at `app/services/assignments.py:402`. |
+| **#8 + #12 — CSV email-validation drift + cross-table identity check** | `unfinished_business.md` #8 + #12 | Bundle: same `_parse_email` helper. #8 sets up #12. |
+| **#23 — Sessions-list Delete button doesn't actually delete** | `unfinished_business.md` #23 | Convert `<a>` → POST `<form>` with `onsubmit="return confirm(...)"`. |
+| **2.6 — Sort-column UX status note** | This file (was §2.6) | Decide & document in `docs/status.md`; semantics never landed. |
 
----
+### Tier 2 — Decisions (each unblocks Tier 3 or 4 work)
 
-## 2. New items surfaced by the audit (need an `unfinished_business.md` entry on first touch)
+| Item | Source | Decision needed |
+|------|--------|-----------------|
+| **2.1 — AG Grid fate** | This file (was §2.1) | Still on the roadmap (name a target segment), or "the plain HTML table is the design" (update workplan + `docs/status.md`)? |
+| **2.3 — Queue-based batch invitation sending** | This file (was §2.3) | Pin to **Segment 15** with real-SMTP work (recommended), or carve as its own item before then? Workplan §12 work item #7 named it but no plan owns it today. |
+| **#7 — CSRF decision write-up** | `unfinished_business.md` #7 | Easy Auth + SameSite cookies, or CSRF tokens? If "tokens," that becomes its own segment. |
+| **#24 — Help-contact merge field source** | `unfinished_business.md` #24 (open question section) | Per-session field on `ReviewSession`, per-operator field on `User`, or global env var? Settles before email template editor coding starts. |
 
-The audit found seven items that weren't tracked anywhere. Sketches
-below; promote each to a full `unfinished_business.md` entry the
-moment work starts so the catalog stays the source of truth.
+### Tier 3 — Small features
 
-### 2.1 AG Grid replacement of the reviewer table — Segment 8 unfinished
+| Item | Source | Notes |
+|------|--------|-------|
+| **#21 — Six canonical button restyle** | `unfinished_business.md` #21 | Sequenced before #22 per existing roadmap (Home rebuild uses these buttons). |
+| **2.4 — Operator Inactivate UI** | This file (was §2.4) | Per-row Inactivate button on Reviewers / Reviewees Manage pages with audit event on flip. |
+| **#10 — `correlation_id` into deadline lazy-close** | `unfinished_business.md` #10 | Bundle with whichever route refactor next touches `observe_deadline`. |
+| **#6 + #24 — Decouple `invitations.py` from `Request` + email template editor** | `unfinished_business.md` #6 + #24 | Bundle: #6 cleans the surface that #24 then extends. Depends on Tier 2 #24 help-contact decision. |
 
-The workplan §11 explicitly listed AG Grid as the second half of
-Segment 8 ("Now replace the simple table with AG Grid while keeping
-the same save endpoint"). The first half (plain HTML table) shipped;
-the second never did. The surface works without it, but the workplan
-deferral was never formalised.
+### Tier 4 — Medium features
 
-**Decision needed first.** Does AG Grid still belong on the roadmap,
-or is the plain HTML table the design? If "still belongs," name a
-target segment (10E, 11, 14, …). If "design," update the workplan +
-`docs/status.md` "What's deliberately not yet there" to make that
-explicit so a future agent doesn't re-scope it on autopilot.
-
-### 2.2 Vanilla-JS autosave — Segment 8 follow-on
-
-`docs/status.md` mentions it ("Follow-on PR after Segment 8") but no
-plan owns it. Reviewer experience today requires explicit Save
-clicks. Probably bundle with #2.1 if AG Grid lands; otherwise a
-small standalone PR layering autosave over the existing `/save`
-endpoint with debounce + last-saved indicator.
-
-### 2.3 Queue-based batch invitation sending — Segment 9.2 work item #7
-
-Workplan §12 named "Add queue-based batch sending." Never
-implemented; today the outbox-write loop runs synchronously inside
-the request. Probably folds into Segment 15 real-SMTP work since
-that's when out-of-request send becomes load-bearing — but no plan
-currently owns it. Either pin it to Segment 15 explicitly in
-`docs/status.md` or carve it as its own item.
-
-### 2.4 Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive
-
-`docs/status.md` says "Not yet planned." The per-row inactive filter
-is enforced defensively in assignment-generation and reviewer-surface
-paths but operators have no UI to set the flag. A small Inactivate
-button on each row of the Reviewers / Reviewees Manage pages would
-do it, with an audit event on the flip.
-
-### 2.5 Inline-editable rows — reviewers / reviewees / assignments Manage pages
-
-The disabled "Edit" buttons across all three Manage pages are
-placeholders today (Segment 9.4 deferred scope). Whatever pattern
-lands here applies to all three. Probably the biggest item on this
-list — needs a design pass before code. `docs/status.md` says "Not
-yet planned; would slot before activation."
-
-### 2.6 Sort-column UX for response / display fields
-
-The Segment 10D plan flagged "semantics ('default row order on
-reviewer surface') not yet decided" and the sort affordance never
-landed. Low priority and not blocking — flag here so a future
-instruments-page touch knows the prior decision lapsed and doesn't
-re-decide it without context.
-
-### 2.7 Local Postgres docker-compose for dev
-
-`segment_05A.md` §3.5 explicitly deferred this; SQLite + the
-`ci-postgres` job covers most needs. Recorded here so the deferral
-isn't mistaken for a silent drop. Probably never lands; 10E either
-confirms "won't fix" in `docs/status.md` or commits to a target
-segment.
+| Item | Source | Notes |
+|------|--------|-------|
+| **#22 — Home body rebuild + Option F relocation** | `unfinished_business.md` #22 | Depends on Tier 3 #21 (chrome buttons settled first). 4–6 small PRs. |
+| **#5 — Audit-event `detail` schema convention** | `unfinished_business.md` #5 | Spec write-up in `spec/architecture.md` then incremental emitter migration. Segment 11 export needs this stable. |
+| **2.2 — Vanilla-JS autosave on `/save`** | This file (was §2.2) | Depends on Tier 2 #2.1 AG Grid decision: bundle if grid lands; otherwise standalone debounce + last-saved-indicator PR. |
 
 ---
 
-## 3. Suggested ordering (pre-Segment-11)
+## Promote-to-`unfinished_business.md` convention
 
-A pragmatic order. Smaller cleanups first to unblock review bandwidth,
-decisions ahead of the work that depends on them.
-
-1. **Tiny / 5-minute** — #9 (docstring), #8 + #12 (CSV email pair),
-   #23 (sessions-list Delete button), #2.6 (sort-column status note),
-   #2.7 (local-Postgres status note).
-2. **Decisions** — #2.1 (AG Grid fate), #2.3 (queue-based send
-   target), #7 (CSRF), #24 help-contact-source. Each is a few
-   paragraphs in the right doc; together they unblock the rest.
-3. **Small features** — #21 button restyle (sequenced before #22
-   per the existing roadmap), #2.4 (Inactivate UI), #10
-   (correlation_id on deadline close), #6 + #24 bundled (Request
-   decoupling + email template editor).
-4. **Medium features** — #22 (Home rebuild), #5 (audit-event
-   detail schema convention + incremental emitter migration), #2.5
-   (inline-editable rows — needs design pass first).
-
-`#2.5` (inline-edit rows) is the only item that probably wants its
-own segment plan before code lands, because the design pattern picked
-will repeat across all three Manage pages.
+Items above sourced "This file (was §N)" don't have a full `Why /
+Where / Plan` write-up yet — they live as sketches here. The
+moment work starts on one, promote it to a full
+`unfinished_business.md` entry first so the catalog stays the source
+of truth and 10E retires gracefully.
 
 ---
 
-## 4. Out of scope
+## Out of scope
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
   with a named target segment ≥11 (export, RuleBased,
   multi-instrument-beyond-10D, production hardening, real SMTP).
+- The two deferrals above (inline-edit rows / local Postgres
+  compose) — see `unfinished_business.md` #25 + #26 and the Segment
+  15 stub.
 - New features not in the audit. 10E is closing books on Segments
   1–10, not opening new scope.
