@@ -91,6 +91,13 @@ documentation pass:
   #32. Known sub-item: multi-instrument preview (the
   `build_preview_context` extension explicitly deferred from
   Segment 11). Pilot-feedback-driven polish lands here too.
+- **AG Grid replacement of the reviewer-surface table** — second
+  half of workplan §11 / archived Segment 8 plan that never
+  landed. Decided 2026-05-03 from Segment 11 Tier 2 §2.1; tracked
+  at `guide/unfinished_business.md` #33. Naturally bundles with
+  vanilla-JS autosave (Segment 11 Tier 4 #2.2) and absorbs the
+  multi-instrument preview sub-item of #32 if AG Grid grouping
+  handles it natively.
 - **Local Postgres docker-compose for dev** — officially deferred
   from Segment 11 (originally 10E §2.7); tracked at
   `guide/unfinished_business.md` #26. The developer-setup-guide

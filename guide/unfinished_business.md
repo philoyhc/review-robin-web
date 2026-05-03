@@ -1421,6 +1421,83 @@ deliberately not yet there" pointing here.
 
 ---
 
+### 33. AG Grid replacement of the reviewer-surface table · [feature] · medium · target Segment 15
+
+**Status.** Filed 2026-05-03 from the Segment 11 Tier 2 §2.1
+"AG Grid fate" decision — target **Segment 15** (operator polish +
+documentation). Picks up the second half of workplan §11 / archived
+Segment 8 plan that never landed.
+
+**Why now (originally).** Workplan §11 was explicit:
+
+> "Implement a simple tabular review page first with ordinary HTML
+> inputs before introducing AG Grid. … Now replace the simple table
+> with AG Grid while keeping the same save endpoint."
+
+The first half shipped (plain HTML table with `<input>` / `<textarea>`
+/ `<select>` per cell + form-based save/submit). The second half —
+AG Grid replacement — was never done. `docs/status.md` didn't list
+it as deferred, so for ten segments it sat in an in-between state
+("are we still doing this, or is the plain HTML the design?"). The
+decision: **still on the roadmap, target Segment 15**.
+
+**Where.**
+- Template to replace:
+  `app/web/templates/reviewer/review_surface.html` — the
+  per-instrument-group table-and-inputs surface.
+- Save endpoint stays:
+  `app/web/routes_reviewer.py` — `/reviewer/sessions/{id}/save` is
+  the contract AG Grid integrates against. No backend change needed.
+- Per-cell render branch (today's `data_type` switch in the
+  template): becomes AG Grid column-type configuration.
+
+**Plan.**
+- Replace the plain HTML table with AG Grid, keeping the existing
+  `/save` endpoint as the persistence target. Per workplan: "do not
+  add new business rules."
+- Preserve current behaviours:
+  - Per-instrument grouping (one grid per instrument, or one grid
+    with instrument grouping — design call).
+  - Display-field columns (Reviewee identity always first; dedup of
+    `(reviewee, name)` / `(reviewee, email_or_identifier)` per
+    PR #320).
+  - Response-field column types (Long_text textarea, Numeric input,
+    List dropdown, Yes/No, Grade — all driven by the RTD's
+    `data_type` + `validation`).
+  - Required-field validation with warn-and-acknowledge override.
+  - Lifecycle locks (closed instruments render disabled).
+  - `submitted_at` / completion-status indicators (the trailing
+    ✓/⚠ column shipped via PR #322 — likely an AG Grid render
+    callback).
+- Naturally bundles with **#2** (vanilla-JS autosave on `/save`),
+  which is currently parked behind this decision in Segment 11
+  Tier 4 — autosave folds into AG Grid's cell-edit lifecycle
+  rather than landing as a standalone debounce.
+
+**Sequencing notes.**
+- Lands after **#31** (sort by reviewee, Segment 13) only if the
+  sort spec's clickable-column-header override is meant to migrate
+  to AG Grid's native multi-column sort. If sort-spec is
+  AG-Grid-aware from the outset, #31 + this can bundle in
+  Segment 15. Most likely: AG Grid lands first in Segment 15, and
+  the sort spec's reviewer-side override is implemented as
+  AG Grid configuration rather than custom JS.
+- Lands together with or replaces **#32** (further refinement of
+  the reviewer surface). The "multi-instrument preview" sub-item
+  of #32 is moot if AG Grid's grouping handles it; pilot polish
+  targets the AG Grid surface rather than the plain HTML one.
+
+**Out of scope.** All workplan §11 "keep deliberately out of
+scope" items — polished spreadsheet UX beyond AG Grid defaults,
+multi-tab multi-instrument review, complex autosave conflict
+handling, reminder emails (Segment 9), export generation
+(Segment 12).
+
+**Cross-ref.** Mirror entry in `docs/status.md` "What's
+deliberately not yet there" pointing here.
+
+---
+
 ## Items deliberately not on this list
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
