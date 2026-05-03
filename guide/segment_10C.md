@@ -7,7 +7,7 @@ baseline. Not a forward-looking plan — items still owed are listed in
 §5 with pointers to where they belong.
 
 This sat between Segment 10B (instrument builder + preview) and
-Segment 11 (export / audit retention). It is not a new feature
+Segment 12 (export / audit retention). It is not a new feature
 segment; it consolidates the operator-facing surface so the new
 multi-instrument/builder shape introduced in 10B is consistent across
 every page.

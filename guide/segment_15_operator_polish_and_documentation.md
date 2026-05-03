@@ -71,17 +71,20 @@ documentation pass:
 - **Real SMTP email backend** — `docs/status.md` "What's deliberately
   not yet there." The dev outbox stays the only mail sink until this
   segment lights up the production path.
-- **Queue-based batch invitation sending** — `guide/segment_10E_*.md`
-  §2 originally floated this as 10E scope; out-of-request send only
-  becomes load-bearing when real SMTP lands, so it bundles here.
+- **Queue-based batch invitation sending** —
+  `guide/segment_11_cleaning_up_unfinished_business.md` §2 (Tier 2
+  decision) originally floated this as Segment 11 scope; out-of-
+  request send only becomes load-bearing when real SMTP lands, so
+  it bundles here.
 - **Inline-editable rows for reviewers / reviewees / assignments
-  Manage pages** — officially deferred from 10E §2.5; tracked at
-  `guide/unfinished_business.md` #25. Needs a design pass before
-  code; the polish segment is the right home.
+  Manage pages** — officially deferred from Segment 11 (originally
+  10E §2.5); tracked at `guide/unfinished_business.md` #25. Needs a
+  design pass before code; the polish segment is the right home.
 - **Local Postgres docker-compose for dev** — officially deferred
-  from 10E §2.7; tracked at `guide/unfinished_business.md` #26. The
-  developer-setup-guide work item above is the natural place for the
-  Postgres-vs-SQLite local-dev story to settle.
+  from Segment 11 (originally 10E §2.7); tracked at
+  `guide/unfinished_business.md` #26. The developer-setup-guide
+  work item above is the natural place for the Postgres-vs-SQLite
+  local-dev story to settle.
 
 ---
 

@@ -24,7 +24,7 @@
 > invitation sending with progress UI (§7.2 — synchronous outbox
 > today); the full invitation-template editor (§6.6 — ships only
 > as a stub); export and retention (§§11–12 — entirely
-> Segment 11). Treat this document as the destination, not the
+> Segment 12). Treat this document as the destination, not the
 > map of where the road goes today.
 
 **Status:** Draft functional specification (pre-implementation)

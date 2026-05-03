@@ -88,7 +88,9 @@ Those can be added later after the core loop is real.
 
 ## 3. Overall build shape
 
-The project can be approached in ten low-intensity segments:
+The project is built in fifteen low-intensity segments.
+
+The first ten segments produce a real end-to-end system:
 
 1. Orientation and repository setup
 2. Azure hello-world deployment
@@ -99,16 +101,21 @@ The project can be approached in ten low-intensity segments:
 7. Assignment generation MVP
 8. Reviewer review-surface MVP
 9. Invitation, monitoring, and reminder MVP
-10. Export, audit, and retention MVP
+10. Instrument builder MVP
 
-After these, advanced Review Robin parity can be considered:
+The remaining five segments move it toward fuller Review Robin parity and operational maturity:
 
-11. RuleBased assignment builder
-12. Multi-instrument sessions
-13. Production hardening
-14. Operator polish and documentation
+11. Cleaning up unfinished business (segment-1–10 follow-ups)
+12. Export, audit, and retention MVP
+13. RuleBased assignment builder
+14. Production hardening
+15. Operator polish and documentation
 
-The first ten segments produce a real end-to-end system. The later segments move it toward fuller Review Robin parity and operational maturity.
+(Multi-instrument sessions were originally planned as their own
+segment but shipped early as part of Segments 10A → 10D; the
+unfinished items live in `guide/unfinished_business.md` #27 / #28 /
+#29 and the original plan is archived as
+`guide/archive/segment_13_multi_instrument_sessions_superseded.md`.)
 
 ---
 
@@ -661,14 +668,48 @@ An operator can shape the questions reviewers see — beyond the seed `rating` i
 
 ### Out of scope
 
-- multi-instrument (still one Instrument per session — Segment 13)
+- multi-instrument (planned for Segment 13 originally; ended up
+  shipping early as part of Segments 10A → 10D — see archived
+  `guide/archive/segment_13_multi_instrument_sessions_superseded.md`)
 - conditional / branching field logic
 - file-upload field type
 - editing the instrument after activation locks it (revisit later if needed)
 
 ---
 
-## 14. Segment 11 — Export, audit, and retention MVP
+## 14. Segment 11 — Cleaning up unfinished business
+
+### Goal
+
+Pick up the segment-1–10 follow-ups before opening export /
+RuleBased / production-hardening work.
+
+### Build outcome
+
+The audit at
+`guide/archive/segment_1-10_unfinished.md` (2026-05-03) catalogued
+items planned for Segments 1–10 that didn't ship. Segment 11 is the
+focused pass that lands them — or formally defers them — before the
+rest of the post-MVP roadmap opens.
+
+### Work items
+
+The detailed punch list lives in
+`guide/segment_11_cleaning_up_unfinished_business.md` (Tier 1
+tiny cleanups → Tier 2 decisions → Tier 3 small features → Tier 4
+medium features). Each item lands as its own PR.
+
+### Done when
+
+- All items in
+  `guide/segment_11_cleaning_up_unfinished_business.md` Tier 1 +
+  Tier 2 + Tier 3 are landed or have a written decision.
+- Tier 4 items are either landed or moved to
+  `guide/unfinished_business.md` with an explicit deferral.
+
+---
+
+## 15. Segment 12 — Export, audit, and retention MVP
 
 ### Goal
 
@@ -725,7 +766,7 @@ An operator can export session responses as CSV/Excel and apply a basic retentio
 
 ---
 
-## 15. Segment 12 — RuleBased assignment builder
+## 16. Segment 13 — RuleBased assignment builder
 
 ### Goal
 
@@ -760,42 +801,6 @@ An operator can define simple rules, preview generated assignments, and apply th
 - RuleBased mode can generate assignments equivalent to the core existing concept.
 - Operator can preview counts before committing.
 - Rule outputs are test-covered and auditable.
-
----
-
-## 16. Segment 13 — Multi-instrument sessions
-
-### Goal
-
-Allow a session to contain more than one instrument.
-
-### Main learning focus
-
-- extending assignment model;
-- rendering multiple review surfaces;
-- export shape changes;
-- preserving simple single-instrument workflow.
-
-### Build outcome
-
-A session can contain multiple instruments, and a reviewer can complete separate tabular forms within the same session.
-
-### Work items
-
-1. Add multiple instrument management UI.
-2. Ensure assignments target an instrument.
-3. Update FullMatrix generation for multiple instruments.
-4. Update ManualAssignment import to include instrument.
-5. Update reviewer dashboard to group by instrument.
-6. Update review surface to show tabs/sections.
-7. Update export to include instrument.
-8. Add tests for multi-instrument sessions.
-
-### Done when
-
-- Single-instrument sessions still work simply.
-- Multi-instrument sessions work end to end.
-- Export correctly identifies instrument for each response.
 
 ---
 
@@ -905,7 +910,8 @@ Week 14–15   Segment 7: Assignment generation
 Week 16–20   Segment 8: Reviewer surface
 Week 21–23   Segment 9: Invitations and monitoring
 Week 24       Segment 10: Instrument builder
-Week 25–27   Segment 11: Export, audit, and retention
+Week 25       Segment 11: Cleaning up unfinished business
+Week 26–28   Segment 12: Export, audit, and retention
 ```
 
 This is not a deadline. It is a low-pressure sequencing guide.

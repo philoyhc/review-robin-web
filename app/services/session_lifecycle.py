@@ -37,7 +37,7 @@ class SessionStatus(str, Enum):
     validated = "validated"
     ready = "ready"
     expired = "expired"  # reserved (Segment 9.3+)
-    archived = "archived"  # reserved (Segment 11+)
+    archived = "archived"  # reserved (Segment 12+)
 
 
 def is_ready(review_session: ReviewSession) -> bool:

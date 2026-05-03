@@ -264,7 +264,7 @@ buttons stay visible (the session is meant to be running).
     is the **only** working preview entry point — the same-named
     button on the Instruments page is currently disabled.
   - **Manage Invitations** → `/operator/sessions/{id}/invitations`.
-  - **Extract Data** — disabled until Segment 11.
+  - **Extract Data** — disabled until Segment 12.
 - **Danger Zone** card (in `.bottom-grid`):
   - **Delete Data** button — wipes collected response data only;
     setup items (reviewers, reviewees, instruments, assignments,
@@ -365,7 +365,7 @@ expose only the bulk Upload-CSV / Delete-all flow.
 
 The Assignments page additionally carries an anchored
 `#rules` "Assign by Rules" placeholder card (Rules editor —
-Segment 12) with a Cancel anchor that drops the fragment.
+Segment 13) with a Cancel anchor that drops the fragment.
 
 ## `/operator/sessions/{id}/instruments` — Instruments
 
@@ -545,11 +545,8 @@ consolidated index for back-compat.
   `create_instrument`, and pointing the placeholder cells at the
   existing `display-fields/{df_id}/edit` route. See
   `guide/segment_10C.md` §5.
-- Multi-instrument operator UI. Schema, services, routes, and
-  audit events are all in place; the `Add an instrument` button
-  is the single UI gate.
 - Response Fields type change. Out of scope; type-change is a
-  Segment 13 (or dedicated slice) concern.
+  data-migration concern (no segment owner today).
 
 ## `/operator/sessions/{id}/preview` — Preview reviewer surface
 

@@ -1,8 +1,12 @@
-# Segment 10E — Cleaning up unfinished business
+# Segment 11 — Cleaning up unfinished business
+
+(Originally drafted as Segment 10E before the 2026-05-03 segment
+renumber promoted it. Cross-references in older docs may still
+point to "10E" by name.)
 
 **Status:** Forward-looking plan. Picks up the loose ends the audit at
 `guide/archive/segment_1-10_unfinished.md` (2026-05-03) surfaced
-across Segments 1–10. Land these before Segment 11 (export / audit
+across Segments 1–10. Land these before Segment 12 (export / audit
 retention) starts so the operator surface settles cleanly.
 
 This is a punch list, not a feature segment. Most items are small;
@@ -62,7 +66,7 @@ already settled.
 | Item | Source | Notes |
 |------|--------|-------|
 | **#22 — Home body rebuild + Option F relocation** | `unfinished_business.md` #22 | Depends on Tier 3 #21 (chrome buttons settled first). 4–6 small PRs. |
-| **#5 — Audit-event `detail` schema convention** | `unfinished_business.md` #5 | Spec write-up in `spec/architecture.md` then incremental emitter migration. Segment 11 export needs this stable. |
+| **#5 — Audit-event `detail` schema convention** | `unfinished_business.md` #5 | Spec write-up in `spec/architecture.md` then incremental emitter migration. Segment 12 export needs this stable. |
 | **2.2 — Vanilla-JS autosave on `/save`** | This file (was §2.2) | Depends on Tier 2 #2.1 AG Grid decision: bundle if grid lands; otherwise standalone debounce + last-saved-indicator PR. |
 
 ---
@@ -73,17 +77,17 @@ Items above sourced "This file (was §N)" don't have a full `Why /
 Where / Plan` write-up yet — they live as sketches here. The
 moment work starts on one, promote it to a full
 `unfinished_business.md` entry first so the catalog stays the source
-of truth and 10E retires gracefully.
+of truth and Segment 11 retires gracefully.
 
 ---
 
 ## Out of scope
 
 - Anything in `docs/status.md` "What's deliberately not yet there"
-  with a named target segment ≥11 (export, RuleBased,
-  multi-instrument-beyond-10D, production hardening, real SMTP).
+  with a named target segment ≥12 (export, RuleBased, production
+  hardening, real SMTP).
 - The two deferrals above (inline-edit rows / local Postgres
   compose) — see `unfinished_business.md` #25 + #26 and the Segment
   15 stub.
-- New features not in the audit. 10E is closing books on Segments
-  1–10, not opening new scope.
+- New features not in the audit. Segment 11 is closing books on
+  Segments 1–10, not opening new scope.

@@ -124,7 +124,7 @@ suite against a `postgres:16` service container).
   POST re-render the Manage page itself — there is no longer a
   standalone `…/import` GET. The assignments page also carries an
   anchored `<section id="rules">` "Assign by Rules" placeholder
-  (Rule editor — Segment 12) with a Cancel anchor that drops the
+  (Rule editor — Segment 13) with a Cancel anchor that drops the
   fragment. **Edit Reviewers / Reviewees / Assignments** buttons
   render as disabled anchors (`<a class="btn disabled"
   aria-disabled="true">`) per the 9.4B disabled-affordance
@@ -422,7 +422,7 @@ Every destructive operation writes an `audit_events` row with
 | `reminders.sent` | batch reminder send (`detail.count`, `detail.invitation_ids`, `detail.reviewer_ids`, `detail.fell_back_count`) |
 
 `excluded_counts` is a generic map (`{"self_review": N,
-"inactive_reviewer": M, ...}`) so RuleBased exclusions in Segment 12 can
+"inactive_reviewer": M, ...}`) so RuleBased exclusions in Segment 13 can
 plug in additional reasons without a schema change. Today's keys are
 `self_review`, `inactive_reviewer`, `inactive_reviewee`.
 
@@ -434,13 +434,13 @@ plug in additional reasons without a schema change. Today's keys are
 |---|---|
 | Edit individual reviewer / reviewee / assignment rows (today: bulk operations only via CSV replace or delete-all) | **Segment 15** (officially deferred 2026-05-03; tracked at `guide/unfinished_business.md` #25 — needs a design pass before code) |
 | Operator UI to flip `Reviewer.status` / `Reviewee.status` to inactive (filter is defensive today) | Not yet planned |
-| Display Fields persistence on the Instruments page placeholder rows (Friendly Label edit, Visible toggle, Order column don't POST yet; the 10B-2 schema-level routes still exist server-side). Wiring up requires extending `_VALID_DISPLAY_SOURCES` / `_DEFAULT_DISPLAY_LABELS` with reviewee name + email, extending `display_field_value` and the reviewer-surface render path, and pointing the placeholder cells at the existing endpoints. | Next round of UI work (a future 10x slice or folded into Segment 11) |
+| Display Fields persistence on the Instruments page placeholder rows (Friendly Label edit, Visible toggle, Order column don't POST yet; the 10B-2 schema-level routes still exist server-side). Wiring up requires extending `_VALID_DISPLAY_SOURCES` / `_DEFAULT_DISPLAY_LABELS` with reviewee name + email, extending `display_field_value` and the reviewer-surface render path, and pointing the placeholder cells at the existing endpoints. | Next round of UI work (a future 10x slice or folded into Segment 12) |
 | Vanilla-JS autosave on top of the reviewer `/save` endpoint | Follow-on PR after Segment 8 |
 | **Real SMTP email backend** (production sending, not the dev outbox) | **Segment 15** |
 | Operator-editable email template editor + merge fields (`{{reviewer_name}}` / `{{deadline}}` / `{{help_contact}}` etc.); the `/setupinvite` stub today | Tracked as `guide/unfinished_business.md` #24 (independent of real SMTP — the editor shapes the body the dev outbox already renders) |
-| **Export / audit retention** | **Segment 11** |
-| **RuleBased assignment** | **Segment 12** |
-| **Multi-instrument sessions** (more than one Instrument under a session) | **Segment 13** |
+| **Export / audit retention** | **Segment 12** |
+| **RuleBased assignment** | **Segment 13** |
+| Multi-instrument sessions: FullMatrix per-instrument target picker, Manual CSV `Instrument` column, reviewer dashboard per-instrument grouping | Schema + reviewer-surface multi-instrument support shipped 2026-05-02 in Segment 10D Slice 5; the three remaining items are tracked at `guide/unfinished_business.md` #27 / #28 / #29 (Segment 13 plan archived as `guide/archive/segment_13_multi_instrument_sessions_superseded.md`) |
 | **Production hardening** (Key Vault, VNet, soft-delete, full Postgres pytest matrix) | **Segment 14** |
 | Local Postgres docker-compose for dev (SQLite + the `ci-postgres` job + migration-on-deploy is the parity story today) | **Segment 15** (officially deferred 2026-05-03; tracked at `guide/unfinished_business.md` #26 — likely settles "won't fix" via the developer setup guide work) |
 
@@ -453,7 +453,7 @@ plug in additional reasons without a schema change. Today's keys are
 FullMatrix and Manual currently have parallel implementations, but the
 storage model treats them uniformly: every assignment is a row in
 `assignments` with `created_by_mode` as a string discriminator and
-`Assignment.context` as JSON. Segment 12 RuleBased is expected to
+`Assignment.context` as JSON. Segment 13 RuleBased is expected to
 introduce a generic generation framework; FullMatrix becomes the
 simplest preset of that framework. The audit-detail shape
 (`excluded_counts: {...}`) is already generic; Manual rows ship with
@@ -468,27 +468,32 @@ event records old count, new count, and any cascaded downstream
 deletions. No append/merge for now — defer until activation
 constraints make it necessary.
 
-### Single-instrument UI invariant
+### Multi-instrument support
 
-The data layer is fully multi-instrument-aware. Every session
-seeds one Instrument at creation time via
-`ensure_default_instrument` (system handle `Default`,
-operator-editable `description`, two seed response fields, three
-seed `pair_context_1/2/3` display fields). The schema columns
-(`Instrument.session_id`, `Instrument.order`,
+The data layer and the operator + reviewer surfaces are
+multi-instrument-aware. Every session seeds one Instrument at
+creation time via `ensure_default_instrument` (system handle
+`Default`, operator-editable `description`, two seed response
+fields, three seed `pair_context_1/2/3` display fields). The
+schema columns (`Instrument.session_id`, `Instrument.order`,
 `Assignment.instrument_id`) and the FK delete-orphan cascades are
 in place; `create_instrument(after_instrument_id=…)` and
 `delete_instrument(...)` exist as service helpers and emit the
 `instrument.created` / `instrument.deleted` audit events; the
-reviewer surface and the operator's `/instruments` page already
-loop over instruments. The remaining gap is the operator UI: the
-`Add an instrument` button is disabled with a "still in progress"
-tooltip, so today every session renders exactly one
-per-instrument card. The Delete button does render when more than
-one instrument exists (reachable, e.g., via direct POSTs to
-`/instruments/add` followed by a UI delete). Lifting the
-single-instrument-UI restriction is what Segment 13 will do. See
+reviewer surface and the operator's `/instruments` page loop over
+instruments; and the `Add an instrument` / `Delete this instrument`
+operator buttons are wired (10D Slice 5, 2026-05-02) with mutual-
+exclusion + single-instrument-floor gates. See
 `spec/architecture.md` "Conceptual hierarchy."
+
+The original Segment 13 plan (multi-instrument sessions) is
+archived at
+`guide/archive/segment_13_multi_instrument_sessions_superseded.md`
+since most of its scope shipped early in Segments 10A → 10D. Three
+items did not ship and live in `guide/unfinished_business.md` as
+#27 (FullMatrix per-instrument target picker), #28 (Manual CSV
+`Instrument` column), and #29 (reviewer dashboard per-instrument
+grouping).
 
 ### Pair-level vs assignment-level context
 
@@ -496,5 +501,5 @@ Manual CSV imports carry two distinct kinds of per-pair context
 (`pair_context_*` and `assignment_context_*`), both stored on
 `Assignment.context`. Pair-level is reviewer-facing informational
 metadata; assignment-level is logic-engaging metadata that
-RuleBased (Segment 12) will read. See `docs/imports.md` and
+RuleBased (Segment 13) will read. See `docs/imports.md` and
 `spec/architecture.md` "Pair-level vs assignment-level context."
