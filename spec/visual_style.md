@@ -18,6 +18,10 @@ This document is app-agnostic. It defines the design system itself: principles, 
 
 **P5 — The color test.** When tempted to introduce a colored element, apply this test: *if removing the color would make the UI ambiguous or harder to scan, the color is doing work; if removing it changes nothing functional, it's decoration*. Decoration loses.
 
+**P6 — Hover by fill.** Filled controls (solid background, white text) *lighten* on hover; outline controls (white background, colored border + text) *darken* with a subtle background tint in their role's color. Same direction across the app, applied consistently from buttons to nav anchors, so "you can click this" reads the same way everywhere.
+
+**P7 — Recovery actions adopt the card's color family.** When an action lives inside a card whose color carries the meaning (a lock card, a danger zone), the action picks up that family rather than reasserting its own. A Primary blue button inside an amber lock card clashes; an outline-amber button continues the card's framing. Same logic for outline-red destructive buttons inside the danger zone. The card already says "this region needs care" — the action shouldn't have to repeat the color story in a different language.
+
 ---
 
 ### Color palette
@@ -33,11 +37,32 @@ Anchor the entire UI on this palette. No off-palette colors should appear withou
 - `text-secondary` — medium grey (`#6B7280`). Supporting text, labels, captions.
 - `text-muted` — lighter grey (`#9CA3AF`). De-emphasized text, placeholder.
 
-**Semantic accents (used sparingly, with specific meaning).**
-- `accent-blue` — muted blue (`#2563EB` for emphasis, `#DBEAFE` for backgrounds). Default accent for active states, links, primary actions.
-- `accent-green` — muted green (`#059669` for emphasis, `#D1FAE5` for backgrounds). Successful states, completion indicators.
-- `accent-amber` — muted amber (`#D97706` for emphasis, `#FEF3C7` for backgrounds). Setup-incomplete indicators, warnings that aren't errors, lock-card patterns.
-- `accent-red` — muted red (`#DC2626` for emphasis, `#FEE2E2` for backgrounds). Destructive action confirmations, validation errors. Used **rarely** — most "negative" signals are amber, not red.
+**Semantic accents (used sparingly, with specific meaning).** Each accent comes as a small ladder of shades so hover, marker, and dark-text variants stay on-palette without ad-hoc hex picking. Tailwind step numbers shown in parentheses for orientation.
+
+- `accent-blue` — default accent for active states, links, primary actions. *Use sparingly* — at most one solid-blue Primary per page region.
+  - `accent-blue-bg-faint` (blue-50, `#FAFCFF`) — hover surface for already-tinted cells (e.g. Home anchor).
+  - `accent-blue-bg-soft` (blue-50, `#EFF6FF`) — base for tinted cells like the chrome's Home anchor.
+  - `accent-blue-bg` (blue-100, `#DBEAFE`) — pill-count background, banner-info background.
+  - `accent-blue-marker` (blue-300, `#93C5FD`) — active-tab underline. Lighter than full accent so the marker signals position without competing.
+  - `accent-blue-light` (blue-500, `#3B82F6`) — Primary button hover (lighten).
+  - `accent-blue` (blue-600, `#2563EB`) — Primary button base, link color, active-tab text.
+  - `accent-blue-dark` (blue-700, `#1D4ED8`) — kept for contexts that explicitly want a darker blue.
+
+- `accent-green` — successful states, completion indicators.
+  - `accent-green-bg` (green-100, `#D1FAE5`) — pill background.
+  - `accent-green-marker` (green-300, `#6EE7B7`) — Operations-row active-tab underline.
+  - `accent-green` (green-600, `#059669`) — emphasis text.
+
+- `accent-amber` — warnings that aren't errors, lock-card patterns, "needs setup" indicators. **Used as the framing color for any card surface that needs the operator's attention** — lock cards and danger zones both border in `accent-amber-dark` so warning surfaces share one visual language.
+  - `accent-amber-bg` (amber-100, `#FEF3C7`) — pill background, lock-card surface.
+  - `accent-amber-bg-mid` (amber-200, `#FDE68A`) — outline-amber button hover surface.
+  - `accent-amber` (amber-600, `#D97706`) — emphasis text where a brighter amber is wanted.
+  - `accent-amber-dark` (amber-800, `#92400E`) — pill text on `accent-amber-bg`, warning-card border, outline-amber button border + text. The "warning brown" that frames every warning surface.
+
+- `accent-red` — destructive action confirmations, validation errors. Used **rarely** — most "negative" signals are amber, not red. Reserved for the one button that actually deletes data.
+  - `accent-red-bg` (red-100, `#FEE2E2`) — destructive-button hover surface, banner-error background.
+  - `accent-red-soft` (red-500, `#EF4444`) — softer red for surfaces that want to flag destructive context without alarming.
+  - `accent-red` (red-600, `#DC2626`) — destructive-button border + text, banner-error border.
 
 The accents are deliberately muted. Saturated, high-contrast colors should not appear. If a color feels saturated enough to draw the eye from across the room, dial it back.
 
@@ -79,35 +104,47 @@ Card internal padding: 16px or 24px depending on density. Don't go lower; crampe
 
 **Buttons.**
 
-All buttons share: 8px vertical padding, 16px horizontal padding, 6px corner radius, medium font weight, single-line label.
+All buttons share: 8px vertical padding, 16px horizontal padding, 6px corner radius, medium font weight (500), single-line label.
 
-- **Primary.** Solid `accent-blue` background, white text. Used for the page's main affirmative action — at most one per page region.
-- **Secondary.** White background, `border-default` border, `text-primary` text. The default button. Used for everything that isn't the single primary action: "Cancel," "Edit," "View detail."
+- **Primary.** Solid `accent-blue` background, white text. Used for the page's *single* main affirmative action — *at most one* per page region. "Submit this form" is *not* enough to qualify; routine submits like "Upload" should be Secondary.
+- **Secondary.** White background, `border-default` border, `text-primary` text. The default button. Used for everything that isn't the single primary action: "Cancel," "Edit," "View detail," routine submits.
 - **Destructive.** White background, `accent-red` border, `accent-red` text. For the *confirmation step* of destructive actions, not for the trigger. The trigger is a normal secondary button; clicking it surfaces a confirmation where the destructive button appears.
-- **Disabled.** Same shape as the role variant; reduced opacity (0.5) and `cursor: not-allowed`. No fill change beyond opacity.
+- **Outline-amber (recovery action inside a colored card).** White background, `accent-amber-dark` border, `accent-amber-dark` text. Per **P7**, recovery actions inside a lock card or other warning-framed card adopt the card's color family. Used e.g. for "Revert to draft" inside a lock card.
+- **Disabled.** Same shape as the role variant; reduced opacity (0.5), `cursor: not-allowed`, `pointer-events: none`. One rule covers `<button disabled>`, `<a class="btn disabled" aria-disabled="true">`, and any role variant.
+
+**Hover** (per **P6**):
+- *Filled buttons* (Primary, any future filled role): lighten — bg/border move one shade lighter (e.g. `accent-blue` → `accent-blue-light`).
+- *Outline buttons* (Secondary, Destructive, Outline-amber): darken — background gains a subtle tint in the role's family (`bg-muted` for Secondary, `accent-red-bg` for Destructive, `accent-amber-bg-mid` for Outline-amber). Border + text stay put.
+
+The same direction is used for tinted nav cells (e.g. the chrome's Home anchor lightens from `accent-blue-bg-soft` to `accent-blue-bg-faint` on hover).
 
 **Cards.**
 
-White background, `border-subtle` 1px border, 8px corner radius, 16–24px padding. No drop shadows; the border is enough. Card titles in H2 sit at the top of the card with 16px of space below them before content.
+White background, `border-default` 2px border, 8px corner radius, 16–24px padding. No drop shadows; the border is enough. Card titles in H2 sit at the top of the card with 16px of space below them before content.
 
-**Lock card variant.** Same card shape, but with `accent-amber` light background and `accent-amber` border. Used for surfaces that are intentionally non-interactive in the current state. Lock card icon on the left; explanatory text and (if applicable) recovery action on the right.
+(Border is 2px rather than 1px because at 1px the card edge gets visually swallowed by the table grid lines and form borders nearby.)
+
+**Lock card variant.** Same card shape, but with `accent-amber-bg` light background and `accent-amber-dark` border (the warning brown). Used for surfaces that are intentionally non-interactive in the current state. Explanatory text and (if applicable) recovery action inside; the recovery action follows **P7** and uses the outline-amber button.
+
+**Danger-zone card variant.** Same card shape, white background, `accent-amber-dark` border (same warning brown as the lock card — both warning-framed surfaces share one visual language), H2 in `accent-amber-dark`. The destructive button *inside* the card stays in its own role color (outline `accent-red`) — the brown frames the surface; the red marks the action that actually deletes data.
 
 **Tabs.**
 
-- Tab labels at small text size, medium weight.
-- Inactive tabs: `text-secondary` on `bg-muted` row background.
-- Active tab: `text-primary` with a 2px underline in the relevant accent color.
+- Tab labels at small text size, semibold (600).
+- Inactive tabs: `text-secondary` on the row's tinted background.
+- Hovered tab: `text-primary` with a subtle white-tint background on the row strip (matches **P6** — outline-style hover lightens the surface).
+- Active tab: `text-primary` with a short inset underline in the row's *marker* tone (`accent-blue-marker` / `accent-green-marker`), not the full accent. The marker is one shade lighter so it signals position without competing with the label.
 - Row backgrounds (if multi-row navigation is used): very subtle tint of the row's accent color (5% opacity).
-- Row labels (if used): tiny text size, medium weight, `text-secondary` when inactive, `text-primary` when the row is active or hovered.
+- Row labels (if used): tiny text size, bold (700), uppercase, `text-muted` when inactive, `text-primary` when the row is active *or* the cursor is over any tab in the row's strip (use a `:has()` selector so hovering a tab previews the row's emphasis without transferring active state).
 
 **Badges (status pills).**
 
-Small inline labels for state. 2px vertical padding, 8px horizontal padding, 9999px corner radius (fully pill-shaped), tiny text size, medium weight.
+Small inline labels for state. 2px vertical padding, 8px horizontal padding, 9999px corner radius (fully pill-shaped), tiny text size, medium weight (500), `text-transform: uppercase`. Used inline in copy too — e.g. "Yes, delete the existing **3 reviewers** and **27 assignments**" wraps the count phrases as pills so the eye lands on the numbers without bolding the whole sentence.
 
-- **Counts** (numeric values): `bg-muted` background, `text-primary` text.
-- **Empty/missing** indicators: `accent-amber` light background, `accent-amber` text.
-- **State indicators**: respective semantic accent color.
-- **Success / completion**: `accent-green` light background, `accent-green` text.
+- **Counts** (numeric values): `accent-blue-bg` background, `text-primary` text. The blue tint signals "this is information" without using a state color.
+- **Empty / missing** indicators: `accent-amber-bg` background, `accent-amber-dark` text. Same brown the warning cards use for their borders, so chips and surfaces share one warning language.
+- **Lifecycle / state indicators**: respective semantic accent — see app-specific document for the per-state mapping.
+- **Success / completion**: `accent-green-bg` background, `accent-green` text.
 
 **Forms.**
 
@@ -266,9 +303,18 @@ For all other session-scoped pages (the five Setup pages, the Operations pages),
 
 ---
 
-### Yellow lock card pattern
+### Warning surfaces — shared brown framing
 
-Used when a page or section is reachable but its actions are disabled because the session lifecycle locks them. Standard application of the general spec's lock card variant, with Review Robin specifics:
+Two card variants in the app's vocabulary frame "this region needs care": the **lock card** (intentionally non-interactive due to lifecycle) and the **danger-zone card** (groups destructive actions). Both border in `accent-amber-dark` (the warning brown), so the operator's eye recognises the same visual category whether reading "you can't change this right now" or "here's where you delete data". The interior treatments differ — the lock card has the `accent-amber-bg` tinted surface; the danger zone has white — but the framing is one.
+
+Per **P7**, recovery / primary actions inside these cards adopt the card's color family:
+
+- **Inside a lock card**: outline-amber button (e.g. "Revert to draft"). A solid Primary blue inside an amber card clashes; the outline-amber action continues the framing.
+- **Inside a danger zone**: outline-red Destructive button. Same principle applied to the destructive role — the brown frames the surface; the red marks the action that actually deletes data.
+
+#### Lock card uses
+
+Used when a page or section is reachable but its actions are disabled because the session lifecycle locks them.
 
 - **On Setup pages** when session is `ready` or `closed`: lock card explains that setup is locked and offers a "Revert to draft" action where appropriate.
 - **On Operations pages** when session is `draft` or `validated`: lock card explains that operations are unavailable until the session is activated, and links to Home where the Activate action lives.
@@ -276,6 +322,10 @@ Used when a page or section is reachable but its actions are disabled because th
 - **On the send-test affordance** within the Reviewer Experience Preview when session is `closed`: same pattern.
 
 The lock card pattern is consistent across all of these. Its prominence and explanatory copy adapt to the specific case, but its visual treatment does not.
+
+#### Danger-zone card uses
+
+Groups the destructive actions for a given Setup entity (Delete all reviewers / reviewees / assignments / instruments) and the session-level destructive actions (Delete data, Delete session). H2 is "Danger Zone" in `accent-amber-dark`. Lives at the bottom-right of the page (or in the bottom row of a `.bottom-grid`) so it stays visually grouped with the entity it operates on but isn't the first thing the eye lands on.
 
 ---
 
