@@ -117,6 +117,24 @@
       }
       th { background: #f4f4f4; }
       th.col-shrink, td.col-shrink { width: 1%; white-space: nowrap; }
+      /*
+       * Reviewer-surface column-width hints. With table-layout: auto the
+       * "width: 1%" idiom collapses a column to its content. .rs-textlong
+       * gets no fixed width; the browser distributes leftover horizontal
+       * space to it (and other unconstrained columns) — so long-text
+       * textareas eat the slack while numeric inputs and Photo links stay
+       * compact. .rs-reviewee caps the identity column at 20% so a long
+       * reviewee name wraps instead of pushing the response inputs off
+       * screen.
+       */
+      th.rs-narrow, td.rs-narrow { width: 1%; white-space: nowrap; }
+      th.rs-reviewee, td.rs-reviewee {
+        max-width: 20%;
+        min-width: 8em;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+      }
+      th.rs-textlong, td.rs-textlong { min-width: 14em; }
       .muted { color: #777; }
       /*
        * Note (2026-05-03): the .btn variants below (default / .secondary /
