@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{# Pilot of spec/ui_elements.md canonical primitives. Twin of
+   operator/session_reviewers.html. Sets `body.ui-v2` so the
+   v2-scoped rules in base.html take effect; old reviewers.html
+   stays pixel-identical on v1. Once the pilot proves out,
+   this template's contents replace session_reviewers.html and
+   the wrapper class retires. See spec/ui_elements.md Part 3. #}
+
+{% block title %}Reviewers — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <div class="session-nav-card">
+    {% with current_page = "Reviewers" %}
+      {% include "operator/partials/session_top_nav.html" %}
+    {% endwith %}
+    {% include "operator/partials/session_setup_status_row.html" %}
+  </div>
+
+  <div class="card">
+    <p style="margin: 0;">
+      Fields with data:
+      {% for label in fields_with_data %}
+        <span class="pill pill-count">{{ label }}</span>
+      {% else %}
+        <span class="muted">—</span>
+      {% endfor %}
+    </p>
+  </div>
+
+  {% if is_ready %}
+    <div class="card lock">
+      <p style="margin: 0 0 12px 0;">
+        The reviewers cannot be modified while the session is ongoing.
+        Revert the session to draft if you wish to modify anything.
+      </p>
+      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
+        <input type="hidden" name="return_to" value="reviewers">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required>
+            Yes, revert <strong>{{ session.name }}</strong> to draft.
+          </label>
+        </p>
+        <p style="margin-bottom: 0;">
+          <button class="btn" type="submit">Revert to draft</button>
+        </p>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if not is_ready %}
+  <div class="page-grid">
+    <section class="card" id="upload-csv">
+      <h2>Upload Reviewers</h2>
+      <p class="form-help">
+        CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
+        <code>ReviewerName</code>, <code>ReviewerEmail</code>. Optional:
+        <code>ReviewerTag1</code>, <code>ReviewerTag2</code>, <code>ReviewerTag3</code>.
+        Other columns are ignored.
+      </p>
+
+      {% include "operator/partials/validation_results.html" %}
+
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/reviewers/import"
+            enctype="multipart/form-data">
+        <label for="file">CSV file</label>
+        <input type="file" id="file" name="file" accept=".csv,text/csv" required>
+
+        {% if existing_count and existing_count > 0 %}
+          <p style="margin-top: 12px;">
+            <strong>This session already has {{ existing_count }} reviewer{% if existing_count != 1 %}s{% endif %}.</strong>
+            Importing will <strong>replace</strong> them.
+            {% if assignment_count and assignment_count > 0 %}
+              Also: <strong>{{ assignment_count }} existing assignment{% if assignment_count != 1 %}s{% endif %}</strong>
+              will be deleted (assignments reference reviewer rows). You'll need to re-generate them after the import.
+            {% endif %}
+          </p>
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm_replace" value="true" required>
+              Yes, replace the existing {{ existing_count }} reviewer{% if existing_count != 1 %}s{% endif %}{% if assignment_count and assignment_count > 0 %} and delete the {{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}{% endif %}.
+            </label>
+          </p>
+        {% endif %}
+
+        <div class="btn-pair" style="margin-top: 20px;">
+          <button class="btn" type="submit">Upload</button>
+          <a class="btn secondary disabled"
+             aria-disabled="true"
+             title="Inline editing — coming soon">Edit Reviewers</a>
+        </div>
+      </form>
+    </section>
+
+    {% if reviewers %}
+      <div class="card danger-zone">
+        <h2>Danger Zone</h2>
+        <form method="post" action="/operator/sessions/{{ session.id }}/reviewers/delete-all">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required>
+              Yes, delete all <strong>{{ reviewers | length }}</strong>
+              reviewer{% if reviewers | length != 1 %}s{% endif %} from this session.
+              Any existing assignments referencing them will also be removed.
+            </label>
+          </p>
+          <p>
+            <button class="btn destructive" type="submit">Delete all reviewers</button>
+          </p>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if reviewers %}
+    {% set has_tags = reviewers | selectattr("tag_1") | list | length > 0
+                    or reviewers | selectattr("tag_2") | list | length > 0
+                    or reviewers | selectattr("tag_3") | list | length > 0 %}
+    <div class="card">
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Status</th>
+          {% if has_tags %}<th>Tags</th>{% endif %}
+        </tr>
+        {% for reviewer in reviewers %}
+          <tr>
+            <td>{{ reviewer.name }}</td>
+            <td><code>{{ reviewer.email }}</code></td>
+            <td>{{ reviewer.status }}</td>
+            {% if has_tags %}
+              <td>
+                {% if reviewer.tag_1 %}1: {{ reviewer.tag_1 }}<br>{% endif %}
+                {% if reviewer.tag_2 %}2: {{ reviewer.tag_2 }}<br>{% endif %}
+                {% if reviewer.tag_3 %}3: {{ reviewer.tag_3 }}{% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}
