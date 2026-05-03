@@ -13,7 +13,10 @@ deliberately as part of a feature change, never silently).
 | `architecture.md` | Domain entities, layering, conceptual hierarchy, pair-vs-assignment context. |
 | `functional_spec.md` | Technology-neutral functional specification — what the system must do regardless of implementation. |
 | `ui_concept.md` | Conceptual map of the operator-facing page surface — page taxonomy (Overview, Control Panel, Setup Pages, Preview Pages, Operations Pages) and the navigation principles that govern movement between them. Reads upstream of `operator_map.md`. |
+| `visual_style.md` | Visual design system — palette, typography, spacing, components, patterns. Part 1 is portable; Part 2 instantiates it for Review Robin (accent assignments, lifecycle colors, two-row chrome, status strip, lock card). |
 | `operator_map.md` | Operator-facing page surface — chrome, setup nav, lock card, per-page layout and affordances. |
+| `preview_hub.md` | Functional spec for the Reviewer Experience Preview hub — read-only Operations Page rendering invitation email, response form, reminder email, and responses-received email for an operator-selected reviewer. |
+| `quick_setup_card_spec.md` | Functional spec for the Quick Setup card on Session Home — three-slot CSV upload (Reviewers, Reviewees, Assignments-or-rule) with shared confirm + cascade + lifecycle-lock semantics. |
 | `reviewer_map.md` | Reviewer-facing page surface — dashboard, review surface, invitation landing. |
 | `assumptions.md` | UI vocabulary — six canonical button styles, typography knob, layout defaults, load-bearing assumptions. |
 
