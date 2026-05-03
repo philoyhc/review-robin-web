@@ -51,7 +51,7 @@ Five clusters resolved — three from the original audit plus a reviewer-surface
 
 | Item | Source | Decision needed |
 |------|--------|-----------------|
-| **2.1 — AG Grid fate** | This file (was §2.1) | Still on the roadmap (name a target segment), or "the plain HTML table is the design" (update workplan + `docs/status.md`)? |
+| **2.1 — AG Grid fate** | This file (was §2.1) | ✅ **decided 2026-05-03** — still on the roadmap, target **Segment 15** (operator polish + documentation). Filed at `unfinished_business.md` #33. Unblocks #2.2 (autosave bundles into AG Grid). |
 | **2.3 — Queue-based batch invitation sending** | This file (was §2.3) | Pin to **Segment 15** with real-SMTP work (recommended), or carve as its own item before then? Workplan §12 work item #7 named it but no plan owns it today. |
 | **#7 — CSRF decision write-up** | `unfinished_business.md` #7 | Easy Auth + SameSite cookies, or CSRF tokens? If "tokens," that becomes its own segment. |
 | **#24 — Help-contact merge field source** | `unfinished_business.md` #24 (open question section) | Per-session field on `ReviewSession`, per-operator field on `User`, or global env var? Settles before email template editor coding starts. |
@@ -71,7 +71,7 @@ Five clusters resolved — three from the original audit plus a reviewer-surface
 |------|--------|-------|
 | **#22 + #30 — Home body rebuild + Quick Setup card** | `unfinished_business.md` #22 + #30, spec at `spec/quick_setup_card_spec.md` | Bundle: both restructure Home's body, share CSS primitives, and depend on Tier 3 #21 (chrome buttons settled first). Doing them in one Home-body restructure pass avoids touching the template twice. ~6–8 small PRs total (4–6 for #22's Option F relocation + 3–4 for #30's three slots). |
 | **#5 — Audit-event `detail` schema convention** | `unfinished_business.md` #5 | Spec write-up in `spec/architecture.md` then incremental emitter migration. Segment 12 export needs this stable. |
-| **2.2 — Vanilla-JS autosave on `/save`** | This file (was §2.2) | Depends on Tier 2 #2.1 AG Grid decision: bundle if grid lands; otherwise standalone debounce + last-saved-indicator PR. |
+| **2.2 — Vanilla-JS autosave on `/save`** | This file (was §2.2) | Bundles with the AG Grid replacement (`unfinished_business.md` #33, target **Segment 15**) per the 2026-05-03 §2.1 decision — autosave folds into AG Grid's cell-edit lifecycle rather than landing as a standalone debounce. |
 
 ---
 
