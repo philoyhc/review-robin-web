@@ -672,18 +672,45 @@
         color: var(--accent-amber-dark);
       }
       /* Disabled card — plain greying for cards whose body is
-         intentionally inert in the current state (Extract Data
-         in draft/validated; Quick Setup in ready). Used on
-         Session Home where the contextual primary action card
-         carries any explanatory messaging, so a yellow lock card
-         here would duplicate that signal — see
-         spec/session_home.md "Disabled treatment on Home is plain
-         greying-out, not yellow lock cards". */
+         intentionally inert in the current state. Used on Session
+         Home where the contextual primary action card carries any
+         explanatory messaging, so a yellow lock card here would
+         duplicate that signal — see spec/session_home.md
+         "Disabled treatment on Home is plain greying-out, not
+         yellow lock cards". */
       body.ui-v2 .card.disabled {
         opacity: 0.55;
       }
       body.ui-v2 .card.disabled,
       body.ui-v2 .card.disabled * {
+        cursor: not-allowed;
+      }
+      /* Placeholder card — single canonical treatment for cards
+         whose underlying feature is not yet implemented (today:
+         Quick Setup and Extract Data on Session Home). Both
+         placeholder cards on a page MUST use this class so they
+         render with identical typography and contrast regardless
+         of which one is in its "available" lifecycle state and
+         which one isn't.
+
+         Treatment: muted bg-muted background + text-secondary
+         body text + text-muted heading. The visual signal "this
+         is a placeholder, not a working action" is uniform across
+         every instance of the class. Per-card state distinctions
+         live in body copy (e.g. "no responses yet" vs "extract
+         responses for analysis"), not in opacity flips that would
+         desynchronise sibling placeholders. */
+      body.ui-v2 .card.placeholder {
+        background: var(--bg-muted);
+      }
+      body.ui-v2 .card.placeholder h2 {
+        color: var(--text-muted);
+      }
+      body.ui-v2 .card.placeholder p {
+        color: var(--text-secondary);
+      }
+      body.ui-v2 .card.placeholder,
+      body.ui-v2 .card.placeholder * {
         cursor: not-allowed;
       }
       /* Buttons — Primary / Secondary / Destructive vocabulary

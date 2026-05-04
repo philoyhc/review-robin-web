@@ -463,36 +463,33 @@ def test_session_card_buttons_when_draft(
 # ---------------------------------------------------------------------------
 
 
-def test_quick_setup_card_enabled_in_draft(
+def test_quick_setup_card_uses_placeholder_class_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """In draft, Quick Setup mirrors the Extract Data card's shape
-    (heading + one-line description + disabled placeholder
-    button). Both cards share the same layout so the operator's
-    eye reads them as a related pair of placeholders."""
+    """Quick Setup carries the canonical .card.placeholder class
+    (defined in base.html v2 block) in every state. State
+    distinctions live in body copy, not in opacity flips that
+    would desynchronise sibling placeholders."""
 
     review_session = _make_session(client, db, code="qs-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    assert 'class="card" id="quick-setup"' in body
-    assert 'class="card disabled" id="quick-setup"' not in body
+    assert 'class="card placeholder" id="quick-setup"' in body
     assert "<h2>Quick Setup</h2>" in body
-    # Single-line action description, action-oriented (not
-    # self-referential meta copy).
+    # Action-oriented body copy in draft / validated.
     assert "Bulk-populate reviewers, reviewees, and assignments" in body
     # Disabled placeholder button matches the Extract Data shape.
     assert "Quick Setup spec at spec/quick_setup_card_spec.md" in body
 
 
-def test_quick_setup_card_disabled_in_ready(
+def test_quick_setup_card_state_copy_switches_in_ready(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """In ready, Quick Setup carries the .card.disabled modifier
-    (plain greying — no yellow lock card on Home per
-    spec/session_home.md). The contextual primary action card above
-    carries any explanatory messaging the operator needs."""
+    """In ready (Activated), the Quick Setup card keeps the same
+    .card.placeholder treatment as in draft — only the body copy
+    changes to convey "paused while Activated"."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
@@ -502,7 +499,13 @@ def test_quick_setup_card_disabled_in_ready(
 
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
-    assert 'class="card disabled" id="quick-setup"' in body
+    # Same canonical class as in draft — visual treatment is
+    # uniform across states.
+    assert 'class="card placeholder" id="quick-setup"' in body
+    # Copy switches.
+    assert (
+        "Setup edits are paused while the session is Activated" in body
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -573,32 +576,31 @@ def test_delete_session_post_still_rejected_when_ready(
 # ---------------------------------------------------------------------------
 
 
-def test_extract_data_card_disabled_in_draft(
+def test_extract_data_card_uses_placeholder_class_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """In draft, the Extract Data card renders with the disabled
-    treatment and explanatory copy ("nothing to extract yet")."""
+    """Extract Data carries the canonical .card.placeholder class
+    in every state, with copy switching to convey "no responses to
+    extract yet" in draft / validated."""
 
     review_session = _make_session(client, db, code="extract-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    assert 'id="extract-data"' in body
+    assert 'class="card placeholder" id="extract-data"' in body
     assert "<h2>Extract Data</h2>" in body
-    # Disabled treatment is the plain-greyed .card.disabled modifier
-    # per spec/session_home.md (no yellow lock card on Home).
-    assert 'class="card disabled"' in body
     assert "No responses to extract yet" in body
     # The Extract action button is permanently disabled until Segment 12.
     assert "Extract Data lands in Segment 12" in body
 
 
-def test_extract_data_card_visually_enabled_in_ready(
+def test_extract_data_card_state_copy_switches_in_ready(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """In ready (Activated), the card visually enables but the button
-    stays disabled (real extraction lands in Segment 12)."""
+    """In ready (Activated), Extract Data keeps the same
+    .card.placeholder treatment as in draft — only the body copy
+    changes. The Extract button stays disabled (Segment 12)."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
@@ -608,13 +610,8 @@ def test_extract_data_card_visually_enabled_in_ready(
 
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
-    assert 'id="extract-data"' in body
-    # Extract Data card itself loses the .disabled modifier in ready
-    # — assert against the specific id-bearing element rather than
-    # the bare class string (Quick Setup also uses .card.disabled in
-    # ready per PR D's treatment).
-    assert 'class="card disabled" id="extract-data"' not in body
-    assert 'class="card" id="extract-data"' in body
+    # Same canonical class as in draft.
+    assert 'class="card placeholder" id="extract-data"' in body
     # Body copy switches to the "ready to extract" line.
     assert "Extract reviewer responses for analysis or reporting." in body
     # Button is still disabled (Segment 12 placeholder).
