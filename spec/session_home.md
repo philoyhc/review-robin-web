@@ -232,18 +232,6 @@ spec: the primary button is a normal secondary button until the operator
 checks the confirmation box, at which point it activates with destructive
 styling.
 
-## Header region
-
-Above the cards, but below the chrome and status strip:
-
-- **Session name** (H1).
-- **Lifecycle state badge** (adjacent to or below the H1).
-- Optional: session code, in `text-secondary` next to the name.
-
-This consolidates lifecycle state into the page header and removes
-duplication that exists in the current implementation (state appears in
-the status strip and the Session Details card).
-
 ## Lifecycle behavior summary
 
 | State (enum / display) | Primary action card | Quick Setup | Extract Data | Danger Zone Delete Session |
