@@ -37,7 +37,7 @@ Documentation is split across three folders, each with its own README:
 
 - **`spec/`** — surface specifications and design intent (`spec/README.md`).
   Includes `architecture.md`, `functional_spec.md`, `assumptions.md`,
-  `operator_map.md`.
+  `operator_ui_concept.md`.
 - **`docs/`** — reference material about the running system (`docs/README.md`).
   Includes `status.md`, `authentication.md`, `database.md`, `imports.md`,
   `local_setup.md`, `deployment_dev.md`.

@@ -10,7 +10,7 @@
 > - For what ships today (URL by URL, audit event by audit event),
 >   read **`docs/status.md`**.
 > - For the operator-page surface contract, read
->   **`spec/operator_map.md`**.
+>   **`spec/operator_ui_concept.md`**.
 > - For the reviewer-page surface contract, read
 >   **`spec/reviewer_map.md`**.
 > - For the conceptual data model and layering, read

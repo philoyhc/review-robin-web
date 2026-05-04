@@ -24,8 +24,8 @@ Top to bottom:
    visibility toggle + Preview reviewer surface action,
    left-aligned. See "Actions for All Instruments" below.
 4. **Full-width yellow "session ongoing" lock card**, only when
-   the session status is `ready`. See `spec/operator_map.md`
-   "Session ongoing yellow lock card".
+   the session status is `ready`. See `spec/visual_style_rrw.md`
+   "Warning surfaces — shared brown framing > Lock card uses".
 5. **One full-width per-instrument card per instrument**, in
    `Instrument.order`. Card layout in "Per-instrument card" below.
 6. **Full-width "Response Type Definitions" card**. Catalog of
@@ -52,8 +52,8 @@ top to bottom:
    (`Session`, `Reviewers`, `Reviewees`, `Assignments`,
    `Instruments`, `Email Invites`) inside `.setup-nav`. The
    `Instruments` button is rendered as Primary Outline; the
-   rest are Primary. See `spec/operator_map.md` "Setup nav"
-   for the canonical contract.
+   rest are Primary. See `spec/visual_style_rrw.md` "Operator session chrome >
+   Navigation chrome (two-row layout)" for the canonical contract.
 
 The standalone "All Instrument Status" card from earlier drafts
 of the spec is **gone** — its status reporting moves into rows 1

@@ -12,7 +12,7 @@
 
 Specification of the reviewer-facing page surface — the pages a
 signed-in reviewer sees when they follow an invitation link or
-visit `/reviewer` directly. Sibling to `spec/operator_map.md`
+visit `/reviewer` directly. Sibling to `spec/operator_ui_concept.md`
 (operator-facing surface). For per-route detail with template
 paths, form fields, and audit events, see `docs/status.md`'s
 "Reviewer-facing app" URL table.
@@ -24,7 +24,7 @@ that's where reviewers spend ~all of their time.
 ## Cross-page conventions
 
 Reviewer pages render the same chrome as operator pages
-(documented in `spec/operator_map.md` "Cross-page conventions"):
+(documented in `spec/operator_ui_concept.md` "Cross-page chrome"):
 
 - **App identity (top left)** linking to `/about`.
 - **User card (top right)** with "Signed in as {user name}" and
@@ -194,7 +194,7 @@ same `review_surface.html` template renders with `preview_mode=True`:
 - Read-only: emits no audit events and skips the deadline-
   observation lazy-close side-effect.
 
-See `spec/operator_map.md` "/operator/sessions/{id}/preview" for
+See `spec/operator_ui_concept.md` "Per-page contracts > /operator/sessions/{id}/previews — Previews hub" for
 the operator-side spec of the entry point.
 
 ## `/reviewer/invite/{token}` — Invitation landing

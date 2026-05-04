@@ -158,10 +158,12 @@ exists there.
 
 All layout primitives live as classes in
 `app/web/templates/base.html`. Pages whose body splits into two
-parallel groupings use the `.page-grid` two-column pattern
-(documented in detail in `spec/operator_map.md` "Page layout —
-two-column option"). Pages whose body is a single linear flow
-keep the default single-column layout — no wrapper grid needed.
+parallel groupings use the `.page-grid` two-column pattern (or
+`.bottom-grid` when the pair shouldn't stretch to equal heights);
+canonical layout classes are catalogued in
+`spec/ui_elements.md` §10 "Layout primitives". Pages whose body
+is a single linear flow keep the default single-column layout —
+no wrapper grid needed.
 
 #### Primitives reference
 

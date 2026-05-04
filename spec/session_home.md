@@ -278,7 +278,7 @@ UI concept doc:
   `archived`. Note the `ready` → "Activated" display divergence.
 - Stale references to `closed` should be cleaned up.
 
-`spec/operator_map.md`:
+`spec/operator_ui_concept.md`:
 
 - Page-level layout contract for `session_detail.html` updates per
   this spec.

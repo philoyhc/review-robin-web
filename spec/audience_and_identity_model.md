@@ -240,7 +240,7 @@ conventions.
   surfaces): applies the universal components to non-session
   operator chrome and to reviewer-facing chrome. Reads downstream
   from this file for the audience and identity assumptions.
-- **`spec/ui_concept.md`**: page taxonomy and navigation principles
+- **`spec/operator_ui_concept.md`**: page taxonomy and navigation principles
   for the operator surface.
 
 ## Out of scope / forward-looking notes

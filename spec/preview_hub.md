@@ -134,7 +134,7 @@ UI concept doc:
 - The chrome description for Operations adds Preview to the tab list.
 - The `Run Session` card on Home updates its link target.
 
-`spec/operator_map.md`:
+`spec/operator_ui_concept.md`:
 
 - New page entry for `session_preview.html` with its layout contract.
 - Removal or rewriting of the existing `/preview` form-only preview entry.

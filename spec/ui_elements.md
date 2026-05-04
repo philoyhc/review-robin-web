@@ -37,7 +37,7 @@ Cross-references:
 - **`spec/assumptions.md`** — current "as-built" UI vocabulary
   (`.btn` family, layout primitives, banner conventions). Sections
   marked superseded there are pointers into this doc.
-- **`spec/operator_map.md`** — page-level chrome and per-page
+- **`spec/operator_ui_concept.md`** — page-level chrome and per-page
   layout contracts that consume these primitives.
 - **`spec/reviewer_map.md`** — reviewer-surface page contracts.
 
