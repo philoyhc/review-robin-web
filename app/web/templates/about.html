@@ -2,14 +2,20 @@
 
 {% block title %}About — Review Robin Web{% endblock %}
 
+{% block body_class %}ui-v2{% endblock %}
+
 {% block content %}
+  <a class="back-link" href="{{ return_to_url }}">&larr; Back to {{ return_to_label }}</a>
+
   <h1>About</h1>
 
-  <p>
-    Review Robin Web is an internal tool for running peer-review sessions:
-    operators upload reviewers and reviewees, generate assignments, and
-    monitor reviewer progress through a deadline.
-  </p>
+  <div class="card">
+    <p>
+      Review Robin Web is an internal tool for running peer-review sessions:
+      operators upload reviewers and reviewees, generate assignments, and
+      monitor reviewer progress through a deadline.
+    </p>
 
-  <p class="muted">version {{ app_version }}</p>
+    <p class="muted">version {{ app_version }}</p>
+  </div>
 {% endblock %}

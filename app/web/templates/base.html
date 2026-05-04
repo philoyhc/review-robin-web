@@ -1111,6 +1111,28 @@
         font-size: var(--fs-small);
         color: var(--text-secondary);
       }
+      /* Return-to-origin "← Back to {context}" link rendered at the
+         top of detour destinations (About, /me/debug). Per
+         spec/visual_style_rrw.md "Return-to-origin behavior". */
+      body.ui-v2 .back-link {
+        display: inline-block;
+        margin-bottom: var(--space-3);
+        color: var(--accent-blue);
+        font-size: var(--fs-small);
+        text-decoration: none;
+      }
+      body.ui-v2 .back-link:hover { text-decoration: underline; }
+      /* Inline link in the chrome user menu (e.g. About). Sits
+         between the identity line and the sign-out button. */
+      body.ui-v2 .chrome-user .chrome-link {
+        display: inline-block;
+        margin-top: var(--space-1);
+        margin-right: var(--space-2);
+        color: var(--accent-blue);
+        font-size: 0.9em;
+        text-decoration: none;
+      }
+      body.ui-v2 .chrome-user .chrome-link:hover { text-decoration: underline; }
     </style>
   </head>
   <body class="{% block body_class %}{% endblock %}">
@@ -1122,6 +1144,9 @@
       {% if user %}
         <div class="chrome-user">
           <div>Signed in as {{ user.display_name or user.email }}</div>
+          {% if request.url.path not in ("/about", "/me/debug") %}
+            <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
+          {% endif %}
           <a class="signout" href="/.auth/logout">Sign out</a>
         </div>
       {% endif %}
