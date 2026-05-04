@@ -177,6 +177,7 @@ def validate_session(
         {
             "user": user,
             "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
             "issues": issues,
             "error_count": len(report.errors),
             "warning_count": len(report.warnings),
