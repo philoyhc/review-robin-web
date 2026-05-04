@@ -131,11 +131,14 @@ def test_session_detail_renders_session_layout(
 
     assert response.status_code == 200
     assert "<h2>Session Details</h2>" in body
-    # Per spec/session_home.md, the contextual primary action card
-    # replaces the old "Run Session" four-CTA card; on a brand new
-    # draft session the action is "Validate Setup".
-    assert 'id="contextual-action"' in body
-    assert "<h2>Validate Setup</h2>" in body
+    # Per spec/session_home.md, the Next action card replaces the
+    # old "Run Session" four-CTA card. The card title is constant
+    # ("Next action") across lifecycle states; the per-state action
+    # surfaces as the primary button label inside the card.
+    assert 'id="next-action"' in body
+    assert "<h2>Next action</h2>" in body
+    # Draft state: primary button is "Validate Setup".
+    assert ">Validate Setup</a>" in body
     assert "<h2>Run Session</h2>" not in body
     assert "Danger Zone" in body
     assert 'id="danger-zone"' in body
@@ -185,9 +188,10 @@ def test_session_detail_no_validate_summary_by_default(
     review_session = _make_session(client, db, code="no-summary")
     body = client.get(f"/operator/sessions/{review_session.id}").text
     # Brand-new draft session — no validation card and no Activate
-    # form should appear. The contextual action card is in its
-    # "Validate Setup" state.
-    assert "<h2>Validate Setup</h2>" in body
+    # form should appear. The Next action card surfaces "Validate
+    # Setup" as its primary button.
+    assert "<h2>Next action</h2>" in body
+    assert ">Validate Setup</a>" in body
     assert "<h2>Validation summary</h2>" not in body
     assert (
         f'action="/operator/sessions/{review_session.id}/activate"'
@@ -205,15 +209,17 @@ def test_session_detail_advances_to_validated_with_query(
         f"/operator/sessions/{review_session.id}?validated=1"
     ).text
 
-    # The contextual action card now shows the Activated-state shape
-    # (Activate Session button + Setup validated pill).
-    assert "<h2>Activate Session</h2>" in body
+    # The Next action card stays titled "Next action" — the per-state
+    # action surfaces as the primary button label inside.
+    assert "<h2>Next action</h2>" in body
+    assert ">Activate Session</button>" in body
     assert "Setup validated" in body
     # Activate form on the card.
     assert (
         f'action="/operator/sessions/{review_session.id}/activate"' in body
     )
-    # Supporting links include validation detail.
+    # Supporting actions include validation detail (now a Secondary
+    # button rather than an inline link).
     assert (
         f'href="/operator/sessions/{review_session.id}/validate"' in body
     )
@@ -234,14 +240,14 @@ def test_validated_session_keeps_action_card_without_query(
     with_query = client.get(
         f"/operator/sessions/{review_session.id}?validated=1"
     ).text
-    assert "<h2>Activate Session</h2>" in with_query
+    assert ">Activate Session</button>" in with_query
 
     # On a refresh without the query, the card stays — state, not URL,
     # drives the contents now.
     without_query = client.get(
         f"/operator/sessions/{review_session.id}"
     ).text
-    assert "<h2>Activate Session</h2>" in without_query
+    assert ">Activate Session</button>" in without_query
     assert (
         f'action="/operator/sessions/{review_session.id}/activate"'
         in without_query
@@ -647,11 +653,11 @@ def test_chrome_status_pill_renders_activated_for_ready_session(
 
 
 # ---------------------------------------------------------------------------
-# Slice 11B — Contextual primary action card per state
+# Slice 11B — Next action card per state
 # ---------------------------------------------------------------------------
 
 
-def test_contextual_action_card_in_ready_renders_pause(
+def test_next_action_card_in_ready_renders_pause(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
@@ -664,16 +670,21 @@ def test_contextual_action_card_in_ready_renders_pause(
 
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
-    # Action card shows Pause Session header + form posting to /revert.
-    assert "<h2>Pause Session</h2>" in body
+    # Card title is constant ("Next action"); the action verb lives
+    # in the primary button label inside.
+    assert "<h2>Next action</h2>" in body
+    assert ">Pause Session</button>" in body
+    # Pause form posts to /revert, with the button outside the form
+    # and wired via the form="..." attribute.
     assert (
         f'action="/operator/sessions/{review_session.id}/revert"' in body
     )
-    assert "Pause Session" in body
-    # Activated-state supporting links present.
-    assert "Manage invitations" in body
-    assert "Monitor responses" in body
-    assert "Preview reviewer surface" in body
+    assert 'form="next-action-pause-form"' in body
+    # Activated-state supporting actions are now Secondary buttons
+    # (anchors styled .btn.secondary), not inline links.
+    assert ">Manage invitations</a>" in body
+    assert ">Monitor responses</a>" in body
+    assert ">Preview reviewer surface</a>" in body
     # Old "Run Session" header is gone.
     assert "<h2>Run Session</h2>" not in body
 
