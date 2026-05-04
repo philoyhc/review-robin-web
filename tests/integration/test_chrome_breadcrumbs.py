@@ -97,16 +97,21 @@ def test_breadcrumb_is_suppressed_on_reviewer_root(
     assert '<span aria-current="page">Reviewer</span>' not in body
 
 
-def test_sessions_list_per_row_renders_access_and_delete_buttons(
+def test_sessions_list_row_renders_name_link_and_delete_button(
     client: TestClient, db: Session
 ) -> None:
     review_session = _create_session(client, db)
     response = client.get("/operator/sessions")
     body = response.text
+    # The session name in the first column is the row's link into Home;
+    # the redundant Access button was retired once the name became the
+    # primary affordance.
     assert (
-        f'<a class="btn secondary" href="/operator/sessions/{review_session.id}">Access</a>'
+        f'<a href="/operator/sessions/{review_session.id}">{review_session.name}</a>'
         in body
     )
+    assert ">Access</a>" not in body
+    # Delete sits in the unlabelled trailing action column.
     assert (
         f'<a class="btn danger-solid" href="/operator/sessions/{review_session.id}#danger-zone">Delete</a>'
         in body

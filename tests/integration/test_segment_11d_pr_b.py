@@ -36,24 +36,63 @@ def test_sessions_list_renders_v2_table_inside_a_card(
     # original D4 cards-vs-table decision).
     assert "<table>" in body
     assert "class=\"card session-card\"" not in body
-    # The session name is the row's primary anchor into Session Home.
+    # The session name is the row's primary anchor into Session Home —
+    # there's no separate Access button.
     assert (
         f'<a href="/operator/sessions/{session.id}">{session.name}</a>'
     ) in body
-    # Lifecycle pill renders via the canonical lifecycle_label filter.
-    assert f'class="pill pill-lifecycle-{session.status}"' in body
+    assert ">Access</a>" not in body
 
 
-def test_sessions_list_row_shows_code_and_deadline_state(
+def test_sessions_list_columns_match_spec(
     client: TestClient, db: Session
 ) -> None:
+    """Six labelled columns (Session Name / Session Code / Deadline /
+    Created by / Created / Last Modified) plus an unlabelled action
+    column for the Delete button."""
+    _create_session(client, db, code="rrw-cols")
+    body = client.get("/operator/sessions").text
+    assert "<th>Session Name</th>" in body
+    assert "<th>Session Code</th>" in body
+    assert "<th>Deadline</th>" in body
+    assert "<th>Created by</th>" in body
+    assert "<th>Created</th>" in body
+    assert "<th>Last Modified</th>" in body
+    # Trailing action column has no header label.
+    assert '<th class="col-shrink"></th>' in body
+
+
+def test_sessions_list_deadline_renders_as_pill_when_set(
+    client: TestClient, db: Session
+) -> None:
+    """Deadline values render as `.pill.pill-info` (a salient stand-out
+    cell, vs the plain "No deadline" text used when unset)."""
+    # Create with no deadline first — assert the empty-state copy.
     _create_session(client, db, code="rrw-no-dl")
     body = client.get("/operator/sessions").text
-    assert "<th>Code</th>" in body
-    assert "<th>Deadline</th>" in body
-    # Newly created sessions have no deadline yet — the cell says so
-    # rather than dropping the field silently.
     assert "No deadline" in body
+    # Now create one with a deadline and check the pill.
+    client.post(
+        "/operator/sessions",
+        data={
+            "name": "With Deadline",
+            "code": "rrw-with-dl",
+            "deadline": "2026-12-31T23:59",
+        },
+        follow_redirects=False,
+    )
+    body = client.get("/operator/sessions").text
+    assert 'class="pill pill-info">2026-12-31' in body
+
+
+def test_sessions_list_shows_creator_created_and_modified_dates(
+    client: TestClient, db: Session
+) -> None:
+    _create_session(client, db, code="rrw-meta")
+    body = client.get("/operator/sessions").text
+    # Created-by reads from the signed-in user's display name (Alice
+    # Example via the conftest fake-auth fixture).
+    assert "Alice Example" in body
 
 
 def test_sessions_list_empty_state_renders_prominent_cta(

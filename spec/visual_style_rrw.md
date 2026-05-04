@@ -265,14 +265,16 @@ This page is the operator's "lobby" and is the natural landing page when signing
 
 - **H1:** "Sessions" or "My Sessions".
 - **Body:** A v2 table inside a single `.card`. Columns:
-  - Session name (linked to that session's Home).
-  - Code.
-  - Status — lifecycle pill (using the display labels: Draft, Validated, Activated, etc.).
-  - Deadline.
-  - Actions — Access (Secondary) + Delete (legacy `danger-solid` until #23 retires it for a POST form).
+  - **Session Name** — linked to that session's Home. The name is the row's primary affordance; there's no separate Access button.
+  - **Session Code** — rendered in `<code>`.
+  - **Deadline** — `.pill.pill-info` carrying the ISO date when set; plain muted "No deadline" when unset.
+  - **Created by** — display name of the operator who created the session (falls back to email).
+  - **Created** — `YYYY-MM-DD`.
+  - **Last Modified** — `YYYY-MM-DD`.
+  - **Action** — unlabelled trailing column carrying the per-row Delete button (legacy `danger-solid` until #23 retires the anchor for a POST form).
 - **Create Session affordance:** primary button in the top-right of the list area, labeled "Create new session". When the list is empty, this becomes the page's prominent affordance, rendered larger inside the empty-state `.card` (a `.btn-cta` with explanatory text).
 
-> **History.** This page tried a per-session-card layout briefly during Segment 11D PR B (D4) on the rationale that cards read more like a "lobby" than a table does. The card layout was reverted on 2026-05-04 in favour of the table — at the operator's lobby, dense scannable rows matter more than per-card framing, and the columns above all have natural width budgets. The lifecycle badges reuse the badge component with the lifecycle color treatments above; the table picks up the v2 row-only borders + muted header treatment from `body.ui-v2 table`.
+> **History.** This page tried a per-session-card layout briefly during Segment 11D PR B (D4) on the rationale that cards read more like a "lobby" than a table does. The card layout was reverted on 2026-05-04 in favour of the table — at the operator's lobby, dense scannable rows matter more than per-card framing, and the columns above all have natural width budgets. A short-lived intermediate Status column (lifecycle pill) was retired the same day once the column set above settled. The table picks up the v2 row-only borders + muted header treatment from `body.ui-v2 table`.
 
 #### About / Settings / Create Session
 
