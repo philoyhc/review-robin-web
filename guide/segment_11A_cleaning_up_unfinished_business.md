@@ -2,7 +2,7 @@
 
 (Originally drafted as Segment 10E before the 2026-05-03 segment renumber promoted it. Cross-references in older docs may still point to "10E" by name.)
 
-**Status (2026-05-03):** Tiers 1, 2, and 3 closed. Only the Tier 4 medium-feature work remains. Land Tier 4 before Segment 12 (export / audit retention) starts so the operator surface settles cleanly.
+**Status (2026-05-04):** Tiers 1, 2, and 3 closed. Tier 4 closed except for two remaining items (`#21b` non-session-centric v2 sweep; `#24` operator-editable email template editor). Segment 11B (Session Home rebuild) shipped end-to-end and absorbed `#22` + `#30`. `#5` (audit-event detail schema) gates Segment 12 and remains the latest item that must precede it.
 
 This was a punch list cleaning up Segments 1–10 — small bug fixes, deferred decisions, surfaced polish. Most items shipped or had decisions recorded; a smaller group was deferred to Segment 13 / Segment 15.
 
@@ -14,13 +14,15 @@ Dense list. PRs and catalog entries linked for detail.
 
 ### Code shipped
 
-- **#9** — `get_or_create_default_instrument` docstring refresh — done (PR #309)
-- **#8** — CSV email-validation drift; shared `_parse_email` helper — done (PR #314)
-- **#12** — CSV cross-table identity check — done (PR #315)
-- **Reviewer surface heading mismatch** — position-based fallback matching the operator surface — done (PR #319)
-- **Reviewer surface UI polish batch** — heading display logic; help text inline; Reviewee column dedup; Photo `View` link; column-width hints by cell type; trailing status-column hide-when-empty; card framing aligned with `spec/visual_style_general.md`; help-text indentation fix — done (PRs #320 → #324)
-- **#10** — `correlation_id` into deadline lazy-close — done (PR #329)
-- **#6** — Decouple `invitations.py` from FastAPI `Request` — done (PR #330)
+- **#9** — `get_or_create_default_instrument` docstring refresh (PR #309)
+- **#8** — CSV email-validation drift; shared `_parse_email` helper (PR #314)
+- **#12** — CSV cross-table identity check (PR #315)
+- **Reviewer surface heading mismatch** — position-based fallback matching the operator surface (PR #319)
+- **Reviewer surface UI polish batch** — heading display logic; help text inline; Reviewee column dedup; Photo `View` link; column-width hints by cell type; trailing status-column hide-when-empty; card framing aligned with `spec/visual_style_general.md`; help-text indentation fix (PRs #320 → #324)
+- **#10** — `correlation_id` into deadline lazy-close (PR #329)
+- **#6** — Decouple `invitations.py` from FastAPI `Request` (PR #330)
+- **#21a** — v2 sweep across the session-centric pages: `session_reviewers.html`, `session_reviewees.html`, `session_assignments.html`, `session_invitations.html`, `session_monitoring.html`, `session_outbox.html`, `session_validate.html`, `session_setupinvite.html` (placeholder), `session_previews.html` (placeholder), `session_detail.html` (Session Home), `instruments_index.html`, plus the `session_setup_status_row.html` partial. Tracked in `guide/ui_checklist.md`.
+- **#22 + #30** — Session Home rebuild + Quick Setup placeholder card. Placeholder card shipped during the v2 Home sweep; full Home rebuild closed via **Segment 11B** (PRs #380 → #393, plan at `guide/segment_11B_session_home.md`, functional spec at `spec/session_home.md`). The 11B work also introduced the canonical `.card.placeholder` class + `placeholder_card` Jinja macro (now reused on the Assignments page's Rule Based Assignment card) and the `.card.next-action` treatment for Session Home's Next Action card.
 
 ### Decisions recorded
 
@@ -40,11 +42,9 @@ Dense list. PRs and catalog entries linked for detail.
 
 | # | Item | Notes |
 |---|------|-------|
-| 1 | **#21a — pages already on v2** | Session-centric pages migrated onto `body.ui-v2` and ticked off in `guide/ui_checklist.md`: `session_reviewers.html`, `session_reviewees.html`, `session_assignments.html`, `session_invitations.html`, `session_monitoring.html`, `session_outbox.html`, `session_validate.html`, `session_setupinvite.html` (placeholder), `session_previews.html` (new placeholder), `session_detail.html` (Session Home), `instruments_index.html` (the heaviest template). Plus the `session_setup_status_row.html` partial. The principles, primitives, and PR recipe are settled — these PRs landed mechanically. |
-| 2 | **#22 + #30 — Session Home rebuild + Quick Setup card** | **Transferred to Segment 11B** (`guide/segment_11B_session_home.md`). Functional spec at `spec/session_home.md`. The placeholder Quick Setup card on Home shipped during the v2 Home sweep; the real card per `spec/quick_setup_card_spec.md` plus the Contextual primary action card and the rest of the Home rebuild land under 11B. |
-| 3 | **#21b — remaining non-session-centric pages** | The pages that are not operator-session-scoped (no session top nav). Pending: `sessions_list.html` (Operator's Overview), `session_new.html` (Create Session form), `session_edit.html` (sub-page form, not chrome'd like Setup pages), all three reviewer templates (`reviewer/dashboard.html`, `reviewer/review_surface.html`, `reviewer/invite_mismatch.html`), `about.html`, `me_debug.html`. Mechanical port-the-template work using the same recipe as #21a, but the non-session chrome conventions in `spec/visual_style_rrw.md` "Non-session and reviewer chrome" apply (light top bar, return-to-origin for About/Settings, reviewer top bar variant). Tracked per-page in `guide/ui_checklist.md`. |
-| 4 | **#24 — Operator-editable email template editor** | Ships **after** the UI clean up bundle. Operator-facing surface at `/operator/sessions/{id}/setupinvite` (currently a stub). New schema column `email_template_overrides` (JSON on `ReviewSession`); body render moves from hardcoded `_email_body` / `_reminder_body` to template + merge fields. Help-contact merge field reads from `ReviewSession.help_contact` per the §24 decision. Tier 3 prerequisite (#6 — decouple `invitations.py` from `Request`) shipped 2026-05-03. Catalog `unfinished_business.md` #24. |
-| 5 | **#5 — Audit-event `detail` schema convention** | Spec write-up in `spec/architecture.md` then incremental emitter migration. Segment 12 (export / audit retention) needs this stable. Catalog `unfinished_business.md` #5. |
+| 1 | **#21b — remaining non-session-centric pages** | Pages outside the operator-session chrome. Pending: `sessions_list.html` (Operator's Overview), `session_new.html` (Create Session form), `session_edit.html` (sub-page form, not chrome'd like Setup pages), all three reviewer templates (`reviewer/dashboard.html`, `reviewer/review_surface.html`, `reviewer/invite_mismatch.html`), `about.html`, `me_debug.html`. Mechanical port-the-template work using the same recipe as #21a, but the non-session chrome conventions in `spec/visual_style_rrw.md` "Non-session and reviewer chrome" apply (light top bar, return-to-origin for About/Settings, reviewer top bar variant). Tracked per-page in `guide/ui_checklist.md`. |
+| 2 | **#24 — Operator-editable email template editor** | Operator-facing surface at `/operator/sessions/{id}/setupinvite` (currently a stub). New schema column `email_template_overrides` (JSON on `ReviewSession`); body render moves from hardcoded `_email_body` / `_reminder_body` to template + merge fields. Help-contact merge field reads from `ReviewSession.help_contact` per the §24 decision. Tier 3 prerequisite (#6 — decouple `invitations.py` from `Request`) shipped 2026-05-03. Catalog `unfinished_business.md` #24. |
+| 3 | **#5 — Audit-event `detail` schema convention** | Spec write-up in `spec/architecture.md` then incremental emitter migration. Segment 12 (export / audit retention) needs this stable. Catalog `unfinished_business.md` #5. |
 
 ---
 
