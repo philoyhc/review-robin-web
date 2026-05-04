@@ -27,18 +27,98 @@ Out:
 - Operator settings page. Doesn't exist yet; the spec mentions it as a future destination for the user-menu Settings link, but no template ships in 11D.
 - AG Grid replacement of the reviewer-surface table (#33) — Segment 15.
 
+## Visual-style decisions this segment makes
+
+11D is mostly mechanical, but it does cross three deliberate visual-style boundaries that didn't apply during 11A / 11B. Settle them up front so per-template work doesn't get re-litigated.
+
+### D1 — Operator user menu structure (non-session top bar)
+
+Per `spec/visual_style_rrw.md` "Non-session operator pages → Top bar":
+
+- **Left:** "Review Robin Web App (version {dev})" — already in `base.html`, rendered in `text-secondary`. No change.
+- **Right user menu:** today shows "Signed in as …" + "Sign out". The spec asks for **About** and **Settings** as additional inline links between the identity line and Sign out (with **return-to-origin** behaviour — see D3). Settings has no template yet, so **11D adds About only**; the Settings link slot waits for a Settings page to ship. The user menu stays inline (three items: identity, About, Sign out); promotion to a dropdown is a future concern when the menu grows.
+
+### D2 — Reviewer top bar variant (new chrome branch)
+
+Per `spec/visual_style_rrw.md` "Reviewer-facing pages → Top bar", reviewer pages render a **lighter** top bar:
+
+- **Left:** "Review Robin" — small, `text-secondary`. **No version.**
+- **Right user menu:** "Signed in as [Reviewer Name]" + "My Reviews" (only when the reviewer has more than one review pending or completed; suppressed otherwise) + "Sign out".
+- **No breadcrumb.** Operator-style breadcrumbs don't apply to reviewer surfaces.
+
+`base.html` today renders the operator chrome unconditionally. 11D introduces a single template branch (the cleanest path is a new `{% block top_bar %}` whose default block emits the operator chrome and which the reviewer templates override). The branch lives entirely in `base.html` plus a one-line override in each of the three reviewer templates.
+
+### D3 — Return-to-origin affordance (About / future Settings)
+
+Per `spec/visual_style_rrw.md` "Return-to-origin behavior":
+
+- About and `/me/debug` are detour destinations. Operator opens them, then wants to return to whatever they were doing.
+- Origin captured via `?return_to=<path>` query param, allowlisted to `/operator/sessions`, `/operator/sessions/{int}`, `/operator/sessions/{int}/{tab}`, `/reviewer`, `/reviewer/sessions/{int}`. Anything outside the allowlist falls back to `/operator/sessions` (the operator's natural lobby).
+- The page renders **"← Back to {context}"** in `accent-blue`, near the top of the page body (above the H1). Label disambiguates by context where it can: "← Back to Sessions" for the sessions list, "← Back to {session name}" for a session, "← Back to your reviews" for a reviewer page.
+- Plumbing: a small helper in `app/web/breadcrumbs.py` (or a new tiny module) parses + validates `request.query_params.get("return_to")` and threads `(return_to_url, return_to_label)` into the template context.
+
+### D4 — Sessions list lobby: cards-vs-table
+
+Per `spec/visual_style_rrw.md` "Operator's Overview (Sessions list)" §, the lobby renders a **list or grid of session cards**, not a `<table>`. Each card carries: session name (linked), lifecycle state badge (using `lifecycle_label` display labels), deadline, brief setup-readiness summary (count badges or single status summary).
+
+The current `sessions_list.html` is a 7-column `<table>`. Migrating to cards is a larger restructure than just swapping classes — the column headers go away, layout becomes a flex column of `.card` rows, and the per-row Action buttons (Access / Delete) move into each card.
+
+**Decision:** PR B does this restructure. It's the bigger of the two PR B sub-pieces and is what lets the lobby read as the "operator's natural landing page" the spec calls for.
+
+### D5 — Status icons on the response surface
+
+Per `spec/ui_elements.md` §9 "Status-symbol indicators", the inline-styled `✓` / `⚠` glyphs in `review_surface.html:190,193` migrate to `.status-icon-complete` / `.status-icon-incomplete` classes. New classes land in the `body.ui-v2` block in `base.html`:
+
+```css
+body.ui-v2 .status-icon-complete   { color: var(--accent-green); font-weight: 600; }
+body.ui-v2 .status-icon-incomplete { color: var(--accent-amber-dark); font-weight: 600; }
+```
+
+No new tokens; reuses the existing palette.
+
+### D6 — Reviewer-surface banners
+
+Per `spec/ui_elements.md` §5, the four `.warning-banner` / one-off banners on the reviewer surface migrate to the canonical four-variant `.banner` family:
+
+| Current | New |
+|---|---|
+| Preview-mode notice (currently a recoloured-blue `.warning-banner`) | `.banner.banner-info` |
+| `?saved=ok` flash | `.banner.banner-success` (or no banner if it can be implicit) |
+| `?submitted=ok` flash | `.banner.banner-success` |
+| Missing-required acknowledge prompt (`acknowledge_missing` checkbox) | `.banner.banner-warning` |
+| Session-closed / not-accepting state | `.banner.banner-warning` |
+
+### D7 — Reviewer-surface page header
+
+Per `spec/visual_style_rrw.md` "Response surface → Page header", the reviewer surface renders:
+
+- Session name as **H1**.
+- Deadline as a small line in `text-secondary` near the H1.
+- (Optional, future) institution / operator name; (optional, future) operator-configured welcome message — both **deferred** to whichever segment ships those data fields. 11D doesn't add new schema.
+
+The current template's `<h1>{{ session.name }}</h1>` (line 15) already does the H1. Add a `.form-help`-style small line below it for the deadline; everything else 11D leaves alone.
+
+### Out of scope (deliberate)
+
+- **Multi-instrument tab strip on the response surface** (`spec/visual_style_rrw.md` "Multi-instrument navigation"). The current reviewer surface loops by instrument with section headings; the spec calls for a single horizontal tab strip when there's more than one instrument. This is a structural change with its own UX considerations (per-tab completion indicator, free movement, save-on-tab-change). **Defer to Segment 15** under reviewer-surface polish (catalog `unfinished_business.md` #32).
+- **Sign-in surface.** Easy Auth handles sign-in today; there's no in-app sign-in template. Spec mentions it as a future concept.
+- **Submission-confirmation page.** Currently folded into `review_surface.html` via the `?submitted=ok` flash banner. The spec describes it as a separate "thank you" page; **defer** to whichever segment introduces the standalone page.
+- **Error / expired states for reviewers.** The spec says reviewer pages should render error states without operator vocabulary. The existing `invite_mismatch.html` already does this for the token-mismatch case; broader error / expired states are out of scope for 11D.
+
 ## Templates and gap against the spec
 
-| Template | LOC | What changes |
-|---|---|---|
-| `sessions_list.html` | 44 | Set `body.ui-v2`. Light non-session top bar (already in `base.html`). H1 to "Sessions" or "My Sessions" per spec. Replace the bare `<table>` with v2 table treatment (already in `base.html` v2 block). Lifecycle column already routes through `lifecycle_label` (PR #381). The two per-row buttons (`<a class="btn">Access</a>`, `<a class="btn danger-solid">Delete</a>`) need the role swap: Access → Secondary; Delete is a navigation link to the session's `#danger-zone`, deferred-fix-or-real-delete is **#23** (Segment 15) — leave as-is for now. The bottom "Create new session" link → Primary (single page-level affirmative action). |
-| `session_new.html` | 32 | Set `body.ui-v2`. Form labels / inputs / helper text → v2 form treatment (`.form-help`, `8/12` padding). Submit button → Primary; Cancel → Secondary. |
-| `about.html` | 15 | Set `body.ui-v2`. Add the **return-to-origin** affordance: read `?return_to=…` from the URL, render "← Back to …" link in `accent-blue` at the top of the body, default to `/operator/sessions`. Light cleanup of any inline styles. |
-| `me_debug.html` | 101 | Set `body.ui-v2`. Same return-to-origin affordance as `about.html`. The headers / claim list switches to v2 typography; if any inline-styled tables, swap for v2 tables. |
-| `session_edit.html` | 37 | **Gains the two-row session chrome** (currently has none) per `spec/visual_style_rrw.md` "Sub-pages of Home (Edit Session): chrome renders normally with no tab active". Wrap the form body in a `.card`. Form fields → v2 form treatment. Save button → Primary; Cancel → Secondary. Drop the `.page-grid` / `.fill-col` two-column layout if it doesn't read as natural inside a card; otherwise tokenize. |
-| `reviewer/dashboard.html` | 52 | Set `body.ui-v2`. Light **reviewer top bar** ("Review Robin", no version) — currently `base.html` renders the operator chrome unconditionally; needs a body-class branch (e.g. `body.reviewer-surface` or just `body.ui-v2.reviewer`). Status pill column: `pill-info "submitted"` and `pill-warning "in progress"` are using the v2-aliased pills already; verify they read right under the new treatment. H1 → "Your reviews" stays. Linkified table cells → v2 table hover. Empty-state card → standard v2 `.card`. |
-| `reviewer/invite_mismatch.html` | 22 | Set `body.ui-v2`. Whatever banner / card the page renders should use the `.banner.banner-warning` family or the standard `.card`. Reviewer top bar applies. |
-| `reviewer/review_surface.html` | 254 | Heaviest sweep. Set `body.ui-v2`. Reviewer top bar. Per-instrument cards on v2 default treatment; the per-cell inline-styled severity icons (`✓` / `⚠`) migrate to `.status-icon-complete` / `.status-icon-incomplete` per `spec/ui_elements.md` §9. Save / Submit / Clear buttons follow the Primary / Secondary / Destructive split. Preview-mode banner should use `.banner.banner-info`. Existing column-width hint classes (`.rs-narrow`, `.rs-reviewee`, `.rs-textlong`) stay. |
+For each template, the **Visual style** column names the canonical primitives the sweep applies and the spec sections that govern them. The **Behaviour** column names anything beyond a primitive swap (e.g. structural restructuring, new helpers).
+
+| Template | LOC | Visual style | Behaviour |
+|---|---|---|---|
+| `sessions_list.html` | 44 | `body.ui-v2`. Operator non-session top bar (D1). Page body uses **session cards** (D4) — a flex column of `.card` rows, each carrying session name (link, body text), lifecycle pill via `lifecycle_label` (already in place from PR #381), deadline (small text-secondary), Access link (Secondary), Delete link (legacy `<a class="btn danger-solid">` stays — #23 in Segment 15). H1: "Sessions". Top-right primary "Create new session" → Primary; on empty state, becomes the page's prominent affordance per `spec/visual_style_rrw.md` "Operator's Overview". | None beyond the table → cards restructure (D4). |
+| `session_new.html` | 32 | `body.ui-v2`. Operator non-session top bar (D1). Form labels above inputs (`text-primary`, medium-500) per `spec/visual_style_general.md` §Forms; inputs `8/12` padding, focus state in `accent-blue`; helper text via `.form-help`. Submit → Primary; Cancel anchor → Secondary. Single `.card` wraps the form. | None. |
+| `about.html` | 15 | `body.ui-v2`. Operator non-session top bar (D1). Return-to-origin link (D3) at top of body, in `accent-blue`. Body content sits in a single `.card` or as loose markup (whichever reads cleaner — the page is currently a couple of paragraphs). | New return-to-origin helper (D3) — a small parser + allowlist + label-by-context. Used by both `about.html` and `me_debug.html`. |
+| `me_debug.html` | 101 | `body.ui-v2`. Operator non-session top bar (D1). Return-to-origin link (D3). Claim list as a `<dl>` or `<table>` with v2 table treatment (`bg-muted` header, row-only borders, `12/16` cell padding) per `spec/visual_style_general.md` §Tables. Sign-out / sign-out-as-X anchors → Secondary. | Inline styles retired (the page has a few inline `style="…"` blocks today). |
+| `session_edit.html` | 37 | `body.ui-v2`. **Gains the two-row session chrome** with no tab active per `spec/visual_style_rrw.md` "Sub-pages of Home" — include `operator/partials/session_top_nav.html` with `current_page = ""` plus the status row partial. Form lives inside a single `.card`; fields use v2 form treatment per `spec/visual_style_general.md` §Forms. Save button → Primary; Cancel → Secondary. H1 "Edit Session" inside the card. | Verify `session_edit` route already passes `status_pills` to the template (the partial requires it). If not, add the dependency to the route. |
+| `reviewer/dashboard.html` | 52 | `body.ui-v2 reviewer`. **Reviewer top bar** (D2) — "Review Robin" identity, "Signed in as …" + "My Reviews" (suppress when only one review) + "Sign out". H1 "Your Reviews" inside `.card`. Per-row status pill: keep `pill-info` / `pill-warning` (the v2 aliases for `pill-count` / `pill-empty`); a `pill-success` for the submitted state may read better than `pill-info` and is worth a small tweak. Empty-state copy in `text-secondary` per `spec/visual_style_rrw.md` "Reviewer's review list → Body" ("You have no pending reviews."). | None beyond the body-class addition + reviewer top bar branch in `base.html` (D2). |
+| `reviewer/invite_mismatch.html` | 22 | `body.ui-v2 reviewer`. Reviewer top bar (D2). Body content — currently the email-mismatch error — renders as a `.banner.banner-warning` near the top of the page body, per `spec/visual_style_rrw.md` "Error / expired states" (no operator vocabulary; plain language; surface contact info if present). | None. |
+| `reviewer/review_surface.html` | 254 | `body.ui-v2 reviewer`. Reviewer top bar (D2). **Page header** per D7: H1 = session name (already in place); deadline as a small `text-secondary` line below it. Inline `✓` / `⚠` glyphs migrate to `.status-icon-*` classes (D5). Banners migrate to the four-variant `.banner` family (D6). Save → Primary; Submit → Primary (only when on a different per-instrument page section, otherwise Secondary — single Primary per page region per `spec/visual_style_general.md` §Buttons P1, but Save / Submit are usually surfaced together; pick Save = Primary, Submit = Secondary unless review prefers the inverse). Clear all → Destructive. Cancel → Secondary. Per-instrument cards use the default `.card` treatment; existing `.rs-help-card` family stays as-is per `spec/ui_elements.md` §4. Column-width hint classes (`.rs-narrow` / `.rs-reviewee` / `.rs-textlong`) stay. | New `.status-icon-*` classes added to `base.html` v2 block (D5). |
 
 ## PR sequence
 
