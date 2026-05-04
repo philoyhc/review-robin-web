@@ -39,6 +39,69 @@ Lifecycle state always appears first in the status strip, leftmost, before per-e
 
 ---
 
+## Page composition — card kinds and layout
+
+Review Robin pages **compose from cards**. The page body is rarely loose markup; instead, every distinct concern on a page lands in its own card. Cards are the unit of layout, the unit of mobile collapse, and the unit of "this region is about one thing".
+
+The general visual spec (`spec/visual_style_general.md` Components > Cards) defines the card *shape* (white background, `border-default` 2px border, 8px corner radius, 16-24px padding, no shadow), plus the Lock-card and Danger-zone variants. This section adds the Review-Robin layout discipline and card-kind taxonomy.
+
+### Width discipline
+
+Cards are either **full-width** or **half-width**:
+
+- **Full-width.** The default. The page body stacks full-width cards vertically. Use this whenever a card stands alone or its content doesn't have a natural pair to sit beside.
+- **Half-width pair.** When two cards carry comparable weight that benefits from side-by-side reading, pair them in a `.bottom-grid` — a 2-column grid with `align-items: start` so each side keeps its natural height (no stretch to match the taller column). Example pairings on operator pages:
+  - Reviewers / Reviewees / Assignments: Upload card (left) + Danger Zone (right).
+  - Session Home: Run Session / Validation Summary / Quick Setup stack on the left; Session Details + Danger Zone stack on the right (each side is its own `.bottom-left` flex column).
+- **Nested half-within-full.** Inside a full-width card, two half-width sub-cards can sit side-by-side when the affordance needs that arrangement. Example: each per-instrument card on the Instruments page is full-width, with Display Fields + Response Fields half-cards side-by-side inside (the `.field-builder` `.bottom-grid` pattern).
+
+`.page-grid` (with `align-items: stretch` for L-shape equal-height layouts and explicit placement classes `.card-tl` / `.card-tr` / `.card-bl` / `.card-br`) is the legacy default; **`.bottom-grid` is preferred** for new pairings since natural heights almost always read better than stretched ones.
+
+### Mobile ordering = DOM order
+
+All grids collapse to a single column at narrow viewports (≤800px). On collapse:
+
+- Cards stack in **DOM order**. Authors write cards in the order they want operators to read on mobile.
+- Half-width pairs stack as left-column card → right-column card.
+- For two-column layouts using two `.bottom-left` wrappers (the Session Home pattern), the left wrapper's full stack appears first, then the right wrapper's full stack.
+
+The implication: when designing a page, **think about mobile order first**, then arrange the desktop grid so the DOM order matches. Don't reach for `order:` CSS to fix mobile after the fact.
+
+### Card-kind taxonomy
+
+A page is composed of cards drawn from a small named vocabulary. The kind sets the card's role and (for the warning kinds) its visual treatment.
+
+**Status / info card** — read-mostly, no primary action. Renders pills, counts, summaries, identifying metadata. Default visual treatment (white background, neutral border). Examples:
+
+- "Fields with data" card at the top of Reviewers / Reviewees / Assignments.
+- Session Details card on Session Home.
+- Summary card on Monitoring (assigned / invited / opened / submitted / incomplete pills).
+- "All Instrument Status" card at the top of Instruments.
+
+**Action card** — primary content is a form or affordance. The card exists to host the action, with framing copy and any required confirmation around it. Default visual treatment (white background, neutral border). Examples:
+
+- Upload card on Reviewers / Reviewees / Assignments.
+- Quick Setup card on Session Home.
+- Contextual primary action card on Session Home (the state-conditional Validate / Activate / Pause card).
+- The Generate / Send-all / Reminder action cards on Invitations / Monitoring.
+
+**Lock card (yellow warning)** — lifecycle-locked or otherwise non-interactive surface, with optional recovery action. `accent-amber-bg` background, `accent-amber-dark` border (the warning brown). The recovery action inside follows P7 and uses the outline-amber button. See "Warning surfaces — shared brown framing" below for the per-page application matrix.
+
+**Danger zone card** — groups destructive actions. White background, `accent-amber-dark` border, H2 in `accent-amber-dark`. Destructive buttons inside use the outline-red Destructive role. See "Warning surfaces — shared brown framing" below.
+
+Status / info and Action cards share the same default visual treatment; the kinds are about *role*, not visual differentiation. The two warning kinds (Lock card, Danger zone) carry their own visual treatment because the warning framing is doing semantic work.
+
+### When a card isn't the answer
+
+Not every page region needs to be a card. Loose markup is fine when:
+
+- The content is a single piece of body copy or a heading + paragraph (e.g., a placeholder page).
+- The content is naturally tabular and would be the only thing inside its own card (a wrapping card adds chrome without adding meaning).
+
+If you're tempted to put loose form controls or pills outside any card, that's a sign you need a card around them — usually a Status / info or Action card.
+
+---
+
 ## Operator session chrome
 
 The chrome that surrounds session-scoped operator pages (Session Home and the Setup / Operations tab pages).
