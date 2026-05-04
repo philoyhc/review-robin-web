@@ -1,0 +1,39 @@
+{# Shared placeholder card macro.
+
+   Used on Session Home for the Quick Setup and Extract Data cards
+   while their full implementations are still pending. Both cards
+   share the same shape (heading + one-line description + disabled
+   action button) so they read as a related pair of placeholders.
+
+   Body text uses plain ``<p>`` (text-primary) rather than
+   ``.form-help`` (text-secondary) on purpose: when one card carries
+   the ``.card.disabled`` modifier and the other doesn't, an active
+   text-primary paragraph next to a faded text-primary paragraph
+   reads as a deliberate state distinction. Active text-secondary
+   next to faded text-secondary reads as ambiguous typography.
+
+   Args:
+     id              — DOM id for the wrapping ``.card``.
+     title           — H2 text, title-case.
+     description     — Single-line action / state copy. Plain text.
+     button_label    — Disabled placeholder button label.
+     button_tooltip  — Native title attribute on the button (e.g.
+                       a pointer at the spec or the segment that
+                       ships the real implementation).
+     disabled        — When True, applies ``.card.disabled`` to grey
+                       out the whole card (per spec/session_home.md
+                       — no yellow lock card on Home).
+#}
+{% macro placeholder_card(id, title, description, button_label, button_tooltip, disabled) -%}
+<div class="card{% if disabled %} disabled{% endif %}" id="{{ id }}">
+  <h2>{{ title }}</h2>
+  <p>{{ description }}</p>
+  <div class="btn-pair">
+    <button class="btn secondary"
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="{{ button_tooltip }}">{{ button_label }}</button>
+  </div>
+</div>
+{%- endmacro %}

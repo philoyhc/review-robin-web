@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_placeholder_card.html" import placeholder_card %}
 
 {% block title %}{{ session.name }} — Review Robin Web{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -106,61 +107,40 @@
         {% endif %}
       </div>
 
-      {# Quick Setup card — placeholder until its full spec lands.
-         Shares the same shape as the Extract Data card below
-         (heading + one-line description + disabled action button).
-         State-conditional per spec/session_home.md: in ready the
-         card greys out (no yellow lock card on Home — the
-         contextual primary action card above carries any
-         lifecycle messaging). Re-enables in draft / validated. #}
-      <div class="card{% if is_ready %} disabled{% endif %}" id="quick-setup">
-        <h2>Quick Setup</h2>
-        {% if is_ready %}
-          <p class="form-help">
-            Setup edits are paused while the session is Activated. Pause
-            the session to re-enable bulk setup.
-          </p>
-        {% else %}
-          <p class="form-help">
-            Bulk-populate reviewers, reviewees, and assignments from
-            files or rules in one place.
-          </p>
-        {% endif %}
-        <div class="btn-pair">
-          <button class="btn secondary"
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  title="Quick Setup spec at spec/quick_setup_card_spec.md (unfinished_business.md #30)">Set up</button>
-        </div>
-      </div>
-
-      {# Extract Data card — placeholder until Segment 12 ships real
-         extraction. Shares the same shape as the Quick Setup card
-         above. State-conditional per spec/session_home.md: in
-         draft/validated the card greys out with explanatory copy
-         ("nothing to extract yet"); in ready the card visually
-         enables but the button stays disabled (Segment 12). #}
-      <div class="card{% if not is_ready %} disabled{% endif %}" id="extract-data">
-        <h2>Extract Data</h2>
-        {% if is_ready %}
-          <p class="form-help">
-            Extract reviewer responses for analysis or reporting.
-          </p>
-        {% else %}
-          <p class="form-help">
-            No responses to extract yet. Available once the session is
-            Activated and responses have been received.
-          </p>
-        {% endif %}
-        <div class="btn-pair">
-          <button class="btn secondary"
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  title="Extract Data lands in Segment 12">Extract</button>
-        </div>
-      </div>
+      {# Quick Setup + Extract Data — paired placeholder cards built
+         on a single shared macro so they're guaranteed to share
+         shape and typography. State-conditional copy + disabled
+         treatment per spec/session_home.md: Quick Setup is paused
+         while Activated; Extract Data is paused until Activated.
+         The contextual primary action card above carries any
+         lifecycle messaging (no yellow lock cards on Home). #}
+      {{ placeholder_card(
+          id="quick-setup",
+          title="Quick Setup",
+          description=(
+            "Setup edits are paused while the session is Activated. "
+            "Pause the session to re-enable bulk setup."
+          ) if is_ready else (
+            "Bulk-populate reviewers, reviewees, and assignments "
+            "from files or rules in one place."
+          ),
+          button_label="Set up",
+          button_tooltip="Quick Setup spec at spec/quick_setup_card_spec.md (unfinished_business.md #30)",
+          disabled=is_ready,
+      ) }}
+      {{ placeholder_card(
+          id="extract-data",
+          title="Extract Data",
+          description=(
+            "Extract reviewer responses for analysis or reporting."
+          ) if is_ready else (
+            "No responses to extract yet. Available once the "
+            "session is Activated and responses have been received."
+          ),
+          button_label="Extract",
+          button_tooltip="Extract Data lands in Segment 12",
+          disabled=not is_ready,
+      ) }}
     </div>
 
     {# Right column — Session Details, Danger Zone #}
