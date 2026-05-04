@@ -269,6 +269,7 @@ def test_delete_instrument_cascades_and_repacks_order(
 
     response = client.post(
         f"/operator/sessions/{session.id}/instruments/{middle.id}/delete",
+        data={"confirm": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -309,6 +310,7 @@ def test_delete_instrument_refuses_last_instrument(
 
     response = client.post(
         f"/operator/sessions/{session.id}/instruments/{default.id}/delete",
+        data={"confirm": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 400
@@ -336,6 +338,7 @@ def test_delete_instrument_invalidates_validated_session(
     second = _instruments(db, session.id)[1]
     response = client.post(
         f"/operator/sessions/{session.id}/instruments/{second.id}/delete",
+        data={"confirm": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -372,6 +375,7 @@ def test_delete_instrument_404_across_session_boundary(
 
     response = client.post(
         f"/operator/sessions/{session_b.id}/instruments/{default_a.id}/delete",
+        data={"confirm": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 404
@@ -447,8 +451,11 @@ def test_action_row_renders_add_and_delete_enabled_in_normal_state(
         in body
     )
 
-    # Native confirm() is wired on Delete.
-    assert "onsubmit=\"return confirm(" in body
+    # Consent checkbox is wired on Delete (replaced the legacy
+    # native confirm() onsubmit pattern with the operator-page
+    # consent-checkbox vocabulary used elsewhere — see Reviewers /
+    # Reviewees / Assignments delete-all forms).
+    assert 'name="confirm" value="true" required' in body
 
 
 def test_delete_button_disabled_when_only_instrument(
