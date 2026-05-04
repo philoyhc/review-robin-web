@@ -92,6 +92,7 @@
           <a class="btn secondary"
              href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
           {% if rs_paginated %}
+            <button class="btn secondary rs-prev-btn" type="button" disabled>Previous</button>
             <button class="btn secondary rs-next-btn" type="button">Next</button>
           {% endif %}
         </div>
@@ -246,6 +247,7 @@
           <a class="btn secondary"
              href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
           {% if rs_paginated %}
+            <button class="btn secondary rs-prev-btn" type="button" disabled>Previous</button>
             <button class="btn secondary rs-next-btn" type="button">Next</button>
           {% endif %}
         </div>
@@ -275,19 +277,24 @@
     </div>
   {% endif %}
 
-  {# Multi-instrument paginated view: clicking Next swaps the active
-     `.rs-instrument-group` for the next one (wrap-around at the end).
-     Pure view state — does not save or submit. Inputs in hidden
-     groups stay in the DOM, so Save draft / Submit pick up every
-     value regardless of which group is currently visible. #}
+  {# Multi-instrument paginated view: Previous / Next swap the active
+     `.rs-instrument-group`. Pure view state — does not save or
+     submit. Inputs in hidden groups stay in the DOM, so Save draft
+     / Submit pick up every value regardless of which group is
+     currently visible. Boundary buttons disable rather than wrap
+     (Previous on the first group, Next on the last). #}
   <script>
     (function () {
       var groups = document.querySelectorAll(".rs-paginated .rs-instrument-group");
       if (groups.length < 2) return;
+      var prevBtns = document.querySelectorAll(".rs-prev-btn");
+      var nextBtns = document.querySelectorAll(".rs-next-btn");
       function activate(idx) {
         groups.forEach(function (g, i) {
           g.classList.toggle("rs-active", i === idx);
         });
+        prevBtns.forEach(function (b) { b.disabled = idx <= 0; });
+        nextBtns.forEach(function (b) { b.disabled = idx >= groups.length - 1; });
       }
       function currentIndex() {
         for (var i = 0; i < groups.length; i++) {
@@ -295,13 +302,21 @@
         }
         return 0;
       }
+      // Sync button states to the initial active group (markup ships
+      // with Previous disabled, but the JS path is authoritative).
+      activate(currentIndex());
       document.addEventListener("click", function (ev) {
-        var btn = ev.target.closest(".rs-next-btn");
-        if (!btn) return;
+        var nextBtn = ev.target.closest(".rs-next-btn");
+        var prevBtn = ev.target.closest(".rs-prev-btn");
+        if (!nextBtn && !prevBtn) return;
+        if (nextBtn && nextBtn.disabled) return;
+        if (prevBtn && prevBtn.disabled) return;
         ev.preventDefault();
-        var next = (currentIndex() + 1) % groups.length;
-        activate(next);
-        groups[next].scrollIntoView({ behavior: "smooth", block: "start" });
+        var idx = currentIndex();
+        var newIdx = nextBtn ? idx + 1 : idx - 1;
+        if (newIdx < 0 || newIdx >= groups.length) return;
+        activate(newIdx);
+        groups[newIdx].scrollIntoView({ behavior: "smooth", block: "start" });
       });
     })();
   </script>
