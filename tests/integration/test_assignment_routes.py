@@ -191,6 +191,28 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
     assert "full_matrix" in populated.text
 
 
+def test_assignments_hub_rule_based_card_uses_placeholder_macro(
+    client: TestClient, db: Session
+) -> None:
+    """The Rule Based Assignment card on the assignments hub uses
+    the canonical .card.placeholder treatment (shared with Quick
+    Setup and Extract Data on Session Home) until Segment 13 ships
+    the real rule builder. The card renders with id, title, body,
+    and a disabled action button."""
+
+    review_session = _make_session(client, db)
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+
+    assert 'class="card placeholder" id="rule-based-assignment"' in body
+    assert "<h2>Rule Based Assignment</h2>" in body
+    assert "matching reviewer and reviewee attributes via rules" in body
+    assert "Rule Based Assignment lands in Segment 13" in body
+    assert ">Build rules</button>" in body
+
+
 def test_non_operator_gets_403_on_assignments_hub_and_post(
     db: Session,
     alice: AuthenticatedUser,

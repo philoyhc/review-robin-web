@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_placeholder_card.html" import placeholder_card %}
 
 {% block title %}Assignments — {{ session.name }}{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -139,10 +140,16 @@
       {% endif %}
     </section>
 
-    <div class="card">
-      <h2>Rule Based Assignment</h2>
-      <p class="form-help">Under construction.</p>
-    </div>
+    {{ placeholder_card(
+        id="rule-based-assignment",
+        title="Rule Based Assignment",
+        description=(
+          "Generate assignments by matching reviewer and reviewee "
+          "attributes via rules."
+        ),
+        button_label="Build rules",
+        button_tooltip="Rule Based Assignment lands in Segment 13",
+    ) }}
     </div>{# /bottom-left #}
 
     <div class="bottom-left">
