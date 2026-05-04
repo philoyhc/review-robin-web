@@ -588,6 +588,7 @@ def session_edit_form(
     request: Request,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
 ) -> HTMLResponse:
     return _templates.TemplateResponse(
         request,
@@ -595,6 +596,7 @@ def session_edit_form(
         {
             "user": user,
             "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Edit details"
             ),
