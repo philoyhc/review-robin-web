@@ -97,7 +97,7 @@ def test_breadcrumb_is_suppressed_on_reviewer_root(
     assert '<span aria-current="page">Reviewer</span>' not in body
 
 
-def test_sessions_list_row_renders_name_link_and_delete_button(
+def test_sessions_list_row_renders_name_link_and_select_checkbox(
     client: TestClient, db: Session
 ) -> None:
     review_session = _create_session(client, db)
@@ -111,9 +111,12 @@ def test_sessions_list_row_renders_name_link_and_delete_button(
         in body
     )
     assert ">Access</a>" not in body
-    # Delete sits in the unlabelled trailing action column.
+    # The trailing column carries an unwired select-row checkbox; the
+    # per-row Delete anchor that briefly lived here was retired in
+    # favour of a future bulk-action affordance.
+    assert ">Delete</a>" not in body
     assert (
-        f'<a class="btn danger-solid" href="/operator/sessions/{review_session.id}#danger-zone">Delete</a>'
+        f'<input type="checkbox" aria-label="Select {review_session.name}">'
         in body
     )
 

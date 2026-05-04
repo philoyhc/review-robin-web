@@ -41,7 +41,7 @@
             <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
             <td>{{ s.updated_at.strftime("%Y-%m-%d") }}</td>
             <td class="col-shrink">
-              <a class="btn danger-solid" href="/operator/sessions/{{ s.id }}#danger-zone">Delete</a>
+              <input type="checkbox" aria-label="Select {{ s.name }}">
             </td>
           </tr>
         {% endfor %}
