@@ -65,6 +65,8 @@ The current `sessions_list.html` is a 7-column `<table>`. Migrating to cards is 
 
 **Decision:** PR B does this restructure. It's the bigger of the two PR B sub-pieces and is what lets the lobby read as the "operator's natural landing page" the spec calls for.
 
+> **Revisited 2026-05-04 (post-11D):** the cards layout was reverted in favour of a v2 `<table>` inside a single `.card`. At the lobby, dense scannable rows beat per-card framing; the trimmed five-column shape (Name / Code / Status / Deadline / Actions) reads cleaner than the per-card stack. The header bar with "Create new session" Primary flush right and the empty-state `.btn-cta` promotion are kept. Spec updated in the "Operator's Overview" § with a History note.
+
 ### D5 — Status icons on the response surface
 
 Per `spec/ui_elements.md` §9 "Status-symbol indicators", the inline-styled `✓` / `⚠` glyphs in `review_surface.html:190,193` migrate to `.status-icon-complete` / `.status-icon-incomplete` classes. New classes land in the `body.ui-v2` block in `base.html`:
