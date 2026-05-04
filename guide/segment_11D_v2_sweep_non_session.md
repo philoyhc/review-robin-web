@@ -6,7 +6,7 @@ The v2 vocabulary is settled; this segment is mostly mechanical per-template wor
 
 ## Status
 
-Planning. Sized as **3 PRs** in dependency order; each independently shippable. Plan to land before Segment 12 starts so the operator + reviewer surfaces are uniformly on v2 when export ships.
+**Shipped 2026-05-04** as PRs A → B → C. PR A swept the four operator-non-session stubs (`sessions_list`, `session_new`, `about`, `me_debug`) onto `body.ui-v2` and landed the return-to-origin helper. PR B added the two-row session chrome to `session_edit` and restructured the sessions-list lobby from a `<table>` to a flex column of `.card.session-card` rows. PR C introduced the lighter reviewer top-bar variant via a new `{% block top_bar %}` in `base.html` plus the `reviewer/_top_bar.html` partial, and swept the three reviewer templates onto `body.ui-v2 reviewer` with D5/D6/D7 (status icons, banner family, page header) applied to the response surface.
 
 ## Scope
 

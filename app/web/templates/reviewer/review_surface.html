@@ -2,10 +2,18 @@
 
 {% block title %}{{ session.name }} — Review{% endblock %}
 
+{% block body_class %}ui-v2{% if not preview_mode %} reviewer{% endif %}{% endblock %}
+
+{# Reviewer chrome only on the actual reviewer surface; the operator
+   preview reuses this template and keeps the operator chrome (with
+   its breadcrumb back to the session). #}
+{% block top_bar %}
+  {% if preview_mode %}{{ super() }}{% else %}{% include "reviewer/_top_bar.html" %}{% endif %}
+{% endblock %}
+
 {% block content %}
   {% if preview_mode %}
-    <div class="warning-banner"
-         style="background: #dbeafe; border-color: #2563eb; color: #1e3a8a;">
+    <div class="banner banner-info">
       <strong>Preview</strong> — not visible to reviewers. This page is
       operator-only and bypasses session-status / deadline / acceptance
       gates.
@@ -13,29 +21,28 @@
   {% endif %}
 
   <h1>{{ session.name }}</h1>
-
-  {% if session.description %}
-    <p>{{ session.description }}</p>
-  {% endif %}
   {% if session.deadline %}
     <p class="muted">Deadline: {{ session.deadline.isoformat() }}</p>
   {% endif %}
+  {% if session.description %}
+    <p>{{ session.description }}</p>
+  {% endif %}
 
   {% if saved %}
-    <div class="card" style="border-color: #16a34a; background: #dcfce7;">
-      <p>Your draft has been saved.</p>
+    <div class="banner banner-success">
+      Your draft has been saved.
     </div>
   {% endif %}
   {% if submitted %}
-    <div class="card" style="border-color: #2563eb; background: #dbeafe;">
-      <p>Your responses have been submitted. You can keep editing
-      and re-submit if needed.</p>
+    <div class="banner banner-success">
+      Your responses have been submitted. You can keep editing
+      and re-submit if needed.
     </div>
   {% endif %}
 
   {% if missing %}
-    <div class="card" style="border-color: #d97706; background: #fef3c7;">
-      <h2 style="color: #92400e;">Required fields missing</h2>
+    <div class="banner banner-warning">
+      <strong>Required fields missing.</strong>
       <p>
         The following required field{% if missing|length != 1 %}s have{% else %} has{% endif %}
         no value yet:
@@ -56,27 +63,23 @@
 
   {% if rows %}
     {% if not any_accepting %}
-      <div class="card" style="border-color: #d97706; background: #fef3c7;">
-        <p>
-          This session is no longer accepting responses.
-          {% if any_closed_with_hidden_values %}
-            Your previously saved values are hidden by the operator's
-            visibility setting.
-          {% else %}
-            Your previously saved values remain visible below in read-only
-            form.
-          {% endif %}
-        </p>
+      <div class="banner banner-warning">
+        This session is no longer accepting responses.
+        {% if any_closed_with_hidden_values %}
+          Your previously saved values are hidden by the operator's
+          visibility setting.
+        {% else %}
+          Your previously saved values remain visible below in read-only
+          form.
+        {% endif %}
       </div>
     {% endif %}
 
     {% if any_accepting and not preview_mode %}
-      <div class="card">
-        <p>
-          <a class="btn secondary"
-             href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
-        </p>
-      </div>
+      <p>
+        <a class="btn secondary"
+           href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
+      </p>
     {% endif %}
 
     {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/save">{% endif %}
@@ -186,11 +189,10 @@
                   <td style="width: 1%; white-space: nowrap; text-align: center;">
                     {% if row.submitted_at or show_acknowledge %}
                       {% if row.is_complete %}
-                        <span title="Complete"
-                              style="color: #16a34a; font-weight: bold; font-size: 1.2em;">✓</span>
+                        <span class="status-icon-complete" title="Complete">✓</span>
                       {% else %}
-                        <span title="{{ row.missing_count }} required field{{ '' if row.missing_count == 1 else 's' }} missing"
-                              style="color: #d97706; font-weight: bold; font-size: 1.2em;">⚠</span>
+                        <span class="status-icon-incomplete"
+                              title="{{ row.missing_count }} required field{{ '' if row.missing_count == 1 else 's' }} missing">⚠</span>
                       {% endif %}
                       {% if row.submitted_at %}
                         <div class="muted"
@@ -208,14 +210,14 @@
       {% endfor %}
 
       {% if any_accepting and not preview_mode %}
-        <p style="margin-top: 16px;">
-          <button class="btn secondary" type="submit">Save draft</button>
-          <button class="btn"
+        <div class="btn-pair" style="margin-top: 16px;">
+          <button class="btn" type="submit">Save draft</button>
+          <button class="btn secondary"
                   type="submit"
                   formaction="/reviewer/sessions/{{ session.id }}/submit">
             Submit
           </button>
-        </p>
+        </div>
         {% if show_acknowledge %}
           <p>
             <label style="font-weight: normal;">
@@ -228,8 +230,8 @@
     {% if preview_mode %}</div>{% else %}</form>{% endif %}
 
     {% if any_accepting and not preview_mode %}
-      <div class="card" style="border-color: #b91c1c; margin-top: 24px;">
-        <h2 style="color: #b91c1c;">Clear all responses</h2>
+      <div class="card danger-zone" style="margin-top: 24px;">
+        <h2>Clear all responses</h2>
         <form method="post" action="/reviewer/sessions/{{ session.id }}/clear">
           <p>
             <label style="font-weight: normal;">
@@ -238,11 +240,9 @@
               This also clears my submitted state.
             </label>
           </p>
-          <p>
-            <button class="btn"
-                    style="background: #b91c1c; border-color: #b91c1c;"
-                    type="submit">Clear all</button>
-          </p>
+          <div class="btn-pair">
+            <button class="btn destructive" type="submit">Clear all</button>
+          </div>
         </form>
       </div>
     {% endif %}

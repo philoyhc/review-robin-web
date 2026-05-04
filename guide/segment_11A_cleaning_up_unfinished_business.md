@@ -2,7 +2,7 @@
 
 (Originally drafted as Segment 10E before the 2026-05-03 segment renumber promoted it. Cross-references in older docs may still point to "10E" by name.)
 
-**Status (2026-05-04):** Tiers 1, 2, and 3 closed. Tier 4 closed except for two remaining items (`#21b` non-session-centric v2 sweep; `#24` operator-editable email template editor). Segment 11B (Session Home rebuild) shipped end-to-end and absorbed `#22` + `#30`. `#5` (audit-event detail schema) gates Segment 12 and remains the latest item that must precede it.
+**Status (2026-05-04):** Tiers 1, 2, and 3 closed. Tier 4 closed except for one remaining item (`#24` operator-editable email template editor). `#21b` shipped via Segment 11D (PRs A → B → C). Segment 11B (Session Home rebuild) shipped end-to-end and absorbed `#22` + `#30`. `#5` (audit-event detail schema) gates Segment 12 and remains the latest item that must precede it.
 
 This was a punch list cleaning up Segments 1–10 — small bug fixes, deferred decisions, surfaced polish. Most items shipped or had decisions recorded; a smaller group was deferred to Segment 13 / Segment 15.
 

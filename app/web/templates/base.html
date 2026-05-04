@@ -991,6 +991,10 @@
         background: var(--accent-amber-bg);
         color: var(--accent-amber-dark);
       }
+      body.ui-v2 .pill.pill-success {
+        background: var(--accent-green-bg);
+        color: var(--accent-green);
+      }
       /* draft = "not ready for action" — same warning treatment as
          .pill-empty so the status badge reads as "needs work". */
       body.ui-v2 .pill-lifecycle-draft {
@@ -1167,24 +1171,47 @@
         text-decoration: none;
       }
       body.ui-v2 .chrome-user .chrome-link:hover { text-decoration: underline; }
+      /* Reviewer top-bar variant — lighter chrome for reviewer-facing
+         pages per spec/visual_style_rrw.md "Reviewer-facing pages →
+         Top bar". Lighter "Review Robin" identity (no version), no
+         breadcrumb, optional dashboard link (rendered only when the
+         reviewer has more than one review pending or completed). */
+      body.ui-v2.reviewer .chrome-app-identity {
+        font-weight: 500;
+      }
+      /* Status-symbol indicators on the reviewer surface — replaces
+         the inline-styled ✓ / ⚠ glyphs per spec/ui_elements.md §9. */
+      body.ui-v2 .status-icon-complete {
+        color: var(--accent-green);
+        font-weight: 600;
+      }
+      body.ui-v2 .status-icon-incomplete {
+        color: var(--accent-amber-dark);
+        font-weight: 600;
+      }
     </style>
   </head>
   <body class="{% block body_class %}{% endblock %}">
-    <div class="chrome">
-      <div class="chrome-left">
-        <a class="chrome-app-identity" href="/about">Review Robin Web App (version {{ app_version }})</a>
-        {% include "_partials/breadcrumb.html" %}
-      </div>
-      {% if user %}
-        <div class="chrome-user">
-          <div>Signed in as {{ user.display_name or user.email }}</div>
-          {% if request.url.path not in ("/about", "/me/debug") %}
-            <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
-          {% endif %}
-          <a class="signout" href="/.auth/logout">Sign out</a>
+    {# Operator top bar is the default; reviewer templates override
+       this block to render the lighter "Review Robin" chrome
+       (spec/visual_style_rrw.md "Reviewer-facing pages → Top bar"). #}
+    {% block top_bar %}
+      <div class="chrome">
+        <div class="chrome-left">
+          <a class="chrome-app-identity" href="/about">Review Robin Web App (version {{ app_version }})</a>
+          {% include "_partials/breadcrumb.html" %}
         </div>
-      {% endif %}
-    </div>
+        {% if user %}
+          <div class="chrome-user">
+            <div>Signed in as {{ user.display_name or user.email }}</div>
+            {% if request.url.path not in ("/about", "/me/debug") %}
+              <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
+            {% endif %}
+            <a class="signout" href="/.auth/logout">Sign out</a>
+          </div>
+        {% endif %}
+      </div>
+    {% endblock %}
 
     {% block content %}{% endblock %}
 

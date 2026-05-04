@@ -2,10 +2,13 @@
 
 {% block title %}Invitation mismatch{% endblock %}
 
+{% block body_class %}ui-v2 reviewer{% endblock %}
+{% block top_bar %}{% include "reviewer/_top_bar.html" %}{% endblock %}
+
 {% block content %}
   <h1>This invitation belongs to someone else</h1>
 
-  <div class="card" style="border-color: #b91c1c; background: #fee2e2;">
+  <div class="banner banner-warning">
     <p>
       You're signed in as <code>{{ user.email }}</code>, but this
       invitation was issued to <code>{{ reviewer_email }}</code>.
@@ -14,9 +17,10 @@
       Sign out and sign back in with the invited account to continue,
       or contact the session operator if you think this is a mistake.
     </p>
-    <p>
-      <a class="btn secondary" href="/me/debug">Sign-in details</a>
-      <a class="btn secondary" href="/reviewer">Your reviewer dashboard</a>
-    </p>
+  </div>
+
+  <div class="btn-pair">
+    <a class="btn secondary" href="/me/debug">Sign-in details</a>
+    <a class="btn secondary" href="/reviewer">Your reviewer dashboard</a>
   </div>
 {% endblock %}

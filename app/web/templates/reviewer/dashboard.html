@@ -2,49 +2,54 @@
 
 {% block title %}Your reviews — Review Robin Web{% endblock %}
 
+{% block body_class %}ui-v2 reviewer{% endblock %}
+{% block top_bar %}{% include "reviewer/_top_bar.html" %}{% endblock %}
+
 {% block content %}
   <h1>Your reviews</h1>
 
   {% if items %}
-    <table>
-      <tr>
-        <th>Session</th>
-        <th>Deadline</th>
-        <th>Status</th>
-      </tr>
-      {% for item in items %}
+    <div class="card">
+      <table>
         <tr>
-          <td>
-            <a href="/reviewer/sessions/{{ item.session.id }}">
-              {{ item.session.name }}
-            </a>
-          </td>
-          <td>
-            {% if item.session.deadline %}
-              {{ item.session.deadline.isoformat() }}
-            {% else %}
-              <span class="muted">—</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if item.pill.state == "submitted" %}
-              <span class="pill pill-info">submitted</span>
-            {% elif item.pill.state == "in progress" %}
-              <span class="pill pill-warning">in progress</span>
-            {% else %}
-              <span class="pill pill-info">not started</span>
-            {% endif %}
-            <span class="muted">
-              ({{ item.pill.completed_rows }}/{{ item.pill.total_assignments }})
-            </span>
-          </td>
+          <th>Session</th>
+          <th>Deadline</th>
+          <th>Status</th>
         </tr>
-      {% endfor %}
-    </table>
+        {% for item in items %}
+          <tr>
+            <td>
+              <a href="/reviewer/sessions/{{ item.session.id }}">
+                {{ item.session.name }}
+              </a>
+            </td>
+            <td>
+              {% if item.session.deadline %}
+                {{ item.session.deadline.isoformat() }}
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.pill.state == "submitted" %}
+                <span class="pill pill-success">submitted</span>
+              {% elif item.pill.state == "in progress" %}
+                <span class="pill pill-warning">in progress</span>
+              {% else %}
+                <span class="pill pill-info">not started</span>
+              {% endif %}
+              <span class="muted">
+                ({{ item.pill.completed_rows }}/{{ item.pill.total_assignments }})
+              </span>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
   {% else %}
     <div class="card">
       <p class="muted">
-        You don't have any review sessions assigned to your account
+        You have no pending reviews
         ({{ user.email }}).
       </p>
     </div>

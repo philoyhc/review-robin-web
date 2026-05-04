@@ -1,0 +1,29 @@
+{# Reviewer-facing top bar variant. Lighter than the operator chrome:
+   "Review Robin" identity (no "Web App", no version), no breadcrumb,
+   user menu with "Signed in as …" + optional "My Reviews" + Sign out.
+
+   Per spec/visual_style_rrw.md "Reviewer-facing pages → Top bar":
+   "My Reviews" surfaces only when the reviewer has more than one
+   review pending or completed (i.e. the dashboard would be useful as
+   a navigation hub). On the dashboard itself, the link is suppressed.
+
+   Required context:
+     - user: User (chrome user card; suppressed when unset).
+     - reviewer_review_count: int (defaults to 0 when unset). The
+       template-rendering reviewer route computes this — see
+       routes_reviewer.reviewer_review_count_for_user.
+#}
+<div class="chrome">
+  <div class="chrome-left">
+    <span class="chrome-app-identity">Review Robin</span>
+  </div>
+  {% if user %}
+    <div class="chrome-user">
+      <div>Signed in as {{ user.display_name or user.email }}</div>
+      {% if (reviewer_review_count|default(0)) > 1 and request.url.path != "/reviewer" %}
+        <a class="chrome-link" href="/reviewer">My Reviews</a>
+      {% endif %}
+      <a class="signout" href="/.auth/logout">Sign out</a>
+    </div>
+  {% endif %}
+</div>
