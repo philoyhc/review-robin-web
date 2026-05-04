@@ -13,41 +13,41 @@
 
   {# Page status info — single full-width info card. All status
      reporting (deadline + accepting + visibility counts) sits on
-     one row, with the bulk visibility toggle button right-aligned
-     on the same row. #}
+     one row; the bulk visibility toggle sits on its own row
+     beneath, right-aligned. #}
   <div class="card">
     {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
     {% set not_accepting_count = instruments | length - accepting_count %}
     {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
     {% set not_showing_count = instruments | length - showing_count %}
-    <div style="margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-      <span>
-        Session deadline (auto-close):
-        {% if session.deadline %}
-          <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
-        {% else %}
-          <span class="pill pill-empty">not set</span>
-        {% endif %}
-        &middot;
-        <span class="pill pill-count">{{ accepting_count }} accepting</span>
-        &middot;
-        <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
-        &middot;
-        Visibility when closed:
-        <span class="pill pill-count">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
-        &middot;
-        <span class="pill pill-empty">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
-      </span>
+    <p style="margin: 0;">
+      Session deadline (auto-close):
+      {% if session.deadline %}
+        <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
+      {% else %}
+        <span class="pill pill-empty">not set</span>
+      {% endif %}
+      &middot;
+      <span class="pill pill-count">{{ accepting_count }} accepting</span>
+      &middot;
+      <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
+      &middot;
+      Visibility when closed:
+      <span class="pill pill-count">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
+      &middot;
+      <span class="pill pill-empty">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
+    </p>
+    <div style="margin: 8px 0 0 0; display: flex; justify-content: flex-end;">
       {% if bulk_visibility_state != "all-on" %}
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
-              style="margin: 0 0 0 auto;">
+              style="margin: 0;">
           <button class="btn secondary" type="submit">Show all when closed</button>
         </form>
       {% else %}
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/visibility/all-off"
-              style="margin: 0 0 0 auto;">
+              style="margin: 0;">
           <button class="btn secondary" type="submit">Don't show any when closed</button>
         </form>
       {% endif %}
@@ -1197,8 +1197,19 @@
      * the operator's seat. Capture the operator's scrollY at submit
      * time, stash it in sessionStorage keyed by pathname, and
      * restore on the next page load.
+     *
+     * Reapply the saved scrollY at multiple points (immediate,
+     * next animation frame, on DOMContentLoaded, on window load)
+     * because the browser's fragment-scroll runs at different
+     * times across browsers (some at parse, some at load) and a
+     * single restore call can be overridden by the later jump.
+     * `history.scrollRestoration = "manual"` quiets the
+     * back/forward auto-restore so manual restoration wins.
      */
     (function () {
+      if ("scrollRestoration" in history) {
+        history.scrollRestoration = "manual";
+      }
       var STORAGE_KEY = "instrumentsScrollY:" + document.location.pathname;
       function captureScroll() {
         sessionStorage.setItem(STORAGE_KEY, String(window.scrollY));
@@ -1223,22 +1234,33 @@
         },
         true,
       );
-      function restoreScroll() {
-        var saved = sessionStorage.getItem(STORAGE_KEY);
-        if (saved === null) return;
+      var saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved !== null) {
         sessionStorage.removeItem(STORAGE_KEY);
-        // Defer to the banner-scroll script (base.html) when an
-        // error / cascade banner wants attention.
-        if (document.querySelector(".banner-scroll-target")) return;
         var y = parseInt(saved, 10);
         if (!isNaN(y)) {
-          window.scrollTo(0, y);
+          // Defer to the banner-scroll script (base.html) when an
+          // error / cascade banner wants attention.
+          var deferToBanner = function () {
+            return !!document.querySelector(".banner-scroll-target");
+          };
+          var apply = function () {
+            if (deferToBanner()) return;
+            window.scrollTo(0, y);
+          };
+          // Immediate (in case parsing has already advanced past
+          // the browser's fragment-jump point).
+          apply();
+          // Next animation frame, after layout settles.
+          requestAnimationFrame(apply);
+          // After DOMContentLoaded, in case the browser jumps
+          // again at that point.
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", apply);
+          }
+          // After full page load — final fallback.
+          window.addEventListener("load", apply, { once: true });
         }
-      }
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", restoreScroll);
-      } else {
-        restoreScroll();
       }
     })();
   </script>
