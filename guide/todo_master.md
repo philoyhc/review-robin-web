@@ -1,163 +1,117 @@
 # Master todo sequence
 
-Prioritized order for working through the
-`guide/unfinished_business.md` catalog. **Two files, two
-purposes:**
+Roadmap for working through the `guide/unfinished_business.md`
+catalog. **Two files, two purposes:**
 
 - **`guide/unfinished_business.md`** — the catalog. Every open
   item, with Why / Where / Plan. Read it for the detail.
-- **This file** — the sequence. Which item next, and why that
-  order. Read it for the roadmap.
+- **This file** — the sequence. What's shipped, what's coming
+  up, and why that order. Read it for the roadmap.
 
 When you ship an item, tick it off in **both** files. When a
 sub-segment plan exists (e.g. `guide/segment_11B_session_home.md`),
 that plan is the day-to-day source of truth for its own slices;
 this file references it without duplicating its PR ladder.
 
-The sequence is shaped by three forces: (a) finish the chrome
-work that #19 spawned (#20 + #21 + #22) before the operator
-surface ships into Segment 12, (b) some items must land in a
-specific order because they touch the same code (#16 bundles
-with #10; #12 follows #8; #22 follows #21 because Home rebuild
-uses the buttons #21 restyles), and (c) defensive CI hardening
-(Postgres pytest) should land before the big arch refactors
-themselves.
+---
+
+## Done
+
+Closed items, dense list. Each line names the catalog item (or a
+named scope) and the date / PR refs that closed it.
+
+### P0 — Stop the bleeding (Instruments UI ↔ data drift)
+
+- **#13 — Fix Display Fields placeholder** — done 2026-05-01 (option 2: wired to existing routes).
+- **#14 — Drop `pair_context_*` default seed; seed from import data** — done 2026-05-01 (lazy-seed + Alembic data migration).
+- **#18 — "Add an instrument" button vs route** — done 2026-05-02 as Slice 5 of Segment 10D (Add + Delete with mutual-exclusion / `is_ready` / single-instrument gates and a native `confirm()` on Delete).
+- **Segment 10D — Instruments rebuild end-to-end** — closed P0 (#220 → #268). Per-instrument card and Response Type Definitions card built around a single editing state machine, mutual-exclusion edit lock, save-time RF / RTD guards, banner auto-scroll convention, multi-instrument support.
+
+### P1 — Test gaps + CI hardening
+
+- **#15 — Backfill 10C integration tests** — done 2026-05-02. `bulk_set_visibility` + the `instruments.bulk_visibility_when_closed` audit covered in `tests/integration/test_bulk_visibility.py`. The other three originally-listed surfaces had been silently covered during Segment 10D.
+- **#1 — Wire `ruff check` into CI** — done 2026-05-02. `ci.yml` now runs `ruff check .` between dependency install and pytest.
+- **#19 — Roll session-status partial onto Reviewers / Reviewees / Assignments / Instruments** — done 2026-05-02. Original literal scope satisfied; actual work grew into a full chrome redesign (PRs #272 / #279 / #280–#290) on all 6 main session-scoped pages. Spawned the follow-on bundle #20 / #21 / #22 / #30 → all closed via 11A + 11B.
+- **#20 — Complete chrome rollout to remaining session-scoped pages** — Operations Pages shipped 2026-05-02 (Invitations / Monitoring / Outbox carry the chrome with their own tab active). The two Home sub-pages (Edit Session / Validate detail) folded into Segment 11B's rethink.
+- **#2 — Run pytest against Postgres in CI** — done 2026-05-02. `ci-postgres.yml` runs the full suite against a `postgres:16` service container after the Alembic round-trip; the `engine` fixture in `tests/conftest.py` honours `TEST_DATABASE_URL` / `DATABASE_URL`.
+
+### P2 — Architectural debt + Segment 11
+
+- **#4 — Single reviewer-session-state helper** — done 2026-05-02. New `ReviewerSessionState` dataclass + `reviewer_session_state()` helper in `responses.py`; `session_pill_for_reviewer` is a thin projection; `monitoring._reviewer_completion` deleted.
+- **#3 — Move `_invalidate_if_validated` into the service layer** — done 2026-05-02. New public `lifecycle.invalidate_if_validated()` helper. Every mutating service calls it at the top with a service-local `reason`; route helpers gone. 11 new service-layer invariant tests.
+- **#16 — `bulk_visibility_when_closed` invalidation policy** — done 2026-05-02 alongside #3. **Decision: visibility-when-closed is exempt** (it's a display flag, not part of the validation snapshot). Pinned in code at `instruments.bulk_set_visibility` and `lifecycle.set_responses_visible_when_closed` and in two regression tests.
+- **#11 — Extract instruments-index template context to `views.py`** — done 2026-05-02. New `build_instruments_context()` in `app/web/views.py` owns the 5 idempotent backfills, the editing-state machine, the bulk three-state derivation, and the URL-driven cascade packaging. Handler shrank from 140 lines → 46.
+- **#21a — v2 sweep, session-centric pages** — done 2026-05-03 across Segment 11A. Session-centric pages migrated onto `body.ui-v2` and ticked off in `guide/ui_checklist.md`.
+- **Segment 11B — Session Home rebuild** — done 2026-05-04. PRs **#380 → #393**, plus a placeholder-card unification pass (#385 → #388) and Next Action card refinements (#390 → #393). Spec at `spec/session_home.md`. Highlights:
+  - Lifecycle display label mapping (`ready` → "Activated") via `lifecycle_display.py` + `lifecycle_label` Jinja filter (#22, #30 absorbed here).
+  - Next Action card with constant H2, `accent-blue` border, fixed `min-height: 200px`, body grows + button row pinned at the bottom (Primary + Secondary, no inline links).
+  - State-conditional contents: Validate Setup / Activate Session / Pause Session as primary, sentence-case secondaries (See validation details / See previews / Revert to draft).
+  - Confirm checkbox in `ready` sits in `.next-action-confirm` just above the buttons.
+  - Quick Setup grey'd in ready; Extract Data grey'd in draft / validated; both render via the canonical `.card.placeholder` class + `placeholder_card` Jinja macro (also adopted by the Assignments page's Rule Based Assignment card).
+  - Danger Zone Delete-Session is visible-but-disabled in ready (server still rejects via `_require_editable`).
+  - `.pill-lifecycle-closed` retired; doc pass via PR F aligns specs and guides with what shipped.
+
+### P3 — Tier 3 polish (closed during Segment 11A)
+
+- **#9 — Refresh `get_or_create_default_instrument` docstring** — done 2026-05-03 (PR #309).
+- **#8 — Fix CSV email-validation drift** — done 2026-05-03 (PR #314); shared `_parse_email` helper.
+- **#12 — Reviewer/Reviewee CSV cross-table identity check** — done 2026-05-03 (PR #315); built on #8.
+- **#10 — Thread `correlation_id` into deadline lazy-close** — done 2026-05-03 (PR #329).
+- **#6 — Decouple `invitations.py` from `Request`** — done 2026-05-03 (PR #330).
+- **#7 — CSRF decision write-up** — done 2026-05-03 (PR #328). Decision: rely on Easy Auth + `SameSite=Lax` cookies; no CSRF tokens in app code. Recorded in `docs/authentication.md`.
+
+### Resolved on re-audit (no work needed)
+
+- **#17 — Filter divergence between `responses.session_pill_for_reviewer` and `monitoring._reviewer_completion`** — re-audit 2026-05-02: gone. Both already routed through the shared `_reviewer_assignments()` filter at `responses.py:54`.
 
 ---
 
-## P0 — Stop the bleeding (Instruments UI ↔ data drift) — ✅ closed
+## Upcoming
 
-The round-3 audit (2026-05-01) found that the operator's per-
-instrument **Display Fields** card and the underlying schema had
-drifted apart in ways that silently lost user input and silently
-hid imported reviewee data. The full slice ladder now ships.
+Items still open, in shipping order.
 
-| Order | Item | Outcome |
-|---|---|---|
-| 1 | ~~**#13 — Fix Display Fields placeholder**~~ | ✅ shipped 2026-05-01 (option 2: wired to existing routes). |
-| 2 | ~~**#14 — Drop `pair_context_*` default seed; seed from import data**~~ | ✅ shipped 2026-05-01 (lazy-seed + Alembic data migration). |
-| 3 | ~~**#18 — Decide "Add an instrument" button vs route**~~ | ✅ shipped 2026-05-02 as Slice 5 of Segment 10D — Add + Delete enabled with mutual-exclusion / `is_ready` / single-instrument gates and a native `confirm()` on Delete. |
+1. **#21b — v2 sweep, non-session-centric pages.** Mechanical port using the same recipe as #21a, but the non-session chrome conventions in `spec/visual_style_rrw.md` apply (light top bar, return-to-origin for About / Settings, reviewer top bar variant). Pending templates: `sessions_list.html`, `session_new.html`, `session_edit.html`, `reviewer/dashboard.html`, `reviewer/review_surface.html`, `reviewer/invite_mismatch.html`, `about.html`, `me_debug.html`. Tracked per-page in `guide/ui_checklist.md`.
+2. **Segment 11C — Operations consolidation (Invitations + Responses).** New page-set absorbing the standalone Monitoring page into a consolidated reviewer-centric Invitations page, adding a reviewee-centric Responses page, and restoring Outbox as a chrome tab. Sized as ~3–5 PRs (A: `/monitoring` redirect + chrome update; B: list-with-bulk-actions pattern; C: Invitations rewrite; D: Responses page; E: retire `session_monitoring.html`). Plan: `guide/segment_11C.md`. Functional spec: `spec/operations_renew.md`.
+3. **#24 — Operator-editable email template editor.** Operator-facing surface at `/operator/sessions/{id}/setupinvite` (currently a stub). New schema column `email_template_overrides` (JSON on `ReviewSession`); body render moves from hardcoded `_email_body` / `_reminder_body` to template + merge fields. Help-contact merge field reads from `ReviewSession.help_contact` per the §24 decision. Catalog `unfinished_business.md` #24.
+4. **#5 — Audit-event `detail` schema convention.** Spec write-up in `spec/architecture.md` then incremental emitter migration. Segment 12 (export / audit retention) reads `audit_events` and needs the `detail` JSON shape pinned first; this is the latest item that gates Segment 12. Catalog `unfinished_business.md` #5.
 
-Segment 10D (#220 → #268) closed P0 end-to-end: the per-instrument
-card and Response Type Definitions card are now built around a
-single editing state machine, mutual-exclusion edit lock, save-
-time RF / RTD guards, banner auto-scroll convention, and live
-multi-instrument support. Reviewers see the right columns,
-operators don't get gaslit, and the Instruments-page surface
-matches the backing routes end-to-end.
+#21b / 11C / #24 are disjoint surfaces and can ship in parallel — pick whichever is most pressing. #5 is the gate to Segment 12 and should be the last P2-tier item before Segment 12 starts.
 
 ---
 
-## P1 — Close test gaps + ship CI hardening — ✅ closed
+## Deferred to later segments
 
-The Slice-5 PR (#265) added route-level coverage for
-`create_instrument` / `delete_instrument`; the rest of the 10C
-surface still has no integration test floor. With the planned
-arch refactors below (item 3 in particular) about to ripple
-through the same code, the test gaps need to close first.
+Items intentionally pushed to where they bundle with related work. Not in the active sequence.
 
-| Order | Item | Why this position |
-|---|---|---|
-| 4 | ~~**#15 — Backfill 10C integration tests**~~ | ✅ shipped 2026-05-02 — `bulk_set_visibility` + `instruments.bulk_visibility_when_closed` audit covered in `tests/integration/test_bulk_visibility.py` (4 cases). The other three originally-listed surfaces had been silently covered during Segment 10D (re-audit 2026-05-02). |
-| 5 | ~~**#1 — Wire `ruff check` into CI**~~ | ✅ shipped 2026-05-02 — `ci.yml` now runs `ruff check .` between dependency install and pytest. |
-| 6 | ~~**#19 — Roll session-status partial onto Reviewers / Reviewees / Assignments / Instruments**~~ | ✅ shipped 2026-05-02 — chrome system rebuilt and rolled out to all 6 main session-scoped pages. Original literal scope satisfied; actual scope grew into a full chrome redesign (PRs #272 / #279 / #280–#290). Three follow-ons spawned: #20 (remaining pages), #21 (UI consistency updates), and #22 (Home body rebuild). |
-| 7 | ~~**#20 — Complete chrome rollout to remaining session-scoped pages**~~ | ✅ Operations Pages shipped 2026-05-02 (Invitations / Monitoring / Outbox now carry the chrome with their own tab active). The two Home sub-pages (Edit Session / Validate detail) were folded into Segment 11B's rethink. |
-| 8 | ~~**#2 — Run pytest against Postgres in CI**~~ | ✅ shipped 2026-05-02 — `ci-postgres.yml` runs the full suite against a `postgres:16` service container after the Alembic round-trip. |
+### Segment 12 (export / audit retention MVP)
 
----
+- **AG Grid evaluation extension** — folds in if the export surface needs interactive grid editing (otherwise stays in Segment 15 with #33).
 
-## P2 — Settle the operator surface before Segment 12
+### Segment 13 (rule-based assignment builder + sort UX)
 
-Segment 12 (export / audit retention) will read
-`Assignment.context` and write a stable `audit_events.detail`
-schema, so the operator UI and the audit-event convention should
-both settle first. The architectural-debt slate (items 9–12) has
-shipped; the remaining work is the Segment 11 sub-segments and
-the audit-schema convention.
+- **§2.6 / `guide/sort_by_reviewee.md`** — sort-column UX on Manage pages. Functional spec ready; ships with the rule-builder work.
+- **Rule Based Assignment** card on `/assignments` is currently a placeholder (uses `placeholder_card` macro); real implementation lands in 13.
 
-| Order | Item | Why this position |
-|---|---|---|
-| 9 | ~~**#4 — Extract a single reviewer-session-state helper**~~ | ✅ shipped 2026-05-02. |
-| 10 | ~~**#3 — Move `_invalidate_if_validated` into the service layer**~~ | ✅ shipped 2026-05-02. |
-| 11 | ~~**#16 — Decide bulk_visibility_when_closed invalidation policy**~~ | ✅ shipped 2026-05-02 (decision: visibility-when-closed is exempt). |
-| 12 | ~~**#11 — Extract instruments-index template context to `views.py`**~~ | ✅ shipped 2026-05-02. |
-| 13 | ~~**Segment 11B — Session Home rebuild (PRs A–E + placeholder unification)**~~ | ✅ shipped 2026-05-04. PR A (lifecycle display label), PR B (contextual primary action card), PR C (Extract Data card), PR D (Quick Setup disabled + Danger Zone visible-disabled), PR E (`.pill-lifecycle-closed` cleanup) all merged. Placeholder treatment unified across Quick Setup + Extract Data + Rule Based Assignment via the canonical `.card.placeholder` class and `placeholder_card` macro. Plan: `guide/segment_11B_session_home.md`. |
-| 14 | **Segment 11B — PR F (doc updates)** | Last slice of 11B. Update `spec/operator_ui_concept.md` to retire the Run Session four-button pattern and reflect the two-column Home; tidy `spec/session_home.md`'s now-completed `.pill-lifecycle-closed` mentions; tick `session_detail.html` in `guide/ui_checklist.md`. Lands after dev-slot verification of the visual changes from PRs B / C / D. |
-| 15 | **#21b — Remaining non-session-centric pages on v2** | Per Segment 11A's Tier 4. The session-centric sweep (#21a) shipped during the chrome rebuild. Remaining: `sessions_list.html`, `session_new.html`, `session_edit.html`, `reviewer/dashboard.html`, `reviewer/review_surface.html`, `reviewer/invite_mismatch.html`, `about.html`, `me_debug.html`. Mechanical port using the same recipe as #21a, but the non-session chrome conventions in `spec/visual_style_rrw.md` apply (light top bar, return-to-origin for About/Settings, reviewer top bar variant). Tracked per-page in `guide/ui_checklist.md`. |
-| 16 | **Segment 11C — Operations consolidation (Invitations + Responses)** | New page-set that absorbs the standalone Monitoring page into a consolidated reviewer-centric Invitations page, adds a reviewee-centric Responses page, and restores Outbox as a chrome tab. Sized as ~3–5 PRs (A: `/monitoring` redirect + chrome update; B: list-with-bulk-actions pattern; C: Invitations rewrite; D: Responses page; E: retire `session_monitoring.html`). Plan: `guide/segment_11C.md`. Functional spec: `spec/operations_renew.md`. Lands after 11B is fully shipped (verified on dev slot). |
-| 17 | **#24 — Operator-editable email template editor** | Per Segment 11A's Tier 4. Operator-facing surface at `/operator/sessions/{id}/setupinvite` (currently a stub). New schema column `email_template_overrides` (JSON on `ReviewSession`); body render moves from hardcoded `_email_body` / `_reminder_body` to template + merge fields. Help-contact merge field reads from `ReviewSession.help_contact` per the §24 decision. Tier 3 prerequisite (#6 — decouple `invitations.py` from `Request`) shipped 2026-05-03. Catalog `unfinished_business.md` #24. |
-| 18 | **#5 — Define audit-event `detail` schema convention** | Spec write-up in `spec/architecture.md` then incremental emitter migration. Segment 12 (export / audit retention) needs this stable, so this is the latest item that must precede Segment 12 starting. |
+### Segment 15 (operator polish + production hardening + real SMTP)
 
-**#17 (filter divergence) — resolved on re-audit 2026-05-02; removed from sequence.**
+- **#23** — Sessions-list per-row Delete button (anchor → POST form).
+- **#25** — Inline-editable rows for Reviewers / Reviewees / Assignments Manage pages.
+- **#26** — Local Postgres docker-compose for dev.
+- **#33** — AG Grid integration on Manage pages (was §2.1).
+- **#34** — Queue-based batch invitation sending (was §2.3; bundled with real SMTP).
+- **#35** — Technical-support contact (split out from §24 / #24).
+- **#36** — Operator Inactivate UI on Reviewers / Reviewees Manage pages (was §2.4).
+- **§2.2** — Vanilla-JS autosave on `/save` (folded into AG Grid #33's cell-edit lifecycle).
 
----
+### Future / undated
 
-## P3 — Closed-out items + deferrals to Segment 15
-
-The Tier 3 polish bundle largely shipped during Segment 11A; the
-items that didn't ship were intentionally pushed to Segment 15
-where they bundle with real SMTP / multi-row inline-edit work.
-
-### Shipped during Segment 11A
-
-| Item | Outcome |
-|---|---|
-| ~~**#9 — Refresh `get_or_create_default_instrument` docstring**~~ | ✅ shipped 2026-05-03 (PR #309). |
-| ~~**#8 — Fix CSV email-validation drift**~~ | ✅ shipped 2026-05-03 (PR #314), shared `_parse_email` helper. |
-| ~~**#12 — Reviewer/Reviewee CSV cross-table identity check**~~ | ✅ shipped 2026-05-03 (PR #315), built on #8. |
-| ~~**#10 — Thread `correlation_id` into deadline lazy-close**~~ | ✅ shipped 2026-05-03 (PR #329). |
-| ~~**#6 — Decouple `invitations.py` from `Request`**~~ | ✅ shipped 2026-05-03 (PR #330). |
-| ~~**#7 — CSRF decision write-up**~~ | ✅ closed 2026-05-03 (PR #328). Decision: rely on Easy Auth + `SameSite=Lax` cookies; no CSRF tokens in app code. Recorded in `docs/authentication.md`. |
-
-### Deferred to Segment 15 (per Segment 11A's "Deferred" table)
-
-| Item | Why Segment 15 |
-|---|---|
-| **§2.4 — Operator Inactivate UI** (per-row Inactivate button on Reviewers / Reviewees Manage pages) | Bundles with the Manage-page refresh in Segment 15. |
-| **§2.2 — Vanilla-JS autosave on `/save`** | Bundles into AG Grid #33's cell-edit lifecycle. |
-| **#23 — Sessions-list Delete button (anchor → POST form)** | Picked up with the Segment 15 sessions-list polish bundle. |
-| **#25 — Inline-editable rows for Manage pages** | Bundles with #33 (AG Grid). |
-| **#26 — Local Postgres docker-compose for dev** | Tooling polish, not blocking any feature work. |
+Anything in `docs/status.md` "What's deliberately not yet there" with a named target segment ≥12 (export, RuleBased assignment, production hardening, real SMTP). Owned by their target segments, not this list.
 
 ---
 
 ## Notes on the order
 
-- **What changed from the previous revision.** Segment 11A
-  closed out most of the Tier 3 polish items (#6 / #7 / #8 / #9
-  / #10 / #12). Segment 11B shipped the Home rebuild end-to-end
-  except for the doc-updates slice (PR F). The placeholder-card
-  vocabulary added during 11B (canonical `.card.placeholder`
-  class + `placeholder_card` macro) is now used by Quick Setup,
-  Extract Data, and Rule Based Assignment; future placeholder
-  cards should reuse it without further design work. The next
-  concrete unit of work is Segment 11B PR F, then the parallel
-  remaining-Tier-4 items (#21b, 11C, #24) in any order.
-- **Why item 14 (11B PR F) is the immediate next PR.** Closes
-  out the Home rebuild and lets us stop touching
-  `session_detail.html` for now. Cheap and isolated.
-- **Why 11C, #21b, and #24 can ship in parallel.** Disjoint
-  surfaces — 11C touches Operations pages, #21b touches the
-  non-session chrome, #24 touches `/setupinvite` + the
-  invitation-send pipeline. Pick whichever is most pressing
-  next.
-- **Why #5 (audit-event detail schema) must precede Segment 12.**
-  Segment 12's first deliverable is exporting `audit_events`;
-  the export is much less work if the `detail` JSON shape is
-  pinned first. Land #5 as the last P2 item before Segment 12
-  starts.
-- **Why CI items (#1 / #2) preceded the arch slate.** Without
-  Postgres-flavoured pytest and `ruff check` in CI, the arch
-  refactors (#3 / #4 / #11 / #16) would have shipped silently-
-  broken code on every PR until the dev-slot deploy.
-
----
-
-## What's not on this list
-
-Anything in `docs/status.md` "What's deliberately not yet there"
-— those are owned by their assigned future segments. The
-"Display Fields persistence" entry there *was* one of those
-deferred items, but the round-3 audit promoted the user-facing
-correctness slice to item 13. Persistence proper is now part of
-the shipped Segment 10D surface.
+- **Why CI items (#1 / #2) preceded the arch slate.** Without Postgres-flavoured pytest and `ruff check` in CI, the arch refactors (#3 / #4 / #11 / #16) would have shipped silently-broken code on every PR until the dev-slot deploy.
+- **Why Segment 11B closed before 11C.** Home is the operator's anchor page; settling its layout, vocabulary (`.card.placeholder`, `.card.next-action`, `lifecycle_label`), and disabled-state pattern first means 11C can compose on top of stable primitives.
+- **Why #5 (audit-event detail schema) gates Segment 12.** Segment 12's first deliverable is exporting `audit_events`; the export is much less work if the JSON shape is pinned first.
+- **Why #21b / 11C / #24 can ship in parallel.** Disjoint surfaces — #21b touches non-session chrome, 11C touches Operations pages, #24 touches the invitation pipeline.
