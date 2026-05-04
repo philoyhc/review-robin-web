@@ -62,7 +62,7 @@ Most of the operator's time is spent doing **phase work** — configuring setup,
 
 Home is therefore visited *at transitions*, not during phase work. Phase work is decentralised across the phase pages; lifecycle commits are centralised on Home.
 
-Home's body, layout, and per-state behaviour are specified in **`spec/session_home.md`**. The high-level shape: a two-column body (left for "running the session", right for metadata + danger), with a single state-conditional **Contextual primary action card** at top-left whose primary button advances the session (Validate Setup → Activate Session → Pause Session) and whose supporting links point at validation detail, preview, etc. The Quick Setup card sits below the action card; the Extract Data card below that. Right column holds Session Details and Danger Zone.
+Home's body, layout, and per-state behaviour are specified in **`spec/session_home.md`**. The high-level shape: a two-column body (left for "running the session", right for metadata + danger), with a single state-conditional **Next Action card** at top-left whose primary button advances the session (Validate Setup → Activate Session → Pause Session) and whose supporting links point at validation detail, preview, etc. The Quick Setup card sits below the action card; the Extract Data card below that. Right column holds Session Details and Danger Zone.
 
 #### Sub-pages of Home
 
@@ -130,11 +130,11 @@ Within a session, **Setup and Operations are both navigable from the chrome on e
 
 ### P3 — Home is the launch point for lifecycle transitions
 
-Home is the session's **identity** and the place where **lifecycle-advancing actions** live (Validate, Activate, Pause). Phase work happens on the phase pages; Home is visited *at transitions*, not during phase work. The Contextual primary action card on Home (per `spec/session_home.md`) embodies this — its primary button is always the next lifecycle move.
+Home is the session's **identity** and the place where **lifecycle-advancing actions** live (Validate, Activate, Pause). Phase work happens on the phase pages; Home is visited *at transitions*, not during phase work. The Next Action card on Home (per `spec/session_home.md`) embodies this — its primary button is always the next lifecycle move.
 
 ### P4 — Lifecycle disables, never hides
 
-Pages remain reachable across all session lifecycle states. Affordances that don't apply to the current state render disabled. The default disabled treatment for setup-mutation surfaces is the yellow lock card pattern (`spec/visual_style_rrw.md`); Home itself is the exception — disabled state on Home is plain greying out, since the Contextual primary action card already explains state in prose (see `spec/session_home.md`).
+Pages remain reachable across all session lifecycle states. Affordances that don't apply to the current state render disabled. The default disabled treatment for setup-mutation surfaces is the yellow lock card pattern (`spec/visual_style_rrw.md`); Home itself is the exception — disabled state on Home is plain greying out, since the Next Action card already explains state in prose (see `spec/session_home.md`).
 
 The four-line shape: two principles about *where the operator can go* (P1, P2), one about *what Home is for* (P3), one about *what stays reachable* (P4). None of them overlap.
 
@@ -172,7 +172,7 @@ Below the chrome, a **status row** renders the at-a-glance session status, ident
 
 ### What the chrome does not do
 
-- It doesn't carry **lifecycle-transition actions**. Validate Setup, Activate, and Pause are body-level actions on Home (via the Contextual primary action card), not chrome buttons. Putting them in the chrome would make them reachable from every page, which contradicts the launch-point framing — transitions are deliberate acts the operator returns to Home for.
+- It doesn't carry **lifecycle-transition actions**. Validate Setup, Activate, and Pause are body-level actions on Home (via the Next Action card), not chrome buttons. Putting them in the chrome would make them reachable from every page, which contradicts the launch-point framing — transitions are deliberate acts the operator returns to Home for.
 - It doesn't carry **cross-session navigation**. Switching sessions means returning to the Overview.
 - It doesn't **change shape** based on lifecycle state or sysadmin mode. Stability matters; the operator should learn the chrome once.
 
@@ -198,7 +198,7 @@ Top-level operator lobby. A table of sessions, one row per session, columns: **N
 
 ### `/operator/sessions/{id}` — Session Home / Control Panel
 
-The per-session home. **Detailed spec: `spec/session_home.md`.** Two-column body with the Contextual primary action card on top-left, Quick Setup and Extract Data below it; Session Details on top-right with the Danger Zone below it. The lifecycle state determines the Contextual action card's primary button (Validate Setup → Activate Session → Pause Session) and supporting affordances.
+The per-session home. **Detailed spec: `spec/session_home.md`.** Two-column body with the Next Action card on top-left, Quick Setup and Extract Data below it; Session Details on top-right with the Danger Zone below it. The lifecycle state determines the Next Action card's primary button (Validate Setup → Activate Session → Pause Session) and supporting affordances.
 
 ### `/operator/sessions/new` — Create new session
 
@@ -212,7 +212,7 @@ Same shape as the create form, with pre-populated values; no session top nav (it
 
 Same four fields as create, pre-filled. Action row: **Save changes** (Primary) submits to `POST /operator/sessions/{id}/edit` → emits a `session.updated` audit event with `changes: {field: [old, new]}` for each changed field, invalidates `validated → draft`, and 303 back to session detail. **Cancel** (Secondary) → session detail.
 
-The route returns **HTTP 409** when the session is `ready` — operators must Pause back to Draft first via the Contextual primary action card on Home.
+The route returns **HTTP 409** when the session is `ready` — operators must Pause back to Draft first via the Next Action card on Home.
 
 ### Setup pages (Reviewers / Reviewees / Assignments) — shared shape
 
@@ -245,7 +245,7 @@ Currently a stub. Hosts the email-template editor when Segment 15 ships. Reached
 
 Operations row tab. Read-only deep-dive of every setup issue, intended for the operator who needs the per-issue breakdown beyond the at-a-glance counts on Home.
 
-- **Page intro** (form-help text): "Read-only view of setup readiness for this session. Errors must be cleared before activation. Warnings can be acknowledged and overridden. Activate from the Contextual primary action card on Session Home."
+- **Page intro** (form-help text): "Read-only view of setup readiness for this session. Errors must be cleared before activation. Warnings can be acknowledged and overridden. Activate from the Next Action card on Session Home."
 - **Severity counts** (three pills inline): error / warning / info counts.
 - **Per-issue list** (rendered via the `operator/partials/validation_results.html` partial) — one entry per issue, with severity pill, source (e.g. "Reviewers", "Assignments"), and human description.
 
@@ -305,7 +305,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/visual_style_rrw.md`** — Review-Robin chrome instantiation, including all visual specifics elided here.
 - **`spec/architecture.md`** — domain entities and layering. Reads upstream of this file.
 - **`spec/functional_spec.md`** — technology-neutral functional spec.
-- **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including the Contextual primary action card and lifecycle display-label mapping.
+- **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including the Next Action card and lifecycle display-label mapping.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home.
 - **`spec/preview_hub.md`** — Preview hub on the Operations row.
 - **`spec/operations_renew.md`** — Invitations + Responses functional spec; consolidates the Manage Invitations + Monitoring pages into a reviewer-centric Invitations page and adds a reviewee-centric Responses page.
