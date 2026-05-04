@@ -72,18 +72,25 @@
               to draft and stops reviewers from submitting new
               responses. Existing responses will be preserved.
             </p>
+          {% endif %}
+        </div>
+        {% if is_ready %}
+          {# Pause confirmation sits in its own block just above the
+             button row so the operator's eye lands on the checkbox
+             immediately before the Pause Session button. #}
+          <div class="next-action-confirm">
             <form method="post"
                   action="/operator/sessions/{{ session.id }}/revert"
                   id="next-action-pause-form">
-              <p>
+              <p style="margin: 0;">
                 <label style="font-weight: normal;">
                   <input type="checkbox" name="confirm" value="true" required>
                   Yes, pause <strong>{{ session.name }}</strong> and return to draft.
                 </label>
               </p>
             </form>
-          {% endif %}
-        </div>
+          </div>
+        {% endif %}
         <div class="next-action-buttons">
           {% if is_draft %}
             <a class="btn"
