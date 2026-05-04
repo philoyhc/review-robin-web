@@ -279,7 +279,7 @@ def test_surface_does_not_wrap_groups_in_outer_card(
 ) -> None:
     """No outer .rs-card wrapper around each instrument group.
 
-    Tried briefly during the visual_style.md alignment work and dropped:
+    Tried briefly during the visual_style_general.md alignment work and dropped:
     the outer card was visually redundant with the help-text grid + table
     inside it. Help text cards (rs-help-card) and the response table stand
     on their own.

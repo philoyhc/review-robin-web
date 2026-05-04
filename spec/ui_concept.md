@@ -1,11 +1,13 @@
 # UI concept
 
 > **Note (2026-05-03):** The chrome description and page taxonomy here
-> overlap with `spec/visual_style.md` (chrome, status strip, page
+> overlap with `spec/visual_style_rrw.md` (chrome, status strip, page
 > headers) and `spec/preview_hub.md` (which retires the "Preview Pages"
 > grouping and adds Preview to Operations Pages). Those two files are
 > now authoritative for the areas they cover. Where this file disagrees
-> with either, the newer spec wins. A reconciliation pass is pending.
+> with either, the newer spec wins. A reconciliation pass is pending —
+> this doc is slated to consolidate with `spec/operator_map.md` into
+> `spec/operator_ui_concept.md`.
 
 **Conceptual map of the operator-facing page surface.** Names the
 groupings the page set falls into, the navigation principles that

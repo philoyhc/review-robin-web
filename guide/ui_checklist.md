@@ -82,7 +82,7 @@ including:
 2. **Cards.** Lock cards use `.card.lock`; danger zones use
    `.card.danger-zone`; no inline `style="border-color: #…;
    background: #…"` overrides on cards.
-3. **Buttons.** Each button uses the role per `spec/visual_style.md`
+3. **Buttons.** Each button uses the role per `spec/visual_style_general.md`
    §Buttons: Primary reserved for the page's *single* main
    affirmative action; routine submits are Secondary; destructive
    confirms are Destructive (outline red); recovery actions inside

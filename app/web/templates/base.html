@@ -10,7 +10,7 @@
       /* ──────────────────────────────────────────────────────────
          Design tokens — palette / type / spacing / radii.
          Defined as :root custom properties so they're available to
-         every rule but inert until consumed. spec/visual_style.md
+         every rule but inert until consumed. spec/visual_style_general.md
          is the source of truth for these values.
          ────────────────────────────────────────────────────────── */
       :root {
@@ -89,7 +89,7 @@
         margin: 0;
       }
       /*
-       * Reviewer-surface help-text primitives — visual_style.md-aligned
+       * Reviewer-surface help-text primitives — visual_style_general.md-aligned
        * bg-muted tinted blocks for the per-instrument response-field help
        * text. Two or more items render in a 2-col grid (rs-help-grid);
        * single-item case collapses to one full-width block
@@ -208,8 +208,8 @@
       /*
        * Note (2026-05-03): the .btn variants below (default / .secondary /
        * .danger / .danger-solid / .alert / .alert-solid) are the
-       * high-contrast saturated palette that spec/visual_style.md retires.
-       * spec/visual_style.md is now authoritative for button styling
+       * high-contrast saturated palette that spec/visual_style_general.md retires.
+       * spec/visual_style_general.md is now authoritative for button styling
        * (Primary / Secondary / Destructive on a muted, low-contrast
        * vocabulary). The CSS here has not been migrated yet — that's the
        * "First PR — button restyle" called out in unfinished_business.md
@@ -666,7 +666,7 @@
         color: var(--accent-amber-dark);
       }
       /* Buttons — Primary / Secondary / Destructive vocabulary
-         per spec/visual_style.md. Same shape, role expressed by
+         per spec/visual_style_general.md. Same shape, role expressed by
          tonal variation only. Primary is solid accent-blue and is
          reserved for the page's single main affirmative action
          (P1 — "color where it carries meaning"); routine submits
