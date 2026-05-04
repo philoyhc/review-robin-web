@@ -6,7 +6,12 @@ The v2 vocabulary is settled; this segment is mostly mechanical per-template wor
 
 ## Status
 
-**Shipped 2026-05-04** as PRs A → B → C. PR A swept the four operator-non-session stubs (`sessions_list`, `session_new`, `about`, `me_debug`) onto `body.ui-v2` and landed the return-to-origin helper. PR B added the two-row session chrome to `session_edit` and restructured the sessions-list lobby from a `<table>` to a flex column of `.card.session-card` rows. PR C introduced the lighter reviewer top-bar variant via a new `{% block top_bar %}` in `base.html` plus the `reviewer/_top_bar.html` partial, and swept the three reviewer templates onto `body.ui-v2 reviewer` with D5/D6/D7 (status icons, banner family, page header) applied to the response surface.
+**Shipped 2026-05-04** as PRs A → B → C, plus a small bundle of post-segment refinements (#410 → #413).
+
+- **PR A** swept the four operator-non-session stubs (`sessions_list`, `session_new`, `about`, `me_debug`) onto `body.ui-v2` and landed the return-to-origin helper.
+- **PR B** added the two-row session chrome to `session_edit` and made an initial run at the sessions-list lobby as a flex column of `.card.session-card` rows.
+- **PR C** introduced the lighter reviewer top-bar variant via a new `{% block top_bar %}` in `base.html` plus the `reviewer/_top_bar.html` partial, and swept the three reviewer templates onto `body.ui-v2 reviewer` with D5/D6/D7 (status icons, banner family, page header) applied to the response surface.
+- **Post-11D follow-ups (#410 → #413)** reverted the lobby from session cards back to a v2 `<table>` inside a single `.card` and settled the column set at **Session Name (link) / Session Code / Deadline (pill) / Created by / Created / Last Modified** plus an unlabelled trailing column carrying an unwired select-row checkbox. The redundant Access button and the per-row Delete anchor were retired; the redundant `/about` link was dropped from the top-left chrome identity (the right-side user-menu About link with `?return_to=` is now the sole About affordance); and the Next Action card on Session Home now surfaces inline validation feedback (error / warning / info pill row + headline) when `?validated=1` fails on a draft session.
 
 ## Scope
 
