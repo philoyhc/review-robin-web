@@ -867,6 +867,25 @@
       body.ui-v2 .btn-icon { color: var(--text-secondary); font-size: 1em; }
       body.ui-v2 .btn-icon.danger { color: var(--accent-red); }
       body.ui-v2 .btn-icon.action { color: var(--accent-blue); }
+      /* Order cell — number on the left, ▲/▼ stacked vertically on
+         the right (up above, down below). Used in the Display Fields
+         + Response Fields tables on the Instruments page. The
+         .order-num / .move-up / .move-down hooks the JS reads stay
+         put; this just re-arranges visually. */
+      body.ui-v2 .order-cell {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      body.ui-v2 .order-arrows {
+        display: inline-flex;
+        flex-direction: column;
+        line-height: 0.7;
+      }
+      body.ui-v2 .order-arrows .btn-icon {
+        padding: 0;
+        font-size: 0.7em;
+      }
       /* Code block — bg-muted-tinted block for monospace content
          (e.g. rendered email bodies on the Outbox page). */
       body.ui-v2 .code-block {

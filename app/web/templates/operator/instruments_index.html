@@ -287,21 +287,25 @@
                         {% endif %}
                       </td>
                       <td>
-                        <span class="order-num">{{ loop.index }}</span>
-                        {% if is_editing and not is_locked_row %}
-                          {# ▲ disabled if this row is right after the
-                             locked rows (i.e. swapping up would put it
-                             into the locked region). #}
-                          {% set arrows_top_index = 2 %}
-                          {% set is_top_movable = (loop.index0 == arrows_top_index) %}
-                          {% set is_bottom = loop.last %}
-                          <button type="button" onclick="moveRow(this, 'up')"
-                                  class="btn-icon move-up" title="Move up"
-                                  {% if is_top_movable %}disabled{% endif %}>&#9650;</button>
-                          <button type="button" onclick="moveRow(this, 'down')"
-                                  class="btn-icon move-down" title="Move down"
-                                  {% if is_bottom %}disabled{% endif %}>&#9660;</button>
-                        {% endif %}
+                        <div class="order-cell">
+                          <span class="order-num">{{ loop.index }}</span>
+                          {% if is_editing and not is_locked_row %}
+                            {# ▲ disabled if this row is right after the
+                               locked rows (i.e. swapping up would put it
+                               into the locked region). #}
+                            {% set arrows_top_index = 2 %}
+                            {% set is_top_movable = (loop.index0 == arrows_top_index) %}
+                            {% set is_bottom = loop.last %}
+                            <span class="order-arrows">
+                              <button type="button" onclick="moveRow(this, 'up')"
+                                      class="btn-icon move-up" title="Move up"
+                                      {% if is_top_movable %}disabled{% endif %}>&#9650;</button>
+                              <button type="button" onclick="moveRow(this, 'down')"
+                                      class="btn-icon move-down" title="Move down"
+                                      {% if is_bottom %}disabled{% endif %}>&#9660;</button>
+                            </span>
+                          {% endif %}
+                        </div>
                       </td>
                       <td><span class="muted">—</span></td>
                     </tr>
@@ -368,15 +372,19 @@
                       {% endif %}
                     </td>
                     <td>
-                      <span class="order-num">{{ loop.index }}</span>
-                      {% if is_editing %}
-                        <button type="button" onclick="moveRow(this, 'up')"
-                                class="btn-icon move-up" title="Move up"
-                                {% if loop.first %}disabled{% endif %}>&#9650;</button>
-                        <button type="button" onclick="moveRow(this, 'down')"
-                                class="btn-icon move-down" title="Move down"
-                                {% if loop.last %}disabled{% endif %}>&#9660;</button>
-                      {% endif %}
+                      <div class="order-cell">
+                        <span class="order-num">{{ loop.index }}</span>
+                        {% if is_editing %}
+                          <span class="order-arrows">
+                            <button type="button" onclick="moveRow(this, 'up')"
+                                    class="btn-icon move-up" title="Move up"
+                                    {% if loop.first %}disabled{% endif %}>&#9650;</button>
+                            <button type="button" onclick="moveRow(this, 'down')"
+                                    class="btn-icon move-down" title="Move down"
+                                    {% if loop.last %}disabled{% endif %}>&#9660;</button>
+                          </span>
+                        {% endif %}
+                      </div>
                     </td>
                     <td style="white-space: nowrap; width: 1%;">
                       {% if is_editing %}
@@ -501,11 +509,15 @@
                      name="required_ids" value="__TEMP_ID__" checked>
             </td>
             <td>
-              <span class="order-num">0</span>
-              <button type="button" onclick="moveRow(this, 'up')"
-                      class="btn-icon move-up" title="Move up">&#9650;</button>
-              <button type="button" onclick="moveRow(this, 'down')"
-                      class="btn-icon move-down" title="Move down">&#9660;</button>
+              <div class="order-cell">
+                <span class="order-num">0</span>
+                <span class="order-arrows">
+                  <button type="button" onclick="moveRow(this, 'up')"
+                          class="btn-icon move-up" title="Move up">&#9650;</button>
+                  <button type="button" onclick="moveRow(this, 'down')"
+                          class="btn-icon move-down" title="Move down">&#9660;</button>
+                </span>
+              </div>
             </td>
             <td style="white-space: nowrap; width: 1%;">
               <div style="display: inline-flex; gap: 0; align-items: center;">
