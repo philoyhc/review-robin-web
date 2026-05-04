@@ -47,15 +47,19 @@ The general visual spec (`spec/visual_style_general.md` Components > Cards) defi
 
 ### Width discipline
 
-Cards are either **full-width** or **half-width**:
+Cards are either **half-width** or **full-width**:
 
-- **Full-width.** The default. The page body stacks full-width cards vertically. Use this whenever a card stands alone or its content doesn't have a natural pair to sit beside.
-- **Half-width pair.** When two cards carry comparable weight that benefits from side-by-side reading, pair them in a `.bottom-grid` — a 2-column grid with `align-items: start` so each side keeps its natural height (no stretch to match the taller column). Example pairings on operator pages:
+- **Half-width is the default.** Half-width cards keep line lengths reasonable — full-width body text and form labels sprawl across the screen and become harder to scan. Pair half-width cards in a `.bottom-grid` (a 2-column grid with `align-items: start` so each side keeps its natural height — never stretches to match the taller column). When two half-width cards naturally belong together side-by-side, write them as a pair; when several stack on one side, wrap them in a `.bottom-left` flex column inside the grid. Example arrangements on operator pages:
   - Reviewers / Reviewees / Assignments: Upload card (left) + Danger Zone (right).
-  - Session Home: Run Session / Validation Summary / Quick Setup stack on the left; Session Details + Danger Zone stack on the right (each side is its own `.bottom-left` flex column).
-- **Nested half-within-full.** Inside a full-width card, two half-width sub-cards can sit side-by-side when the affordance needs that arrangement. Example: each per-instrument card on the Instruments page is full-width, with Display Fields + Response Fields half-cards side-by-side inside (the `.field-builder` `.bottom-grid` pattern).
+  - Session Home: Run Session / Validation Summary / Quick Setup stack inside a `.bottom-left` on the left; Session Details + Danger Zone stack inside a `.bottom-left` on the right.
+- **Full-width when content requires it.** Reach for full-width only when the card's content genuinely needs more horizontal space:
+  - Wide tables (Reviewers / Reviewees / Monitoring / Invitations data tables) where half-width would force horizontal scroll or column truncation.
+  - Per-instrument cards on the Instruments page, each of which hosts nested half-width Display Fields + Response Fields children.
+  - Top-of-page status / overview cards that span the chrome's status strip width — the "All Instrument Status" card is one such case.
+  - Multi-column forms whose grouping exceeds a half-width column.
+- **Nested half-within-full.** Inside a full-width card, two half-width sub-cards can sit side-by-side when the parent's affordance benefits from that arrangement. Example: each per-instrument card on the Instruments page is full-width, with Display Fields + Response Fields half-cards side-by-side inside (the `.field-builder` `.bottom-grid` pattern).
 
-`.page-grid` (with `align-items: stretch` for L-shape equal-height layouts and explicit placement classes `.card-tl` / `.card-tr` / `.card-bl` / `.card-br`) is the legacy default; **`.bottom-grid` is preferred** for new pairings since natural heights almost always read better than stretched ones.
+`.page-grid` (with `align-items: stretch` for L-shape equal-height layouts and explicit placement classes `.card-tl` / `.card-tr` / `.card-bl` / `.card-br`) is a legacy primitive; **`.bottom-grid` is preferred** for new pairings since natural heights almost always read better than stretched ones.
 
 ### Mobile ordering = DOM order
 
