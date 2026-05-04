@@ -108,12 +108,13 @@
       </div>
 
       {# Quick Setup + Extract Data — paired placeholder cards built
-         on a single shared macro so they're guaranteed to share
-         shape and typography. State-conditional copy + disabled
-         treatment per spec/session_home.md: Quick Setup is paused
-         while Activated; Extract Data is paused until Activated.
-         The contextual primary action card above carries any
-         lifecycle messaging (no yellow lock cards on Home). #}
+         on a single shared macro that applies the canonical
+         .card.placeholder treatment so the two cards always render
+         with identical typography and contrast. Per-card state
+         distinctions live in the body copy (informational), not
+         in opacity flips that would desynchronise sibling
+         placeholders. The contextual primary action card above
+         carries any lifecycle messaging. #}
       {{ placeholder_card(
           id="quick-setup",
           title="Quick Setup",
@@ -126,7 +127,6 @@
           ),
           button_label="Set up",
           button_tooltip="Quick Setup spec at spec/quick_setup_card_spec.md (unfinished_business.md #30)",
-          disabled=is_ready,
       ) }}
       {{ placeholder_card(
           id="extract-data",
@@ -139,7 +139,6 @@
           ),
           button_label="Extract",
           button_tooltip="Extract Data lands in Segment 12",
-          disabled=not is_ready,
       ) }}
     </div>
 
