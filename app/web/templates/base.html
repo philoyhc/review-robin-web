@@ -930,20 +930,22 @@
       }
       /* Next action card on Session Home — constant title + frame,
          state-conditional body and button row. Fixed min-height
-         gauged on the longest body (the Pause Session state) so
-         the card frame doesn't reflow when the session moves
-         between lifecycle states. Body grows; the button row
-         pins to the bottom via margin-top: auto. */
+         keeps the card frame from reflowing as the session moves
+         between lifecycle states; body flex-grows to push the
+         optional .next-action-confirm block and the .next-action-
+         buttons row to the bottom of the card. */
       body.ui-v2 .card.next-action {
         display: flex;
         flex-direction: column;
-        min-height: 216px;
+        min-height: 200px;
       }
       body.ui-v2 .card.next-action .next-action-body {
         flex: 1 1 auto;
       }
+      body.ui-v2 .card.next-action .next-action-confirm {
+        padding-bottom: var(--space-2);
+      }
       body.ui-v2 .card.next-action .next-action-buttons {
-        margin-top: auto;
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-2);
