@@ -11,30 +11,28 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# Page status info — full-width info card. The bulk
-     "Show all when closed" / "Don't show any when closed"
-     toggle sits on the right of the visibility row inside this
-     same card; the Preview reviewer surface link lives on its
-     own card below. #}
+  {# Page status info — single full-width info card. All status
+     reporting (deadline + accepting + visibility counts) sits on
+     one row, with the bulk visibility toggle button right-aligned
+     on the same row. #}
   <div class="card">
     {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
     {% set not_accepting_count = instruments | length - accepting_count %}
     {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
     {% set not_showing_count = instruments | length - showing_count %}
-    <p style="margin: 0;">
-      Session deadline (auto-close):
-      {% if session.deadline %}
-        <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
-      {% else %}
-        <span class="pill pill-empty">not set</span>
-      {% endif %}
-      &middot;
-      <span class="pill pill-count">{{ accepting_count }} accepting</span>
-      &middot;
-      <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
-    </p>
-    <div style="margin: 4px 0 0 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <div style="margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
       <span>
+        Session deadline (auto-close):
+        {% if session.deadline %}
+          <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
+        {% else %}
+          <span class="pill pill-empty">not set</span>
+        {% endif %}
+        &middot;
+        <span class="pill pill-count">{{ accepting_count }} accepting</span>
+        &middot;
+        <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
+        &middot;
         Visibility when closed:
         <span class="pill pill-count">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
         &middot;
