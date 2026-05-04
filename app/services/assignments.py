@@ -537,6 +537,21 @@ def replace_assignments(
 ) -> tuple[int, int]:
     """Replace all assignments for the session. Returns (replaced, new).
 
+    Each (reviewer, reviewee) pair fans out to **one Assignment row per
+    instrument** in the session. The unique constraint on
+    ``(session_id, reviewer_id, reviewee_id, instrument_id)`` allows the
+    same pair to coexist across instruments; on the reviewer surface
+    each Assignment is its own row inside its instrument's table, which
+    is what the multi-instrument paginated view needs to show all the
+    instrument groups.
+
+    ``contexts`` and ``includes`` are indexed by ``pairs`` (one entry
+    per pair), and the same value is replicated across every instrument
+    fan-out for that pair — pair-level metadata, not instrument-level.
+
+    Returns ``(replaced, new)`` as Assignment row counts (so for an
+    N-instrument session, ``new == len(pairs) * N``).
+
     ``excluded_counts`` is a generic map of exclusion-reason -> row count
     (e.g. ``{"self_review": 3}``). Recorded on the audit event detail.
     Future RuleBased exclusions (tag mismatch, capacity caps, deny lists)
@@ -559,23 +574,38 @@ def replace_assignments(
         correlation_id=correlation_id,
     )
 
-    instrument = get_or_create_default_instrument(db, review_session)
+    # Make sure the session has at least the default instrument, then
+    # load the full instrument list so each pair fans out across all of
+    # them.
+    get_or_create_default_instrument(db, review_session)
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
 
     replaced = existing_count(db, review_session.id)
     db.execute(delete(Assignment).where(Assignment.session_id == review_session.id))
 
+    new_count = 0
     for index, (reviewer, reviewee) in enumerate(pairs):
-        db.add(
-            Assignment(
-                session_id=review_session.id,
-                reviewer_id=reviewer.id,
-                reviewee_id=reviewee.id,
-                instrument_id=instrument.id,
-                include=includes[index] if includes is not None else True,
-                context=contexts[index] if contexts is not None else None,
-                created_by_mode=mode.value,
+        pair_include = includes[index] if includes is not None else True
+        pair_context = contexts[index] if contexts is not None else None
+        for instrument in instruments:
+            db.add(
+                Assignment(
+                    session_id=review_session.id,
+                    reviewer_id=reviewer.id,
+                    reviewee_id=reviewee.id,
+                    instrument_id=instrument.id,
+                    include=pair_include,
+                    context=pair_context,
+                    created_by_mode=mode.value,
+                )
             )
-        )
+            new_count += 1
 
     review_session.assignment_mode = mode.value
     db.flush()
@@ -584,15 +614,19 @@ def replace_assignments(
         db,
         event_type="assignments.generated",
         summary=(
-            f"Generated {len(pairs)} assignments via {mode.value} "
-            f"(replaced {replaced})"
+            f"Generated {new_count} assignments "
+            f"({len(pairs)} pairs × {len(instruments)} instrument"
+            f"{'' if len(instruments) == 1 else 's'}) "
+            f"via {mode.value} (replaced {replaced})"
         ),
         actor_user_id=user.id,
         session_id=review_session.id,
         detail={
             "mode": mode.value,
             "replaced_count": replaced,
-            "new_count": len(pairs),
+            "new_count": new_count,
+            "pair_count": len(pairs),
+            "instrument_count": len(instruments),
             "excluded_counts": excluded_counts or {},
             "filename": filename,
         },
@@ -607,7 +641,7 @@ def replace_assignments(
 
     if seed_display_fields_from_assignments(db, review_session):
         db.commit()
-    return replaced, len(pairs)
+    return replaced, new_count
 
 
 def list_reviewers(db: Session, session_id: int) -> list[Reviewer]:
