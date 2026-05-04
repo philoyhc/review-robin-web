@@ -42,8 +42,8 @@ separately.
 - [x] `session_assignments.html` — `/operator/sessions/{id}/assignments`
 - [x] `session_setupinvite.html` — `/operator/sessions/{id}/setupinvite` (placeholder)
 - [x] `session_previews.html` — `/operator/sessions/{id}/previews` (new placeholder; Operations row)
-- [ ] `sessions_list.html` — `/operator/sessions`
-- [ ] `session_new.html` — `/operator/sessions/new`
+- [x] `sessions_list.html` — `/operator/sessions` (Segment 11D PR A: `body.ui-v2`; per-row Access → Secondary; Delete stays as the legacy `danger-solid` pending #23 + the table → cards restructure that PR B owns)
+- [x] `session_new.html` — `/operator/sessions/new` (Segment 11D PR A: `body.ui-v2`; form wrapped in `.card`; v2 form treatment via base defaults; Cancel → Secondary)
 - [x] `session_detail.html` — `/operator/sessions/{id}` (Session Setup card retired; its five Manage links live in the chrome top-nav now. Segment 11B rebuilt the body: Next Action card replaces the old Run Session + Validation summary stack; Quick Setup and Extract Data render as placeholder cards via the canonical `placeholder_card` macro; Danger Zone Delete-Session is visible-but-disabled in `ready`; lifecycle prose / status pills route through the `lifecycle_label` Jinja filter.)
 - [ ] `session_edit.html` — `/operator/sessions/{id}/edit`
 - [x] `instruments_index.html` — `/operator/sessions/{id}/instruments`
@@ -69,8 +69,8 @@ separately.
 
 ### Other
 
-- [ ] `about.html` — `/about`
-- [ ] `me_debug.html` — `/me/debug`
+- [x] `about.html` — `/about` (Segment 11D PR A: `body.ui-v2`; body content sits in a `.card`; gains the return-to-origin "← Back to {context}" link via `app/web/return_to.py`)
+- [x] `me_debug.html` — `/me/debug` (Segment 11D PR A: now extends `base.html` on `body.ui-v2`; inline styles retired, claim list uses v2 table treatment, Sign-out → Secondary, return-to-origin link at top)
 
 ### What "v2-covered" means
 
