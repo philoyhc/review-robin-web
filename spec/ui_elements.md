@@ -413,17 +413,20 @@ the eye lands on the numbers without bolding the whole sentence.
 
 > **Lifecycle badges (specific to status strip)** — per
 > `spec/visual_style_rrw.md` "Lifecycle state colors":
-> - `draft` → neutral grey (`text-secondary` on `bg-muted`)
+> - `draft` → warning amber (`accent-amber-dark` on `accent-amber-bg`)
 > - `validated` → muted blue (`accent-blue`)
-> - `ready` → muted green (`accent-green`)
-> - `closed` → neutral grey, slightly darker than draft
+> - `ready` → muted green (`accent-green`); rendered as "Activated"
+>   in user copy via the lifecycle display-label mapping
+>   (`spec/session_home.md`)
 > *Current:* rendered as `.pill.pill-info` / `.pill.pill-warning`
 > indiscriminately across `session_detail.html`,
 > `session_setup_status_row.html`, `sessions_list.html`,
 > `session_invitations.html`, `session_monitoring.html`.
-> *Canonical:* one `.pill-lifecycle-{draft|validated|ready|closed}`
-> set. Lifecycle badge always renders through this set, never
-> through generic `pill-info`.
+> *Canonical:* one `.pill-lifecycle-{draft|validated|ready}` set
+> covering the three live states. Reserved future states
+> (`expired`, `archived`, per `spec/session_home.md`) get classes
+> when those states ship. Lifecycle badge always renders through
+> this set, never through generic `pill-info`.
 > *Migration delta:* introduce classes; sweep templates.
 > *PR:* G (badges).
 
@@ -526,7 +529,7 @@ a banner class:
 
 **Lifecycle pills using generic `.pill-info` / `.pill-warning`** —
 every page that shows session lifecycle.
-→ use `.pill-lifecycle-{draft|validated|ready|closed}` (§9).
+→ use `.pill-lifecycle-{draft|validated|ready}` (§9).
 
 **Reviewer-surface status icons (✓ / ⚠) inline-styled** —
 `review_surface.html`.
@@ -563,7 +566,7 @@ on every other operator (and reviewer) page, then promote the
 | **D** | Navigation chrome — `.session-nav-card` recolor, lighter Home anchor, bold tab text, lighter active-tab markers, restored row-label emphasis, status-row white background | **Landed in pilot** (PRs #336, #338, #341). The `session_setup_status_row.html` middle-dot rewrite + lifecycle-badge lift was deferred — strip is already close to spec on structure; revisit if visual feedback warrants. |
 | **E** | Tables — row-only borders, `12 / 16` padding, `bg-muted` header, subtle hover tint | **Landed in pilot.** Table on `/reviewers1` uses the v2 treatment. `.table-dense` opt-in for the Instruments-page tables not yet needed. |
 | **F** | Forms — input padding `8 / 12`, tokenized borders, `.form-help` / `.form-error`, label medium weight | **Landed in pilot.** `/reviewers1` uses `.form-help` for the CSV instructions; file input + checkboxes carry the v2 treatment. |
-| **G** | Badges — `.pill-count` (neutral) and lifecycle classes (`.pill-lifecycle-{draft\|validated\|ready\|closed}`), reviewer-surface `.status-icon-*` | **`.pill-count` and `.pill-empty` landed** with the refined blue-tint / brown-on-yellow treatments. Lifecycle classes still pending — `session_setup_status_row.html` still emits generic `.pill-info` for the lifecycle badge; the v2 treatment of `.pill-info` is "count" which is acceptable as a placeholder. Reviewer status icons not yet introduced. |
+| **G** | Badges — `.pill-count` (neutral) and lifecycle classes (`.pill-lifecycle-{draft\|validated\|ready}`), reviewer-surface `.status-icon-*` | **`.pill-count` and `.pill-empty` landed** with the refined blue-tint / brown-on-yellow treatments. Lifecycle classes still pending — `session_setup_status_row.html` still emits generic `.pill-info` for the lifecycle badge; the v2 treatment of `.pill-info` is "count" which is acceptable as a placeholder. Reviewer status icons not yet introduced. |
 
 Once the sweep across the rest of the operator surface lands (the
 mechanical work to replicate `/reviewers1` page-by-page), the
