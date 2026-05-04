@@ -106,7 +106,12 @@
         {% endif %}
       </div>
 
-      <div class="card" id="quick-setup">
+      {# Quick Setup — placeholder until its full spec lands.
+         State-conditional per spec/session_home.md: in ready the
+         card greys out (no yellow lock card on Home — the
+         contextual primary action card above carries any lifecycle
+         messaging). Re-enables in draft / validated. #}
+      <div class="card{% if is_ready %} disabled{% endif %}" id="quick-setup">
         <h2>Quick setup</h2>
         <p class="form-help">
           Quick setup — placeholder. Bulk-populate reviewers, reviewees, and
@@ -196,24 +201,32 @@
 
         <hr>
 
-        {% if is_ready %}
-          <p class="form-help">
-            Session deletion is locked while status is Activated. Pause the session
-            first to enable deletion.
+        {# Per spec/session_home.md, the Delete Session affordance
+           stays visible-but-disabled while Activated rather than
+           being hidden — the operator should always see the action
+           and the path forward (Pause first, then delete). The
+           server still rejects the POST while ready (the lifecycle
+           gate in the route is the source of truth); this is a
+           visual change only. #}
+        <form method="post" action="/operator/sessions/{{ session.id }}/delete">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required
+                     {% if is_ready %}disabled{% endif %}>
+              Yes, delete <strong>{{ session.name }}</strong> and all its data.
+            </label>
           </p>
-        {% else %}
-          <form method="post" action="/operator/sessions/{{ session.id }}/delete">
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm" value="true" required>
-                Yes, delete <strong>{{ session.name }}</strong> and all its data.
-              </label>
+          <p>
+            <button class="btn destructive" type="submit"
+                    {% if is_ready %}disabled aria-disabled="true"{% endif %}>Delete session</button>
+          </p>
+          {% if is_ready %}
+            <p class="form-help" style="margin-bottom: 0;">
+              Session deletion is locked while status is Activated. Pause the session
+              first to enable deletion.
             </p>
-            <p>
-              <button class="btn destructive" type="submit">Delete session</button>
-            </p>
-          </form>
-        {% endif %}
+          {% endif %}
+        </form>
       </div>
     </div>
   </div>
