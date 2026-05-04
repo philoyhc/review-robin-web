@@ -1168,6 +1168,43 @@
         color: var(--accent-amber-dark);
         font-weight: 600;
       }
+      /* Reviewer-surface page header — H1 sits inline with the
+         deadline on the same baseline so the operator's eye picks
+         up "what session, due when" in one read. */
+      body.ui-v2 .rs-page-header {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+        margin-bottom: var(--space-4);
+      }
+      body.ui-v2 .rs-page-header h1 { margin: 0; }
+      /* Reviewer-surface action row — Save draft / Submit / Cancel
+         triplet flushed right, repeated above and below the
+         instrument tables so the reviewer can act without scrolling
+         to either end. */
+      body.ui-v2 .rs-action-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-3);
+        margin: var(--space-4) 0;
+        flex-wrap: wrap;
+      }
+      /* Half-width Clear-all (Danger Zone) flush-right at the foot
+         of the reviewer surface. Collapses to full width below the
+         800px breakpoint. */
+      body.ui-v2 .rs-danger-zone {
+        max-width: calc(50% - 10px);
+        margin-left: auto;
+        margin-top: var(--space-6);
+        box-sizing: border-box;
+      }
+      @media (max-width: 800px) {
+        body.ui-v2 .rs-danger-zone {
+          max-width: 100%;
+          margin-left: 0;
+        }
+      }
     </style>
   </head>
   <body class="{% block body_class %}{% endblock %}">

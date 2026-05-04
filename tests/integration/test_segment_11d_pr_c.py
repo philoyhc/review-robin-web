@@ -324,7 +324,9 @@ def test_review_surface_renders_h1_and_deadline(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """The reviewer surface page header carries the session name as H1
-    plus a small text-secondary line for the deadline (D7)."""
+    plus a small text-secondary line for the deadline (D7). Post-D7
+    revisit: deadline sits inline with the H1 inside `.rs-page-header`
+    so "what session, due when" reads in one glance."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -336,9 +338,69 @@ def test_review_surface_renders_h1_and_deadline(
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
     assert f"<h1>{review_session.name}</h1>" in body
+    # H1 is wrapped in the page-header flex row.
+    assert 'class="rs-page-header"' in body
     # Newly created session has no deadline; absence is a feature, not
     # a bug — assertion below only checks the H1 is present and the
     # template doesn't crash on the optional deadline branch.
+
+
+def test_review_surface_action_rows_render_above_and_below_tables(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Save draft / Submit / Cancel triplet renders flush right both
+    above and below the instrument tables."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-act-rows",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    # Two .rs-action-row containers — one above the instrument loop,
+    # one after the tables.
+    assert body.count('class="rs-action-row"') == 2
+    # Each row carries the same three controls. Cancel is now an
+    # anchor inside the form rather than a free-floating <p> above.
+    save_count = body.count(">Save draft</button>")
+    cancel_count = body.count(">Cancel — discard unsaved edits</a>")
+    assert save_count >= 2, f"expected 2 Save draft buttons; got {save_count}"
+    assert cancel_count >= 2, f"expected 2 Cancel anchors; got {cancel_count}"
+    # Submit lives at both rows too — formaction routes the click to
+    # /submit instead of the form's default /save action.
+    assert (
+        body.count(f'formaction="/reviewer/sessions/{review_session.id}/submit"')
+        >= 2
+    )
+
+
+def test_review_surface_clear_all_card_is_half_width_flush_right(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Clear-all (Danger Zone) renders as a half-width, flush-right
+    card via the new `.rs-danger-zone` modifier (which carries
+    `max-width: calc(50% - 10px); margin-left: auto`)."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-dz-half",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    assert 'class="card danger-zone rs-danger-zone"' in body
+    assert "<h2>Clear all responses</h2>" in body
 
 
 # ── Operator preview keeps operator chrome ──────────────────────────────
