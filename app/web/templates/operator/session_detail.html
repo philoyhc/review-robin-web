@@ -77,7 +77,7 @@
         {% elif is_ready %}
           <h2>Pause Session</h2>
           <p class="form-help">
-            Session is currently <strong>Activated</strong>. Reviewers
+            Session is currently <strong>{{ session.status | lifecycle_label }}</strong>. Reviewers
             can access forms and save responses.
           </p>
           <p class="form-help">
@@ -152,7 +152,7 @@
         <h2>Danger Zone</h2>
         <p class="form-help">
           Delete Data wipes every reviewer response while leaving setup intact.
-          Delete session removes the entire session and is locked while ready.
+          Delete session removes the entire session and is locked while Activated.
         </p>
 
         <form method="post" action="/operator/sessions/{{ session.id }}/delete-data">
@@ -172,8 +172,8 @@
 
         {% if is_ready %}
           <p class="form-help">
-            Session deletion is locked while status is ready. Revert to draft
-            first.
+            Session deletion is locked while status is Activated. Pause the session
+            first to enable deletion.
           </p>
         {% else %}
           <form method="post" action="/operator/sessions/{{ session.id }}/delete">

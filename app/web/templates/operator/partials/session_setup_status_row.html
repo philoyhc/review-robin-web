@@ -11,7 +11,7 @@
 <div class="status-row">
   <p>
     Session:
-    <span class="pill pill-lifecycle-{{ session.status }}">{{ session.status }}</span>
+    <span class="pill pill-lifecycle-{{ session.status }}">{{ session.status | lifecycle_label }}</span>
     &middot;
     Reviewers:
     {% if status_pills.reviewer_count %}

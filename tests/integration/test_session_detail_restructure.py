@@ -459,6 +459,34 @@ def test_session_card_buttons_when_draft(
 
 
 # ---------------------------------------------------------------------------
+# Slice 11B — Lifecycle display label rendered everywhere
+# ---------------------------------------------------------------------------
+
+
+def test_chrome_status_pill_renders_activated_for_ready_session(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """When the session is in the ``ready`` enum state, the chrome
+    status pill (and other operator-readable surfaces) must render
+    "Activated", not "ready" / "READY". The CSS class still uses the
+    enum (``pill-lifecycle-ready``)."""
+
+    operator = make_client(alice)
+    review_session = _seed_pair(
+        operator, db, code="chrome-activated", reviewer_email="r@example.edu"
+    )
+    _activate(operator, db, review_session)
+
+    body = operator.get(f"/operator/sessions/{review_session.id}").text
+
+    # Pill class still keyed by enum; pill text uses the display label.
+    assert 'class="pill pill-lifecycle-ready"' in body
+    assert ">Activated</span>" in body
+
+
+# ---------------------------------------------------------------------------
 # Slice 11B — Contextual primary action card per state
 # ---------------------------------------------------------------------------
 

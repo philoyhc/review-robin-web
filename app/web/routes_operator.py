@@ -25,7 +25,7 @@ from app.services import (
     sessions,
     validation,
 )
-from app.services import session_lifecycle as lifecycle
+from app.services import lifecycle_display, session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -42,6 +42,9 @@ _templates.env.globals["display_field_label"] = (
 )
 _templates.env.globals["is_locked_display_source"] = (
     instruments_service.is_locked_display_source
+)
+_templates.env.filters["lifecycle_label"] = (
+    lifecycle_display.lifecycle_display_label
 )
 
 
