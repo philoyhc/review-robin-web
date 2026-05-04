@@ -459,6 +459,105 @@ def test_session_card_buttons_when_draft(
 
 
 # ---------------------------------------------------------------------------
+# Slice 11B — Quick Setup disabled-greyed when ready
+# ---------------------------------------------------------------------------
+
+
+def test_quick_setup_card_enabled_in_draft(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="qs-draft")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    assert 'class="card" id="quick-setup"' in body
+    assert 'class="card disabled" id="quick-setup"' not in body
+
+
+def test_quick_setup_card_disabled_in_ready(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """In ready, Quick Setup carries the .card.disabled modifier
+    (plain greying — no yellow lock card on Home per
+    spec/session_home.md). The contextual primary action card above
+    carries any explanatory messaging the operator needs."""
+
+    operator = make_client(alice)
+    review_session = _seed_pair(
+        operator, db, code="qs-ready", reviewer_email="r@example.edu"
+    )
+    _activate(operator, db, review_session)
+
+    body = operator.get(f"/operator/sessions/{review_session.id}").text
+
+    assert 'class="card disabled" id="quick-setup"' in body
+
+
+# ---------------------------------------------------------------------------
+# Slice 11B — Danger Zone Delete Session visible-disabled when ready
+# ---------------------------------------------------------------------------
+
+
+def test_delete_session_visible_but_disabled_when_ready(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Per spec/session_home.md, the Delete Session affordance stays
+    visible-but-disabled when the session is Activated rather than
+    being hidden — the operator should always see the action and the
+    path forward."""
+
+    operator = make_client(alice)
+    review_session = _seed_pair(
+        operator, db, code="del-visible", reviewer_email="r@example.edu"
+    )
+    _activate(operator, db, review_session)
+
+    body = operator.get(f"/operator/sessions/{review_session.id}").text
+
+    # Form, button, and confirmation checkbox all rendered.
+    assert (
+        f'action="/operator/sessions/{review_session.id}/delete"' in body
+    )
+    assert "Delete session" in body
+    assert (
+        'name="confirm" value="true" required'
+        in body
+    )
+    # Disabled attribute carried on both controls.
+    assert 'disabled aria-disabled="true"' in body
+    # Explanatory note present.
+    assert "Session deletion is locked while status is Activated" in body
+    assert "Pause the session" in body
+
+
+def test_delete_session_post_still_rejected_when_ready(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The visible-but-disabled UI change is cosmetic. Server-side,
+    the lifecycle gate (_require_editable in the /delete route)
+    still rejects the POST — bypassing the disabled attribute via a
+    direct POST should still 4xx."""
+
+    operator = make_client(alice)
+    review_session = _seed_pair(
+        operator, db, code="del-block", reviewer_email="r@example.edu"
+    )
+    _activate(operator, db, review_session)
+
+    response = operator.post(
+        f"/operator/sessions/{review_session.id}/delete",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code in (400, 403, 409)
+
+
+# ---------------------------------------------------------------------------
 # Slice 11B — Extract Data card (placeholder until Segment 12)
 # ---------------------------------------------------------------------------
 
@@ -499,8 +598,12 @@ def test_extract_data_card_visually_enabled_in_ready(
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
     assert 'id="extract-data"' in body
-    # Card no longer carries the .disabled modifier.
-    assert 'class="card disabled"' not in body
+    # Extract Data card itself loses the .disabled modifier in ready
+    # — assert against the specific id-bearing element rather than
+    # the bare class string (Quick Setup also uses .card.disabled in
+    # ready per PR D's treatment).
+    assert 'class="card disabled" id="extract-data"' not in body
+    assert 'class="card" id="extract-data"' in body
     # Body copy switches to the "ready to extract" line.
     assert "Extract reviewer responses for analysis or reporting." in body
     # Button is still disabled (Segment 12 placeholder).
@@ -624,9 +727,17 @@ def test_session_card_buttons_when_ready(
     assert (
         f'action="/operator/sessions/{review_session.id}/delete-data"' in body
     )
-    # Delete Session form ABSENT (locked while ready)
+    # Per PR D, the Delete Session affordance now stays VISIBLE
+    # (form + button + confirmation checkbox) but the button and
+    # checkbox are disabled while ready, with an explanatory note
+    # below. The server-side lock in the route is the source of
+    # truth (_require_editable rejects the POST); this is the
+    # visual "always show the affordance" change from
+    # spec/session_home.md.
     assert (
-        f'action="/operator/sessions/{review_session.id}/delete"' not in body
-        or 'Delete session' not in body  # belt-and-suspenders
+        f'action="/operator/sessions/{review_session.id}/delete"' in body
     )
-    assert "Session deletion is locked while status is" in body
+    assert "Delete session" in body
+    # Button and checkbox carry disabled attribute.
+    assert "disabled aria-disabled=\"true\"" in body
+    assert "Session deletion is locked while status is Activated" in body
