@@ -466,11 +466,22 @@ def test_session_card_buttons_when_draft(
 def test_quick_setup_card_enabled_in_draft(
     client: TestClient, db: Session
 ) -> None:
+    """In draft, Quick Setup mirrors the Extract Data card's shape
+    (heading + one-line description + disabled placeholder
+    button). Both cards share the same layout so the operator's
+    eye reads them as a related pair of placeholders."""
+
     review_session = _make_session(client, db, code="qs-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     assert 'class="card" id="quick-setup"' in body
     assert 'class="card disabled" id="quick-setup"' not in body
+    assert "<h2>Quick Setup</h2>" in body
+    # Single-line action description, action-oriented (not
+    # self-referential meta copy).
+    assert "Bulk-populate reviewers, reviewees, and assignments" in body
+    # Disabled placeholder button matches the Extract Data shape.
+    assert "Quick Setup spec at spec/quick_setup_card_spec.md" in body
 
 
 def test_quick_setup_card_disabled_in_ready(
