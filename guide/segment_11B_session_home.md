@@ -14,6 +14,14 @@ implementation plan against that spec.
 Planning. PRs **A → F** are sized to land in dependency order; each
 is independently shippable.
 
+**Recommended sequence after review:**
+**A** → (pre-B verification spike) → **E** as a CSS warm-up →
+**B** → **C** → **D** → **F**. E is moved earlier because it's
+CSS-only and risk-free; running it before B gives the test suite
+one less thing to react to when B's bigger sweep lands. The
+verification spike (see "Pre-PR-B verification" below) is not a
+PR — just findings recorded in PR B's description.
+
 ## Scope
 
 In:
@@ -72,9 +80,14 @@ Out:
 **PR A — Lifecycle display mapping (foundation).** Prepare every
 template that renders `session.status` to use a display label.
 
-- New helper: `lifecycle_display_label(status: str) -> str` in
-  `app/services/session_lifecycle.py` (or a new
-  `app/services/lifecycle_display.py` if it grows). Keep it tiny:
+- New helper: `lifecycle_display_label(status: str) -> str` in a
+  new `app/services/lifecycle_display.py` module. (The plan
+  originally allowed `app/services/session_lifecycle.py` as the
+  home with promotion to its own module "if it grows" — taking
+  the dedicated module up front since multiple call sites and
+  tests will reach for it, and keeping it out of
+  `session_lifecycle.py` avoids muddling lifecycle *transitions*
+  with lifecycle *display*.) Keep it tiny:
 
   ```python
   DISPLAY_LABELS = {"ready": "Activated"}
@@ -91,13 +104,34 @@ template that renders `session.status` to use a display label.
 - Enum stays for slugs / API / log messages / database / CSS class
   names.
 
+**Pre-PR-B verification spike** (not a PR — record findings in PR
+B's description). Two cheap checks that determine PR B's shape:
+
+1. **`/revert` route coverage.** Grep the route handler + tests to
+   confirm whether `POST /operator/sessions/{id}/revert` accepts
+   both `validated → draft` (current "invalidate") and `ready →
+   draft` (current "revert"). If both work via the same endpoint,
+   PR B is "relabel a button + new confirmation copy." If
+   `validated → draft` requires a separate `invalidate` endpoint,
+   PR B either wires up the new endpoint or points the supporting
+   "Revert to Draft" link at it.
+2. **Test sweep size.** Grep templates and tests for `Run Session`,
+   `Validation summary`, `Revert to draft`, `READY`, and `ready` as
+   user-visible body text. Note the hit count in PR B's
+   description so the reviewer knows the sweep was bounded, not
+   missed.
+
 **PR B — Contextual primary action card (biggest visual change).**
 Replace the existing Run Session + Validation summary cards with a
 single state-aware card.
 
-- New partial: `_partials/contextual_action.html` (or inline in
-  `session_detail.html` for the first cut; refactor later if it gets
-  unwieldy).
+- **Inline first, partial later.** Write the if/elif/else inline
+  in `session_detail.html` for the first cut. Only refactor to
+  `_partials/contextual_action.html` (and a `ContextualAction`
+  view-shape dataclass in `app/web/views.py` alongside
+  `build_setup_rows`) if the inline version exceeds ~50 lines or
+  the conditional logic gets gnarly. Don't over-engineer the
+  first pass.
 - Per-state contents:
 
   | State | Primary button | Supporting links | Readiness summary |
@@ -137,15 +171,28 @@ to its own card.
 
 **PR D — Right column polish + Quick Setup disabled state.**
 
-- Drop the duplicate `Status:` pill from the Session Details card.
+- ~~Drop the duplicate `Status:` pill from the Session Details
+  card.~~ **Already shipped** (PR #375 / commits 2a36607, 6c59215).
+  This item is removed from D's scope.
 - Quick Setup gets a disabled-greyed treatment when `is_ready`
   (no yellow lock card per spec). Likely a small `.card.disabled`
   helper class on the v2 block, or a `.disabled` modifier on
-  `.card`.
-- Confirm Danger Zone matches the spec's "Delete Session disabled
-  when Activated" — currently hides the form, decide whether to
-  keep hiding or render greyed-out so the affordance stays visible
-  with an explanation.
+  `.card`. Add the rule to `base.html` v2 block alongside the
+  other card variants.
+- **Danger Zone Delete Session — behavior change, not just
+  polish.** Current code *hides* the Delete Session form when
+  `is_ready` (`session_detail.html:170-187`). Spec says the
+  affordance stays visible but greyed-disabled with an
+  explanation. Render the form's button as disabled with a
+  short note ("Pause the session first to enable deletion.")
+  rather than suppressing the form entirely. Flag this in the
+  PR description as the one behavior change in D — the rest is
+  pure styling.
+
+If the Danger Zone change feels load-bearing in review, splitting
+D into D1 (Quick Setup disabled, CSS-only) and D2 (Danger Zone
+visible-disabled, behavior change) is fine. Default to keeping
+them together since both are small.
 
 **PR E — Stale `.pill-lifecycle-closed` cleanup.** CSS-only.
 
@@ -153,6 +200,9 @@ to its own card.
   `base.html` v2 block.
 - Grep for any `pill-lifecycle-closed` template usage; should be
   zero.
+
+Land this **before PR B** as a warm-up. It's CSS-only, risk-free,
+and gets one stale rule out of the way before B's bigger sweep.
 
 **PR F — Doc impact.**
 
@@ -164,6 +214,13 @@ to its own card.
   ships.)
 - Tick `session_detail.html` against the new spec in
   `guide/ui_checklist.md`.
+
+Land **after** B/C/D have been seen on the Azure dev slot — doc
+updates should reflect what actually shipped, not what was
+planned. If post-deploy verification surfaces a small visual
+deviation from the spec, capture it in F (or fold the spec
+update into a follow-up) rather than rewriting docs that the
+implementation already moved past.
 
 ## Implementation pointers
 
