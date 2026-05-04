@@ -119,15 +119,20 @@
       <div class="card">
         <h2>Session Details</h2>
         <div class="session-meta-row">
-          <div><strong>Deadline:</strong> {{ session.deadline.isoformat() if session.deadline else "Not set" }}</div>
-          <div><strong>Created by:</strong> {{ session.created_by_user.display_name or session.created_by_user.email }}</div>
-        </div>
-        <p><strong>Description:</strong> {{ session.description or "—" }}</p>
-        <div class="session-status-row">
           <div>
-            <strong>Status:</strong>
-            <span class="pill pill-lifecycle-{{ session.status }}">{{ session.status }}</span>
+            <p class="form-help" style="margin: 0;">Deadline</p>
+            <p style="margin: 0 0 var(--space-3) 0;">{{ session.deadline.isoformat() if session.deadline else "Not set" }}</p>
           </div>
+          <div>
+            <p class="form-help" style="margin: 0;">Created by</p>
+            <p style="margin: 0 0 var(--space-3) 0;">{{ session.created_by_user.display_name or session.created_by_user.email }}</p>
+          </div>
+        </div>
+        <p class="form-help" style="margin: 0;">Description</p>
+        <p style="margin: 0 0 var(--space-3) 0;">{{ session.description or "—" }}</p>
+        {# Lifecycle state shown in the chrome status strip — no
+           duplicate Status pill here per spec/session_home.md. #}
+        <div style="display: flex; justify-content: flex-end;">
           <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
         </div>
       </div>
