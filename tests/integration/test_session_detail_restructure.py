@@ -131,7 +131,12 @@ def test_session_detail_renders_session_layout(
 
     assert response.status_code == 200
     assert "<h2>Session Details</h2>" in body
-    assert "<h2>Run Session</h2>" in body
+    # Per spec/session_home.md, the contextual primary action card
+    # replaces the old "Run Session" four-CTA card; on a brand new
+    # draft session the action is "Validate Setup".
+    assert 'id="contextual-action"' in body
+    assert "<h2>Validate Setup</h2>" in body
+    assert "<h2>Run Session</h2>" not in body
     assert "Danger Zone" in body
     assert 'id="danger-zone"' in body
     # The standalone "Session Setup" card was retired — its five Manage
@@ -179,11 +184,18 @@ def test_session_detail_no_validate_summary_by_default(
 ) -> None:
     review_session = _make_session(client, db, code="no-summary")
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    assert 'id="validation-summary"' not in body
-    assert "Validation summary" not in body
+    # Brand-new draft session — no validation card and no Activate
+    # form should appear. The contextual action card is in its
+    # "Validate Setup" state.
+    assert "<h2>Validate Setup</h2>" in body
+    assert "<h2>Validation summary</h2>" not in body
+    assert (
+        f'action="/operator/sessions/{review_session.id}/activate"'
+        not in body
+    )
 
 
-def test_session_detail_renders_validate_summary_with_query(
+def test_session_detail_advances_to_validated_with_query(
     client: TestClient, db: Session
 ) -> None:
     review_session = _seed_pair(
@@ -193,35 +205,47 @@ def test_session_detail_renders_validate_summary_with_query(
         f"/operator/sessions/{review_session.id}?validated=1"
     ).text
 
-    assert 'id="validation-summary"' in body
-    assert "Validation summary" in body
-    # Counts pills present
-    assert "0 errors" in body
-    # View detailed validation button targets /validate
-    assert (
-        f'href="/operator/sessions/{review_session.id}/validate"' in body
-    )
-    # Activate form is on the card when can_activate
+    # The contextual action card now shows the Activated-state shape
+    # (Activate Session button + Setup validated pill).
+    assert "<h2>Activate Session</h2>" in body
+    assert "Setup validated" in body
+    # Activate form on the card.
     assert (
         f'action="/operator/sessions/{review_session.id}/activate"' in body
     )
+    # Supporting links include validation detail.
+    assert (
+        f'href="/operator/sessions/{review_session.id}/validate"' in body
+    )
 
 
-def test_validate_summary_lost_on_refresh_without_query(
+def test_validated_session_keeps_action_card_without_query(
     client: TestClient, db: Session
 ) -> None:
+    """Once validated, the action card persists as Activate Session
+    without needing ``?validated=1``. (Pre-11B, the validation summary
+    card was query-gated; the spec replaces that with a state-driven
+    card that reflects the persistent lifecycle state.)"""
+
     review_session = _seed_pair(
         client, db, code="lose-summary", reviewer_email="r@example.edu"
     )
+    # Walk through ?validated=1 to mark the session validated.
     with_query = client.get(
         f"/operator/sessions/{review_session.id}?validated=1"
     ).text
-    assert "Validation summary" in with_query
+    assert "<h2>Activate Session</h2>" in with_query
 
+    # On a refresh without the query, the card stays — state, not URL,
+    # drives the contents now.
     without_query = client.get(
         f"/operator/sessions/{review_session.id}"
     ).text
-    assert "Validation summary" not in without_query
+    assert "<h2>Activate Session</h2>" in without_query
+    assert (
+        f'action="/operator/sessions/{review_session.id}/activate"'
+        in without_query
+    )
 
 
 def test_validate_page_activate_form_removed(
@@ -432,6 +456,72 @@ def test_session_card_buttons_when_draft(
     assert (
         f'action="/operator/sessions/{review_session.id}/delete"' in body
     )
+
+
+# ---------------------------------------------------------------------------
+# Slice 11B — Contextual primary action card per state
+# ---------------------------------------------------------------------------
+
+
+def test_contextual_action_card_in_ready_renders_pause(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    operator = make_client(alice)
+    review_session = _seed_pair(
+        operator, db, code="ready-pause", reviewer_email="r@example.edu"
+    )
+    _activate(operator, db, review_session)
+
+    body = operator.get(f"/operator/sessions/{review_session.id}").text
+
+    # Action card shows Pause Session header + form posting to /revert.
+    assert "<h2>Pause Session</h2>" in body
+    assert (
+        f'action="/operator/sessions/{review_session.id}/revert"' in body
+    )
+    assert "Pause Session" in body
+    # Activated-state supporting links present.
+    assert "Manage invitations" in body
+    assert "Monitor responses" in body
+    assert "Preview reviewer surface" in body
+    # Old "Run Session" header is gone.
+    assert "<h2>Run Session</h2>" not in body
+
+
+def test_revert_route_handles_validated_to_draft(
+    client: TestClient, db: Session
+) -> None:
+    """The Revert to Draft supporting link in the validated-state
+    action card POSTs to /revert; the route now dispatches to
+    ``invalidate_session`` for ``validated → draft`` transitions
+    (previously only handled ``ready → draft``)."""
+
+    review_session = _seed_pair(
+        client, db, code="validated-revert", reviewer_email="r@example.edu"
+    )
+    # Mark validated via the ?validated=1 entry path.
+    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    db.refresh(review_session)
+    assert review_session.status == "validated"
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/revert",
+        data={},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    db.refresh(review_session)
+    assert review_session.status == "draft"
+
+    # An audit row was written for the operator-initiated invalidation.
+    audit = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.invalidated"
+        )
+    ).scalar_one()
+    assert audit.detail["reason"] == "operator_revert"
 
 
 def test_session_card_buttons_when_ready(

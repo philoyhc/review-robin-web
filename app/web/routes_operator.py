@@ -125,7 +125,11 @@ def session_detail(
 ) -> HTMLResponse:
     setup_rows = views.build_setup_rows(db, review_session)
     validation_summary: dict[str, object] | None = None
-    if validated:
+    # Run validation on the ?validated=1 entry path AND whenever the
+    # session is already in validated — the Activate Session control on
+    # the contextual action card needs ``can_activate`` /
+    # ``needs_acknowledge`` to render the right form shape.
+    if validated or lifecycle.is_validated(review_session):
         issues = validation.validate_session_setup(db, review_session)
         report = lifecycle.build_readiness_report(issues)
         if report.can_activate and lifecycle.is_draft(review_session):
@@ -875,13 +879,22 @@ def session_revert_to_draft(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     try:
-        lifecycle.revert_session_to_draft(
-            db,
-            review_session=review_session,
-            user=user,
-            confirm=confirm == "true",
-            correlation_id=request_correlation_id(),
-        )
+        if lifecycle.is_validated(review_session):
+            lifecycle.invalidate_session(
+                db,
+                review_session=review_session,
+                user=user,
+                reason="operator_revert",
+                correlation_id=request_correlation_id(),
+            )
+        else:
+            lifecycle.revert_session_to_draft(
+                db,
+                review_session=review_session,
+                user=user,
+                confirm=confirm == "true",
+                correlation_id=request_correlation_id(),
+            )
     except lifecycle.LifecycleError as exc:
         raise _lifecycle_error_response(exc) from exc
     target = f"/operator/sessions/{review_session.id}"
