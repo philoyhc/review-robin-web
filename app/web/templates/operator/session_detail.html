@@ -106,23 +106,38 @@
         {% endif %}
       </div>
 
-      {# Quick Setup — placeholder until its full spec lands.
+      {# Quick Setup card — placeholder until its full spec lands.
+         Shares the same shape as the Extract Data card below
+         (heading + one-line description + disabled action button).
          State-conditional per spec/session_home.md: in ready the
          card greys out (no yellow lock card on Home — the
-         contextual primary action card above carries any lifecycle
-         messaging). Re-enables in draft / validated. #}
+         contextual primary action card above carries any
+         lifecycle messaging). Re-enables in draft / validated. #}
       <div class="card{% if is_ready %} disabled{% endif %}" id="quick-setup">
-        <h2>Quick setup</h2>
-        <p class="form-help">
-          Quick setup — placeholder. Bulk-populate reviewers, reviewees, and
-          assignments from files or rules in one place. Spec at
-          <code>spec/quick_setup_card_spec.md</code>; full implementation
-          tracked as <code>unfinished_business.md</code> #30.
-        </p>
+        <h2>Quick Setup</h2>
+        {% if is_ready %}
+          <p class="form-help">
+            Setup edits are paused while the session is Activated. Pause
+            the session to re-enable bulk setup.
+          </p>
+        {% else %}
+          <p class="form-help">
+            Bulk-populate reviewers, reviewees, and assignments from
+            files or rules in one place.
+          </p>
+        {% endif %}
+        <div class="btn-pair">
+          <button class="btn secondary"
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  title="Quick Setup spec at spec/quick_setup_card_spec.md (unfinished_business.md #30)">Set up</button>
+        </div>
       </div>
 
       {# Extract Data card — placeholder until Segment 12 ships real
-         extraction. State-conditional per spec/session_home.md: in
+         extraction. Shares the same shape as the Quick Setup card
+         above. State-conditional per spec/session_home.md: in
          draft/validated the card greys out with explanatory copy
          ("nothing to extract yet"); in ready the card visually
          enables but the button stays disabled (Segment 12). #}
