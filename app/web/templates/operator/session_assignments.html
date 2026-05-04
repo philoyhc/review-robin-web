@@ -13,8 +13,15 @@
   </div>
 
   <div class="card">
-    {% if assignment_count %}
-      <p style="margin: 0;">
+    <p style="margin: 0;">
+      Fields with data:
+      {% for label in fields_with_data %}
+        <span class="pill pill-count">{{ label }}</span>
+      {% else %}
+        <span class="muted">—</span>
+      {% endfor %}
+      {% if assignment_count %}
+        &nbsp;&middot;&nbsp;
         Self-review:
         {% if self_review_found == 0 %}
           <span class="pill pill-count">0 found</span>
@@ -26,25 +33,8 @@
           <span class="pill pill-count">{{ self_review_included }} included</span>
           <span class="pill pill-count">{{ self_review_excluded }} excluded</span>
         {% endif %}
-      </p>
-      <p style="margin: 4px 0 0 0;">
-        Fields with data:
-        {% for label in fields_with_data %}
-          <span class="pill pill-count">{{ label }}</span>
-        {% else %}
-          <span class="muted">—</span>
-        {% endfor %}
-      </p>
-    {% else %}
-      <p style="margin: 0;">
-        Fields with data:
-        {% for label in fields_with_data %}
-          <span class="pill pill-count">{{ label }}</span>
-        {% else %}
-          <span class="muted">—</span>
-        {% endfor %}
-      </p>
-    {% endif %}
+      {% endif %}
+    </p>
   </div>
 
   {% if is_ready %}
