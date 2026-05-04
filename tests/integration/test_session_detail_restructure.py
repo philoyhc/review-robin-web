@@ -199,6 +199,38 @@ def test_session_detail_no_validate_summary_by_default(
     )
 
 
+def test_session_detail_validation_failure_renders_inline_feedback(
+    client: TestClient, db: Session
+) -> None:
+    """Clicking Validate Setup with empty rosters keeps the session in
+    draft (validation failed) and surfaces the failure inline in the
+    Next Action card body — counts as pills + a "Validation didn't
+    pass" headline + an explicit "resolve and re-run" instruction.
+
+    Regression for the original 11D-era report: clicking Validate
+    Setup on an empty session was a no-op visually; the operator had
+    to navigate to /validate to see what was wrong.
+    """
+    review_session = _make_session(client, db, code="empty-validate")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}?validated=1"
+    ).text
+
+    # Stayed in draft — Validate Setup remains the Primary action.
+    assert ">Validate Setup</a>" in body
+    # Inline feedback present.
+    assert "Validation didn't pass." in body
+    # Pill row mirrors the validate page's pills (errors / warnings /
+    # info), so the operator sees the shape of the failure without
+    # leaving Home.
+    assert 'class="pill pill-error"' in body
+    assert "error" in body  # at least one error pill rendered with count
+    assert "Resolve the errors and re-run validation" in body
+    # The "See validation details" Secondary stays in the bottom row
+    # as the deeper read.
+    assert ">See validation details</a>" in body
+
+
 def test_session_detail_advances_to_validated_with_query(
     client: TestClient, db: Session
 ) -> None:
