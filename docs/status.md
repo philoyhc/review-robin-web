@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 11B (2026-05-04)
+**As of:** end of Segment 11D (2026-05-04)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated
@@ -36,6 +36,7 @@ For the full long-term plan see
 | 2026-05-02 | Segment 10D shipped (Instruments-page rebuild: state-machine-driven Display + Response Fields tables, Response Type Definitions card with cascade-delete UX, mutual-exclusion edit lock, multi-instrument enable) |
 | 2026-05-03 | Segment 11A shipped (Tier 1–3 cleanup punch list: shared `_parse_email`, CSV cross-table identity check, `correlation_id` into deadline lazy-close, decoupled `invitations.py` from `Request`, CSRF decision, reviewer-surface polish batch, v2 chrome rebuild + per-page sweep across the session-centric pages) |
 | 2026-05-04 | Segment 11B shipped (Session Home rebuild: lifecycle display-label mapping, Next Action card with constant title + `accent-blue` border + `min-height: 200px` + bottom button row, canonical `.card.placeholder` + `placeholder_card` macro for Quick Setup / Extract Data / Rule Based Assignment, Quick Setup disabled in `ready`, Danger Zone Delete-Session visible-but-disabled, `.pill-lifecycle-closed` retired) |
+| 2026-05-04 | Segment 11D shipped (v2 sweep across the eight remaining non-session-centric templates; reviewer top bar variant via `{% block top_bar %}` + `reviewer/_top_bar.html`; About / `me/debug` return-to-origin via `app/web/return_to.py`; sessions list lobby restructured from `<table>` to `.card.session-card` rows; `session_edit` gains the two-row session chrome with no tab active; reviewer surface picks up status-icon classes, the four-variant `.banner` family, and the H1 + deadline page header) |
 
 ---
 

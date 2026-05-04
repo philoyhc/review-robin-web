@@ -63,9 +63,9 @@ separately.
 
 ### Reviewer pages
 
-- [ ] `reviewer/dashboard.html` — `/reviewer`
-- [ ] `reviewer/review_surface.html` — `/reviewer/sessions/{id}`
-- [ ] `reviewer/invite_mismatch.html`
+- [x] `reviewer/dashboard.html` — `/reviewer` (Segment 11D PR C: `body.ui-v2 reviewer`; lighter chrome via the new `reviewer/_top_bar.html` partial; per-row submitted-state pill swapped from `pill-info` to `pill-success`; empty-state copy "You have no pending reviews".)
+- [x] `reviewer/review_surface.html` — `/reviewer/sessions/{id}` (Segment 11D PR C: `body.ui-v2 reviewer` (preview reuses operator chrome via the `top_bar` `super()` branch); D5 status icons via `.status-icon-{complete,incomplete}`; D6 banners migrated to the `.banner.banner-{info,success,warning}` family; D7 page header carries H1 + deadline in `.muted`; Save → Primary, Submit → Secondary, Clear all moved into a `.card.danger-zone` with a `.btn.destructive` action.)
+- [x] `reviewer/invite_mismatch.html` (Segment 11D PR C: `body.ui-v2 reviewer`; the email-mismatch error renders as a `.banner.banner-warning`; legacy inline red `.card` styles retired.)
 
 ### Other
 

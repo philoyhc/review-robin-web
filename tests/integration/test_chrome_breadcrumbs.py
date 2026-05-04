@@ -32,16 +32,23 @@ def test_operator_chrome_renders_app_identity_user_card_and_signout(
     assert 'href="/.auth/logout"' in body
 
 
-def test_reviewer_chrome_renders_app_identity_user_card_and_signout(
+def test_reviewer_chrome_renders_lighter_top_bar_with_no_breadcrumb(
     client: TestClient,
 ) -> None:
+    """Reviewer pages render the lighter "Review Robin" chrome variant
+    (Segment 11D PR C, D2): no version string, no /about link, and no
+    breadcrumb. The user card and sign-out remain."""
     response = client.get("/reviewer")
     assert response.status_code == 200
     body = response.text
-    assert 'href="/about"' in body
-    assert "Review Robin Web App (version dev)" in body
+    assert "Review Robin Web App" not in body
+    assert "version dev" not in body
+    assert 'class="chrome-app-identity">Review Robin</span>' in body
+    assert 'href="/about"' not in body
     assert "Signed in as Alice Example" in body
     assert 'href="/.auth/logout"' in body
+    # No operator-style breadcrumb on the reviewer surface.
+    assert 'class="breadcrumb"' not in body
 
 
 def test_breadcrumb_on_operator_root_shows_single_non_link_label(
@@ -78,13 +85,16 @@ def test_breadcrumb_on_nested_operator_page_renders_three_tuple_trail(
     assert '<span aria-current="page">Reviewers</span>' in body
 
 
-def test_breadcrumb_on_reviewer_root_shows_single_non_link_label(
+def test_breadcrumb_is_suppressed_on_reviewer_root(
     client: TestClient,
 ) -> None:
+    """Reviewer pages don't carry the operator-style breadcrumb
+    (Segment 11D PR C, D2). The chrome's H1 + the user menu together
+    orient the reviewer."""
     response = client.get("/reviewer")
     body = response.text
-    assert '<span aria-current="page">Reviewer</span>' in body
-    assert '<a href="/reviewer">Reviewer</a>' not in body
+    assert 'class="breadcrumb"' not in body
+    assert '<span aria-current="page">Reviewer</span>' not in body
 
 
 def test_sessions_list_per_row_renders_access_and_delete_buttons(

@@ -38,6 +38,22 @@ _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _templates.env.globals["app_version"] = settings.app_version
 
 
+def reviewer_review_count_for_user(db: Session, user: User) -> int:
+    """Count active Reviewer rows whose email matches ``user``, case-insensitive.
+
+    Drives the conditional "My Reviews" link in the reviewer chrome
+    (suppressed when the user has only a single review — the dashboard
+    isn't useful as a navigation hub in that case).
+    """
+    target = (user.email or "").casefold()
+    if not target:
+        return 0
+    rows = db.execute(
+        select(Reviewer).where(Reviewer.status == "active")
+    ).scalars()
+    return sum(1 for r in rows if r.email.casefold() == target)
+
+
 @router.get("", response_class=HTMLResponse)
 def reviewer_dashboard(
     request: Request,
@@ -73,6 +89,7 @@ def reviewer_dashboard(
         {
             "user": user,
             "items": items,
+            "reviewer_review_count": len(items),
             "breadcrumbs": breadcrumbs.reviewer_root(),
         },
     )
@@ -620,6 +637,7 @@ def review_surface(
         submitted=submitted == "ok",
     )
     context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
+    context["reviewer_review_count"] = reviewer_review_count_for_user(db, user)
     return _templates.TemplateResponse(
         request, "reviewer/review_surface.html", context
     )
@@ -698,6 +716,9 @@ async def reviewer_submit(
             show_acknowledge=True,
         )
         context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
+        context["reviewer_review_count"] = reviewer_review_count_for_user(
+            db, user
+        )
         return _templates.TemplateResponse(
             request,
             "reviewer/review_surface.html",
@@ -770,6 +791,9 @@ def reviewer_invite(
                 "user": user,
                 "session": review_session,
                 "reviewer_email": reviewer.email,
+                "reviewer_review_count": reviewer_review_count_for_user(
+                    db, user
+                ),
                 "breadcrumbs": breadcrumbs.reviewer_invite_mismatch(),
             },
             status_code=status.HTTP_403_FORBIDDEN,
