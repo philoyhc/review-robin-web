@@ -695,17 +695,20 @@ rest of the post-MVP roadmap opens.
 ### Work items
 
 The detailed punch list lives in
-`guide/segment_11_cleaning_up_unfinished_business.md` (Tier 1
+`guide/segment_11A_cleaning_up_unfinished_business.md` (Tier 1
 tiny cleanups → Tier 2 decisions → Tier 3 small features → Tier 4
-medium features). Each item lands as its own PR.
+medium features). Each item lands as its own PR. The Session Home
+rebuild + Quick Setup card portion of the Tier 4 bundle is split
+out into `guide/segment_11B_session_home.md`.
 
 ### Done when
 
 - All items in
-  `guide/segment_11_cleaning_up_unfinished_business.md` Tier 1 +
+  `guide/segment_11A_cleaning_up_unfinished_business.md` Tier 1 +
   Tier 2 + Tier 3 are landed or have a written decision.
 - Tier 4 items are either landed or moved to
   `guide/unfinished_business.md` with an explicit deferral.
+- Segment 11B (Session Home rebuild + Quick Setup card) lands.
 
 ---
 
