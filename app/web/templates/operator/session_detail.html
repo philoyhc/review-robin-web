@@ -29,10 +29,28 @@
         <h2>Next Action</h2>
         <div class="next-action-body">
           {% if is_draft %}
-            <p>
-              Run validation to surface errors and warnings before
-              activating. Validation never mutates session data.
-            </p>
+            {% if validation_summary %}
+              {# Validation just ran (?validated=1) and didn't pass —
+                 the session stays in draft. Surface the counts inline
+                 so the operator sees feedback without leaving Home;
+                 the "See validation details" Secondary in the button
+                 row is the deeper read. #}
+              <p><strong>Validation didn't pass.</strong></p>
+              <p>
+                <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
+                <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
+                <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
+              </p>
+              <p>
+                Resolve the errors and re-run validation before
+                activating.
+              </p>
+            {% else %}
+              <p>
+                Run validation to surface errors and warnings before
+                activating. Validation never mutates session data.
+              </p>
+            {% endif %}
           {% elif is_validated %}
             {% if validation_summary and validation_summary.can_activate %}
               <p>
