@@ -1033,11 +1033,23 @@ def session_preview(
     )
 
 
-def _instruments_redirect(session_id: int) -> RedirectResponse:
-    return RedirectResponse(
-        url=f"/operator/sessions/{session_id}/instruments",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+def _instruments_redirect(
+    session_id: int, fragment: str | None = None
+) -> RedirectResponse:
+    """Redirect to the Instruments index, optionally landing on an
+    in-page anchor.
+
+    Per-instrument actions (open / close / visibility / save) should
+    pass ``fragment="instrument-{id}"`` so the operator lands on the
+    instrument they were just acting on instead of being yanked to
+    the top of the page. Bulk actions (accepting/visibility all-on/
+    off) pass no fragment — they affect the whole list, so landing
+    at the top is appropriate.
+    """
+    url = f"/operator/sessions/{session_id}/instruments"
+    if fragment:
+        url = f"{url}#{fragment}"
+    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 def _require_response_field_in_instrument(
@@ -1937,10 +1949,30 @@ def instruments_delete(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete the last instrument",
         )
+    # Pick the next-or-previous sibling so the operator lands near
+    # the instrument they just deleted instead of being yanked to
+    # the top of the page. Captured BEFORE the delete since the row
+    # is gone after.
+    sibling_ids = (
+        db.execute(
+            select(Instrument.id)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.id)
+        )
+        .scalars()
+        .all()
+    )
+    idx = sibling_ids.index(instrument_id)
+    if idx + 1 < len(sibling_ids):
+        landing_id = sibling_ids[idx + 1]
+    else:
+        landing_id = sibling_ids[idx - 1]
     instruments_service.delete_instrument(
         db, instrument=instrument, actor=user
     )
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(
+        review_session.id, fragment=f"instrument-{landing_id}"
+    )
 
 
 @router.post("/sessions/{session_id}/instruments/accepting/all-on")
@@ -2018,7 +2050,9 @@ def instrument_open(
         )
     except lifecycle.LifecycleError as exc:
         raise _lifecycle_error_response(exc) from exc
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(
+        review_session.id, fragment=f"instrument-{instrument.id}"
+    )
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/close")
@@ -2036,7 +2070,9 @@ def instrument_close(
         reason="manual",
         correlation_id=request_correlation_id(),
     )
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(
+        review_session.id, fragment=f"instrument-{instrument.id}"
+    )
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/visibility")
@@ -2055,7 +2091,9 @@ def instrument_visibility(
         visible=visible_when_closed == "true",
         correlation_id=request_correlation_id(),
     )
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(
+        review_session.id, fragment=f"instrument-{instrument.id}"
+    )
 
 
 # --------------------------------------------------------------------------- #
