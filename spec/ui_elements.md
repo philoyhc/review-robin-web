@@ -195,6 +195,50 @@ Each element entry follows the same shape:
 > *PR:* C (cards & banners) — class landed; per-template sweep
 > still pending.
 
+> **`.card.placeholder` (canonical placeholder treatment)** — same
+> shape as `.card`, with `bg-muted` background, `text-muted` H2,
+> `text-secondary` body, `not-allowed` cursor on the whole card.
+> Used for cards whose underlying feature is not yet implemented;
+> every instance reads as visually identical so siblings on the
+> same page render with the same typography and contrast
+> regardless of which is in its "active" lifecycle state.
+> *v1:* not a class — placeholder cards mixed with active cards
+> rendered identically (default `.card`), distinguished only by
+> a "(under construction)" body line.
+> *v2 (Segment 11B):* `.card.placeholder` rule under
+> `body.ui-v2`; a Jinja macro `placeholder_card(id, title,
+> description, button_label, button_tooltip)` in
+> `app/web/templates/operator/partials/_placeholder_card.html`
+> packages the canonical heading + body + disabled action
+> button. Used on Session Home (Quick Setup, Extract Data) and
+> the Assignments page (Rule Based Assignment). New placeholder
+> cards on any page should reuse the macro without further
+> design work.
+> *Migration delta:* none — canonical from the start.
+> *PR:* Segment 11B (PRs C / D / 386 / 387 / 388).
+
+> **`.card.next-action` (Session Home's Next Action card)** —
+> same shape as `.card`, with `accent-blue` border (matching the
+> Primary button inside), `display: flex; flex-direction: column;
+> min-height: 200px`. Three vertically-stacked children:
+> `.next-action-body` (flex-grows), optional `.next-action-confirm`
+> (sits just above the buttons), and `.next-action-buttons`
+> (Primary + Secondary buttons in one row at the bottom). The
+> H2 is the literal constant string "Next Action"; per-state
+> action verbs live in the primary button label, not the H2.
+> The blue border signals this is the page's single most
+> important card. POST forms (Activate / Revert to draft /
+> Pause) declare an id in the body and the button declares
+> `form="next-action-{name}-form"` so the form definition stays
+> near its checkbox while the submit button lives in the bottom
+> row.
+> *v1:* not a class — Home rendered four equal-weight CTAs in a
+> "Run Session" card.
+> *v2 (Segment 11B):* `.card.next-action` rule under
+> `body.ui-v2`; spec at `spec/session_home.md`.
+> *Migration delta:* none — net-new in 11B.
+> *PR:* Segment 11B (PRs B / 390 / 391 / 392 / 393).
+
 > **Reviewer help cards (`.rs-help-card` family)** — bg-muted
 > tinted blocks listing per-instrument response-field help text.
 > Two-up grid (`.rs-help-grid`) when ≥2 items; single full-width

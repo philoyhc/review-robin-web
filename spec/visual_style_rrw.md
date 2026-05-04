@@ -51,7 +51,7 @@ Cards are either **half-width** or **full-width**:
 
 - **Half-width is the default.** Half-width cards keep line lengths reasonable — full-width body text and form labels sprawl across the screen and become harder to scan. Pair half-width cards in a `.bottom-grid` (a 2-column grid with `align-items: start` so each side keeps its natural height — never stretches to match the taller column). When two half-width cards naturally belong together side-by-side, write them as a pair; when several stack on one side, wrap them in a `.bottom-left` flex column inside the grid. Example arrangements on operator pages:
   - Reviewers / Reviewees / Assignments: Upload card (left) + Danger Zone (right).
-  - Session Home: Run Session / Validation Summary / Quick Setup stack inside a `.bottom-left` on the left; Session Details + Danger Zone stack inside a `.bottom-left` on the right.
+  - Session Home: Next Action / Quick Setup / Extract Data stack inside a `.bottom-left` on the left; Session Details + Danger Zone stack inside a `.bottom-left` on the right.
 - **Full-width when content requires it.** Reach for full-width only when the card's content genuinely needs more horizontal space:
   - Wide tables (Reviewers / Reviewees / Monitoring / Invitations data tables) where half-width would force horizontal scroll or column truncation.
   - Per-instrument cards on the Instruments page, each of which hosts nested half-width Display Fields + Response Fields children.
@@ -86,7 +86,7 @@ A page is composed of cards drawn from a small named vocabulary. The kind sets t
 
 - Upload card on Reviewers / Reviewees / Assignments.
 - Quick Setup card on Session Home.
-- Contextual primary action card on Session Home (the state-conditional Validate / Activate / Pause card).
+- Next Action card on Session Home (the state-conditional Validate / Activate / Pause card).
 - The Generate / Send-all / Reminder action cards on Invitations / Monitoring.
 
 **Lock card (yellow warning)** — lifecycle-locked or otherwise non-interactive surface, with optional recovery action. `accent-amber-bg` background, `accent-amber-dark` border (the warning brown). The recovery action inside follows P7 and uses the outline-amber button. See "Warning surfaces — shared brown framing" below for the per-page application matrix.
@@ -182,7 +182,7 @@ Used when a page or section is reachable but its actions are disabled because th
 
 The lock card pattern is consistent across all of these. Its prominence and explanatory copy adapt to the specific case, but its visual treatment does not.
 
-**Exception — Session Home.** Per `spec/session_home.md`, Home does *not* render lock cards; the contextual primary action card carries any explanatory messaging the operator needs about lifecycle. Disabled treatment on Home is plain greying-out. Lock cards remain in use everywhere else.
+**Exception — Session Home.** Per `spec/session_home.md`, Home does *not* render lock cards; the Next Action card carries any explanatory messaging the operator needs about lifecycle. Disabled treatment on Home is plain greying-out. Lock cards remain in use everywhere else.
 
 #### Danger-zone card uses
 

@@ -11,15 +11,28 @@ implementation plan against that spec.
 
 ## Status
 
-Planning. PRs **A → F** are sized to land in dependency order; each
-is independently shippable.
+✅ **Shipped 2026-05-04.** All seven planned slices merged across
+PRs **#380–#393**, plus a placeholder-card unification pass and
+several user-driven Next Action card refinements. The functional
+spec (`spec/session_home.md`) reflects what shipped.
 
-**Recommended sequence after review:**
+| PR  | Slice | Highlight |
+|---|---|---|
+| #380 | **B** — contextual primary action card (initial shape) | Replaced Run Session + Validation summary cards; wired `/revert` to dispatch validated → draft via `invalidate_session(reason="operator_revert")` |
+| #381 | **A** — lifecycle display mapping | New `app/services/lifecycle_display.py` + `lifecycle_label` Jinja filter; `ready` renders as "Activated" everywhere a user reads it |
+| #382 | **C** — Extract Data card | Promoted from CTA to its own card with state-conditional copy |
+| #383 | **D** — Quick Setup disabled in ready + Danger Zone visible-disabled | Two visual changes; the Danger Zone Delete-Session UI flip is the only behaviour change |
+| #384 | **E** — `.pill-lifecycle-closed` cleanup | CSS-only |
+| #385 / #386 / #387 / #388 | Placeholder card unification | Canonical `.card.placeholder` class + `placeholder_card` macro; Quick Setup, Extract Data, and Rule Based Assignment all share one treatment |
+| #390 / #391 / #392 / #393 | **Next Action card** refinements | Renamed from "Contextual primary action card"; constant H2 "Next Action"; bottom button row (Primary + Secondary, no inline links); state-conditional trims; sentence-case button copy ("See previews", "See validation details", "Revert to draft"); confirm checkbox sits just above buttons in `ready`; 200px min-height; `accent-blue` border tying visually to the Primary action |
+| **F** (this PR) | Doc updates | Aligns `spec/session_home.md`, `spec/operator_ui_concept.md`, `spec/visual_style_rrw.md`, `spec/ui_elements.md`, and `guide/ui_checklist.md` with what shipped; documents the new `.card.placeholder` / `.card.next-action` vocabulary |
+
+**Original sequence (for the historical record):**
 **A** → (pre-B verification spike) → **E** as a CSS warm-up →
-**B** → **C** → **D** → **F**. E is moved earlier because it's
-CSS-only and risk-free; running it before B gives the test suite
-one less thing to react to when B's bigger sweep lands. The
-verification spike (see "Pre-PR-B verification" below) is not a
+**B** → **C** → **D** → **F**. E was moved earlier because it's
+CSS-only and risk-free; running it before B gave the test suite
+one less thing to react to when B's bigger sweep landed. The
+verification spike (see "Pre-PR-B verification" below) was not a
 PR — just findings recorded in PR B's description.
 
 ## Scope
