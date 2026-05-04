@@ -1188,4 +1188,60 @@
       }
     }
   </script>
+  <script>
+    /*
+     * Preserve scroll position across form submits and same-page
+     * anchor clicks on the Instruments page. Without this, every
+     * button click in an instrument card triggers a POST → 303
+     * redirect; the redirect URL carries an `#instrument-{id}`
+     * fragment so the browser jumps to the top of that card on
+     * load — which feels like the page jumping to the top from
+     * the operator's seat. Capture the operator's scrollY at submit
+     * time, stash it in sessionStorage keyed by pathname, and
+     * restore on the next page load.
+     */
+    (function () {
+      var STORAGE_KEY = "instrumentsScrollY:" + document.location.pathname;
+      function captureScroll() {
+        sessionStorage.setItem(STORAGE_KEY, String(window.scrollY));
+      }
+      document.addEventListener("submit", captureScroll, true);
+      document.addEventListener(
+        "click",
+        function (e) {
+          var a = e.target.closest("a");
+          if (!a || (a.target && a.target !== "_self")) return;
+          var url;
+          try {
+            url = new URL(a.href, document.location);
+          } catch (err) {
+            return;
+          }
+          // Only capture for navigations that stay on this page;
+          // cross-page anchors (e.g. chrome links) should not pollute
+          // the saved scroll position.
+          if (url.pathname !== document.location.pathname) return;
+          captureScroll();
+        },
+        true,
+      );
+      function restoreScroll() {
+        var saved = sessionStorage.getItem(STORAGE_KEY);
+        if (saved === null) return;
+        sessionStorage.removeItem(STORAGE_KEY);
+        // Defer to the banner-scroll script (base.html) when an
+        // error / cascade banner wants attention.
+        if (document.querySelector(".banner-scroll-target")) return;
+        var y = parseInt(saved, 10);
+        if (!isNaN(y)) {
+          window.scrollTo(0, y);
+        }
+      }
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", restoreScroll);
+      } else {
+        restoreScroll();
+      }
+    })();
+  </script>
 {% endblock %}
