@@ -103,7 +103,7 @@ def test_sessions_list_per_row_renders_access_and_delete_buttons(
     )
 
 
-def test_sessions_list_create_button_lives_below_table(
+def test_sessions_list_create_button_lives_in_header(
     client: TestClient, db: Session
 ) -> None:
     _create_session(client, db)
@@ -111,13 +111,15 @@ def test_sessions_list_create_button_lives_below_table(
     body = response.text
     # Old top-of-page "Create session" link no longer present.
     assert ">Create session<" not in body
-    # New "Create new session" button targets the new-session form.
+    # Per Segment 11D PR B (D4), the lobby is a flex column of session
+    # cards rather than a <table>; the Primary "Create new session"
+    # affordance sits in the header row to the right of the H1.
+    assert "<table>" not in body
     assert 'href="/operator/sessions/new"' in body
     assert "Create new session" in body
-    # Button appears after the closing </table>.
-    table_end = body.rfind("</table>")
+    header_close = body.find("</div>", body.find('class="sessions-list-header"'))
     create_btn = body.find("Create new session")
-    assert table_end != -1 and create_btn > table_end
+    assert header_close != -1 and 0 < create_btn < header_close
 
 
 def test_about_page_is_reachable_without_easy_auth(client: TestClient) -> None:

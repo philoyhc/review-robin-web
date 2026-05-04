@@ -5,42 +5,43 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
-  <h1>Your Sessions</h1>
+  <div class="sessions-list-header">
+    <h1>Sessions</h1>
+    {% if sessions %}
+      <a class="btn" href="/operator/sessions/new">Create new session</a>
+    {% endif %}
+  </div>
 
   {% if sessions %}
-    <table>
-      <tr>
-        <th>Name</th>
-        <th>Code</th>
-        <th>Status</th>
-        <th>Deadline</th>
-        <th>Created</th>
-        <th>Created by</th>
-        <th class="col-shrink">Actions</th>
-      </tr>
+    <div class="sessions-list">
       {% for s in sessions %}
-        <tr>
-          <td>{{ s.name }}</td>
-          <td><code>{{ s.code }}</code></td>
-          <td>{{ s.status | lifecycle_label }}</td>
-          <td>{{ s.deadline.isoformat() if s.deadline else "—" }}</td>
-          <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
-          <td>{{ s.created_by_user.display_name or s.created_by_user.email }}</td>
-          <td class="col-shrink">
+        <div class="card session-card">
+          <div class="session-card-header">
+            <a class="session-card-name" href="/operator/sessions/{{ s.id }}">{{ s.name }}</a>
+            <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
+          </div>
+          <p class="session-card-meta">
+            Code: <code>{{ s.code }}</code>
+            {% if s.deadline %}
+              &middot; Deadline: {{ s.deadline.isoformat() }}
+            {% else %}
+              &middot; No deadline
+            {% endif %}
+          </p>
+          <div class="btn-pair">
             <a class="btn secondary" href="/operator/sessions/{{ s.id }}">Access</a>
             <a class="btn danger-solid" href="/operator/sessions/{{ s.id }}#danger-zone">Delete</a>
-          </td>
-        </tr>
+          </div>
+        </div>
       {% endfor %}
-    </table>
+    </div>
   {% else %}
     <div class="card">
-      <p class="muted">You don't have any sessions yet.</p>
-      <p>Use <strong>Create new session</strong> below to start your first review session.</p>
+      <p>You don't have any sessions yet.</p>
+      <p class="muted">Create a session to invite reviewers, build assignments, and collect responses.</p>
+      <div class="btn-pair">
+        <a class="btn-cta" href="/operator/sessions/new">Create new session</a>
+      </div>
     </div>
   {% endif %}
-
-  <p style="margin-top: 20px;">
-    <a class="btn" href="/operator/sessions/new">Create new session</a>
-  </p>
 {% endblock %}

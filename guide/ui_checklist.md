@@ -42,10 +42,10 @@ separately.
 - [x] `session_assignments.html` — `/operator/sessions/{id}/assignments`
 - [x] `session_setupinvite.html` — `/operator/sessions/{id}/setupinvite` (placeholder)
 - [x] `session_previews.html` — `/operator/sessions/{id}/previews` (new placeholder; Operations row)
-- [x] `sessions_list.html` — `/operator/sessions` (Segment 11D PR A: `body.ui-v2`; per-row Access → Secondary; Delete stays as the legacy `danger-solid` pending #23 + the table → cards restructure that PR B owns)
+- [x] `sessions_list.html` — `/operator/sessions` (Segment 11D PR A: `body.ui-v2`; per-row Access → Secondary. PR B (D4): table replaced with a flex column of `.card.session-card` rows carrying name + lifecycle pill + meta line; Primary "Create new session" sits in the header row when populated and promotes to a `.btn-cta` inside the empty-state card.)
 - [x] `session_new.html` — `/operator/sessions/new` (Segment 11D PR A: `body.ui-v2`; form wrapped in `.card`; v2 form treatment via base defaults; Cancel → Secondary)
 - [x] `session_detail.html` — `/operator/sessions/{id}` (Session Setup card retired; its five Manage links live in the chrome top-nav now. Segment 11B rebuilt the body: Next Action card replaces the old Run Session + Validation summary stack; Quick Setup and Extract Data render as placeholder cards via the canonical `placeholder_card` macro; Danger Zone Delete-Session is visible-but-disabled in `ready`; lifecycle prose / status pills route through the `lifecycle_label` Jinja filter.)
-- [ ] `session_edit.html` — `/operator/sessions/{id}/edit`
+- [x] `session_edit.html` — `/operator/sessions/{id}/edit` (Segment 11D PR B1: gains the two-row session chrome with no tab active per `spec/operator_ui_concept.md` "Sub-pages of Home"; status row partial wired in; route now passes `status_pills`. Form lives inside a single `.card`; Save → Primary, Cancel → Secondary.)
 - [x] `instruments_index.html` — `/operator/sessions/{id}/instruments`
 - [x] `session_invitations.html` — `/operator/sessions/{id}/invitations`
 - [x] `session_outbox.html` — `/operator/sessions/{id}/outbox`
