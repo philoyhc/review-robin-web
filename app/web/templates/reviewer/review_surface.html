@@ -20,10 +20,12 @@
     </div>
   {% endif %}
 
-  <h1>{{ session.name }}</h1>
-  {% if session.deadline %}
-    <p class="muted">Deadline: {{ session.deadline.isoformat() }}</p>
-  {% endif %}
+  <div class="rs-page-header">
+    <h1>{{ session.name }}</h1>
+    {% if session.deadline %}
+      <span class="muted">Deadline: {{ session.deadline.isoformat() }}</span>
+    {% endif %}
+  </div>
   {% if session.description %}
     <p>{{ session.description }}</p>
   {% endif %}
@@ -75,14 +77,19 @@
       </div>
     {% endif %}
 
-    {% if any_accepting and not preview_mode %}
-      <p>
-        <a class="btn secondary"
-           href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
-      </p>
-    {% endif %}
-
     {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/save">{% endif %}
+      {% if any_accepting and not preview_mode %}
+        <div class="rs-action-row">
+          <button class="btn" type="submit">Save draft</button>
+          <button class="btn secondary"
+                  type="submit"
+                  formaction="/reviewer/sessions/{{ session.id }}/submit">
+            Submit
+          </button>
+          <a class="btn secondary"
+             href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
+        </div>
+      {% endif %}
       {% for group in instrument_groups %}
         {% if group.heading %}
           <h2 style="margin-top: 24px;">{{ group.heading }}</h2>
@@ -210,14 +217,6 @@
       {% endfor %}
 
       {% if any_accepting and not preview_mode %}
-        <div class="btn-pair" style="margin-top: 16px;">
-          <button class="btn" type="submit">Save draft</button>
-          <button class="btn secondary"
-                  type="submit"
-                  formaction="/reviewer/sessions/{{ session.id }}/submit">
-            Submit
-          </button>
-        </div>
         {% if show_acknowledge %}
           <p>
             <label style="font-weight: normal;">
@@ -226,11 +225,21 @@
             </label>
           </p>
         {% endif %}
+        <div class="rs-action-row">
+          <button class="btn" type="submit">Save draft</button>
+          <button class="btn secondary"
+                  type="submit"
+                  formaction="/reviewer/sessions/{{ session.id }}/submit">
+            Submit
+          </button>
+          <a class="btn secondary"
+             href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
+        </div>
       {% endif %}
     {% if preview_mode %}</div>{% else %}</form>{% endif %}
 
     {% if any_accepting and not preview_mode %}
-      <div class="card danger-zone" style="margin-top: 24px;">
+      <div class="card danger-zone rs-danger-zone">
         <h2>Clear all responses</h2>
         <form method="post" action="/reviewer/sessions/{{ session.id }}/clear">
           <p>
