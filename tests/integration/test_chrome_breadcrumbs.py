@@ -26,8 +26,18 @@ def test_operator_chrome_renders_app_identity_user_card_and_signout(
     response = client.get("/operator/sessions")
     assert response.status_code == 200
     body = response.text
-    assert 'href="/about"' in body
-    assert "Review Robin Web App (version dev)" in body
+    # Top-left identity is plain text now — the redundant link to
+    # /about was retired once the user menu's About link landed on
+    # the top-right (with ?return_to=).
+    assert (
+        '<span class="chrome-app-identity">Review Robin Web App (version dev)</span>'
+        in body
+    )
+    assert 'class="chrome-app-identity" href="/about"' not in body
+    # The right-side About link in the user menu carries the current
+    # path as ?return_to= so the About page renders a contextual
+    # back-link.
+    assert 'class="chrome-link" href="/about?return_to=' in body
     assert "Signed in as Alice Example" in body
     assert 'href="/.auth/logout"' in body
 
