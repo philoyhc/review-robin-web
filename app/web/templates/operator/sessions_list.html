@@ -16,11 +16,13 @@
     <div class="card">
       <table>
         <tr>
-          <th>Name</th>
-          <th>Code</th>
-          <th>Status</th>
+          <th>Session Name</th>
+          <th>Session Code</th>
           <th>Deadline</th>
-          <th class="col-shrink">Actions</th>
+          <th>Created by</th>
+          <th>Created</th>
+          <th>Last Modified</th>
+          <th class="col-shrink"></th>
         </tr>
         {% for s in sessions %}
           <tr>
@@ -29,17 +31,16 @@
             </td>
             <td><code>{{ s.code }}</code></td>
             <td>
-              <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
-            </td>
-            <td>
               {% if s.deadline %}
-                {{ s.deadline.isoformat() }}
+                <span class="pill pill-info">{{ s.deadline.isoformat() }}</span>
               {% else %}
                 <span class="muted">No deadline</span>
               {% endif %}
             </td>
+            <td>{{ s.created_by_user.display_name or s.created_by_user.email }}</td>
+            <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
+            <td>{{ s.updated_at.strftime("%Y-%m-%d") }}</td>
             <td class="col-shrink">
-              <a class="btn secondary" href="/operator/sessions/{{ s.id }}">Access</a>
               <a class="btn danger-solid" href="/operator/sessions/{{ s.id }}#danger-zone">Delete</a>
             </td>
           </tr>
