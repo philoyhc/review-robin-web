@@ -11,30 +11,28 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# Page status info — full-width info card. The bulk
-     "Show all when closed" / "Don't show any when closed"
-     toggle sits on the right of the visibility row inside this
-     same card; the Preview reviewer surface link lives on its
-     own card below. #}
+  {# Page status info — single full-width info card. All status
+     reporting (deadline + accepting + visibility counts) sits on
+     one row, with the bulk visibility toggle button right-aligned
+     on the same row. #}
   <div class="card">
     {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
     {% set not_accepting_count = instruments | length - accepting_count %}
     {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
     {% set not_showing_count = instruments | length - showing_count %}
-    <p style="margin: 0;">
-      Session deadline (auto-close):
-      {% if session.deadline %}
-        <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
-      {% else %}
-        <span class="pill pill-empty">not set</span>
-      {% endif %}
-      &middot;
-      <span class="pill pill-count">{{ accepting_count }} accepting</span>
-      &middot;
-      <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
-    </p>
-    <div style="margin: 4px 0 0 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <div style="margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
       <span>
+        Session deadline (auto-close):
+        {% if session.deadline %}
+          <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
+        {% else %}
+          <span class="pill pill-empty">not set</span>
+        {% endif %}
+        &middot;
+        <span class="pill pill-count">{{ accepting_count }} accepting</span>
+        &middot;
+        <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
+        &middot;
         Visibility when closed:
         <span class="pill pill-count">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
         &middot;
@@ -53,14 +51,6 @@
           <button class="btn secondary" type="submit">Don't show any when closed</button>
         </form>
       {% endif %}
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Actions for All Instruments</h2>
-    <div style="display: flex; justify-content: flex-start; gap: 8px; align-items: center; flex-wrap: wrap;">
-      <a class="btn secondary"
-         href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
     </div>
   </div>
 
@@ -1195,5 +1185,61 @@
         btn.removeAttribute('title');
       }
     }
+  </script>
+  <script>
+    /*
+     * Preserve scroll position across form submits and same-page
+     * anchor clicks on the Instruments page. Without this, every
+     * button click in an instrument card triggers a POST → 303
+     * redirect; the redirect URL carries an `#instrument-{id}`
+     * fragment so the browser jumps to the top of that card on
+     * load — which feels like the page jumping to the top from
+     * the operator's seat. Capture the operator's scrollY at submit
+     * time, stash it in sessionStorage keyed by pathname, and
+     * restore on the next page load.
+     */
+    (function () {
+      var STORAGE_KEY = "instrumentsScrollY:" + document.location.pathname;
+      function captureScroll() {
+        sessionStorage.setItem(STORAGE_KEY, String(window.scrollY));
+      }
+      document.addEventListener("submit", captureScroll, true);
+      document.addEventListener(
+        "click",
+        function (e) {
+          var a = e.target.closest("a");
+          if (!a || (a.target && a.target !== "_self")) return;
+          var url;
+          try {
+            url = new URL(a.href, document.location);
+          } catch (err) {
+            return;
+          }
+          // Only capture for navigations that stay on this page;
+          // cross-page anchors (e.g. chrome links) should not pollute
+          // the saved scroll position.
+          if (url.pathname !== document.location.pathname) return;
+          captureScroll();
+        },
+        true,
+      );
+      function restoreScroll() {
+        var saved = sessionStorage.getItem(STORAGE_KEY);
+        if (saved === null) return;
+        sessionStorage.removeItem(STORAGE_KEY);
+        // Defer to the banner-scroll script (base.html) when an
+        // error / cascade banner wants attention.
+        if (document.querySelector(".banner-scroll-target")) return;
+        var y = parseInt(saved, 10);
+        if (!isNaN(y)) {
+          window.scrollTo(0, y);
+        }
+      }
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", restoreScroll);
+      } else {
+        restoreScroll();
+      }
+    })();
   </script>
 {% endblock %}
