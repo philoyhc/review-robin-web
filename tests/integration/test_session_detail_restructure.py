@@ -213,16 +213,17 @@ def test_session_detail_advances_to_validated_with_query(
     # action surfaces as the primary button label inside.
     assert "<h2>Next action</h2>" in body
     assert ">Activate Session</button>" in body
-    assert "Setup validated" in body
+    # Validated-can-activate body copy (no pills any more).
+    assert "successfully validated" in body
     # Activate form on the card.
     assert (
         f'action="/operator/sessions/{review_session.id}/activate"' in body
     )
-    # Supporting actions include validation detail (now a Secondary
-    # button rather than an inline link).
-    assert (
-        f'href="/operator/sessions/{review_session.id}/validate"' in body
-    )
+    # Supporting actions: See validation details + See previews,
+    # both Secondary buttons.
+    assert ">See validation details</a>" in body
+    assert ">See previews</a>" in body
+    assert ">Revert to draft</button>" in body
 
 
 def test_validated_session_keeps_action_card_without_query(
@@ -681,10 +682,20 @@ def test_next_action_card_in_ready_renders_pause(
     )
     assert 'form="next-action-pause-form"' in body
     # Activated-state supporting actions are now Secondary buttons
-    # (anchors styled .btn.secondary), not inline links.
+    # (anchors styled .btn.secondary), not inline links. The
+    # "See previews" button is intentionally absent in ready —
+    # operators monitor live responses, not previews, while
+    # Activated.
     assert ">Manage invitations</a>" in body
     assert ">Monitor responses</a>" in body
-    assert ">Preview reviewer surface</a>" in body
+    assert ">See previews</a>" not in body
+    # Body copy: single-paragraph rewrite per the latest pass.
+    # Substrings are tested without crossing the template's source
+    # line breaks (Jinja preserves whitespace, so "submitting new
+    # responses" spans a newline and isn't a substring).
+    assert "Session is currently activated" in body
+    assert "submitting new" in body
+    assert "return to draft" in body
     # Old "Run Session" header is gone.
     assert "<h2>Run Session</h2>" not in body
 
@@ -692,7 +703,7 @@ def test_next_action_card_in_ready_renders_pause(
 def test_revert_route_handles_validated_to_draft(
     client: TestClient, db: Session
 ) -> None:
-    """The Revert to Draft supporting link in the validated-state
+    """The "Revert to draft" supporting button in the validated-state
     action card POSTs to /revert; the route now dispatches to
     ``invalidate_session`` for ``validated → draft`` transitions
     (previously only handled ``ready → draft``)."""
