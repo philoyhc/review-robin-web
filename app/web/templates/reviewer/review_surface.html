@@ -27,7 +27,9 @@
     {% endif %}
   </div>
   {% if session.description %}
-    <p>{{ session.description }}</p>
+    <div class="card rs-description-card">
+      <p style="margin: 0;">{{ session.description }}</p>
+    </div>
   {% endif %}
 
   {% if saved %}
@@ -77,9 +79,10 @@
       </div>
     {% endif %}
 
+    {% set rs_paginated = instrument_groups|length > 1 and any_accepting and not preview_mode %}
     {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/save">{% endif %}
       {% if any_accepting and not preview_mode %}
-        <div class="rs-action-row">
+        <div class="rs-action-row rs-action-row-top rs-action-row-left">
           <button class="btn" type="submit">Save draft</button>
           <button class="btn secondary"
                   type="submit"
@@ -88,9 +91,15 @@
           </button>
           <a class="btn secondary"
              href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
+          {% if rs_paginated %}
+            <button class="btn secondary rs-next-btn" type="button">Next</button>
+          {% endif %}
         </div>
       {% endif %}
+      {% if rs_paginated %}<div class="rs-paginated">{% endif %}
       {% for group in instrument_groups %}
+        <div class="rs-instrument-group{% if loop.first %} rs-active{% endif %}"
+             data-instrument-index="{{ loop.index0 }}">
         {% if group.heading %}
           <h2 style="margin-top: 24px;">{{ group.heading }}</h2>
         {% endif %}
@@ -214,7 +223,9 @@
             {% endfor %}
           </table>
         </div>
+        </div>{# /rs-instrument-group #}
       {% endfor %}
+      {% if rs_paginated %}</div>{# /rs-paginated #}{% endif %}
 
       {% if any_accepting and not preview_mode %}
         {% if show_acknowledge %}
@@ -234,6 +245,9 @@
           </button>
           <a class="btn secondary"
              href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
+          {% if rs_paginated %}
+            <button class="btn secondary rs-next-btn" type="button">Next</button>
+          {% endif %}
         </div>
       {% endif %}
     {% if preview_mode %}</div>{% else %}</form>{% endif %}
@@ -260,4 +274,35 @@
       <p class="muted">No assignments are visible to you in this session yet.</p>
     </div>
   {% endif %}
+
+  {# Multi-instrument paginated view: clicking Next swaps the active
+     `.rs-instrument-group` for the next one (wrap-around at the end).
+     Pure view state — does not save or submit. Inputs in hidden
+     groups stay in the DOM, so Save draft / Submit pick up every
+     value regardless of which group is currently visible. #}
+  <script>
+    (function () {
+      var groups = document.querySelectorAll(".rs-paginated .rs-instrument-group");
+      if (groups.length < 2) return;
+      function activate(idx) {
+        groups.forEach(function (g, i) {
+          g.classList.toggle("rs-active", i === idx);
+        });
+      }
+      function currentIndex() {
+        for (var i = 0; i < groups.length; i++) {
+          if (groups[i].classList.contains("rs-active")) return i;
+        }
+        return 0;
+      }
+      document.addEventListener("click", function (ev) {
+        var btn = ev.target.closest(".rs-next-btn");
+        if (!btn) return;
+        ev.preventDefault();
+        var next = (currentIndex() + 1) % groups.length;
+        activate(next);
+        groups[next].scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    })();
+  </script>
 {% endblock %}
