@@ -671,6 +671,21 @@
       body.ui-v2 .card.danger-zone h2 {
         color: var(--accent-amber-dark);
       }
+      /* Disabled card — plain greying for cards whose body is
+         intentionally inert in the current state (Extract Data
+         in draft/validated; Quick Setup in ready). Used on
+         Session Home where the contextual primary action card
+         carries any explanatory messaging, so a yellow lock card
+         here would duplicate that signal — see
+         spec/session_home.md "Disabled treatment on Home is plain
+         greying-out, not yellow lock cards". */
+      body.ui-v2 .card.disabled {
+        opacity: 0.55;
+      }
+      body.ui-v2 .card.disabled,
+      body.ui-v2 .card.disabled * {
+        cursor: not-allowed;
+      }
       /* Buttons — Primary / Secondary / Destructive vocabulary
          per spec/visual_style_general.md. Same shape, role expressed by
          tonal variation only. Primary is solid accent-blue and is
