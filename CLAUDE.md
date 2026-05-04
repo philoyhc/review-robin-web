@@ -89,7 +89,7 @@ A small but important fourth seam:
 ### Templating conventions
 
 - Templates extend `app/web/templates/base.html`. The base owns inline CSS for the entire app (no separate stylesheet, no JS build step beyond targeted progressive-enhancement scripts inline in templates). When adding new visual primitives, add a class to `base.html` rather than inline styles on individual templates.
-- The six canonical button styles (Primary, Primary Outline, Alert, Alert Outline, Danger, Danger Outline) and the `.page-grid` / `.bottom-grid` layout patterns are documented in `spec/assumptions.md` and `spec/operator_map.md` — refer to those names when editing UI.
+- The six canonical button styles (Primary, Primary Outline, Alert, Alert Outline, Danger, Danger Outline) and the `.page-grid` / `.bottom-grid` layout patterns are documented in `spec/assumptions.md` and `spec/operator_ui_concept.md` — refer to those names when editing UI.
 - Operator pages render breadcrumbs via `app/web/breadcrumbs.py` helpers (`operator_root`, `operator_session_child`). Don't hand-roll breadcrumb HTML — call these.
 
 ### Database
@@ -145,7 +145,7 @@ A small but important fourth seam:
 ## Where to look
 
 - **`docs/status.md`** — current implementation state and segment history. Authoritative.
-- **`spec/operator_map.md`** — operator-page surface and cross-page conventions (chrome, setup nav, lock card, layout patterns).
+- **`spec/operator_ui_concept.md`** — operator-page surface and cross-page conventions (chrome, setup nav, lock card, layout patterns).
 - **`spec/assumptions.md`** — UI vocabulary (button styles, typography knob, layout defaults).
 - **`spec/architecture.md`** — domain entities, layering, conceptual hierarchy.
 - **`spec/functional_spec.md`** — technology-neutral functional spec.

@@ -35,8 +35,8 @@ In:
   user-facing surface renders `ready` as "Activated".
 - Retire the stale `.pill-lifecycle-closed` v2 CSS rule (no
   canonical "closed" state).
-- Update `spec/operator_map.md` and `spec/ui_concept.md` to reflect
-  the new Home shape.
+- Update `spec/operator_ui_concept.md` to reflect the new Home
+  shape.
 
 Out:
 
@@ -65,7 +65,7 @@ Out:
 | Pause Session (Activated → Draft) | `Revert to draft` form inside the lock card; underlying route exists | Reuse; relabel as "Pause Session" with new confirmation copy |
 | Lifecycle display mapping (`ready` → "Activated") | Templates render bare enum value; CSS uppercases | Add helper + thread through every UI surface |
 | `.pill-lifecycle-closed` retired | Rule still in v2 CSS | Remove |
-| Doc updates (`operator_map.md`, `ui_concept.md`) | Reflect old layout | Update |
+| Doc updates (`operator_ui_concept.md`) | Reflects old layout | Update |
 
 ## Proposed PR sequence
 
@@ -156,12 +156,12 @@ to its own card.
 
 **PR F — Doc impact.**
 
-- Update `spec/operator_map.md`: retire the "Run Session
-  four-button" pattern; reference the contextual primary action
-  card.
-- Update `spec/ui_concept.md`: reflect the two-column Home body
-  and the canonical lifecycle vocabulary (drop any "closed"
-  mentions).
+- Update `spec/operator_ui_concept.md`: retire the "Run Session
+  four-button" pattern, reference the contextual primary action
+  card, reflect the two-column Home body, and drop any stale
+  "closed" lifecycle mentions. (Largely already done by the docs
+  reorg PRs #360-#363; verify against the final layout once it
+  ships.)
 - Tick `session_detail.html` against the new spec in
   `guide/ui_checklist.md`.
 

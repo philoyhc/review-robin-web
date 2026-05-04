@@ -220,13 +220,13 @@ These are notes for whoever picks this up; the spec above is the contract.
   - Integration: operator sets sort via instruments-page form, save, render reviewer surface, verify row order matches.
   - Integration: cascade-clean — delete a sort-referenced display field, save instrument, verify the sort spec auto-compacts.
   - Render: reviewer-side override JS reorders visible rows; reset link returns to default. (Probably JS-via-Selenium; if too costly for this segment, defer to a follow-on PR with explicit deferral note.)
-- **Spec cross-ref updates:** when this lands, update `spec/operator_map.md` Display Fields section to describe the Sort column; update `spec/reviewer_map.md` to describe the header-click override.
+- **Spec cross-ref updates:** when this lands, update `spec/operator_ui_concept.md` Display Fields section to describe the Sort column; update `spec/reviewer_map.md` to describe the header-click override.
 
 ---
 
 ## Doc cross-references
 
-- **`spec/operator_map.md`** — per-instrument Display Fields card layout. The Sort column lands here when implemented.
+- **`spec/operator_ui_concept.md`** — per-instrument Display Fields card layout. The Sort column lands here when implemented.
 - **`spec/reviewer_map.md`** — review surface table. The header-click override lands here when implemented.
 - **`spec/quick_setup_card_spec.md`** — adjacent operator-card design pattern (single source of truth for an operator-side feature spec).
 - **`guide/segment_13_rulebased_assignment_builder_plan.md`** — the segment plan that picks this up.

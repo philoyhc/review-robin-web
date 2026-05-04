@@ -164,7 +164,7 @@ suite against a `postgres:16` service container).
   card omits `return_to`. While locked, each page hides its own
   mutation affordances (upload cards, Danger Zone, per-instrument
   Save button); `<input>` / `<select>` elements inside
-  `.field-builder` are disabled. See `spec/operator_map.md` for
+  `.field-builder` are disabled. See `spec/operator_ui_concept.md` for
   the per-page contract and `spec/assumptions.md` for the markup.
 - Card-based layout, monospace tabular code spans, severity pills
   (`error` / `warning` / `info`) for validation issues. All inline
@@ -200,7 +200,7 @@ suite against a `postgres:16` service container).
 | `POST /operator/sessions/{id}/assignments/delete-all` | delete every assignment, clear mode |
 | `POST /operator/sessions/{id}/activate` | flip session draft→ready (warn-and-acknowledge for non-blocking findings) |
 | `POST /operator/sessions/{id}/revert` | flip session ready→draft (confirm checkbox; closes all instruments) |
-| `GET /operator/sessions/{id}/instruments` | consolidated instruments page (post-10C shape) — setup nav header, yellow lock card when ready, full-width **All Instrument Status** card (deadline + accepting + visibility pill rows; bulk Open/Close + bulk Show/Don't-show; disabled Preview button), then one pastel-tinted card per instrument with a top `.bottom-grid` (description + per-instrument status), a `.field-builder` `.bottom-grid` of Display + Response Fields half-cards, a live client-rendered Preview Instrument #N table, and a Back / Save / Edit / Add an instrument / Delete button row. Multi-instrument schema + services ship; the `Add an instrument` button is the single UI gate (disabled with tooltip). Display Fields render a hardcoded 6-row CSV-named placeholder; the schema-level display-field routes still exist server-side but the template doesn't post to them. See `spec/operator_map.md` for the per-section contract. |
+| `GET /operator/sessions/{id}/instruments` | consolidated instruments page (post-10C shape) — setup nav header, yellow lock card when ready, full-width **All Instrument Status** card (deadline + accepting + visibility pill rows; bulk Open/Close + bulk Show/Don't-show; disabled Preview button), then one pastel-tinted card per instrument with a top `.bottom-grid` (description + per-instrument status), a `.field-builder` `.bottom-grid` of Display + Response Fields half-cards, a live client-rendered Preview Instrument #N table, and a Back / Save / Edit / Add an instrument / Delete button row. Multi-instrument schema + services ship; the `Add an instrument` button is the single UI gate (disabled with tooltip). Display Fields render a hardcoded 6-row CSV-named placeholder; the schema-level display-field routes still exist server-side but the template doesn't post to them. See `guide/instruments.md` for the per-section contract. |
 | `GET /operator/sessions/{id}/setupinvite` | stub page — email-template editor is now tracked as `guide/unfinished_business.md` #24 (was previously auto-deferred to Segment 15) |
 | `GET /operator/sessions/{id}/instruments/{instrument_id}` | legacy redirect — 303 to `/instruments` (back-compat for bookmarks; 10A) |
 | `POST /operator/sessions/{id}/instruments/{instrument_id}/edit` | edit friendly description (`Instrument.description`); audit `instrument.described`; invalidates `validated → draft` |

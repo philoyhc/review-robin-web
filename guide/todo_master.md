@@ -77,7 +77,7 @@ schema, so settle the arch story first.
 | 12 | ~~**#11 — Extract instruments-index template context to `views.py`**~~ | ✅ shipped 2026-05-02 — new `build_instruments_context()` in `app/web/views.py` owns the 5 idempotent display-field / RTD backfills, the editing-state machine, the bulk Accepting / Visibility three-state derivation, and the URL-driven `rtd_delete_blocked` / `rtd_would_empty` packaging. Handler shrank from 140 lines → 46 lines (query-param declarations + 1 view call + render). The catalog's "preview route reuse" framing turned out to be stale (preview uses `routes_reviewer.build_preview_context`); motivation reduced to "thin the route" per the CLAUDE.md services/routes/views split. No behaviour change; full 423-test suite passes on both dialects. |
 | 13 | **#5 — Define audit-event `detail` schema convention** | Document in `spec/architecture.md`. Migrate emitters incrementally — one PR per emitter family. Segment 12 will export these, so the convention needs to settle first. |
 | 14 | **#21 — UI consistency updates aligning with the new chrome** | Umbrella for follow-on UI cleanups that align the surface with the chrome's visual language. First sub-task: restyle the six canonical button modifiers (Primary / Primary Outline / Alert / Alert Outline / Danger / Danger Outline) — they now read as jarringly contrastive against the chrome's understated tints. Move them to softer fills / lighter borders / lighten-on-hover. Update `spec/assumptions.md` once settled. Sequenced before #22 because the Home rebuild will use these buttons, so getting the visual right first saves rework. |
-| 15 | **#22 — Home body rebuild + Option F relocation** | After #20 / #21, the chrome system is fully deployed and the visual vocabulary is settled, but Home's body still uses the old four-card layout (not the launch-point framing in `spec/ui_concept.md`), and page-specific status content (`fields_with_data`, self-review breakdown, etc.) is parked in sub-cards instead of relocated next to its relevant action per Option F. 4–6 small PRs total. Worth landing before Segment 12 so the operator surface is settled when export ships. |
+| 15 | **#22 — Home body rebuild + Option F relocation** | After #20 / #21, the chrome system is fully deployed and the visual vocabulary is settled, but Home's body still uses the old four-card layout (not the launch-point framing in `spec/operator_ui_concept.md`), and page-specific status content (`fields_with_data`, self-review breakdown, etc.) is parked in sub-cards instead of relocated next to its relevant action per Option F. 4–6 small PRs total. Worth landing before Segment 12 so the operator surface is settled when export ships. |
 
 **#17 (filter divergence) — resolved on re-audit 2026-05-02; removed from sequence.**
 
@@ -107,7 +107,7 @@ land before they age into harder problems.
   PR.** Direct continuation of #19 — the chrome system is built
   and live on 6 of the 11 session-scoped pages. Adopting it on
   the remaining 5 (Operations Pages + Home sub-pages) is
-  mechanical and small. Per **P2** in `spec/ui_concept.md`,
+  mechanical and small. Per **P2** in `spec/operator_ui_concept.md`,
   *"both phases always reachable"* requires the chrome on
   Operations Pages, so #20 is a P2-correctness fix as much as a
   cleanup.

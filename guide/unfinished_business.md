@@ -388,7 +388,7 @@ A round-3 audit found that the operator's per-instrument
 **Display Fields** card and the underlying schema have drifted
 apart in 5+ ways. Items 13–14 are the user-facing fixes; item 18
 is the related multi-instrument-button decision. See `docs/status.md`
-audit-table + `spec/operator_map.md` "Instruments" for the
+audit-table + `spec/operator_ui_concept.md` "Instruments" for the
 contracts these items are correcting.
 
 ### 13. ~~Fix the Display Fields placeholder (no-persistence + bad sources)~~ ✅ shipped 2026-05-01 · [bug] · small
@@ -749,7 +749,7 @@ settles, as part of #22 or a successor item.
 
 **Why now.** The new two-row session top nav (item #19) is live
 on Home, the 5 Setup Pages, and Email Template. Per **P2** in
-[`spec/ui_concept.md`](./ui_concept.md) (*"both phases always
+[`spec/operator_ui_concept.md`](../spec/operator_ui_concept.md) (*"both phases always
 reachable"*), the chrome should also appear on:
 
 - **The three Operations Pages** (Invitations, Monitoring,
@@ -855,7 +855,7 @@ left two cleanups deferred:
    section; instrument breakdowns in the *Actions for All
    Instruments* card.
 2. **Home body rebuild around the launch-point framing.** Per
-   [`spec/ui_concept.md`](./ui_concept.md) "Per Session Home /
+   [`spec/operator_ui_concept.md`](../spec/operator_ui_concept.md) "Per Session Home /
    Control Panel", Home should hold: session identity (now in
    chrome anchor), the next lifecycle-transition action
    (Validate / Activate / Close / Reopen — one primary button

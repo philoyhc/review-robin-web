@@ -23,7 +23,7 @@ The general spec defines four semantic accents (blue, green, amber, red). Review
 - **`accent-amber`** — setup-incomplete indicators (`NONE`, `NOT SET UP`). The yellow lock card pattern. Lifecycle-locked surfaces.
 - **`accent-red`** — destructive action confirmations (e.g., replacing existing setup data via Quick Setup). Validation errors. Used rarely.
 
-Setup and Operations are two parallel series of pages (see `spec/ui_concept.md` for the taxonomy). The blue/green pairing for these two groups is the app's most visible color decision and should be preserved across the entire chrome.
+Setup and Operations are two parallel series of pages (see `spec/operator_ui_concept.md` for the taxonomy). The blue/green pairing for these two groups is the app's most visible color decision and should be preserved across the entire chrome.
 
 ---
 
@@ -407,7 +407,7 @@ A useful checkpoint: after the chrome migration but before page-body migration, 
 
 - **`spec/visual_style_general.md`** — the design system this document instantiates.
 - **`spec/audience_and_identity_model.md`** — audience definitions, auth posture, customization boundaries that the chrome decisions in this doc implement.
-- **`spec/ui_concept.md`** + **`spec/operator_map.md`** — page taxonomy and navigation principles, plus per-page layout contracts for the operator surface. The two-row chrome described here implements the navigation model described there. (These two docs will consolidate into `spec/operator_ui_concept.md` in a follow-up PR.)
+- **`spec/operator_ui_concept.md`** — page taxonomy, navigation principles, and per-page contracts for the operator surface. The two-row chrome described here implements the navigation model described there.
 - **`spec/session_home.md`** — functional spec for Session Home (the per-session Control Panel), including the lifecycle display-label mapping (`ready` → "Activated") referenced above.
 - **`spec/ui_elements.md`** — implementation catalogue mapping the canonical primitives in this doc to the CSS classes and templates that realise them.
 
