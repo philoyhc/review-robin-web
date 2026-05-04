@@ -88,9 +88,76 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
         "mode": "full_matrix",
         "replaced_count": 0,
         "new_count": 2,
+        "pair_count": 2,
+        "instrument_count": 1,
         "excluded_counts": {},
         "filename": None,
     }
+
+
+def test_full_matrix_fans_pairs_out_per_instrument(
+    client: TestClient, db: Session
+) -> None:
+    """Each (reviewer, reviewee) pair gets one Assignment row per
+    instrument. Without the fanout, multi-instrument sessions only
+    show the default instrument's table on the reviewer surface
+    (since the surface filters by the reviewer's Assignments).
+
+    Regression for: PR #410-era reports of "Next button doesn't show
+    on multi-instrument sessions" — full-matrix was pinning every
+    pair to the default instrument so `instrument_groups|length`
+    stayed at 1.
+    """
+    from app.db.models import Instrument
+
+    review_session = _make_session(client, db, code="multi-fan")
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=["alice@example.edu"],
+        reviewee_idents=["carol@example.edu", "dan-2026"],
+    )
+    # Add a second instrument before generating assignments.
+    [default_instrument] = list(
+        db.execute(
+            select(Instrument).where(Instrument.session_id == review_session.id)
+        ).scalars()
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add",
+        data={"after": str(default_instrument.id)},
+        follow_redirects=False,
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    rows = list(
+        db.execute(
+            select(Assignment).where(Assignment.session_id == review_session.id)
+        ).scalars()
+    )
+    # 2 pairs × 2 instruments = 4 Assignment rows.
+    assert len(rows) == 4
+    instrument_ids = {r.instrument_id for r in rows}
+    assert len(instrument_ids) == 2
+    # Each pair appears once per instrument.
+    pair_counts: dict[tuple[int, int], int] = {}
+    for r in rows:
+        key = (r.reviewer_id, r.reviewee_id)
+        pair_counts[key] = pair_counts.get(key, 0) + 1
+    assert all(count == 2 for count in pair_counts.values())
+
+    event = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "assignments.generated")
+    ).scalar_one()
+    assert event.detail["new_count"] == 4
+    assert event.detail["pair_count"] == 2
+    assert event.detail["instrument_count"] == 2
 
 
 def test_full_matrix_re_save_without_confirm_blocks(
