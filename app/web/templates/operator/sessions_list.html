@@ -20,7 +20,7 @@
         <tr>
           <td>{{ s.name }}</td>
           <td><code>{{ s.code }}</code></td>
-          <td>{{ s.status }}</td>
+          <td>{{ s.status | lifecycle_label }}</td>
           <td>{{ s.deadline.isoformat() if s.deadline else "—" }}</td>
           <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
           <td>{{ s.created_by_user.display_name or s.created_by_user.email }}</td>
