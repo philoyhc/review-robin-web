@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Instruments — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
   <div class="session-nav-card">
@@ -10,61 +11,59 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# Page-specific status (deadline + accepting/visibility breakdowns
-     across the session's instruments). The setup-todo overview in
-     the chrome only shows the instrument count; the per-instrument
-     breakdown lives here. #}
-  <div class="card">
-    {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
-    {% set not_accepting_count = instruments | length - accepting_count %}
-    {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
-    {% set not_showing_count = instruments | length - showing_count %}
-    <p style="margin: 0;">
-      Session deadline (auto-close):
-      {% if session.deadline %}
-        <span class="pill pill-info">{{ session.deadline.isoformat() }}</span>
-      {% else %}
-        <span class="pill pill-warning">not set</span>
-      {% endif %}
-      &middot;
-      <span class="pill pill-info">{{ accepting_count }} accepting</span>
-      &middot;
-      <span class="pill pill-warning">{{ not_accepting_count }} not accepting</span>
-    </p>
-    <p style="margin: 4px 0 0 0;">
-      Visibility when closed:
-      <span class="pill pill-info">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
-      &middot;
-      <span class="pill pill-warning">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
-    </p>
-  </div>
+  {# Page status info (left, half-width) + Actions for All Instruments
+     (right, half-width). Side-by-side per the half-width-default card
+     composition principle in spec/visual_style_rrw.md. #}
+  <div class="bottom-grid">
+    <div class="card">
+      {% set accepting_count = instruments | selectattr('accepting_responses') | list | length %}
+      {% set not_accepting_count = instruments | length - accepting_count %}
+      {% set showing_count = instruments | selectattr('responses_visible_when_closed') | list | length %}
+      {% set not_showing_count = instruments | length - showing_count %}
+      <p style="margin: 0;">
+        Session deadline (auto-close):
+        {% if session.deadline %}
+          <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
+        {% else %}
+          <span class="pill pill-empty">not set</span>
+        {% endif %}
+        &middot;
+        <span class="pill pill-count">{{ accepting_count }} accepting</span>
+        &middot;
+        <span class="pill pill-empty">{{ not_accepting_count }} not accepting</span>
+      </p>
+      <p style="margin: 4px 0 0 0;">
+        Visibility when closed:
+        <span class="pill pill-count">{{ showing_count }} instrument{% if showing_count != 1 %}s{% endif %} showing</span>
+        &middot;
+        <span class="pill pill-empty">{{ not_showing_count }} instrument{% if not_showing_count != 1 %}s{% endif %} not showing</span>
+      </p>
+    </div>
 
-  {# Actions for All Instruments: bulk-visibility toggle + Preview
-     reviewer surface link, left-aligned. Operates on the entire
-     session's instrument set, not on any single one. #}
-  <div class="card">
-    <h2 style="margin-top: 0;">Actions for All Instruments</h2>
-    <div style="display: flex; justify-content: flex-start; gap: 8px; align-items: center; flex-wrap: wrap;">
-      {% if bulk_visibility_state != "all-on" %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
-              style="margin: 0;">
-          <button class="btn alert-solid" type="submit">Show all when closed</button>
-        </form>
-      {% else %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/instruments/visibility/all-off"
-              style="margin: 0;">
-          <button class="btn alert-solid" type="submit">Don't show any when closed</button>
-        </form>
-      {% endif %}
-      <a class="btn alert-solid"
-         href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
+    <div class="card">
+      <h2>Actions for All Instruments</h2>
+      <div style="display: flex; justify-content: flex-start; gap: 8px; align-items: center; flex-wrap: wrap;">
+        {% if bulk_visibility_state != "all-on" %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/visibility/all-on"
+                style="margin: 0;">
+            <button class="btn secondary" type="submit">Show all when closed</button>
+          </form>
+        {% else %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/visibility/all-off"
+                style="margin: 0;">
+            <button class="btn secondary" type="submit">Don't show any when closed</button>
+          </form>
+        {% endif %}
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
+      </div>
     </div>
   </div>
 
   {% if is_ready %}
-    <div class="card" style="border-color: #d97706; background: #fef3c7;">
+    <div class="card lock">
       <p style="margin: 0 0 12px 0;">
         The instruments cannot be modified while the session is ongoing.
         Revert the session to draft if you wish to modify anything.
@@ -78,15 +77,14 @@
           </label>
         </p>
         <p style="margin-bottom: 0;">
-          <button class="btn alert-solid" type="submit">Revert to draft</button>
+          <button class="btn alert" type="submit">Revert to draft</button>
         </p>
       </form>
     </div>
   {% endif %}
 
   {% if rf_save_error %}
-    <div class="card banner-scroll-target" id="rf-save-error-banner"
-         style="border-color: #dc2626; background: #fee2e2;">
+    <div class="banner banner-error banner-scroll-target" id="rf-save-error-banner">
       <p style="margin: 0 0 8px 0;"><strong>Could not save:</strong> {{ rf_save_error }}</p>
       <div style="display: flex; justify-content: flex-end;">
         {# Cancel returns to the source row (the instrument card the
@@ -95,10 +93,10 @@
            lands the operator back at where they were before the
            banner appeared. Slice 4d / banner-scroll convention. #}
         {% if editing_instrument_id %}
-          <a class="btn alert"
+          <a class="btn secondary"
              href="/operator/sessions/{{ session.id }}/instruments?editing={{ editing_instrument_id }}#instrument-{{ editing_instrument_id }}">Cancel</a>
         {% else %}
-          <a class="btn alert"
+          <a class="btn secondary"
              href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
         {% endif %}
       </div>
@@ -634,8 +632,8 @@
     {%- endif -%}
   {%- endmacro %}
   <div class="card" id="rtd-card">
-    <h2 style="margin-top: 0;">Response Type Definitions</h2>
-    <p class="muted" style="margin: 0 0 12px 0; font-size: 0.9em;">
+    <h2>Response Type Definitions</h2>
+    <p class="form-help">
       Catalog of Response Types referenced by every instrument's
       Response Fields. Seeded rows are locked. Operator-added rows
       can be edited or deleted; the Response Type name and Data Type
@@ -644,15 +642,14 @@
     </p>
 
     {% if rtd_error %}
-      <div class="card banner-scroll-target" id="rtd-error-banner"
-           style="border-color: #dc2626; background: #fee2e2; margin-bottom: 12px;">
+      <div class="banner banner-error banner-scroll-target" id="rtd-error-banner">
         <p style="margin: 0 0 8px 0;"><strong>Could not save Response Type:</strong> {{ rtd_error }}</p>
         <div style="display: flex; justify-content: flex-end;">
           {% if rtd_error_id %}
-            <a class="btn alert"
+            <a class="btn secondary"
                href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd_error_id }}#rtd-row-{{ rtd_error_id }}">Cancel</a>
           {% else %}
-            <a class="btn alert"
+            <a class="btn secondary"
                href="/operator/sessions/{{ session.id }}/instruments#rtd-card">Cancel</a>
           {% endif %}
         </div>
@@ -660,8 +657,7 @@
     {% endif %}
 
     {% if rtd_would_empty %}
-      <div class="card banner-scroll-target" id="rtd-would-empty-banner"
-           style="border-color: #b91c1c; background: #fee2e2; margin-bottom: 12px;">
+      <div class="banner banner-error banner-scroll-target" id="rtd-would-empty-banner">
         <p style="margin: 0 0 8px 0;">
           <strong>Cannot delete this Response Type.</strong>
           {% set count = rtd_would_empty.instrument_numbers | length %}
@@ -674,15 +670,14 @@
           first, then come back.
         </p>
         <div style="display: flex; gap: 8px; justify-content: flex-end;">
-          <a class="btn alert"
+          <a class="btn secondary"
              href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd_would_empty.id }}">Cancel</a>
         </div>
       </div>
     {% endif %}
 
     {% if rtd_delete_blocked %}
-      <div class="card banner-scroll-target" id="rtd-delete-blocked-banner"
-           style="border-color: #d97706; background: #fef3c7; margin-bottom: 12px;">
+      <div class="banner banner-warning banner-scroll-target" id="rtd-delete-blocked-banner">
         <p style="margin: 0 0 8px 0;">
           Deleting this Response Type will drop
           <strong>{{ rtd_delete_blocked.response_field_count }}</strong>
@@ -696,13 +691,13 @@
           Continue?
         </p>
         <div style="display: flex; gap: 8px; justify-content: flex-end;">
-          <a class="btn alert"
+          <a class="btn secondary"
              href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd_delete_blocked.id }}">Cancel</a>
           <form method="post"
                 action="/operator/sessions/{{ session.id }}/response-types/{{ rtd_delete_blocked.id }}/delete"
                 style="margin: 0;">
             <input type="hidden" name="confirm" value="true">
-            <button class="btn danger-solid" type="submit">Delete + cascade</button>
+            <button class="btn destructive" type="submit">Delete + cascade</button>
           </form>
         </div>
       </div>
