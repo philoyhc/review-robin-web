@@ -11,71 +11,37 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {% if has_responses and not is_ready %}
-    <div class="card lock">
-      <p style="margin: 0;">
-        This session has existing reviewer responses. Editing the session,
-        replacing rosters, or regenerating assignments may invalidate or
-        delete them. Forms below ask you to acknowledge response loss
-        before proceeding.
-      </p>
-    </div>
-  {% endif %}
-
-  {% if is_ready %}
-    <div class="card lock">
-      <p style="margin: 0 0 12px 0;">
-        Session details cannot be modified while the session is ongoing.
-        Revert the session to draft if you wish to modify anything.
-      </p>
-      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required>
-            Yes, revert <strong>{{ session.name }}</strong> to draft.
-          </label>
-        </p>
-        <p style="margin-bottom: 0;">
-          <button class="btn alert" type="submit">Revert to draft</button>
-        </p>
-      </form>
-    </div>
-  {% endif %}
-
   <div class="bottom-grid">
-    {# Left column — Run Session, Validation summary, Quick setup #}
+    {# Left column — Contextual primary action, Quick setup #}
     <div class="bottom-left">
-      <div class="card">
-        <h2>Run Session</h2>
-        <div class="btn-row">
-          <a class="btn-cta"
-             href="/operator/sessions/{{ session.id }}?validated=1">Validate<br>Session Setup</a>
-          <a class="btn-cta"
-             href="/operator/sessions/{{ session.id }}/preview">Preview<br>Reviewer Surface</a>
-          <a class="btn-cta"
-             href="/operator/sessions/{{ session.id }}/invitations">Manage<br>Invitations</a>
-          <a class="btn-cta disabled"
-             aria-disabled="true"
-             title="Extract Data lands in Segment 12">Extract<br>Data</a>
-        </div>
-      </div>
-
-      {% if validation_summary %}
-        <div class="card" id="validation-summary">
-          <h2>Validation summary</h2>
-          <p>
-            <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
-            <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
-            <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
+      {# Contextual primary action card — state-conditional contents,
+         constant card shape. Per spec/session_home.md, this card
+         carries any explanatory messaging the operator needs about
+         the session's lifecycle state, replacing the retired
+         top-of-body lock cards. #}
+      <div class="card" id="contextual-action">
+        {% if is_draft %}
+          <h2>Validate Setup</h2>
+          <p class="form-help">
+            Run validation to surface errors and warnings before
+            activating. Validation never mutates session data.
           </p>
-          {% if is_ready %}
-            <p class="form-help">
-              Session is already ready. Reviewers can save and submit
-              responses on the open instruments.
-            </p>
+          <div class="btn-pair">
+            <a class="btn"
+               href="/operator/sessions/{{ session.id }}?validated=1">Validate Setup</a>
             <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
-          {% elif validation_summary.can_activate %}
+               href="/operator/sessions/{{ session.id }}/validate">View validation detail</a>
+          </div>
+        {% elif is_validated %}
+          <h2>Activate Session</h2>
+          <p>
+            <span class="pill pill-success">Setup validated</span>
+            {% if validation_summary %}
+              <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
+              <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
+            {% endif %}
+          </p>
+          {% if validation_summary and validation_summary.can_activate %}
             <form method="post" action="/operator/sessions/{{ session.id }}/activate">
               {% if validation_summary.needs_acknowledge %}
                 <p>
@@ -86,22 +52,59 @@
                 </p>
               {% endif %}
               <div class="btn-pair">
-                <button class="btn" type="submit">Activate session</button>
-                <a class="btn secondary"
-                   href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
+                <button class="btn" type="submit">Activate Session</button>
               </div>
             </form>
           {% else %}
             <p class="form-help">
-              Cannot activate while {{ validation_summary.error_count }}
-              error{% if validation_summary.error_count != 1 %}s remain{% else %} remains{% endif %}.
-              Resolve the errors above and re-run validation.
+              Validation now shows
+              {{ validation_summary.error_count if validation_summary else 0 }}
+              error{% if not validation_summary or validation_summary.error_count != 1 %}s{% endif %}.
+              Resolve them and re-run validation before activating.
             </p>
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/validate">View detailed validation</a>
           {% endif %}
-        </div>
-      {% endif %}
+          <div class="contextual-action-links">
+            <a href="/operator/sessions/{{ session.id }}/validate">View validation detail</a>
+            <span aria-hidden="true">·</span>
+            <a href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
+            <span aria-hidden="true">·</span>
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/revert"
+                  class="contextual-action-inline-form">
+              <button type="submit" class="link-button">Revert to Draft</button>
+            </form>
+          </div>
+        {% elif is_ready %}
+          <h2>Pause Session</h2>
+          <p class="form-help">
+            Session is currently <strong>Activated</strong>. Reviewers
+            can access forms and save responses.
+          </p>
+          <p class="form-help">
+            Pausing returns the session to Draft. Reviewers will not be
+            able to access forms while paused. Existing responses are
+            preserved.
+          </p>
+          <form method="post" action="/operator/sessions/{{ session.id }}/revert">
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm" value="true" required>
+                Yes, pause <strong>{{ session.name }}</strong> and return to Draft.
+              </label>
+            </p>
+            <div class="btn-pair">
+              <button class="btn" type="submit">Pause Session</button>
+            </div>
+          </form>
+          <p class="form-help" style="margin-top: var(--space-3);">
+            <a href="/operator/sessions/{{ session.id }}/invitations">Manage invitations</a>
+            ·
+            <a href="/operator/sessions/{{ session.id }}/monitoring">Monitor responses</a>
+            ·
+            <a href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
+          </p>
+        {% endif %}
+      </div>
 
       <div class="card" id="quick-setup">
         <h2>Quick setup</h2>

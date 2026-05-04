@@ -886,6 +886,33 @@
         padding: 0;
         font-size: 0.7em;
       }
+      /* Contextual primary action card supporting links — small text
+         row of inline anchors and a POST-form button rendered as a
+         link, separated by middle dots. The form has to be a real
+         <form> (POST) but visually sits among <a> siblings. */
+      body.ui-v2 .contextual-action-links {
+        font-size: var(--fs-small);
+        color: var(--text-secondary);
+        margin-top: var(--space-3);
+      }
+      body.ui-v2 .contextual-action-links a,
+      body.ui-v2 .contextual-action-links .link-button {
+        color: var(--accent-blue);
+      }
+      body.ui-v2 .contextual-action-inline-form {
+        display: inline;
+      }
+      body.ui-v2 .link-button {
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      body.ui-v2 .link-button:hover {
+        text-decoration: underline;
+      }
       /* Code block — bg-muted-tinted block for monospace content
          (e.g. rendered email bodies on the Outbox page). */
       body.ui-v2 .code-block {
