@@ -426,11 +426,11 @@ def test_review_surface_single_instrument_has_no_next_button(
     )
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    # The button DOM element isn't rendered (the inline JS hook mentions
-    # the class as a string literal, but the rendered button isn't there).
-    assert "rs-next-btn" not in body.replace(
-        '.closest(".rs-next-btn")', ""
-    )
+    # No Previous / Next button DOM elements (the inline JS hook
+    # mentions the class names as string literals, but the rendered
+    # buttons aren't there).
+    assert ">Next</button>" not in body
+    assert ">Previous</button>" not in body
     # No paginated wrapper around the instrument groups.
     assert '<div class="rs-paginated">' not in body
     # Instrument group wrapper still renders so the markup is uniform,
@@ -532,10 +532,26 @@ def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
     assert '<div class="rs-paginated">' in body
-    # Next button renders in the top + bottom action rows (the JS
-    # selector also names the class as a string literal — count the
-    # `>Next</button>` payload to skip that noise).
+    # Previous + Next render in the top + bottom action rows (the JS
+    # selector also names the classes as string literals — count the
+    # `>Previous</button>` / `>Next</button>` payloads to skip that
+    # noise).
+    assert body.count(">Previous</button>") == 2
     assert body.count(">Next</button>") == 2
+    # Markup ships with Previous disabled — we start at the first
+    # instrument, so navigating backwards is a no-op.
+    assert (
+        body.count(
+            '<button class="btn secondary rs-prev-btn" type="button" disabled>Previous</button>'
+        )
+        == 2
+    )
+    # Next is NOT pre-disabled in markup — JS will disable it on the
+    # last group at runtime.
+    assert (
+        '<button class="btn secondary rs-next-btn" type="button" disabled>'
+        not in body
+    )
     # Two `.rs-instrument-group` wrappers — the first is marked active
     # so only it is visible until Next is clicked.
     assert body.count('class="rs-instrument-group rs-active"') == 1
