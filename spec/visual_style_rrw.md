@@ -264,14 +264,15 @@ No breadcrumb is needed; the page hierarchy is too shallow. The H1 and the user 
 This page is the operator's "lobby" and is the natural landing page when signing in or returning from a session. It deserves slightly more care than other non-session pages, but uses the same chrome.
 
 - **H1:** "Sessions" or "My Sessions".
-- **Body:** A list or grid of session cards. Each card shows:
+- **Body:** A v2 table inside a single `.card`. Columns:
   - Session name (linked to that session's Home).
-  - Lifecycle state badge (using the display labels: Draft, Validated, Activated, etc.).
+  - Code.
+  - Status — lifecycle pill (using the display labels: Draft, Validated, Activated, etc.).
   - Deadline.
-  - Brief setup readiness summary (count badges or a single status summary).
-- **Create Session affordance:** primary button in the top-right of the list area, labeled "New Session" or "Create Session". When the list is empty, this becomes the page's prominent affordance, rendered larger and with explanatory text.
+  - Actions — Access (Secondary) + Delete (legacy `danger-solid` until #23 retires it for a POST form).
+- **Create Session affordance:** primary button in the top-right of the list area, labeled "Create new session". When the list is empty, this becomes the page's prominent affordance, rendered larger inside the empty-state `.card` (a `.btn-cta` with explanatory text).
 
-The session cards reuse the Card component from the general spec; the lifecycle badges reuse the badge component with the lifecycle color treatments above.
+> **History.** This page tried a per-session-card layout briefly during Segment 11D PR B (D4) on the rationale that cards read more like a "lobby" than a table does. The card layout was reverted on 2026-05-04 in favour of the table — at the operator's lobby, dense scannable rows matter more than per-card framing, and the columns above all have natural width budgets. The lifecycle badges reuse the badge component with the lifecycle color treatments above; the table picks up the v2 row-only borders + muted header treatment from `body.ui-v2 table`.
 
 #### About / Settings / Create Session
 

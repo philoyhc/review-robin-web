@@ -25,32 +25,33 @@ def _create_session(
 # ── Sessions list lobby (D4) ────────────────────────────────────────────
 
 
-def test_sessions_list_renders_session_cards_not_a_table(
+def test_sessions_list_renders_v2_table_inside_a_card(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db)
     body = client.get("/operator/sessions").text
-    # Body class flips onto v2 (no longer the legacy two-column look).
+    # Body class flips onto v2.
     assert '<body class="ui-v2">' in body
-    # Lobby is a flex column of `.card.session-card` rows, no <table>.
-    assert "<table>" not in body
-    assert 'class="card session-card"' in body
-    # The session name is the card's primary anchor into Session Home.
+    # Lobby is a v2 <table> inside a single .card wrapper (revisits the
+    # original D4 cards-vs-table decision).
+    assert "<table>" in body
+    assert "class=\"card session-card\"" not in body
+    # The session name is the row's primary anchor into Session Home.
     assert (
-        f'class="session-card-name" href="/operator/sessions/{session.id}">'
-        f"{session.name}</a>"
+        f'<a href="/operator/sessions/{session.id}">{session.name}</a>'
     ) in body
     # Lifecycle pill renders via the canonical lifecycle_label filter.
     assert f'class="pill pill-lifecycle-{session.status}"' in body
 
 
-def test_sessions_list_card_meta_shows_code_and_deadline_state(
+def test_sessions_list_row_shows_code_and_deadline_state(
     client: TestClient, db: Session
 ) -> None:
     _create_session(client, db, code="rrw-no-dl")
     body = client.get("/operator/sessions").text
-    assert "Code:" in body
-    # Newly created sessions have no deadline yet — the meta line says so
+    assert "<th>Code</th>" in body
+    assert "<th>Deadline</th>" in body
+    # Newly created sessions have no deadline yet — the cell says so
     # rather than dropping the field silently.
     assert "No deadline" in body
 

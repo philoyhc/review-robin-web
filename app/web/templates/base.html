@@ -1115,12 +1115,11 @@
         font-size: var(--fs-small);
         color: var(--text-secondary);
       }
-      /* Sessions-list lobby — flex column of .card rows, with a
-         header row that pairs the H1 with the "Create new session"
-         Primary affordance flush right per
-         spec/visual_style_rrw.md "Operator's Overview". The empty
-         state is a single .card with explanatory text and a .btn-cta
-         that doubles as the prominent affordance. */
+      /* Sessions-list lobby header — pairs the H1 with the "Create
+         new session" Primary affordance flush right. Body is a v2
+         table inside a single .card; the empty state is a separate
+         .card with explanatory text and a .btn-cta that doubles as
+         the prominent affordance. */
       body.ui-v2 .sessions-list-header {
         display: flex;
         align-items: center;
@@ -1129,26 +1128,6 @@
         gap: var(--space-3);
       }
       body.ui-v2 .sessions-list-header h1 { margin: 0; }
-      body.ui-v2 .sessions-list { display: flex; flex-direction: column; }
-      body.ui-v2 .session-card-header {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: var(--space-3);
-        margin-bottom: var(--space-2);
-      }
-      body.ui-v2 .session-card-name {
-        font-size: var(--fs-h2);
-        font-weight: 600;
-        color: var(--text-primary);
-        text-decoration: none;
-      }
-      body.ui-v2 .session-card-name:hover { text-decoration: underline; }
-      body.ui-v2 .session-card-meta {
-        margin: 0 0 var(--space-3) 0;
-        color: var(--text-secondary);
-        font-size: var(--fs-small);
-      }
       /* Return-to-origin "← Back to {context}" link rendered at the
          top of detour destinations (About, /me/debug). Per
          spec/visual_style_rrw.md "Return-to-origin behavior". */

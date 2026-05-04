@@ -121,10 +121,9 @@ def test_sessions_list_create_button_lives_in_header(
     body = response.text
     # Old top-of-page "Create session" link no longer present.
     assert ">Create session<" not in body
-    # Per Segment 11D PR B (D4), the lobby is a flex column of session
-    # cards rather than a <table>; the Primary "Create new session"
-    # affordance sits in the header row to the right of the H1.
-    assert "<table>" not in body
+    # Per Segment 11D PR B (D4) and the cards-vs-table revisit, the
+    # Primary "Create new session" affordance sits in the header row
+    # to the right of the H1, above the lobby's table-in-a-card.
     assert 'href="/operator/sessions/new"' in body
     assert "Create new session" in body
     header_close = body.find("</div>", body.find('class="sessions-list-header"'))
