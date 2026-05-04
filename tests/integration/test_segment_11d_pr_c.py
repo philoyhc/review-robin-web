@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Assignment, Reviewer, ReviewSession
+from app.db.models import Assignment, Instrument, Reviewer, ReviewSession
 
 
 def _operator_creates_session_with_pair(
@@ -363,9 +363,12 @@ def test_review_surface_action_rows_render_above_and_below_tables(
     )
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    # Two .rs-action-row containers — one above the instrument loop,
-    # one after the tables.
-    assert body.count('class="rs-action-row"') == 2
+    # Two .rs-action-row containers — one above the instrument loop
+    # (carries the .rs-action-row-left modifier so it sits flush left
+    # under the description card), one after the tables (default
+    # flush-right).
+    assert body.count("rs-action-row") >= 2
+    assert "rs-action-row rs-action-row-top rs-action-row-left" in body
     # Each row carries the same three controls. Cancel is now an
     # anchor inside the form rather than a free-floating <p> above.
     save_count = body.count(">Save draft</button>")
@@ -378,6 +381,166 @@ def test_review_surface_action_rows_render_above_and_below_tables(
         body.count(f'formaction="/reviewer/sessions/{review_session.id}/submit"')
         >= 2
     )
+
+
+def test_review_surface_session_description_renders_in_half_width_card(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Session description sits in a `.card.rs-description-card` (the
+    half-width, flush-left modifier) instead of as a loose `<p>`."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-desc",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    review_session.description = "Please rate each reviewee on the rubric."
+    db.commit()
+
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    assert 'class="card rs-description-card"' in body
+    assert "Please rate each reviewee on the rubric." in body
+
+
+def test_review_surface_single_instrument_has_no_next_button(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Next is suppressed when the session has only one instrument —
+    pagination only kicks in when there's somewhere to step to."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-one-inst",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    # The button DOM element isn't rendered (the inline JS hook mentions
+    # the class as a string literal, but the rendered button isn't there).
+    assert "rs-next-btn" not in body.replace(
+        '.closest(".rs-next-btn")', ""
+    )
+    # No paginated wrapper around the instrument groups.
+    assert '<div class="rs-paginated">' not in body
+    # Instrument group wrapper still renders so the markup is uniform,
+    # but with no `.rs-paginated` ancestor it has no display-toggling
+    # CSS effect.
+    assert 'class="rs-instrument-group rs-active"' in body
+
+
+def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """When the session has more than one instrument, both action rows
+    carry a Next button (`type="button"`, no form submission) and the
+    instrument groups are wrapped in `.rs-paginated` so CSS hides
+    inactive groups."""
+    operator = make_client(alice)
+    # Build the session in draft so we can slot in a second instrument
+    # before activation; `_require_instrument_editable` rejects edits
+    # once the session is `ready`.
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Multi", "code": "rae-multi-inst"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "rae-multi-inst")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": ""},
+        follow_redirects=False,
+    )
+    # full-matrix pins all assignments to the default instrument; add a
+    # second instrument and slot in an extra Assignment for it so the
+    # reviewer sees both in their surface.
+    [default_instrument] = list(
+        db.execute(
+            select(Instrument).where(Instrument.session_id == review_session.id)
+        ).scalars()
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add",
+        data={"after": str(default_instrument.id)},
+        follow_redirects=False,
+    )
+    second_instrument = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != default_instrument.id)
+    ).scalar_one()
+    seed_assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).scalar_one()
+    db.add(
+        Assignment(
+            session_id=review_session.id,
+            reviewer_id=seed_assignment.reviewer_id,
+            reviewee_id=seed_assignment.reviewee_id,
+            instrument_id=second_instrument.id,
+            include=True,
+            created_by_mode="full_matrix",
+        )
+    )
+    db.commit()
+    operator.get(f"/operator/sessions/{review_session.id}?validated=1")
+    operator.post(
+        f"/operator/sessions/{review_session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+    assert review_session.status == "ready"
+
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
+    assert '<div class="rs-paginated">' in body
+    # Next button renders in the top + bottom action rows (the JS
+    # selector also names the class as a string literal — count the
+    # `>Next</button>` payload to skip that noise).
+    assert body.count(">Next</button>") == 2
+    # Two `.rs-instrument-group` wrappers — the first is marked active
+    # so only it is visible until Next is clicked.
+    assert body.count('class="rs-instrument-group rs-active"') == 1
+    # Plus the second group without `rs-active`.
+    assert body.count('class="rs-instrument-group"') == 1
 
 
 def test_review_surface_clear_all_card_is_half_width_flush_right(

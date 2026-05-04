@@ -1180,15 +1180,44 @@
       }
       body.ui-v2 .rs-page-header h1 { margin: 0; }
       /* Reviewer-surface action row — Save draft / Submit / Cancel
-         triplet flushed right, repeated above and below the
-         instrument tables so the reviewer can act without scrolling
-         to either end. */
+         triplet (plus optional Next on multi-instrument sessions),
+         repeated above and below the instrument tables so the
+         reviewer can act without scrolling to either end. The top
+         row carries `.rs-action-row-left` to sit flush left under
+         the description card; the bottom row keeps the default
+         flush-right alignment. */
       body.ui-v2 .rs-action-row {
         display: flex;
         justify-content: flex-end;
         gap: var(--space-3);
         margin: var(--space-4) 0;
         flex-wrap: wrap;
+      }
+      body.ui-v2 .rs-action-row.rs-action-row-left {
+        justify-content: flex-start;
+      }
+      /* Top action row sits below the description card with a wider
+         gap than the default 16px so the card and the buttons read
+         as separate concerns rather than a stack. */
+      body.ui-v2 .rs-action-row.rs-action-row-top {
+        margin-top: var(--space-8);
+      }
+      /* Half-width session-description card flushed left below the
+         page header. Collapses to full width on narrow viewports. */
+      body.ui-v2 .rs-description-card {
+        max-width: calc(50% - 10px);
+        margin-bottom: 0;
+      }
+      @media (max-width: 800px) {
+        body.ui-v2 .rs-description-card { max-width: 100%; }
+      }
+      /* Multi-instrument paginated view — only the active group
+         renders; the Next button cycles through (no-save, no-submit
+         — purely view state). Single-instrument sessions don't get
+         the wrapper, so this rule has no effect there. */
+      body.ui-v2 .rs-paginated .rs-instrument-group { display: none; }
+      body.ui-v2 .rs-paginated .rs-instrument-group.rs-active {
+        display: block;
       }
       /* Half-width Clear-all (Danger Zone) flush-right at the foot
          of the reviewer surface. Collapses to full width below the
