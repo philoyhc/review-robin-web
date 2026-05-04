@@ -13,7 +13,9 @@ deliberately as part of a feature change, never silently).
 | `architecture.md` | Domain entities, layering, conceptual hierarchy, pair-vs-assignment context. |
 | `functional_spec.md` | Technology-neutral functional specification — what the system must do regardless of implementation. |
 | `ui_concept.md` | Conceptual map of the operator-facing page surface — page taxonomy (Overview, Control Panel, Setup Pages, Preview Pages, Operations Pages) and the navigation principles that govern movement between them. Reads upstream of `operator_map.md`. |
-| `visual_style.md` | Visual design system — palette, typography, spacing, components, patterns. Part 1 is portable; Part 2 instantiates it for Review Robin (accent assignments, lifecycle colors, two-row chrome, status strip, lock card). |
+| `visual_style_general.md` | Portable visual design system — palette, typography, spacing, components, patterns. Authoritative for the general visual vocabulary used across all surfaces. |
+| `visual_style_rrw.md` | Review-Robin instantiation of the general spec — accent assignments, lifecycle colors, two-row session chrome, status strip, warning surfaces, non-session operator chrome, reviewer-facing chrome. Reads downstream of `visual_style_general.md` and `audience_and_identity_model.md`. |
+| `audience_and_identity_model.md` | Conceptual map of who uses Review Robin — audiences (operator, reviewer, plus forward-looking reviewee and sysadmin), auth posture, customization boundaries. The "highest-ranking" doc on identity / audience decisions; visual-style choices follow from it. |
 | `operator_map.md` | Operator-facing page surface — chrome, setup nav, lock card, per-page layout and affordances. |
 | `preview_hub.md` | Functional spec for the Reviewer Experience Preview hub — read-only Operations Page rendering invitation email, response form, reminder email, and responses-received email for an operator-selected reviewer. |
 | `quick_setup_card_spec.md` | Functional spec for the Quick Setup card on Session Home — three-slot CSV upload (Reviewers, Reviewees, Assignments-or-rule) with shared confirm + cascade + lifecycle-lock semantics. |

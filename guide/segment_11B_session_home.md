@@ -191,7 +191,7 @@ returns. Tighten the wording once the page is on the dev slot and
 we see what reads well.
 
 **No new button variants** for this work. Reuse Primary / Secondary
-/ Destructive / Outline-amber per `spec/visual_style.md` and
+/ Destructive / Outline-amber per `spec/visual_style_general.md` and
 `spec/ui_elements.md`.
 
 **Responsive collapse** is the existing single-column behaviour

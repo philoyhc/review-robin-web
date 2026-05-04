@@ -3,10 +3,12 @@
 > **Note (2026-05-03):** Sections referencing the operator chrome
 > (which reviewer pages share) and the standalone
 > `/operator/sessions/{id}/preview` surface overlap with
-> `spec/visual_style.md` and `spec/preview_hub.md` respectively.
+> `spec/visual_style_rrw.md` and `spec/preview_hub.md` respectively.
 > Those two files are now authoritative for the areas they cover.
-> Where this file disagrees with either, the newer spec wins. A
-> reconciliation pass is pending.
+> Reviewer-facing chrome specifically is documented in
+> `spec/visual_style_rrw.md` "Reviewer-facing pages". Where this
+> file disagrees with either, the newer spec wins. A reconciliation
+> pass is pending.
 
 Specification of the reviewer-facing page surface — the pages a
 signed-in reviewer sees when they follow an invitation link or

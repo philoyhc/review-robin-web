@@ -2,8 +2,10 @@
 
 > **Note (2026-05-03):** This file overlaps with three newer specs that
 > are now authoritative for the areas they cover:
-> - `spec/visual_style.md` — chrome, status strip, lock card, button
->   styles, page headers.
+> - `spec/visual_style_general.md` and `spec/visual_style_rrw.md` —
+>   chrome, status strip, lock card, button styles, page headers
+>   (general visual vocabulary in the first; Review-Robin chrome
+>   instantiation in the second).
 > - `spec/preview_hub.md` — folds the standalone
 >   `/operator/sessions/{id}/preview` page into a new Operations hub
 >   at `/sessions/{id}/preview`.

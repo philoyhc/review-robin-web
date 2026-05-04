@@ -3,7 +3,7 @@
 > **Status (2026-05-03):** Pilot-validated. Initial audit-derived draft;
 > then iterated through `/operator/sessions/{id}/reviewers1` (the
 > first page on `body.ui-v2`) over PRs #333 → #341. Pilot-derived
-> principles have been folded back into `spec/visual_style.md`. This
+> principles have been folded back into `spec/visual_style_general.md`. This
 > doc is now the implementation catalogue: it tracks per-element
 > current state, canonical naming, and the rollout status across the
 > seven-PR migration plan in Part 3.
@@ -20,7 +20,7 @@ primitives. It is split into:
 
 - **Part 1 — Element catalogue.** One section per element family.
   Each entry lists the canonical name, the canonical visual treatment
-  (per `spec/visual_style.md`), the current implementation in
+  (per `spec/visual_style_general.md`), the current implementation in
   `base.html` and templates, and the migration delta.
 - **Part 2 — Drift catalogue.** Cross-cutting list of one-off
   inline styles, unique classes, and inconsistent treatments the
@@ -30,7 +30,7 @@ primitives. It is split into:
 
 Cross-references:
 
-- **`spec/visual_style.md`** — authoritative design system (palette,
+- **`spec/visual_style_general.md`** — authoritative design system (palette,
   type scale, spacing, component shapes, app-specific accent
   assignments). This catalogue instantiates that spec against the
   current codebase.
@@ -55,7 +55,7 @@ Each element entry follows the same shape:
 > *Current* (what's in the codebase today): CSS class(es) + the
 > file(s) that own the rules.
 > *Canonical* (what it should be after #21): treatment per
-> `visual_style.md`.
+> `visual_style_general.md`.
 > *Migration delta* (what changes): brief.
 > *PR* (which slice of the bundle owns it): see Part 3.
 
@@ -79,7 +79,7 @@ Each element entry follows the same shape:
 > `text-primary` semibold, separator " / " in `text-muted`.
 > *Current:* `.breadcrumb`, `.breadcrumb-sep`, `[aria-current="page"]`
 > rules in `base.html`. Already close to spec.
-> *Canonical:* match `visual_style.md` "Breadcrumb" pattern (no home
+> *Canonical:* match `visual_style_general.md` "Breadcrumb" pattern (no home
 > icon, small text, consistent spacing).
 > *Migration delta:* swap `#999` separator for `text-muted` token;
 > verify type scale.
@@ -90,7 +90,7 @@ Each element entry follows the same shape:
 > **`.session-nav-card`** — the two-row navigation card with the
 > double-height Home anchor on the left and Setup / Operations tab
 > rows on the right. Specified in detail in
-> `spec/visual_style.md` Part 2 ("Navigation chrome (two-row layout)").
+> `spec/visual_style_rrw.md` "Operator session chrome > Navigation chrome (two-row layout)".
 > *Current:* `.session-nav-card`, `.session-nav-grid`,
 > `.session-home-anchor`, `.row-label`, `.tab-strip-setup`,
 > `.tab-strip-ops`, `.nav-tab`, `.status-row` rules in `base.html`;
@@ -113,7 +113,7 @@ Each element entry follows the same shape:
 > `operator/partials/session_setup_status_row.html`. Today emits
 > `<p>` tags rather than the canonical "key: badge · key: badge"
 > middle-dot row.
-> *Canonical:* `visual_style.md` Part 2 "Status strip" — middle-dot
+> *Canonical:* `visual_style_rrw.md` "Operator session chrome > Status strip" — middle-dot
 > separators, lifecycle badge first, count / empty badges per slot,
 > `bg-muted` background.
 > *Migration delta:* template rewrite of
@@ -139,7 +139,7 @@ Each element entry follows the same shape:
 > `.page-subtitle` line allowed below.
 > *Current:* `h1` global rule in `base.html` (margin only, no size
 > override). `.page-subtitle` defined as `0.95em #555`.
-> *Canonical:* `visual_style.md` "Type scale" — explicit `1.5rem`
+> *Canonical:* `visual_style_general.md` "Type scale" — explicit `1.5rem`
 > semibold, `page-subtitle` becomes `text-secondary` small.
 > *Migration delta:* size + weight on H1; color token on subtitle.
 > *PR:* A (tokens & primitives).
@@ -256,7 +256,7 @@ vocabulary as follows.
 |---|---|---|
 | `.btn` (no modifier) | **Primary** | Solid `accent-blue`, white text. Reserved for the page's *single* main affirmative action — at most one per page region. "Submit this form" doesn't qualify; routine submits use Secondary. |
 | `.btn.secondary` | **Secondary** | White bg, `border-default`, `text-primary`. The default button. Used for routine submits (Upload, Save), Cancel, View detail, etc. |
-| `.btn.alert` | **Outline-amber (recovery in lock card)** | White bg, `accent-amber-dark` border + text. Per `visual_style.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
+| `.btn.alert` | **Outline-amber (recovery in lock card)** | White bg, `accent-amber-dark` border + text. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
 | `.btn.alert-solid` | **Primary** | The orange solid collapses to Primary. The action's gravity is communicated by the surrounding context (lock card, confirm-step), not the button color. |
 | `.btn.danger-solid` | **Destructive** | White bg, `accent-red` border + text. Used as the **confirmation step** of destructive actions. Lives inside `.card.danger-zone` — the brown frames the surface, the red marks the action. |
 | `.btn.danger` | **Destructive** (entry point) or **Secondary** | Where `.danger` is the entry into a confirmation, prefer Secondary; the destructive treatment lands on the confirm step. |
@@ -264,7 +264,7 @@ vocabulary as follows.
 | `.btn-cta.disabled` | **Primary (disabled)** | Opacity 0.5, `pointer-events: none`. Same disabled rule as the regular Primary. |
 | `.btn-icon` | **Icon button** | Borderless inline action (move-up / move-down / delete-row). Keep; add canonical disabled treatment. |
 
-**Hover** (per `visual_style.md` P6 — pilot-validated):
+**Hover** (per `visual_style_general.md` P6 — pilot-validated):
 - *Filled buttons* (Primary, `.alert-solid`): bg/border move from `accent-blue` to `accent-blue-light` (lighten).
 - *Outline buttons* (Secondary, Destructive, Outline-amber): subtle background tint in the role's family (`bg-muted`, `accent-red-bg`, `accent-amber-bg-mid`).
 - Disabled buttons skip via `pointer-events: none`.
@@ -278,7 +278,7 @@ vocabulary as follows.
 > `.btn.secondary.disabled` in others.
 > *Canonical:* one `.btn.disabled` rule that handles both
 > `<button disabled>` and `<a class="btn disabled" aria-disabled>`,
-> matching visual_style.md's "Disabled — same shape as the role
+> matching visual_style_general.md's "Disabled — same shape as the role
 > variant; reduced opacity (0.5) and `cursor: not-allowed`".
 > *Migration delta:* unify; remove inline overrides.
 > *PR:* B (buttons).
@@ -307,7 +307,7 @@ vocabulary as follows.
 > `border-collapse: collapse; width: 100%`; `th, td { border: 1px
 > solid #ddd; padding: 4px 8px; }` (full grid, every cell
 > bordered); `th { background: #f4f4f4; }`. Two divergences from
-> visual_style.md: full grid lines (spec calls for row-only) and
+> visual_style_general.md: full grid lines (spec calls for row-only) and
 > tight `4px 8px` cell padding (spec calls for `12px 16px`).
 > *Canonical:* row-only borders, generous cell padding, hover tint.
 > *Migration delta:* rewrite global `th, td` rules; some dense
@@ -358,7 +358,7 @@ vocabulary as follows.
 
 > **`<select>` / `<input type="file">` / `<input type="number">`
 > / `<input type="checkbox">` / `<input type="radio">`** —
-> currently un-styled (browser defaults). visual_style.md does
+> currently un-styled (browser defaults). visual_style_general.md does
 > not yet specify treatment.
 > *Current:* browser defaults.
 > *Canonical:* spec to be written. For #21 we adopt the minimum:
@@ -412,7 +412,7 @@ the eye lands on the numbers without bolding the whole sentence.
 | `.pill-handle` (grey monospace) | **`.pill-handle`** — keep | tokenize colors |
 
 > **Lifecycle badges (specific to status strip)** — per
-> `visual_style.md` Part 2:
+> `spec/visual_style_rrw.md` "Lifecycle state colors":
 > - `draft` → neutral grey (`text-secondary` on `bg-muted`)
 > - `validated` → muted blue (`accent-blue`)
 > - `ready` → muted green (`accent-green`)
@@ -578,11 +578,11 @@ with is in place and named.
 The pilot resolved the original Open questions and surfaced a few
 new patterns:
 
-- **Hover by fill** (now `visual_style.md` P6). Filled controls
+- **Hover by fill** (now `visual_style_general.md` P6). Filled controls
   lighten on hover; outline controls darken with a subtle bg
   tint in their role's color. One direction across buttons,
   nav anchors, tinted cells.
-- **Recovery actions in colored cards** (now `visual_style.md`
+- **Recovery actions in colored cards** (now `visual_style_general.md`
   P7). Action picks up the card's color family rather than
   reasserting Primary blue. Two concrete cases: outline-amber
   Revert-to-draft inside `.card.lock`; outline-red Destructive

@@ -18,7 +18,7 @@ Dense list. PRs and catalog entries linked for detail.
 - **#8** — CSV email-validation drift; shared `_parse_email` helper — done (PR #314)
 - **#12** — CSV cross-table identity check — done (PR #315)
 - **Reviewer surface heading mismatch** — position-based fallback matching the operator surface — done (PR #319)
-- **Reviewer surface UI polish batch** — heading display logic; help text inline; Reviewee column dedup; Photo `View` link; column-width hints by cell type; trailing status-column hide-when-empty; card framing aligned with `spec/visual_style.md`; help-text indentation fix — done (PRs #320 → #324)
+- **Reviewer surface UI polish batch** — heading display logic; help text inline; Reviewee column dedup; Photo `View` link; column-width hints by cell type; trailing status-column hide-when-empty; card framing aligned with `spec/visual_style_general.md`; help-text indentation fix — done (PRs #320 → #324)
 - **#10** — `correlation_id` into deadline lazy-close — done (PR #329)
 - **#6** — Decouple `invitations.py` from FastAPI `Request` — done (PR #330)
 

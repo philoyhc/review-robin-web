@@ -1,10 +1,10 @@
 # Assumptions
 
 > **Note (2026-05-03):** The visual sections (button styles, layout
-> primitives, typography) overlap with `spec/visual_style.md`, which
-> is now authoritative for the visual design system. Where this file
-> disagrees with it, `visual_style.md` wins. A reconciliation pass is
-> pending.
+> primitives, typography) overlap with `spec/visual_style_general.md`
+> and `spec/visual_style_rrw.md`, which are now authoritative for the
+> visual design system. Where this file disagrees with them, the
+> visual_style docs win. A reconciliation pass is pending.
 
 A living record of the load-bearing assumptions — both domain
 shape and visual conventions — that the app is built around.
@@ -58,10 +58,10 @@ Instrument automatically closes upon session deadline.
 
 > **Superseded (2026-05-03).** The six-style affordance×treatment
 > matrix below describes the *current* CSS in `base.html`, which
-> `spec/visual_style.md` retires. `visual_style.md` is now
-> authoritative for button styling and replaces this hierarchy with
-> a muted Primary / Secondary / Destructive vocabulary. The
-> migration to those new styles is tracked as
+> `spec/visual_style_general.md` retires. The general visual-style
+> spec is now authoritative for button styling and replaces this
+> hierarchy with a muted Primary / Secondary / Destructive
+> vocabulary. The migration to those new styles is tracked as
 > `unfinished_business.md` #21. Until that ships, the table below
 > still describes what's in the templates today.
 
