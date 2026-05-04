@@ -120,12 +120,20 @@
         <h2>Session Details</h2>
         <div class="session-meta-row">
           <div>
-            <p class="form-help" style="margin: 0;">Deadline</p>
-            <p style="margin: 0 0 var(--space-3) 0;">{{ session.deadline.isoformat() if session.deadline else "Not set" }}</p>
+            <p class="form-help" style="margin: 0;">Created by</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              <span class="pill pill-count">{{ session.created_by_user.display_name or session.created_by_user.email }}</span>
+            </p>
           </div>
           <div>
-            <p class="form-help" style="margin: 0;">Created by</p>
-            <p style="margin: 0 0 var(--space-3) 0;">{{ session.created_by_user.display_name or session.created_by_user.email }}</p>
+            <p class="form-help" style="margin: 0;">Deadline</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              {% if session.deadline %}
+                <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
+              {% else %}
+                <span class="pill pill-empty">Not set</span>
+              {% endif %}
+            </p>
           </div>
         </div>
         <p class="form-help" style="margin: 0;">Description</p>
