@@ -853,6 +853,14 @@
         color: var(--accent-red);
         margin: var(--space-1) 0 0 0;
       }
+      /* Icon-button modifiers — borderless single-glyph affordances
+         used in dense rows (e.g. ✗ delete, ✚ add a row). The base
+         .btn-icon rule lives in the legacy block above; v2 adds two
+         semantic colour modifiers so templates can drop their
+         inline color: # styles. */
+      body.ui-v2 .btn-icon { color: var(--text-secondary); font-size: 1em; }
+      body.ui-v2 .btn-icon.danger { color: var(--accent-red); }
+      body.ui-v2 .btn-icon.action { color: var(--accent-blue); }
       /* Code block — bg-muted-tinted block for monospace content
          (e.g. rendered email bodies on the Outbox page). */
       body.ui-v2 .code-block {

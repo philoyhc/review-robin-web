@@ -46,7 +46,7 @@ separately.
 - [ ] `session_new.html` — `/operator/sessions/new`
 - [x] `session_detail.html` — `/operator/sessions/{id}` (Session Setup card retired; its five Manage links live in the chrome top-nav now)
 - [ ] `session_edit.html` — `/operator/sessions/{id}/edit`
-- [ ] `instruments_index.html` — `/operator/sessions/{id}/instruments`
+- [x] `instruments_index.html` — `/operator/sessions/{id}/instruments`
 - [x] `session_invitations.html` — `/operator/sessions/{id}/invitations`
 - [x] `session_outbox.html` — `/operator/sessions/{id}/outbox`
 - [x] `session_monitoring.html` — `/operator/sessions/{id}/monitoring`
