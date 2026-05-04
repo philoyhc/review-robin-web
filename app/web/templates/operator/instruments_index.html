@@ -134,7 +134,7 @@
             {% if is_editing %}
               <button form="dfsave-{{ instrument.id }}" type="submit" class="btn"
                       {% if is_ready %}disabled{% endif %}>Save</button>
-              <a class="btn alert"
+              <a class="btn secondary"
                  href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
                  {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
             {% elif is_some_rtd_unlocked %}
@@ -142,14 +142,13 @@
                  Definitions row is currently unlocked. Lock this
                  instrument's Edit so the operator can't open two
                  editing contexts at once. #}
-              <a class="btn alert-solid"
+              <a class="btn secondary disabled"
                  aria-disabled="true"
-                 style="opacity: 0.5; pointer-events: none;"
                  title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
             {% else %}
-              <a class="btn alert-solid"
+              <a class="btn secondary{% if is_ready %} disabled{% endif %}"
                  href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-                 {% if is_ready %}aria-disabled="true" style="opacity: 0.5; pointer-events: none;"{% endif %}>Edit</a>
+                 {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
             {% endif %}
           </div>
         </div>
@@ -159,28 +158,28 @@
           <p>
             Status:
             {% if instrument.accepting_responses %}
-              <span class="pill pill-info">accepting responses</span>
+              <span class="pill pill-count">accepting responses</span>
             {% else %}
-              <span class="pill pill-warning">not accepting</span>
+              <span class="pill pill-empty">not accepting</span>
             {% endif %}
             &middot;
             Visibility when closed:
             {% if instrument.responses_visible_when_closed %}
-              <span class="pill pill-info">showing</span>
+              <span class="pill pill-count">showing</span>
             {% else %}
-              <span class="pill pill-warning">not showing</span>
+              <span class="pill pill-empty">not showing</span>
             {% endif %}
           </p>
           <p>
             Instrument details:
             {% if instrument_saved_state.get(instrument.id) %}
-              <span class="pill pill-info">saved</span>
+              <span class="pill pill-count">saved</span>
             {% else %}
-              <span class="pill pill-warning">not saved</span>
+              <span class="pill pill-empty">not saved</span>
             {% endif %}
           </p>
           {% if instrument.deadline_closed_at %}
-            <p class="muted" style="margin-top: 4px;">
+            <p class="form-help" style="margin-top: 4px;">
               Closed by deadline at <code>{{ instrument.deadline_closed_at.isoformat() }}</code>.
             </p>
           {% endif %}
@@ -189,14 +188,14 @@
               <form method="post"
                     action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
                     style="margin: 0;">
-                <button class="btn alert-solid" type="submit">Open this Instrument</button>
+                <button class="btn secondary" type="submit">Open this Instrument</button>
               </form>
             {% endif %}
             {% if is_ready and instrument.accepting_responses %}
               <form method="post"
                     action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close"
                     style="margin: 0;">
-                <button class="btn alert-solid" type="submit">Close this instrument</button>
+                <button class="btn secondary" type="submit">Close this instrument</button>
               </form>
             {% endif %}
             {% if not instrument.responses_visible_when_closed %}
@@ -204,13 +203,13 @@
                     action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
                     style="margin: 0;">
                 <input type="hidden" name="visible_when_closed" value="true">
-                <button class="btn alert-solid" type="submit">Show when closed</button>
+                <button class="btn secondary" type="submit">Show when closed</button>
               </form>
             {% else %}
               <form method="post"
                     action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
                     style="margin: 0;">
-                <button class="btn alert-solid" type="submit">Don't show when closed</button>
+                <button class="btn secondary" type="submit">Don't show when closed</button>
               </form>
             {% endif %}
           </div>
@@ -380,13 +379,11 @@
                       {% if is_editing %}
                         <div style="display: inline-flex; gap: 0; align-items: center;">
                           <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
-                                  class="rf-delete"
-                                  title="Delete row (applied on Save)"
-                                  style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1;">&#10007;</button>
+                                  class="btn-icon danger rf-delete"
+                                  title="Delete row (applied on Save)">&#10007;</button>
                           <button type="button" onclick="addRow(this, {{ instrument.id }})"
-                                  class="rf-add"
-                                  title="Add row after (applied on Save)"
-                                  style="background: none; border: none; color: #2563eb; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1;">&#10133;</button>
+                                  class="btn-icon action rf-add"
+                                  title="Add row after (applied on Save)">&#10133;</button>
                         </div>
                       {% else %}
                         <span class="muted">—</span>
@@ -397,7 +394,7 @@
                 <tr class="rf-empty"{% if sorted_response_fields %} style="display: none;"{% endif %}>
                   <td colspan="6" class="muted" style="font-style: italic;">
                     {% if is_editing %}
-                      <button type="button" class="btn"
+                      <button type="button" class="btn secondary"
                               onclick="addRow(this, {{ instrument.id }})">Add a response field</button>
                     {% else %}
                       No response fields.
@@ -510,13 +507,11 @@
             <td style="white-space: nowrap; width: 1%;">
               <div style="display: inline-flex; gap: 0; align-items: center;">
                 <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
-                        class="rf-delete"
-                        title="Delete row (applied on Save)"
-                        style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1;">&#10007;</button>
+                        class="btn-icon danger rf-delete"
+                        title="Delete row (applied on Save)">&#10007;</button>
                 <button type="button" onclick="addRow(this, {{ instrument.id }})"
-                        class="rf-add"
-                        title="Add row after (applied on Save)"
-                        style="background: none; border: none; color: #2563eb; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1;">&#10133;</button>
+                        class="btn-icon action rf-add"
+                        title="Add row after (applied on Save)">&#10133;</button>
               </div>
             </td>
           </tr>
@@ -566,18 +561,17 @@
               {% if is_editing %}
                 <button form="dfsave-{{ instrument.id }}" type="submit" class="btn"
                         {% if is_ready %}disabled{% endif %}>Save</button>
-                <a class="btn alert"
+                <a class="btn secondary"
                    href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
                    {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
               {% elif is_some_rtd_unlocked %}
-                <a class="btn alert-solid"
+                <a class="btn secondary disabled"
                    aria-disabled="true"
-                   style="opacity: 0.5; pointer-events: none;"
                    title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
               {% else %}
-                <a class="btn alert-solid"
+                <a class="btn secondary{% if is_ready %} disabled{% endif %}"
                    href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-                   {% if is_ready %}aria-disabled="true" style="opacity: 0.5; pointer-events: none;"{% endif %}>Edit</a>
+                   {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
               {% endif %}
             </div>
             <div>
@@ -585,16 +579,16 @@
                     action="/operator/sessions/{{ session.id }}/instruments/add"
                     style="display: inline; margin: 0;">
                 <input type="hidden" name="after" value="{{ instrument.id }}">
-                <button class="btn alert-solid" type="submit"
+                <button class="btn secondary" type="submit"
                         {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add new instrument</button>
               </form>
             </div>
           </div>
         </div>
 
-        <div class="card" style="border-color: #b91c1c; background: #fff;">
-          <h2 style="color: #b91c1c;">Danger Zone</h2>
-          <p class="muted">
+        <div class="card danger-zone">
+          <h2>Danger Zone</h2>
+          <p class="form-help">
             Deleting this instrument cascades to its display and
             response fields, assignments referencing it, and any
             submitted reviewer responses. This cannot be undone.
@@ -611,7 +605,7 @@
                   action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"
                   onsubmit="return confirm('Delete this instrument? This will also delete its display fields, response fields, assignments referencing it, and any submitted reviewer responses. This cannot be undone.');"
                   style="margin: 0;">
-              <button class="btn danger-solid" type="submit"
+              <button class="btn destructive" type="submit"
                       {% if delete_disabled %}disabled title="{{ delete_title }}"{% endif %}>Delete this instrument</button>
             </form>
           </div>
@@ -764,13 +758,13 @@
                   <div style="display: inline-flex; gap: 6px;">
                     <button form="rtd-edit-{{ rtd.id }}" type="submit"
                             class="btn" style="{{ _rtd_btn_style }}">Save</button>
-                    <a class="btn alert" style="{{ _rtd_btn_style }}"
+                    <a class="btn secondary" style="{{ _rtd_btn_style }}"
                        href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd.id }}">Cancel</a>
                     <form method="post"
                           action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/delete"
                           onsubmit="return confirm('Delete Response Type {{ rtd.response_type }}? This cannot be undone.');"
                           style="display: inline; margin: 0;">
-                      <button class="btn danger-solid" type="submit"
+                      <button class="btn destructive" type="submit"
                               style="{{ _rtd_btn_style }}">Delete</button>
                     </form>
                   </div>
@@ -789,21 +783,21 @@
                     {# Seeded rows: no buttons. Ready-session lock:
                        no buttons either (mirrors instrument cards). #}
                   {% elif is_some_row_unlocked %}
-                    <a class="btn alert-solid disabled"
+                    <a class="btn secondary disabled"
                        aria-disabled="true"
-                       style="{{ _rtd_btn_style }} opacity: 0.5; pointer-events: none;"
+                       style="{{ _rtd_btn_style }}"
                        title="Save or cancel the row in progress before editing another.">Edit</a>
                   {% elif is_some_instrument_editing %}
                     {# Slice 4d mutual-exclusion: a per-instrument card
                        is currently in edit mode. Lock RTD edits so
                        cascade-deletes can't silently rewrite the RF
                        rows the operator's browser still has open. #}
-                    <a class="btn alert-solid disabled"
+                    <a class="btn secondary disabled"
                        aria-disabled="true"
-                       style="{{ _rtd_btn_style }} opacity: 0.5; pointer-events: none;"
+                       style="{{ _rtd_btn_style }}"
                        title="Save or cancel the instrument edit before editing a Response Type.">Edit</a>
                   {% else %}
-                    <a class="btn alert-solid" style="{{ _rtd_btn_style }}"
+                    <a class="btn secondary" style="{{ _rtd_btn_style }}"
                        href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd.id }}#rtd-row-{{ rtd.id }}">Edit</a>
                   {% endif %}
                 </td>
@@ -833,7 +827,7 @@
            id="rtd-add-card">
         <div class="card card-half" style="margin-bottom: 0;">
           <h2 style="margin-top: 0;">Add a Response Type</h2>
-          <p class="muted" style="margin: 0 0 12px 0;">
+          <p class="form-help">
             Click <strong>Add</strong> to start a new row in the table
             above after choosing a name and selecting the data type.
             Note that the data type of an added row cannot be changed,
@@ -856,7 +850,7 @@
               </select>
             </label>
             <button id="rtd-add-button"
-                    type="button" class="btn alert-solid"
+                    type="button" class="btn secondary"
                     style="width: 6em; box-sizing: border-box;"
                     onclick="addRtdDraft()"
                     {% if add_disabled %}disabled data-server-disabled="1"
@@ -889,7 +883,7 @@
             <div style="display: inline-flex; gap: 6px;">
               <button form="rtd-draft-form-__DRAFT_ID__" type="submit" class="btn"
                       style="width: 6em; box-sizing: border-box;">Save</button>
-              <button type="button" class="btn alert"
+              <button type="button" class="btn secondary"
                       style="width: 6em; box-sizing: border-box;"
                       onclick="cancelRtdDraft('__DRAFT_ID__')">Cancel</button>
             </div>
