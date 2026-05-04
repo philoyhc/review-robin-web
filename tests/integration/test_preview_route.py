@@ -284,10 +284,12 @@ def test_reviewer_side_surface_still_renders_write_path(
 def test_preview_anchor_rendered_on_session_detail(
     client: TestClient, db: Session
 ) -> None:
-    """The Preview Reviewer Surface anchor renders in the contextual
-    primary action card's supporting links once the session is
-    validated. Per spec/session_home.md, draft state intentionally
-    omits the Preview link (nothing meaningful to preview yet)."""
+    """The See previews secondary button renders in the Next action
+    card's button row once the session is validated. Per
+    spec/session_home.md, draft and ready states intentionally omit
+    the See previews button (nothing meaningful to preview in
+    draft; operators monitor live responses, not previews, while
+    Activated)."""
 
     review_session = _make_session(client, db, code="prev-anchor-detail")
     _populate_rosters(client, review_session.id)
@@ -300,4 +302,4 @@ def test_preview_anchor_rendered_on_session_detail(
     assert (
         f'href="/operator/sessions/{review_session.id}/preview"' in body
     )
-    assert "Preview reviewer surface" in body
+    assert ">See previews</a>" in body

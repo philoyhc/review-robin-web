@@ -34,14 +34,12 @@
               activating. Validation never mutates session data.
             </p>
           {% elif is_validated %}
-            <p>
-              <span class="pill pill-success">Setup validated</span>
-              {% if validation_summary %}
-                <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
-                <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
-              {% endif %}
-            </p>
             {% if validation_summary and validation_summary.can_activate %}
+              <p>
+                The session setup data has successfully validated.
+                Preview the reviewer surface to make sure that it
+                conforms to your requirements before activating.
+              </p>
               <form method="post"
                     action="/operator/sessions/{{ session.id }}/activate"
                     id="next-action-activate-form">
@@ -56,13 +54,11 @@
               </form>
             {% else %}
               <p>
-                Validation now shows
-                {{ validation_summary.error_count if validation_summary else 0 }}
-                error{% if not validation_summary or validation_summary.error_count != 1 %}s{% endif %}.
-                Resolve them and re-run validation before activating.
+                Validation shows that there are error(s). Resolve them
+                and re-run validation before activating.
               </p>
             {% endif %}
-            {# Empty form holder for the Revert to Draft button below;
+            {# Empty form holder for the Revert to draft button below;
                the button declares form="next-action-revert-form" so
                POST is wired even though the button lives in the
                bottom button row. #}
@@ -71,13 +67,10 @@
                   id="next-action-revert-form"></form>
           {% elif is_ready %}
             <p>
-              Session is currently <strong>{{ session.status | lifecycle_label }}</strong>. Reviewers
-              can access forms and save responses.
-            </p>
-            <p>
-              Pausing returns the session to Draft. Reviewers will not be
-              able to access forms while paused. Existing responses are
-              preserved.
+              Session is currently activated. Reviewers can access
+              forms and save responses. Pausing returns the session
+              to draft and stops reviewers from submitting new
+              responses. Existing responses will be preserved.
             </p>
             <form method="post"
                   action="/operator/sessions/{{ session.id }}/revert"
@@ -85,7 +78,7 @@
               <p>
                 <label style="font-weight: normal;">
                   <input type="checkbox" name="confirm" value="true" required>
-                  Yes, pause <strong>{{ session.name }}</strong> and return to Draft.
+                  Yes, pause <strong>{{ session.name }}</strong> and return to draft.
                 </label>
               </p>
             </form>
@@ -96,25 +89,23 @@
             <a class="btn"
                href="/operator/sessions/{{ session.id }}?validated=1">Validate Setup</a>
             <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/validate">View validation detail</a>
+               href="/operator/sessions/{{ session.id }}/validate">See validation details</a>
           {% elif is_validated %}
             {% if validation_summary and validation_summary.can_activate %}
               <button class="btn"
                       type="submit"
                       form="next-action-activate-form">Activate Session</button>
+              <a class="btn secondary"
+                 href="/operator/sessions/{{ session.id }}/validate">See validation details</a>
+              <a class="btn secondary"
+                 href="/operator/sessions/{{ session.id }}/preview">See previews</a>
             {% else %}
               <a class="btn"
-                 href="/operator/sessions/{{ session.id }}/validate">View validation detail</a>
+                 href="/operator/sessions/{{ session.id }}/validate">See validation details</a>
             {% endif %}
-            {% if validation_summary and validation_summary.can_activate %}
-              <a class="btn secondary"
-                 href="/operator/sessions/{{ session.id }}/validate">View validation detail</a>
-            {% endif %}
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
             <button class="btn secondary"
                     type="submit"
-                    form="next-action-revert-form">Revert to Draft</button>
+                    form="next-action-revert-form">Revert to draft</button>
           {% elif is_ready %}
             <button class="btn"
                     type="submit"
@@ -123,8 +114,6 @@
                href="/operator/sessions/{{ session.id }}/invitations">Manage invitations</a>
             <a class="btn secondary"
                href="/operator/sessions/{{ session.id }}/monitoring">Monitor responses</a>
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/preview">Preview reviewer surface</a>
           {% endif %}
         </div>
       </div>
