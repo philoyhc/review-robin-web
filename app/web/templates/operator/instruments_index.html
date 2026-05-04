@@ -122,7 +122,7 @@
         <div class="card instrument-edit"
              style="border-color: transparent; background: transparent; padding: 0;
                     display: flex; flex-direction: column;">
-          <h2 style="margin-top: 0;">Instrument #{{ loop.index }}</h2>
+          <h2 style="margin-top: 0; font-size: 1.5rem;">Instrument #{{ loop.index }}</h2>
           {% if is_editing %}
             <textarea form="dfsave-{{ instrument.id }}" name="description"
                       placeholder="(no description)"
@@ -135,7 +135,7 @@
              affordance without scrolling past the tables. #}
           <div style="display: flex; gap: 8px; justify-content: flex-start; margin-top: auto; padding-top: 12px;">
             {% if is_editing %}
-              <button form="dfsave-{{ instrument.id }}" type="submit" class="btn"
+              <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary"
                       {% if is_ready %}disabled{% endif %}>Save</button>
               <a class="btn secondary"
                  href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
@@ -562,7 +562,7 @@
           <div style="display: flex; justify-content: flex-end; gap: 8px;">
             <div style="display: flex; gap: 8px;">
               {% if is_editing %}
-                <button form="dfsave-{{ instrument.id }}" type="submit" class="btn"
+                <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary"
                         {% if is_ready %}disabled{% endif %}>Save</button>
                 <a class="btn secondary"
                    href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
@@ -591,11 +591,6 @@
 
         <div class="card danger-zone">
           <h2>Danger Zone</h2>
-          <p class="form-help">
-            Deleting this instrument cascades to its display and
-            response fields, assignments referencing it, and any
-            submitted reviewer responses. This cannot be undone.
-          </p>
           {% set is_only_instrument = (instruments | length == 1) %}
           {% set delete_disabled = add_delete_disabled or is_only_instrument %}
           {% if is_only_instrument %}
@@ -603,15 +598,21 @@
           {% else %}
             {% set delete_title = add_delete_disabled_title %}
           {% endif %}
-          <div style="display: flex; justify-content: flex-end;">
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete"
-                  onsubmit="return confirm('Delete this instrument? This will also delete its display fields, response fields, assignments referencing it, and any submitted reviewer responses. This cannot be undone.');"
-                  style="margin: 0;">
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete">
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm" value="true" required>
+                Yes, delete <strong>Instrument #{{ loop.index }}</strong>. This will
+                also delete its display and response fields, assignments
+                referencing it, and any submitted reviewer responses.
+              </label>
+            </p>
+            <p>
               <button class="btn destructive" type="submit"
                       {% if delete_disabled %}disabled title="{{ delete_title }}"{% endif %}>Delete this instrument</button>
-            </form>
-          </div>
+            </p>
+          </form>
         </div>
       </div>
     </div>
@@ -760,7 +761,7 @@
                 <td style="white-space: nowrap; text-align: right;">
                   <div style="display: inline-flex; gap: 6px;">
                     <button form="rtd-edit-{{ rtd.id }}" type="submit"
-                            class="btn" style="{{ _rtd_btn_style }}">Save</button>
+                            class="btn secondary" style="{{ _rtd_btn_style }}">Save</button>
                     <a class="btn secondary" style="{{ _rtd_btn_style }}"
                        href="/operator/sessions/{{ session.id }}/instruments#rtd-row-{{ rtd.id }}">Cancel</a>
                     <form method="post"
@@ -884,7 +885,7 @@
           </td>
           <td style="white-space: nowrap;">
             <div style="display: inline-flex; gap: 6px;">
-              <button form="rtd-draft-form-__DRAFT_ID__" type="submit" class="btn"
+              <button form="rtd-draft-form-__DRAFT_ID__" type="submit" class="btn secondary"
                       style="width: 6em; box-sizing: border-box;">Save</button>
               <button type="button" class="btn secondary"
                       style="width: 6em; box-sizing: border-box;"

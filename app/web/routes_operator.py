@@ -1924,11 +1924,17 @@ def response_type_delete(
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/delete")
 def instruments_delete(
     instrument_id: int,
+    confirm: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     _require_instrument_editable(review_session)
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required",
+        )
     instrument = db.execute(
         select(Instrument)
         .where(Instrument.id == instrument_id)
