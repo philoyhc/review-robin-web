@@ -136,7 +136,7 @@ def test_session_detail_renders_session_layout(
     # ("Next action") across lifecycle states; the per-state action
     # surfaces as the primary button label inside the card.
     assert 'id="next-action"' in body
-    assert "<h2>Next action</h2>" in body
+    assert "<h2>Next Action</h2>" in body
     # Draft state: primary button is "Validate Setup".
     assert ">Validate Setup</a>" in body
     assert "<h2>Run Session</h2>" not in body
@@ -190,7 +190,7 @@ def test_session_detail_no_validate_summary_by_default(
     # Brand-new draft session — no validation card and no Activate
     # form should appear. The Next action card surfaces "Validate
     # Setup" as its primary button.
-    assert "<h2>Next action</h2>" in body
+    assert "<h2>Next Action</h2>" in body
     assert ">Validate Setup</a>" in body
     assert "<h2>Validation summary</h2>" not in body
     assert (
@@ -211,7 +211,7 @@ def test_session_detail_advances_to_validated_with_query(
 
     # The Next action card stays titled "Next action" — the per-state
     # action surfaces as the primary button label inside.
-    assert "<h2>Next action</h2>" in body
+    assert "<h2>Next Action</h2>" in body
     assert ">Activate Session</button>" in body
     # Validated-can-activate body copy (no pills any more).
     assert "successfully validated" in body
@@ -673,7 +673,7 @@ def test_next_action_card_in_ready_renders_pause(
 
     # Card title is constant ("Next action"); the action verb lives
     # in the primary button label inside.
-    assert "<h2>Next action</h2>" in body
+    assert "<h2>Next Action</h2>" in body
     assert ">Pause Session</button>" in body
     # Pause form posts to /revert, with the button outside the form
     # and wired via the form="..." attribute.

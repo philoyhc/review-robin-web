@@ -928,16 +928,20 @@
         padding: 0;
         font-size: 0.7em;
       }
-      /* Next action card on Session Home — constant title + frame,
+      /* Next Action card on Session Home — constant title + frame,
          state-conditional body and button row. Fixed min-height
          keeps the card frame from reflowing as the session moves
          between lifecycle states; body flex-grows to push the
          optional .next-action-confirm block and the .next-action-
-         buttons row to the bottom of the card. */
+         buttons row to the bottom of the card. The border picks
+         up the same accent-blue as the Primary action button
+         inside it, signalling that this is the page's
+         single most important card. */
       body.ui-v2 .card.next-action {
         display: flex;
         flex-direction: column;
         min-height: 200px;
+        border-color: var(--accent-blue);
       }
       body.ui-v2 .card.next-action .next-action-body {
         flex: 1 1 auto;
