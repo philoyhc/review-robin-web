@@ -115,6 +115,32 @@
           tracked as <code>unfinished_business.md</code> #30.
         </p>
       </div>
+
+      {# Extract Data card — placeholder until Segment 12 ships real
+         extraction. State-conditional per spec/session_home.md: in
+         draft/validated the card greys out with explanatory copy
+         ("nothing to extract yet"); in ready the card visually
+         enables but the button stays disabled (Segment 12). #}
+      <div class="card{% if not is_ready %} disabled{% endif %}" id="extract-data">
+        <h2>Extract Data</h2>
+        {% if is_ready %}
+          <p class="form-help">
+            Extract reviewer responses for analysis or reporting.
+          </p>
+        {% else %}
+          <p class="form-help">
+            No responses to extract yet. Available once the session is
+            Activated and responses have been received.
+          </p>
+        {% endif %}
+        <div class="btn-pair">
+          <button class="btn secondary"
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  title="Extract Data lands in Segment 12">Extract</button>
+        </div>
+      </div>
     </div>
 
     {# Right column — Session Details, Danger Zone #}

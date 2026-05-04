@@ -459,6 +459,55 @@ def test_session_card_buttons_when_draft(
 
 
 # ---------------------------------------------------------------------------
+# Slice 11B — Extract Data card (placeholder until Segment 12)
+# ---------------------------------------------------------------------------
+
+
+def test_extract_data_card_disabled_in_draft(
+    client: TestClient, db: Session
+) -> None:
+    """In draft, the Extract Data card renders with the disabled
+    treatment and explanatory copy ("nothing to extract yet")."""
+
+    review_session = _make_session(client, db, code="extract-draft")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    assert 'id="extract-data"' in body
+    assert "<h2>Extract Data</h2>" in body
+    # Disabled treatment is the plain-greyed .card.disabled modifier
+    # per spec/session_home.md (no yellow lock card on Home).
+    assert 'class="card disabled"' in body
+    assert "No responses to extract yet" in body
+    # The Extract action button is permanently disabled until Segment 12.
+    assert "Extract Data lands in Segment 12" in body
+
+
+def test_extract_data_card_visually_enabled_in_ready(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """In ready (Activated), the card visually enables but the button
+    stays disabled (real extraction lands in Segment 12)."""
+
+    operator = make_client(alice)
+    review_session = _seed_pair(
+        operator, db, code="extract-ready", reviewer_email="r@example.edu"
+    )
+    _activate(operator, db, review_session)
+
+    body = operator.get(f"/operator/sessions/{review_session.id}").text
+
+    assert 'id="extract-data"' in body
+    # Card no longer carries the .disabled modifier.
+    assert 'class="card disabled"' not in body
+    # Body copy switches to the "ready to extract" line.
+    assert "Extract reviewer responses for analysis or reporting." in body
+    # Button is still disabled (Segment 12 placeholder).
+    assert "Extract Data lands in Segment 12" in body
+
+
+# ---------------------------------------------------------------------------
 # Slice 11B — Lifecycle display label rendered everywhere
 # ---------------------------------------------------------------------------
 
