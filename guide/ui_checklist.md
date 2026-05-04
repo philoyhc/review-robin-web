@@ -50,7 +50,7 @@ separately.
 - [x] `session_invitations.html` — `/operator/sessions/{id}/invitations`
 - [x] `session_outbox.html` — `/operator/sessions/{id}/outbox`
 - [x] `session_monitoring.html` — `/operator/sessions/{id}/monitoring`
-- [ ] `session_validate.html` — `/operator/sessions/{id}/validate`
+- [x] `session_validate.html` — `/operator/sessions/{id}/validate` (now a chrome tab on the Operations row, replacing Outbox)
 
 ### Operator partials
 
