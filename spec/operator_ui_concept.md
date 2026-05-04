@@ -90,24 +90,27 @@ The Reviewers / Reviewees / Assignments pages share an identical chrome shape (i
 
 Read-only renderings spun off from one or other Setup Page, showing what the configured setup will look like to its audience (reviewers today; future reviewees or other audiences once they exist).
 
-The Preview hub lives at `GET /operator/sessions/{id}/previews` (Operations row) — see `spec/preview_hub.md` for the contract. The standalone reviewer-surface preview at `GET /operator/sessions/{id}/preview` (singular) remains as the operator's read-only render of what reviewers will see; it bypasses session-status / deadline / acceptance gates.
+The Preview hub lives at `GET /operator/sessions/{id}/previews` (Operations row, tab label "Preview") — see `spec/preview_hub.md` for the contract. The standalone reviewer-surface preview at `GET /operator/sessions/{id}/preview` (singular) remains as the operator's read-only render of what reviewers will see; it bypasses session-status / deadline / acceptance gates.
 
-The category is plural because additional Preview surfaces are anticipated (e.g. per-instrument preview integration is open per `guide/instruments.md` Section D).
+The grouping name stays plural because additional Preview surfaces are anticipated (e.g. per-instrument preview integration is open per `guide/instruments.md` Section D).
 
 ### 5. Per Session Operations Pages
 
-Surfaces for running a session and intervening when needed — validating setup, previewing, sending invitations, monitoring progress. Four tabs in the chrome's Operations row:
+Surfaces for running a session and intervening when needed — validating setup, previewing reviewer-facing artifacts, engaging reviewers, tracking reviewee coverage. Five tabs in the chrome's Operations row:
 
 | Page | Template | URL |
 |---|---|---|
 | Validate | `session_validate.html` | `/sessions/{id}/validate` |
-| Previews | `session_previews.html` | `/sessions/{id}/previews` |
+| Preview | `session_previews.html` | `/sessions/{id}/previews` |
 | Invitations | `session_invitations.html` | `/sessions/{id}/invitations` |
-| Monitoring | `session_monitoring.html` | `/sessions/{id}/monitoring` |
+| Responses | `session_responses.html` | `/sessions/{id}/responses` |
+| Outbox | `session_outbox.html` | `/sessions/{id}/outbox` |
 
-Plus one page reachable from Operations but not a chrome tab:
+The row pairs are deliberate: pre-flight (Validate, Preview), monitoring (Invitations, Responses), dev diagnostic (Outbox). See `spec/operations_renew.md` for the Invitations + Responses consolidation rationale and per-page contracts.
 
-- **Outbox** — `session_outbox.html` — `/sessions/{id}/outbox` — dev-mode email outbox (read raw outbox rows, useful for debugging send paths). Reached from "View outbox" buttons on the Invitations and Monitoring pages.
+**Naming:** "Invitations" + "Responses" rather than "Reviewers" + "Reviewees" — those nouns are claimed by the Setup tabs (configuring the rosters); the Operations tabs are about working with them mid-session. Distinct nouns for distinct activities.
+
+**Retired:** the previous standalone `session_monitoring.html` is consolidated into Invitations (reviewer-centric, sending + monitoring + reminders combined). The `/sessions/{id}/monitoring` URL redirects to `/invitations` to preserve bookmarks.
 
 Outbox is **per-session with system-debugging powers** — it's not a cross-session admin surface (a future cross-session admin surface would belong to the System Admin group below).
 
@@ -146,7 +149,7 @@ A double-height **Home** anchor on the left, two rows of phase tabs to its right
 ```
 ┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Assignments][Instruments][Email Template]
 │  Home  │
-└────────┴─ OPERATIONS ▶ [Validate][Previews][Invitations][Monitoring]
+└────────┴─ OPERATIONS ▶ [Validate][Preview][Invitations][Responses][Outbox]
 ```
 
 - **Home** is double-height to span both rows, signalling that it's one level up from the phase tabs rather than a peer of any of them. It carries the session's identity, so the chrome itself answers *"which session am I in?"* The session's lifecycle state surfaces in the status row below the chrome, not inside the Home anchor.
@@ -248,40 +251,33 @@ Operations row tab. Read-only deep-dive of every setup issue, intended for the o
 
 There is no Activate button on this page; activation lives only on Session Home (so the activate contract is enforced at a single place).
 
-### `/operator/sessions/{id}/previews` — Previews hub
+### `/operator/sessions/{id}/previews` — Preview hub
 
-Operations row tab. **Detailed spec: `spec/preview_hub.md`.** Renders read-only previews of what reviewers will see (invitation email, response form, reminder email, responses-received email) for an operator-selected reviewer.
+Operations row tab (label: **Preview**). **Detailed spec: `spec/preview_hub.md`.** Renders read-only previews of what reviewers will see (invitation email, response form, reminder email, responses-received email) for an operator-selected reviewer.
 
-Also reachable: the operator's standalone read-only render of the reviewer surface at `GET /operator/sessions/{id}/preview` (singular) — predates the previews hub; conceptually adjacent. Operator-only; bypasses session-status / deadline / acceptance gates.
+Also reachable: the operator's standalone read-only render of the reviewer surface at `GET /operator/sessions/{id}/preview` (singular) — predates the preview hub; conceptually adjacent. Operator-only; bypasses session-status / deadline / acceptance gates.
 
-### `/operator/sessions/{id}/invitations` — Manage invitations
+### `/operator/sessions/{id}/invitations` — Invitations (reviewer-centric)
 
-Operations row tab. The operator's invitation control panel — generate invitations for assigned reviewers, send the pending ones, and rotate tokens. All POST actions on this page require `ready` (409 otherwise).
+Operations row tab. **Detailed spec: `spec/operations_renew.md` "Invitations page".** Reviewer-centric working surface — sending invitations, sending reminders, monitoring per-reviewer progress. Consolidates what was previously split between the standalone Manage Invitations page and the (now-retired) Monitoring page.
 
-- **Lock card** when the session isn't `ready`: explains that invitations require Activated state and points back to Home.
-- **Summary card** (3 inline counts): eligible reviewers (active + at least one assignment), uninvited count, pending-send count.
-  - **Generate invitations** → `POST /…/invitations/generate`. Bulk-creates one invitation per uninvited eligible reviewer. Idempotent. Disabled when `uninvited_count == 0` or session not ready. Audit: `invitations.generated`.
-  - **Send all pending** → `POST /…/invitations/send-all`. Writes one outbox row per pending invitation; flips them to `sent`. Disabled when `pending_count == 0` or not ready. Audit: one `invitation.sent` per row.
-  - **View outbox** → `/…/outbox`.
-- **Per-reviewer table** (when invitations exist). Columns: Reviewer (name + email), Status pill (`pending` / `sent` / `opened`), Sent timestamp, Opened timestamp, Actions (Send / Regenerate per row).
-- **Empty state** — "No invitations yet. Click *Generate invitations* above to create one row per assigned active reviewer."
+Pattern: a list-with-bulk-actions table of reviewers, with status filtering, selection, bulk send/remind actions, and per-row drill-in into a reviewer's full engagement history. All POST actions require `ready` (409 otherwise).
 
-### `/operator/sessions/{id}/monitoring` — Monitoring
+### `/operator/sessions/{id}/responses` — Responses (reviewee-centric)
 
-Operations row tab. Per-reviewer progress + reminder actions for the live session. Reminder actions require `ready`; the page itself renders in any status (so an operator can review counts post-deadline).
+Operations row tab. **Detailed spec: `spec/operations_renew.md` "Responses page".** Reviewee-centric coverage view — surfaces under-served reviewees that the reviewer-centric Invitations view doesn't make visible.
 
-- **Lock card** when the session isn't `ready`: reminder actions require Activated state.
-- **Summary card** (5 inline pills): assigned / invited / opened / submitted / incomplete.
-  - **Send reminders to N incomplete reviewer(s)** → `POST /…/monitoring/remind-incomplete`. Bulk reminder to every incomplete reviewer.
-  - **View outbox** → `/…/outbox`.
-- **Per-reviewer table**. Columns: Reviewer, Invitation pill, Progress pill (`submitted` / `in progress` / `not started`) + completed/assignments count, Missing-required count, Last reminder timestamp, Actions (Send reminder per row).
-- **Empty state** — "No assigned reviewers yet — generate assignments before activating the session."
+Pattern: list-with-bulk-actions table of reviewees, with per-reviewee coverage status (`Complete` / `Adequate` / `At risk` / `No responses`), bulk reminder dispatch to non-responding reviewers for selected reviewees, and per-row drill-in into per-reviewer response status for that reviewee.
 
-A reviewer is **incomplete** iff their session pill is anything other than `submitted` (never opened, opened but not submitted, or submitted-with-warn-override that still has missing required all classify as incomplete).
+The reminder send-path is **shared** with the Invitations page; only the selection logic differs.
+
+### `/operator/sessions/{id}/monitoring` — *retired*
+
+The previous standalone Monitoring page has been consolidated into the new Invitations page (reviewer-centric) and Responses page (reviewee-centric) per `spec/operations_renew.md`. The URL redirects to `/operator/sessions/{id}/invitations` to preserve bookmarks.
 
 ### `/operator/sessions/{id}/outbox` — Email outbox
 
-Reached from "View outbox" on Invitations and Monitoring (not a chrome tab). Dev-mode email outbox view; read-only.
+Operations row tab. Dev-mode email outbox view; read-only.
 
 - **Page intro** (muted text): "Dev-mode email outbox for this session. No real SMTP backend is wired up; rows are flipped `queued → sent` synchronously when an operator clicks *Send*. The rendered body includes the raw invitation URL so you can copy it into a real client."
 - **Per-row card** (newest first): kind (`invitation` / `reminder`), recipient email, status pill, sent-at timestamp, then the rendered subject + body (`<pre>` block).
@@ -299,7 +295,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 
 - **Central Control and Operations Panel** — a cross-session operator surface that aggregates run-state across all of an operator's sessions. Conceivable but ROI unclear, and P1 ("one session at a time") is stronger when the whole app respects it. Not on any segment plan.
 - **Adjacent capabilities likely to land sooner:** shared operator permissions on a session, session duplication (sans response data), shared setup data between sessions (e.g. reusable reviewer rosters or instrument templates), session tagging / grouping. These compose with the Overview surface — none would force a redesign of the Setup / Control / Operations groupings.
-- **Operations row consolidation.** If a future iteration folds Invitations + Monitoring into a single page, the Operations row could shrink. At which point the two-row chrome could collapse to a **single row** (Setup tabs only, with the residual Operations tab(s) appended). Possible future, not a plan.
+- **Two-row chrome → single row.** With the Operations row at five tabs after the Invitations + Responses consolidation per `spec/operations_renew.md`, the two-row layout is unlikely to collapse. Recorded for completeness; not on any roadmap.
 - **Cross-session System Admin** — when added, sits at Operator's Overview level (or above), not inside a session. Implies its own chrome (different from the per-session two-row nav). Not a per-session Operations Page.
 
 ## Cross-references
@@ -311,7 +307,8 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/functional_spec.md`** — technology-neutral functional spec.
 - **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including the Contextual primary action card and lifecycle display-label mapping.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home.
-- **`spec/preview_hub.md`** — Previews hub on the Operations row.
+- **`spec/preview_hub.md`** — Preview hub on the Operations row.
+- **`spec/operations_renew.md`** — Invitations + Responses functional spec; consolidates the Manage Invitations + Monitoring pages into a reviewer-centric Invitations page and adds a reviewee-centric Responses page.
 - **`spec/reviewer_map.md`** — reviewer-facing surface contracts (separate audience).
 - **`spec/ui_elements.md`** — implementation catalogue mapping the canonical primitives to CSS classes and templates.
 - **`guide/instruments.md`** — locked spec for the Instruments page.
