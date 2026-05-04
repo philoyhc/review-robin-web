@@ -103,7 +103,10 @@
     </div>
   {% endif %}
 
-  {% set instrument_palette = ['#f0f9ff', '#d1fae5', '#ede9fe', '#ffedd5', '#ffe4e6', '#fef3c7'] %}
+  {# Lightened cycling palette (Tailwind *-50 tones) — hints of color
+     for instrument identification while keeping table grid lines
+     legible on the tinted background. #}
+  {% set instrument_palette = ['#f0f9ff', '#ecfdf5', '#f5f3ff', '#fff7ed', '#fff1f2', '#fffbeb'] %}
   {% for instrument in instruments %}
     {% set is_editing = (editing_instrument_id == instrument.id) %}
     {% set was_saved = (saved_instrument_id == instrument.id) %}
