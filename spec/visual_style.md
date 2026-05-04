@@ -351,3 +351,495 @@ A useful checkpoint: after the chrome migration but before page-body migration, 
 ---
 
 The intent: this document captures only the Review Robin-specific decisions. When starting a new app, copy the general spec unchanged and write a new app-specific document of comparable size to this one. Common decisions stay common; app-specific decisions are local.
+
+---
+---
+
+## Part 3 — Non-session and reviewer surface chrome
+
+This document extends the visual style spec to cover surfaces outside
+the per-session operator chrome:
+
+- **Non-session operator pages** — Operator's Overview (sessions
+  list), About, Settings, Create Session.
+- **Reviewer-facing pages** — the surfaces a reviewer sees when
+  signing into Review Robin and responding to a session.
+
+Read alongside Part 1 (general visual style), Part 2 (Review Robin
+operator session chrome), and the **audience and identity model
+doc** (`spec/audience_and_identity_model.md`), which establishes the
+audience definitions, auth posture, and customization boundaries
+that this document's chrome decisions implement.
+
+The visual vocabulary defined in Part 1 (palette, typography,
+spacing, components) applies uniformly across all surfaces. What
+differs by surface is the *chrome* — the framing and navigation
+patterns that surround page content.
+
+### Audience surface map
+
+The app comprises three distinct surface types, each with its own
+chrome conventions:
+
+```
+                    App
+                     │
+       ┌─────────────┼─────────────┐
+       │                           │
+   Operator                    Reviewer
+    surface                     surface
+       │                           │
+   ┌───┴───┐                       │
+   │       │                       │
+Session-  Non-session         Sign-in +
+scoped    operator pages      review list +
+operator  (this doc)          response form
+pages                         (this doc)
+(Part 2)
+```
+
+Within each surface, components from Part 1 are used identically;
+chrome and structural patterns differ.
+
+---
+
+### Non-session operator pages
+
+Pages the operator visits when *not* working inside a specific
+session: the Sessions list (Operator's Overview), the Create Session
+form, About, Settings, and any future app-level pages.
+
+#### Chrome philosophy
+
+**Minimal and quiet.** Non-session operator pages are visited
+rarely and usually as detours from the operator's main work (which
+happens inside sessions). The chrome should not invest visual
+weight in navigating between them, since operators rarely navigate
+between non-session pages directly.
+
+The two-row session chrome (Setup row, Operations row) **does not
+appear** on these pages. The status strip does not appear.
+Lifecycle badges do not appear. These are session-scoped affordances
+and have no meaning outside a session.
+
+#### Top bar
+
+The existing top bar pattern continues:
+
+- **Left:** "Review Robin Web App (version dev)" — small, in
+  `text-secondary`. App identity and version, modest.
+- **Right:** A small **user menu** containing:
+  - "Signed in as [Operator Name]" (informational, not a link).
+  - About — opens About page, with return-to-origin behavior (see
+    below).
+  - Settings — opens Settings page, with return-to-origin behavior.
+  - Sign out — ends the operator's session.
+
+The user menu can render as inline links (when the menu has three
+or four items) or as a dropdown triggered by clicking the operator
+name. Inline is preferred while the menu is small; promote to
+dropdown when it would otherwise crowd the top bar.
+
+#### Return-to-origin behavior
+
+About and Settings are detour destinations: the operator opens them
+to consult or adjust something, then wants to return to whatever
+they were doing. The pattern:
+
+- When the operator opens About or Settings, the URL captures the
+  origin via a query parameter (e.g., `?return_to=/sessions/abc123`)
+  or session state.
+- The About/Settings page renders a clear "Back" affordance — a
+  link in `accent-blue` near the top of the page body, labeled
+  with context where possible: "← Back to Sessions" or "← Back
+  to Student Associate Selection 2026 Peer Review".
+- Clicking the affordance returns the operator to the origin URL.
+- If no origin is recorded (e.g., the operator deep-linked to
+  Settings), the affordance defaults to "← Back to Sessions" —
+  the app's natural lobby.
+
+This is a small piece of plumbing but it changes the affordance
+from "trip down a rabbit hole" to "quick consultation." Operators
+learn to use About and Settings without losing their place.
+
+#### Page structure
+
+Non-session operator pages share a simple structure:
+
+1. **Top bar** (as above).
+2. **Page body**:
+   - Optional return-to-origin affordance (top-left of body).
+   - **H1 page title.**
+   - Page content.
+
+No breadcrumb is needed; the page hierarchy is too shallow. The H1
+and the user menu together orient the operator sufficiently.
+
+#### Operator's Overview (Sessions list)
+
+This page is the operator's "lobby" and is the natural landing page
+when signing in or returning from a session. It deserves slightly
+more care than other non-session pages, but uses the same chrome.
+
+- **H1:** "Sessions" or "My Sessions".
+- **Body:** A list or grid of session cards. Each card shows:
+  - Session name (linked to that session's Home).
+  - Lifecycle state badge (using the display labels: Draft,
+    Validated, Activated, etc.).
+  - Deadline.
+  - Brief setup readiness summary (count badges or a single status
+    summary).
+- **Create Session affordance:** primary button in the top-right of
+  the list area, labeled "New Session" or "Create Session". When
+  the list is empty, this becomes the page's prominent affordance,
+  rendered larger and with explanatory text.
+
+The session cards reuse the Card component from Part 1; the
+lifecycle badges reuse the badge component with the lifecycle color
+treatments from Part 2.
+
+#### About / Settings / Create Session
+
+Each is a single page with the standard non-session chrome. Body
+content is whatever the page does:
+
+- **About:** version info, links to documentation, changelog.
+  Read-only.
+- **Settings:** operator preferences, app-level configuration. Form
+  with standard form components.
+- **Create Session:** a form for creating a new session. Submitting
+  takes the operator to the new session's Home.
+
+If any of these grow into multi-page sets later (e.g., Settings
+with multiple categories), they may need their own internal
+navigation — but this is a future concern, not a current one. The
+first such page-set to land will define the pattern.
+
+---
+
+### Reviewer-facing pages
+
+The surfaces a reviewer sees when signing into Review Robin and
+responding to a session. Per the **audience and identity model**,
+reviewers are authenticated users of the app — not anonymous form
+respondents — but they spend most of their time in task-focused
+surfaces rather than in app-level navigation. The chrome reflects
+this: app identity is persistent and visible enough to function as
+a trust anchor, but unobtrusive enough that the reviewer's
+attention stays on their work.
+
+#### Chrome philosophy
+
+**Light but recognizable.** The reviewer's experience is minimal in
+structure but consistent in identity. Across sessions, the
+reviewer-facing chrome looks the same; per-session variation is
+limited to content (session name, instructions, instrument names)
+within stable chrome.
+
+What this means in practice:
+
+- Review Robin identity is **persistent and visible** but small —
+  enough for the reviewer to recognize the app, not enough to
+  dominate the page.
+- Per-session operator customization is **content-only** — session
+  name, optional welcome message, optional institution name. No
+  visual customization (colors, layout, branding imagery). See the
+  audience and identity model doc for the rationale.
+- Operator chrome (two-row session navigation, status strips,
+  lifecycle badges) does **not** appear on reviewer pages.
+  Reviewers don't navigate the operator's structure; they have
+  their own.
+
+#### Top bar
+
+Reviewer-facing pages have a top bar, but lighter than the
+operator's:
+
+- **Left:** "Review Robin" — small, `text-secondary`. App identity
+  as a trust anchor. No version info (operators care about that;
+  reviewers don't).
+- **Right:** A small **user menu** containing:
+  - "Signed in as [Reviewer Name]" — informational. Lets the
+    reviewer confirm correct identity (important on shared
+    computers, useful in institutions where SSO might silently
+    log the wrong person in).
+  - "My Reviews" — link back to the reviewer's review list (only
+    rendered when the reviewer has more than one review pending or
+    completed; suppressed when there's just one).
+  - "Sign out" — ends the reviewer's session.
+
+The top bar is consistent across all reviewer pages. Its presence
+is what makes the reviewer surface recognizable as Review Robin
+across sessions.
+
+#### Sign-in surface
+
+The first page a reviewer sees, reached by clicking a sign-in link
+in their invitation email or by direct URL. This page has elevated
+trust significance: the reviewer is about to authenticate, and they
+need to verify they're on the right system before doing so.
+
+**Chrome:**
+
+- Standard top bar with Review Robin identity (no user menu yet,
+  since the reviewer isn't signed in).
+- Page body centered on the sign-in flow:
+  - **H1:** "Sign in to Review Robin" or similar.
+  - Brief explanation of the auth flow ("You'll be redirected to
+    your institution's sign-in page.").
+  - Primary action: "Sign in with [Institution]" (SSO trigger,
+    branded with the institution name when known from the
+    invitation context).
+  - Secondary affordance: magic-link option, for reviewers without
+    SSO access. Less prominent than the SSO action.
+
+After authentication, the reviewer is delivered to either:
+
+- The specific response surface they were invited to (if the
+  sign-in link was for a specific session), or
+- Their reviewer review list (if no specific destination is
+  associated with the sign-in).
+
+#### Reviewer's review list
+
+The reviewer's "home" after sign-in. A simple list of pending and
+recent reviews.
+
+**Chrome:** standard reviewer top bar + page body.
+
+**Body:**
+
+- **H1:** "My Reviews" or "Your Reviews".
+- A list of review cards, each showing:
+  - Session name (linked to that session's response surface for
+    this reviewer).
+  - Deadline.
+  - Completion status (e.g., "Not started," "In progress: 2 of 5
+    reviewees," "Completed").
+  - Optional: institution name if relevant for cross-institution
+    reviewers.
+- Empty state when the reviewer has no pending reviews: "You have
+  no pending reviews." in `text-secondary`. Not an error; just
+  informational.
+
+**Deep-linking behavior:** when a reviewer signs in via a
+session-specific invitation link and has only one pending review,
+the sign-in flow can deep-link them past the review list to the
+response surface directly. The list exists for the cases where
+it's useful (multiple reviews, returning to find a specific one);
+it's not a forced waypoint for every visit.
+
+#### Response surface (the response form)
+
+The main task surface, where the reviewer completes their
+evaluations.
+
+**Chrome:**
+
+- Standard reviewer top bar (Review Robin identity + user menu).
+- **Page header** with session context:
+  - Session name — rendered at H1 size.
+  - Deadline — small reminder in `text-secondary`, near the
+    session name.
+  - Optional: institution or operator name (small,
+    `text-secondary`) — useful for reviewers participating across
+    institutions or with multiple operators in mind.
+  - Optional: operator-configured welcome message / instructions,
+    shown above the form on first visit. Plain text or limited
+    markdown.
+- **Instrument tab strip** (only when the session has more than
+  one instrument; see below).
+- **Form body.**
+
+##### Multi-instrument navigation
+
+A session may have multiple instruments for a reviewer to complete
+across their assigned reviewees. This requires more than one page
+facing the reviewer, and therefore some navigation chrome.
+
+**Pattern: a single horizontal tab strip.**
+
+Below the page header, one row of tabs — one tab per instrument
+the reviewer needs to complete:
+
+```
+Session: Student Associate Selection 2026 Peer Review · Deadline: 2026-07-01
+─────────────────────────────────────────────────────────────────
+[Skills Assessment] [Cultural Fit] [Final Recommendation]
+─────────────────────────────────────────────────────────────────
+```
+
+Specifics:
+
+- **Tab labels** are the instrument names, kept short.
+- **Active tab** uses the same underline-and-color-emphasis pattern
+  as the operator session chrome (Part 2), but in a single row.
+  Reuses the tab component from Part 1.
+- **Per-tab completion indicator.** A small badge or dot adjacent
+  to the tab label shows whether that instrument is incomplete, in
+  progress, or complete:
+  - No badge: not started.
+  - In progress (some responses entered, not all): muted dot
+    indicator.
+  - Complete: small check icon or `accent-green` badge.
+
+  This lets the reviewer track progress at a glance without a
+  separate dashboard.
+- **Tab order** matches whatever order the operator configured in
+  the Instruments Setup page. The reviewer is not free to reorder;
+  the tabs are determined by the session's setup.
+- **Free movement between tabs.** The reviewer can switch tabs at
+  any time. Responses are saved per-tab as they go (auto-save or
+  on-tab-change save — implementation detail, but the reviewer
+  should never lose work by switching tabs).
+- **No tab is "locked" by another tab's completion.** The reviewer
+  can complete instruments in any order.
+
+**When there is only one instrument**, the tab strip does not
+render. A single-instrument session shows just the page header and
+the form directly; introducing a one-tab strip would be visual
+noise.
+
+##### Per-reviewee navigation within an instrument
+
+A separate concern: within a single instrument, the reviewer may
+need to evaluate multiple reviewees. This is *content-level*
+navigation, not chrome-level. It belongs inside the instrument's
+form, not in the page chrome.
+
+Pattern options for in-form per-reviewee navigation:
+
+- **One reviewee per page**, with "Next reviewee" / "Previous
+  reviewee" affordances at the bottom of the form, plus a small
+  indicator ("Reviewee 2 of 7") near the top.
+- **All reviewees on one page**, in a long scrolling form with
+  each reviewee as a section.
+- **Sidebar of reviewees** within the form, letting the reviewer
+  jump between them.
+
+The choice depends on instrument complexity and reviewee count and
+is properly the concern of the response-form component, not the
+chrome. Flagging here so it's clear the chrome stops at the
+instrument-level tab strip; what happens *inside* the form is the
+form's design.
+
+#### Submission confirmation
+
+Shown after the reviewer submits all required responses for the
+session.
+
+**Chrome:** standard reviewer top bar + page body.
+
+**Body:**
+
+- Brief acknowledgement: "Thank you. Your responses have been
+  received."
+- Optional: summary ("You completed 3 instruments across 7
+  reviewees.").
+- Optional: link back to the reviewer's review list, if other
+  reviews remain.
+- No tab strip; the task is complete.
+
+Tone: calm and brief. The reviewer is finished; the page should
+confirm and let them go.
+
+#### Error / expired states
+
+Shown when a sign-in link is invalid, the session is not in
+Activated state, or the deadline has passed.
+
+**Chrome:** standard reviewer top bar (with whatever auth state
+applies — signed in or not) + page body.
+
+**Body:**
+
+- Brief explanation in plain language. Examples:
+  - "This review is no longer accepting responses. The deadline
+    passed on [date]."
+  - "This sign-in link is no longer valid. Request a new one from
+    the session organizer."
+  - "This review is not currently available. Try again later or
+    contact the session organizer."
+- Avoid technical detail (no "Session is in Draft state" — that's
+  operator vocabulary). The reviewer doesn't need or want the
+  internal model.
+- Where appropriate, surface the operator-configured contact
+  information ("Questions? Contact [operator email]").
+
+#### What reviewers must not see
+
+Worth being explicit, since the temptation when sharing components
+with the operator surface is to leak operator-context affordances:
+
+- **No lifecycle state mention.** The reviewer doesn't care whether
+  the session is "Activated"; they just need the form. If the
+  session is not Activated, the page renders a generic "This
+  review is not currently available" state, not "Session is in
+  Draft."
+- **No setup-state badges, readiness summaries, or operator-side
+  status.**
+- **No links to operator pages**, even if the reviewer happens to
+  also be an operator on another session in the same app. The two
+  surfaces remain distinct; an operator-reviewer who needs to
+  switch contexts does so by navigating the URL or signing out and
+  back in via a different entry point.
+- **No mention of other reviewers, assignment structure, or
+  cross-reviewer state.**
+- **No operator-uploaded visual content** (banners, logos, custom
+  imagery). Per the audience and identity model, visual
+  customization is not permitted; operator presence is expressed
+  through content (session name, instructions, institution name)
+  within stable chrome.
+
+---
+
+### Cross-surface consistency
+
+Some patterns from Part 1 and Part 2 carry over uniformly to all
+three surfaces:
+
+- **Component library.** Buttons, cards, badges, form inputs,
+  tables, and links all use the Part 1 definitions on every
+  surface. A submit button on a reviewer form looks identical to a
+  submit button on an operator setup page.
+- **Color palette.** Same neutrals, same accents. Lifecycle accent
+  colors are operator-only (reviewers don't see lifecycle); other
+  accents (blue for action, green for completion, amber for
+  warnings) apply across all surfaces.
+- **Typography.** Same type scale and font stack on all surfaces.
+- **Spacing.** Same 4px grid throughout.
+- **Top bar pattern.** Both operator and reviewer surfaces have a
+  top bar with app identity (left) and user menu (right).
+  Operator's says "Review Robin Web App (version dev)" because
+  operators care about the version; reviewer's says "Review Robin"
+  because they don't. Operator's user menu hosts About / Settings
+  / Sign out; reviewer's user menu hosts My Reviews / Sign out.
+  Same shape, different contents.
+
+The discipline: components and visual language are uniform; chrome
+and navigation patterns are audience-specific. An operator and a
+reviewer should recognize the same app from the visual style; a
+quick glance at the chrome should tell each which surface they're
+on.
+
+---
+
+### What this part doesn't cover
+
+- **Per-page detail layouts** for non-session operator pages
+  (Settings forms, About content). These belong in functional
+  specs for individual pages.
+- **Response form internals** (reviewee navigation, instrument
+  question types, submission validation). These belong in the
+  Instruments Setup spec and the response-form component spec.
+- **Email templates** that lead reviewers to these pages. Email
+  artifacts have their own design considerations and are not part
+  of the in-page UI spec.
+- **Auth flow specifics** (SSO integration, magic-link generation
+  and validation, session lifetime, MFA). These are handled at the
+  auth layer, not the chrome layer; the chrome simply assumes
+  authentication has happened where appropriate.
+- **Future audience surfaces** (reviewees, if the app becomes
+  symmetric; cross-session admin). These will add their own
+  sections to this document when they ship; the audience and
+  identity model doc records them as forward-looking.
