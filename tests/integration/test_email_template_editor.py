@@ -98,7 +98,9 @@ def test_save_persists_overrides_and_audits(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert "saved=ok" in response.headers["location"]
+    assert response.headers["location"].endswith(
+        "/setupinvite?template=invitation"
+    )
 
     db.refresh(review_session)
     overrides = review_session.email_template_overrides or {}
@@ -205,7 +207,9 @@ def test_reset_removes_override_and_audits(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert "reset=subject" in response.headers["location"]
+    assert response.headers["location"].endswith(
+        "/setupinvite?template=invitation"
+    )
 
     db.refresh(review_session)
     overrides = review_session.email_template_overrides or {}

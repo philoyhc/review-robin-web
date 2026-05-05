@@ -4,16 +4,11 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
+  <a class="back-link" href="{{ return_to_url }}">&larr; Back to {{ return_to_label }}</a>
+
   <div class="rs-page-header">
     <h1>Settings</h1>
   </div>
-
-  {% if saved %}
-    <div class="banner banner-success">Settings saved.</div>
-  {% endif %}
-  {% if cleared %}
-    <div class="banner banner-success">Settings cleared.</div>
-  {% endif %}
 
   {% if not user.smtp_host %}
     <div class="card">
@@ -34,9 +29,15 @@
     </div>
   {% endif %}
 
+  {# Save button starts disabled and only enables once the operator
+     has touched any input — the disabled→enabled→disabled cycle
+     across the Save reload replaces a flash banner. #}
   <div class="card">
     <h2>Email send (SMTP)</h2>
-    <form method="post" action="/operator/settings">
+    <form method="post" action="/operator/settings" id="operator-settings-form">
+      {% if return_to_raw %}
+        <input type="hidden" name="return_to" value="{{ return_to_raw }}">
+      {% endif %}
       <div class="page-grid">
         <div>
           <label for="smtp_host">SMTP host</label>
@@ -81,9 +82,10 @@
         </div>
       </div>
 
-      <div class="btn-row" style="margin-top: 20px;">
-        <button class="btn" type="submit">Save</button>
-        <a class="btn secondary" href="/operator/sessions">Cancel</a>
+      <div class="settings-actions"
+           style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px;">
+        <a class="btn secondary" href="{{ return_to_url }}">Cancel</a>
+        <button class="btn" type="submit" id="settings-save-button" disabled>Save</button>
       </div>
     </form>
   </div>
@@ -95,7 +97,23 @@
       not affected. You can re-enter credentials any time.
     </p>
     <form method="post" action="/operator/settings/clear">
-      <button class="btn destructive" type="submit">Clear all settings</button>
+      {% if return_to_raw %}
+        <input type="hidden" name="return_to" value="{{ return_to_raw }}">
+      {% endif %}
+      <div style="display: flex; justify-content: flex-end;">
+        <button class="btn destructive" type="submit">Clear all settings</button>
+      </div>
     </form>
   </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById("operator-settings-form");
+      var save = document.getElementById("settings-save-button");
+      if (!form || !save) return;
+      function enable() { save.disabled = false; }
+      form.addEventListener("input", enable);
+      form.addEventListener("change", enable);
+    })();
+  </script>
 {% endblock %}
