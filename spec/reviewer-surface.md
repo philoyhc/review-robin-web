@@ -9,9 +9,11 @@ exist to land them on it.
 
 This spec rewrites the response surface around **multi-instrument
 awareness**: the URL carries an explicit instrument segment, the page
-renders one instrument at a time, and a page-actions row lets the
-reviewer move between instruments. Single-instrument sessions are a
-degenerate case of the same model.
+renders one instrument at a time, and an action row at the top + bottom
+of the surface carries every control — page-level (Save / Discard / Page
+N) and review-level (Submit) — in one strip per side, separated by a
+vertical divider. Single-instrument sessions are a degenerate case of
+the same model.
 
 Cross-references:
 
@@ -109,12 +111,9 @@ Top-to-bottom, the page renders:
      - Transient flash banners (saved / submitted / missing-required
        / session-closed) inline within the panel when applicable;
        they do not push other layout around.
-5. **Review-level action row (top)** — single right-flushed row
-   carrying just `Submit` (Primary). Submit is review-session-wide;
-   it commits every saved response across all instruments. (See
-   "Form scope" below.)
-6. **Page actions row (top)** — `.rs-action-row.rs-action-row-top.rs-action-row-left`,
-   flush left. Contents (in left-to-right order):
+5. **Action row (top)** — `.rs-action-row.rs-action-row-top`, flush
+   right, the surface's main control strip. One row carrying every
+   action, page-level and review-level, in this left-to-right order:
    - `Save` (Primary) — persists the current page's dirty inputs.
      Greyed out (`disabled`) when the current page has no unsaved
      edits (see "Save button enabled state" below).
@@ -132,19 +131,31 @@ Top-to-bottom, the page renders:
      truthful and Back/Forward work; no server round-trip. The
      button for the current page renders disabled
      (`aria-disabled="true"`).
-7. **Instrument body** — heading, help-text card(s), reviewer table.
+   - **Vertical divider** — a `.rs-action-divider` element separating
+     the page-level controls (Save / Discard / Page N) from the
+     review-level Submit. 1px wide, full button-height,
+     `border-default` colored, with horizontal margin to give the
+     Submit button breathing room. Hidden when Submit isn't
+     rendered (e.g. read-only or operator-preview mode).
+   - `Submit` (Primary) — review-session-wide. Commits every saved
+     response across every instrument and stamps `submitted_at` on
+     every assignment. Sits at the rightmost edge of the row so
+     "I'm done" is the visually terminal action. (See "Form scope"
+     below.)
+6. **Instrument body** — heading, help-text card(s), reviewer table.
    Exactly one instrument's content renders per page.
-8. **Page actions row (bottom)** — `.rs-action-row` (flush-right). Same
-   contents as the top page actions row, same order.
-9. **Acknowledge missing checkbox** — when `show_acknowledge` is set
+7. **Acknowledge missing checkbox** — when `show_acknowledge` is set
    (server-driven on a session-wide Submit attempt that hits required
-   gaps), renders immediately above the bottom review-level row.
-10. **Review-level action row (bottom)** — single right-flushed row
-    carrying `Submit` again. Mirrors the top review-level row.
-11. **Danger zone** — `.card.danger-zone.rs-danger-zone` with the
-    Clear-all-responses form. Half-width, flush right, 24px above the
-    foot. Review-session-wide; wipes every response across all
-    instruments. Only when `any_accepting and not preview_mode`.
+   gaps), renders immediately above the bottom action row: "I
+   acknowledge required fields are missing — submit anyway."
+8. **Action row (bottom)** — `.rs-action-row`, flush right. Mirrors
+   the top action row exactly: same buttons, same order, same
+   divider before Submit. The repetition lets the reviewer act
+   without scrolling back to either end of the table.
+9. **Danger zone** — `.card.danger-zone.rs-danger-zone` with the
+   Clear-all-responses form. Half-width, flush right, 24px above the
+   foot. Review-session-wide; wipes every response across all
+   instruments. Only when `any_accepting and not preview_mode`.
 
 Mental model: instruments are **chapters of one review session**, not
 standalone editing surfaces. The reviewer fills each page (saving
@@ -423,7 +434,7 @@ Acknowledge is now **session-wide**, since Submit is session-wide:
      lives on (so the reviewer knows where to navigate).
    - `show_acknowledge=True`.
 3. The acknowledge checkbox renders immediately above the bottom
-   review-level action row: "I acknowledge required fields are
+   action row: "I acknowledge required fields are
    missing — submit anyway."
 4. The reviewer can either navigate to the offending page and fill
    the gaps, or tick the checkbox and click Submit again. Ticking the
@@ -452,10 +463,10 @@ read prior state. When the gate is closed, the editing surface
 degrades to read-only:
 
 - Every input renders `disabled`.
-- The top + bottom review-level rows (Submit) hide.
-- The Save / Discard buttons hide from the page actions row, but the
-  Page N buttons stay so the reviewer can walk through their other
-  instruments (which may or may not also be closed).
+- In both action rows: Save / Discard / Submit hide, plus the
+  vertical divider that separated them. The Page N buttons stay so
+  the reviewer can walk through their other instruments (which may
+  or may not also be closed).
 - The Danger Zone card hides (no Clear all).
 - A `.banner.banner-warning` lands in the right-half status panel
   explaining the state, e.g. "This session is no longer accepting
@@ -520,9 +531,9 @@ session can have multiple reviewers, each tied to a distinct user.
   Page N buttons still render in their slot so the operator can
   walk through every instrument to verify setup — clicking them
   toggles visibility client-side exactly as on the reviewer
-  surface, but the rest of the page-actions row collapses to just
-  the page buttons, and the review-level rows + danger zone don't
-  render at all.
+  surface. With Save / Discard / Submit gone, both action rows
+  collapse to just the Page N buttons (no vertical divider, since
+  there's nothing to separate). Danger zone doesn't render.
 - Inputs render disabled.
 - The right-half status panel renders without the per-page status
   pills (preview is read-only and synthetic; per-page state is
@@ -632,10 +643,10 @@ from the top bar.
 
 | Where | Old label | New label |
 |---|---|---|
-| Page actions row | `Save draft` | `Save` |
-| Page actions row | `Cancel — discard unsaved edits` | `Discard` |
-| Page actions row | n/a | `Page N: {Instrument.name}` (falls back to bare `Page N` when the instrument has no name) |
-| Review-level rows | `Submit` | `Submit` (unchanged) |
+| Action row (page-level slot) | `Save draft` | `Save` |
+| Action row (page-level slot) | `Cancel — discard unsaved edits` | `Discard` |
+| Action row (page-level slot) | n/a | `Page N: {Instrument.name}` (falls back to bare `Page N` when the instrument has no name) |
+| Action row (review-level slot, after divider) | `Submit` | `Submit` (unchanged) |
 | Danger Zone | `Clear all` | `Clear all` (unchanged; copy explains "every response across every page") |
 
 Other labels (`Sign out`, `My Reviews`) are unchanged.
