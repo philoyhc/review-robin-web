@@ -225,9 +225,10 @@ def test_placeholder_for_field_table(
             {"min": 1.0, "max": 5.0, "step": 0.5},
             "1.0-5.0, steps of 0.5",
         ),
-        # String drops the ``steps of`` suffix; List joins choices.
+        # String drops the ``steps of`` suffix.
         ("String", {"min_length": 0, "max_length": 100}, "0-100 char"),
-        ("List", {"choices": ["Yes", "No"]}, "Yes / No"),
+        # List rows are intentionally omitted from the summary line.
+        ("List", {"choices": ["Yes", "No"]}, ""),
         ("List", {"choices": []}, ""),
         # Incomplete blocks still emit nothing rather than half-formed text.
         ("Integer", {"min": 1, "max": 5}, ""),
