@@ -359,7 +359,8 @@ The template renders the row only when `heading.title` is truthy.
 Single-instrument sessions with both `short_label` and `description`
 empty render no H2 at all (regression-tested; see
 `test_surface_single_instrument_no_description_renders_no_heading`,
-which gets renamed once the helper does — see PR S).
+which gets renamed once the multi-instrument-rewrite PR γ adds the
+`instrument_heading(...)` helper).
 
 ### Columns
 
@@ -706,10 +707,12 @@ It carries audit-event copy and is otherwise invisible.
 
 The 32-char ceiling on `short_label` is a **Setup-side concern** —
 this surface trusts the value it's given. The Instruments Setup
-page enforces it at create / edit time (see PR S in the
-`guide/segment_11D…` plan). The reviewer surface still ships a
-defensive `max-width: 16em; text-overflow: ellipsis` rule on Page
-buttons as belt-and-suspenders against pre-existing oddities.
+page enforces it at create / edit time (see
+`guide/segment_11L_instrument_short_label.md` for the single-PR
+plan that adds the column + Setup-side editor). The reviewer
+surface still ships a defensive
+`max-width: 16em; text-overflow: ellipsis` rule on Page buttons
+as belt-and-suspenders against pre-existing oddities.
 
 ---
 

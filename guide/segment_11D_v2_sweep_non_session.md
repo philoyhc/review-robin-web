@@ -270,12 +270,12 @@ description.
    Note hit count in PR α's description so reviewers know the
    sweep is bounded.
 
-2. **`Instrument.short_label` cap value sanity-check.** PR S adds
-   a new `Instrument.short_label String(32) | None` column. Page
-   button labels read `Page #{N}: {short_label}` (falling back
-   to bare `Page #{N}`); the per-instrument H2 heading reads
-   `Page #{N}: {short_label}` likewise. Sanity-check: do the
-   spec's example labels (`Skills`, `Cultural Fit`,
+2. **`Instrument.short_label` cap value sanity-check.** Segment
+   11L adds a new `Instrument.short_label String(32) | None`
+   column. Page button labels read `Page #{N}: {short_label}`
+   (falling back to bare `Page #{N}`); the per-instrument H2
+   heading reads `Page #{N}: {short_label}` likewise. Sanity-
+   check: do the spec's example labels (`Skills`, `Cultural Fit`,
    `Final Recommendation`) plus a typical `Page #99:` prefix fit
    under typical viewport widths at body font size? At 16px ≈
    `16em` ≈ 256px is a safe ceiling for the CSS truncation rule
@@ -290,12 +290,12 @@ PR leaves the surface working for both single-instrument and
 multi-instrument sessions; the multi-instrument experience
 improves incrementally.
 
-A **sibling Setup-side PR** (PR S — see "Sibling: Setup-side
-instrument-name constraint" below) is a hard prerequisite for
-PR γ. PR S can ship any time before then in parallel with α / β;
-without it, PR γ's `Page #{N}: {short_label}` button labels and
-the per-instrument H2 title can't read the operator's framing —
-the `short_label` column doesn't exist yet.
+**Hard prerequisite for PR γ: Segment 11L** —
+`guide/segment_11L_instrument_short_label.md` ships the
+`Instrument.short_label` column + Setup-side editor that PR γ's
+button labels and per-instrument H2 title both read. Segment 11L
+is independent of α / β / δ / ε; it can ship in parallel with
+any of them. Land it before γ.
 
 ### PR α — URL routing + dashboard rewiring
 
@@ -381,11 +381,16 @@ mirrored top + bottom. `Page #{N}: {short_label}` buttons replace
 Previous / Next. Server-side navigation only (full page reload on
 Page button click) — client-side toggle lands in PR δ.
 
-**Hard prerequisite: PR S.** PR γ's button labels and per-
-instrument H2 read `Instrument.short_label`; PR S ships the field
-+ Setup-side editor + the `page_button_label` and
-`instrument_heading` helpers. Without PR S, `short_label` doesn't
-exist as a column. Land PR S first.
+**Hard prerequisite: Segment 11L.** PR γ's button labels and
+per-instrument H2 both read `Instrument.short_label`; the column
++ Setup-side editor ship in
+`guide/segment_11L_instrument_short_label.md`. Without 11L,
+`short_label` doesn't exist as a column. Land 11L first. The
+two reviewer-side helpers PR γ needs
+(`page_button_label(instrument, position)` and
+`instrument_heading(instrument, position, total_count)`) are
+**not** part of 11L — they ship inside PR γ alongside the
+template work that consumes them.
 
 - Replace the current top + bottom action rows with a single
   unified `.rs-action-row` per side (top and bottom mirrored).
@@ -407,20 +412,25 @@ exist as a column. Land PR S first.
 
 - Page buttons render as `<a class="btn">` anchors pointing at
   `/reviewer/sessions/{id}/{n}` — server-side navigation, full
-  page reload. Label comes from PR S's
-  `page_button_label(instrument, position)`:
-  `Page #{N}: {short_label}` when set; bare `Page #{N}` when
-  unset. Current page button is `aria-disabled="true"`. Add a
-  defensive `max-width: 16em; text-overflow: ellipsis` rule on
-  the page buttons as belt-and-suspenders — PR S enforces a
+  page reload. PR γ ships a new helper
+  `page_button_label(instrument, position)` returning
+  `f"Page #{position}: {instrument.short_label}"` when
+  `short_label` is set (trimmed non-empty), else
+  `f"Page #{position}"`. Current page button is
+  `aria-disabled="true"`. Add a defensive
+  `max-width: 16em; text-overflow: ellipsis` rule on the page
+  buttons as belt-and-suspenders — Segment 11L enforces a
   32-char ceiling at the data layer, but the CSS guards against
   pre-existing oddities or future migration glitches.
 - **Per-instrument heading.** Replace the existing
   `<h2>{group.heading}</h2>` line with a `.rs-instrument-heading`
   flex row (title + optional subtitle, baseline-aligned, mirrors
-  the `.rs-page-header` pattern). Title and subtitle come from
-  PR S's `instrument_heading(instrument, position, total_count)`
-  helper returning `(title: str | None, subtitle: str | None)`.
+  the `.rs-page-header` pattern). PR γ ships a new helper
+  `instrument_heading(instrument, position, total_count) -> InstrumentHeading`
+  where `InstrumentHeading` is a frozen dataclass of
+  `(title: str | None, subtitle: str | None)`. The existing
+  `views.reviewer_instrument_heading(...)` helper retires; PR γ's
+  new helper returns structured data the template iterates.
   Composition rules per `spec/reviewer-surface.md` "Above the
   table — heading + help block". Add CSS in `base.html`:
 
@@ -460,6 +470,10 @@ Test impact: medium-heavy. Most reviewer-flow tests need updating:
 - New tests for the divider + Submit position.
 - New tests for `Page #{N}: {short_label}` button rendering
   (with + without `short_label` set on the test fixture).
+- New unit tests on the two new helpers (`page_button_label`
+  covers the two label cases; `instrument_heading` covers the
+  six composition cases laid out in `spec/reviewer-surface.md`
+  "Above the table").
 - New tests for the per-instrument heading title + subtitle row
   (covering the six cases in the heading-spec table:
   multi-instrument {with / without short_label} × {with / without
@@ -544,130 +558,6 @@ preview adapts to the new chrome.
 
 Test impact: moderate. Existing acknowledge tests update for
 session-wide model. Existing preview tests update for new chrome.
-
-### Sibling PR S — Add `Instrument.short_label` + Setup-side editor
-
-**Sibling track.** Independent of α / β; hard prerequisite for γ.
-Lands the Setup-side foundation that PR γ's
-`Page #{N}: {short_label}` buttons + per-instrument H2 headings
-depend on.
-
-**Why a new field rather than tightening `Instrument.name`.**
-Three strings now have distinct jobs (per the spec sweep folded
-into `spec/visual_style_rrw.md` "Implications for the reviewer
-surface"):
-
-| Column | Length | Audience | Role |
-|---|---|---|---|
-| `Instrument.name` | `String(255)` (unchanged) | Operator-internal / audit-event copy | System handle. Auto-generated as `instrument_N` on instrument create. **Not** reviewer-facing. |
-| `Instrument.short_label` (new) | `String(32) | None` | Reviewer | The operator's reviewer-facing framing. Lands on Page button labels and as the per-instrument H2 title. Capped at 32 chars at the schema layer. |
-| `Instrument.description` (unchanged) | `String(2000) | None` | Reviewer | The longer per-instrument blurb. Lands as the subtitle next to the H2 title above each table. |
-
-Tightening `name` to do double duty (system handle + reviewer
-framing) would tangle audit copy with reviewer copy and force
-the auto-generated default to get clever. A new column keeps the
-three concerns clean.
-
-**Goal.** Operators can set a short reviewer-facing label on each
-instrument (32-char ceiling). The reviewer surface puts the short
-label on Page buttons and on per-instrument H2 headings.
-
-Scope:
-
-- **Schema.** Alembic migration adds
-  `instruments.short_label VARCHAR(32) NULL`. Safe — additive
-  column, defaults to NULL. No data migration; existing rows have
-  `short_label IS NULL` and the reviewer surface's fallback
-  (bare `Page #{N}`) handles them.
-- **Service-layer.** New
-  `instruments.update_short_label(db, *, review_session, instrument, value, actor, correlation_id)`
-  helper. Accepts `value: str | None`; trims whitespace; raises
-  `ValueError` on `len(value) > 32`; emits an
-  `instrument.short_label_updated` audit event with detail
-  `{"old": …, "new": …}`. Lifecycle-gated by
-  `_require_instrument_editable`.
-- **Route.** Extend the existing per-instrument edit POST (the
-  same one that handles description today — see
-  `update_instrument_description` in
-  `app/services/instruments.py:2255`) to accept an optional
-  `short_label` form field alongside `description`. Both update
-  in one save. (Single round-trip is friendlier than two
-  separate routes.)
-- **Operator UI.** On the Instruments index page
-  (`operator/instruments_index.html`) per-instrument card,
-  Section A's edit form gains a short-label input above the
-  existing description textarea:
-
-  ```html
-  <input form="dfsave-{{ instrument.id }}"
-         type="text"
-         name="short_label"
-         maxlength="32"
-         placeholder="(optional short label, e.g. Skills)"
-         value="{{ instrument.short_label or '' }}">
-  ```
-
-  Read-only mode (when not editing) renders the short label as
-  the small-caps subhead above the description, or omits it when
-  unset. The Section A H2 ("Instrument #1") stays — that's the
-  operator's positional reference, and the short label is a
-  distinct field.
-- **Audit-summary helper update.** `_instrument_label(instrument)`
-  in `app/services/instruments.py:1004` extends to prefer
-  `short_label` → trimmed `description` → `name`. (Existing
-  callers pick up the prettier label automatically.)
-- **Reviewer-surface helpers (used by PR γ).**
-  - `page_button_label(instrument, position)`:
-    `f"Page #{position}: {instrument.short_label}"` when set,
-    else `f"Page #{position}"`.
-  - `instrument_heading(instrument, position, total_count) -> InstrumentHeading`
-    where `InstrumentHeading` is a frozen dataclass of
-    `(title: str | None, subtitle: str | None)`. Composition rules
-    per `spec/reviewer-surface.md` "Above the table — heading +
-    help block". (The existing
-    `views.reviewer_instrument_heading(...)` helper retires; the
-    new helper returns structured data the template iterates.)
-
-  Both helpers ship in PR S so PR γ can wire them up the moment
-  it lands; PR S's surface template doesn't use them yet.
-
-Out of scope (deferred follow-ons):
-
-- A bulk-set UI / CSV-of-labels import. PR S lands the per-
-  instrument input only.
-- Uniqueness checks on `short_label`. Duplicate labels are
-  acceptable; the position prefix disambiguates on multi-
-  instrument sessions.
-- Tightening `Instrument.name` itself or retiring it. The system
-  handle stays as is.
-- Tightening `Instrument.description` constraints. The 2000-char
-  ceiling stays.
-
-Test impact: small.
-
-- New unit test on `update_short_label` (trim, length cap,
-  audit emit).
-- New unit test on the two reviewer-surface helpers
-  (`page_button_label`, `instrument_heading`) covering all six
-  table cases from the heading spec.
-- New integration test on the per-instrument edit route covering
-  the new `short_label` form field (success, 400 on too-long,
-  403 when session is `ready`).
-- Migration test (`tests/db/`) confirming the additive column
-  lands and existing rows have NULL.
-- No breakage in the reviewer-surface or operator-instruments
-  test suites — the new field is additive.
-
-Doc impact:
-
-- `spec/reviewer-surface.md` "Friendly short label vs. long
-  description" subsection already describes this PR's intent;
-  flip it from "PR S in the plan" to "shipped" once PR S merges.
-- `spec/visual_style_rrw.md` "Implications for the reviewer
-  surface" — same flip.
-- `spec/instruments_setup_spec.md` (forthcoming) — when written,
-  it documents the short-label input + 32-char ceiling as
-  already-shipped behaviour.
 
 ## Implementation pointers
 
