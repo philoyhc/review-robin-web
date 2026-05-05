@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, not_, select
@@ -616,9 +616,71 @@ def build_preview_context(
     }
 
 
-@router.get("/sessions/{session_id}", response_class=HTMLResponse)
+# ─────────────────────────────────────────────────────────────────
+# Reviewer surface — multi-instrument-aware URL pattern (Segment 11D
+# follow-on, PR α). The surface itself still renders today's stacked
+# layout; the URL gains an `{instrument_position}` segment so PRs β/γ/δ
+# can layer the per-page UI on top without another URL break.
+#
+# - GET  /sessions/{id}                         → 303 to /sessions/{id}/1
+# - GET  /sessions/{id}/{instrument_position}   → renders the surface
+# - POST /sessions/{id}/{instrument_position}/save
+# - POST /sessions/{id}/submit                  → session-wide
+# - POST /sessions/{id}/clear                   → session-wide
+#
+# Submit and Clear stay session-wide; their redirect targets read a
+# `current_position` hidden form field so the reviewer lands back on the
+# page they were on. The position segment on Save is decorative in PR α
+# (the route accepts it but doesn't filter by it) — PR γ wires the
+# per-position filter alongside the rendering-narrows step.
+# ─────────────────────────────────────────────────────────────────
+
+
+def submit_redirect_url(review_session: ReviewSession, position: int) -> str:
+    """Where to send the reviewer after a successful submit. Today
+    returns the surface URL with ``?submitted=ok`` flash; the deferred
+    standalone-confirmation page swaps the URL via this helper without
+    touching the surface route.
+    """
+    return f"/reviewer/sessions/{review_session.id}/{position}?submitted=ok"
+
+
+def _read_current_position(form: object, default: int = 1) -> int:
+    """Parse a ``current_position`` hidden field from a reviewer-surface
+    form POST. Falls back to ``default`` (1) when missing or malformed
+    so a stray POST doesn't 500 the route. Out-of-range values still
+    redirect to that position; the GET route 404s if it's truly invalid.
+    """
+    raw = form.get("current_position") if hasattr(form, "get") else None
+    if not isinstance(raw, str):
+        return default
+    try:
+        n = int(raw)
+    except ValueError:
+        return default
+    return n if n >= 1 else default
+
+
+@router.get("/sessions/{session_id}", response_class=HTMLResponse, response_model=None)
+def review_surface_default_position(session_id: int) -> RedirectResponse:
+    """Bare-URL fallback. 303s to ``/{id}/1`` so existing invitation
+    links and bookmarks keep working. Auth happens on the destination
+    handler — we don't 401 here because the redirect is harmless and
+    skipping the dependency keeps this handler trivial.
+    """
+    return RedirectResponse(
+        url=f"/reviewer/sessions/{session_id}/1",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/{instrument_position}",
+    response_class=HTMLResponse,
+)
 def review_surface(
     request: Request,
+    instrument_position: int,
     saved: str | None = None,
     submitted: str | None = None,
     reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
@@ -628,6 +690,9 @@ def review_surface(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     reviewer, review_session = reviewer_session
+    instrument_count = len(_instruments_for_session(db, review_session.id))
+    if instrument_position < 1 or instrument_position > instrument_count:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     context = _surface_context(
         db=db,
         user=user,
@@ -638,24 +703,33 @@ def review_surface(
     )
     context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
     context["reviewer_review_count"] = reviewer_review_count_for_user(db, user)
+    context["current_position"] = instrument_position
     return _templates.TemplateResponse(
         request, "reviewer/review_surface.html", context
     )
 
 
 @router.post(
-    "/sessions/{session_id}/save",
+    "/sessions/{session_id}/{instrument_position}/save",
     response_class=HTMLResponse,
     response_model=None,
 )
 async def reviewer_save(
     request: Request,
+    instrument_position: int,
     reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
         require_reviewer_in_session
     ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    """Save the form's response inputs.
+
+    The ``{instrument_position}`` URL segment is decorative in PR α —
+    the route accepts every input the form posts and persists the lot,
+    matching today's all-instruments-stacked behaviour. PR γ ships
+    the per-position filter alongside rendering-narrows-to-one-page.
+    """
     reviewer, review_session = reviewer_session
     _require_session_accepting(db, review_session, reviewer)
     form = await request.form()
@@ -671,7 +745,7 @@ async def reviewer_save(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}?saved=ok",
+        url=f"/reviewer/sessions/{review_session.id}/{instrument_position}?saved=ok",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -694,6 +768,7 @@ async def reviewer_submit(
     form = await request.form()
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
     acknowledge = string_form.get("acknowledge_missing") == "true"
+    current_position = _read_current_position(form)
     upserts = responses_service.parse_form_payload(string_form)
     result = responses_service.submit(
         db,
@@ -719,6 +794,7 @@ async def reviewer_submit(
         context["reviewer_review_count"] = reviewer_review_count_for_user(
             db, user
         )
+        context["current_position"] = current_position
         return _templates.TemplateResponse(
             request,
             "reviewer/review_surface.html",
@@ -726,7 +802,7 @@ async def reviewer_submit(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}?submitted=ok",
+        url=submit_redirect_url(review_session, current_position),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -736,8 +812,8 @@ async def reviewer_submit(
     response_class=HTMLResponse,
     response_model=None,
 )
-def reviewer_clear(
-    confirm: str | None = Form(default=None),
+async def reviewer_clear(
+    request: Request,
     reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
         require_reviewer_in_session
     ),
@@ -746,11 +822,13 @@ def reviewer_clear(
 ) -> RedirectResponse:
     reviewer, review_session = reviewer_session
     _require_session_accepting(db, review_session, reviewer)
-    if confirm != "true":
+    form = await request.form()
+    if form.get("confirm") != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="confirm checkbox required",
         )
+    current_position = _read_current_position(form)
     responses_service.clear_all(
         db,
         review_session=review_session,
@@ -759,7 +837,7 @@ def reviewer_clear(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}",
+        url=f"/reviewer/sessions/{review_session.id}/{current_position}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

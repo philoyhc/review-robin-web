@@ -267,7 +267,7 @@ def test_reviewer_side_surface_still_renders_write_path(
 
     reviewer_client = make_client(reviewer_user)
     body = reviewer_client.get(
-        f"/reviewer/sessions/{review_session.id}"
+        f"/reviewer/sessions/{review_session.id}/1"
     ).text
 
     assert "Preview — not visible to reviewers" not in body
@@ -277,7 +277,7 @@ def test_reviewer_side_surface_still_renders_write_path(
     )
     assert "Cancel — discard unsaved edits" in body
     assert (
-        f'action="/reviewer/sessions/{review_session.id}/save"' in body
+        f'action="/reviewer/sessions/{review_session.id}/1/save"' in body
     )
 
 

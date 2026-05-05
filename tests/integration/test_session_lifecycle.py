@@ -315,7 +315,7 @@ def test_reviewer_save_403_when_session_draft(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{session.id}/save",
+        f"/reviewer/sessions/{session.id}/1/save",
         data={},
         follow_redirects=False,
     )
@@ -342,7 +342,7 @@ def test_reviewer_save_403_when_instrument_closed_manually(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{session.id}/save",
+        f"/reviewer/sessions/{session.id}/1/save",
         data={},
         follow_redirects=False,
     )
@@ -364,7 +364,7 @@ def test_reviewer_save_403_when_deadline_passed(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/reviewer/sessions/{session.id}/save",
+        f"/reviewer/sessions/{session.id}/1/save",
         data={},
         follow_redirects=False,
     )
@@ -391,7 +391,7 @@ def test_reviewer_surface_hides_values_when_closed_and_invisible(
     )
     rae_client = make_client(rae)
     rae_client.post(
-        f"/reviewer/sessions/{session.id}/save",
+        f"/reviewer/sessions/{session.id}/1/save",
         data={
             f"response[{assignment.id}][rating]": "4",
             f"response[{assignment.id}][comments]": "secret-comment",

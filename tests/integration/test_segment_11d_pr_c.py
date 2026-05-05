@@ -308,7 +308,7 @@ def test_review_surface_saved_banner_uses_banner_success(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}?saved=ok"
+        f"/reviewer/sessions/{review_session.id}/1?saved=ok"
     ).text
     assert 'class="banner banner-success"' in body
     assert "Your draft has been saved." in body

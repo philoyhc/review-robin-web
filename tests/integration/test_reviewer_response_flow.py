@@ -485,7 +485,7 @@ def test_save_draft_persists_and_reload_shows_values(
     ).scalar_one()
 
     response = rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/save",
+        f"/reviewer/sessions/{review_session.id}/1/save",
         data={
             f"response[{assignment.id}][rating]": "4",
             f"response[{assignment.id}][comments]": "good work",
@@ -618,7 +618,7 @@ def test_clear_all_with_confirm_deletes_responses(
         select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalar_one()
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/save",
+        f"/reviewer/sessions/{review_session.id}/1/save",
         data={f"response[{assignment.id}][rating]": "5"},
         follow_redirects=False,
     )
@@ -717,7 +717,7 @@ def test_cancel_link_renders_last_saved_values(
         select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalar_one()
     rae_client.post(
-        f"/reviewer/sessions/{review_session.id}/save",
+        f"/reviewer/sessions/{review_session.id}/1/save",
         data={
             f"response[{assignment.id}][rating]": "4",
             f"response[{assignment.id}][comments]": "saved comment",

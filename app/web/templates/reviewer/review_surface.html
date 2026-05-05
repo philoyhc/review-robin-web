@@ -80,7 +80,9 @@
     {% endif %}
 
     {% set rs_paginated = instrument_groups|length > 1 and any_accepting and not preview_mode %}
-    {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/save">{% endif %}
+    {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/{{ current_position }}/save">
+    <input type="hidden" name="current_position" value="{{ current_position }}">
+    {% endif %}
       {% if any_accepting and not preview_mode %}
         <div class="rs-action-row rs-action-row-top rs-action-row-left">
           <button class="btn" type="submit">Save draft</button>
@@ -90,7 +92,7 @@
             Submit
           </button>
           <a class="btn secondary"
-             href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
+             href="/reviewer/sessions/{{ session.id }}/{{ current_position }}">Cancel — discard unsaved edits</a>
           {% if rs_paginated %}
             <button class="btn secondary rs-prev-btn" type="button" disabled>Previous</button>
             <button class="btn secondary rs-next-btn" type="button">Next</button>
@@ -245,7 +247,7 @@
             Submit
           </button>
           <a class="btn secondary"
-             href="/reviewer/sessions/{{ session.id }}">Cancel — discard unsaved edits</a>
+             href="/reviewer/sessions/{{ session.id }}/{{ current_position }}">Cancel — discard unsaved edits</a>
           {% if rs_paginated %}
             <button class="btn secondary rs-prev-btn" type="button" disabled>Previous</button>
             <button class="btn secondary rs-next-btn" type="button">Next</button>
@@ -258,6 +260,7 @@
       <div class="card danger-zone rs-danger-zone">
         <h2>Clear all responses</h2>
         <form method="post" action="/reviewer/sessions/{{ session.id }}/clear">
+          <input type="hidden" name="current_position" value="{{ current_position }}">
           <p>
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required>
