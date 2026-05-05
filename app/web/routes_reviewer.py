@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -112,6 +114,58 @@ def _load_assignments_with_relations(
         .order_by(Assignment.id)
     )
     return list(db.execute(stmt).scalars())
+
+
+PageStatusState = Literal["not_started", "in_progress", "complete", "submitted"]
+
+
+@dataclass(frozen=True)
+class PageStatus:
+    """Per-page completion status for the right-half status panel.
+
+    Lands in template context as ``page_statuses: list[PageStatus]``,
+    one entry per instrument the reviewer has assignments on. Single-
+    instrument sessions still get one entry — the panel always
+    renders. Operator preview passes an empty list (per-page state
+    is moot for synthetic preview rows).
+    """
+
+    position: int
+    label: str  # bare "Page N" — short labels live on Page buttons (PR γ)
+    state: PageStatusState
+
+
+def _page_status_for_group(group_rows: list[dict]) -> PageStatusState:
+    """Roll up per-row completion data into a single page state.
+
+    Order of evaluation matches the spec table in
+    ``spec/reviewer-surface.md`` "Per-page status":
+
+    1. ``submitted`` — every row has ``submitted_at`` set. Wins
+       even if a row is technically incomplete (acknowledge_missing
+       can stamp ``submitted_at`` on a row missing a required field).
+    2. ``complete`` — every required field on every row has a saved
+       value (``is_complete``).
+    3. ``in_progress`` — at least one row carries Response data,
+       but neither ``submitted`` nor ``complete`` apply.
+    4. ``not_started`` — no Response data on any row.
+
+    ``in_progress`` falls back to "any row has at least one cell
+    with a non-empty value" — a Response row can exist with an
+    empty string, but that's the same shape as "not started" for
+    pill-display purposes.
+    """
+    if not group_rows:
+        return "not_started"
+    if all(r.get("submitted_at") for r in group_rows):
+        return "submitted"
+    if all(r.get("is_complete") for r in group_rows):
+        return "complete"
+    has_any_value = any(
+        any((cell.get("value") or "") for cell in r.get("cells", []))
+        for r in group_rows
+    )
+    return "in_progress" if has_any_value else "not_started"
 
 
 _NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD = not_(
@@ -327,6 +381,28 @@ def _surface_context(
         )
         flat_rows.extend(group_rows)
 
+    # Per-page status pills for the right-half status panel (PR β).
+    # One entry per instrument the reviewer has assignments on, sorted
+    # by URL position so the panel reads top-to-bottom in the same
+    # order the Page buttons land in (PR γ).
+    page_statuses: list[PageStatus] = []
+    instrument_groups_by_id = {
+        g["instrument"].id: g for g in instrument_groups
+    }
+    for inst in sorted(instruments.values(), key=lambda i: (i.order, i.id)):
+        if inst.id not in instrument_groups_by_id:
+            continue
+        position = position_by_id[inst.id]
+        page_statuses.append(
+            PageStatus(
+                position=position,
+                label=f"Page {position}",
+                state=_page_status_for_group(
+                    instrument_groups_by_id[inst.id]["rows"]
+                ),
+            )
+        )
+
     return {
         "user": user,
         "session": review_session,
@@ -343,6 +419,7 @@ def _surface_context(
         ),
         "any_accepting": any_accepting,
         "any_closed_with_hidden_values": any_closed_with_hidden_values,
+        "page_statuses": page_statuses,
     }
 
 
@@ -462,6 +539,7 @@ def build_preview_context(
             "any_required": False,
             "any_accepting": False,
             "any_closed_with_hidden_values": False,
+            "page_statuses": [],
             "preview_mode": True,
         }
 

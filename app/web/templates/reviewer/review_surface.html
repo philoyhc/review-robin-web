@@ -26,44 +26,68 @@
       <span class="muted">Deadline: {{ session.deadline.isoformat() }}</span>
     {% endif %}
   </div>
-  {% if session.description %}
-    <div class="card rs-description-card">
-      <p style="margin: 0;">{{ session.description }}</p>
-    </div>
-  {% endif %}
 
-  {% if saved %}
-    <div class="banner banner-success">
-      Your draft has been saved.
-    </div>
-  {% endif %}
-  {% if submitted %}
-    <div class="banner banner-success">
-      Your responses have been submitted. You can keep editing
-      and re-submit if needed.
-    </div>
-  {% endif %}
+  {# Top-row layout (PR β): description card half-width-left,
+     flash + per-page status panel half-width-right. The panel always
+     renders so the reviewer always has a per-page progress summary;
+     transient flash banners (saved / submitted / missing-required)
+     land inside it inline. Below the 800px breakpoint the .bottom-grid
+     stacks. #}
+  <div class="bottom-grid">
+    {% if session.description %}
+      <div class="card rs-description-card">
+        <p style="margin: 0;">{{ session.description }}</p>
+      </div>
+    {% else %}
+      <div></div>
+    {% endif %}
 
-  {% if missing %}
-    <div class="banner banner-warning">
-      <strong>Required fields missing.</strong>
-      <p>
-        The following required field{% if missing|length != 1 %}s have{% else %} has{% endif %}
-        no value yet:
-      </p>
-      <ul>
-        {% for m in missing %}
-          <li>
-            <strong>{{ m.reviewee_name }}</strong> — <code>{{ m.field_label }}</code>
-          </li>
-        {% endfor %}
-      </ul>
-      <p>
-        Tick the box below and submit again to record your responses
-        anyway.
-      </p>
+    <div class="card rs-status-panel">
+      {% if page_statuses %}
+        <ul class="rs-page-status-pills">
+          {% for ps in page_statuses %}
+            <li>
+              <span class="pill {% if ps.state == 'submitted' or ps.state == 'complete' %}pill-success{% elif ps.state == 'in_progress' %}pill-warning{% else %}pill-empty{% endif %}">
+                {{ ps.label }}: {{ ps.state | replace('_', ' ') }}
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if saved %}
+        <div class="banner banner-success">
+          Your draft has been saved.
+        </div>
+      {% endif %}
+      {% if submitted %}
+        <div class="banner banner-success">
+          Your responses have been submitted. You can keep editing
+          and re-submit if needed.
+        </div>
+      {% endif %}
+      {% if missing %}
+        <div class="banner banner-warning">
+          <strong>Required fields missing.</strong>
+          <p>
+            The following required field{% if missing|length != 1 %}s have{% else %} has{% endif %}
+            no value yet:
+          </p>
+          <ul>
+            {% for m in missing %}
+              <li>
+                <strong>{{ m.reviewee_name }}</strong> — <code>{{ m.field_label }}</code>
+              </li>
+            {% endfor %}
+          </ul>
+          <p>
+            Tick the box below and submit again to record your responses
+            anyway.
+          </p>
+        </div>
+      {% endif %}
     </div>
-  {% endif %}
+  </div>
 
   {% if rows %}
     {% if not any_accepting %}

@@ -1202,14 +1202,33 @@
       body.ui-v2 .rs-action-row.rs-action-row-top {
         margin-top: var(--space-8);
       }
-      /* Half-width session-description card flushed left below the
-         page header. Collapses to full width on narrow viewports. */
+      /* Reviewer-surface top row (PR β) — description card on the
+         left, flash + per-page status panel on the right. The
+         existing .bottom-grid primitive handles the responsive
+         stacking; the per-card max-width is unset here because
+         .bottom-grid already constrains widths. */
       body.ui-v2 .rs-description-card {
-        max-width: calc(50% - 10px);
         margin-bottom: 0;
       }
-      @media (max-width: 800px) {
-        body.ui-v2 .rs-description-card { max-width: 100%; }
+      body.ui-v2 .rs-status-panel {
+        margin-bottom: 0;
+      }
+      body.ui-v2 .rs-status-panel .rs-page-status-pills {
+        list-style: none;
+        margin: 0 0 var(--space-3) 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+      }
+      body.ui-v2 .rs-status-panel .rs-page-status-pills li {
+        margin: 0;
+      }
+      body.ui-v2 .rs-status-panel .banner {
+        margin-bottom: var(--space-3);
+      }
+      body.ui-v2 .rs-status-panel .banner:last-child {
+        margin-bottom: 0;
       }
       /* Multi-instrument paginated view — only the active group
          renders; the Next button cycles through (no-save, no-submit
