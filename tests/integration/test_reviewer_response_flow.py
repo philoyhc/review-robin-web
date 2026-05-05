@@ -501,11 +501,123 @@ def test_save_draft_persists_and_reload_shows_values(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert "saved=ok" in response.headers["location"]
+    assert response.headers["location"].endswith(
+        f"/reviewer/sessions/{review_session.id}/1"
+    )
 
     page = rae_client.get(f"/reviewer/sessions/{review_session.id}")
     assert 'value="4"' in page.text
     assert "good work" in page.text
+
+
+def test_save_rejects_out_of_range_integer_and_keeps_typed_value(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A 1-to-5int rating is bound to ``min=1 max=5 step=1`` via the
+    seeded RTD. Saving ``77`` is rejected server-side: the row stays
+    unwritten, the surface re-renders with the Invalid-values card,
+    and the form input still carries the typed ``77`` so the reviewer
+    can correct it in place."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-bad-range",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    rae_client = make_client(rae)
+    assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).scalar_one()
+    response = rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/1/save",
+        data={f"response[{assignment.id}][rating]": "77"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    body = response.text
+    assert "data-rs-errors-card" in body
+    assert "Must be at most 5" in body
+    assert 'value="77"' in body
+    # No persisted row.
+    page = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    assert 'value="77"' not in page
+
+
+def test_save_persists_valid_and_rejects_invalid_in_same_batch(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Mixed batch — the valid String input ('comments') saves through;
+    the invalid Integer input ('rating') is held back."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-mixed",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    rae_client = make_client(rae)
+    assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).scalar_one()
+    response = rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/1/save",
+        data={
+            f"response[{assignment.id}][rating]": "9",
+            f"response[{assignment.id}][comments]": "looks good",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    page = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    # Valid one persisted; invalid one did not.
+    assert "looks good" in page
+    assert 'value="9"' not in page
+
+
+def test_submit_blocks_on_validation_error(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Submit blocks on out-of-range values just like Save does, and
+    the error card takes precedence over the missing-required card so
+    invalid values don't masquerade as 'present'."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-submit-bad",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    rae_client = make_client(rae)
+    assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).scalar_one()
+    response = rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/submit",
+        data={
+            "current_position": "1",
+            f"response[{assignment.id}][rating]": "0",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    body = response.text
+    assert "data-rs-errors-card" in body
+    assert "Must be at least 1" in body
+    # Missing-required card does not coexist with the validation card.
+    assert "data-rs-missing-card" not in body
 
 
 def test_submit_with_all_required_filled_succeeds_and_writes_audit(
@@ -535,7 +647,9 @@ def test_submit_with_all_required_filled_succeeds_and_writes_audit(
     )
 
     assert response.status_code == 303
-    assert "submitted=ok" in response.headers["location"]
+    assert response.headers["location"].endswith(
+        f"/reviewer/sessions/{review_session.id}/1"
+    )
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")
     ).scalar_one()

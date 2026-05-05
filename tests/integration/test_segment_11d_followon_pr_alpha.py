@@ -285,7 +285,7 @@ def test_save_post_url_carries_position(
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}/1?saved=ok"
+        == f"/reviewer/sessions/{review_session.id}/1"
     )
 
 
@@ -333,7 +333,7 @@ def test_submit_redirect_honours_current_position_field(
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}/1?submitted=ok"
+        == f"/reviewer/sessions/{review_session.id}/1"
     )
 
 
@@ -371,7 +371,7 @@ def test_submit_redirect_falls_back_when_current_position_missing(
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/reviewer/sessions/{review_session.id}/1?submitted=ok"
+        == f"/reviewer/sessions/{review_session.id}/1"
     )
 
 
