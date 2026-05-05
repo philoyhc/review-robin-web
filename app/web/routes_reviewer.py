@@ -379,6 +379,11 @@ def _surface_context(
             }
             for df in display_fields
         ]
+        constraints = []
+        for f in fields:
+            summary = views.constraint_summary_for_field(f)
+            if summary:
+                constraints.append({"label": f.label, "summary": summary})
         instrument_groups.append(
             {
                 "instrument": instrument,
@@ -388,6 +393,7 @@ def _surface_context(
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
+                "constraints": constraints,
                 "show_status_col": show_incomplete_marks
                 or any(r.get("submitted_at") for r in group_rows),
             }
@@ -721,6 +727,11 @@ def build_preview_context(
             }
             for df in display_fields
         ]
+        constraints = []
+        for f in fields:
+            summary = views.constraint_summary_for_field(f)
+            if summary:
+                constraints.append({"label": f.label, "summary": summary})
         instrument_groups.append(
             {
                 "instrument": instrument,
@@ -733,6 +744,7 @@ def build_preview_context(
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
+                "constraints": constraints,
                 "show_status_col": False,
             }
         )

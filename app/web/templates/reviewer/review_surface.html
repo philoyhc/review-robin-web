@@ -173,6 +173,11 @@
             {% endfor %}
           </div>
         {% endif %}
+        {% if group.constraints %}
+          <p class="rs-constraints muted">
+            {% for c in group.constraints %}<strong>{{ c.label }}</strong> ({{ c.summary }}){% if not loop.last %}, {% endif %}{% endfor %}
+          </p>
+        {% endif %}
         <div class="table-scroll">
           <table>
             <tr>

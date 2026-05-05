@@ -16,6 +16,7 @@ from types import SimpleNamespace
 from app.db.models import Instrument
 from app.web.views import (
     InstrumentHeading,
+    constraint_summary_for_field,
     instrument_heading,
     page_button_label,
     placeholder_for_field,
@@ -208,3 +209,32 @@ def test_placeholder_for_field_table(
     data_type: str, validation: dict | None, expected: str
 ) -> None:
     assert placeholder_for_field(_field(data_type=data_type, validation=validation)) == expected
+
+
+# ── constraint_summary_for_field ─────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("data_type", "validation", "expected"),
+    [
+        # Integer / Decimal use dash notation (vs ``placeholder``'s ``to``).
+        ("Integer", {"min": 1, "max": 5, "step": 1}, "1-5, steps of 1"),
+        ("Integer", {"min": 0, "max": 100, "step": 1}, "0-100, steps of 1"),
+        (
+            "Decimal",
+            {"min": 1.0, "max": 5.0, "step": 0.5},
+            "1.0-5.0, steps of 0.5",
+        ),
+        # String drops the ``steps of`` suffix; List joins choices.
+        ("String", {"min_length": 0, "max_length": 100}, "0-100 char"),
+        ("List", {"choices": ["Yes", "No"]}, "Yes / No"),
+        ("List", {"choices": []}, ""),
+        # Incomplete blocks still emit nothing rather than half-formed text.
+        ("Integer", {"min": 1, "max": 5}, ""),
+        ("Decimal", None, ""),
+    ],
+)
+def test_constraint_summary_for_field_table(
+    data_type: str, validation: dict | None, expected: str
+) -> None:
+    assert constraint_summary_for_field(_field(data_type=data_type, validation=validation)) == expected

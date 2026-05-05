@@ -1314,6 +1314,14 @@
       body.ui-v2 .rs-instrument-card .rs-instrument-subtitle {
         margin: var(--space-2) 0 0 0;
       }
+      /* Per-instrument constraint summary line above the table.
+         Right-aligned and muted so it reads as ancillary metadata
+         next to the main response columns. */
+      body.ui-v2 .rs-constraints {
+        text-align: right;
+        font-size: var(--fs-small);
+        margin: 0 0 var(--space-2) 0;
+      }
       /* Reviewer-surface top row (PR β) — description card on the
          left, flash + per-page status panel on the right. The
          existing .bottom-grid primitive handles the responsive

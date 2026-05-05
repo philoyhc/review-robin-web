@@ -535,6 +535,35 @@ def test_surface_renders_constraint_hints_for_integer_and_string_fields(
     assert 'placeholder="0 to 2000 char"' in body
 
 
+def test_surface_renders_constraint_summary_row_above_table(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The default instrument carries a 1-to-5int rating + a Long_text
+    comments field. A right-aligned summary line lists each field's
+    label (bold) and constraint summary, in column order, above the
+    table."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-constraints",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    assert "rs-constraints" in body
+    assert "<strong>Rating</strong> (1-5, steps of 1)" in body
+    assert "<strong>Comments</strong> (0-2000 char)" in body
+    # Row sits above the table-scroll wrapper.
+    summary_idx = body.find('class="rs-constraints')
+    table_idx = body.find('class="table-scroll"')
+    assert 0 < summary_idx < table_idx
+
+
 def test_numeric_input_carries_step_data_attrs_for_js_validity(
     db: Session,
     alice: AuthenticatedUser,
