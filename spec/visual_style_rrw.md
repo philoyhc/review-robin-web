@@ -367,6 +367,8 @@ The main task surface, where the reviewer completes their evaluations.
 
 A session may have multiple instruments for a reviewer to complete across their assigned reviewees. This requires more than one page facing the reviewer, and therefore some navigation chrome.
 
+(Underlying rationale: see "Response form layout and instrument pacing" below — one page per instrument is the canonical principle, and the tab strip is its chrome surface.)
+
 **Pattern: a single horizontal tab strip.**
 
 Below the page header, one row of tabs — one tab per instrument the reviewer needs to complete:
@@ -396,15 +398,9 @@ Specifics:
 
 ##### Per-reviewee navigation within an instrument
 
-A separate concern: within a single instrument, the reviewer may need to evaluate multiple reviewees. This is *content-level* navigation, not chrome-level. It belongs inside the instrument's form, not in the page chrome.
+A separate concern: within a single instrument, the reviewer evaluates multiple reviewees. **This is rendered as a table — every reviewee on one page, one row per reviewee.** No per-reviewee paging, no sidebar drill-down. See "Response form layout and instrument pacing" below for the canonical principle and rationale; pacing across cohorts is handled by splitting into multiple instruments (i.e. multiple tabs), not by paging within an instrument.
 
-Pattern options for in-form per-reviewee navigation:
-
-- **One reviewee per page**, with "Next reviewee" / "Previous reviewee" affordances at the bottom of the form, plus a small indicator ("Reviewee 2 of 7") near the top.
-- **All reviewees on one page**, in a long scrolling form with each reviewee as a section.
-- **Sidebar of reviewees** within the form, letting the reviewer jump between them.
-
-The choice depends on instrument complexity and reviewee count and is properly the concern of the response-form component, not the chrome. Flagging here so it's clear the chrome stops at the instrument-level tab strip; what happens *inside* the form is the form's design.
+The chrome stops at the instrument-level tab strip; what happens *inside* the form (table layout, sticky headers, keyboard navigation, auto-save) is the response-form component's concern — see "Large-table ergonomics" below.
 
 #### Submission confirmation
 
@@ -457,6 +453,279 @@ Some patterns from `visual_style_general.md` and the operator session chrome abo
 - **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts About / Settings / Sign out; reviewer's user menu hosts My Reviews / Sign out. Same shape, different contents.
 
 The discipline: components and visual language are uniform; chrome and navigation patterns are audience-specific. An operator and a reviewer should recognize the same app from the visual style; a quick glance at the chrome should tell each which surface they're on.
+
+---
+
+## Response form layout and instrument pacing
+
+### Core principle
+
+**One page per instrument.** Each instrument the reviewer is
+assigned renders as one page, with the instrument's tabular form
+as the page's main content and reviewees as rows.
+
+This pattern is canonical and uniform: it applies to sessions of 5
+reviewees and sessions of 100 reviewees, to numeric scoring
+instruments and qualitative comment instruments, to one-instrument
+sessions and many-instrument sessions. There is no alternative
+"narrative mode," no per-reviewee paging variant, no layout toggle.
+One pattern.
+
+**Pacing is operator-controlled at instrument-design time.** If a
+reviewer should encounter the work in smaller chunks — because the
+cohort is large, because different reviewees should be evaluated in
+different contexts, or because the operator wants to break a long
+task into parts — the operator designs that pacing into the
+instruments themselves. Smaller instruments give smaller pages;
+more instruments give more tabs. The reviewer-side layout does not
+vary by scale; the operator-side instrument design carries the
+burden of pacing.
+
+### Why this principle
+
+#### Tabular instruments are the app's defining feature
+
+Review Robin supports tabular review artifacts at scale as a
+deliberate product positioning. Generic form tools (MS Forms,
+Google Forms, Qualtrics) handle per-reviewee paged forms perfectly
+well; the differentiator is the tabular workflow — cross-reviewee
+calibration, efficient bulk scoring, spreadsheet-mode entry. Honoring
+the operator's choice of a tabular instrument means rendering it
+*as a table*, not transposing it into something else on the
+reviewer side.
+
+#### The operator already has the right knowledge to decide pacing
+
+The operator knows the cohort size, the question complexity, the
+reviewer's likely time commitment, and the cognitive structure they
+want the reviewer to enter. The reviewer-side renderer does not
+have any of this information and is in a poor position to make
+pacing decisions on the operator's behalf. Pushing the decision to
+instrument-design time puts it where it can actually be reasoned
+about.
+
+#### One reviewer pattern simplifies the system
+
+A single canonical response form layout means:
+
+- Reviewers learn the pattern once and recognize it across all
+  sessions and review types.
+- The Setup-side and reviewer-side share one model; what the
+  operator builds is what the reviewer sees.
+- The chrome (tab strip, persistent affordances) is stable and
+  well-defined; no mode-dependent variants.
+- Future variations (different review types, embedded scenarios,
+  audience extensions) sit alongside this pattern as separate
+  features rather than as toggles within it.
+
+### How operators use instruments as a pacing tool
+
+Some illustrative cases:
+
+**Wide-and-shallow** — 30 reviewers each rating 80 reviewees on
+familiarity, rating, and a comment. One large instrument with three
+columns and 80 rows. One reviewer page with one big table.
+Reviewers use spreadsheet-mode entry to work through it efficiently,
+calibrating across rows.
+
+**Multiple contexts, same reviewer pool** — reviewers evaluate one
+group of people on technical criteria and a slightly different
+group on collaborative criteria. Two instruments, two tabs, two
+tables. The tab strip carries the context switch; each table is
+appropriately sized to its scope.
+
+**Large global cohort, small per-reviewer scopes** — 1,000 people
+to be reviewed in groups of 5–8 by their groupmates. Each reviewer
+sees only their group as rows; structurally this is per-reviewer
+assignment scoping rather than instrument design, but the principle
+holds: the reviewer's tabular experience is bounded by what the
+operator configured for them.
+
+**Narrative-heavy review with few reviewees** — 8 people each
+needing a written holistic evaluation. Operator can design 8
+instruments (one per reviewee) so each tab becomes a per-reviewee
+narrative page. This is a workable use of the principle, and the
+slight clunkiness is a useful signal that this review type is at
+the edge of what tabular framing handles well — not its center. If
+it became a frequent need, it would warrant a separate review type
+with its own design, not a layout toggle on the existing pattern.
+
+The thread through these cases: the operator's instrument design
+*is* the reviewer's pacing. Smaller instruments mean smaller pages
+mean more breakpoints. Operators who want reviewers to feel chunked
+progress design for it; operators who want one continuous tabular
+sweep design for that.
+
+### Implications for instrument design
+
+Operators should consider, when designing instruments:
+
+- **How wide can a row reasonably be?** A row with three or four
+  short columns reads cleanly; a row with twelve columns and a
+  long comment field reads cluttered. If a single instrument has
+  too many response dimensions, splitting it into multiple
+  instruments may improve the reviewer's experience.
+- **Are different evaluation criteria genuinely separate, or just
+  long?** A single instrument with related criteria (all
+  technical-skills questions) is appropriate. An instrument
+  conflating unrelated dimensions (technical skills + cultural
+  fit + recommendation) might benefit from being three
+  instruments — both for the reviewer's mental clarity and for
+  the operator's downstream analysis.
+- **Will reviewers benefit from a context reset between groups?**
+  If yes, separate instruments for separate groups (as in the
+  multiple-contexts case above) make the context boundary
+  explicit.
+- **Is the cohort small enough to feel manageable as one table?**
+  At small reviewee counts (say, under 20), one instrument
+  with all relevant columns is usually fine. At larger counts,
+  the operator should think harder about pacing.
+
+These are guidance for the Instruments Setup experience, not hard
+rules. Operators retain full control; the app does not enforce
+splits. Surfacing the considerations is a job for Setup-side
+documentation and possibly inline guidance on the Instruments Setup
+page.
+
+### Implications for the reviewer surface
+
+Most of these are already covered above in "Multi-instrument
+navigation"; restating in this principle's context:
+
+- **Tab strip is the reviewer's pacing UI.** Each tab is one
+  instrument, one page. Operators choose tab order; reviewers move
+  freely between tabs.
+- **Tab labels carry the operator's framing.** "Round 1, Round 2,
+  Round 3" is a different reviewer experience from "Skills,
+  Cultural Fit, Recommendation." Operators should choose tab labels
+  with reviewer-comprehension in mind.
+- **Optional per-instrument description.** A one-line description
+  shown to the reviewer above the table on instrument entry can
+  help when the tab label alone isn't self-explanatory ("This
+  instrument asks you to rate the candidates on technical skills,
+  considering their submitted work samples.") This affordance is
+  recommended for the Instruments Setup page.
+- **Per-tab completion indicators** (per "Multi-instrument
+  navigation") give the reviewer a sense of progress at the
+  instrument level. Within an instrument, completeness is a
+  property of the table itself (filled vs. empty rows), so per-row
+  indicators may also be useful — see "Large-table ergonomics"
+  below.
+
+### Large-table ergonomics
+
+Since the canonical layout is "one page = one tabular instrument,"
+and instruments may legitimately have 80+ rows, the response-form
+component must handle large tables as a first-class concern. These
+are first-class because the app's positioning depends on them, not
+nice-to-haves.
+
+The full design for large tables belongs in the response-form
+component spec (separate from this document), but the requirements
+this principle imposes are:
+
+- **Auto-save** at appropriate granularity (cell change, row blur,
+  or short interval) so that reviewers working on long tables do
+  not lose work to browser crashes, accidental navigations, or
+  session timeouts.
+- **Return-to-place behavior** when a reviewer comes back to an
+  in-progress table — landing at the first incomplete row, the
+  last edited row, or top with a "resume" affordance.
+- **Visible progress.** A small "47 of 80 complete" indicator at
+  the top of the table, plus per-row completion icons in a sticky
+  leftmost column.
+- **Sticky column headers.** When the reviewer is on row 60, the
+  column headers (question text) should still be visible at the
+  top of the viewport.
+- **Filter to incomplete.** A "show only unscored" toggle is
+  invaluable for reviewers working across multiple sessions or
+  returning to a table they partially filled.
+- **Keyboard navigation.** Tab moves to the next cell within a
+  row; Enter (or Tab from the last cell) moves to the next row.
+  Reviewers who learn this can work through large tables several
+  times faster than mouse-only.
+- **Submission semantics.** Submitting a review is a
+  review-session-level action (one Submit covers every instrument
+  the reviewer has been assigned), not per-row. Submission should
+  be enabled only when the review is complete, or should warn
+  explicitly about partial submission.
+- **Column type ergonomics.** Numeric scoring columns can be
+  narrow; comment columns need to expand. Long-form comments
+  may need a click-to-expand or popover pattern within the cell —
+  inline editing of long text inside a tight cell is poor
+  ergonomics.
+
+The last point bleeds back into instrument design: if operators
+add comment fields to a tabular instrument, the reviewer's
+ergonomics depend on how the comment field renders within the
+table. The Instruments Setup page may want to surface a soft
+warning about column types and reviewer ergonomics — for example,
+flagging when an instrument has multiple long-form text columns
+that may not work well in tabular form.
+
+### What this principle is not
+
+- **Not a one-row-per-page experience.** Even small instruments
+  (5 reviewees) render as tables, not as paged forms. The unit of
+  iteration is the instrument, not the reviewee.
+- **Not configurable per session.** The reviewer-side layout is
+  fixed; what varies is the operator's instrument design.
+- **Not a commitment to handle every conceivable review type.**
+  Reviews that genuinely want per-reviewee narrative paging are
+  served imperfectly by this pattern. The principle accepts this
+  trade-off in service of consistency and the tabular-at-scale
+  positioning.
+- **Not a barrier to future review types.** If a fundamentally
+  different review type emerges (a longitudinal review where
+  reviewers track a single subject over time, an ethnographic
+  observation form, etc.), it can be added as its own type with
+  its own reviewer pattern — alongside this one, not replacing or
+  toggling it.
+
+### Doc impact
+
+`spec/operator_ui_concept.md`:
+
+- The reviewer-facing pages section gains a brief reference to this
+  principle.
+
+This document (further down):
+
+- The "Multi-instrument navigation" subsection above already
+  aligns with this principle. A one-line cross-reference here
+  clarifies the underlying rationale (added in the same change as
+  this section).
+
+`spec/instruments_setup_spec.md` (forthcoming):
+
+- Explicit guidance to operators that instrument boundaries are
+  pacing tools, not just data-grouping tools.
+- The optional per-instrument description affordance recommended
+  above.
+- Soft-warning logic for column-type ergonomics.
+
+`spec/response_form_component_spec.md` (forthcoming):
+
+- The full large-table ergonomics design.
+- Specific handling of auto-save, return-to-place, sticky headers,
+  keyboard navigation, and submission semantics.
+
+### Cross-references for this principle
+
+- `spec/audience_and_identity_model.md` — the audience and surface
+  philosophy the principle here serves.
+- "Multi-instrument navigation" (above in this document) — the
+  chrome around the response form, including the multi-instrument
+  tab strip.
+- `spec/reviewer-surface.md` — the multi-instrument-aware response
+  surface spec; the URL pattern, page anatomy, form scope, and
+  per-page status pills implementing this principle on the live
+  surface.
+- `spec/instruments_setup_spec.md` (forthcoming) — operator-side
+  instrument design, where pacing decisions are made.
+- `spec/response_form_component_spec.md` (forthcoming) — the
+  detailed UI design for the response form itself, including
+  large-table handling.
 
 ---
 
