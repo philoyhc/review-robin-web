@@ -73,119 +73,136 @@ Top-to-bottom, the page renders:
 3. **Page header** — `.rs-page-header` flex row carrying the session
    name as H1 plus the deadline inline as `.muted`. (D7 — settled in
    Segment 11D PR C and adjusted post-merge.)
-4. **Description card** — half-width `.card.rs-description-card`
-   flushed left, only when `session.description` is set. Collapses to
-   full width below the 800px breakpoint.
-5. **Flash banners** — saved/submitted/missing-required/session-closed,
-   per `spec/visual_style_rrw.md` "Reviewer-surface banners".
-6. **Top action row** — `.rs-action-row.rs-action-row-top.rs-action-row-left`,
-   flush left under the description card with a wider top margin than
-   the default action row. Contents (in left-to-right order):
-   - Save draft (Primary).
-   - Submit (Secondary).
-   - Discard unsaved edits (Secondary anchor — see "Button labels"
-     below).
-7. **Page selector** — only when the session has more than one
-   instrument. See "Page selector" below.
-8. **Instrument body** — heading, help-text card(s), reviewer table.
+4. **Description + status bar** — a `.bottom-grid` 2-column row with:
+   - **Description card** — half-width `.card.rs-description-card`
+     flushed left, only when `session.description` is set. Collapses
+     to full width below the 800px breakpoint.
+   - **Flash + status panel** — half-width on the right. Always
+     renders (collapses to full width below 800px). Hosts:
+     - Per-page status pills — one pill per instrument labelled
+       e.g. `Page 1: in progress`, `Page 2: complete`. State
+       computed server-side from response data (see "Per-page status"
+       below).
+     - Transient flash banners (saved / submitted / missing-required
+       / session-closed) inline within the panel when applicable;
+       they do not push other layout around.
+5. **Review-level action row (top)** — single right-flushed row
+   carrying just `Submit` (Primary). Submit is review-session-wide;
+   it commits every saved response across all instruments. (See
+   "Form scope" below.)
+6. **Page actions row (top)** — `.rs-action-row.rs-action-row-top.rs-action-row-left`,
+   flush left. Contents (in left-to-right order):
+   - `Save` (Primary) — saves the current page's inputs.
+   - `Discard` (Secondary anchor) — discards the current page's
+     in-progress edits.
+   - `Page 1`, `Page 2`, … — one anchor per instrument, Primary
+     style; the anchor for the current page renders disabled
+     (`aria-disabled="true"`).
+7. **Instrument body** — heading, help-text card(s), reviewer table.
    Exactly one instrument's content renders per page.
-9. **Bottom action row** — `.rs-action-row` (default flush-right).
-   Same buttons as the top row, in the same order.
-10. **Acknowledge checkbox** — when `show_acknowledge` is set
-    (server-driven on missing-required submit attempt), renders
-    immediately above the bottom action row.
+8. **Page actions row (bottom)** — `.rs-action-row` (flush-right). Same
+   contents as the top page actions row, same order.
+9. **Acknowledge missing checkbox** — when `show_acknowledge` is set
+   (server-driven on a session-wide Submit attempt that hits required
+   gaps), renders immediately above the bottom review-level row.
+10. **Review-level action row (bottom)** — single right-flushed row
+    carrying `Submit` again. Mirrors the top review-level row.
 11. **Danger zone** — `.card.danger-zone.rs-danger-zone` with the
     Clear-all-responses form. Half-width, flush right, 24px above the
-    foot. Only when `any_accepting and not preview_mode`.
+    foot. Review-session-wide; wipes every response across all
+    instruments. Only when `any_accepting and not preview_mode`.
 
-The whole editing surface lives inside a single `<form>` whose scope is
-**this instrument only**. Save / Submit / Clear / Discard all act on
-the current instrument's responses; navigating to a different page does
-not implicitly save.
+Mental model: instruments are **chapters of one review session**, not
+standalone editing surfaces. The reviewer fills each page (saving as
+they go), then **Submit commits the whole review** in one action.
+"Page actions" act on the current page; "Review-level actions" act on
+the entire session.
+
+| Button | Scope | HTTP | Behavior |
+|---|---|---|---|
+| **Save** | Page | POST `…/{position}/save` | Persist the visible inputs as draft. 303 → `…/{position}?saved=ok` (transient flash in the right-half status panel). |
+| **Discard** | Page | GET `…/{position}` | Plain anchor — re-fetches the page, dropping in-progress unsaved edits. No server state change. |
+| **Page N** | Page | GET `…/{n}` | Plain anchor — navigates to instrument N. Silently drops in-progress unsaved edits on the current page (URL is the source of truth). The current page's button is disabled. |
+| **Submit** | Review-session | POST `/reviewer/sessions/{id}/submit` | Save the current page's inputs (so the in-flight edits aren't lost), then validate every saved response across **all** instruments and stamp `submitted_at` on every assignment in the session. On missing-required without ack: 400, re-render the surface with `missing` populated and `show_acknowledge=True`. On success: 303 → `…/{position}?submitted=ok`. |
+| **Clear all** | Review-session | POST `/reviewer/sessions/{id}/clear` | Wipe every response across every instrument (with confirmation checkbox). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
+
+**Why Submit is session-wide, not per-page.** Conceptually a review is
+one document spread across multiple pages. Per-page submit would
+require the reviewer to remember to submit each page individually,
+which invites missed submissions. The single review-session-wide
+Submit affordance — surfaced at the top *and* bottom of every page —
+makes "I'm done" a single click no matter which page the reviewer is
+on. Submit also acts as an implicit Save for the current page first
+so an in-flight edit on Page 2 isn't lost when the reviewer hits
+Submit there.
+
+**Form HTML mechanics.** The whole editing surface lives inside a
+single `<form>` whose default `action` is `…/{position}/save`. The
+Save button submits to that default action; the Submit button
+overrides via `formaction="/reviewer/sessions/{id}/submit"`. Both
+buttons send the current page's input values. The Save route persists
+those inputs and 303s back to the page; the Submit route persists
+those inputs *and* applies the session-wide submission semantics.
+
+**Cross-page unsaved-edit handling.** Clicking `Page N` (or `Discard`)
+is plain navigation; unsaved edits on the current page are discarded
+silently. The future `beforeunload` warning (see
+"Designed-for-extensibility") prompts before navigating away from a
+dirty form; intentional-discard controls (`Page N` / `Discard` /
+chrome `My Reviews` link) are tagged so they bypass the prompt.
+
+**"Submitted" status on the dashboard.** Once Submit succeeds, every
+assignment in the session has `submitted_at` set. The dashboard's
+session-level pill ("submitted" / "in progress" / "not started")
+follows the same rule it does today (every assignment submitted →
+"submitted"). With session-wide Submit, the rollup is always
+all-or-nothing rather than "submitted on some pages but not others".
 
 ---
 
-## Page selector
+## Per-page status
 
-When the session has more than one instrument, a row of page-selector
-buttons sits between the top action row and the instrument body:
+The right-half panel renders one status pill per instrument,
+positioned immediately above any transient flash banners that may
+land. Status is computed server-side from response data:
 
-- One button per instrument, labelled `Page 1`, `Page 2`, …, in the
-  same order as the URL position scheme.
-- Each button is a Primary `.btn` anchor pointing at
-  `/reviewer/sessions/{session_id}/{n}`.
-- The button for the **current page** is rendered as disabled
-  (`aria-disabled="true"` + `.btn` greyed via the canonical
-  `body.ui-v2 .btn[aria-disabled="true"]` rule). It still occupies its
-  slot so the reviewer's visual context doesn't shift between pages.
-- The selector wraps as needed via flex-wrap; on narrow viewports the
-  buttons stack rather than overflow.
-
-Replaces the Previous / Next pair from PR #417 — direct page navigation
-is more useful than step-through once the URL is the source of truth
-for "which page am I on", and the disabled-current-page treatment is a
-clearer "you are here" signal than greying the boundary buttons.
-
-A small `.rs-page-selector` flex container hosts the row:
-
-```css
-body.ui-v2 .rs-page-selector {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-4);
-}
-```
-
-The selector renders **even on the first page** (single-instrument
-sessions skip it entirely; the test for "more than one instrument" is
-the only gate).
-
----
-
-## Form scope and Save / Submit / Discard semantics
-
-Per-page form scope. All POSTs target
-`/reviewer/sessions/{id}/{position}/...` endpoints and act on the
-current page's response fields only.
-
-| Button | HTTP | Behavior |
+| Pill state | Pill class | Condition |
 |---|---|---|
-| Save draft | POST `…/save` | Persist the visible inputs as draft. 303 → `…/{position}?saved=ok` (banner-success). |
-| Submit | POST `…/submit` | Validate + persist + stamp `submitted_at`. On missing required without ack: 400-render with `missing` populated, `show_acknowledge=True`. On success: 303 → `…/{position}?submitted=ok`. |
-| Discard unsaved edits | GET `…/{position}` | Plain anchor — re-fetches the page, dropping in-progress unsaved edits. |
-| Clear all | POST `…/clear` | Wipe every response on this page (with confirmation checkbox). Does not touch other pages. |
+| `not started` | `.pill.pill-empty` | No saved Response rows for any of this page's assignments. |
+| `in progress` | `.pill.pill-warning` | Some Response rows saved, but at least one required field empty across this page's assignments. |
+| `complete` | `.pill.pill-success` | Every required field on every assignment in this page has a saved value. |
+| `submitted` | `.pill.pill-success` | Every assignment in this page has `submitted_at` set (i.e. the session has been submitted; all pages flip together). |
 
-**Cross-page unsaved-edit handling.** Clicking a different `Page N`
-button is plain navigation; unsaved edits on the current page are
-discarded silently. This matches the per-instrument form scope and
-keeps the URL the source of truth. (Future enhancement could add a
-`beforeunload` warning when the form is dirty — out of scope here.)
+Pill copy: `Page 1: in progress`, `Page 2: complete`, etc. Single-
+instrument sessions still show one pill (`Page 1: …`), since the
+status panel always renders.
 
-**"Submitted" status.** A reviewer's session-level status ("submitted"
-on the dashboard) is the conjunction of all instruments having
-`submitted_at` set for every assignment. Per-instrument submit stamps
-only that instrument's rows; the dashboard pill rolls up across pages.
+The route threads a `page_statuses: list[PageStatus]` into context
+(`PageStatus = {position: int, label: str, state: Literal[…]}`),
+populated for every instrument regardless of how many there are. The
+template iterates and renders one pill per entry.
 
 ---
 
 ## Acknowledge missing required flow
 
-Unchanged from the current implementation, but scoped per-page:
+Acknowledge is now **session-wide**, since Submit is session-wide:
 
-1. Reviewer hits Submit on Page 2 with at least one required field
-   blank.
-2. Server returns 400 + re-renders Page 2 with the missing-required
-   `.banner.banner-warning` near the top and `show_acknowledge=True`.
+1. Reviewer hits Submit on any page with at least one required field
+   blank anywhere in the session.
+2. Server returns 400 + re-renders the page they were on (whichever
+   `{position}` they submitted from) with:
+   - The missing-required `.banner.banner-warning` inside the right-
+     half flash/status panel, listing which page each missing field
+     lives on (so the reviewer knows where to navigate).
+   - `show_acknowledge=True`.
 3. The acknowledge checkbox renders immediately above the bottom
-   action row: "I acknowledge required fields are missing — submit
-   anyway."
-4. Reviewer ticks it and clicks Submit again; the server records the
-   submit + the `acknowledged_missing: true` audit detail.
-
-The acknowledge checkbox only governs submits on the current page. It
-does not pre-acknowledge other pages' missing values; each page
-handles its own ack flow.
+   review-level action row: "I acknowledge required fields are
+   missing — submit anyway."
+4. The reviewer can either navigate to the offending page and fill
+   the gaps, or tick the checkbox and click Submit again. Ticking the
+   checkbox session-wide-acknowledges; the server records the submit
+   + `acknowledged_missing: true` audit detail.
 
 ---
 
@@ -222,13 +239,18 @@ renders read-only:
 - The preview-mode banner (`.banner.banner-info`) renders at the top
   of the body.
 - The reviewer write-path forms are suppressed (no Save / Submit /
-  Discard / Clear). Page selector still renders so the operator can
-  walk through all instruments to verify each one's setup.
+  Discard / Clear). The Page N anchors still render in their slot so
+  the operator can walk through every instrument to verify setup —
+  but the rest of the page-actions row collapses to just the page
+  buttons, and the review-level rows + danger zone don't render at
+  all.
 - Inputs render disabled.
+- The right-half status panel renders without the per-page status
+  pills (preview is read-only and synthetic; per-page state is moot).
 
 The preview URL stays at `/operator/sessions/{id}/preview` (no
-position segment) and lands on Page 1 by default; clicking a page
-selector button on the preview navigates to
+position segment) and lands on Page 1 by default; clicking a Page N
+anchor on the preview navigates to
 `/operator/sessions/{id}/preview/{position}` (mirror of the reviewer
 URL pattern, prefixed with the operator path).
 
@@ -238,11 +260,13 @@ URL pattern, prefixed with the operator path).
 
 | Where | Old label | New label |
 |---|---|---|
-| Top + bottom action rows (Cancel) | `Cancel — discard unsaved edits` | `Discard unsaved edits` |
-| Page selector | n/a | `Page 1`, `Page 2`, … |
+| Page actions row | `Save draft` | `Save` |
+| Page actions row | `Cancel — discard unsaved edits` | `Discard` |
+| Page actions row | n/a | `Page 1`, `Page 2`, … |
+| Review-level rows | `Submit` | `Submit` (unchanged) |
+| Danger Zone | `Clear all` | `Clear all` (unchanged; copy explains "every response across every page") |
 
-Other labels (`Save draft`, `Submit`, `Clear all`, `Sign out`, `My
-Reviews`) are unchanged.
+Other labels (`Sign out`, `My Reviews`) are unchanged.
 
 ---
 
@@ -254,10 +278,8 @@ re-architecting; see "Designed-for-extensibility" below.
 
 - **`beforeunload` warning** when the form is dirty.
 - **Standalone submission-confirmation page** ("thank you" surface).
-  Today the post-submit signal is the `?submitted=ok` flash banner.
-- **Per-page status pill on the page selector** (e.g. each `Page N`
-  button shows "complete" / "in progress" / "not started"). Useful for
-  sessions with many instruments.
+  Today the post-submit signal is the `?submitted=ok` flash banner in
+  the right-half status panel.
 - **AG Grid replacement of the reviewer-surface `<table>`** (catalog
   `unfinished_business.md` #33 — Segment 15).
 
@@ -265,66 +287,39 @@ re-architecting; see "Designed-for-extensibility" below.
 
 ## Designed-for-extensibility
 
-Notes on how this surface keeps the four deferred features above
+Notes on how this surface keeps the three deferred features above
 non-risky to add later. Each item lists the design call this spec
 makes today + the small follow-on the deferred work needs.
 
 ### beforeunload warning
 
-- **Today.** Clicking a `Page N` selector button or `Discard unsaved
-  edits` is plain navigation; unsaved edits are silently dropped.
+- **Today.** Clicking a `Page N` button or `Discard` is plain
+  navigation; unsaved edits are silently dropped.
 - **Design call.** The editing form carries a stable id (`id="rs-form"`
-  or similar), and every intentional-discard control (`Discard unsaved
-  edits` anchor + `Page N` selector buttons + `My Reviews` chrome
-  link) carries a `data-discards-edits` attribute. A future hook
-  attaches a `beforeunload` listener tied to a `dirty` flag on the
-  form (set on first `input` event); clicks that match
-  `[data-discards-edits]` set a `intentional` flag that the listener
-  reads and lets through without prompting.
+  or similar), and every intentional-discard control (`Discard`
+  anchor + `Page N` anchors + `My Reviews` chrome link) carries a
+  `data-discards-edits` attribute. A future hook attaches a
+  `beforeunload` listener tied to a `dirty` flag on the form (set on
+  first `input` event); clicks that match `[data-discards-edits]` set
+  an `intentional` flag that the listener reads and lets through
+  without prompting.
 - **What lands later.** A small inline `<script>` block in the same
   shape as the existing rs-paginated handler. No template
   restructuring needed.
 
 ### Standalone submission-confirmation page
 
-- **Today.** `POST …/submit` 303s to `…/{position}?submitted=ok`,
-  which re-renders the surface with a `.banner.banner-success`.
+- **Today.** `POST /reviewer/sessions/{id}/submit` 303s to
+  `…/{position}?submitted=ok`, which re-renders the surface with a
+  `.banner.banner-success` inside the right-half status panel.
 - **Design call.** The submit route's redirect target is computed via
   a small helper (call it `submit_redirect_url(review_session,
   position)`) rather than inlined. Today the helper returns
   `f"/reviewer/sessions/{id}/{position}?submitted=ok"`. Tomorrow it
-  can return `f"/reviewer/sessions/{id}/submitted"` for a session-level
-  confirmation, or `f"/reviewer/sessions/{id}/{position}/submitted"`
-  for a per-page confirmation, depending on which flavour ships.
+  can return `f"/reviewer/sessions/{id}/submitted"` (session-level
+  thank-you) without touching any other code path.
 - **What lands later.** A new template (`reviewer/submitted.html` or
   similar) plus the helper change. The surface itself doesn't move.
-
-### Per-page status pill on the page selector
-
-- **Today.** Page selector buttons carry the label only (`Page 1`,
-  `Page 2`, …). The current page is `aria-disabled="true"`; otherwise
-  buttons are pure navigation.
-- **Design call.** The route threads a `page_statuses` mapping
-  (`{position: "complete" | "in_progress" | "not_started"}`) into
-  template context, populated even now (every entry is currently
-  unused). The page-selector template already iterates over `pages`
-  with each entry exposing both the label and (lookup-by-position) a
-  status; today the template ignores the status. The Jinja shape:
-
-  ```jinja
-  {% for page in pages %}
-    <a class="btn{% if page.is_current %} aria-disabled-link{% endif %}"
-       href="…/{{ page.position }}"
-       {% if page.is_current %}aria-disabled="true"{% endif %}>
-      Page {{ page.position }}
-      {# status pill slot — empty today, populated by the deferred PR. #}
-    </a>
-  {% endfor %}
-  ```
-
-- **What lands later.** Drop a `<span class="pill pill-…">…</span>`
-  inside the existing slot, plus the per-status copy decision. No
-  context-shape changes, no route plumbing changes.
 
 ### AG Grid table
 
