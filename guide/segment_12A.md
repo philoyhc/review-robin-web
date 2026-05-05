@@ -1,21 +1,52 @@
-# Segment 12A — Session metadata export / import (CSV)
+# Segment 12A — Session export / import + data extraction (CSV)
 
-Stub. Implementation plan for a round-trippable CSV format that
-captures the user-inputted *configuration* of a review session
-(everything an operator typed into Setup) without including the
-data-volume-heavy people lists (reviewers, reviewees, assignments).
-The export side gives operators a sharable backup / template; the
-import side rehydrates a freshly-named session from that template.
+Stub. Implementation plan covering two paired concerns that share
+the same CSV vocabulary and the same Session Home anchor:
+
+1. **Configuration export / import.** A round-trippable CSV that
+   captures the user-inputted *configuration* of a review session
+   (everything an operator typed into Setup). Export gives
+   operators a sharable backup / template; import rehydrates a
+   freshly-named session from that template. Configuration only
+   — no people lists, no responses.
+2. **Data extraction card.** The Session Home **Extract Data**
+   card (currently a `placeholder_card` stub at
+   `session_detail.html:187`) ships as a real card with five
+   separate CSV downloads — Session settings, Reviewers,
+   Reviewees, Assignments, Responses — plus a "Download all"
+   zip bundle. Read-only; no import counterpart.
+
+Both halves live in 12A because the configuration export is
+already one of the five extracts, and the Extract Data card is the
+natural anchor for it. Folding them avoids a second segment (the
+prior "Segment 11H — Extract Data" placeholder in
+`guide/todo_master.md`) and keeps one CSV vocabulary.
 
 This is the smallest useful slice of Segment 12 (export / audit
-retention / data-rehydration), pulled forward as **12A** so the rest
-of Segment 12 can land on top.
+retention / data-rehydration), pulled forward as **12A** so the
+rest of Segment 12 (audit retention) can land on top.
 
 ## Status
 
-Planning. Sized as **2 PRs** in dependency order — export first
-(narrower contract, single source of truth on the CSV shape), import
-second (consumes that exact shape).
+Planning. Sized as **6 PRs** in dependency order:
+
+1. **PR 1 — Config export.** Narrow contract; single source of
+   truth on the CSV shape.
+2. **PR 2 — Config import.** Consumes that exact shape.
+3. **PR 3 — Reviewers + reviewees extract.** Two CSVs that
+   round-trip with the existing per-entity upload flows.
+4. **PR 4 — Assignments extract.** Round-trippable with the
+   existing manual-assignments upload.
+5. **PR 5 — Responses extract.** New CSV shape (no import
+   counterpart — operators don't upload responses).
+6. **PR 6 — Extract Data card on Session Home.** Replaces the
+   placeholder, wires all five downloads + the zip bundle, swaps
+   the Quick Setup configuration-import slot's placeholder for
+   the live PR 2 form.
+
+PRs 3-5 are parallelizable once PR 1's serialization helpers
+(`Row` shape, filename convention, audit event family) are in
+place. PR 6 depends on 1-5.
 
 ## Why CSV (not JSON / YAML)
 
@@ -31,27 +62,30 @@ second (consumes that exact shape).
   their type next to them, so the importer doesn't have to keep a
   parallel schema.
 
-The CSV is **not** a general data-dump format. It captures
-configuration only; reviewers / reviewees / assignments / responses
-ship via their existing CSV upload flows or the response-extract
-flow that the rest of Segment 12 covers.
+The 3-column shape is **not** a general data-dump format — it's
+configuration only. Reviewers / reviewees / assignments / responses
+ship via the data-extraction CSVs (this segment) using their natural
+per-entity column shapes, not the 3-column key/value shape.
 
 ## Scope
 
 In:
 
+### Configuration round-trip (PRs 1-2)
+
 - **Export** at `GET /operator/sessions/{id}/export-config.csv`
-  (anchor: a "Download config" button on Session Home next to the
-  existing "Extract Data" placeholder card, or on the Session
-  Details card — pick one in PR 1). Streams a 3-column CSV with
-  every user-inputted configuration field, in deterministic order.
+  (anchor: the Session settings download button inside the Extract
+  Data card on Session Home — see "Data extraction card" below).
+  Streams a 3-column CSV with every user-inputted configuration
+  field, in deterministic order.
 - **Import** at `POST /operator/sessions/{id}/import-config` with
   a `file=…` multipart payload. Reads the CSV, validates every row,
   applies all mutations atomically, and 303s back to Session Home
   on success or the same page with a validation summary card on
-  failure. Anchor: a "Import config" button on Session Home, gated
-  to draft sessions only (locked sessions reject the upload at the
-  service layer).
+  failure. Anchor: the configuration-import slot of the Quick Setup
+  card (Segment 11J's fourth slot — placeholder today, lit up in
+  PR 6 of this segment). Gated to `draft` / `validated` sessions
+  only; locked sessions reject the upload at the service layer.
 - New service module `app/services/session_config_io.py` with two
   pure functions: `serialize_session_config(session) -> list[Row]`
   and `apply_session_config(session, rows) -> ApplyResult`. Routes
@@ -62,18 +96,79 @@ In:
   round-trip, partial / malformed CSV rejection, lifecycle gate,
   and the audit events.
 
+### Data extraction (PRs 3-6)
+
+- **Five separate CSV downloads** anchored on the **Extract Data**
+  card on Session Home, each with its own button + filename:
+  - **Session settings** (`session-{code}-settings.csv`) — the
+    same 3-column config CSV PR 1 ships.
+  - **Reviewers** (`session-{code}-reviewers.csv`) — round-trips
+    with the existing reviewer upload (`ReviewerName`,
+    `ReviewerEmail`, `ReviewerTag1`, `ReviewerTag2`,
+    `ReviewerTag3`).
+  - **Reviewees** (`session-{code}-reviewees.csv`) — round-trips
+    with the existing reviewee upload (`RevieweeName`,
+    `RevieweeEmail`, `RevieweeTag1`-3, plus optional
+    `ProfileLink` / per-session pair-context columns matching
+    what the importer expects).
+  - **Assignments** (`session-{code}-assignments.csv`) —
+    round-trips with the existing manual-assignments upload
+    (`ReviewerEmail`, `RevieweeEmail`, `IncludeAssignment` —
+    plus `Instrument` once multi-instrument upload is in scope;
+    today the export emits one assignment row per
+    (assignment, instrument) tuple to keep responses joinable).
+  - **Responses** (`session-{code}-responses.csv`) — new shape,
+    one row per saved response, with the join keys denormalized
+    so the file is human-readable without the other CSVs:
+    `ReviewerEmail`, `RevieweeEmail`, `InstrumentName`,
+    `InstrumentShortLabel`, `FieldKey`, `FieldLabel`, `Value`,
+    `SavedAt`, `SubmittedAt`, `Version`. No import counterpart;
+    operators don't upload responses.
+- **"Download all" zip bundle** at
+  `GET /operator/sessions/{id}/export.zip` containing all five
+  CSVs at the filenames above. The card surfaces this as a single
+  "Download all" button next to the per-file buttons.
+- **No lifecycle gate.** Extraction is read-only and useful at
+  every state — `draft` (sanity-check the config you typed),
+  `validated`, `ready` (mid-flight responses snapshot), `closed`
+  (final dataset). The Extract Data card stays interactive in
+  every lifecycle state, including behind the yellow lock card —
+  which by convention disables setup mutations only, not reads.
+- **One service module per CSV**, each with a single
+  `serialize_*(session) -> Iterable[Row]` function. They live
+  alongside `session_config_io.py` (e.g.
+  `app/services/extracts/{reviewers,reviewees,assignments,
+  responses}_extract.py`) and import from it for the shared
+  `Row` shape and CSV streaming helper. Routes stay thin.
+- **Six audit events** (one per download, plus the bundle):
+  `session.{settings,reviewers,reviewees,assignments,responses,
+  bundle}_extracted`, all with detail
+  `{"row_count": <int>}`. Audit-event detail-schema convention
+  lands in Segment 11K; until then these match the simplest
+  shape `audit_events.detail` already carries.
+
 Out (deferred):
 
-- **Reviewers / reviewees / assignments.** These have their own
-  upload flows on their respective Manage pages; the existing
-  helpers stay the source of truth. The config export deliberately
-  excludes them so a single template can drive multiple sessions
-  with different cohorts.
-- **Per-reviewer / per-reviewee state** (invitation tokens, sent
-  timestamps, Response rows, audit events). Out of scope.
+- **Reviewer / reviewee / assignment import via 12A.** Out — they
+  already have their own upload flows on their Manage pages and
+  on the Quick Setup card (Segment 11J). 12A's import half is
+  configuration-only; the per-entity CSVs are extract-only. The
+  one wrinkle: the file shapes match across both directions, so
+  an operator can take a 12A reviewers extract and feed it back
+  into the existing reviewer-upload flow on a different session
+  without conversion. That's the round-trip we want.
+- **Response import.** Operators don't upload responses; only
+  reviewers create them via the response surface. No round-trip
+  for the responses CSV.
+- **Per-reviewer / per-reviewee state beyond the CSVs.** Invitation
+  tokens, sent / opened timestamps, audit-event log. Out of scope
+  — those are operator-internal records, not data the operator
+  exports for downstream analysis. Audit-log export lands with the
+  rest of Segment 12 (audit retention).
 - **Session lifecycle state** (`status`, `deadline_closed_at`,
   `is_seeded` on RTDs). Lifecycle is owned by the activation /
-  deadline / pause flow; the importer never writes these.
+  deadline / pause flow; the importer never writes these and the
+  Session settings extract omits them.
 - **Operator-editable email templates.** Coming in Segment 11E
   (`email_template_overrides` JSON column on `ReviewSession`). When
   that ships, fold the column into the export schema as a follow-on
@@ -259,8 +354,11 @@ yet; an operator can download but not upload.
     attachment; filename="{session.code}-config.csv"`.
   - Writes an audit `session.config_exported` event with detail
     `{"row_count": len(rows)}`.
-- "Download config" anchor on Session Home (location TBD — propose
-  the Session Details card's footer; revisit at PR review time).
+- "Download config" anchor on Session Home: a temporary button on
+  the Session Details card's footer in PR 1, retired in PR 6 when
+  the Extract Data card subsumes it as the "Session settings"
+  download row. PR 1 doesn't need to wait for PR 6 — operators can
+  use the temporary button as soon as PR 1 ships.
 - Unit tests on `serialize_session_config` for each row class +
   one golden-fixture test that pins the byte-exact output for a
   fully-populated session.
@@ -293,9 +391,13 @@ session into the same shape.
     convention).
   - On validation error: re-render Session Home with a
     `.banner.banner-warning` enumerating the errors.
-- "Import config" form on Session Home (file input + submit
-  button). Anchor + visibility decision: hide on
-  `status not in {"draft", "validated"}`.
+- "Import config" form on Session Home: lives in the Quick Setup
+  card's fourth slot (the "Configuration import" placeholder
+  Segment 11J shipped). PR 2 swaps the placeholder for a real
+  `<input type="file">` + submit; no new anchor on Home. The
+  visibility rule is already enforced by the slot's lifecycle
+  framing (`draft` / `validated` only; disabled behind the yellow
+  lock card otherwise).
 - Audit `session.config_imported` with detail
   `{"counts": {"session": 1, "rtds": 3, "instruments": 2,
   "display_fields": 6, "response_fields": 8}}` (real numbers per
@@ -311,8 +413,208 @@ session into the same shape.
   - Conflict path: session has assignments referencing a not-in-
     CSV instrument ⇒ 409, no rows written.
 
+### PR 3 — Reviewers + reviewees extract
+
+**Goal.** Two CSV downloads matching the column shape of the
+existing per-entity uploads, so an operator can extract from one
+session and feed the file straight into another session's upload.
+
+- New module `app/services/extracts/__init__.py` defining a shared
+  `Row = list[str]` (or per-extract `NamedTuple`) and a tiny
+  `stream_csv(rows, fieldnames) -> Iterator[bytes]` helper that
+  wraps `csv.writer` over a `StringIO` chunked to keep memory flat
+  for sessions with thousands of reviewers.
+- New module `app/services/extracts/reviewers_extract.py` with
+  `serialize_reviewers(session) -> Iterable[Row]`. Column order
+  matches the importer at `csv_imports.parse_reviewer_csv:138`:
+  `ReviewerName`, `ReviewerEmail`, `ReviewerTag1`, `ReviewerTag2`,
+  `ReviewerTag3`. Inactive reviewers are included with their
+  current state (the importer treats them as inactive on the
+  next session anyway); no special filter.
+- New module `app/services/extracts/reviewees_extract.py` with
+  `serialize_reviewees(session) -> Iterable[Row]`. Same shape:
+  `RevieweeName`, `RevieweeEmail`, `RevieweeTag1-3`, plus any
+  `pair_context_*` columns the per-session schema carries (read
+  from the same place the importer reads them — single source of
+  truth).
+- Two new routes:
+  - `GET /operator/sessions/{id}/export/reviewers.csv`
+  - `GET /operator/sessions/{id}/export/reviewees.csv`
+  Each streams `text/csv` with
+  `Content-Disposition: attachment; filename="session-{code}-reviewers.csv"`
+  (etc.). Each emits its own audit event
+  (`session.reviewers_extracted`, `session.reviewees_extracted`)
+  with `{"row_count": <int>}`.
+- Tests:
+  - Golden-fixture CSV pinning the byte-exact output for a
+    populated session (one per extract).
+  - **Round-trip test**: extract from session A → upload to
+    session B via the existing `csv_imports.parse_reviewer_csv`
+    + `save_reviewers` path → assert session B's reviewer set
+    matches A's. Same for reviewees.
+  - Empty-session case: header row only, no body rows;
+    `row_count=0` in the audit.
+
+### PR 4 — Assignments extract
+
+**Goal.** Round-trippable CSV matching the manual-assignments
+upload at `assignments.parse_manual_csv:166`.
+
+- New module `app/services/extracts/assignments_extract.py` with
+  `serialize_assignments(session) -> Iterable[Row]`. Column order
+  matches the importer: `ReviewerEmail`, `RevieweeEmail`,
+  `IncludeAssignment`. One row per assignment; emits
+  `IncludeAssignment=true` for active assignments and `false`
+  for inactive ones (so the upload round-trip preserves the
+  active/inactive split exactly).
+- **Multi-instrument shape.** When a session has multiple
+  instruments, today's manual CSV implicitly applies one
+  `Assignment` row to all instruments via `instrument_id`.
+  PR 4 emits one row per (assignment, instrument) tuple with an
+  `Instrument` column (matching the per-instrument label) so the
+  output stays unambiguous; the upload-side `parse_manual_csv`
+  already collapses repeated `(ReviewerEmail, RevieweeEmail)`
+  pairs into one assignment, so the round-trip still works on the
+  multi-instrument case. If the importer doesn't yet read an
+  `Instrument` column, PR 4 ships the column anyway and the
+  importer ignores it (forward-compatible — the multi-instrument
+  upload is a Segment 13 concern).
+- New route `GET /operator/sessions/{id}/export/assignments.csv`
+  + audit `session.assignments_extracted` with `{"row_count":
+  <int>}`.
+- Tests:
+  - Golden-fixture CSV.
+  - Round-trip: extract from session A → upload to session B
+    (with reviewers / reviewees pre-populated to match) →
+    assignments match.
+  - Multi-instrument session: N assignments × M instruments ⇒
+    N×M rows in the output.
+
+### PR 5 — Responses extract
+
+**Goal.** A new CSV shape for response data — read-only, no
+import counterpart. Designed for downstream analysis: each row
+is self-contained (denormalized join keys) so an analyst can
+open the file in Excel without joining against the other CSVs.
+
+- New module `app/services/extracts/responses_extract.py` with
+  `serialize_responses(session) -> Iterable[Row]`. Column order:
+  `ReviewerEmail`, `RevieweeEmail`, `InstrumentName`,
+  `InstrumentShortLabel`, `FieldKey`, `FieldLabel`, `Value`,
+  `SavedAt` (ISO-8601), `SubmittedAt` (ISO-8601 or empty for
+  saved-but-not-submitted), `Version`.
+- One row per `Response` row in the database (already at
+  `(assignment_id, response_field_id)` granularity per the
+  unique-constraint at `app/db/models/response.py:19`). Order
+  rows by `(ReviewerEmail, RevieweeEmail, instrument.order,
+  response_field.order)` — deterministic, matches the reviewer
+  surface's display order.
+- **Empty values.** A `null` `Response.value` (the reviewer
+  cleared the field) emits an empty cell. A reviewer who never
+  saved any value for a field has no `Response` row and so emits
+  no row in the CSV — the absence of a row signals "no response
+  recorded" by itself. This keeps the CSV row count equal to
+  `len(responses)` and makes "responses received" a one-line
+  count from the file.
+- **Numeric / list values.** Integer / decimal values export as
+  their `Response.value` Text representation (already
+  serialization-stable from the reviewer surface). List-type
+  responses export as the same comma-separated literal the
+  database stores. No type column on the responses extract — if
+  a downstream consumer needs typing, they join against the
+  Session settings extract on `FieldKey`.
+- New route `GET /operator/sessions/{id}/export/responses.csv`
+  + audit `session.responses_extracted` with `{"row_count":
+  <int>}`.
+- Streams the CSV from a yielding generator so a session with
+  100k responses doesn't OOM the worker (`StreamingResponse`
+  + a tuned chunk size; verify under integration test by
+  asserting the response is `chunked` and not buffered).
+- Tests:
+  - Golden-fixture CSV.
+  - Empty session (no responses): header row only.
+  - Numeric / decimal / list response types each round-trip
+    through their `Response.value` text representation
+    correctly.
+  - Saved-but-not-submitted vs. submitted: the
+    `SubmittedAt` column distinguishes them.
+  - Multi-instrument session: rows from all instruments
+    interleaved per the deterministic order.
+
+### PR 6 — Extract Data card on Session Home
+
+**Goal.** Replace the placeholder Extract Data card with a real
+card surfacing all five downloads + the zip bundle. Retire the
+temporary "Download config" button PR 1 placed on Session
+Details. Light up Quick Setup's configuration-import slot (the
+PR 2 form) by swapping its placeholder body.
+
+- Delete the `placeholder_card(id="extract-data", ...)` block at
+  `app/web/templates/operator/session_detail.html:187`. Replace
+  with a real `.card` containing one row per extract (label +
+  count summary + Download button) plus a "Download all"
+  affordance.
+- New view-shape adapter `views.build_extract_data_context(session)`
+  returning per-row counts (`reviewer_count`, `reviewee_count`,
+  `assignment_count`, `response_count`) plus the zip bundle's
+  total. Reuses the existing per-entity count helpers
+  (`csv_imports.existing_reviewer_count`, etc.) and adds a
+  one-liner `responses.session_response_count(session)` for the
+  responses count.
+- New route `GET /operator/sessions/{id}/export.zip` streaming
+  a zip with all five CSVs at the canonical filenames. Use
+  `zipfile.ZipFile(..., mode="w")` over a `BytesIO` for
+  small-to-medium sessions; revisit chunked streaming if the
+  responses CSV proves too big for a 30s App Service request
+  budget at production scale (track in `docs/status.md` as a
+  Segment 14 follow-up). Audit `session.bundle_extracted` with
+  `{"row_counts": {"settings": ..., "reviewers": ..., ...}}`.
+- Quick Setup configuration-import slot: replace the
+  placeholder body with the live `<form
+  action="/operator/sessions/{id}/import-config" method="post"
+  enctype="multipart/form-data">` PR 2 ships, matching the file
+  input + submit shape of slots 1-3 and reusing their inline
+  confirmation banner pattern (replacement-confirmation banner
+  on populated session, `.banner.banner-error` on parse /
+  validation failure with mandatory `.btn.alert` Cancel per
+  Segment 11J's convention).
+- Retire the temporary Session Details "Download config"
+  button from PR 1 — its place is taken by the Session settings
+  row in the new Extract Data card.
+- Tests:
+  - Card renders five download rows on a populated session
+    with the right counts.
+  - Card renders five download rows on an empty session with
+    zero counts (still functional — empty CSVs are valid).
+  - Lock state on `ready` / `closed`: card stays interactive
+    (extraction is read-only).
+  - Zip bundle round-trip: download → unzip → each member CSV
+    matches the per-file extract byte-for-byte.
+  - Configuration-import slot Quick Setup integration:
+    upload via the slot 303s through PR 2's import path; lock
+    states gate per the existing slot rules.
+
 ## Implementation pointers
 
+- **One CSV vocabulary, two shapes.** PRs 1-2's configuration CSV
+  is the 3-column key/value/data-type shape. PRs 3-5's per-entity
+  extracts are wide CSVs whose column order matches the existing
+  per-entity importers (so reviewer / reviewee / assignment files
+  round-trip with the upload flows on the Manage pages and on
+  Quick Setup). Don't try to unify the two shapes — they serve
+  different purposes and the per-entity round-trip is what makes
+  the extracts useful.
+- **Filename convention.** Every download is
+  `session-{session.code}-{kind}.csv` (or `.zip` for the bundle).
+  The session code is operator-typed and stable; using the
+  numeric `session.id` would be opaque. Centralise the filename
+  in a helper (`extracts.filename(session, kind)`) so every
+  route reaches for the same string.
+- **Streaming.** Wrap each extract route's body in
+  `StreamingResponse(stream_csv(rows), media_type="text/csv")` to
+  keep memory flat on large sessions. The responses extract is
+  the one that matters at production scale; the others are
+  small enough that streaming is just consistency.
 - **CSV parsing.** Use `csv.DictReader` (stdlib). Don't introduce
   a new dependency.
 - **Datetime formatting.** Use `datetime.isoformat()` on export and
@@ -349,44 +651,75 @@ session into the same shape.
 
 ## Out of scope (cross-references)
 
-- **Reviewer / reviewee / assignment CSVs** — existing per-table
-  upload flows on the Manage pages. See Segment 6 / 7. The config
-  CSV deliberately omits them.
+- **Reviewer / reviewee / assignment import via 12A.** Existing
+  per-table upload flows on the Manage pages and on Quick Setup
+  (Segment 11J) stay the source of truth. 12A's per-entity CSVs
+  are extract-only; they reuse the importers' column shapes
+  precisely so an operator can feed them back through those
+  existing upload flows without conversion.
 - **Operator-editable email templates** — Segment 11E. When
   `email_template_overrides` ships, fold its key path into the
   export schema as a follow-on patch.
-- **Audit retention / response extract** — rest of Segment 12.
-  This segment's `apply_session_config` writes a single
-  `session.config_imported` audit event; per-row diff is not
-  emitted (would balloon the event log).
+- **Audit retention / audit-log export** — rest of Segment 12.
+  This segment's importer writes a single
+  `session.config_imported` audit event; the extracts each emit
+  one event per download. Per-row diffs are not emitted (would
+  balloon the event log).
+- **Audit-event `detail` schema convention** — Segment 11K. The
+  extract audit events here use the simplest
+  `{"row_count": <int>}` shape; if 11K lands first, fold its
+  convention in.
 - **Cross-deployment / cross-version** — assumes same app version
   on both ends. A future schema-versioned wrapper (`# version: 1`
-  comment line at the top of the CSV) is the natural extension
+  comment line at the top of each CSV) is the natural extension
   but not in scope here.
+- **Segment 11H (Extract Data) as a separate segment.** Folded
+  into 12A by this plan; remove its entry from
+  `guide/todo_master.md` "Upcoming" when PR 6 lands.
 
 ## Test impact
 
-- Two new test files —
+- New unit tests per extract module —
   `tests/unit/test_session_config_io.py` (round-trip,
-  per-row-type parsing, error collection) and
+  per-row-type parsing, error collection),
+  `tests/unit/test_reviewers_extract.py`,
+  `tests/unit/test_reviewees_extract.py`,
+  `tests/unit/test_assignments_extract.py`,
+  `tests/unit/test_responses_extract.py`.
+- Integration test files per route surface —
   `tests/integration/test_session_config_io_routes.py` (auth,
-  lifecycle gate, multipart upload, audit events).
-- One golden fixture under `tests/fixtures/` — a `.csv` of a
-  fully-populated session that pins the byte-exact serialization.
-  Future contract changes to the CSV shape have to deliberately
-  update the fixture, which is the cheapest place to discuss
-  them.
-- No changes to the existing reviewer/reviewee/assignment test
-  suites — those flows stay untouched.
+  lifecycle gate, multipart upload, audit events) and
+  `tests/integration/test_extracts_routes.py` (auth, audit events,
+  zip bundle, Extract Data card render).
+- One golden fixture per extract under `tests/fixtures/extracts/`
+  — `.csv` files for a fully-populated session. Future contract
+  changes to any CSV shape have to deliberately update the
+  fixture, which is the cheapest place to discuss them.
+- **Round-trip integration tests** for the per-entity extracts:
+  upload from session A → extract → re-upload to session B →
+  assert state matches. These pin the contract that the extracts
+  feed the existing importers without conversion.
+- No changes to the existing reviewer / reviewee / assignment
+  upload tests — those flows stay untouched.
 
 ## Doc impact
 
 - `docs/status.md` gains a timeline entry per PR.
-- `guide/todo_master.md` adds Segment 12A under **Upcoming**
-  before PR 1 ships; moves to **Done** under the existing
-  Segment 11 / Resolved siblings once PR 2 lands.
-- `spec/architecture.md` may want a one-liner under "Data import /
-  export" pointing at the CSV shape; verify on PR 1 review.
-- No spec doc for the CSV shape itself — this guide doubles as
-  the spec until the format proves stable across two or three
+- `guide/todo_master.md`:
+  - Adds Segment 12A under **Upcoming** before PR 1 ships;
+    moves to **Done** under the existing Segment 11 / Resolved
+    siblings once PR 6 lands.
+  - **Removes the standalone "Segment 11H — Extract Data"
+    entry** from "Upcoming" (folded into 12A by this plan).
+  - Updates the "Open question on Segment 12 scope" footer:
+    with Extract Data folded in, Segment 12 narrows to
+    audit-retention only, gated on Segment 11K.
+- `guide/segment_11J.md` — the configuration-import slot's
+  graduation step (PR 6) is now pinned; update 11J's
+  "Interaction with Segment 12A" section to point at PR 6 by
+  name when 12A lands.
+- `spec/architecture.md` — one-liner under "Data import /
+  export" pointing at the CSV shapes; verify on PR 1 review.
+- No spec doc for the CSV shapes themselves — this guide doubles
+  as the spec until the format proves stable across two or three
   consumers; promote then.
