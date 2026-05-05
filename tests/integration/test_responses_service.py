@@ -171,7 +171,6 @@ def test_submit_missing_required_returns_warning_without_audit(db: Session) -> N
         reviewer=reviewer,
         user=op,
         upserts=[],
-        acknowledge_missing=False,
         correlation_id="c1",
     )
 
@@ -249,7 +248,6 @@ def test_reviewer_session_state_submitted(db: Session) -> None:
         upserts=[
             ResponseUpsert(assignment_id=assignment.id, field_key="rating", value="4"),
         ],
-        acknowledge_missing=False,
         correlation_id="c1",
     )
 

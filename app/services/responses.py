@@ -272,17 +272,19 @@ def submit(
     reviewer: Reviewer,
     user: User,
     upserts: list[ResponseUpsert],
-    acknowledge_missing: bool,
     correlation_id: str,
 ) -> SubmitResult:
     """Persist any pending upserts, validate required fields, then either
-    surface a missing-required warning or stamp ``submitted_at = now()``
-    on every Response row for this reviewer's assignments.
+    block on missing-required or stamp ``submitted_at = now()`` on every
+    Response row for this reviewer's assignments.
 
-    The first call with required missing returns ``submitted=False`` and
-    writes no audit event. The second call with ``acknowledge_missing``
-    set proceeds and writes the audit event with
-    ``acknowledged_missing=True``.
+    Submit is a hard gate: any missing required field anywhere in the
+    session blocks submission. Drafts written via ``upserts`` still
+    commit on a blocked submit so the reviewer's typed values aren't
+    lost. There is no acknowledge-and-submit-anyway path — the
+    reviewer must fill the missing fields (or remove their value
+    elsewhere if the operator has already loosened a ``required``
+    constraint) before the submit can land.
     """
     assignments = _reviewer_assignments(db, reviewer, review_session.id)
     assignment_index = {a.id: a for a in assignments}
@@ -322,7 +324,7 @@ def submit(
         position_by_instrument_id=position_by_instrument_id,
     )
 
-    if missing and not acknowledge_missing:
+    if missing:
         # Persist the draft writes that landed before the missing
         # check; they're useful for the user even on a blocked submit.
         db.commit()
@@ -346,7 +348,6 @@ def submit(
         event_type="responses.submitted",
         summary=(
             f"Submitted {submitted_count} response{'' if submitted_count == 1 else 's'}"
-            + (f" ({len(missing)} missing)" if missing else "")
         ),
         actor_user_id=user.id,
         session_id=review_session.id,
@@ -354,8 +355,6 @@ def submit(
             "session_id": review_session.id,
             "reviewer_id": reviewer.id,
             "count": submitted_count,
-            "missing_required_count": len(missing),
-            "acknowledged_missing": bool(missing),
         },
         correlation_id=correlation_id,
     )

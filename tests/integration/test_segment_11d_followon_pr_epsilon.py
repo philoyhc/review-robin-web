@@ -316,9 +316,9 @@ def test_missing_required_card_carries_cancel_dismiss_button(
     ).text
     assert "data-rs-missing-dismiss" in body
     assert ">\n          Cancel\n        </button>" in body
-    # The acknowledge checkbox is still rendered — the card is purely
-    # an information surface, not a submission gate.
-    assert 'name="acknowledge_missing"' in body
+    # Submit is a hard gate when required fields are missing; the
+    # retired acknowledge-and-submit-anyway checkbox does not render.
+    assert 'name="acknowledge_missing"' not in body
 
 
 def test_missing_required_card_absent_when_no_gaps(

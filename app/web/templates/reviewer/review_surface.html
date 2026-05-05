@@ -89,10 +89,6 @@
           </li>
         {% endfor %}
       </ul>
-      <p>
-        Tick the box below the form and submit again to record your
-        responses anyway.
-      </p>
       <div class="rs-missing-card-actions">
         <button type="button" class="btn secondary" data-rs-missing-dismiss>
           Cancel
@@ -267,7 +263,7 @@
                 {% endfor %}
                 {% if group.show_status_col %}
                   <td style="width: 1%; white-space: nowrap; text-align: center;">
-                    {% if row.submitted_at or show_acknowledge %}
+                    {% if row.submitted_at or show_incomplete_marks %}
                       {% if row.is_complete %}
                         <span class="status-icon-complete" title="Complete">✓</span>
                       {% else %}
@@ -291,17 +287,7 @@
       {% endfor %}
       </div>{# /.rs-paginated #}
 
-      {% if any_accepting and not preview_mode %}
-        {% if show_acknowledge %}
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="acknowledge_missing" value="true">
-              I acknowledge required fields are missing — submit anyway.
-            </label>
-          </p>
-        {% endif %}
-        {% include "reviewer/_action_row.html" %}
-      {% elif preview_mode and page_buttons %}
+      {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
         {% include "reviewer/_action_row.html" %}
       {% endif %}
     {% if preview_mode %}</div>{% else %}</form>{% endif %}
