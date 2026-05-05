@@ -17,7 +17,14 @@ Catalog item: `unfinished_business.md` #30.
 ## Status
 
 Planning. Sized as **3 PRs** in dependency order (slots A / B / C +
-the configuration-import placeholder folded into PR C).
+the configuration-import placeholder folded into PR C). **Depends
+on Segment 11H PR A** — 11H ships the inert four-slot scaffold
+(`_quick_setup_card.html` partial, `quick_setup_slot` macro,
+`QuickSetupSlot` dataclass + `views.build_quick_setup_context`),
+and 11J's PRs flip slots from `is_wired=False` to `True` while
+plugging in the `wire_url` and the live banner-population branch.
+None of 11J's PRs introduce markup; the wiring patch on each PR
+is a thin diff against the scaffold's seam.
 
 ## Why a thin convenience surface
 
@@ -32,8 +39,17 @@ into a single Home-page panel; the parsing, validation, audit, and
 `lifecycle.invalidate_if_validated()` calls all stay where they
 already are.
 
+The visual scaffold (the four-slot layout, lock-card lifecycle
+behaviour, DOM IDs / fragment anchors, dormant banner placeholders)
+ships in **Segment 11H PR A** before 11J's first wiring PR. 11J
+adds the live POSTs + the populate-banner-on-error branch + the
+view-adapter extensions that propagate `is_wired=True` and
+`wire_url=…`; everything else is already on the page when 11J
+starts.
+
 That framing also keeps the segment small. The risk surface is
-template + thin route plumbing, not new business rules.
+thin route plumbing + adapter extensions, not new business rules
+and not new markup.
 
 ## Scope
 
@@ -164,21 +180,22 @@ side so the order stays clear.
 
 ## Proposed PR sequence
 
-### PR A — Slots 1 + 2 (Reviewers, Reviewees)
+### PR A — Wire slots 1 + 2 (Reviewers, Reviewees)
 
-**Goal.** Two-slot card on Home that delegates to the existing
-per-entity import pipeline. No assignments slot yet; the third and
-fourth slots remain `placeholder_card` stubs in this PR.
+**Goal.** Flip the Reviewers and Reviewees slots from inert
+(11H scaffold state) to live: each slot's file input + Submit
+become a real `<form action="…/quick-setup/{kind}" method="post"
+enctype="multipart/form-data">` posting to a thin route that
+delegates to the existing per-entity import pipeline. Slots 3
+and 4 stay inert per 11H.
 
-- New template partial `operator/partials/_quick_setup_card.html`
-  with the card chrome + a `quick_setup_slot(...)` Jinja macro that
-  renders one slot's file input, submit button, count indicator,
-  and inline-confirmation block.
-- New view-shape adapter `views.build_quick_setup_context(session)`
-  returning per-slot counts and the disabled / enabled state per
-  the spec's lifecycle table. Service helpers for the counts
-  already exist (`csv_imports.existing_reviewer_count`,
-  `existing_reviewee_count`); the adapter assembles them.
+- **No new template / partial / macro.** 11H's
+  `_quick_setup_card.html` and `quick_setup_slot(slot)` macro
+  already render the slot. PR A only changes the
+  `views.build_quick_setup_context(session)` adapter to set
+  `is_wired=True` and `wire_url="/operator/sessions/{id}/quick-setup/{kind}"`
+  for the two slots PR A activates.
+- **No new dataclass.** `QuickSetupSlot` stays as 11H ships it.
 - Two new routes:
   - `POST /operator/sessions/{id}/quick-setup/reviewers`
   - `POST /operator/sessions/{id}/quick-setup/reviewees`
@@ -193,10 +210,17 @@ fourth slots remain `placeholder_card` stubs in this PR.
   `.banner.banner-error` (with mandatory Cancel button) inside
   that slot, and the URL fragment lands on `#quick-setup-{kind}`.
 - Lifecycle gate stays where it already is in
-  `_handle_import`'s call to `_require_editable`.
-- Disabled / lock-card path for `ready` / `closed` reuses the
-  existing yellow lock card component; verify by snapshot test
-  rather than re-rolling markup.
+  `_handle_import`'s call to `_require_editable`. Lock-card
+  rendering is already correct from 11H — PR A doesn't touch
+  the visual lock state.
+- **Banner population.** 11H's scaffold ships dormant banner
+  containers (`<div class="banner banner-warning
+  banner-scroll-target" id="quick-setup-{kind}-banner"
+  hidden>`). On error / replacement-confirmation render, the
+  context-builder un-hides the right banner and populates its
+  body via the existing
+  `views.cascade_message_for_replace(kind, counts)` helper this
+  PR adds. Markup unchanged from 11H.
 - Tests:
   - Per-slot golden-path upload (each slot independently) on a
     `draft` session — assert the success render carries **no**
@@ -220,15 +244,18 @@ fourth slots remain `placeholder_card` stubs in this PR.
   - Lock state on `ready` / `closed` — slots non-interactive,
     counts still render, post is rejected at the service layer.
 
-### PR B — Slot 3 (Assignments)
+### PR B — Wire slot 3 (Assignments)
 
-**Goal.** Add the assignments slot with its rule-selector / CSV
-toggle.
+**Goal.** Flip slot 3 from inert (11H scaffold state) to live.
+The rule-selector and CSV-mode toggle markup already render
+in 11H; PR B wires them.
 
-- Extend the partial with the rule-selector + CSV-mode toggle.
-  Rule menu renders FullMatrix today; an explanatory caption
-  ("more rules ship with Segment 13") sits under the selector.
-  CSV-mode reuses the file input pattern from slots 1-2.
+- **No partial / macro extension.** 11H ships the rule-
+  selector + CSV-mode toggle (rule menu rendered with the
+  `<select disabled>` showing FullMatrix and the
+  "more rules ship with Segment 13" caption). PR B's adapter
+  flips `is_wired=True` and supplies
+  `wire_url="/operator/sessions/{id}/quick-setup/assignments"`.
 - New route `POST /operator/sessions/{id}/quick-setup/assignments`:
   - Form contains either `mode=rule` + `rule=FullMatrix` or
     `mode=csv` + `file=...`.
@@ -257,17 +284,28 @@ toggle.
     indicator without a flash banner.
   - Lock state on `ready` / `closed`.
 
-### PR C — Configuration-import slot (placeholder)
+### PR C — Configuration-import slot (left inert; graduates in 12A PR 6)
 
-**Goal.** Land the fourth slot as a placeholder framed like the
-other three, so its location is stable when Segment 12A goes live.
+**Goal.** Slot 4 already renders in 11H's scaffold as the
+inert configuration-import placeholder. PR C is a documentation
+slice — confirms the slot's expected wire path and points the
+operator at the eventual graduation. **No code changes.**
 
-- Extend `_quick_setup_card.html` with a fourth section using the
-  same outer markup as the other slots but with a `.placeholder`
-  inner treatment: greyed body, disabled "Import" button, body
-  copy explaining the slot graduates with Segment 12A.
-- No new route; no new service code. The button's `title`
-  attribute points at `guide/segment_12A.md` for the curious.
+(In the original 11J plan PR C extended the partial with the
+fourth section. With 11H scaffolding all four slots up front,
+that markup-creation work has already happened — and PR C's
+remaining job is "confirm slot 4's content and copy match what
+12A PR 6 will graduate.")
+
+- Audit the 11H-rendered slot 4 for the `coming_in="Wired in
+  Segment 12A PR 6"` copy and the disabled `<input
+  type="file">` + Submit shape. If anything has drifted since
+  11H shipped, this PR fixes it; otherwise PR C collapses to a
+  no-op and 11J ships at 2 PRs.
+- Confirm Segment 12A PR 6's wiring path against 11H's seam:
+  the slot's adapter context entry should accept
+  `wire_url="/operator/sessions/{id}/import-config"` from
+  12A's PR 6 with no markup changes.
 - One snapshot test confirming the slot renders on `draft` /
   `validated` and renders disabled-with-counts on `ready` /
   `closed` like its siblings.
