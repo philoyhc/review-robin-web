@@ -183,10 +183,12 @@ suite against a `postgres:16` service container).
   14 concern.
 - **Session Home rebuild (Segment 11B)**: `session_detail.html`
   renders a two-column body. Left column: a **Next Action card**
-  (constant H2 "Next Action", `accent-blue` border, fixed
-  `min-height: 200px`; per-state Primary + Secondary buttons at
-  the bottom; pause confirm in `.next-action-confirm` just above
-  the buttons in `ready`); Quick Setup; Extract Data. Right column:
+  (constant H2 "Next Action", `accent-blue` border; height grows to
+  fit content; per-state Primary + Secondary buttons at the bottom
+  for most states; the Activated state lays out as two body sections
+  separated by an `<hr>` with their own inline buttons — Manage
+  invitations + Monitor responses, then Pause Session); Quick Setup;
+  Extract Data. Right column:
   Session Details + Danger Zone. The two left-column placeholder
   cards plus the Rule Based Assignment card on `/assignments`
   share the canonical `.card.placeholder` class + `placeholder_card`

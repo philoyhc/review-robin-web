@@ -89,9 +89,10 @@ context that helps the operator decide whether to take it.
   button inside the card. The blue framing signals this is the
   page's single most important card and ties visually to the
   primary action it carries.
-- Fixed `min-height: 200px` so the card frame doesn't reflow as
-  the session moves between lifecycle states. Body grows naturally
-  if content needs more room.
+- Card height grows to fit content. There's no fixed `min-height` —
+  early states (empty draft) read short; the Activated state's two-
+  section layout reads taller. Each state's vertical extent matches
+  its content rather than padding to a uniform frame.
 
 **Body layout.** Three vertically-stacked blocks inside the card:
 
