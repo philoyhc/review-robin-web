@@ -230,13 +230,11 @@
                                {{ disabled_attr }}>
                       {% endif %}
                     {% elif data_type == "Integer" or data_type == "Decimal" %}
-                      <input type="number"
+                      <input type="text"
+                             inputmode="{{ 'numeric' if data_type == 'Integer' else 'decimal' }}"
                              name="{{ field_name }}"
                              value="{{ cell.value }}"
                              data-rs-saved-value="{{ cell.value }}"
-                             {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
-                             {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
-                             {% if validation.step is defined %}step="{{ validation.step }}"{% endif %}
                              {{ disabled_attr }}>
                     {% elif data_type == "List" %}
                       <select name="{{ field_name }}"
