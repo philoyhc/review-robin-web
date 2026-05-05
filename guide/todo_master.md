@@ -83,7 +83,7 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - **PR 2 (#465)** — actual editor UI on `/setupinvite`. Two-card `.bottom-grid` layout: composer left, merge tags + Save / Cancel right. Per-template (Invitation / Reminder) selection via `?template=` query. Per-field "Reset to default" forms; `email_template.updated` / `email_template.reset` audit events.
   - **#468** polish — Email Template + Settings button consistency: Invitation / Reminder tabs out of card / normal-sized / flushed left, Save / Cancel at bottom-right of their card, no flash banners (Save disables until dirty), Settings page picks up `?return_to=` plumbing matching the About-page convention.
   - Spec at `spec/email_infra_options.md` for the broader transport landscape (Options A–D: SMTP, Microsoft Graph application permission, Azure Communication Services, third-party transactional). The Graph stub will become Option B once the institution's IT conversation lands.
-  - Plan: `guide/segment_11E_email_template_editor.md`. Catalog `unfinished_business.md` #24 (closed by this segment).
+  - Plan: `guide/archive/segment_11E_email_template_editor.md`. Catalog `unfinished_business.md` #24 (closed by this segment).
 
 ---
 
