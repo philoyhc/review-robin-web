@@ -720,7 +720,7 @@ It carries audit-event copy and is otherwise invisible.
 The 32-char ceiling on `short_label` is a **Setup-side concern** —
 this surface trusts the value it's given. The Instruments Setup
 page enforces it at create / edit time (see
-`guide/segment_11L_instrument_short_label.md` for the single-PR
+`guide/archive/segment_11L_instrument_short_label.md` for the single-PR
 plan that adds the column + Setup-side editor). The reviewer
 surface still ships a defensive
 `max-width: 16em; text-overflow: ellipsis` rule on Page buttons

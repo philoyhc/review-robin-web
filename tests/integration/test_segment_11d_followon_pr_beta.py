@@ -1,6 +1,6 @@
 """PR β — Reviewer surface top-row layout + per-page status pills.
 
-Per `guide/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
+Per `guide/archive/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
 surface — multi-instrument rewrite" → PR β. Description card and
 flash+status panel sit side-by-side in a `.bottom-grid`; the panel
 hosts one per-page status pill per instrument the reviewer is

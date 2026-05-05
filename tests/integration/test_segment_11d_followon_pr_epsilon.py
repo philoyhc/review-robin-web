@@ -1,6 +1,6 @@
 """PR ε — Acknowledge missing required (session-wide) + preview adaptation.
 
-Per `guide/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
+Per `guide/archive/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
 surface — multi-instrument rewrite" → PR ε.
 
 - ``responses.submit`` already validates required fields session-wide;
