@@ -23,6 +23,7 @@ def create_session(
         code=payload.code,
         description=payload.description,
         deadline=payload.deadline,
+        help_contact=payload.help_contact,
         created_by_user_id=user.id,
     )
     db.add(review_session)
@@ -100,7 +101,7 @@ def update_session(
         correlation_id=correlation_id,
     )
     changes: dict[str, list[Any]] = {}
-    for field in ("name", "code", "description", "deadline"):
+    for field in ("name", "code", "description", "deadline", "help_contact"):
         old = getattr(review_session, field)
         new = getattr(payload, field)
         if old != new:

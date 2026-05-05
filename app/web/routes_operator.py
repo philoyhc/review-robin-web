@@ -87,6 +87,7 @@ def create_session(
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
+    help_contact: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -105,6 +106,7 @@ def create_session(
         code=code,
         description=description or None,
         deadline=parsed_deadline,
+        help_contact=help_contact or None,
     )
     review_session = sessions.create_session(
         db,
@@ -622,6 +624,7 @@ def session_edit_submit(
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
+    help_contact: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -644,6 +647,7 @@ def session_edit_submit(
         code=code,
         description=description or None,
         deadline=parsed_deadline,
+        help_contact=help_contact or None,
     )
     sessions.update_session(
         db,

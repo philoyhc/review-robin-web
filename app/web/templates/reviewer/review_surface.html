@@ -25,6 +25,9 @@
     {% if session.deadline %}
       <span class="muted">Deadline: {{ session.deadline.isoformat() }}</span>
     {% endif %}
+    {% if session.help_contact %}
+      <span class="muted">Questions? Contact {{ session.help_contact }}</span>
+    {% endif %}
   </div>
 
   {# Top-row layout (PR β): description card half-width-left,
