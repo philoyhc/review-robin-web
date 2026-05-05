@@ -97,22 +97,11 @@ def _setup_two_instrument_session(
         .where(Instrument.session_id == review_session.id)
         .where(Instrument.id != first.id)
     ).scalar_one()
-    seed_assignment = db.execute(
-        select(Assignment).where(Assignment.session_id == review_session.id)
-    ).scalar_one()
-    db.add(
-        Assignment(
-            session_id=review_session.id,
-            reviewer_id=seed_assignment.reviewer_id,
-            reviewee_id=seed_assignment.reviewee_id,
-            instrument_id=second.id,
-            include=True,
-            created_by_mode="full_matrix",
-        )
-    )
-    db.commit()
-    # Apply heading metadata via the service helper (the operator route
-    # writes through it; either path is fine for fixtures).
+    # ``instruments/add`` clones full-matrix assignments onto the new
+    # instrument automatically (per ``create_instrument``), so no
+    # manual Assignment seeding is needed. Apply heading metadata via
+    # the service helper (the operator route writes through it;
+    # either path is fine for fixtures).
     if first_short_label is not None:
         instruments_service.update_short_label(
             db, instrument=first, short_label=first_short_label, actor=None
@@ -205,7 +194,11 @@ def test_action_row_renders_mirrored_top_and_bottom(
     ).text
 
     assert body.count('class="rs-action-divider"') == 2
-    assert body.count('class="rs-action-row"') == 2
+    # Two rs-action-row instances: top (carries the `rs-action-row-top`
+    # modifier so it can be left-aligned with extra space above) and
+    # bottom (default class string).
+    assert body.count('class="rs-action-row rs-action-row-top"') == 1
+    assert body.count('class="rs-action-row"') == 1
 
 
 # ── Page-button labels ───────────────────────────────────────────────────

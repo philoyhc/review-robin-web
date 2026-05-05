@@ -984,6 +984,41 @@ def create_instrument(
     db.flush()
     ensure_locked_display_fields(db, instrument=instrument)
 
+    # Replicate assignment rows from any existing instrument so the
+    # new instrument joins the matrix on every (reviewer, reviewee)
+    # pair that's already assigned. Without this, full-matrix +
+    # instrument.add leaves the new instrument with zero
+    # assignments — the reviewer surface then hides its Page button
+    # because it has nothing to render. Pick the lowest-ordered
+    # existing instrument as the source so the clone is
+    # deterministic; the (reviewer, reviewee, include, context)
+    # tuples are identical across instruments today, so any source
+    # would yield the same rows.
+    cloned_assignments = 0
+    if existing:
+        source_instrument = existing[0]
+        source_rows = list(
+            db.execute(
+                select(Assignment)
+                .where(Assignment.session_id == review_session.id)
+                .where(Assignment.instrument_id == source_instrument.id)
+            ).scalars()
+        )
+        for source in source_rows:
+            db.add(
+                Assignment(
+                    session_id=review_session.id,
+                    reviewer_id=source.reviewer_id,
+                    reviewee_id=source.reviewee_id,
+                    instrument_id=instrument.id,
+                    include=source.include,
+                    context=source.context,
+                    created_by_mode=source.created_by_mode,
+                )
+            )
+            cloned_assignments += 1
+        db.flush()
+
     write_event(
         db,
         event_type="instrument.created",
@@ -995,6 +1030,7 @@ def create_instrument(
             "session_id": review_session.id,
             "order": new_order,
             "after_instrument_id": after_instrument_id,
+            "cloned_assignments": cloned_assignments,
         },
     )
     db.commit()

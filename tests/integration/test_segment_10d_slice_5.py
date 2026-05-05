@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    Assignment,
     AuditEvent,
     Instrument,
     InstrumentDisplayField,
@@ -201,6 +202,120 @@ def test_add_instrument_with_after_inserts_mid_stack(
     assert instruments[0].id == default.id
     assert instruments[1].id != default.id
     assert instruments[1].id != second.id
+
+
+def test_add_instrument_clones_existing_full_matrix_assignments(
+    client: TestClient, db: Session
+) -> None:
+    """Adding a new instrument to a session that's already had
+    assignments seeded (full-matrix or otherwise) replicates each
+    `(reviewer, reviewee, include, context)` pair onto the new
+    instrument so it joins the matrix immediately. Without this,
+    the reviewer surface hides the new instrument's Page button
+    (no assignments → nothing to render)."""
+    session = _create_session(client, db, code="add-clone")
+    [default] = _instruments(db, session.id)
+    client.post(
+        f"/operator/sessions/{session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nC,c@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/assignments/full-matrix",
+        data={"exclude_self_review": ""},
+        follow_redirects=False,
+    )
+    pre_assignments = (
+        db.execute(
+            select(Assignment).where(Assignment.session_id == session.id)
+        )
+        .scalars()
+        .all()
+    )
+    assert len(pre_assignments) == 1  # one (reviewer, reviewee) pair × default
+
+    client.post(
+        f"/operator/sessions/{session.id}/instruments/add",
+        data={"after": str(default.id)},
+        follow_redirects=False,
+    )
+    new_instrument = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == session.id)
+            .where(Instrument.id != default.id)
+        )
+        .scalars()
+        .one()
+    )
+    new_assignments = (
+        db.execute(
+            select(Assignment)
+            .where(Assignment.session_id == session.id)
+            .where(Assignment.instrument_id == new_instrument.id)
+        )
+        .scalars()
+        .all()
+    )
+    assert len(new_assignments) == len(pre_assignments)
+    assert new_assignments[0].reviewer_id == pre_assignments[0].reviewer_id
+    assert new_assignments[0].reviewee_id == pre_assignments[0].reviewee_id
+    assert new_assignments[0].include == pre_assignments[0].include
+    assert new_assignments[0].created_by_mode == pre_assignments[0].created_by_mode
+    # Audit event records the clone count for traceability.
+    event = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "instrument.created")
+        .where(AuditEvent.session_id == session.id)
+    ).scalar_one()
+    assert event.detail["cloned_assignments"] == len(pre_assignments)
+
+
+def test_add_instrument_with_no_existing_assignments_clones_zero(
+    client: TestClient, db: Session
+) -> None:
+    """Adding an instrument to a session that has no assignments
+    yet (e.g. before reviewers / reviewees are imported) succeeds and
+    clones zero rows. Audit detail reflects the count."""
+    session = _create_session(client, db, code="add-clone-empty")
+    [default] = _instruments(db, session.id)
+
+    client.post(
+        f"/operator/sessions/{session.id}/instruments/add",
+        data={"after": str(default.id)},
+        follow_redirects=False,
+    )
+    assignments = (
+        db.execute(
+            select(Assignment).where(Assignment.session_id == session.id)
+        )
+        .scalars()
+        .all()
+    )
+    assert assignments == []
+    event = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "instrument.created")
+        .where(AuditEvent.session_id == session.id)
+    ).scalar_one()
+    assert event.detail["cloned_assignments"] == 0
 
 
 def test_add_instrument_invalidates_validated_session(

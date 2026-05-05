@@ -95,13 +95,18 @@
        * (`.rs-intro-grid` below); the lone-help case lands in column 2
        * (or column 1 if no heading) instead of expanding to full width.
        */
-      .rs-help-card {
-        background: #f5f5f7;
+      /* Solid light-grey block — fill matches the `.card` border
+         colour so the help text reads as a tinted slab inside the
+         per-instrument intro grid rather than a regular card with
+         contrasting border + interior. ui-v2-scoped so it wins
+         against the `.card` background rule. */
+      body.ui-v2 .rs-help-card {
+        background: var(--border-default);
         padding: 10px 14px;
         border-radius: 6px;
         color: #444;
       }
-      .rs-help-card strong { color: #111827; }
+      body.ui-v2 .rs-help-card strong { color: #111827; }
       .warning-banner {
         border: 1px solid #f59e0b;
         background: #fef3c7;
@@ -1182,6 +1187,13 @@
         gap: var(--space-3);
         margin: var(--space-4) 0;
         flex-wrap: wrap;
+      }
+      /* Top action row variant — left-aligned with a doubled margin
+         above so it reads as the lead-in to the form. The bottom
+         instance stays right-aligned per the default rule above. */
+      body.ui-v2 .rs-action-row.rs-action-row-top {
+        justify-content: flex-start;
+        margin-top: var(--space-8);
       }
       /* Vertical divider that visually separates the page-level
          cluster (Save / Discard / Page N) from the review-session-
