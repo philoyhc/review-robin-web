@@ -503,25 +503,9 @@ def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
         data={"after": str(default_instrument.id)},
         follow_redirects=False,
     )
-    second_instrument = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .where(Instrument.id != default_instrument.id)
-    ).scalar_one()
-    seed_assignment = db.execute(
-        select(Assignment).where(Assignment.session_id == review_session.id)
-    ).scalar_one()
-    db.add(
-        Assignment(
-            session_id=review_session.id,
-            reviewer_id=seed_assignment.reviewer_id,
-            reviewee_id=seed_assignment.reviewee_id,
-            instrument_id=second_instrument.id,
-            include=True,
-            created_by_mode="full_matrix",
-        )
-    )
-    db.commit()
+    # ``instruments/add`` clones full-matrix assignments onto the new
+    # instrument automatically (per ``create_instrument``), so no
+    # manual Assignment seeding is needed.
     operator.get(f"/operator/sessions/{review_session.id}?validated=1")
     operator.post(
         f"/operator/sessions/{review_session.id}/activate",

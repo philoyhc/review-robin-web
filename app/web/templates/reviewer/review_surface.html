@@ -131,7 +131,9 @@
          review-session-wide commit. The vertical divider visually
          separates the two scopes without splitting the row. #}
       {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
-        {% include "reviewer/_action_row.html" %}
+        {% with action_row_position="top" %}
+          {% include "reviewer/_action_row.html" %}
+        {% endwith %}
       {% endif %}
       {# PR δ — every instrument group renders into the DOM. CSS hides
          the non-active ones via

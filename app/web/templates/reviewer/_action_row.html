@@ -1,7 +1,6 @@
 {# Reviewer-surface unified action row (PR γ; PR δ wires JS;
    PR ε: collapses to just Page N buttons in operator preview).
-   Mirrored top + bottom on the surface. Order, left-to-right,
-   flush right:
+   Mirrored top + bottom on the surface. Order, left-to-right:
 
        Save / Discard / Page #N: short_label / divider / Submit
 
@@ -29,10 +28,14 @@
      - current_position: int (URL position the surface was rendered at)
      - page_buttons: list[views.PageButton]
      - preview_mode: bool
+     - action_row_position: "top" or "bottom" (default treated as
+       "bottom"). Top instances are left-aligned with a doubled
+       margin above so they read as the lead-in to the form;
+       bottom instances stay right-aligned and follow the tables.
    The caller renders the partial whenever there are page buttons to
    show (live + accepting, or any preview with > 0 instruments).
 #}
-<div class="rs-action-row">
+<div class="rs-action-row{% if action_row_position == 'top' %} rs-action-row-top{% endif %}">
   {% if not preview_mode %}
     <button class="btn" type="submit" data-rs-save>Save</button>
     <a class="btn secondary"

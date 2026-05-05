@@ -88,20 +88,9 @@ def _setup_two_instrument_session(
         .where(Instrument.session_id == review_session.id)
         .where(Instrument.id != first.id)
     ).scalar_one()
-    seed_assignment = db.execute(
-        select(Assignment).where(Assignment.session_id == review_session.id)
-    ).scalar_one()
-    db.add(
-        Assignment(
-            session_id=review_session.id,
-            reviewer_id=seed_assignment.reviewer_id,
-            reviewee_id=seed_assignment.reviewee_id,
-            instrument_id=second.id,
-            include=True,
-            created_by_mode="full_matrix",
-        )
-    )
-    db.commit()
+    # ``instruments/add`` clones full-matrix assignments onto the new
+    # instrument automatically (per ``create_instrument``), so no
+    # manual Assignment seeding is needed.
     instruments_service.update_short_label(
         db, instrument=first, short_label="Self-eval", actor=None
     )
