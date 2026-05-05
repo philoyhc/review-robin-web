@@ -104,23 +104,87 @@ class SessionStatusPills:
     email_invites_set_up: bool
 
 
-def reviewer_instrument_heading(
-    *, description: str | None, position: int, total_count: int
-) -> str:
-    """Heading for a single instrument group on the reviewer surface.
+@dataclass(frozen=True)
+class InstrumentHeading:
+    """Title + optional subtitle for the per-instrument heading row.
 
-    - One instrument total: description if set, else empty string (template
-      skips the ``<h2>`` when empty).
-    - More than one: ``#{n} {description}`` if description is set, else
-      ``Instrument #{n}`` (matching the operator surface's loop.index render
-      so the same instrument carries the same label across surfaces).
+    Title lands on the H2; subtitle on a `.muted` body-weight span
+    next to it (`.rs-instrument-heading` flex row, baseline-aligned).
+    Either or both can be ``None`` — the template only renders the
+    `.rs-instrument-heading` block when ``title`` is truthy.
+
+    Composition rules per `spec/reviewer-surface.md` "Above the table
+    — heading + help block":
+
+    | total_count | short_label | description | title | subtitle |
+    |---|---|---|---|---|
+    | >1 | set     | set       | "Page #{N}: {short_label}" | description |
+    | >1 | set     | unset     | "Page #{N}: {short_label}" | None |
+    | >1 | unset   | set       | "Page #{N}"                | description |
+    | >1 | unset   | unset     | "Page #{N}"                | None |
+    | 1  | set     | set       | "{short_label}"            | description |
+    | 1  | set     | unset     | "{short_label}"            | None |
+    | 1  | unset   | set       | "{description}" *          | None *     |
+    | 1  | unset   | unset     | None                       | None |
+
+    \\* The single-instrument-only-description row preserves the
+    legacy heading behaviour (description renders as the H2 text)
+    so operators who haven't migrated to ``short_label`` yet don't
+    silently lose their per-instrument context. The spec's strict
+    reading was "no heading; description shown elsewhere", but
+    there's no other display path for ``Instrument.description``
+    today; preserving it here is a small spec deviation in service
+    of operator continuity.
     """
-    desc = (description or "").strip()
+
+    title: str | None
+    subtitle: str | None
+
+
+def page_button_label(instrument: Instrument, position: int) -> str:
+    """Label for a Page N button on the reviewer surface's action row.
+
+    Returns ``"Page #{N}: {short_label}"`` when the operator has set
+    ``Instrument.short_label`` (32-char ceiling enforced at the
+    schema layer per Segment 11L); falls back to bare ``"Page #{N}"``
+    otherwise.
+    """
+    short = (instrument.short_label or "").strip()
+    if short:
+        return f"Page #{position}: {short}"
+    return f"Page #{position}"
+
+
+def instrument_heading(
+    *, instrument: Instrument, position: int, total_count: int
+) -> InstrumentHeading:
+    """Build the per-instrument heading title + subtitle for the
+    reviewer surface, per the composition table on
+    :class:`InstrumentHeading`.
+    """
+    short = (instrument.short_label or "").strip()
+    desc = (instrument.description or "").strip() or None
     if total_count == 1:
-        return desc
-    if desc:
-        return f"#{position} {desc}"
-    return f"Instrument #{position}"
+        if short:
+            return InstrumentHeading(title=short, subtitle=desc)
+        if desc:
+            # Legacy behaviour preserved — see the docstring's note.
+            return InstrumentHeading(title=desc, subtitle=None)
+        return InstrumentHeading(title=None, subtitle=None)
+    # Multi-instrument: position prefix is the safety-net default.
+    if short:
+        return InstrumentHeading(title=f"Page #{position}: {short}", subtitle=desc)
+    return InstrumentHeading(title=f"Page #{position}", subtitle=desc)
+
+
+@dataclass(frozen=True)
+class PageButton:
+    """View-shape for a Page button on the reviewer-surface action row."""
+
+    position: int
+    label: str
+    href: str
+    is_current: bool
 
 
 def _bulk_state(values: list[bool]) -> str:

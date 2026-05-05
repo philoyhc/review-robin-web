@@ -362,19 +362,18 @@ def test_review_surface_action_rows_render_above_and_below_tables(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    # Two .rs-action-row containers — one above the instrument loop
-    # (carries the .rs-action-row-left modifier so it sits flush left
-    # under the description card), one after the tables (default
-    # flush-right).
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    # Two .rs-action-row containers, mirrored top + bottom (PR γ
+    # collapsed the previous review-level + page-level rows into a
+    # single unified row, both flush right).
     assert body.count("rs-action-row") >= 2
-    assert "rs-action-row rs-action-row-top rs-action-row-left" in body
-    # Each row carries the same three controls. Cancel is now an
-    # anchor inside the form rather than a free-floating <p> above.
-    save_count = body.count(">Save draft</button>")
-    cancel_count = body.count(">Cancel — discard unsaved edits</a>")
-    assert save_count >= 2, f"expected 2 Save draft buttons; got {save_count}"
-    assert cancel_count >= 2, f"expected 2 Cancel anchors; got {cancel_count}"
+    # Each row carries Save / Discard / Submit. Labels were renamed
+    # in PR γ ("Save draft" → "Save", "Cancel — discard unsaved
+    # edits" → "Discard").
+    assert body.count(">Save</button>") >= 2
+    assert body.count(">Discard</a>") >= 2
     # Submit lives at both rows too — formaction routes the click to
     # /submit instead of the form's default /save action.
     assert (
@@ -408,14 +407,15 @@ def test_review_surface_session_description_renders_in_half_width_card(
     assert "Please rate each reviewee on the rubric." in body
 
 
-def test_review_surface_single_instrument_has_no_next_button(
+def test_review_surface_single_instrument_has_no_page_buttons(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Next is suppressed when the session has only one instrument —
-    pagination only kicks in when there's somewhere to step to."""
+    """Single-instrument sessions don't render Page N anchors — there
+    is nowhere to navigate to. The unified action row collapses to
+    Save / Discard / divider / Submit only."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -425,18 +425,16 @@ def test_review_surface_single_instrument_has_no_next_button(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    # No Previous / Next button DOM elements (the inline JS hook
-    # mentions the class names as string literals, but the rendered
-    # buttons aren't there).
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    # PR #417's Previous / Next buttons retired in PR γ.
     assert ">Next</button>" not in body
     assert ">Previous</button>" not in body
-    # No paginated wrapper around the instrument groups.
-    assert '<div class="rs-paginated">' not in body
-    # Instrument group wrapper still renders so the markup is uniform,
-    # but with no `.rs-paginated` ancestor it has no display-toggling
-    # CSS effect.
-    assert 'class="rs-instrument-group rs-active"' in body
+    assert "rs-paginated" not in body
+    # Page button anchor renders even on single-instrument sessions
+    # (one entry in `page_buttons`); the current page is disabled.
+    assert "Page #1" in body
 
 
 def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
@@ -530,33 +528,20 @@ def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
     assert review_session.status == "ready"
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    assert '<div class="rs-paginated">' in body
-    # Previous + Next render in the top + bottom action rows (the JS
-    # selector also names the classes as string literals — count the
-    # `>Previous</button>` / `>Next</button>` payloads to skip that
-    # noise).
-    assert body.count(">Previous</button>") == 2
-    assert body.count(">Next</button>") == 2
-    # Markup ships with Previous disabled — we start at the first
-    # instrument, so navigating backwards is a no-op.
-    assert (
-        body.count(
-            '<button class="btn secondary rs-prev-btn" type="button" disabled>Previous</button>'
-        )
-        == 2
-    )
-    # Next is NOT pre-disabled in markup — JS will disable it on the
-    # last group at runtime.
-    assert (
-        '<button class="btn secondary rs-next-btn" type="button" disabled>'
-        not in body
-    )
-    # Two `.rs-instrument-group` wrappers — the first is marked active
-    # so only it is visible until Next is clicked.
-    assert body.count('class="rs-instrument-group rs-active"') == 1
-    # Plus the second group without `rs-active`.
-    assert body.count('class="rs-instrument-group"') == 1
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    # Previous / Next + the rs-paginated JS scaffold retired in PR γ.
+    assert "rs-paginated" not in body
+    assert ">Previous</button>" not in body
+    assert ">Next</button>" not in body
+    # Page #1 and Page #2 anchors render in the unified action row,
+    # mirrored top + bottom (so each appears twice). The current
+    # page's anchor is disabled.
+    assert body.count("Page #1") >= 2
+    assert body.count("Page #2") >= 2
+    # The current page's anchor renders disabled.
+    assert "aria-disabled=\"true\"" in body
 
 
 def test_review_surface_clear_all_card_is_half_width_flush_right(

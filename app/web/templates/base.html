@@ -1179,28 +1179,53 @@
         margin-bottom: var(--space-4);
       }
       body.ui-v2 .rs-page-header h1 { margin: 0; }
-      /* Reviewer-surface action row — Save draft / Submit / Cancel
-         triplet (plus optional Next on multi-instrument sessions),
-         repeated above and below the instrument tables so the
-         reviewer can act without scrolling to either end. The top
-         row carries `.rs-action-row-left` to sit flush left under
-         the description card; the bottom row keeps the default
-         flush-right alignment. */
+      /* Reviewer-surface unified action row (PR γ). Save / Discard /
+         Page N: short_label / vertical divider / Submit. Mirrored
+         top + bottom; both flush right. */
       body.ui-v2 .rs-action-row {
         display: flex;
+        align-items: center;
         justify-content: flex-end;
         gap: var(--space-3);
         margin: var(--space-4) 0;
         flex-wrap: wrap;
       }
-      body.ui-v2 .rs-action-row.rs-action-row-left {
-        justify-content: flex-start;
+      /* Vertical divider that visually separates the page-level
+         cluster (Save / Discard / Page N) from the review-session-
+         level Submit. 1px wide, full button-height via
+         `align-self: stretch` on the flex parent. */
+      body.ui-v2 .rs-action-divider {
+        width: 1px;
+        align-self: stretch;
+        background: var(--border-default);
+        margin: 0 var(--space-2);
       }
-      /* Top action row sits below the description card with a wider
-         gap than the default 16px so the card and the buttons read
-         as separate concerns rather than a stack. */
-      body.ui-v2 .rs-action-row.rs-action-row-top {
-        margin-top: var(--space-8);
+      /* Page button label may include the operator-set short_label
+         (≤ 32 chars per Segment 11L's schema cap). The CSS truncation
+         is belt-and-suspenders against pre-existing oddities or
+         future migration glitches; `max-width: 16em` ≈ 256px at 16px
+         body font, with room for `Page #99: Final Recommendation`
+         (~30 chars) before truncation kicks in. */
+      body.ui-v2 .rs-action-row .rs-page-btn {
+        max-width: 16em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      /* Per-instrument heading (PR γ). Title (`<h2>`) and optional
+         subtitle (description) on the same baseline, mirroring the
+         page-header pattern. */
+      body.ui-v2 .rs-instrument-heading {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+        margin: var(--space-6) 0 var(--space-3) 0;
+      }
+      body.ui-v2 .rs-instrument-heading h2 { margin: 0; }
+      body.ui-v2 .rs-instrument-heading .rs-instrument-subtitle {
+        font-size: var(--fs-body);
+        font-weight: 400;
       }
       /* Reviewer-surface top row (PR β) — description card on the
          left, flash + per-page status panel on the right. The
@@ -1229,14 +1254,6 @@
       }
       body.ui-v2 .rs-status-panel .banner:last-child {
         margin-bottom: 0;
-      }
-      /* Multi-instrument paginated view — only the active group
-         renders; the Next button cycles through (no-save, no-submit
-         — purely view state). Single-instrument sessions don't get
-         the wrapper, so this rule has no effect there. */
-      body.ui-v2 .rs-paginated .rs-instrument-group { display: none; }
-      body.ui-v2 .rs-paginated .rs-instrument-group.rs-active {
-        display: block;
       }
       /* Half-width Clear-all (Danger Zone) flush-right at the foot
          of the reviewer surface. Collapses to full width below the

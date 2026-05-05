@@ -230,6 +230,7 @@ def _surface_context(
     review_session: ReviewSession,
     saved: bool,
     submitted: bool,
+    current_position: int,
     missing: list[responses_service.MissingPosition] | None = None,
     show_acknowledge: bool = False,
 ) -> dict:
@@ -351,8 +352,8 @@ def _surface_context(
         help_block_items = [
             f for f in fields if f.help_text and f.help_text_visible
         ]
-        heading = views.reviewer_instrument_heading(
-            description=instrument.description,
+        heading = views.instrument_heading(
+            instrument=instrument,
             position=position_by_id[instrument_id],
             total_count=total_instrument_count,
         )
@@ -384,7 +385,7 @@ def _surface_context(
     # Per-page status pills for the right-half status panel (PR β).
     # One entry per instrument the reviewer has assignments on, sorted
     # by URL position so the panel reads top-to-bottom in the same
-    # order the Page buttons land in (PR γ).
+    # order the Page buttons land in.
     page_statuses: list[PageStatus] = []
     instrument_groups_by_id = {
         g["instrument"].id: g for g in instrument_groups
@@ -403,12 +404,44 @@ def _surface_context(
             )
         )
 
+    # Page buttons for the unified action row (PR γ). One per instrument
+    # the reviewer has assignments on, sorted by session-wide position;
+    # the button at ``current_position`` renders disabled.
+    page_buttons: list[views.PageButton] = []
+    for inst in sorted(instruments.values(), key=lambda i: (i.order, i.id)):
+        if inst.id not in instrument_groups_by_id:
+            continue
+        position = position_by_id[inst.id]
+        page_buttons.append(
+            views.PageButton(
+                position=position,
+                label=views.page_button_label(inst, position),
+                href=f"/reviewer/sessions/{review_session.id}/{position}",
+                is_current=(position == current_position),
+            )
+        )
+
+    # PR γ — narrow rendering to only the current page's instrument
+    # group. Pre-PR-γ the surface stacked every instrument group; PR
+    # γ flips this to single-page rendering (the URL position
+    # determines visibility). Page buttons + status pills above still
+    # reference all reviewer-accessible instruments so the reviewer
+    # can navigate.
+    visible_instrument_groups = [
+        g
+        for g in instrument_groups
+        if position_by_id[g["instrument"].id] == current_position
+    ]
+    visible_flat_rows: list[dict] = []
+    for g in visible_instrument_groups:
+        visible_flat_rows.extend(g["rows"])
+
     return {
         "user": user,
         "session": review_session,
         "reviewer": reviewer,
-        "instrument_groups": instrument_groups,
-        "rows": flat_rows,
+        "instrument_groups": visible_instrument_groups,
+        "rows": visible_flat_rows,
         "saved": saved,
         "submitted": submitted,
         "missing": missing or [],
@@ -420,6 +453,7 @@ def _surface_context(
         "any_accepting": any_accepting,
         "any_closed_with_hidden_values": any_closed_with_hidden_values,
         "page_statuses": page_statuses,
+        "page_buttons": page_buttons,
     }
 
 
@@ -648,8 +682,8 @@ def build_preview_context(
         help_block_items = [
             f for f in fields if f.help_text and f.help_text_visible
         ]
-        heading = views.reviewer_instrument_heading(
-            description=instrument.description,
+        heading = views.instrument_heading(
+            instrument=instrument,
             position=position,
             total_count=total_instrument_count,
         )
@@ -690,6 +724,9 @@ def build_preview_context(
         "any_required": False,
         "any_accepting": False,
         "any_closed_with_hidden_values": False,
+        "page_statuses": [],
+        "page_buttons": [],
+        "current_position": 1,
         "preview_mode": True,
     }
 
@@ -778,6 +815,7 @@ def review_surface(
         review_session=review_session,
         saved=saved == "ok",
         submitted=submitted == "ok",
+        current_position=instrument_position,
     )
     context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
     context["reviewer_review_count"] = reviewer_review_count_for_user(db, user)
@@ -801,12 +839,13 @@ async def reviewer_save(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Save the form's response inputs.
+    """Save the form's response inputs for the URL position.
 
-    The ``{instrument_position}`` URL segment is decorative in PR α —
-    the route accepts every input the form posts and persists the lot,
-    matching today's all-instruments-stacked behaviour. PR γ ships
-    the per-position filter alongside rendering-narrows-to-one-page.
+    PR γ wires the per-position filter alongside rendering-narrows-
+    to-one-page (the GET surface renders only the URL position's
+    instrument group, so the form body normally contains only its
+    inputs; the filter is defense-in-depth against malformed POSTs
+    that include cross-page assignment_ids).
     """
     reviewer, review_session = reviewer_session
     _require_session_accepting(db, review_session, reviewer)
@@ -814,6 +853,25 @@ async def reviewer_save(
     upserts = responses_service.parse_form_payload(
         {k: v for k, v in form.items() if isinstance(v, str)}
     )
+    # Filter upserts to assignments whose instrument matches the URL
+    # position. Inputs from other pages (a malformed POST or stale
+    # form from before the rendering-narrows step) are silently
+    # dropped — Save's scope is "this page only".
+    sorted_instruments = sorted(
+        _instruments_for_session(db, review_session.id).values(),
+        key=lambda i: (i.order, i.id),
+    )
+    if not 1 <= instrument_position <= len(sorted_instruments):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    target_instrument_id = sorted_instruments[instrument_position - 1].id
+    target_assignment_ids = {
+        a.id
+        for a in _load_assignments_with_relations(
+            db, session_id=review_session.id, reviewer_id=reviewer.id
+        )
+        if a.instrument_id == target_instrument_id
+    }
+    upserts = [u for u in upserts if u.assignment_id in target_assignment_ids]
     responses_service.save_draft(
         db,
         review_session=review_session,
@@ -865,6 +923,7 @@ async def reviewer_submit(
             review_session=review_session,
             saved=False,
             submitted=False,
+            current_position=current_position,
             missing=result.missing,
             show_acknowledge=True,
         )
