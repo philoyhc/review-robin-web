@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_placeholder_card.html" import placeholder_card %}
 
 {% block title %}Email Template — {{ session.name }}{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -11,9 +12,32 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  <div class="card">
-    <p class="form-help">
-      Email template — placeholder. The editor lands in Segment 15.
-    </p>
+  {# Two-card placeholder layout — frames the editor surface that
+     Segment 11E PR 2 ships. Left card is the email-shape composer
+     preview; right card is the merge-tag list + action buttons.
+     Both render via the canonical ``placeholder_card`` macro so the
+     muted treatment matches Quick Setup / Extract Data on Session
+     Home. #}
+  <div class="bottom-grid">
+    {{ placeholder_card(
+      id="email-composer",
+      title="Email composer",
+      description=(
+        "Edit the invitation and reminder email subject + body here. "
+        "Lands in Segment 11E PR 2."
+      ),
+      button_label="Edit",
+      button_tooltip="Editor UI lands in Segment 11E PR 2 (guide/segment_11E_email_template_editor.md)",
+    ) }}
+    {{ placeholder_card(
+      id="merge-tags-and-actions",
+      title="Merge tags &amp; actions",
+      description=(
+        "Per-tag Copy buttons plus Save / Cancel / Preview as Rae "
+        "Reviewer. Lands alongside the composer in Segment 11E PR 2."
+      ),
+      button_label="Save",
+      button_tooltip="Editor UI lands in Segment 11E PR 2 (guide/segment_11E_email_template_editor.md)",
+    ) }}
   </div>
 {% endblock %}
