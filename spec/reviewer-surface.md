@@ -248,22 +248,103 @@ Reviews`) are unchanged.
 
 ## Out of scope
 
-- Per-instrument deadlines (operator-set deadlines that differ between
-  instruments). Today every instrument inherits the session deadline;
-  per-instrument deadlines remain a Segment 12+ concern.
-- `beforeunload` warning for navigating away with unsaved edits.
-  Worth adding as a small enhancement once the URL-driven pagination
-  is in place.
-- Submission-confirmation page (a standalone "thank you" surface). The
-  spec calls for it; today it's folded into `?submitted=ok` flash
-  banner copy. Defer to whichever segment introduces the standalone
-  page.
-- Reviewer-side instrument status indicator (per-page "complete" /
-  "in progress" pill on the page selector). Could land on the page
-  selector buttons later — useful for sessions with many instruments
-  — but for now the buttons are pure navigation.
-- AG Grid replacement of the reviewer-surface table (catalog
+The following are deliberately deferred. They are not implemented
+today but the surface is designed so they can be added later without
+re-architecting; see "Designed-for-extensibility" below.
+
+- **`beforeunload` warning** when the form is dirty.
+- **Standalone submission-confirmation page** ("thank you" surface).
+  Today the post-submit signal is the `?submitted=ok` flash banner.
+- **Per-page status pill on the page selector** (e.g. each `Page N`
+  button shows "complete" / "in progress" / "not started"). Useful for
+  sessions with many instruments.
+- **AG Grid replacement of the reviewer-surface `<table>`** (catalog
   `unfinished_business.md` #33 — Segment 15).
+
+---
+
+## Designed-for-extensibility
+
+Notes on how this surface keeps the four deferred features above
+non-risky to add later. Each item lists the design call this spec
+makes today + the small follow-on the deferred work needs.
+
+### beforeunload warning
+
+- **Today.** Clicking a `Page N` selector button or `Discard unsaved
+  edits` is plain navigation; unsaved edits are silently dropped.
+- **Design call.** The editing form carries a stable id (`id="rs-form"`
+  or similar), and every intentional-discard control (`Discard unsaved
+  edits` anchor + `Page N` selector buttons + `My Reviews` chrome
+  link) carries a `data-discards-edits` attribute. A future hook
+  attaches a `beforeunload` listener tied to a `dirty` flag on the
+  form (set on first `input` event); clicks that match
+  `[data-discards-edits]` set a `intentional` flag that the listener
+  reads and lets through without prompting.
+- **What lands later.** A small inline `<script>` block in the same
+  shape as the existing rs-paginated handler. No template
+  restructuring needed.
+
+### Standalone submission-confirmation page
+
+- **Today.** `POST …/submit` 303s to `…/{position}?submitted=ok`,
+  which re-renders the surface with a `.banner.banner-success`.
+- **Design call.** The submit route's redirect target is computed via
+  a small helper (call it `submit_redirect_url(review_session,
+  position)`) rather than inlined. Today the helper returns
+  `f"/reviewer/sessions/{id}/{position}?submitted=ok"`. Tomorrow it
+  can return `f"/reviewer/sessions/{id}/submitted"` for a session-level
+  confirmation, or `f"/reviewer/sessions/{id}/{position}/submitted"`
+  for a per-page confirmation, depending on which flavour ships.
+- **What lands later.** A new template (`reviewer/submitted.html` or
+  similar) plus the helper change. The surface itself doesn't move.
+
+### Per-page status pill on the page selector
+
+- **Today.** Page selector buttons carry the label only (`Page 1`,
+  `Page 2`, …). The current page is `aria-disabled="true"`; otherwise
+  buttons are pure navigation.
+- **Design call.** The route threads a `page_statuses` mapping
+  (`{position: "complete" | "in_progress" | "not_started"}`) into
+  template context, populated even now (every entry is currently
+  unused). The page-selector template already iterates over `pages`
+  with each entry exposing both the label and (lookup-by-position) a
+  status; today the template ignores the status. The Jinja shape:
+
+  ```jinja
+  {% for page in pages %}
+    <a class="btn{% if page.is_current %} aria-disabled-link{% endif %}"
+       href="…/{{ page.position }}"
+       {% if page.is_current %}aria-disabled="true"{% endif %}>
+      Page {{ page.position }}
+      {# status pill slot — empty today, populated by the deferred PR. #}
+    </a>
+  {% endfor %}
+  ```
+
+- **What lands later.** Drop a `<span class="pill pill-…">…</span>`
+  inside the existing slot, plus the per-status copy decision. No
+  context-shape changes, no route plumbing changes.
+
+### AG Grid table
+
+- **Today.** Per-instrument rows render as a `<table>` inside
+  `.table-scroll`. Column-width hint classes (`.rs-narrow` /
+  `.rs-reviewee` / `.rs-textlong`) on `<th>` / `<td>` carry the
+  responsive sizing. The data driving each row is built in
+  `_surface_context` as a list of dicts with stable, serializable
+  keys (`assignment`, `cells`, `display_cells`, `is_complete`,
+  `missing_count`, `submitted_at`, `accepting`, `show_values`).
+- **Design call.** Keep all table-specific markup confined to
+  `review_surface.html`; route handlers and view-shape adapters never
+  emit HTML. Field metadata (label / data_type / validation) ships
+  alongside the row data so a future JS-driven grid can render the
+  same view shape without a second round-trip. The dict shape
+  becomes the implicit AG Grid column-defs source.
+- **What lands later.** A new partial (`reviewer/_response_grid.html`
+  or similar) loads AG Grid and mounts against a JSON payload built
+  from the same `_surface_context` shape. The current `<table>` block
+  is replaced; nothing else moves.
 
 ---
 
