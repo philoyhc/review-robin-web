@@ -250,7 +250,7 @@
                              name="{{ field_name }}"
                              value="{{ cell.value }}"
                              data-rs-saved-value="{{ cell.value }}"
-                             {% if cell.placeholder %}placeholder="{{ cell.placeholder }}"{% endif %}
+                             {% if cell.placeholder %}placeholder="{{ cell.placeholder }}" size="{{ cell.placeholder|length + 1 }}"{% endif %}
                              {{ disabled_attr }}>
                     {% elif data_type == "List" %}
                       <select name="{{ field_name }}"
