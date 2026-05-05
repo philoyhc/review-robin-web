@@ -116,10 +116,27 @@
                     display: flex; flex-direction: column;">
           <h2 style="margin-top: 0; font-size: 1.5rem;">Instrument #{{ loop.index }}</h2>
           {% if is_editing %}
+            {# Segment 11L — Friendly short label (≤ 32 chars).
+               Reviewer-facing; lands on Page button labels and the
+               per-instrument H2 title in the multi-instrument
+               rewrite. ``maxlength="32"`` is the user-visible
+               guardrail; the service helper raises ValueError →
+               HTTP 400 as the defensive fallback. #}
+            <input form="dfsave-{{ instrument.id }}"
+                   type="text"
+                   name="short_label"
+                   maxlength="32"
+                   placeholder="(optional short label, e.g. Skills)"
+                   value="{{ instrument.short_label or '' }}"
+                   style="width: 100%; margin-bottom: 8px;">
             <textarea form="dfsave-{{ instrument.id }}" name="description"
                       placeholder="(no description)"
                       style="width: 100%;">{{ instrument.description or "" }}</textarea>
           {% else %}
+            {% if instrument.short_label %}
+              <p class="short-label-text"
+                 style="margin: 0 0 4px 0; font-weight: 600; color: var(--text-primary, #111827);">{{ instrument.short_label }}</p>
+            {% endif %}
             <p class="description-text">{{ instrument.description or "(no description)" }}</p>
           {% endif %}
           {# Mirror of the Section E Edit / Save+Cancel pair, anchored

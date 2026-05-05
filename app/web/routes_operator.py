@@ -1693,6 +1693,29 @@ async def instrument_bulk_save_fields(
             instruments_service.update_instrument_description(
                 db, instrument=instrument, description=cleaned, actor=user
             )
+    # Section A — short_label shares the same Save / Cancel state machine
+    # as description. Per Segment 11L, the field is reviewer-facing and
+    # capped at 32 chars (HTML5 ``maxlength`` is the user-visible
+    # guardrail; the service helper raises ValueError as a defensive
+    # fallback that yields HTTP 400).
+    if "short_label" in form:
+        submitted_label = form.get("short_label")
+        try:
+            instruments_service.update_short_label(
+                db,
+                instrument=instrument,
+                short_label=(
+                    submitted_label
+                    if isinstance(submitted_label, str)
+                    else None
+                ),
+                actor=user,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
     # Redirect with ``?saved={iid}`` so the page renders a flash
     # confirmation. The ``?editing`` param is intentionally cleared —
     # per spec, a successful Save locks the tables.

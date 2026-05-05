@@ -1002,7 +1002,21 @@ def create_instrument(
 
 
 def _instrument_label(instrument: Instrument) -> str:
-    return instrument.description.strip() if instrument.description and instrument.description.strip() else instrument.name
+    """Operator-facing label for audit-event copy.
+
+    Prefers ``short_label`` (the operator-set reviewer-facing framing
+    added in Segment 11L) over ``description.strip()`` over the
+    auto-generated ``name`` system handle. Lets ``"Updated description
+    on instrument Skills"`` read better than ``"…on instrument
+    instrument_3"`` once an operator has set a short label.
+    """
+    short = (instrument.short_label or "").strip()
+    if short:
+        return short
+    desc = (instrument.description or "").strip()
+    if desc:
+        return desc
+    return instrument.name
 
 
 def delete_instrument(
@@ -2281,6 +2295,62 @@ def update_instrument_description(
             "instrument_id": instrument.id,
             "session_id": instrument.session_id,
             "description": [old_value, new_value],
+        },
+    )
+    db.commit()
+    return instrument
+
+
+def update_short_label(
+    db: Session,
+    *,
+    instrument: Instrument,
+    short_label: str | None,
+    actor: User,
+) -> Instrument:
+    """Update an instrument's reviewer-facing short label (Segment 11L).
+
+    Trims whitespace; persists ``None`` when the trimmed value is
+    empty (so the reviewer surface's "no friendly label set" fallback
+    kicks in). Raises ``ValueError`` when the trimmed value exceeds
+    32 chars — the HTML5 ``maxlength`` attribute on the operator-side
+    input is the user-visible guardrail, but the server-side cap is
+    the bedrock guard. Emits an ``instrument.short_label_updated``
+    audit event only when the stored value actually changes
+    (no-op edits don't write events or invalidate ``validated``).
+
+    Mirrors the shape of :func:`update_instrument_description` so
+    the two read as siblings.
+    """
+    cleaned = short_label.strip() if isinstance(short_label, str) else None
+    new_value = cleaned or None
+    if new_value is not None and len(new_value) > 32:
+        raise ValueError(
+            f"short_label exceeds 32 chars: {len(new_value)}"
+        )
+    if instrument.short_label == new_value:
+        return instrument  # no-op; no audit, no invalidate
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_short_label_updated",
+    )
+    old_value = instrument.short_label
+    instrument.short_label = new_value
+    db.flush()
+    write_event(
+        db,
+        event_type="instrument.short_label_updated",
+        summary=(
+            f"Updated short_label on instrument {_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session_id=instrument.session_id,
+        detail={
+            "instrument_id": instrument.id,
+            "session_id": instrument.session_id,
+            "short_label": [old_value, new_value],
         },
     )
     db.commit()
