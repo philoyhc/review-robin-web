@@ -714,7 +714,7 @@ PR 2 form) by swapping its placeholder body.
   - Updates the "Open question on Segment 12 scope" footer:
     with Extract Data folded in, Segment 12 narrows to
     audit-retention only, gated on Segment 11K.
-- `guide/segment_11J.md` — the configuration-import slot's
+- `guide/segment_11J_quick_setup_card.md` — the configuration-import slot's
   graduation step (PR 6) is now pinned; update 11J's
   "Interaction with Segment 12A" section to point at PR 6 by
   name when 12A lands.
