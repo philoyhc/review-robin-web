@@ -580,3 +580,266 @@ single import.
   liner about the merge-tag rendering layer; verify on PR 1 review.
 - No new spec doc — this guide doubles as the spec until / unless
   the editor proves stable enough to promote.
+
+---
+
+## Follow-on — Responses-received email
+
+PRs 1-5 shipped invitation + reminder. The third reviewer-facing
+email — the **responses-received** confirmation sent to the
+reviewer the moment they submit their review — slots in on top
+of the same primitives without re-architecting anything: the
+`email_template_overrides` JSON column gets four more keys, the
+editor grows a third selector tab, the renderer gets one more
+function, and the reviewer-submit handler enqueues an outbox row.
+
+The Preview hub (`spec/preview_hub.md`) lists this artifact in
+its registry; Segment 11F deferred its preview card explicitly
+on the grounds that no render path existed yet. This follow-on
+ships the render path, which lights up that card too.
+
+### Status
+
+Planning. Sized as **2 PRs** in dependency order:
+
+1. **PR 6 — Schema + render helper + editor third tab.** The
+   template is editable but not yet auto-sent on submit.
+2. **PR 7 — Submit-time send wiring.** Reviewer-submit enqueues
+   an outbox row; Segment 11C's transport-activation path
+   carries it to `sent` like the invitation / reminder rows.
+
+PR 7 depends on Segment 11C PR F having landed (the transport
+seam that lets queued outbox rows actually go out). PR 6 is
+independent and can ship before 11C PR F.
+
+### Why a third email type, not a fold-into-an-existing-one
+
+- **Different audience moment.** Invitation goes out on
+  Activate; reminder goes out on a deadline threshold;
+  responses-received fires the instant the reviewer submits. A
+  unified template across the three would have to special-case
+  every merge field on every send path.
+- **Different merge-tag set.** `$invite_url` is moot
+  post-submission (the link is already used). A
+  `$submitted_at` tag is novel here. Sharing a template across
+  audience moments forces awkward conditional copy in the body
+  ("if you've already submitted, ignore this").
+- **Different default body.** The confirmation is short and
+  closes the loop ("Thanks. Your responses are recorded."); the
+  invitation onboards. Distinct defaults read better than a
+  shared one.
+
+### Scope
+
+In:
+
+- **Schema additions** to `email_template_overrides` JSON. Four
+  new optional keys, mirroring the invitation / reminder shape:
+  - `responses_received_subject`
+  - `responses_received_body`
+  - `responses_received_cc`
+  - `responses_received_bcc`
+  No Alembic migration — the column is already a free-form JSON;
+  new keys land at write time. Defaults live in code alongside
+  `DEFAULT_INVITATION_*` / `DEFAULT_REMINDER_*` constants in
+  `app/services/email_templates.py`.
+- **Render helper** `render_responses_received(session,
+  reviewer)` in `app/services/email_templates.py`. Same shape
+  as `render_invitation` / `render_reminder`: `string.Template`
+  substitution over the override-or-default body. Returns the
+  same `RenderedEmail` dataclass the other two return.
+- **Editor third tab.** The template selector at the top of
+  `/operator/sessions/{id}/setupinvite` grows a third option —
+  "Responses received" — alongside Invitation and Reminder.
+  `?template=responses_received` selects it via the same
+  query-param convention PR 2 shipped. The composer + merge-
+  tags cards re-render with this template's fields.
+- **Per-template merge-tag list.** The right-card merge-tag
+  list is now per-template:
+  - **Invitation / Reminder:** unchanged (the canonical five —
+    `$reviewer_name`, `$session_name`, `$deadline`,
+    `$help_contact`, `$invite_url`).
+  - **Responses received:** four tags — `$reviewer_name`,
+    `$session_name`, `$deadline`, `$help_contact`. **Drops**
+    `$invite_url` (moot post-submit). Adds an optional
+    `$submitted_at` (formatted `"%Y-%m-%d %H:%M %Z"`) that
+    resolves to the `Assignment.submitted_at` of the most
+    recently submitted assignment for that reviewer in that
+    session.
+  - The view-shape adapter the editor consumes (PR 2's
+    `views.merge_tags_for_template(template)`) gains the new
+    case; everything else flows through unchanged.
+- **Default body / subject** in code:
+  - Subject: `"Responses received: $session_name"`.
+  - Body:
+    ```
+    Hi $reviewer_name,
+
+    Thanks. Your responses for $session_name are recorded
+    as of $submitted_at.
+
+    Questions? Contact $help_contact.
+    ```
+- **Submit-time send trigger** (PR 7). The reviewer-submit
+  handler at the end of `routes_reviewer.submit_review` (or
+  whichever helper closes the submit transaction) enqueues a
+  new `email_outbox` row with `kind="responses_received"`,
+  `to_email=reviewer.email`, populated `subject` / `body` from
+  `render_responses_received`, and `status="queued"`. Segment
+  11C's transport activation (PR F) picks it up like any other
+  queued row.
+- **One audit event** added to PR 7:
+  `responses_received_email.queued`, with detail
+  `{"reviewer_id": <int>, "assignment_count": <int>}`. Mirrors
+  the existing `invitation.queued` / `reminder.queued` shape.
+- **Preview hub registry append** (lands here, not in 11F):
+  one new `PreviewArtifactSpec` entry for the responses-received
+  card. Render adapter calls `render_responses_received` with
+  the picker-selected reviewer. Card source-of-truth footer
+  points at `setupinvite?template=responses_received` and the
+  Reviewers Setup page. PR 6 ships this together with the
+  editor work since they share the render helper.
+
+Out (deferred):
+
+- **Configurable trigger threshold.** The email fires on submit
+  unconditionally; no operator opt-out, no "only after the
+  deadline closes" gate. If a session needs to suppress the
+  confirmation for a privacy / compliance reason, that's a
+  follow-on toggle in `email_template_overrides`
+  (`responses_received_enabled: bool`, defaulting to `true`).
+  Out of scope here — most operators want the confirmation,
+  and the current scope is "ship the artifact".
+- **Multiple send on resubmit.** The reviewer surface allows
+  edit-and-resubmit before the deadline. The simplest semantic
+  is "fire once per submit transition", which is what the
+  outbox-enqueue at submit time gives you. Operators who want
+  "fire once total per reviewer per session" can revisit with
+  a `last_responses_received_sent_at` column on `Assignment`;
+  not needed for the MVP.
+- **Operator BCC of every responses-received email.** Some
+  operators will want a copy. The CC / BCC fields in the
+  override JSON cover this once Segment 15's outbox CC / BCC
+  schema work lands; until then the CC / BCC columns store
+  the operator's intent but the send path ignores them, same
+  as the invitation / reminder fields.
+- **Aggregated digest** (one summary email per operator at end
+  of day) — separate scope, separate audience.
+
+### Proposed PR sequence
+
+#### PR 6 — Schema + render helper + editor tab
+
+**Goal.** The third email type is fully editable in the
+operator UI and previewable in the Preview hub; nothing yet
+fires on submit.
+
+- Add the four new keys to the override JSON's documented
+  shape (in this guide and the `email_template_overrides`
+  docstring). No Alembic migration.
+- New `DEFAULT_RESPONSES_RECEIVED_SUBJECT` /
+  `DEFAULT_RESPONSES_RECEIVED_BODY` constants in
+  `app/services/email_templates.py`.
+- New `render_responses_received(session, reviewer) ->
+  RenderedEmail`. Same Template-substitution path as the
+  other two. `$submitted_at` resolves via the helper
+  `_latest_submitted_at(session, reviewer)` querying the
+  reviewer's assignments in this session and taking the
+  newest `submitted_at`; falls back to "(not yet submitted)"
+  if no submitted assignment exists (only the Preview hub
+  hits that branch — the live send path always has one).
+- Editor: extend the template selector partial to render the
+  third option; extend `views.merge_tags_for_template` to
+  return the four-tag set; per-field "Reset to default"
+  links re-use the existing pattern.
+- Preview hub: append the registry entry; the
+  responses-received card renders inline below the reviewer-
+  surface card on `/operator/sessions/{id}/previews`.
+- Tests:
+  - `render_responses_received` substitutes all four tags;
+    `$submitted_at` resolves correctly when the reviewer has
+    submitted assignments and falls back to the "not yet
+    submitted" placeholder otherwise.
+  - Editor tab navigation: `?template=responses_received`
+    selects the tab; merge-tag list shows four tags (no
+    `$invite_url`).
+  - Save / Reset round-trip on the new fields persists to
+    `email_template_overrides`.
+  - Preview hub renders the card with the right body for
+    the picker-selected reviewer.
+
+#### PR 7 — Submit-time send trigger
+
+**Goal.** Wire the reviewer-submit handler to enqueue the
+responses-received email so Segment 11C's transport activation
+delivers it.
+
+- In `routes_reviewer.submit_review` (or its service-layer
+  helper, depending on where the submit-success branch lives),
+  after the assignment's `submitted_at` is stamped and before
+  the redirect, call `email_outbox.enqueue(
+  kind="responses_received", reviewer=reviewer,
+  rendered=render_responses_received(session, reviewer))`.
+- New audit event `responses_received_email.queued` with
+  detail `{"reviewer_id": <int>, "assignment_count": <int>}`.
+  Emitted alongside the existing submit audit (
+  `assignment.submitted` or whatever it's named today).
+- Idempotency: re-submit of the same assignment fires another
+  enqueue. This matches the simple semantic; the deferred
+  "once per session" toggle is the escape hatch if operators
+  push back.
+- Tests:
+  - Submit on a draft assignment enqueues exactly one
+    outbox row with `kind="responses_received"` and the
+    rendered subject / body.
+  - Submit-then-resubmit enqueues two rows (documented
+    behaviour, locked-in by the test).
+  - Submit on a reviewer with multiple assignments in the
+    session enqueues a single email per submit transition,
+    not one per assignment (the email is per-reviewer-per-
+    session, not per-assignment).
+  - Audit event fires alongside the submit audit and carries
+    the right `assignment_count`.
+
+### Implementation pointers
+
+- **Reuse the existing `email_outbox.enqueue` helper.** The
+  invitation / reminder send paths already enqueue rows with
+  `kind="invitation"` / `kind="reminder"`. Adding
+  `kind="responses_received"` is a string addition; the
+  outbox model already has the columns.
+- **Don't gate on transport readiness.** PR 7 enqueues the row
+  regardless of whether the operator has SMTP configured. If
+  the operator skipped Settings, the row sits at `queued`
+  forever — same as the invitation / reminder flows today.
+  Surfacing "you have unsent confirmations" is a Segment 11C
+  Manage-Invitations / Outbox concern.
+- **Submitted-at formatting.** Use the same
+  `format_datetime_for_display` helper the invitation /
+  reminder `$deadline` formatting uses. Keep the merge-tag
+  rendering consistent across all three email types.
+- **Help-contact fallback.** The `$help_contact` tag's "(help
+  contact not set)" placeholder is jarring in a closing
+  confirmation; if `session.help_contact is None`, drop the
+  whole "Questions? Contact …" sentence from the default body
+  rather than printing the placeholder. Operator-supplied
+  bodies that reference `$help_contact` still get the
+  placeholder — that's their decision to make.
+
+### Test impact
+
+- Two new test files —
+  `tests/unit/test_render_responses_received.py` and
+  `tests/integration/test_responses_received_send.py`.
+- Existing `tests/integration/test_session_setupinvite.py`
+  picks up cases for the third tab; existing
+  `tests/integration/test_session_previews.py` (from 11F) picks
+  up the new artifact card.
+- No churn on the existing invitation / reminder test suites.
+
+### Doc impact
+
+This follow-on is intentionally docs-light per the user
+direction — no `todo_master.md`, `status.md`, or
+`unfinished_business.md` updates land here. Those move when
+the PRs ship.
