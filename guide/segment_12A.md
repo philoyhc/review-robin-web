@@ -541,26 +541,36 @@ open the file in Excel without joining against the other CSVs.
   - Multi-instrument session: rows from all instruments
     interleaved per the deterministic order.
 
-### PR 6 — Extract Data card on Session Home
+### PR 6 — Wire Extract Data card downloads + zip bundle
 
-**Goal.** Replace the placeholder Extract Data card with a real
-card surfacing all five downloads + the zip bundle. Retire the
-temporary "Download config" button PR 1 placed on Session
-Details. Light up Quick Setup's configuration-import slot (the
-PR 2 form) by swapping its placeholder body.
+**Goal.** Flip the five Extract Data rows + zip-bundle footer
+from inert (Segment 11H PR B scaffold state) to live, retire
+the temporary "Download config" button PR 1 placed on Session
+Details, and graduate Quick Setup's slot 4 (configuration-
+import placeholder) to its live form.
 
-- Delete the `placeholder_card(id="extract-data", ...)` block at
-  `app/web/templates/operator/session_detail.html:187`. Replace
-  with a real `.card` containing one row per extract (label +
-  count summary + Download button) plus a "Download all"
-  affordance.
-- New view-shape adapter `views.build_extract_data_context(session)`
-  returning per-row counts (`reviewer_count`, `reviewee_count`,
-  `assignment_count`, `response_count`) plus the zip bundle's
-  total. Reuses the existing per-entity count helpers
-  (`csv_imports.existing_reviewer_count`, etc.) and adds a
-  one-liner `responses.session_response_count(session)` for the
-  responses count.
+**Depends on Segment 11H PR B**, which ships the inert Extract
+Data card scaffold (`_extract_data_card.html` partial,
+`extract_data_row` macro, `ExtractDataRow` dataclass +
+`views.build_extract_data_context`). PR 6 only flips
+`is_wired=True` and supplies `download_url` per row; no markup
+changes.
+
+- **No partial / macro / dataclass changes.** 11H PR B is the
+  source of truth for the card's DOM contract. PR 6 extends
+  `views.build_extract_data_context` to populate
+  `download_url` per row from the routes shipped in PRs 1
+  and 3-5:
+  - Settings row → `/operator/sessions/{id}/export-config.csv`
+    (PR 1).
+  - Reviewers / Reviewees rows → the routes from PR 3.
+  - Assignments row → the route from PR 4.
+  - Responses row → the route from PR 5.
+  - "Download all" footer → the new `/export.zip` route this
+    PR adds.
+- The
+  `responses.session_response_count(session)` helper is
+  already present from 11H PR B; PR 6 doesn't add it.
 - New route `GET /operator/sessions/{id}/export.zip` streaming
   a zip with all five CSVs at the canonical filenames. Use
   `zipfile.ZipFile(..., mode="w")` over a `BytesIO` for
@@ -569,18 +579,24 @@ PR 2 form) by swapping its placeholder body.
   budget at production scale (track in `docs/status.md` as a
   Segment 14 follow-up). Audit `session.bundle_extracted` with
   `{"row_counts": {"settings": ..., "reviewers": ..., ...}}`.
-- Quick Setup configuration-import slot: replace the
-  placeholder body with the live `<form
-  action="/operator/sessions/{id}/import-config" method="post"
-  enctype="multipart/form-data">` PR 2 ships, matching the file
-  input + submit shape of slots 1-3 and reusing their inline
-  confirmation banner pattern (replacement-confirmation banner
-  on populated session, `.banner.banner-error` on parse /
-  validation failure with mandatory `.btn.alert` Cancel per
-  Segment 11J's convention).
+- Quick Setup configuration-import slot (slot 4): graduate from
+  the inert state 11H PR A shipped. Per 11H's seam contract,
+  this is one adapter change in
+  `views.build_quick_setup_context(session)`: flip slot 4's
+  `is_wired=True` and supply
+  `wire_url="/operator/sessions/{id}/import-config"` (the
+  route PR 2 shipped). The slot then renders as a live `<form
+  action="…/import-config" method="post"
+  enctype="multipart/form-data">` with the same file input +
+  submit shape as slots 1-3 and the same inline confirmation
+  banner pattern (replacement-confirmation on populated
+  session, `.banner.banner-error` on parse / validation
+  failure with mandatory `.btn.alert` Cancel per Segment 11J's
+  convention).
 - Retire the temporary Session Details "Download config"
   button from PR 1 — its place is taken by the Session settings
-  row in the new Extract Data card.
+  row in the new Extract Data card (already rendered by 11H,
+  flipped live by this PR).
 - Tests:
   - Card renders five download rows on a populated session
     with the right counts.
