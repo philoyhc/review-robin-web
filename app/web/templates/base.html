@@ -880,6 +880,14 @@
         background: var(--bg-page);
         color: var(--text-primary);
       }
+      /* Numeric inputs in `.rs-narrow` columns size themselves via the
+         HTML5 ``size`` attribute (driven by the placeholder length) so
+         the cell is just wide enough to show the hint. The blanket
+         ``width: 100%`` above would otherwise collapse the input to
+         the column's content width and crop the placeholder. */
+      body.ui-v2 td.rs-narrow input[type="text"] {
+        width: auto;
+      }
       body.ui-v2 input[type="text"]:focus,
       body.ui-v2 input[type="datetime-local"]:focus,
       body.ui-v2 input[type="number"]:focus,
