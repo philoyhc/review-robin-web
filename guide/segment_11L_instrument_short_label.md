@@ -77,9 +77,26 @@ strings ≤ 32 chars or NULL. (No CHECK constraint at the DB layer
 
 Alembic migration:
 
-- New revision under `alembic/versions/`.
-- `op.add_column("instruments", sa.Column("short_label", sa.String(32), nullable=True))`.
-- Down migration drops the column.
+- New revision under `alembic/versions/` with
+  `down_revision = "b2c3d4e5f6a7"` (the current head as of
+  2026-05-05; verify with `alembic heads` before drafting).
+- Use the existing batch-alter-table convention (every prior
+  migration in `alembic/versions/` opens a `batch_alter_table`
+  context — the form is friendlier on SQLite where bare
+  `ALTER TABLE` has limitations):
+
+  ```python
+  def upgrade() -> None:
+      with op.batch_alter_table("instruments", schema=None) as batch_op:
+          batch_op.add_column(
+              sa.Column("short_label", sa.String(length=32), nullable=True)
+          )
+
+  def downgrade() -> None:
+      with op.batch_alter_table("instruments", schema=None) as batch_op:
+          batch_op.drop_column("short_label")
+  ```
+
 - Round-trips clean on both SQLite (local) and Postgres
   (`ci-postgres` job). String length on SQLite is advisory; on
   Postgres it's enforced — that's the bedrock guard.
@@ -93,52 +110,80 @@ short_label: Mapped[str | None] = mapped_column(String(32))
 
 ## Service layer
 
-New helper in `app/services/instruments.py`:
+New helper in `app/services/instruments.py`, modelled on the
+existing `update_instrument_description(...)` at line 2255 so it
+reads as a sibling — same arg shape, same lifecycle-invalidation
+hook, same `write_event` import (the module already imports
+`from app.services.audit import write_event`), same
+`[old, new]` audit-detail list shape:
 
 ```python
 def update_short_label(
     db: Session,
     *,
-    review_session: ReviewSession,
     instrument: Instrument,
-    value: str | None,
+    short_label: str | None,
     actor: User,
-    correlation_id: str,
-) -> None:
-    """Update an instrument's short label. value=None clears it.
+) -> Instrument:
+    """Update an instrument's short_label. short_label=None clears it.
 
     Trims whitespace; persists None when the trimmed value is
     empty. Raises ValueError when len > 32. Emits an audit event
-    on change.
+    only when the stored value actually changes.
     """
-    new_value = (value or "").strip() or None
+    cleaned = short_label.strip() if isinstance(short_label, str) else None
+    new_value = cleaned or None
     if new_value is not None and len(new_value) > 32:
-        raise ValueError(f"short_label exceeds 32 chars: {len(new_value)}")
+        raise ValueError(
+            f"short_label exceeds 32 chars: {len(new_value)}"
+        )
     if instrument.short_label == new_value:
-        return  # no-op; no audit
+        return instrument  # no-op; no audit, no invalidate
+
     lifecycle.invalidate_if_validated(
-        db, review_session=review_session, user=actor,
+        db,
+        review_session=instrument.session,
+        user=actor,
         reason="instrument_short_label_updated",
-        correlation_id=correlation_id,
     )
     old_value = instrument.short_label
     instrument.short_label = new_value
     db.flush()
-    audit.write_event(
+    write_event(
         db,
         event_type="instrument.short_label_updated",
-        summary=f"Updated short_label on instrument {_instrument_label(instrument)}",
-        actor_user_id=actor.id,
-        session_id=review_session.id,
+        summary=(
+            f"Updated short_label on instrument {_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session_id=instrument.session_id,
         detail={
             "instrument_id": instrument.id,
-            "old": old_value,
-            "new": new_value,
+            "session_id": instrument.session_id,
+            "short_label": [old_value, new_value],
         },
-        correlation_id=correlation_id,
     )
     db.commit()
+    return instrument
 ```
+
+Three things to call out:
+
+- **No `correlation_id` arg.** `update_instrument_description`
+  doesn't take one either, and neither does its
+  `lifecycle.invalidate_if_validated` call — so this helper
+  matches.
+- **Audit detail uses a `[old, new]` list**, not a `{"old": …,
+  "new": …}` dict. Matches the convention in
+  `update_instrument_description` (`detail={"description":
+  [old_value, new_value]}`).
+- **The summary uses `_instrument_label(instrument)`** (the
+  prettier-label helper) rather than bare `instrument.name`.
+  Most audit-summary call sites in this file already use
+  `_instrument_label` — `update_instrument_description` is the
+  one outlier still using `instrument.name` directly. Don't
+  copy that outlier into the new helper; align with the
+  majority pattern.
 
 `_instrument_label(instrument)` extension (line ~1004 today):
 
@@ -153,28 +198,91 @@ def _instrument_label(instrument: Instrument) -> str:
     return instrument.name
 ```
 
-Existing audit-summary call sites (~10 of them) pick up the
-prettier label automatically. No call-site changes needed.
+Existing audit-summary call sites (13 of them across
+`app/services/instruments.py`) pick up the prettier label
+automatically. No call-site changes needed. No tests pin
+specific summary copy — verified via
+`grep -rnE 'event\.summary' tests/` finding no instrument-summary
+assertions.
 
 ## Route
 
-The Instruments index page already has a per-instrument edit POST
-that handles the description textarea — see
-`update_instrument_description(...)` in
-`app/services/instruments.py:2255` and its route handler. **Extend
-the existing edit POST** to accept an optional `short_label` form
-field alongside `description`. Both update in one round-trip.
+**Where description gets persisted today.** Despite the orphan
+`/edit` route at `app/web/routes_operator.py:1116` (which exists
+but no template or test calls), the actual description-update
+path runs through the **bulk fields-save handler** at
+`app/web/routes_operator.py:1465` (`instrument_bulk_save_fields`)
+— see lines 1684-1695:
 
-The route reads the form, calls `update_short_label(...)` and
-`update_instrument_description(...)` in sequence, and 303s back to
-the Instruments page with the same anchor. Validation errors (len
-> 32 from `update_short_label`) re-render the page with an inline
-error banner near the offending instrument's card; `description`
-errors keep their existing handling.
+```python
+if "description" in form:
+    submitted_desc = form.get("description")
+    cleaned = (
+        submitted_desc.strip() if isinstance(submitted_desc, str) else None
+    ) or None
+    if cleaned != instrument.description:
+        instruments_service.update_instrument_description(
+            db, instrument=instrument, description=cleaned, actor=user
+        )
+```
 
-Lifecycle gate: the existing `_require_instrument_editable(...)`
-on the route stays. Editing is rejected when the session is
-`ready` (HTTP 400 with the lock-card explanation, same as today).
+The description `<textarea>` in the template carries
+`form="dfsave-{{ instrument.id }}"` so it submits with the bulk
+Display-Fields form, posting to `/fields/save`.
+
+**The 11L change.** Add a parallel block in
+`instrument_bulk_save_fields` that processes `short_label`
+identically:
+
+```python
+if "short_label" in form:
+    submitted_label = form.get("short_label")
+    try:
+        instruments_service.update_short_label(
+            db,
+            instrument=instrument,
+            short_label=(
+                submitted_label
+                if isinstance(submitted_label, str)
+                else None
+            ),
+            actor=user,
+        )
+    except ValueError:
+        # Inline-error path: see "Validation errors" below.
+        ...
+```
+
+The handler already calls `_require_instrument_editable(review_session)`
+at line 1473 — that lifecycle gate covers `short_label` updates
+the same way it covers description. No new gate needed.
+
+The orphan `/edit` route is **not** 11L's problem. Leave it
+alone (or retire it as separate cleanup; out of scope here).
+
+**Validation errors.** A 33-char `short_label` raises `ValueError`
+in the service helper. The bulk handler doesn't currently
+re-render with inline errors — failures elsewhere (e.g. a missing
+required field) cascade through normal exception handling. For
+11L, two viable paths:
+
+- **(a)** Catch the `ValueError` in the handler, attach a
+  `?short_label_error={instrument.id}` flash to the redirect, and
+  re-render with an inline `.banner.banner-warning` near that
+  instrument's card. Mirrors the `?saved=` flash already in place
+  at line 1700.
+- **(b)** Lean on the HTML5 `maxlength="32"` attribute (already
+  in the plan's UI spec) so the browser prevents oversized input
+  from being submitted in the first place. Server-side cap is a
+  defensive fallback; if it ever fires, return HTTP 400 with a
+  generic error message.
+
+Path (b) is simpler and adequate — the `maxlength` attribute is
+the user-visible guardrail, and a 400 from server-side enforcement
+should be effectively unreachable. Recommend (b) for PR scope.
+
+Redirect: same as today — 303 back to the Instruments page with
+`?saved={instrument.id}#instrument-{instrument.id}`.
 
 ## Operator UI
 
@@ -225,21 +333,36 @@ Unit:
   - Empty / whitespace-only value persists as NULL.
   - 32-char value persists as is.
   - 33-char value raises `ValueError`.
-  - No-op when `short_label` is unchanged (no audit event).
-  - On change, audit event has correct `old` / `new` detail.
+  - No-op when `short_label` is unchanged (no audit event,
+    no `invalidate_if_validated` call).
+  - On change, audit event detail carries `short_label:
+    [old, new]` shape (matching `update_instrument_description`'s
+    convention).
+  - Audit summary uses `_instrument_label(instrument)` (so a
+    short-label set on an unrelated previous edit shows up in
+    subsequent audit copy).
 
 Integration:
 
 - `tests/integration/test_segment_11l.py` — new file:
-  - The Instruments edit POST accepts `short_label` alongside
-    `description` and persists both.
-  - Validation: 400 when `short_label` is > 32 chars.
-  - Lifecycle gate: 400 when the session is `ready`.
+  - The bulk fields-save POST
+    (`/operator/sessions/{id}/instruments/{instrument_id}/fields/save`)
+    accepts a `short_label` form field alongside the existing
+    `description` and persists both in one round-trip.
+  - Server-side validation: a 33-char `short_label` returns
+    HTTP 400 (the defensive fallback for the
+    HTML5 `maxlength` attribute that browsers normally enforce).
+  - Lifecycle gate: 400 when the session is `ready`. (Existing
+    `_require_instrument_editable` on the handler covers this;
+    no new gate to test in isolation, but verify it still
+    catches `short_label`-only updates.)
   - The read-only render shows the short label when set; omits
     when unset.
   - The audit-summary helper (`_instrument_label`) prefers
     `short_label` over `description` over `name` — exercised
-    indirectly via an audit-event summary read.
+    indirectly by setting a short_label, doing some other
+    instrument edit (e.g. add a field), and reading the
+    resulting audit-event summary.
 
 Migration:
 
