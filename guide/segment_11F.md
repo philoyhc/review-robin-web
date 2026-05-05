@@ -19,7 +19,7 @@ Catalog item: `guide/todo_master.md` "Upcoming" item 2
 
 ## Status
 
-Planning. Sized as **3 PRs** in dependency order, each
+Planning. Sized as **5 PRs** in dependency order, each
 independently shippable:
 
 1. **PR A — Page chrome + reviewer picker.** No artifact cards
@@ -30,6 +30,15 @@ independently shippable:
 3. **PR C — Reviewer surface card.** Folds in the existing
    `/preview` (singular) form-only preview as a hub card and
    retires the standalone route.
+4. **PR D — Reminder email card.** Renders through
+   `email_templates.render_reminder` verbatim. Smaller than
+   PR B because it reuses every primitive PR B introduced
+   (registry, render adapter shape, missing-data path).
+5. **PR E — Responses-received email card.** Coordinates with
+   Segment 11E PR 6, which adds `render_responses_received`
+   and proposes landing the registry append itself; whichever
+   ships first carries the work, the other plan strikes
+   through its corresponding scope item. See "PR E" below.
 
 Send-test affordances per artifact (spec §"Send-test") are
 **deferred** to either a small 11F follow-on or to Segment 11C
@@ -40,25 +49,15 @@ keeps 11F itself small.
 
 ## Why this scope
 
-The spec defines four artifacts (invitation, response form,
-reminder, responses-received). Two of those four are mid /
-post-flight communications:
-
-- **Reminder email** is sent against an active session past a
-  threshold; previewing it pre-flight is useful but not
-  blocking.
-- **Responses-received email** doesn't have a render path yet
-  (`app/services/email_templates.py` has `render_invitation` and
-  `render_reminder`, but no responses-received template). Adding
-  one is a separate scope.
-
-The two artifacts the operator must inspect *before* activating
-the session are the **invitation email** (the message that
-goes out the moment they hit Activate) and the **reviewer
-surface** (what the reviewer lands on after clicking the link).
-These are the pre-flight blockers; 11F ships them and pins the
-hub structure so reminder + responses-received drop in as new
-registry entries later without touching the page chrome.
+The spec defines four reviewer-facing artifacts (invitation,
+response form, reminder, responses-received). All four ship in
+11F now that 11E's follow-on planning (`render_responses_received`,
+PR 6) gives the fourth artifact a render path. The original
+2-card sizing carved off the two pre-flight blockers —
+**invitation** and **reviewer surface** — so PR B / PR C could
+land before reminder / responses-received UX questions settled.
+Those questions have settled enough to ship, so the deferred
+two slot into PR D / PR E on top of the same hub structure.
 
 ## Scope
 
@@ -79,6 +78,18 @@ In:
   the existing `routes_reviewer.build_preview_context`. Folds in
   the standalone `/preview` (singular) route by retiring it and
   embedding its template output as a card body inside the hub.
+- **Reminder email card.** Renders through
+  `email_templates.render_reminder(session, reviewer)` — same
+  call shape as the invitation card; same canonical-five
+  merge-tag set. Card description: "Sent against an active
+  session past the configured reminder threshold."
+- **Responses-received email card.** Renders through
+  `email_templates.render_responses_received(session, reviewer)`,
+  the helper Segment 11E PR 6 introduces. Four-tag merge-set
+  per 11E (drops `$invite_url`, optional `$submitted_at`).
+  Card description: "Sent the moment the reviewer submits
+  their review." See PR E below for the cross-segment seam
+  with 11E.
 - **Source-of-truth footer** on each card per spec ("Rendered
   from Email Template (Setup) and Reviewers (Setup).") — names
   what to edit if the operator dislikes what they see, with
@@ -94,25 +105,18 @@ In:
   `closed`). Send-test (when it lands) is the only thing that
   gates lifecycle; the previews themselves are read-only and
   always inspectable.
-- **Artifact registry seam.** Even with only two artifacts in
-  PR B / PR C, the page iterates over a small registry tuple
-  list at `app/web/views.py` (something like
-  `PREVIEW_ARTIFACTS: list[ArtifactSpec]`) so registering the
-  reminder / responses-received cards later is a one-line
-  append, not a template rewrite. Per spec §"Forward-looking" —
-  the registry is also where the future Reviewee Experience
-  Preview filters by audience.
+- **Artifact registry seam.** The page iterates over a small
+  registry tuple list at `app/web/views.py` (something like
+  `PREVIEW_ARTIFACTS: list[ArtifactSpec]`); each card is one
+  registry entry. The registry order pins the rendered order
+  on the page (per spec §"Page layout": invitation → form →
+  reminder → responses-received, matching the chronological
+  arc of the reviewer experience). Per spec §"Forward-looking"
+  — the registry's `audience` field is also where the future
+  Reviewee Experience Preview filters.
 
 Out:
 
-- **Reminder email card.** Render path exists
-  (`render_reminder`) but reminder previewing is not pre-flight
-  blocking. Lands as a follow-on registry append once the spec
-  is reconciled with the Segment 11C consolidated reminder
-  flow.
-- **Responses-received email card.** No render path yet; adding
-  one is its own scope. Defer with the rest of post-submit
-  comms (likely Segment 11M / 15).
 - **Send-test affordances.** Per "Status" above, fold into
   Segment 11C PR F (which already builds the transport seam
   for per-row + bulk + test sends on Manage Invitations) so
@@ -393,6 +397,122 @@ after clicking the invitation, using the production
     fragment preserved.
   - Session Home "See previews" link points at the hub.
 
+### PR D — Reminder email card
+
+**Goal.** Render the reminder email the selected reviewer
+would receive, using the production render path. Smaller than
+PR B because the registry, the card partial, and the
+missing-data path are all already in place.
+
+- Append a third `PreviewArtifactSpec` entry to
+  `views.PREVIEW_ARTIFACTS` for the reminder. Render adapter
+  calls `email_templates.render_reminder(session, reviewer)`
+  and packages the rendered subject + from / to / body into
+  the existing `CardBody` dataclass PR B introduced.
+- **Position in registry.** Insert between the reviewer-
+  surface card and (eventually) the responses-received card,
+  matching the chronological arc the reviewer experiences
+  (invitation arrives → reviewer opens the form → reminder
+  arrives if they don't act → responses-received arrives on
+  submit).
+- **Card description.** "Sent against an active session past
+  the configured reminder threshold. Operators trigger
+  reminders from the consolidated Manage Invitations page
+  (Segment 11C)." This grounds the operator in the live
+  send-side affordance without duplicating it here.
+- **Source-of-truth footer.** Reuses the Setup-page links the
+  invitation card uses (Email Template + Reviewers); the
+  reminder body lives in the same `email_template_overrides`
+  JSON column the invitation does, edited from the same
+  `/setupinvite` page (different `?template=reminder` tab).
+- **Missing-data handling.** Same shape as the invitation
+  card: if `session.email_template_overrides` lacks reminder
+  keys *and* the seeded reminder default is unset (cannot
+  happen today; cheap forward-compatible check), render the
+  "Reminder template not set up. Configure on the Email
+  Template Setup page." stub with a
+  `?template=reminder`-anchored link.
+- **No new lifecycle gating.** Card renders in all session
+  states like its siblings.
+- Tests:
+  - Selected reviewer's reminder renders with subject + body
+    populated; canonical-five merge tags substitute.
+  - Switching reviewers via the picker swaps the rendered
+    name / `$invite_url` (the reminder still carries the
+    sign-in link until the reviewer submits).
+  - Reminder-template-not-set path renders the missing-data
+    stub with the configured Setup-page link.
+  - Card sits between the reviewer-surface card (PR C) and
+    the responses-received card (PR E) in the rendered DOM
+    order — pin via integration test.
+
+### PR E — Responses-received email card
+
+**Goal.** Render the confirmation email the reviewer receives
+on submit, using the `render_responses_received` helper
+Segment 11E PR 6 introduces.
+
+**Cross-segment seam.** Segment 11E PR 6's scope already
+calls out a "Preview hub registry append" for this artifact
+("lands here, not in 11F"). Both plans converge on the same
+one-line registry append + render adapter; only one of the
+two PRs ships the work, the other strikes its corresponding
+scope item:
+
+- If **11E PR 6 ships first** — the registry entry, render
+  adapter, and Preview hub integration land there. PR E in
+  this guide collapses to a strikethrough note ("shipped
+  with 11E PR 6") and the segment is sized at 4 PRs (A-D)
+  rather than 5.
+- If **11F PR D ships first** (i.e., we land the reminder
+  card, then come back for responses-received before 11E
+  PR 6 lands) — PR E lands the registry append here, and
+  11E PR 6's scope drops the registry-append bullet.
+- The render adapter shape is identical in both cases:
+  call `render_responses_received(session, reviewer)`, return
+  a `CardBody` with the rendered subject / from / to / body.
+  Whichever plan owns the work, the other references it.
+
+Scope assuming PR E ships the work (the conservative case
+this guide covers; flip if the order resolves the other way):
+
+- Append a fourth `PreviewArtifactSpec` to
+  `views.PREVIEW_ARTIFACTS` after the reminder. Render
+  adapter calls `render_responses_received(session,
+  reviewer)`.
+- **Card description.** "Sent the moment the reviewer
+  submits their review."
+- **Source-of-truth footer.** Email Template
+  (`?template=responses_received` per 11E PR 6) + Reviewers.
+- **Merge-tag set.** Four tags per 11E PR 6 — drops
+  `$invite_url`, includes optional `$submitted_at`. The
+  `$submitted_at` resolution path is owned by 11E PR 6's
+  helper; the preview adapter calls through to it without
+  knowing the implementation.
+- **Pre-submit preview rendering.** When the picker-selected
+  reviewer has not yet submitted any assignments (the common
+  pre-flight case), `$submitted_at` falls back to the
+  "(not yet submitted)" placeholder per 11E PR 6's helper
+  contract. The card surfaces a one-line note above the
+  rendered body — "Previewing pre-submit; `$submitted_at`
+  shows a placeholder." — so the operator isn't surprised
+  the date field doesn't carry a real value.
+- **Missing-data handling.** Same template-not-set / no-help-
+  contact paths as the other email cards.
+- Tests:
+  - Card renders with `$submitted_at` populated when the
+    selected reviewer has submitted assignments (use a
+    fixture that pre-stamps `submitted_at`).
+  - Card renders with the placeholder + the explanatory note
+    on a reviewer with no submitted assignments.
+  - Card sits last in the rendered DOM order
+    (invitation → reviewer-surface → reminder →
+    responses-received).
+  - Cross-segment seam: integration test passes regardless of
+    whether 11E PR 6's registry append landed here or there
+    (the test asserts the rendered DOM, not which file
+    introduced the registry entry).
+
 ## Implementation pointers
 
 - **Production parity is non-negotiable** (spec §"Rendering").
@@ -427,15 +547,6 @@ after clicking the invitation, using the production
 
 ## Out of scope (cross-references)
 
-- **Reminder email artifact** — render path exists
-  (`email_templates.render_reminder`) but lands as a follow-on
-  registry append once Segment 11C's consolidated reminder flow
-  settles. The reminder UX makes more sense to preview when the
-  preview surface and the live send surface (Manage
-  Invitations) share their reminder vocabulary.
-- **Responses-received email artifact** — no render path
-  exists. Add the render path *and* the registry entry as one
-  scope; not 11F.
 - **Send-test affordance** — Segment 11C PR F. Same
   `EmailTransport` interface; one wiring point on the
   consolidated Manage Invitations page covers per-row, bulk,
