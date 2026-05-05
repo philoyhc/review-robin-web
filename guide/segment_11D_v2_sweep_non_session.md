@@ -300,7 +300,36 @@ any of them. Land it before γ.
 ### PR α — URL routing + dashboard rewiring
 
 **Goal.** The new URL pattern works end-to-end. No visible layout
-change.
+change. Save semantics stay session-wide (any input the form
+posts gets persisted, regardless of which page it belongs to);
+PR γ adds the per-position filter when rendering also narrows
+to one instrument.
+
+**Settled decisions (2026-05-05):**
+
+- **Submit redirect target — hidden form field.** Submit POST
+  has no position in its URL but its 303 target needs one. The
+  surface form carries a hidden `current_position` field; the
+  submit handler reads it via `submit_redirect_url(review_session,
+  current_position)` and 303s to
+  `/reviewer/sessions/{id}/{current_position}?submitted=ok`.
+  Falls back to `position=1` when the field is missing or
+  out-of-range (defensive — the value comes from a hidden field
+  the surface emits, but a malformed POST shouldn't 500).
+- **Save filter — deferred to PR γ.** PR α only changes the
+  Save URL shape (`{position}` segment added). The route ignores
+  the position segment and persists every input in the form
+  body, matching today's all-instruments-stacked behaviour.
+  This keeps the intermediate state coherent for multi-instrument
+  reviewers (a Save click during the α-to-γ window persists
+  everything they typed, just like today). PR γ adds the filter
+  the moment rendering narrows to one instrument.
+- **Status codes.** Bare-URL → `/{id}/1` is **HTTP 303** (matches
+  the existing redirect convention for the surface). Out-of-range
+  position is **HTTP 404**. Non-integer position is **HTTP 422**
+  (FastAPI's auto-validation; the path parameter is typed `int`).
+
+**Scope:**
 
 - Add `/reviewer/sessions/{session_id}/{instrument_position}` route
   (GET). Position is 1-indexed, sorted by `Instrument.order` then
@@ -312,19 +341,30 @@ change.
 - Reviewer dashboard rows in `reviewer/dashboard.html` link to
   `/reviewer/sessions/{id}/1`.
 - `POST /reviewer/sessions/{id}/{position}/save` replaces
-  `POST /reviewer/sessions/{id}/save`. Route filters incoming form
-  inputs to ones whose `name` matches response fields belonging to
-  `{position}`'s instrument; ignores everything else. (Today's
-  surface only renders one instrument's fields anyway, so this is
-  a no-op refactor — the filter becomes load-bearing in PR γ.)
+  `POST /reviewer/sessions/{id}/save`. The `{position}` segment
+  is **decorative** in PR α — the route signature accepts it
+  (so the URL shape is consistent) but the body persistence
+  logic doesn't filter by it. PR γ wires the filter when it
+  ships rendering-narrows-to-one-instrument.
 - `POST /reviewer/sessions/{id}/submit` and
   `POST /reviewer/sessions/{id}/clear` stay as session-wide
-  endpoints (drop any surviving `{position}` segment if present).
+  endpoints (no position segment).
+- Surface form gains a hidden
+  `<input type="hidden" name="current_position" value="{N}">`
+  reflecting the URL position. Submit reads it for the redirect.
+- New helper `submit_redirect_url(review_session, current_position)`
+  in `app/web/routes_reviewer.py` (or its own tiny module).
+  Today returns `f"/reviewer/sessions/{id}/{position}?submitted=ok"`;
+  PR ε's standalone-confirmation page swap is a one-line helper
+  change.
 - Rendering is unchanged — server still produces today's stacked-
   instruments layout.
 
 Test impact: small. Update existing reviewer-flow tests to use the
 new save / GET URLs (or the bare URL with `follow_redirects=True`).
+New tests cover the URL shape, the bare-URL 303, out-of-range
+404, dashboard-link 1-suffix, and the submit-redirect-respects-
+hidden-field behaviour.
 
 Risk: invitation tokens 303 through the bare URL; verify the chain
 still works in `tests/integration/test_invitations.py`.
@@ -456,12 +496,19 @@ template work that consumes them.
   `.rs-prev-btn` / `.rs-next-btn` retire.
 - The `.rs-action-row-left` modifier retires (both rows are flush
   right now). Keep `.rs-action-row-top` for its top-margin role.
-- Server still renders one instrument's group (the URL position).
-  Save POST already filters by position (PR α). Submit POST is
-  session-wide — but currently the form only contains the visible
-  instrument's inputs, so Submit's "session-wide" semantics are
-  not yet load-bearing. (PR δ ships the all-instruments-in-DOM
-  change that makes Submit truly session-wide.)
+- Server now renders only the URL position's instrument group
+  (the rendering-narrows step deferred from PR α). Save POST
+  picks up its per-position filter at the same time: the route
+  reads only inputs whose `name` matches response fields
+  belonging to `{position}`'s instrument and ignores the rest
+  (defensive — with rendering narrowed, the form body shouldn't
+  contain stray inputs from other pages, but the filter
+  documents intent and guards against future template edits).
+  Submit POST is session-wide — but currently the form only
+  contains the visible instrument's inputs, so Submit's
+  "session-wide" semantics are not yet load-bearing. (PR δ
+  ships the all-instruments-in-DOM change that makes Submit
+  truly session-wide.)
 
 Test impact: medium-heavy. Most reviewer-flow tests need updating:
 - `Save draft` → `Save`.
@@ -515,7 +562,8 @@ the current page has no dirty inputs.
   Discard click: read each input on the active group, write the
   saved-value back, clear the dirty flag, disable Save.
 - The form's POST body now contains every input across every
-  instrument. Save's per-position route filter (PR α) keeps
+  instrument. Save's per-position route filter (which actually
+  lands here in PR γ alongside the rendering narrowing) keeps
   Save's scope clean. Submit reads the full body and persists
   every value before stamping `submitted_at` session-wide.
 - `popstate` (back / forward) handler: read URL position, toggle
