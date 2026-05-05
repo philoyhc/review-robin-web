@@ -270,14 +270,17 @@ description.
    Note hit count in PR α's description so reviewers know the
    sweep is bounded.
 
-2. **`Instrument.name` data audit.** What's the longest existing
-   `Instrument.name` in production-shaped test data, and what do
-   real-world operators actually set? Per the spec, page button
-   labels read `Page N: {Instrument.name}`. The Setup-side
-   `max_length` constraint (~32 chars) lands in the forthcoming
-   Instruments Setup spec; until then the surface ships a CSS
-   `text-overflow: ellipsis` safeguard. The audit confirms the
-   safeguard's `max-width` value lands in the right ballpark.
+2. **`Instrument.short_label` cap value sanity-check.** PR S adds
+   a new `Instrument.short_label String(32) | None` column. Page
+   button labels read `Page #{N}: {short_label}` (falling back
+   to bare `Page #{N}`); the per-instrument H2 heading reads
+   `Page #{N}: {short_label}` likewise. Sanity-check: do the
+   spec's example labels (`Skills`, `Cultural Fit`,
+   `Final Recommendation`) plus a typical `Page #99:` prefix fit
+   under typical viewport widths at body font size? At 16px ≈
+   `16em` ≈ 256px is a safe ceiling for the CSS truncation rule
+   PR γ ships. (No data audit on existing rows — `short_label`
+   is a new column; existing rows have NULL by default.)
 
 ## PR sequence
 
@@ -290,9 +293,9 @@ improves incrementally.
 A **sibling Setup-side PR** (PR S — see "Sibling: Setup-side
 instrument-name constraint" below) is a hard prerequisite for
 PR γ. PR S can ship any time before then in parallel with α / β;
-without it, PR γ's `Page N: name` button labels show the auto-
-generated `instrument_3` system handle, which is unhelpful copy
-for reviewers.
+without it, PR γ's `Page #{N}: {short_label}` button labels and
+the per-instrument H2 title can't read the operator's framing —
+the `short_label` column doesn't exist yet.
 
 ### PR α — URL routing + dashboard rewiring
 
@@ -371,24 +374,24 @@ Existing tests that asserted banner position (e.g. "saved=ok
 banner near top of body") may need to update to check the panel
 instead.
 
-### PR γ — Unified action row (server-side Page N navigation)
+### PR γ — Unified action row (server-side Page navigation)
 
 **Goal.** The action row collapses into a single flush-right strip,
-mirrored top + bottom. Page N: name buttons replace Previous /
-Next. Server-side navigation only (full page reload on Page N
-click) — client-side toggle lands in PR δ.
+mirrored top + bottom. `Page #{N}: {short_label}` buttons replace
+Previous / Next. Server-side navigation only (full page reload on
+Page button click) — client-side toggle lands in PR δ.
 
-**Hard prerequisite: PR S.** The `Page N: name` button label reads
-`Instrument.name`; until PR S adds the rename UI + 32-char ceiling,
-every instrument carries the auto-generated `instrument_N` system
-handle and the buttons read e.g. `Page 3: instrument_3`. Land PR
-S first.
+**Hard prerequisite: PR S.** PR γ's button labels and per-
+instrument H2 read `Instrument.short_label`; PR S ships the field
++ Setup-side editor + the `page_button_label` and
+`instrument_heading` helpers. Without PR S, `short_label` doesn't
+exist as a column. Land PR S first.
 
 - Replace the current top + bottom action rows with a single
   unified `.rs-action-row` per side (top and bottom mirrored).
-  Order, left-to-right: `Save`, `Discard`, `Page 1: name`,
-  `Page 2: name`, …, **vertical divider**, `Submit`. Whole row
-  flush right.
+  Order, left-to-right: `Save`, `Discard`,
+  `Page #1: {short_label}`, `Page #2: {short_label}`, …,
+  **vertical divider**, `Submit`. Whole row flush right.
 - New element: `.rs-action-divider` — a 1px-wide `<span>` that
   visually separates the page-level cluster from Submit. CSS in
   `base.html` v2 block:
@@ -402,15 +405,40 @@ S first.
   }
   ```
 
-- `Page N: name` buttons render as `<a class="btn">` anchors
-  pointing at `/reviewer/sessions/{id}/{n}` — server-side
-  navigation, full page reload. Current page button is
-  `aria-disabled="true"`. Add a defensive
-  `max-width: 16em; text-overflow: ellipsis` rule on the page
-  buttons as defence-in-depth — PR S enforces a 32-char ceiling
-  at the data layer, but the CSS belt-and-suspenders means a
-  pre-existing oversized name (or a future migration glitch)
-  doesn't break the layout.
+- Page buttons render as `<a class="btn">` anchors pointing at
+  `/reviewer/sessions/{id}/{n}` — server-side navigation, full
+  page reload. Label comes from PR S's
+  `page_button_label(instrument, position)`:
+  `Page #{N}: {short_label}` when set; bare `Page #{N}` when
+  unset. Current page button is `aria-disabled="true"`. Add a
+  defensive `max-width: 16em; text-overflow: ellipsis` rule on
+  the page buttons as belt-and-suspenders — PR S enforces a
+  32-char ceiling at the data layer, but the CSS guards against
+  pre-existing oddities or future migration glitches.
+- **Per-instrument heading.** Replace the existing
+  `<h2>{group.heading}</h2>` line with a `.rs-instrument-heading`
+  flex row (title + optional subtitle, baseline-aligned, mirrors
+  the `.rs-page-header` pattern). Title and subtitle come from
+  PR S's `instrument_heading(instrument, position, total_count)`
+  helper returning `(title: str | None, subtitle: str | None)`.
+  Composition rules per `spec/reviewer-surface.md` "Above the
+  table — heading + help block". Add CSS in `base.html`:
+
+  ```css
+  body.ui-v2 .rs-instrument-heading {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin: var(--space-6) 0 var(--space-3) 0;
+  }
+  body.ui-v2 .rs-instrument-heading h2 { margin: 0; }
+  body.ui-v2 .rs-instrument-heading .rs-instrument-subtitle {
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+  ```
+
 - Acknowledge missing checkbox renders above the bottom action
   row when `show_acknowledge` is set.
 - Drop `Previous` / `Next` buttons + their inline JS (the
@@ -430,7 +458,13 @@ Test impact: medium-heavy. Most reviewer-flow tests need updating:
 - `Cancel — discard unsaved edits` → `Discard`.
 - `>Previous</button>` / `>Next</button>` assertions retire.
 - New tests for the divider + Submit position.
-- New tests for `Page N: name` button rendering.
+- New tests for `Page #{N}: {short_label}` button rendering
+  (with + without `short_label` set on the test fixture).
+- New tests for the per-instrument heading title + subtitle row
+  (covering the six cases in the heading-spec table:
+  multi-instrument {with / without short_label} × {with / without
+  description}, single-instrument {with / without short_label} ×
+  {with / without description}).
 
 ### PR δ — Client-side page navigation + dirty preservation
 
@@ -511,92 +545,129 @@ preview adapts to the new chrome.
 Test impact: moderate. Existing acknowledge tests update for
 session-wide model. Existing preview tests update for new chrome.
 
-### Sibling PR S — Instruments page: rename UI + 32-char `Instrument.name` constraint
+### Sibling PR S — Add `Instrument.short_label` + Setup-side editor
 
 **Sibling track.** Independent of α / β; hard prerequisite for γ.
-Lands the Setup-side foundation that PR γ's `Page N: name`
-buttons depend on. Per the spike (`guide/segment_11D…` §
-"Pre-implementation spike"), today's instruments all carry an
-auto-generated `instrument_N` system handle and there's **no
-rename UI** — operators can't actually set a friendly name. PR
-γ's button labels need both halves: a place to set the friendly
-name, and a length cap so the buttons don't overflow the action
-row.
+Lands the Setup-side foundation that PR γ's
+`Page #{N}: {short_label}` buttons + per-instrument H2 headings
+depend on.
 
-**Goal.** Operators can set a short, reviewer-facing friendly
-name on each instrument (32-char ceiling). The name is what the
-reviewer surface puts on Page N buttons.
+**Why a new field rather than tightening `Instrument.name`.**
+Three strings now have distinct jobs (per the spec sweep folded
+into `spec/visual_style_rrw.md` "Implications for the reviewer
+surface"):
+
+| Column | Length | Audience | Role |
+|---|---|---|---|
+| `Instrument.name` | `String(255)` (unchanged) | Operator-internal / audit-event copy | System handle. Auto-generated as `instrument_N` on instrument create. **Not** reviewer-facing. |
+| `Instrument.short_label` (new) | `String(32) | None` | Reviewer | The operator's reviewer-facing framing. Lands on Page button labels and as the per-instrument H2 title. Capped at 32 chars at the schema layer. |
+| `Instrument.description` (unchanged) | `String(2000) | None` | Reviewer | The longer per-instrument blurb. Lands as the subtitle next to the H2 title above each table. |
+
+Tightening `name` to do double duty (system handle + reviewer
+framing) would tangle audit copy with reviewer copy and force
+the auto-generated default to get clever. A new column keeps the
+three concerns clean.
+
+**Goal.** Operators can set a short reviewer-facing label on each
+instrument (32-char ceiling). The reviewer surface puts the short
+label on Page buttons and on per-instrument H2 headings.
 
 Scope:
 
-- **Schema.** Alembic migration tightens `Instrument.name` from
-  `String(255)` to `String(32)`. Safe given the spike — no
-  existing names exceed 16 chars. The migration includes a guard
-  that fails fast if any pre-existing row has a name >32 chars
-  (defensive — shouldn't fire, but better an explicit migration
-  failure than silent truncation).
-- **Service-layer.** New `instruments.rename(...)` (or extend
-  `instruments.update_metadata(...)` if it exists) — accepts
-  `name: str`; raises a domain error when `len(name) > 32` or
-  `name == ""`. Auto-generated `instrument_N` names remain the
-  default for newly-created instruments; the rename UI overrides
-  them.
-- **Route.** New `POST /operator/sessions/{id}/instruments/{instrument_id}/rename`
-  taking a `name` form field. Lifecycle-gated by
-  `_require_instrument_editable` (same gate as other instrument
-  edits). Emits an `instrument.renamed` audit event with detail
-  `{"old_name": …, "new_name": …}`.
+- **Schema.** Alembic migration adds
+  `instruments.short_label VARCHAR(32) NULL`. Safe — additive
+  column, defaults to NULL. No data migration; existing rows have
+  `short_label IS NULL` and the reviewer surface's fallback
+  (bare `Page #{N}`) handles them.
+- **Service-layer.** New
+  `instruments.update_short_label(db, *, review_session, instrument, value, actor, correlation_id)`
+  helper. Accepts `value: str | None`; trims whitespace; raises
+  `ValueError` on `len(value) > 32`; emits an
+  `instrument.short_label_updated` audit event with detail
+  `{"old": …, "new": …}`. Lifecycle-gated by
+  `_require_instrument_editable`.
+- **Route.** Extend the existing per-instrument edit POST (the
+  same one that handles description today — see
+  `update_instrument_description` in
+  `app/services/instruments.py:2255`) to accept an optional
+  `short_label` form field alongside `description`. Both update
+  in one save. (Single round-trip is friendlier than two
+  separate routes.)
 - **Operator UI.** On the Instruments index page
-  (`operator/instruments_index.html`), each per-instrument card
-  gains a rename input — `<input type="text" name="name"
-  maxlength="32" required>` — adjacent to the existing
-  description textarea. Form submits to the new rename route.
-  Inline validation (HTML5 `maxlength` + `required`) catches
-  most issues; server-side validation is the source of truth.
-- **Reviewer-surface fallback.** Page N button label logic
-  treats two cases as "no friendly name set" → renders bare
-  `Page N`:
-  - Empty / missing name (defensive — schema enforces non-empty,
-    but render robustly).
-  - Auto-generated handle (matches the regex
-    `^instrument_\d+$`). When the operator hasn't bothered to
-    rename, showing "Page 3: instrument_3" is worse than just
-    "Page 3".
+  (`operator/instruments_index.html`) per-instrument card,
+  Section A's edit form gains a short-label input above the
+  existing description textarea:
 
-  This rule lives in the page-button rendering helper; PR γ uses
-  the helper.
+  ```html
+  <input form="dfsave-{{ instrument.id }}"
+         type="text"
+         name="short_label"
+         maxlength="32"
+         placeholder="(optional short label, e.g. Skills)"
+         value="{{ instrument.short_label or '' }}">
+  ```
+
+  Read-only mode (when not editing) renders the short label as
+  the small-caps subhead above the description, or omits it when
+  unset. The Section A H2 ("Instrument #1") stays — that's the
+  operator's positional reference, and the short label is a
+  distinct field.
+- **Audit-summary helper update.** `_instrument_label(instrument)`
+  in `app/services/instruments.py:1004` extends to prefer
+  `short_label` → trimmed `description` → `name`. (Existing
+  callers pick up the prettier label automatically.)
+- **Reviewer-surface helpers (used by PR γ).**
+  - `page_button_label(instrument, position)`:
+    `f"Page #{position}: {instrument.short_label}"` when set,
+    else `f"Page #{position}"`.
+  - `instrument_heading(instrument, position, total_count) -> InstrumentHeading`
+    where `InstrumentHeading` is a frozen dataclass of
+    `(title: str | None, subtitle: str | None)`. Composition rules
+    per `spec/reviewer-surface.md` "Above the table — heading +
+    help block". (The existing
+    `views.reviewer_instrument_heading(...)` helper retires; the
+    new helper returns structured data the template iterates.)
+
+  Both helpers ship in PR S so PR γ can wire them up the moment
+  it lands; PR S's surface template doesn't use them yet.
 
 Out of scope (deferred follow-ons):
 
-- A bulk-rename UI / CSV-of-names import. PR S lands the per-
-  instrument rename input only.
-- Validation that two instruments in the same session don't share
-  a name. The spec's UX accepts duplicates (the position prefix
-  disambiguates on the reviewer surface).
-- Renaming `Instrument.description` constraints (description is
-  shown above the table, not on a button — its 2000-char ceiling
-  stays).
+- A bulk-set UI / CSV-of-labels import. PR S lands the per-
+  instrument input only.
+- Uniqueness checks on `short_label`. Duplicate labels are
+  acceptable; the position prefix disambiguates on multi-
+  instrument sessions.
+- Tightening `Instrument.name` itself or retiring it. The system
+  handle stays as is.
+- Tightening `Instrument.description` constraints. The 2000-char
+  ceiling stays.
 
 Test impact: small.
-- New unit test on the service-layer rename function (length
-  cap, empty rejection, audit emit).
-- New integration test on the rename route (success, 400 on
-  too-long input, 403 when session is `ready`).
-- Migration test confirming pre-existing data fits under the new
-  cap (safety guard).
+
+- New unit test on `update_short_label` (trim, length cap,
+  audit emit).
+- New unit test on the two reviewer-surface helpers
+  (`page_button_label`, `instrument_heading`) covering all six
+  table cases from the heading spec.
+- New integration test on the per-instrument edit route covering
+  the new `short_label` form field (success, 400 on too-long,
+  403 when session is `ready`).
+- Migration test (`tests/db/`) confirming the additive column
+  lands and existing rows have NULL.
 - No breakage in the reviewer-surface or operator-instruments
-  test suites — the rename UI is additive.
+  test suites — the new field is additive.
 
 Doc impact:
 
-- `spec/instruments_setup_spec.md` (forthcoming) — once written,
-  it cites the 32-char ceiling and the rename UI as already-
-  shipped behaviour.
-- `spec/reviewer-surface.md` "Instrument-name length constraint"
-  subsection updates to point at PR S's shipped state instead of
-  flagging it as forthcoming.
+- `spec/reviewer-surface.md` "Friendly short label vs. long
+  description" subsection already describes this PR's intent;
+  flip it from "PR S in the plan" to "shipped" once PR S merges.
 - `spec/visual_style_rrw.md` "Implications for the reviewer
-  surface" — same one-line update.
+  surface" — same flip.
+- `spec/instruments_setup_spec.md` (forthcoming) — when written,
+  it documents the short-label input + 32-char ceiling as
+  already-shipped behaviour.
 
 ## Implementation pointers
 
