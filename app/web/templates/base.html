@@ -1221,6 +1221,39 @@
       body.ui-v2 .rs-paginated > .rs-instrument-group:not(.rs-active) {
         display: none;
       }
+      /* Missing-required warning card — full-width, two-column flow
+         so a long list of gaps stays compact. Sits below the bottom-
+         grid (description + status panel) so it spans the whole
+         surface width; the embedded `.rs-missing-list` uses CSS
+         columns to flow across two columns at typical viewports and
+         collapses to one on narrow screens. The Cancel button
+         dismisses the card client-side via ``data-rs-missing-dismiss``;
+         the form's acknowledge-and-resubmit path is unchanged. */
+      body.ui-v2 .rs-missing-card {
+        margin: var(--space-4) 0;
+        border-color: var(--accent-amber);
+        background: var(--accent-amber-bg);
+      }
+      body.ui-v2 .rs-missing-card .rs-missing-list {
+        column-count: 2;
+        column-gap: var(--space-6);
+        margin: var(--space-3) 0;
+        padding-left: var(--space-5);
+      }
+      body.ui-v2 .rs-missing-card .rs-missing-list li {
+        break-inside: avoid;
+        margin-bottom: var(--space-1);
+      }
+      @media (max-width: 800px) {
+        body.ui-v2 .rs-missing-card .rs-missing-list {
+          column-count: 1;
+        }
+      }
+      body.ui-v2 .rs-missing-card-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: var(--space-3);
+      }
       /* Per-instrument heading (PR γ). Title (`<h2>`) and optional
          subtitle (description) on the same baseline, mirroring the
          page-header pattern. */

@@ -66,28 +66,50 @@
           and re-submit if needed.
         </div>
       {% endif %}
-      {% if missing %}
-        <div class="banner banner-warning">
-          <strong>Required fields missing.</strong>
-          <p>
-            The following required field{% if missing|length != 1 %}s have{% else %} has{% endif %}
-            no value yet:
-          </p>
-          <ul>
-            {% for m in missing %}
-              <li>
-                {% if m.position %}<strong>Page {{ m.position }}:</strong> {% endif %}<strong>{{ m.reviewee_name }}</strong> — <code>{{ m.field_label }}</code>
-              </li>
-            {% endfor %}
-          </ul>
-          <p>
-            Tick the box below and submit again to record your responses
-            anyway.
-          </p>
-        </div>
-      {% endif %}
     </div>
   </div>
+
+  {# Missing-required warning card. Lives outside the bottom-grid so
+     it spans full width — the list can be long enough that cramming
+     it into the half-width status panel produced a tall, narrow
+     scroll. Two-column flow keeps the card compact even with many
+     gaps; a Cancel button dismisses the card client-side without
+     affecting the form. #}
+  {% if missing %}
+    <div class="card rs-missing-card" data-rs-missing-card>
+      <strong>Required fields missing.</strong>
+      <p>
+        The following required field{% if missing|length != 1 %}s have{% else %} has{% endif %}
+        no value yet:
+      </p>
+      <ul class="rs-missing-list">
+        {% for m in missing %}
+          <li>
+            {% if m.position %}<strong>Page {{ m.position }}:</strong> {% endif %}<strong>{{ m.reviewee_name }}</strong> — <code>{{ m.field_label }}</code>
+          </li>
+        {% endfor %}
+      </ul>
+      <p>
+        Tick the box below the form and submit again to record your
+        responses anyway.
+      </p>
+      <div class="rs-missing-card-actions">
+        <button type="button" class="btn secondary" data-rs-missing-dismiss>
+          Cancel
+        </button>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var card = document.querySelector("[data-rs-missing-card]");
+        var dismiss = document.querySelector("[data-rs-missing-dismiss]");
+        if (!card || !dismiss) return;
+        dismiss.addEventListener("click", function () {
+          card.remove();
+        });
+      })();
+    </script>
+  {% endif %}
 
   {% if rows %}
     {% if not any_accepting %}
