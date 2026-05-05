@@ -1,7 +1,7 @@
 """Segment 11E PR 1: review_sessions.help_contact + email_template_overrides
 
 Adds the two columns the operator-editable email template editor
-(per ``guide/segment_11E_email_template_editor.md``) and the
+(per ``guide/archive/segment_11E_email_template_editor.md``) and the
 ``{{help_contact}}`` merge field both consume:
 
 * ``help_contact`` (String(320), nullable) — operational help contact

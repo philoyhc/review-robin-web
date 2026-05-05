@@ -1,7 +1,7 @@
 """Segment 11E PR 4: per-operator SMTP settings on users
 
 Adds the seven columns the operator Settings page (per
-``guide/segment_11E_email_template_editor.md`` PR 4) populates
+``guide/archive/segment_11E_email_template_editor.md`` PR 4) populates
 when an operator configures their Outlook / Office 365 SMTP
 credentials. Storage is per-user because Segment 11E adopts the
 "send-as-me" identity model — the operator who hits Send in

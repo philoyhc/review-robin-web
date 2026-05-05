@@ -40,7 +40,8 @@ separately.
 - [x] `session_reviewers.html` — `/operator/sessions/{id}/reviewers`
 - [x] `session_reviewees.html` — `/operator/sessions/{id}/reviewees`
 - [x] `session_assignments.html` — `/operator/sessions/{id}/assignments`
-- [x] `session_setupinvite.html` — `/operator/sessions/{id}/setupinvite` (placeholder)
+- [x] `session_setupinvite.html` — `/operator/sessions/{id}/setupinvite` (Segment 11E PR 2: real editor — two-card `.bottom-grid` with email-shape composer left + merge-tag list / Save / Cancel right; per-template selector via `?template=invitation|reminder`; per-field "Reset to default" forms; Save renders `disabled` until a form input changes (no flash banner). PR #468 polish: Invitation / Reminder tabs out of card, normal-sized, flushed left.)
+- [x] `operator_settings.html` — `/operator/settings` (Segment 11E PR 4 + #468: per-operator SMTP credentials with encrypted-at-rest password; ``← Back to {context}`` link from `?return_to=` per `app/web/return_to.py`; Save/Cancel flushed bottom-right; danger-zone Clear-all-settings card.)
 - [x] `session_previews.html` — `/operator/sessions/{id}/previews` (new placeholder; Operations row)
 - [x] `sessions_list.html` — `/operator/sessions` (Segment 11D PR A: `body.ui-v2`; per-row Access → Secondary. PR B (D4): "Create new session" promoted to a Primary affordance flush right of the H1 in `.sessions-list-header`, with `.btn-cta` promotion inside the empty-state card. **Cards-vs-table revisit (post-11D, 2026-05-04):** the table layout returns — six labelled columns (Session Name link / Session Code / Deadline pill / Created by / Created / Last Modified) plus an unlabelled trailing column carrying an unwired select-row checkbox. The redundant Access button and the per-row Delete anchor are both gone — the Session Name link is the row's affordance, and bulk-select wiring will live on the checkbox once it ships. The `.card.session-card` per-row layout from D4 is retired.)
 - [x] `session_new.html` — `/operator/sessions/new` (Segment 11D PR A: `body.ui-v2`; form wrapped in `.card`; v2 form treatment via base defaults; Cancel → Secondary)
@@ -139,8 +140,9 @@ active work.
   `/assignments/manual/import` and `/assignments/full-matrix`
   remain but redirect back to the hub).
 - [ ] `instruments_index.html`
-- [ ] `session_setupinvite.html` (heading renamed to **Email
-  Invites** only; no v1 layout pass)
+- [x] `session_setupinvite.html` (Segment 11E rebuilt the page as
+  the operator-editable email template editor; the v1 restructure
+  is moot.)
 - [ ] `session_invitations.html`
 - [ ] `session_outbox.html`
 - [ ] `session_monitoring.html`
