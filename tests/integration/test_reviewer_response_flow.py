@@ -218,8 +218,12 @@ def test_surface_help_text_renders_as_inline_list(
     body = make_client(rae).get(f"/reviewer/sessions/{review_session.id}").text
     del rae_client
 
-    # Single help item collapses to a full-width tinted block (no grid).
-    assert 'class="rs-help-card rs-help-card-solo"' in body
+    # Single help item still renders as a half-width card inside the
+    # per-instrument intro grid (the lone-help case used to expand to
+    # full width via `rs-help-card-solo`; now it always stays half-
+    # width and lands in column 2 next to the heading card).
+    assert 'class="card rs-help-card"' in body
+    assert "rs-help-card-solo" not in body
     assert "<strong>Rating</strong> — 1 (poor) to 5 (excellent)." in body
     assert "<dl class=\"help-block\">" not in body
     assert '<ul class="help-block">' not in body
@@ -231,7 +235,8 @@ def test_surface_help_text_multi_items_render_in_grid(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Two+ help items render in the 2-col rs-help-grid; not a solo block."""
+    """Two+ help items render as half-width cards inside the per-
+    instrument intro grid; no solo-card branch."""
     from app.db.models import InstrumentResponseField
 
     operator = make_client(alice)
@@ -263,12 +268,12 @@ def test_surface_help_text_multi_items_render_in_grid(
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
 
-    assert '<div class="rs-help-grid">' in body
+    assert '<div class="rs-intro-grid">' in body
+    assert body.count('class="card rs-help-card"') == 2
     assert "Rating help." in body
     assert "Comments help." in body
-    # Solo block class should not be applied when there's more than one item
-    # (the bare class appears in the inline CSS, but no element uses it).
-    assert 'class="rs-help-card rs-help-card-solo"' not in body
+    # The retired `rs-help-card-solo` modifier no longer renders.
+    assert "rs-help-card-solo" not in body
 
 
 def test_surface_does_not_wrap_groups_in_outer_card(
@@ -532,7 +537,6 @@ def test_submit_with_all_required_filled_succeeds_and_writes_audit(
         select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")
     ).scalar_one()
     assert audit.detail["count"] >= 1
-    assert audit.detail["acknowledged_missing"] is False
 
 
 def test_submit_with_missing_required_warns_without_audit(
@@ -559,7 +563,9 @@ def test_submit_with_missing_required_warns_without_audit(
 
     assert response.status_code == 400
     assert "Required fields missing" in response.text
-    assert "acknowledge_missing" in response.text
+    # Submit is a hard gate — the missing-card lists the gaps but
+    # there's no acknowledge-and-submit-anyway escape hatch.
+    assert 'name="acknowledge_missing"' not in response.text
     # Per-row amber icon shows on the warn re-render (so reviewer can find
     # which rows are incomplete without scrolling back to the top card).
     assert "⚠" in response.text
@@ -569,17 +575,21 @@ def test_submit_with_missing_required_warns_without_audit(
     assert submitted is None
 
 
-def test_submit_with_acknowledge_missing_succeeds(
+def test_submit_with_missing_required_stays_blocked_even_with_legacy_acknowledge(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
+    """Sanity check the gate isn't reachable via a stale form payload —
+    a POST with the retired ``acknowledge_missing=true`` field still
+    blocks when required fields are missing. Drafts written via the
+    payload still commit."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
         db,
-        code="rae-ack",
+        code="rae-ack-blocked",
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
     )
@@ -591,12 +601,12 @@ def test_submit_with_acknowledge_missing_succeeds(
         follow_redirects=False,
     )
 
-    assert response.status_code == 303
-    audit = db.execute(
+    assert response.status_code == 400
+    assert "Required fields missing" in response.text
+    submitted = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")
-    ).scalar_one()
-    assert audit.detail["acknowledged_missing"] is True
-    assert audit.detail["missing_required_count"] >= 1
+    ).first()
+    assert submitted is None
 
 
 def test_clear_all_with_confirm_deletes_responses(

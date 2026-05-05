@@ -89,10 +89,6 @@
           </li>
         {% endfor %}
       </ul>
-      <p>
-        Tick the box below the form and submit again to record your
-        responses anyway.
-      </p>
       <div class="rs-missing-card-actions">
         <button type="button" class="btn secondary" data-rs-missing-dismiss>
           Cancel
@@ -149,25 +145,27 @@
       {% for group in instrument_groups %}
         <div class="rs-instrument-group{% if group.is_current %} rs-active{% endif %}"
              data-rs-position="{{ group.position }}">
-        {% if group.heading.title %}
-          <div class="rs-instrument-heading">
-            <h2>{{ group.heading.title }}</h2>
-            {% if group.heading.subtitle %}
-              <span class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</span>
+        {# Per-instrument intro: heading card (short label + description)
+           in column 1, help text cards from column 2 onward. The grid is
+           bottom-aligned so the first help card lines up with the
+           heading card's bottom regardless of which is taller. Help
+           cards are always half-width — the lone-help case lands in
+           column 2 (or column 1 if no heading) rather than expanding
+           to full width. #}
+        {% if group.heading.title or group.help_block_items %}
+          <div class="rs-intro-grid">
+            {% if group.heading.title %}
+              <div class="card rs-instrument-card">
+                <h2>{{ group.heading.title }}</h2>
+                {% if group.heading.subtitle %}
+                  <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
+                {% endif %}
+              </div>
             {% endif %}
+            {% for field in group.help_block_items %}
+              <div class="card rs-help-card"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>
+            {% endfor %}
           </div>
-        {% endif %}
-        {% if group.help_block_items %}
-          {% if group.help_block_items|length > 1 %}
-            <div class="rs-help-grid">
-              {% for field in group.help_block_items %}
-                <div class="rs-help-card"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>
-              {% endfor %}
-            </div>
-          {% else %}
-            {% set field = group.help_block_items[0] %}
-            <div class="rs-help-card rs-help-card-solo"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>
-          {% endif %}
         {% endif %}
         <div class="table-scroll">
           <table>
@@ -267,7 +265,7 @@
                 {% endfor %}
                 {% if group.show_status_col %}
                   <td style="width: 1%; white-space: nowrap; text-align: center;">
-                    {% if row.submitted_at or show_acknowledge %}
+                    {% if row.submitted_at or show_incomplete_marks %}
                       {% if row.is_complete %}
                         <span class="status-icon-complete" title="Complete">✓</span>
                       {% else %}
@@ -291,17 +289,7 @@
       {% endfor %}
       </div>{# /.rs-paginated #}
 
-      {% if any_accepting and not preview_mode %}
-        {% if show_acknowledge %}
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="acknowledge_missing" value="true">
-              I acknowledge required fields are missing — submit anyway.
-            </label>
-          </p>
-        {% endif %}
-        {% include "reviewer/_action_row.html" %}
-      {% elif preview_mode and page_buttons %}
+      {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
         {% include "reviewer/_action_row.html" %}
       {% endif %}
     {% if preview_mode %}</div>{% else %}</form>{% endif %}

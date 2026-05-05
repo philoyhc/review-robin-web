@@ -306,10 +306,13 @@ def test_submit_persists_inputs_from_every_group(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Submit's scope is session-wide, so it must persist values from
+    """Submit's scope is session-wide, so it must read values from
     every instrument group's inputs (not just the active page).
     Under PR δ the form body now naturally carries every group's
-    inputs because every group lives in the DOM."""
+    inputs because every group lives in the DOM. Submit blocks here
+    because the seeded ``rating`` field is required and not provided,
+    but the draft writes still commit ahead of the missing-required
+    block — so both pages' typed values land in the DB."""
     operator = make_client(alice)
     review_session, first, second = _setup_two_instrument_session(
         operator, db, code="rae-d-submit-all"
@@ -332,7 +335,6 @@ def test_submit_persists_inputs_from_every_group(
             f"response[{page1_assignment.id}][comments]": "page-1 submit",
             f"response[{page2_assignment.id}][comments]": "page-2 submit",
             "current_position": "1",
-            "acknowledge_missing": "true",
         },
         follow_redirects=False,
     )

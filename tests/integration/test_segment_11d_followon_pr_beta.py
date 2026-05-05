@@ -268,7 +268,6 @@ def test_page_status_pill_flips_to_submitted_after_submit(
         f"/reviewer/sessions/{review_session.id}/submit",
         data={
             "current_position": "1",
-            "acknowledge_missing": "true",
             f"response[{assignment.id}][rating]": "4",
         },
         follow_redirects=False,

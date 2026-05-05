@@ -141,9 +141,11 @@ def _page_status_for_group(group_rows: list[dict]) -> PageStatusState:
     Order of evaluation matches the spec table in
     ``spec/reviewer-surface.md`` "Per-page status":
 
-    1. ``submitted`` — every row has ``submitted_at`` set. Wins
-       even if a row is technically incomplete (acknowledge_missing
-       can stamp ``submitted_at`` on a row missing a required field).
+    1. ``submitted`` — every row has ``submitted_at`` set. Submit is
+       a hard gate on missing-required, so ``submitted`` implies
+       ``complete`` today; the two states are kept separate so a
+       future operator-side ``required`` change after submit
+       doesn't silently demote the row from ``submitted``.
     2. ``complete`` — every required field on every row has a saved
        value (``is_complete``).
     3. ``in_progress`` — at least one row carries Response data,
@@ -232,7 +234,7 @@ def _surface_context(
     submitted: bool,
     current_position: int,
     missing: list[responses_service.MissingPosition] | None = None,
-    show_acknowledge: bool = False,
+    show_incomplete_marks: bool = False,
 ) -> dict:
     lifecycle.observe_deadline(
         db, review_session, correlation_id=request_correlation_id()
@@ -378,7 +380,7 @@ def _surface_context(
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
-                "show_status_col": show_acknowledge
+                "show_status_col": show_incomplete_marks
                 or any(r.get("submitted_at") for r in group_rows),
             }
         )
@@ -442,7 +444,7 @@ def _surface_context(
         "saved": saved,
         "submitted": submitted,
         "missing": missing or [],
-        "show_acknowledge": show_acknowledge,
+        "show_incomplete_marks": show_incomplete_marks,
         "any_required": any(
             any(f.required for f in fields_by_instrument.get(a.instrument_id, []))
             for a in assignments
@@ -567,7 +569,7 @@ def build_preview_context(
             "saved": False,
             "submitted": False,
             "missing": [],
-            "show_acknowledge": False,
+            "show_incomplete_marks": False,
             "any_required": False,
             "any_accepting": False,
             "any_closed_with_hidden_values": False,
@@ -740,7 +742,7 @@ def build_preview_context(
         "saved": False,
         "submitted": False,
         "missing": [],
-        "show_acknowledge": False,
+        "show_incomplete_marks": False,
         "any_required": False,
         "any_accepting": False,
         "any_closed_with_hidden_values": False,
@@ -923,7 +925,6 @@ async def reviewer_submit(
     _require_session_accepting(db, review_session, reviewer)
     form = await request.form()
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
-    acknowledge = string_form.get("acknowledge_missing") == "true"
     current_position = _read_current_position(form)
     upserts = responses_service.parse_form_payload(string_form)
     result = responses_service.submit(
@@ -932,7 +933,6 @@ async def reviewer_submit(
         reviewer=reviewer,
         user=user,
         upserts=upserts,
-        acknowledge_missing=acknowledge,
         correlation_id=request_correlation_id(),
     )
     if not result.submitted:
@@ -945,7 +945,7 @@ async def reviewer_submit(
             submitted=False,
             current_position=current_position,
             missing=result.missing,
-            show_acknowledge=True,
+            show_incomplete_marks=True,
         )
         context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
         context["reviewer_review_count"] = reviewer_review_count_for_user(

@@ -390,7 +390,10 @@ def test_submitted_with_warn_override_classified_incomplete(
         f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
     )
 
-    # Rae submits with the warn-and-override path (no rating value, ack flag).
+    # Rae attempts a submit with the required ``rating`` left blank.
+    # Submit blocks (no acknowledge-and-override path), but the
+    # ``comments`` draft commits — Rae still ends up classified as
+    # incomplete by the monitoring path.
     rae = AuthenticatedUser(
         principal_id="r", email="rae@example.edu", name="Rae", provider="aad"
     )
@@ -402,7 +405,6 @@ def test_submitted_with_warn_override_classified_incomplete(
         f"/reviewer/sessions/{session.id}/submit",
         data={
             f"response[{assignment.id}][comments]": "fine",
-            "acknowledge_missing": "true",
         },
         follow_redirects=False,
     )
