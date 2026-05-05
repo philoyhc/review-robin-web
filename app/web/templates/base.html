@@ -1238,11 +1238,18 @@
         column-count: 2;
         column-gap: var(--space-6);
         margin: var(--space-3) 0;
-        padding-left: var(--space-5);
+        /* `padding-left` on the `<ul>` only indents the first column
+           — the second column's bullets get pushed against the gap
+           edge. Move the indent onto the `<li>`s and use
+           ``list-style-position: inside`` so each item carries its
+           own bullet within the column flow. */
+        padding-left: 0;
+        list-style-position: inside;
       }
       body.ui-v2 .rs-missing-card .rs-missing-list li {
         break-inside: avoid;
         margin-bottom: var(--space-1);
+        padding-left: var(--space-5);
       }
       @media (max-width: 800px) {
         body.ui-v2 .rs-missing-card .rs-missing-list {
