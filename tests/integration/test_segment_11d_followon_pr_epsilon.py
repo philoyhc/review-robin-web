@@ -417,9 +417,12 @@ def test_preview_inputs_render_disabled(
     # via the `name="response"` token co-occurring with `disabled`.
     response_input_idx = body.find('name="response')
     assert response_input_idx >= 0
-    # Look forward up to 200 chars for the `disabled` attribute on the
-    # same tag.
-    assert "disabled" in body[response_input_idx : response_input_idx + 300]
+    # Look forward up to the next tag close for the `disabled`
+    # attribute. The window has to be generous enough to cover the
+    # numeric input's full attribute set (min, max, step, title, …).
+    tag_close = body.find(">", response_input_idx)
+    assert tag_close > response_input_idx
+    assert "disabled" in body[response_input_idx:tag_close]
 
 
 def test_preview_omits_pushstate_prefix(
