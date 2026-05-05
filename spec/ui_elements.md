@@ -219,8 +219,9 @@ Each element entry follows the same shape:
 
 > **`.card.next-action` (Session Home's Next Action card)** —
 > same shape as `.card`, with `accent-blue` border (matching the
-> Primary button inside), `display: flex; flex-direction: column;
-> min-height: 200px`. Three vertically-stacked children:
+> Primary button inside) and `display: flex; flex-direction: column`.
+> No fixed `min-height` — the card grows to fit its content. Three
+> vertically-stacked children:
 > `.next-action-body` (flex-grows), optional `.next-action-confirm`
 > (sits just above the buttons), and `.next-action-buttons`
 > (Primary + Secondary buttons in one row at the bottom). The
