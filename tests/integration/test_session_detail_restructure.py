@@ -228,7 +228,7 @@ def test_session_detail_empty_rosters_renders_setup_short_circuit(
     assert "<h2>Next Action</h2>" in body
     assert "Session not fully set up." in body
     assert (
-        "Make sure that reviewers, reviewees, and assignments have been set up."
+        "Make sure that reviewers, reviewees, and assignments have been set up before continuing."
         in body
     )
     # Action buttons suppressed in this state.
@@ -719,11 +719,13 @@ def test_next_action_card_in_ready_renders_pause(
         f'action="/operator/sessions/{review_session.id}/revert"' in body
     )
     assert 'form="next-action-pause-form"' in body
-    # Activated-state supporting actions are now Secondary buttons
-    # (anchors styled .btn.secondary), not inline links. The
-    # "See previews" button is intentionally absent in ready —
-    # operators monitor live responses, not previews, while
-    # Activated.
+    # Activated-state lays out as two body sections separated by
+    # ``hr.next-action-divider``: section 1 surfaces Manage
+    # invitations (Primary) + Monitor responses (Secondary); section
+    # 2 is the Pause path. "See previews" is intentionally absent
+    # while Activated — operators monitor live responses, not
+    # previews.
+    assert "next-action-divider" in body
     assert ">Manage invitations</a>" in body
     assert ">Monitor responses</a>" in body
     assert ">See previews</a>" not in body

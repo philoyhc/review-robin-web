@@ -952,8 +952,18 @@
       body.ui-v2 .card.next-action {
         display: flex;
         flex-direction: column;
-        min-height: 200px;
+        min-height: 240px;
         border-color: var(--accent-blue);
+      }
+      /* Horizontal divider between the two sections that the
+         activated state renders inside the body (Manage / Monitor
+         vs Pause). Picks up the same border token as other
+         dividers; small vertical breathing room reads the two
+         concerns as distinct without forcing a sub-card. */
+      body.ui-v2 .card.next-action hr.next-action-divider {
+        border: 0;
+        border-top: 1px solid var(--border-default);
+        margin: var(--space-4) 0;
       }
       body.ui-v2 .card.next-action .next-action-body {
         flex: 1 1 auto;

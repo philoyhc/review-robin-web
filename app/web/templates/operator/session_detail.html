@@ -34,7 +34,7 @@
                framing — the operator's first job is to fill the
                missing roster, not click Validate. No action buttons
                render below in this state. #}
-            <p>Session not fully set up. Make sure that reviewers, reviewees, and assignments have been set up.</p>
+            <p>Session not fully set up. Make sure that reviewers, reviewees, and assignments have been set up before continuing.</p>
           {% elif is_draft %}
             {% if validation_summary %}
               {# Validation just ran (?validated=1) and didn't pass —
@@ -91,32 +91,51 @@
                   action="/operator/sessions/{{ session.id }}/revert"
                   id="next-action-revert-form"></form>
           {% elif is_ready %}
+            {# Two-section layout while activated. Section 1 nudges the
+               operator toward inviting reviewers (the day-to-day "doing
+               things" action) — Manage invitations is the Primary;
+               Monitor responses sits next to it as Secondary.
+               Section 2 is the standalone Pause path with its own
+               confirm checkbox + Primary button, separated from
+               section 1 by a horizontal rule so the two are read as
+               distinct concerns. #}
             <p>
               Session is currently activated. Reviewers can access
-              forms and save responses. Pausing returns the session
-              to draft and stops reviewers from submitting new
-              responses. Existing responses will be preserved.
+              forms and save responses. Don't forget to generate and
+              send out email to notify the reviewers.
             </p>
+            <div class="next-action-buttons">
+              <a class="btn"
+                 href="/operator/sessions/{{ session.id }}/invitations">Manage invitations</a>
+              <a class="btn secondary"
+                 href="/operator/sessions/{{ session.id }}/monitoring">Monitor responses</a>
+            </div>
+            <hr class="next-action-divider">
+            <p>
+              Pausing returns the session to draft and stops reviewers
+              from submitting new responses. Existing responses will be
+              preserved.
+            </p>
+            <div class="next-action-confirm">
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/revert"
+                    id="next-action-pause-form">
+                <p style="margin: 0;">
+                  <label style="font-weight: normal;">
+                    <input type="checkbox" name="confirm" value="true" required>
+                    Yes, pause <strong>{{ session.name }}</strong> and return to draft.
+                  </label>
+                </p>
+              </form>
+            </div>
+            <div class="next-action-buttons">
+              <button class="btn"
+                      type="submit"
+                      form="next-action-pause-form">Pause Session</button>
+            </div>
           {% endif %}
         </div>
-        {% if is_ready %}
-          {# Pause confirmation sits in its own block just above the
-             button row so the operator's eye lands on the checkbox
-             immediately before the Pause Session button. #}
-          <div class="next-action-confirm">
-            <form method="post"
-                  action="/operator/sessions/{{ session.id }}/revert"
-                  id="next-action-pause-form">
-              <p style="margin: 0;">
-                <label style="font-weight: normal;">
-                  <input type="checkbox" name="confirm" value="true" required>
-                  Yes, pause <strong>{{ session.name }}</strong> and return to draft.
-                </label>
-              </p>
-            </form>
-          </div>
-        {% endif %}
-        {% if not is_setup_empty %}
+        {% if not is_setup_empty and not is_ready %}
         <div class="next-action-buttons">
           {% if is_draft %}
             <a class="btn"
@@ -139,14 +158,6 @@
             <button class="btn secondary"
                     type="submit"
                     form="next-action-revert-form">Revert to draft</button>
-          {% elif is_ready %}
-            <button class="btn"
-                    type="submit"
-                    form="next-action-pause-form">Pause Session</button>
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/invitations">Manage invitations</a>
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/monitoring">Monitor responses</a>
           {% endif %}
         </div>
         {% endif %}
