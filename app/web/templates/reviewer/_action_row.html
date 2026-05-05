@@ -1,0 +1,34 @@
+{# Reviewer-surface unified action row (PR γ). Mirrored top + bottom
+   on the surface. Order, left-to-right, flush right:
+
+       Save / Discard / Page #N: short_label / divider / Submit
+
+   The vertical `.rs-action-divider` separates page-level controls
+   (Save / Discard / Page N) from the review-session-level Submit.
+   Page buttons are server-side-navigation `<a>` anchors today; PR δ
+   swaps them for JS-driven `type="button"` controls that toggle
+   visibility client-side and preserve dirty edits across pages.
+
+   Required context:
+     - session: ReviewSession
+     - current_position: int (URL position the surface was rendered at)
+     - page_buttons: list[views.PageButton]
+   This partial is included only when ``any_accepting and not preview_mode``;
+   the caller handles that guard.
+#}
+<div class="rs-action-row">
+  <button class="btn" type="submit">Save</button>
+  <a class="btn secondary"
+     href="/reviewer/sessions/{{ session.id }}/{{ current_position }}">Discard</a>
+  {% for page in page_buttons %}
+    <a class="btn{% if page.is_current %} disabled{% endif %} rs-page-btn"
+       href="{{ page.href }}"
+       {% if page.is_current %}aria-disabled="true"{% endif %}>{{ page.label }}</a>
+  {% endfor %}
+  <span class="rs-action-divider" aria-hidden="true"></span>
+  <button class="btn"
+          type="submit"
+          formaction="/reviewer/sessions/{{ session.id }}/submit">
+    Submit
+  </button>
+</div>

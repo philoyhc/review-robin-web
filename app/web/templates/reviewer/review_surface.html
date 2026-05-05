@@ -103,32 +103,26 @@
       </div>
     {% endif %}
 
-    {% set rs_paginated = instrument_groups|length > 1 and any_accepting and not preview_mode %}
     {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/{{ current_position }}/save">
     <input type="hidden" name="current_position" value="{{ current_position }}">
     {% endif %}
+      {# PR γ unified action row, mirrored top + bottom. Order
+         left-to-right: Save / Discard / Page #N: short_label /
+         vertical divider / Submit. Whole row flush right. The
+         page-level cluster reads "act on this page"; Submit is the
+         review-session-wide commit. The vertical divider visually
+         separates the two scopes without splitting the row. #}
       {% if any_accepting and not preview_mode %}
-        <div class="rs-action-row rs-action-row-top rs-action-row-left">
-          <button class="btn" type="submit">Save draft</button>
-          <button class="btn secondary"
-                  type="submit"
-                  formaction="/reviewer/sessions/{{ session.id }}/submit">
-            Submit
-          </button>
-          <a class="btn secondary"
-             href="/reviewer/sessions/{{ session.id }}/{{ current_position }}">Cancel — discard unsaved edits</a>
-          {% if rs_paginated %}
-            <button class="btn secondary rs-prev-btn" type="button" disabled>Previous</button>
-            <button class="btn secondary rs-next-btn" type="button">Next</button>
-          {% endif %}
-        </div>
+        {% include "reviewer/_action_row.html" %}
       {% endif %}
-      {% if rs_paginated %}<div class="rs-paginated">{% endif %}
       {% for group in instrument_groups %}
-        <div class="rs-instrument-group{% if loop.first %} rs-active{% endif %}"
-             data-instrument-index="{{ loop.index0 }}">
-        {% if group.heading %}
-          <h2 style="margin-top: 24px;">{{ group.heading }}</h2>
+        {% if group.heading.title %}
+          <div class="rs-instrument-heading">
+            <h2>{{ group.heading.title }}</h2>
+            {% if group.heading.subtitle %}
+              <span class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</span>
+            {% endif %}
+          </div>
         {% endif %}
         {% if group.help_block_items %}
           {% if group.help_block_items|length > 1 %}
@@ -250,9 +244,7 @@
             {% endfor %}
           </table>
         </div>
-        </div>{# /rs-instrument-group #}
       {% endfor %}
-      {% if rs_paginated %}</div>{# /rs-paginated #}{% endif %}
 
       {% if any_accepting and not preview_mode %}
         {% if show_acknowledge %}
@@ -263,20 +255,7 @@
             </label>
           </p>
         {% endif %}
-        <div class="rs-action-row">
-          <button class="btn" type="submit">Save draft</button>
-          <button class="btn secondary"
-                  type="submit"
-                  formaction="/reviewer/sessions/{{ session.id }}/submit">
-            Submit
-          </button>
-          <a class="btn secondary"
-             href="/reviewer/sessions/{{ session.id }}/{{ current_position }}">Cancel — discard unsaved edits</a>
-          {% if rs_paginated %}
-            <button class="btn secondary rs-prev-btn" type="button" disabled>Previous</button>
-            <button class="btn secondary rs-next-btn" type="button">Next</button>
-          {% endif %}
-        </div>
+        {% include "reviewer/_action_row.html" %}
       {% endif %}
     {% if preview_mode %}</div>{% else %}</form>{% endif %}
 
@@ -304,47 +283,4 @@
     </div>
   {% endif %}
 
-  {# Multi-instrument paginated view: Previous / Next swap the active
-     `.rs-instrument-group`. Pure view state — does not save or
-     submit. Inputs in hidden groups stay in the DOM, so Save draft
-     / Submit pick up every value regardless of which group is
-     currently visible. Boundary buttons disable rather than wrap
-     (Previous on the first group, Next on the last). #}
-  <script>
-    (function () {
-      var groups = document.querySelectorAll(".rs-paginated .rs-instrument-group");
-      if (groups.length < 2) return;
-      var prevBtns = document.querySelectorAll(".rs-prev-btn");
-      var nextBtns = document.querySelectorAll(".rs-next-btn");
-      function activate(idx) {
-        groups.forEach(function (g, i) {
-          g.classList.toggle("rs-active", i === idx);
-        });
-        prevBtns.forEach(function (b) { b.disabled = idx <= 0; });
-        nextBtns.forEach(function (b) { b.disabled = idx >= groups.length - 1; });
-      }
-      function currentIndex() {
-        for (var i = 0; i < groups.length; i++) {
-          if (groups[i].classList.contains("rs-active")) return i;
-        }
-        return 0;
-      }
-      // Sync button states to the initial active group (markup ships
-      // with Previous disabled, but the JS path is authoritative).
-      activate(currentIndex());
-      document.addEventListener("click", function (ev) {
-        var nextBtn = ev.target.closest(".rs-next-btn");
-        var prevBtn = ev.target.closest(".rs-prev-btn");
-        if (!nextBtn && !prevBtn) return;
-        if (nextBtn && nextBtn.disabled) return;
-        if (prevBtn && prevBtn.disabled) return;
-        ev.preventDefault();
-        var idx = currentIndex();
-        var newIdx = nextBtn ? idx + 1 : idx - 1;
-        if (newIdx < 0 || newIdx >= groups.length) return;
-        activate(newIdx);
-        groups[newIdx].scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    })();
-  </script>
 {% endblock %}
