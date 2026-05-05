@@ -431,10 +431,14 @@ def test_review_surface_single_instrument_has_no_page_buttons(
     # PR #417's Previous / Next buttons retired in PR γ.
     assert ">Next</button>" not in body
     assert ">Previous</button>" not in body
-    assert "rs-paginated" not in body
     # Page button anchor renders even on single-instrument sessions
     # (one entry in `page_buttons`); the current page is disabled.
     assert "Page #1" in body
+    # PR δ — every instrument group lives in the DOM under
+    # `.rs-paginated`; CSS hides the non-active ones. Single-instrument
+    # sessions still wrap their lone group in the same scaffold so
+    # the JS handler doesn't need a special case.
+    assert 'class="rs-paginated"' in body
 
 
 def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
@@ -531,17 +535,20 @@ def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
     body = rae_client.get(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
-    # Previous / Next + the rs-paginated JS scaffold retired in PR γ.
-    assert "rs-paginated" not in body
+    # Previous / Next retired in PR γ.
     assert ">Previous</button>" not in body
     assert ">Next</button>" not in body
-    # Page #1 and Page #2 anchors render in the unified action row,
+    # Page #1 and Page #2 buttons render in the unified action row,
     # mirrored top + bottom (so each appears twice). The current
-    # page's anchor is disabled.
+    # page's button is disabled.
     assert body.count("Page #1") >= 2
     assert body.count("Page #2") >= 2
-    # The current page's anchor renders disabled.
+    # The current page's button renders disabled.
     assert "aria-disabled=\"true\"" in body
+    # PR δ — both instrument groups live in the DOM at once under
+    # `.rs-paginated`; CSS hides the non-active one.
+    assert 'class="rs-paginated"' in body
+    assert body.count('class="rs-instrument-group') == 2
 
 
 def test_review_surface_clear_all_card_is_half_width_flush_right(

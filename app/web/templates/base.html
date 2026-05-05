@@ -1212,6 +1212,15 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      /* Multi-instrument paginated rendering (PR δ). Every instrument
+         group lives in the DOM; CSS hides the non-active ones so the
+         inline JS handler can toggle visibility on Page #N click
+         without losing dirty edits in the hidden groups. With JS
+         disabled the surface still pins to the URL position because
+         the server-rendered ``rs-active`` modifier matches the URL. */
+      body.ui-v2 .rs-paginated > .rs-instrument-group:not(.rs-active) {
+        display: none;
+      }
       /* Per-instrument heading (PR γ). Title (`<h2>`) and optional
          subtitle (description) on the same baseline, mirroring the
          page-header pattern. */
