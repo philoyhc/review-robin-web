@@ -215,6 +215,37 @@ def placeholder_for_field(field: InstrumentResponseField) -> str:
     return ""
 
 
+def constraint_summary_for_field(field: InstrumentResponseField) -> str:
+    """Short ``min-max[, steps of step]`` summary used in the
+    above-table constraint row on the reviewer surface. Distinct from
+    ``placeholder_for_field`` (``a to b``) — this one uses the dash
+    notation requested for the summary line. Returns ``""`` when the
+    validation block is incomplete or absent."""
+    validation = field.validation or {}
+    data_type = field.data_type
+    if data_type == "String":
+        max_length = validation.get("max_length")
+        if max_length is None:
+            return ""
+        min_length = validation.get("min_length") or 0
+        return f"{int(min_length)}-{int(max_length)} char"
+    if data_type in ("Integer", "Decimal"):
+        min_ = validation.get("min")
+        max_ = validation.get("max")
+        step = validation.get("step")
+        if min_ is None or max_ is None or step is None:
+            return ""
+        if data_type == "Integer":
+            return f"{int(min_)}-{int(max_)}, steps of {int(step)}"
+        return f"{min_:.1f}-{max_:.1f}, steps of {step:.1f}"
+    if data_type == "List":
+        choices = validation.get("choices") or []
+        if not choices:
+            return ""
+        return " / ".join(choices)
+    return ""
+
+
 def _bulk_state(values: list[bool]) -> str:
     """Three-state value for a bulk toggle: ``all-on`` / ``all-off`` / ``mixed``."""
     if not values:
