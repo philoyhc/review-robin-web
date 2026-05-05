@@ -106,12 +106,13 @@ class SessionStatusPills:
 
 @dataclass(frozen=True)
 class InstrumentHeading:
-    """Title + optional subtitle for the per-instrument heading row.
+    """Title + optional subtitle for the per-instrument heading card.
 
-    Title lands on the H2; subtitle on a `.muted` body-weight span
-    next to it (`.rs-instrument-heading` flex row, baseline-aligned).
-    Either or both can be ``None`` — the template only renders the
-    `.rs-instrument-heading` block when ``title`` is truthy.
+    Title lands on the H2; subtitle on a `.muted` body-weight `<p>`
+    below it inside `.card.rs-instrument-card`, which sits in column 1
+    of the per-instrument intro grid (`.rs-intro-grid`). Either or
+    both can be ``None`` — the template only renders the heading card
+    when ``title`` is truthy.
 
     Composition rules per `spec/reviewer-surface.md` "Above the table
     — heading + help block":

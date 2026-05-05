@@ -218,8 +218,12 @@ def test_surface_help_text_renders_as_inline_list(
     body = make_client(rae).get(f"/reviewer/sessions/{review_session.id}").text
     del rae_client
 
-    # Single help item collapses to a full-width tinted block (no grid).
-    assert 'class="rs-help-card rs-help-card-solo"' in body
+    # Single help item still renders as a half-width card inside the
+    # per-instrument intro grid (the lone-help case used to expand to
+    # full width via `rs-help-card-solo`; now it always stays half-
+    # width and lands in column 2 next to the heading card).
+    assert 'class="card rs-help-card"' in body
+    assert "rs-help-card-solo" not in body
     assert "<strong>Rating</strong> — 1 (poor) to 5 (excellent)." in body
     assert "<dl class=\"help-block\">" not in body
     assert '<ul class="help-block">' not in body
@@ -231,7 +235,8 @@ def test_surface_help_text_multi_items_render_in_grid(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Two+ help items render in the 2-col rs-help-grid; not a solo block."""
+    """Two+ help items render as half-width cards inside the per-
+    instrument intro grid; no solo-card branch."""
     from app.db.models import InstrumentResponseField
 
     operator = make_client(alice)
@@ -263,12 +268,12 @@ def test_surface_help_text_multi_items_render_in_grid(
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
 
-    assert '<div class="rs-help-grid">' in body
+    assert '<div class="rs-intro-grid">' in body
+    assert body.count('class="card rs-help-card"') == 2
     assert "Rating help." in body
     assert "Comments help." in body
-    # Solo block class should not be applied when there's more than one item
-    # (the bare class appears in the inline CSS, but no element uses it).
-    assert 'class="rs-help-card rs-help-card-solo"' not in body
+    # The retired `rs-help-card-solo` modifier no longer renders.
+    assert "rs-help-card-solo" not in body
 
 
 def test_surface_does_not_wrap_groups_in_outer_card(
