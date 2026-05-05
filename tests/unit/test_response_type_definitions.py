@@ -69,7 +69,9 @@ def test_seeded_constants_match_spec_count_and_order() -> None:
         "response_type": "100int", "data_type": "Integer",
         "min": 0, "max": 100, "step": 1, "list_csv": None,
     }
-    assert by_name["Likert5"]["list_csv"].startswith("Strongly Disagree")
+    assert by_name["Likert5"]["list_csv"] == (
+        "Strongly Agree, Agree, Neutral, Disagree, Strongly Disagree"
+    )
 
 
 def test_ensure_seed_is_idempotent(db: Session) -> None:
@@ -112,8 +114,8 @@ def test_validation_block_for_rtd_covers_all_data_types(db: Session) -> None:
     }
     assert validation_block_for_rtd(rtds["Likert5"]) == {
         "choices": [
-            "Strongly Disagree", "Disagree", "Neutral", "Agree",
-            "Strongly Agree",
+            "Strongly Agree", "Agree", "Neutral", "Disagree",
+            "Strongly Disagree",
         ],
     }
     assert validation_block_for_rtd(rtds["100int"]) == {

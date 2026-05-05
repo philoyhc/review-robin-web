@@ -141,7 +141,7 @@ SEEDED_RESPONSE_TYPE_DEFINITIONS: list[dict[str, Any]] = [
     {"response_type": "Short_text", "data_type": "String",  "min": 0,    "max": 100,  "step": None, "list_csv": None},
     {"response_type": "Yes_no",     "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Yes, No"},
     {"response_type": "Grade",      "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "A+, A, A-, B+, B, B-, C+, C, D+, D, F"},
-    {"response_type": "Likert5",    "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Strongly Disagree, Disagree, Neutral, Agree, Strongly Agree"},
+    {"response_type": "Likert5",    "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Strongly Agree, Agree, Neutral, Disagree, Strongly Disagree"},
     {"response_type": "100int",     "data_type": "Integer", "min": 0,    "max": 100,  "step": 1,    "list_csv": None},
     {"response_type": "0-to-2int",  "data_type": "Integer", "min": 0,    "max": 2,    "step": 1,    "list_csv": None},
     {"response_type": "1-to-5int",  "data_type": "Integer", "min": 1,    "max": 5,    "step": 1,    "list_csv": None},
