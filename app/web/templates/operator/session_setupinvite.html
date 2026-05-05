@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% from "operator/partials/_placeholder_card.html" import placeholder_card %}
 
 {% block title %}Email Template — {{ session.name }}{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -12,32 +11,105 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# Two-card placeholder layout — frames the editor surface that
-     Segment 11E PR 2 ships. Left card is the email-shape composer
-     preview; right card is the merge-tag list + action buttons.
-     Both render via the canonical ``placeholder_card`` macro so the
-     muted treatment matches Quick Setup / Extract Data on Session
-     Home. #}
+  {% if saved %}
+    <div class="banner banner-success">Template saved.</div>
+  {% endif %}
+  {% if reset_field %}
+    <div class="banner banner-success">{{ active_template|capitalize }} {{ reset_field }} reset to default.</div>
+  {% endif %}
+
+  {# Template selector — sub-tabs sitting above the two-card grid.
+     The active tab carries ``aria-disabled`` to read like a current-
+     page anchor; clicking either swaps the URL, which the form
+     posts back to. #}
+  <div class="card">
+    <div class="btn-row" style="gap: 0;">
+      {% for t in valid_templates %}
+        {% if t == active_template %}
+          <button type="button" class="btn disabled" aria-disabled="true">{{ t|capitalize }}</button>
+        {% else %}
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.id }}/setupinvite?template={{ t }}">{{ t|capitalize }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Two-card layout. Left: email-shape composer; right: merge-tag
+     reference + Save / Cancel. The Save button lives in the right
+     card but submits the composer form via the HTML5 ``form="..."``
+     attribute, so the form definition stays beside its inputs. #}
   <div class="bottom-grid">
-    {{ placeholder_card(
-      id="email-composer",
-      title="Email composer",
-      description=(
-        "Edit the invitation and reminder email subject + body here. "
-        "Lands in Segment 11E PR 2."
-      ),
-      button_label="Edit",
-      button_tooltip="Editor UI lands in Segment 11E PR 2 (guide/segment_11E_email_template_editor.md)",
-    ) }}
-    {{ placeholder_card(
-      id="merge-tags-and-actions",
-      title="Merge tags &amp; actions",
-      description=(
-        "Per-tag Copy buttons plus Save / Cancel / Preview as Rae "
-        "Reviewer. Lands alongside the composer in Segment 11E PR 2."
-      ),
-      button_label="Save",
-      button_tooltip="Editor UI lands in Segment 11E PR 2 (guide/segment_11E_email_template_editor.md)",
-    ) }}
+    <div class="card email-composer" id="email-composer">
+      <h2>{{ active_template|capitalize }} email</h2>
+
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/setupinvite"
+            id="setupinvite-form">
+        <input type="hidden" name="template" value="{{ active_template }}">
+
+        <div class="form-row muted">
+          <strong>From:</strong> <em>(your configured SMTP From email — see <a href="/operator/settings">Settings</a>)</em>
+        </div>
+        <div class="form-row muted">
+          <strong>To:</strong> <em>(sent individually to each reviewer)</em>
+        </div>
+
+        {% for row in rows %}
+          <div class="form-row">
+            <label for="field-{{ row.field }}">
+              {{ row.field|capitalize }}
+              {% if row.has_override %}
+                <span class="muted">— overridden</span>
+              {% endif %}
+            </label>
+            {% if row.field == "body" %}
+              <textarea id="field-{{ row.field }}" name="{{ row.field }}"
+                        rows="8"
+                        placeholder="{{ row.default }}">{{ row.value if row.has_override else '' }}</textarea>
+            {% else %}
+              <input type="text" id="field-{{ row.field }}" name="{{ row.field }}"
+                     value="{{ row.value if row.has_override else '' }}"
+                     placeholder="{{ row.default }}"
+                     {% if row.field == "subject" %}maxlength="255"{% endif %}>
+            {% endif %}
+          </div>
+          {% if row.has_override %}
+            <div class="form-row" style="margin-top: -8px;">
+              <form method="post"
+                    action="/operator/sessions/{{ session.id }}/setupinvite/reset"
+                    style="display: inline;">
+                <input type="hidden" name="template" value="{{ active_template }}">
+                <input type="hidden" name="field" value="{{ row.field }}">
+                <button type="submit" class="chrome-link"
+                        style="background: none; border: 0; padding: 0; cursor: pointer;">
+                  Reset {{ row.field }} to default
+                </button>
+              </form>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </form>
+    </div>
+
+    <div class="card merge-tags" id="merge-tags-and-actions">
+      <h2>Merge tags</h2>
+      <p class="muted">
+        Use these placeholders in the subject or body; they're substituted at send time.
+      </p>
+      <ul class="merge-tag-list">
+        {% for tag in merge_tags %}
+          <li>
+            <code>{{ tag.tag }}</code> — {{ tag.description }}
+          </li>
+        {% endfor %}
+      </ul>
+
+      <div class="btn-row" style="margin-top: 20px;">
+        <button class="btn" type="submit" form="setupinvite-form">Save</button>
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}">Cancel</a>
+      </div>
+    </div>
   </div>
 {% endblock %}

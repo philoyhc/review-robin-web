@@ -17,7 +17,9 @@ from app.schemas.assignments import AssignmentMode
 from app.schemas.sessions import SessionCreate
 from app.services import (
     assignments,
+    audit as audit_service,
     csv_imports,
+    email_templates,
     instruments as instruments_service,
     invitations,
     monitoring,
@@ -1089,13 +1091,46 @@ def instruments_index(
     )
 
 
+_VALID_TEMPLATES = ("invitation", "reminder")
+
+
+def _build_field_rows(
+    review_session: ReviewSession, template: str
+) -> list[dict[str, Any]]:
+    """For each (field, key, default) tuple on the active template,
+    return the dict the editor template iterates over to render
+    each editable field plus its per-field "Reset to default" link.
+    """
+    rows: list[dict[str, Any]] = []
+    for spec in email_templates.TEMPLATE_FIELDS[template]:
+        override = email_templates.get_override(review_session, spec["key"])
+        rows.append(
+            {
+                "field": spec["field"],
+                "key": spec["key"],
+                "value": override if override is not None else spec["default"],
+                "default": spec["default"],
+                "has_override": override is not None,
+            }
+        )
+    return rows
+
+
 @router.get("/sessions/{session_id}/setupinvite", response_class=HTMLResponse)
-def setupinvite_stub(
+def setupinvite_form(
     request: Request,
+    template: str = Query(default="invitation"),
+    saved: str | None = Query(default=None),
+    reset: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    if template not in _VALID_TEMPLATES:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown template",
+        )
     return _templates.TemplateResponse(
         request,
         "operator/session_setupinvite.html",
@@ -1103,10 +1138,119 @@ def setupinvite_stub(
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
+            "active_template": template,
+            "valid_templates": _VALID_TEMPLATES,
+            "rows": _build_field_rows(review_session, template),
+            "merge_tags": [
+                {"tag": "$reviewer_name", "description": "Reviewer's name from the roster."},
+                {"tag": "$session_name", "description": "Session name."},
+                {"tag": "$deadline", "description": "Session deadline (YYYY-MM-DD), blank when unset."},
+                {"tag": "$help_contact", "description": "Per-session help contact."},
+                {"tag": "$invite_url", "description": "Reviewer-specific invitation URL."},
+            ],
+            "saved": saved == "ok",
+            "reset_field": reset,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Email Template"
             ),
         },
+    )
+
+
+@router.post("/sessions/{session_id}/setupinvite")
+async def setupinvite_save(
+    request: Request,
+    template: str = Form(default="invitation"),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    if template not in _VALID_TEMPLATES:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown template",
+        )
+    form = await request.form()
+    updates: dict[str, str | None] = {}
+    for spec in email_templates.TEMPLATE_FIELDS[template]:
+        raw = form.get(spec["field"])
+        if not isinstance(raw, str):
+            continue
+        # Empty submission for any field falls through to the default
+        # by removing the override key. Whitespace-only is treated as
+        # empty for the same reason.
+        updates[spec["key"]] = raw if raw.strip() else None
+    changes = email_templates.set_overrides(review_session, updates)
+    if changes:
+        audit_service.write_event(
+            db,
+            event_type="email_template.updated",
+            summary=(
+                f"Session {review_session.code}: "
+                f"{template} template updated"
+            ),
+            actor_user_id=user.id,
+            session_id=review_session.id,
+            detail={
+                "template": template,
+                "changes": {k: list(v) for k, v in changes.items()},
+            },
+            correlation_id=request_correlation_id(),
+        )
+    db.commit()
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/setupinvite?template={template}&saved=ok",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/setupinvite/reset")
+def setupinvite_reset(
+    template: str = Form(...),
+    field: str = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    if template not in _VALID_TEMPLATES:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown template",
+        )
+    spec = next(
+        (s for s in email_templates.TEMPLATE_FIELDS[template] if s["field"] == field),
+        None,
+    )
+    if spec is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown field",
+        )
+    changes = email_templates.set_overrides(review_session, {spec["key"]: None})
+    if changes:
+        audit_service.write_event(
+            db,
+            event_type="email_template.reset",
+            summary=(
+                f"Session {review_session.code}: "
+                f"{template}.{field} reset to default"
+            ),
+            actor_user_id=user.id,
+            session_id=review_session.id,
+            detail={
+                "template": template,
+                "field": field,
+                "changes": {k: list(v) for k, v in changes.items()},
+            },
+            correlation_id=request_correlation_id(),
+        )
+    db.commit()
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/setupinvite"
+            f"?template={template}&reset={field}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

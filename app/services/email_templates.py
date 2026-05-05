@@ -145,3 +145,65 @@ def render_reminder(
         **merge,
     )
     return subject, body
+
+
+# ── Editor helpers (Segment 11E PR 2) ────────────────────────────────────
+
+
+# Maps each (template, field) pair to its override key + default value.
+# The editor's GET / POST handlers iterate the appropriate slice; the
+# table is the single source of truth for which (template, field)
+# pairs the editor surfaces.
+TEMPLATE_FIELDS: dict[str, list[dict[str, str]]] = {
+    "invitation": [
+        {"field": "subject", "key": "invitation_subject", "default": DEFAULT_INVITATION_SUBJECT},
+        {"field": "body", "key": "invitation_body", "default": DEFAULT_INVITATION_BODY},
+        {"field": "cc", "key": "invitation_cc", "default": ""},
+        {"field": "bcc", "key": "invitation_bcc", "default": ""},
+    ],
+    "reminder": [
+        {"field": "subject", "key": "reminder_subject", "default": DEFAULT_REMINDER_SUBJECT},
+        {"field": "body", "key": "reminder_body", "default": DEFAULT_REMINDER_BODY},
+        {"field": "cc", "key": "reminder_cc", "default": ""},
+        {"field": "bcc", "key": "reminder_bcc", "default": ""},
+    ],
+}
+
+
+def get_override(review_session: ReviewSession, key: str) -> str | None:
+    """Returns the operator-supplied override for ``key``, or ``None``
+    if no override is set. Distinct from ``_resolve`` which falls back
+    to the default — the editor needs to know whether an override
+    exists so it can decide whether to render a "Reset to default"
+    link next to the field."""
+    overrides = review_session.email_template_overrides or {}
+    value = overrides.get(key)
+    if isinstance(value, str):
+        return value
+    return None
+
+
+def set_overrides(
+    review_session: ReviewSession,
+    updates: dict[str, str | None],
+) -> dict[str, list[Any]]:
+    """Apply per-key updates to the session's
+    ``email_template_overrides`` JSON. Returns a ``{key: [old, new]}``
+    diff for audit. ``None`` value removes the key (resets to default);
+    a string value upserts."""
+    current: dict[str, Any] = dict(review_session.email_template_overrides or {})
+    changes: dict[str, list[Any]] = {}
+    for key, new_value in updates.items():
+        if key not in OVERRIDE_KEYS:
+            continue
+        old_value = current.get(key)
+        if new_value is None:
+            if old_value is not None:
+                changes[key] = [old_value, None]
+                del current[key]
+        else:
+            if old_value != new_value:
+                changes[key] = [old_value, new_value]
+                current[key] = new_value
+    review_session.email_template_overrides = current or None
+    return changes
