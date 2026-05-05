@@ -369,7 +369,7 @@ A session may have multiple instruments for a reviewer to complete across their 
 
 (Underlying rationale: see "Response form layout and instrument pacing" below — one page per instrument is the canonical principle.)
 
-**Pattern: page buttons in the unified action row.** When the session has more than one instrument, the surface's main action row carries one button per instrument labelled `Page N: {Instrument.name}` (e.g. `Page 1: Skills` / `Page 2: Cultural Fit`), alongside Save and Discard, with a vertical divider between those page-level controls and the review-level Submit at the row's right edge. The button for the current page renders disabled (`aria-disabled="true"`); other buttons are Primary anchors that JS-toggle which instrument is visible (no server round-trip — the reviewer's in-progress edits stay in the DOM across page switches). The action row is repeated at the top and bottom of the form so the reviewer can act without scrolling.
+**Pattern: page buttons in the unified action row.** When the session has more than one instrument, the surface's main action row carries one button per instrument labelled `Page #{N}: {Instrument.short_label}` (e.g. `Page #1: Skills` / `Page #2: Cultural Fit`), alongside Save and Discard, with a vertical divider between those page-level controls and the review-level Submit at the row's right edge. When `short_label` is unset, the button falls back to bare `Page #{N}`. The button for the current page renders disabled (`aria-disabled="true"`); other buttons are Primary anchors that JS-toggle which instrument is visible (no server round-trip — the reviewer's in-progress edits stay in the DOM across page switches). The action row is repeated at the top and bottom of the form so the reviewer can act without scrolling.
 
 Detailed layout contract — Page button position, Save / Discard ordering, status-pill placement, JS visibility-toggle mechanics, save semantics, dirty-state preservation across page changes — lives in `spec/reviewer-surface.md`. This document covers the chrome philosophy; the surface spec is the implementation contract.
 
@@ -580,27 +580,48 @@ navigation"; restating in this principle's context:
 - **Page buttons are the reviewer's pacing UI.** Each button is
   one instrument, one page. Operators choose page order; reviewers
   move freely between pages.
+- **Two operator-authored strings per instrument.** The schema
+  exposes:
+  - **`Instrument.short_label`** (`String(32) | None`) — the
+    operator's reviewer-facing framing. Lands on Page button
+    labels and as the per-instrument H2 title above each table.
+    Capped at 32 characters at the schema layer.
+  - **`Instrument.description`** (`String(2000) | None`) — the
+    longer per-instrument blurb. Lands as the subtitle next to the
+    H2 title. Optional per-instrument context the reviewer reads
+    on instrument entry ("This instrument asks you to rate the
+    candidates on technical skills, considering their submitted
+    work samples.").
+  The system handle `Instrument.name` is **not** reviewer-facing
+  — it carries audit-event copy and is otherwise invisible.
 - **Page button labels carry the operator's framing.** Each button
-  shows `Page N: {Instrument.name}` — the position grounds the
-  reviewer in the sequence, the name carries the operator's
-  framing. "Page 1: Round 1" / "Page 2: Round 2" is a different
-  reviewer experience from "Page 1: Skills" / "Page 2: Cultural
-  Fit" / "Page 3: Recommendation". Operators should choose
-  instrument names with reviewer-comprehension in mind.
-- **Instrument-name length constraint.** Because the name lands on
-  a page button alongside Save and Discard, **the Instruments
-  Setup page must enforce a `max_length` on `Instrument.name`**
-  (~32 characters is the recommended ceiling) so the page button
-  row doesn't wrap or overflow on typical viewports. This is a
-  Setup-side responsibility; the reviewer surface trusts the
-  value it's given. Spec lives in the forthcoming
-  `spec/instruments_setup_spec.md`.
-- **Optional per-instrument description.** A one-line description
-  shown to the reviewer above the table on instrument entry can
-  help when the page button label alone isn't self-explanatory
-  ("This instrument asks you to rate the candidates on technical
-  skills, considering their submitted work samples.") This
-  affordance is recommended for the Instruments Setup page.
+  shows `Page #{N}: {short_label}` when the operator has set a
+  short label, falling back to bare `Page #{N}` otherwise. The
+  position grounds the reviewer in the sequence; the short label
+  carries the operator's framing. "Page #1: Round 1" /
+  "Page #2: Round 2" is a different reviewer experience from
+  "Page #1: Skills" / "Page #2: Cultural Fit" /
+  "Page #3: Recommendation". Operators should choose `short_label`
+  values with reviewer-comprehension in mind.
+- **Per-instrument heading mirrors the page button.** The H2 above
+  each table reads `Page #{N}: {short_label}` for multi-instrument
+  sessions and bare `{short_label}` for single-instrument sessions
+  (no `Page #1:` prefix needed when there's only one). The longer
+  description renders as a subtitle on the same row as the H2,
+  baseline-aligned, so "what is this page, and what's it for"
+  reads in one glance. With both fields empty in a single-
+  instrument session, no H2 row renders at all.
+- **`short_label` length constraint.** Because the short label
+  lands on a page button alongside Save and Discard, **the
+  Instruments Setup page enforces `max_length=32` on
+  `Instrument.short_label`** so the button row doesn't wrap or
+  overflow on typical viewports. This is a Setup-side
+  responsibility; the reviewer surface trusts the value it's
+  given. Spec lives in the forthcoming
+  `spec/instruments_setup_spec.md`. The reviewer surface also
+  ships a defensive CSS truncation rule
+  (`max-width: 16em; text-overflow: ellipsis`) on Page buttons
+  as belt-and-suspenders.
 - **Per-page status pills** (per "Multi-instrument navigation")
   live in the right-half status panel above the action rows, not
   on the page buttons themselves. The panel always renders (one

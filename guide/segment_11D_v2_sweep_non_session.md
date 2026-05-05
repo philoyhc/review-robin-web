@@ -270,14 +270,17 @@ description.
    Note hit count in PR α's description so reviewers know the
    sweep is bounded.
 
-2. **`Instrument.name` data audit.** What's the longest existing
-   `Instrument.name` in production-shaped test data, and what do
-   real-world operators actually set? Per the spec, page button
-   labels read `Page N: {Instrument.name}`. The Setup-side
-   `max_length` constraint (~32 chars) lands in the forthcoming
-   Instruments Setup spec; until then the surface ships a CSS
-   `text-overflow: ellipsis` safeguard. The audit confirms the
-   safeguard's `max-width` value lands in the right ballpark.
+2. **`Instrument.short_label` cap value sanity-check.** Segment
+   11L adds a new `Instrument.short_label String(32) | None`
+   column. Page button labels read `Page #{N}: {short_label}`
+   (falling back to bare `Page #{N}`); the per-instrument H2
+   heading reads `Page #{N}: {short_label}` likewise. Sanity-
+   check: do the spec's example labels (`Skills`, `Cultural Fit`,
+   `Final Recommendation`) plus a typical `Page #99:` prefix fit
+   under typical viewport widths at body font size? At 16px ≈
+   `16em` ≈ 256px is a safe ceiling for the CSS truncation rule
+   PR γ ships. (No data audit on existing rows — `short_label`
+   is a new column; existing rows have NULL by default.)
 
 ## PR sequence
 
@@ -286,6 +289,13 @@ behaviour-rich (client-side navigation + acknowledge polish). Each
 PR leaves the surface working for both single-instrument and
 multi-instrument sessions; the multi-instrument experience
 improves incrementally.
+
+**Hard prerequisite for PR γ: Segment 11L** —
+`guide/segment_11L_instrument_short_label.md` ships the
+`Instrument.short_label` column + Setup-side editor that PR γ's
+button labels and per-instrument H2 title both read. Segment 11L
+is independent of α / β / δ / ε; it can ship in parallel with
+any of them. Land it before γ.
 
 ### PR α — URL routing + dashboard rewiring
 
@@ -364,18 +374,29 @@ Existing tests that asserted banner position (e.g. "saved=ok
 banner near top of body") may need to update to check the panel
 instead.
 
-### PR γ — Unified action row (server-side Page N navigation)
+### PR γ — Unified action row (server-side Page navigation)
 
 **Goal.** The action row collapses into a single flush-right strip,
-mirrored top + bottom. Page N: name buttons replace Previous /
-Next. Server-side navigation only (full page reload on Page N
-click) — client-side toggle lands in PR δ.
+mirrored top + bottom. `Page #{N}: {short_label}` buttons replace
+Previous / Next. Server-side navigation only (full page reload on
+Page button click) — client-side toggle lands in PR δ.
+
+**Hard prerequisite: Segment 11L.** PR γ's button labels and
+per-instrument H2 both read `Instrument.short_label`; the column
++ Setup-side editor ship in
+`guide/segment_11L_instrument_short_label.md`. Without 11L,
+`short_label` doesn't exist as a column. Land 11L first. The
+two reviewer-side helpers PR γ needs
+(`page_button_label(instrument, position)` and
+`instrument_heading(instrument, position, total_count)`) are
+**not** part of 11L — they ship inside PR γ alongside the
+template work that consumes them.
 
 - Replace the current top + bottom action rows with a single
   unified `.rs-action-row` per side (top and bottom mirrored).
-  Order, left-to-right: `Save`, `Discard`, `Page 1: name`,
-  `Page 2: name`, …, **vertical divider**, `Submit`. Whole row
-  flush right.
+  Order, left-to-right: `Save`, `Discard`,
+  `Page #1: {short_label}`, `Page #2: {short_label}`, …,
+  **vertical divider**, `Submit`. Whole row flush right.
 - New element: `.rs-action-divider` — a 1px-wide `<span>` that
   visually separates the page-level cluster from Submit. CSS in
   `base.html` v2 block:
@@ -389,13 +410,45 @@ click) — client-side toggle lands in PR δ.
   }
   ```
 
-- `Page N: name` buttons render as `<a class="btn">` anchors
-  pointing at `/reviewer/sessions/{id}/{n}` — server-side
-  navigation, full page reload. Current page button is
-  `aria-disabled="true"`. Truncate label via inline
-  `style="max-width: 16em; text-overflow: ellipsis"` on the
-  anchor as a CSS safeguard until the Setup-side `max_length`
-  constraint ships (see "Out of scope" below).
+- Page buttons render as `<a class="btn">` anchors pointing at
+  `/reviewer/sessions/{id}/{n}` — server-side navigation, full
+  page reload. PR γ ships a new helper
+  `page_button_label(instrument, position)` returning
+  `f"Page #{position}: {instrument.short_label}"` when
+  `short_label` is set (trimmed non-empty), else
+  `f"Page #{position}"`. Current page button is
+  `aria-disabled="true"`. Add a defensive
+  `max-width: 16em; text-overflow: ellipsis` rule on the page
+  buttons as belt-and-suspenders — Segment 11L enforces a
+  32-char ceiling at the data layer, but the CSS guards against
+  pre-existing oddities or future migration glitches.
+- **Per-instrument heading.** Replace the existing
+  `<h2>{group.heading}</h2>` line with a `.rs-instrument-heading`
+  flex row (title + optional subtitle, baseline-aligned, mirrors
+  the `.rs-page-header` pattern). PR γ ships a new helper
+  `instrument_heading(instrument, position, total_count) -> InstrumentHeading`
+  where `InstrumentHeading` is a frozen dataclass of
+  `(title: str | None, subtitle: str | None)`. The existing
+  `views.reviewer_instrument_heading(...)` helper retires; PR γ's
+  new helper returns structured data the template iterates.
+  Composition rules per `spec/reviewer-surface.md` "Above the
+  table — heading + help block". Add CSS in `base.html`:
+
+  ```css
+  body.ui-v2 .rs-instrument-heading {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin: var(--space-6) 0 var(--space-3) 0;
+  }
+  body.ui-v2 .rs-instrument-heading h2 { margin: 0; }
+  body.ui-v2 .rs-instrument-heading .rs-instrument-subtitle {
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+  ```
+
 - Acknowledge missing checkbox renders above the bottom action
   row when `show_acknowledge` is set.
 - Drop `Previous` / `Next` buttons + their inline JS (the
@@ -415,7 +468,17 @@ Test impact: medium-heavy. Most reviewer-flow tests need updating:
 - `Cancel — discard unsaved edits` → `Discard`.
 - `>Previous</button>` / `>Next</button>` assertions retire.
 - New tests for the divider + Submit position.
-- New tests for `Page N: name` button rendering.
+- New tests for `Page #{N}: {short_label}` button rendering
+  (with + without `short_label` set on the test fixture).
+- New unit tests on the two new helpers (`page_button_label`
+  covers the two label cases; `instrument_heading` covers the
+  six composition cases laid out in `spec/reviewer-surface.md`
+  "Above the table").
+- New tests for the per-instrument heading title + subtitle row
+  (covering the six cases in the heading-spec table:
+  multi-instrument {with / without short_label} × {with / without
+  description}, single-instrument {with / without short_label} ×
+  {with / without description}).
 
 ### PR δ — Client-side page navigation + dirty preservation
 
@@ -539,11 +602,6 @@ session-wide model. Existing preview tests update for new chrome.
 
 ## Out of scope (deferred)
 
-- **Setup-side `Instrument.name` length constraint.** Belongs in
-  the forthcoming `spec/instruments_setup_spec.md` and the
-  Segment-11E (Email Template editor) or a separate Setup-polish
-  segment. Until then, the surface ships the CSS truncation
-  safeguard.
 - **`beforeunload` warning** when the reviewer browser-closes,
   tab-closes, or navigates via `My Reviews` / address-bar with
   unsaved edits. The dirty-tracking machinery PR δ ships is the

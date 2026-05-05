@@ -120,17 +120,18 @@ Top-to-bottom, the page renders:
    - `Discard` (Secondary button, `type="button"`) — JS-resets the
      current page's inputs back to their server-saved values.
      Other pages' unsaved edits are untouched.
-   - `Page N: {Instrument.name}`, one button per instrument, Primary
-     style. The label combines the position with the instrument's
-     name so the reviewer sees both ordering and context (e.g.
-     `Page 1: Skills` / `Page 2: Cultural Fit`). Falls back to bare
-     `Page N` when an instrument has no name set. Each button is a
-     JS-driven control (`type="button"`) — clicking it swaps the
-     visible instrument group via CSS class toggle and updates the
-     URL via `history.pushState(...)` so the address bar stays
-     truthful and Back/Forward work; no server round-trip. The
-     button for the current page renders disabled
-     (`aria-disabled="true"`).
+   - `Page #{N}: {Instrument.short_label}`, one button per
+     instrument, Primary style. The label combines the position
+     with the operator-set short label so the reviewer sees both
+     ordering and context (e.g. `Page #1: Skills` /
+     `Page #2: Cultural Fit`). When `short_label` isn't set
+     (nullable column; default empty), the button falls back to
+     bare `Page #{N}`. Each button is a JS-driven control
+     (`type="button"`) — clicking it swaps the visible instrument
+     group via CSS class toggle and updates the URL via
+     `history.pushState(...)` so the address bar stays truthful
+     and Back/Forward work; no server round-trip. The button for
+     the current page renders disabled (`aria-disabled="true"`).
    - **Vertical divider** — a `.rs-action-divider` element separating
      the page-level controls (Save / Discard / Page N) from the
      review-level Submit. 1px wide, full button-height,
@@ -289,12 +290,13 @@ clicks Save (and the page re-renders).
 | `complete` | `.pill.pill-success` | Every required field on every assignment in this page has a saved value. |
 | `submitted` | `.pill.pill-success` | Every assignment in this page has `submitted_at` set (i.e. the session has been submitted; all pages flip together). |
 
-Pill copy: `Page 1: in progress`, `Page 2: complete`, etc. Single-
-instrument sessions still show one pill (`Page 1: …`), since the
-status panel always renders. Pill copy uses bare `Page N` rather
-than `Page N: {Instrument.name}` to keep the panel compact —
-instrument names live on the Page button labels, where the reviewer
-needs them to navigate.
+Pill copy: `Page #1: in progress`, `Page #2: complete`, etc.
+Single-instrument sessions still show one pill (`Page #1: …`),
+since the status panel always renders. Pill copy uses bare
+`Page #{N}` rather than `Page #{N}: {short_label}` to keep the
+panel compact — short labels live on the Page button labels and
+on the per-instrument H2 above each table, where the reviewer
+needs them to navigate or orient.
 
 The route threads a `page_statuses: list[PageStatus]` into context
 (`PageStatus = {position: int, label: str, state: Literal[…]}`),
@@ -313,18 +315,52 @@ of forcing the surrounding layout to grow.
 
 ### Above the table — heading + help block
 
-- **H2 section heading** from `Instrument.description` (fall back to
-  the system handle / `Instrument.name` when the description is
-  empty). Single-instrument sessions with empty descriptions render
-  no H2 at all (regression-tested; see
-  `test_surface_single_instrument_no_description_renders_no_heading`).
-- **Help block** above the table, listing each response field that
-  has both `help_text` set and `help_text_visible=true`. Two
-  variants:
+The per-instrument heading is a `.rs-instrument-heading` flex row
+carrying a title (H2) and an optional subtitle on the same baseline,
+styled like the page header (H1 + deadline). Title and subtitle
+content comes from `Instrument.short_label` and
+`Instrument.description` respectively, with composition rules driven
+by how many instruments the reviewer is assigned on:
+
+| Case | Title (H2) | Subtitle (`.muted`, body-weight) |
+|---|---|---|
+| Multi-instrument, `short_label` set | `Page #{N}: {short_label}` | `description` if set, else nothing |
+| Multi-instrument, `short_label` empty | `Page #{N}` (bare) | `description` if set, else nothing |
+| Single-instrument, `short_label` set | `{short_label}` (no `Page #1:` prefix) | `description` if set, else nothing |
+| Single-instrument, both empty | none — no heading row renders | n/a |
+| Single-instrument, only `description` set | none — no heading row renders | n/a (description shown elsewhere) |
+
+The `Page #{N}` prefix is the safety-net default for multi-instrument
+sessions: even with `short_label` unset, the reviewer still gets
+"which page am I on" context. Single-instrument sessions don't need
+the `Page #1` prefix; the H1 (session name) at the top of the surface
+already establishes "this is the review."
+
+The view-shape returned by `_surface_context` exposes a structured
+heading dict per instrument group:
+
+```python
+@dataclass(frozen=True)
+class InstrumentHeading:
+    title: str | None      # rendered as <h2>; absent when None
+    subtitle: str | None   # rendered as a body-weight muted span; absent when None
+```
+
+The template renders the row only when `heading.title` is truthy.
+
+- **Help block** above the table (below the heading row), listing each
+  response field that has both `help_text` set and
+  `help_text_visible=true`. Two variants:
   - Multiple visible help items → `.rs-help-grid` (responsive grid
     of `.rs-help-card` items).
   - Exactly one visible help item → `.rs-help-card.rs-help-card-solo`
     (full-width single-card variant).
+
+Single-instrument sessions with both `short_label` and `description`
+empty render no H2 at all (regression-tested; see
+`test_surface_single_instrument_no_description_renders_no_heading`,
+which gets renamed once the multi-instrument-rewrite PR γ adds the
+`instrument_heading(...)` helper).
 
 ### Columns
 
@@ -645,29 +681,38 @@ from the top bar.
 |---|---|---|
 | Action row (page-level slot) | `Save draft` | `Save` |
 | Action row (page-level slot) | `Cancel — discard unsaved edits` | `Discard` |
-| Action row (page-level slot) | n/a | `Page N: {Instrument.name}` (falls back to bare `Page N` when the instrument has no name) |
+| Action row (page-level slot) | n/a | `Page #{N}: {Instrument.short_label}` when the operator has set a short label; bare `Page #{N}` otherwise |
 | Action row (review-level slot, after divider) | `Submit` | `Submit` (unchanged) |
 | Danger Zone | `Clear all` | `Clear all` (unchanged; copy explains "every response across every page") |
 
 Other labels (`Sign out`, `My Reviews`) are unchanged.
 
-### Instrument-name length constraint
+### Friendly short label vs. long description
 
-Page button labels include the instrument name so reviewers see what
-they're switching to. To prevent buttons growing unwieldy, the
-**Instruments Setup page must enforce a `max_length` on
-`Instrument.name`** at create / edit time. Suggested limit: ~32
-characters (enough for "Final Recommendation" or "Skills
-Assessment", short enough to keep the button row from wrapping in
-typical viewports).
+The operator authors **two distinct strings** per instrument, both
+optional:
 
-This constraint is a **Setup-side concern**; this surface trusts
-the value it's given. Spec lives in the forthcoming
-`spec/instruments_setup_spec.md`. Until that lands, the surface
-template ships a CSS truncation safeguard (`max-width` +
-`text-overflow: ellipsis`) so an unconstrained name doesn't break
-the layout — but the truncation isn't a substitute for the
-input-side constraint.
+- **`Instrument.short_label`** (`String(32) | None`, nullable) — the
+  operator's reviewer-facing framing. Lands on Page button labels
+  (`Page #{N}: {short_label}`) and as the per-instrument H2 title.
+  Capped at 32 characters at the schema layer so button rows don't
+  wrap on typical viewports.
+- **`Instrument.description`** (`String(2000) | None`, nullable —
+  unchanged from today) — the longer per-instrument blurb. Lands
+  as the subtitle next to the H2 title above each table.
+
+The system handle `Instrument.name` (`String(255)`, auto-generated
+as `instrument_N` on instrument create) is **not** reviewer-facing.
+It carries audit-event copy and is otherwise invisible.
+
+The 32-char ceiling on `short_label` is a **Setup-side concern** —
+this surface trusts the value it's given. The Instruments Setup
+page enforces it at create / edit time (see
+`guide/segment_11L_instrument_short_label.md` for the single-PR
+plan that adds the column + Setup-side editor). The reviewer
+surface still ships a defensive
+`max-width: 16em; text-overflow: ellipsis` rule on Page buttons
+as belt-and-suspenders against pre-existing oddities.
 
 ---
 
