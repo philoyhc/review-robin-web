@@ -360,47 +360,32 @@ The main task surface, where the reviewer completes their evaluations.
   - Deadline — small reminder in `text-secondary`, near the session name.
   - Optional: institution or operator name (small, `text-secondary`) — useful for reviewers participating across institutions or with multiple operators in mind.
   - Optional: operator-configured welcome message / instructions, shown above the form on first visit. Plain text or limited markdown.
-- **Instrument tab strip** (only when the session has more than one instrument; see below).
+- **Page navigation** (only when the session has more than one instrument; see "Multi-instrument navigation" below).
 - **Form body.**
 
 ##### Multi-instrument navigation
 
-A session may have multiple instruments for a reviewer to complete across their assigned reviewees. This requires more than one page facing the reviewer, and therefore some navigation chrome.
+A session may have multiple instruments for a reviewer to complete across their assigned reviewees. This requires more than one page facing the reviewer, and some navigation chrome.
 
-(Underlying rationale: see "Response form layout and instrument pacing" below — one page per instrument is the canonical principle, and the tab strip is its chrome surface.)
+(Underlying rationale: see "Response form layout and instrument pacing" below — one page per instrument is the canonical principle.)
 
-**Pattern: a single horizontal tab strip.**
+**Pattern: page buttons in the page actions row.** When the session has more than one instrument, the page-actions row carries one button per instrument labelled `Page N: {Instrument.name}` (e.g. `Page 1: Skills` / `Page 2: Cultural Fit`), alongside Save and Discard. The button for the current page renders disabled (`aria-disabled="true"`); other buttons are Primary anchors that JS-toggle which instrument is visible (no server round-trip — the reviewer's in-progress edits stay in the DOM across page switches).
 
-Below the page header, one row of tabs — one tab per instrument the reviewer needs to complete:
+Detailed layout contract — Page button position, Save / Discard ordering, status-pill placement, JS visibility-toggle mechanics, save semantics, dirty-state preservation across page changes — lives in `spec/reviewer-surface.md`. This document covers the chrome philosophy; the surface spec is the implementation contract.
 
-```
-Session: Student Associate Selection 2026 Peer Review · Deadline: 2026-07-01
-─────────────────────────────────────────────────────────────────
-[Skills Assessment] [Cultural Fit] [Final Recommendation]
-─────────────────────────────────────────────────────────────────
-```
+Three persistent guarantees the chrome makes regardless of layout details:
 
-Specifics:
+- **Tab order** matches whatever order the operator configured in the Instruments Setup page. Reviewers can't reorder; the order is the session's.
+- **Free movement between pages.** The reviewer can switch pages at any time, in any order. The dirty buffer carries across page switches so they don't lose typed-but-not-saved values.
+- **No page is "locked" by another page's completion.** The reviewer can fill instruments in any order.
 
-- **Tab labels** are the instrument names, kept short.
-- **Active tab** uses the same underline-and-color-emphasis pattern as the operator session chrome above, but in a single row. Reuses the tab component from the general spec.
-- **Per-tab completion indicator.** A small badge or dot adjacent to the tab label shows whether that instrument is incomplete, in progress, or complete:
-  - No badge: not started.
-  - In progress (some responses entered, not all): muted dot indicator.
-  - Complete: small check icon or `accent-green` badge.
-
-  This lets the reviewer track progress at a glance without a separate dashboard.
-- **Tab order** matches whatever order the operator configured in the Instruments Setup page. The reviewer is not free to reorder; the tabs are determined by the session's setup.
-- **Free movement between tabs.** The reviewer can switch tabs at any time. Responses are saved per-tab as they go (auto-save or on-tab-change save — implementation detail, but the reviewer should never lose work by switching tabs).
-- **No tab is "locked" by another tab's completion.** The reviewer can complete instruments in any order.
-
-**When there is only one instrument**, the tab strip does not render. A single-instrument session shows just the page header and the form directly; introducing a one-tab strip would be visual noise.
+**When there is only one instrument**, the page buttons don't render. A single-instrument session shows just the page header, action rows, and the form — the per-page status pill in the right-half status panel ("Page 1: …") is the only signal that pages exist as a concept.
 
 ##### Per-reviewee navigation within an instrument
 
-A separate concern: within a single instrument, the reviewer evaluates multiple reviewees. **This is rendered as a table — every reviewee on one page, one row per reviewee.** No per-reviewee paging, no sidebar drill-down. See "Response form layout and instrument pacing" below for the canonical principle and rationale; pacing across cohorts is handled by splitting into multiple instruments (i.e. multiple tabs), not by paging within an instrument.
+A separate concern: within a single instrument, the reviewer evaluates multiple reviewees. **This is rendered as a table — every reviewee on one page, one row per reviewee.** No per-reviewee paging, no sidebar drill-down. See "Response form layout and instrument pacing" below for the canonical principle and rationale; pacing across cohorts is handled by splitting into multiple instruments (i.e. multiple page buttons), not by paging within an instrument.
 
-The chrome stops at the instrument-level tab strip; what happens *inside* the form (table layout, sticky headers, keyboard navigation, auto-save) is the response-form component's concern — see "Large-table ergonomics" below.
+The chrome stops at the page button row; what happens *inside* the form (table layout, sticky headers, keyboard navigation, auto-save) is the response-form component's concern — see "Large-table ergonomics" below.
 
 #### Submission confirmation
 
@@ -413,7 +398,7 @@ Shown after the reviewer submits all required responses for the session.
 - Brief acknowledgement: "Thank you. Your responses have been received."
 - Optional: summary ("You completed 3 instruments across 7 reviewees.").
 - Optional: link back to the reviewer's review list, if other reviews remain.
-- No tab strip; the task is complete.
+- No page navigation; the task is complete.
 
 Tone: calm and brief. The reviewer is finished; the page should confirm and let them go.
 
@@ -512,8 +497,8 @@ A single canonical response form layout means:
   sessions and review types.
 - The Setup-side and reviewer-side share one model; what the
   operator builds is what the reviewer sees.
-- The chrome (tab strip, persistent affordances) is stable and
-  well-defined; no mode-dependent variants.
+- The chrome (page button row, persistent affordances) is stable
+  and well-defined; no mode-dependent variants.
 - Future variations (different review types, embedded scenarios,
   audience extensions) sit alongside this pattern as separate
   features rather than as toggles within it.
@@ -530,8 +515,8 @@ calibrating across rows.
 
 **Multiple contexts, same reviewer pool** — reviewers evaluate one
 group of people on technical criteria and a slightly different
-group on collaborative criteria. Two instruments, two tabs, two
-tables. The tab strip carries the context switch; each table is
+group on collaborative criteria. Two instruments, two pages, two
+tables. The page buttons carry the context switch; each table is
 appropriately sized to its scope.
 
 **Large global cohort, small per-reviewer scopes** — 1,000 people
@@ -592,25 +577,38 @@ page.
 Most of these are already covered above in "Multi-instrument
 navigation"; restating in this principle's context:
 
-- **Tab strip is the reviewer's pacing UI.** Each tab is one
-  instrument, one page. Operators choose tab order; reviewers move
-  freely between tabs.
-- **Tab labels carry the operator's framing.** "Round 1, Round 2,
-  Round 3" is a different reviewer experience from "Skills,
-  Cultural Fit, Recommendation." Operators should choose tab labels
-  with reviewer-comprehension in mind.
+- **Page buttons are the reviewer's pacing UI.** Each button is
+  one instrument, one page. Operators choose page order; reviewers
+  move freely between pages.
+- **Page button labels carry the operator's framing.** Each button
+  shows `Page N: {Instrument.name}` — the position grounds the
+  reviewer in the sequence, the name carries the operator's
+  framing. "Page 1: Round 1" / "Page 2: Round 2" is a different
+  reviewer experience from "Page 1: Skills" / "Page 2: Cultural
+  Fit" / "Page 3: Recommendation". Operators should choose
+  instrument names with reviewer-comprehension in mind.
+- **Instrument-name length constraint.** Because the name lands on
+  a page button alongside Save and Discard, **the Instruments
+  Setup page must enforce a `max_length` on `Instrument.name`**
+  (~32 characters is the recommended ceiling) so the page button
+  row doesn't wrap or overflow on typical viewports. This is a
+  Setup-side responsibility; the reviewer surface trusts the
+  value it's given. Spec lives in the forthcoming
+  `spec/instruments_setup_spec.md`.
 - **Optional per-instrument description.** A one-line description
   shown to the reviewer above the table on instrument entry can
-  help when the tab label alone isn't self-explanatory ("This
-  instrument asks you to rate the candidates on technical skills,
-  considering their submitted work samples.") This affordance is
-  recommended for the Instruments Setup page.
-- **Per-tab completion indicators** (per "Multi-instrument
-  navigation") give the reviewer a sense of progress at the
-  instrument level. Within an instrument, completeness is a
-  property of the table itself (filled vs. empty rows), so per-row
-  indicators may also be useful — see "Large-table ergonomics"
-  below.
+  help when the page button label alone isn't self-explanatory
+  ("This instrument asks you to rate the candidates on technical
+  skills, considering their submitted work samples.") This
+  affordance is recommended for the Instruments Setup page.
+- **Per-page status pills** (per "Multi-instrument navigation")
+  live in the right-half status panel above the action rows, not
+  on the page buttons themselves. The panel always renders (one
+  pill per instrument) so the reviewer sees the shape of their
+  remaining work at a glance, regardless of which page is visible.
+  Within an instrument, completeness is a property of the table
+  itself (filled vs. empty rows), so per-row indicators may also
+  be useful — see "Large-table ergonomics" below.
 
 ### Large-table ergonomics
 
@@ -715,8 +713,7 @@ This document (further down):
 - `spec/audience_and_identity_model.md` — the audience and surface
   philosophy the principle here serves.
 - "Multi-instrument navigation" (above in this document) — the
-  chrome around the response form, including the multi-instrument
-  tab strip.
+  chrome around the response form, including the page button row.
 - `spec/reviewer-surface.md` — the multi-instrument-aware response
   surface spec; the URL pattern, page anatomy, form scope, and
   per-page status pills implementing this principle on the live

@@ -4,7 +4,7 @@
 
 This file sits one level above the visual style spec for Review Robin (`spec/visual_style_rrw.md`, which owns chrome and component details) and one level below the audience model (`spec/audience_and_identity_model.md`) and the architecture spec (`spec/architecture.md`, which owns the domain). When the page set or its navigation changes, this is the file to update first; visual chrome decisions in `visual_style_rrw.md` follow from the page taxonomy here, and per-page deep-dive specs (e.g. `spec/session_home.md`, `guide/instruments.md`) assume this doc's contracts as their starting point.
 
-For the reviewer-facing surface — out of scope here — see `spec/reviewer_map.md` and the reviewer chrome section of `spec/visual_style_rrw.md`.
+For the reviewer-facing surface — out of scope here — see `spec/reviewer-surface.md` and the reviewer chrome section of `spec/visual_style_rrw.md`.
 
 ## Reading order
 
@@ -184,7 +184,7 @@ Every operator page (session-scoped or not) renders the same outer chrome before
 - **User card (top right).** "Signed in as {user name}" plus a Sign-out control (`/.auth/logout`).
 - **Breadcrumb trail** (below the app identity) reflecting the page's position in the surface hierarchy. Each segment except the current page is a link to that ancestor; the current page renders as a plain non-link label.
   - Operator root: `Sessions` → `/operator/sessions`.
-  - Reviewer root: `Reviewer` → `/reviewer` (covered in `spec/reviewer_map.md`).
+  - Reviewer root: `Reviewer` → `/reviewer` (covered in `spec/reviewer-surface.md`).
 
 Visual treatment (typography, spacing, link colors) is per `spec/visual_style_general.md` ("Breadcrumb", "Links") and `spec/visual_style_rrw.md` (non-session operator top bar).
 
@@ -309,7 +309,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home.
 - **`spec/preview_hub.md`** — Preview hub on the Operations row.
 - **`spec/operations_renew.md`** — Invitations + Responses functional spec; consolidates the Manage Invitations + Monitoring pages into a reviewer-centric Invitations page and adds a reviewee-centric Responses page.
-- **`spec/reviewer_map.md`** — reviewer-facing surface contracts (separate audience).
+- **`spec/reviewer-surface.md`** — reviewer-facing surface contracts (separate audience).
 - **`spec/ui_elements.md`** — implementation catalogue mapping the canonical primitives to CSS classes and templates.
 - **`guide/instruments.md`** — locked spec for the Instruments page.
 - **`docs/status.md`** — current implementation state and per-route detail.

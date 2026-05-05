@@ -12,7 +12,7 @@
 > - For the operator-page surface contract, read
 >   **`spec/operator_ui_concept.md`**.
 > - For the reviewer-page surface contract, read
->   **`spec/reviewer_map.md`**.
+>   **`spec/reviewer-surface.md`**.
 > - For the conceptual data model and layering, read
 >   **`spec/architecture.md`**.
 >

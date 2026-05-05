@@ -13,12 +13,13 @@ renders one instrument at a time, and a page-actions row lets the
 reviewer move between instruments. Single-instrument sessions are a
 degenerate case of the same model.
 
-This spec **supersedes `spec/reviewer_map.md`**; that file is
-scheduled for retirement once this one settles. Where the two
-disagree, this one wins.
-
 Cross-references:
 
+- `spec/visual_style_rrw.md` "Response form layout and instrument
+  pacing" — the underlying principle (one page per instrument,
+  tabular form, pacing via operator instrument design). This spec
+  is the implementation contract for that principle on the live
+  surface.
 - `spec/visual_style_rrw.md` — top-bar / chrome conventions, banner
   family, status-icon classes.
 - `spec/visual_style_general.md` — `.card` / `.btn` / `.pill` / form
@@ -38,8 +39,8 @@ Cross-references:
 ```
 GET  /reviewer/sessions/{session_id}/{instrument_position}
 POST /reviewer/sessions/{session_id}/{instrument_position}/save
-POST /reviewer/sessions/{session_id}/{instrument_position}/submit
-POST /reviewer/sessions/{session_id}/{instrument_position}/clear
+POST /reviewer/sessions/{session_id}/submit
+POST /reviewer/sessions/{session_id}/clear
 ```
 
 `{instrument_position}` is the **1-indexed position** of the instrument
@@ -48,7 +49,7 @@ Position is preferred over the DB id because:
 
 - It produces stable, predictable URLs for the reviewer (Page 1 / Page
   2 / …).
-- The "Page N" label in the UI matches the URL segment.
+- The "Page N" framing in the UI matches the URL segment.
 - Operators rarely reorder instruments after activation; if they do,
   bookmark URLs simply land on whichever instrument now sits at that
   position, which is reasonable behavior.
@@ -64,6 +65,21 @@ has only 2 instruments) return **404**.
 The reviewer dashboard at `/reviewer` always links each row to position
 `1`, since the dashboard summarises the session as a whole and Page 1 is
 a safe default landing.
+
+**URL semantics across the four routes.**
+
+- The GET route renders the **whole** surface — every instrument the
+  reviewer has assignments on is delivered in one HTML response, with
+  the instrument at `{position}` initially visible. Other instruments
+  are hidden via CSS until the reviewer clicks a Page button (see
+  "Form scope" below).
+- The Save POST is **page-scoped** — `{position}` tells the route
+  which instrument's response fields to persist. Inputs from other
+  pages (which travel in the same form body) are ignored.
+- The Submit POST is **session-wide** — no `{position}` segment;
+  submits the whole review.
+- The Clear POST is **session-wide** — no `{position}` segment;
+  wipes everything.
 
 ---
 
@@ -99,11 +115,22 @@ Top-to-bottom, the page renders:
    "Form scope" below.)
 6. **Page actions row (top)** — `.rs-action-row.rs-action-row-top.rs-action-row-left`,
    flush left. Contents (in left-to-right order):
-   - `Save` (Primary) — saves the current page's inputs.
-   - `Discard` (Secondary anchor) — discards the current page's
-     in-progress edits.
-   - `Page 1`, `Page 2`, … — one anchor per instrument, Primary
-     style; the anchor for the current page renders disabled
+   - `Save` (Primary) — persists the current page's dirty inputs.
+     Greyed out (`disabled`) when the current page has no unsaved
+     edits (see "Save button enabled state" below).
+   - `Discard` (Secondary button, `type="button"`) — JS-resets the
+     current page's inputs back to their server-saved values.
+     Other pages' unsaved edits are untouched.
+   - `Page N: {Instrument.name}`, one button per instrument, Primary
+     style. The label combines the position with the instrument's
+     name so the reviewer sees both ordering and context (e.g.
+     `Page 1: Skills` / `Page 2: Cultural Fit`). Falls back to bare
+     `Page N` when an instrument has no name set. Each button is a
+     JS-driven control (`type="button"`) — clicking it swaps the
+     visible instrument group via CSS class toggle and updates the
+     URL via `history.pushState(...)` so the address bar stays
+     truthful and Back/Forward work; no server round-trip. The
+     button for the current page renders disabled
      (`aria-disabled="true"`).
 7. **Instrument body** — heading, help-text card(s), reviewer table.
    Exactly one instrument's content renders per page.
@@ -120,65 +147,112 @@ Top-to-bottom, the page renders:
     instruments. Only when `any_accepting and not preview_mode`.
 
 Mental model: instruments are **chapters of one review session**, not
-standalone editing surfaces. The reviewer fills each page (saving as
-they go), then **Submit commits the whole review** in one action.
-"Page actions" act on the current page; "Review-level actions" act on
-the entire session.
+standalone editing surfaces. The reviewer fills each page (saving
+when they like), then **Submit commits the whole review** in one
+action. "Page actions" (Save / Discard / Page buttons) act on the
+current page; "Review-level actions" (Submit / Clear all) act on the
+entire session. Page navigation is a client-side concern that
+preserves in-progress edits across pages so the reviewer can move
+freely without losing work; persistence to the database happens only
+on explicit Save or Submit.
+
+### How the surface works
+
+The server renders **every instrument the reviewer has assignments
+on** in one HTML response. All instrument groups live in the DOM
+simultaneously; CSS hides every group except the one matching the
+URL position. Clicking a Page button:
+
+1. Toggles the `.rs-active` class so the chosen instrument's group
+   becomes visible and the rest hide.
+2. Calls `history.pushState(...)` to update the address bar to
+   `/reviewer/sessions/{id}/{n}` — bookmarkable, Back/Forward work,
+   but no HTTP request.
+3. Updates the disabled state on Page / Save / etc. buttons to
+   reflect the new "current page".
+
+Because hidden instrument groups stay in the DOM, a reviewer's
+typed-but-not-saved values **persist as the reviewer moves between
+pages**. They aren't sent to the server until Save or Submit fires.
+Refresh / browser-close / window-close still loses them — the
+`beforeunload` warning (deferred; see "Designed-for-extensibility")
+guards that gap.
+
+### Save / Discard / Page navigation / Submit / Clear all
 
 | Button | Scope | HTTP | Behavior |
 |---|---|---|---|
-| **Save** | Page | POST `…/{position}/save` | Persist the visible inputs as draft. 303 → `…/{position}?saved=ok` (transient flash in the right-half status panel). |
-| **Discard** | Page | GET `…/{position}` | Plain anchor — re-fetches the page, dropping in-progress unsaved edits. No server state change. |
-| **Page N** | Page | GET `…/{n}` | Plain anchor — navigates to instrument N. Silently drops in-progress unsaved edits on the current page (URL is the source of truth). The current page's button is disabled. |
-| **Submit** | Review-session | POST `/reviewer/sessions/{id}/submit` | Save the current page's inputs (so the in-flight edits aren't lost), then validate every saved response across **all** instruments and stamp `submitted_at` on every assignment in the session. On missing-required without ack: 400, re-render the surface with `missing` populated and `show_acknowledge=True`. On success: 303 → `…/{position}?submitted=ok`. |
-| **Clear all** | Review-session | POST `/reviewer/sessions/{id}/clear` | Wipe every response across every instrument (with confirmation checkbox). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
+| **Save** | Page | POST `…/{position}/save` | Persist the **current page's** dirty inputs to the database. The form body carries inputs from every page (since they all live in the DOM); the route filters by `{position}` and ignores inputs that don't belong to that page's instrument. Greys out when the current page has no dirty inputs. 303 → `…/{position}?saved=ok` (transient flash in the right-half status panel). |
+| **Discard** | Page | none — JS only | Reset every input on the current page to its **server-saved value** (a per-input baseline that the server renders into the page; the JS handler reads it and writes it back on click). No HTTP request, no database write, no audit. Other pages' unsaved edits are untouched. |
+| **Page N** | Page | none — JS only | Swap which instrument group is visible (CSS class toggle); update the URL via `pushState`. No HTTP request. Reviewer's typed-but-not-saved values on the previously-visible page stay in the DOM. The button for the current page is disabled. |
+| **Submit** | Review-session | POST `/reviewer/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. On missing-required without ack: 400, re-render the surface with `missing` populated and `show_acknowledge=True`. On success: 303 → `…/{position}?submitted=ok`. |
+| **Clear all** | Review-session | POST `/reviewer/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
-**Why Submit is session-wide, not per-page.** Conceptually a review is
-one document spread across multiple pages. Per-page submit would
-require the reviewer to remember to submit each page individually,
-which invites missed submissions. The single review-session-wide
-Submit affordance — surfaced at the top *and* bottom of every page —
-makes "I'm done" a single click no matter which page the reviewer is
-on. Submit also acts as an implicit Save for the current page first
-so an in-flight edit on Page 2 isn't lost when the reviewer hits
-Submit there.
+### Why Submit is session-wide
 
-**Form HTML mechanics.** The whole editing surface lives inside a
-single `<form>` whose default `action` is `…/{position}/save`. The
-Save button submits to that default action; the Submit button
-overrides via `formaction="/reviewer/sessions/{id}/submit"`. Both
-buttons send the current page's input values. The Save route persists
-those inputs and 303s back to the page; the Submit route persists
-those inputs *and* applies the session-wide submission semantics.
+Conceptually a review is one document spread across multiple pages.
+Per-page submit would require the reviewer to remember to submit
+each page individually, which invites missed submissions. The single
+review-session-wide Submit affordance — surfaced at the top *and*
+bottom of every page — makes "I'm done" a single click no matter
+which page the reviewer is on. Submit also implicit-saves every
+dirty input across every page first, so unsaved work is never lost
+to a Submit click.
 
-**Cross-page unsaved-edit handling.** Clicking `Page N` (or `Discard`)
-is plain navigation; unsaved edits on the current page are discarded
-silently. The future `beforeunload` warning (see
-"Designed-for-extensibility") prompts before navigating away from a
-dirty form; intentional-discard controls (`Page N` / `Discard` /
-chrome `My Reviews` link) are tagged so they bypass the prompt.
+### Save button enabled state
 
-**Persistence semantics.**
+The Save button reflects whether the current page has unsaved edits:
+
+- On initial page load: `disabled`. No inputs are dirty yet.
+- On the first input event in any input belonging to the current
+  page's instrument: enable.
+- On Save success (303 round-trip): the page is re-rendered, every
+  input matches its saved value, the button is `disabled` again.
+- When the reviewer switches to a different page (Page N click): the
+  Save button's enabled state recomputes for the new current page —
+  enabled iff any input in the new page's instrument is dirty.
+
+JS implementation: a per-page dirty flag, recomputed on `input`
+events and on Page button clicks. The same dirty-tracking feeds the
+deferred `beforeunload` warning (see "Designed-for-extensibility").
+
+### Form HTML mechanics
+
+The whole editing surface lives inside a single `<form>` whose
+default `action` is `…/{position}/save` and `method="post"`. Save
+submits to that default action; Submit overrides via
+`formaction="/reviewer/sessions/{id}/submit"`. Both buttons send
+the **entire** form body — every input across every instrument
+group, since they're all in the DOM. The route distinguishes:
+
+- Save filters the incoming form to inputs whose `name` matches
+  response fields belonging to `{position}`'s instrument and
+  persists those, ignoring everything else.
+- Submit accepts the entire form body, persists every value, then
+  applies the session-wide submission semantics.
+
+### Persistence semantics
 
 - **Save** upserts `Response` rows in `(assignment_id,
-  response_field_id)` shape. An empty submitted value **deletes** the
-  matching `Response` row (so absence == empty answer); a non-empty
-  value upserts. Save never touches `submitted_at`. Returns 303 →
-  `…/{position}?saved=ok`.
-- **Submit** persists pending writes the same way Save does, then
-  validates required fields across **all** instruments. With
-  acknowledge (or no missing required), it stamps `submitted_at` on
-  every Response row in the session and writes a
-  `responses.submitted` audit event. Editing a previously-submitted
-  required field to empty deletes its `Response` row (including the
-  `submitted_at` stamp), which flips the dashboard pill back to
-  `in progress` on next render — no per-row resubmit required.
+  response_field_id)` shape. An empty submitted value **deletes**
+  the matching `Response` row (so absence == empty answer); a
+  non-empty value upserts. Save never touches `submitted_at`. The
+  filter-by-position keeps Save from accidentally touching another
+  page's saved values when only the current page should change.
+- **Submit** persists pending writes session-wide (treating the
+  whole form body as a session-wide save), then validates required
+  fields across every instrument. With acknowledge (or no missing
+  required), it stamps `submitted_at` on every Response row in the
+  session and writes a `responses.submitted` audit event. Editing a
+  previously-submitted required field to empty deletes its
+  `Response` row (including the `submitted_at` stamp), which flips
+  the dashboard pill back to `in progress` on next render — no
+  per-row resubmit required.
 - **Clear all** deletes every `Response` row for this reviewer in
   this session, across every instrument. No partial undo. Writes a
   `responses.cleared` audit event.
-- **Discard** is a plain `<a>` re-fetch of the current page; no DB
-  write, no audit. Drops in-progress unsaved edits by re-reading
-  saved values.
+- **Discard** is JS-only — no DB write, no audit. Resets the
+  current page's inputs to the server-rendered baseline.
 
 **"Submitted" status on the dashboard.** Once Submit succeeds, every
 assignment in the session has `submitted_at` set. The dashboard's
@@ -193,7 +267,9 @@ all-or-nothing rather than "submitted on some pages but not others".
 
 The right-half panel renders one status pill per instrument,
 positioned immediately above any transient flash banners that may
-land. Status is computed server-side from response data:
+land. Status is computed **server-side from saved response data**;
+client-side dirty edits don't shift a pill until the reviewer
+clicks Save (and the page re-renders).
 
 | Pill state | Pill class | Condition |
 |---|---|---|
@@ -204,7 +280,10 @@ land. Status is computed server-side from response data:
 
 Pill copy: `Page 1: in progress`, `Page 2: complete`, etc. Single-
 instrument sessions still show one pill (`Page 1: …`), since the
-status panel always renders.
+status panel always renders. Pill copy uses bare `Page N` rather
+than `Page N: {Instrument.name}` to keep the panel compact —
+instrument names live on the Page button labels, where the reviewer
+needs them to navigate.
 
 The route threads a `page_statuses: list[PageStatus]` into context
 (`PageStatus = {position: int, label: str, state: Literal[…]}`),
@@ -375,7 +454,7 @@ degrades to read-only:
 - Every input renders `disabled`.
 - The top + bottom review-level rows (Submit) hide.
 - The Save / Discard buttons hide from the page actions row, but the
-  Page N anchors stay so the reviewer can walk through their other
+  Page N buttons stay so the reviewer can walk through their other
   instruments (which may or may not also be closed).
 - The Danger Zone card hides (no Clear all).
 - A `.banner.banner-warning` lands in the right-half status panel
@@ -438,10 +517,12 @@ session can have multiple reviewers, each tied to a distinct user.
 - The reviewer write-path forms are suppressed (no Save / Submit /
   Discard / Clear). The `<form>` wrapper is replaced by a plain
   `<div>` so no `formaction=` can re-target a write endpoint. The
-  Page N anchors still render in their slot so the operator can
-  walk through every instrument to verify setup — but the rest of
-  the page-actions row collapses to just the page buttons, and the
-  review-level rows + danger zone don't render at all.
+  Page N buttons still render in their slot so the operator can
+  walk through every instrument to verify setup — clicking them
+  toggles visibility client-side exactly as on the reviewer
+  surface, but the rest of the page-actions row collapses to just
+  the page buttons, and the review-level rows + danger zone don't
+  render at all.
 - Inputs render disabled.
 - The right-half status panel renders without the per-page status
   pills (preview is read-only and synthetic; per-page state is
@@ -553,11 +634,29 @@ from the top bar.
 |---|---|---|
 | Page actions row | `Save draft` | `Save` |
 | Page actions row | `Cancel — discard unsaved edits` | `Discard` |
-| Page actions row | n/a | `Page 1`, `Page 2`, … |
+| Page actions row | n/a | `Page N: {Instrument.name}` (falls back to bare `Page N` when the instrument has no name) |
 | Review-level rows | `Submit` | `Submit` (unchanged) |
 | Danger Zone | `Clear all` | `Clear all` (unchanged; copy explains "every response across every page") |
 
 Other labels (`Sign out`, `My Reviews`) are unchanged.
+
+### Instrument-name length constraint
+
+Page button labels include the instrument name so reviewers see what
+they're switching to. To prevent buttons growing unwieldy, the
+**Instruments Setup page must enforce a `max_length` on
+`Instrument.name`** at create / edit time. Suggested limit: ~32
+characters (enough for "Final Recommendation" or "Skills
+Assessment", short enough to keep the button row from wrapping in
+typical viewports).
+
+This constraint is a **Setup-side concern**; this surface trusts
+the value it's given. Spec lives in the forthcoming
+`spec/instruments_setup_spec.md`. Until that lands, the surface
+template ships a CSS truncation safeguard (`max-width` +
+`text-overflow: ellipsis`) so an unconstrained name doesn't break
+the layout — but the truncation isn't a substitute for the
+input-side constraint.
 
 ---
 
@@ -584,19 +683,26 @@ makes today + the small follow-on the deferred work needs.
 
 ### beforeunload warning
 
-- **Today.** Clicking a `Page N` button or `Discard` is plain
-  navigation; unsaved edits are silently dropped.
-- **Design call.** The editing form carries a stable id (`id="rs-form"`
-  or similar), and every intentional-discard control (`Discard`
-  anchor + `Page N` anchors + `My Reviews` chrome link) carries a
-  `data-discards-edits` attribute. A future hook attaches a
-  `beforeunload` listener tied to a `dirty` flag on the form (set on
-  first `input` event); clicks that match `[data-discards-edits]` set
-  an `intentional` flag that the listener reads and lets through
-  without prompting.
-- **What lands later.** A small inline `<script>` block in the same
-  shape as the existing rs-paginated handler. No template
-  restructuring needed.
+- **Today.** Clicking `Page N` or `Discard` doesn't lose unsaved
+  edits — Page navigation is purely client-side and the dirty
+  buffer survives, and Discard is an explicit "drop my edits"
+  control. The remaining gap is **browser-close**, **tab-close**,
+  **typing a new URL into the address bar**, and **clicking the
+  chrome's `My Reviews` link** — any of these throw away the dirty
+  buffer with no prompt.
+- **Design call.** The editing form carries a stable id
+  (`id="rs-form"` or similar). The same dirty-tracking that drives
+  the Save button's enabled state (see "Save button enabled
+  state") also feeds a future `beforeunload` listener: when the
+  form is dirty, the listener prompts; when clean, it doesn't.
+  Intentional-discard controls (`Discard` button + chrome
+  `My Reviews` link) carry a `data-discards-edits` attribute the
+  listener reads to skip the prompt; Page N buttons don't need
+  the marker because they don't trigger a real navigation.
+- **What lands later.** A small addition to the existing inline
+  `<script>` block — adds a `beforeunload` handler to the dirty-
+  tracking machinery already in place. No template restructuring
+  needed.
 
 ### Standalone submission-confirmation page
 
@@ -612,9 +718,19 @@ makes today + the small follow-on the deferred work needs.
 - **What lands later.** A new template (`reviewer/submitted.html` or
   similar) plus the helper change. The surface itself doesn't move.
 
-### AG Grid table
+### AG Grid table + large-table ergonomics
 
-- **Today.** Per-instrument rows render as a `<table>` inside
+`spec/visual_style_rrw.md` "Response form layout and instrument
+pacing → Large-table ergonomics" pins the following as first-class
+requirements (since the app's positioning depends on tabular review
+artifacts at scale): auto-save, return-to-place, visible progress,
+sticky column headers, filter-to-incomplete, keyboard navigation,
+and column-type ergonomics. None of those land in this surface
+spec; they belong in the forthcoming `response_form_component_spec.md`
+that picks up the AG-Grid (or equivalent) implementation. Notes on
+how the surface stays compatible:
+
+- **Today.** Per-instrument rows render as a plain `<table>` inside
   `.table-scroll`. Column-width hint classes (`.rs-narrow` /
   `.rs-reviewee` / `.rs-textlong`) on `<th>` / `<td>` carry the
   responsive sizing. The data driving each row is built in
@@ -626,11 +742,16 @@ makes today + the small follow-on the deferred work needs.
   emit HTML. Field metadata (label / data_type / validation) ships
   alongside the row data so a future JS-driven grid can render the
   same view shape without a second round-trip. The dict shape
-  becomes the implicit AG Grid column-defs source.
+  becomes the implicit AG Grid column-defs source. None of today's
+  routes need to change to swap the rendering layer.
 - **What lands later.** A new partial (`reviewer/_response_grid.html`
   or similar) loads AG Grid and mounts against a JSON payload built
   from the same `_surface_context` shape. The current `<table>` block
-  is replaced; nothing else moves.
+  is replaced; nothing else moves. The grid component picks up
+  auto-save, return-to-place, visible progress, sticky headers,
+  filter-to-incomplete, and keyboard navigation as part of the
+  same change — the principle treats them as one bundle, not as
+  individual follow-on features.
 
 ---
 

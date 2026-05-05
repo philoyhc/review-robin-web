@@ -39,7 +39,7 @@ Cross-references:
   marked superseded there are pointers into this doc.
 - **`spec/operator_ui_concept.md`** — page-level chrome and per-page
   layout contracts that consume these primitives.
-- **`spec/reviewer_map.md`** — reviewer-surface page contracts.
+- **`spec/reviewer-surface.md`** — reviewer-surface page contracts.
 
 When this doc disagrees with `assumptions.md`, this doc wins for
 canonical naming; `assumptions.md` remains accurate for what's in
