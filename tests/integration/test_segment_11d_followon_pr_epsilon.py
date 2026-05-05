@@ -209,6 +209,142 @@ def test_submit_missing_only_on_page_two_still_carries_page_number(
     assert "<strong>Page 2:</strong>" in body
 
 
+# ── Missing-required card — full-width, two-column, dismissible ──────────
+
+
+def test_missing_required_renders_in_full_width_card(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The missing-required warning lives in its own full-width card
+    (`.rs-missing-card`) below the bottom-grid — not inside the
+    half-width status panel — because the list can be long enough
+    that cramming it into the panel produced a tall, narrow scroll."""
+    operator = make_client(alice)
+    review_session, first, _ = _setup_two_instrument_session(
+        operator, db, code="rae-e-card"
+    )
+    page1_assignment = db.execute(
+        select(Assignment)
+        .where(Assignment.session_id == review_session.id)
+        .where(Assignment.instrument_id == first.id)
+    ).scalar_one()
+    rae_client = make_client(rae)
+    body = rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/submit",
+        data={
+            f"response[{page1_assignment.id}][rating]": "5",
+            "current_position": "1",
+        },
+        follow_redirects=False,
+    ).text
+    assert 'class="card rs-missing-card"' in body
+    # Card sits *below* the bottom-grid, not inside the status panel.
+    grid_close = body.find("</div>\n  </div>")  # bottom-grid close
+    panel_open = body.find('class="card rs-status-panel"')
+    card_open = body.find('class="card rs-missing-card"')
+    assert grid_close >= 0 and panel_open >= 0 and card_open >= 0
+    # Card opens after the status panel closes — ie after the bottom-grid.
+    assert card_open > panel_open
+
+
+def test_missing_required_card_uses_two_column_list(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The list inside the missing card flows over two columns
+    (CSS `column-count: 2`) so a long list stays compact. Pin the
+    `.rs-missing-list` modifier so a future markup change has to
+    deliberately retire the two-column layout."""
+    operator = make_client(alice)
+    review_session, first, _ = _setup_two_instrument_session(
+        operator, db, code="rae-e-cols"
+    )
+    page1_assignment = db.execute(
+        select(Assignment)
+        .where(Assignment.session_id == review_session.id)
+        .where(Assignment.instrument_id == first.id)
+    ).scalar_one()
+    rae_client = make_client(rae)
+    body = rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/submit",
+        data={
+            f"response[{page1_assignment.id}][rating]": "5",
+            "current_position": "1",
+        },
+        follow_redirects=False,
+    ).text
+    assert 'class="rs-missing-list"' in body
+    # The two-column rule is in base.html; pin its presence so a
+    # future cleanup doesn't silently collapse the card to one column
+    # at desktop widths.
+    assert ".rs-missing-card .rs-missing-list" in body
+    assert "column-count: 2" in body
+
+
+def test_missing_required_card_carries_cancel_dismiss_button(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The card ends with a Cancel button that dismisses it client-side
+    (``data-rs-missing-dismiss`` data attr drives an inline JS handler).
+    The dismiss is purely UI — it doesn't affect the form's
+    acknowledge-and-resubmit path."""
+    operator = make_client(alice)
+    review_session, first, _ = _setup_two_instrument_session(
+        operator, db, code="rae-e-dismiss"
+    )
+    page1_assignment = db.execute(
+        select(Assignment)
+        .where(Assignment.session_id == review_session.id)
+        .where(Assignment.instrument_id == first.id)
+    ).scalar_one()
+    rae_client = make_client(rae)
+    body = rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/submit",
+        data={
+            f"response[{page1_assignment.id}][rating]": "5",
+            "current_position": "1",
+        },
+        follow_redirects=False,
+    ).text
+    assert "data-rs-missing-dismiss" in body
+    assert ">\n          Cancel\n        </button>" in body
+    # The acknowledge checkbox is still rendered — the card is purely
+    # an information surface, not a submission gate.
+    assert 'name="acknowledge_missing"' in body
+
+
+def test_missing_required_card_absent_when_no_gaps(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """No missing card on a fresh GET (no submit attempt) and no card
+    on a successful submit (no gaps)."""
+    operator = make_client(alice)
+    review_session, _, _ = _setup_two_instrument_session(
+        operator, db, code="rae-e-nocard"
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    # The CSS rule for `.rs-missing-card` is always in the inline
+    # stylesheet; assert on the element class + dismiss data attr's
+    # closing `>` (the bare attr name appears inside CSS comments
+    # that document the JS hook).
+    assert 'class="card rs-missing-card"' not in body
+    assert "data-rs-missing-dismiss>" not in body
+
+
 # ── Operator preview adapts to PR ε chrome ───────────────────────────────
 
 
