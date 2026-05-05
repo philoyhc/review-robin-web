@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — Review Robin Web{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <div class="rs-page-header">
+    <h1>Settings</h1>
+  </div>
+
+  {% if saved %}
+    <div class="banner banner-success">Settings saved.</div>
+  {% endif %}
+  {% if cleared %}
+    <div class="banner banner-success">Settings cleared.</div>
+  {% endif %}
+
+  {% if not user.smtp_host %}
+    <div class="card">
+      <p>
+        <strong>Bring your own SMTP.</strong>
+        Review Robin sends invitation and reminder emails through your
+        own Outlook / Office 365 mailbox (the "send-as-me" identity
+        model). Configure your SMTP credentials below before you can
+        activate sends from the Manage Invitations page.
+      </p>
+      <p class="muted">
+        Most Outlook accounts need an
+        <a href="https://support.microsoft.com/en-us/account-billing/manage-app-passwords-for-two-step-verification-d6dc8c6d-4bf7-4851-ad95-6d07799387e9"
+           target="_blank" rel="noopener">app password</a>
+        rather than your sign-in password. Generate one once and paste
+        it into the App password field.
+      </p>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Email send (SMTP)</h2>
+    <form method="post" action="/operator/settings">
+      <div class="page-grid">
+        <div>
+          <label for="smtp_host">SMTP host</label>
+          <input type="text" id="smtp_host" name="smtp_host"
+                 maxlength="255"
+                 placeholder="smtp.office365.com"
+                 value="{{ user.smtp_host or '' }}">
+
+          <label for="smtp_port">SMTP port</label>
+          <input type="number" id="smtp_port" name="smtp_port"
+                 placeholder="587"
+                 value="{{ user.smtp_port or '' }}">
+
+          <label for="smtp_encryption">Encryption</label>
+          <select id="smtp_encryption" name="smtp_encryption">
+            <option value=""{% if not user.smtp_encryption %} selected{% endif %}>—</option>
+            {% for mode in encryption_modes %}
+              <option value="{{ mode }}"{% if user.smtp_encryption == mode %} selected{% endif %}>{{ mode }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="fill-col">
+          <label for="smtp_username">From email (= SMTP username)</label>
+          <input type="email" id="smtp_username" name="smtp_username"
+                 maxlength="320"
+                 placeholder="reviews@your-org.edu"
+                 value="{{ user.smtp_username or '' }}">
+
+          <label for="smtp_password">App password
+            <span class="muted">— {% if has_password %}set{% else %}not set{% endif %}</span>
+          </label>
+          <input type="password" id="smtp_password" name="smtp_password"
+                 placeholder="{% if has_password %}leave blank to keep existing{% else %}paste your app password{% endif %}">
+
+          <label for="smtp_from_display_name">From display name (optional)</label>
+          <input type="text" id="smtp_from_display_name"
+                 name="smtp_from_display_name"
+                 maxlength="255"
+                 placeholder="e.g. Course Reviews"
+                 value="{{ user.smtp_from_display_name or '' }}">
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-top: 20px;">
+        <button class="btn" type="submit">Save</button>
+        <a class="btn secondary" href="/operator/sessions">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="card danger-zone" id="danger-zone">
+    <h2>Clear all settings</h2>
+    <p>
+      Wipes every SMTP field on this account. Existing outbox rows are
+      not affected. You can re-enter credentials any time.
+    </p>
+    <form method="post" action="/operator/settings/clear">
+      <button class="btn destructive" type="submit">Clear all settings</button>
+    </form>
+  </div>
+{% endblock %}
