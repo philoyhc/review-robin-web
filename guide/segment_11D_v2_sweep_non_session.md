@@ -205,3 +205,391 @@ PR C: heaviest — the reviewer-surface test suite is 786 LOC. Most should survi
 - Tick the eight templates in `guide/ui_checklist.md` § "v2 sweep" as each PR lands.
 - Update `guide/todo_master.md` and `guide/segment_11A_cleaning_up_unfinished_business.md` to mark `#21b` shipped once PR C merges.
 - `docs/status.md` gains a 2026-MM-DD timeline entry "Segment 11D shipped (v2 sweep across the eight remaining non-session-centric templates; reviewer top bar variant; About / me_debug return-to-origin)".
+
+---
+
+# Follow-on: Reviewer surface — multi-instrument rewrite
+
+Implementation plan for the reviewer-surface rewrite specified in
+`spec/reviewer-surface.md` (and its underlying principle in
+`spec/visual_style_rrw.md` "Response form layout and instrument
+pacing"). Lands as a series of PRs *after* Segment 11D ships and
+PR #418's per-instrument assignment fanout has bedded in.
+
+Why folded into the 11D doc: the work is downstream of 11D PR C
+(reviewer chrome variant + D5/D6/D7 sweep on the response surface),
+re-uses much of the same template + view-shape plumbing, and
+shares testing infrastructure with the existing
+`tests/integration/test_reviewer_response_flow.py` /
+`tests/integration/test_segment_11d_pr_c.py` suites. If the work
+ends up larger than ~5 PRs, promote it to its own segment doc
+(`guide/segment_11M_reviewer_surface_multi_instrument.md` or
+similar) and leave a forwarding note here.
+
+## Status
+
+Planning. Spec sign-off complete; implementation has not started.
+Sized as **5 PRs** in dependency order (α → β → γ → δ → ε); each
+independently shippable on top of `main`.
+
+## Reference
+
+- `spec/reviewer-surface.md` — the surface contract this plan
+  implements. Single source of truth for URL pattern, page anatomy,
+  form scope, persistence semantics, lifecycle gating, identity
+  matching, operator preview, dashboard, and invitation landing.
+- `spec/visual_style_rrw.md` "Response form layout and instrument
+  pacing" — the canonical principle (one page per instrument,
+  tabular form, pacing via operator instrument design). Also the
+  source for "Multi-instrument navigation" chrome treatment.
+- `app/web/templates/reviewer/review_surface.html` — the current
+  template (single-form-multi-instrument-stack); this is what gets
+  rewritten.
+- `app/web/routes_reviewer.py` (`_surface_context`,
+  `build_preview_context`, the GET / save / submit / clear /
+  invite routes) — where most of the route work lands.
+
+## Pre-implementation spike
+
+Two cheap checks before PR α opens. Record findings in PR α's
+description.
+
+1. **Existing test markup-assertion sweep.** Grep
+   `tests/integration/test_reviewer_response_flow.py` and
+   `tests/integration/test_segment_11d_pr_c.py` for assertions on:
+   - `/reviewer/sessions/{id}` URL literals (will change shape).
+   - `class="rs-action-row"` count or position assertions.
+   - `>Save draft</button>` / `>Cancel — discard unsaved edits</a>`
+     / `>Previous</button>` / `>Next</button>` literals (button
+     labels change or buttons retire).
+   - `class="rs-page-header"` markup (stays; the description card
+     moves out of it).
+   - banner placement (currently between H1 and form; moves into
+     the right-half status panel).
+
+   Note hit count in PR α's description so reviewers know the
+   sweep is bounded.
+
+2. **`Instrument.name` data audit.** What's the longest existing
+   `Instrument.name` in production-shaped test data, and what do
+   real-world operators actually set? Per the spec, page button
+   labels read `Page N: {Instrument.name}`. The Setup-side
+   `max_length` constraint (~32 chars) lands in the forthcoming
+   Instruments Setup spec; until then the surface ships a CSS
+   `text-overflow: ellipsis` safeguard. The audit confirms the
+   safeguard's `max-width` value lands in the right ballpark.
+
+## PR sequence
+
+The sequence ships from foundational (URL routing) toward
+behaviour-rich (client-side navigation + acknowledge polish). Each
+PR leaves the surface working for both single-instrument and
+multi-instrument sessions; the multi-instrument experience
+improves incrementally.
+
+### PR α — URL routing + dashboard rewiring
+
+**Goal.** The new URL pattern works end-to-end. No visible layout
+change.
+
+- Add `/reviewer/sessions/{session_id}/{instrument_position}` route
+  (GET). Position is 1-indexed, sorted by `Instrument.order` then
+  `Instrument.id`.
+- Bare `/reviewer/sessions/{id}` (no position) **303s to**
+  `/reviewer/sessions/{id}/1` so existing invitation links and
+  bookmarks keep working.
+- Out-of-range positions return **404**.
+- Reviewer dashboard rows in `reviewer/dashboard.html` link to
+  `/reviewer/sessions/{id}/1`.
+- `POST /reviewer/sessions/{id}/{position}/save` replaces
+  `POST /reviewer/sessions/{id}/save`. Route filters incoming form
+  inputs to ones whose `name` matches response fields belonging to
+  `{position}`'s instrument; ignores everything else. (Today's
+  surface only renders one instrument's fields anyway, so this is
+  a no-op refactor — the filter becomes load-bearing in PR γ.)
+- `POST /reviewer/sessions/{id}/submit` and
+  `POST /reviewer/sessions/{id}/clear` stay as session-wide
+  endpoints (drop any surviving `{position}` segment if present).
+- Rendering is unchanged — server still produces today's stacked-
+  instruments layout.
+
+Test impact: small. Update existing reviewer-flow tests to use the
+new save / GET URLs (or the bare URL with `follow_redirects=True`).
+
+Risk: invitation tokens 303 through the bare URL; verify the chain
+still works in `tests/integration/test_invitations.py`.
+
+### PR β — Top-row layout (description card + flash/status panel)
+
+**Goal.** The description card and a new flash/status panel sit
+side-by-side in a `.bottom-grid` at the top of the body. The
+panel always renders; per-page status pills + transient flash
+banners live inside it.
+
+- Add `page_statuses: list[PageStatus]` to `_surface_context` and
+  `build_preview_context`. `PageStatus` shape:
+
+  ```python
+  @dataclass(frozen=True)
+  class PageStatus:
+      position: int
+      label: str  # bare "Page N" — instrument names go on buttons later
+      state: Literal["not_started", "in_progress", "complete", "submitted"]
+  ```
+
+  Computation reads from `Response` rows. State logic:
+  - `submitted` if every assignment in the page has `submitted_at`.
+  - `complete` if every required field on every assignment in the
+    page has a saved value (and submitted hasn't fired).
+  - `in_progress` if any Response row exists for this page but
+    `complete` doesn't apply.
+  - `not_started` if no Response rows exist for this page.
+- Template: replace the existing top-of-body banner stack +
+  description paragraph with a `.bottom-grid` carrying:
+  - left: `.card.rs-description-card` (existing class) when
+    `session.description` is set.
+  - right: `.card.rs-status-panel` (new class) with one
+    `.pill.pill-{empty|warning|success}` per `page_statuses`
+    entry, plus the existing flash banners (saved / submitted /
+    missing-required / session-closed) inline within the panel.
+- New CSS in `base.html` v2 block: `.rs-status-panel` (`max-width:
+  calc(50% - 10px)` etc.). The existing `.rs-description-card`
+  modifier already exists (was added in 11D PR C). Drop its
+  unconditional `margin-bottom: 0` — the bottom-grid handles
+  spacing now.
+- No action-row changes yet.
+
+Test impact: medium. New tests for the panel + per-page pills.
+Existing tests that asserted banner position (e.g. "saved=ok
+banner near top of body") may need to update to check the panel
+instead.
+
+### PR γ — Unified action row (server-side Page N navigation)
+
+**Goal.** The action row collapses into a single flush-right strip,
+mirrored top + bottom. Page N: name buttons replace Previous /
+Next. Server-side navigation only (full page reload on Page N
+click) — client-side toggle lands in PR δ.
+
+- Replace the current top + bottom action rows with a single
+  unified `.rs-action-row` per side (top and bottom mirrored).
+  Order, left-to-right: `Save`, `Discard`, `Page 1: name`,
+  `Page 2: name`, …, **vertical divider**, `Submit`. Whole row
+  flush right.
+- New element: `.rs-action-divider` — a 1px-wide `<span>` that
+  visually separates the page-level cluster from Submit. CSS in
+  `base.html` v2 block:
+
+  ```css
+  body.ui-v2 .rs-action-divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--border-default);
+    margin: 0 var(--space-2);
+  }
+  ```
+
+- `Page N: name` buttons render as `<a class="btn">` anchors
+  pointing at `/reviewer/sessions/{id}/{n}` — server-side
+  navigation, full page reload. Current page button is
+  `aria-disabled="true"`. Truncate label via inline
+  `style="max-width: 16em; text-overflow: ellipsis"` on the
+  anchor as a CSS safeguard until the Setup-side `max_length`
+  constraint ships (see "Out of scope" below).
+- Acknowledge missing checkbox renders above the bottom action
+  row when `show_acknowledge` is set.
+- Drop `Previous` / `Next` buttons + their inline JS (the
+  rs-paginated handler from PR #417). All references to
+  `.rs-prev-btn` / `.rs-next-btn` retire.
+- The `.rs-action-row-left` modifier retires (both rows are flush
+  right now). Keep `.rs-action-row-top` for its top-margin role.
+- Server still renders one instrument's group (the URL position).
+  Save POST already filters by position (PR α). Submit POST is
+  session-wide — but currently the form only contains the visible
+  instrument's inputs, so Submit's "session-wide" semantics are
+  not yet load-bearing. (PR δ ships the all-instruments-in-DOM
+  change that makes Submit truly session-wide.)
+
+Test impact: medium-heavy. Most reviewer-flow tests need updating:
+- `Save draft` → `Save`.
+- `Cancel — discard unsaved edits` → `Discard`.
+- `>Previous</button>` / `>Next</button>` assertions retire.
+- New tests for the divider + Submit position.
+- New tests for `Page N: name` button rendering.
+
+### PR δ — Client-side page navigation + dirty preservation
+
+**Goal.** All instrument groups live in the DOM at once; CSS hides
+the non-active ones. Page N click toggles visibility client-side
++ updates the URL via `pushState`; reviewer's typed-but-not-saved
+edits survive cross-page navigation. Save button greys out when
+the current page has no dirty inputs.
+
+- Server now renders **every** instrument group the reviewer is
+  assigned on, wrapped in `.rs-paginated > .rs-instrument-group`.
+  The group whose position matches the URL gets `.rs-active`;
+  others don't.
+- CSS hides non-active groups (existing `.rs-paginated >
+  .rs-instrument-group:not(.rs-active) { display: none }` rule
+  shipped in PR #416 still works — confirm it's still in
+  `base.html` after PR γ retires the rs-paginated handler;
+  keep the CSS even though the JS retires).
+- Page N anchors swap from `<a>` to `<button type="button">`. JS
+  handler:
+  - Tracks the dirty flag per page (per `data-instrument-index`).
+  - On Page N click: toggles `.rs-active` to the target group;
+    updates URL via `history.pushState(null, '', "/reviewer/sessions/{id}/{n}")`;
+    updates which Page N button is `aria-disabled`; recomputes
+    Save button enabled state from the new current page's dirty
+    flag.
+  - On `input` event in any input within an instrument group:
+    set that group's dirty flag; if the group is the active one,
+    enable Save.
+  - On Save success (303 round-trip): the page reloads; markup
+    starts clean.
+- Discard becomes a JS-only handler. Server renders a per-input
+  `data-saved-value` attribute (or a JSON blob the JS reads). On
+  Discard click: read each input on the active group, write the
+  saved-value back, clear the dirty flag, disable Save.
+- The form's POST body now contains every input across every
+  instrument. Save's per-position route filter (PR α) keeps
+  Save's scope clean. Submit reads the full body and persists
+  every value before stamping `submitted_at` session-wide.
+- `popstate` (back / forward) handler: read URL position, toggle
+  visibility to match. Dirty edits remain in their respective
+  groups across pop events.
+
+Test impact: heaviest of the segment.
+- New JS hard to integration-test from pytest. Add the few
+  testable behaviours (route-level: Save filters by position;
+  Submit reads all inputs; baseline `data-saved-value` attr is
+  present in markup).
+- UI verification on the dev slot is required for: visibility
+  toggle, dirty preservation across pages, Save button
+  enabled-state recomputation, Back/Forward.
+
+### PR ε — Acknowledge missing required (session-wide) + preview adaptation
+
+**Goal.** Submit's missing-required behaviour catches gaps anywhere
+in the session and tells the reviewer where to look. Operator
+preview adapts to the new chrome.
+
+- `responses.submit(...)` validates required fields across **all**
+  instruments (today: only the current page's). Returns
+  `MissingPosition`s with each entry naming `position` so the
+  re-rendered banner can say "Page 2: Reviewee X — field Y".
+- Missing-required `.banner.banner-warning` lands inside the right-
+  half status panel and enumerates `(position, reviewee_name,
+  field_label)` per gap.
+- Acknowledge checkbox copy: "I acknowledge required fields are
+  missing — submit anyway." Renders above the bottom action row.
+- `acknowledged_missing: true` audit detail unchanged.
+- Operator preview: `build_preview_context` already pads up to 3
+  synthetic rows; that stays. The unified action row collapses to
+  just Page N buttons in preview mode (Save / Discard / Submit /
+  divider all suppressed). Status panel renders without per-page
+  pills (preview is read-only and synthetic; per-page state is
+  moot). Inputs render disabled, as today.
+- Update `tests/integration/test_preview_route.py` to match the
+  new chrome.
+
+Test impact: moderate. Existing acknowledge tests update for
+session-wide model. Existing preview tests update for new chrome.
+
+## Implementation pointers
+
+- **Position resolution.** Implement once in
+  `app/services/responses.py` (or a new tiny `app/web/pages.py`):
+  `resolve_position(db, review_session) -> list[PageDescriptor]`
+  returning instrument-id-per-position so routes don't recompute
+  the sort. Callers:
+  `_surface_context` / `build_preview_context` for the page
+  buttons + status pills; the GET / Save routes for position
+  validation; the dashboard for first-link generation.
+- **Save filter.** In the Save POST route: build the set of
+  `response_field_id` values for `{position}`'s instrument once,
+  then iterate the form payload and discard keys whose
+  `response_field_id` isn't in the set. The existing parser
+  (`responses_service.parse_form_payload`) returns
+  `(assignment_id, response_field_id, value)` triples — easy to
+  filter.
+- **Per-page status computation.** Reuses a lot of
+  `responses.compute_row_completion`. Consider extracting a
+  `responses.compute_page_status(db, review_session, position)`
+  helper called per position; keep the function small and
+  cache-able.
+- **JS scope.** All inline in `review_surface.html`. The existing
+  rs-paginated handler retires in PR γ; the PR δ handler is
+  bigger (~50 lines) but has no external dependencies.
+- **Dirty-tracking idiom.** Per-group `dirty` flag stored on the
+  `.rs-instrument-group` element via
+  `dataset.dirty = "true"`; recomputed on `input` events via
+  event delegation; consumed by Save-button-enable logic and
+  (later) by the `beforeunload` warning hook.
+- **Submission-confirmation redirect helper.** In PR α already:
+  introduce `submit_redirect_url(review_session, position)`
+  helper that returns
+  `f"/reviewer/sessions/{review_session.id}/{position}?submitted=ok"`.
+  Inlined helper makes the deferred standalone confirmation page
+  a one-line swap later.
+- **Operator preview**: `build_preview_context` already produces
+  the `instrument_groups` shape; just thread `page_statuses=[]`
+  (or skip the panel render in preview by checking
+  `preview_mode`). Don't add synthetic per-page status state.
+
+## Out of scope (deferred)
+
+- **Setup-side `Instrument.name` length constraint.** Belongs in
+  the forthcoming `spec/instruments_setup_spec.md` and the
+  Segment-11E (Email Template editor) or a separate Setup-polish
+  segment. Until then, the surface ships the CSS truncation
+  safeguard.
+- **`beforeunload` warning** when the reviewer browser-closes,
+  tab-closes, or navigates via `My Reviews` / address-bar with
+  unsaved edits. The dirty-tracking machinery PR δ ships is the
+  hook the deferred PR builds on.
+- **Standalone submission-confirmation page.** PR α introduces
+  the `submit_redirect_url` helper that the deferred PR re-points
+  at the new page.
+- **AG Grid replacement** (catalog `unfinished_business.md` #33).
+  Picks up auto-save, return-to-place, sticky headers, filter-to-
+  incomplete, keyboard navigation, column-type ergonomics in one
+  bundle. Per `spec/visual_style_rrw.md` "Large-table ergonomics".
+  Lands as part of the response-form-component-spec work.
+
+## Test impact summary
+
+PR α: small. URL-pattern tests + dashboard-link tests. Existing
+tests update to use the new save URL or follow_redirects=True on
+the bare URL.
+
+PR β: medium. New tests for the status panel + per-page pills.
+Banner-position assertions move into the panel.
+
+PR γ: medium-heavy. Many reviewer-flow tests update for new button
+labels (`Save draft` → `Save`, `Cancel — discard unsaved edits` →
+`Discard`) + retired Previous/Next.
+
+PR δ: heaviest. Mostly UI verification on the dev slot —
+JS-driven behaviour isn't tractable from pytest. Add tests for
+the route-level invariants (Save filters by position; Submit reads
+all inputs across all groups; `data-saved-value` baseline attr is
+present in markup).
+
+PR ε: moderate. Acknowledge tests update for session-wide model;
+preview tests update for new chrome.
+
+## Doc impact
+
+- `docs/status.md` gains one timeline entry per PR (or one entry
+  for the whole follow-on once it ships).
+- `guide/ui_checklist.md` already has `reviewer/review_surface.html`
+  ticked from 11D PR C. After PR ε ships, append a tail-note
+  describing the multi-instrument rewrite that landed on top.
+- `guide/todo_master.md` adds the follow-on as an Upcoming item
+  before the work starts; moves it to Shipped once PR ε merges.
+- `spec/reviewer-surface.md` is the canonical contract. As the
+  PRs land, the "Today" / "Design call" / "What lands later"
+  framing in the Designed-for-extensibility section may need
+  small updates so it doesn't claim today-state things that have
+  shipped.
