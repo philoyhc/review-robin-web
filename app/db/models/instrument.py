@@ -26,6 +26,7 @@ class Instrument(Base, TimestampMixin):
         ForeignKey("sessions.id"), index=True, nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    short_label: Mapped[str | None] = mapped_column(String(32))
     description: Mapped[str | None] = mapped_column(String(2000))
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     accepting_responses: Mapped[bool] = mapped_column(
