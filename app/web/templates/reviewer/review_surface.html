@@ -249,13 +249,16 @@
                          ``min`` / ``max`` enforcement (and the
                          ``Value must be ≤ N`` browser popup on
                          submit). ``step="any"`` deliberately bypasses
-                         the step-grid check — that's what fired
+                         the native step-grid check — that's what fired
                          spurious popups on legitimate values like
                          ``2`` in a 1-to-5dec field due to float drift.
-                         The actual step is communicated through the
-                         hover ``title`` and enforced server-side.
-                         Spinners are hidden via base.html CSS so the
-                         input reads as a plain number box. #}
+                         The actual step lives in ``data-rs-step`` and
+                         drives a JS-side check that uses
+                         ``setCustomValidity`` so off-grid values get
+                         the same browser popup chrome as a range
+                         violation, just with our custom message and
+                         our float-tolerant comparison. Spinners are
+                         hidden via base.html CSS. #}
                       <input type="number"
                              inputmode="{{ 'numeric' if data_type == 'Integer' else 'decimal' }}"
                              name="{{ field_name }}"
@@ -264,6 +267,8 @@
                              {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
                              {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
                              step="any"
+                             {% if validation.step is defined %}data-rs-step="{{ validation.step }}"{% endif %}
+                             {% if validation.min is defined %}data-rs-step-anchor="{{ validation.min }}"{% endif %}
                              {% if cell.placeholder %}title="{{ cell.placeholder }}"{% endif %}
                              {{ disabled_attr }}>
                     {% elif data_type == "List" %}
@@ -468,15 +473,60 @@
           });
         });
 
+        // Step validation — for ``type="number"`` inputs that carry a
+        // ``data-rs-step``, verify ``(value − anchor) / step`` lands on
+        // an integer (with float tolerance). Off-grid values get a
+        // ``setCustomValidity`` message which the browser then surfaces
+        // as the same popup chrome it uses for native min/max
+        // violations on submit. Empty / NaN clears the constraint so a
+        // partially-typed value doesn't gate Submit.
+        var STEP_TOLERANCE = 1e-6;
+        function recomputeStepValidity(input) {
+          var stepRaw = input.dataset.rsStep;
+          if (!stepRaw) return;
+          var step = parseFloat(stepRaw);
+          if (!(step > 0)) return;
+          var anchor = parseFloat(input.dataset.rsStepAnchor || "0") || 0;
+          var raw = (input.value || "").trim();
+          if (raw === "") {
+            input.setCustomValidity("");
+            return;
+          }
+          var v = parseFloat(raw);
+          if (Number.isNaN(v)) {
+            input.setCustomValidity("");
+            return;
+          }
+          var offset = (v - anchor) / step;
+          if (Math.abs(offset - Math.round(offset)) > STEP_TOLERANCE) {
+            input.setCustomValidity(
+              "Must be in increments of " + stepRaw + "."
+            );
+          } else {
+            input.setCustomValidity("");
+          }
+        }
+        // Initial pass over server-rendered values so the first Submit
+        // attempt reflects the current state, not a fresh form's clean
+        // state. Covers the re-render-after-validation-error case too.
+        Array.prototype.forEach.call(
+          root.querySelectorAll("input[data-rs-step]"),
+          recomputeStepValidity
+        );
+
         // Dirty tracking — any input/change in the active group flips
         // its dirty flag and enables Save. Listening on the root via
-        // event delegation covers dynamically rendered rows too.
+        // event delegation covers dynamically rendered rows too. The
+        // step-validity check piggybacks on the same delegated handler.
         root.addEventListener("input", function (event) {
           var group = event.target.closest(".rs-instrument-group");
           if (!group) return;
           group.dataset.rsDirty = "true";
           if (group.classList.contains("rs-active")) {
             setSaveEnabled(true);
+          }
+          if (event.target.dataset && event.target.dataset.rsStep) {
+            recomputeStepValidity(event.target);
           }
         });
         root.addEventListener("change", function (event) {

@@ -535,6 +535,35 @@ def test_surface_renders_constraint_hints_for_integer_and_string_fields(
     assert 'placeholder="0 to 2000 char"' in body
 
 
+def test_numeric_input_carries_step_data_attrs_for_js_validity(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The 1-to-5int rating input carries ``data-rs-step="1"`` and
+    ``data-rs-step-anchor="1"`` so the inline ``setCustomValidity`` JS
+    can detect off-grid values and pop up the same browser warning
+    chrome the range check uses. The HTML5 ``step="any"`` stays in
+    place to suppress the native (float-drift-prone) step check."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-step-attrs",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    assert 'data-rs-step="1"' in body
+    assert 'data-rs-step-anchor="1"' in body
+    assert 'step="any"' in body
+    # JS hook: the recompute helper is wired up.
+    assert "recomputeStepValidity" in body
+    assert "setCustomValidity" in body
+
+
 def test_save_rejects_out_of_range_integer_and_keeps_typed_value(
     db: Session,
     alice: AuthenticatedUser,
