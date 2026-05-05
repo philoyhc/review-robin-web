@@ -1,6 +1,6 @@
 """PR α — Reviewer-surface URL routing + dashboard rewiring.
 
-Per `guide/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
+Per `guide/archive/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
 surface — multi-instrument rewrite" → PR α. The new URL pattern
 (`/reviewer/sessions/{id}/{instrument_position}`) lands without
 visible layout change. Save, Submit, and Clear get the

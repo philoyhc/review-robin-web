@@ -1,7 +1,7 @@
 """PR δ — Reviewer surface client-side page navigation + dirty
 preservation.
 
-Per `guide/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
+Per `guide/archive/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
 surface — multi-instrument rewrite" → PR δ. Every instrument group
 the reviewer is assigned on lives in the DOM at once; CSS hides the
 non-active ones. Page #N click is JS-driven (toggles ``.rs-active``,

@@ -1,6 +1,6 @@
 """PR γ — Reviewer surface multi-instrument rewrite.
 
-Per `guide/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
+Per `guide/archive/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
 surface — multi-instrument rewrite" → PR γ. Replaces the dual top +
 bottom action rows with a single unified `.rs-action-row` per side
 (Save / Discard / `Page #N: {short_label}` / divider / Submit),
