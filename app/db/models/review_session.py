@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import JSON, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -30,6 +30,8 @@ class ReviewSession(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(32), default="draft", nullable=False)
     deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     assignment_mode: Mapped[str | None] = mapped_column(String(32))
+    help_contact: Mapped[str | None] = mapped_column(String(320))
+    email_template_overrides: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
     created_by_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=False

@@ -26,7 +26,7 @@ from app.db.models import (
     Reviewer,
     User,
 )
-from app.services import audit
+from app.services import audit, email_templates
 
 
 INVITATION_KIND = "invitation"
@@ -41,13 +41,12 @@ def _new_token() -> tuple[str, str]:
     return raw, hash_token(raw)
 
 
-def _email_body(session: ReviewSession, invite_url: str) -> tuple[str, str]:
-    subject = f"Invitation to review: {session.name}"
-    body = (
-        f"You've been invited to review for: {session.name}.\n"
-        f"Open this link (sign in with your work email): {invite_url}\n"
-    )
-    return subject, body
+# Subject + body rendering retired in Segment 11E PR 1; ``send_invitation``
+# / ``send_reminder`` call ``email_templates.render_invitation`` /
+# ``render_reminder`` instead, which pick up per-session overrides from
+# ``ReviewSession.email_template_overrides`` and merge in the canonical
+# five-tag merge field set (reviewer name, session name, deadline, help
+# contact, invite URL).
 
 
 # --------------------------------------------------------------------------- #
@@ -208,7 +207,9 @@ def send_invitation(
     invitation.token_hash = token_hash
 
     invite_url = build_invite_url(raw_token)
-    subject, body = _email_body(review_session, invite_url)
+    subject, body = email_templates.render_invitation(
+        review_session, reviewer, invite_url
+    )
 
     outbox = EmailOutbox(
         session_id=review_session.id,
@@ -383,13 +384,7 @@ def most_recent_invitation_url(
     return match.group(0) if match else None
 
 
-def _reminder_body(session: ReviewSession, invite_url: str) -> tuple[str, str]:
-    subject = f"Reminder: review for {session.name}"
-    body = (
-        f"Reminder — your review for {session.name} isn't complete yet.\n"
-        f"Open this link (sign in with your work email): {invite_url}\n"
-    )
-    return subject, body
+# ``_reminder_body`` retired in Segment 11E PR 1 alongside ``_email_body``.
 
 
 @dataclass
@@ -433,7 +428,9 @@ def send_reminder(
             outbox_id=result.outbox_id, fell_back_to_invitation=True
         )
 
-    subject, body = _reminder_body(review_session, existing_url)
+    subject, body = email_templates.render_reminder(
+        review_session, reviewer, existing_url
+    )
     outbox = EmailOutbox(
         session_id=review_session.id,
         reviewer_id=reviewer.id,

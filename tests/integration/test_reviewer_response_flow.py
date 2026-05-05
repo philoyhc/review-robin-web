@@ -535,6 +535,44 @@ def test_surface_renders_constraint_hints_for_integer_and_string_fields(
     assert 'placeholder="0 to 2000 char"' in body
 
 
+def test_surface_renders_help_contact_line_when_set(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """When the operator sets a per-session help contact, the
+    reviewer surface page header surfaces "Questions? Contact <X>"
+    as a small ``muted`` line. Hidden when the column is NULL."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-help-contact",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    # Operator sets the help contact via /edit (only allowed while
+    # the session is editable — i.e. before activation).
+    response = operator.post(
+        f"/operator/sessions/{review_session.id}/edit",
+        data={
+            "name": review_session.name,
+            "code": review_session.code,
+            "description": review_session.description or "",
+            "help_contact": "Prof X <x@example.edu>",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    # Activate so the reviewer surface is reachable.
+    _activate(operator, db, review_session)
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    assert "Questions? Contact Prof X" in body
+
+
 def test_surface_renders_constraint_summary_row_above_table(
     db: Session,
     alice: AuthenticatedUser,

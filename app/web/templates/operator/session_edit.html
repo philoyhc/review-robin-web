@@ -30,6 +30,12 @@
             name="deadline"
             value="{{ session.deadline.strftime('%Y-%m-%dT%H:%M') if session.deadline else '' }}"
           >
+
+          <label for="help_contact">Help contact (optional)</label>
+          <input type="text" id="help_contact" name="help_contact"
+                 maxlength="320"
+                 value="{{ session.help_contact or '' }}"
+                 placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
         </div>
 
         <div class="fill-col">

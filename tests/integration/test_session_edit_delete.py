@@ -74,6 +74,7 @@ def test_session_edit_persists_and_audits_changes(
             "name": "Spring v2",
             "code": "edit-test",
             "description": "new description",
+            "help_contact": "Prof X <x@example.edu>",
         },
         follow_redirects=False,
     )
@@ -82,6 +83,7 @@ def test_session_edit_persists_and_audits_changes(
     db.refresh(review_session)
     assert review_session.name == "Spring v2"
     assert review_session.description == "new description"
+    assert review_session.help_contact == "Prof X <x@example.edu>"
 
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "session.updated")
@@ -89,6 +91,7 @@ def test_session_edit_persists_and_audits_changes(
     changes = event.detail["changes"]
     assert changes["name"] == ["Spring", "Spring v2"]
     assert changes["description"] == ["old", "new description"]
+    assert changes["help_contact"] == [None, "Prof X <x@example.edu>"]
     assert "code" not in changes
 
 
