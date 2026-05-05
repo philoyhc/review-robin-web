@@ -100,10 +100,10 @@ def test_session_detail_shows_counts_and_validate_link(
     assert ">Reviewers</a>" in body
     assert ">Reviewees</a>" in body
     assert ">Assignments</a>" in body
-    # Validate Session Setup button targets the ?validated=1 query branch
-    assert (
-        f'href="/operator/sessions/{review_session.id}?validated=1"' in body
-    )
+    # The Validate Setup button is suppressed on empty drafts (the
+    # Next Action card short-circuits to "Session not fully set up").
+    # It returns once at least one of reviewers / reviewees /
+    # assignments is populated.
 
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",

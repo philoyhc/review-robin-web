@@ -28,7 +28,14 @@
       <div class="card next-action" id="next-action">
         <h2>Next Action</h2>
         <div class="next-action-body">
-          {% if is_draft %}
+          {% if is_setup_empty %}
+            {# Freshly-created draft with at least one of reviewers /
+               reviewees / assignments still empty. Skip the validation
+               framing — the operator's first job is to fill the
+               missing roster, not click Validate. No action buttons
+               render below in this state. #}
+            <p>Session not fully set up. Make sure that reviewers, reviewees, and assignments have been set up.</p>
+          {% elif is_draft %}
             {% if validation_summary %}
               {# Validation just ran (?validated=1) and didn't pass —
                  the session stays in draft. Surface the counts inline
@@ -109,6 +116,7 @@
             </form>
           </div>
         {% endif %}
+        {% if not is_setup_empty %}
         <div class="next-action-buttons">
           {% if is_draft %}
             <a class="btn"
@@ -141,6 +149,7 @@
                href="/operator/sessions/{{ session.id }}/monitoring">Monitor responses</a>
           {% endif %}
         </div>
+        {% endif %}
       </div>
 
       {# Quick Setup + Extract Data — paired placeholder cards built
