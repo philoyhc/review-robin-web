@@ -252,7 +252,11 @@ def test_setupinvite_stub_renders(
     body = response.text
     # Page title now lives in the active nav tab, not a separate <h1>.
     assert ">Email Template<" in body
-    assert "Segment 15" in body
+    # Two-card placeholder layout (Segment 11E PR 2-A) frames the
+    # editor surface ahead of the actual editor's arrival in PR 2.
+    assert 'id="email-composer"' in body
+    assert 'id="merge-tags-and-actions"' in body
+    assert "Segment 11E PR 2" in body
 
 
 # ---------------------------------------------------------------------------
