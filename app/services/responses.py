@@ -57,6 +57,65 @@ class MissingPosition:
     position: int
 
 
+@dataclass
+class ValidationError:
+    assignment_id: int
+    field_key: str
+    field_label: str
+    reviewee_name: str
+    value: str
+    message: str
+    position: int
+
+
+_STEP_TOLERANCE = 1e-6
+
+
+def _format_number(v: float, *, integer: bool) -> str:
+    if integer:
+        return str(int(v))
+    if v == int(v):
+        return f"{v:.1f}"
+    return f"{v:g}"
+
+
+def validate_value(
+    field: InstrumentResponseField, value: str
+) -> str | None:
+    """Validate a non-empty form value against the field's RTD-derived
+    ``validation`` block. Returns an error message or None.
+
+    Empty values are treated as "delete the row" by the save layer and
+    are not validated here.
+    """
+    if value == "":
+        return None
+    validation = field.validation or {}
+    data_type = field.data_type
+    if data_type in ("Integer", "Decimal"):
+        integer = data_type == "Integer"
+        try:
+            v = int(value) if integer else float(value)
+        except ValueError:
+            return "Must be a whole number." if integer else "Must be a number."
+        min_ = validation.get("min")
+        max_ = validation.get("max")
+        step = validation.get("step")
+        if min_ is not None and v < min_:
+            return f"Must be at least {_format_number(min_, integer=integer)}."
+        if max_ is not None and v > max_:
+            return f"Must be at most {_format_number(max_, integer=integer)}."
+        if step is not None and step > 0:
+            anchor = min_ if min_ is not None else 0
+            offset = (v - anchor) / step
+            if abs(offset - round(offset)) > _STEP_TOLERANCE:
+                return (
+                    "Must be in increments of "
+                    f"{_format_number(step, integer=integer)}."
+                )
+    return None
+
+
 def _reviewer_assignments(
     db: Session, reviewer: Reviewer, session_id: int
 ) -> list[Assignment]:
@@ -212,6 +271,62 @@ def compute_row_completion(
 @dataclass
 class SaveResult:
     upsert_count: int
+    errors: list[ValidationError]
+
+
+def _split_validated(
+    *,
+    upserts: list[ResponseUpsert],
+    assignment_index: dict[int, Assignment],
+    field_index: dict[tuple[int, str], InstrumentResponseField],
+    position_by_instrument_id: dict[int, int],
+) -> tuple[list[ResponseUpsert], list[ValidationError]]:
+    """Partition upserts into (valid, errors) by running ``validate_value``
+    against each. Upserts that target an unknown assignment / field key are
+    treated as valid here — ``_apply_upserts`` already silently drops them."""
+    valid: list[ResponseUpsert] = []
+    errors: list[ValidationError] = []
+    for u in upserts:
+        assignment = assignment_index.get(u.assignment_id)
+        if assignment is None:
+            valid.append(u)
+            continue
+        field = field_index.get((assignment.instrument_id, u.field_key))
+        if field is None:
+            valid.append(u)
+            continue
+        message = validate_value(field, u.value)
+        if message is None:
+            valid.append(u)
+            continue
+        errors.append(
+            ValidationError(
+                assignment_id=assignment.id,
+                field_key=field.field_key,
+                field_label=field.label,
+                reviewee_name=assignment.reviewee.name,
+                value=u.value,
+                message=message,
+                position=position_by_instrument_id.get(
+                    assignment.instrument_id, 0
+                ),
+            )
+        )
+    errors.sort(key=lambda e: (e.position, e.reviewee_name, e.field_label))
+    return valid, errors
+
+
+def _session_position_map(
+    db: Session, session_id: int
+) -> dict[int, int]:
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == session_id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    return {inst.id: idx + 1 for idx, inst in enumerate(instruments)}
 
 
 def save_draft(
@@ -223,7 +338,12 @@ def save_draft(
     upserts: list[ResponseUpsert],
     correlation_id: str,
 ) -> SaveResult:
-    """Upsert response rows; empty values delete. Never touches submitted_at."""
+    """Upsert response rows; empty values delete. Never touches submitted_at.
+
+    Values that fail RTD-level validation (Integer / Decimal range and
+    step) are skipped — only valid upserts are persisted. The caller
+    surfaces the error list so the offending fields can be re-rendered
+    with the typed value still in the box."""
     assignments = _reviewer_assignments(db, reviewer, review_session.id)
     assignment_index = {a.id: a for a in assignments}
     fields_by_instrument = _instrument_fields_by_id(
@@ -234,9 +354,16 @@ def save_draft(
         for field in fields:
             field_index[(instrument_id, field.field_key)] = field
 
+    valid_upserts, errors = _split_validated(
+        upserts=upserts,
+        assignment_index=assignment_index,
+        field_index=field_index,
+        position_by_instrument_id=_session_position_map(db, review_session.id),
+    )
+
     written = _apply_upserts(
         db,
-        upserts=upserts,
+        upserts=valid_upserts,
         assignment_index=assignment_index,
         field_index=field_index,
     )
@@ -251,17 +378,19 @@ def save_draft(
             "session_id": review_session.id,
             "reviewer_id": reviewer.id,
             "count": written,
+            "validation_errors": len(errors),
         },
         correlation_id=correlation_id,
     )
     db.commit()
-    return SaveResult(upsert_count=written)
+    return SaveResult(upsert_count=written, errors=errors)
 
 
 @dataclass
 class SubmitResult:
     submitted: bool
     missing: list[MissingPosition]
+    errors: list[ValidationError]
     submitted_count: int
 
 
@@ -296,26 +425,31 @@ def submit(
         for field in fields:
             field_index[(instrument_id, field.field_key)] = field
 
+    # Resolve session-wide page positions so MissingPosition / ValidationError
+    # entries carry the page number the reviewer needs to navigate to.
+    position_by_instrument_id = _session_position_map(db, review_session.id)
+
+    valid_upserts, errors = _split_validated(
+        upserts=upserts,
+        assignment_index=assignment_index,
+        field_index=field_index,
+        position_by_instrument_id=position_by_instrument_id,
+    )
+
     _apply_upserts(
         db,
-        upserts=upserts,
+        upserts=valid_upserts,
         assignment_index=assignment_index,
         field_index=field_index,
     )
 
-    # Resolve session-wide page positions so MissingPosition entries
-    # carry the page number the reviewer needs to navigate to. Sort
-    # mirrors the reviewer surface's Page-N ordering.
-    session_instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    position_by_instrument_id = {
-        inst.id: idx + 1 for idx, inst in enumerate(session_instruments)
-    }
+    if errors:
+        # Persist the valid draft writes; surface the bad ones so the
+        # reviewer can fix and retry without losing their other typing.
+        db.commit()
+        return SubmitResult(
+            submitted=False, missing=[], errors=errors, submitted_count=0
+        )
 
     missing = _compute_missing_required(
         db,
@@ -328,7 +462,9 @@ def submit(
         # Persist the draft writes that landed before the missing
         # check; they're useful for the user even on a blocked submit.
         db.commit()
-        return SubmitResult(submitted=False, missing=missing, submitted_count=0)
+        return SubmitResult(
+            submitted=False, missing=missing, errors=[], submitted_count=0
+        )
 
     now = datetime.now(timezone.utc)
     submitted_count = 0
@@ -360,7 +496,10 @@ def submit(
     )
     db.commit()
     return SubmitResult(
-        submitted=True, missing=missing, submitted_count=submitted_count
+        submitted=True,
+        missing=missing,
+        errors=[],
+        submitted_count=submitted_count,
     )
 
 

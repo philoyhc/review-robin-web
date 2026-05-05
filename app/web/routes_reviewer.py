@@ -230,10 +230,10 @@ def _surface_context(
     user: User,
     reviewer: Reviewer,
     review_session: ReviewSession,
-    saved: bool,
-    submitted: bool,
     current_position: int,
     missing: list[responses_service.MissingPosition] | None = None,
+    errors: list[responses_service.ValidationError] | None = None,
+    bad_values: dict[tuple[int, str], str] | None = None,
     show_incomplete_marks: bool = False,
 ) -> dict:
     lifecycle.observe_deadline(
@@ -297,6 +297,13 @@ def _surface_context(
         for field in fields:
             existing = response_rows.get((assignment.id, field.id))
             value = (existing.value or "") if existing else ""
+            # On a re-render after server-side validation, the user's
+            # typed-but-invalid value (which never reached the DB) wins
+            # so they can correct it in place.
+            if bad_values is not None:
+                override = bad_values.get((assignment.id, field.field_key))
+                if override is not None:
+                    value = override
             cells.append(
                 {
                     "field": field,
@@ -441,9 +448,8 @@ def _surface_context(
         "reviewer": reviewer,
         "instrument_groups": instrument_groups,
         "rows": flat_rows,
-        "saved": saved,
-        "submitted": submitted,
         "missing": missing or [],
+        "errors": errors or [],
         "show_incomplete_marks": show_incomplete_marks,
         "any_required": any(
             any(f.required for f in fields_by_instrument.get(a.instrument_id, []))
@@ -566,9 +572,8 @@ def build_preview_context(
             "reviewer": None,
             "instrument_groups": [],
             "rows": [],
-            "saved": False,
-            "submitted": False,
             "missing": [],
+            "errors": [],
             "show_incomplete_marks": False,
             "any_required": False,
             "any_accepting": False,
@@ -739,9 +744,8 @@ def build_preview_context(
         "reviewer": None,
         "instrument_groups": instrument_groups,
         "rows": flat_rows,
-        "saved": False,
-        "submitted": False,
         "missing": [],
+        "errors": [],
         "show_incomplete_marks": False,
         "any_required": False,
         "any_accepting": False,
@@ -774,12 +778,12 @@ def build_preview_context(
 
 
 def submit_redirect_url(review_session: ReviewSession, position: int) -> str:
-    """Where to send the reviewer after a successful submit. Today
-    returns the surface URL with ``?submitted=ok`` flash; the deferred
-    standalone-confirmation page swaps the URL via this helper without
-    touching the surface route.
+    """Where to send the reviewer after a successful submit — back to
+    the page they pressed Submit from. The deferred standalone-
+    confirmation page can swap the URL via this helper without touching
+    the surface route.
     """
-    return f"/reviewer/sessions/{review_session.id}/{position}?submitted=ok"
+    return f"/reviewer/sessions/{review_session.id}/{position}"
 
 
 def _read_current_position(form: object, default: int = 1) -> int:
@@ -818,8 +822,6 @@ def review_surface_default_position(session_id: int) -> RedirectResponse:
 def review_surface(
     request: Request,
     instrument_position: int,
-    saved: str | None = None,
-    submitted: str | None = None,
     reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
         require_reviewer_in_session
     ),
@@ -835,8 +837,6 @@ def review_surface(
         user=user,
         reviewer=reviewer,
         review_session=review_session,
-        saved=saved == "ok",
-        submitted=submitted == "ok",
         current_position=instrument_position,
     )
     context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
@@ -860,7 +860,7 @@ async def reviewer_save(
     ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     """Save the form's response inputs for the URL position.
 
     PR γ wires the per-position filter alongside rendering-narrows-
@@ -868,6 +868,12 @@ async def reviewer_save(
     instrument group, so the form body normally contains only its
     inputs; the filter is defense-in-depth against malformed POSTs
     that include cross-page assignment_ids).
+
+    Server-side value validation rejects per-upsert (Integer / Decimal
+    range and step). Invalid upserts are *not* persisted; the surface
+    re-renders inline with the typed value still in the box plus the
+    Invalid-values warning card. Valid upserts in the same batch save
+    through.
     """
     reviewer, review_session = reviewer_session
     _require_session_accepting(db, review_session, reviewer)
@@ -894,7 +900,7 @@ async def reviewer_save(
         if a.instrument_id == target_instrument_id
     }
     upserts = [u for u in upserts if u.assignment_id in target_assignment_ids]
-    responses_service.save_draft(
+    result = responses_service.save_draft(
         db,
         review_session=review_session,
         reviewer=reviewer,
@@ -902,8 +908,32 @@ async def reviewer_save(
         upserts=upserts,
         correlation_id=request_correlation_id(),
     )
+    if result.errors:
+        bad_values = {
+            (e.assignment_id, e.field_key): e.value for e in result.errors
+        }
+        context = _surface_context(
+            db=db,
+            user=user,
+            reviewer=reviewer,
+            review_session=review_session,
+            current_position=instrument_position,
+            errors=result.errors,
+            bad_values=bad_values,
+        )
+        context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
+        context["reviewer_review_count"] = reviewer_review_count_for_user(
+            db, user
+        )
+        context["current_position"] = instrument_position
+        return _templates.TemplateResponse(
+            request,
+            "reviewer/review_surface.html",
+            context,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
     return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}/{instrument_position}?saved=ok",
+        url=f"/reviewer/sessions/{review_session.id}/{instrument_position}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -936,16 +966,19 @@ async def reviewer_submit(
         correlation_id=request_correlation_id(),
     )
     if not result.submitted:
+        bad_values = {
+            (e.assignment_id, e.field_key): e.value for e in result.errors
+        }
         context = _surface_context(
             db=db,
             user=user,
             reviewer=reviewer,
             review_session=review_session,
-            saved=False,
-            submitted=False,
             current_position=current_position,
             missing=result.missing,
-            show_incomplete_marks=True,
+            errors=result.errors,
+            bad_values=bad_values,
+            show_incomplete_marks=not result.errors,
         )
         context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
         context["reviewer_review_count"] = reviewer_review_count_for_user(

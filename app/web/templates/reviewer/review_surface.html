@@ -28,11 +28,9 @@
   </div>
 
   {# Top-row layout (PR β): description card half-width-left,
-     flash + per-page status panel half-width-right. The panel always
-     renders so the reviewer always has a per-page progress summary;
-     transient flash banners (saved / submitted / missing-required)
-     land inside it inline. Below the 800px breakpoint the .bottom-grid
-     stacks. #}
+     per-page status panel half-width-right. The panel always renders
+     so the reviewer always has a per-page progress summary. Below the
+     800px breakpoint the .bottom-grid stacks. #}
   <div class="bottom-grid">
     {% if session.description %}
       <div class="card rs-description-card">
@@ -54,20 +52,35 @@
           {% endfor %}
         </ul>
       {% endif %}
-
-      {% if saved %}
-        <div class="banner banner-success">
-          Your draft has been saved.
-        </div>
-      {% endif %}
-      {% if submitted %}
-        <div class="banner banner-success">
-          Your responses have been submitted. You can keep editing
-          and re-submit if needed.
-        </div>
-      {% endif %}
     </div>
   </div>
+
+  {# Invalid-values warning card. Surfaces server-side rejections for
+     out-of-range / wrong-shape numeric input. Same chrome as the
+     missing-required card so the two read consistently when both fire
+     (in practice they're mutually exclusive — submit checks invalid
+     before missing). #}
+  {% if errors %}
+    <div class="card rs-missing-card" data-rs-errors-card>
+      <strong>Some values couldn't be saved.</strong>
+      <p>
+        Please correct the following field{% if errors|length != 1 %}s{% endif %} and try again:
+      </p>
+      <ul class="rs-missing-list">
+        {% for e in errors %}
+          <li>
+            {% if e.position %}<strong>Page {{ e.position }}:</strong> {% endif %}<strong>{{ e.reviewee_name }}</strong> — <code>{{ e.field_label }}</code> — {{ e.message }}
+          </li>
+        {% endfor %}
+      </ul>
+      <div class="rs-missing-card-actions">
+        <a class="btn secondary"
+           href="/reviewer/sessions/{{ session.id }}/{{ current_position }}">
+          Cancel
+        </a>
+      </div>
+    </div>
+  {% endif %}
 
   {# Missing-required warning card. Lives outside the bottom-grid so
      it spans full width — the list can be long enough that cramming
@@ -348,6 +361,31 @@
         var discardButtons = Array.prototype.slice.call(
           document.querySelectorAll("[data-rs-discard]")
         );
+        // Form whose action carries the URL position. JS-pushed Page #N
+        // navigation has to keep this in sync so Save posts to (and
+        // redirects back to) the page the reviewer is actually on,
+        // rather than the page the surface was first server-rendered
+        // at. The hidden current_position input drives Submit's
+        // post-success redirect via the same channel.
+        var saveForm = root.closest("form");
+        var savePathTemplate = pushStatePrefix
+          ? pushStatePrefix + "POSITION/save"
+          : "";
+        function syncFormToPosition(position) {
+          if (!saveForm) return;
+          if (savePathTemplate) {
+            saveForm.setAttribute(
+              "action",
+              savePathTemplate.replace("POSITION", position)
+            );
+          }
+          var hiddenInputs = saveForm.querySelectorAll(
+            'input[type="hidden"][name="current_position"]'
+          );
+          Array.prototype.forEach.call(hiddenInputs, function (input) {
+            input.value = position;
+          });
+        }
 
         function activeGroup() {
           for (var i = 0; i < groups.length; i++) {
@@ -394,15 +432,17 @@
         // and dirty flags only flip in response to user input.
         setSaveEnabled(false);
 
-        // Page #N button clicks toggle visibility client-side and
-        // pushState the new URL so refresh / share carries the
-        // current position.
+        // Page #N button clicks toggle visibility client-side, sync
+        // the form action / hidden current_position so Save / Submit
+        // target the active page, and pushState the new URL so refresh
+        // / share carries the current position.
         pageButtons.forEach(function (btn) {
           btn.addEventListener("click", function (event) {
             event.preventDefault();
             var position = btn.dataset.rsPage;
             if (!position) return;
             var matched = activate(position);
+            syncFormToPosition(position);
             if (matched && pushStatePrefix) {
               window.history.pushState(
                 null, "", pushStatePrefix + position
@@ -461,7 +501,10 @@
             var match = window.location.pathname.match(
               /\/reviewer\/sessions\/\d+\/(\d+)/
             );
-            if (match) activate(match[1]);
+            if (match) {
+              activate(match[1]);
+              syncFormToPosition(match[1]);
+            }
           });
         }
       })();

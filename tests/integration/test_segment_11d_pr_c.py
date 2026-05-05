@@ -292,28 +292,6 @@ def test_review_surface_preview_banner_is_banner_info(
     assert "not visible to reviewers" in body
 
 
-def test_review_surface_saved_banner_uses_banner_success(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-d6-saved",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1?saved=ok"
-    ).text
-    assert 'class="banner banner-success"' in body
-    assert "Your draft has been saved." in body
-
-
 # ── D7: page header ─────────────────────────────────────────────────────
 
 

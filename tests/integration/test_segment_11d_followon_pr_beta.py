@@ -278,61 +278,6 @@ def test_page_status_pill_flips_to_submitted_after_submit(
     assert "Page 1: submitted" in body
 
 
-# ── Flash banners — saved/submitted/missing render inside the panel ───
-
-
-def test_saved_banner_renders_inside_status_panel(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """The `?saved=ok` flash banner lands inside the right-half
-    status panel, not as a free-floating banner above the form."""
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-saved-flash",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1?saved=ok"
-    ).text
-    panel_open = body.find('class="card rs-status-panel"')
-    panel_close = body.find("</div>", panel_open)
-    saved_banner = body.find("Your draft has been saved.")
-    assert panel_open != -1 and saved_banner != -1
-    # The flash banner sits inside the status-panel card.
-    assert panel_open < saved_banner < panel_close
-
-
-def test_submitted_banner_renders_inside_status_panel(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-submitted-flash",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/reviewer/sessions/{review_session.id}/1?submitted=ok"
-    ).text
-    panel_open = body.find('class="card rs-status-panel"')
-    panel_close = body.find("</div>", panel_open)
-    flash = body.find("Your responses have been submitted.")
-    assert panel_open < flash < panel_close
-
-
 # ── Operator preview suppresses per-page pills ────────────────────────
 
 
