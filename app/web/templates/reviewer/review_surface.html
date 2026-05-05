@@ -73,8 +73,9 @@
      it spans full width — the list can be long enough that cramming
      it into the half-width status panel produced a tall, narrow
      scroll. Two-column flow keeps the card compact even with many
-     gaps; a Cancel button dismisses the card client-side without
-     affecting the form. #}
+     gaps; the Cancel button is a plain link back to the page the
+     reviewer submitted from, so the URL bar leaves the POST-only
+     ``/submit`` endpoint behind. #}
   {% if missing %}
     <div class="card rs-missing-card" data-rs-missing-card>
       <strong>Required fields missing.</strong>
@@ -90,21 +91,12 @@
         {% endfor %}
       </ul>
       <div class="rs-missing-card-actions">
-        <button type="button" class="btn secondary" data-rs-missing-dismiss>
+        <a class="btn secondary" data-rs-missing-dismiss
+           href="/reviewer/sessions/{{ session.id }}/{{ current_position }}">
           Cancel
-        </button>
+        </a>
       </div>
     </div>
-    <script>
-      (function () {
-        var card = document.querySelector("[data-rs-missing-card]");
-        var dismiss = document.querySelector("[data-rs-missing-dismiss]");
-        if (!card || !dismiss) return;
-        dismiss.addEventListener("click", function () {
-          card.remove();
-        });
-      })();
-    </script>
   {% endif %}
 
   {% if rows %}
