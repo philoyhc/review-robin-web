@@ -1389,6 +1389,9 @@
         {% if user %}
           <div class="chrome-user">
             <div>Signed in as {{ user.display_name or user.email }}</div>
+            {% if request.url.path != "/operator/settings" %}
+              <a class="chrome-link" href="/operator/settings">Settings</a>
+            {% endif %}
             {% if request.url.path not in ("/about", "/me/debug") %}
               <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
             {% endif %}
