@@ -239,9 +239,7 @@ def test_build_setup_rows_re_enables_instruments_and_setup_invites(
 # ---------------------------------------------------------------------------
 
 
-def test_setupinvite_stub_renders(
-    client: TestClient, db: Session
-) -> None:
+def test_setupinvite_renders(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="setupinvite")
 
     response = client.get(
@@ -250,13 +248,16 @@ def test_setupinvite_stub_renders(
 
     assert response.status_code == 200
     body = response.text
-    # Page title now lives in the active nav tab, not a separate <h1>.
+    # Page title lives in the active nav tab, not a separate <h1>.
     assert ">Email Template<" in body
-    # Two-card placeholder layout (Segment 11E PR 2-A) frames the
-    # editor surface ahead of the actual editor's arrival in PR 2.
+    # Two-card editor layout (Segment 11E PR 2): composer on the
+    # left, merge tags + actions on the right.
     assert 'id="email-composer"' in body
     assert 'id="merge-tags-and-actions"' in body
-    assert "Segment 11E PR 2" in body
+    # Active template defaults to Invitation; the Save button wires
+    # to the form via the form="..." attribute pattern.
+    assert "Invitation email" in body
+    assert 'form="setupinvite-form"' in body
 
 
 # ---------------------------------------------------------------------------
