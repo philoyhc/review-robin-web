@@ -30,6 +30,7 @@ from app.services import (
 )
 from app.services import lifecycle_display, session_lifecycle as lifecycle
 from app.services._secrets import MissingEncryptionKey
+from app.web.return_to import resolve_return_to
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -70,11 +71,22 @@ def list_sessions(
     )
 
 
+def _settings_redirect_url(return_to_raw: str | None) -> str:
+    """Save / Clear keep the operator on the Settings page (so they
+    can verify their changes); the ``return_to`` query param rides
+    along on the redirect so the back-link stays wired through the
+    Save → reload cycle."""
+    if return_to_raw:
+        from urllib.parse import quote
+
+        return f"/operator/settings?return_to={quote(return_to_raw, safe='/')}"
+    return "/operator/settings"
+
+
 @router.get("/settings", response_class=HTMLResponse)
 def operator_settings_form(
     request: Request,
-    saved: str | None = None,
-    cleared: str | None = None,
+    return_to: str | None = Query(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -84,18 +96,24 @@ def operator_settings_form(
     when ``SMTP_ENCRYPTION_KEY`` isn't configured — the encryption
     helper only fires on Save / Clear, so a deployment can defer
     setting the env var until operators actually start configuring.
+
+    Honours ``?return_to=<path>`` per ``app.web.return_to`` (same
+    allowlist as the About page) so the page surfaces a "← Back to
+    {context}" link and Cancel routes to the originating surface.
     """
     db.refresh(user)
     has_password = user.smtp_password_encrypted is not None
+    target = resolve_return_to(return_to, db)
     return _templates.TemplateResponse(
         request,
         "operator/operator_settings.html",
         {
             "user": user,
             "has_password": has_password,
-            "saved": saved == "ok",
-            "cleared": cleared == "ok",
             "encryption_modes": operator_settings.SMTP_ENCRYPTION_MODES,
+            "return_to_raw": return_to,
+            "return_to_url": target.url,
+            "return_to_label": target.label,
             "breadcrumbs": breadcrumbs.operator_root(),
         },
     )
@@ -109,6 +127,7 @@ def operator_settings_save(
     smtp_password: str | None = Form(default=None),
     smtp_from_display_name: str | None = Form(default=None),
     smtp_encryption: str | None = Form(default=None),
+    return_to: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -147,13 +166,14 @@ def operator_settings_save(
             detail=str(exc),
         ) from exc
     return RedirectResponse(
-        url="/operator/settings?saved=ok",
+        url=_settings_redirect_url(return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.post("/settings/clear")
 def operator_settings_clear(
+    return_to: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -161,7 +181,7 @@ def operator_settings_clear(
         db, user=user, correlation_id=request_correlation_id()
     )
     return RedirectResponse(
-        url="/operator/settings?cleared=ok",
+        url=_settings_redirect_url(return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -1120,8 +1140,6 @@ def _build_field_rows(
 def setupinvite_form(
     request: Request,
     template: str = Query(default="invitation"),
-    saved: str | None = Query(default=None),
-    reset: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1148,8 +1166,6 @@ def setupinvite_form(
                 {"tag": "$help_contact", "description": "Per-session help contact."},
                 {"tag": "$invite_url", "description": "Reviewer-specific invitation URL."},
             ],
-            "saved": saved == "ok",
-            "reset_field": reset,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Email Template"
             ),
@@ -1199,7 +1215,7 @@ async def setupinvite_save(
         )
     db.commit()
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/setupinvite?template={template}&saved=ok",
+        url=f"/operator/sessions/{review_session.id}/setupinvite?template={template}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -1248,7 +1264,7 @@ def setupinvite_reset(
     return RedirectResponse(
         url=(
             f"/operator/sessions/{review_session.id}/setupinvite"
-            f"?template={template}&reset={field}"
+            f"?template={template}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
     )

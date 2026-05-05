@@ -11,34 +11,33 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {% if saved %}
-    <div class="banner banner-success">Template saved.</div>
-  {% endif %}
-  {% if reset_field %}
-    <div class="banner banner-success">{{ active_template|capitalize }} {{ reset_field }} reset to default.</div>
-  {% endif %}
-
-  {# Template selector — sub-tabs sitting above the two-card grid.
-     The active tab carries ``aria-disabled`` to read like a current-
-     page anchor; clicking either swaps the URL, which the form
-     posts back to. #}
-  <div class="card">
-    <div class="btn-row" style="gap: 0;">
-      {% for t in valid_templates %}
-        {% if t == active_template %}
-          <button type="button" class="btn disabled" aria-disabled="true">{{ t|capitalize }}</button>
-        {% else %}
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/setupinvite?template={{ t }}">{{ t|capitalize }}</a>
-        {% endif %}
-      {% endfor %}
-    </div>
+  {# Template selector — Invitation / Reminder. Plain row of normal-
+     sized buttons flushed left; no wrapping card (these are page-
+     level navigation, not their own concern). The active tab
+     renders disabled to read like a current-page anchor. #}
+  <div class="btn-pair" style="margin-bottom: 16px;">
+    {% for t in valid_templates %}
+      {% if t == active_template %}
+        <button type="button" class="btn disabled" aria-disabled="true">{{ t|capitalize }}</button>
+      {% else %}
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}/setupinvite?template={{ t }}">{{ t|capitalize }}</a>
+      {% endif %}
+    {% endfor %}
   </div>
 
   {# Two-card layout. Left: email-shape composer; right: merge-tag
      reference + Save / Cancel. The Save button lives in the right
      card but submits the composer form via the HTML5 ``form="..."``
-     attribute, so the form definition stays beside its inputs. #}
+     attribute, so the form definition stays beside its inputs.
+
+     Save initially renders disabled and only enables once the
+     operator has touched any field in the composer (handled by the
+     inline script below). After a successful save, the page reloads
+     via the route's 303 redirect — the reload puts the form back in
+     a clean state and Save returns to disabled. No flash banner is
+     needed; the disabled→enabled→disabled cycle is the visual
+     signal. #}
   <div class="bottom-grid">
     <div class="card email-composer" id="email-composer">
       <h2>{{ active_template|capitalize }} email</h2>
@@ -49,7 +48,7 @@
         <input type="hidden" name="template" value="{{ active_template }}">
 
         <div class="form-row muted">
-          <strong>From:</strong> <em>(your configured SMTP From email — see <a href="/operator/settings">Settings</a>)</em>
+          <strong>From:</strong> <em>(your configured SMTP From email — see <a href="/operator/settings?return_to={{ request.url.path | urlencode }}">Settings</a>)</em>
         </div>
         <div class="form-row muted">
           <strong>To:</strong> <em>(sent individually to each reviewer)</em>
@@ -76,20 +75,32 @@
           </div>
           {% if row.has_override %}
             <div class="form-row" style="margin-top: -8px;">
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/setupinvite/reset"
-                    style="display: inline;">
-                <input type="hidden" name="template" value="{{ active_template }}">
-                <input type="hidden" name="field" value="{{ row.field }}">
-                <button type="submit" class="chrome-link"
-                        style="background: none; border: 0; padding: 0; cursor: pointer;">
-                  Reset {{ row.field }} to default
-                </button>
-              </form>
+              <button type="submit"
+                      form="setupinvite-reset-{{ row.field }}-form"
+                      class="chrome-link"
+                      style="background: none; border: 0; padding: 0; cursor: pointer;">
+                Reset {{ row.field }} to default
+              </button>
             </div>
           {% endif %}
         {% endfor %}
       </form>
+
+      {# Per-field reset forms live OUTSIDE the main composer form
+         (HTML doesn't allow nested forms). Each carries hidden
+         template / field inputs and is targeted by a button via the
+         HTML5 ``form="..."`` attribute. #}
+      {% for row in rows %}
+        {% if row.has_override %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/setupinvite/reset"
+                id="setupinvite-reset-{{ row.field }}-form"
+                style="display: none;">
+            <input type="hidden" name="template" value="{{ active_template }}">
+            <input type="hidden" name="field" value="{{ row.field }}">
+          </form>
+        {% endif %}
+      {% endfor %}
     </div>
 
     <div class="card merge-tags" id="merge-tags-and-actions">
@@ -105,11 +116,29 @@
         {% endfor %}
       </ul>
 
-      <div class="btn-row" style="margin-top: 20px;">
-        <button class="btn" type="submit" form="setupinvite-form">Save</button>
+      <div class="setupinvite-actions"
+           style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px;">
         <a class="btn secondary"
            href="/operator/sessions/{{ session.id }}">Cancel</a>
+        <button class="btn" type="submit" form="setupinvite-form"
+                id="setupinvite-save-button" disabled>Save</button>
       </div>
     </div>
   </div>
+
+  <script>
+    // Save-button dirty tracking. The button starts disabled; any
+    // input / change in the composer flips it on. After save the
+    // page reloads (303), markup re-renders clean, and the button
+    // is disabled again — the operator gets a "you have unsaved
+    // edits" affordance without a flash banner.
+    (function () {
+      var form = document.getElementById("setupinvite-form");
+      var save = document.getElementById("setupinvite-save-button");
+      if (!form || !save) return;
+      function enable() { save.disabled = false; }
+      form.addEventListener("input", enable);
+      form.addEventListener("change", enable);
+    })();
+  </script>
 {% endblock %}

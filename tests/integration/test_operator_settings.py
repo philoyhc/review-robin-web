@@ -107,7 +107,7 @@ def test_settings_save_persists_and_audits(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == "/operator/settings?saved=ok"
+    assert response.headers["location"] == "/operator/settings"
 
     user = _alice_row(db)
     assert user.smtp_host == "smtp.office365.com"
@@ -211,7 +211,7 @@ def test_settings_clear_wipes_everything_and_audits(
     )
     response = client.post("/operator/settings/clear", follow_redirects=False)
     assert response.status_code == 303
-    assert response.headers["location"] == "/operator/settings?cleared=ok"
+    assert response.headers["location"] == "/operator/settings"
 
     user = _alice_row(db)
     assert user.smtp_host is None
@@ -309,13 +309,65 @@ def test_save_fails_loudly_when_encryption_key_missing(
 # ── User-menu chrome link ────────────────────────────────────────────────
 
 
-def test_user_menu_carries_settings_link(client: TestClient) -> None:
+def test_user_menu_carries_settings_link_with_return_to(
+    client: TestClient,
+) -> None:
+    """Chrome user-menu Settings link threads ``?return_to=`` so the
+    Settings page's back-link knows where the operator came from."""
     body = client.get("/operator/sessions").text
-    assert 'href="/operator/settings">Settings</a>' in body
+    assert (
+        'href="/operator/settings?return_to=/operator/sessions">Settings</a>'
+        in body
+    )
 
 
 def test_user_menu_hides_settings_link_on_settings_page(
     client: TestClient,
 ) -> None:
     body = client.get("/operator/settings").text
-    assert 'href="/operator/settings">Settings</a>' not in body
+    # Strip any return_to query param when looking for the link, since
+    # the chrome partial omits the link entirely on the Settings page.
+    assert "/operator/settings?return_to=" not in body or ">Settings</a>" not in body
+    # Cheaper assertion: the chrome partial just doesn't render the
+    # link element at all when on /operator/settings.
+    assert "/operator/settings\">Settings</a>" not in body
+    assert "Settings</a>" not in body or "Cancel" in body  # only cancel-anchor allowed
+
+
+def test_settings_get_renders_back_link_to_origin(
+    client: TestClient, db: Session
+) -> None:
+    """``?return_to=/operator/sessions`` resolves via
+    ``app.web.return_to`` and renders the back-link + Cancel target."""
+    body = client.get(
+        "/operator/settings?return_to=/operator/sessions"
+    ).text
+    assert "&larr; Back to Sessions" in body
+    assert 'class="back-link" href="/operator/sessions"' in body
+    # Cancel anchor in the form actions row points at the same URL.
+    assert (
+        '<a class="btn secondary" href="/operator/sessions">Cancel</a>' in body
+    )
+
+
+def test_settings_save_preserves_return_to_through_redirect(
+    client: TestClient, db: Session, fernet_key: str
+) -> None:
+    """The hidden ``return_to`` form input rides through the Save
+    redirect so the back-link stays wired after reload."""
+    response = client.post(
+        "/operator/settings",
+        data={
+            "smtp_host": "smtp.office365.com",
+            "smtp_port": "587",
+            "smtp_username": "alice@example.edu",
+            "smtp_password": "x",
+            "smtp_encryption": "starttls",
+            "return_to": "/operator/sessions",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        "/operator/settings?return_to=/operator/sessions"
+    )
