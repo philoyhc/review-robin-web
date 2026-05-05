@@ -238,11 +238,8 @@ def constraint_summary_for_field(field: InstrumentResponseField) -> str:
         if data_type == "Integer":
             return f"{int(min_)}-{int(max_)}, steps of {int(step)}"
         return f"{min_:.1f}-{max_:.1f}, steps of {step:.1f}"
-    if data_type == "List":
-        choices = validation.get("choices") or []
-        if not choices:
-            return ""
-        return " / ".join(choices)
+    # List rows are omitted from the constraint summary — the
+    # ``<select>`` already constrains the choice in the input itself.
     return ""
 
 
