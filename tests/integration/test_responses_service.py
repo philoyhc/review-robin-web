@@ -179,6 +179,10 @@ def test_submit_missing_required_returns_warning_without_audit(db: Session) -> N
     assert result.submitted_count == 0
     assert any(m.field_key == "rating" for m in result.missing)
     assert result.missing[0].reviewee_name == "Carol"
+    # PR ε — every MissingPosition entry carries the page number the
+    # reviewer needs to navigate to. ``_seed`` builds a single-
+    # instrument session, so all entries land at Page 1.
+    assert all(m.position == 1 for m in result.missing)
 
 
 def test_reviewer_session_state_no_assignments(db: Session) -> None:

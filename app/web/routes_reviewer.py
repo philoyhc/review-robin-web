@@ -572,6 +572,8 @@ def build_preview_context(
             "any_accepting": False,
             "any_closed_with_hidden_values": False,
             "page_statuses": [],
+            "page_buttons": [],
+            "current_position": 1,
             "preview_mode": True,
         }
 
@@ -714,6 +716,21 @@ def build_preview_context(
         )
         flat_rows.extend(group_rows)
 
+    # Operator preview — build Page N buttons so multi-instrument
+    # preview lets the operator flip between pages (per Segment 11D
+    # follow-on PR ε). The unified action row collapses to Page N
+    # buttons only in preview; Save / Discard / Submit / divider are
+    # suppressed at the partial level.
+    page_buttons: list[views.PageButton] = [
+        views.PageButton(
+            position=group["position"],
+            label=views.page_button_label(group["instrument"], group["position"]),
+            href=f"/operator/sessions/{review_session.id}/preview",
+            is_current=group["is_current"],
+        )
+        for group in instrument_groups
+    ]
+
     return {
         "user": user,
         "session": review_session,
@@ -728,7 +745,7 @@ def build_preview_context(
         "any_accepting": False,
         "any_closed_with_hidden_values": False,
         "page_statuses": [],
-        "page_buttons": [],
+        "page_buttons": page_buttons,
         "current_position": 1,
         "preview_mode": True,
     }

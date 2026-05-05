@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    Instrument,
     InstrumentResponseField,
     Response,
     ReviewSession,
@@ -49,6 +50,11 @@ class MissingPosition:
     field_key: str
     field_label: str
     reviewee_name: str
+    # Session-wide page number (1-based) the assignment's instrument
+    # sits at, so the missing-required banner can prefix entries with
+    # ``Page N:``. Resolved from ``(Instrument.order, Instrument.id)``
+    # at submit time. Per-PR-ε of Segment 11D follow-on.
+    position: int
 
 
 def _reviewer_assignments(
@@ -129,8 +135,16 @@ def _compute_missing_required(
     *,
     assignments: list[Assignment],
     fields_by_instrument: dict[int, list[InstrumentResponseField]],
+    position_by_instrument_id: dict[int, int],
 ) -> list[MissingPosition]:
-    """List positions where a required field has no Response row."""
+    """List positions where a required field has no Response row.
+
+    The ``position_by_instrument_id`` map drives the page-number prefix
+    on the rendered banner; build it once at the call site
+    (``submit``) so each MissingPosition entry can land with the page
+    number the reviewer needs to navigate to. Iterates assignments
+    session-wide (across all instruments the reviewer is assigned on).
+    """
     missing: list[MissingPosition] = []
     for assignment in assignments:
         fields = fields_by_instrument.get(assignment.instrument_id, [])
@@ -152,8 +166,17 @@ def _compute_missing_required(
                     field_key=field.field_key,
                     field_label=field.label,
                     reviewee_name=assignment.reviewee.name,
+                    position=position_by_instrument_id.get(
+                        assignment.instrument_id, 0
+                    ),
                 )
             )
+    # Sort by (position, reviewee_name, field_label) so the rendered
+    # banner reads top-to-bottom in the same order the reviewer can
+    # walk the pages — Page 1 entries first, then Page 2, etc.
+    missing.sort(
+        key=lambda m: (m.position, m.reviewee_name, m.field_label)
+    )
     return missing
 
 
@@ -278,10 +301,25 @@ def submit(
         field_index=field_index,
     )
 
+    # Resolve session-wide page positions so MissingPosition entries
+    # carry the page number the reviewer needs to navigate to. Sort
+    # mirrors the reviewer surface's Page-N ordering.
+    session_instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    position_by_instrument_id = {
+        inst.id: idx + 1 for idx, inst in enumerate(session_instruments)
+    }
+
     missing = _compute_missing_required(
         db,
         assignments=assignments,
         fields_by_instrument=fields_by_instrument,
+        position_by_instrument_id=position_by_instrument_id,
     )
 
     if missing and not acknowledge_missing:
