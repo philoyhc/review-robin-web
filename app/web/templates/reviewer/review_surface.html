@@ -76,7 +76,7 @@
           <ul>
             {% for m in missing %}
               <li>
-                <strong>{{ m.reviewee_name }}</strong> — <code>{{ m.field_label }}</code>
+                {% if m.position %}<strong>Page {{ m.position }}:</strong> {% endif %}<strong>{{ m.reviewee_name }}</strong> — <code>{{ m.field_label }}</code>
               </li>
             {% endfor %}
           </ul>
@@ -112,7 +112,7 @@
          page-level cluster reads "act on this page"; Submit is the
          review-session-wide commit. The vertical divider visually
          separates the two scopes without splitting the row. #}
-      {% if any_accepting and not preview_mode %}
+      {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
         {% include "reviewer/_action_row.html" %}
       {% endif %}
       {# PR δ — every instrument group renders into the DOM. CSS hides
@@ -122,7 +122,8 @@
          click + updates the URL via ``history.pushState``. With JS
          disabled the surface is pinned to the page it was rendered
          at — the URL still drives initial visibility. #}
-      <div class="rs-paginated">
+      <div class="rs-paginated"
+           {% if not preview_mode %}data-rs-pushstate-prefix="/reviewer/sessions/{{ session.id }}/"{% endif %}>
       {% for group in instrument_groups %}
         <div class="rs-instrument-group{% if group.is_current %} rs-active{% endif %}"
              data-rs-position="{{ group.position }}">
@@ -278,6 +279,8 @@
           </p>
         {% endif %}
         {% include "reviewer/_action_row.html" %}
+      {% elif preview_mode and page_buttons %}
+        {% include "reviewer/_action_row.html" %}
       {% endif %}
     {% if preview_mode %}</div>{% else %}</form>{% endif %}
 
@@ -305,7 +308,7 @@
     </div>
   {% endif %}
 
-  {% if any_accepting and not preview_mode %}
+  {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
     {# PR δ — client-side page navigation + dirty-edit preservation.
        Every instrument group lives in the DOM at once; this handler
        toggles `.rs-active` on Page #N click, updates the URL via
@@ -316,12 +319,21 @@
        ``data-rs-saved-value`` baseline and clears the dirty flag.
        Save / Submit hits the server normally; the per-position Save
        filter (PR γ) drops cross-page inputs from Save's payload so
-       the route's scope stays "this page only". #}
+       the route's scope stays "this page only".
+
+       PR ε — also enabled in operator preview so the operator can
+       flip between pages on multi-instrument sessions. The Save /
+       Discard handlers no-op gracefully because the buttons aren't
+       rendered in preview; only Page #N click + popstate + dirty
+       tracking remain reachable. #}
     <script>
       (function () {
-        var sessionId = {{ session.id|tojson }};
         var root = document.querySelector(".rs-paginated");
         if (!root) return;
+        // ``data-rs-pushstate-prefix`` is rendered only on the live
+        // reviewer surface; operator preview omits it so Page #N
+        // clicks toggle visibility without rewriting the URL bar.
+        var pushStatePrefix = root.dataset.rsPushstatePrefix || "";
         var groups = Array.prototype.slice.call(
           root.querySelectorAll(".rs-instrument-group")
         );
@@ -390,10 +402,10 @@
             var position = btn.dataset.rsPage;
             if (!position) return;
             var matched = activate(position);
-            if (matched) {
-              var newUrl =
-                "/reviewer/sessions/" + sessionId + "/" + position;
-              window.history.pushState(null, "", newUrl);
+            if (matched && pushStatePrefix) {
+              window.history.pushState(
+                null, "", pushStatePrefix + position
+              );
             }
           });
         });
@@ -441,12 +453,16 @@
         // popstate (back / forward) — read the position out of the
         // URL and toggle visibility to match. Dirty edits survive
         // because every group lives in the DOM continuously.
-        window.addEventListener("popstate", function () {
-          var match = window.location.pathname.match(
-            /\/reviewer\/sessions\/\d+\/(\d+)/
-          );
-          if (match) activate(match[1]);
-        });
+        // Skipped in preview (no pushStatePrefix means we never
+        // pushed state in the first place).
+        if (pushStatePrefix) {
+          window.addEventListener("popstate", function () {
+            var match = window.location.pathname.match(
+              /\/reviewer\/sessions\/\d+\/(\d+)/
+            );
+            if (match) activate(match[1]);
+          });
+        }
       })();
     </script>
   {% endif %}

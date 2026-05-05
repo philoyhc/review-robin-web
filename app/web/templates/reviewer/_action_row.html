@@ -1,4 +1,5 @@
-{# Reviewer-surface unified action row (PR γ; PR δ wires JS).
+{# Reviewer-surface unified action row (PR γ; PR δ wires JS;
+   PR ε: collapses to just Page N buttons in operator preview).
    Mirrored top + bottom on the surface. Order, left-to-right,
    flush right:
 
@@ -17,28 +18,39 @@
    Save / Submit and the dirty-edit preservation guarantee is JS-
    only by design.
 
+   In ``preview_mode`` (operator preview), Save / Discard / divider /
+   Submit are suppressed so the row collapses to just the Page N
+   buttons — preview is read-only and synthetic, so Save / Submit
+   wouldn't write anything meaningful and Discard has nothing to
+   restore.
+
    Required context:
      - session: ReviewSession
      - current_position: int (URL position the surface was rendered at)
      - page_buttons: list[views.PageButton]
-   This partial is included only when ``any_accepting and not preview_mode``;
-   the caller handles that guard.
+     - preview_mode: bool
+   The caller renders the partial whenever there are page buttons to
+   show (live + accepting, or any preview with > 0 instruments).
 #}
 <div class="rs-action-row">
-  <button class="btn" type="submit" data-rs-save>Save</button>
-  <a class="btn secondary"
-     href="/reviewer/sessions/{{ session.id }}/{{ current_position }}"
-     data-rs-discard>Discard</a>
+  {% if not preview_mode %}
+    <button class="btn" type="submit" data-rs-save>Save</button>
+    <a class="btn secondary"
+       href="/reviewer/sessions/{{ session.id }}/{{ current_position }}"
+       data-rs-discard>Discard</a>
+  {% endif %}
   {% for page in page_buttons %}
     <button type="button"
             class="btn{% if page.is_current %} disabled{% endif %} rs-page-btn"
             data-rs-page="{{ page.position }}"
             {% if page.is_current %}aria-disabled="true"{% endif %}>{{ page.label }}</button>
   {% endfor %}
-  <span class="rs-action-divider" aria-hidden="true"></span>
-  <button class="btn"
-          type="submit"
-          formaction="/reviewer/sessions/{{ session.id }}/submit">
-    Submit
-  </button>
+  {% if not preview_mode %}
+    <span class="rs-action-divider" aria-hidden="true"></span>
+    <button class="btn"
+            type="submit"
+            formaction="/reviewer/sessions/{{ session.id }}/submit">
+      Submit
+    </button>
+  {% endif %}
 </div>

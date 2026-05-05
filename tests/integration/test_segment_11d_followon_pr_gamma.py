@@ -177,14 +177,12 @@ def test_action_row_orders_save_discard_pages_divider_submit(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
 
-    save_idx = body.find(">Save</button>")
-    discard_idx = body.find(">Discard</a>")
-    page1_idx = body.find("Page #1")
-    page2_idx = body.find("Page #2")
+    save_idx = body.find("data-rs-save")
+    discard_idx = body.find("data-rs-discard")
+    page1_idx = body.find('data-rs-page="1"')
+    page2_idx = body.find('data-rs-page="2"')
     divider_idx = body.find('class="rs-action-divider"')
-    submit_idx = body.find(">\n    Submit\n  </button>")
-    if submit_idx == -1:
-        submit_idx = body.find(">Submit</button>")
+    submit_idx = body.find("/submit")
 
     assert -1 < save_idx < discard_idx < page1_idx < page2_idx < divider_idx < submit_idx
 
