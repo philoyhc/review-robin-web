@@ -510,6 +510,30 @@ def test_save_draft_persists_and_reload_shows_values(
     assert "good work" in page.text
 
 
+def test_surface_renders_placeholder_hints_for_integer_and_string_fields(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The default instrument carries a 1-to-5int rating + a Long_text
+    comments field. Each input renders a ``placeholder`` derived from
+    its RTD's validation block so reviewers can read the expected shape
+    inside an empty input box."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-placeholder",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    assert 'placeholder="1 to 5, steps of 1"' in body
+    assert 'placeholder="0 to 2000 char"' in body
+
+
 def test_save_rejects_out_of_range_integer_and_keeps_typed_value(
     db: Session,
     alice: AuthenticatedUser,

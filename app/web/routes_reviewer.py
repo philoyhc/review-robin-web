@@ -308,6 +308,7 @@ def _surface_context(
                 {
                     "field": field,
                     "value": value if show_values else "",
+                    "placeholder": views.placeholder_for_field(field),
                 }
             )
         is_complete, missing_count, latest_submitted = (
@@ -529,7 +530,14 @@ def _make_synthetic_row(
         }
         for df in display_fields
     ]
-    cells = [{"field": field, "value": ""} for field in response_fields]
+    cells = [
+        {
+            "field": field,
+            "value": "",
+            "placeholder": views.placeholder_for_field(field),
+        }
+        for field in response_fields
+    ]
     return {
         "assignment": assignment,
         "cells": cells,
@@ -629,7 +637,14 @@ def build_preview_context(
         display_fields = display_fields_by_instrument.get(
             assignment.instrument_id, []
         )
-        cells = [{"field": field, "value": ""} for field in fields]
+        cells = [
+            {
+                "field": field,
+                "value": "",
+                "placeholder": views.placeholder_for_field(field),
+            }
+            for field in fields
+        ]
         display_cells = [
             {
                 "field": df,

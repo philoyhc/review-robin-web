@@ -232,6 +232,7 @@
                                   rows="2"
                                   style="min-height: 44px;"
                                   data-rs-saved-value="{{ cell.value }}"
+                                  {% if cell.placeholder %}placeholder="{{ cell.placeholder }}"{% endif %}
                                   {% if max_len %}maxlength="{{ max_len }}"{% endif %}
                                   {{ disabled_attr }}>{{ cell.value }}</textarea>
                       {% else %}
@@ -239,6 +240,7 @@
                                name="{{ field_name }}"
                                value="{{ cell.value }}"
                                data-rs-saved-value="{{ cell.value }}"
+                               {% if cell.placeholder %}placeholder="{{ cell.placeholder }}"{% endif %}
                                {% if max_len %}maxlength="{{ max_len }}"{% endif %}
                                {{ disabled_attr }}>
                       {% endif %}
@@ -248,6 +250,7 @@
                              name="{{ field_name }}"
                              value="{{ cell.value }}"
                              data-rs-saved-value="{{ cell.value }}"
+                             {% if cell.placeholder %}placeholder="{{ cell.placeholder }}"{% endif %}
                              {{ disabled_attr }}>
                     {% elif data_type == "List" %}
                       <select name="{{ field_name }}"
