@@ -163,6 +163,18 @@ def session_detail(
             "is_draft": lifecycle.is_draft(review_session),
             "is_validated": lifecycle.is_validated(review_session),
             "is_ready": lifecycle.is_ready(review_session),
+            # Freshly-created draft with at least one of reviewers /
+            # reviewees / assignments still empty. Computed after the
+            # validation flow so a session that just transitioned
+            # ``draft → validated`` no longer falls through this gate.
+            "is_setup_empty": (
+                lifecycle.is_draft(review_session)
+                and (
+                    csv_imports.existing_reviewer_count(db, review_session.id) == 0
+                    or csv_imports.existing_reviewee_count(db, review_session.id) == 0
+                    or assignments.existing_count(db, review_session.id) == 0
+                )
+            ),
             "has_responses": lifecycle.session_has_responses(db, review_session),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
         },

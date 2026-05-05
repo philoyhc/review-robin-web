@@ -124,7 +124,13 @@ def test_build_setup_rows_returns_expected_shape(
 def test_session_detail_renders_session_layout(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="layout-cards")
+    # ``_seed_pair`` populates reviewers / reviewees / assignments so
+    # the Next Action card lands in the populated-draft state (Validate
+    # Setup as Primary), not the freshly-created "not fully set up"
+    # short-circuit which intentionally suppresses action buttons.
+    review_session = _seed_pair(
+        client, db, code="layout-cards", reviewer_email="r@example.edu"
+    )
 
     response = client.get(f"/operator/sessions/{review_session.id}")
     body = response.text
@@ -137,7 +143,7 @@ def test_session_detail_renders_session_layout(
     # surfaces as the primary button label inside the card.
     assert 'id="next-action"' in body
     assert "<h2>Next Action</h2>" in body
-    # Draft state: primary button is "Validate Setup".
+    # Populated draft state: primary button is "Validate Setup".
     assert ">Validate Setup</a>" in body
     assert "<h2>Run Session</h2>" not in body
     assert "Danger Zone" in body
@@ -185,11 +191,13 @@ def test_setup_table_renders_manage_links(
 def test_session_detail_no_validate_summary_by_default(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="no-summary")
+    review_session = _seed_pair(
+        client, db, code="no-summary", reviewer_email="r@example.edu"
+    )
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    # Brand-new draft session — no validation card and no Activate
-    # form should appear. The Next action card surfaces "Validate
-    # Setup" as its primary button.
+    # Populated draft session, no ``?validated=1`` — no validation card
+    # and no Activate form should appear. The Next action card surfaces
+    # "Validate Setup" as its primary button.
     assert "<h2>Next Action</h2>" in body
     assert ">Validate Setup</a>" in body
     assert "<h2>Validation summary</h2>" not in body
@@ -199,36 +207,34 @@ def test_session_detail_no_validate_summary_by_default(
     )
 
 
-def test_session_detail_validation_failure_renders_inline_feedback(
+def test_session_detail_empty_rosters_renders_setup_short_circuit(
     client: TestClient, db: Session
 ) -> None:
-    """Clicking Validate Setup with empty rosters keeps the session in
-    draft (validation failed) and surfaces the failure inline in the
-    Next Action card body — counts as pills + a "Validation didn't
-    pass" headline + an explicit "resolve and re-run" instruction.
+    """A freshly-created draft (no reviewers / reviewees / assignments)
+    surfaces a "Session not fully set up" body and suppresses every
+    action button on the Next Action card — the operator's first move
+    is to fill the missing roster, not chase Validate.
 
-    Regression for the original 11D-era report: clicking Validate
-    Setup on an empty session was a no-op visually; the operator had
-    to navigate to /validate to see what was wrong.
-    """
-    review_session = _make_session(client, db, code="empty-validate")
+    Replaces the former empty-rosters-validation-failure test: with
+    this short-circuit in place, the Validate Setup button is no
+    longer reachable until the rosters are populated, so the inline
+    validation-failure feedback isn't the first thing an empty
+    session shows."""
+    review_session = _make_session(client, db, code="empty-shortcircuit")
     body = client.get(
         f"/operator/sessions/{review_session.id}?validated=1"
     ).text
 
-    # Stayed in draft — Validate Setup remains the Primary action.
-    assert ">Validate Setup</a>" in body
-    # Inline feedback present.
-    assert "Validation didn't pass." in body
-    # Pill row mirrors the validate page's pills (errors / warnings /
-    # info), so the operator sees the shape of the failure without
-    # leaving Home.
-    assert 'class="pill pill-error"' in body
-    assert "error" in body  # at least one error pill rendered with count
-    assert "Resolve the errors and re-run validation" in body
-    # The "See validation details" Secondary stays in the bottom row
-    # as the deeper read.
-    assert ">See validation details</a>" in body
+    assert "<h2>Next Action</h2>" in body
+    assert "Session not fully set up." in body
+    assert (
+        "Make sure that reviewers, reviewees, and assignments have been set up."
+        in body
+    )
+    # Action buttons suppressed in this state.
+    assert ">Validate Setup</a>" not in body
+    assert ">Activate Session</button>" not in body
+    assert ">See validation details</a>" not in body
 
 
 def test_session_detail_advances_to_validated_with_query(
