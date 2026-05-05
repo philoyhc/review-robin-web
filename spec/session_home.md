@@ -94,45 +94,71 @@ context that helps the operator decide whether to take it.
   section layout reads taller. Each state's vertical extent matches
   its content rather than padding to a uniform frame.
 
-**Body layout.** Three vertically-stacked blocks inside the card:
+**Body layout.** Three vertically-stacked blocks inside the card,
+in the standard treatment used by every state except Activated:
 
-1. `.next-action-body` — explanation paragraph(s), state-conditional. Grows
-   to fill available space (`flex: 1 1 auto`).
-2. `.next-action-confirm` — optional, used in `ready` to host the
-   pause-confirmation checkbox. Sits immediately above the button
+1. `.next-action-body` — explanation paragraph(s), state-conditional.
+   Grows to fill available space (`flex: 1 1 auto`).
+2. `.next-action-confirm` — optional, used in pre-Activated states
+   that need a confirm checkbox. Sits immediately above the button
    row so the operator's eye flows top-down: read → confirm →
    click.
 3. `.next-action-buttons` — the button row, pinned to the bottom.
    Primary action first, supporting actions following as
    Secondary buttons.
 
-**Buttons.** All actions render as buttons in the bottom row.
-Primary action uses Primary styling (solid `accent-blue`);
-supporting actions use Secondary styling (white background,
-default border). Inline middle-dot links are not used here. POST
-forms (Activate, Revert to draft, Pause) declare a hidden form
-id in the body and the bottom-row submit button declares
+The **Activated state is an exception** — its body splits into two
+inline sections separated by `<hr class="next-action-divider">`,
+each with its own buttons and (for the Pause section) its own
+`.next-action-confirm`. The bottom-pinned `.next-action-buttons`
+row is *not* rendered while Activated; the buttons live next to
+the body sections they belong to. See the per-state breakdown
+below.
+
+The empty-draft short-circuit state renders only a single
+paragraph in `.next-action-body` and skips both
+`.next-action-confirm` and `.next-action-buttons` entirely.
+
+**Buttons.** Primary action uses Primary styling (solid
+`accent-blue`); supporting actions use Secondary styling (white
+background, default border). Inline middle-dot links are not used
+here. POST forms (Activate, Revert to draft, Pause) declare a
+hidden form id in the body and the submit button declares
 `form="next-action-{name}-form"` so the form definition stays
-near its checkbox while the button lives in the row.
+near its checkbox while the button lives in the row (or, in the
+Activated state, in the inline section).
 
 **Contents by lifecycle state:**
 
-| State (enum / display) | Body | Primary | Supporting (Secondary) |
+| State / trigger | Body | Primary | Supporting (Secondary) |
 |---|---|---|---|
-| `draft` / Draft | "Run validation to surface errors and warnings before activating. Validation never mutates session data." | **Validate Setup** | See validation details |
-| `validated` / Validated (no errors) | "The session setup data has successfully validated. Preview the reviewer surface to make sure that it conforms to your requirements before activating." (+ optional `acknowledge_warnings` checkbox) | **Activate Session** | See validation details · See previews · Revert to draft |
-| `validated` / Validated (errors) | "Validation shows that there are error(s). Resolve them and re-run validation before activating." | **See validation details** | Revert to draft |
-| `ready` / Activated | "Session is currently activated. Reviewers can access forms and save responses. Pausing returns the session to draft and stops reviewers from submitting new responses. Existing responses will be preserved." | **Pause Session** (with confirm checkbox in `.next-action-confirm`) | Manage invitations · Monitor responses |
+| **Empty draft** — `is_draft` AND any of reviewers / reviewees / assignments has zero rows | "Session not fully set up. Make sure that reviewers, reviewees, and assignments have been set up before continuing." | — *(none)* | — *(none)* |
+| **Draft, pre-validation** — `is_draft`, rosters populated, no `?validated=1` yet | "Run validation to surface errors and warnings before activating. Validation never mutates session data." | **Validate Setup** | See validation details |
+| **Draft, validation just failed** — `is_draft` AND `validation_summary` populated (i.e. operator clicked Validate Setup but the report didn't pass) | "Validation didn't pass." headline + a pill row (`pill-error` / `pill-empty` / `pill-count` for error / warning / info counts) + "Resolve the errors and re-run validation before activating." | **Validate Setup** | See validation details |
+| **Validated (no errors)** — `is_validated` AND `can_activate` | "The session setup data has successfully validated. Preview the reviewer surface to make sure that it conforms to your requirements before activating." (+ optional `acknowledge_warnings` checkbox in the body when `needs_acknowledge`) | **Activate Session** | See validation details · See previews · Revert to draft |
+| **Validated (errors)** — `is_validated` AND not `can_activate` | "Validation shows that there are error(s). Resolve them and re-run validation before activating." | **See validation details** | Revert to draft |
+| **Activated** — `is_ready` | Two sections split by `<hr class="next-action-divider">`. **§1 body:** "Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers." **§2 body:** "Pausing returns the session to draft and stops reviewers from submitting new responses. Existing responses will be preserved." | **§1:** Manage invitations · **§2:** Pause Session (with `.next-action-confirm` carrying "Yes, pause [Session name] and return to draft.") | **§1:** Monitor responses |
 
 Notes:
 
+- **Empty-draft short-circuit.** The card surfaces a clear
+  "fill the rosters first" instruction rather than sending the
+  operator to Validate Setup, where every error would amount to
+  the same gap. The operator's path forward is the chrome top-nav
+  Manage links (Reviewers / Reviewees / Assignments), which stay
+  reachable while this state shows.
+- **Manage invitations promoted to Primary in `ready`.** During
+  the running session, inviting reviewers is the day-to-day
+  "doing things" action; Pause is the wind-down concern, separated
+  out into its own section so its consequences read explicitly.
 - **No "See previews" in `ready`.** Operators monitor live
   responses while Activated; previewing is the validation-time
   affordance.
-- **No status pills in body.** Earlier drafts surfaced a "Setup
-  validated" pill plus warning / info counts; the current spec
-  drops them in favour of plain prose. Lifecycle and per-entity
-  state belong in the chrome status strip, not the card body.
+- **No status pills in body** (other than the validation-failure
+  count row above). Earlier drafts surfaced a "Setup validated"
+  pill plus warning / info counts; the current spec drops them in
+  favour of plain prose. Lifecycle and per-entity state belong in
+  the chrome status strip, not the card body.
 - **Pause confirmation checkbox copy:** "Yes, pause [Session
   name] and return to draft." (lowercase "draft" — running
   prose).
@@ -263,9 +289,10 @@ work.
 
 | State (enum / display) | Next Action card | Quick Setup | Extract Data | Danger Zone Delete Session |
 |---|---|---|---|---|
-| `draft` / Draft | Primary: Validate Setup | Active (placeholder) | Greyed (placeholder) | Active |
+| `draft` / Draft, rosters empty | "Session not fully set up…" — no buttons | Active (placeholder) | Greyed (placeholder) | Active |
+| `draft` / Draft, rosters populated | Primary: Validate Setup | Active (placeholder) | Greyed (placeholder) | Active |
 | `validated` / Validated | Primary: Activate Session (or See validation details on errors) | Active (placeholder) | Greyed (placeholder) | Active |
-| `ready` / Activated | Primary: Pause Session (with confirm) | Greyed (placeholder) | Active (placeholder, button still disabled until Segment 12) | Visible-but-disabled |
+| `ready` / Activated | Two sections: Manage invitations (Primary) + Monitor responses; `<hr>`; Pause Session (Primary, with confirm) | Greyed (placeholder) | Active (placeholder, button still disabled until Segment 12) | Visible-but-disabled |
 
 Reserved states (Expired, Archived) not yet in scope. When
 introduced, this table extends with their treatment.
@@ -291,11 +318,21 @@ action card doing the explanatory job.
 
 ## Implementation pointers
 
-- The Next Action card's content is state-conditional but the
-  card's *frame* is constant — fixed min-height, constant H2,
-  blue border, button row at the bottom. Implement as a single
-  block in the template that switches body / confirm / buttons
-  by lifecycle state.
+- The Next Action card's content is state-conditional. The card
+  frame's constants are the H2 ("Next Action") and the
+  `accent-blue` border; height grows to fit content. The standard
+  body / confirm / buttons stack handles every state except
+  Activated, which uses an inline two-section layout. Implement as
+  a single block in the template that switches body / confirm /
+  buttons by lifecycle state.
+- The empty-draft short-circuit (rosters not yet populated) is a
+  special case computed in the route handler from
+  `lifecycle.is_draft(session)` plus
+  `csv_imports.existing_reviewer_count` /
+  `existing_reviewee_count` / `assignments.existing_count`. Computed
+  *after* the validation flow may have flipped `draft → validated`
+  so a session that just transitioned out of draft doesn't fall
+  through this gate.
 - Reuse the existing Primary / Secondary button styling from the
   visual style spec; do not introduce new button variants for
   this page.
