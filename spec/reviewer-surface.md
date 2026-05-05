@@ -13,12 +13,13 @@ renders one instrument at a time, and a page-actions row lets the
 reviewer move between instruments. Single-instrument sessions are a
 degenerate case of the same model.
 
-This spec **supersedes `spec/reviewer_map.md`**; that file is
-scheduled for retirement once this one settles. Where the two
-disagree, this one wins.
-
 Cross-references:
 
+- `spec/visual_style_rrw.md` "Response form layout and instrument
+  pacing" — the underlying principle (one page per instrument,
+  tabular form, pacing via operator instrument design). This spec
+  is the implementation contract for that principle on the live
+  surface.
 - `spec/visual_style_rrw.md` — top-bar / chrome conventions, banner
   family, status-icon classes.
 - `spec/visual_style_general.md` — `.card` / `.btn` / `.pill` / form
@@ -612,9 +613,19 @@ makes today + the small follow-on the deferred work needs.
 - **What lands later.** A new template (`reviewer/submitted.html` or
   similar) plus the helper change. The surface itself doesn't move.
 
-### AG Grid table
+### AG Grid table + large-table ergonomics
 
-- **Today.** Per-instrument rows render as a `<table>` inside
+`spec/visual_style_rrw.md` "Response form layout and instrument
+pacing → Large-table ergonomics" pins the following as first-class
+requirements (since the app's positioning depends on tabular review
+artifacts at scale): auto-save, return-to-place, visible progress,
+sticky column headers, filter-to-incomplete, keyboard navigation,
+and column-type ergonomics. None of those land in this surface
+spec; they belong in the forthcoming `response_form_component_spec.md`
+that picks up the AG-Grid (or equivalent) implementation. Notes on
+how the surface stays compatible:
+
+- **Today.** Per-instrument rows render as a plain `<table>` inside
   `.table-scroll`. Column-width hint classes (`.rs-narrow` /
   `.rs-reviewee` / `.rs-textlong`) on `<th>` / `<td>` carry the
   responsive sizing. The data driving each row is built in
@@ -626,11 +637,16 @@ makes today + the small follow-on the deferred work needs.
   emit HTML. Field metadata (label / data_type / validation) ships
   alongside the row data so a future JS-driven grid can render the
   same view shape without a second round-trip. The dict shape
-  becomes the implicit AG Grid column-defs source.
+  becomes the implicit AG Grid column-defs source. None of today's
+  routes need to change to swap the rendering layer.
 - **What lands later.** A new partial (`reviewer/_response_grid.html`
   or similar) loads AG Grid and mounts against a JSON payload built
   from the same `_surface_context` shape. The current `<table>` block
-  is replaced; nothing else moves.
+  is replaced; nothing else moves. The grid component picks up
+  auto-save, return-to-place, visible progress, sticky headers,
+  filter-to-incomplete, and keyboard navigation as part of the
+  same change — the principle treats them as one bundle, not as
+  individual follow-on features.
 
 ---
 
