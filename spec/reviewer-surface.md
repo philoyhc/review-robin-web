@@ -108,9 +108,13 @@ Top-to-bottom, the page renders:
        e.g. `Page 1: in progress`, `Page 2: complete`. State
        computed server-side from response data (see "Per-page status"
        below).
-     - Transient flash banners (saved / submitted / missing-required
-       / session-closed) inline within the panel when applicable;
-       they do not push other layout around.
+     - Transient session-closed banner inline within the panel when
+       the session is no longer accepting responses; does not push
+       other layout around. (Save / Submit no longer flash — the
+       per-page status pills are the canonical signal — and the
+       missing-required and invalid-value warnings render as their
+       own full-width cards below the bottom-grid, not inside the
+       panel.)
 5. **Action row (top)** — `.rs-action-row.rs-action-row-top`, flush
    right, the surface's main control strip. One row carrying every
    action, page-level and review-level, in this left-to-right order:
@@ -145,10 +149,14 @@ Top-to-bottom, the page renders:
      below.)
 6. **Instrument body** — heading, help-text card(s), reviewer table.
    Exactly one instrument's content renders per page.
-7. **Acknowledge missing checkbox** — when `show_acknowledge` is set
-   (server-driven on a session-wide Submit attempt that hits required
-   gaps), renders immediately above the bottom action row: "I
-   acknowledge required fields are missing — submit anyway."
+7. **Missing-required warning card** — `.rs-missing-card`, full-width
+   below the bottom-grid, two-column flow. Renders only after a
+   blocked Submit attempt; enumerates gaps as `Page N: Reviewee X —
+   field Y`. Submit is a **hard gate** (no acknowledge-and-submit-
+   anyway path); the reviewer fills the gaps and resubmits.
+   `data-rs-errors-card` (same chrome) surfaces server-side numeric
+   validation rejections, with the typed value preserved in the
+   originating input so the reviewer can correct in place.
 8. **Action row (bottom)** — `.rs-action-row`, flush right. Mirrors
    the top action row exactly: same buttons, same order, same
    divider before Submit. The repetition lets the reviewer act
@@ -194,10 +202,10 @@ guards that gap.
 
 | Button | Scope | HTTP | Behavior |
 |---|---|---|---|
-| **Save** | Page | POST `…/{position}/save` | Persist the **current page's** dirty inputs to the database. The form body carries inputs from every page (since they all live in the DOM); the route filters by `{position}` and ignores inputs that don't belong to that page's instrument. Greys out when the current page has no dirty inputs. 303 → `…/{position}?saved=ok` (transient flash in the right-half status panel). |
+| **Save** | Page | POST `…/{position}/save` | Persist the **current page's** dirty inputs to the database. The form body carries inputs from every page (since they all live in the DOM); the route filters by `{position}` and ignores inputs that don't belong to that page's instrument. Greys out when the current page has no dirty inputs. On success: 303 → `…/{position}` (no flash; the page-status pill in the right-half panel is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Discard** | Page | none — JS only | Reset every input on the current page to its **server-saved value** (a per-input baseline that the server renders into the page; the JS handler reads it and writes it back on click). No HTTP request, no database write, no audit. Other pages' unsaved edits are untouched. |
 | **Page N** | Page | none — JS only | Swap which instrument group is visible (CSS class toggle); update the URL via `pushState`. No HTTP request. Reviewer's typed-but-not-saved values on the previously-visible page stay in the DOM. The button for the current page is disabled. |
-| **Submit** | Review-session | POST `/reviewer/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. On missing-required without ack: 400, re-render the surface with `missing` populated and `show_acknowledge=True`. On success: 303 → `…/{position}?submitted=ok`. |
+| **Submit** | Review-session | POST `/reviewer/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{position}` (no flash; the per-page pill flips to `submitted` and the per-row submitted-timestamp surfaces in the status column). |
 | **Clear all** | Review-session | POST `/reviewer/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
 ### Why Submit is session-wide
@@ -457,25 +465,29 @@ Keep this dict shape stable — the AG Grid migration (see
 
 ---
 
-## Acknowledge missing required flow
+## Missing required flow
 
-Acknowledge is now **session-wide**, since Submit is session-wide:
+Submit is a **hard gate** on missing required, session-wide. There is
+no acknowledge-and-submit-anyway path; the reviewer must fill (or the
+operator must loosen the `required` constraint on) every required
+field before the submit lands.
 
 1. Reviewer hits Submit on any page with at least one required field
    blank anywhere in the session.
 2. Server returns 400 + re-renders the page they were on (whichever
-   `{position}` they submitted from) with:
-   - The missing-required `.banner.banner-warning` inside the right-
-     half flash/status panel, listing which page each missing field
-     lives on (so the reviewer knows where to navigate).
-   - `show_acknowledge=True`.
-3. The acknowledge checkbox renders immediately above the bottom
-   action row: "I acknowledge required fields are
-   missing — submit anyway."
-4. The reviewer can either navigate to the offending page and fill
-   the gaps, or tick the checkbox and click Submit again. Ticking the
-   checkbox session-wide-acknowledges; the server records the submit
-   + `acknowledged_missing: true` audit detail.
+   `{position}` they submitted from) with the full-width
+   `.rs-missing-card` below the bottom-grid, enumerating the gaps as
+   `Page N: Reviewee X — field Y` so the reviewer knows where to
+   navigate.
+3. The reviewer fills the gaps (using the per-page navigation
+   to reach each one) and re-clicks Submit. There is no checkbox,
+   no `show_acknowledge` template flag, and no
+   `acknowledged_missing` audit detail.
+
+The card carries a Cancel link back to the originating instrument
+page so the reviewer can also dismiss the warning without scrolling
+through the form (URL bar leaves the POST-only `/submit` endpoint
+behind).
 
 ---
 
@@ -724,8 +736,9 @@ re-architecting; see "Designed-for-extensibility" below.
 
 - **`beforeunload` warning** when the form is dirty.
 - **Standalone submission-confirmation page** ("thank you" surface).
-  Today the post-submit signal is the `?submitted=ok` flash banner in
-  the right-half status panel.
+  Today the post-submit signal is the per-page `submitted` pill in
+  the right-half status panel and the per-row submitted-timestamp in
+  the status column.
 - **AG Grid replacement of the reviewer-surface `<table>`** (catalog
   `unfinished_business.md` #33 — Segment 15).
 
@@ -763,14 +776,15 @@ makes today + the small follow-on the deferred work needs.
 ### Standalone submission-confirmation page
 
 - **Today.** `POST /reviewer/sessions/{id}/submit` 303s to
-  `…/{position}?submitted=ok`, which re-renders the surface with a
-  `.banner.banner-success` inside the right-half status panel.
+  `…/{position}` (no flash). The reviewer reads the post-submit
+  signal off the per-page `submitted` pill in the right-half panel
+  and the per-row submitted-timestamp in the status column.
 - **Design call.** The submit route's redirect target is computed via
-  a small helper (call it `submit_redirect_url(review_session,
-  position)`) rather than inlined. Today the helper returns
-  `f"/reviewer/sessions/{id}/{position}?submitted=ok"`. Tomorrow it
-  can return `f"/reviewer/sessions/{id}/submitted"` (session-level
-  thank-you) without touching any other code path.
+  a small helper (`submit_redirect_url(review_session, position)`)
+  rather than inlined. Today the helper returns
+  `f"/reviewer/sessions/{id}/{position}"`. Tomorrow it can return
+  `f"/reviewer/sessions/{id}/submitted"` (session-level thank-you)
+  without touching any other code path.
 - **What lands later.** A new template (`reviewer/submitted.html` or
   similar) plus the helper change. The surface itself doesn't move.
 
