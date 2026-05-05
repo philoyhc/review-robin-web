@@ -1,14 +1,20 @@
 # Reviewer page map
 
-> **Note (2026-05-03):** Sections referencing the operator chrome
-> (which reviewer pages share) and the standalone
+> **Superseded (2026-05-05).** `spec/reviewer-surface.md` is now
+> authoritative for the reviewer-facing app — the multi-instrument
+> rewrite of the response surface, plus the dashboard and invitation
+> landing. This file is retained only until the surface rewrite
+> ships; it will be deleted once the rewrite lands. Where the two
+> disagree, **`spec/reviewer-surface.md` wins**.
+
+> **Older note (2026-05-03):** Sections referencing the operator
+> chrome (which reviewer pages share) and the standalone
 > `/operator/sessions/{id}/preview` surface overlap with
 > `spec/visual_style_rrw.md` and `spec/preview_hub.md` respectively.
 > Those two files are now authoritative for the areas they cover.
 > Reviewer-facing chrome specifically is documented in
 > `spec/visual_style_rrw.md` "Reviewer-facing pages". Where this
-> file disagrees with either, the newer spec wins. A reconciliation
-> pass is pending.
+> file disagrees with either, the newer spec wins.
 
 Specification of the reviewer-facing page surface — the pages a
 signed-in reviewer sees when they follow an invitation link or

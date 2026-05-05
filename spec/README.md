@@ -18,7 +18,8 @@ deliberately as part of a feature change, never silently).
 | `operator_ui_concept.md` | Operator-facing page surface — page taxonomy (Overview, Control Panel, Setup Pages, Preview Pages, Operations Pages), navigation principles, per-page contracts. Reads upstream of `visual_style_rrw.md`. |
 | `preview_hub.md` | Functional spec for the Reviewer Experience Preview hub — read-only Operations Page rendering invitation email, response form, reminder email, and responses-received email for an operator-selected reviewer. |
 | `quick_setup_card_spec.md` | Functional spec for the Quick Setup card on Session Home — three-slot CSV upload (Reviewers, Reviewees, Assignments-or-rule) with shared confirm + cascade + lifecycle-lock semantics. |
-| `reviewer_map.md` | Reviewer-facing page surface — dashboard, review surface, invitation landing. |
+| `reviewer-surface.md` | Reviewer-facing app — multi-instrument-aware response surface (`/reviewer/sessions/{id}/{position}`), dashboard (`/reviewer`), and invitation landing (`/reviewer/invite/{token}`). Supersedes `reviewer_map.md`. |
+| `reviewer_map.md` | **Superseded by `reviewer-surface.md`** — kept until the surface rewrite ships, then retired. |
 | `assumptions.md` | UI vocabulary — six canonical button styles, typography knob, layout defaults, load-bearing assumptions. |
 
 Sibling folders:
