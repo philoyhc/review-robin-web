@@ -1,4 +1,4 @@
-# Segment 11E — Operator-editable email template editor
+# Segment 11E — Operator-editable email template editor + SMTP scaffolding
 
 Implementation plan for `unfinished_business.md` #24 — the operator-
 facing email template editor at
@@ -7,15 +7,29 @@ facing email template editor at
 `_reminder_body` helpers in `app/services/invitations.py` are two
 hardcoded plain-text strings. This segment ships the editor + the
 merge-field rendering layer so operators can shape their own
-invitations and reminders without code changes. **Real SMTP stays
-deferred to Segment 15** — this segment only changes the body that
-the dev outbox already renders.
+invitations and reminders without code changes, **plus the SMTP
+transport scaffolding** — a per-operator Settings page, encrypted
+credential storage, and a transport-agnostic send interface — that
+Segment 11C wires up on the Manage Invitations page. **Real SMTP
+sends do not happen in 11E**: outbox rows still write
+`status="queued"` and the dev outbox is the only sink the operator
+sees on this surface.
 
 ## Status
 
-Planning. Sized as **3 PRs** in dependency order (schema → editor
-UI → send-side refactor); each independently shippable on top of
-`main`.
+Planning. Sized as **5 PRs** in dependency order:
+1. Email-template schema + service-layer rendering.
+2. Editor UI (the two-card layout).
+3. Send-side refactor (template renderer wired into existing send
+   path; outbox rows still queued).
+4. Operator Settings page + per-operator credential storage
+   (encrypted at rest).
+5. Transport interface + SMTP backend (in code only, not yet
+   triggered).
+
+Each PR ships independently on top of `main`. Segment 11C picks up
+PR 5's interface and wires the Manage Invitations page to actually
+hit Send.
 
 ## Reference
 
@@ -62,12 +76,36 @@ In:
 - The `/setupinvite` setup-nav button label stays "Email Invites"
   (no change). Once the editor ships, `docs/status.md`'s row for
   `/setupinvite` flips from "stub" to its real description.
+- **Operator-level Settings page** at `/operator/settings`:
+  per-operator SMTP credential storage. The page sits behind the
+  user-menu dropdown (alongside About / Sign out) so it's reachable
+  from any surface. Card layout TBD at PR 4 review; minimum
+  contents per "SMTP credentials storage" below.
+- **Transport-agnostic send interface** in `app/services/email_send.py`.
+  Defines `EmailTransport` Protocol; ships an SMTP backend
+  (`SmtpEmailTransport` over `smtplib`); leaves a typed-stub
+  `GraphEmailTransport` placeholder so a future Graph addition is
+  a one-enum-value-plus-implementation change. The interface is
+  in place but **not yet invoked from any send path** in 11E.
+- **Two new audit events on top of the editor's two:**
+  `operator_email_settings.updated` / `operator_email_settings.cleared`.
 
 Out (deferred):
 
-- **Real SMTP** — Segment 15. The dev outbox stays the only sink
-  in this segment. Operators see the rendered body in the outbox
-  view as today.
+- **Activating actual sends** — the transport sits in code but no
+  route triggers it. **Segment 11C** wires per-row + bulk activate-
+  send and test-send affordances on the Manage Invitations page;
+  that's where outbox rows transition from `queued` to `sent` /
+  `failed`.
+- **Microsoft Graph backend.** The Protocol and a typed stub land
+  in 11E; the `httpx`-against-`/me/sendMail` implementation, Entra
+  app `Mail.Send` scope grant, and token-cache module all wait on
+  a future segment. The shape is designed to accept the Graph
+  backend without touching call sites.
+- **Outbox CC / BCC + error columns** — folded into 11C alongside
+  the send-activation work, since that's where they're observable.
+  The editor stores CC / BCC in the override JSON in 11E so the
+  operator-facing surface stays shape-stable across the cutover.
 - **CC / BCC at send time** — the editor stores them in the
   override JSON but the existing
   `email_outbox` table has only `to_email`. Send-path consumption
@@ -159,6 +197,86 @@ PR 2 ships pattern 1 unless the operator-UI direction at the time
 nudges otherwise. Pattern 2 trades vertical scroll for a flat
 mental model.
 
+## Operator Settings page
+
+Per-operator page at `/operator/settings`, reached from the user-
+menu dropdown. **Per-operator** because the send-as-me model means
+the operator who clicks Send needs their own credentials in the
+transport's `from_addr` / auth pair; no concept of a session-level
+or app-level shared mailbox in this segment.
+
+### Contents (PR 4)
+
+A single `.card.settings-card` (full-width, no two-column layout)
+carrying:
+
+| Field | Treatment | Notes |
+|---|---|---|
+| **Transport** | Read-only display | "SMTP (Outlook / Office 365)" — only legal value today. Documented as the slot a future Graph backend would swap into. |
+| **SMTP host** | Editable text input | Default placeholder `smtp.office365.com`. |
+| **SMTP port** | Editable number input | Default placeholder `587`. |
+| **Encryption** | Radio (STARTTLS / SSL) | Default `STARTTLS`. |
+| **From email** | Editable text input | The operator's Outlook address. Used as both SMTP `username` and the message `From`. |
+| **App password** | Editable password input | Empty by default; entering a value triggers a re-encrypt + persist. The page never re-renders the existing plaintext (it isn't stored). A "Password is set" / "Password is not set" indicator sits next to the field. |
+| **From display name** | Editable text input | Optional. Falls back to the From email when blank. |
+
+Action row at the bottom of the card: **Save** (Primary), **Clear
+all settings** (Destructive), **Cancel** (Secondary back to the
+last page). Saved confirmation is a `?saved=ok` flash inside the
+existing banner family.
+
+When the page loads with no credentials configured, an intro card
+sits above the form pointing at Microsoft's docs for generating
+SMTP-AUTH-compatible app passwords. Empty-state UX matters more
+here than usual — "configure SMTP" is one of the few in-app gates
+on actually sending mail.
+
+## Transport interface
+
+`app/services/email_send.py` defines the contract every backend
+implements:
+
+```python
+@dataclass(frozen=True)
+class EmailMessage:
+    from_addr: str
+    from_display_name: str | None
+    to: str
+    cc: list[str] = field(default_factory=list)
+    bcc: list[str] = field(default_factory=list)
+    subject: str = ""
+    body: str = ""
+
+@dataclass(frozen=True)
+class SendResult:
+    ok: bool
+    error_message: str | None = None
+    transport_response: str | None = None  # truncated, for audit
+
+class EmailTransport(Protocol):
+    def send(self, msg: EmailMessage) -> SendResult: ...
+```
+
+Backends:
+
+- **`SmtpEmailTransport`** — concrete, ships in PR 5. Wraps
+  `smtplib.SMTP` (STARTTLS) / `smtplib.SMTP_SSL`. Catches every
+  `smtplib` exception → `SendResult(ok=False, error_message=…)`.
+- **`GraphEmailTransport`** — typed stub in PR 5. Documents the
+  expected swap (`POST /me/sendMail` via `httpx`, OAuth2 token
+  cached per-operator). `raise NotImplementedError(...)` until a
+  future segment.
+
+`transport_for(settings: EmailSettings) -> EmailTransport`
+dispatches on `settings.transport`. Today only `"smtp"` is
+reachable; the factory shape leaves room for `"graph"` without
+touching call sites.
+
+Critically: **nothing in 11E imports `transport_for` from a
+route**. The interface and SMTP backend ship in PR 5 ready for
+import. Segment 11C's Manage Invitations send handler is the first
+caller.
+
 ## Proposed PR sequence
 
 ### PR 1 — Schema + service-layer template rendering
@@ -248,6 +366,119 @@ to a downstream reader of the outbox.
   to default when null; outbox row carries the merged body
   byte-exact; existing send-path tests still pass.
 
+### PR 4 — Operator Settings page + credential storage
+
+**Goal.** A signed-in operator can land on `/operator/settings` and
+persist their SMTP credentials. The credentials are encrypted at rest
+and decryptable on read. **No send path consumes them yet** — the
+read happens only in unit tests in 11E and in 11C's send-activation
+work.
+
+- New columns on `users` (operator-scoped, since "Send as me"):
+  - `smtp_host: Mapped[str | None]` (String(255)).
+  - `smtp_port: Mapped[int | None]` (Integer).
+  - `smtp_username: Mapped[str | None]` (String(320)).
+  - `smtp_password_encrypted: Mapped[bytes | None]` (LargeBinary)
+    — Fernet-encrypted; the plaintext is never persisted.
+  - `smtp_from_display_name: Mapped[str | None]` (String(255)).
+  - `smtp_encryption: Mapped[str | None]` (String(16) — one of
+    `"starttls"` / `"ssl"`).
+  - `smtp_transport: Mapped[str]` (String(16), default `"smtp"`)
+    — keyed for the future Graph swap. Today the only legal value
+    is `"smtp"`; the column is constrained at the service layer
+    rather than via a CHECK constraint to keep the migration small.
+- New `app/services/operator_settings.py`:
+  - `get_email_settings(user) -> EmailSettings | None` — returns
+    a frozen dataclass with the decrypted password if all fields
+    are populated; `None` otherwise. Callers (PR 5's transport
+    factory + 11C's send-activation) treat `None` as "operator
+    hasn't configured a transport yet."
+  - `save_email_settings(user, *, …, plaintext_password)` — encrypts
+    the password and upserts the row. Emits
+    `operator_email_settings.updated` audit with the diff (excluding
+    the password field; "password changed: yes/no" is the only
+    detail logged).
+  - `clear_email_settings(user)` — wipes every field. Emits
+    `operator_email_settings.cleared`.
+- New module `app/services/_secrets.py` (or fold into
+  `operator_settings.py`):
+  - `encrypt_password(plaintext) -> bytes` and
+    `decrypt_password(ciphertext) -> str` using
+    `cryptography.fernet.Fernet`.
+  - Reads the Fernet key from a new env var
+    `SMTP_ENCRYPTION_KEY` (Base64-encoded 32-byte key). **Fail-loud
+    on startup** if the env var is missing or malformed; refuse to
+    boot rather than risk writing unencrypted ciphertext or losing
+    decryption later. Add to `app/config.py`'s settings model.
+  - The `cryptography` package becomes a new runtime dependency
+    in `pyproject.toml`.
+- New route + template:
+  - `GET /operator/settings` — renders the form. Pre-fills every
+    field except the password (which renders as an empty input
+    plus a "Password is set" / "Password is not set" indicator
+    next to it; entering a new value re-encrypts; leaving it
+    empty preserves the existing value).
+  - `POST /operator/settings` — saves. 303 → same page with
+    `?saved=ok` flash.
+  - `POST /operator/settings/clear` — wipes the row. 303 → same
+    page.
+  - Page reachable from the user-menu dropdown (alongside the
+    existing About / Sign out items). Update
+    `app/web/templates/_partials/user_menu.html` (or wherever the
+    dropdown lives) accordingly.
+- No "Send test" button on the Settings page itself — that's
+  on Manage Invitations per 11C. The Settings page indicates only
+  whether the credential set is *complete* (every required field
+  populated), not whether it actually works.
+- **Empty-state copy** when no credentials are configured: a
+  short intro card pointing at Microsoft's app-password / SMTP
+  AUTH docs ("To send via Outlook / Office 365, generate an app
+  password at https://…"). Better than a blank form for first-
+  time operators.
+- Tests: round-trip encryption (encrypt then decrypt → original);
+  save form persists every field except the password when blank;
+  password upsert encrypts and decrypts correctly; clear wipes all
+  fields; audit events emit with the correct diff shape; missing
+  `SMTP_ENCRYPTION_KEY` causes a startup failure (or a fail-loud
+  exception when the encryption helper is first invoked, depending
+  on whether the env-var check is wired into `Settings` at import
+  time).
+
+### PR 5 — Transport interface + SMTP backend
+
+**Goal.** Send logic exists in code, fully testable, but no route
+in the app actually invokes it. The handoff to Segment 11C is a
+single import.
+
+- New `app/services/email_send.py`:
+  - `class EmailMessage` — frozen dataclass with `from_addr`,
+    `from_display_name`, `to`, `cc`, `bcc`, `subject`, `body`.
+  - `class SendResult` — frozen dataclass with `ok`,
+    `error_message`, `transport_response` (raw provider message,
+    truncated).
+  - `class EmailTransport(Protocol)` — `def send(self, msg:
+    EmailMessage) -> SendResult: ...`.
+  - `class SmtpEmailTransport(EmailTransport)` — concrete class
+    constructed from an `EmailSettings` dataclass. Uses
+    `smtplib.SMTP` with STARTTLS by default, `smtplib.SMTP_SSL`
+    when `encryption="ssl"`. Catches every `smtplib`-side
+    exception, normalises to `SendResult(ok=False, error_message=…)`;
+    never raises.
+  - `class GraphEmailTransport(EmailTransport)` — typed stub
+    (`raise NotImplementedError(...)` in `send`). Documented
+    in-line as "Segment 11+ — wire to httpx /me/sendMail."
+  - `transport_for(settings: EmailSettings) -> EmailTransport` —
+    factory that dispatches on `settings.transport`. Today only
+    `"smtp"` is reachable.
+- Tests cover the SMTP backend with a `unittest.mock`-patched
+  `smtplib.SMTP` (no real network): success, auth failure,
+  connection timeout, bad recipient. `GraphEmailTransport.send`
+  raises `NotImplementedError`.
+- **No call sites change in 11E.** `send_invitation` /
+  `send_reminder` continue writing `status="queued"` outbox
+  rows. `transport_for` is imported by 11C's Manage Invitations
+  send handler, which transitions queued rows to sent / failed.
+
 ## Implementation pointers
 
 - **Default templates.** The two existing strings are short enough
@@ -292,21 +523,34 @@ to a downstream reader of the outbox.
 
 ## Out of scope (cross-references)
 
-- **Real SMTP / Azure email backend.** Segment 15
-  (`guide/segment_15_operator_polish_and_documentation.md`).
-- **Outbox CC / BCC columns.** Folds into Segment 15's SMTP work.
+- **Activating actual sends** — Segment 11C wires Manage Invitations
+  per-row + bulk Send + test-send affordances on top of the
+  transport interface this segment ships. 11E's outbox rows stay
+  `status="queued"` until 11C lands.
+- **Microsoft Graph backend.** Protocol + typed stub here; full
+  implementation (httpx against `/me/sendMail`, Entra `Mail.Send`
+  scope grant, token cache) defer to a future segment.
+- **Outbox CC / BCC + error columns.** Folded into Segment 11C
+  alongside the send activation work, since that's where they're
+  observable.
 - **Per-reviewer / per-cohort body customization.** Not in this
   segment; a future enhancement if pilots ask for it.
 - **Rich-text / HTML email.** Segment 15 polish concern.
-- **Segment 11C — Operations consolidation.** Disjoint surface;
-  ships in parallel if capacity allows.
 
 ## Test impact
 
-- Two new test files: `tests/integration/test_email_template_editor.py`
-  (route + audit + override persistence) and
-  `tests/unit/test_email_templates.py` (renderer fall-through and
-  `safe_substitute` behaviour).
+- New test files:
+  - `tests/integration/test_email_template_editor.py` — editor
+    route + audit + override persistence (PR 2).
+  - `tests/unit/test_email_templates.py` — renderer fall-through
+    and `safe_substitute` behaviour (PR 1).
+  - `tests/integration/test_operator_settings.py` — Settings page
+    GET / Save / Clear, audit events, encryption round-trip
+    (PR 4).
+  - `tests/unit/test_email_send.py` — `SmtpEmailTransport` over
+    a mocked `smtplib.SMTP` (success + auth failure + connection
+    timeout + bad recipient); `GraphEmailTransport.send` raises
+    `NotImplementedError` (PR 5).
 - Existing `tests/integration/test_invitations.py` and
   `tests/unit/test_email_outbox.py` need a small update — assertions
   that match `_email_body`'s exact output continue to pass since
@@ -322,12 +566,16 @@ to a downstream reader of the outbox.
 
 - `docs/status.md` gains a timeline entry per PR; the "Capabilities
   today" line for `/setupinvite` flips from "stub" to its real
-  description after PR 2.
+  description after PR 2; a new "Capabilities today" line covers
+  `/operator/settings` after PR 4.
 - `guide/todo_master.md` — Segment 11E moves from **Upcoming** to
-  the **Segment 11** Done section once PR 3 ships. Cross-references
-  `unfinished_business.md` #24 (closed by this segment).
+  the **Segment 11** Done section once PR 5 ships. Cross-references
+  `unfinished_business.md` #24 (closed by this segment) and the
+  forward dependency from Segment 11C.
 - `guide/unfinished_business.md` #24 — strikethrough closure once
-  PR 3 ships, naming the merge PRs.
+  PR 5 ships, naming the merge PRs.
+- `guide/segment_11C_operations_consolidation.md` — picks up the
+  Manage Invitations send-activation scope. Update separately.
 - `spec/architecture.md` "Data import / export" can pick up a one-
   liner about the merge-tag rendering layer; verify on PR 1 review.
 - No new spec doc — this guide doubles as the spec until / unless
