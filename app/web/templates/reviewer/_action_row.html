@@ -1,13 +1,21 @@
-{# Reviewer-surface unified action row (PR γ). Mirrored top + bottom
-   on the surface. Order, left-to-right, flush right:
+{# Reviewer-surface unified action row (PR γ; PR δ wires JS).
+   Mirrored top + bottom on the surface. Order, left-to-right,
+   flush right:
 
        Save / Discard / Page #N: short_label / divider / Submit
 
    The vertical `.rs-action-divider` separates page-level controls
    (Save / Discard / Page N) from the review-session-level Submit.
-   Page buttons are server-side-navigation `<a>` anchors today; PR δ
-   swaps them for JS-driven `type="button"` controls that toggle
-   visibility client-side and preserve dirty edits across pages.
+   Page buttons render as `<button type="button">` with a
+   ``data-rs-page`` attribute carrying the position; the inline JS
+   handler in ``review_surface.html`` toggles ``.rs-active`` on the
+   matching ``.rs-instrument-group`` and updates the URL via
+   ``history.pushState``. With JS disabled the page buttons no-op
+   (the URL remains pinned to the page the surface was rendered at);
+   that's an acceptable graceful-degradation cost since the
+   reviewer surface already requires JS-free form behaviour for
+   Save / Submit and the dirty-edit preservation guarantee is JS-
+   only by design.
 
    Required context:
      - session: ReviewSession
@@ -17,13 +25,15 @@
    the caller handles that guard.
 #}
 <div class="rs-action-row">
-  <button class="btn" type="submit">Save</button>
+  <button class="btn" type="submit" data-rs-save>Save</button>
   <a class="btn secondary"
-     href="/reviewer/sessions/{{ session.id }}/{{ current_position }}">Discard</a>
+     href="/reviewer/sessions/{{ session.id }}/{{ current_position }}"
+     data-rs-discard>Discard</a>
   {% for page in page_buttons %}
-    <a class="btn{% if page.is_current %} disabled{% endif %} rs-page-btn"
-       href="{{ page.href }}"
-       {% if page.is_current %}aria-disabled="true"{% endif %}>{{ page.label }}</a>
+    <button type="button"
+            class="btn{% if page.is_current %} disabled{% endif %} rs-page-btn"
+            data-rs-page="{{ page.position }}"
+            {% if page.is_current %}aria-disabled="true"{% endif %}>{{ page.label }}</button>
   {% endfor %}
   <span class="rs-action-divider" aria-hidden="true"></span>
   <button class="btn"

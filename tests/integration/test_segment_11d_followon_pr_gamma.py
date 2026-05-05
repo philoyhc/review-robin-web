@@ -495,19 +495,21 @@ def test_save_drops_cross_page_assignment_inputs(
 # ── Rendering narrows to current position ────────────────────────────────
 
 
-def test_surface_renders_only_current_position_instrument(
+def test_surface_renders_all_groups_marks_current_active(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """The reviewer surface renders only the URL position's instrument
-    group. The other instrument's heading and table do not appear."""
+    """PR δ — every instrument group lives in the DOM at once
+    (rendered into ``.rs-paginated``); only the URL position's group
+    carries the ``rs-active`` modifier. CSS hides non-active groups
+    so dirty edits in hidden groups survive client-side navigation."""
     operator = make_client(alice)
     review_session, _, _ = _setup_two_instrument_session(
         operator,
         db,
-        code="rae-g-narrow",
+        code="rae-d-allgroups",
         first_short_label="Self-eval",
         second_short_label="Peer review",
     )
@@ -515,11 +517,27 @@ def test_surface_renders_only_current_position_instrument(
     body_p1 = rae_client.get(
         f"/reviewer/sessions/{review_session.id}/1"
     ).text
+    # Both headings render — non-active group is hidden via CSS, not
+    # omitted from the markup.
     assert "<h2>Page #1: Self-eval</h2>" in body_p1
-    assert "<h2>Page #2: Peer review</h2>" not in body_p1
+    assert "<h2>Page #2: Peer review</h2>" in body_p1
+    assert (
+        '<div class="rs-instrument-group rs-active"' in body_p1
+        and 'data-rs-position="1"' in body_p1
+    )
+    # Position 2 group is present without rs-active.
+    assert (
+        '<div class="rs-instrument-group"' in body_p1
+        and 'data-rs-position="2"' in body_p1
+    )
 
     body_p2 = rae_client.get(
         f"/reviewer/sessions/{review_session.id}/2"
     ).text
     assert "<h2>Page #2: Peer review</h2>" in body_p2
-    assert "<h2>Page #1: Self-eval</h2>" not in body_p2
+    assert "<h2>Page #1: Self-eval</h2>" in body_p2
+    # Active group flips to position 2 on /2.
+    assert (
+        '<div class="rs-instrument-group rs-active"' in body_p2
+        and 'data-rs-position="2"' in body_p2
+    )

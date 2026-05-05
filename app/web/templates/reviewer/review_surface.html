@@ -115,7 +115,17 @@
       {% if any_accepting and not preview_mode %}
         {% include "reviewer/_action_row.html" %}
       {% endif %}
+      {# PR δ — every instrument group renders into the DOM. CSS hides
+         the non-active ones via
+         `.rs-paginated > .rs-instrument-group:not(.rs-active)`; the
+         inline JS handler below toggles `.rs-active` on Page #N
+         click + updates the URL via ``history.pushState``. With JS
+         disabled the surface is pinned to the page it was rendered
+         at — the URL still drives initial visibility. #}
+      <div class="rs-paginated">
       {% for group in instrument_groups %}
+        <div class="rs-instrument-group{% if group.is_current %} rs-active{% endif %}"
+             data-rs-position="{{ group.position }}">
         {% if group.heading.title %}
           <div class="rs-instrument-heading">
             <h2>{{ group.heading.title }}</h2>
@@ -185,17 +195,23 @@
                        a <select> over the RTD's ``choices``. Slice 4a
                        contract; pre-Slice-4a rendering branched on
                        legacy literal type names. #}
+                    {# PR δ — `data-rs-saved-value` carries the
+                       last-saved value; the inline JS Discard handler
+                       reads it back into the input on click and
+                       clears the active group's dirty flag. #}
                     {% if data_type == "String" %}
                       {% if max_len > 100 %}
                         <textarea name="{{ field_name }}"
                                   rows="2"
                                   style="min-height: 44px;"
+                                  data-rs-saved-value="{{ cell.value }}"
                                   {% if max_len %}maxlength="{{ max_len }}"{% endif %}
                                   {{ disabled_attr }}>{{ cell.value }}</textarea>
                       {% else %}
                         <input type="text"
                                name="{{ field_name }}"
                                value="{{ cell.value }}"
+                               data-rs-saved-value="{{ cell.value }}"
                                {% if max_len %}maxlength="{{ max_len }}"{% endif %}
                                {{ disabled_attr }}>
                       {% endif %}
@@ -203,12 +219,15 @@
                       <input type="number"
                              name="{{ field_name }}"
                              value="{{ cell.value }}"
+                             data-rs-saved-value="{{ cell.value }}"
                              {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
                              {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
                              {% if validation.step is defined %}step="{{ validation.step }}"{% endif %}
                              {{ disabled_attr }}>
                     {% elif data_type == "List" %}
-                      <select name="{{ field_name }}" {{ disabled_attr }}>
+                      <select name="{{ field_name }}"
+                              data-rs-saved-value="{{ cell.value }}"
+                              {{ disabled_attr }}>
                         <option value=""{% if not cell.value %} selected{% endif %}>—</option>
                         {% for choice in (validation.choices or []) %}
                           <option value="{{ choice }}"{% if cell.value == choice %} selected{% endif %}>{{ choice }}</option>
@@ -218,6 +237,7 @@
                       <input type="text"
                              name="{{ field_name }}"
                              value="{{ cell.value }}"
+                             data-rs-saved-value="{{ cell.value }}"
                              {{ disabled_attr }}>
                     {% endif %}
                   </td>
@@ -244,7 +264,9 @@
             {% endfor %}
           </table>
         </div>
+        </div>{# /.rs-instrument-group #}
       {% endfor %}
+      </div>{# /.rs-paginated #}
 
       {% if any_accepting and not preview_mode %}
         {% if show_acknowledge %}
@@ -281,6 +303,152 @@
     <div class="card">
       <p class="muted">No assignments are visible to you in this session yet.</p>
     </div>
+  {% endif %}
+
+  {% if any_accepting and not preview_mode %}
+    {# PR δ — client-side page navigation + dirty-edit preservation.
+       Every instrument group lives in the DOM at once; this handler
+       toggles `.rs-active` on Page #N click, updates the URL via
+       ``pushState`` (so refresh / share retains position), and
+       preserves typed-but-not-saved edits across pages. The Save
+       button's enabled state tracks the active group's dirty flag;
+       Discard restores each input on the active group from its
+       ``data-rs-saved-value`` baseline and clears the dirty flag.
+       Save / Submit hits the server normally; the per-position Save
+       filter (PR γ) drops cross-page inputs from Save's payload so
+       the route's scope stays "this page only". #}
+    <script>
+      (function () {
+        var sessionId = {{ session.id|tojson }};
+        var root = document.querySelector(".rs-paginated");
+        if (!root) return;
+        var groups = Array.prototype.slice.call(
+          root.querySelectorAll(".rs-instrument-group")
+        );
+        if (groups.length === 0) return;
+        var pageButtons = Array.prototype.slice.call(
+          document.querySelectorAll("[data-rs-page]")
+        );
+        var saveButtons = Array.prototype.slice.call(
+          document.querySelectorAll("[data-rs-save]")
+        );
+        var discardButtons = Array.prototype.slice.call(
+          document.querySelectorAll("[data-rs-discard]")
+        );
+
+        function activeGroup() {
+          for (var i = 0; i < groups.length; i++) {
+            if (groups[i].classList.contains("rs-active")) return groups[i];
+          }
+          return null;
+        }
+
+        function setSaveEnabled(enabled) {
+          saveButtons.forEach(function (btn) {
+            btn.disabled = !enabled;
+          });
+        }
+
+        function recomputeSaveFromActive() {
+          var g = activeGroup();
+          setSaveEnabled(!!(g && g.dataset.rsDirty === "true"));
+        }
+
+        function activate(position) {
+          var matched = null;
+          groups.forEach(function (g) {
+            if (g.dataset.rsPosition === String(position)) {
+              g.classList.add("rs-active");
+              matched = g;
+            } else {
+              g.classList.remove("rs-active");
+            }
+          });
+          pageButtons.forEach(function (btn) {
+            var isCurrent = btn.dataset.rsPage === String(position);
+            btn.classList.toggle("disabled", isCurrent);
+            if (isCurrent) {
+              btn.setAttribute("aria-disabled", "true");
+            } else {
+              btn.removeAttribute("aria-disabled");
+            }
+          });
+          recomputeSaveFromActive();
+          return matched;
+        }
+
+        // Save initially disabled — markup is clean on first paint
+        // and dirty flags only flip in response to user input.
+        setSaveEnabled(false);
+
+        // Page #N button clicks toggle visibility client-side and
+        // pushState the new URL so refresh / share carries the
+        // current position.
+        pageButtons.forEach(function (btn) {
+          btn.addEventListener("click", function (event) {
+            event.preventDefault();
+            var position = btn.dataset.rsPage;
+            if (!position) return;
+            var matched = activate(position);
+            if (matched) {
+              var newUrl =
+                "/reviewer/sessions/" + sessionId + "/" + position;
+              window.history.pushState(null, "", newUrl);
+            }
+          });
+        });
+
+        // Dirty tracking — any input/change in the active group flips
+        // its dirty flag and enables Save. Listening on the root via
+        // event delegation covers dynamically rendered rows too.
+        root.addEventListener("input", function (event) {
+          var group = event.target.closest(".rs-instrument-group");
+          if (!group) return;
+          group.dataset.rsDirty = "true";
+          if (group.classList.contains("rs-active")) {
+            setSaveEnabled(true);
+          }
+        });
+        root.addEventListener("change", function (event) {
+          var group = event.target.closest(".rs-instrument-group");
+          if (!group) return;
+          group.dataset.rsDirty = "true";
+          if (group.classList.contains("rs-active")) {
+            setSaveEnabled(true);
+          }
+        });
+
+        // Discard — restore each input on the active group from its
+        // ``data-rs-saved-value`` baseline; clear dirty + disable Save.
+        // Falls back to the server-side discard link if there is no
+        // active group (defensive — should never happen in practice).
+        discardButtons.forEach(function (btn) {
+          btn.addEventListener("click", function (event) {
+            var group = activeGroup();
+            if (!group) return;
+            event.preventDefault();
+            var inputs = group.querySelectorAll(
+              "input[data-rs-saved-value], textarea[data-rs-saved-value], select[data-rs-saved-value]"
+            );
+            Array.prototype.forEach.call(inputs, function (input) {
+              input.value = input.dataset.rsSavedValue || "";
+            });
+            group.dataset.rsDirty = "";
+            setSaveEnabled(false);
+          });
+        });
+
+        // popstate (back / forward) — read the position out of the
+        // URL and toggle visibility to match. Dirty edits survive
+        // because every group lives in the DOM continuously.
+        window.addEventListener("popstate", function () {
+          var match = window.location.pathname.match(
+            /\/reviewer\/sessions\/\d+\/(\d+)/
+          );
+          if (match) activate(match[1]);
+        });
+      })();
+    </script>
   {% endif %}
 
 {% endblock %}

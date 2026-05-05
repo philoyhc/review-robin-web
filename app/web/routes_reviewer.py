@@ -373,6 +373,8 @@ def _surface_context(
             {
                 "instrument": instrument,
                 "heading": heading,
+                "position": position_by_id[instrument_id],
+                "is_current": position_by_id[instrument_id] == current_position,
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
@@ -421,27 +423,22 @@ def _surface_context(
             )
         )
 
-    # PR γ — narrow rendering to only the current page's instrument
-    # group. Pre-PR-γ the surface stacked every instrument group; PR
-    # γ flips this to single-page rendering (the URL position
-    # determines visibility). Page buttons + status pills above still
-    # reference all reviewer-accessible instruments so the reviewer
-    # can navigate.
-    visible_instrument_groups = [
-        g
-        for g in instrument_groups
-        if position_by_id[g["instrument"].id] == current_position
-    ]
-    visible_flat_rows: list[dict] = []
-    for g in visible_instrument_groups:
-        visible_flat_rows.extend(g["rows"])
+    # PR δ — render every instrument group the reviewer is assigned
+    # on; CSS hides the non-active ones via
+    # `.rs-paginated > .rs-instrument-group:not(.rs-active)`. The
+    # active group (matching the URL position) carries the
+    # ``rs-active`` modifier, set per ``group["is_current"]``. PR γ
+    # narrowed rendering server-side so cross-page dirty edits were
+    # discarded on Page click; PR δ flips that to client-side toggle
+    # so dirty edits survive navigation.
+    instrument_groups.sort(key=lambda g: g["position"])
 
     return {
         "user": user,
         "session": review_session,
         "reviewer": reviewer,
-        "instrument_groups": visible_instrument_groups,
-        "rows": visible_flat_rows,
+        "instrument_groups": instrument_groups,
+        "rows": flat_rows,
         "saved": saved,
         "submitted": submitted,
         "missing": missing or [],
@@ -454,6 +451,7 @@ def _surface_context(
         "any_closed_with_hidden_values": any_closed_with_hidden_values,
         "page_statuses": page_statuses,
         "page_buttons": page_buttons,
+        "current_position": current_position,
     }
 
 
@@ -703,6 +701,11 @@ def build_preview_context(
             {
                 "instrument": instrument,
                 "heading": heading,
+                "position": position,
+                # Operator preview always treats Page #1 as the active
+                # group; the synthetic surface has no client-side
+                # navigation handler.
+                "is_current": position == 1,
                 "rows": group_rows,
                 "help_block_items": help_block_items,
                 "display_fields": display_field_headers,
