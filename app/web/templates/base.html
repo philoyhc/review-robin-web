@@ -98,15 +98,16 @@
       /* Solid light-grey block — fill matches the `.card` border
          colour so the help text reads as a tinted slab inside the
          per-instrument intro grid rather than a regular card with
-         contrasting border + interior. ui-v2-scoped so it wins
-         against the `.card` background rule. */
-      body.ui-v2 .rs-help-card {
+         contrasting border + interior. Selector co-targets `.card`
+         to outweigh the later `body.ui-v2 .card` background rule
+         (equal class specificity but later wins on cascade). */
+      body.ui-v2 .card.rs-help-card {
         background: var(--border-default);
         padding: 10px 14px;
         border-radius: 6px;
         color: #444;
       }
-      body.ui-v2 .rs-help-card strong { color: #111827; }
+      body.ui-v2 .card.rs-help-card strong { color: #111827; }
       .warning-banner {
         border: 1px solid #f59e0b;
         background: #fef3c7;
@@ -1266,26 +1267,32 @@
         justify-content: flex-end;
         margin-top: var(--space-3);
       }
-      /* Per-instrument intro grid — heading card (short label +
-         description) in column 1, help text cards from column 2
-         onward. Bottom-aligned so the first help card lines up with
-         the heading card's bottom edge regardless of which is
-         taller. Below the 800px breakpoint the grid stacks, matching
-         the rest of the surface's 2-col primitives. */
+      /* Per-instrument intro grid — half-width heading card (short
+         label + description) sitting alone in column 1; column 2 is
+         intentionally empty so the card keeps the same visual width
+         as the description card up top. Help text cards live in a
+         separate `.rs-help-grid` row below. Both grids stack on
+         narrow screens. */
       body.ui-v2 .rs-intro-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        align-items: end;
         gap: var(--space-3);
         margin: var(--space-6) 0 var(--space-3) 0;
       }
+      body.ui-v2 .rs-help-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3);
+        margin: 0 0 var(--space-3) 0;
+      }
       @media (max-width: 800px) {
-        body.ui-v2 .rs-intro-grid {
+        body.ui-v2 .rs-intro-grid,
+        body.ui-v2 .rs-help-grid {
           grid-template-columns: 1fr;
         }
       }
       body.ui-v2 .rs-intro-grid .rs-instrument-card,
-      body.ui-v2 .rs-intro-grid .rs-help-card {
+      body.ui-v2 .rs-help-grid .rs-help-card {
         margin: 0;
       }
       body.ui-v2 .rs-instrument-card h2 { margin: 0; }
