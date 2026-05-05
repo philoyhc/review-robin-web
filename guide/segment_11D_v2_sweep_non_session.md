@@ -287,6 +287,13 @@ PR leaves the surface working for both single-instrument and
 multi-instrument sessions; the multi-instrument experience
 improves incrementally.
 
+A **sibling Setup-side PR** (PR S — see "Sibling: Setup-side
+instrument-name constraint" below) is a hard prerequisite for
+PR γ. PR S can ship any time before then in parallel with α / β;
+without it, PR γ's `Page N: name` button labels show the auto-
+generated `instrument_3` system handle, which is unhelpful copy
+for reviewers.
+
 ### PR α — URL routing + dashboard rewiring
 
 **Goal.** The new URL pattern works end-to-end. No visible layout
@@ -371,6 +378,12 @@ mirrored top + bottom. Page N: name buttons replace Previous /
 Next. Server-side navigation only (full page reload on Page N
 click) — client-side toggle lands in PR δ.
 
+**Hard prerequisite: PR S.** The `Page N: name` button label reads
+`Instrument.name`; until PR S adds the rename UI + 32-char ceiling,
+every instrument carries the auto-generated `instrument_N` system
+handle and the buttons read e.g. `Page 3: instrument_3`. Land PR
+S first.
+
 - Replace the current top + bottom action rows with a single
   unified `.rs-action-row` per side (top and bottom mirrored).
   Order, left-to-right: `Save`, `Discard`, `Page 1: name`,
@@ -392,10 +405,12 @@ click) — client-side toggle lands in PR δ.
 - `Page N: name` buttons render as `<a class="btn">` anchors
   pointing at `/reviewer/sessions/{id}/{n}` — server-side
   navigation, full page reload. Current page button is
-  `aria-disabled="true"`. Truncate label via inline
-  `style="max-width: 16em; text-overflow: ellipsis"` on the
-  anchor as a CSS safeguard until the Setup-side `max_length`
-  constraint ships (see "Out of scope" below).
+  `aria-disabled="true"`. Add a defensive
+  `max-width: 16em; text-overflow: ellipsis` rule on the page
+  buttons as defence-in-depth — PR S enforces a 32-char ceiling
+  at the data layer, but the CSS belt-and-suspenders means a
+  pre-existing oversized name (or a future migration glitch)
+  doesn't break the layout.
 - Acknowledge missing checkbox renders above the bottom action
   row when `show_acknowledge` is set.
 - Drop `Previous` / `Next` buttons + their inline JS (the
@@ -496,6 +511,93 @@ preview adapts to the new chrome.
 Test impact: moderate. Existing acknowledge tests update for
 session-wide model. Existing preview tests update for new chrome.
 
+### Sibling PR S — Instruments page: rename UI + 32-char `Instrument.name` constraint
+
+**Sibling track.** Independent of α / β; hard prerequisite for γ.
+Lands the Setup-side foundation that PR γ's `Page N: name`
+buttons depend on. Per the spike (`guide/segment_11D…` §
+"Pre-implementation spike"), today's instruments all carry an
+auto-generated `instrument_N` system handle and there's **no
+rename UI** — operators can't actually set a friendly name. PR
+γ's button labels need both halves: a place to set the friendly
+name, and a length cap so the buttons don't overflow the action
+row.
+
+**Goal.** Operators can set a short, reviewer-facing friendly
+name on each instrument (32-char ceiling). The name is what the
+reviewer surface puts on Page N buttons.
+
+Scope:
+
+- **Schema.** Alembic migration tightens `Instrument.name` from
+  `String(255)` to `String(32)`. Safe given the spike — no
+  existing names exceed 16 chars. The migration includes a guard
+  that fails fast if any pre-existing row has a name >32 chars
+  (defensive — shouldn't fire, but better an explicit migration
+  failure than silent truncation).
+- **Service-layer.** New `instruments.rename(...)` (or extend
+  `instruments.update_metadata(...)` if it exists) — accepts
+  `name: str`; raises a domain error when `len(name) > 32` or
+  `name == ""`. Auto-generated `instrument_N` names remain the
+  default for newly-created instruments; the rename UI overrides
+  them.
+- **Route.** New `POST /operator/sessions/{id}/instruments/{instrument_id}/rename`
+  taking a `name` form field. Lifecycle-gated by
+  `_require_instrument_editable` (same gate as other instrument
+  edits). Emits an `instrument.renamed` audit event with detail
+  `{"old_name": …, "new_name": …}`.
+- **Operator UI.** On the Instruments index page
+  (`operator/instruments_index.html`), each per-instrument card
+  gains a rename input — `<input type="text" name="name"
+  maxlength="32" required>` — adjacent to the existing
+  description textarea. Form submits to the new rename route.
+  Inline validation (HTML5 `maxlength` + `required`) catches
+  most issues; server-side validation is the source of truth.
+- **Reviewer-surface fallback.** Page N button label logic
+  treats two cases as "no friendly name set" → renders bare
+  `Page N`:
+  - Empty / missing name (defensive — schema enforces non-empty,
+    but render robustly).
+  - Auto-generated handle (matches the regex
+    `^instrument_\d+$`). When the operator hasn't bothered to
+    rename, showing "Page 3: instrument_3" is worse than just
+    "Page 3".
+
+  This rule lives in the page-button rendering helper; PR γ uses
+  the helper.
+
+Out of scope (deferred follow-ons):
+
+- A bulk-rename UI / CSV-of-names import. PR S lands the per-
+  instrument rename input only.
+- Validation that two instruments in the same session don't share
+  a name. The spec's UX accepts duplicates (the position prefix
+  disambiguates on the reviewer surface).
+- Renaming `Instrument.description` constraints (description is
+  shown above the table, not on a button — its 2000-char ceiling
+  stays).
+
+Test impact: small.
+- New unit test on the service-layer rename function (length
+  cap, empty rejection, audit emit).
+- New integration test on the rename route (success, 400 on
+  too-long input, 403 when session is `ready`).
+- Migration test confirming pre-existing data fits under the new
+  cap (safety guard).
+- No breakage in the reviewer-surface or operator-instruments
+  test suites — the rename UI is additive.
+
+Doc impact:
+
+- `spec/instruments_setup_spec.md` (forthcoming) — once written,
+  it cites the 32-char ceiling and the rename UI as already-
+  shipped behaviour.
+- `spec/reviewer-surface.md` "Instrument-name length constraint"
+  subsection updates to point at PR S's shipped state instead of
+  flagging it as forthcoming.
+- `spec/visual_style_rrw.md` "Implications for the reviewer
+  surface" — same one-line update.
+
 ## Implementation pointers
 
 - **Position resolution.** Implement once in
@@ -539,11 +641,6 @@ session-wide model. Existing preview tests update for new chrome.
 
 ## Out of scope (deferred)
 
-- **Setup-side `Instrument.name` length constraint.** Belongs in
-  the forthcoming `spec/instruments_setup_spec.md` and the
-  Segment-11E (Email Template editor) or a separate Setup-polish
-  segment. Until then, the surface ships the CSS truncation
-  safeguard.
 - **`beforeunload` warning** when the reviewer browser-closes,
   tab-closes, or navigates via `My Reviews` / address-bar with
   unsaved edits. The dirty-tracking machinery PR δ ships is the
