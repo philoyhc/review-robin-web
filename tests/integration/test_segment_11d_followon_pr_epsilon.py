@@ -281,10 +281,9 @@ def test_missing_required_card_carries_cancel_dismiss_button(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """The card ends with a Cancel button that dismisses it client-side
-    (``data-rs-missing-dismiss`` data attr drives an inline JS handler).
-    The dismiss is purely UI — it doesn't affect the form's
-    acknowledge-and-resubmit path."""
+    """The card ends with a Cancel link (``data-rs-missing-dismiss``)
+    that navigates back to the originating instrument page so the
+    URL bar leaves the POST-only ``/submit`` endpoint behind."""
     operator = make_client(alice)
     review_session, first, _ = _setup_two_instrument_session(
         operator, db, code="rae-e-dismiss"
@@ -304,7 +303,10 @@ def test_missing_required_card_carries_cancel_dismiss_button(
         follow_redirects=False,
     ).text
     assert "data-rs-missing-dismiss" in body
-    assert ">\n          Cancel\n        </button>" in body
+    assert (
+        f'href="/reviewer/sessions/{review_session.id}/1">\n          Cancel\n        </a>'
+        in body
+    )
     # Submit is a hard gate when required fields are missing; the
     # retired acknowledge-and-submit-anyway checkbox does not render.
     assert 'name="acknowledge_missing"' not in body

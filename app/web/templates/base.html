@@ -1232,9 +1232,11 @@
          grid (description + status panel) so it spans the whole
          surface width; the embedded `.rs-missing-list` uses CSS
          columns to flow across two columns at typical viewports and
-         collapses to one on narrow screens. The Cancel button
-         dismisses the card client-side via ``data-rs-missing-dismiss``;
-         the form's acknowledge-and-resubmit path is unchanged. */
+         collapses to one on narrow screens. The Cancel button is a
+         link (``data-rs-missing-dismiss``) back to the originating
+         instrument page so the URL bar leaves the submit endpoint
+         behind; the form's acknowledge-and-resubmit path is
+         unchanged. */
       body.ui-v2 .rs-missing-card {
         margin: var(--space-4) 0;
         border-color: var(--accent-amber);
