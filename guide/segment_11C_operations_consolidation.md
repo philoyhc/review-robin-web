@@ -1,10 +1,17 @@
-# Segment 11C — Operations consolidation (Invitations + Responses)
+# Segment 11C — Operations consolidation (Invitations + Responses) + email send activation
 
 Stub. Implementation plan for consolidating the running-session
 Operations work per `spec/operations_renew.md`. Sibling to
 Segment 11B (Session Home rebuild); both pull forward the
 operator-facing work originally bucketed in Segment 11A's #21
 sweep.
+
+**Also picks up the send-activation half of Segment 11E's email
+work** — 11E ships the editor, the operator Settings page, and the
+SMTP transport interface in a "ready but unwired" state; 11C wires
+that interface to per-row + bulk Send and test-send affordances on
+the consolidated Manage Invitations page so outbox rows actually
+transition from `queued` to `sent` / `failed`.
 
 The functional spec is **`spec/operations_renew.md`**. The page
 taxonomy + per-page contract summaries are in
@@ -14,8 +21,9 @@ detail.
 
 ## Status
 
-Planning. Sized as ~3–5 PRs to land in dependency order; each
-independently shippable.
+Planning. Sized as **~6 PRs** to land in dependency order (5
+operations-consolidation PRs already specced + 1 send-activation
+PR added on top); each independently shippable.
 
 ## Scope
 
@@ -46,6 +54,35 @@ In:
 - Single-source the reminder send-path so per-row + bulk reminders
   from either Invitations or Responses feed the same underlying
   email send.
+- **Wire the Segment 11E SMTP transport** into the Manage Invitations
+  page:
+  - Per-row Send button on each invitation row (transitions a
+    `queued` outbox row into a real send via the operator's
+    configured `EmailTransport`).
+  - Bulk Send-all-queued action (selection-driven via the
+    list-with-bulk-actions pattern PR B ships).
+  - Per-page "Send test to me" affordance — composes a synthetic
+    invitation message addressed to the signed-in operator's
+    email and pushes it through their transport. Useful as an
+    end-to-end verification step that the editor's Preview
+    doesn't cover.
+  - Transport-ready status pill in the chrome status row: green
+    "SMTP configured" when the operator has Settings populated,
+    grey "Configure SMTP" linking to `/operator/settings` when
+    they haven't.
+- **Outbox schema additions** to support the new send semantics:
+  - `error_message: Mapped[str | None]` (Text) on `email_outbox` —
+    captured when a send fails so the Outbox page can surface the
+    reason.
+  - `status` enum extended from `{queued, sent}` to
+    `{queued, sending, sent, failed}` (string column today; service-
+    layer enforces the value set).
+  - `cc_emails` / `bcc_emails` (Text — comma-separated) on
+    `email_outbox`. Populated from the editor's CC / BCC override
+    JSON (already stored in 11E) at queue time.
+- **Two new audit events:** `email.sent` (with the outbox row id,
+  recipient, transport response truncation) and `email.send_failed`
+  (with the outbox row id, error message).
 
 Out:
 
@@ -54,9 +91,13 @@ Out:
 - Live updating / auto-refresh — pages render snapshot data; a
   manual refresh affordance is the budget for this segment.
 - Reading individual response content from these pages (that's the
-  Extract Data flow, Segment 12).
-- Real SMTP / production email — still deferred to Segment 15;
-  reminder-send writes outbox rows in dev as today.
+  Extract Data flow, Segment 12 / 12A).
+- Microsoft Graph backend. Segment 11E lands the typed stub; the
+  full implementation (httpx against `/me/sendMail`, Entra
+  `Mail.Send` scope grant, token cache) is its own future segment.
+- Per-reviewer / per-cohort body customization. Stays at session
+  level via the editor's overrides; per-cohort would be a future
+  enhancement on top.
 
 ## Gap against the spec
 
@@ -100,8 +141,33 @@ and its dedicated route handler; the redirect from PR A keeps the
 URL alive. Sweep tests + cross-references to drop Monitoring
 mentions.
 
+**PR F — Email send activation.** Hard prerequisite: Segment 11E
+ships first (the editor, the operator Settings page, and
+`app/services/email_send.py`'s `EmailTransport` Protocol +
+`SmtpEmailTransport`). PR F:
+
+- Adds the outbox schema columns described in Scope (`error_message`,
+  expanded `status`, `cc_emails` / `bcc_emails`).
+- Wires `transport_for(settings)` from 11E into a new
+  `app/services/email_send_dispatch.py` that:
+  - Reads a queued outbox row, builds an `EmailMessage` from it,
+    invokes the operator's `EmailTransport.send(...)`, and writes
+    back the result (`sent` / `failed` + `error_message`).
+  - Refuses to dispatch if the initiating operator has no
+    `EmailSettings` configured — surfaces an inline error rather
+    than silently leaving the row queued.
+- Adds the per-row Send + bulk Send-all-queued + Send-test-to-me
+  affordances on the rebuilt Manage Invitations page (PR C
+  framework).
+- Adds the transport-ready chrome pill.
+- Emits `email.sent` / `email.send_failed` audit events.
+
 PR ordering can fold (e.g., A + B together, or D + E) depending on
-risk appetite once implementation starts.
+risk appetite once implementation starts. **PR F sequencing**:
+land it after PR C at the earliest (it consumes PR C's Manage
+Invitations rebuild); 11E PRs 4 + 5 (Settings page + transport
+interface) must already be merged. Folding F into D or E isn't
+recommended — they touch different surfaces.
 
 ## Implementation pointers
 
@@ -128,13 +194,36 @@ risk appetite once implementation starts.
 - **The Outbox tab** is purely a chrome change — the page itself is
   already on v2 (PR #366); it just stops being a hidden destination
   and becomes a first-class Operations tab.
+- **PR F transport dispatch.** Keep the dispatch helper *thin*:
+  - Read row → build `EmailMessage` → call `transport.send(msg)` →
+    persist result. No retries, no exponential backoff in this
+    segment; a failed row stays `failed` and the operator can
+    reset / re-queue it manually. Retry logic is a Segment 15
+    concern.
+  - Bulk Send iterates rows synchronously inside the request. For
+    a 200-reviewer session this is on the edge of acceptable
+    request latency; if it bites, async dispatch is its own
+    future PR. Note in the PR F description.
+  - Per-row Send POSTs are idempotent on `status="queued"` only
+    — clicking Send on a `sending`-state row returns 409. The
+    list-with-bulk-actions UI hides the per-row button when the
+    row isn't queued.
+- **PR F transport-ready pill.** Computed once per page load from
+  the signed-in operator's `EmailSettings`; cached on the request
+  if the chrome partial reads it on multiple pages. The pill links
+  to `/operator/settings` when grey.
 
 ## Out of scope (cross-references)
 
-- **Real SMTP / production email** — Segment 15.
-- **Operator-editable email template editor** — Segment 11A
-  remaining item (#24); independent of this segment.
-- **Reading response content / extraction** — Segment 12.
+- **Real SMTP service-account / shared mailbox** — out of scope;
+  send-as-me uses the operator's own credentials per Segment 11E.
+  A shared-mailbox model would be its own future segment.
+- **Microsoft Graph backend.** Protocol + typed stub land in 11E;
+  full Graph implementation (httpx, Entra scope grant, token
+  cache) is a future segment.
+- **Async / queued sending** — PR F dispatches synchronously inside
+  the request. Async / background dispatch is a Segment 15 concern.
+- **Reading response content / extraction** — Segment 12 / 12A.
 - **Per-instrument or per-assignment level dashboards** — out of
   scope; if eventually wanted, would compose on top of the Responses
   page rather than replacing it.
@@ -151,3 +240,13 @@ assertions in the same PR. Search hits include
 PR E retires the Monitoring page entirely; any test file scoped
 purely to the Monitoring page should be deleted (its coverage moves
 into the new Invitations + Responses test files).
+
+PR F adds new tests:
+- `tests/integration/test_email_send_dispatch.py` — per-row Send,
+  bulk Send-all-queued, Send-test-to-me, "no transport configured"
+  refusal, audit events emitted on success and failure.
+- `tests/unit/test_email_send_dispatch.py` — outbox row state
+  transitions (queued → sending → sent / failed); `error_message`
+  populated on transport failure; idempotency of per-row Send.
+- An Alembic round-trip test gains the new outbox columns
+  (`error_message`, `cc_emails`, `bcc_emails`).
