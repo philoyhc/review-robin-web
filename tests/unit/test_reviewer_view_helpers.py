@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import pytest
 
+from types import SimpleNamespace
+
 from app.db.models import Instrument
 from app.web.views import (
     InstrumentHeading,
     instrument_heading,
     page_button_label,
+    placeholder_for_field,
 )
 
 
@@ -151,3 +154,57 @@ def test_instrument_heading_treats_blank_strings_as_unset() -> None:
     assert instrument_heading(
         instrument=inst, position=2, total_count=2
     ) == InstrumentHeading(title="Page #2", subtitle=None)
+
+
+# ── placeholder_for_field ────────────────────────────────────────────────
+
+
+def _field(*, data_type: str, validation: dict | None) -> SimpleNamespace:
+    """A duck-typed stand-in for ``InstrumentResponseField``. The real
+    model derives ``data_type`` from a related RTD row, which is more
+    SQLAlchemy fixture work than ``placeholder_for_field`` warrants —
+    the helper only reads ``data_type`` and ``validation``."""
+    return SimpleNamespace(data_type=data_type, validation=validation)
+
+
+@pytest.mark.parametrize(
+    ("data_type", "validation", "expected"),
+    [
+        # String — `{min} to {max} char`, integers
+        ("String", {"min_length": 0, "max_length": 100}, "0 to 100 char"),
+        ("String", {"max_length": 2000}, "0 to 2000 char"),
+        # Integer — `{min} to {max}, steps of {step}`, no decimals
+        (
+            "Integer",
+            {"min": 1, "max": 5, "step": 1},
+            "1 to 5, steps of 1",
+        ),
+        (
+            "Integer",
+            {"min": 0, "max": 100, "step": 1},
+            "0 to 100, steps of 1",
+        ),
+        # Decimal — `{min} to {max}, steps of {step}`, one decimal place
+        (
+            "Decimal",
+            {"min": 1.0, "max": 5.0, "step": 0.5},
+            "1.0 to 5.0, steps of 0.5",
+        ),
+        (
+            "Decimal",
+            {"min": 1.0, "max": 5.0, "step": 0.1},
+            "1.0 to 5.0, steps of 0.1",
+        ),
+        # List rows have no shape hint to surface.
+        ("List", {"choices": ["Yes", "No"]}, ""),
+        # Incomplete validation blocks → no placeholder rather than a
+        # half-formed string.
+        ("Integer", {"min": 1, "max": 5}, ""),
+        ("String", {"min_length": 0}, ""),
+        ("Integer", None, ""),
+    ],
+)
+def test_placeholder_for_field_table(
+    data_type: str, validation: dict | None, expected: str
+) -> None:
+    assert placeholder_for_field(_field(data_type=data_type, validation=validation)) == expected

@@ -13,7 +13,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, ReviewSession, User
+from app.db.models import Instrument, InstrumentResponseField, ReviewSession, User
 from app.services import (
     assignments,
     csv_imports,
@@ -186,6 +186,33 @@ class PageButton:
     label: str
     href: str
     is_current: bool
+
+
+def placeholder_for_field(field: InstrumentResponseField) -> str:
+    """Short hint shown inside the input box when empty, so reviewers
+    know what shape a value should take. Mirrors the RTD's validation
+    block; returns ``""`` for List rows or when the validation block is
+    incomplete (e.g. an Integer RTD missing ``step``)."""
+    validation = field.validation or {}
+    data_type = field.data_type
+    if data_type == "String":
+        max_length = validation.get("max_length")
+        if max_length is None:
+            return ""
+        min_length = validation.get("min_length") or 0
+        return f"{int(min_length)} to {int(max_length)} char"
+    if data_type in ("Integer", "Decimal"):
+        min_ = validation.get("min")
+        max_ = validation.get("max")
+        step = validation.get("step")
+        if min_ is None or max_ is None or step is None:
+            return ""
+        if data_type == "Integer":
+            return (
+                f"{int(min_)} to {int(max_)}, steps of {int(step)}"
+            )
+        return f"{min_:.1f} to {max_:.1f}, steps of {step:.1f}"
+    return ""
 
 
 def _bulk_state(values: list[bool]) -> str:
