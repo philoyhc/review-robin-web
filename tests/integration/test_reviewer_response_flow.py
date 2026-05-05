@@ -268,7 +268,10 @@ def test_surface_help_text_multi_items_render_in_grid(
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
 
-    assert '<div class="rs-intro-grid">' in body
+    # Help cards live in their own `.rs-help-grid` row below the
+    # heading card's `.rs-intro-grid`; they no longer share a row
+    # with the heading.
+    assert '<div class="rs-help-grid">' in body
     assert body.count('class="card rs-help-card"') == 2
     assert "Rating help." in body
     assert "Comments help." in body
