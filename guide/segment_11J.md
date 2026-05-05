@@ -76,9 +76,29 @@ In:
   underlying cascade is already implemented in
   `csv_imports.save_reviewers` / `save_reviewees`; this segment
   surfaces the cascade in the confirmation prompt.
-- Per-slot inline result reporting on the same Home render after
-  the 303 round-trip — success message + updated count, or scoped
-  error banner. Errors in one slot do not affect other slots.
+- **No success flash banner.** Per the operator-page direction
+  set on the reviewer surface (Save / Submit retired their flash
+  banners — the status pill is the canonical success signal),
+  Quick Setup does **not** add a transient "8 reviewers loaded"
+  banner on the success 303. The slot's count indicator updates
+  in place ("Reviewers (8 currently)" → "Reviewers (47 currently)"),
+  which *is* the success signal; the file input clears and the
+  submit button greys out until the next file is chosen. One
+  fewer ephemeral piece of UI to dismiss.
+- **Error / confirmation banners follow the assumptions.md Cancel
+  convention.** When a slot needs a banner — parse / validation
+  error from the importer, or the cascade-preview confirmation
+  before replacing populated data — it renders inside the
+  destination slot using the canonical `.banner.banner-error` /
+  `.banner.banner-warning` classes, carries the
+  `banner-scroll-target` class for auto-scroll, and **always
+  includes a `.btn.alert` Cancel button** right-aligned at the
+  bottom that links back to a clean Home URL with a
+  `#quick-setup-{kind}` fragment. Confirmation banners pair the
+  Cancel with a `.btn.danger-solid` "Confirm replacement"; pure
+  error banners (parse / validation, no confirm path) make Cancel
+  the only button. This is the existing convention — no new
+  visual primitive, just consistent reuse.
 - Audit events stay where they already are (the existing per-entity
   upload services emit them); no new audit shapes.
 
@@ -166,8 +186,12 @@ fourth slots remain `placeholder_card` stubs in this PR.
   calls the same `_handle_import` core as the per-entity routes,
   but renders Home (via the existing context builders) on
   validation failure instead of the per-entity page. On success:
-  303 → Home with `?quick_setup=reviewers_loaded` (or similar) so
-  the slot's success line renders inline.
+  303 → Home with **no query flag** — the count indicator on the
+  slot updates in place, which is the success signal; no flash
+  banner. On parse / validation error: 303 → Home with a
+  `?quick_setup_error={kind}` flag so the GET render places a
+  `.banner.banner-error` (with mandatory Cancel button) inside
+  that slot, and the URL fragment lands on `#quick-setup-{kind}`.
 - Lifecycle gate stays where it already is in
   `_handle_import`'s call to `_require_editable`.
 - Disabled / lock-card path for `ready` / `closed` reuses the
@@ -175,11 +199,20 @@ fourth slots remain `placeholder_card` stubs in this PR.
   rather than re-rolling markup.
 - Tests:
   - Per-slot golden-path upload (each slot independently) on a
-    `draft` session.
-  - Replacement confirmation prompt fires when count > 0 on
-    submit; second submit (with `confirm_replace=1`) applies.
-  - Cascade-clearance copy renders when assignments exist on a
-    reviewer / reviewee replace.
+    `draft` session — assert the success render carries **no**
+    `.banner` element and the count indicator reflects the new
+    value.
+  - Replacement confirmation banner fires when count > 0 on
+    submit; carries a `.btn.alert` Cancel + `.btn.danger-solid`
+    Confirm; second submit (with `confirm_replace=1`) applies.
+    Cancel link points at `?` (no flag) with `#quick-setup-{kind}`
+    fragment.
+  - Cascade-clearance copy renders inside the same confirmation
+    banner when assignments exist on a reviewer / reviewee replace.
+  - Parse / validation error path: route 303s with
+    `?quick_setup_error={kind}`; GET render shows
+    `.banner.banner-error` scoped to that slot with the mandatory
+    Cancel button; other slots are unaffected.
   - `validated` → re-upload flips the session back to `draft`
     (already covered in `_handle_import`'s underlying tests; one
     additional integration test confirms the route surface
@@ -203,18 +236,25 @@ toggle.
     user=user)` (the helper is already wired to invalidate +
     audit).
   - CSV mode → the existing assignment CSV upload path.
-- Replace-confirmation copy per spec: "This will replace 104
-  existing assignments. Replace?" — no cascade messaging (per
-  spec, assignments are leaf data).
+- Replace-confirmation banner copy per spec: "This will replace
+  104 existing assignments. Replace?" — no cascade messaging (per
+  spec, assignments are leaf data). Banner uses the same
+  `.banner.banner-warning` + Cancel + Confirm shape as slots 1-2.
+- Success path: 303 → Home with no flag; the slot's count + rule
+  indicator updates in place ("Assignments (104 currently,
+  full-matrix rule)"). No flash banner.
 - Tests:
   - Rule-mode submission on an empty assignments table generates
-    N×N − N rows (or whatever FullMatrix's helper produces) and
-    the slot reports the count.
+    the FullMatrix row count and the slot's count + rule
+    indicator reflects it on the next render — assert no
+    `.banner` element on the success page.
   - Rule-mode submission on a populated table requires the
-    confirmation step.
-  - CSV-mode round-trip (parse error path → inline error scoped
-    to slot 3 only; success path → count + "loaded from file"
-    indicator).
+    confirmation banner; Cancel returns to a clean URL with the
+    `#quick-setup-assignments` fragment.
+  - CSV-mode parse-error path renders `.banner.banner-error`
+    scoped to slot 3 only with the mandatory Cancel button;
+    success path updates the count + "loaded from file"
+    indicator without a flash banner.
   - Lock state on `ready` / `closed`.
 
 ### PR C — Configuration-import slot (placeholder)
@@ -236,22 +276,41 @@ other three, so its location is stable when Segment 12A goes live.
 
 ## Implementation pointers
 
-- **Per-slot 303 + flash key.** Reuse the existing
-  `?validated=1`-style query-param flash convention rather than
-  introducing a session cookie. The Home context builder reads the
-  query param and surfaces the matching success line in the right
-  slot. Match whatever string the per-entity Setup pages already
-  use to avoid two parallel vocabularies.
-- **Confirmation pattern.** Spec §"Confirmation UI" mandates
-  inline (no modal). The Edit Session danger flow on Home already
-  uses an inline two-step pattern (submit transforms into "Confirm
-  replacement" + Cancel); reuse its CSS hooks rather than rolling
-  new ones.
+- **No success flash; count indicator is the signal.** Success
+  303s carry no query-string flag. The Home GET render reflects
+  the new state directly via the slot's count indicator, the
+  cleared file input, and (for assignments) the rule label
+  refreshing. This matches the reviewer-surface direction of
+  retiring transient post-success banners in favour of canonical
+  in-page state. Tests should assert the absence of `.banner` on
+  success renders so we don't drift back into flash territory.
+- **Banners only when something needs operator attention, and
+  always with Cancel.** Two cases need a banner: (a) parse /
+  validation error from the importer, (b) cascade-preview
+  confirmation before a populated-slot replacement. Both follow
+  `spec/assumptions.md` §"Inline error / warning banners":
+  - Use `.banner.banner-error` (red) for errors and
+    `.banner.banner-warning` (amber) for cascade-preview
+    confirmations.
+  - Carry the `banner-scroll-target` class plus a unique anchor
+    id (`id="quick-setup-{kind}-banner"`) so the page-wide
+    auto-scroll script in `base.html` brings the banner into
+    view.
+  - Right-align a `.btn.alert` **Cancel** button at the bottom
+    of every banner. Cancel links to a clean URL (no
+    `?quick_setup_error=...` flag) with a
+    `#quick-setup-{kind}` fragment that returns the operator to
+    the source slot. For confirmation-style banners the Confirm
+    button (`.btn.danger-solid`) sits next to Cancel; for pure
+    error banners Cancel is the only button.
+  - Render the banner **inside the destination slot**, not at
+    the top of Home, so it's visually anchored to the action
+    that produced it.
 - **Cascade copy.** The cascade itself is automatic in the
   existing `save_reviewers` / `save_reviewees` paths; this segment
-  only changes the confirmation copy. Centralise the copy in a
-  small helper (`views.cascade_message_for_replace(kind, counts)`)
-  so the four sentences live in one place.
+  only changes the confirmation banner copy. Centralise the
+  sentences in a small helper (`views.cascade_message_for_replace(
+  kind, counts)`) so the four cases live in one place.
 - **Lock card reuse.** `app/web/templates/operator/partials/`
   already has the yellow lock card component used by the Setup
   tabs. Wrap the disabled card in the same partial; do not
