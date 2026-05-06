@@ -11,7 +11,32 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  <div class="card">
-    <p class="form-help">Previews — placeholder.</p>
-  </div>
+  {% include "operator/partials/_preview_picker.html" %}
+
+  {% if not picker.options %}
+    <div class="card placeholder">
+      <p class="form-help">
+        The previews hub renders the invitation email, reviewer
+        surface, reminder email, and responses-received email each
+        reviewer would see — so you can spot-check what they get
+        before activating the session.
+      </p>
+    </div>
+  {% elif picker.current %}
+    <div class="card placeholder">
+      <p class="form-help">
+        Artifact previews — invitation email, reviewer surface,
+        reminder, and confirmation — land in upcoming PRs of segment
+        11F. The picker above already drives which reviewer's
+        artifacts will populate them.
+      </p>
+    </div>
+  {% else %}
+    <div class="card">
+      <p class="form-help">
+        Pick a reviewer above to preview the invitation, reviewer
+        surface, reminder, and confirmation they'd receive.
+      </p>
+    </div>
+  {% endif %}
 {% endblock %}
