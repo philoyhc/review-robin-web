@@ -52,7 +52,7 @@
       <form method="get"
             action="/operator/sessions/{{ session.id }}/responses">
         <div class="filter-row">
-          <label>
+          <label class="filter-status">
             Status:
             <select name="status">
               <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
@@ -61,12 +61,19 @@
               {% endfor %}
             </select>
           </label>
-          <label>
+          <label class="filter-search">
             Search:
             <input type="text"
                    name="q"
+                   list="responses-search-options"
                    value="{{ filter_search }}"
+                   autocomplete="off"
                    placeholder="Reviewee name or email">
+            <datalist id="responses-search-options">
+              {% for label in filter_search_options %}
+                <option value="{{ label }}"></option>
+              {% endfor %}
+            </datalist>
           </label>
         </div>
         <div class="filter-actions">

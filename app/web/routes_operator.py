@@ -2552,6 +2552,7 @@ def invitations_index(
 ) -> HTMLResponse:
     all_rows = views.build_invitations_rows(db, review_session)
     rows = views.filter_invitations_rows(all_rows, status=status, search=q)
+    search_options = views.invitations_search_options(all_rows)
     invitation_rows = invitations.list_invitations_for_session(
         db, review_session.id
     )
@@ -2575,6 +2576,7 @@ def invitations_index(
             "filter_status": status,
             "filter_search": q,
             "filter_status_options": views.INVITATIONS_STATUS_OPTIONS,
+            "filter_search_options": search_options,
             "eligible_count": len(eligible),
             "uninvited_count": sum(1 for r in eligible if r.id not in invited_ids),
             "pending_count": pending_count,
@@ -2828,6 +2830,7 @@ def session_responses(
     """
     all_rows = views.build_responses_rows(db, review_session)
     rows = views.filter_responses_rows(all_rows, status=status, search=q)
+    search_options = views.responses_search_options(all_rows)
     summary = monitoring.summary_counts(db, review_session)
     incomplete_count = summary.incomplete
     return _templates.TemplateResponse(
@@ -2842,6 +2845,7 @@ def session_responses(
             "filter_status": status,
             "filter_search": q,
             "filter_status_options": views.RESPONSES_STATUS_OPTIONS,
+            "filter_search_options": search_options,
             "incomplete_count": incomplete_count,
             "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(

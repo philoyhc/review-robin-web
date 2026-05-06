@@ -599,6 +599,11 @@
         flex-direction: column;
         gap: 4px;
       }
+      /* Status dropdown takes 1/3 of the row, Search input takes 2/3,
+         so the typeahead's "Name (email)" labels stay readable while
+         the dropdown collapses to its short option list. */
+      .filter-card .filter-row > label.filter-status { flex: 1; }
+      .filter-card .filter-row > label.filter-search { flex: 2; }
       .filter-card .filter-row select,
       .filter-card .filter-row input[type="text"] {
         width: 100%;
