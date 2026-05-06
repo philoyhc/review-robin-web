@@ -84,7 +84,29 @@
 <div class="card{% if quick_setup.is_disabled %} disabled{% endif %}" id="quick-setup">
   <h2>Quick Setup</h2>
   <p class="form-help">{{ quick_setup.description }}</p>
-  {% for slot in quick_setup.slots %}
+  {# Top: 2-column grid for the three setup slots. Left column
+     stacks Reviewers + Reviewees; right column carries
+     Assignments. Mobile collapses to single column in DOM order
+     (Reviewers → Reviewees → Assignments) per the standard
+     ≤800px breakpoint. #}
+  <div class="quick-setup-top-grid">
+    <div class="quick-setup-top-grid-col">
+      {% for slot in quick_setup.slots if slot.key in ("reviewers", "reviewees") %}
+        {{ quick_setup_slot(slot) }}
+      {% endfor %}
+    </div>
+    <div class="quick-setup-top-grid-col">
+      {% for slot in quick_setup.slots if slot.key == "assignments" %}
+        {{ quick_setup_slot(slot) }}
+      {% endfor %}
+    </div>
+  </div>
+  {# Bottom: full-width Configuration import slot below a divider.
+     The Configuration import slot is the only one whose live
+     wiring lands outside Segment 11J (Segment 12A PR 6 graduates
+     it), so visually separating it makes the seam explicit. #}
+  <hr class="quick-setup-divider">
+  {% for slot in quick_setup.slots if slot.key == "config_import" %}
     {{ quick_setup_slot(slot) }}
   {% endfor %}
 </div>

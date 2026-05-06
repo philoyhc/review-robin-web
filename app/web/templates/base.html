@@ -728,6 +728,47 @@
         border-top: 0;
         padding-top: 0;
       }
+      /* Quick Setup top-grid — 2 columns at desktop, single column
+         at narrow viewports. Left column stacks Reviewers +
+         Reviewees; right column carries Assignments. The
+         Configuration import slot lives below the
+         ``.quick-setup-divider`` outside this grid so it spans the
+         full card width. */
+      body.ui-v2 .quick-setup-top-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-4);
+        align-items: start;
+      }
+      body.ui-v2 .quick-setup-top-grid > * {
+        min-width: 0;
+      }
+      body.ui-v2 .quick-setup-divider {
+        margin: var(--space-4) 0 var(--space-3) 0;
+        border: 0;
+        border-top: 2px solid var(--border-default);
+      }
+      @media (max-width: 800px) {
+        body.ui-v2 .quick-setup-top-grid {
+          grid-template-columns: 1fr;
+          gap: 0;
+        }
+        /* Reinstate the separator between stacked columns on
+           narrow viewports — Assignments is :first-of-type in
+           the right column so it loses its border-top, but when
+           the grid collapses to one column it stacks directly
+           below Reviewees with no visual break. The selector
+           targets specifically the first slot of the second
+           column so Reviewers stays separator-less at the top
+           of the card. */
+        body.ui-v2 .quick-setup-top-grid-col
+          + .quick-setup-top-grid-col
+          .quick-setup-slot:first-of-type {
+          border-top: 1px solid var(--border-default);
+          padding-top: var(--space-3);
+          margin-top: var(--space-3);
+        }
+      }
       body.ui-v2 .quick-setup-slot-heading {
         margin: 0 0 var(--space-2) 0;
         font-size: 1rem;
