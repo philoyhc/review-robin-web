@@ -175,6 +175,42 @@ def test_extract_data_dom_carries_wire_target_attributes(
         assert f'data-wire-target="extract-data-{key}"' in body
 
 
+def test_extract_data_card_renders_counts_for_entity_rows_only(
+    client: TestClient, db: Session
+) -> None:
+    """Per the post-Part-1 polish, the four entity rows
+    (Reviewers / Reviewees / Assignments / Responses) surface their
+    raw count inline next to the title (e.g. ``Reviewers (1)``).
+    Session settings and the zip-bundle row keep the title-only
+    treatment — counts there are either redundant (instrument count
+    isn't a useful "Session settings" signal) or already implied
+    (zip aggregates everything above)."""
+
+    review_session = _seed_pair(
+        client, db, code="ed-counts", reviewer_email="r@example.edu"
+    )
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    # Entity rows render their count after the title.
+    assert "Reviewers <span" in body
+    assert "Reviewees <span" in body
+    assert "Assignments <span" in body
+    assert "Responses <span" in body
+    # Settings + Zip all keep title-only treatment.
+    assert "Session settings <span" not in body
+    assert "Zip all <span" not in body
+
+    # ExtractDataRow.show_count flag follows the same shape.
+    context = views.build_extract_data_context(db, review_session)
+    by_key = {r.key: r for r in context.rows}
+    assert by_key["reviewers"].show_count is True
+    assert by_key["reviewees"].show_count is True
+    assert by_key["assignments"].show_count is True
+    assert by_key["responses"].show_count is True
+    assert by_key["settings"].show_count is False
+    assert context.bundle.show_count is False
+
+
 def test_extract_data_buttons_are_aria_disabled_anchors(
     client: TestClient, db: Session
 ) -> None:
