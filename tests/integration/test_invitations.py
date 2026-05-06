@@ -372,6 +372,13 @@ def test_outbox_view_renders_invitation_url(
     assert response.status_code == 200
     assert "/reviewer/invite/" in response.text
     assert "rae@example.edu" in response.text
+    # Outbox is a first-class Operations tab in the chrome (Segment 11C
+    # Part 1). The tab links to the page and renders active when on it.
+    assert (
+        f'href="/operator/sessions/{session.id}/outbox">Outbox</a>'
+        in response.text
+    )
+    assert "nav-tab active" in response.text
 
 
 def test_audit_events_written_for_lifecycle(
