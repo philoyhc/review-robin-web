@@ -416,6 +416,256 @@ def build_instruments_context(
     }
 
 
+# ---------------------------------------------------------------------------
+# Segment 11G PR A — Validate page view-shape adapter
+# ---------------------------------------------------------------------------
+#
+# The Validate page is a read-only deep-dive into setup readiness. PR A
+# replaces the thin issue list with a structured layout: a top
+# **Readiness summary card** (verdict line + severity counts +
+# last-validated marker + lifecycle-aware secondary line), a
+# **Setup-coverage matrix** (per-entity inventory the operator scans
+# at a glance — useful even when the issue list is empty), and the
+# existing issue list partial.
+
+
+@dataclass(frozen=True)
+class SetupCoverageRow:
+    """One row of the Setup-coverage matrix.
+
+    ``label`` reads the row left-edge (e.g. "Reviewers"). ``status``
+    is a short summary string (e.g. "8" or "Default (no overrides)" or
+    "✓"). ``source`` matches the validation issue source slug so the
+    matrix can link to the issue list section when issues exist for
+    that source; ``None`` for rows that don't have a corresponding
+    issue source (e.g. "Help contact"). ``error_count`` /
+    ``warning_count`` come from the per-source issue tallies and drive
+    the inline pill counts when nonzero."""
+
+    label: str
+    status: str
+    source: str | None
+    error_count: int = 0
+    warning_count: int = 0
+
+
+@dataclass(frozen=True)
+class ValidateContext:
+    verdict_line: str
+    """Page's at-a-glance verdict ("Ready to activate.", "Has 3
+    errors.", "Ready to activate with 2 warnings.")"""
+    verdict_class: str
+    """``"verdict-clean"`` / ``"verdict-error"`` / ``"verdict-warn"``
+    — drives the colour-coded accent on the readiness summary card."""
+    error_count: int
+    warning_count: int
+    info_count: int
+    last_validated_text: str
+    """Today validation runs live on every GET. Renders as
+    "Validated just now" — sets expectations that re-running is free
+    and refresh-driven."""
+    lifecycle_copy: str
+    """Lifecycle-aware secondary line ("Activate from the Next Action
+    card on Session Home.", etc.)"""
+    setup_coverage: list[SetupCoverageRow]
+
+
+def validate_lifecycle_copy(
+    session_status: str, has_errors: bool, has_warnings: bool
+) -> str:
+    """Pure function — easy to unit-test the per-state secondary line.
+
+    The plan covers ``draft``, ``validated``, ``ready``, plus a future
+    ``closed`` state that's not yet part of the lifecycle enum. Falls
+    through to a generic line for any unexpected status."""
+    if session_status == "draft":
+        if has_errors:
+            return "Resolve the errors below before activating."
+        return "Activate from the Next Action card on Session Home."
+    if session_status == "validated":
+        return "Setup is validated. Activate from Session Home."
+    if session_status == "ready":
+        return (
+            "This session is live. Setup is locked. Revert to draft on "
+            "Session Home to make changes."
+        )
+    if session_status == "closed":
+        return "Session closed. This is a snapshot of the final setup state."
+    return ""
+
+
+def _verdict(error_count: int, warning_count: int) -> tuple[str, str]:
+    if error_count > 0:
+        plural = "" if error_count == 1 else "s"
+        return f"Has {error_count} error{plural}.", "verdict-error"
+    if warning_count > 0:
+        plural = "" if warning_count == 1 else "s"
+        return (
+            f"Ready to activate with {warning_count} warning{plural}.",
+            "verdict-warn",
+        )
+    return "Ready to activate.", "verdict-clean"
+
+
+def _setup_coverage_rows(
+    db: Session,
+    review_session: ReviewSession,
+    issue_counts_by_source: dict[str, tuple[int, int]],
+) -> list[SetupCoverageRow]:
+    sid = review_session.id
+
+    reviewer_count = csv_imports.existing_reviewer_count(db, sid)
+    reviewee_count = csv_imports.existing_reviewee_count(db, sid)
+    assignment_count = assignments.existing_count(db, sid)
+    instrument_count = len(
+        list(
+            db.execute(
+                select(Instrument).where(Instrument.session_id == sid)
+            ).scalars()
+        )
+    )
+    has_email_overrides = bool(review_session.email_template_overrides)
+    help_contact_set = bool(review_session.help_contact)
+    assignment_mode = review_session.assignment_mode
+
+    def _err_warn(source: str) -> tuple[int, int]:
+        return issue_counts_by_source.get(source, (0, 0))
+
+    rows: list[SetupCoverageRow] = []
+    e, w = _err_warn("session")
+    rows.append(
+        SetupCoverageRow(
+            label="Session name",
+            status="✓" if review_session.name else "—",
+            source="session",
+            error_count=e,
+            warning_count=w,
+        )
+    )
+    rows.append(
+        SetupCoverageRow(
+            label="Session code",
+            status="✓" if review_session.code else "—",
+            source="session",
+            error_count=0,
+            warning_count=0,
+        )
+    )
+    e, w = _err_warn("reviewers")
+    rows.append(
+        SetupCoverageRow(
+            label="Reviewers",
+            status=str(reviewer_count),
+            source="reviewers",
+            error_count=e,
+            warning_count=w,
+        )
+    )
+    e, w = _err_warn("reviewees")
+    rows.append(
+        SetupCoverageRow(
+            label="Reviewees",
+            status=str(reviewee_count),
+            source="reviewees",
+            error_count=e,
+            warning_count=w,
+        )
+    )
+    e, w = _err_warn("instruments")
+    rows.append(
+        SetupCoverageRow(
+            label="Instruments",
+            status=(
+                f"{instrument_count}" if instrument_count else "—"
+            ),
+            source="instruments",
+            error_count=e,
+            warning_count=w,
+        )
+    )
+    e, w = _err_warn("assignments")
+    rows.append(
+        SetupCoverageRow(
+            label="Assignments",
+            status=(
+                f"{assignment_count} · {assignment_mode}"
+                if assignment_count and assignment_mode
+                else (str(assignment_count) if assignment_count else "—")
+            ),
+            source="assignments",
+            error_count=e,
+            warning_count=w,
+        )
+    )
+    rows.append(
+        SetupCoverageRow(
+            label="Email template",
+            status=(
+                "Custom overrides" if has_email_overrides else "Default (no overrides)"
+            ),
+            source="email_template",
+            error_count=0,
+            warning_count=0,
+        )
+    )
+    rows.append(
+        SetupCoverageRow(
+            label="Help contact",
+            status="Set" if help_contact_set else "—",
+            source=None,
+        )
+    )
+    return rows
+
+
+def build_validate_context(
+    db: Session,
+    review_session: ReviewSession,
+    issues: list[Any],
+) -> ValidateContext:
+    """Builds the page's view-shape context. ``issues`` is the
+    ``list[ValidationIssue]`` returned by
+    ``validation.validate_session_setup``; PR B will extend this
+    function to thread the rule registry's per-issue ``fix_url`` /
+    ``fix_anchor``.
+
+    Severity filter (PR C) is intentionally not part of this adapter
+    yet — it will compose on top by filtering ``issues`` before this
+    function runs and adding a separate filtered-counts shape."""
+    error_count = sum(1 for i in issues if i.severity.value == "error")
+    warning_count = sum(1 for i in issues if i.severity.value == "warning")
+    info_count = sum(1 for i in issues if i.severity.value == "info")
+
+    issue_counts_by_source: dict[str, tuple[int, int]] = {}
+    for issue in issues:
+        e, w = issue_counts_by_source.get(issue.source, (0, 0))
+        if issue.severity.value == "error":
+            issue_counts_by_source[issue.source] = (e + 1, w)
+        elif issue.severity.value == "warning":
+            issue_counts_by_source[issue.source] = (e, w + 1)
+
+    verdict_line, verdict_class = _verdict(error_count, warning_count)
+    setup_coverage = _setup_coverage_rows(
+        db, review_session, issue_counts_by_source
+    )
+    lifecycle_copy = validate_lifecycle_copy(
+        review_session.status,
+        has_errors=error_count > 0,
+        has_warnings=warning_count > 0,
+    )
+
+    return ValidateContext(
+        verdict_line=verdict_line,
+        verdict_class=verdict_class,
+        error_count=error_count,
+        warning_count=warning_count,
+        info_count=info_count,
+        last_validated_text="Validated just now",
+        lifecycle_copy=lifecycle_copy,
+        setup_coverage=setup_coverage,
+    )
+
+
 def session_status_pills(
     db: Session, review_session: ReviewSession
 ) -> SessionStatusPills:

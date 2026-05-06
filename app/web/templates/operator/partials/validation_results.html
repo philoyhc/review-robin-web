@@ -3,7 +3,7 @@
     <h2>Issues</h2>
     {% set sources = issues | map(attribute='source') | unique | list %}
     {% for source in sources %}
-      <h3 style="text-transform: capitalize;">{{ source }}</h3>
+      <h3 id="issue-source-{{ source }}" style="text-transform: capitalize;">{{ source }}</h3>
       <ul>
         {% for issue in issues if issue.source == source %}
           <li>

@@ -306,10 +306,11 @@ def test_validate_page_activate_form_removed(
         f'action="/operator/sessions/{review_session.id}/activate"'
         not in body
     )
-    # Page still renders counts + validation results
+    # Page still renders severity counts + validation results.
     assert "0 errors" in body
-    # The Activate hint about the inline summary card is present
-    assert "inline summary card" in body
+    # 11G PR A reshaped the page; the lifecycle-aware secondary line
+    # now points the operator at Session Home for activation.
+    assert "Activate from the Next Action card on Session Home." in body
 
 
 # ---------------------------------------------------------------------------
