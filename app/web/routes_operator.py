@@ -196,6 +196,7 @@ def new_session_form(
         "operator/session_new.html",
         {
             "user": user,
+            "quick_setup": views.build_new_session_quick_setup_context(),
             "breadcrumbs": breadcrumbs.operator_new_session(),
         },
     )

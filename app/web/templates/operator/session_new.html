@@ -37,4 +37,17 @@
       </div>
     </form>
   </div>
+
+  {# Quick setup (optional) — half-width preview card on the
+     bottom-left. Always unlocked here (no Lock / Unlock button)
+     and counts are always 0 because there's no session row yet;
+     the operator sees the eventual shape so the post-create
+     workflow on Session Home isn't a surprise. The right column
+     of the .bottom-grid stays empty. #}
+  <div class="bottom-grid">
+    <div>
+      {% include "operator/partials/_quick_setup_card.html" %}
+    </div>
+    <div></div>
+  </div>
 {% endblock %}

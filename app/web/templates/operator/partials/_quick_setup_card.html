@@ -88,7 +88,7 @@
 {%- endmacro %}
 
 <div class="card{% if quick_setup.is_disabled %} disabled{% endif %}" id="quick-setup">
-  <h2>Quick Setup</h2>
+  <h2>{{ quick_setup.title }}</h2>
   <p class="form-help">{{ quick_setup.description }}</p>
   {# Body wrapper that picks up ``.locked`` greying when the card
      is editable but locked (default state). The Lock / Unlock
@@ -123,13 +123,15 @@
       {{ quick_setup_slot(slot) }}
     {% endfor %}
   </div>
-  {# Footer: Lock / Unlock toggle, bottom-right. Renders only when
-     the session is editable (``draft`` / ``validated``). On
-     Activated sessions the whole card is greyed via
-     ``.card.disabled`` and the operator's path forward is Pause,
-     not unlock — so no toggle here. The button is a placeholder
-     in 11H; Segment 11J wires the toggle. #}
-  {% if not quick_setup.is_disabled %}
+  {# Footer: Lock / Unlock toggle, bottom-right. Gated by
+     ``show_lock_toggle`` — on Session Home the toggle renders
+     whenever the card is editable; on Activated sessions the
+     whole card is greyed via ``.card.disabled`` and the path
+     forward is Pause, not unlock. The new-session preview variant
+     also suppresses the toggle (always unlocked, nothing yet to
+     lock). The button is a placeholder in 11H; Segment 11J wires
+     the toggle. #}
+  {% if quick_setup.show_lock_toggle %}
     <div class="quick-setup-card-footer">
       <button type="button"
               class="btn secondary"

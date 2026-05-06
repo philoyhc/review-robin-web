@@ -502,12 +502,24 @@ class QuickSetupContext:
       whenever the card is editable so the operator must
       deliberately unlock before any setup change. The button is a
       placeholder in 11H — Segment 11J wires the toggle.
+
+    ``title`` overrides the H2 text. Session Home uses the default
+    ``"Quick Setup"``; the new-session preview variant uses
+    ``"Quick setup (optional)"`` to convey that the card surfaces
+    early as a hint about post-creation setup paths.
+
+    ``show_lock_toggle`` gates the Lock / Unlock footer button.
+    Session Home renders it whenever the card is editable; the
+    new-session preview variant suppresses it (the card is always
+    unlocked there because there's nothing yet to lock).
     """
 
     slots: list[QuickSetupSlot]
     is_disabled: bool
     is_locked: bool
     description: str
+    title: str = "Quick Setup"
+    show_lock_toggle: bool = True
 
 
 def build_quick_setup_context(
@@ -596,6 +608,78 @@ def build_quick_setup_context(
         is_disabled=is_disabled,
         is_locked=is_locked,
         description=description,
+        # Title stays the default "Quick Setup" on Session Home.
+        # Lock toggle renders whenever the card is editable; on
+        # Activated sessions the operator's path forward is Pause,
+        # not Unlock, so the toggle is suppressed.
+        show_lock_toggle=not is_disabled,
+    )
+
+
+def build_new_session_quick_setup_context() -> QuickSetupContext:
+    """Quick Setup placeholder for the ``/operator/sessions/new`` page.
+
+    There is no session row yet, so all four slots show zero counts
+    and no wire URLs. The card is always unlocked (``is_locked=False``)
+    and the Lock / Unlock toggle is suppressed (the lock concept has
+    nothing to lock here). Heading reads ``"Quick setup (optional)"``
+    to convey this is a forward-looking hint, not a working surface.
+    """
+
+    slots = [
+        QuickSetupSlot(
+            key="reviewers",
+            label="Reviewers",
+            count=0,
+            count_summary="none yet",
+            mode="file_upload",
+            is_wired=False,
+            wire_url=None,
+            coming_in="Wired in Segment 11J PR A",
+        ),
+        QuickSetupSlot(
+            key="reviewees",
+            label="Reviewees",
+            count=0,
+            count_summary="none yet",
+            mode="file_upload",
+            is_wired=False,
+            wire_url=None,
+            coming_in="Wired in Segment 11J PR A",
+        ),
+        QuickSetupSlot(
+            key="assignments",
+            label="Assignments",
+            count=0,
+            count_summary="none yet",
+            mode="rule_or_csv",
+            is_wired=False,
+            wire_url=None,
+            coming_in="Wired in Segment 11J PR B",
+        ),
+        QuickSetupSlot(
+            key="settings",
+            label="Session settings",
+            count=0,
+            count_summary="upload a session-settings CSV",
+            mode="file_upload",
+            is_wired=False,
+            wire_url=None,
+            coming_in="Wired in Segment 12A PR 6",
+        ),
+    ]
+
+    return QuickSetupContext(
+        slots=slots,
+        is_disabled=False,
+        is_locked=False,
+        description=(
+            "Bulk-populate reviewers, reviewees, and assignments "
+            "from files or rules in one place — available on "
+            "Session Home after the session is created."
+        ),
+        title="Quick setup (optional)",
+        show_lock_toggle=False,
     )
 
 
