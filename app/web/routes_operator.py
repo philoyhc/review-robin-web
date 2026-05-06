@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import secrets
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -1316,18 +1318,24 @@ def setupinvite_reset(
 
 
 @router.get("/sessions/{session_id}/previews", response_class=HTMLResponse)
-def previews_stub(
+def previews_index(
     request: Request,
+    reviewer_email: str = "",
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    """Placeholder for the Operations-row Previews tab.
+    """Operations-row Previews tab — pre-flight reviewer experience hub.
 
     Distinct from ``/preview`` (singular), which is the operator's
-    preview of the reviewer surface. ``/previews`` (plural) lands the
-    operator on a hub for surfaces under construction.
+    preview of the reviewer surface and is retired in PR C of segment
+    11F. The picker is GET-driven via ``?reviewer_email=``; an
+    unmatched value renders an inline "No reviewer matched" note
+    rather than 404 or fall back to first.
     """
+    picker = views.build_preview_picker_context(
+        db, review_session, reviewer_email
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_previews.html",
@@ -1338,7 +1346,40 @@ def previews_stub(
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Previews"
             ),
+            "picker": picker,
         },
+    )
+
+
+@router.post("/sessions/{session_id}/previews/random")
+def previews_random(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Pick a random reviewer and 303 to the previews page.
+
+    Random selection happens server-side via ``secrets.choice`` so no
+    list of reviewer emails has to leak into client-side JS. Empty
+    sessions 303 back without a ``?reviewer_email=`` param so the
+    picker stays in its disabled empty state.
+    """
+    reviewers = list(
+        db.execute(
+            select(Reviewer)
+            .where(Reviewer.session_id == review_session.id)
+            .order_by(Reviewer.email)
+        ).scalars()
+    )
+    base_url = f"/operator/sessions/{review_session.id}/previews"
+    if not reviewers:
+        return RedirectResponse(
+            url=base_url, status_code=status.HTTP_303_SEE_OTHER
+        )
+    selected = secrets.choice(reviewers)
+    return RedirectResponse(
+        url=f"{base_url}?reviewer_email={quote(selected.email)}",
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

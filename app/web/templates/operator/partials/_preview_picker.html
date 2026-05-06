@@ -1,0 +1,88 @@
+{# Reviewer picker for the Previews page (segment 11F PR A).
+
+   Renders an `<input>` + `<datalist>` typeahead with an Apply button,
+   Prev/Next step anchors (disabled when no reviewer is selected), a
+   Random POST button, and a context strip below.
+
+   Required context:
+     - session: ReviewSession
+     - picker: views.PreviewPickerContext
+#}
+<div class="card preview-picker-card">
+  <p class="preview-picker-heading"><strong>Previewing as:</strong></p>
+
+  <form class="preview-picker-form"
+        method="get"
+        action="/operator/sessions/{{ session.id }}/previews">
+    <input type="text"
+           name="reviewer_email"
+           list="preview-picker-options"
+           value="{{ picker.raw_query }}"
+           autocomplete="off"
+           placeholder="Search reviewer name or email..."
+           {% if not picker.options %}disabled{% endif %}>
+    <datalist id="preview-picker-options">
+      {% for opt in picker.options %}
+        <option value="{{ opt.label }}"></option>
+      {% endfor %}
+    </datalist>
+    <button class="btn secondary" type="submit"
+            {% if not picker.options %}disabled{% endif %}>
+      Apply
+    </button>
+  </form>
+
+  {% if picker.no_match_query %}
+    <p class="muted preview-picker-no-match">
+      No reviewer matched "{{ picker.no_match_query }}".
+    </p>
+  {% endif %}
+
+  <div class="preview-picker-step-row">
+    {% if picker.prev_email %}
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/previews?reviewer_email={{ picker.prev_email | urlencode }}">← Previous</a>
+    {% else %}
+      <a class="btn secondary" aria-disabled="true" href="#">← Previous</a>
+    {% endif %}
+    {% if picker.next_email %}
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/previews?reviewer_email={{ picker.next_email | urlencode }}">Next →</a>
+    {% else %}
+      <a class="btn secondary" aria-disabled="true" href="#">Next →</a>
+    {% endif %}
+    <form method="post"
+          action="/operator/sessions/{{ session.id }}/previews/random"
+          class="preview-picker-random-form">
+      <button class="btn secondary" type="submit"
+              {% if not picker.options %}disabled{% endif %}>
+        Random
+      </button>
+    </form>
+  </div>
+
+  <div class="preview-picker-context muted">
+    {% if not picker.options %}
+      No reviewers configured. Add reviewers via the
+      <a href="/operator/sessions/{{ session.id }}/reviewers">Reviewers Setup page</a>
+      or the Quick Setup card on Home.
+    {% elif picker.current %}
+      <strong>Reviewer {{ picker.current_index + 1 }} of {{ picker.options | length }}</strong>
+      · {{ picker.current.name }} ({{ picker.current.email }})
+      · {{ picker.reviewee_count }}
+      reviewee{% if picker.reviewee_count != 1 %}s{% endif %} assigned{% if picker.reviewee_peek %}: {{ picker.reviewee_peek | join(", ") }}{% endif %}
+      {% if picker.reviewee_tail %}
+        <details class="preview-picker-more">
+          <summary>more</summary>
+          <ul>
+            {% for name in picker.reviewee_tail %}<li>{{ name }}</li>{% endfor %}
+          </ul>
+        </details>
+      {% endif %}
+    {% else %}
+      {{ picker.options | length }} reviewer{% if picker.options | length != 1 %}s{% endif %} in this session.
+      Pick one to preview the invitation, surface, reminder, and
+      confirmation they'd see.
+    {% endif %}
+  </div>
+</div>

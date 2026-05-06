@@ -7,7 +7,8 @@ markup-only.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import select
@@ -16,6 +17,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from app.db.models import (
+    Assignment,
     EmailOutbox,
     Instrument,
     InstrumentResponseField,
@@ -1452,3 +1454,191 @@ def filter_responses_rows(
             or _matches_search(r.reviewee.email_or_identifier, needle)
         ]
     return out
+
+
+# How many reviewee names the picker context strip shows before
+# collapsing the rest into the `<details>` disclosure tail.
+PREVIEW_PICKER_REVIEWEE_PEEK_COUNT = 3
+
+
+@dataclass(frozen=True)
+class PreviewPickerOption:
+    """One row backing the picker `<datalist>` and the prev/next math.
+
+    ``label`` is the display string (``"Name (email)"``); ``value`` is
+    the bare email the form submits. Sort order across all options is
+    alphabetical by email (case-insensitive), matching the order
+    `app/services/monitoring._assigned_active_reviewers` uses elsewhere.
+    """
+
+    reviewer_id: int
+    name: str
+    email: str
+    label: str
+
+
+@dataclass(frozen=True)
+class PreviewPickerContext:
+    options: list[PreviewPickerOption]
+    """Every reviewer in the session, alphabetical by email. Backs both
+    the `<datalist>` and the prev/next math."""
+
+    raw_query: str
+    """The operator's typed value (post-strip), forwarded to the input
+    so refresh/back doesn't blank it."""
+
+    current: PreviewPickerOption | None
+    """The resolved selection, or ``None`` when nothing is selected
+    (no param, empty param, or unmatched param)."""
+
+    current_index: int | None
+    """0-based index of ``current`` within ``options``; ``None`` when
+    no current selection."""
+
+    prev_email: str | None
+    """Email to step to on Previous; wraps. ``None`` when no current."""
+
+    next_email: str | None
+    """Email to step to on Next; wraps. ``None`` when no current."""
+
+    reviewee_count: int
+    """How many distinct reviewees ``current`` is assigned to (counting
+    only ``include=True`` assignments). 0 when no current."""
+
+    reviewee_peek: list[str] = field(default_factory=list)
+    """First ``PREVIEW_PICKER_REVIEWEE_PEEK_COUNT`` reviewee names for
+    the context strip."""
+
+    reviewee_tail: list[str] = field(default_factory=list)
+    """Remaining reviewee names that go inside the `<details>`
+    disclosure. Empty when ``reviewee_count`` is at or below the peek
+    count."""
+
+    no_match_query: str | None = None
+    """When the operator submitted a value that didn't resolve, the
+    typed value (post-strip). The template renders the "No reviewer
+    matched 'foo'." note. ``None`` when the input was empty or
+    resolved cleanly."""
+
+
+_PICKER_LABEL_EMAIL_RE = re.compile(r"\(([^()]+@[^()]+)\)\s*$")
+
+
+def _extract_email_from_picker_value(value: str) -> str:
+    """Parse the picker's submitted value into an email.
+
+    Accepts a bare email (``"alice@x.edu"``) or a datalist label
+    (``"Alice Smith (alice@x.edu)"``). Returns the trimmed lower-case
+    email, or the trimmed lower-case input unchanged when no parens-
+    enclosed email is found (the caller treats unmatched values as a
+    no-match).
+    """
+    stripped = value.strip()
+    if not stripped:
+        return ""
+    match = _PICKER_LABEL_EMAIL_RE.search(stripped)
+    if match is not None:
+        return match.group(1).strip().casefold()
+    return stripped.casefold()
+
+
+def build_preview_picker_context(
+    db: Session, review_session: ReviewSession, reviewer_query: str
+) -> PreviewPickerContext:
+    """Hydrate the Previews-page reviewer picker.
+
+    ``reviewer_query`` comes from ``?reviewer_email=`` and may be
+    blank, an email, or the datalist label format
+    (``"Name (email)"``). Resolution is case-insensitive on email.
+    Unmatched non-empty values surface as ``no_match_query`` so the
+    template renders the inline "No reviewer matched" note rather than
+    silently falling back.
+    """
+
+    reviewer_rows = list(
+        db.execute(
+            select(Reviewer)
+            .where(Reviewer.session_id == review_session.id)
+            .order_by(Reviewer.email)
+        ).scalars()
+    )
+
+    options = [
+        PreviewPickerOption(
+            reviewer_id=r.id,
+            name=r.name,
+            email=r.email,
+            label=f"{r.name} ({r.email})",
+        )
+        for r in reviewer_rows
+    ]
+
+    raw = reviewer_query.strip()
+    parsed_email = _extract_email_from_picker_value(reviewer_query)
+
+    current: PreviewPickerOption | None = None
+    current_index: int | None = None
+    if parsed_email:
+        for idx, opt in enumerate(options):
+            if opt.email.casefold() == parsed_email:
+                current = opt
+                current_index = idx
+                break
+
+    prev_email: str | None = None
+    next_email: str | None = None
+    if current is not None and len(options) > 0 and current_index is not None:
+        n = len(options)
+        prev_email = options[(current_index - 1) % n].email
+        next_email = options[(current_index + 1) % n].email
+
+    no_match: str | None = None
+    if raw and current is None:
+        no_match = raw
+
+    reviewee_count = 0
+    reviewee_peek: list[str] = []
+    reviewee_tail: list[str] = []
+    if current is not None:
+        names = _picker_assigned_reviewee_names(
+            db, review_session.id, current.reviewer_id
+        )
+        reviewee_count = len(names)
+        reviewee_peek = names[:PREVIEW_PICKER_REVIEWEE_PEEK_COUNT]
+        reviewee_tail = names[PREVIEW_PICKER_REVIEWEE_PEEK_COUNT:]
+
+    return PreviewPickerContext(
+        options=options,
+        raw_query=raw,
+        current=current,
+        current_index=current_index,
+        prev_email=prev_email,
+        next_email=next_email,
+        reviewee_count=reviewee_count,
+        reviewee_peek=reviewee_peek,
+        reviewee_tail=reviewee_tail,
+        no_match_query=no_match,
+    )
+
+
+def _picker_assigned_reviewee_names(
+    db: Session, session_id: int, reviewer_id: int
+) -> list[str]:
+    """Distinct reviewee names this reviewer is assigned to, sorted.
+
+    Only counts ``include=True`` assignments (matching how the rest of
+    the app treats included assignments as the live set). Sort by name
+    so the context strip is stable across reloads.
+    """
+    rows = db.execute(
+        select(Reviewee.name)
+        .join(Assignment, Assignment.reviewee_id == Reviewee.id)
+        .where(
+            Assignment.session_id == session_id,
+            Assignment.reviewer_id == reviewer_id,
+            Assignment.include.is_(True),
+        )
+        .distinct()
+        .order_by(Reviewee.name)
+    ).all()
+    return [row[0] for row in rows]
