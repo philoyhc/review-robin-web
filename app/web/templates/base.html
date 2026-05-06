@@ -612,6 +612,36 @@
         margin-top: 12px;
         flex-wrap: wrap;
       }
+      /* Reviewer picker card on the Previews page (segment 11F).
+         Half-width card with a single typeahead input + Apply button on
+         one flex row, then a `.card-action-row` of step/random buttons,
+         then a passive context strip naming the current selection. */
+      .preview-picker-card .preview-picker-heading {
+        margin: 0 0 12px 0;
+      }
+      .preview-picker-card .preview-picker-form {
+        display: flex;
+        gap: 12px;
+        align-items: stretch;
+        margin: 0;
+      }
+      .preview-picker-card .preview-picker-form input[type="text"] {
+        flex: 1;
+        margin: 0;
+      }
+      .preview-picker-card .preview-picker-no-match {
+        margin: 8px 0 0 0;
+      }
+      .preview-picker-card .preview-picker-context {
+        margin-top: 12px;
+      }
+      .preview-picker-card .preview-picker-more {
+        margin-top: 4px;
+      }
+      .preview-picker-card .preview-picker-more ul {
+        margin: 4px 0 0 0;
+        padding-left: 20px;
+      }
       /* Generic right-aligned action row for v2 cards. Used by the
          Responses summary card (Send reminders + Manage Invitations
          buttons) and any other card that wants its actions pinned to

@@ -4,11 +4,16 @@
    Prev/Next step anchors (disabled when no reviewer is selected), a
    Random POST button, and a context strip below.
 
+   Layout:
+     - The card is half-width (`.card-half`) per `spec/visual_style_general.md`.
+     - The search input + Apply button sit on one flex row with a gap.
+     - Prev / Next / Random sit in `.card-action-row`, right-flushed.
+
    Required context:
      - session: ReviewSession
      - picker: views.PreviewPickerContext
 #}
-<div class="card preview-picker-card">
+<div class="card card-half preview-picker-card">
   <p class="preview-picker-heading"><strong>Previewing as:</strong></p>
 
   <form class="preview-picker-form"
@@ -38,7 +43,7 @@
     </p>
   {% endif %}
 
-  <div class="preview-picker-step-row">
+  <div class="card-action-row">
     {% if picker.prev_email %}
       <a class="btn secondary"
          href="/operator/sessions/{{ session.id }}/previews?reviewer_email={{ picker.prev_email | urlencode }}">← Previous</a>
@@ -52,8 +57,7 @@
       <a class="btn secondary" aria-disabled="true" href="#">Next →</a>
     {% endif %}
     <form method="post"
-          action="/operator/sessions/{{ session.id }}/previews/random"
-          class="preview-picker-random-form">
+          action="/operator/sessions/{{ session.id }}/previews/random">
       <button class="btn secondary" type="submit"
               {% if not picker.options %}disabled{% endif %}>
         Random
