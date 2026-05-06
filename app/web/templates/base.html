@@ -617,10 +617,13 @@
         margin-top: 12px;
         flex-wrap: wrap;
       }
-      /* Reviewer picker card on the Previews page (segment 11F).
-         Half-width card with a single typeahead input + Apply button on
-         one flex row, then a `.card-action-row` of step/random buttons,
-         then a passive context strip naming the current selection. */
+      /* Reviewer picker on the Previews page (segment 11F). Two
+         side-by-side half-width cards in a `.bottom-grid`:
+         **Previewing as** (typeahead input + Apply on one flex row,
+         then a `.card-action-row` of Prev / Next / Random) on the
+         left, and **About this reviewer** (passive context strip
+         naming the current selection — count + name + reviewee peek
+         + native-disclosure "more" expander) on the right. */
       .preview-picker-card .preview-picker-form {
         display: flex;
         gap: 12px;
@@ -631,7 +634,7 @@
         flex: 1;
         margin: 0;
       }
-      .preview-picker-card .preview-picker-more ul {
+      .preview-about-reviewer-card .preview-picker-more ul {
         margin: 4px 0 0 0;
         padding-left: 20px;
       }
