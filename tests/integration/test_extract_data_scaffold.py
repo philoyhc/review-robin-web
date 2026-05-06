@@ -83,20 +83,22 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
     client: TestClient, db: Session
 ) -> None:
     """The view-shape adapter returns the five per-entity rows in
-    the canonical order plus the zip-bundle row separately. Order
-    matches the row order the operator scans top-to-bottom."""
+    the canonical 2-col grid order (Reviewers / Reviewees /
+    Assignments / Responses / Session settings — left-right, up-down)
+    plus the zip-bundle row separately."""
 
     review_session = _make_session(client, db, code="ed-shape")
     context = views.build_extract_data_context(db, review_session)
 
     assert [row.key for row in context.rows] == [
-        "settings",
         "reviewers",
         "reviewees",
         "assignments",
         "responses",
+        "settings",
     ]
     assert context.bundle.key == "bundle"
+    assert context.bundle.label == "Zip all"
     # All inert at scaffold-time.
     assert all(row.is_wired is False for row in context.rows)
     assert context.bundle.is_wired is False
