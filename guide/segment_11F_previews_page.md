@@ -67,9 +67,9 @@ In:
   real hub: reviewer picker top, then a list of artifact cards.
 - **Reviewer picker** as proposed below ("Reviewer picker UI").
   URL state via `?reviewer_email={email}` so the selected
-  reviewer is bookmarkable / shareable; default = first
-  reviewer in the session's reviewer list (alphabetical, the
-  same order the Reviewers Setup page uses).
+  reviewer is bookmarkable / shareable; default = no reviewer
+  selected (operator must pick explicitly), so the cards below
+  stay in a single combined empty state until then.
 - **Invitation email card.** Renders subject + from / to / body
   via `email_templates.render_invitation(session, reviewer)`
   — the same call the live invitation flow uses (Segment 11E).
@@ -139,66 +139,101 @@ Out:
 ## Reviewer picker UI
 
 The picker is the spine of the page. It controls every artifact
-card's render. Three concrete forms make sense; the proposed
-shape combines all three.
+card's render.
 
-### Proposed shape — native select + step buttons + count
+### Proposed shape — typeahead + step buttons + count
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│ Previewing as:                                                 │
-│ ┌──────────────────────────────────────────────────────┐  ← →  │
-│ │ Alice Smith (alice@x.edu) — 5 reviewees assigned   ▾ │       │
-│ └──────────────────────────────────────────────────────┘ Random│
-│                                                                │
-│ Reviewer 3 of 47 · 5 reviewees: Bob Jones, Carol Lee, …  more  │
-└────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ Previewing as:                                               │
+│ ┌────────────────────────────────────────────────────┐       │
+│ │ Search reviewer name or email...                   │ Apply │
+│ └────────────────────────────────────────────────────┘       │
+│  ← Previous   Next →   Random                                │
+│                                                              │
+│ Reviewer 3 of 47 · Alice Smith (alice@x.edu) · 5 reviewees   │
+│ assigned: Bob Jones, Carol Lee, …  more                      │
+└──────────────────────────────────────────────────────────────┘
+```
+
+When no reviewer is yet selected:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Previewing as:                                               │
+│ ┌────────────────────────────────────────────────────┐       │
+│ │ Search reviewer name or email...                   │ Apply │
+│ └────────────────────────────────────────────────────┘       │
+│  ← Previous (disabled)   Next → (disabled)   Random          │
+│                                                              │
+│ 47 reviewers in this session. Pick one to preview the        │
+│ invitation, surface, reminder, and confirmation they'd see.  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 The picker contains:
 
-1. **Primary control: a native `<select>`** listing every
-   reviewer as
-   `"{name} ({email}) — {n} reviewees assigned"`. Native
-   `<select>` over a custom combobox because:
-   - Zero JS for the core flow; the form auto-submits via one
-     inline `onchange` line.
-   - The browser's native search-by-typing covers the
-     "find a specific reviewer fast" case without a JS combobox.
-   - Accessibility free (screen readers know what a `<select>`
-     is).
-   For sessions with thousands of reviewers a native select
-   stays usable; if it ever proves too unwieldy, a future
-   progressive enhancement swaps in a `<datalist>` filter
-   without changing the URL or render path.
-2. **Step buttons: "← Previous" / "Next →"** flanking the
-   select. The natural verb for pre-flight inspection is
-   "spot-check every reviewer's surface looks right" — paging
-   through the list is the operator's actual mental model, and
-   step buttons make it a one-click action per reviewer rather
-   than a re-open-the-dropdown round-trip. Wraps at the ends
-   (Next on the last reviewer wraps to the first) with a quiet
-   visual cue (the count flash) so the operator notices.
-3. **Random button.** Picks a reviewer at random from the list.
-   Useful for sampling on a 500-reviewer session — the operator
-   won't page through all 500, but spot-checking 5 random ones
-   catches most setup drift. One click.
-4. **Count indicator: "Reviewer N of M".** Below the controls,
-   right-aligned. Tells the operator the scale of the session
-   at a glance, and disambiguates step-button wrap-around.
+1. **Primary control: a typeahead `<input list="…">` paired
+   with a `<datalist>`.** The datalist holds one option per
+   reviewer (`<option value="alice@x.edu">Alice Smith
+   (alice@x.edu)</option>`). Native HTML5 — the browser shows
+   matching suggestions as the operator types, accessibility is
+   free, no JS for the typeahead itself.
+   - Why datalist over a native `<select>`: a `<select>`
+     forces the operator to scan in dropdown order. A typeahead
+     lets them type "ali" and see only Alice / Aliyah / Aliza.
+     For sessions with hundreds of reviewers this is the
+     difference between scrolling and finding.
+   - Why datalist over a custom JS combobox: zero JS, no
+     accessibility re-implementation, no build step. The
+     styling limits (the browser owns the suggestion panel's
+     font and chrome) don't matter here — the operator only
+     needs to see names and emails. If a future need surfaces
+     (e.g. inline submission-status badges in suggestions),
+     swap to a small inline JS combobox without changing the
+     URL contract.
+   - **Pattern is reusable.** Manage Invitations and Manage
+     Responses both have a free-text search box with the same
+     intent. If the datalist typeahead lands cleanly here, lift
+     it into those pages as a separate slice — out of scope
+     for 11F, worth flagging.
+
+2. **Apply button.** Submits the form. The server parses the
+   typed value: an exact email match selects that reviewer;
+   `"Name (email)"` format extracts the email; an unmatched
+   value renders a "No reviewer matched 'foo'." note below the
+   input and leaves the picker in unselected state.
+
+3. **Step buttons: "← Previous" / "Next →"** flanking the
+   input. Operate over the full reviewer list (alphabetical by
+   email, the same order the Reviewers Setup page uses). Wrap
+   at the ends with a quiet visual cue (the count flash) so the
+   operator notices. **Disabled when no reviewer is yet
+   selected** — stepping needs a starting point.
+
+4. **Random button.** Picks a reviewer uniformly at random
+   from the full reviewer list. One click. Useful for spot-
+   sampling on a 500-reviewer session — the operator won't
+   page through all 500, but spot-checking 5 random ones
+   catches most setup drift. Available even when no reviewer
+   is yet selected (it's a valid first action).
+
+5. **Count indicator: "Reviewer N of M".** Below the controls,
+   alongside the selected reviewer's name + email + reviewee
+   preview. Becomes "M reviewers in this session. Pick one…"
+   when nothing is selected.
 
 ### Below the picker — passive context strip
 
-Per spec §"Reviewer picker (top of page)": a short strip
-naming the current selection's key attributes — name, email,
-reviewee count, and the first ~3 reviewee names with a "more"
-disclosure for the rest. This is the "previewing for" header
-that grounds what the operator is about to see in each artifact
-card below.
+When a reviewer is selected: a short strip naming the current
+selection's key attributes — name, email, reviewee count, and
+the first ~3 reviewee names with a "more" disclosure for the
+rest. The disclosure is a `<details>` element (native, no JS),
+default collapsed.
 
-The disclosure is a `<details>` element (native, no JS). When
-the operator opens it, the full reviewee list renders. Default
-collapsed.
+When no reviewer is selected: the strip collapses to the one-
+line empty state shown in the second mockup above, directing
+the operator to the picker as their next action.
 
 ### URL state
 
@@ -212,85 +247,124 @@ Why email and not `id`:
   too — keeping the picker's identifier in the same vocabulary
   is one fewer mental shift.
 
-If the param is missing or matches no reviewer, default to the
-first reviewer alphabetically. If the session has no reviewers,
-the picker renders **disabled** with the empty-state copy from
-spec §"Empty state" and the cards below show their respective
-empty states.
+**Default behavior is no reviewer selected** — explicit
+operator pick is the only path to an artifact render. This is
+a deliberate change from earlier shapes that defaulted to the
+first reviewer alphabetically: defaulting hides the "you need
+to pick someone" affordance behind a populated render that
+looks like it's already showing the right answer. With no
+default, the operator's first interaction is intentional.
+
+If `?reviewer_email=` is present but matches no reviewer, the
+picker surfaces the "No reviewer matched" note and stays in
+unselected state — no 404, no fallback to first. If the
+session has no reviewers at all, the picker renders disabled
+with the empty-state copy from spec §"Empty state" and the
+body below picks up the same explanatory tone.
 
 ### Non-mechanics
 
-- **Default ordering** matches the Reviewers Setup page.
+- **Default ordering** for the datalist and Prev/Next/Random
+  matches the Reviewers Setup page (alphabetical by email).
   Whatever sort `app/web/routes_operator.py` reviewers index
   uses, the picker reuses — no second mental model.
 - **Step buttons preserve ordering**, so "Next" advances by
   one in the picker's list order, not by reviewer-id order.
-- **No JS framework.** The auto-submit-on-change is one line
-  of inline JS in the template, matching the rest of the app
-  (per `CLAUDE.md` — targeted progressive enhancement, no
-  build step). Step / Random submit a tiny `<form>` with the
-  precomputed target `reviewer_email` in a hidden input.
+- **Random selection happens server-side**, via
+  `secrets.choice` over the reviewer list. The button is a
+  tiny POST (or a GET to a redirector) that 303s to
+  `?reviewer_email=…`. No reviewer-email list leaks into
+  client-side JS this way.
+- **No JS framework.** One inline `onchange` line on the input
+  optionally auto-submits when the operator picks a datalist
+  suggestion; everything else is plain `<form method="get">`.
+  Step buttons submit tiny `<form>`s carrying the precomputed
+  target `reviewer_email` in a hidden input.
 
 ### Why not these alternatives
 
-- **Searchable combobox (custom JS).** Heavier, accessibility
-  to redo, no real benefit over native `<select>` until the
-  list is in the tens of thousands.
+- **Native `<select>` only.** Forces scanning a long list in
+  dropdown order. Datalist gives the same zero-JS guarantee
+  plus substring filtering for free.
+- **Custom JS combobox.** Heavier, accessibility to redo,
+  build-step temptation. No real benefit over datalist unless
+  suggestions need custom inline content (status badges, etc.).
 - **Reviewer table with radio-select.** Renders the full list
-  inline, but at 500 reviewers the table dwarfs the artifact
-  cards below, defeating the page's purpose. Step buttons get
-  the "page through reviewers" verb without the table cost.
+  inline; at 500 reviewers the table dwarfs the artifact cards
+  below, defeating the page's purpose. Step buttons get the
+  "page through reviewers" verb without the table cost.
 - **Modal picker dialog.** Matches no other pattern in the app
   and adds a click before each preview switch. Inline picker
   wins on directness.
+- **Default-to-first-reviewer.** Hides the "you need to pick"
+  affordance behind a render that looks done. Explicit pick is
+  part of the UX intent.
 
 ## Proposed PR sequence
 
 ### PR A — Page chrome + reviewer picker
 
-**Goal.** A real `session_previews.html` body with the picker
-working end-to-end, a context strip below it, and a placeholder
-"Artifact previews land here" stub where the cards will appear.
-No artifact rendering yet.
+**Goal.** A real `session_previews.html` body with the
+typeahead picker working end-to-end, a context strip below it,
+and a placeholder "Artifact previews land here" stub where the
+cards will appear. No artifact rendering yet.
 
 - Replace the placeholder body of `session_previews.html`. New
   template partial `operator/partials/_preview_picker.html`
-  rendering the select + step buttons + Random + count + context
-  strip.
+  rendering the search input + `<datalist>` + Apply + step
+  buttons + Random + count + context strip.
 - New view-shape adapter `views.build_preview_picker_context(
-  session, reviewer_email)` returning:
-  - the ordered reviewer list (for the `<select>` options),
-  - the current reviewer (or `None` if empty / unmatched),
+  session, reviewer_query)` returning:
+  - the ordered reviewer list (for the `<datalist>` options),
+  - the resolved current reviewer (or `None` if unselected /
+    unmatched),
   - prev / next reviewer emails for the step-button hidden
-    inputs,
-  - the count `(index, total)`,
+    inputs (or `None` when no current reviewer),
+  - the count `(index, total)` when a reviewer is selected;
+    just `total` otherwise,
   - the context-strip data (assigned-reviewees list capped at
     a configured `PREVIEW_PICKER_REVIEWEE_PEEK_COUNT = 3` plus
-    the disclosure tail).
-- Update `previews_stub` (or rename to `previews_index`) at
-  `routes_operator.py:1273` to read `?reviewer_email=` from the
-  request, hydrate via the adapter, and render. No new POST
-  routes — the picker is GET-only via query parameter.
-- The body below the picker renders one stub `.card.placeholder`
-  with copy "Artifact previews — invitation email and reviewer
-  surface — land in PR B / PR C." Same placeholder treatment as
-  Quick Setup / Extract Data on Home, retired by PR B + C.
-- **Empty state**: if `len(reviewers) == 0`, the picker
+    the disclosure tail),
+  - a "no match" indicator + the operator's typed value, when
+    the submitted `reviewer_email` didn't resolve.
+- Update `previews_stub` (rename to `previews_index`) at
+  `routes_operator.py:1318` to read `?reviewer_email=` from the
+  request, hydrate via the adapter, and render. Add a tiny
+  `POST /sessions/{id}/previews/random` route that picks a
+  reviewer via `secrets.choice` and 303s to `?reviewer_email=…`
+  — the Random button posts to it. Step buttons stay GET (they
+  carry the precomputed target in hidden inputs). Apply submits
+  the search form as GET with the typed value mapped onto
+  `?reviewer_email=`.
+- The body below the picker renders a single empty-state card
+  when no reviewer is selected ("Pick a reviewer above to
+  preview their experience."); otherwise PR A renders one
+  `.card.placeholder` stub ("Artifact previews — invitation
+  email, reviewer surface, reminder, and confirmation — land
+  in PR B–E."), retired card-by-card as PR B–E ship.
+- **Empty-session state**: if `len(reviewers) == 0`, the picker
   renders disabled with the spec's copy ("No reviewers
   configured. Add reviewers via the Reviewers Setup page or
   the Quick Setup card on Home.") and the placeholder body
   picks up the same explanatory tone.
 - Tests:
-  - First-load (no `?reviewer_email`) defaults to the first
-    reviewer alphabetically; Reviewer 1 of N.
-  - `?reviewer_email=alice@x.edu` selects Alice; Prev wraps
-    to last, Next advances to next.
-  - Random click 303s with a `?reviewer_email=` param drawn
-    from the reviewer set; never selects out-of-set.
-  - Unknown email param falls through to first reviewer
-    (graceful degradation, no 404).
-  - Empty session renders the disabled picker + empty-state
-    copy.
+  - First-load (no `?reviewer_email`) renders the picker with
+    no reviewer selected; artifact body shows the "Pick a
+    reviewer" empty state; Prev/Next are disabled.
+  - `?reviewer_email=alice@x.edu` selects Alice; Prev wraps to
+    last, Next advances; count reads "Reviewer N of M".
+  - `?reviewer_email=ghost@x.edu` (not in session) renders the
+    "No reviewer matched" note and stays in unselected state —
+    does not 404, does not fall back to first reviewer.
+  - Apply with `"Alice Smith (alice@x.edu)"` typed in (the
+    datalist label format) resolves to Alice — the adapter
+    extracts the email from the parens.
+  - Random POST 303s to a `?reviewer_email=` param drawn from
+    the reviewer set; never selects out-of-set.
+  - Empty session (zero reviewers) renders the disabled picker
+    + empty-state copy.
+  - The `<datalist>` contains one `<option>` per reviewer in
+    the session (integration test counts options).
 
 ### PR B — Invitation email card
 
@@ -564,15 +638,20 @@ this guide covers; flip if the order resolves the other way):
 ## Test impact
 
 - New `tests/integration/test_session_previews.py` covering:
-  picker default / param / step / random / wrap; per-card
+  picker unselected default / valid param / unmatched param
+  ("No reviewer matched") / step / random / wrap / disabled-
+  step-when-unselected / "Name (email)" label parse; per-card
   render for selected reviewer; missing-data scoped errors per
-  card; lifecycle render in `draft` / `validated` / `ready` /
-  `closed` (assert no lock card around the cards themselves);
-  `/preview` → `/previews` redirect.
+  card; combined "Pick a reviewer" empty state when nothing is
+  selected (no per-card error-card explosion); lifecycle render
+  in `draft` / `validated` / `ready` / `closed` (assert no lock
+  card around the cards themselves); `/preview` → `/previews`
+  redirect.
 - New `tests/unit/test_preview_picker_context.py` pinning the
   view adapter's prev / next / count math (especially the
-  wrap-around edge cases and the empty-session degenerate
-  state).
+  wrap-around edge cases, the unselected-state degenerate
+  shape, and the typed-value parser that accepts both bare
+  emails and `"Name (email)"` formats).
 - One snapshot fixture per artifact under
   `tests/fixtures/previews/` — the rendered invitation email
   body for a populated session, and the reviewer-surface
