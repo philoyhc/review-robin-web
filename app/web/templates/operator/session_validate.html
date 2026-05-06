@@ -66,22 +66,20 @@
     </p>
     <div class="setup-coverage-grid">
       {% for row in validate.setup_coverage %}
-        <div class="setup-coverage-cell">
-          <p class="setup-coverage-label">{{ row.label }}</p>
-          <p class="setup-coverage-status">
-            {{ row.status }}
-            {% if row.error_count > 0 or row.warning_count > 0 %}
-              <a class="setup-coverage-issues" href="#issue-source-{{ row.source }}">
-                {% if row.error_count > 0 %}
-                  <span class="pill pill-error">{{ row.error_count }} error{% if row.error_count != 1 %}s{% endif %}</span>
-                {% endif %}
-                {% if row.warning_count > 0 %}
-                  <span class="pill pill-empty">{{ row.warning_count }} warning{% if row.warning_count != 1 %}s{% endif %}</span>
-                {% endif %}
-              </a>
-            {% endif %}
-          </p>
-        </div>
+        <p class="setup-coverage-cell">
+          <span class="setup-coverage-label">{{ row.label }}</span>
+          <span class="setup-coverage-status">{{ row.status }}</span>
+          {% if row.error_count > 0 or row.warning_count > 0 %}
+            <a class="setup-coverage-issues" href="#issue-source-{{ row.source }}">
+              {% if row.error_count > 0 %}
+                <span class="pill pill-error">{{ row.error_count }} error{% if row.error_count != 1 %}s{% endif %}</span>
+              {% endif %}
+              {% if row.warning_count > 0 %}
+                <span class="pill pill-empty">{{ row.warning_count }} warning{% if row.warning_count != 1 %}s{% endif %}</span>
+              {% endif %}
+            </a>
+          {% endif %}
+        </p>
       {% endfor %}
     </div>
   </div>
