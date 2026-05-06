@@ -24,8 +24,17 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Create antenv and install dependencies
+        # Pre-install requirements into the canonical "antenv" venv
+        # name App Service Linux Python expects, with --copies so
+        # the venv ships portable binaries (no host-Python symlinks).
+        # Shipping a pre-built antenv side-steps Oryx running a
+        # potentially stale build on App Service: when antenv +
+        # oryx-manifest.toml are present in the deploy package,
+        # Oryx uses them as-is rather than re-running pip install.
         run: |
+          python -m venv --copies antenv
+          source antenv/bin/activate
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
@@ -39,6 +48,8 @@ jobs:
             alembic.ini
             requirements.txt
             pyproject.toml
+            antenv/
+          include-hidden-files: true
 
   migrate:
     runs-on: ubuntu-latest
