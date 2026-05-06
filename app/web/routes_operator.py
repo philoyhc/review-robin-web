@@ -2503,6 +2503,7 @@ def invitations_index(
             "uninvited_count": sum(1 for r in eligible if r.id not in invited_ids),
             "pending_count": pending_count,
             "incomplete_count": incomplete_count,
+            "total_invitation_count": len(invitation_rows),
             "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Invitations"
@@ -2601,6 +2602,30 @@ def invitations_send_all(
             ),
             correlation_id=request_correlation_id(),
         )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/invitations",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/invitations/regenerate-all")
+def invitations_regenerate_all(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Bulk-rotate every invitation token in the session. Each
+    invitation flips to ``pending`` and ``sent_at`` / ``opened_at``
+    clear; previously-issued URLs go stale uniformly. One batch
+    ``invitations.regenerated`` audit event when at least one
+    invitation was rotated."""
+    _require_ready(review_session)
+    invitations.regenerate_all_tokens(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
