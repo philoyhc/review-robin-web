@@ -809,6 +809,16 @@ def test_invitations_filter_strip_renders(
     assert ">Clear</a>" not in body
 
 
+def _strip_datalist(body: str) -> str:
+    """Return the response body with `<datalist>` blocks removed.
+
+    The Manage Invitations / Responses typeahead datalist legitimately
+    contains every option regardless of the active filter, so
+    "excluded reviewer not in body" assertions need to look at
+    everything *outside* the datalist."""
+    return re.sub(r"<datalist[^>]*>.*?</datalist>", "", body, flags=re.DOTALL)
+
+
 def test_invitations_filter_status_narrows_rows(
     client: TestClient, db: Session
 ) -> None:
@@ -825,9 +835,9 @@ def test_invitations_filter_status_narrows_rows(
         f"/operator/sessions/{session.id}/invitations/{invitation_rae.id}/send"
     )
     # Filter to "Not yet sent" → only Ren.
-    body = client.get(
+    body = _strip_datalist(client.get(
         f"/operator/sessions/{session.id}/invitations?status=not_sent"
-    ).text
+    ).text)
     assert "ren@example.edu" in body
     assert "rae@example.edu" not in body
     # Clear link surfaces when filter is active.
@@ -842,15 +852,15 @@ def test_invitations_filter_search_narrows_rows(
     session = _ready_session_with_two_reviewers(client, db, "filt-search")
     client.post(f"/operator/sessions/{session.id}/invitations/generate")
     # Search by partial email.
-    body = client.get(
+    body = _strip_datalist(client.get(
         f"/operator/sessions/{session.id}/invitations?q=rae"
-    ).text
+    ).text)
     assert "rae@example.edu" in body
     assert "ren@example.edu" not in body
     # Search is case-insensitive.
-    body = client.get(
+    body = _strip_datalist(client.get(
         f"/operator/sessions/{session.id}/invitations?q=REN"
-    ).text
+    ).text)
     assert "ren@example.edu" in body
 
 

@@ -6,11 +6,22 @@ accompany the Monitoring retirement.
 """
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession
+
+
+def _strip_datalist(body: str) -> str:
+    """Body minus `<datalist>` blocks.
+
+    The Manage Responses typeahead datalist holds every option
+    regardless of the active filter, so "excluded reviewee not in
+    body" assertions need to look outside the datalist."""
+    return re.sub(r"<datalist[^>]*>.*?</datalist>", "", body, flags=re.DOTALL)
 
 
 # --------------------------------------------------------------------------- #
@@ -346,9 +357,9 @@ def test_responses_filter_search_narrows_rows(
         reviewer_emails=["rae@example.edu"],
         reviewee_emails=["carol@example.edu", "dave@example.edu"],
     )
-    body = client.get(
+    body = _strip_datalist(client.get(
         f"/operator/sessions/{session.id}/responses?q=carol"
-    ).text
+    ).text)
     assert "carol@example.edu" in body
     assert "dave@example.edu" not in body
     # Showing-N-of-M counter renders.
