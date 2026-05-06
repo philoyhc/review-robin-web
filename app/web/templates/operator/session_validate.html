@@ -59,11 +59,13 @@
   {% endif %}
 
   <div class="card setup-coverage">
-    <h2>Setup coverage</h2>
-    <p class="form-help">
-      Inventory of the session's setup state. Use as a reference;
-      issues below describe the diagnostics.
-    </p>
+    <div class="setup-coverage-header">
+      <h2>Setup coverage</h2>
+      <p class="form-help">
+        Inventory of the session's setup state. Use as a reference;
+        issues below describe the diagnostics.
+      </p>
+    </div>
     <div class="setup-coverage-grid">
       {% for row in validate.setup_coverage %}
         <p class="setup-coverage-cell">

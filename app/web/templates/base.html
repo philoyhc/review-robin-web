@@ -706,17 +706,32 @@
         border-color: var(--accent-amber-dark);
         background: var(--accent-amber-bg);
       }
-      /* Setup-coverage grid on the Validate page — read-only
-         inventory laid out in three columns at desktop widths,
-         collapsing to two at narrow breakpoints. Each cell stacks
-         the label + status (+ optional issue-pill anchor). */
+      /* Setup-coverage card on the Validate page. The header is
+         a flex row so the H2 and the descriptive subtitle sit on
+         the same line (H2 keeps its h2 font; the subtitle keeps
+         the form-help font). The grid below lays the inventory
+         in four columns at desktop widths, collapsing to two
+         at narrow breakpoints. */
+      body.ui-v2 .card.setup-coverage .setup-coverage-header {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+        margin-bottom: var(--space-3);
+      }
+      body.ui-v2 .card.setup-coverage .setup-coverage-header h2 {
+        margin: 0;
+      }
+      body.ui-v2 .card.setup-coverage .setup-coverage-header p {
+        margin: 0;
+      }
       body.ui-v2 .card.setup-coverage .setup-coverage-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
         gap: var(--space-3);
         margin-top: var(--space-2);
       }
-      @media (max-width: 800px) {
+      @media (max-width: 900px) {
         body.ui-v2 .card.setup-coverage .setup-coverage-grid {
           grid-template-columns: 1fr 1fr;
         }
