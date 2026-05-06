@@ -2465,12 +2465,18 @@ def invitations_index(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    rows = invitations.list_invitations_for_session(db, review_session.id)
+    rows = views.build_invitations_rows(db, review_session)
+    invitation_rows = invitations.list_invitations_for_session(
+        db, review_session.id
+    )
     eligible = invitations.reviewers_eligible_for_invitation(db, review_session.id)
-    invited_ids = {r.invitation.reviewer_id for r in rows}
-    pending_ids = [
-        r.invitation.id for r in rows if r.invitation.status == "pending"
-    ]
+    invited_ids = {r.invitation.reviewer_id for r in invitation_rows}
+    pending_count = sum(
+        1
+        for r in invitation_rows
+        if r.invitation.status == "pending"
+    )
+    incomplete_count = sum(1 for r in rows if r.is_incomplete)
     return _templates.TemplateResponse(
         request,
         "operator/session_invitations.html",
@@ -2481,10 +2487,59 @@ def invitations_index(
             "rows": rows,
             "eligible_count": len(eligible),
             "uninvited_count": sum(1 for r in eligible if r.id not in invited_ids),
-            "pending_count": len(pending_ids),
+            "pending_count": pending_count,
+            "incomplete_count": incomplete_count,
             "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Invitations"
+            ),
+        },
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/invitations/{invitation_id}/detail",
+    response_class=HTMLResponse,
+)
+def invitation_reviewer_detail(
+    request: Request,
+    bundle: tuple[Invitation, ReviewSession] = Depends(
+        _require_invitation_in_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    """Drill-in from a row on the Manage Invitations table.
+
+    Segment 11C Part 1 scaffolds this as a thin per-reviewer summary —
+    the same Email Status / Review Progress / Required Fields fields the
+    consolidated table renders, plus the latest invitation outbox row's
+    raw token URL when available. Future segments grow this surface
+    (per-assignment progress, per-response detail).
+    """
+    invitation, review_session = bundle
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
+    ).scalar_one()
+    rows = views.build_invitations_rows(db, review_session)
+    row = next((r for r in rows if r.reviewer.id == reviewer.id), None)
+    invite_url = invitations.most_recent_invitation_url(
+        db, invitation_id=invitation.id
+    )
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_invitations_reviewer_detail.html",
+        {
+            "user": user,
+            "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
+            "reviewer": reviewer,
+            "invitation": invitation,
+            "row": row,
+            "invite_url": invite_url,
+            "is_ready": lifecycle.is_ready(review_session),
+            "breadcrumbs": breadcrumbs.operator_session_invitations_reviewer(
+                review_session, reviewer.name
             ),
         },
     )
@@ -2675,7 +2730,37 @@ def invitations_remind_one(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/monitoring",
+        url=f"/operator/sessions/{review_session.id}/invitations",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/invitations/remind-incomplete"
+)
+def invitations_remind_incomplete(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Bulk reminder dispatch from the consolidated Manage Invitations
+    page (Segment 11C Part 1). Funnels through the same
+    ``invitations.send_reminders_to_incomplete`` helper the (still-
+    existing) Monitoring page uses; PR 3 retires the Monitoring
+    counterpart endpoint."""
+    _require_ready(review_session)
+    invitations.send_reminders_to_incomplete(
+        db,
+        review_session=review_session,
+        user=user,
+        build_invite_url=lambda token: str(
+            request.url_for("reviewer_invite", token=token)
+        ),
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

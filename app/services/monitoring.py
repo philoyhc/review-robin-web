@@ -30,12 +30,17 @@ class ReviewerProgress:
     assignment_count: int
     completed_count: int
     missing_required_count: int
+    required_total: int
     pill_state: str  # "not started" | "in progress" | "submitted"
     last_reminder_at: object | None  # datetime|None — keep generic for templates
 
     @property
     def is_incomplete(self) -> bool:
         return self.pill_state != "submitted"
+
+    @property
+    def required_done(self) -> int:
+        return self.required_total - self.missing_required_count
 
 
 def _assigned_active_reviewers(db: Session, session_id: int) -> list[Reviewer]:
@@ -80,6 +85,7 @@ def per_reviewer_progress(
                 assignment_count=state.total_assignments,
                 completed_count=state.completed_count,
                 missing_required_count=state.missing_required_count,
+                required_total=state.required_total,
                 pill_state=state.pill_state,
                 last_reminder_at=invitation.last_reminder_at if invitation else None,
             )

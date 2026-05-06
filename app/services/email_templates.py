@@ -147,6 +147,27 @@ def render_reminder(
     return subject, body
 
 
+def cc_bcc_for(
+    review_session: ReviewSession, kind: str
+) -> tuple[str | None, str | None]:
+    """Returns ``(cc, bcc)`` from the override JSON for the given email
+    kind. ``kind`` is ``"invitation"`` or ``"reminder"``; values are the
+    raw operator-entered comma-separated strings, or ``None`` when the
+    override is unset / blank.
+
+    Consumed by the queue path in ``app.services.invitations`` to
+    populate ``EmailOutbox.cc_emails`` / ``bcc_emails`` (added by the
+    Segment 11C PR 2 outbox-schema slice)."""
+    cc_key = f"{kind}_cc"
+    bcc_key = f"{kind}_bcc"
+    overrides = review_session.email_template_overrides or {}
+    cc = overrides.get(cc_key)
+    bcc = overrides.get(bcc_key)
+    cc_value = cc.strip() if isinstance(cc, str) and cc.strip() else None
+    bcc_value = bcc.strip() if isinstance(bcc, str) and bcc.strip() else None
+    return cc_value, bcc_value
+
+
 # ── Editor helpers (Segment 11E PR 2) ────────────────────────────────────
 
 

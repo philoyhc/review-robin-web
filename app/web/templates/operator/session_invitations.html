@@ -14,9 +14,9 @@
   {% if not is_ready %}
     <div class="card lock">
       <p style="margin: 0;">
-        Invitations can only be issued while the session is Activated.
-        Activate the session from the validation page to enable these
-        actions.
+        Invitation and reminder actions can only be issued while the
+        session is Activated. Activate the session from the validation
+        page to enable these actions.
       </p>
     </div>
   {% endif %}
@@ -29,6 +29,8 @@
       <span class="pill pill-count">{{ uninvited_count }}</span>
       &middot; Pending send:
       <span class="pill pill-count">{{ pending_count }}</span>
+      &middot; Incomplete:
+      <span class="pill pill-empty">{{ incomplete_count }}</span>
     </p>
     <p>
       <form method="post"
@@ -49,13 +51,22 @@
           Send all pending
         </button>
       </form>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete"
+            style="display: inline;">
+        <button class="btn secondary"
+                type="submit"
+                {% if not is_ready or incomplete_count == 0 %}disabled{% endif %}>
+          Send reminders to {{ incomplete_count }} incomplete reviewer{% if incomplete_count != 1 %}s{% endif %}
+        </button>
+      </form>
       <a class="btn secondary"
          href="/operator/sessions/{{ session.id }}/outbox">View outbox</a>
     </p>
     <p class="form-help">
-      Each "Send" rotates the token (the previous URL becomes stale) and
-      writes a fresh row to the dev outbox. Reviewers must sign in with
-      their work email to follow the link.
+      Each "Send" rotates the invitation token (the previous URL becomes
+      stale). Reminders reuse the most-recent invitation URL so the
+      reviewer's existing link keeps working.
     </p>
   </div>
 
@@ -64,45 +75,93 @@
       <table>
         <tr>
           <th>Reviewer</th>
-          <th>Status</th>
-          <th>Sent</th>
-          <th>Opened</th>
+          <th>Email Status</th>
+          <th>Email Sent</th>
+          <th>Review Progress</th>
+          <th>Required Fields</th>
+          <th>Last reminder</th>
           <th class="col-shrink"></th>
         </tr>
         {% for row in rows %}
           <tr>
             <td>
-              <strong>{{ row.reviewer.name }}</strong><br>
+              {% if row.invitation %}
+                <a href="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/detail">
+                  <strong>{{ row.reviewer.name }}</strong>
+                </a><br>
+              {% else %}
+                <strong>{{ row.reviewer.name }}</strong><br>
+              {% endif %}
               <code>{{ row.reviewer.email }}</code>
             </td>
             <td>
-              {% if row.invitation.status == "opened" %}
-                <span class="pill pill-count">opened</span>
-              {% elif row.invitation.status == "sent" %}
+              {% if row.email_status == "sent" %}
                 <span class="pill pill-count">sent</span>
+              {% elif row.email_status == "queued" %}
+                <span class="pill pill-empty">queued</span>
               {% else %}
-                <span class="pill pill-empty">pending</span>
+                <span class="pill pill-empty">not sent</span>
               {% endif %}
             </td>
-            <td>{{ row.invitation.sent_at.strftime("%Y-%m-%d %H:%M") if row.invitation.sent_at else "—" }}</td>
-            <td>{{ row.invitation.opened_at.strftime("%Y-%m-%d %H:%M") if row.invitation.opened_at else "—" }}</td>
+            <td>
+              {% if row.email_sent_at %}
+                {{ row.email_sent_at.strftime("%Y-%m-%d %H:%M") }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if row.review_progress_total == 0 %}
+                —
+              {% else %}
+                {{ row.review_progress_state }}
+                ({{ row.review_progress_done }}/{{ row.review_progress_total }})
+              {% endif %}
+            </td>
+            <td>
+              {% if row.review_progress_total == 0 %}
+                —
+              {% else %}
+                ({{ row.required_fields_done }}/{{ row.required_fields_total }})
+              {% endif %}
+            </td>
+            <td>
+              {% if row.last_reminder_at %}
+                {{ row.last_reminder_at.strftime("%Y-%m-%d %H:%M") }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td class="col-shrink">
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/send"
-                    style="display: inline;">
-                <button class="btn secondary" type="submit"
-                        {% if not is_ready %}disabled{% endif %}>
-                  Send
-                </button>
-              </form>
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/regenerate"
-                    style="display: inline;">
-                <button class="btn secondary" type="submit"
-                        {% if not is_ready %}disabled{% endif %}>
-                  Regenerate
-                </button>
-              </form>
+              {% if row.invitation %}
+                {% if row.invitation.status == "pending" %}
+                  <form method="post"
+                        action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/send"
+                        style="display: inline;">
+                    <button class="btn secondary" type="submit"
+                            {% if not is_ready %}disabled{% endif %}>
+                      Send
+                    </button>
+                  </form>
+                {% else %}
+                  <form method="post"
+                        action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/remind"
+                        style="display: inline;">
+                    <button class="btn secondary" type="submit"
+                            {% if not is_ready or not row.is_incomplete %}disabled{% endif %}>
+                      Send reminder
+                    </button>
+                  </form>
+                {% endif %}
+                <form method="post"
+                      action="/operator/sessions/{{ session.id }}/invitations/{{ row.invitation.id }}/regenerate"
+                      style="display: inline;">
+                  <button class="btn secondary" type="submit"
+                          {% if not is_ready %}disabled{% endif %}>
+                    Regenerate
+                  </button>
+                </form>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}
@@ -110,8 +169,8 @@
     </div>
   {% else %}
     <div class="card">
-      <p class="muted">No invitations yet. Click <em>Generate invitations</em>
-      above to create one row per assigned active reviewer.</p>
+      <p class="muted">No reviewers assigned yet — generate assignments
+      before activating the session.</p>
     </div>
   {% endif %}
 {% endblock %}

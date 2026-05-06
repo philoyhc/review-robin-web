@@ -31,6 +31,19 @@ def operator_session_child(session: ReviewSession, label: str) -> list[Crumb]:
     ]
 
 
+def operator_session_invitations_reviewer(
+    session: ReviewSession, reviewer_label: str
+) -> list[Crumb]:
+    """Breadcrumb for the reviewer-detail drill-in from Manage
+    Invitations (Segment 11C Part 1)."""
+    return [
+        ("Sessions", "/operator/sessions"),
+        (session.name, f"/operator/sessions/{session.id}"),
+        ("Invitations", f"/operator/sessions/{session.id}/invitations"),
+        (reviewer_label, None),
+    ]
+
+
 def operator_new_session() -> list[Crumb]:
     return [
         ("Sessions", "/operator/sessions"),
