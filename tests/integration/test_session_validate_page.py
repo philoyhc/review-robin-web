@@ -231,6 +231,37 @@ def test_setup_coverage_matrix_omits_issue_pill_when_clean(
     assert 'href="#issue-source-reviewers"' not in body
 
 
+def test_validate_page_renders_fix_on_link_per_issue(
+    client: TestClient, db: Session
+) -> None:
+    """Each issue carries a "Fix on {Setup page} ↗" anchor pointing
+    at the rule's ``fix_url`` (with ``fix_anchor`` appended where the
+    rule emits one)."""
+    review_session = _make_session(client, db, code="fix-link")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    # Bare session has no reviewers → reviewers.empty rule fires →
+    # "Fix on Reviewers Setup ↗" link surfaces.
+    assert (
+        f'href="/operator/sessions/{review_session.id}/reviewers"'
+        in body
+    )
+    assert "Fix on Reviewers Setup ↗" in body
+
+
+def test_validate_page_renders_per_issue_id_anchors(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="issue-ids")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    # rule_key + loop index combine into the per-issue id; every
+    # registry-emitted issue carries an id="issue-{rule_key}-N".
+    assert 'id="issue-reviewers.empty-1"' in body
+
+
 def test_validate_page_lifecycle_copy_for_ready_session(
     db: Session,
     alice: AuthenticatedUser,

@@ -761,6 +761,22 @@
         text-align: right;
         white-space: nowrap;
       }
+      /* Validate-page issue list — flex-row per item with the fix-on
+         link right-aligned. The Fix link uses the standard "leaves
+         this page" arrow ↗ trailing literal. */
+      body.ui-v2 .issue-list > li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+      }
+      body.ui-v2 .issue-list .issue-body {
+        flex: 1;
+      }
+      body.ui-v2 .issue-list .issue-fix-link {
+        white-space: nowrap;
+      }
       body.ui-v2 .card.danger-zone {
         border-color: var(--accent-amber-dark);
         background: var(--bg-page);

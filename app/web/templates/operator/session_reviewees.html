@@ -121,7 +121,7 @@
           {% if has_tags %}<th>Tags</th>{% endif %}
         </tr>
         {% for reviewee in reviewees %}
-          <tr>
+          <tr id="reviewee-row-{{ reviewee.id }}">
             <td>{{ reviewee.name }}</td>
             <td><code>{{ reviewee.email_or_identifier }}</code></td>
             <td>{{ reviewee.status }}</td>

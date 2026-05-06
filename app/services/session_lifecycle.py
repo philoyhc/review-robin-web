@@ -71,7 +71,12 @@ class ReadinessReport:
 
     @property
     def has_non_blocking_findings(self) -> bool:
-        return bool(self.warnings or self.info)
+        """True iff there are warnings that require operator
+        acknowledgment to activate. Info-severity issues are advisory
+        only and don't trigger the acknowledgment ceremony — they were
+        unused before Segment 11G PR B added the first info rule
+        (``email_template.no_help_contact``)."""
+        return bool(self.warnings)
 
 
 def build_readiness_report(issues: list[ValidationIssue]) -> ReadinessReport:
