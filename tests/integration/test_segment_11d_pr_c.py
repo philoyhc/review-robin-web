@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, Instrument, Reviewer, ReviewSession
 
+from ._preview_iframe import get_surface_preview_html
+
 
 def _operator_creates_session_with_pair(
     operator_client: TestClient,
@@ -282,9 +284,9 @@ def test_review_surface_preview_banner_is_banner_info(
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
     )
-    body = operator.get(
-        f"/operator/sessions/{review_session.id}/preview"
-    ).text
+    body = get_surface_preview_html(
+        operator, review_session.id, "rae@example.edu"
+    )
     assert 'class="banner banner-info"' in body
     assert 'class="warning-banner"' not in body
     # Copy is preserved exactly so cross-tests don't churn.
@@ -544,7 +546,10 @@ def test_operator_preview_keeps_operator_chrome(
 ) -> None:
     """The operator preview reuses review_surface.html but should keep
     the operator chrome (with breadcrumb back to the session) — the
-    reviewer top bar override is suppressed in preview_mode."""
+    reviewer top bar override is suppressed in preview_mode. After
+    Segment 11F PR C the surface renders inside an iframe srcdoc on
+    the previews hub; the iframe's inner HTML still asserts the same
+    chrome contract."""
     client.post(
         "/operator/sessions",
         data={"name": "Prev", "code": "rae-prev-chrome"},
@@ -553,7 +558,36 @@ def test_operator_preview_keeps_operator_chrome(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "rae-prev-chrome")
     ).scalar_one()
-    body = client.get(f"/operator/sessions/{review_session.id}/preview").text
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": ""},
+        follow_redirects=False,
+    )
+    body = get_surface_preview_html(
+        client, review_session.id, "r@example.edu"
+    )
     # Operator chrome present (Web App identity, breadcrumb).
     assert "Review Robin Web App (version dev)" in body
     assert 'class="breadcrumb"' in body

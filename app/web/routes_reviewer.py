@@ -561,16 +561,23 @@ def build_preview_context(
     db: Session,
     user: User,
     review_session: ReviewSession,
+    target_reviewer: Reviewer | None = None,
 ) -> dict:
     """Operator-side mirror of :func:`_surface_context`.
 
     Builds the reviewer-surface view shape with up to three rows: real
-    assignments first (by ``Assignment.id`` ascending, no reviewer-id
-    filter), padded with synthetic placeholders to reach three. Per
-    Segment 10B-3 D9 this is read-only — it does **not** call
-    ``lifecycle.observe_deadline`` (which mutates the DB on a deadline
-    crossing) and forces ``accepting=False`` on every row so the existing
-    template's ``disabled_attr`` branch renders every input disabled.
+    assignments first (by ``Assignment.id`` ascending), padded with
+    synthetic placeholders to reach three. When ``target_reviewer`` is
+    provided (Segment 11F PR C — picker-driven previews hub), the real
+    assignments are filtered to that reviewer so the iframe surfaces
+    *that reviewer's* reviewees. With no target_reviewer (the legacy
+    ``/preview`` redirect target / direct caller path) the query
+    returns the first three assignments in the session regardless of
+    reviewer. Per Segment 10B-3 D9 this is read-only — it does **not**
+    call ``lifecycle.observe_deadline`` (which mutates the DB on a
+    deadline crossing) and forces ``accepting=False`` on every row so
+    the existing template's ``disabled_attr`` branch renders every
+    input disabled.
     """
     instruments = list(
         db.execute(
@@ -621,19 +628,24 @@ def build_preview_context(
             field
         )
 
+    assignments_stmt = (
+        select(Assignment)
+        .options(
+            joinedload(Assignment.reviewee),
+            joinedload(Assignment.instrument),
+        )
+        .where(
+            Assignment.session_id == review_session.id,
+            Assignment.include.is_(True),
+        )
+    )
+    if target_reviewer is not None:
+        assignments_stmt = assignments_stmt.where(
+            Assignment.reviewer_id == target_reviewer.id
+        )
     real_assignments = list(
         db.execute(
-            select(Assignment)
-            .options(
-                joinedload(Assignment.reviewee),
-                joinedload(Assignment.instrument),
-            )
-            .where(
-                Assignment.session_id == review_session.id,
-                Assignment.include.is_(True),
-            )
-            .order_by(Assignment.id)
-            .limit(3)
+            assignments_stmt.order_by(Assignment.id).limit(3)
         ).scalars()
     )
 
@@ -754,12 +766,17 @@ def build_preview_context(
     # preview lets the operator flip between pages (per Segment 11D
     # follow-on PR ε). The unified action row collapses to Page N
     # buttons only in preview; Save / Discard / Submit / divider are
-    # suppressed at the partial level.
+    # suppressed at the partial level. Segment 11F PR C now embeds
+    # the surface inside a sandboxed iframe on the previews hub —
+    # the JS that swaps pages client-side doesn't run in the iframe,
+    # so click-fallback hrefs land the operator on the previews hub
+    # surface card (the closest sensible target). The standalone
+    # ``/preview`` route is a 308 to that same hub.
     page_buttons: list[views.PageButton] = [
         views.PageButton(
             position=group["position"],
             label=views.page_button_label(group["instrument"], group["position"]),
-            href=f"/operator/sessions/{review_session.id}/preview",
+            href=f"/operator/sessions/{review_session.id}/previews#reviewer-surface",
             is_current=group["is_current"],
         )
         for group in instrument_groups

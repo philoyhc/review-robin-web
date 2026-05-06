@@ -1,0 +1,49 @@
+{# Reviewer-surface card for the Previews page (segment 11F PR C).
+
+   Renders the picker-selected reviewer's would-be reviewer surface
+   inside an iframe srcdoc. The iframe carries
+   `sandbox="allow-same-origin"` (no `allow-scripts`, no
+   `allow-forms`) so a reviewer template that ever picks up
+   client-side JS can't fire inside the operator's preview page.
+
+   When the surface adapter surfaces a scoped missing-data error
+   (no instruments configured / no assigned reviewees), the card
+   renders the error inline with a link to the relevant Setup page;
+   the email region above the `<hr>` keeps rendering regardless.
+
+   Required context:
+     - session: ReviewSession
+     - picker: views.PreviewPickerContext
+     - surface_card: views.SurfacePreviewContext
+     - surface_html: str | None  (the iframe srcdoc body, populated
+       by the route via the `reviewer/review_surface.html` template
+       when ``surface_card.preview`` is non-None)
+#}
+<div class="card surface-preview-card" id="reviewer-surface">
+  <h2 class="card-title">Reviewer surface</h2>
+  <p class="form-help surface-preview-description">
+    The form
+    {% if picker.current %}{{ picker.current.name }} ({{ picker.current.email }}){% else %}the selected reviewer{% endif %}
+    would see after clicking the invitation.
+  </p>
+
+  {% if surface_card.missing %}
+    <p class="form-help surface-preview-missing">
+      {{ surface_card.missing.message }}
+      <a href="{{ surface_card.missing.setup_url }}">{{ surface_card.missing.setup_label }}</a>
+    </p>
+  {% else %}
+    <iframe class="surface-preview-iframe"
+            sandbox="allow-same-origin"
+            srcdoc="{{ surface_html }}"
+            title="Reviewer surface preview"></iframe>
+  {% endif %}
+
+  <p class="form-help surface-preview-footer">
+    Rendered from
+    <a href="/operator/sessions/{{ session.id }}/reviewers">Reviewers (Setup)</a>,
+    <a href="/operator/sessions/{{ session.id }}/assignments">Assignments (Setup)</a>,
+    and
+    <a href="/operator/sessions/{{ session.id }}/instruments">Instruments (Setup)</a>.
+  </p>
+</div>

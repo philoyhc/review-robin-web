@@ -1,8 +1,19 @@
-"""Integration tests for GET /operator/sessions/{id}/preview (Segment 10B-3)."""
+"""Integration tests for the retired ``/operator/sessions/{id}/preview``
+route (Segment 10B-3 → Segment 11F PR C).
+
+PR C retires the standalone preview route in favor of the iframe-
+embedded surface card on the consolidated previews hub. This file
+keeps the tests that exercise behaviors specific to the retired
+route — the 308 redirect contract, operator-only access, and the
+deadline-observation D9 contract — plus the regression guard for
+the live reviewer surface route. The bulk of the rendered-surface
+assertions migrate to ``test_session_previews.py`` (PR C tests) and
+``test_segment_11d_*.py`` (chrome / panel / inputs / page buttons),
+which call ``get_surface_preview_html`` to extract the iframe srcdoc.
+"""
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 
 import pytest
@@ -12,6 +23,8 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import AuditEvent, ReviewSession
+
+from ._preview_iframe import get_surface_preview_html
 
 
 @pytest.fixture
@@ -80,146 +93,56 @@ def _activate(client: TestClient, db: Session, session_id: int) -> None:
     )
 
 
-def test_preview_renders_banner_in_draft_status(
+def test_preview_route_returns_308_to_previews_hub(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="prev-draft")
+    """``/preview`` (singular) is a permanent redirect to the previews
+    hub anchored on the surface card. Status 308 keeps the GET method
+    on cross-client redirect handling and signals to crawlers that
+    the standalone route is gone."""
+    review_session = _make_session(client, db, code="prev-308")
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
+        f"/operator/sessions/{review_session.id}/preview",
+        follow_redirects=False,
     )
 
-    assert response.status_code == 200
-    body = response.text
-    assert "Preview" in body
-    assert "not visible to reviewers" in body
-    assert f"<h1>{review_session.name}</h1>" in body
-
-
-def test_preview_works_in_validated_and_ready_status(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="prev-states")
-    _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
-
-    # validated state
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
-    db.refresh(review_session)
-    assert review_session.status == "validated"
-    response = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
+    assert response.status_code == 308
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}/previews#reviewer-surface"
     )
-    assert response.status_code == 200
-    assert "not visible to reviewers" in response.text
-
-    # ready state
-    _activate(client, db, review_session.id)
-    db.refresh(review_session)
-    assert review_session.status == "ready"
-
-    response = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
-    )
-    assert response.status_code == 200
-    assert "not visible to reviewers" in response.text
-
-    # Preview is read-only: no instrument.opened audit event is emitted
-    # by the GET (D9 — read-only).
-    opened_events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.opened",
-            AuditEvent.session_id == review_session.id,
-        )
-    ).scalars().all()
-    # The activate call may emit instrument.opened; what we want to assert
-    # is that the preview GET itself doesn't emit one. Snapshot count
-    # before + after.
-    before = len(opened_events)
-    client.get(f"/operator/sessions/{review_session.id}/preview")
-    after = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.opened",
-            AuditEvent.session_id == review_session.id,
-        )
-    ).scalars().all()
-    assert len(after) == before
 
 
-def test_preview_returns_403_for_non_operator(
+def test_preview_route_403s_for_non_operator(
     db: Session,
     alice: AuthenticatedUser,
     reviewer_user: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
+    """The redirect goes through ``require_session_operator`` so a
+    non-operator still bounces with a 403 rather than getting a free
+    redirect into the operator hub."""
     operator = make_client(alice)
-    review_session = _make_session(operator, db, code="prev-403")
+    review_session = _make_session(operator, db, code="prev-308-403")
     _populate_rosters(operator, review_session.id)
     _generate_full_matrix(operator, review_session.id)
 
-    # rae is an active reviewer in the session — but not an operator
     other_client = make_client(reviewer_user)
     response = other_client.get(
-        f"/operator/sessions/{review_session.id}/preview"
+        f"/operator/sessions/{review_session.id}/preview",
+        follow_redirects=False,
     )
     assert response.status_code == 403
 
 
-def test_preview_body_has_no_reviewer_write_path_forms(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="prev-forms")
-    _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
-    _activate(client, db, review_session.id)
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
-    ).text
-
-    # No reviewer write-path action attributes should appear in preview.
-    assert (
-        f'action="/reviewer/sessions/{review_session.id}/save"' not in body
-    )
-    assert (
-        f'action="/reviewer/sessions/{review_session.id}/submit"' not in body
-    )
-    assert (
-        f'action="/reviewer/sessions/{review_session.id}/clear"' not in body
-    )
-    # And no formaction= overrides on Submit buttons.
-    assert "formaction=" not in body
-
-
-def test_preview_inputs_render_disabled(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="prev-disabled")
-    _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
-    ).text
-
-    # Every input / textarea / select-tagged element should carry
-    # the disabled attribute. Use a permissive regex that matches the
-    # opening tag and asserts disabled appears before the closing >.
-    pattern = re.compile(
-        r"<(input|textarea|select)\b([^>]*)>", re.IGNORECASE | re.DOTALL
-    )
-    for match in pattern.finditer(body):
-        opening_attrs = match.group(2)
-        assert (
-            re.search(r"\bdisabled\b", opening_attrs) is not None
-        ), f"input-like tag missing disabled: {match.group(0)!r}"
-
-
-def test_preview_does_not_observe_deadline_side_effect(
+def test_preview_iframe_does_not_observe_deadline_side_effect(
     client: TestClient, db: Session
 ) -> None:
     """Bypassing deadline observation per D9 means an expired deadline
-    does NOT trigger the lazy-close path on a preview GET."""
+    does NOT trigger the lazy-close path on a preview render. The
+    contract carries through the iframe srcdoc on the previews hub:
+    rendering the surface card after deadline must not emit a
+    ``deadline``-reason ``instrument.closed`` audit event."""
     from datetime import datetime, timedelta, timezone
 
     review_session = _make_session(client, db, code="prev-deadline")
@@ -228,17 +151,16 @@ def test_preview_does_not_observe_deadline_side_effect(
     _activate(client, db, review_session.id)
     db.refresh(review_session)
 
-    # Set a deadline in the past after activation
+    # Set a deadline in the past after activation.
     review_session.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
     db.flush()
 
-    response = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
+    body = get_surface_preview_html(
+        client, review_session.id, "r@example.edu"
     )
-    assert response.status_code == 200
+    # Surface still renders without observing the deadline.
+    assert f"<h1>{review_session.name}</h1>" in body
 
-    # No deadline-driven instrument.closed event should be written by
-    # the preview GET.
     deadline_close = db.execute(
         select(AuditEvent).where(
             AuditEvent.event_type == "instrument.closed",
@@ -246,7 +168,6 @@ def test_preview_does_not_observe_deadline_side_effect(
         )
     ).scalars().all()
     for ev in deadline_close:
-        # Any lazy-close events should not reference the preview path.
         assert ev.detail.get("reason") != "deadline"
 
 
@@ -256,9 +177,10 @@ def test_reviewer_side_surface_still_renders_write_path(
     reviewer_user: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Regression guard for Slice 3's {% if not preview_mode %} wrappers —
-    the reviewer's normal /reviewer/sessions/{id} surface must still
-    render Save / Submit / Discard / Clear (and no preview banner)."""
+    """Regression guard for Slice 3's ``{% if not preview_mode %}``
+    wrappers — the reviewer's normal /reviewer/sessions/{id} surface
+    must still render Save / Submit / Discard / Clear (and no preview
+    banner)."""
     operator = make_client(alice)
     review_session = _make_session(operator, db, code="rev-regress")
     _populate_rosters(operator, review_session.id)
@@ -279,27 +201,3 @@ def test_reviewer_side_surface_still_renders_write_path(
     assert (
         f'action="/reviewer/sessions/{review_session.id}/1/save"' in body
     )
-
-
-def test_preview_anchor_rendered_on_session_detail(
-    client: TestClient, db: Session
-) -> None:
-    """The See previews secondary button renders in the Next action
-    card's button row once the session is validated. Per
-    spec/session_home.md, draft and ready states intentionally omit
-    the See previews button (nothing meaningful to preview in
-    draft; operators monitor live responses, not previews, while
-    Activated)."""
-
-    review_session = _make_session(client, db, code="prev-anchor-detail")
-    _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}?validated=1"
-    ).text
-
-    assert (
-        f'href="/operator/sessions/{review_session.id}/preview"' in body
-    )
-    assert ">See previews</a>" in body

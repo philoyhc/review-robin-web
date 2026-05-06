@@ -29,6 +29,8 @@ from app.db.models import (
 )
 from app.services import instruments as instruments_service
 
+from ._preview_iframe import get_surface_preview_html
+
 
 def _setup_two_instrument_session(
     operator_client: TestClient,
@@ -344,7 +346,9 @@ def test_preview_action_row_collapses_to_page_buttons(
 ) -> None:
     """Operator preview renders a unified action row that collapses to
     just Page #N buttons. Save / Discard / divider / Submit are
-    suppressed because preview is read-only and synthetic."""
+    suppressed because preview is read-only and synthetic. After
+    Segment 11F PR C the preview lives inside an iframe srcdoc on
+    the previews hub."""
     client.post(
         "/operator/sessions",
         data={"name": "Prev", "code": "prev-eps-collapse"},
@@ -353,9 +357,36 @@ def test_preview_action_row_collapses_to_page_buttons(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "prev-eps-collapse")
     ).scalar_one()
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
-    ).text
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": ""},
+        follow_redirects=False,
+    )
+    body = get_surface_preview_html(
+        client, review_session.id, "r@example.edu"
+    )
     # Page #1 button renders even on single-instrument preview.
     assert 'data-rs-page="1"' in body
     # No Save / Discard / Submit / divider in preview. ``data-rs-save>``
@@ -407,9 +438,36 @@ def test_preview_inputs_render_disabled(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "prev-eps-disabled")
     ).scalar_one()
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
-    ).text
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": ""},
+        follow_redirects=False,
+    )
+    body = get_surface_preview_html(
+        client, review_session.id, "r@example.edu"
+    )
     # Every actual response input on the synthetic surface carries
     # ``disabled``. Anchor on the seeded `rating` field.
     assert 'name="response' in body

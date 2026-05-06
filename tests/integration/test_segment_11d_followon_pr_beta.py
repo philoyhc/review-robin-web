@@ -19,6 +19,8 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, Reviewer, ReviewSession
 
+from ._preview_iframe import get_surface_preview_html
+
 
 def _operator_creates_session_with_pair(
     operator_client: TestClient,
@@ -286,7 +288,9 @@ def test_operator_preview_status_panel_has_no_per_page_pills(
 ) -> None:
     """Operator preview reuses the surface template but the panel
     renders without per-page pills (preview is read-only and synthetic;
-    per-page state is moot)."""
+    per-page state is moot). After Segment 11F PR C the surface
+    renders inside an iframe srcdoc on the previews hub; the iframe's
+    inner HTML still carries the panel contract."""
     review_session_response = client.post(
         "/operator/sessions",
         data={"name": "Prev", "code": "rae-prev-pills"},
@@ -296,9 +300,36 @@ def test_operator_preview_status_panel_has_no_per_page_pills(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "rae-prev-pills")
     ).scalar_one()
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
-    ).text
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": ""},
+        follow_redirects=False,
+    )
+    body = get_surface_preview_html(
+        client, review_session.id, "r@example.edu"
+    )
     # The panel still renders (layout-stable) but the pill list is empty.
     assert 'class="card rs-status-panel"' in body
     assert 'class="rs-page-status-pills"' not in body
