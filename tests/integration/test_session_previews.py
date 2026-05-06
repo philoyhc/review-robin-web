@@ -533,7 +533,11 @@ def test_surface_card_renders_iframe_with_session_name(
     assert response.status_code == 200
     body = response.text
     assert 'class="surface-preview-iframe"' in body
-    assert 'sandbox="allow-same-origin"' in body
+    # `allow-scripts` (without `allow-same-origin`) keeps the
+    # reviewer-surface page-toggle JS alive so multi-instrument
+    # Page #N controls work inside the iframe; the opaque origin
+    # blocks parent-cookie / localStorage access.
+    assert 'sandbox="allow-scripts"' in body
     inner = _extract_iframe_srcdoc(body)
     # The iframe's HTML contains the reviewer-surface page header H1.
     assert f"<h1>{session.name}</h1>" in inner
