@@ -2468,11 +2468,14 @@ def _require_invitation_in_session(
 )
 def invitations_index(
     request: Request,
+    status: str = "all",
+    q: str = "",
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    rows = views.build_invitations_rows(db, review_session)
+    all_rows = views.build_invitations_rows(db, review_session)
+    rows = views.filter_invitations_rows(all_rows, status=status, search=q)
     invitation_rows = invitations.list_invitations_for_session(
         db, review_session.id
     )
@@ -2483,7 +2486,7 @@ def invitations_index(
         for r in invitation_rows
         if r.invitation.status == "pending"
     )
-    incomplete_count = sum(1 for r in rows if r.is_incomplete)
+    incomplete_count = sum(1 for r in all_rows if r.is_incomplete)
     return _templates.TemplateResponse(
         request,
         "operator/session_invitations.html",
@@ -2492,6 +2495,10 @@ def invitations_index(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "rows": rows,
+            "total_row_count": len(all_rows),
+            "filter_status": status,
+            "filter_search": q,
+            "filter_status_options": views.INVITATIONS_STATUS_OPTIONS,
             "eligible_count": len(eligible),
             "uninvited_count": sum(1 for r in eligible if r.id not in invited_ids),
             "pending_count": pending_count,
@@ -2700,6 +2707,8 @@ def session_monitoring_redirect(
 )
 def session_responses(
     request: Request,
+    status: str = "all",
+    q: str = "",
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -2711,8 +2720,13 @@ def session_responses(
     of their assigned reviewers who have submitted. Bulk reminder funnels
     through the same ``invitations.send_reminders_to_incomplete`` helper
     the Manage Invitations page calls.
+
+    ``status`` and ``q`` query params drive the per-page filter strip
+    (Segment 11C Part 1 follow-up). Filter state is page-local; not
+    persisted across navigations.
     """
-    rows = views.build_responses_rows(db, review_session)
+    all_rows = views.build_responses_rows(db, review_session)
+    rows = views.filter_responses_rows(all_rows, status=status, search=q)
     summary = monitoring.summary_counts(db, review_session)
     incomplete_count = summary.incomplete
     return _templates.TemplateResponse(
@@ -2723,6 +2737,10 @@ def session_responses(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "rows": rows,
+            "total_row_count": len(all_rows),
+            "filter_status": status,
+            "filter_search": q,
+            "filter_status_options": views.RESPONSES_STATUS_OPTIONS,
             "incomplete_count": incomplete_count,
             "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(

@@ -276,3 +276,80 @@ def test_per_reviewee_coverage_no_responses_with_assignments(
     assert coverage[0].reviewer_count == 2
     assert coverage[0].completed_count == 0
     assert coverage[0].pill_state == "no responses"
+
+
+# --------------------------------------------------------------------------- #
+# Filter strip — status + search (Segment 11C Part 1 follow-up)
+# --------------------------------------------------------------------------- #
+
+
+def test_responses_filter_strip_renders(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(
+        client,
+        db,
+        "resp-filt-strip",
+        reviewer_emails=["rae@example.edu"],
+        reviewee_emails=["carol@example.edu"],
+    )
+    body = client.get(f"/operator/sessions/{session.id}/responses").text
+    # Status dropdown lands with the four spec values + All.
+    assert '<option value="all"' in body
+    assert '<option value="complete"' in body
+    assert '<option value="adequate"' in body
+    assert '<option value="at_risk"' in body
+    assert '<option value="no_responses"' in body
+    # Search input renders, no Clear link until filter active.
+    assert 'name="q"' in body
+    assert ">Clear</a>" not in body
+
+
+def test_responses_filter_status_narrows_rows(
+    client: TestClient, db: Session
+) -> None:
+    """Two reviewees, one each in different states:
+    - Carol has one assigned reviewer → "no responses".
+    - Bob has no assignments at all → not included in the per-reviewee
+      coverage list (coverage is per assigned reviewee only). So we
+      assemble two reviewees both with assignments and check the
+      filter narrows to one."""
+    session = _ready_session(
+        client,
+        db,
+        "resp-filt-status",
+        reviewer_emails=["rae@example.edu"],
+        reviewee_emails=["carol@example.edu", "dave@example.edu"],
+    )
+    body = client.get(
+        f"/operator/sessions/{session.id}/responses?status=no_responses"
+    ).text
+    # Both reviewees match "no responses" today (no submissions yet).
+    assert "carol@example.edu" in body
+    assert "dave@example.edu" in body
+    # Filtering on "complete" with zero matching reviewees shows the
+    # filter-empty message, not the "no reviewees assigned yet" copy.
+    body = client.get(
+        f"/operator/sessions/{session.id}/responses?status=complete"
+    ).text
+    assert "No reviewees match the current filter." in body
+    assert ">Clear</a>" in body
+
+
+def test_responses_filter_search_narrows_rows(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(
+        client,
+        db,
+        "resp-filt-search",
+        reviewer_emails=["rae@example.edu"],
+        reviewee_emails=["carol@example.edu", "dave@example.edu"],
+    )
+    body = client.get(
+        f"/operator/sessions/{session.id}/responses?q=carol"
+    ).text
+    assert "carol@example.edu" in body
+    assert "dave@example.edu" not in body
+    # Showing-N-of-M counter renders.
+    assert "Showing 1 of 2." in body
