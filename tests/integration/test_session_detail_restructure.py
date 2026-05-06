@@ -512,11 +512,11 @@ def test_session_card_buttons_when_draft(
 def test_quick_setup_card_renders_scaffold_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """Segment 11H PR A — the Quick Setup card on Session Home
-    renders the full four-slot scaffold inert (every control
-    disabled) in draft. ``card`` carries no ``placeholder`` /
-    ``disabled`` modifier in this state — the slots are visible
-    and laid out, just not wired."""
+    """The Quick Setup card on Session Home renders the four-slot
+    layout in draft. Per Segment 11J PR A, the Reviewers and
+    Reviewees slots are live (no wiring tooltip); Assignments and
+    Settings remain inert pending Segment 11J PR B / Segment 12A
+    PR 6."""
 
     review_session = _make_session(client, db, code="qs-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
@@ -529,25 +529,32 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     # Four slots render with stable fragment anchors.
     for key in ("reviewers", "reviewees", "assignments", "settings"):
         assert f'id="quick-setup-{key}"' in body
-    # Each slot's inert controls carry the wiring tooltip.
-    assert "Wired in Segment 11J PR A" in body  # reviewers / reviewees
-    assert "Wired in Segment 11J PR B" in body  # assignments
-    assert "Wired in Segment 12A PR 6" in body  # settings (Session settings slot)
+    # Inert slots carry wiring tooltips; the live slots have shed theirs.
+    assert "Wired in Segment 11J PR A" not in body  # reviewers/reviewees live
+    assert "Wired in Segment 11J PR B" in body  # assignments still inert
+    assert "Wired in Segment 12A PR 6" in body  # settings still inert
+    # Live slot's form posts to its wire URL.
+    assert (
+        f'action="/operator/sessions/{review_session.id}/quick-setup/reviewers"'
+        in body
+    )
     # Dormant banner containers per slot per spec/assumptions.md.
     assert 'id="quick-setup-reviewers-confirm-banner"' in body
     assert 'id="quick-setup-reviewers-error-banner"' in body
 
 
-def test_quick_setup_card_disables_in_ready(
+def test_quick_setup_card_greys_in_ready(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Segment 11H PR A — when the session is Activated, the Quick
-    Setup card carries ``.card.disabled`` (plain greying per
-    ``spec/session_home.md``, not a yellow lock card) and the
-    description copy switches to the "paused while Activated"
-    line. The slot contents still render."""
+    """Per Segment 11J PR A's unified status-awareness model the
+    Quick Setup card greys via the body wrapper's ``.locked``
+    treatment in ``ready`` — same visual signal as the default-
+    locked draft state. The Lock / Unlock toggle stays visible
+    (the operator can still cosmetically unlock; the service
+    layer rejects mutating submits). The description copy switches
+    to the "paused while Activated" line."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
@@ -557,15 +564,18 @@ def test_quick_setup_card_disables_in_ready(
 
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
-    # ``.card.disabled`` plain greying (P4: lifecycle-disables-never-hides).
-    assert 'class="card disabled" id="quick-setup"' in body
+    # Body-greying via .locked, no separate .card.disabled treatment.
+    assert 'class="card disabled"' not in body
+    assert 'class="quick-setup-body locked"' in body
     # Description copy switches.
     assert (
         "Setup edits are paused while the session is Activated" in body
     )
-    # Slot scaffolds still present so the operator sees the eventual shape.
+    # Slots + lock toggle still present so the operator can navigate
+    # the card in any state.
     assert 'id="quick-setup-reviewers"' in body
     assert 'id="quick-setup-assignments"' in body
+    assert 'id="quick-setup-lock-toggle"' in body
 
 
 # ---------------------------------------------------------------------------
