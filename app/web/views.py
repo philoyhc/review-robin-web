@@ -13,11 +13,23 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, InstrumentResponseField, ReviewSession, User
+from datetime import datetime
+
+from app.db.models import (
+    EmailOutbox,
+    Instrument,
+    InstrumentResponseField,
+    Invitation,
+    Reviewer,
+    ReviewSession,
+    User,
+)
 from app.services import (
     assignments,
     csv_imports,
     instruments as instruments_service,
+    invitations as invitations_service,
+    monitoring,
     responses as responses_service,
     session_lifecycle as lifecycle,
 )
@@ -826,3 +838,105 @@ def _extract_summary(noun: str, count: int) -> str:
     if count == 1:
         return f"1 {noun}"
     return f"{count} {noun}s"
+
+
+# ---------------------------------------------------------------------------
+# Segment 11C Part 1 — Manage Invitations consolidated row spec
+# ---------------------------------------------------------------------------
+#
+# The rebuilt Manage Invitations page renders one row per assigned active
+# reviewer with seven columns (per the segment plan): Reviewer / Email
+# Status / Email Sent / Review Progress / Required Fields / Last reminder /
+# Action. ``InvitationsRow`` carries all the per-row data the template
+# needs; ``build_invitations_rows`` joins:
+#   - the per-reviewer progress + required-field aggregates from
+#     ``monitoring.per_reviewer_progress`` (which already joins
+#     reviewers ⨯ invitations ⨯ assignments ⨯ responses);
+#   - the latest invitation outbox row's status + sent_at (the
+#     "Email Status" + "Email Sent" columns);
+# in a single batched outbox query rather than firing N queries per row.
+
+
+@dataclass(frozen=True)
+class InvitationsRow:
+    reviewer: Reviewer
+    invitation: Invitation | None
+    email_status: str
+    """The latest invitation outbox row's status, or ``"not sent"`` when
+    no outbox row exists for this reviewer's invitation. Today the value
+    set is ``{"not sent", "queued", "sent"}``; Segment 11C Part 2 widens
+    it to include ``"sending"`` and ``"failed"``."""
+    email_sent_at: datetime | None
+    review_progress_state: str
+    """``"not started"`` / ``"in progress"`` / ``"submitted"`` —
+    pill_state from ``monitoring.ReviewerProgress``."""
+    review_progress_done: int
+    review_progress_total: int
+    required_fields_done: int
+    required_fields_total: int
+    last_reminder_at: datetime | None
+
+    @property
+    def is_incomplete(self) -> bool:
+        return self.review_progress_state != "submitted"
+
+
+def _latest_invitation_outbox_by_reviewer(
+    db: Session, session_id: int
+) -> dict[int, EmailOutbox]:
+    """One latest ``kind="invitation"`` outbox row per reviewer.
+
+    Used by ``build_invitations_rows`` to populate the Email Status +
+    Email Sent columns. Sorted descending by created_at then id, then
+    the first row per reviewer wins.
+    """
+    rows = list(
+        db.execute(
+            select(EmailOutbox)
+            .where(
+                EmailOutbox.session_id == session_id,
+                EmailOutbox.kind == invitations_service.INVITATION_KIND,
+                EmailOutbox.reviewer_id.is_not(None),
+            )
+            .order_by(
+                EmailOutbox.created_at.desc(), EmailOutbox.id.desc()
+            )
+        ).scalars()
+    )
+    out: dict[int, EmailOutbox] = {}
+    for row in rows:
+        rid = row.reviewer_id
+        if rid is not None and rid not in out:
+            out[rid] = row
+    return out
+
+
+def build_invitations_rows(
+    db: Session, review_session: ReviewSession
+) -> list[InvitationsRow]:
+    progress_rows = monitoring.per_reviewer_progress(db, review_session)
+    latest_outbox = _latest_invitation_outbox_by_reviewer(db, review_session.id)
+    out: list[InvitationsRow] = []
+    for p in progress_rows:
+        outbox_row = latest_outbox.get(p.reviewer.id)
+        if outbox_row is None:
+            email_status = "not sent"
+            email_sent_at: datetime | None = None
+        else:
+            email_status = outbox_row.status
+            email_sent_at = outbox_row.sent_at
+        out.append(
+            InvitationsRow(
+                reviewer=p.reviewer,
+                invitation=p.invitation,
+                email_status=email_status,
+                email_sent_at=email_sent_at,
+                review_progress_state=p.pill_state,
+                review_progress_done=p.completed_count,
+                review_progress_total=p.assignment_count,
+                required_fields_done=p.required_done,
+                required_fields_total=p.required_total,
+                last_reminder_at=p.last_reminder_at,
+            )
+        )
+    return out

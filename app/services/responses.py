@@ -621,7 +621,12 @@ class ReviewerSessionState:
     total_assignments: int
     completed_count: int
     missing_required_count: int
+    required_total: int
     pill_state: str  # "not started" | "in progress" | "submitted"
+
+    @property
+    def required_done(self) -> int:
+        return self.required_total - self.missing_required_count
 
 
 def reviewer_session_state(
@@ -633,6 +638,7 @@ def reviewer_session_state(
             total_assignments=0,
             completed_count=0,
             missing_required_count=0,
+            required_total=0,
             pill_state="not started",
         )
 
@@ -644,10 +650,12 @@ def reviewer_session_state(
     all_required_with_submitted = True
     completed_count = 0
     missing_required_count = 0
+    required_total = 0
 
     for assignment in assignments:
         fields = fields_by_instrument.get(assignment.instrument_id, [])
         required_ids = {f.id for f in fields if f.required}
+        required_total += len(required_ids)
         rows = list(
             db.execute(
                 select(Response).where(Response.assignment_id == assignment.id)
@@ -685,6 +693,7 @@ def reviewer_session_state(
         total_assignments=len(assignments),
         completed_count=completed_count,
         missing_required_count=missing_required_count,
+        required_total=required_total,
         pill_state=pill_state,
     )
 

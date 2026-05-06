@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}{{ reviewer.name }} — Invitations — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <div class="session-nav-card">
+    {% with current_page = "Invitations" %}
+      {% include "operator/partials/session_top_nav.html" %}
+    {% endwith %}
+    {% include "operator/partials/session_setup_status_row.html" %}
+  </div>
+
+  <div class="card">
+    <h1 style="margin-top: 0;">{{ reviewer.name }}</h1>
+    <p>
+      <code>{{ reviewer.email }}</code>
+      &middot;
+      <a href="/operator/sessions/{{ session.id }}/invitations">← Back to Manage Invitations</a>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top: 0;">Invitation</h2>
+    {% if row %}
+      <p>
+        Email Status:
+        {% if row.email_status == "sent" %}
+          <span class="pill pill-count">sent</span>
+        {% elif row.email_status == "queued" %}
+          <span class="pill pill-empty">queued</span>
+        {% else %}
+          <span class="pill pill-empty">not sent</span>
+        {% endif %}
+        &middot; Email Sent:
+        {% if row.email_sent_at %}
+          {{ row.email_sent_at.strftime("%Y-%m-%d %H:%M") }}
+        {% else %}
+          —
+        {% endif %}
+        &middot; Last reminder:
+        {% if row.last_reminder_at %}
+          {{ row.last_reminder_at.strftime("%Y-%m-%d %H:%M") }}
+        {% else %}
+          —
+        {% endif %}
+      </p>
+    {% endif %}
+    {% if invite_url %}
+      <p>
+        Invitation URL (last issued):<br>
+        <code>{{ invite_url }}</code>
+      </p>
+    {% else %}
+      <p class="muted">No invitation URL has been issued yet.</p>
+    {% endif %}
+  </div>
+
+  {% if row and row.review_progress_total > 0 %}
+    <div class="card">
+      <h2 style="margin-top: 0;">Review Progress</h2>
+      <p>
+        Status:
+        {% if row.review_progress_state == "submitted" %}
+          <span class="pill pill-count">submitted</span>
+        {% elif row.review_progress_state == "in progress" %}
+          <span class="pill pill-empty">in progress</span>
+        {% else %}
+          <span class="pill pill-empty">not started</span>
+        {% endif %}
+        &middot;
+        Assignments completed: {{ row.review_progress_done }} / {{ row.review_progress_total }}
+        &middot;
+        Required fields filled: {{ row.required_fields_done }} / {{ row.required_fields_total }}
+      </p>
+      <p class="form-help">
+        Per-assignment and per-response detail will land in a future
+        segment. This page is a scaffold — the row-level fields above
+        match the columns on the Manage Invitations table.
+      </p>
+    </div>
+  {% endif %}
+{% endblock %}

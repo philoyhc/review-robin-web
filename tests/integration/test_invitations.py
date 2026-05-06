@@ -442,3 +442,257 @@ def test_record_open_audit_event_written(
     ).scalar_one()
     assert opened.detail is not None
     assert opened.detail["invitation_id"] == invitation.id
+
+
+# --------------------------------------------------------------------------- #
+# Segment 11C Part 1 — consolidated Manage Invitations page
+# --------------------------------------------------------------------------- #
+
+
+def test_invitations_page_renders_consolidated_column_headers(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="cols-1")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+    # The full new column spec from segment_11C plan, in order.
+    for header in (
+        "<th>Reviewer</th>",
+        "<th>Email Status</th>",
+        "<th>Email Sent</th>",
+        "<th>Review Progress</th>",
+        "<th>Required Fields</th>",
+        "<th>Last reminder</th>",
+    ):
+        assert header in body, f"missing column header: {header!r}"
+    # The dropped "Opened" column from the pre-rewrite shape stays out.
+    assert "<th>Opened</th>" not in body
+
+
+def test_invitations_page_renders_review_progress_and_required_fields_format(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="prog-fmt")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+    # Review Progress: "{state} ({done}/{total})". Single reviewer with
+    # one assignment (Rae ⨯ Carol), no responses yet → "not started (0/1)".
+    assert "not started" in body
+    assert "(0/1)" in body  # review progress + required fields both 0/0 or 0/1
+
+
+def test_invitations_page_email_status_reflects_outbox_row(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="email-status")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+    # Before send: no outbox row exists → "not sent" pill.
+    assert "not sent" in body
+
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+    # After send: outbox row exists at status="sent" (today the queue
+    # path stamps sent immediately; Part 2 widens the value set).
+    assert ">sent</span>" in body
+
+
+def test_invitations_page_reviewer_name_links_to_drill_in(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="drill-link")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+    assert (
+        f'href="/operator/sessions/{session.id}/invitations/'
+        f'{invitation.id}/detail"' in body
+    )
+
+
+def test_invitation_reviewer_detail_renders(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="drill-detail")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    response = client.get(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/detail"
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert "rae@example.edu" in body
+    # Drill-in shows Email Status + Email Sent + Last reminder block.
+    assert "Email Status" in body
+    # Pre-send: no invitation URL.
+    assert "No invitation URL has been issued yet." in body
+
+    # After send: URL surfaces.
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/detail"
+    ).text
+    assert "/reviewer/invite/" in body
+
+
+def test_per_row_remind_redirects_to_invitations_page(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="remind-redir")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/operator/sessions/{session.id}/invitations"
+    )
+
+
+def test_invitations_remind_incomplete_bulk_endpoint(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="bulk-remind")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/operator/sessions/{session.id}/invitations"
+    )
+    # A reminder outbox row was written.
+    reminder_count = len(
+        db.execute(
+            select(EmailOutbox).where(
+                EmailOutbox.session_id == session.id,
+                EmailOutbox.kind == "reminder",
+            )
+        ).scalars().all()
+    )
+    assert reminder_count == 1
+
+
+def test_invitations_remind_incomplete_409_while_session_draft(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, "bulk-draft")
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+
+
+def test_send_invitation_populates_cc_bcc_from_override_json(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="cc-bcc")
+    # Operator sets CC + BCC on the session's email_template_overrides
+    # (the editor surface from Segment 11E PR 2 writes this same shape).
+    session.email_template_overrides = {
+        "invitation_cc": "ops@example.edu",
+        "invitation_bcc": "audit@example.edu, archive@example.edu",
+    }
+    db.commit()
+
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+
+    outbox = db.execute(
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
+    ).scalar_one()
+    assert outbox.cc_emails == "ops@example.edu"
+    assert outbox.bcc_emails == "audit@example.edu, archive@example.edu"
+
+
+def test_send_reminder_populates_cc_bcc_from_override_json(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="rem-cc-bcc")
+    session.email_template_overrides = {
+        "reminder_cc": "ops@example.edu",
+        "reminder_bcc": "archive@example.edu",
+    }
+    db.commit()
+
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind"
+    )
+
+    reminder = db.execute(
+        select(EmailOutbox).where(
+            EmailOutbox.invitation_id == invitation.id,
+            EmailOutbox.kind == "reminder",
+        )
+    ).scalar_one()
+    assert reminder.cc_emails == "ops@example.edu"
+    assert reminder.bcc_emails == "archive@example.edu"
+
+
+def test_send_omits_cc_bcc_when_overrides_blank(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="cc-bcc-blank")
+    # No overrides set at all.
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    outbox = db.execute(
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
+    ).scalar_one()
+    assert outbox.cc_emails is None
+    assert outbox.bcc_emails is None

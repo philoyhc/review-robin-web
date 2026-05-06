@@ -210,6 +210,9 @@ def send_invitation(
     subject, body = email_templates.render_invitation(
         review_session, reviewer, invite_url
     )
+    cc_emails, bcc_emails = email_templates.cc_bcc_for(
+        review_session, INVITATION_KIND
+    )
 
     outbox = EmailOutbox(
         session_id=review_session.id,
@@ -217,6 +220,8 @@ def send_invitation(
         invitation_id=invitation.id,
         kind=INVITATION_KIND,
         to_email=reviewer.email,
+        cc_emails=cc_emails,
+        bcc_emails=bcc_emails,
         subject=subject,
         body=body,
         status="queued",
@@ -431,12 +436,17 @@ def send_reminder(
     subject, body = email_templates.render_reminder(
         review_session, reviewer, existing_url
     )
+    cc_emails, bcc_emails = email_templates.cc_bcc_for(
+        review_session, REMINDER_KIND
+    )
     outbox = EmailOutbox(
         session_id=review_session.id,
         reviewer_id=reviewer.id,
         invitation_id=invitation.id,
         kind=REMINDER_KIND,
         to_email=reviewer.email,
+        cc_emails=cc_emails,
+        bcc_emails=bcc_emails,
         subject=subject,
         body=body,
         status="queued",

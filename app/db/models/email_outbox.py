@@ -36,6 +36,8 @@ class EmailOutbox(Base):
     )
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     to_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    cc_emails: Mapped[str | None] = mapped_column(Text, nullable=True)
+    bcc_emails: Mapped[str | None] = mapped_column(Text, nullable=True)
     subject: Mapped[str] = mapped_column(String(255), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="queued", nullable=False)
