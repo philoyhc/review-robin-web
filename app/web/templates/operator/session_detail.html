@@ -166,54 +166,8 @@
          Sits immediately under the Next Action card so the
          operator's two most common reads on Home (current
          lifecycle action + responses-to-extract status) sit in
-         the same column. Quick Setup moves to the right column
-         under Session Details so the destructive setup-bulk
-         actions cluster with the other right-column cards
-         (Session Details, Danger Zone) rather than competing
-         with the Next Action card for attention. #}
+         the same column. #}
       {% include "operator/partials/_extract_data_card.html" %}
-    </div>
-
-    {# Right column — Session Details, Quick Setup, Danger Zone.
-       Mobile DOM order is Next Action → Extract Data → Session
-       Details → Quick Setup → Danger Zone, matching the
-       intended overall reading order. #}
-    <div class="bottom-left">
-      <div class="card">
-        <h2>Session Details</h2>
-        <div class="session-meta-row">
-          <div>
-            <p class="form-help" style="margin: 0;">Created by</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session.created_by_user.display_name or session.created_by_user.email }}</span>
-            </p>
-          </div>
-          <div>
-            <p class="form-help" style="margin: 0;">Deadline</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              {% if session.deadline %}
-                <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
-              {% else %}
-                <span class="pill pill-empty">Not set</span>
-              {% endif %}
-            </p>
-          </div>
-        </div>
-        <p class="form-help" style="margin: 0;">Description</p>
-        <p style="margin: 0 0 var(--space-3) 0;">{{ session.description or "—" }}</p>
-        {# Lifecycle state shown in the chrome status strip — no
-           duplicate Status pill here per spec/session_home.md. #}
-        <div style="display: flex; justify-content: flex-end;">
-          <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
-        </div>
-      </div>
-
-      {# Quick Setup — full scaffolded shape per Segment 11H PR A.
-         Lives in the right column under Session Details and above
-         Danger Zone so the destructive setup-bulk actions cluster
-         with the other right-column cards rather than competing
-         with the Next Action card for attention. #}
-      {% include "operator/partials/_quick_setup_card.html" %}
 
       <div class="card danger-zone" id="danger-zone">
         <h2>Danger Zone</h2>
@@ -264,6 +218,50 @@
           {% endif %}
         </form>
       </div>
+    </div>
+
+    {# Right column — Session Details, Quick Setup. Quick Setup
+       sits in the right column rather than the working column so
+       its destructive setup-bulk actions don't compete with the
+       Next Action card for attention. Mobile DOM order is
+       Next Action → Extract Data → Danger Zone → Session Details
+       → Quick Setup. #}
+    <div class="bottom-left">
+      <div class="card">
+        <h2>Session Details</h2>
+        <div class="session-meta-row">
+          <div>
+            <p class="form-help" style="margin: 0;">Created by</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              <span class="pill pill-count">{{ session.created_by_user.display_name or session.created_by_user.email }}</span>
+            </p>
+          </div>
+          <div>
+            <p class="form-help" style="margin: 0;">Deadline</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              {% if session.deadline %}
+                <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
+              {% else %}
+                <span class="pill pill-empty">Not set</span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        <p class="form-help" style="margin: 0;">Description</p>
+        <p style="margin: 0 0 var(--space-3) 0;">{{ session.description or "—" }}</p>
+        {# Lifecycle state shown in the chrome status strip — no
+           duplicate Status pill here per spec/session_home.md. #}
+        <div style="display: flex; justify-content: flex-end;">
+          <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
+        </div>
+      </div>
+
+      {# Quick Setup — full scaffolded shape per Segment 11H PR A.
+         Lives in the right column under Session Details and above
+         Danger Zone so the destructive setup-bulk actions cluster
+         with the other right-column cards rather than competing
+         with the Next Action card for attention. #}
+      {% include "operator/partials/_quick_setup_card.html" %}
     </div>
   </div>
 {% endblock %}
