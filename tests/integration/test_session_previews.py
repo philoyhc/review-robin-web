@@ -264,3 +264,188 @@ def test_prev_next_links_wrap_around_endpoints(
     body = response.text
     assert "reviewer_email=bob%40example.edu" in body  # Prev steps back
     assert "reviewer_email=alice%40example.edu" in body  # Next wraps
+
+
+# --- Email previews region (PR B) ---------------------------------------- #
+
+
+def test_email_region_not_rendered_when_no_reviewer_selected(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="prev-email-empty-pick")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+
+    response = client.get(f"/operator/sessions/{session.id}/previews")
+
+    assert response.status_code == 200
+    body = response.text
+    # The email region only appears once a reviewer is picked. Look
+    # for the rendered `<div>` rather than the bare class name (the
+    # class also appears in <style> rules from base.html).
+    assert '<div class="card email-preview-card">' not in body
+    # The empty-state "Pick a reviewer" card from PR A still renders.
+    assert "Pick a reviewer" in body
+
+
+def test_invitation_tab_active_by_default(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="prev-email-default")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={"reviewer_email": "alice@example.edu"},
+    )
+
+    body = response.text
+    # Invitation tab is the disabled "current view" button.
+    assert (
+        '<button type="button" class="btn disabled" aria-disabled="true">Invitation</button>'
+        in body
+    )
+    # Reminder + Responses received are disabled with "(coming soon)".
+    assert "Reminder (coming soon)" in body
+    assert "Responses received (coming soon)" in body
+
+
+def test_invitation_body_renders_with_substituted_session_name(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="prev-email-render")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={"reviewer_email": "alice@example.edu"},
+    )
+
+    body = response.text
+    # Default invitation subject is "Invitation to review: $session_name"
+    # which substitutes the session's name (capitalized "Prev-Email-Render").
+    assert "Invitation to review:" in body
+    # `$invite_url` substitutes the preview placeholder, not a real URL.
+    assert "preview link" in body.lower()
+    # The "To:" header lands the picked reviewer's email.
+    assert "<strong>To:</strong> alice@example.edu" in body
+
+
+def test_unknown_email_param_falls_back_to_invitation(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="prev-email-fallback")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={
+            "reviewer_email": "alice@example.edu",
+            "email": "nonsense",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.text
+    # Fell through to invitation — Invitation tab is the active button.
+    assert (
+        '<button type="button" class="btn disabled" aria-disabled="true">Invitation</button>'
+        in body
+    )
+
+
+def test_unshipped_email_param_falls_back_to_invitation(
+    client: TestClient, db: Session
+) -> None:
+    """`?email=reminder` is in the registry but unshipped in PR B,
+    so the route falls back to invitation — does not render an
+    empty / broken region."""
+    session = _create_session(client, db, code="prev-email-unshipped")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={
+            "reviewer_email": "alice@example.edu",
+            "email": "reminder",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.text
+    assert (
+        '<button type="button" class="btn disabled" aria-disabled="true">Invitation</button>'
+        in body
+    )
+    # Reminder is still rendered as a "(coming soon)" tab in the strip
+    # (just not activated).
+    assert "Reminder (coming soon)" in body
+
+
+def test_email_footer_links_to_setup_pages(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="prev-email-footer")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={"reviewer_email": "alice@example.edu"},
+    )
+
+    body = response.text
+    # Setup-page deep link to the matching template tab.
+    assert (
+        f'href="/operator/sessions/{session.id}/setupinvite?template=invitation"'
+        in body
+    )
+    # Reviewers Setup link.
+    assert f'href="/operator/sessions/{session.id}/reviewers"' in body
+
+
+def test_hr_separator_sits_between_email_region_and_surface_placeholder(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="prev-email-hr")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={"reviewer_email": "alice@example.edu"},
+    )
+
+    body = response.text
+    # The email card precedes the <hr> precedes the reviewer-surface
+    # placeholder card. Pin the relative DOM order here so PR C can
+    # rely on the contract.
+    email_idx = body.index('<div class="card email-preview-card">')
+    hr_idx = body.index('<hr class="preview-region-divider">')
+    surface_idx = body.index('id="reviewer-surface"')
+    assert email_idx < hr_idx < surface_idx

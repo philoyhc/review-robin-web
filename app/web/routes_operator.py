@@ -1321,6 +1321,7 @@ def setupinvite_reset(
 def previews_index(
     request: Request,
     reviewer_email: str = "",
+    email: str = "invitation",
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1329,13 +1330,35 @@ def previews_index(
 
     Distinct from ``/preview`` (singular), which is the operator's
     preview of the reviewer surface and is retired in PR C of segment
-    11F. The picker is GET-driven via ``?reviewer_email=``; an
-    unmatched value renders an inline "No reviewer matched" note
-    rather than 404 or fall back to first.
+    11F. URL state:
+
+    - ``?reviewer_email=…`` selects the picker's current reviewer; an
+      unmatched value renders an inline "No reviewer matched" note
+      rather than 404 or fall back to first.
+    - ``?email=invitation|reminder|responses_received`` selects the
+      active email-preview tab. PR B ships only the invitation render;
+      unknown / unshipped values fall through to invitation so the
+      page never blanks out.
     """
     picker = views.build_preview_picker_context(
         db, review_session, reviewer_email
     )
+    active_email_tab = views.resolve_email_preview_tab(email)
+    email_body: views.EmailBody | None = None
+    if picker.current is not None:
+        reviewer_obj = db.execute(
+            select(Reviewer).where(
+                Reviewer.session_id == review_session.id,
+                Reviewer.id == picker.current.reviewer_id,
+            )
+        ).scalar_one()
+        from_display = views.email_preview_from_display(user)
+        email_body = views.build_email_preview_body(
+            tab=active_email_tab,
+            review_session=review_session,
+            reviewer=reviewer_obj,
+            from_display=from_display,
+        )
     return _templates.TemplateResponse(
         request,
         "operator/session_previews.html",
@@ -1347,6 +1370,9 @@ def previews_index(
                 review_session, "Previews"
             ),
             "picker": picker,
+            "email_tabs": views.EMAIL_PREVIEW_TABS,
+            "active_email_tab": active_email_tab,
+            "email_body": email_body,
         },
     )
 

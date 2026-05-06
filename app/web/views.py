@@ -30,6 +30,7 @@ from app.db.models import (
 from app.services import (
     assignments,
     csv_imports,
+    email_templates,
     instruments as instruments_service,
     invitations as invitations_service,
     monitoring,
@@ -1710,3 +1711,156 @@ def _picker_assigned_reviewee_names(
         .order_by(Reviewee.name)
     ).all()
     return [row[0] for row in rows]
+
+
+# --- Email previews region (segment 11F PR B) ----------------------------- #
+#
+# The previews page renders three reviewer-facing emails through a single
+# tabbed card. The `EMAIL_PREVIEW_TABS` registry pins the tab order
+# (chronological: invitation → reminder → responses-received) and tells the
+# template which tabs are shipped vs. coming. The route's render dispatch
+# lives in `build_email_preview_body` below; PRs D / E flip the matching
+# tab from "coming" to live.
+
+# A placeholder URL the operator-facing preview substitutes for `$invite_url`.
+# Real invitation tokens are one-time-use and would be wasted (and audit-
+# muddying) if minted just to power a preview render.
+PREVIEW_INVITE_URL_PLACEHOLDER = "(preview link — real invitation URL is generated when the operator sends)"
+
+
+@dataclass(frozen=True)
+class EmailBody:
+    """Rendered email body for the previews page.
+
+    `subject`, `body` come from `email_templates.render_*`. `from_display`
+    + `to_display` are envelope strings the operator sees in the preview
+    header — they're not part of the rendered template, just the chrome
+    around it.
+    """
+
+    subject: str
+    from_display: str
+    to_display: str
+    body: str
+
+
+@dataclass(frozen=True)
+class EmailPreviewTab:
+    """One entry in the previews page's email tab strip."""
+
+    key: str
+    """URL slug — what `?email=` resolves to."""
+
+    label: str
+    """Human-readable tab label."""
+
+    template_setup_param: str
+    """Value to thread into the deep-link to the Email Template Setup
+    page (`/setupinvite?template=...`). Same as `key` for now; kept
+    separate so the URL slug can diverge from the Setup-page slug
+    without ripple."""
+
+    is_shipped: bool
+    """`True` once the matching render adapter is wired in. PR B sets
+    only `invitation` to True; PRs D / E flip the others."""
+
+    description: str
+    """One-line description rendered below the tab strip when this tab
+    is active. Grounds the operator in when this email gets sent."""
+
+
+EMAIL_PREVIEW_TABS: tuple[EmailPreviewTab, ...] = (
+    EmailPreviewTab(
+        key="invitation",
+        label="Invitation",
+        template_setup_param="invitation",
+        is_shipped=True,
+        description="Sent when the operator activates the session.",
+    ),
+    EmailPreviewTab(
+        key="reminder",
+        label="Reminder",
+        template_setup_param="reminder",
+        is_shipped=False,
+        description=(
+            "Sent against an active session past the configured "
+            "reminder threshold. Operators trigger reminders from "
+            "Manage Invitations."
+        ),
+    ),
+    EmailPreviewTab(
+        key="responses_received",
+        label="Responses received",
+        template_setup_param="responses_received",
+        is_shipped=False,
+        description="Sent the moment the reviewer submits their review.",
+    ),
+)
+
+
+def resolve_email_preview_tab(key: str) -> EmailPreviewTab:
+    """Return the registry entry for ``key``, falling back to
+    ``"invitation"`` when ``key`` is unknown or not yet shipped.
+
+    The fallback keeps `?email=foo` from 404'ing or rendering a blank
+    region — the operator gets the canonical first tab instead. PRs
+    D / E lift this once the matching tab ships.
+    """
+    for tab in EMAIL_PREVIEW_TABS:
+        if tab.key == key and tab.is_shipped:
+            return tab
+    # Unknown or unshipped — fall back to the first shipped tab.
+    for tab in EMAIL_PREVIEW_TABS:
+        if tab.is_shipped:
+            return tab
+    raise RuntimeError(  # pragma: no cover — invariant: invitation always ships
+        "EMAIL_PREVIEW_TABS has no shipped entries"
+    )
+
+
+def email_preview_from_display(user: User) -> str:
+    """Format the From-header string the preview shows, given the
+    operator's SMTP credentials.
+
+    Reads ``smtp_username`` / ``smtp_from_display_name`` directly off
+    the User row (no decryption — the displayed header doesn't need
+    the password). When the credentials aren't configured, returns a
+    placeholder pointing at Settings so the preview surfaces the
+    missing config rather than rendering an empty header.
+    """
+    username = (user.smtp_username or "").strip()
+    if not username:
+        return "(SMTP From not configured — see Settings)"
+    display_name = (user.smtp_from_display_name or "").strip()
+    if display_name:
+        return f"{display_name} <{username}>"
+    return username
+
+
+def build_email_preview_body(
+    *,
+    tab: EmailPreviewTab,
+    review_session: ReviewSession,
+    reviewer: Reviewer,
+    from_display: str,
+) -> EmailBody | None:
+    """Render the active tab's email for the picker-selected reviewer.
+
+    Returns ``None`` for tabs whose render adapter hasn't shipped yet
+    (the route falls back to the invitation tab via
+    ``resolve_email_preview_tab`` before reaching this, so a None
+    return today only happens if a caller passes an unshipped tab
+    directly). PR D / PR E extend the dispatch to cover reminder /
+    responses-received.
+    """
+    if tab.key == "invitation":
+        subject, body = email_templates.render_invitation(
+            review_session, reviewer, PREVIEW_INVITE_URL_PLACEHOLDER
+        )
+        return EmailBody(
+            subject=subject,
+            from_display=from_display,
+            to_display=reviewer.email,
+            body=body,
+        )
+    return None
