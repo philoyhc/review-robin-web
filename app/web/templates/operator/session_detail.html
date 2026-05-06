@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% from "operator/partials/_placeholder_card.html" import placeholder_card %}
 
 {% block title %}{{ session.name }} — Review Robin Web{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -163,39 +162,14 @@
         {% endif %}
       </div>
 
-      {# Quick Setup + Extract Data — paired placeholder cards built
-         on a single shared macro that applies the canonical
-         .card.placeholder treatment so the two cards always render
-         with identical typography and contrast. Per-card state
-         distinctions live in the body copy (informational), not
-         in opacity flips that would desynchronise sibling
-         placeholders. The contextual primary action card above
-         carries any lifecycle messaging. #}
-      {{ placeholder_card(
-          id="quick-setup",
-          title="Quick Setup",
-          description=(
-            "Setup edits are paused while the session is Activated. "
-            "Pause the session to re-enable bulk setup."
-          ) if is_ready else (
-            "Bulk-populate reviewers, reviewees, and assignments "
-            "from files or rules in one place."
-          ),
-          button_label="Set up",
-          button_tooltip="Quick Setup spec at spec/quick_setup_card_spec.md (unfinished_business.md #30)",
-      ) }}
-      {{ placeholder_card(
-          id="extract-data",
-          title="Extract Data",
-          description=(
-            "Extract reviewer responses for analysis or reporting."
-          ) if is_ready else (
-            "No responses to extract yet. Available once the "
-            "session is Activated and responses have been received."
-          ),
-          button_label="Extract",
-          button_tooltip="Extract Data lands in Segment 12",
-      ) }}
+      {# Quick Setup + Extract Data — full scaffolded shape per
+         Segment 11H. Both cards render every slot / row inline with
+         all interactive controls disabled until Segments 11J / 12A
+         wire them live. Per ``spec/session_home.md``, Quick Setup
+         disables to plain greying when ``ready`` (not a yellow
+         lock card); Extract Data has no lifecycle gate. #}
+      {% include "operator/partials/_quick_setup_card.html" %}
+      {% include "operator/partials/_extract_data_card.html" %}
     </div>
 
     {# Right column — Session Details, Danger Zone #}

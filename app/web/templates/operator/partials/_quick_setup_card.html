@@ -1,0 +1,90 @@
+{# Quick Setup card scaffold — Segment 11H PR A.
+
+   Replaces the previous ``placeholder_card(id="quick-setup")`` stub
+   on Session Home with the full four-slot layout. Every interactive
+   control renders ``disabled`` until Segment 11J wires the slots
+   live; the visual + DOM contract (slot order, fragment anchors,
+   dormant banner containers, mode-conditional inner shape) is
+   final and will not move.
+
+   Renders one ``QuickSetupSlot`` per item in
+   ``quick_setup.slots``; the section ``id`` is
+   ``quick-setup-{slot.key}`` so URL fragments and Cancel-return
+   anchors per ``spec/assumptions.md`` resolve directly.
+
+   While ``quick_setup.is_disabled`` (session is Activated), the
+   outer card carries the ``.card.disabled`` plain-greying treatment
+   per ``spec/session_home.md`` "Disabled treatment on Home is plain
+   greying-out, not yellow lock cards".
+#}
+{% macro quick_setup_slot(slot) -%}
+<section class="quick-setup-slot"
+         id="quick-setup-{{ slot.key }}"
+         data-wire-target="quick-setup-{{ slot.key }}">
+  <h3 class="quick-setup-slot-heading">
+    {{ slot.label }}
+    <span class="muted">{{ slot.count_summary }}</span>
+  </h3>
+  {# Dormant banner containers — 11J's wiring populates these on
+     replacement-confirmation (banner-warning) or parse / validation
+     failure (banner-error). 11H ships them hidden so the markup
+     contract is in place. #}
+  <div class="banner banner-warning banner-scroll-target"
+       id="quick-setup-{{ slot.key }}-confirm-banner"
+       hidden></div>
+  <div class="banner banner-error banner-scroll-target"
+       id="quick-setup-{{ slot.key }}-error-banner"
+       hidden></div>
+  {% if slot.mode == "rule_or_csv" %}
+    {# Slot 3 — Assignments. Rule selector default; CSV upload
+       alternative. The selector renders FullMatrix today; an
+       explanatory caption sits below. #}
+    <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
+      Generate by rule, or upload a CSV.
+    </p>
+    <div class="quick-setup-slot-controls">
+      <select disabled
+              aria-disabled="true"
+              {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
+        <option>Full matrix</option>
+      </select>
+      <span class="muted">or</span>
+      <input type="file"
+             accept=".csv"
+             disabled
+             aria-disabled="true"
+             {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
+      <button type="button"
+              class="btn secondary"
+              disabled
+              aria-disabled="true"
+              {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>Submit</button>
+    </div>
+    <p class="form-help" style="margin: var(--space-2) 0 0 0;">
+      More rules ship with Segment 13.
+    </p>
+  {% else %}
+    {# Slots 1, 2, 4 — file upload + Submit. #}
+    <div class="quick-setup-slot-controls">
+      <input type="file"
+             accept=".csv"
+             disabled
+             aria-disabled="true"
+             {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
+      <button type="button"
+              class="btn secondary"
+              disabled
+              aria-disabled="true"
+              {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>Submit</button>
+    </div>
+  {% endif %}
+</section>
+{%- endmacro %}
+
+<div class="card{% if quick_setup.is_disabled %} disabled{% endif %}" id="quick-setup">
+  <h2>Quick Setup</h2>
+  <p class="form-help">{{ quick_setup.description }}</p>
+  {% for slot in quick_setup.slots %}
+    {{ quick_setup_slot(slot) }}
+  {% endfor %}
+</div>

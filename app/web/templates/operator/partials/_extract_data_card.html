@@ -1,0 +1,51 @@
+{# Extract Data card scaffold — Segment 11H PR B.
+
+   Replaces the previous ``placeholder_card(id="extract-data")`` stub
+   on Session Home with the full five-row + zip-bundle layout per
+   ``guide/segment_12A.md`` PR 6. Every Download button renders with
+   ``aria-disabled="true"`` and a missing ``href`` until Segment 12A
+   wires the routes live.
+
+   No lifecycle gate — the card stays interactive in every session
+   state. Extraction is read-only and useful at every state per
+   ``guide/segment_12A.md`` "No lifecycle gate".
+
+   Renders one ``ExtractDataRow`` per entry in
+   ``extract_data.rows`` plus the ``extract_data.bundle`` row in a
+   footer block. Section ``id`` is ``extract-data-{row.key}``.
+#}
+{% macro extract_data_row(row) -%}
+<section class="extract-data-row"
+         id="extract-data-{{ row.key }}"
+         data-wire-target="extract-data-{{ row.key }}">
+  <div class="extract-data-row-meta">
+    <p class="extract-data-row-label">
+      {{ row.label }}
+      <span class="muted">{{ row.count_summary }}</span>
+    </p>
+    <p class="form-help" style="margin: 0;">{{ row.filename }}</p>
+  </div>
+  {% if row.is_wired and row.download_url %}
+    <a class="btn secondary"
+       href="{{ row.download_url }}">{{ "Download all" if row.key == "bundle" else "Download" }}</a>
+  {% else %}
+    <a class="btn secondary"
+       role="button"
+       aria-disabled="true"
+       {% if row.coming_in %}title="{{ row.coming_in }}"{% endif %}>{{ "Download all" if row.key == "bundle" else "Download" }}</a>
+  {% endif %}
+</section>
+{%- endmacro %}
+
+<div class="card" id="extract-data">
+  <h2>Extract Data</h2>
+  <p class="form-help">
+    Download per-entity CSVs of the session's data. Read-only; available
+    in every lifecycle state.
+  </p>
+  {% for row in extract_data.rows %}
+    {{ extract_data_row(row) }}
+  {% endfor %}
+  <hr class="extract-data-bundle-divider">
+  {{ extract_data_row(extract_data.bundle) }}
+</div>

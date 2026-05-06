@@ -712,6 +712,64 @@
       body.ui-v2 .card.placeholder * {
         cursor: not-allowed;
       }
+      /* Segment 11H scaffolds — Quick Setup + Extract Data cards
+         on Session Home. Slot / row layout primitives. Inert until
+         11J / 12A wire the controls; greying handled by .card.disabled
+         (Quick Setup) and the disabled / aria-disabled attributes on
+         individual controls (Extract Data has no lifecycle gate). */
+      body.ui-v2 .quick-setup-slot,
+      body.ui-v2 .extract-data-row {
+        margin-top: var(--space-3);
+        padding-top: var(--space-3);
+        border-top: 1px solid var(--border-default);
+      }
+      body.ui-v2 .quick-setup-slot:first-of-type,
+      body.ui-v2 .extract-data-row:first-of-type {
+        border-top: 0;
+        padding-top: 0;
+      }
+      body.ui-v2 .quick-setup-slot-heading {
+        margin: 0 0 var(--space-2) 0;
+        font-size: 1rem;
+      }
+      body.ui-v2 .quick-setup-slot-heading .muted,
+      body.ui-v2 .extract-data-row-label .muted {
+        font-weight: normal;
+        color: var(--text-secondary);
+        margin-left: var(--space-2);
+      }
+      body.ui-v2 .quick-setup-slot-controls {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+      }
+      body.ui-v2 .extract-data-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+      }
+      body.ui-v2 .extract-data-row-label {
+        margin: 0;
+        font-weight: 600;
+      }
+      body.ui-v2 .extract-data-row-meta {
+        flex: 1;
+      }
+      body.ui-v2 .extract-data-bundle-divider {
+        margin: var(--space-3) 0;
+        border: 0;
+        border-top: 2px solid var(--border-default);
+      }
+      /* Anchors styled as buttons but rendered with aria-disabled
+         (no native ``disabled`` on <a>) get the same not-allowed
+         affordance + reduced opacity as a real disabled button. */
+      body.ui-v2 a.btn[aria-disabled="true"] {
+        opacity: 0.55;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
       /* Buttons — Primary / Secondary / Destructive vocabulary
          per spec/visual_style_general.md. Same shape, role expressed by
          tonal variation only. Primary is solid accent-blue and is

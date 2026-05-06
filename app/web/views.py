@@ -18,6 +18,7 @@ from app.services import (
     assignments,
     csv_imports,
     instruments as instruments_service,
+    responses as responses_service,
     session_lifecycle as lifecycle,
 )
 from app.web import breadcrumbs
@@ -422,3 +423,304 @@ def session_status_pills(
         # for a real check (e.g. a non-empty email template row).
         email_invites_set_up=False,
     )
+
+
+# ---------------------------------------------------------------------------
+# Segment 11H — Quick Setup card scaffold
+# ---------------------------------------------------------------------------
+#
+# The Quick Setup card on Session Home renders four slots; each slot has
+# the same outer shape (file input + Submit + count indicator + dormant
+# banner container) but the controls are inert until Segment 11J wires
+# them up. The scaffold pins the visual + DOM contract here so 11J's
+# wiring PRs are thin diffs that flip ``is_wired=True`` and supply
+# ``wire_url=…`` per slot.
+
+
+@dataclass(frozen=True)
+class QuickSetupSlot:
+    """One slot inside the Quick Setup card on Session Home.
+
+    11J's PRs flip ``is_wired`` and supply ``wire_url`` per slot;
+    11H ships every slot with ``is_wired=False`` and the controls
+    rendered ``disabled``.
+    """
+
+    key: str
+    """Stable slot identifier — ``reviewers`` / ``reviewees`` /
+    ``assignments`` / ``config_import``. Used as the DOM-id suffix
+    (``#quick-setup-{key}``) so URL fragments scroll directly to a
+    slot, and as the ``data-wire-target`` value so 11J's wiring
+    can locate the slot without a CSS-selector contract."""
+
+    label: str
+    """Human-readable slot label, used in the H3 heading."""
+
+    count: int
+    """Current population — count of reviewers / reviewees /
+    assignments. ``0`` for the configuration-import slot."""
+
+    count_summary: str
+    """Pre-rendered count copy, e.g. ``"8 currently"`` /
+    ``"none yet"`` / ``"104 currently, full-matrix"``."""
+
+    mode: str
+    """``"file_upload"`` for slots 1, 2, 4; ``"rule_or_csv"`` for
+    slot 3 (Assignments). Slot mode controls which inputs render
+    inside the slot body."""
+
+    is_wired: bool
+    """``True`` once 11J / 12A wires the slot. While ``False`` the
+    slot's controls render ``disabled`` and a ``coming_in`` tooltip
+    surfaces the wiring PR's name."""
+
+    wire_url: str | None
+    """POST URL once ``is_wired=True``. ``None`` while inert."""
+
+    coming_in: str | None
+    """``"Wired in Segment 11J PR A"``-style tooltip while
+    ``is_wired=False``. ``None`` once wired."""
+
+
+@dataclass(frozen=True)
+class QuickSetupContext:
+    """Page-shape adapter output for the Quick Setup card.
+
+    ``slots`` renders top-to-bottom in the order given; the card
+    iterates and the ``quick_setup_slot`` macro renders each one.
+
+    ``is_disabled`` is ``True`` when the session is ``ready`` /
+    ``closed`` and the whole card carries the ``.card.disabled``
+    plain-greying treatment per ``spec/session_home.md`` "Disabled
+    treatment on Home is plain greying-out, not yellow lock cards".
+    """
+
+    slots: list[QuickSetupSlot]
+    is_disabled: bool
+    description: str
+
+
+def build_quick_setup_context(
+    db: Session, review_session: ReviewSession
+) -> QuickSetupContext:
+    sid = review_session.id
+    # Per spec/session_home.md, Quick Setup disables when the session is
+    # Activated (``ready``); ``closed`` is a reserved future state that
+    # would also disable, but the predicate doesn't exist yet — when
+    # ``closed`` ships, extend this check.
+    is_disabled = lifecycle.is_ready(review_session)
+
+    reviewer_count = csv_imports.existing_reviewer_count(db, sid)
+    reviewee_count = csv_imports.existing_reviewee_count(db, sid)
+    assignment_count = assignments.existing_count(db, sid)
+    # ``assignment_mode`` is a stored string today (e.g. "FullMatrix"
+    # / "Manual"); the column is plain Text, not a SQLAlchemy enum.
+    assignment_mode: str | None = review_session.assignment_mode
+
+    slots = [
+        QuickSetupSlot(
+            key="reviewers",
+            label="Reviewers",
+            count=reviewer_count,
+            count_summary=(
+                f"{reviewer_count} currently"
+                if reviewer_count
+                else "none yet"
+            ),
+            mode="file_upload",
+            is_wired=False,
+            wire_url=None,
+            coming_in="Wired in Segment 11J PR A",
+        ),
+        QuickSetupSlot(
+            key="reviewees",
+            label="Reviewees",
+            count=reviewee_count,
+            count_summary=(
+                f"{reviewee_count} currently"
+                if reviewee_count
+                else "none yet"
+            ),
+            mode="file_upload",
+            is_wired=False,
+            wire_url=None,
+            coming_in="Wired in Segment 11J PR A",
+        ),
+        QuickSetupSlot(
+            key="assignments",
+            label="Assignments",
+            count=assignment_count,
+            count_summary=_assignment_summary(assignment_count, assignment_mode),
+            mode="rule_or_csv",
+            is_wired=False,
+            wire_url=None,
+            coming_in="Wired in Segment 11J PR B",
+        ),
+        QuickSetupSlot(
+            key="config_import",
+            label="Configuration import",
+            count=0,
+            count_summary="upload a session-config CSV",
+            mode="file_upload",
+            is_wired=False,
+            wire_url=None,
+            coming_in="Wired in Segment 12A PR 6",
+        ),
+    ]
+
+    description = (
+        "Setup edits are paused while the session is Activated. "
+        "Pause the session to re-enable bulk setup."
+        if is_disabled
+        else "Bulk-populate reviewers, reviewees, and assignments "
+        "from files or rules in one place."
+    )
+
+    return QuickSetupContext(
+        slots=slots, is_disabled=is_disabled, description=description
+    )
+
+
+def _assignment_summary(count: int, mode: str | None) -> str:
+    if not count:
+        return "none yet"
+    if mode:
+        return f"{count} currently, {mode}"
+    return f"{count} currently"
+
+
+# ---------------------------------------------------------------------------
+# Segment 11H — Extract Data card scaffold
+# ---------------------------------------------------------------------------
+#
+# The Extract Data card on Session Home renders five per-entity rows + a
+# "Download all" zip-bundle footer. Read-only by nature: Segment 12A's
+# PRs wire each row's Download button live; the card stays interactive
+# in every lifecycle state (no lock-card wrap).
+
+
+@dataclass(frozen=True)
+class ExtractDataRow:
+    """One row inside the Extract Data card on Session Home.
+
+    12A's PRs flip ``is_wired`` and supply ``download_url`` per row;
+    11H ships every row inert.
+    """
+
+    key: str
+    """Stable identifier — ``settings`` / ``reviewers`` / ``reviewees``
+    / ``assignments`` / ``responses`` / ``bundle``. DOM id is
+    ``#extract-data-{key}``."""
+
+    label: str
+
+    filename: str
+    """Final filename the download will carry, e.g.
+    ``session-CS101-reviewers.csv``. Surfaced to the operator as a
+    secondary line so they know what to expect."""
+
+    count: int
+    count_summary: str
+
+    is_wired: bool
+    download_url: str | None
+    coming_in: str | None
+
+
+@dataclass(frozen=True)
+class ExtractDataContext:
+    rows: list[ExtractDataRow]
+    bundle: ExtractDataRow
+
+
+def build_extract_data_context(
+    db: Session, review_session: ReviewSession
+) -> ExtractDataContext:
+    sid = review_session.id
+    code = review_session.code or "session"
+
+    reviewer_count = csv_imports.existing_reviewer_count(db, sid)
+    reviewee_count = csv_imports.existing_reviewee_count(db, sid)
+    assignment_count = assignments.existing_count(db, sid)
+    response_count = responses_service.session_response_count(db, sid)
+    instrument_count = len(
+        list(
+            db.execute(
+                select(Instrument).where(Instrument.session_id == sid)
+            ).scalars()
+        )
+    )
+
+    rows = [
+        ExtractDataRow(
+            key="settings",
+            label="Session settings",
+            filename=f"session-{code}-settings.csv",
+            count=instrument_count,
+            count_summary=_extract_summary("instrument", instrument_count),
+            is_wired=False,
+            download_url=None,
+            coming_in="Wired in Segment 12A PR 1",
+        ),
+        ExtractDataRow(
+            key="reviewers",
+            label="Reviewers",
+            filename=f"session-{code}-reviewers.csv",
+            count=reviewer_count,
+            count_summary=_extract_summary("reviewer", reviewer_count),
+            is_wired=False,
+            download_url=None,
+            coming_in="Wired in Segment 12A PR 3",
+        ),
+        ExtractDataRow(
+            key="reviewees",
+            label="Reviewees",
+            filename=f"session-{code}-reviewees.csv",
+            count=reviewee_count,
+            count_summary=_extract_summary("reviewee", reviewee_count),
+            is_wired=False,
+            download_url=None,
+            coming_in="Wired in Segment 12A PR 3",
+        ),
+        ExtractDataRow(
+            key="assignments",
+            label="Assignments",
+            filename=f"session-{code}-assignments.csv",
+            count=assignment_count,
+            count_summary=_extract_summary("assignment", assignment_count),
+            is_wired=False,
+            download_url=None,
+            coming_in="Wired in Segment 12A PR 4",
+        ),
+        ExtractDataRow(
+            key="responses",
+            label="Responses",
+            filename=f"session-{code}-responses.csv",
+            count=response_count,
+            count_summary=_extract_summary("response", response_count),
+            is_wired=False,
+            download_url=None,
+            coming_in="Wired in Segment 12A PR 5",
+        ),
+    ]
+
+    bundle = ExtractDataRow(
+        key="bundle",
+        label="Download all",
+        filename=f"session-{code}-export.zip",
+        count=sum(r.count for r in rows),
+        count_summary="zip of all five CSVs above",
+        is_wired=False,
+        download_url=None,
+        coming_in="Wired in Segment 12A PR 6",
+    )
+
+    return ExtractDataContext(rows=rows, bundle=bundle)
+
+
+def _extract_summary(noun: str, count: int) -> str:
+    if count == 0:
+        return f"0 {noun}s"
+    if count == 1:
+        return f"1 {noun}"
+    return f"{count} {noun}s"

@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -698,4 +698,19 @@ def session_pill_for_reviewer(
         state=state.pill_state,
         total_assignments=state.total_assignments,
         completed_rows=state.completed_count,
+    )
+
+
+def session_response_count(db: Session, session_id: int) -> int:
+    """Total number of Response rows for the session.
+
+    One row per (assignment, response_field). Backs the Extract Data
+    card's responses-row count summary.
+    """
+    return (
+        db.execute(
+            select(func.count(Response.id))
+            .join(Assignment, Response.assignment_id == Assignment.id)
+            .where(Assignment.session_id == session_id)
+        ).scalar_one()
     )
