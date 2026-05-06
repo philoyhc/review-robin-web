@@ -298,6 +298,8 @@ def session_detail(
                 )
             ),
             "has_responses": lifecycle.session_has_responses(db, review_session),
+            "quick_setup": views.build_quick_setup_context(db, review_session),
+            "extract_data": views.build_extract_data_context(db, review_session),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
         },
     )

@@ -508,33 +508,45 @@ def test_session_card_buttons_when_draft(
 # ---------------------------------------------------------------------------
 
 
-def test_quick_setup_card_uses_placeholder_class_in_draft(
+def test_quick_setup_card_renders_scaffold_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """Quick Setup carries the canonical .card.placeholder class
-    (defined in base.html v2 block) in every state. State
-    distinctions live in body copy, not in opacity flips that
-    would desynchronise sibling placeholders."""
+    """Segment 11H PR A — the Quick Setup card on Session Home
+    renders the full four-slot scaffold inert (every control
+    disabled) in draft. ``card`` carries no ``placeholder`` /
+    ``disabled`` modifier in this state — the slots are visible
+    and laid out, just not wired."""
 
     review_session = _make_session(client, db, code="qs-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    assert 'class="card placeholder" id="quick-setup"' in body
+    # Outer card with stable id; no .placeholder modifier.
+    assert 'class="card" id="quick-setup"' in body
     assert "<h2>Quick Setup</h2>" in body
     # Action-oriented body copy in draft / validated.
     assert "Bulk-populate reviewers, reviewees, and assignments" in body
-    # Disabled placeholder button matches the Extract Data shape.
-    assert "Quick Setup spec at spec/quick_setup_card_spec.md" in body
+    # Four slots render with stable fragment anchors.
+    for key in ("reviewers", "reviewees", "assignments", "config_import"):
+        assert f'id="quick-setup-{key}"' in body
+    # Each slot's inert controls carry the wiring tooltip.
+    assert "Wired in Segment 11J PR A" in body  # reviewers / reviewees
+    assert "Wired in Segment 11J PR B" in body  # assignments
+    assert "Wired in Segment 12A PR 6" in body  # config_import
+    # Dormant banner containers per slot per spec/assumptions.md.
+    assert 'id="quick-setup-reviewers-confirm-banner"' in body
+    assert 'id="quick-setup-reviewers-error-banner"' in body
 
 
-def test_quick_setup_card_state_copy_switches_in_ready(
+def test_quick_setup_card_disables_in_ready(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """In ready (Activated), the Quick Setup card keeps the same
-    .card.placeholder treatment as in draft — only the body copy
-    changes to convey "paused while Activated"."""
+    """Segment 11H PR A — when the session is Activated, the Quick
+    Setup card carries ``.card.disabled`` (plain greying per
+    ``spec/session_home.md``, not a yellow lock card) and the
+    description copy switches to the "paused while Activated"
+    line. The slot contents still render."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
@@ -544,13 +556,15 @@ def test_quick_setup_card_state_copy_switches_in_ready(
 
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
-    # Same canonical class as in draft — visual treatment is
-    # uniform across states.
-    assert 'class="card placeholder" id="quick-setup"' in body
-    # Copy switches.
+    # ``.card.disabled`` plain greying (P4: lifecycle-disables-never-hides).
+    assert 'class="card disabled" id="quick-setup"' in body
+    # Description copy switches.
     assert (
         "Setup edits are paused while the session is Activated" in body
     )
+    # Slot scaffolds still present so the operator sees the eventual shape.
+    assert 'id="quick-setup-reviewers"' in body
+    assert 'id="quick-setup-assignments"' in body
 
 
 # ---------------------------------------------------------------------------
@@ -621,31 +635,50 @@ def test_delete_session_post_still_rejected_when_ready(
 # ---------------------------------------------------------------------------
 
 
-def test_extract_data_card_uses_placeholder_class_in_draft(
+def test_extract_data_card_renders_scaffold_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """Extract Data carries the canonical .card.placeholder class
-    in every state, with copy switching to convey "no responses to
-    extract yet" in draft / validated."""
+    """Segment 11H PR B — the Extract Data card on Session Home
+    renders five per-entity rows + a "Download all" zip-bundle
+    footer. Every Download button is inert
+    (``aria-disabled="true"``) until 12A wires the routes."""
 
     review_session = _make_session(client, db, code="extract-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    assert 'class="card placeholder" id="extract-data"' in body
+    assert 'class="card" id="extract-data"' in body
     assert "<h2>Extract Data</h2>" in body
-    assert "No responses to extract yet" in body
-    # The Extract action button is permanently disabled until Segment 12.
-    assert "Extract Data lands in Segment 12" in body
+    # Five rows + bundle footer with stable fragment anchors.
+    for key in (
+        "settings",
+        "reviewers",
+        "reviewees",
+        "assignments",
+        "responses",
+        "bundle",
+    ):
+        assert f'id="extract-data-{key}"' in body
+    # Filename copy surfaces per row.
+    assert "session-extract-draft-reviewers.csv" in body
+    assert "session-extract-draft-export.zip" in body
+    # Wiring tooltips name the segment / PR that lights each row up.
+    assert "Wired in Segment 12A PR 1" in body  # settings
+    assert "Wired in Segment 12A PR 3" in body  # reviewers / reviewees
+    assert "Wired in Segment 12A PR 4" in body  # assignments
+    assert "Wired in Segment 12A PR 5" in body  # responses
+    assert "Wired in Segment 12A PR 6" in body  # bundle
 
 
-def test_extract_data_card_state_copy_switches_in_ready(
+def test_extract_data_card_stays_interactive_in_ready(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """In ready (Activated), Extract Data keeps the same
-    .card.placeholder treatment as in draft — only the body copy
-    changes. The Extract button stays disabled (Segment 12)."""
+    """Segment 11H PR B — the Extract Data card has no lifecycle
+    gate. Per ``guide/segment_12A.md`` the card stays interactive
+    in every lifecycle state; in 11H every row is inert across the
+    board, so this only confirms that ready doesn't add a
+    ``.disabled`` class."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
@@ -655,12 +688,11 @@ def test_extract_data_card_state_copy_switches_in_ready(
 
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
-    # Same canonical class as in draft.
-    assert 'class="card placeholder" id="extract-data"' in body
-    # Body copy switches to the "ready to extract" line.
-    assert "Extract reviewer responses for analysis or reporting." in body
-    # Button is still disabled (Segment 12 placeholder).
-    assert "Extract Data lands in Segment 12" in body
+    # No ``disabled`` modifier on the Extract Data card.
+    assert 'class="card" id="extract-data"' in body
+    assert 'class="card disabled" id="extract-data"' not in body
+    # Rows still render with their counts.
+    assert 'id="extract-data-responses"' in body
 
 
 # ---------------------------------------------------------------------------
