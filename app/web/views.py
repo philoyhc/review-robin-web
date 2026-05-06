@@ -20,6 +20,7 @@ from app.db.models import (
     Instrument,
     InstrumentResponseField,
     Invitation,
+    Reviewee,
     Reviewer,
     ReviewSession,
     User,
@@ -940,3 +941,38 @@ def build_invitations_rows(
             )
         )
     return out
+
+
+# ---------------------------------------------------------------------------
+# Segment 11C Part 1 — Responses page (reviewee-centric coverage)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ResponsesRow:
+    reviewee: Reviewee
+    coverage_state: str
+    """``"complete"`` / ``"adequate"`` / ``"at risk"`` / ``"no responses"``"""
+    reviewers_done: int
+    reviewers_total: int
+    last_response_at: datetime | None
+
+    @property
+    def is_at_risk(self) -> bool:
+        return self.coverage_state in ("at risk", "no responses")
+
+
+def build_responses_rows(
+    db: Session, review_session: ReviewSession
+) -> list[ResponsesRow]:
+    coverage = monitoring.per_reviewee_coverage(db, review_session)
+    return [
+        ResponsesRow(
+            reviewee=c.reviewee,
+            coverage_state=c.pill_state,
+            reviewers_done=c.completed_count,
+            reviewers_total=c.reviewer_count,
+            last_response_at=c.last_response_at,
+        )
+        for c in coverage
+    ]
