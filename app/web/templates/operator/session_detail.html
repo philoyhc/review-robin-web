@@ -162,17 +162,22 @@
         {% endif %}
       </div>
 
-      {# Quick Setup + Extract Data — full scaffolded shape per
-         Segment 11H. Both cards render every slot / row inline with
-         all interactive controls disabled until Segments 11J / 12A
-         wire them live. Per ``spec/session_home.md``, Quick Setup
-         disables to plain greying when ``ready`` (not a yellow
-         lock card); Extract Data has no lifecycle gate. #}
-      {% include "operator/partials/_quick_setup_card.html" %}
+      {# Extract Data — full scaffolded shape per Segment 11H PR B.
+         Sits immediately under the Next Action card so the
+         operator's two most common reads on Home (current
+         lifecycle action + responses-to-extract status) sit in
+         the same column. Quick Setup moves to the right column
+         under Session Details so the destructive setup-bulk
+         actions cluster with the other right-column cards
+         (Session Details, Danger Zone) rather than competing
+         with the Next Action card for attention. #}
       {% include "operator/partials/_extract_data_card.html" %}
     </div>
 
-    {# Right column — Session Details, Danger Zone #}
+    {# Right column — Session Details, Quick Setup, Danger Zone.
+       Mobile DOM order is Next Action → Extract Data → Session
+       Details → Quick Setup → Danger Zone, matching the
+       intended overall reading order. #}
     <div class="bottom-left">
       <div class="card">
         <h2>Session Details</h2>
@@ -202,6 +207,13 @@
           <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
         </div>
       </div>
+
+      {# Quick Setup — full scaffolded shape per Segment 11H PR A.
+         Lives in the right column under Session Details and above
+         Danger Zone so the destructive setup-bulk actions cluster
+         with the other right-column cards rather than competing
+         with the Next Action card for attention. #}
+      {% include "operator/partials/_quick_setup_card.html" %}
 
       <div class="card danger-zone" id="danger-zone">
         <h2>Danger Zone</h2>

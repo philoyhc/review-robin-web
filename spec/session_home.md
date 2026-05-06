@@ -64,13 +64,15 @@ Two-column body below the chrome and status strip.
 The operator's working column. Stack of cards, top to bottom:
 
 1. **Next Action card.**
-2. **Quick Setup card.** *(placeholder until full implementation lands)*
-3. **Extract Data card.** *(placeholder until Segment 12 lands real extraction)*
+2. **Extract Data card.** *(scaffolded in Segment 11H PR B; wired in Segment 12A PRs 3-6)*
 
-### Right column — metadata and danger
+### Right column — metadata, bulk-setup, and danger
 
 1. **Session Details card** (top).
-2. **Danger Zone card** (bottom).
+2. **Quick Setup card** (middle). *(scaffolded in Segment 11H PR A; wired in Segment 11J)*
+3. **Danger Zone card** (bottom).
+
+The mobile-collapse DOM order — Next Action → Extract Data → Session Details → Quick Setup → Danger Zone — is also the intended desktop reading order, top-left to top-right to bottom-right. Quick Setup sits in the right column with the other right-column cards (Session Details, Danger Zone) rather than the working column, because its destructive setup-bulk actions are setup mutations the operator should encounter alongside Session Details and Danger Zone, not next to the lifecycle-advancing Next Action card.
 
 ## Cards
 
@@ -169,47 +171,29 @@ Notes:
   - **Archived** likely renders the card empty or with a
     "Restore" affordance.
 
-### 2. Quick Setup card (left column, middle)
-
-Existing Quick Setup placeholder until its full spec lands
-(`spec/quick_setup_card_spec.md`). Renders via the canonical
-`placeholder_card` macro (see "Placeholder cards" below).
-
-State-conditional copy only — the card frame is constant:
-
-- **Draft / Validated:** "Bulk-populate reviewers, reviewees, and
-  assignments from files or rules in one place."
-- **Ready / Activated:** "Setup edits are paused while the
-  session is Activated. Pause the session to re-enable bulk
-  setup."
-
-The disabled "Set up" placeholder button carries a tooltip
-pointing at the quick-setup spec.
-
-### 3. Extract Data card (left column, bottom)
+### 2. Extract Data card (left column, bottom)
 
 Lets the operator pull response data out of the session for
-downstream use. Renders via the same `placeholder_card` macro
-as Quick Setup (see "Placeholder cards" below) until Segment 12
-ships real extraction.
+downstream use. The Extract Data card scaffold (Segment 11H PR B)
+renders five per-entity download rows (Session settings,
+Reviewers, Reviewees, Assignments, Responses) plus a
+"Download all" zip-bundle footer with all buttons inert
+(`aria-disabled="true"`); Segment 12A PRs 3-6 wire the routes.
 
-State-conditional copy:
+**No lifecycle gate.** The card renders identically in every
+session state. Extraction is read-only and useful at every
+state — `draft` (sanity-check the configured artefacts),
+`validated`, `ready` (mid-flight responses snapshot), `closed`
+(final dataset). Once 12A wires the routes, every Download
+button stays clickable across the lifecycle.
 
-- **Draft / Validated:** "No responses to extract yet. Available
-  once the session is Activated and responses have been
-  received."
-- **Activated:** "Extract reviewer responses for analysis or
-  reporting."
+**Out of scope for this card** (deferred to Segment 12A): the
+actual route plumbing per entity, the `?format=` selector, the
+zip-bundle stream, and the audit emitters per download. The
+card's filenames follow `session-{code}-{kind}.csv` so the
+operator can identify the file downstream.
 
-The disabled "Extract" placeholder button carries a tooltip
-pointing at Segment 12.
-
-**Out of scope for this card** (deferred to Segment 12): real
-extraction, format selector (CSV / JSON / etc.), terse summary of
-what would be extracted, complex filtering, scheduled exports,
-partial-extraction UIs.
-
-### 4. Session Details card (right column, top)
+### 3. Session Details card (right column, top)
 
 Reference metadata with an edit affordance. Read-mostly, but the
 operator does occasionally need to update session metadata
@@ -242,6 +226,30 @@ The previously-rendered duplicate `Status:` pill on this card
 was retired in PR #375; lifecycle state is shown in the chrome
 status strip and (on Home) in the Next Action card's body copy
 when relevant.
+
+### 4. Quick Setup card (right column, middle)
+
+The Quick Setup card scaffold (Segment 11H PR A) renders the
+real four-slot shape with all interactive controls inert; full
+wiring lands in Segment 11J. The functional spec is
+`spec/quick_setup_card_spec.md`.
+
+Layout: a 2-column top grid carrying the three setup slots
+(Reviewers + Reviewees stacked in the left column, Assignments
+in the right column), then a horizontal divider, then the
+full-width Session settings slot. A Lock / Unlock button sits
+in a footer at the bottom-right, rendered only when the
+session is editable; the card defaults to locked so the
+operator must explicitly Unlock before any setup change.
+
+State-conditional copy only — the card frame is constant:
+
+- **Draft / Validated:** "Bulk-populate reviewers, reviewees, and
+  assignments from files or rules in one place."
+- **Ready / Activated:** "Setup edits are paused while the
+  session is Activated. Pause the session to re-enable bulk
+  setup." The Lock / Unlock button does not render in this
+  state — the operator's path forward is Pause, not Unlock.
 
 ### 5. Danger Zone card (right column, bottom)
 
