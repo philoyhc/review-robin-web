@@ -881,6 +881,23 @@ class InvitationsRow:
     def is_incomplete(self) -> bool:
         return self.review_progress_state != "submitted"
 
+    @property
+    def summary_state(self) -> str:
+        """Single derived state for the Manage Invitations status filter.
+
+        Collapses the otherwise-orthogonal Email Status + Review
+        Progress columns into one bucket the operator filters on.
+        Mirrors `spec/operations_renew.md` "Status filter values"
+        (Manage Invitations) modulo the deferred "stale" bucket.
+        """
+        if self.email_status == "not sent":
+            return "not_sent"
+        if self.review_progress_state == "submitted":
+            return "submitted"
+        if self.review_progress_state == "in progress":
+            return "in_progress"
+        return "not_started"
+
 
 def _latest_invitation_outbox_by_reviewer(
     db: Session, session_id: int
@@ -976,3 +993,92 @@ def build_responses_rows(
         )
         for c in coverage
     ]
+
+
+# ---------------------------------------------------------------------------
+# Filter helpers — Segment 11C Part 1 follow-up
+# ---------------------------------------------------------------------------
+#
+# Both Manage Invitations and Responses ship the list-with-bulk-actions
+# pattern's filter strip (status dropdown + name/email search) per
+# `spec/operations_renew.md` "Filtering". Filters compose: status + search
+# narrows to rows matching both. Filter state is page-local — query params
+# only, nothing persisted across navigations.
+
+
+# Status filter options for Manage Invitations. Order matters: it's the
+# dropdown order operators see. ``"all"`` (no filter) is implicit.
+INVITATIONS_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("not_sent", "Not yet sent"),
+    ("not_started", "Sent, not started"),
+    ("in_progress", "In progress"),
+    ("submitted", "Submitted"),
+)
+
+
+# Status filter options for Responses. Order matters; ``"all"`` is implicit.
+RESPONSES_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("complete", "Complete"),
+    ("adequate", "Adequate"),
+    ("at_risk", "At risk"),
+    ("no_responses", "No responses"),
+)
+
+
+def _matches_search(haystack: str, needle: str) -> bool:
+    return needle.casefold() in haystack.casefold()
+
+
+def filter_invitations_rows(
+    rows: list[InvitationsRow], *, status: str, search: str
+) -> list[InvitationsRow]:
+    """Apply status + search filters to invitations rows.
+
+    ``status`` is one of ``INVITATIONS_STATUS_OPTIONS`` keys or
+    ``"all"`` (anything else falls through to "all"). ``search`` is
+    matched case-insensitively against the reviewer's name or email.
+    Empty ``search`` is a no-op."""
+    out = list(rows)
+    valid_status = {key for key, _ in INVITATIONS_STATUS_OPTIONS}
+    if status in valid_status:
+        out = [r for r in out if r.summary_state == status]
+    needle = search.strip()
+    if needle:
+        out = [
+            r
+            for r in out
+            if _matches_search(r.reviewer.name, needle)
+            or _matches_search(r.reviewer.email, needle)
+        ]
+    return out
+
+
+def filter_responses_rows(
+    rows: list[ResponsesRow], *, status: str, search: str
+) -> list[ResponsesRow]:
+    """Apply status + search filters to responses rows.
+
+    ``status`` is one of ``RESPONSES_STATUS_OPTIONS`` keys or
+    ``"all"``. The four status keys are slugged
+    (``"at_risk"`` / ``"no_responses"``) for URL-friendliness; this
+    helper maps back to the row's ``coverage_state`` (``"at risk"`` /
+    ``"no responses"``)."""
+    out = list(rows)
+    status_to_state = {
+        "complete": "complete",
+        "adequate": "adequate",
+        "at_risk": "at risk",
+        "no_responses": "no responses",
+    }
+    target_state = status_to_state.get(status)
+    if target_state is not None:
+        out = [r for r in out if r.coverage_state == target_state]
+    needle = search.strip()
+    if needle:
+        out = [
+            r
+            for r in out
+            if _matches_search(r.reviewee.name, needle)
+            or _matches_search(r.reviewee.email_or_identifier, needle)
+        ]
+    return out

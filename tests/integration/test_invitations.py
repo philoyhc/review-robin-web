@@ -747,3 +747,119 @@ def test_send_omits_cc_bcc_when_overrides_blank(
     ).scalar_one()
     assert outbox.cc_emails is None
     assert outbox.bcc_emails is None
+
+
+# --------------------------------------------------------------------------- #
+# Filter strip — status + search (Segment 11C Part 1 follow-up)
+# --------------------------------------------------------------------------- #
+
+
+def _ready_session_with_two_reviewers(
+    client: TestClient, db: Session, code: str
+) -> ReviewSession:
+    """Helper: ready session with two reviewers (rae + ren) so we can
+    exercise filters that narrow to one row."""
+    session = _create_session(client, db, code)
+    client.post(
+        f"/operator/sessions/{session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nRae,rae@example.edu\n"
+                b"Ren,ren@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/assignments/full-matrix",
+        data={"exclude_self_review": ""},
+        follow_redirects=False,
+    )
+    _activate(client, session.id)
+    db.refresh(session)
+    return session
+
+
+def test_invitations_filter_strip_renders(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="filt-strip")
+    body = client.get(f"/operator/sessions/{session.id}/invitations").text
+    # Status dropdown lands with the four mapped options + All.
+    assert '<option value="all"' in body
+    assert '<option value="not_sent"' in body
+    assert '<option value="not_started"' in body
+    assert '<option value="in_progress"' in body
+    assert '<option value="submitted"' in body
+    # Search input renders, no Clear link when no filter active.
+    assert 'name="q"' in body
+    assert ">Clear</a>" not in body
+
+
+def test_invitations_filter_status_narrows_rows(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session_with_two_reviewers(client, db, "filt-status")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    # Send invitation for Rae only — Ren stays "not sent".
+    invitation_rae = db.execute(
+        select(Invitation)
+        .join(Invitation.reviewer)
+        .where(Invitation.session_id == session.id)
+        .order_by(Invitation.id)
+    ).scalars().first()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation_rae.id}/send"
+    )
+    # Filter to "Not yet sent" → only Ren.
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations?status=not_sent"
+    ).text
+    assert "ren@example.edu" in body
+    assert "rae@example.edu" not in body
+    # Clear link surfaces when filter is active.
+    assert ">Clear</a>" in body
+    # Showing-N-of-M counter renders.
+    assert "Showing 1 of 2." in body
+
+
+def test_invitations_filter_search_narrows_rows(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session_with_two_reviewers(client, db, "filt-search")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    # Search by partial email.
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations?q=rae"
+    ).text
+    assert "rae@example.edu" in body
+    assert "ren@example.edu" not in body
+    # Search is case-insensitive.
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations?q=REN"
+    ).text
+    assert "ren@example.edu" in body
+
+
+def test_invitations_filter_no_match_shows_empty_message(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session_with_two_reviewers(client, db, "filt-empty")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations?q=nobody"
+    ).text
+    assert "No reviewers match the current filter." in body
