@@ -83,17 +83,18 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
     client: TestClient, db: Session
 ) -> None:
     """The view-shape adapter returns the five per-entity rows in
-    the canonical 2-col grid order (Reviewers / Reviewees /
-    Assignments / Responses / Session settings — left-right, up-down)
-    plus the zip-bundle row separately."""
+    the canonical 2-col grid order — left-right, up-down — matching
+    the Quick Setup card's grid: Reviewers / Assignments (top row),
+    Reviewees / Responses (middle row), Session settings / Zip all
+    (bottom row, with Zip all sourced from ``context.bundle``)."""
 
     review_session = _make_session(client, db, code="ed-shape")
     context = views.build_extract_data_context(db, review_session)
 
     assert [row.key for row in context.rows] == [
         "reviewers",
-        "reviewees",
         "assignments",
+        "reviewees",
         "responses",
         "settings",
     ]
