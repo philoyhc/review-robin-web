@@ -209,3 +209,52 @@ def test_quick_setup_dormant_banner_containers_render_hidden(
             and 'class="banner banner-warning' in body
         )
         assert f'id="quick-setup-{key}-error-banner"' in body
+
+
+def test_quick_setup_top_grid_layout(
+    client: TestClient, db: Session
+) -> None:
+    """The Quick Setup card body splits into three regions:
+
+    1. A ``.quick-setup-top-grid`` 2-column grid: Reviewers +
+       Reviewees stacked in the left column, Assignments alone
+       in the right column.
+    2. A ``.quick-setup-divider`` horizontal rule.
+    3. The Configuration import slot full-width below the
+       divider, outside the grid.
+
+    Pin the structural contract so 11J / 12A wiring patches can
+    rely on it.
+    """
+
+    review_session = _make_session(client, db, code="qs-grid")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    grid_start = body.find('class="quick-setup-top-grid"')
+    divider_pos = body.find('class="quick-setup-divider"')
+    config_pos = body.find('id="quick-setup-config_import"')
+    reviewers_pos = body.find('id="quick-setup-reviewers"')
+    reviewees_pos = body.find('id="quick-setup-reviewees"')
+    assignments_pos = body.find('id="quick-setup-assignments"')
+
+    # All anchors found.
+    assert -1 not in (
+        grid_start,
+        divider_pos,
+        config_pos,
+        reviewers_pos,
+        reviewees_pos,
+        assignments_pos,
+    )
+
+    # Reviewers + Reviewees + Assignments live inside the grid;
+    # Configuration import sits after the divider.
+    assert grid_start < reviewers_pos < reviewees_pos
+    assert reviewees_pos < assignments_pos
+    assert assignments_pos < divider_pos
+    assert divider_pos < config_pos
+
+    # Two ``.quick-setup-top-grid-col`` wrappers — left column
+    # holds the two reviewer-side slots, right column holds
+    # Assignments.
+    assert body.count('class="quick-setup-top-grid-col"') == 2
