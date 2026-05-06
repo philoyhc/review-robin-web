@@ -48,10 +48,10 @@
     </p>
   </div>
 
-  <div class="card">
+  <div class="card card-half filter-card">
     <form method="get"
           action="/operator/sessions/{{ session.id }}/responses">
-      <p style="margin: 0;">
+      <div class="filter-row">
         <label>
           Status:
           <select name="status">
@@ -61,7 +61,6 @@
             {% endfor %}
           </select>
         </label>
-        &nbsp;
         <label>
           Search:
           <input type="text"
@@ -69,17 +68,15 @@
                  value="{{ filter_search }}"
                  placeholder="Reviewee name or email">
         </label>
-        <button class="btn secondary" type="submit">Apply</button>
+      </div>
+      <div class="filter-actions">
         {% if filter_status != "all" or filter_search %}
+          <span class="muted">Showing {{ rows | length }} of {{ total_row_count }}.</span>
           <a class="btn secondary"
              href="/operator/sessions/{{ session.id }}/responses">Clear</a>
         {% endif %}
-        {% if filter_status != "all" or filter_search %}
-          <span class="muted">
-            Showing {{ rows | length }} of {{ total_row_count }}.
-          </span>
-        {% endif %}
-      </p>
+        <button class="btn secondary" type="submit">Apply</button>
+      </div>
     </form>
   </div>
 
