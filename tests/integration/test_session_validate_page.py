@@ -140,7 +140,8 @@ def test_setup_coverage_matrix_renders_canonical_rows(
     ).text
     assert "Setup coverage" in body
     # The grid renders one .setup-coverage-cell per row, each carrying
-    # a .setup-coverage-label with the label text.
+    # a .setup-coverage-label span (label sits inline, status follows
+    # with a small gap).
     assert 'class="setup-coverage-grid"' in body
     for label in (
         "Session name",
@@ -152,7 +153,7 @@ def test_setup_coverage_matrix_renders_canonical_rows(
         "Email template",
         "Help contact",
     ):
-        assert f">{label}</p>" in body, f"matrix row missing: {label}"
+        assert f">{label}</span>" in body, f"matrix row missing: {label}"
 
 
 def test_setup_coverage_matrix_links_to_issue_source_anchor_when_issues(
