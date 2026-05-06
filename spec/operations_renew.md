@@ -23,11 +23,14 @@ differ by audience.
 Operations row after this consolidation:
 
 ```
-Operations  [Validate][Preview][Invitations][Responses][Outbox]
+Operations  [Validate][Preview][Invitations][Responses]
 ```
 
 Pre-flight pair (Validate, Preview), monitoring pair (Invitations,
-Responses), dev diagnostic (Outbox).
+Responses). The dev-diagnostic Outbox page (`session_outbox.html`)
+sits **outside the chrome** — it's reachable from a "View outbox"
+button on Manage Invitations, not a tab. Day-to-day operator work
+shouldn't need it; pilot debugging and send-troubleshooting do.
 
 ## Why "Invitations" and "Responses"
 
@@ -321,7 +324,9 @@ useful page.
 `spec/operator_ui_concept.md`:
 
 - Operations Pages list updates to reflect the new structure:
-  Validate, Preview, Invitations, Responses, Outbox.
+  Validate, Preview, Invitations, Responses. (The Outbox page
+  retains its `/sessions/{id}/outbox` URL but exits the chrome
+  taxonomy — reachable from a button on Manage Invitations.)
 - Description of Invitations updates to note its broader scope
   (sending + monitoring + reminders).
 - Responses is a new entry.

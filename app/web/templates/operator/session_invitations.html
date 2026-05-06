@@ -105,31 +105,34 @@
             </td>
             <td>
               {% if row.email_sent_at %}
-                {{ row.email_sent_at.strftime("%Y-%m-%d %H:%M") }}
+                <span class="pill pill-count">{{ row.email_sent_at.strftime("%Y-%m-%d %H:%M") }}</span>
               {% else %}
-                —
+                <span class="pill pill-empty">—</span>
               {% endif %}
             </td>
             <td>
               {% if row.review_progress_total == 0 %}
-                —
+                <span class="pill pill-empty">—</span>
+              {% elif row.review_progress_state == "submitted" %}
+                <span class="pill pill-count">submitted ({{ row.review_progress_done }}/{{ row.review_progress_total }})</span>
               {% else %}
-                {{ row.review_progress_state }}
-                ({{ row.review_progress_done }}/{{ row.review_progress_total }})
+                <span class="pill pill-empty">{{ row.review_progress_state }} ({{ row.review_progress_done }}/{{ row.review_progress_total }})</span>
               {% endif %}
             </td>
             <td>
-              {% if row.review_progress_total == 0 %}
-                —
+              {% if row.required_fields_total == 0 %}
+                <span class="pill pill-empty">—</span>
+              {% elif row.required_fields_done == row.required_fields_total %}
+                <span class="pill pill-count">({{ row.required_fields_done }}/{{ row.required_fields_total }})</span>
               {% else %}
-                ({{ row.required_fields_done }}/{{ row.required_fields_total }})
+                <span class="pill pill-empty">({{ row.required_fields_done }}/{{ row.required_fields_total }})</span>
               {% endif %}
             </td>
             <td>
               {% if row.last_reminder_at %}
-                {{ row.last_reminder_at.strftime("%Y-%m-%d %H:%M") }}
+                <span class="pill pill-count">{{ row.last_reminder_at.strftime("%Y-%m-%d %H:%M") }}</span>
               {% else %}
-                —
+                <span class="pill pill-empty">—</span>
               {% endif %}
             </td>
             <td class="col-shrink">

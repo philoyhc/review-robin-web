@@ -104,15 +104,14 @@ Surfaces for running a session and intervening when needed — validating setup,
 | Preview | `session_previews.html` | `/sessions/{id}/previews` |
 | Invitations | `session_invitations.html` | `/sessions/{id}/invitations` |
 | Responses | `session_responses.html` | `/sessions/{id}/responses` |
-| Outbox | `session_outbox.html` | `/sessions/{id}/outbox` |
 
-The row pairs are deliberate: pre-flight (Validate, Preview), monitoring (Invitations, Responses), dev diagnostic (Outbox). See `spec/operations_renew.md` for the Invitations + Responses consolidation rationale and per-page contracts.
+The row pairs are deliberate: pre-flight (Validate, Preview), monitoring (Invitations, Responses). See `spec/operations_renew.md` for the Invitations + Responses consolidation rationale and per-page contracts.
 
 **Naming:** "Invitations" + "Responses" rather than "Reviewers" + "Reviewees" — those nouns are claimed by the Setup tabs (configuring the rosters); the Operations tabs are about working with them mid-session. Distinct nouns for distinct activities.
 
 **Retired:** the previous standalone `session_monitoring.html` is consolidated into Invitations (reviewer-centric, sending + monitoring + reminders combined). The `/sessions/{id}/monitoring` URL redirects to `/invitations` to preserve bookmarks.
 
-Outbox is **per-session with system-debugging powers** — it's not a cross-session admin surface (a future cross-session admin surface would belong to the System Admin group below).
+**Outbox is not a chrome tab.** `session_outbox.html` at `/sessions/{id}/outbox` is a dev-diagnostic surface — useful for inspecting the rendered email body / token URL during pilot or when debugging a send issue, but not part of the operator's day-to-day Operations row taxonomy. It's reachable via a "View outbox" button on the Manage Invitations page; that button is the canonical entry point. A future cross-session admin surface would belong to the System Admin group below.
 
 ### 6. System Admin / System Setup Pages (placeholder)
 
@@ -149,7 +148,7 @@ A double-height **Home** anchor on the left, two rows of phase tabs to its right
 ```
 ┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Assignments][Instruments][Email Template]
 │  Home  │
-└────────┴─ OPERATIONS ▶ [Validate][Preview][Invitations][Responses][Outbox]
+└────────┴─ OPERATIONS ▶ [Validate][Preview][Invitations][Responses]
 ```
 
 - **Home** is double-height to span both rows, signalling that it's one level up from the phase tabs rather than a peer of any of them. It carries the session's identity, so the chrome itself answers *"which session am I in?"* The session's lifecycle state surfaces in the status row below the chrome, not inside the Home anchor.
@@ -277,13 +276,14 @@ The previous standalone Monitoring page has been consolidated into the new Invit
 
 ### `/operator/sessions/{id}/outbox` — Email outbox
 
-Operations row tab. Dev-mode email outbox view; read-only.
+Dev-diagnostic page; **not an Operations row tab**. Reachable via the "View outbox" button on Manage Invitations. Read-only.
 
 - **Page intro** (muted text): "Dev-mode email outbox for this session. No real SMTP backend is wired up; rows are flipped `queued → sent` synchronously when an operator clicks *Send*. The rendered body includes the raw invitation URL so you can copy it into a real client."
 - **Per-row card** (newest first): kind (`invitation` / `reminder`), recipient email, status pill, sent-at timestamp, then the rendered subject + body (`<pre>` block).
 - **Empty state** — "No outbox rows yet for this session."
+- **Chrome.** The page extends `base.html` with the standard session top nav; no Operations tab highlights as active (mirroring how Edit Session sub-pages render with no tab active).
 
-Real SMTP / production email is deferred to Segment 15; the outbox table itself stays useful for debugging in any environment.
+Real SMTP / production email is deferred to Segment 11C Part 2; the outbox table itself stays useful for debugging in any environment.
 
 ### `/about` — About
 
@@ -295,7 +295,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 
 - **Central Control and Operations Panel** — a cross-session operator surface that aggregates run-state across all of an operator's sessions. Conceivable but ROI unclear, and P1 ("one session at a time") is stronger when the whole app respects it. Not on any segment plan.
 - **Adjacent capabilities likely to land sooner:** shared operator permissions on a session, session duplication (sans response data), shared setup data between sessions (e.g. reusable reviewer rosters or instrument templates), session tagging / grouping. These compose with the Overview surface — none would force a redesign of the Setup / Control / Operations groupings.
-- **Two-row chrome → single row.** With the Operations row at five tabs after the Invitations + Responses consolidation per `spec/operations_renew.md`, the two-row layout is unlikely to collapse. Recorded for completeness; not on any roadmap.
+- **Two-row chrome → single row.** With the Operations row at four tabs after the Invitations + Responses consolidation (and the Outbox de-tabbed) per `spec/operations_renew.md`, the two-row layout is unlikely to collapse. Recorded for completeness; not on any roadmap.
 - **Cross-session System Admin** — when added, sits at Operator's Overview level (or above), not inside a session. Implies its own chrome (different from the per-session two-row nav). Not a per-session Operations Page.
 
 ## Cross-references

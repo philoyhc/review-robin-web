@@ -42,7 +42,7 @@ each independently shippable.
 |---|---|---|---|
 | Invitations is reviewer-centric, list-with-bulk-actions | Old "Manage invitations" page: 3-count summary card + table; no bulk selection / no filters; reminders live on a separate Monitoring page | Rewrite | 1 |
 | Responses page exists | Doesn't exist | New template + route | 1 |
-| Operations row: Validate / Preview / Invitations / Responses / Outbox | Validate / Preview / Invitations / Monitoring (no Outbox tab; no Responses tab) | Add Responses + Outbox tabs; remove Monitoring | 1 |
+| Operations row: Validate / Preview / Invitations / Responses | Validate / Preview / Invitations / Monitoring (no Responses tab) | Add Responses tab; remove Monitoring. Outbox stays *outside* the chrome — reachable from a "View outbox" button on Manage Invitations only (it's a dev-diagnostic surface, not part of day-to-day Operations). | 1 |
 | Monitoring URL preserved as redirect | 404s if removed cleanly | Add 303 redirect handler | 1 |
 | Shared reminder send-path | Each call site composes its own send | Extract single helper; per-row, bulk-from-Invitations, bulk-from-Responses, drill-in-from-either all call it | 1 |
 | List-with-bulk-actions pattern shared | New pattern for both pages | Implement once; both pages instantiate | 1 |
@@ -83,11 +83,22 @@ In:
   | Last reminder | latest *reminder* outbox row's `sent_at` for this reviewer | "—" when no row. |
   | Action | per-row affordances | Part 1: per-row "Send reminder" + drill-in to reviewer detail (token rotation moves here too if it isn't already). Part 2 adds: per-row "Send" button (when invitation row is `queued`). |
 
+  All five data cells (Email Status / Email Sent / Review Progress /
+  Required Fields / Last reminder) render their contents inside a
+  `<span class="pill ...">`, not as plain text — the table reads as a
+  sparkline of state at a glance rather than a wall of timestamps and
+  parentheticals. Pill class follows the existing convention:
+  `pill-count` for "good" / "filled" states (timestamp present, all
+  required filled, `submitted`); `pill-empty` for "absent" / "not yet"
+  states (`—`, `not started`, `in progress`, partial required, etc.).
+
 - Add the **Responses** Operations row tab to `session_top_nav.html`
   in the position established by `spec/operator_ui_concept.md`:
-  `Validate / Preview / Invitations / Responses / Outbox`.
-- Restore **Outbox** as a chrome tab (currently reachable only from
-  "View outbox" buttons on Invitations and Monitoring).
+  `Validate / Preview / Invitations / Responses`.
+- The **Outbox** page (`session_outbox.html`) stays **out of the
+  chrome** — it's a dev-diagnostic surface, not a day-to-day
+  Operations tab. Reachable from a "View outbox" button on the
+  consolidated Manage Invitations page only.
 - Retire `session_monitoring.html`. Add a `/sessions/{id}/monitoring`
   → `/sessions/{id}/invitations` redirect to preserve any inbound
   bookmarks.
@@ -136,10 +147,11 @@ Out (cross-segment):
 **PR A — `/monitoring` redirect + chrome update.** Foundation: add
 the `/sessions/{id}/monitoring` → `/sessions/{id}/invitations` 303
 redirect; update `session_top_nav.html` `_ops_pages` to add
-"Responses" and restore "Outbox" before the new pages exist (the
-Responses tab would 404 if clicked, but later PRs land it
-quickly). Or sequence the chrome change to land alongside PR B / C
-— TBD when the work starts.
+"Responses" before the new page exists (the Responses tab would
+404 if clicked, but later PRs land it quickly). Or sequence the
+chrome change to land alongside PR B / C — TBD when the work
+starts. (The Outbox page does **not** get a chrome tab — it stays
+reachable via the "View outbox" button on Manage Invitations.)
 
 **PR B — List-with-bulk-actions pattern + shared reminder
 send-path.** Extract the shared filter / checkbox-column /
@@ -205,9 +217,10 @@ on risk appetite once implementation starts.
   query rather than firing N queries per row. Same shape works
   for the Review Progress / Required Fields aggregates over
   assignments + responses.
-- **The Outbox tab** is purely a chrome change — the page itself
-  is already on v2 (PR #366); it just stops being a hidden
-  destination and becomes a first-class Operations tab.
+- **Outbox stays unlisted in chrome.** The page itself is already
+  on v2 (PR #366); the canonical entry point is the "View outbox"
+  button on Manage Invitations. Operators don't need it for
+  routine work — it's a dev-diagnostic / pilot-debugging surface.
 
 ### Test impact (Part 1)
 
