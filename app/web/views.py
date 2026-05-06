@@ -741,6 +741,14 @@ class ExtractDataRow:
     download_url: str | None
     coming_in: str | None
 
+    @property
+    def show_count(self) -> bool:
+        """True for the four entity rows whose count is operator-
+        meaningful inline alongside the title (Reviewers / Reviewees /
+        Assignments / Responses). Session settings + the zip-bundle row
+        keep the title-only treatment."""
+        return self.key in ("reviewers", "reviewees", "assignments", "responses")
+
 
 @dataclass(frozen=True)
 class ExtractDataContext:

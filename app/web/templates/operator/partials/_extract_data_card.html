@@ -19,7 +19,9 @@
 <section class="extract-data-row"
          id="extract-data-{{ row.key }}"
          data-wire-target="extract-data-{{ row.key }}">
-  <p class="extract-data-row-label">{{ row.label }}</p>
+  <p class="extract-data-row-label">
+    {{ row.label }}{% if row.show_count %} <span class="muted">({{ row.count }})</span>{% endif %}
+  </p>
   {% if row.is_wired and row.download_url %}
     <a class="btn secondary"
        href="{{ row.download_url }}">Download</a>
