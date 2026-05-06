@@ -58,47 +58,32 @@
     {% endif %}
   {% endif %}
 
-  <div class="card readiness-summary {{ validate.verdict_class }}">
-    <p class="readiness-verdict">{{ validate.verdict_line }}</p>
-    <p class="readiness-counts">
-      <span class="pill pill-error">{{ validate.error_count }} error{% if validate.error_count != 1 %}s{% endif %}</span>
-      <span class="pill pill-empty">{{ validate.warning_count }} warning{% if validate.warning_count != 1 %}s{% endif %}</span>
-      <span class="pill pill-count">{{ validate.info_count }} info</span>
-      <span class="muted readiness-last-validated">{{ validate.last_validated_text }}</span>
-    </p>
-    {% if validate.lifecycle_copy %}
-      <p class="readiness-lifecycle form-help">{{ validate.lifecycle_copy }}</p>
-    {% endif %}
-  </div>
-
   <div class="card setup-coverage">
     <h2>Setup coverage</h2>
     <p class="form-help">
       Inventory of the session's setup state. Use as a reference;
       issues below describe the diagnostics.
     </p>
-    <table>
-      <tbody>
-        {% for row in validate.setup_coverage %}
-          <tr>
-            <th scope="row">{{ row.label }}</th>
-            <td>{{ row.status }}</td>
-            <td class="setup-coverage-issues col-shrink">
-              {% if row.error_count > 0 or row.warning_count > 0 %}
-                <a href="#issue-source-{{ row.source }}">
-                  {% if row.error_count > 0 %}
-                    <span class="pill pill-error">{{ row.error_count }} error{% if row.error_count != 1 %}s{% endif %}</span>
-                  {% endif %}
-                  {% if row.warning_count > 0 %}
-                    <span class="pill pill-empty">{{ row.warning_count }} warning{% if row.warning_count != 1 %}s{% endif %}</span>
-                  {% endif %}
-                </a>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="setup-coverage-grid">
+      {% for row in validate.setup_coverage %}
+        <div class="setup-coverage-cell">
+          <p class="setup-coverage-label">{{ row.label }}</p>
+          <p class="setup-coverage-status">
+            {{ row.status }}
+            {% if row.error_count > 0 or row.warning_count > 0 %}
+              <a class="setup-coverage-issues" href="#issue-source-{{ row.source }}">
+                {% if row.error_count > 0 %}
+                  <span class="pill pill-error">{{ row.error_count }} error{% if row.error_count != 1 %}s{% endif %}</span>
+                {% endif %}
+                {% if row.warning_count > 0 %}
+                  <span class="pill pill-empty">{{ row.warning_count }} warning{% if row.warning_count != 1 %}s{% endif %}</span>
+                {% endif %}
+              </a>
+            {% endif %}
+          </p>
+        </div>
+      {% endfor %}
+    </div>
   </div>
 
   {% if validate.error_count + validate.warning_count + validate.info_count > 0 %}

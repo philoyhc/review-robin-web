@@ -15,13 +15,11 @@ activate-warns detour from Home (PR D).
 
 from __future__ import annotations
 
-from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.identity import AuthenticatedUser
 from app.db.models import ReviewSession
 from app.web import views
 
@@ -129,53 +127,6 @@ def test_validate_lifecycle_copy_ready() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Readiness summary card
-# --------------------------------------------------------------------------- #
-
-
-def test_readiness_summary_clean_verdict_renders_green(
-    client: TestClient, db: Session
-) -> None:
-    """A draft session with reviewers + reviewees + assignments has no
-    errors → "Ready to activate." with the verdict-clean accent."""
-    review_session = _seed_pair(client, db, code="ready-verdict")
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
-    ).text
-    assert "Ready to activate." in body
-    assert "verdict-clean" in body
-
-
-def test_readiness_summary_error_verdict_renders_red(
-    client: TestClient, db: Session
-) -> None:
-    """A bare session (no reviewers / no reviewees) has multiple
-    errors → "Has N errors." with the verdict-error accent."""
-    review_session = _make_session(client, db, code="error-verdict")
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
-    ).text
-    # "Has N errors." with N > 1 (no reviewers + no reviewees + no
-    # assignments).
-    assert "errors." in body
-    assert "verdict-error" in body
-
-
-def test_readiness_summary_severity_counts_render(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="counts")
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
-    ).text
-    # Pills + "Validated just now" hint render together.
-    assert 'class="pill pill-error"' in body
-    assert 'class="pill pill-empty"' in body
-    assert 'class="pill pill-count"' in body
-    assert "Validated just now" in body
-
-
-# --------------------------------------------------------------------------- #
 # Setup-coverage matrix
 # --------------------------------------------------------------------------- #
 
@@ -188,6 +139,9 @@ def test_setup_coverage_matrix_renders_canonical_rows(
         f"/operator/sessions/{review_session.id}/validate"
     ).text
     assert "Setup coverage" in body
+    # The grid renders one .setup-coverage-cell per row, each carrying
+    # a .setup-coverage-label with the label text.
+    assert 'class="setup-coverage-grid"' in body
     for label in (
         "Session name",
         "Session code",
@@ -198,7 +152,7 @@ def test_setup_coverage_matrix_renders_canonical_rows(
         "Email template",
         "Help contact",
     ):
-        assert f">{label}</th>" in body, f"matrix row missing: {label}"
+        assert f">{label}</p>" in body, f"matrix row missing: {label}"
 
 
 def test_setup_coverage_matrix_links_to_issue_source_anchor_when_issues(
@@ -345,22 +299,6 @@ def test_validate_page_renders_why_disclosure_per_issue(
     assert 'class="issue-why"' in body
     # Body of one of the rule.why paragraphs surfaces.
     assert "Activation creates per-reviewer invitations" in body
-
-
-def test_validate_page_lifecycle_copy_for_ready_session(
-    db: Session,
-    alice: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    operator = make_client(alice)
-    review_session = _seed_pair(operator, db, code="ready-copy")
-    _activate(operator, db, review_session)
-
-    body = operator.get(
-        f"/operator/sessions/{review_session.id}/validate"
-    ).text
-    assert "This session is live." in body
-    assert "Setup is locked" in body
 
 
 # --------------------------------------------------------------------------- #

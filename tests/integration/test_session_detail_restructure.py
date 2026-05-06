@@ -296,6 +296,9 @@ def test_validated_session_keeps_action_card_without_query(
 def test_validate_page_activate_form_removed(
     client: TestClient, db: Session
 ) -> None:
+    """The Validate page itself does not host an Activate form —
+    activation lives on Session Home (or via the warnings detour
+    when present, which posts from /validate?activate=1)."""
     review_session = _seed_pair(
         client, db, code="no-activate-form", reviewer_email="r@example.edu"
     )
@@ -306,11 +309,8 @@ def test_validate_page_activate_form_removed(
         f'action="/operator/sessions/{review_session.id}/activate"'
         not in body
     )
-    # Page still renders severity counts + validation results.
-    assert "0 errors" in body
-    # 11G PR A reshaped the page; the lifecycle-aware secondary line
-    # now points the operator at Session Home for activation.
-    assert "Activate from the Next Action card on Session Home." in body
+    # Setup-coverage card surfaces the inventory.
+    assert "Setup coverage" in body
 
 
 # ---------------------------------------------------------------------------
