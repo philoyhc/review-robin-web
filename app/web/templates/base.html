@@ -583,6 +583,35 @@
       }
       .btn-pair > form { margin: 0; }
       .card-half { max-width: calc(50% - 10px); box-sizing: border-box; }
+      /* Filter strip card (Manage Invitations + Responses, Segment 11C
+         Part 1 follow-up). Lives inside `.card.card-half`; its form has
+         a two-up `.filter-row` for the status dropdown + search input
+         and a right-aligned `.filter-actions` row at the bottom for
+         Apply (with optional Clear + "Showing N of M" counter). */
+      .filter-card form { margin: 0; }
+      .filter-card .filter-row {
+        display: flex;
+        gap: 16px;
+      }
+      .filter-card .filter-row > label {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .filter-card .filter-row select,
+      .filter-card .filter-row input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .filter-card .filter-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
       #danger-zone button.btn { width: 200px; }
       @media (max-width: 800px) {
         .page-grid { grid-template-columns: 1fr; }
