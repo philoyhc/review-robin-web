@@ -59,20 +59,20 @@ states.
 
 Two-column body below the chrome and status strip.
 
-### Left column — running the session
+### Left column — running the session and danger
 
-The operator's working column. Stack of cards, top to bottom:
+Stack of cards, top to bottom:
 
-1. **Next Action card.**
-2. **Extract Data card.** *(scaffolded in Segment 11H PR B; wired in Segment 12A PRs 3-6)*
-
-### Right column — metadata, bulk-setup, and danger
-
-1. **Session Details card** (top).
-2. **Quick Setup card** (middle). *(scaffolded in Segment 11H PR A; wired in Segment 11J)*
+1. **Next Action card** (top).
+2. **Extract Data card** (middle). *(scaffolded in Segment 11H PR B; wired in Segment 12A PRs 3-6)*
 3. **Danger Zone card** (bottom).
 
-The mobile-collapse DOM order — Next Action → Extract Data → Session Details → Quick Setup → Danger Zone — is also the intended desktop reading order, top-left to top-right to bottom-right. Quick Setup sits in the right column with the other right-column cards (Session Details, Danger Zone) rather than the working column, because its destructive setup-bulk actions are setup mutations the operator should encounter alongside Session Details and Danger Zone, not next to the lifecycle-advancing Next Action card.
+### Right column — metadata and bulk-setup
+
+1. **Session Details card** (top).
+2. **Quick Setup card** (bottom). *(scaffolded in Segment 11H PR A; wired in Segment 11J)*
+
+The mobile-collapse DOM order — Next Action → Extract Data → Danger Zone → Session Details → Quick Setup — falls out of the source order. Quick Setup sits in the right column rather than the working column so its destructive setup-bulk actions don't compete with the lifecycle-advancing Next Action card for attention; Danger Zone sits at the bottom of the left column so the operator's destructive cleanup actions sit at the natural end of the working column rather than under the right column's read-mostly metadata.
 
 ## Cards
 
@@ -171,7 +171,7 @@ Notes:
   - **Archived** likely renders the card empty or with a
     "Restore" affordance.
 
-### 2. Extract Data card (left column, bottom)
+### 2. Extract Data card (left column, middle)
 
 Lets the operator pull response data out of the session for
 downstream use. The Extract Data card scaffold (Segment 11H PR B)
@@ -193,7 +193,29 @@ zip-bundle stream, and the audit emitters per download. The
 card's filenames follow `session-{code}-{kind}.csv` so the
 operator can identify the file downstream.
 
-### 3. Session Details card (right column, top)
+### 3. Danger Zone card (left column, bottom)
+
+Destructive cleanup actions. Visually distinct (`accent-amber-dark`
+border, H2 in the same warning brown).
+
+**Contents:**
+
+- **Delete Data** — wipes all reviewer responses while preserving
+  setup. Confirmation checkbox + Destructive button.
+- **Delete Session** — removes the session entirely. Confirmation
+  checkbox + Destructive button. **Visible-but-disabled while
+  Activated**: form, button, and confirm checkbox all render but
+  carry the `disabled` attribute, with an explanatory note ("Pause
+  the session first to enable deletion."). The server-side
+  lifecycle gate in `/delete` is the source of truth — a direct
+  POST while Activated still 4xxs. Visible greyed-out so the
+  operator always sees the affordance and the path forward (Pause
+  via the Next Action card first, then delete).
+
+Both actions follow the inline-confirmation pattern: the operator
+ticks the checkbox to enable the destructive submit.
+
+### 4. Session Details card (right column, top)
 
 Reference metadata with an edit affordance. Read-mostly, but the
 operator does occasionally need to update session metadata
@@ -227,7 +249,7 @@ was retired in PR #375; lifecycle state is shown in the chrome
 status strip and (on Home) in the Next Action card's body copy
 when relevant.
 
-### 4. Quick Setup card (right column, middle)
+### 5. Quick Setup card (right column, bottom)
 
 The Quick Setup card scaffold (Segment 11H PR A) renders the
 real four-slot shape with all interactive controls inert; full
@@ -250,28 +272,6 @@ State-conditional copy only — the card frame is constant:
   session is Activated. Pause the session to re-enable bulk
   setup." The Lock / Unlock button does not render in this
   state — the operator's path forward is Pause, not Unlock.
-
-### 5. Danger Zone card (right column, bottom)
-
-Destructive cleanup actions. Visually distinct (`accent-amber-dark`
-border, H2 in the same warning brown).
-
-**Contents:**
-
-- **Delete Data** — wipes all reviewer responses while preserving
-  setup. Confirmation checkbox + Destructive button.
-- **Delete Session** — removes the session entirely. Confirmation
-  checkbox + Destructive button. **Visible-but-disabled while
-  Activated**: form, button, and confirm checkbox all render but
-  carry the `disabled` attribute, with an explanatory note ("Pause
-  the session first to enable deletion."). The server-side
-  lifecycle gate in `/delete` is the source of truth — a direct
-  POST while Activated still 4xxs. Visible greyed-out so the
-  operator always sees the affordance and the path forward (Pause
-  via the Next Action card first, then delete).
-
-Both actions follow the inline-confirmation pattern: the operator
-ticks the checkbox to enable the destructive submit.
 
 ## Placeholder cards
 
