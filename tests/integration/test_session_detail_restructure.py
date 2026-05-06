@@ -526,12 +526,12 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     # Action-oriented body copy in draft / validated.
     assert "Bulk-populate reviewers, reviewees, and assignments" in body
     # Four slots render with stable fragment anchors.
-    for key in ("reviewers", "reviewees", "assignments", "config_import"):
+    for key in ("reviewers", "reviewees", "assignments", "settings"):
         assert f'id="quick-setup-{key}"' in body
     # Each slot's inert controls carry the wiring tooltip.
     assert "Wired in Segment 11J PR A" in body  # reviewers / reviewees
     assert "Wired in Segment 11J PR B" in body  # assignments
-    assert "Wired in Segment 12A PR 6" in body  # config_import
+    assert "Wired in Segment 12A PR 6" in body  # settings (Session settings slot)
     # Dormant banner containers per slot per spec/assumptions.md.
     assert 'id="quick-setup-reviewers-confirm-banner"' in body
     assert 'id="quick-setup-reviewers-error-banner"' in body

@@ -448,7 +448,7 @@ class QuickSetupSlot:
 
     key: str
     """Stable slot identifier — ``reviewers`` / ``reviewees`` /
-    ``assignments`` / ``config_import``. Used as the DOM-id suffix
+    ``assignments`` / ``settings``. Used as the DOM-id suffix
     (``#quick-setup-{key}``) so URL fragments scroll directly to a
     slot, and as the ``data-wire-target`` value so 11J's wiring
     can locate the slot without a CSS-selector contract."""
@@ -567,10 +567,10 @@ def build_quick_setup_context(
             coming_in="Wired in Segment 11J PR B",
         ),
         QuickSetupSlot(
-            key="config_import",
-            label="Configuration import",
+            key="settings",
+            label="Session settings",
             count=0,
-            count_summary="upload a session-config CSV",
+            count_summary="upload a session-settings CSV",
             mode="file_upload",
             is_wired=False,
             wire_url=None,
