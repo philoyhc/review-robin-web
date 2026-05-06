@@ -768,16 +768,6 @@ def build_extract_data_context(
 
     rows = [
         ExtractDataRow(
-            key="settings",
-            label="Session settings",
-            filename=f"session-{code}-settings.csv",
-            count=instrument_count,
-            count_summary=_extract_summary("instrument", instrument_count),
-            is_wired=False,
-            download_url=None,
-            coming_in="Wired in Segment 12A PR 1",
-        ),
-        ExtractDataRow(
             key="reviewers",
             label="Reviewers",
             filename=f"session-{code}-reviewers.csv",
@@ -817,11 +807,21 @@ def build_extract_data_context(
             download_url=None,
             coming_in="Wired in Segment 12A PR 5",
         ),
+        ExtractDataRow(
+            key="settings",
+            label="Session settings",
+            filename=f"session-{code}-settings.csv",
+            count=instrument_count,
+            count_summary=_extract_summary("instrument", instrument_count),
+            is_wired=False,
+            download_url=None,
+            coming_in="Wired in Segment 12A PR 1",
+        ),
     ]
 
     bundle = ExtractDataRow(
         key="bundle",
-        label="Download all",
+        label="Zip all",
         filename=f"session-{code}-export.zip",
         count=sum(r.count for r in rows),
         count_summary="zip of all five CSVs above",

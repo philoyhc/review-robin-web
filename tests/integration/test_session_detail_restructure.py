@@ -638,17 +638,23 @@ def test_delete_session_post_still_rejected_when_ready(
 def test_extract_data_card_renders_scaffold_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """Segment 11H PR B — the Extract Data card on Session Home
-    renders five per-entity rows + a "Download all" zip-bundle
-    footer. Every Download button is inert
-    (``aria-disabled="true"``) until 12A wires the routes."""
+    """Segment 11H PR B (with post-Part-1 polish) — the Extract Data
+    card on Session Home renders the five per-entity rows + a "Zip all"
+    cell in a 2-col grid (Reviewers / Reviewees / Assignments /
+    Responses / Session settings / Zip all, left-right then up-down).
+    Every Download button is inert (``aria-disabled="true"``) until
+    12A wires the routes."""
 
     review_session = _make_session(client, db, code="extract-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     assert 'class="card" id="extract-data"' in body
     assert "<h2>Extract Data</h2>" in body
-    # Five rows + bundle footer with stable fragment anchors.
+    # Card subtitle stays.
+    assert "Download per-entity CSVs of the session's data." in body
+    # Two-column grid wraps the cells.
+    assert 'class="extract-data-grid"' in body
+    # Five rows + bundle cell with stable fragment anchors.
     for key in (
         "settings",
         "reviewers",
@@ -658,9 +664,8 @@ def test_extract_data_card_renders_scaffold_in_draft(
         "bundle",
     ):
         assert f'id="extract-data-{key}"' in body
-    # Filename copy surfaces per row.
-    assert "session-extract-draft-reviewers.csv" in body
-    assert "session-extract-draft-export.zip" in body
+    # Cell labels — bundle is "Zip all" (was "Download all" pre-polish).
+    assert "Zip all" in body
     # Wiring tooltips name the segment / PR that lights each row up.
     assert "Wired in Segment 12A PR 1" in body  # settings
     assert "Wired in Segment 12A PR 3" in body  # reviewers / reviewees
