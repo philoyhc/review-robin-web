@@ -4,8 +4,11 @@
    Prev/Next step anchors (disabled when no reviewer is selected), a
    Random POST button, and a context strip below.
 
-   Layout:
-     - The card is half-width (`.card-half`) per `spec/visual_style_general.md`.
+   Layout / styling:
+     - Half-width card (`.card-half`) per spec/visual_style_general.md.
+     - Card title is an `<h2>` like the Next Action card on Session Home.
+     - Body / context lines use `.form-help` so they read at the same
+       weight as the muted text on Manage Invitations.
      - The search input + Apply button sit on one flex row with a gap.
      - Prev / Next / Random sit in `.card-action-row`, right-flushed.
 
@@ -14,7 +17,7 @@
      - picker: views.PreviewPickerContext
 #}
 <div class="card card-half preview-picker-card">
-  <p class="preview-picker-heading"><strong>Previewing as:</strong></p>
+  <h2>Previewing as</h2>
 
   <form class="preview-picker-form"
         method="get"
@@ -38,7 +41,7 @@
   </form>
 
   {% if picker.no_match_query %}
-    <p class="muted preview-picker-no-match">
+    <p class="form-help">
       No reviewer matched "{{ picker.no_match_query }}".
     </p>
   {% endif %}
@@ -65,28 +68,32 @@
     </form>
   </div>
 
-  <div class="preview-picker-context muted">
-    {% if not picker.options %}
+  {% if not picker.options %}
+    <p class="form-help">
       No reviewers configured. Add reviewers via the
       <a href="/operator/sessions/{{ session.id }}/reviewers">Reviewers Setup page</a>
       or the Quick Setup card on Home.
-    {% elif picker.current %}
+    </p>
+  {% elif picker.current %}
+    <p class="form-help">
       <strong>Reviewer {{ picker.current_index + 1 }} of {{ picker.options | length }}</strong>
       · {{ picker.current.name }} ({{ picker.current.email }})
       · {{ picker.reviewee_count }}
       reviewee{% if picker.reviewee_count != 1 %}s{% endif %} assigned{% if picker.reviewee_peek %}: {{ picker.reviewee_peek | join(", ") }}{% endif %}
-      {% if picker.reviewee_tail %}
-        <details class="preview-picker-more">
-          <summary>more</summary>
-          <ul>
-            {% for name in picker.reviewee_tail %}<li>{{ name }}</li>{% endfor %}
-          </ul>
-        </details>
-      {% endif %}
-    {% else %}
+    </p>
+    {% if picker.reviewee_tail %}
+      <details class="form-help preview-picker-more">
+        <summary>more</summary>
+        <ul>
+          {% for name in picker.reviewee_tail %}<li>{{ name }}</li>{% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+  {% else %}
+    <p class="form-help">
       {{ picker.options | length }} reviewer{% if picker.options | length != 1 %}s{% endif %} in this session.
       Pick one to preview the invitation, surface, reminder, and
       confirmation they'd see.
-    {% endif %}
-  </div>
+    </p>
+  {% endif %}
 </div>
