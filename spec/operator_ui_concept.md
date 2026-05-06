@@ -90,7 +90,7 @@ The Reviewers / Reviewees / Assignments pages share an identical chrome shape (i
 
 Read-only renderings spun off from one or other Setup Page, showing what the configured setup will look like to its audience (reviewers today; future reviewees or other audiences once they exist).
 
-The Preview hub lives at `GET /operator/sessions/{id}/previews` (Operations row, tab label "Preview") — see `spec/preview_hub.md` for the contract. The standalone reviewer-surface preview at `GET /operator/sessions/{id}/preview` (singular) remains as the operator's read-only render of what reviewers will see; it bypasses session-status / deadline / acceptance gates.
+The Preview hub lives at `GET /operator/sessions/{id}/previews` (Operations row, tab label "Previews") — see `spec/preview_hub.md` for the contract. The standalone reviewer-surface preview at `GET /operator/sessions/{id}/preview` (singular) was retired in Segment 11F PR C; the URL is now a permanent (308) redirect to `/operator/sessions/{id}/previews#reviewer-surface` (the surface card on the consolidated hub). The hub bypasses session-status / deadline / acceptance gates.
 
 The grouping name stays plural because additional Preview surfaces are anticipated (e.g. per-instrument preview integration is open per `guide/instruments.md` Section D).
 
@@ -101,7 +101,7 @@ Surfaces for running a session and intervening when needed — validating setup,
 | Page | Template | URL |
 |---|---|---|
 | Validate | `session_validate.html` | `/sessions/{id}/validate` |
-| Preview | `session_previews.html` | `/sessions/{id}/previews` |
+| Previews | `session_previews.html` | `/sessions/{id}/previews` |
 | Invitations | `session_invitations.html` | `/sessions/{id}/invitations` |
 | Responses | `session_responses.html` | `/sessions/{id}/responses` |
 
@@ -167,7 +167,7 @@ Below the chrome, a **status row** renders the at-a-glance session status, ident
 ### Sub-pages and Preview
 
 - **Sub-pages of Home** (Edit Session): chrome renders the two phase rows normally, with no tab active. The sub-page identifies itself via H1 in the page body.
-- **Standalone reviewer-surface preview** (`/preview`, singular): chrome renders normally, with no tab active. Conceptually adjacent to the Previews hub on the Operations row.
+- **Retired standalone reviewer-surface preview** (`/preview`, singular): retired in Segment 11F PR C as a permanent (308) redirect to `/sessions/{id}/previews#reviewer-surface`. The reviewer-surface render now lives as the Previews hub's surface card.
 
 ### What the chrome does not do
 
@@ -250,11 +250,11 @@ Operations row tab. Read-only deep-dive of every setup issue, intended for the o
 
 There is no Activate button on this page; activation lives only on Session Home (so the activate contract is enforced at a single place).
 
-### `/operator/sessions/{id}/previews` — Preview hub
+### `/operator/sessions/{id}/previews` — Previews hub
 
-Operations row tab (label: **Preview**). **Detailed spec: `spec/preview_hub.md`.** Renders read-only previews of what reviewers will see (invitation email, response form, reminder email, responses-received email) for an operator-selected reviewer.
+Operations row tab (label: **Previews**). **Detailed spec: `spec/preview_hub.md`.** Renders read-only previews of what reviewers will see (invitation email, response form, reminder email, responses-received email) for an operator-selected reviewer. Operator-only; bypasses session-status / deadline / acceptance gates.
 
-Also reachable: the operator's standalone read-only render of the reviewer surface at `GET /operator/sessions/{id}/preview` (singular) — predates the preview hub; conceptually adjacent. Operator-only; bypasses session-status / deadline / acceptance gates.
+The retired standalone `/operator/sessions/{id}/preview` (singular) — the predecessor reviewer-surface preview — is a permanent (308) redirect to `/sessions/{id}/previews#reviewer-surface`. The reviewer-surface render now lives as the hub's surface card.
 
 ### `/operator/sessions/{id}/invitations` — Invitations (reviewer-centric)
 

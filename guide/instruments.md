@@ -546,13 +546,13 @@ inputs to be fixed.
   reviewer surface* UX is open.
 - **Per-instrument preview integration** — earlier drafts of
   this spec carried a Section D `Preview Instrument #{N}` card
-  (a per-instrument inline preview). The shared
-  `Preview reviewer surface` page at
-  `/operator/sessions/{id}/preview` already renders the reviewer
-  surface for the whole session, so the per-instrument card no
-  longer renders a preview placeholder. How the two integrate is
-  open: should each card carry a `Preview this instrument` action
-  that links into the appropriate section of `/preview`? Should
-  `/preview` extend to render help text alongside response
-  fields? Should the per-instrument card host a no-mock-data
-  inline summary instead? Revisit in a follow-up segment.
+  (a per-instrument inline preview). The shared Previews hub at
+  `/operator/sessions/{id}/previews` (Segment 11F) renders the
+  reviewer surface for the whole session inside its surface card,
+  so the per-instrument card no longer renders a preview
+  placeholder. How the two integrate is open: should each card
+  carry a `Preview this instrument` action that links into the
+  appropriate section of the hub's surface card? Should the hub
+  extend to render help text alongside response fields? Should
+  the per-instrument card host a no-mock-data inline summary
+  instead? Revisit in a follow-up segment.
