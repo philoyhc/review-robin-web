@@ -86,7 +86,7 @@ def test_build_quick_setup_context_returns_four_slots(
 ) -> None:
     """The view-shape adapter returns the four scaffold slots in
     the canonical order — Reviewers, Reviewees, Assignments,
-    Configuration import. 11J will flip ``is_wired`` per slot;
+    Session settings. 11J will flip ``is_wired`` per slot;
     11H ships them all inert."""
 
     review_session = _make_session(client, db, code="qs-shape")
@@ -96,7 +96,7 @@ def test_build_quick_setup_context_returns_four_slots(
         "reviewers",
         "reviewees",
         "assignments",
-        "config_import",
+        "settings",
     ]
     # All slots inert at scaffold-time.
     assert all(slot.is_wired is False for slot in context.slots)
@@ -168,7 +168,7 @@ def test_quick_setup_slot_assignments_uses_rule_or_csv_mode(
     assert by_key["reviewers"].mode == "file_upload"
     assert by_key["reviewees"].mode == "file_upload"
     assert by_key["assignments"].mode == "rule_or_csv"
-    assert by_key["config_import"].mode == "file_upload"
+    assert by_key["settings"].mode == "file_upload"
 
 
 def test_quick_setup_dom_carries_wire_target_attributes(
@@ -182,7 +182,7 @@ def test_quick_setup_dom_carries_wire_target_attributes(
     review_session = _make_session(client, db, code="qs-wire-targets")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    for key in ("reviewers", "reviewees", "assignments", "config_import"):
+    for key in ("reviewers", "reviewees", "assignments", "settings"):
         assert f'data-wire-target="quick-setup-{key}"' in body
 
 
@@ -199,7 +199,7 @@ def test_quick_setup_dormant_banner_containers_render_hidden(
     review_session = _make_session(client, db, code="qs-banners")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    for key in ("reviewers", "reviewees", "assignments", "config_import"):
+    for key in ("reviewers", "reviewees", "assignments", "settings"):
         assert (
             'class="banner banner-warning banner-scroll-target"\n'
             f'       id="quick-setup-{key}-confirm-banner"\n'
@@ -300,7 +300,7 @@ def test_quick_setup_top_grid_layout(
        Reviewees stacked in the left column, Assignments alone
        in the right column.
     2. A ``.quick-setup-divider`` horizontal rule.
-    3. The Configuration import slot full-width below the
+    3. The Session settings slot full-width below the
        divider, outside the grid.
 
     Pin the structural contract so 11J / 12A wiring patches can
@@ -312,7 +312,7 @@ def test_quick_setup_top_grid_layout(
 
     grid_start = body.find('class="quick-setup-top-grid"')
     divider_pos = body.find('class="quick-setup-divider"')
-    config_pos = body.find('id="quick-setup-config_import"')
+    config_pos = body.find('id="quick-setup-settings"')
     reviewers_pos = body.find('id="quick-setup-reviewers"')
     reviewees_pos = body.find('id="quick-setup-reviewees"')
     assignments_pos = body.find('id="quick-setup-assignments"')
@@ -328,7 +328,7 @@ def test_quick_setup_top_grid_layout(
     )
 
     # Reviewers + Reviewees + Assignments live inside the grid;
-    # Configuration import sits after the divider.
+    # Session settings sits after the divider.
     assert grid_start < reviewers_pos < reviewees_pos
     assert reviewees_pos < assignments_pos
     assert assignments_pos < divider_pos

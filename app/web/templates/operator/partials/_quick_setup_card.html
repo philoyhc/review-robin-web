@@ -113,12 +113,13 @@
         {% endfor %}
       </div>
     </div>
-    {# Bottom: full-width Configuration import slot below a divider.
-       The Configuration import slot is the only one whose live
-       wiring lands outside Segment 11J (Segment 12A PR 6 graduates
-       it), so visually separating it makes the seam explicit. #}
+    {# Bottom: full-width Session settings slot below a divider.
+       Session settings is the only slot whose live wiring lands
+       outside Segment 11J (Segment 12A PR 6 graduates it; matches
+       the "Session settings" row on the Extract Data card), so
+       visually separating it makes the seam explicit. #}
     <hr class="quick-setup-divider">
-    {% for slot in quick_setup.slots if slot.key == "config_import" %}
+    {% for slot in quick_setup.slots if slot.key == "settings" %}
       {{ quick_setup_slot(slot) }}
     {% endfor %}
   </div>

@@ -106,7 +106,7 @@ In:
   ```python
   @dataclass(frozen=True)
   class QuickSetupSlot:
-      key: str               # "reviewers" / "reviewees" / "assignments" / "config_import"
+      key: str               # "reviewers" / "reviewees" / "assignments" / "settings"
       label: str             # "Reviewers"
       count: int             # current population
       count_summary: str     # "8 currently" / "none yet"
