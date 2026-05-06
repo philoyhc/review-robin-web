@@ -635,6 +635,40 @@
         margin: 4px 0 0 0;
         padding-left: 20px;
       }
+      /* Email previews region (segment 11F PR B). Tab strip on top,
+         active email's envelope (subject / from / to) above a divider,
+         then the rendered body in a monospace pre. The pre wraps so
+         long URLs and merge-tag-substituted lines stay inside the
+         card width. */
+      .email-preview-card .email-preview-tabs { margin-bottom: 12px; }
+      .email-preview-card .email-preview-description { margin: 0 0 12px 0; }
+      .email-preview-card .email-preview-envelope { margin: 0 0 8px 0; }
+      .email-preview-card .email-preview-header {
+        margin: 2px 0;
+      }
+      .email-preview-card .email-preview-divider {
+        border: 0;
+        border-top: 1px solid #ddd;
+        margin: 8px 0;
+      }
+      .email-preview-card .email-preview-body {
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 0.95em;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        margin: 0;
+      }
+      .email-preview-card .email-preview-footer {
+        margin: 12px 0 0 0;
+      }
+      /* Separator between the email previews region and the reviewer-
+         surface card (which lands in PR C). Matches the divider
+         weight used inside the email preview envelope. */
+      .preview-region-divider {
+        border: 0;
+        border-top: 1px solid #ddd;
+        margin: 16px 0;
+      }
       /* Generic right-aligned action row for v2 cards. Used by the
          Responses summary card (Send reminders + Manage Invitations
          buttons) and any other card that wants its actions pinned to

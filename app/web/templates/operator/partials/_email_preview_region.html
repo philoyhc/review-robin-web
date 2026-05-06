@@ -1,0 +1,59 @@
+{# Email previews region for the Previews page (segment 11F PR B).
+
+   Renders a single full-width card with a `.btn-pair` tab strip
+   (Invitation / Reminder / Responses-received), then the active
+   tab's rendered email below: subject, from, to, body, and a
+   source-of-truth footer.
+
+   Tab styling mirrors `session_setupinvite.html:14-27`:
+     - Active tab: `<button class="btn disabled" aria-disabled="true">`
+     - Other shipped tabs: `<a class="btn secondary" href="?email=…">`
+     - Unshipped tabs: `<button class="btn secondary" disabled
+       aria-disabled="true">` with "(coming soon)" suffix.
+
+   Required context:
+     - session: ReviewSession
+     - picker: views.PreviewPickerContext
+     - email_tabs: tuple[views.EmailPreviewTab, ...]
+     - active_email_tab: views.EmailPreviewTab
+     - email_body: views.EmailBody | None
+#}
+<div class="card email-preview-card">
+  <div class="btn-pair email-preview-tabs">
+    {% for tab in email_tabs %}
+      {% if tab.key == active_email_tab.key %}
+        <button type="button" class="btn disabled" aria-disabled="true">{{ tab.label }}</button>
+      {% elif tab.is_shipped %}
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}/previews?reviewer_email={{ picker.current.email | urlencode }}&email={{ tab.key }}">{{ tab.label }}</a>
+      {% else %}
+        <button type="button" class="btn secondary" disabled aria-disabled="true">{{ tab.label }} (coming soon)</button>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <p class="form-help email-preview-description">
+    {{ active_email_tab.description }}
+  </p>
+
+  {% if email_body is none %}
+    <p class="form-help">
+      This email tab's render adapter ships in a later segment 11F PR.
+    </p>
+  {% else %}
+    <div class="email-preview-envelope">
+      <p class="email-preview-header"><strong>Subject:</strong> {{ email_body.subject }}</p>
+      <p class="email-preview-header"><strong>From:</strong> {{ email_body.from_display }}</p>
+      <p class="email-preview-header"><strong>To:</strong> {{ email_body.to_display }}</p>
+    </div>
+    <hr class="email-preview-divider">
+    <pre class="email-preview-body">{{ email_body.body }}</pre>
+  {% endif %}
+
+  <p class="form-help email-preview-footer">
+    Rendered from
+    <a href="/operator/sessions/{{ session.id }}/setupinvite?template={{ active_email_tab.template_setup_param }}">Email Template (Setup)</a>
+    and
+    <a href="/operator/sessions/{{ session.id }}/reviewers">Reviewers (Setup)</a>.
+  </p>
+</div>

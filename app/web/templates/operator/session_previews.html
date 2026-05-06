@@ -23,12 +23,15 @@
       </p>
     </div>
   {% elif picker.current %}
-    <div class="card placeholder">
+    {% include "operator/partials/_email_preview_region.html" %}
+
+    <hr class="preview-region-divider">
+
+    <div class="card placeholder" id="reviewer-surface">
       <p class="form-help">
-        Artifact previews — invitation email, reviewer surface,
-        reminder, and confirmation — land in upcoming PRs of segment
-        11F. The picker above already drives which reviewer's
-        artifacts will populate them.
+        The reviewer-surface preview — the form the selected reviewer
+        would land on after clicking the invitation — lands in PR C
+        of segment 11F.
       </p>
     </div>
   {% else %}
