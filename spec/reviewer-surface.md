@@ -562,8 +562,12 @@ session can have multiple reviewers, each tied to a distinct user.
 
 ## Operator preview mode
 
-`/operator/sessions/{id}/preview` reuses this template via
-`build_preview_context`. In preview mode:
+The Previews-hub surface card at `/operator/sessions/{id}/previews`
+(Segment 11F PR C) renders this template into an iframe `srcdoc`
+via `build_preview_context`. The legacy standalone
+`/operator/sessions/{id}/preview` (singular) is a permanent (308)
+redirect to `/previews#reviewer-surface` and no longer renders the
+template directly. In preview mode:
 
 - The chrome `top_bar` block calls `super()` so the operator chrome
   (with breadcrumb back to the session) renders instead of the
@@ -603,11 +607,14 @@ session can have multiple reviewers, each tied to a distinct user.
   flip `accepting_responses=false` even if the session deadline
   has lapsed.
 
-The preview URL stays at `/operator/sessions/{id}/preview` (no
-position segment) and lands on Page 1 by default; clicking a Page N
-anchor on the preview navigates to
-`/operator/sessions/{id}/preview/{position}` (mirror of the reviewer
-URL pattern, prefixed with the operator path).
+The Previews-hub surface card lives at
+`/operator/sessions/{id}/previews?reviewer_email=…#reviewer-surface`
+(Segment 11F PR C). The picker-selected reviewer is the only state
+the URL carries; Page #N navigation inside the iframe runs through
+the existing reviewer-surface page-toggle JS (the iframe's
+`sandbox="allow-scripts"` keeps it alive). The retired
+`/preview` (singular) 308-redirects there for bookmarks /
+external links.
 
 ---
 
