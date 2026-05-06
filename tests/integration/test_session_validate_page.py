@@ -361,3 +361,161 @@ def test_validate_page_lifecycle_copy_for_ready_session(
     ).text
     assert "This session is live." in body
     assert "Setup is locked" in body
+
+
+# --------------------------------------------------------------------------- #
+# Activate-warns detour from Home (PR D)
+# --------------------------------------------------------------------------- #
+
+
+def _seed_validated_with_warnings(
+    client: TestClient, db: Session, *, code: str
+) -> ReviewSession:
+    """Set up a session in validated state with one warning
+    (assignments.no_mode) so the activate-warns detour path is
+    reachable. Reviewers + reviewees imported, but no assignments
+    generated."""
+    review_session = _make_session(client, db, code=code)
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nC,c@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    # ?validated=1 marks the session validated when can_activate
+    # (no errors). Warnings don't block.
+    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    db.refresh(review_session)
+    assert review_session.status == "validated"
+    return review_session
+
+
+def test_session_home_validated_with_warnings_links_to_validate_detour(
+    client: TestClient, db: Session
+) -> None:
+    """Per PR D, when a validated session has warnings the
+    Next Action card's Activate button is an anchor to
+    `/validate?activate=1` rather than a POST submit. The
+    acknowledge_warnings checkbox is gone."""
+    review_session = _seed_validated_with_warnings(
+        client, db, code="home-detour"
+    )
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    # Activate Session anchor points at the detour URL.
+    assert (
+        f'href="/operator/sessions/{review_session.id}/validate?activate=1"'
+        in body
+    )
+    # No acknowledge_warnings checkbox on Home.
+    assert 'name="acknowledge_warnings"' not in body
+    # Warning-count line under the primary button surfaces.
+    assert "warning" in body and "review on Validate" in body
+
+
+def test_session_home_validated_no_warnings_keeps_direct_post(
+    client: TestClient, db: Session
+) -> None:
+    """Validated session with zero warnings keeps the direct
+    Activate POST — no detour."""
+    review_session = _seed_pair(client, db, code="no-detour")
+    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    db.refresh(review_session)
+    assert review_session.status == "validated"
+
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    # Direct POST form to /activate is present.
+    assert (
+        f'action="/operator/sessions/{review_session.id}/activate"'
+        in body
+    )
+    # No detour anchor.
+    assert (
+        f'href="/operator/sessions/{review_session.id}/validate?activate=1"'
+        not in body
+    )
+
+
+def test_validate_activate_param_renders_warning_banner(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _seed_validated_with_warnings(
+        client, db, code="banner-warn"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate?activate=1"
+    ).text
+    assert "Acknowledge warnings to activate" in body
+    assert 'id="activate-confirm-banner"' in body
+    assert "banner-scroll-target" in body
+    # The acknowledge POST submit + Cancel link both render.
+    assert "Acknowledge and activate" in body
+    assert (
+        f'href="/operator/sessions/{review_session.id}/validate"'
+        in body
+    )
+
+
+def test_validate_activate_param_acknowledge_post_activates_session(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _seed_validated_with_warnings(
+        client, db, code="ack-post"
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    db.refresh(review_session)
+    assert review_session.status == "ready"
+
+
+def test_validate_activate_param_on_draft_redirects_to_clean_url(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="draft-redir")
+    # Session stays draft (no ?validated=1).
+    response = client.get(
+        f"/operator/sessions/{review_session.id}/validate?activate=1",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/operator/sessions/{review_session.id}/validate"
+    )
+
+
+def test_validate_activate_param_no_warnings_redirects(
+    client: TestClient, db: Session
+) -> None:
+    """Validated session with no warnings: ?activate=1 has nothing
+    to acknowledge → 303 to clean /validate URL."""
+    review_session = _seed_pair(client, db, code="no-warn-redir")
+    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    db.refresh(review_session)
+
+    response = client.get(
+        f"/operator/sessions/{review_session.id}/validate?activate=1",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/operator/sessions/{review_session.id}/validate"
+    )

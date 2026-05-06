@@ -64,18 +64,17 @@
                 Preview the reviewer surface to make sure that it
                 conforms to your requirements before activating.
               </p>
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/activate"
-                    id="next-action-activate-form">
-                {% if validation_summary.needs_acknowledge %}
-                  <p>
-                    <label style="font-weight: normal;">
-                      <input type="checkbox" name="acknowledge_warnings" value="true" required>
-                      I have reviewed the warnings/info and want to activate anyway.
-                    </label>
-                  </p>
-                {% endif %}
-              </form>
+              {% if validation_summary.needs_acknowledge %}
+                <p class="form-help" style="margin: 0;">
+                  {{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}
+                  — review on Validate before activating.
+                </p>
+              {% else %}
+                {# No warnings to acknowledge — direct activate POST. #}
+                <form method="post"
+                      action="/operator/sessions/{{ session.id }}/activate"
+                      id="next-action-activate-form"></form>
+              {% endif %}
             {% else %}
               <p>
                 Validation shows that there are error(s). Resolve them
@@ -143,9 +142,17 @@
                href="/operator/sessions/{{ session.id }}/validate">See validation details</a>
           {% elif is_validated %}
             {% if validation_summary and validation_summary.can_activate %}
-              <button class="btn"
-                      type="submit"
-                      form="next-action-activate-form">Activate Session</button>
+              {% if validation_summary.needs_acknowledge %}
+                {# Warnings present — detour to /validate?activate=1
+                   so the operator acknowledges them with the
+                   warnings inline (Segment 11G PR D). #}
+                <a class="btn"
+                   href="/operator/sessions/{{ session.id }}/validate?activate=1">Activate Session</a>
+              {% else %}
+                <button class="btn"
+                        type="submit"
+                        form="next-action-activate-form">Activate Session</button>
+              {% endif %}
               <a class="btn secondary"
                  href="/operator/sessions/{{ session.id }}/validate">See validation details</a>
               <a class="btn secondary"

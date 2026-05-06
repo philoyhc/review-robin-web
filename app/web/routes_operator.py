@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -317,12 +317,41 @@ def session_detail(
 def validate_session(
     request: Request,
     severity: str = "all",
+    activate: int = 0,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> HTMLResponse:
+) -> Response:
     issues = validation.validate_session_setup(db, review_session)
     report = lifecycle.build_readiness_report(issues)
+    # Activate-warns detour: ?activate=1 requests the inline
+    # confirmation banner (Segment 11G PR D). It only renders on
+    # ``validated`` sessions that have warnings or new errors. On
+    # ineligible states (draft / ready / closed) or when there's
+    # nothing to acknowledge, drop the param and 303 to the clean
+    # URL — operator can activate (or not) from Home.
+    activate_banner: dict[str, object] | None = None
+    if activate:
+        if not lifecycle.is_validated(review_session):
+            return RedirectResponse(
+                url=f"/operator/sessions/{review_session.id}/validate",
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
+        if report.errors:
+            activate_banner = {
+                "kind": "error",
+                "errors": report.errors,
+            }
+        elif report.warnings:
+            activate_banner = {
+                "kind": "warning",
+                "warnings": report.warnings,
+            }
+        else:
+            return RedirectResponse(
+                url=f"/operator/sessions/{review_session.id}/validate",
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
     validate_ctx = views.build_validate_context(
         db, review_session, issues, severity_filter=severity
     )
@@ -335,6 +364,7 @@ def validate_session(
             "status_pills": views.session_status_pills(db, review_session),
             "issues": issues,
             "validate": validate_ctx,
+            "activate_banner": activate_banner,
             "error_count": len(report.errors),
             "warning_count": len(report.warnings),
             "info_count": len(report.info),
