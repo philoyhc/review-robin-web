@@ -489,14 +489,24 @@ class QuickSetupContext:
     ``slots`` renders top-to-bottom in the order given; the card
     iterates and the ``quick_setup_slot`` macro renders each one.
 
-    ``is_disabled`` is ``True`` when the session is ``ready`` /
-    ``closed`` and the whole card carries the ``.card.disabled``
-    plain-greying treatment per ``spec/session_home.md`` "Disabled
-    treatment on Home is plain greying-out, not yellow lock cards".
+    Two greying triggers, mutually exclusive:
+
+    - ``is_disabled`` — session is Activated (``ready``). Whole
+      card carries ``.card.disabled`` plain-greying per
+      ``spec/session_home.md``; the Lock / Unlock button is not
+      rendered (the operator's path forward is Pause, not unlock).
+    - ``is_locked`` — session is editable (``draft`` / ``validated``)
+      but the card body is greyed pending an explicit Unlock click.
+      The body wrapper gets ``.locked``; the Lock / Unlock button
+      sits outside the wrapper so it stays vivid. Defaults ``True``
+      whenever the card is editable so the operator must
+      deliberately unlock before any setup change. The button is a
+      placeholder in 11H — Segment 11J wires the toggle.
     """
 
     slots: list[QuickSetupSlot]
     is_disabled: bool
+    is_locked: bool
     description: str
 
 
@@ -576,8 +586,16 @@ def build_quick_setup_context(
         "from files or rules in one place."
     )
 
+    # Lock the card by default whenever it's editable. The toggle
+    # itself is wired in 11J; 11H ships the lock state at fresh-page-
+    # load default (locked) without state persistence.
+    is_locked = not is_disabled
+
     return QuickSetupContext(
-        slots=slots, is_disabled=is_disabled, description=description
+        slots=slots,
+        is_disabled=is_disabled,
+        is_locked=is_locked,
+        description=description,
     )
 
 

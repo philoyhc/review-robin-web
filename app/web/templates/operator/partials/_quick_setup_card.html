@@ -37,8 +37,7 @@
        hidden></div>
   {% if slot.mode == "rule_or_csv" %}
     {# Slot 3 — Assignments. Rule selector default; CSV upload
-       alternative. The selector renders FullMatrix today; an
-       explanatory caption sits below. #}
+       alternative. The selector renders FullMatrix today. #}
     <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
       Generate by rule, or upload a CSV.
     </p>
@@ -60,8 +59,15 @@
               aria-disabled="true"
               {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>Submit</button>
     </div>
-    <p class="form-help" style="margin: var(--space-2) 0 0 0;">
-      More rules ship with Segment 13.
+    <p style="margin: var(--space-2) 0 0 0;">
+      <label style="font-weight: normal;">
+        <input type="checkbox"
+               name="exclude_self_review"
+               disabled
+               aria-disabled="true"
+               {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
+        Exclude self-review
+      </label>
     </p>
   {% else %}
     {# Slots 1, 2, 4 — file upload + Submit. #}
@@ -84,29 +90,52 @@
 <div class="card{% if quick_setup.is_disabled %} disabled{% endif %}" id="quick-setup">
   <h2>Quick Setup</h2>
   <p class="form-help">{{ quick_setup.description }}</p>
-  {# Top: 2-column grid for the three setup slots. Left column
-     stacks Reviewers + Reviewees; right column carries
-     Assignments. Mobile collapses to single column in DOM order
-     (Reviewers → Reviewees → Assignments) per the standard
-     ≤800px breakpoint. #}
-  <div class="quick-setup-top-grid">
-    <div class="quick-setup-top-grid-col">
-      {% for slot in quick_setup.slots if slot.key in ("reviewers", "reviewees") %}
-        {{ quick_setup_slot(slot) }}
-      {% endfor %}
+  {# Body wrapper that picks up ``.locked`` greying when the card
+     is editable but locked (default state). The Lock / Unlock
+     button below sits outside this wrapper so it stays vivid even
+     while the body is greyed — the operator needs a clear,
+     uninhibited control to flip the lock. #}
+  <div class="quick-setup-body{% if quick_setup.is_locked %} locked{% endif %}">
+    {# Top: 2-column grid for the three setup slots. Left column
+       stacks Reviewers + Reviewees; right column carries
+       Assignments. Mobile collapses to single column in DOM order
+       (Reviewers → Reviewees → Assignments) per the standard
+       ≤800px breakpoint. #}
+    <div class="quick-setup-top-grid">
+      <div class="quick-setup-top-grid-col">
+        {% for slot in quick_setup.slots if slot.key in ("reviewers", "reviewees") %}
+          {{ quick_setup_slot(slot) }}
+        {% endfor %}
+      </div>
+      <div class="quick-setup-top-grid-col">
+        {% for slot in quick_setup.slots if slot.key == "assignments" %}
+          {{ quick_setup_slot(slot) }}
+        {% endfor %}
+      </div>
     </div>
-    <div class="quick-setup-top-grid-col">
-      {% for slot in quick_setup.slots if slot.key == "assignments" %}
-        {{ quick_setup_slot(slot) }}
-      {% endfor %}
-    </div>
+    {# Bottom: full-width Configuration import slot below a divider.
+       The Configuration import slot is the only one whose live
+       wiring lands outside Segment 11J (Segment 12A PR 6 graduates
+       it), so visually separating it makes the seam explicit. #}
+    <hr class="quick-setup-divider">
+    {% for slot in quick_setup.slots if slot.key == "config_import" %}
+      {{ quick_setup_slot(slot) }}
+    {% endfor %}
   </div>
-  {# Bottom: full-width Configuration import slot below a divider.
-     The Configuration import slot is the only one whose live
-     wiring lands outside Segment 11J (Segment 12A PR 6 graduates
-     it), so visually separating it makes the seam explicit. #}
-  <hr class="quick-setup-divider">
-  {% for slot in quick_setup.slots if slot.key == "config_import" %}
-    {{ quick_setup_slot(slot) }}
-  {% endfor %}
+  {# Footer: Lock / Unlock toggle, bottom-right. Renders only when
+     the session is editable (``draft`` / ``validated``). On
+     Activated sessions the whole card is greyed via
+     ``.card.disabled`` and the operator's path forward is Pause,
+     not unlock — so no toggle here. The button is a placeholder
+     in 11H; Segment 11J wires the toggle. #}
+  {% if not quick_setup.is_disabled %}
+    <div class="quick-setup-card-footer">
+      <button type="button"
+              class="btn secondary"
+              id="quick-setup-lock-toggle"
+              disabled
+              aria-disabled="true"
+              title="Wired in Segment 11J">{% if quick_setup.is_locked %}Unlock{% else %}Lock{% endif %}</button>
+    </div>
+  {% endif %}
 </div>
