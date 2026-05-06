@@ -7,6 +7,8 @@ PRs B-E and have their own test files.
 
 from __future__ import annotations
 
+import html
+import re
 from urllib.parse import parse_qs, urlparse
 
 from fastapi.testclient import TestClient
@@ -14,6 +16,24 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
+
+
+def _extract_iframe_srcdoc(body: str) -> str:
+    """Pull the `srcdoc` attribute off the surface preview iframe and
+    HTML-unescape it so tests can assert against the rendered reviewer-
+    surface body.
+
+    Auto-escaping inside Jinja2 attributes encodes `<` `>` `"` `&`
+    `'`, so a raw substring assertion against the outer body would
+    miss most of the rendered HTML. Decoding once gives the same
+    bytes the browser would see when parsing the iframe document.
+    """
+    match = re.search(
+        r'<iframe[^>]*\bclass="surface-preview-iframe"[^>]*\bsrcdoc="([^"]*)"',
+        body,
+    )
+    assert match is not None, "surface preview iframe not found"
+    return html.unescape(match.group(1))
 
 
 def _create_session(
@@ -426,7 +446,7 @@ def test_email_footer_links_to_setup_pages(
     assert f'href="/operator/sessions/{session.id}/reviewers"' in body
 
 
-def test_hr_separator_sits_between_email_region_and_surface_placeholder(
+def test_hr_separator_sits_between_email_region_and_surface_card(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="prev-email-hr")
@@ -443,9 +463,213 @@ def test_hr_separator_sits_between_email_region_and_surface_placeholder(
 
     body = response.text
     # The email card precedes the <hr> precedes the reviewer-surface
-    # placeholder card. Pin the relative DOM order here so PR C can
-    # rely on the contract.
+    # card. Pin the relative DOM order so PRs D / E can rely on the
+    # contract.
     email_idx = body.index('<div class="card email-preview-card">')
     hr_idx = body.index('<hr class="preview-region-divider">')
     surface_idx = body.index('id="reviewer-surface"')
     assert email_idx < hr_idx < surface_idx
+
+
+# ── PR C: reviewer-surface card ─────────────────────────────────────
+
+
+def _import_reviewees(
+    client: TestClient, session_id: int, csv_body: bytes
+) -> None:
+    response = client.post(
+        f"/operator/sessions/{session_id}/reviewees/import",
+        files={"file": ("e.csv", csv_body, "text/csv")},
+        follow_redirects=False,
+    )
+    assert response.status_code in (200, 303), response.text
+
+
+def _generate_full_matrix(client: TestClient, session_id: int) -> None:
+    response = client.post(
+        f"/operator/sessions/{session_id}/assignments/full-matrix",
+        data={"exclude_self_review": ""},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+
+def _seed_session_with_assignments(
+    client: TestClient, db: Session, *, code: str
+) -> ReviewSession:
+    session = _create_session(client, db, code=code)
+    _import_reviewers(
+        client,
+        session.id,
+        (
+            b"ReviewerName,ReviewerEmail\n"
+            b"Alice,alice@example.edu\n"
+            b"Bob,bob@example.edu\n"
+        ),
+    )
+    _import_reviewees(
+        client,
+        session.id,
+        (
+            b"RevieweeName,RevieweeEmail\n"
+            b"Carol,carol@example.edu\n"
+            b"Dan,dan@example.edu\n"
+        ),
+    )
+    _generate_full_matrix(client, session.id)
+    return session
+
+
+def test_surface_card_renders_iframe_with_session_name(
+    client: TestClient, db: Session
+) -> None:
+    session = _seed_session_with_assignments(client, db, code="prev-c-iframe")
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={"reviewer_email": "alice@example.edu"},
+    )
+
+    assert response.status_code == 200
+    body = response.text
+    assert 'class="surface-preview-iframe"' in body
+    assert 'sandbox="allow-same-origin"' in body
+    inner = _extract_iframe_srcdoc(body)
+    # The iframe's HTML contains the reviewer-surface page header H1.
+    assert f"<h1>{session.name}</h1>" in inner
+
+
+def test_surface_card_iframe_is_filtered_to_picker_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    """When the picker selects Alice, the iframe surfaces Alice's
+    assignments (Carol, Dan), not Bob's. Switching the picker to Bob
+    shows Bob's assignments — same reviewees in this seed but the
+    threading runs through `target_reviewer`."""
+    session = _seed_session_with_assignments(client, db, code="prev-c-filter")
+
+    alice_body = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={"reviewer_email": "alice@example.edu"},
+    ).text
+    alice_inner = _extract_iframe_srcdoc(alice_body)
+    assert "Carol" in alice_inner
+    assert "Dan" in alice_inner
+    # Sample-Reviewee synthetic rows only render when a reviewer has
+    # fewer than three real assignments. Alice has two (Carol + Dan)
+    # so one synthetic row pads.
+    assert "Sample Reviewee" in alice_inner
+
+    bob_body = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={"reviewer_email": "bob@example.edu"},
+    ).text
+    bob_inner = _extract_iframe_srcdoc(bob_body)
+    assert "Carol" in bob_inner
+    assert "Dan" in bob_inner
+
+
+def test_surface_card_renders_missing_assignments_stub(
+    client: TestClient, db: Session
+) -> None:
+    """A reviewer with no assignments gets the scoped missing-data stub
+    (with a Setup-page link), and the email region above the <hr>
+    keeps rendering."""
+    session = _create_session(client, db, code="prev-c-no-assign")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+
+    body = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={"reviewer_email": "alice@example.edu"},
+    ).text
+
+    assert "This reviewer has no reviewees assigned" in body
+    assert (
+        f'href="/operator/sessions/{session.id}/assignments"' in body
+    )
+    # Email region above the <hr> still renders.
+    assert 'class="card email-preview-card"' in body
+    assert 'class="surface-preview-iframe"' not in body
+
+
+def test_surface_card_renders_missing_instruments_stub(
+    client: TestClient, db: Session
+) -> None:
+    """When a session has no instruments, the surface card surfaces
+    the Instruments-Setup link rather than rendering a blank iframe."""
+    # Bypass the seed defaults that create instruments by going through
+    # SQL directly.
+    from app.db.models import Instrument
+
+    session = _create_session(client, db, code="prev-c-no-instr")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+    # Tear down auto-seeded instruments so the missing-instruments
+    # branch fires.
+    instruments = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().all()
+    for ins in instruments:
+        db.delete(ins)
+    db.flush()
+
+    body = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={"reviewer_email": "alice@example.edu"},
+    ).text
+
+    assert "No instruments configured" in body
+    assert f'href="/operator/sessions/{session.id}/instruments"' in body
+    assert 'class="surface-preview-iframe"' not in body
+
+
+def test_preview_singular_route_redirects_308_to_hub(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="prev-c-redir")
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/preview", follow_redirects=False
+    )
+
+    assert response.status_code == 308
+    assert response.headers["location"] == (
+        f"/operator/sessions/{session.id}/previews#reviewer-surface"
+    )
+
+
+def test_session_home_see_previews_link_targets_hub(
+    client: TestClient, db: Session
+) -> None:
+    """Session Home's See previews secondary button points at the
+    consolidated previews hub anchored on the surface card, not the
+    retired /preview route."""
+    session = _create_session(client, db, code="prev-c-home-link")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+    _import_reviewees(
+        client,
+        session.id,
+        b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+    )
+    _generate_full_matrix(client, session.id)
+
+    body = client.get(
+        f"/operator/sessions/{session.id}?validated=1"
+    ).text
+
+    assert (
+        f'href="/operator/sessions/{session.id}/previews#reviewer-surface"'
+        in body
+    )
+    assert ">See previews</a>" in body

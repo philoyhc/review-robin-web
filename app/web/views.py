@@ -1864,3 +1864,117 @@ def build_email_preview_body(
             body=body,
         )
     return None
+
+
+# ─────────────────────────────────────────────────────────────────
+# Reviewer-surface preview card (Segment 11F PR C). The previews hub
+# renders the picker-selected reviewer's would-be surface inside an
+# iframe srcdoc so the reviewer's own CSS scope (`body.ui-v2 reviewer`)
+# can't leak into the operator chrome.
+#
+# The adapter returns a `SurfacePreviewContext` with one of two
+# branches populated: ``preview`` carries the rendered context dict
+# the template engine uses to produce the iframe srcdoc, OR
+# ``missing`` describes a scoped missing-data error (no instruments
+# configured / reviewer has no assignments) so the card surfaces a
+# scoped error rather than a blank surface. Errors are scoped to this
+# card only — the email region above the `<hr>` keeps rendering.
+# ─────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class SurfacePreviewMissing:
+    """Scoped missing-data error for the surface card."""
+
+    message: str
+    setup_label: str
+    setup_url: str
+
+
+@dataclass(frozen=True)
+class SurfacePreviewContext:
+    """Result of building the surface preview card.
+
+    Exactly one of ``preview`` / ``missing`` is non-None.
+    """
+
+    preview: dict | None
+    missing: SurfacePreviewMissing | None
+
+
+def build_surface_preview_context(
+    *,
+    db: Session,
+    user: User,
+    review_session: ReviewSession,
+    reviewer: Reviewer,
+) -> SurfacePreviewContext:
+    """Build the surface preview card's context.
+
+    Wraps :func:`routes_reviewer.build_preview_context` with the
+    picker-selected reviewer threaded through, then surfaces missing-
+    data errors scoped to this card. The route renders the returned
+    ``preview`` dict against ``reviewer/review_surface.html`` to
+    produce the iframe srcdoc.
+    """
+    # Local import: ``routes_reviewer`` imports from ``views`` for
+    # ``placeholder_for_field`` etc., so a top-level import here would
+    # cycle.
+    from app.web.routes_reviewer import build_preview_context
+
+    instrument_count = (
+        db.execute(
+            select(Instrument).where(Instrument.session_id == review_session.id)
+        )
+        .scalars()
+        .first()
+    )
+    if instrument_count is None:
+        return SurfacePreviewContext(
+            preview=None,
+            missing=SurfacePreviewMissing(
+                message=(
+                    "No instruments configured for this session. "
+                    "Configure on the Instruments Setup page."
+                ),
+                setup_label="Instruments (Setup)",
+                setup_url=(
+                    f"/operator/sessions/{review_session.id}/instruments"
+                ),
+            ),
+        )
+
+    assigned_count = (
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id,
+                Assignment.reviewer_id == reviewer.id,
+                Assignment.include.is_(True),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if assigned_count is None:
+        return SurfacePreviewContext(
+            preview=None,
+            missing=SurfacePreviewMissing(
+                message=(
+                    "This reviewer has no reviewees assigned. "
+                    "Configure assignments on the Assignments Setup "
+                    "page."
+                ),
+                setup_label="Assignments (Setup)",
+                setup_url=(
+                    f"/operator/sessions/{review_session.id}/assignments"
+                ),
+            ),
+        )
+
+    preview = build_preview_context(
+        db=db,
+        user=user,
+        review_session=review_session,
+        target_reviewer=reviewer,
+    )
+    return SurfacePreviewContext(preview=preview, missing=None)

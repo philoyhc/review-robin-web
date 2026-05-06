@@ -1345,6 +1345,8 @@ def previews_index(
     )
     active_email_tab = views.resolve_email_preview_tab(email)
     email_body: views.EmailBody | None = None
+    surface_card: views.SurfacePreviewContext | None = None
+    surface_html: str | None = None
     if picker.current is not None:
         reviewer_obj = db.execute(
             select(Reviewer).where(
@@ -1359,6 +1361,31 @@ def previews_index(
             reviewer=reviewer_obj,
             from_display=from_display,
         )
+        surface_card = views.build_surface_preview_context(
+            db=db,
+            user=user,
+            review_session=review_session,
+            reviewer=reviewer_obj,
+        )
+        if surface_card.preview is not None:
+            # The iframe document is its own page, so breadcrumbs +
+            # request go through the rendering context — the
+            # breadcrumb partial in the operator chrome reads them
+            # via Jinja's default. We point breadcrumbs at the
+            # previews hub itself rather than back to a "Preview"
+            # leaf so the operator-chrome trail inside the iframe
+            # mirrors where they actually are.
+            surface_html = _templates.get_template(
+                "reviewer/review_surface.html"
+            ).render(
+                {
+                    **surface_card.preview,
+                    "request": request,
+                    "breadcrumbs": breadcrumbs.operator_session_child(
+                        review_session, "Previews"
+                    ),
+                }
+            )
     return _templates.TemplateResponse(
         request,
         "operator/session_previews.html",
@@ -1373,6 +1400,8 @@ def previews_index(
             "email_tabs": views.EMAIL_PREVIEW_TABS,
             "active_email_tab": active_email_tab,
             "email_body": email_body,
+            "surface_card": surface_card,
+            "surface_html": surface_html,
         },
     )
 
@@ -1409,31 +1438,26 @@ def previews_random(
     )
 
 
-@router.get("/sessions/{session_id}/preview", response_class=HTMLResponse)
+@router.get("/sessions/{session_id}/preview")
 def session_preview(
-    request: Request,
     review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    """Operator preview of the reviewer surface (Segment 10B-3).
+) -> RedirectResponse:
+    """Permanent redirect from the standalone reviewer-surface preview
+    (Segment 10B-3) to the consolidated previews hub's surface card
+    (Segment 11F PR C).
 
-    Operator-only via ``require_session_operator``. Bypasses session-status
-    / deadline / acceptance gates per D9. Pads with up to three synthetic
-    rows when fewer real assignments exist; all inputs render disabled and
-    the reviewer write-path forms are suppressed via the ``preview_mode``
-    template flag.
+    Status 308 keeps the GET method and preserves the bookmark / link
+    semantics for stragglers. The fragment lands the operator on the
+    surface card directly. The hub renders the surface card only after
+    the operator picks a reviewer in the picker, so this redirect lands
+    on the empty-state body until they do.
     """
-    from app.web.routes_reviewer import build_preview_context
-
-    context = build_preview_context(
-        db=db, user=user, review_session=review_session
-    )
-    context["breadcrumbs"] = breadcrumbs.operator_session_child(
-        review_session, "Preview"
-    )
-    return _templates.TemplateResponse(
-        request, "reviewer/review_surface.html", context
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/previews"
+            f"#reviewer-surface"
+        ),
+        status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
 
 
