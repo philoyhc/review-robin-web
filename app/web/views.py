@@ -786,16 +786,6 @@ def build_extract_data_context(
             coming_in="Wired in Segment 12A PR 3",
         ),
         ExtractDataRow(
-            key="reviewees",
-            label="Reviewees",
-            filename=f"session-{code}-reviewees.csv",
-            count=reviewee_count,
-            count_summary=_extract_summary("reviewee", reviewee_count),
-            is_wired=False,
-            download_url=None,
-            coming_in="Wired in Segment 12A PR 3",
-        ),
-        ExtractDataRow(
             key="assignments",
             label="Assignments",
             filename=f"session-{code}-assignments.csv",
@@ -804,6 +794,16 @@ def build_extract_data_context(
             is_wired=False,
             download_url=None,
             coming_in="Wired in Segment 12A PR 4",
+        ),
+        ExtractDataRow(
+            key="reviewees",
+            label="Reviewees",
+            filename=f"session-{code}-reviewees.csv",
+            count=reviewee_count,
+            count_summary=_extract_summary("reviewee", reviewee_count),
+            is_wired=False,
+            download_url=None,
+            coming_in="Wired in Segment 12A PR 3",
         ),
         ExtractDataRow(
             key="responses",
