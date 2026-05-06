@@ -612,6 +612,20 @@
         margin-top: 12px;
         flex-wrap: wrap;
       }
+      /* Generic right-aligned action row for v2 cards. Used by the
+         Responses summary card (Send reminders + Manage Invitations
+         buttons) and any other card that wants its actions pinned to
+         bottom-right. Forms inside collapse their default margins so
+         the buttons align with adjacent anchors. */
+      body.ui-v2 .card-action-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: var(--space-3);
+        flex-wrap: wrap;
+      }
+      body.ui-v2 .card-action-row form { margin: 0; }
       #danger-zone button.btn { width: 200px; }
       @media (max-width: 800px) {
         .page-grid { grid-template-columns: 1fr; }

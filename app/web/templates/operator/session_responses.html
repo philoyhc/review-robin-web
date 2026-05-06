@@ -20,64 +20,65 @@
     </div>
   {% endif %}
 
-  <div class="card">
-    <p>
-      Reviewees:
-      <span class="pill pill-count">{{ total_row_count }}</span>
-      &middot; Incomplete reviewers across the session:
-      <span class="pill pill-empty">{{ incomplete_count }}</span>
-    </p>
-    <p>
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete"
-            style="display: inline;">
-        <button class="btn"
-                type="submit"
-                {% if not is_ready or incomplete_count == 0 %}disabled{% endif %}>
-          Send reminders to {{ incomplete_count }} incomplete reviewer{% if incomplete_count != 1 %}s{% endif %}
-        </button>
-      </form>
-      <a class="btn secondary"
-         href="/operator/sessions/{{ session.id }}/invitations">Manage Invitations</a>
-    </p>
-    <p class="form-help">
-      Reviewees are classified by the fraction of their assigned reviewers
-      who have submitted responses. Bulk reminders go to every reviewer
-      across the session who hasn't completed (same dispatch path Manage
-      Invitations uses).
-    </p>
-  </div>
+  <div class="bottom-grid">
+    <div class="card">
+      <p>
+        Reviewees:
+        <span class="pill pill-count">{{ total_row_count }}</span>
+        &middot; Incomplete reviewers across the session:
+        <span class="pill pill-empty">{{ incomplete_count }}</span>
+      </p>
+      <p class="form-help">
+        Reviewees are classified by the fraction of their assigned
+        reviewers who have submitted responses. Bulk reminders go to
+        every reviewer across the session who hasn't completed (same
+        dispatch path Manage Invitations uses).
+      </p>
+      <div class="card-action-row">
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}/invitations">Manage Invitations</a>
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete">
+          <button class="btn"
+                  type="submit"
+                  {% if not is_ready or incomplete_count == 0 %}disabled{% endif %}>
+            Send reminders to {{ incomplete_count }} incomplete reviewer{% if incomplete_count != 1 %}s{% endif %}
+          </button>
+        </form>
+      </div>
+    </div>
 
-  <div class="card card-half filter-card">
-    <form method="get"
-          action="/operator/sessions/{{ session.id }}/responses">
-      <div class="filter-row">
-        <label>
-          Status:
-          <select name="status">
-            <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
-            {% for value, label in filter_status_options %}
-              <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <label>
-          Search:
-          <input type="text"
-                 name="q"
-                 value="{{ filter_search }}"
-                 placeholder="Reviewee name or email">
-        </label>
-      </div>
-      <div class="filter-actions">
-        {% if filter_status != "all" or filter_search %}
-          <span class="muted">Showing {{ rows | length }} of {{ total_row_count }}.</span>
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/responses">Clear</a>
-        {% endif %}
-        <button class="btn secondary" type="submit">Apply</button>
-      </div>
-    </form>
+    <div class="card filter-card">
+      <form method="get"
+            action="/operator/sessions/{{ session.id }}/responses">
+        <div class="filter-row">
+          <label>
+            Status:
+            <select name="status">
+              <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+              {% for value, label in filter_status_options %}
+                <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Search:
+            <input type="text"
+                   name="q"
+                   value="{{ filter_search }}"
+                   placeholder="Reviewee name or email">
+          </label>
+        </div>
+        <div class="filter-actions">
+          {% if filter_status != "all" or filter_search %}
+            <span class="muted">Showing {{ rows | length }} of {{ total_row_count }}.</span>
+            <a class="btn secondary"
+               href="/operator/sessions/{{ session.id }}/responses">Clear</a>
+          {% endif %}
+          <button class="btn secondary" type="submit">Apply</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   {% if rows %}
