@@ -11,17 +11,47 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  <div class="card">
+  <div class="card readiness-summary {{ validate.verdict_class }}">
+    <p class="readiness-verdict">{{ validate.verdict_line }}</p>
+    <p class="readiness-counts">
+      <span class="pill pill-error">{{ validate.error_count }} error{% if validate.error_count != 1 %}s{% endif %}</span>
+      <span class="pill pill-empty">{{ validate.warning_count }} warning{% if validate.warning_count != 1 %}s{% endif %}</span>
+      <span class="pill pill-count">{{ validate.info_count }} info</span>
+      <span class="muted readiness-last-validated">{{ validate.last_validated_text }}</span>
+    </p>
+    {% if validate.lifecycle_copy %}
+      <p class="readiness-lifecycle form-help">{{ validate.lifecycle_copy }}</p>
+    {% endif %}
+  </div>
+
+  <div class="card setup-coverage">
+    <h2>Setup coverage</h2>
     <p class="form-help">
-      Read-only view of setup readiness for this session. Errors must be
-      cleared before activation. Warnings can be acknowledged and overridden.
-      Activate from the inline summary card on the session detail page.
+      Inventory of the session's setup state. Use as a reference;
+      issues below describe the diagnostics.
     </p>
-    <p>
-      <span class="pill pill-error">{{ error_count }} error{% if error_count != 1 %}s{% endif %}</span>
-      <span class="pill pill-empty">{{ warning_count }} warning{% if warning_count != 1 %}s{% endif %}</span>
-      <span class="pill pill-count">{{ info_count }} info</span>
-    </p>
+    <table>
+      <tbody>
+        {% for row in validate.setup_coverage %}
+          <tr>
+            <th scope="row">{{ row.label }}</th>
+            <td>{{ row.status }}</td>
+            <td class="setup-coverage-issues col-shrink">
+              {% if row.error_count > 0 or row.warning_count > 0 %}
+                <a href="#issue-source-{{ row.source }}">
+                  {% if row.error_count > 0 %}
+                    <span class="pill pill-error">{{ row.error_count }} error{% if row.error_count != 1 %}s{% endif %}</span>
+                  {% endif %}
+                  {% if row.warning_count > 0 %}
+                    <span class="pill pill-empty">{{ row.warning_count }} warning{% if row.warning_count != 1 %}s{% endif %}</span>
+                  {% endif %}
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 
   {% include "operator/partials/validation_results.html" %}

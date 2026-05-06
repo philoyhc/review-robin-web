@@ -322,6 +322,7 @@ def validate_session(
 ) -> HTMLResponse:
     issues = validation.validate_session_setup(db, review_session)
     report = lifecycle.build_readiness_report(issues)
+    validate_ctx = views.build_validate_context(db, review_session, issues)
     return _templates.TemplateResponse(
         request,
         "operator/session_validate.html",
@@ -330,6 +331,7 @@ def validate_session(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "issues": issues,
+            "validate": validate_ctx,
             "error_count": len(report.errors),
             "warning_count": len(report.warnings),
             "info_count": len(report.info),

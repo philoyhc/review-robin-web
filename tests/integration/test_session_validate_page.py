@@ -1,0 +1,247 @@
+"""Tests for the Validate page surface introduced in Segment 11G PR A.
+
+The page replaces the thin issue-list body with a structured layout:
+- Readiness summary card (verdict line, severity counts, last-validated
+  marker, lifecycle-aware secondary line)
+- Setup-coverage matrix (per-entity inventory the operator scans before
+  reading the diagnostic issue list)
+- Existing issue-list partial (extended with `id="issue-source-{source}"`
+  anchors so the matrix can deep-link)
+
+Subsequent 11G PRs add the rule-registry refactor + per-issue fix-links
+(PR B), severity filter chips + "Why" disclosure (PR C), and the
+activate-warns detour from Home (PR D).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+
+from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.auth.identity import AuthenticatedUser
+from app.db.models import ReviewSession
+from app.web import views
+
+
+# --------------------------------------------------------------------------- #
+# Setup helpers
+# --------------------------------------------------------------------------- #
+
+
+def _make_session(
+    client: TestClient, db: Session, *, code: str = "vp"
+) -> ReviewSession:
+    response = client.post(
+        "/operator/sessions",
+        data={"name": code.title(), "code": code, "description": "d"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    return db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+
+
+def _seed_pair(
+    client: TestClient,
+    db: Session,
+    *,
+    code: str,
+    reviewer_email: str = "r@example.edu",
+) -> ReviewSession:
+    review_session = _make_session(client, db, code=code)
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                f"ReviewerName,ReviewerEmail\nR,{reviewer_email}\n".encode(),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nC,c@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
+        data={"exclude_self_review": ""},
+        follow_redirects=False,
+    )
+    return review_session
+
+
+def _activate(
+    client: TestClient, db: Session, review_session: ReviewSession
+) -> None:
+    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    client.post(
+        f"/operator/sessions/{review_session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+
+
+# --------------------------------------------------------------------------- #
+# Lifecycle copy lookup — pure function
+# --------------------------------------------------------------------------- #
+
+
+def test_validate_lifecycle_copy_draft_clean() -> None:
+    assert (
+        views.validate_lifecycle_copy("draft", has_errors=False, has_warnings=False)
+        == "Activate from the Next Action card on Session Home."
+    )
+
+
+def test_validate_lifecycle_copy_draft_with_errors() -> None:
+    assert (
+        views.validate_lifecycle_copy("draft", has_errors=True, has_warnings=False)
+        == "Resolve the errors below before activating."
+    )
+
+
+def test_validate_lifecycle_copy_validated() -> None:
+    assert (
+        views.validate_lifecycle_copy("validated", has_errors=False, has_warnings=True)
+        == "Setup is validated. Activate from Session Home."
+    )
+
+
+def test_validate_lifecycle_copy_ready() -> None:
+    assert (
+        "live" in views.validate_lifecycle_copy("ready", False, False)
+        and "Setup is locked" in views.validate_lifecycle_copy("ready", False, False)
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Readiness summary card
+# --------------------------------------------------------------------------- #
+
+
+def test_readiness_summary_clean_verdict_renders_green(
+    client: TestClient, db: Session
+) -> None:
+    """A draft session with reviewers + reviewees + assignments has no
+    errors → "Ready to activate." with the verdict-clean accent."""
+    review_session = _seed_pair(client, db, code="ready-verdict")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    assert "Ready to activate." in body
+    assert "verdict-clean" in body
+
+
+def test_readiness_summary_error_verdict_renders_red(
+    client: TestClient, db: Session
+) -> None:
+    """A bare session (no reviewers / no reviewees) has multiple
+    errors → "Has N errors." with the verdict-error accent."""
+    review_session = _make_session(client, db, code="error-verdict")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    # "Has N errors." with N > 1 (no reviewers + no reviewees + no
+    # assignments).
+    assert "errors." in body
+    assert "verdict-error" in body
+
+
+def test_readiness_summary_severity_counts_render(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="counts")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    # Pills + "Validated just now" hint render together.
+    assert 'class="pill pill-error"' in body
+    assert 'class="pill pill-empty"' in body
+    assert 'class="pill pill-count"' in body
+    assert "Validated just now" in body
+
+
+# --------------------------------------------------------------------------- #
+# Setup-coverage matrix
+# --------------------------------------------------------------------------- #
+
+
+def test_setup_coverage_matrix_renders_canonical_rows(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _seed_pair(client, db, code="cov-rows")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    assert "Setup coverage" in body
+    for label in (
+        "Session name",
+        "Session code",
+        "Reviewers",
+        "Reviewees",
+        "Instruments",
+        "Assignments",
+        "Email template",
+        "Help contact",
+    ):
+        assert f">{label}</th>" in body, f"matrix row missing: {label}"
+
+
+def test_setup_coverage_matrix_links_to_issue_source_anchor_when_issues(
+    client: TestClient, db: Session
+) -> None:
+    """When a setup source has issues, the matrix's row carries a
+    pill-error / pill-empty count that anchor-links to the matching
+    section in the issue list (e.g. `#issue-source-reviewers`)."""
+    review_session = _make_session(client, db, code="cov-links")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    # Bare session has no reviewers → reviewers row carries an
+    # error-pill anchor link to the issue-list anchor.
+    assert 'href="#issue-source-reviewers"' in body
+    # The issue-list partial now emits the matching anchor on its
+    # per-source <h3>.
+    assert 'id="issue-source-reviewers"' in body
+
+
+def test_setup_coverage_matrix_omits_issue_pill_when_clean(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _seed_pair(client, db, code="cov-clean")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    # When a session is fully populated, no error-pill anchors render
+    # in the matrix.
+    assert 'href="#issue-source-reviewers"' not in body
+
+
+def test_validate_page_lifecycle_copy_for_ready_session(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    operator = make_client(alice)
+    review_session = _seed_pair(operator, db, code="ready-copy")
+    _activate(operator, db, review_session)
+
+    body = operator.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    assert "This session is live." in body
+    assert "Setup is locked" in body
