@@ -54,7 +54,7 @@
         <tr>
           <th>Reviewee</th>
           <th>Coverage</th>
-          <th>Reviewers</th>
+          <th>Reviewers completed</th>
           <th>Last response</th>
         </tr>
         {% for row in rows %}
@@ -76,12 +76,20 @@
                 <span class="pill pill-empty">no responses</span>
               {% endif %}
             </td>
-            <td>{{ row.reviewers_done }}/{{ row.reviewers_total }}</td>
+            <td>
+              {% if row.reviewers_total == 0 %}
+                <span class="pill pill-empty">—</span>
+              {% elif row.reviewers_done == row.reviewers_total %}
+                <span class="pill pill-count">{{ row.reviewers_done }}/{{ row.reviewers_total }}</span>
+              {% else %}
+                <span class="pill pill-empty">{{ row.reviewers_done }}/{{ row.reviewers_total }}</span>
+              {% endif %}
+            </td>
             <td>
               {% if row.last_response_at %}
-                {{ row.last_response_at.strftime("%Y-%m-%d %H:%M") }}
+                <span class="pill pill-count">{{ row.last_response_at.strftime("%Y-%m-%d %H:%M") }}</span>
               {% else %}
-                —
+                <span class="pill pill-empty">—</span>
               {% endif %}
             </td>
           </tr>

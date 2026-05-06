@@ -113,7 +113,7 @@ def test_responses_page_renders_table_for_assigned_reviewees(
     for header in (
         "<th>Reviewee</th>",
         "<th>Coverage</th>",
-        "<th>Reviewers</th>",
+        "<th>Reviewers completed</th>",
         "<th>Last response</th>",
     ):
         assert header in body
@@ -122,7 +122,11 @@ def test_responses_page_renders_table_for_assigned_reviewees(
     assert "dave@example.edu" in body
     # Each reviewee starts with no responses.
     assert ">no responses</span>" in body
-    assert "0/1" in body
+    # Reviewers-completed cell renders inside a pill ("0/1" with one
+    # reviewer assigned and zero done → pill-empty).
+    assert '<span class="pill pill-empty">0/1</span>' in body
+    # Last response is em-dash in pill-empty pre-submission.
+    assert '<span class="pill pill-empty">—</span>' in body
 
 
 def test_responses_tab_shows_in_top_nav_and_active_on_page(
