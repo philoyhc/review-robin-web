@@ -11,7 +11,14 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import Instrument, Invitation, Reviewer, ReviewSession, User
+from app.db.models import (
+    Instrument,
+    Invitation,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    User,
+)
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
 from app.schemas.sessions import SessionCreate
@@ -2674,29 +2681,94 @@ def outbox_index(
 # --------------------------------------------------------------------------- #
 
 
+@router.get("/sessions/{session_id}/monitoring")
+def session_monitoring_redirect(
+    review_session: ReviewSession = Depends(require_session_operator),
+) -> RedirectResponse:
+    """Segment 11C Part 1 PR 3 retired the Monitoring template; the
+    consolidated Manage Invitations page (PR 2) absorbed its
+    reviewer-centric surface. Existing bookmarks land here and 303
+    forward to ``/invitations``."""
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/invitations",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @router.get(
-    "/sessions/{session_id}/monitoring", response_class=HTMLResponse
+    "/sessions/{session_id}/responses", response_class=HTMLResponse
 )
-def session_monitoring(
+def session_responses(
     request: Request,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    rows = monitoring.per_reviewer_progress(db, review_session)
+    """Reviewee-centric coverage view (Segment 11C Part 1 PR 3).
+
+    Each row classifies a reviewee per ``monitoring.AT_RISK_THRESHOLDS``
+    (Complete / Adequate / At risk / No responses) based on the fraction
+    of their assigned reviewers who have submitted. Bulk reminder funnels
+    through the same ``invitations.send_reminders_to_incomplete`` helper
+    the Manage Invitations page calls.
+    """
+    rows = views.build_responses_rows(db, review_session)
     summary = monitoring.summary_counts(db, review_session)
+    incomplete_count = summary.incomplete
     return _templates.TemplateResponse(
         request,
-        "operator/session_monitoring.html",
+        "operator/session_responses.html",
         {
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
-            "summary": summary,
             "rows": rows,
+            "incomplete_count": incomplete_count,
             "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Monitoring"
+                review_session, "Responses"
+            ),
+        },
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/responses/{reviewee_id}/detail",
+    response_class=HTMLResponse,
+)
+def responses_reviewee_detail(
+    request: Request,
+    reviewee_id: int,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    """Drill-in from a Responses table row (Segment 11C Part 1 PR 3
+    scaffold). Per-assignment / per-response detail lands in a future
+    segment; this surface mirrors the row-level fields plus a list of
+    the reviewers assigned to this reviewee."""
+    reviewee = db.execute(
+        select(Reviewee).where(
+            Reviewee.id == reviewee_id,
+            Reviewee.session_id == review_session.id,
+        )
+    ).scalar_one_or_none()
+    if reviewee is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    coverage = monitoring.per_reviewee_coverage(db, review_session)
+    row = next((c for c in coverage if c.reviewee.id == reviewee.id), None)
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_responses_reviewee_detail.html",
+        {
+            "user": user,
+            "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
+            "reviewee": reviewee,
+            "row": row,
+            "is_ready": lifecycle.is_ready(review_session),
+            "breadcrumbs": breadcrumbs.operator_session_responses_reviewee(
+                review_session, reviewee.name
             ),
         },
     )
@@ -2765,26 +2837,7 @@ def invitations_remind_incomplete(
     )
 
 
-@router.post(
-    "/sessions/{session_id}/monitoring/remind-incomplete"
-)
-def session_remind_incomplete(
-    request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    _require_ready(review_session)
-    invitations.send_reminders_to_incomplete(
-        db,
-        review_session=review_session,
-        user=user,
-        build_invite_url=lambda token: str(
-            request.url_for("reviewer_invite", token=token)
-        ),
-        correlation_id=request_correlation_id(),
-    )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/monitoring",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+# The POST /sessions/{id}/monitoring/remind-incomplete endpoint retired
+# in Segment 11C Part 1 PR 3. Its only caller was the (now-deleted)
+# Monitoring template; bulk reminder dispatch funnels through
+# ``POST /sessions/{id}/invitations/remind-incomplete`` (PR 2) instead.

@@ -106,36 +106,22 @@ def _extract_url(body: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def test_monitoring_page_renders_summary_counts(
+def test_monitoring_url_redirects_to_invitations(
     client: TestClient, db: Session
 ) -> None:
+    """Segment 11C Part 1 PR 3 retired the Monitoring page; existing
+    bookmarks 303 forward to ``/invitations``."""
     session = _ready_session(
-        client, db, "mon-summary", reviewers=["rae@example.edu"]
+        client, db, "mon-redir", reviewers=["rae@example.edu"]
     )
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
-
-    response = client.get(f"/operator/sessions/{session.id}/monitoring")
-    assert response.status_code == 200
-    body = response.text
-    assert "1 assigned" in body
-    assert "0 invited" in body
-    assert "1 incomplete" in body
-
-
-def test_monitoring_page_lists_reviewer_rows(
-    client: TestClient, db: Session
-) -> None:
-    session = _ready_session(
-        client, db, "mon-rows", reviewers=["rae@example.edu"]
+    response = client.get(
+        f"/operator/sessions/{session.id}/monitoring",
+        follow_redirects=False,
     )
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
-
-    response = client.get(f"/operator/sessions/{session.id}/monitoring")
-    assert response.status_code == 200
-    body = response.text
-    assert "rae@example.edu" in body
-    assert "pending" in body
-    assert "0/1" in body  # completed/assigned
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/operator/sessions/{session.id}/invitations"
+    )
 
 
 def test_send_reminder_reuses_invitation_url_without_rotating_token(
@@ -257,7 +243,7 @@ def test_remind_incomplete_targets_only_incomplete(
 
     operator2 = make_client(alice)
     response = operator2.post(
-        f"/operator/sessions/{session.id}/monitoring/remind-incomplete",
+        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -295,7 +281,7 @@ def test_remind_incomplete_writes_single_batch_audit_event(
         )
 
     client.post(
-        f"/operator/sessions/{session.id}/monitoring/remind-incomplete",
+        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
 
@@ -333,7 +319,7 @@ def test_per_row_and_bulk_reminders_stamp_last_reminder_at(
     assert first is not None
 
     client.post(
-        f"/operator/sessions/{session.id}/monitoring/remind-incomplete",
+        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     db.refresh(invitation)
@@ -361,7 +347,7 @@ def test_reminder_actions_409_while_session_draft(
     db.commit()
 
     bulk = client.post(
-        f"/operator/sessions/{session.id}/monitoring/remind-incomplete",
+        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert bulk.status_code == 409
@@ -411,7 +397,7 @@ def test_submitted_with_warn_override_classified_incomplete(
 
     operator2 = make_client(alice)
     response = operator2.post(
-        f"/operator/sessions/{session.id}/monitoring/remind-incomplete",
+        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -456,7 +442,7 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
 
     operator2 = make_client(alice)
     operator2.post(
-        f"/operator/sessions/{session.id}/monitoring/remind-incomplete",
+        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     events = db.execute(

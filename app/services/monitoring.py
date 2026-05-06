@@ -1,26 +1,45 @@
-"""Per-session monitoring queries used by the operator monitoring page.
+"""Per-session monitoring queries used by the operator running-session
+pages (Manage Invitations, Responses).
 
-Segment 9.3 only — no per-reviewee progress (that's deferred). The
-"incomplete" classification mirrors the criterion locked in
+The "incomplete" classification mirrors the criterion locked in
 ``segment_09_3A.md``: a reviewer is incomplete iff they are not in the
 ``submitted`` pill state, which collapses both "never opened",
 "opened-but-not-submitted", and "submitted-with-warn-override that still
 has missing required" into a single bucket.
+
+The reviewee-centric ``per_reviewee_coverage`` (Segment 11C Part 1 PR 3)
+classifies reviewees into Complete / Adequate / At risk / No responses
+buckets based on the fraction of their assigned reviewers who have
+submitted. Thresholds live in ``AT_RISK_THRESHOLDS`` — a single
+constant operators can later tune via a session-level setting.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    InstrumentResponseField,
     Invitation,
+    Response,
+    Reviewee,
     Reviewer,
     ReviewSession,
 )
 from app.services import responses as responses_service
+
+
+# At-risk classification thresholds for the Responses page. A reviewee
+# whose responding-reviewer fraction is at least ``adequate_fraction``
+# (but not 100%) renders as "adequate"; below that (and > 0) is
+# "at risk"; 0 is "no responses"; 100% is "complete".
+AT_RISK_THRESHOLDS = {
+    "adequate_fraction": 0.5,
+}
 
 
 @dataclass
@@ -123,9 +142,134 @@ def summary_counts(
     )
 
 
+@dataclass
+class RevieweeCoverage:
+    reviewee: Reviewee
+    reviewer_count: int
+    completed_count: int
+    pill_state: str  # "complete" | "adequate" | "at risk" | "no responses"
+    last_response_at: datetime | None
+
+    @property
+    def is_at_risk(self) -> bool:
+        return self.pill_state in ("at risk", "no responses")
+
+
+def _classify_coverage(completed: int, total: int) -> str:
+    if total == 0 or completed == 0:
+        return "no responses"
+    if completed == total:
+        return "complete"
+    fraction = completed / total
+    if fraction >= AT_RISK_THRESHOLDS["adequate_fraction"]:
+        return "adequate"
+    return "at risk"
+
+
+def _assignment_complete(
+    db: Session, assignment: Assignment, fields: list[InstrumentResponseField]
+) -> tuple[bool, datetime | None]:
+    """Returns ``(is_complete, latest_submitted_at)`` for one assignment.
+
+    "Complete" mirrors the reviewer-side definition: every required
+    response field has a non-empty value with a non-null ``submitted_at``.
+    The second tuple element is the most recent ``submitted_at`` across
+    all response rows on the assignment (or ``None``)."""
+    rows = list(
+        db.execute(
+            select(Response).where(Response.assignment_id == assignment.id)
+        ).scalars()
+    )
+    if not rows:
+        return False, None
+    required_ids = {f.id for f in fields if f.required}
+    by_field = {r.response_field_id: r for r in rows}
+    is_complete = True
+    if not required_ids:
+        is_complete = True  # no required → first response counts as done
+    else:
+        for fid in required_ids:
+            r = by_field.get(fid)
+            if r is None or (r.value or "") == "" or r.submitted_at is None:
+                is_complete = False
+                break
+    submitted_times = [r.submitted_at for r in rows if r.submitted_at is not None]
+    latest = max(submitted_times) if submitted_times else None
+    return is_complete, latest
+
+
+def per_reviewee_coverage(
+    db: Session, review_session: ReviewSession
+) -> list[RevieweeCoverage]:
+    """Per-reviewee coverage rows for the Responses page.
+
+    Joins ``reviewees ⨯ assignments ⨯ responses ⨯ instruments``;
+    classifies each reviewee per ``AT_RISK_THRESHOLDS``."""
+    assignments = list(
+        db.execute(
+            select(Assignment)
+            .where(
+                Assignment.session_id == review_session.id,
+                Assignment.include.is_(True),
+            )
+        ).scalars()
+    )
+    if not assignments:
+        return []
+
+    instrument_ids = {a.instrument_id for a in assignments}
+    fields_by_instrument: dict[int, list[InstrumentResponseField]] = {}
+    if instrument_ids:
+        for f in db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id.in_(instrument_ids)
+            )
+        ).scalars():
+            fields_by_instrument.setdefault(f.instrument_id, []).append(f)
+
+    by_reviewee: dict[int, list[Assignment]] = {}
+    for a in assignments:
+        by_reviewee.setdefault(a.reviewee_id, []).append(a)
+
+    reviewees = list(
+        db.execute(
+            select(Reviewee)
+            .where(Reviewee.id.in_(by_reviewee.keys()))
+            .order_by(Reviewee.email_or_identifier)
+        ).scalars()
+    )
+
+    out: list[RevieweeCoverage] = []
+    for reviewee in reviewees:
+        rs = by_reviewee.get(reviewee.id, [])
+        completed = 0
+        latest: datetime | None = None
+        for a in rs:
+            fields = fields_by_instrument.get(a.instrument_id, [])
+            is_complete, last_at = _assignment_complete(db, a, fields)
+            if is_complete:
+                completed += 1
+            if last_at is not None and (latest is None or last_at > latest):
+                latest = last_at
+        pill = _classify_coverage(completed, len(rs))
+        out.append(
+            RevieweeCoverage(
+                reviewee=reviewee,
+                reviewer_count=len(rs),
+                completed_count=completed,
+                pill_state=pill,
+                last_response_at=latest,
+            )
+        )
+    return out
+
+
 __all__ = [
+    "AT_RISK_THRESHOLDS",
     "ReviewerProgress",
+    "RevieweeCoverage",
     "SummaryCounts",
     "per_reviewer_progress",
+    "per_reviewee_coverage",
     "summary_counts",
 ]

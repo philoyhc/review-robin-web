@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ reviewee.name }} — Responses — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <div class="session-nav-card">
+    {% with current_page = "Responses" %}
+      {% include "operator/partials/session_top_nav.html" %}
+    {% endwith %}
+    {% include "operator/partials/session_setup_status_row.html" %}
+  </div>
+
+  <div class="card">
+    <h1 style="margin-top: 0;">{{ reviewee.name }}</h1>
+    <p>
+      <code>{{ reviewee.email_or_identifier }}</code>
+      &middot;
+      <a href="/operator/sessions/{{ session.id }}/responses">← Back to Responses</a>
+    </p>
+  </div>
+
+  {% if row %}
+    <div class="card">
+      <h2 style="margin-top: 0;">Coverage</h2>
+      <p>
+        Status:
+        {% if row.pill_state == "complete" %}
+          <span class="pill pill-count">complete</span>
+        {% elif row.pill_state == "adequate" %}
+          <span class="pill pill-count">adequate</span>
+        {% elif row.pill_state == "at risk" %}
+          <span class="pill pill-empty">at risk</span>
+        {% else %}
+          <span class="pill pill-empty">no responses</span>
+        {% endif %}
+        &middot;
+        Reviewers responded: {{ row.completed_count }} / {{ row.reviewer_count }}
+        &middot;
+        Last response:
+        {% if row.last_response_at %}
+          {{ row.last_response_at.strftime("%Y-%m-%d %H:%M") }}
+        {% else %}
+          —
+        {% endif %}
+      </p>
+      <p class="form-help">
+        Per-reviewer breakdown and per-response detail will land in a
+        future segment. This page is a scaffold — the row-level fields
+        above match the columns on the Responses table.
+      </p>
+    </div>
+  {% else %}
+    <div class="card">
+      <p class="muted">No coverage data — this reviewee has no
+      assignments in the session.</p>
+    </div>
+  {% endif %}
+{% endblock %}

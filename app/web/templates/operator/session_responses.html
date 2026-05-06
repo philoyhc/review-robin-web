@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Responses — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <div class="session-nav-card">
+    {% with current_page = "Responses" %}
+      {% include "operator/partials/session_top_nav.html" %}
+    {% endwith %}
+    {% include "operator/partials/session_setup_status_row.html" %}
+  </div>
+
+  {% if not is_ready %}
+    <div class="card lock">
+      <p style="margin: 0;">
+        Reminder actions require the session to be Activated. Activate the
+        session from the validation page first.
+      </p>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <p>
+      Reviewees:
+      <span class="pill pill-count">{{ rows | length }}</span>
+      &middot; Incomplete reviewers across the session:
+      <span class="pill pill-empty">{{ incomplete_count }}</span>
+    </p>
+    <p>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete"
+            style="display: inline;">
+        <button class="btn"
+                type="submit"
+                {% if not is_ready or incomplete_count == 0 %}disabled{% endif %}>
+          Send reminders to {{ incomplete_count }} incomplete reviewer{% if incomplete_count != 1 %}s{% endif %}
+        </button>
+      </form>
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/invitations">Manage Invitations</a>
+    </p>
+    <p class="form-help">
+      Reviewees are classified by the fraction of their assigned reviewers
+      who have submitted responses. Bulk reminders go to every reviewer
+      across the session who hasn't completed (same dispatch path Manage
+      Invitations uses).
+    </p>
+  </div>
+
+  {% if rows %}
+    <div class="card">
+      <table>
+        <tr>
+          <th>Reviewee</th>
+          <th>Coverage</th>
+          <th>Reviewers</th>
+          <th>Last response</th>
+        </tr>
+        {% for row in rows %}
+          <tr>
+            <td>
+              <a href="/operator/sessions/{{ session.id }}/responses/{{ row.reviewee.id }}/detail">
+                <strong>{{ row.reviewee.name }}</strong>
+              </a><br>
+              <code>{{ row.reviewee.email_or_identifier }}</code>
+            </td>
+            <td>
+              {% if row.coverage_state == "complete" %}
+                <span class="pill pill-count">complete</span>
+              {% elif row.coverage_state == "adequate" %}
+                <span class="pill pill-count">adequate</span>
+              {% elif row.coverage_state == "at risk" %}
+                <span class="pill pill-empty">at risk</span>
+              {% else %}
+                <span class="pill pill-empty">no responses</span>
+              {% endif %}
+            </td>
+            <td>{{ row.reviewers_done }}/{{ row.reviewers_total }}</td>
+            <td>
+              {% if row.last_response_at %}
+                {{ row.last_response_at.strftime("%Y-%m-%d %H:%M") }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <div class="card">
+      <p class="muted">
+        No reviewees assigned yet — generate assignments before
+        activating the session.
+      </p>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -9,13 +9,13 @@
      - current_page: one of "Home" / "Reviewers" / "Reviewees" /
                      "Assignments" / "Instruments" / "Email Template" /
                      "Validate" / "Previews" / "Invitations" /
-                     "Monitoring" / "Outbox".
+                     "Responses" / "Outbox".
                      Sub-pages of Home (Edit, Validate detail) and
                      Preview Pages pass the parent's name (or "Home"
                      for Home sub-pages).
 #}
 {% set _setup_pages = ["Reviewers", "Reviewees", "Assignments", "Instruments", "Email Template"] %}
-{% set _ops_pages = ["Validate", "Previews", "Invitations", "Monitoring", "Outbox"] %}
+{% set _ops_pages = ["Validate", "Previews", "Invitations", "Responses", "Outbox"] %}
 {% set _setup_active = current_page in _setup_pages %}
 {% set _ops_active = current_page in _ops_pages %}
 <div class="session-nav-grid">
@@ -47,8 +47,8 @@
        href="/operator/sessions/{{ session.id }}/previews">Previews</a>
     <a class="nav-tab{% if current_page == 'Invitations' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/invitations">Invitations</a>
-    <a class="nav-tab{% if current_page == 'Monitoring' %} active{% endif %}"
-       href="/operator/sessions/{{ session.id }}/monitoring">Monitoring</a>
+    <a class="nav-tab{% if current_page == 'Responses' %} active{% endif %}"
+       href="/operator/sessions/{{ session.id }}/responses">Responses</a>
     <a class="nav-tab{% if current_page == 'Outbox' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/outbox">Outbox</a>
   </div>

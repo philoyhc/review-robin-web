@@ -44,6 +44,19 @@ def operator_session_invitations_reviewer(
     ]
 
 
+def operator_session_responses_reviewee(
+    session: ReviewSession, reviewee_label: str
+) -> list[Crumb]:
+    """Breadcrumb for the reviewee-detail drill-in from the Responses
+    page (Segment 11C Part 1 PR 3)."""
+    return [
+        ("Sessions", "/operator/sessions"),
+        (session.name, f"/operator/sessions/{session.id}"),
+        ("Responses", f"/operator/sessions/{session.id}/responses"),
+        (reviewee_label, None),
+    ]
+
+
 def operator_new_session() -> list[Crumb]:
     return [
         ("Sessions", "/operator/sessions"),
