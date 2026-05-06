@@ -19,26 +19,37 @@ Catalog item: `guide/todo_master.md` "Upcoming" item 2
 
 ## Status
 
-Planning. Sized as **5 PRs** in dependency order, each
-independently shippable:
+In progress. Sized as **5 PRs** in dependency order, each
+independently shippable. PR A shipped (PR #517 / #520);
+PRs B-E remain.
 
-1. **PR A — Page chrome + reviewer picker.** No artifact cards
-   yet; the body renders the picker and an empty-state stub
-   below it.
-2. **PR B — Invitation email card.** Renders through
-   `email_templates.render_invitation` verbatim.
-3. **PR C — Reviewer surface card.** Folds in the existing
-   `/preview` (singular) form-only preview as a hub card and
-   retires the standalone route.
-4. **PR D — Reminder email card.** Renders through
-   `email_templates.render_reminder` verbatim. Smaller than
-   PR B because it reuses every primitive PR B introduced
-   (registry, render adapter shape, missing-data path).
-5. **PR E — Responses-received email card.** Coordinates with
-   Segment 11E PR 6, which adds `render_responses_received`
-   and proposes landing the registry append itself; whichever
-   ships first carries the work, the other plan strikes
-   through its corresponding scope item. See "PR E" below.
+1. **PR A — Page chrome + reviewer picker.** ✅ Shipped. No
+   artifact regions yet; the body renders the picker and a
+   single combined empty-state card below it ("Pick a reviewer
+   above to preview their experience.").
+2. **PR B — Email previews region (tabbed) + invitation
+   card.** Introduces the artifact registry seam, the email
+   region's three-tab strip (Invitation / Reminder /
+   Responses-received), the active-tab body wired through
+   `email_templates.render_invitation`, the `<hr>` separator
+   below it, and a stub where PR C's surface card will land.
+   Reminder + Responses-received tabs render disabled until
+   PRs D/E enable them.
+3. **PR C — Reviewer surface card.** Fills the placeholder
+   below the `<hr>`. Folds in the existing `/preview`
+   (singular) form-only preview as a hub card and retires the
+   standalone route. Independent of the email region.
+4. **PR D — Enable Reminder tab.** Wires the Reminder entry
+   in PR B's `EMAIL_PREVIEW_TABS` registry to a real render
+   adapter; the previously-disabled Reminder tab in PR B's
+   strip lights up and renders through
+   `email_templates.render_reminder`.
+5. **PR E — Enable Responses-received tab.** Same shape as
+   PR D for the last tab. Coordinates with Segment 11E PR 6,
+   which adds `render_responses_received` and proposes
+   landing the registry append itself; whichever ships first
+   carries the work, the other plan strikes through its
+   corresponding scope item. See "PR E" below.
 
 Send-test affordances per artifact (spec §"Send-test") are
 **deferred** to either a small 11F follow-on or to Segment 11C
@@ -105,15 +116,17 @@ In:
   `closed`). Send-test (when it lands) is the only thing that
   gates lifecycle; the previews themselves are read-only and
   always inspectable.
-- **Artifact registry seam.** The page iterates over a small
-  registry tuple list at `app/web/views.py` (something like
-  `PREVIEW_ARTIFACTS: list[ArtifactSpec]`); each card is one
-  registry entry. The registry order pins the rendered order
-  on the page (per spec §"Page layout": invitation → form →
-  reminder → responses-received, matching the chronological
-  arc of the reviewer experience). Per spec §"Forward-looking"
-  — the registry's `audience` field is also where the future
-  Reviewee Experience Preview filters.
+- **Email-tab registry seam.** The email region's tab strip
+  iterates over a small registry list at `app/web/views.py`
+  (`EMAIL_PREVIEW_TABS: list[EmailPreviewTab]`); each tab is
+  one entry. The list order pins the rendered tab order
+  (invitation → reminder → responses-received, the
+  chronological arc the reviewer experiences). PR B seeds all
+  three entries with `render=None` for the unshipped two,
+  flipping them on as PRs D / E land. The reviewer surface is
+  not in this registry — it's a structurally different artifact
+  (iframe, not subject + body) and lives in its own card below
+  the `<hr>` separator.
 
 Out:
 
@@ -135,6 +148,72 @@ Out:
   shipped chrome and saves a redirect; flag the spec
   inconsistency for a one-line fix in the spec, not a slug
   migration here.
+
+## Page layout
+
+Three vertically-stacked regions:
+
+```
+┌─────────────────────────────────────────────┐
+│ Reviewer picker (half-width card)           │  ← PR A, shipped
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│ [Invitation] [Reminder] [Responses-recv]    │  ← PR B (tabs);
+│                                             │    only one body
+│  Subject: …                                 │    rendered at a time
+│  From: …  To: …                             │
+│  ─────────────────────────────────────────  │
+│  …rendered email body…                      │
+│                                             │
+│  Rendered from Email Template (Setup) …     │
+└─────────────────────────────────────────────┘
+
+──────────────────────────────────────────────  ← <hr>
+
+┌─────────────────────────────────────────────┐
+│ Reviewer surface (iframe srcdoc)            │  ← PR C
+└─────────────────────────────────────────────┘
+```
+
+**Email previews region — tabbed.** The three reviewer-facing
+emails (invitation, reminder, responses-received) share one
+full-width card with a `.btn-pair` tab strip at the top. Only
+one email body renders at a time. URL state extends to
+`?reviewer_email=…&email={invitation|reminder|responses_received}`;
+default `email=invitation` when the param is absent. The tab
+pattern mirrors the existing Email Template (Setup) page
+(`session_setupinvite.html:18-27`): active tab as a disabled
+`<button class="btn">` (reads as the current view); inactive
+tabs as `<a class="btn secondary" href="?email=…">`. Tabs
+whose render adapter hasn't shipped yet (PR D / PR E) render
+**disabled** with `aria-disabled="true"`.
+
+This drifts from `spec/preview_hub.md` §"Page layout", which
+proposes four full-width cards stacked vertically. The tabbed
+email region collapses three of those four cards into one
+slot; the fourth (reviewer surface) stays its own card below
+the `<hr>`. Rationale: the three emails share an identical
+shape (subject + from / to / body) and are visually
+redundant when stacked. The reviewer surface is structurally
+different (iframe of the live form) and warrants its own
+card. The spec gets a one-line note flagging this drift; see
+"Doc impact" below.
+
+**Reviewer surface region — full-width card.** The card sits
+below an `<hr>` separator and renders an `<iframe srcdoc="…">`
+of the rendered `reviewer/review_surface.html` so it inherits
+the reviewer chrome verbatim. Iframe carries
+`sandbox="allow-same-origin"` per the implementation pointers
+below.
+
+**Empty state composition.** When no reviewer is yet picked,
+the artifact regions collapse to one combined empty-state
+card ("Pick a reviewer above to preview their experience.")
+above where the email region + `<hr>` + surface card would
+sit. Already in place from PR A; PR B and PR C each move
+their respective region from this combined card to its own
+real card once a reviewer is selected.
 
 ## Reviewer picker UI
 
@@ -302,7 +381,7 @@ body below picks up the same explanatory tone.
 
 ## Proposed PR sequence
 
-### PR A — Page chrome + reviewer picker
+### PR A — Page chrome + reviewer picker ✅ Shipped (PR #517 / #520)
 
 **Goal.** A real `session_previews.html` body with the
 typeahead picker working end-to-end, a context strip below it,
@@ -366,196 +445,266 @@ cards will appear. No artifact rendering yet.
   - The `<datalist>` contains one `<option>` per reviewer in
     the session (integration test counts options).
 
-### PR B — Invitation email card
+### PR B — Email previews region (tabbed) + invitation card
 
-**Goal.** Render the invitation email the selected reviewer
-would actually receive, using the production render path.
+**Goal.** Stand up the email previews region — a single full-
+width card with a three-tab strip (Invitation / Reminder /
+Responses-received) that renders the active email's subject +
+from / to / body. Wire only the Invitation tab to a real render
+adapter; Reminder + Responses-received tabs render disabled
+until PRs D / E activate them. Add the `<hr>` separator and a
+placeholder where PR C's surface card will land.
 
-- New artifact registry seam in `app/web/views.py`:
+- New email-tab registry seam in `app/web/views.py`:
   ```python
   @dataclass(frozen=True)
-  class PreviewArtifactSpec:
-      key: str               # "invitation_email"
-      label: str             # "Invitation email"
-      audience: str          # "reviewer" — future-proof for
-                             # the Reviewee hub
-      render: Callable[[ReviewSession, Reviewer], CardBody]
-      source_pages: list[tuple[str, str]]  # (label, url) pairs
-                                            # for the footer
+  class EmailPreviewTab:
+      key: str         # "invitation" / "reminder" /
+                       # "responses_received"
+      label: str       # "Invitation" / "Reminder" / etc.
+      render: Callable[[ReviewSession, Reviewer], EmailBody] | None
+      """``None`` until the corresponding PR D / PR E lands;
+      a None render means the tab renders disabled."""
+      source_pages: list[tuple[str, str]]
+      """``(label, url)`` pairs for the source-of-truth footer.
+      Email Template (Setup) deep-links to the matching
+      ``?template=`` tab; Reviewers (Setup) is constant."""
+      template_setup_param: str
+      """The ``?template=`` value the Setup deep-link uses,
+      e.g. ``"invitation"`` or ``"reminder"``."""
   ```
-  Plus a module-level `PREVIEW_ARTIFACTS: list[PreviewArtifactSpec]`
-  the page iterates over. PR B appends one entry; PR C appends
-  the second.
-- New template partial `_preview_card.html` rendering one
-  artifact card: title, one-line description, body (artifact
-  output or scoped missing-data error), source-of-truth footer.
-- **Invitation render adapter** in
-  `app/web/views.py` calling
+  Plus a module-level
+  ``EMAIL_PREVIEW_TABS: list[EmailPreviewTab]`` ordered
+  invitation → reminder → responses-received (the
+  chronological arc the reviewer experiences). PR B seeds all
+  three entries but only the invitation entry has a non-`None`
+  render; PRs D / E swap the others to non-`None`.
+- New template partial `_email_preview_region.html` rendering:
+  - The `.btn-pair` tab strip — active tab is a disabled
+    `<button class="btn">` (matches `session_setupinvite.html`
+    line 21); inactive *and shipped* tabs are
+    `<a class="btn secondary" href="?…">`; inactive *and
+    unshipped* tabs render as `<button class="btn secondary"
+    disabled aria-disabled="true">` with the label suffixed
+    "(coming soon)" so the operator knows the tab is wired.
+  - The active email's body (subject + from / to / body) when
+    its render adapter is non-`None`, or a "Coming in PR D /
+    PR E" placeholder when the disabled-tab branch somehow
+    became active (shouldn't happen via the tab strip; only
+    via a hand-edited URL).
+  - Source-of-truth footer ("Rendered from Email Template
+    (Setup) and Reviewers (Setup).") with the deep-linked
+    Setup-page anchors per the active tab's `source_pages`.
+- **Invitation render adapter** in `app/web/views.py` calling
   `email_templates.render_invitation(session, reviewer)` and
-  packaging the rendered subject + from / to / body into a
-  `CardBody` dataclass the partial consumes. Subject + headers
+  packaging the rendered subject + from / to / body into the
+  `EmailBody` dataclass the partial consumes. Subject + headers
   styled approximately as the reviewer's email client would
   show them (basic envelope; not a faux-Outlook chrome — this
   is a render preview, not a costume).
-- **Missing-data handling**: if `session.email_template_overrides
-  is None` *and* the seeded default for invitations is also
-  unset (which currently can't happen since seeded defaults
-  always exist, but the check is cheap and forward-compatible
-  for Segment 11M), render the spec's
-  "Invitation email template not set up. Configure on the
-  Email Template Setup page." stub with a link to
-  `/operator/sessions/{id}/setupinvite?template=invitation`.
+- Update `previews_index` route to read `?email=` (default
+  `"invitation"`) and resolve to one of the
+  `EMAIL_PREVIEW_TABS` entries; an unknown / unshipped value
+  falls back to `"invitation"` rather than 404. URL state is
+  now ``?reviewer_email=…&email=invitation``.
+- Below the email card, render an `<hr>` separator followed by
+  a placeholder card ("Reviewer surface preview lands in PR C
+  of segment 11F.") that PR C replaces. The combined "Pick a
+  reviewer above" empty state PR A introduced still renders
+  before either region when no reviewer is selected (the
+  email card and `<hr>` and surface placeholder don't render
+  in that branch).
+- **Missing-data handling**: if the invitation-template seeded
+  default is unset *and* the session has no overrides for it
+  (cannot happen today; cheap forward-compatible check for
+  Segment 11M), render the spec's "Invitation email template
+  not set up. Configure on the Email Template Setup page."
+  stub with a link to
+  ``/operator/sessions/{id}/setupinvite?template=invitation``.
 - Tests:
   - Selected reviewer's invitation renders with subject + body
     populated; merge tags (`$reviewer_name`, `$session_name`,
     `$deadline`, `$help_contact`, `$invite_url`) are
     substituted.
+  - Tab strip renders three tabs in order; the Invitation tab
+    is the disabled-button "current view" indicator on first
+    load (no `?email=` param); the other two render disabled
+    with `aria-disabled="true"` and the "(coming soon)" suffix.
+  - `?email=reminder` (an unshipped tab) falls back to the
+    invitation render — no 404, no broken page.
+  - `?email=` mid-page-redirect preserves `?reviewer_email=`.
   - Switching reviewers via the picker swaps the rendered
-    name / `invite_url` (different reviewer ⇒ different
-    one-time-use token) — pin via integration test snapshot.
+    name / `invite_url` in the active tab (different reviewer
+    ⇒ different one-time-use token) — pin via integration
+    snapshot.
   - Email-template-not-set path renders the missing-data
     stub with the configured Setup-page link.
-  - Source-of-truth footer renders Email Template + Reviewers
-    Setup-page links.
+  - Source-of-truth footer renders the Email Template
+    (`?template=invitation`) + Reviewers Setup-page links.
+  - Empty-session path: when no reviewer is selected, the
+    email card + `<hr>` + surface placeholder are not in the
+    DOM; only the combined "Pick a reviewer" card is.
 
 ### PR C — Reviewer surface card + retire `/preview` route
 
-**Goal.** Render the form the selected reviewer would land on
-after clicking the invitation, using the production
-`build_preview_context`. Retire the standalone `/preview`
-(singular) route now that its content lives in the hub.
+**Goal.** Replace PR B's surface placeholder card (below the
+`<hr>`) with the real surface preview — an iframe srcdoc of
+the rendered reviewer surface for the picker-selected
+reviewer. Retire the standalone `/preview` (singular) route
+now that its content lives in the hub. Independent of the
+email region — does not touch `EMAIL_PREVIEW_TABS` or the tab
+strip.
 
-- Append a second `PreviewArtifactSpec` entry for the reviewer
-  surface, with a render adapter that calls
+- New template partial `_surface_preview_card.html` rendering
+  the surface card: title ("Reviewer surface"), one-line
+  description ("The form the reviewer would see after clicking
+  the invitation."), the iframe, and a source-of-truth footer
+  pointing at the Reviewers + Assignments + Instruments Setup
+  pages.
+- New view-shape adapter in `app/web/views.py` —
+  `build_surface_preview_context(db, user, session, reviewer)`
+  — that calls
   `routes_reviewer.build_preview_context(db, user,
-  review_session, target_reviewer=reviewer)`. The existing
-  `build_preview_context` already pads with up to three
-  synthetic rows when fewer real assignments exist (per
+  review_session, target_reviewer=reviewer)` and packages the
+  result into a small dataclass the partial consumes. The
+  existing `build_preview_context` already pads with up to
+  three synthetic rows when fewer real assignments exist (per
   Segment 10B-3); thread the selected reviewer's identity
-  through so the synthetic-row rendering surfaces *that
+  through so synthetic-row rendering surfaces *that
   reviewer's* assignments rather than the operator-as-reviewer
   fallback.
-- Render the reviewer-surface artifact inline as an `<iframe
-  srcdoc="…">` of the rendered `reviewer/review_surface.html`
-  with `preview_mode=True`. Iframe rather than direct embed
-  because the reviewer surface ships its own `body.ui-v2
-  reviewer` chrome and CSS scope; embedding inline would leak
-  the reviewer top-bar and styling into the operator page.
-  An iframe is the smallest tool that gets the spec's
-  "production parity" guarantee — the reviewer sees the same
-  bytes — without a separate "preview mode" template fork.
+- Render the surface artifact inline as an `<iframe
+  srcdoc="…">` of `reviewer/review_surface.html` rendered with
+  `preview_mode=True`. Iframe rather than direct embed because
+  the reviewer surface ships its own `body.ui-v2 reviewer`
+  chrome and CSS scope; embedding inline would leak the
+  reviewer top-bar and styling into the operator page. The
+  iframe carries `sandbox="allow-same-origin"` (no
+  `allow-scripts`, no `allow-forms`) per implementation
+  pointers below.
+- **Why not the registry?** The surface render produces an
+  iframe srcdoc, not a subject + from / to / body envelope; it
+  doesn't share the email tab's `EmailBody` shape. Keeping it
+  outside `EMAIL_PREVIEW_TABS` keeps the tab strip
+  semantically about emails and the surface as the page's
+  second, structurally different region.
 - **Missing-data handling**: per spec, if the reviewer has no
   assignments → "This reviewer has no reviewees assigned.
   Configure assignments on the Assignments Setup page."; if
   `session.instruments` is empty → "No instruments configured.
-  Configure on the Instruments Setup page." Errors scoped to
-  this card only; the invitation card above keeps rendering.
+  Configure on the Instruments Setup page." Errors are scoped
+  to the surface card only; the email region above the `<hr>`
+  keeps rendering.
 - **Retire `/sessions/{id}/preview` (singular).** The
-  standalone route at `routes_operator.py:1300` and its breadcrumb
-  / link references go. Replace its inbound link from the
-  Session Home Next Action card ("See previews" link at
-  `session_detail.html:153`) with a link to the hub plus a
-  fragment to the reviewer-surface card
+  standalone route and its breadcrumb / link references go.
+  Replace its inbound link from the Session Home Next Action
+  card ("See previews" link in `session_detail.html`) with a
+  link to the hub plus a fragment to the reviewer-surface card
   (`/operator/sessions/{id}/previews#reviewer-surface`). One
-  redirect from `/preview` → `/previews` for any stragglers
-  (bookmarks, external links from the Sessions list, etc.); a
-  permanent 308 keeps SEO / browser caching honest.
+  permanent 308 redirect from `/preview` → `/previews` for any
+  stragglers (bookmarks, external links from the Sessions
+  list).
 - Tests:
-  - Reviewer-surface card renders the selected reviewer's
-    assigned reviewees in the iframe.
+  - Surface card renders the selected reviewer's assigned
+    reviewees in the iframe.
   - Switching reviewers via the picker swaps which reviewees
     surface in the iframe.
   - Missing-assignments path renders the missing-data stub
-    without breaking the invitation card above it.
+    without breaking the email region above the `<hr>`.
+  - The `<hr>` separator sits between the email card and the
+    surface card in the rendered DOM order — pin via
+    integration test.
   - `/preview` → `/previews` redirect is a 308 with the
     fragment preserved.
-  - Session Home "See previews" link points at the hub.
+  - Session Home "See previews" link points at the hub
+    (`/previews#reviewer-surface`).
 
-### PR D — Reminder email card
+### PR D — Activate Reminder tab
 
-**Goal.** Render the reminder email the selected reviewer
-would receive, using the production render path. Smaller than
-PR B because the registry, the card partial, and the
-missing-data path are all already in place.
+**Goal.** Light up the previously-disabled Reminder tab in
+PR B's strip by attaching a real render adapter. Tiny PR — one
+render adapter, one registry mutation, one set of tests.
 
-- Append a third `PreviewArtifactSpec` entry to
-  `views.PREVIEW_ARTIFACTS` for the reminder. Render adapter
-  calls `email_templates.render_reminder(session, reviewer)`
-  and packages the rendered subject + from / to / body into
-  the existing `CardBody` dataclass PR B introduced.
-- **Position in registry.** Insert between the reviewer-
-  surface card and (eventually) the responses-received card,
-  matching the chronological arc the reviewer experiences
-  (invitation arrives → reviewer opens the form → reminder
-  arrives if they don't act → responses-received arrives on
-  submit).
-- **Card description.** "Sent against an active session past
+- Update the Reminder entry in
+  `views.EMAIL_PREVIEW_TABS` so its `render` field points at a
+  new adapter that calls
+  `email_templates.render_reminder(session, reviewer)` and
+  returns the same `EmailBody` shape PR B introduced.
+- Update the tab-strip partial's "shipped vs. unshipped" check
+  is automatic — it keys off `render is not None` — so the
+  Reminder tab flips from disabled-with-"(coming soon)" to a
+  live `<a class="btn secondary">` link with no template
+  change.
+- **Card description (rendered below the tab strip when
+  Reminder is active).** "Sent against an active session past
   the configured reminder threshold. Operators trigger
   reminders from the consolidated Manage Invitations page
-  (Segment 11C)." This grounds the operator in the live
-  send-side affordance without duplicating it here.
-- **Source-of-truth footer.** Reuses the Setup-page links the
-  invitation card uses (Email Template + Reviewers); the
-  reminder body lives in the same `email_template_overrides`
-  JSON column the invitation does, edited from the same
-  `/setupinvite` page (different `?template=reminder` tab).
+  (Segment 11C)." Grounds the operator in the live send-side
+  affordance without duplicating it here.
+- **Source-of-truth footer.** Email Template
+  (`?template=reminder`) + Reviewers. The reminder body lives
+  in the same `email_template_overrides` JSON column the
+  invitation does, edited from the same `/setupinvite` page
+  (different `?template=reminder` tab).
 - **Missing-data handling.** Same shape as the invitation
-  card: if `session.email_template_overrides` lacks reminder
-  keys *and* the seeded reminder default is unset (cannot
-  happen today; cheap forward-compatible check), render the
-  "Reminder template not set up. Configure on the Email
-  Template Setup page." stub with a
+  card: if the reminder template has no override *and* its
+  seeded default is unset (cannot happen today; cheap forward-
+  compatible check), render the "Reminder template not set up.
+  Configure on the Email Template Setup page." stub with a
   `?template=reminder`-anchored link.
 - **No new lifecycle gating.** Card renders in all session
   states like its siblings.
 - Tests:
-  - Selected reviewer's reminder renders with subject + body
-    populated; canonical-five merge tags substitute.
+  - Reminder tab renders as a live `<a>` link in the strip,
+    not a disabled button (the contrast against PR B's test
+    is the contract here).
+  - `?email=reminder` activates the tab and renders the
+    reminder body with subject + canonical-five merge tags
+    substituted.
   - Switching reviewers via the picker swaps the rendered
     name / `$invite_url` (the reminder still carries the
     sign-in link until the reviewer submits).
   - Reminder-template-not-set path renders the missing-data
     stub with the configured Setup-page link.
-  - Card sits between the reviewer-surface card (PR C) and
-    the responses-received card (PR E) in the rendered DOM
-    order — pin via integration test.
+  - Tab order in the strip stays
+    invitation → reminder → responses-received.
 
-### PR E — Responses-received email card
+### PR E — Activate Responses-received tab
 
-**Goal.** Render the confirmation email the reviewer receives
-on submit, using the `render_responses_received` helper
-Segment 11E PR 6 introduces.
+**Goal.** Same shape as PR D for the third tab, plus the
+optional-`$submitted_at` placeholder note. Calls into the
+`render_responses_received` helper Segment 11E PR 6 adds.
 
 **Cross-segment seam.** Segment 11E PR 6's scope already
 calls out a "Preview hub registry append" for this artifact
 ("lands here, not in 11F"). Both plans converge on the same
-one-line registry append + render adapter; only one of the
-two PRs ships the work, the other strikes its corresponding
-scope item:
+one-line `EMAIL_PREVIEW_TABS` mutation + render adapter; only
+one of the two PRs ships the work, the other strikes its
+corresponding scope item:
 
-- If **11E PR 6 ships first** — the registry entry, render
-  adapter, and Preview hub integration land there. PR E in
-  this guide collapses to a strikethrough note ("shipped
-  with 11E PR 6") and the segment is sized at 4 PRs (A-D)
-  rather than 5.
-- If **11F PR D ships first** (i.e., we land the reminder
-  card, then come back for responses-received before 11E
-  PR 6 lands) — PR E lands the registry append here, and
+- If **11E PR 6 ships first** — the tab activation and render
+  adapter land there. PR E in this guide collapses to a
+  strikethrough note ("shipped with 11E PR 6") and 11F sizes
+  at 4 PRs (A-D) rather than 5.
+- If **11F PR E ships first** — the activation lands here and
   11E PR 6's scope drops the registry-append bullet.
-- The render adapter shape is identical in both cases:
-  call `render_responses_received(session, reviewer)`, return
-  a `CardBody` with the rendered subject / from / to / body.
-  Whichever plan owns the work, the other references it.
+- The render adapter shape is identical in both cases: call
+  `render_responses_received(session, reviewer)`, return an
+  `EmailBody`. Whichever plan owns the work, the other
+  references it.
 
-Scope assuming PR E ships the work (the conservative case
-this guide covers; flip if the order resolves the other way):
+Scope assuming PR E ships the work (conservative case; flip if
+the order resolves the other way):
 
-- Append a fourth `PreviewArtifactSpec` to
-  `views.PREVIEW_ARTIFACTS` after the reminder. Render
-  adapter calls `render_responses_received(session,
-  reviewer)`.
-- **Card description.** "Sent the moment the reviewer
-  submits their review."
+- Update the Responses-received entry in
+  `views.EMAIL_PREVIEW_TABS` so its `render` field points at a
+  new adapter that calls
+  `email_templates.render_responses_received(session,
+  reviewer)`. Tab flips from disabled to live without template
+  change.
+- **Card description (rendered below the tab strip when
+  Responses-received is active).** "Sent the moment the
+  reviewer submits their review."
 - **Source-of-truth footer.** Email Template
   (`?template=responses_received` per 11E PR 6) + Reviewers.
 - **Merge-tag set.** Four tags per 11E PR 6 — drops
@@ -569,23 +718,25 @@ this guide covers; flip if the order resolves the other way):
   "(not yet submitted)" placeholder per 11E PR 6's helper
   contract. The card surfaces a one-line note above the
   rendered body — "Previewing pre-submit; `$submitted_at`
-  shows a placeholder." — so the operator isn't surprised
-  the date field doesn't carry a real value.
-- **Missing-data handling.** Same template-not-set / no-help-
-  contact paths as the other email cards.
+  shows a placeholder." — so the operator isn't surprised the
+  date field doesn't carry a real value.
+- **Missing-data handling.** Same template-not-set path as the
+  other email tabs.
 - Tests:
-  - Card renders with `$submitted_at` populated when the
-    selected reviewer has submitted assignments (use a
-    fixture that pre-stamps `submitted_at`).
+  - Responses-received tab renders as a live `<a>` link in
+    the strip (no longer disabled).
+  - `?email=responses_received` activates the tab and renders
+    the body with `$submitted_at` populated when the selected
+    reviewer has submitted assignments (fixture pre-stamps
+    `submitted_at`).
   - Card renders with the placeholder + the explanatory note
     on a reviewer with no submitted assignments.
-  - Card sits last in the rendered DOM order
-    (invitation → reviewer-surface → reminder →
-    responses-received).
+  - Tab order in the strip stays
+    invitation → reminder → responses-received.
   - Cross-segment seam: integration test passes regardless of
-    whether 11E PR 6's registry append landed here or there
-    (the test asserts the rendered DOM, not which file
-    introduced the registry entry).
+    whether 11E PR 6's registry mutation landed here or there
+    (the test asserts the rendered DOM, not which file owns
+    the mutation).
 
 ## Implementation pointers
 
@@ -612,12 +763,12 @@ this guide covers; flip if the order resolves the other way):
   inspection; emit no audit events. Send-test (when it lands
   in 11C) is the audit point for outbound-from-the-hub
   actions.
-- **Artifact registry placement.** Keep `PREVIEW_ARTIFACTS`
-  in `app/web/views.py`, not a new module. The list is small,
-  the page is the only consumer, and `views.py` already owns
-  the page-shape adapters that bridge services to templates.
-  Move to its own module only if the registry grows past ~5
-  entries.
+- **Registry placement.** Keep `EMAIL_PREVIEW_TABS` (and the
+  surface adapter PR C adds) in `app/web/views.py`, not a new
+  module. The list is small, the page is the only consumer, and
+  `views.py` already owns the page-shape adapters that bridge
+  services to templates. Move to its own module only if the
+  registry grows past ~5 entries.
 
 ## Out of scope (cross-references)
 
@@ -637,27 +788,26 @@ this guide covers; flip if the order resolves the other way):
 
 ## Test impact
 
-- New `tests/integration/test_session_previews.py` covering:
-  picker unselected default / valid param / unmatched param
-  ("No reviewer matched") / step / random / wrap / disabled-
-  step-when-unselected / "Name (email)" label parse; per-card
-  render for selected reviewer; missing-data scoped errors per
-  card; combined "Pick a reviewer" empty state when nothing is
-  selected (no per-card error-card explosion); lifecycle render
-  in `draft` / `validated` / `ready` / `closed` (assert no lock
-  card around the cards themselves); `/preview` → `/previews`
-  redirect.
-- New `tests/unit/test_preview_picker_context.py` pinning the
-  view adapter's prev / next / count math (especially the
-  wrap-around edge cases, the unselected-state degenerate
-  shape, and the typed-value parser that accepts both bare
-  emails and `"Name (email)"` formats).
-- One snapshot fixture per artifact under
-  `tests/fixtures/previews/` — the rendered invitation email
-  body for a populated session, and the reviewer-surface
-  iframe-srcdoc trimmed to its `<main>` block. Future contract
-  changes to either render path have to deliberately update
-  the fixture.
+- `tests/integration/test_session_previews.py` (created in
+  PR A) gains coverage for: tab strip default / disabled-tab /
+  shipped-tab transition / unknown `?email=` fallback (PR B);
+  per-tab body render for selected reviewer (PR B / D / E);
+  missing-data scoped errors per tab; the `<hr>` separator's
+  position between email card and surface card (PR C); the
+  iframe srcdoc carrying the right reviewer's assignments
+  (PR C); lifecycle render in `draft` / `validated` /
+  `ready` / `closed` (assert no lock card around the cards
+  themselves); `/preview` → `/previews` redirect (PR C).
+- `tests/unit/test_preview_picker_context.py` (PR A) stays as
+  is; new unit tests for any non-trivial render-adapter logic
+  (e.g. PR E's pre-submit `$submitted_at` placeholder) live in
+  the same file or a sibling.
+- One snapshot fixture per email tab under
+  `tests/fixtures/previews/` — the rendered invitation /
+  reminder / responses-received bodies for a populated
+  session, and the reviewer-surface iframe-srcdoc trimmed to
+  its `<main>` block. Future contract changes to either
+  render path have to deliberately update the fixture.
 - No churn on the existing email-template or reviewer-surface
   test suites — those cover the underlying render paths the
   hub composes.
@@ -668,7 +818,7 @@ this guide covers; flip if the order resolves the other way):
   **Done** once PR C ships; mention the deferred reminder /
   responses-received artifacts and the send-test fold into 11C.
 - `docs/status.md` — timeline entry per PR.
-- `spec/preview_hub.md` — reconcile two small drift points with
+- `spec/preview_hub.md` — reconcile three drift points with
   what 11F ships:
   - URL slug `/preview` (singular) in the spec vs. `/previews`
     (plural) in the chrome and the shipped placeholder. Plural
@@ -676,6 +826,17 @@ this guide covers; flip if the order resolves the other way):
   - The four-artifact list narrows to two for 11F; spec gains a
     "shipped in 11F" / "deferred to follow-on" annotation per
     artifact rather than rewriting the list.
+  - **Tabbed email region** — the spec proposes four full-width
+    cards stacked vertically. 11F collapses the three email
+    cards (invitation, reminder, responses-received) into one
+    full-width card with a tab strip and renders the surface
+    card separately below an `<hr>` separator. Spec gains a
+    "Page layout (as built)" subsection or a footnote on the
+    "Page layout" section noting this. Two emails would be
+    visually redundant when stacked; the tabbed region cuts
+    vertical scroll without losing per-artifact addressability
+    (each email tab is bookmarkable via
+    `?email=invitation|reminder|responses_received`).
 - `spec/operator_ui_concept.md` — verify the Operations row
   tab order matches what 11F leaves in the chrome
   (`Validate / Previews / Invitations / Monitoring / Outbox`
