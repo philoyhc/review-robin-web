@@ -69,7 +69,7 @@ def upgrade() -> None:
                     "INSERT INTO instrument_display_fields "
                     "(instrument_id, source_type, source_field, label, "
                     "\"order\", visible) "
-                    "VALUES (:iid, 'reviewee', 'name', '', 0, 1)"
+                    "VALUES (:iid, 'reviewee', 'name', '', 0, TRUE)"
                 ),
                 {"iid": instrument_id},
             )
@@ -81,7 +81,7 @@ def upgrade() -> None:
                     "(instrument_id, source_type, source_field, label, "
                     "\"order\", visible) "
                     "VALUES (:iid, 'reviewee', 'email_or_identifier', '', "
-                    ":ord, 1)"
+                    ":ord, TRUE)"
                 ),
                 {"iid": instrument_id, "ord": order_for_email},
             )
