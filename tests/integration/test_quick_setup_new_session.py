@@ -23,8 +23,9 @@ def test_new_session_page_renders_quick_setup_card(
 
     body = client.get("/operator/sessions/new").text
 
-    # Header copy on the page.
-    assert "<h1>Create New Session</h1>" in body
+    # Form card carries an in-card H2 heading matching the v2
+    # convention (same font size as Quick setup (optional) below).
+    assert "<h2>Session details</h2>" in body
     # Quick Setup card present with the optional title.
     assert 'id="quick-setup"' in body
     assert "<h2>Quick setup (optional)</h2>" in body
