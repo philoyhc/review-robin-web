@@ -254,6 +254,8 @@ def create_session(
 def session_detail(
     request: Request,
     validated: bool = Query(default=False),
+    quick_setup_error: str | None = Query(default=None),
+    quick_setup_reason: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -308,7 +310,13 @@ def session_detail(
                 )
             ),
             "has_responses": lifecycle.session_has_responses(db, review_session),
-            "quick_setup": views.build_quick_setup_context(db, review_session),
+            "quick_setup": views.build_quick_setup_context(
+                db,
+                review_session,
+                is_unlocked=_quick_setup_unlocked(request, review_session),
+                error_kind=quick_setup_error,
+                error_reason=quick_setup_reason,
+            ),
             "extract_data": views.build_extract_data_context(db, review_session),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
         },
@@ -523,6 +531,234 @@ async def _handle_import(
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
+
+# --------------------------------------------------------------------------- #
+# Segment 11J PR A — Quick Setup card live wiring
+# --------------------------------------------------------------------------- #
+#
+# Three live POST endpoints back the Quick Setup card on Session Home:
+#
+#   - ``POST /sessions/{id}/quick-setup/lock`` flips the per-session
+#     ``HttpOnly`` cookie that drives the card's ``is_locked`` state.
+#   - ``POST /sessions/{id}/quick-setup/reviewers`` /
+#     ``POST /sessions/{id}/quick-setup/reviewees`` delegate to a thin
+#     ``_handle_quick_setup_import`` wrapper that reuses the existing
+#     per-entity import pipeline. On success the wrapper 303s back to
+#     Session Home with no flag (the slot's count indicator is the
+#     success signal). On parse / validation / lifecycle rejection it
+#     303s with ``?quick_setup_error={kind}&quick_setup_reason=...``
+#     so the GET render places a ``.banner.banner-error`` inside the
+#     offending slot.
+#
+# Slot 3 (Assignments) and slot 4 (Settings) ship in PR B / Segment
+# 12A respectively and are not yet wired here.
+
+
+_QUICK_SETUP_COOKIE_PREFIX = "qsu"
+
+
+def _quick_setup_cookie_name(session_id: int) -> str:
+    return f"{_QUICK_SETUP_COOKIE_PREFIX}_{session_id}"
+
+
+def _quick_setup_unlocked(request: Request, review_session: ReviewSession) -> bool:
+    """``True`` when the operator's last lock-toggle action was Unlock.
+
+    Read from the per-session cookie set by
+    ``POST /sessions/{id}/quick-setup/lock``. Absent ⇒ default locked.
+    """
+
+    return request.cookies.get(_quick_setup_cookie_name(review_session.id)) == "1"
+
+
+@router.post(
+    "/sessions/{session_id}/quick-setup/lock",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def quick_setup_lock_toggle(
+    action: str = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Flip the Quick Setup card's per-session lock cookie.
+
+    ``action="unlock"`` sets ``qsu_{id}=1`` (and the next render
+    drops ``.locked`` from the body wrapper); ``action="lock"`` clears
+    the cookie. The toggle is visual only — the service layer
+    (``_require_editable``) stays the source of truth for whether a
+    slot's submit can mutate.
+    """
+
+    redirect = RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}#quick-setup"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+    cookie_name = _quick_setup_cookie_name(review_session.id)
+    cookie_path = f"/operator/sessions/{review_session.id}"
+    if action == "unlock":
+        redirect.set_cookie(
+            key=cookie_name,
+            value="1",
+            path=cookie_path,
+            httponly=True,
+            samesite="lax",
+        )
+    else:
+        redirect.delete_cookie(
+            key=cookie_name,
+            path=cookie_path,
+        )
+    # Touch unused params to silence type checkers; ``user`` / ``db``
+    # are pulled in for the operator-permission dependency chain.
+    del user, db
+    return redirect
+
+
+@router.post(
+    "/sessions/{session_id}/quick-setup/reviewers",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def quick_setup_reviewers_submit(
+    request: Request,
+    file: UploadFile = File(...),
+    confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    return await _handle_quick_setup_import(
+        request=request,
+        file=file,
+        confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
+        review_session=review_session,
+        user=user,
+        db=db,
+        kind="reviewers",
+        existing_count_fn=csv_imports.existing_reviewer_count,
+        parse_fn=csv_imports.parse_reviewer_csv,
+        save_fn=csv_imports.save_reviewers,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/quick-setup/reviewees",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def quick_setup_reviewees_submit(
+    request: Request,
+    file: UploadFile = File(...),
+    confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    return await _handle_quick_setup_import(
+        request=request,
+        file=file,
+        confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
+        review_session=review_session,
+        user=user,
+        db=db,
+        kind="reviewees",
+        existing_count_fn=csv_imports.existing_reviewee_count,
+        parse_fn=csv_imports.parse_reviewee_csv,
+        save_fn=csv_imports.save_reviewees,
+    )
+
+
+async def _handle_quick_setup_import(
+    *,
+    request: Request,
+    file: UploadFile,
+    confirm_replace: str | None,
+    acknowledge_response_loss: str | None,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+    kind: str,
+    existing_count_fn,
+    parse_fn,
+    save_fn,
+) -> RedirectResponse:
+    """Quick Setup card slot handler — thin wrapper over the same
+    parse / save pipeline the per-entity Setup pages use.
+
+    On success: 303 → Session Home with no flag; the slot's count
+    indicator on the next render is the success signal (per the
+    "no flash banner" direction in segment_11J).
+
+    On parse / validation failure, missing-confirm, or lifecycle
+    rejection: 303 → Session Home with ``?quick_setup_error={kind}``
+    and a ``quick_setup_reason`` token that drives the slot's
+    inline ``banner-error`` copy.
+    """
+
+    home_url = f"/operator/sessions/{review_session.id}"
+    fragment = f"#quick-setup-{kind}"
+
+    def error_redirect(reason: str) -> RedirectResponse:
+        return RedirectResponse(
+            url=(
+                f"{home_url}?quick_setup_error={kind}"
+                f"&quick_setup_reason={reason}{fragment}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    if not lifecycle.is_editable(review_session):
+        return error_redirect("lifecycle")
+
+    content = await file.read()
+    result = parse_fn(content)
+    if not result.is_blocked:
+        result.issues.extend(
+            csv_imports.check_cross_table_identity(
+                db,
+                session_id=review_session.id,
+                rows=result.rows,
+                kind=kind,
+            )
+        )
+
+    if result.is_blocked or any(
+        issue.severity == "error" for issue in result.issues
+    ):
+        return error_redirect("parse")
+
+    existing = existing_count_fn(db, review_session.id)
+    if existing > 0 and confirm_replace != "true":
+        return error_redirect("needs_confirm")
+
+    if existing > 0:
+        try:
+            _require_response_loss_ack(
+                db, review_session, acknowledge_response_loss
+            )
+        except HTTPException:
+            return error_redirect("needs_confirm")
+
+    save_fn(
+        db,
+        session=review_session,
+        user=user,
+        rows=result.rows,
+        filename=file.filename or "",
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"{home_url}{fragment}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.get("/sessions/{session_id}/assignments", response_class=HTMLResponse)

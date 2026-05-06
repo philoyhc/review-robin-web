@@ -859,6 +859,25 @@ class QuickSetupSlot:
     """``"Wired in Segment 11J PR A"``-style tooltip while
     ``is_wired=False``. ``None`` once wired."""
 
+    cascade_message: str | None = None
+    """Cascade-aware "this will replace N existing X" copy. Populated
+    when ``count > 0`` and the slot is wired; rendered as the inline
+    ``banner-warning`` confirmation surface alongside the slot's
+    submit form. ``None`` when the slot is empty (no confirmation
+    required) or when the slot is inert."""
+
+    error_message: str | None = None
+    """Populated when the operator's last submit for this slot was
+    rejected (parse / validation failure, or a lifecycle rejection
+    on ``ready``). Rendered as a ``banner-error`` inside the slot.
+    The cancel link in the banner returns the operator to the slot
+    fragment with a clean URL."""
+
+    cancel_url: str | None = None
+    """Clean Home URL with this slot's fragment anchor. Used as the
+    Cancel target for both the cascade-confirmation banner and the
+    error banner. Stable across renders."""
+
 
 @dataclass(frozen=True)
 class QuickSetupContext:
@@ -867,19 +886,27 @@ class QuickSetupContext:
     ``slots`` renders top-to-bottom in the order given; the card
     iterates and the ``quick_setup_slot`` macro renders each one.
 
-    Two greying triggers, mutually exclusive:
+    Status awareness collapses on a single signal — ``is_locked`` —
+    so the card's visual state is the same in every editable-
+    conceivable lifecycle state (``draft`` / ``validated`` /
+    ``ready``):
 
-    - ``is_disabled`` — session is Activated (``ready``). Whole
-      card carries ``.card.disabled`` plain-greying per
-      ``spec/session_home.md``; the Lock / Unlock button is not
-      rendered (the operator's path forward is Pause, not unlock).
-    - ``is_locked`` — session is editable (``draft`` / ``validated``)
-      but the card body is greyed pending an explicit Unlock click.
-      The body wrapper gets ``.locked``; the Lock / Unlock button
-      sits outside the wrapper so it stays vivid. Defaults ``True``
-      whenever the card is editable so the operator must
-      deliberately unlock before any setup change. The button is a
-      placeholder in 11H — Segment 11J wires the toggle.
+    - ``is_locked`` is ``True`` by default on every fresh page
+      load. The body wrapper picks up ``.locked`` greying; the
+      Lock / Unlock button sits outside the wrapper so it stays
+      vivid. The operator must explicitly Unlock before any
+      submit.
+    - On ``ready``, the toggle still renders and unlocking still
+      reveals the controls. Submits are then rejected at the
+      service layer (``_require_editable``); the rejection
+      surfaces as an inline ``banner-error`` with copy that names
+      the next move.
+
+    ``is_disabled`` stays as a label-only signal driving the
+    description copy ("Setup edits are paused while the session
+    is Activated…") — it does **not** drive a separate visual
+    treatment. The body's ``.locked`` greying is the single
+    visual lock signal.
 
     ``title`` overrides the H2 text. Session Home uses the default
     ``"Quick Setup"``; the new-session preview variant uses
@@ -887,9 +914,10 @@ class QuickSetupContext:
     early as a hint about post-creation setup paths.
 
     ``show_lock_toggle`` gates the Lock / Unlock footer button.
-    Session Home renders it whenever the card is editable; the
-    new-session preview variant suppresses it (the card is always
-    unlocked there because there's nothing yet to lock).
+    Session Home renders it whenever the card is reachable
+    (``draft`` / ``validated`` / ``ready``); the new-session
+    preview variant suppresses it (no session row → nothing to
+    lock).
     """
 
     slots: list[QuickSetupSlot]
@@ -901,21 +929,57 @@ class QuickSetupContext:
 
 
 def build_quick_setup_context(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    is_unlocked: bool = False,
+    error_kind: str | None = None,
+    error_reason: str | None = None,
 ) -> QuickSetupContext:
+    """Build the Quick Setup card context for Session Home.
+
+    ``is_unlocked`` reflects the operator's lock-toggle cookie
+    (``qsu_{session_id}=1``). Default is ``False`` ⇒ ``is_locked=True``
+    on every fresh page load.
+
+    ``error_kind`` + ``error_reason`` come from the
+    ``?quick_setup_error=...&quick_setup_reason=...`` redirect flag set
+    by the slot's POST handler on rejection. The pair drives the
+    inline ``banner-error`` rendered inside the offending slot. Other
+    slots are unaffected.
+    """
+
     sid = review_session.id
-    # Per spec/session_home.md, Quick Setup disables when the session is
-    # Activated (``ready``); ``closed`` is a reserved future state that
-    # would also disable, but the predicate doesn't exist yet — when
-    # ``closed`` ships, extend this check.
     is_disabled = lifecycle.is_ready(review_session)
 
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     assignment_count = assignments.existing_count(db, sid)
-    # ``assignment_mode`` is a stored string today (e.g. "FullMatrix"
-    # / "Manual"); the column is plain Text, not a SQLAlchemy enum.
     assignment_mode: str | None = review_session.assignment_mode
+
+    cancel_url_for = lambda key: (  # noqa: E731
+        f"/operator/sessions/{sid}#quick-setup-{key}"
+    )
+
+    def _error_for(slot_key: str) -> str | None:
+        if error_kind != slot_key:
+            return None
+        return _quick_setup_error_message(slot_key, error_reason)
+
+    reviewers_cascade = cascade_message_for_replace(
+        "reviewers",
+        reviewer_count=reviewer_count,
+        assignment_count=assignment_count,
+    )
+    reviewees_cascade = cascade_message_for_replace(
+        "reviewees",
+        reviewee_count=reviewee_count,
+        assignment_count=assignment_count,
+    )
+    assignments_cascade = cascade_message_for_replace(
+        "assignments",
+        assignment_count=assignment_count,
+    )
 
     slots = [
         QuickSetupSlot(
@@ -928,9 +992,12 @@ def build_quick_setup_context(
                 else "none yet"
             ),
             mode="file_upload",
-            is_wired=False,
-            wire_url=None,
-            coming_in="Wired in Segment 11J PR A",
+            is_wired=True,
+            wire_url=f"/operator/sessions/{sid}/quick-setup/reviewers",
+            coming_in=None,
+            cascade_message=reviewers_cascade,
+            error_message=_error_for("reviewers"),
+            cancel_url=cancel_url_for("reviewers"),
         ),
         QuickSetupSlot(
             key="reviewees",
@@ -942,9 +1009,12 @@ def build_quick_setup_context(
                 else "none yet"
             ),
             mode="file_upload",
-            is_wired=False,
-            wire_url=None,
-            coming_in="Wired in Segment 11J PR A",
+            is_wired=True,
+            wire_url=f"/operator/sessions/{sid}/quick-setup/reviewees",
+            coming_in=None,
+            cascade_message=reviewees_cascade,
+            error_message=_error_for("reviewees"),
+            cancel_url=cancel_url_for("reviewees"),
         ),
         QuickSetupSlot(
             key="assignments",
@@ -955,6 +1025,9 @@ def build_quick_setup_context(
             is_wired=False,
             wire_url=None,
             coming_in="Wired in Segment 11J PR B",
+            cascade_message=assignments_cascade,
+            error_message=_error_for("assignments"),
+            cancel_url=cancel_url_for("assignments"),
         ),
         QuickSetupSlot(
             key="settings",
@@ -965,6 +1038,9 @@ def build_quick_setup_context(
             is_wired=False,
             wire_url=None,
             coming_in="Wired in Segment 12A PR 6",
+            cascade_message=None,
+            error_message=None,
+            cancel_url=cancel_url_for("settings"),
         ),
     ]
 
@@ -976,22 +1052,122 @@ def build_quick_setup_context(
         "from files or rules in one place."
     )
 
-    # Lock the card by default whenever it's editable. The toggle
-    # itself is wired in 11J; 11H ships the lock state at fresh-page-
-    # load default (locked) without state persistence.
-    is_locked = not is_disabled
+    # Default-locked on every fresh page load (in every editable-
+    # conceivable state). The cookie-driven ``is_unlocked`` flips it
+    # off until the operator locks again or the cookie is cleared.
+    is_locked = not is_unlocked
 
     return QuickSetupContext(
         slots=slots,
         is_disabled=is_disabled,
         is_locked=is_locked,
         description=description,
-        # Title stays the default "Quick Setup" on Session Home.
-        # Lock toggle renders whenever the card is editable; on
-        # Activated sessions the operator's path forward is Pause,
-        # not Unlock, so the toggle is suppressed.
-        show_lock_toggle=not is_disabled,
+        # Toggle renders in every editable-conceivable state,
+        # including ``ready``. On ``ready`` the unlock is purely
+        # cosmetic — the service layer rejects mutating submits.
+        show_lock_toggle=True,
     )
+
+
+# Per-kind cascade-aware confirmation copy. Shared by both the
+# Quick Setup card (banner-warning above the slot's submit form) and
+# the per-entity Setup pages (the inline confirm checkbox above the
+# upload form), once those pages migrate over. The card-level call
+# site populates ``QuickSetupSlot.cascade_message`` whenever a slot
+# already has data; the message is ``None`` for an empty slot.
+def cascade_message_for_replace(
+    kind: str,
+    *,
+    reviewer_count: int = 0,
+    reviewee_count: int = 0,
+    assignment_count: int = 0,
+) -> str | None:
+    """Cascade-aware "this will replace N existing X" copy.
+
+    Returns ``None`` when no replacement is in play (i.e. the
+    target count is zero — there's nothing to confirm).
+    """
+
+    if kind == "reviewers":
+        if reviewer_count == 0:
+            return None
+        noun = "reviewer" if reviewer_count == 1 else "reviewers"
+        base = f"This will replace {reviewer_count} existing {noun}."
+        if assignment_count > 0:
+            assn_noun = (
+                "assignment" if assignment_count == 1 else "assignments"
+            )
+            base += (
+                f" {assignment_count} existing {assn_noun} will be cleared "
+                "(they reference the current reviewers)."
+            )
+        return base
+    if kind == "reviewees":
+        if reviewee_count == 0:
+            return None
+        noun = "reviewee" if reviewee_count == 1 else "reviewees"
+        base = f"This will replace {reviewee_count} existing {noun}."
+        if assignment_count > 0:
+            assn_noun = (
+                "assignment" if assignment_count == 1 else "assignments"
+            )
+            base += (
+                f" {assignment_count} existing {assn_noun} will be cleared "
+                "(they reference the current reviewees)."
+            )
+        return base
+    if kind == "assignments":
+        if assignment_count == 0:
+            return None
+        noun = "assignment" if assignment_count == 1 else "assignments"
+        return f"This will replace {assignment_count} existing {noun}."
+    return None
+
+
+def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
+    """Render the banner-error copy for a slot's last failed submit.
+
+    ``reason`` is a stable token from the route handler:
+
+    - ``"parse"`` — the upload couldn't be parsed / validated. The
+      message points the operator at the per-entity Setup page where
+      the per-row error feedback lives.
+    - ``"lifecycle"`` — the submit hit ``_require_editable`` on a
+      ``ready`` session. The message names the next move (Pause).
+    - ``"needs_confirm"`` — the form was submitted without ticking
+      the confirm box. Defense in depth; the HTML5 ``required``
+      attribute on the checkbox blocks this in normal browsers.
+    """
+
+    label_for = {
+        "reviewers": "Reviewers",
+        "reviewees": "Reviewees",
+        "assignments": "Assignments",
+        "settings": "Session settings",
+    }
+    label = label_for.get(slot_key, slot_key)
+    if reason == "lifecycle":
+        return (
+            "Setup edits are paused while the session is Activated. "
+            "Pause the session before applying setup changes."
+        )
+    if reason == "needs_confirm":
+        return (
+            f"Tick the confirmation box to replace existing {label.lower()}."
+        )
+    # Default / parse-error path. Keep the message short — the
+    # per-entity Setup page is the authoritative error surface.
+    per_entity_path = {
+        "reviewers": "reviewers",
+        "reviewees": "reviewees",
+        "assignments": "assignments",
+    }.get(slot_key)
+    if per_entity_path:
+        return (
+            f"Could not import {label.lower()}. "
+            f"Open the {label} Setup page for per-row error details."
+        )
+    return f"Could not import {label.lower()}."
 
 
 def build_new_session_quick_setup_context() -> QuickSetupContext:

@@ -1,21 +1,21 @@
-{# Quick Setup card scaffold — Segment 11H PR A.
+{# Quick Setup card — Segment 11J PR A.
 
-   Replaces the previous ``placeholder_card(id="quick-setup")`` stub
-   on Session Home with the full four-slot layout. Every interactive
-   control renders ``disabled`` until Segment 11J wires the slots
-   live; the visual + DOM contract (slot order, fragment anchors,
-   dormant banner containers, mode-conditional inner shape) is
-   final and will not move.
+   Renders the four-slot Quick Setup card. Slots whose
+   ``slot.is_wired=True`` carry a live POST form to ``slot.wire_url``;
+   inert slots render disabled controls and a wiring-tooltip.
 
-   Renders one ``QuickSetupSlot`` per item in
-   ``quick_setup.slots``; the section ``id`` is
-   ``quick-setup-{slot.key}`` so URL fragments and Cancel-return
-   anchors per ``spec/assumptions.md`` resolve directly.
+   Status awareness collapses on a single signal — ``is_locked`` —
+   so the card's visual state is the same in every editable-
+   conceivable lifecycle state. The body wrapper picks up
+   ``.locked`` greying when locked; the Lock / Unlock toggle in the
+   footer flips it via ``POST /operator/sessions/{id}/quick-setup/lock``
+   (a per-session ``HttpOnly`` cookie carries the operator's last
+   choice).
 
-   While ``quick_setup.is_disabled`` (session is Activated), the
-   outer card carries the ``.card.disabled`` plain-greying treatment
-   per ``spec/session_home.md`` "Disabled treatment on Home is plain
-   greying-out, not yellow lock cards".
+   On ``ready`` the toggle still renders and unlocks visually; the
+   service layer's ``_require_editable`` is the hard gate, and the
+   rejection surfaces inside the offending slot as a ``banner-error``
+   (see ``views._quick_setup_error_message``).
 #}
 {% macro quick_setup_slot(slot) -%}
 <section class="quick-setup-slot"
@@ -25,19 +25,22 @@
     {{ slot.label }}
     <span class="muted">{{ slot.count_summary }}</span>
   </h3>
-  {# Dormant banner containers — 11J's wiring populates these on
-     replacement-confirmation (banner-warning) or parse / validation
-     failure (banner-error). 11H ships them hidden so the markup
-     contract is in place. #}
-  <div class="banner banner-warning banner-scroll-target"
-       id="quick-setup-{{ slot.key }}-confirm-banner"
-       hidden></div>
+  {# Error banner — populated when this slot's last submit was
+     rejected. Cancel returns to a clean URL with the slot fragment. #}
   <div class="banner banner-error banner-scroll-target"
        id="quick-setup-{{ slot.key }}-error-banner"
-       hidden></div>
+       {% if not slot.error_message %}hidden{% endif %}>
+    {% if slot.error_message %}
+      <p style="margin: 0 0 var(--space-2) 0;">{{ slot.error_message }}</p>
+      <div style="text-align: right;">
+        <a class="btn alert" href="{{ slot.cancel_url }}">Cancel</a>
+      </div>
+    {% endif %}
+  </div>
   {% if slot.mode == "rule_or_csv" %}
     {# Slot 3 — Assignments. Rule selector default; CSV upload
-       alternative. The selector renders FullMatrix today. #}
+       alternative. The selector renders FullMatrix today.
+       Wiring is Segment 11J PR B; controls stay disabled until then. #}
     <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
       Generate by rule, or upload a CSV.
     </p>
@@ -69,8 +72,50 @@
         Exclude self-review
       </label>
     </p>
+    {# Dormant confirm-banner placeholder — populated when 11J PR B
+       wires the slot. Markup contract pinned for the wiring patch. #}
+    <div class="banner banner-warning banner-scroll-target"
+         id="quick-setup-{{ slot.key }}-confirm-banner"
+         hidden></div>
+  {% elif slot.is_wired %}
+    {# Slots 1, 2 (file upload + Submit) — live wiring. The cascade-
+       confirmation banner-warning renders inside the form so the
+       confirm checkbox + cancel + submit live in one visual unit
+       (per spec/quick_setup_card_spec.md "Confirmation UI: inline
+       within the slot, not a modal dialog"). When the slot is
+       empty, the banner is dormant and the submit is a plain
+       Submit button. #}
+    <form method="post"
+          action="{{ slot.wire_url }}"
+          enctype="multipart/form-data">
+      <div class="quick-setup-slot-controls">
+        <input type="file" name="file" accept=".csv" required>
+        {% if not slot.cascade_message %}
+          <button type="submit" class="btn secondary">Submit</button>
+        {% endif %}
+      </div>
+      <div class="banner banner-warning banner-scroll-target"
+           id="quick-setup-{{ slot.key }}-confirm-banner"
+           {% if not slot.cascade_message %}hidden{% endif %}
+           style="margin-top: var(--space-2);">
+        {% if slot.cascade_message %}
+          <p style="margin: 0 0 var(--space-2) 0;">{{ slot.cascade_message }}</p>
+          <p style="margin: 0 0 var(--space-2) 0;">
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm_replace" value="true" required>
+              Yes, replace.
+            </label>
+          </p>
+          <div style="display: flex; gap: var(--space-2); justify-content: flex-end;">
+            <a class="btn alert" href="{{ slot.cancel_url }}">Cancel</a>
+            <button type="submit" class="btn danger-solid">Confirm replacement</button>
+          </div>
+        {% endif %}
+      </div>
+    </form>
   {% else %}
-    {# Slots 1, 2, 4 — file upload + Submit. #}
+    {# Inert slot (slot 4 — Settings, until Segment 12A PR 6 wires
+       it). Same shape as the live slot but every control disabled. #}
     <div class="quick-setup-slot-controls">
       <input type="file"
              accept=".csv"
@@ -83,24 +128,20 @@
               aria-disabled="true"
               {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>Submit</button>
     </div>
+    <div class="banner banner-warning banner-scroll-target"
+         id="quick-setup-{{ slot.key }}-confirm-banner"
+         hidden></div>
   {% endif %}
 </section>
 {%- endmacro %}
 
-<div class="card{% if quick_setup.is_disabled %} disabled{% endif %}" id="quick-setup">
+<div class="card" id="quick-setup">
   <h2>{{ quick_setup.title }}</h2>
   <p class="form-help">{{ quick_setup.description }}</p>
-  {# Body wrapper that picks up ``.locked`` greying when the card
-     is editable but locked (default state). The Lock / Unlock
-     button below sits outside this wrapper so it stays vivid even
-     while the body is greyed — the operator needs a clear,
-     uninhibited control to flip the lock. #}
+  {# Body wrapper carries ``.locked`` greying when the card is
+     locked. The Lock / Unlock button below sits outside this wrapper
+     so it stays vivid even while the body is greyed. #}
   <div class="quick-setup-body{% if quick_setup.is_locked %} locked{% endif %}">
-    {# Top: 2-column grid for the three setup slots. Left column
-       stacks Reviewers + Reviewees; right column carries
-       Assignments. Mobile collapses to single column in DOM order
-       (Reviewers → Reviewees → Assignments) per the standard
-       ≤800px breakpoint. #}
     <div class="quick-setup-top-grid">
       <div class="quick-setup-top-grid-col">
         {% for slot in quick_setup.slots if slot.key in ("reviewers", "reviewees") %}
@@ -114,31 +155,31 @@
       </div>
     </div>
     {# Bottom: full-width Session settings slot below a divider.
-       Session settings is the only slot whose live wiring lands
-       outside Segment 11J (Segment 12A PR 6 graduates it; matches
-       the "Session settings" row on the Extract Data card), so
-       visually separating it makes the seam explicit. #}
+       Settings's live wiring lands in Segment 12A PR 6; until then
+       the slot stays inert (same shape as the live slots). #}
     <hr class="quick-setup-divider">
     {% for slot in quick_setup.slots if slot.key == "settings" %}
       {{ quick_setup_slot(slot) }}
     {% endfor %}
   </div>
-  {# Footer: Lock / Unlock toggle, bottom-right. Gated by
-     ``show_lock_toggle`` — on Session Home the toggle renders
-     whenever the card is editable; on Activated sessions the
-     whole card is greyed via ``.card.disabled`` and the path
-     forward is Pause, not unlock. The new-session preview variant
-     also suppresses the toggle (always unlocked, nothing yet to
-     lock). The button is a placeholder in 11H; Segment 11J wires
-     the toggle. #}
+  {# Footer: Lock / Unlock toggle, bottom-right. Renders in every
+     editable-conceivable state on Session Home (the new-session
+     preview variant suppresses it via ``show_lock_toggle=False``).
+     The form posts to the lock-toggle route which flips a per-
+     session ``HttpOnly`` cookie that the context-builder reads on
+     subsequent renders. #}
   {% if quick_setup.show_lock_toggle %}
     <div class="quick-setup-card-footer">
-      <button type="button"
-              class="btn secondary"
-              id="quick-setup-lock-toggle"
-              disabled
-              aria-disabled="true"
-              title="Wired in Segment 11J">{% if quick_setup.is_locked %}Unlock{% else %}Lock{% endif %}</button>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/quick-setup/lock"
+            style="margin: 0;">
+        <input type="hidden"
+               name="action"
+               value="{% if quick_setup.is_locked %}unlock{% else %}lock{% endif %}">
+        <button type="submit"
+                class="btn secondary"
+                id="quick-setup-lock-toggle">{% if quick_setup.is_locked %}Unlock{% else %}Lock{% endif %}</button>
+      </form>
     </div>
   {% endif %}
 </div>

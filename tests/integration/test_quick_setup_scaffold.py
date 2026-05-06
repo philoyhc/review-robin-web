@@ -84,10 +84,11 @@ def _activate(
 def test_build_quick_setup_context_returns_four_slots(
     client: TestClient, db: Session
 ) -> None:
-    """The view-shape adapter returns the four scaffold slots in
-    the canonical order — Reviewers, Reviewees, Assignments,
-    Session settings. 11J will flip ``is_wired`` per slot;
-    11H ships them all inert."""
+    """The view-shape adapter returns the four slots in the
+    canonical order — Reviewers, Reviewees, Assignments, Session
+    settings. After Segment 11J PR A, Reviewers and Reviewees are
+    wired live; Assignments and Settings remain inert pending
+    Segment 11J PR B / Segment 12A PR 6."""
 
     review_session = _make_session(client, db, code="qs-shape")
     context = views.build_quick_setup_context(db, review_session)
@@ -98,11 +99,22 @@ def test_build_quick_setup_context_returns_four_slots(
         "assignments",
         "settings",
     ]
-    # All slots inert at scaffold-time.
-    assert all(slot.is_wired is False for slot in context.slots)
-    assert all(slot.wire_url is None for slot in context.slots)
-    # Each slot carries a wiring-tooltip pointer.
-    assert all(slot.coming_in for slot in context.slots)
+    by_key = {slot.key: slot for slot in context.slots}
+    # PR A — Reviewers and Reviewees are live.
+    assert by_key["reviewers"].is_wired is True
+    assert by_key["reviewers"].wire_url == (
+        f"/operator/sessions/{review_session.id}/quick-setup/reviewers"
+    )
+    assert by_key["reviewers"].coming_in is None
+    assert by_key["reviewees"].is_wired is True
+    assert by_key["reviewees"].wire_url == (
+        f"/operator/sessions/{review_session.id}/quick-setup/reviewees"
+    )
+    # Assignments + Settings remain inert.
+    assert by_key["assignments"].is_wired is False
+    assert by_key["assignments"].coming_in == "Wired in Segment 11J PR B"
+    assert by_key["settings"].is_wired is False
+    assert by_key["settings"].coming_in == "Wired in Segment 12A PR 6"
     # Default state is not disabled in draft.
     assert context.is_disabled is False
 
@@ -263,32 +275,37 @@ def test_quick_setup_locks_by_default_in_draft(
     assert ">Unlock</button>" in body
 
 
-def test_quick_setup_lock_toggle_hidden_when_session_activated(
+def test_quick_setup_lock_toggle_renders_when_session_activated(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """When the session is Activated the whole card is greyed
-    via ``.card.disabled`` and the operator's path forward is
-    Pause, not Unlock. The Lock / Unlock button must not render
-    in this state."""
+    """Per Segment 11J PR A's unified status-awareness model the
+    Lock / Unlock toggle renders in every editable-conceivable
+    state (``draft`` / ``validated`` / ``ready``). On ``ready`` the
+    body still greys via ``.locked`` by default; unlocking is
+    visual only — submits are rejected at the service layer with
+    a banner-error inside the offending slot."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
-        operator, db, code="qs-activated-no-lock", reviewer_email="r@example.edu"
+        operator, db, code="qs-activated-toggle", reviewer_email="r@example.edu"
     )
     _activate(operator, db, review_session)
 
     context = views.build_quick_setup_context(db, review_session)
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
+    # ``is_disabled`` stays as a label-only signal driving the
+    # description copy; the visual treatment unifies on
+    # ``.quick-setup-body.locked``.
     assert context.is_disabled is True
-    assert context.is_locked is False
-    assert 'id="quick-setup-lock-toggle"' not in body
-    # ``.card.disabled`` still applied; ``.quick-setup-body.locked``
-    # is not (the card is disabled for a different reason).
-    assert 'class="card disabled" id="quick-setup"' in body
-    assert "quick-setup-body locked" not in body
+    assert context.is_locked is True
+    assert context.show_lock_toggle is True
+    assert 'id="quick-setup-lock-toggle"' in body
+    # ``.card.disabled`` is retired in favour of the body-greying.
+    assert 'class="card disabled"' not in body
+    assert 'class="quick-setup-body locked"' in body
 
 
 def test_quick_setup_card_lives_in_right_column_under_session_details(
