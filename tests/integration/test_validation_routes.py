@@ -35,7 +35,9 @@ def test_validate_renders_with_errors_for_empty_session(
     body = response.text
     assert "No reviewers" in body
     assert "No reviewees" in body
-    assert "2 errors" in body or "2 error" in body
+    # Severity-counts row used to live on the (now-removed) readiness
+    # summary card; the same totals surface in the chip-strip labels.
+    assert "Errors only (" in body
 
 
 def test_validate_renders_clean_for_populated_session(
@@ -68,7 +70,6 @@ def test_validate_renders_clean_for_populated_session(
     response = client.get(f"/operator/sessions/{review_session.id}/validate")
 
     assert response.status_code == 200
-    assert "0 errors" in response.text
     assert "No reviewers" not in response.text
     assert "No reviewees" not in response.text
 

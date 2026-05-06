@@ -706,59 +706,37 @@
         border-color: var(--accent-amber-dark);
         background: var(--accent-amber-bg);
       }
-      /* Validate-page readiness summary card. Accent color depends on
-         the verdict (clean / warn / error). The card body stacks the
-         verdict line, severity-counts row, and lifecycle-aware
-         secondary line. */
-      body.ui-v2 .card.readiness-summary .readiness-verdict {
-        margin: 0 0 var(--space-2) 0;
-        font-size: var(--fs-h2);
-        font-weight: 600;
-      }
-      body.ui-v2 .card.readiness-summary .readiness-counts {
-        margin: 0 0 var(--space-2) 0;
-        display: flex;
-        gap: var(--space-2);
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      body.ui-v2 .card.readiness-summary .readiness-last-validated {
-        margin-left: auto;
-      }
-      body.ui-v2 .card.readiness-summary .readiness-lifecycle {
-        margin: 0;
-      }
-      body.ui-v2 .card.readiness-summary.verdict-clean {
-        border-color: var(--accent-green);
-      }
-      body.ui-v2 .card.readiness-summary.verdict-clean .readiness-verdict {
-        color: var(--accent-green);
-      }
-      body.ui-v2 .card.readiness-summary.verdict-warn {
-        border-color: var(--accent-amber-dark);
-      }
-      body.ui-v2 .card.readiness-summary.verdict-warn .readiness-verdict {
-        color: var(--accent-amber-dark);
-      }
-      body.ui-v2 .card.readiness-summary.verdict-error {
-        border-color: var(--accent-red);
-      }
-      body.ui-v2 .card.readiness-summary.verdict-error .readiness-verdict {
-        color: var(--accent-red);
-      }
-      /* Setup-coverage matrix — read-only inventory table on the
-         Validate page. Two-column shape (label / status) with an
-         optional third column for inline issue-count pills. */
-      body.ui-v2 .card.setup-coverage table {
+      /* Setup-coverage grid on the Validate page — read-only
+         inventory laid out in three columns at desktop widths,
+         collapsing to two at narrow breakpoints. Each cell stacks
+         the label + status (+ optional issue-pill anchor). */
+      body.ui-v2 .card.setup-coverage .setup-coverage-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: var(--space-3);
         margin-top: var(--space-2);
       }
-      body.ui-v2 .card.setup-coverage th[scope="row"] {
-        background: transparent;
-        font-weight: 600;
-        width: 30%;
+      @media (max-width: 800px) {
+        body.ui-v2 .card.setup-coverage .setup-coverage-grid {
+          grid-template-columns: 1fr 1fr;
+        }
       }
-      body.ui-v2 .card.setup-coverage td.setup-coverage-issues {
-        text-align: right;
+      @media (max-width: 500px) {
+        body.ui-v2 .card.setup-coverage .setup-coverage-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      body.ui-v2 .card.setup-coverage .setup-coverage-label {
+        margin: 0 0 4px 0;
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.92em;
+      }
+      body.ui-v2 .card.setup-coverage .setup-coverage-status {
+        margin: 0;
+      }
+      body.ui-v2 .card.setup-coverage .setup-coverage-issues {
+        margin-left: var(--space-2);
         white-space: nowrap;
       }
       /* Validate-page issue list — flex-row per item with the fix-on
