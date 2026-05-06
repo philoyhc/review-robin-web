@@ -1,25 +1,79 @@
-{% if issues %}
+{# Validate-page issue list — rendered from `validate.issue_groups`
+   (the view-shape adapter pre-groups issues by source after the
+   severity filter is applied). The legacy `issues` list is still
+   accepted as a fallback when this partial is included from other
+   code paths (e.g. session_detail's validation summary). #}
+{% if validate is defined %}
+  {% set _groups = validate.issue_groups %}
+  {% set _has_issues = validate.filtered_issue_count > 0 %}
+  {% set _filter_active = validate.severity_filter != "all" %}
+{% else %}
+  {% set _groups = [] %}
+  {% set _legacy_issues = issues if issues else [] %}
+  {% set _has_issues = (_legacy_issues | length) > 0 %}
+  {% set _filter_active = false %}
+  {% set _legacy_sources = _legacy_issues | map(attribute='source') | unique | list %}
+{% endif %}
+
+{% if _has_issues %}
   <div class="card">
     <h2>Issues</h2>
-    {% set sources = issues | map(attribute='source') | unique | list %}
-    {% for source in sources %}
-      <h3 id="issue-source-{{ source }}" style="text-transform: capitalize;">{{ source }}</h3>
-      <ul class="issue-list">
-        {% for issue in issues if issue.source == source %}
-          <li{% if issue.rule_key %} id="issue-{{ issue.rule_key }}-{{ loop.index }}"{% endif %}>
-            <span class="issue-body">
-              <span class="pill pill-{{ issue.severity.value }}">{{ issue.severity.value }}</span>
-              {% if issue.row_number %}<strong>Row {{ issue.row_number }}:</strong>{% endif %}
-              {% if issue.field %}<code>{{ issue.field }}</code>{% endif %}
-              {{ issue.message }}
-            </span>
-            {% if issue.fix_url %}
-              <a class="issue-fix-link"
-                 href="{{ issue.fix_url }}{{ issue.fix_anchor or '' }}">Fix on {{ issue.fix_page_label }} ↗</a>
-            {% endif %}
-          </li>
-        {% endfor %}
-      </ul>
-    {% endfor %}
+    {% if validate is defined %}
+      {% for group in _groups %}
+        <h3 id="issue-source-{{ group.source }}" style="text-transform: capitalize;">
+          {{ group.source }}
+          <span class="muted">({{ group.count_summary }})</span>
+        </h3>
+        <ul class="issue-list">
+          {% for issue in group.issues %}
+            <li{% if issue.rule_key %} id="issue-{{ issue.rule_key }}-{{ loop.index }}"{% endif %}>
+              <span class="issue-body">
+                <span class="pill pill-{{ issue.severity.value }}">{{ issue.severity.value }}</span>
+                {% if issue.row_number %}<strong>Row {{ issue.row_number }}:</strong>{% endif %}
+                {% if issue.field %}<code>{{ issue.field }}</code>{% endif %}
+                {{ issue.message }}
+                {% if issue.why %}
+                  <details class="issue-why">
+                    <summary>Why this check?</summary>
+                    <p>{{ issue.why }}</p>
+                  </details>
+                {% endif %}
+              </span>
+              {% if issue.fix_url %}
+                <a class="issue-fix-link"
+                   href="{{ issue.fix_url }}{{ issue.fix_anchor or '' }}">Fix on {{ issue.fix_page_label }} ↗</a>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+    {% else %}
+      {# Legacy code path — used by session_detail's validation
+         summary partial which doesn't run through build_validate_context. #}
+      {% for source in _legacy_sources %}
+        <h3 id="issue-source-{{ source }}" style="text-transform: capitalize;">{{ source }}</h3>
+        <ul class="issue-list">
+          {% for issue in _legacy_issues if issue.source == source %}
+            <li{% if issue.rule_key %} id="issue-{{ issue.rule_key }}-{{ loop.index }}"{% endif %}>
+              <span class="issue-body">
+                <span class="pill pill-{{ issue.severity.value }}">{{ issue.severity.value }}</span>
+                {% if issue.row_number %}<strong>Row {{ issue.row_number }}:</strong>{% endif %}
+                {% if issue.field %}<code>{{ issue.field }}</code>{% endif %}
+                {{ issue.message }}
+              </span>
+              {% if issue.fix_url %}
+                <a class="issue-fix-link"
+                   href="{{ issue.fix_url }}{{ issue.fix_anchor or '' }}">Fix on {{ issue.fix_page_label }} ↗</a>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+    {% endif %}
+  </div>
+{% elif _filter_active %}
+  <div class="card">
+    <h2>Issues</h2>
+    <p class="muted">No issues match the current severity filter.</p>
   </div>
 {% endif %}

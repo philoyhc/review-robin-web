@@ -54,5 +54,19 @@
     </table>
   </div>
 
+  {% if validate.error_count + validate.warning_count + validate.info_count > 0 %}
+    <div class="card severity-filter-card">
+      <p class="severity-filter-row">
+        {% for chip in validate.severity_chips %}
+          <a class="severity-chip{% if chip.is_active %} active{% endif %}"
+             {% if chip.is_active %}aria-current="page"{% endif %}
+             href="/operator/sessions/{{ session.id }}/validate{% if chip.key != 'all' %}?severity={{ chip.key }}{% endif %}">
+            {{ chip.label }} ({{ chip.count }})
+          </a>
+        {% endfor %}
+      </p>
+    </div>
+  {% endif %}
+
   {% include "operator/partials/validation_results.html" %}
 {% endblock %}

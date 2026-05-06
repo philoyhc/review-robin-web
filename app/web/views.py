@@ -450,6 +450,31 @@ class SetupCoverageRow:
 
 
 @dataclass(frozen=True)
+class SeverityChip:
+    """One row of the severity-filter chip strip on the Validate page.
+
+    Rendered as an anchor link flipping ``?severity=`` to ``key``
+    (or absent for ``key="all"``). The active chip carries
+    ``aria-current="page"`` and a visual outline."""
+
+    key: str  # "all" | "error" | "warning" | "info"
+    label: str  # "All issues" | "Errors only" | "Warnings only" | "Info"
+    count: int
+    is_active: bool
+
+
+@dataclass(frozen=True)
+class IssueSourceGroup:
+    """Per-source group on the issue list. ``count_summary`` is the
+    inline summary line under the ``<h3>`` (e.g. "2 errors, 1
+    warning") respecting the active severity filter."""
+
+    source: str
+    count_summary: str
+    issues: list[Any]  # list[ValidationIssue], untyped to avoid circular import
+
+
+@dataclass(frozen=True)
 class ValidateContext:
     verdict_line: str
     """Page's at-a-glance verdict ("Ready to activate.", "Has 3
@@ -468,6 +493,16 @@ class ValidateContext:
     """Lifecycle-aware secondary line ("Activate from the Next Action
     card on Session Home.", etc.)"""
     setup_coverage: list[SetupCoverageRow]
+    severity_filter: str
+    """``"all"`` (no filter) / ``"error"`` / ``"warning"`` / ``"info"``"""
+    severity_chips: list[SeverityChip]
+    """The four-chip strip above the issue list."""
+    issue_groups: list[IssueSourceGroup]
+    """Pre-grouped issues respecting the severity filter; the partial
+    iterates these instead of computing its own per-source split."""
+    filtered_issue_count: int
+    """Total issues *after* the filter is applied. Drives the
+    issue-list empty state when the filter narrows to zero rows."""
 
 
 def validate_lifecycle_copy(
@@ -618,20 +653,47 @@ def _setup_coverage_rows(
     return rows
 
 
+_VALID_SEVERITY_FILTERS = ("all", "error", "warning", "info")
+
+
+def _per_source_count_summary(group_issues: list[Any]) -> str:
+    """Inline count summary line for a per-source issue group.
+
+    Reads "Reviewers (2 errors, 1 warning)" — but only the severities
+    that are non-zero in the group; the leading source-name is added
+    by the template (we return just the parenthetical body)."""
+    error = sum(1 for i in group_issues if i.severity.value == "error")
+    warning = sum(1 for i in group_issues if i.severity.value == "warning")
+    info = sum(1 for i in group_issues if i.severity.value == "info")
+    parts: list[str] = []
+    if error:
+        parts.append(f"{error} error{'' if error == 1 else 's'}")
+    if warning:
+        parts.append(f"{warning} warning{'' if warning == 1 else 's'}")
+    if info:
+        parts.append(f"{info} info")
+    return ", ".join(parts) if parts else "no issues"
+
+
 def build_validate_context(
     db: Session,
     review_session: ReviewSession,
     issues: list[Any],
+    *,
+    severity_filter: str = "all",
 ) -> ValidateContext:
     """Builds the page's view-shape context. ``issues`` is the
     ``list[ValidationIssue]`` returned by
-    ``validation.validate_session_setup``; PR B will extend this
-    function to thread the rule registry's per-issue ``fix_url`` /
-    ``fix_anchor``.
+    ``validation.validate_session_setup``.
 
-    Severity filter (PR C) is intentionally not part of this adapter
-    yet — it will compose on top by filtering ``issues`` before this
-    function runs and adding a separate filtered-counts shape."""
+    ``severity_filter`` (PR C) is one of ``"all"`` / ``"error"`` /
+    ``"warning"`` / ``"info"``; anything else falls through to
+    ``"all"``. The severity-counts row + chip totals always reflect
+    the unfiltered issue counts so the operator can see what they
+    *would* see at a different filter."""
+    if severity_filter not in _VALID_SEVERITY_FILTERS:
+        severity_filter = "all"
+
     error_count = sum(1 for i in issues if i.severity.value == "error")
     warning_count = sum(1 for i in issues if i.severity.value == "warning")
     info_count = sum(1 for i in issues if i.severity.value == "info")
@@ -654,6 +716,52 @@ def build_validate_context(
         has_warnings=warning_count > 0,
     )
 
+    severity_chips = [
+        SeverityChip(
+            key="all",
+            label="All issues",
+            count=len(issues),
+            is_active=severity_filter == "all",
+        ),
+        SeverityChip(
+            key="error",
+            label="Errors only",
+            count=error_count,
+            is_active=severity_filter == "error",
+        ),
+        SeverityChip(
+            key="warning",
+            label="Warnings only",
+            count=warning_count,
+            is_active=severity_filter == "warning",
+        ),
+        SeverityChip(
+            key="info",
+            label="Info",
+            count=info_count,
+            is_active=severity_filter == "info",
+        ),
+    ]
+
+    if severity_filter == "all":
+        filtered_issues = list(issues)
+    else:
+        filtered_issues = [
+            i for i in issues if i.severity.value == severity_filter
+        ]
+
+    grouped: dict[str, list[Any]] = {}
+    for issue in filtered_issues:
+        grouped.setdefault(issue.source, []).append(issue)
+    issue_groups = [
+        IssueSourceGroup(
+            source=source,
+            count_summary=_per_source_count_summary(group_issues),
+            issues=group_issues,
+        )
+        for source, group_issues in grouped.items()
+    ]
+
     return ValidateContext(
         verdict_line=verdict_line,
         verdict_class=verdict_class,
@@ -663,6 +771,10 @@ def build_validate_context(
         last_validated_text="Validated just now",
         lifecycle_copy=lifecycle_copy,
         setup_coverage=setup_coverage,
+        severity_filter=severity_filter,
+        severity_chips=severity_chips,
+        issue_groups=issue_groups,
+        filtered_issue_count=len(filtered_issues),
     )
 
 

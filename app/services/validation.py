@@ -448,5 +448,6 @@ def validate_session_setup(
             issue.rule_key = rule.key
             issue.fix_url = url
             issue.fix_page_label = rule.fix_page_label
+            issue.why = rule.why
             issues.append(issue)
     return issues

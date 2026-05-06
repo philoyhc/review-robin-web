@@ -27,6 +27,10 @@ class ValidationIssue(BaseModel):
     fix_url: str | None = None
     fix_anchor: str | None = None
     fix_page_label: str | None = None
+    why: str | None = None
+    """One-paragraph rationale stamped by the rule registry; surfaced
+    via the per-issue ``<details>`` "Why this check?" disclosure on
+    the Validate page (Segment 11G PR C)."""
 
     @property
     def is_blocking(self) -> bool:

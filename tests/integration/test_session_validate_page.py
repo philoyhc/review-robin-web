@@ -262,6 +262,91 @@ def test_validate_page_renders_per_issue_id_anchors(
     assert 'id="issue-reviewers.empty-1"' in body
 
 
+# --------------------------------------------------------------------------- #
+# Severity filter chips + per-source group counts + "Why" disclosure (PR C)
+# --------------------------------------------------------------------------- #
+
+
+def test_validate_page_renders_severity_chip_strip(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="chip-strip")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    # Four chips render with their unfiltered totals.
+    assert "All issues (" in body
+    assert "Errors only (" in body
+    assert "Warnings only (" in body
+    assert "Info (" in body
+    # Default no-filter state: All chip is active.
+    assert "severity-chip active" in body
+    assert 'aria-current="page"' in body
+
+
+def test_validate_page_filter_errors_only(
+    client: TestClient, db: Session
+) -> None:
+    """``?severity=error`` filters the issue list to errors and
+    flips the All chip's active styling onto Errors only."""
+    review_session = _make_session(client, db, code="errors-only")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate?severity=error"
+    ).text
+    # The assignments.no_mode warning is the only warning in the bare
+    # session; under errors-only it should not appear in the body.
+    assert "assignments.no_mode" not in body
+    # Errors chip carries the active styling now.
+    assert (
+        'href="/operator/sessions/' in body
+        and "/validate?severity=error" in body
+    )
+
+
+def test_validate_page_filter_no_match_shows_empty_message(
+    client: TestClient, db: Session
+) -> None:
+    """``?severity=`` narrowing to zero matches renders the
+    filter-empty placeholder."""
+    review_session = _seed_pair(client, db, code="filter-empty")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate?severity=error"
+    ).text
+    # Seeded session has no errors → filter-empty message renders.
+    assert "No issues match the current severity filter." in body
+
+
+def test_validate_page_per_source_group_count_summary(
+    client: TestClient, db: Session
+) -> None:
+    """Per-source <h3> carries an inline count summary line — e.g.
+    ``Reviewers (1 error)`` — that respects the filter."""
+    review_session = _make_session(client, db, code="grp-count")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    # Bare session has reviewers.empty error → "1 error" summary
+    # under the Reviewers <h3>.
+    assert "1 error" in body
+
+
+def test_validate_page_renders_why_disclosure_per_issue(
+    client: TestClient, db: Session
+) -> None:
+    """Each registered-rule issue ships a default-collapsed
+    ``<details>`` with the rule's ``why`` paragraph."""
+    review_session = _make_session(client, db, code="why-disclosure")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    assert "Why this check?" in body
+    # "<details" (no closing >) — actual element renders with the
+    # "issue-why" class so this is a stable anchor.
+    assert 'class="issue-why"' in body
+    # Body of one of the rule.why paragraphs surfaces.
+    assert "Activation creates per-reviewer invitations" in body
+
+
 def test_validate_page_lifecycle_copy_for_ready_session(
     db: Session,
     alice: AuthenticatedUser,

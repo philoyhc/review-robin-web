@@ -316,13 +316,16 @@ def session_detail(
 @router.get("/sessions/{session_id}/validate", response_class=HTMLResponse)
 def validate_session(
     request: Request,
+    severity: str = "all",
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     issues = validation.validate_session_setup(db, review_session)
     report = lifecycle.build_readiness_report(issues)
-    validate_ctx = views.build_validate_context(db, review_session, issues)
+    validate_ctx = views.build_validate_context(
+        db, review_session, issues, severity_filter=severity
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_validate.html",
