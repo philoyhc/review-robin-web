@@ -33,8 +33,12 @@ detail.
 
 ## Status
 
-Planning. Sized as **~7 PRs** total (5 in Part 1 + 2 in Part 2);
-each independently shippable.
+**Part 1 shipped 2026-05-06** across PRs **#490 → #491 → #492 →
+#493** (folded from the planned 5 PRs into 4 — see "Proposed PR
+sequence (Part 1)" below for what landed where). **Part 2 is
+upcoming**: 2 PRs (PR F: outbox schema move + dispatch helper +
+per-row Send + Send-test-to-me + chrome pill + audit events;
+PR G: bulk Send-all-queued).
 
 ## Gap against the spec
 
@@ -143,6 +147,14 @@ Out (cross-segment):
   enhancement on top.
 
 ### Proposed PR sequence (Part 1)
+
+> **What shipped (2026-05-06).** 4 PRs:
+> - **#490** — chrome only (Outbox tab restored). Subset of PR A.
+> - **#491** — PR C + PR C-schema folded.
+> - **#492** — PR D + PR E + the `/monitoring` redirect half of PR A folded; the redirect was deferred from #490 to here so operators didn't lose access to per-reviewer progress + bulk reminders in the window between Monitoring retirement and the Manage Invitations rewrite landing.
+> - **#493** — follow-up beyond the original plan: dropped the Outbox tab from chrome (Outbox is dev-diagnostic, not day-to-day) and pillified the five Manage Invitations data cells.
+>
+> PR B (list-with-bulk-actions partial extraction) collapsed to a no-op — the shared reminder send-path was already converged on `invitations.send_reminder` / `send_reminders_to_incomplete`, and the user steered toward inlining the table pattern in PR C rather than pre-extracting (CLAUDE.md: "Don't add abstractions beyond what the task requires").
 
 **PR A — `/monitoring` redirect + chrome update.** Foundation: add
 the `/sessions/{id}/monitoring` → `/sessions/{id}/invitations` 303
