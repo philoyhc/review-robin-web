@@ -748,6 +748,27 @@
         border: 0;
         border-top: 2px solid var(--border-default);
       }
+      /* Locked-body greying — applied to the .quick-setup-body
+         wrapper inside the card when the session is editable but
+         the operator hasn't unlocked the card yet. The Lock /
+         Unlock button sits in .quick-setup-card-footer outside
+         this wrapper so it stays vivid. Distinct from
+         .card.disabled (which greys the whole card on Activated
+         sessions and never has a Lock button). */
+      body.ui-v2 .quick-setup-body.locked {
+        opacity: 0.55;
+      }
+      body.ui-v2 .quick-setup-body.locked,
+      body.ui-v2 .quick-setup-body.locked * {
+        cursor: not-allowed;
+      }
+      body.ui-v2 .quick-setup-card-footer {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: var(--space-3);
+        padding-top: var(--space-3);
+        border-top: 1px solid var(--border-default);
+      }
       @media (max-width: 800px) {
         body.ui-v2 .quick-setup-top-grid {
           grid-template-columns: 1fr;

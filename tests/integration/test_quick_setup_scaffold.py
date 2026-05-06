@@ -211,6 +211,86 @@ def test_quick_setup_dormant_banner_containers_render_hidden(
         assert f'id="quick-setup-{key}-error-banner"' in body
 
 
+def test_quick_setup_assignments_slot_has_exclude_self_review_checkbox(
+    client: TestClient, db: Session
+) -> None:
+    """The Assignments slot now carries an inert
+    ``exclude_self_review`` checkbox alongside the rule selector
+    and CSV upload. The checkbox is ``disabled`` until 11J PR B
+    wires the slot."""
+
+    review_session = _make_session(client, db, code="qs-exclude")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    assert 'name="exclude_self_review"' in body
+    assert "Exclude self-review" in body
+
+
+def test_quick_setup_assignments_slot_drops_segment_13_caption(
+    client: TestClient, db: Session
+) -> None:
+    """The "More rules ship with Segment 13" caption is removed
+    from the Assignments slot — the rule menu's expansion is
+    Segment 13's concern, but the caption was a forward-looking
+    note that got noisy on Home."""
+
+    review_session = _make_session(client, db, code="qs-no-caption")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    assert "Segment 13" not in body
+    assert "More rules ship" not in body
+
+
+def test_quick_setup_locks_by_default_in_draft(
+    client: TestClient, db: Session
+) -> None:
+    """Per the Lock / Unlock requirement, the card defaults to
+    ``locked`` whenever the session is editable so the operator
+    must explicitly Unlock before changing setup. The locked
+    state greys the body via ``.quick-setup-body.locked``; the
+    Lock / Unlock button sits outside the locked wrapper so it
+    stays vivid."""
+
+    review_session = _make_session(client, db, code="qs-locked")
+    context = views.build_quick_setup_context(db, review_session)
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    assert context.is_disabled is False
+    assert context.is_locked is True
+    assert 'class="quick-setup-body locked"' in body
+    # Footer button renders with the Unlock label (since locked).
+    assert 'id="quick-setup-lock-toggle"' in body
+    assert ">Unlock</button>" in body
+
+
+def test_quick_setup_lock_toggle_hidden_when_session_activated(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """When the session is Activated the whole card is greyed
+    via ``.card.disabled`` and the operator's path forward is
+    Pause, not Unlock. The Lock / Unlock button must not render
+    in this state."""
+
+    operator = make_client(alice)
+    review_session = _seed_pair(
+        operator, db, code="qs-activated-no-lock", reviewer_email="r@example.edu"
+    )
+    _activate(operator, db, review_session)
+
+    context = views.build_quick_setup_context(db, review_session)
+    body = operator.get(f"/operator/sessions/{review_session.id}").text
+
+    assert context.is_disabled is True
+    assert context.is_locked is False
+    assert 'id="quick-setup-lock-toggle"' not in body
+    # ``.card.disabled`` still applied; ``.quick-setup-body.locked``
+    # is not (the card is disabled for a different reason).
+    assert 'class="card disabled" id="quick-setup"' in body
+    assert "quick-setup-body locked" not in body
+
+
 def test_quick_setup_top_grid_layout(
     client: TestClient, db: Session
 ) -> None:
