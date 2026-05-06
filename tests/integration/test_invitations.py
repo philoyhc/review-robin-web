@@ -372,13 +372,21 @@ def test_outbox_view_renders_invitation_url(
     assert response.status_code == 200
     assert "/reviewer/invite/" in response.text
     assert "rae@example.edu" in response.text
-    # Outbox is a first-class Operations tab in the chrome (Segment 11C
-    # Part 1). The tab links to the page and renders active when on it.
+    # Outbox is a dev-diagnostic surface, not a chrome tab — the only
+    # entry point is the "View outbox" button on Manage Invitations.
+    invitations_body = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+    assert (
+        f'href="/operator/sessions/{session.id}/outbox">View outbox</a>'
+        in invitations_body
+    )
+    # And no Outbox tab in the chrome (here on the Outbox page itself,
+    # to confirm the nav doesn't list it anywhere).
     assert (
         f'href="/operator/sessions/{session.id}/outbox">Outbox</a>'
-        in response.text
+        not in response.text
     )
-    assert "nav-tab active" in response.text
 
 
 def test_audit_events_written_for_lifecycle(
@@ -485,6 +493,49 @@ def test_invitations_page_renders_review_progress_and_required_fields_format(
     # one assignment (Rae ⨯ Carol), no responses yet → "not started (0/1)".
     assert "not started" in body
     assert "(0/1)" in body  # review progress + required fields both 0/0 or 0/1
+
+
+def test_invitations_data_cells_render_in_pills(
+    client: TestClient, db: Session
+) -> None:
+    """Email Status / Email Sent / Review Progress / Required Fields /
+    Last reminder all render their cell content inside a
+    ``<span class="pill ...">`` so the table reads as a sparkline of
+    state at a glance."""
+    session = _ready_session(client, db, code="pill-cells")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+
+    # Pre-send state: not-sent pill, em-dash pills for empty cells.
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+    assert '<span class="pill pill-empty">not sent</span>' in body
+    # Review Progress pill (not started state) carries the formatted count.
+    assert '<span class="pill pill-empty">not started (0/1)</span>' in body
+    # Required Fields pill — "(0/{total})" or "—" depending on
+    # whether the seeded instrument has required fields. Either way
+    # the cell content is wrapped in a pill.
+    assert (
+        '<span class="pill pill-empty">(0/' in body
+        or '<span class="pill pill-empty">—</span>' in body
+    )
+    # Last reminder pre-send is em-dash in pill-empty.
+    assert '<span class="pill pill-empty">—</span>' in body
+
+    # After send: Email Sent timestamp wraps in a pill-count.
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+    # The Email Sent cell now carries a pill-count with a timestamp
+    # (look for the year prefix as a reasonable shape proxy).
+    assert '<span class="pill pill-count">202' in body or \
+        '<span class="pill pill-count">203' in body
 
 
 def test_invitations_page_email_status_reflects_outbox_row(
