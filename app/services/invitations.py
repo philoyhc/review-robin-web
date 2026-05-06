@@ -172,6 +172,69 @@ def regenerate_token(
     return RegenerateResult(raw_token=raw)
 
 
+@dataclass
+class RegenerateAllResult:
+    regenerated_count: int
+    invitation_ids: list[int]
+
+
+def regenerate_all_tokens(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str | None = None,
+) -> RegenerateAllResult:
+    """Rotate tokens on every invitation in the session.
+
+    Each invitation gets a fresh token; status flips to ``pending``
+    and ``sent_at`` / ``opened_at`` clear. The previous URLs become
+    stale uniformly. Emits a single batch ``invitations.regenerated``
+    audit event when at least one invitation was rotated. No-op when
+    the session has no invitations yet."""
+    rows = list(
+        db.execute(
+            select(Invitation).where(
+                Invitation.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    rotated_ids: list[int] = []
+    rotated_reviewer_ids: list[int] = []
+    for invitation in rows:
+        _, token_hash = _new_token()
+        invitation.token_hash = token_hash
+        invitation.status = "pending"
+        invitation.sent_at = None
+        invitation.opened_at = None
+        rotated_ids.append(invitation.id)
+        rotated_reviewer_ids.append(invitation.reviewer_id)
+    if rotated_ids:
+        db.flush()
+        audit.write_event(
+            db,
+            event_type="invitations.regenerated",
+            summary=(
+                f"Regenerated {len(rotated_ids)} invitation"
+                f"{'' if len(rotated_ids) == 1 else 's'}"
+            ),
+            actor_user_id=user.id,
+            session_id=review_session.id,
+            detail={
+                "session_id": review_session.id,
+                "count": len(rotated_ids),
+                "invitation_ids": rotated_ids,
+                "reviewer_ids": rotated_reviewer_ids,
+            },
+            correlation_id=correlation_id,
+        )
+        db.commit()
+    return RegenerateAllResult(
+        regenerated_count=len(rotated_ids),
+        invitation_ids=rotated_ids,
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Send (write outbox row, flip status)
 # --------------------------------------------------------------------------- #
@@ -541,6 +604,7 @@ __all__ = [
     "REMINDER_KIND",
     "GenerateResult",
     "RegenerateResult",
+    "RegenerateAllResult",
     "SendResult",
     "ReminderResult",
     "ReminderBatchResult",
@@ -548,6 +612,7 @@ __all__ = [
     "hash_token",
     "generate_invitations",
     "regenerate_token",
+    "regenerate_all_tokens",
     "send_invitation",
     "lookup_invitation_by_token",
     "record_open",

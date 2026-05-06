@@ -58,6 +58,14 @@
           </button>
         </form>
         <form method="post"
+              action="/operator/sessions/{{ session.id }}/invitations/regenerate-all">
+          <button class="btn secondary"
+                  type="submit"
+                  {% if not is_ready or total_invitation_count == 0 %}disabled{% endif %}>
+            Regenerate all
+          </button>
+        </form>
+        <form method="post"
               action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete">
           <button class="btn secondary"
                   type="submit"

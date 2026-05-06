@@ -863,3 +863,116 @@ def test_invitations_filter_no_match_shows_empty_message(
         f"/operator/sessions/{session.id}/invitations?q=nobody"
     ).text
     assert "No reviewers match the current filter." in body
+
+
+# --------------------------------------------------------------------------- #
+# Bulk regenerate-all (Segment 11C Part 1 follow-up)
+# --------------------------------------------------------------------------- #
+
+
+def test_regenerate_all_rotates_every_token_and_resets_status(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session_with_two_reviewers(client, db, "regen-all-rot")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    # Send Rae's invitation so its status is "sent" and we can confirm
+    # regenerate-all flips it back to "pending".
+    rae_invitation = db.execute(
+        select(Invitation)
+        .join(Invitation.reviewer)
+        .where(Invitation.session_id == session.id)
+        .order_by(Invitation.id)
+    ).scalars().first()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{rae_invitation.id}/send"
+    )
+    db.refresh(rae_invitation)
+    rae_old_hash = rae_invitation.token_hash
+    assert rae_invitation.status == "sent"
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/regenerate-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/operator/sessions/{session.id}/invitations"
+    )
+
+    rows = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalars().all()
+    assert len(rows) == 2
+    for inv in rows:
+        assert inv.status == "pending"
+        assert inv.sent_at is None
+        assert inv.opened_at is None
+    db.refresh(rae_invitation)
+    assert rae_invitation.token_hash != rae_old_hash
+
+
+def test_regenerate_all_writes_single_batch_audit_event(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session_with_two_reviewers(client, db, "regen-all-audit")
+    client.post(f"/operator/sessions/{session.id}/invitations/generate")
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/regenerate-all"
+    )
+
+    audit_rows = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == session.id,
+            AuditEvent.event_type == "invitations.regenerated",
+        )
+    ).scalars().all()
+    assert len(audit_rows) == 1
+    detail = audit_rows[0].detail
+    assert detail is not None
+    assert detail["count"] == 2
+    assert len(detail["invitation_ids"]) == 2
+    assert len(detail["reviewer_ids"]) == 2
+
+
+def test_regenerate_all_409_while_session_draft(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, "regen-all-draft")
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/regenerate-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+
+
+def test_regenerate_all_with_zero_invitations_writes_no_audit(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="regen-all-empty")
+    # Don't generate invitations.
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/regenerate-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    audit_rows = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == session.id,
+            AuditEvent.event_type == "invitations.regenerated",
+        )
+    ).scalars().all()
+    assert audit_rows == []
+
+
+def test_regenerate_all_button_renders_on_page(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="regen-all-btn")
+    body = client.get(
+        f"/operator/sessions/{session.id}/invitations"
+    ).text
+    assert (
+        f'action="/operator/sessions/{session.id}/invitations/regenerate-all"'
+        in body
+    )
+    assert "Regenerate all" in body
