@@ -1339,6 +1339,24 @@
         border-color: var(--accent-red);
         background: var(--accent-red-bg);
       }
+      /* Activate-confirmation banner (Segment 11G PR D). Headline
+         + warning list + Cancel/Acknowledge action row pinned to
+         the bottom-right of the banner. */
+      body.ui-v2 .banner .banner-headline {
+        margin: 0 0 var(--space-2) 0;
+        font-weight: 600;
+        font-size: var(--fs-h3);
+      }
+      body.ui-v2 .banner .banner-actions {
+        display: flex;
+        gap: var(--space-2);
+        justify-content: flex-end;
+        margin-top: var(--space-3);
+        flex-wrap: wrap;
+      }
+      body.ui-v2 .banner .banner-actions form {
+        margin: 0;
+      }
       /* Chrome — repaint to palette tokens; per-row accent on the
          active-tab marker; row tints at 5% accent. */
       body.ui-v2 .chrome { border-bottom-color: var(--border-subtle); }

@@ -11,6 +11,53 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
+  {% if activate_banner %}
+    {% if activate_banner.kind == "warning" %}
+      <div class="banner banner-warning banner-scroll-target"
+           id="activate-confirm-banner">
+        <p class="banner-headline">⚠ Acknowledge warnings to activate</p>
+        <p>
+          This session has {{ activate_banner.warnings | length }}
+          warning{% if activate_banner.warnings | length != 1 %}s{% endif %}.
+          Activating will start the live review with these conditions:
+        </p>
+        <ul>
+          {% for warning in activate_banner.warnings %}
+            <li>{{ warning.message }}</li>
+          {% endfor %}
+        </ul>
+        <div class="banner-actions">
+          <a class="btn alert"
+             href="/operator/sessions/{{ session.id }}/validate">Cancel</a>
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/activate">
+            <input type="hidden" name="acknowledge_warnings" value="true">
+            <button class="btn danger-solid" type="submit">Acknowledge and activate</button>
+          </form>
+        </div>
+      </div>
+    {% else %}
+      <div class="banner banner-error banner-scroll-target"
+           id="activate-confirm-banner">
+        <p class="banner-headline">⚠ Errors appeared since this session was validated</p>
+        <p>
+          Re-validation surfaced {{ activate_banner.errors | length }}
+          error{% if activate_banner.errors | length != 1 %}s{% endif %}.
+          Resolve them and re-validate before activating.
+        </p>
+        <ul>
+          {% for issue in activate_banner.errors %}
+            <li>{{ issue.message }}</li>
+          {% endfor %}
+        </ul>
+        <div class="banner-actions">
+          <a class="btn alert"
+             href="/operator/sessions/{{ session.id }}/validate">Cancel</a>
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+
   <div class="card readiness-summary {{ validate.verdict_class }}">
     <p class="readiness-verdict">{{ validate.verdict_line }}</p>
     <p class="readiness-counts">
