@@ -39,7 +39,23 @@ is byte-equivalent on output. Manual upload is unchanged.
 
 ## Status
 
-Planning. Sized as **9 PRs** in dependency order:
+**Shipped 2026-05-07.** All nine planned PRs (0 → 8, with PR 5
+landed as 5a / 5b / 5c) merged via PRs #563 / #565 / #566 / #569 /
+#570 / #576 / #577 / #578 / #579 / #580 / #581 (plus follow-on
+polish #564 / #571 / #572 / #573 / #574 / #575). Segment closed
+out 2026-05-07.
+
+Two **follow-on extensions** are documented at the bottom of this
+plan but not yet shipped:
+
+- **PR 9 — Source picker on the Copy form.** Pick which RuleSet to
+  copy from inside the editor instead of going back to the
+  assignments page.
+- **PR 10 — Library panel inside the editor.** A sidebar/strip
+  listing all visible RuleSets for retrieval (Load) and Personal
+  RuleSet deletion, without leaving the editor.
+
+The original PR sequence (now historical):
 
 0. **PR 0 — Card scaffold + editor stub.** Replace the assignments-
    page `placeholder_card` with a fully-rendered Rule Based card —
@@ -1114,6 +1130,240 @@ After PR 8, the assignments page has two cards: Manual upload and
 Rule Based. Operators who previously used Full Matrix find it as the
 default seed in the Rule Based selector with the same output as
 before.
+
+## Follow-on extensions
+
+The two PRs below are **not yet shipped**. They extend the editor
+with multi-RuleSet awareness so operators don't have to bounce
+back to the assignments page to switch sources or manage their
+Personal library. Both are independent of each other and of any
+other segment; either can ship first.
+
+### PR 9 — Source picker on the Copy form
+
+**Goal.** Let an operator inside the editor pick *any visible
+RuleSet* (seed or their own Personal) as the source for a Copy,
+without first navigating back to the assignments page and
+re-opening the editor on the desired source.
+
+**Today's flow.** The editor's Copy form on a seed view duplicates
+the loaded seed (URL-bound) into a new Personal RuleSet. To copy
+from a different seed, the operator: (1) clicks "← Back to
+Assignments", (2) changes the dropdown on the Rule Based card,
+(3) clicks "Edit ruleset" on the new selection, (4) clicks Copy
+on that editor page. Four navigations to reach the same outcome
+the editor itself could provide in one click.
+
+**PR 9 flow.** The Copy form's hidden `rule_set_id` field becomes
+a visible `<select name="source_rule_set_id">` populated from
+`library.list_visible_rule_sets(db, user=user)`. Selecting a
+different option doesn't navigate; it just changes which RuleSet
+the Copy will duplicate. Submit → the existing
+`POST /assignments/rule-based/copy` route kicks in unchanged, and
+the operator lands on the new Personal RuleSet's editor.
+
+**Surface.**
+
+```
+┌─ Copy ──────────────────────────────────────────────┐
+│  Copy from: [▼ Intra-group peer review        ]    │
+│             Reviewer and reviewee share tag1.       │
+│                                                      │
+│  Name for the new RuleSet:                          │
+│  [Intra-group peer review (copy)               ]    │
+│                                                      │
+│  [ Copy ]   [ Cancel ]                              │
+└─────────────────────────────────────────────────────┘
+```
+
+The picker uses the same dataclass pattern as the Rule Based
+card's selector — seed group above, Personal group below, sorted
+within each group by install order / most-recently-updated. The
+description line below the picker (mirrors the card's
+`#rule-based-description` element) updates via the same inline
+JS hook on selector change so the operator sees what they're
+about to copy. The default name suggestion updates to
+`"<picked source name> (copy)"` on selector change.
+
+**Where the form renders.** Both branches of the editor:
+
+- On a **seed** view (read-only), the Copy form replaces the
+  current "duplicates the loaded seed" form with the picker
+  version. Default selection is the loaded seed so the operator
+  who doesn't change anything gets identical PR 5a behaviour.
+- On a **Personal** view (editable), the Copy form is *additive*
+  to the existing Save / Save As / Rename / Delete affordances.
+  Save As already lets the operator save the in-editor edits as
+  a new Personal RuleSet; Copy lets them clone any *other*
+  RuleSet without losing the current draft (which lives only in
+  the DOM until Save / Save As). PR 9 must NOT submit silently —
+  if the editor's `rules_json` hidden field has unsaved edits, a
+  banner-warning + required `confirm_lose_draft` checkbox gates
+  the Copy from the Personal editor (no checkbox needed on
+  seed-view Copy because there's no draft to lose).
+
+**Service / route changes.** None. The existing
+`POST /assignments/rule-based/copy` already accepts an arbitrary
+`rule_set_id` and the visibility gate (seed OR caller-owned) is
+already in place. PR 9 is purely a template + JS change plus
+extending `RuleBasedEditorContext` with a `source_options` field
+populated from `library.list_visible_rule_sets`.
+
+**Audit.** No new event types — the existing `rule_set.created`
+emit with `context.via='copy'` and `refs.source_rule_set_id`
+already records the chosen source.
+
+**Tests** (`tests/integration/test_rule_based_editor.py`):
+
+- Editor renders a `<select name="source_rule_set_id">` populated
+  with all visible RuleSets, defaulting to the loaded RuleSet's
+  id.
+- Copy with a different `source_rule_set_id` than the URL's
+  `rule_set_id` creates a new Personal RuleSet from the picked
+  source's tree (not the URL's).
+- On a Personal editor, Copy without `confirm_lose_draft` 303s
+  back with `?error=needs_lose_draft_confirm` and writes nothing.
+- Visibility gate: the picker doesn't expose other operators'
+  Personal RuleSets (asserted by another user's Personal RuleSet
+  not appearing as an `<option>`).
+
+**Out of scope for PR 9.** Composite *editing* of the source
+RuleSet in-place from the picker — operators still need to Copy
+first, then edit the copy. The plan's `Save As` already covers
+"edit then save under a new name"; PR 9 only changes which source
+the Copy starts from.
+
+### PR 10 — Library panel inside the editor
+
+**Goal.** Surface the operator's Personal RuleSet library
+*inside* the editor so they can retrieve, edit, or delete a
+saved RuleSet without bouncing back to the assignments page's
+selector.
+
+**Today's flow.** Operator opens the editor on RuleSet A. To
+work on RuleSet B (a different Personal RuleSet they own), they:
+(1) "← Back to Assignments", (2) open the dropdown, (3) pick
+RuleSet B, (4) click "Edit ruleset". To delete RuleSet C while
+in the editor on A, they have to navigate to C's editor first.
+Both flows are several clicks for what should be one.
+
+**PR 10 flow.** A new **Library** card on the editor page lists
+every visible RuleSet (seeds + caller-owned Personal). Each row
+links to that RuleSet's `/edit/{id}` URL — clicking a row
+navigates the editor to that RuleSet. Personal rows carry a
+small "Delete" affordance inline that submits to the existing
+`POST /assignments/rule-based/delete` route. The currently-
+loaded RuleSet renders as the active row (visually highlighted).
+
+**Surface.**
+
+Insert a new card between the "Back to Assignments" link card
+and the main editor card. (Or, if column space allows, render
+as a slim left rail; lead with the simpler card-above approach
+in PR 10 and revisit layout once shipped.)
+
+```
+┌─ Library ──────────────────────────────────────────┐
+│  Seeded                                            │
+│    Full Matrix                                     │
+│    Intra-group peer review                         │
+│    Cross-group peer review                         │
+│    Same group, different role                      │
+│    Three reviewers per reviewee                    │
+│                                                    │
+│  Yours                                             │
+│  ▶ My intra-group review               [×]         │
+│    Editor's pick                       [×]         │
+│                                                    │
+│  + New from blank                                  │
+└────────────────────────────────────────────────────┘
+```
+
+- "▶" marks the currently-loaded RuleSet.
+- "[×]" is the per-row Delete button (Personal only). Clicking
+  expands an inline confirm + Delete button (or routes via the
+  existing soft-delete confirm flow). Seeds have no Delete.
+- "**+ New from blank**" links to a `/edit/new` URL variant that
+  PR 5 had carved out conceptually but never shipped — see
+  "Out of scope" below for the deferred decision.
+
+**Layout interaction with the existing editor.** The right-column
+preview panel (PR 7) stays where it is. The Library card is on
+the **left** column above the main editor card. The Save As /
+Save / Rename / Delete forms inside the main editor card stay
+unchanged — they operate on the *currently-loaded* RuleSet, while
+the Library panel lets the operator switch which RuleSet that is.
+
+**Navigation safety.** Clicking another Library row when the
+current Personal editor has unsaved edits would lose the draft
+silently. PR 10 wires the same `confirm_lose_draft` interlock as
+PR 9 — clicking a Library row sets a `data-load-target` attribute
+on the page, and the inline JS intercepts the navigation: if the
+editor's hidden `rules_json` field differs from its initial
+value, prompt via `window.confirm("Discard unsaved edits?")`.
+Native confirm is fine here — same pattern any operator-shipping
+form-loss surface uses.
+
+**Route changes.** No new mutation routes. Personal-RuleSet
+delete uses the existing `POST /assignments/rule-based/delete`
+(PR 6); load is just a link to `/edit/{id}` (PR 5). The
+`/edit/new` blank-start route is the one new addition; see
+below.
+
+**Optional companion: `/edit/new`.** A blank-start RuleSet — no
+loaded RuleSet, no current_revision, no rule list. Save As
+creates it as a new Personal RuleSet from scratch. PR 5's plan
+mentioned `…/edit/new` as a sibling URL but never shipped it
+because Copy-from-seed was the canonical entry path. PR 10's
+Library panel surfaces blank-start as a natural option, so this
+is a good time to ship it. The route renders the editor with an
+empty `editor.editable_rules`, default combinator (`ALL_OF`), and
+`excludeSelfReviews=true`. The save-path forms target Save As
+only (no in-place Save until the RuleSet exists).
+
+**Service / route changes.**
+
+- `views.build_rule_based_editor_context(...)` gains a `library`
+  field (a list of `LibraryEntry(id, name, scope, is_seed,
+  is_active, is_owner)` items). Drives the Library panel
+  rendering.
+- New `views.build_rule_based_blank_editor_context(...)` for the
+  `/edit/new` path.
+- New `GET /assignments/rule-based/edit/new` route that calls
+  the blank-start builder and renders the same editor template
+  with a `null` RuleSet and Save As as the only persistence
+  affordance.
+- Existing Personal-RuleSet `POST .../delete` reused unchanged.
+  The Library panel's inline delete forms post the existing
+  payload (`rule_set_id`, `confirm`).
+
+**Audit.** No new event types. The existing `rule_set.deleted`
+event covers Library-panel-driven deletes; `rule_set.created`
+with `context.via='save_as'` covers blank-start saves.
+
+**Tests** (`tests/integration/test_rule_based_editor.py`):
+
+- Library panel renders on every editor view (seed + Personal +
+  blank-start), with the active row marked.
+- Personal rows carry an inline delete affordance; seed rows do
+  not.
+- Clicking a delete from the panel submits to the existing
+  delete route and redirects to the assignments page.
+- A non-owner's Personal RuleSet doesn't appear in the panel
+  (visibility gate parity with the card's selector).
+- `/edit/new` GET renders the editor with no rules and Save As
+  as the only persistence button.
+- Save As from `/edit/new` creates a Personal RuleSet with
+  `revision_no=1` and `via='save_as'` audit refs.
+
+**Out of scope for PR 10.** A workspace-level `/operator/rule-
+sets/` index page that lists all Personal RuleSets across every
+session — the Library panel makes that index surface less
+necessary by surfacing the same data inside the editor. If a
+workspace-level index proves valuable later, it ships as a
+separate slice with its own URL and route — the Library panel's
+same `LibraryEntry` dataclass + visibility query are the
+source-of-truth for both surfaces.
 
 ## Implementation pointers
 
