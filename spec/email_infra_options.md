@@ -95,8 +95,8 @@ class EmailTransport(Protocol):
 
 The `EmailMessage` shape is transport-agnostic — no DB types in
 the contract, no `ReviewSession` / `Reviewer`. The future send
-dispatcher (Segment 11C PR F) builds a message from outbox + session
-+ reviewer rows and hands the transport a flat object.
+dispatcher (Segment 14-1 Part A) builds a message from outbox +
+session + reviewer rows and hands the transport a flat object.
 
 A `health_check() -> HealthResult` method is a reasonable future
 addition for an operator-facing diagnostics surface; not on the
@@ -170,7 +170,8 @@ central data structure that makes the email subsystem auditable,
 debuggable, and idempotent.
 
 Today's `email_outbox` table is the audit log. Its current shape
-(post-Segment 9.2):
+(post-Segment 9.2 + Segment 11C Part 1's `cc_emails` /
+`bcc_emails` slice):
 
 | Field | Type | Notes |
 |---|---|---|
@@ -178,32 +179,40 @@ Today's `email_outbox` table is the audit log. Its current shape
 | `session_id` | FK | Which session this send belongs to. |
 | `reviewer_id` | FK | Which reviewer (nullable for system emails). |
 | `invitation_id` | FK | Which invitation row this send is for (nullable). |
-| `kind` | enum | `invitation`, `reminder`, etc. |
+| `kind` | enum | `invitation`, `reminder`; `responses_received` member added by Segment 11C Part 2. |
 | `to_email` | text | The recipient. |
+| `cc_emails` / `bcc_emails` | text, comma-separated | Populated from the editor's CC / BCC overrides at queue time (Segment 11C Part 1). |
 | `subject` | text | The merged subject. |
 | `body` | text | The merged body. |
-| `status` | enum | `queued`, `sent` today; expanded in 11C PR F. |
+| `status` | enum | `queued`, `sent` today; widened to `{queued, sending, sent, failed}` at the service layer by Segment 11C Part 2. |
 | `created_at` | timestamp | When the row was written. |
 
-Segment 11C PR F adds the columns the production send path needs:
+**Segment 11C Part 2 (truncated)** lands the audit-log columns
+the production send path will write at send time, as inert
+schema scaffolding — no wiring, no service-layer reads. The
+columns are populated by **Segment 14-1 Part A** when the
+dispatch helper goes live:
 
-- `error_message` (Text) — captured on failure so the Outbox page
-  can surface the reason.
-- `cc_emails` / `bcc_emails` (Text, comma-separated) — populated
-  from the editor's CC / BCC overrides at queue time.
-- `status` enum extends to `{queued, sending, sent, failed}`.
-
-Future-target additions covered by this spec but not yet on the
-table:
-
-| Field | Type | Notes |
-|---|---|---|
-| `from_address` | text | The address actually sent from. Useful when comparing operator-set and deployment-default identities. |
-| `backend` | text | Which `EmailTransport` implementation handled the send. |
-| `backend_message_id` | text | The backend's identifier for the message, if any. |
-| `delivered_at` | timestamp | When delivery confirmed (if backend reports). |
-| `payload_hash` | text | Hash of (to + subject + body) for dedup detection. |
-| `correlation_id` | text | The app's deterministic identifier for "this send to this recipient at this intent." Mechanism for idempotent retry. |
+- `error_message` (Text, nullable) — captured on failure so the
+  Outbox / Manage Invitations diagnostic surfaces can render the
+  reason.
+- `from_address` (String 320, nullable) — the address actually
+  sent from. Useful when comparing operator-set and deployment-
+  default identities.
+- `backend` (String 32, nullable) — which `EmailTransport`
+  implementation handled the send (`smtp` / `graph` / `acs` /
+  `thirdparty:sendgrid` / etc.).
+- `backend_message_id` (String 255, nullable) — the backend's
+  identifier for the message, if any (Graph operation ID, ACS
+  operation ID, third-party message ID, SMTP server queue ID).
+- `delivered_at` (timestamp, nullable) — when delivery confirmed
+  (if backend reports — primarily Graph / ACS / third-party).
+- `payload_hash` (String 64, nullable) — hash of `(to, subject,
+  body)` for dedup detection.
+- `correlation_id` (String 128, nullable, indexed) — the app's
+  deterministic identifier for "this send to this recipient at
+  this intent." Mechanism for idempotent retry; populated by
+  14-1's enqueue path.
 
 Records are written *before* the send is attempted (status
 `queued`), updated *after* with the outcome. This pattern means
@@ -318,9 +327,10 @@ none required today; operator-level credentials are sufficient.
   deployments, Azure Key Vault reference is preferred for the
   Fernet key.
 
-**Implementation work to add.** None for the basic path. PR F
-of Segment 11C wires the existing transport into the Manage
-Invitations send path.
+**Implementation work to add.** None for the basic path.
+**Segment 14-1 Part A** wires the existing transport into the
+Manage Invitations send path against the audit-log columns
+**Segment 11C Part 2** scaffolds.
 
 **Considerations.**
 
@@ -561,23 +571,28 @@ to all. ✅ = shipped, ◻ = pending.
 2. ✅ **A factory or DI registration** that selects the active
    implementation from configuration (`transport_for(settings)`).
 3. ◻ **The audit log table extensions** described above —
-   Segment 11C PR F lands `error_message` / `cc_emails` /
-   `bcc_emails` / expanded `status` enum; the future
+   `cc_emails` / `bcc_emails` shipped in Segment 11C Part 1;
+   `error_message` + the future-target columns (`from_address` /
    `backend` / `backend_message_id` / `delivered_at` /
-   `payload_hash` / `correlation_id` columns are still TBD.
+   `payload_hash` / `correlation_id`) and the widened status /
+   kind value-sets land in **Segment 11C Part 2** as inert
+   schema scaffolding. **Segment 14-1 Part A** is the first call
+   site that writes to them.
 4. ◻ **A `correlation_id` strategy** for idempotent sends
-   across invitation, reminder, and other kinds.
+   across invitation, reminder, and other kinds — Segment 14-1
+   Part B.
 5. ◻ **A bulk-send queue / worker pattern** for operator-
-   triggered batch operations.
+   triggered batch operations — Segment 14-1 Part C.
 6. ◻ **Per-deployment from-identity configuration** as a
-   complement to the per-operator settings already in place.
+   complement to the per-operator settings already in place —
+   Segment 14-1 Part D.
 7. ✅ **Secrets management** via App Service settings, with Key
    Vault references for credentials and tokens
    (`SMTP_ENCRYPTION_KEY` env var; per-operator passwords
    encrypted at rest).
 8. ◻ **An operator-visible diagnostic surface** — the existing
    Outbox concept, generalised to read from the audit log
-   regardless of backend.
+   regardless of backend — Segment 14-1 Part E.
 
 With these in place, adding any one of Options B–D is a scoped
 piece of work: implement one `EmailTransport` class, add its
@@ -603,22 +618,38 @@ A reasonable sequence:
 
 1. ✅ **Sender abstraction + SMTP backend** — Segment 11E PR 5.
 2. ✅ **Operator credential storage** — Segment 11E PR 4.
-3. ◻ **Manage Invitations send activation** — Segment 11C PR F.
-   First call site for the existing `transport_for` factory.
-   Lands the audit-log column extensions
-   (`error_message`, `cc_emails`, `bcc_emails`, expanded
-   `status`).
-4. ◻ **Add Option C (ACS)** as the first non-SMTP backend (no
-   IT cooperation needed, can be done unilaterally). Use it
-   for early production deployments and testing.
-5. ◻ **Add Option B (Graph)** when an institutional deployment
-   is ready to pursue it. The IT conversation runs in parallel
-   with the code work.
-6. ◻ **Add Option D (third-party)** if a specific deployment
-   requires it or as a fallback for institutions where neither
-   ACS nor Graph fits.
+3. ◻ **Outbox audit-log column scaffolding** — Segment 11C
+   Part 2. Inert; populated at send time by Step 4. Lands the
+   columns (`error_message` + future-target additions) and the
+   widened status / kind value-sets so the wiring in Step 4
+   doesn't have to ship Alembic churn alongside its logic
+   changes.
+4. ◻ **Manage Invitations send activation (SMTP)** — Segment
+   14-1 Part A. First call site for the existing
+   `transport_for` factory; first writer of Step 3's columns.
+   Per-row Send + bulk Send + Send-test-to-me + dispatch helper
+   + chrome pill + audit events + responses-received submit-
+   time enqueue.
+5. ◻ **`correlation_id` strategy + idempotent retry** — Segment
+   14-1 Part B.
+6. ◻ **Bulk-send queue + background worker** — Segment 14-1
+   Part C.
+7. ◻ **Per-deployment from-identity defaults** — Segment 14-1
+   Part D.
+8. ◻ **Generalised Outbox diagnostic surface** — Segment 14-1
+   Part E.
+9. ◻ **Add Option C (ACS)** as the first non-SMTP backend (no
+   IT cooperation needed, can be done unilaterally) — Segment
+   14-1 Part G. Use it for early production deployments and
+   testing.
+10. ◻ **Add Option B (Graph)** when an institutional deployment
+    is ready to pursue it — Segment 14-1 Part F. The IT
+    conversation runs in parallel with the code work.
+11. ◻ **Add Option D (third-party)** if a specific deployment
+    requires it or as a fallback for institutions where
+    neither ACS nor Graph fits — Segment 14-1 Part H.
 
-Steps 4–6 are independent; do them in whatever order
+Steps 9–11 are independent; do them in whatever order
 deployments demand.
 
 ## Doc impact

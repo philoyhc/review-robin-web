@@ -19,9 +19,17 @@ Catalog item: `guide/todo_master.md` "Upcoming" item 2
 
 ## Status
 
-In progress. Sized as **5 PRs** in dependency order, each
-independently shippable. PR A shipped (PR #517 / #520);
-PRs B-E remain.
+In progress. Originally sized as 5 PRs (A-E); shipped state:
+
+- **PRs A / B / C** ✅ shipped 2026-05-06 (#517 / #520 / #521 /
+  #522 / #523 plus follow-ups).
+- **PR E** ✅ shipped 2026-05-07 via Segment 11E PR 6 (#532) —
+  the registry mutation + render-adapter dispatch branch rode
+  along with the editor third tab on the same
+  `render_responses_received` helper.
+- **PR D** remains as the only unshipped item — wires the
+  Reminder tab's render adapter to
+  `email_templates.render_reminder`.
 
 1. **PR A — Page chrome + reviewer picker.** ✅ Shipped. No
    artifact regions yet; the body renders the picker and a
@@ -44,31 +52,31 @@ PRs B-E remain.
    adapter; the previously-disabled Reminder tab in PR B's
    strip lights up and renders through
    `email_templates.render_reminder`.
-5. **PR E — Enable Responses-received tab.** Same shape as
-   PR D for the last tab. Coordinates with Segment 11E PR 6,
-   which adds `render_responses_received` and proposes
-   landing the registry append itself; whichever ships first
-   carries the work, the other plan strikes through its
-   corresponding scope item. See "PR E" below.
+5. ~~**PR E — Enable Responses-received tab.**~~ Shipped
+   2026-05-07 via Segment 11E PR 6 (#532) — the registry
+   mutation + render-adapter dispatch branch rode along with
+   the editor third tab on the same `render_responses_received`
+   helper. See "~~PR E~~" below.
 
 Send-test affordances per artifact (spec §"Send-test") are
-**deferred** to either a small 11F follow-on or to Segment 11C
-PR F (which already wires `EmailTransport` into per-row + bulk
-send on Manage Invitations). Folding them into 11C is the
-cleaner option — same transport seam, one set of tests — and
-keeps 11F itself small.
+**deferred** to **Segment 14-1 Part A** (which wires
+`EmailTransport` into per-row + bulk + test sends on Manage
+Invitations as the first call site of the transport interface).
+Folding them into 14-1 is the cleaner option — same transport
+seam, one set of tests — and keeps 11F itself small.
 
 ## Why this scope
 
 The spec defines four reviewer-facing artifacts (invitation,
 response form, reminder, responses-received). All four ship in
-11F now that 11E's follow-on planning (`render_responses_received`,
-PR 6) gives the fourth artifact a render path. The original
-2-card sizing carved off the two pre-flight blockers —
-**invitation** and **reviewer surface** — so PR B / PR C could
-land before reminder / responses-received UX questions settled.
-Those questions have settled enough to ship, so the deferred
-two slot into PR D / PR E on top of the same hub structure.
+11F now that 11E PR 6 has shipped `render_responses_received`
+(and the responses-received tab activation rode along with it).
+The original 2-card sizing carved off the two pre-flight
+blockers — **invitation** and **reviewer surface** — so PR B /
+PR C could land before reminder / responses-received UX
+questions settled. Those questions have settled enough to ship,
+so the deferred two slot in: PR E shipped via 11E PR 6, PR D
+remains for the Reminder tab.
 
 ## Scope
 
@@ -96,11 +104,11 @@ In:
   session past the configured reminder threshold."
 - **Responses-received email card.** Renders through
   `email_templates.render_responses_received(session, reviewer)`,
-  the helper Segment 11E PR 6 introduces. Four-tag merge-set
-  per 11E (drops `$invite_url`, optional `$submitted_at`).
-  Card description: "Sent the moment the reviewer submits
-  their review." See PR E below for the cross-segment seam
-  with 11E.
+  the helper Segment 11E PR 6 ships. Five-tag merge-set per 11E
+  (drops `$invite_url`, adds `$submitted_at`). Card description:
+  "Sent the moment the reviewer submits their review." Activated
+  via 11E PR 6 (the registry mutation + dispatch branch landed
+  there alongside the editor third tab); see "~~PR E~~" below.
 - **Source-of-truth footer** on each card per spec ("Rendered
   from Email Template (Setup) and Reviewers (Setup).") — names
   what to edit if the operator dislikes what they see, with
@@ -669,74 +677,39 @@ render adapter, one registry mutation, one set of tests.
   - Tab order in the strip stays
     invitation → reminder → responses-received.
 
-### PR E — Activate Responses-received tab
+### ~~PR E — Activate Responses-received tab~~ — shipped 2026-05-07 via Segment 11E PR 6 (#532)
 
-**Goal.** Same shape as PR D for the third tab, plus the
-optional-`$submitted_at` placeholder note. Calls into the
-`render_responses_received` helper Segment 11E PR 6 adds.
+The cross-segment seam this section described resolved with 11E
+PR 6 shipping first — the registry mutation + render adapter
+landed there alongside the editor third tab, since both
+depended on the same `render_responses_received` helper.
 
-**Cross-segment seam.** Segment 11E PR 6's scope already
-calls out a "Preview hub registry append" for this artifact
-("lands here, not in 11F"). Both plans converge on the same
-one-line `EMAIL_PREVIEW_TABS` mutation + render adapter; only
-one of the two PRs ships the work, the other strikes its
-corresponding scope item:
+What shipped (in 11E PR 6):
 
-- If **11E PR 6 ships first** — the tab activation and render
-  adapter land there. PR E in this guide collapses to a
-  strikethrough note ("shipped with 11E PR 6") and 11F sizes
-  at 4 PRs (A-D) rather than 5.
-- If **11F PR E ships first** — the activation lands here and
-  11E PR 6's scope drops the registry-append bullet.
-- The render adapter shape is identical in both cases: call
-  `render_responses_received(session, reviewer)`, return an
-  `EmailBody`. Whichever plan owns the work, the other
-  references it.
+- `views.EMAIL_PREVIEW_TABS` responses-received entry flipped
+  to `is_shipped=True`.
+- `views.build_email_preview_body` picked up a dispatch branch
+  calling `email_templates.render_responses_received(session,
+  reviewer)`.
+- The card description and operator-facing copy ("Sent the
+  moment the reviewer submits their review.") came along on
+  the existing tab metadata.
+- `$submitted_at` resolves via `_latest_submitted_at` (queries
+  the reviewer's responses through `Session.object_session`);
+  pre-submit falls back to the `"(not yet submitted)"`
+  placeholder.
+- New tests in `tests/integration/test_session_previews.py`
+  cover the activated tab + placeholder behaviour.
 
-Scope assuming PR E ships the work (conservative case; flip if
-the order resolves the other way):
+The "previewing pre-submit; `$submitted_at` shows a
+placeholder" explanatory note this section originally proposed
+was not shipped — the placeholder text itself reads clearly
+enough on its own. If a reviewer-side complaint comes in about
+operators getting confused by the placeholder, the note can
+land as a small `views.py` follow-up.
 
-- Update the Responses-received entry in
-  `views.EMAIL_PREVIEW_TABS` so its `render` field points at a
-  new adapter that calls
-  `email_templates.render_responses_received(session,
-  reviewer)`. Tab flips from disabled to live without template
-  change.
-- **Card description (rendered below the tab strip when
-  Responses-received is active).** "Sent the moment the
-  reviewer submits their review."
-- **Source-of-truth footer.** Email Template
-  (`?template=responses_received` per 11E PR 6) + Reviewers.
-- **Merge-tag set.** Four tags per 11E PR 6 — drops
-  `$invite_url`, includes optional `$submitted_at`. The
-  `$submitted_at` resolution path is owned by 11E PR 6's
-  helper; the preview adapter calls through to it without
-  knowing the implementation.
-- **Pre-submit preview rendering.** When the picker-selected
-  reviewer has not yet submitted any assignments (the common
-  pre-flight case), `$submitted_at` falls back to the
-  "(not yet submitted)" placeholder per 11E PR 6's helper
-  contract. The card surfaces a one-line note above the
-  rendered body — "Previewing pre-submit; `$submitted_at`
-  shows a placeholder." — so the operator isn't surprised the
-  date field doesn't carry a real value.
-- **Missing-data handling.** Same template-not-set path as the
-  other email tabs.
-- Tests:
-  - Responses-received tab renders as a live `<a>` link in
-    the strip (no longer disabled).
-  - `?email=responses_received` activates the tab and renders
-    the body with `$submitted_at` populated when the selected
-    reviewer has submitted assignments (fixture pre-stamps
-    `submitted_at`).
-  - Card renders with the placeholder + the explanatory note
-    on a reviewer with no submitted assignments.
-  - Tab order in the strip stays
-    invitation → reminder → responses-received.
-  - Cross-segment seam: integration test passes regardless of
-    whether 11E PR 6's registry mutation landed here or there
-    (the test asserts the rendered DOM, not which file owns
-    the mutation).
+11F Part 2 collapses to **PR D only** (Reminder tab); 11F as a
+whole now sizes at 4 PRs (A → D) rather than 5.
 
 ## Implementation pointers
 

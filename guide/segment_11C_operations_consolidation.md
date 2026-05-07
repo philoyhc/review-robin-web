@@ -1,4 +1,4 @@
-# Segment 11C — Operations consolidation (Invitations + Responses) + email send activation
+# Segment 11C — Operations consolidation (Invitations + Responses) + outbox audit-log scaffolding
 
 Stub. Implementation plan for consolidating the running-session
 Operations work per `spec/operations_renew.md`. Sibling to
@@ -6,26 +6,42 @@ Segment 11B (Session Home rebuild); both pull forward the
 operator-facing work originally bucketed in Segment 11A's #21
 sweep.
 
-This segment splits into **two distinct parts**, each of which
-is multiple PRs:
+This segment splits into **two parts**:
 
 - **Part 1 — Consolidation.** Bring the running-session operator
   surfaces onto the right pages with the list-with-bulk-actions
   pattern and a single consolidated Manage Invitations table.
   No new send semantics — outbox rows continue to land at
   `status="queued"` exactly as they do today.
-- **Part 2 — Send activation.** Wire Segment 11E's transport
-  interface into the consolidated Manage Invitations page so
-  queued outbox rows actually transition to `sent` / `failed`.
-  Adds bulk-Send, Send-test-to-me, the transport-ready chrome
-  pill, and the schema move that makes failure observable.
+- **Part 2 — Outbox audit-log scaffolding (truncated).** Land the
+  `email_outbox` columns + status / kind value-set widening that
+  *all four* transport options in `spec/email_infra_options.md`
+  will need (`error_message`, `from_address`, `backend`,
+  `backend_message_id`, `delivered_at`, `payload_hash`,
+  `correlation_id`; status enum widened to
+  `{queued, sending, sent, failed}`; kind enum widened to include
+  `responses_received`). **No wiring, no UI, no service-layer
+  reads** — the columns sit inert until **Segment 14-1**
+  (`guide/segment_14-1_email_infra.md`) lights up the actual send
+  paths against this stable schema.
 
-The two parts ship independently. Part 1 stays useful even if
-Part 2 slips. Part 2 hard-depends on Part 1's Invitations
-rewrite (PR C) and on Segment 11E PRs 4 + 5 (operator Settings
-page + transport interface) being merged.
+The original Part 2 scope (per-row Send, bulk-Send, Send-test-to-
+me, the transport-ready chrome pill, the dispatch helper, the
+audit events, and the responses-received submit-time enqueue) all
+move to **Segment 14-1 Part A**; this guide retains only the
+schema piece because it's coupled to the existing Outbox
+schema-slice work Part 1 already touched, and shipping the
+columns now decouples the wiring PRs from any Alembic churn.
 
-The functional spec is **`spec/operations_renew.md`**. The page
+The two parts ship independently. Part 1 already shipped (see
+Status); Part 2 is unblocked once a small migration + model edit
+PR is convenient to land. **14-1 hard-depends on Part 2's
+schema** (the wiring there populates these columns) but not on
+the order of any other 11C work.
+
+The functional spec is **`spec/operations_renew.md`** for Part 1;
+**`spec/email_infra_options.md`** is the spec for the broader
+transport landscape Part 2's columns prepare for. The page
 taxonomy + per-page contract summaries are in
 **`spec/operator_ui_concept.md`** §5 and "Per-page contracts".
 This guide is the implementation plan; reference those specs for
@@ -36,13 +52,9 @@ detail.
 **Part 1 shipped 2026-05-06** across PRs **#490 → #491 → #492 →
 #493** (folded from the planned 5 PRs into 4 — see "Proposed PR
 sequence (Part 1)" below for what landed where). **Part 2 is
-upcoming**: 3 PRs (PR F: outbox schema move + dispatch helper +
-per-row Send + Send-test-to-me + chrome pill + audit events; PR
-G: bulk Send-all-queued; **PR H: responses-received submit-time
-enqueue + audit event** — formerly Segment 11E PR 7, absorbed
-here so all email *sending* lives on the Operations side, with
-11E owning only "what does this email say, and should it
-auto-send?").
+upcoming**: 1 PR (PR F: outbox audit-log scaffolding — the
+schema piece only; the wiring formerly planned here moves to
+**Segment 14-1**, see `guide/segment_14-1_email_infra.md`).
 
 ## Gap against the spec
 
@@ -55,10 +67,10 @@ auto-send?").
 | Shared reminder send-path | Each call site composes its own send | Extract single helper; per-row, bulk-from-Invitations, bulk-from-Responses, drill-in-from-either all call it | 1 |
 | List-with-bulk-actions pattern shared | New pattern for both pages | Implement once; both pages instantiate | 1 |
 | Outbox carries CC / BCC at queue time | `email_outbox` has only `to_email` | Add `cc_emails` / `bcc_emails` (populated from 11E override JSON) | 1 |
-| Outbox rows can move from queued → sent / failed | Today they're written `queued` and never re-touched | Wire 11E transport interface; widen status enum; capture `error_message` | 2 |
-| Operator can Send / bulk-Send / test-Send from Invitations | No such affordances exist | Add per-row + bulk + test-send affordances | 2 |
-| Transport-ready chrome pill | None | Compute from operator's `EmailSettings` | 2 |
-| Reviewer-submit enqueues a responses-received outbox row when the per-session toggle is on | Submit handler doesn't enqueue anything for responses-received; the `kind` doesn't exist on the outbox yet | Reviewer-submit handler reads `email_template_overrides.responses_received_enabled` (default `True`, defined in Segment 11E PR 6); if on, enqueue an outbox row rendered via `email_templates.render_responses_received` and emit the `responses_received_email.queued` audit event | 2 (PR H) |
+| Outbox audit-log columns the spec's "Future-target additions" lists | Today's `email_outbox` lacks `error_message` + the future-target columns; status enum is `{queued, sent}`; kind set excludes `responses_received` | Add the columns nullable; widen the status / kind value-sets at the service layer. Inert scaffolding — populated by 14-1's wiring | 2 |
+| Operator can Send / bulk-Send / test-Send from Invitations | No such affordances exist | **Moved to Segment 14-1 Part A**, which will hang the per-row + bulk + test-send affordances off the consolidated Manage Invitations table Part 1 ships | — |
+| Transport-ready chrome pill | None | **Moved to Segment 14-1 Part A** | — |
+| Reviewer-submit enqueues a responses-received outbox row when the per-session toggle is on | Submit handler doesn't enqueue anything for responses-received | **Moved to Segment 14-1 Part A** (reads the `responses_received_enabled` flag + calls `render_responses_received` — both shipped by Segment 11E PR 6) | — |
 
 ---
 
@@ -264,218 +276,145 @@ moves into the new Invitations + Responses test files).
 
 ---
 
-## Part 2 — Email send activation
+## Part 2 — Outbox audit-log scaffolding
+
+**Truncated from the original Send-activation scope.** This part
+ships only the schema piece — the columns and value-set widening
+that all four transport options in `spec/email_infra_options.md`
+will need to write at send time. **No wiring, no UI, no
+service-layer reads** — the new columns sit inert until **Segment
+14-1 Part A** lights up the actual send paths against this
+stable schema.
+
+The trade is deliberate: shipping the schema move now decouples
+the wiring PRs in 14-1 from any Alembic churn, and makes any of
+the four transports (SMTP / Graph / ACS / third-party) a scoped
+backend swap rather than a coupled schema + backend + UI change.
 
 Hard prerequisites:
 
-- **Part 1 PR C** ships the consolidated Manage Invitations page
-  (PRs F + G hang the new send affordances off it).
-- **Segment 11E PRs 4 + 5** ship the operator Settings page + the
-  `EmailTransport` Protocol / `SmtpEmailTransport`.
-- **Segment 11E PR 6** (the responses-received editor follow-on)
-  is a hard prerequisite for **PR H specifically** — PR H reads
-  the `email_template_overrides.responses_received_enabled` flag
-  PR 6 introduces and calls the `render_responses_received`
-  helper PR 6 ships. PRs F and G are unaffected and can land
-  before PR 6.
+- **Part 1 PR C-schema** already shipped `cc_emails` /
+  `bcc_emails` populated at queue time (Migration `b3d5e7f9a1c4`).
+  Part 2 piles onto the same model file.
+- No transport-layer prerequisites — Part 2 doesn't touch
+  `EmailTransport` or `email_send.py`.
 
 ### Scope (Part 2)
 
 In:
 
-- **Outbox schema slice landing in Part 2:**
-  - `error_message: Mapped[str | None]` (Text) on `email_outbox` —
-    captured when a send fails so the Outbox page can surface the
-    reason.
-  - `status` enum widened from `{queued, sent}` to
-    `{queued, sending, sent, failed}` (string column today;
-    service-layer enforces the value set).
-- **Transport dispatch helper** at
-  `app/services/email_send_dispatch.py` that:
-  - Reads a queued outbox row, builds an `EmailMessage` from it,
-    invokes the operator's `EmailTransport.send(...)`, and writes
-    back the result (`sent` / `failed` + `error_message`).
-  - Refuses to dispatch if the initiating operator has no
-    `EmailSettings` configured — surfaces an inline error rather
-    than silently leaving the row queued.
-- **Per-row Send button** on each invitation row of the
-  consolidated Manage Invitations table (transitions a queued
-  outbox row to `sent` / `failed` via the operator's configured
-  `EmailTransport`). Slots into the table's "Action" column.
-  Hidden when the row's status isn't `queued`. POSTs are
-  idempotent on `status="queued"` only — clicking Send on a
-  `sending`-state row returns 409.
-- **Bulk Send-all-queued** action — selection-driven via the
-  Part 1 list-with-bulk-actions pattern; iterates rows
-  synchronously inside the request.
-- **Send-test-to-me** affordance — composes a synthetic
-  invitation message addressed to the signed-in operator's
-  email and pushes it through their transport. Useful as an
-  end-to-end verification step that the editor's Preview
-  doesn't cover.
-- **Transport-ready status pill** in the chrome status row:
-  green "SMTP configured" when the operator has Settings
-  populated, grey "Configure SMTP" linking to
-  `/operator/settings` when they haven't.
-- **Two new audit events:** `email.sent` (with the outbox row id,
-  recipient, transport response truncation) and
-  `email.send_failed` (with the outbox row id, error message).
-- **Reviewer-submit responses-received enqueue (PR H).** When the
-  reviewer-submit handler stamps `submitted_at` on an assignment,
-  it reads `email_templates.responses_received_enabled(session)`
-  (the helper Segment 11E PR 6 introduces, backed by the
-  per-session `email_template_overrides.responses_received_enabled`
-  flag the editor surfaces as a checkbox); when `True` (the
-  default), the handler enqueues a single `email_outbox` row with
-  `kind="responses_received"`, `to_email=reviewer.email`, and
-  `subject` / `body` populated by `render_responses_received`.
-  PR F's transport dispatch picks the row up the same way it
-  picks up invitations / reminders.
-- **One additional audit event (PR H):**
-  `responses_received_email.queued`, with detail
-  `{"reviewer_id": <int>, "assignment_count": <int>}`. Mirrors
-  the existing `invitation.queued` / `reminder.queued` shape.
-  Emitted alongside the existing submit audit (i.e. immediately
-  after `assignment.submitted`).
+- **Outbox model + migration.** Add the following nullable
+  columns to `email_outbox`, sourced from the spec's "Future-
+  target additions" table (`spec/email_infra_options.md`
+  "Audit log"):
 
-Out (deferred):
+  | Column | Type | Notes |
+  |---|---|---|
+  | `error_message` | `Text` (nullable) | Captured on failure. The 14-1 dispatch helper writes truncated transport errors here so the Outbox / Manage Invitations diagnostic surfaces can render them. |
+  | `from_address` | `String(320)` (nullable) | The address actually sent from. Useful when comparing operator-set and deployment-default identities. |
+  | `backend` | `String(32)` (nullable) | Which `EmailTransport` implementation handled the send (`smtp` / `graph` / `acs` / `thirdparty:sendgrid` / etc.). |
+  | `backend_message_id` | `String(255)` (nullable) | The backend's identifier for the message, if any (Graph operation ID, ACS operation ID, third-party message ID, SMTP server queue ID). |
+  | `delivered_at` | `DateTime(timezone=True)` (nullable) | When delivery confirmed (if backend reports — primarily Graph / ACS / third-party; SMTP typically doesn't populate this). |
+  | `payload_hash` | `String(64)` (nullable) | Hash of `(to, subject, body)` for dedup detection. |
+  | `correlation_id` | `String(128)` (nullable, indexed) | The app's deterministic identifier for "this send to this recipient at this intent" — `invitation:{session_id}:{reviewer_id}` / `reminder:{session_id}:{reviewer_id}:{n}` / `responses_received:{session_id}:{reviewer_id}:{submit_id}`. Mechanism for idempotent retry; populated by 14-1's enqueue path. Indexed because the dispatch helper looks rows up by it on retry. |
 
-- **Real SMTP service-account / shared mailbox** — out of scope;
-  send-as-me uses the operator's own credentials per Segment 11E.
-  A shared-mailbox model would be its own future segment.
-- **Microsoft Graph backend.** Protocol + typed stub land in 11E;
-  full Graph implementation (httpx, Entra scope grant, token
-  cache) is a future segment.
-- **Async / queued sending** — Part 2 dispatches synchronously
-  inside the request. Async / background dispatch is a Segment
-  15 concern.
-- **Retries / backoff.** A failed row stays `failed`; the operator
-  can reset / re-queue it manually. Retry logic is a Segment 15
+  All fields nullable on the existing rows so the migration is
+  pure additive — no backfill, no defaults beyond the column
+  defaults the model carries.
+
+- **Status value-set widening.** `status` is a string column
+  (no Alembic constraint to update); the canonical value set is
+  documented at the service layer. New constant
+  `EMAIL_OUTBOX_STATUSES = ("queued", "sending", "sent",
+  "failed")` in `app/db/models/email_outbox.py` (or a sibling
+  module) replaces the implicit two-value set. Service-layer
+  consumers in 14-1 enforce the set; today's code only writes
+  `"queued"` / `"sent"` and continues to do so.
+- **Kind value-set widening.** Same pattern for `kind`:
+  `EMAIL_OUTBOX_KINDS = ("invitation", "reminder",
+  "responses_received")` — `responses_received` is the new
+  member, written by 14-1 Part A's submit-time enqueue (formerly
+  PR H of the original Part 2 scope). Today's code only writes
+  `"invitation"` / `"reminder"`.
+- **Module + column docstrings.** The `EmailOutbox` class
+  docstring is updated to reflect the broader audit-log role and
+  to point at `spec/email_infra_options.md` for the field
+  semantics. Each new column gets a one-line comment.
+
+Out (deferred to Segment 14-1 Part A):
+
+- **`email_send_dispatch.py` helper** — read-row →
+  build-`EmailMessage` → call-`transport.send` → persist-result.
+  The first consumer of these new columns lives there.
+- **Per-row Send button + bulk-Send + Send-test-to-me** on the
+  consolidated Manage Invitations page.
+- **Transport-ready chrome pill.**
+- **`email.sent` / `email.send_failed` audit events** — emitted
+  from the dispatch helper.
+- **Reviewer-submit responses-received enqueue** + the
+  `responses_received_email.queued` audit event.
+- **`correlation_id` generation strategy.** The column lands here;
+  the deterministic generation logic + idempotent-retry checks
+  live in 14-1.
+- **Bulk-send queue / worker.** Async dispatch is a 14-1 Part C
   concern.
+- **Per-deployment from-identity defaults.** Env-var-backed
+  deployment defaults supplementing per-operator settings — 14-1
+  Part D.
+- **Backends beyond SMTP** — 14-1 Parts F / G / H (Options B / C /
+  D from the spec).
 
 ### Proposed PR sequence (Part 2)
 
-**PR F — Schema + dispatch helper + per-row Send + test-send + chrome pill.**
-Lands:
-- The outbox schema move (`error_message`, expanded status enum).
-- `app/services/email_send_dispatch.py` (the read-row →
-  build-message → call-transport → persist-result helper).
-- Per-row Send button on the Manage Invitations Action column.
-- Send-test-to-me affordance on the page's bulk-action bar.
-- Transport-ready chrome pill.
-- `email.sent` / `email.send_failed` audit events.
+**PR F — Outbox audit-log scaffolding.** Single PR.
 
-No bulk yet — every queued row goes one at a time.
+- Alembic migration: add the seven nullable columns + the
+  `correlation_id` index.
+- `app/db/models/email_outbox.py`: add the `Mapped[X | None]`
+  declarations + the `EMAIL_OUTBOX_STATUSES` /
+  `EMAIL_OUTBOX_KINDS` constants. Update the class docstring +
+  per-column comments.
+- Tests:
+  - `tests/integration/test_email_outbox_schema.py` (new) —
+    persists every new column round-trip; the Alembic round-trip
+    test in the dialect-agnostic suite picks up the new columns
+    automatically.
+  - A unit test on the canonical value-set constants pinning
+    membership (so any future widening is a deliberate change).
 
-**PR G — Bulk Send-all-queued.** Adds the selection-driven bulk
-action on top of the Part 1 list-with-bulk-actions pattern.
-Iterates rows synchronously inside the request. For a
-200-reviewer session this is on the edge of acceptable request
-latency; if it bites, async dispatch is its own future PR. Note
-this in the PR G description.
-
-Folding F + G into one PR is fine if the bulk handler is small;
-keeping them split protects rollback if bulk semantics need
-reshuffling.
-
-**PR H — Responses-received submit-time enqueue.** Wires the
-reviewer-submit handler to enqueue a responses-received outbox
-row when the per-session toggle is on. Lands alongside (or after)
-PRs F + G; depends on Segment 11E PR 6 having shipped the
-editor side (the `responses_received_enabled` flag + the
-`render_responses_received` helper).
-
-- In the reviewer-submit code path (likely `routes_reviewer.submit_review`
-  or the service-layer helper that closes the submit transaction),
-  after `Assignment.submitted_at` is stamped and before the
-  redirect:
-  - Call `email_templates.responses_received_enabled(session)`;
-    skip the rest when `False`.
-  - Otherwise call `email_outbox.enqueue(
-    kind="responses_received", reviewer=reviewer,
-    rendered=email_templates.render_responses_received(session,
-    reviewer))`.
-  - Emit `responses_received_email.queued` with the documented
-    detail shape.
-- **Per-reviewer-per-session, not per-assignment.** A reviewer
-  with multiple assignments in the same session that all submit
-  in one request still produces a single enqueued row. The
-  enqueue site computes `assignment_count` from
-  `monitoring.per_reviewer_progress` (or whatever helper the
-  submit-success branch already has on hand) and fires the
-  `responses_received_email.queued` audit with that count.
-- **Idempotency.** Re-submit of the same assignment (the
-  reviewer surface allows edit-and-resubmit before the
-  deadline) fires another enqueue. This matches the simple "one
-  enqueue per submit transition" semantic; if operators push
-  back, a `last_responses_received_sent_at` column on
-  `Assignment` is the escape hatch but not in scope here.
-- **Don't gate on transport readiness.** PR H enqueues the row
-  regardless of whether the operator has SMTP configured. If
-  the operator skipped Settings, the row sits at `queued`
-  forever — same as the invitation / reminder flows. Surfacing
-  "you have unsent confirmations" stays a Manage Invitations /
-  Outbox concern (visible via the existing per-row Send +
-  bulk-Send affordances PRs F + G ship).
-
-PR H can fold into PR F or G if the diff stays small; keeping it
-split protects rollback if the per-session toggle semantic needs
-reshuffling.
+No service-layer code reads or writes the new columns yet. The
+existing invitation / reminder enqueue paths continue to write
+`status="queued"`, `cc_emails` / `bcc_emails` from the editor
+JSON, and nothing else.
 
 ### Implementation pointers (Part 2)
 
-- **Transport dispatch.** Keep the dispatch helper *thin*:
-  - Read row → build `EmailMessage` → call `transport.send(msg)` →
-    persist result. No retries, no exponential backoff in this
-    segment.
-  - Bulk Send iterates rows synchronously inside the request.
-    Note the latency caveat in PR G's description.
-  - Per-row Send POSTs are idempotent on `status="queued"` only
-    — clicking Send on a `sending`-state row returns 409. The
-    list-with-bulk-actions UI hides the per-row button when the
-    row isn't queued.
-- **Transport-ready pill.** Computed once per page load from the
-  signed-in operator's `EmailSettings`; cached on the request if
-  the chrome partial reads it on multiple pages. The pill links
-  to `/operator/settings` when grey.
-- **`error_message` truncation.** Cap stored `error_message` at
-  a sensible length (e.g. 4 KB) so a verbose stack trace from a
-  transport library doesn't bloat the column. The audit event's
-  `transport_response` is similarly truncated.
-- **Status enum widening on SQLite.** `status` is a string column
-  today; the widening is a service-layer constant change with no
-  Alembic constraint to update. Tests pin the new values.
+- **Pure additive migration.** All columns nullable; no defaults
+  beyond column defaults; no backfill. Existing rows keep their
+  current shape — the new columns just sit `NULL` until 14-1's
+  dispatch helper writes to them.
+- **`correlation_id` index.** Because the dispatch helper in
+  14-1 will look up rows by `correlation_id` on idempotent retry,
+  index the column at scaffolding time. SQLite + Postgres both
+  honour the index with no extra ceremony.
+- **Don't pre-emit constants from 14-1 here.** The
+  `EMAIL_OUTBOX_STATUSES` constant is the value-set
+  documentation, not the dispatch state machine. The state-
+  transition rules ("`queued → sending → sent | failed`",
+  per-row Send POST 409s on non-`queued`, etc.) belong in 14-1's
+  dispatch helper — they're behaviour, not schema.
+- **Status enum widening on SQLite.** `status` stays a `String`
+  column; SQLite has no `ENUM` type to widen. Any future
+  Postgres-only constraint widening lives with the dialect-
+  specific work in Segment 14.
 
 ### Test impact (Part 2)
 
-PR F adds:
-- `tests/integration/test_email_send_dispatch.py` — per-row Send,
-  Send-test-to-me, "no transport configured" refusal, audit
-  events emitted on success and failure, Manage Invitations
-  table re-renders with the row in its new status post-Send.
-- `tests/unit/test_email_send_dispatch.py` — outbox row state
-  transitions (queued → sending → sent / failed); `error_message`
-  populated on transport failure; idempotency of per-row Send.
-- An Alembic round-trip test gains the new outbox column
-  (`error_message`).
-
-PR G adds bulk-Send coverage to the integration test file
-(selection-driven bulk action over a mix of queued / non-queued
-rows; non-queued rows are skipped, not 409'd, when reached via
-the bulk path).
-
-PR H adds:
-- `tests/integration/test_responses_received_send.py` —
-  reviewer submit on a fresh assignment enqueues exactly one
-  outbox row with `kind="responses_received"` and the rendered
-  subject / body when the per-session toggle is on; submit when
-  the toggle is `False` enqueues nothing; submit-then-resubmit
-  enqueues two rows (documented behaviour); a reviewer with
-  multiple assignments in the session enqueues a single email
-  per submit transition, not one per assignment; the
-  `responses_received_email.queued` audit event fires alongside
-  `assignment.submitted` with the right `assignment_count`.
-- A short addition to `tests/unit/test_email_send_dispatch.py`
-  confirming PR F's dispatch picks up
-  `kind="responses_received"` rows the same way it picks up
-  invitation / reminder rows (no special-case branch needed).
+- One new test file —
+  `tests/integration/test_email_outbox_schema.py` — covering the
+  round-trip on each new column.
+- The dialect-agnostic Alembic round-trip test (`ci-postgres`
+  workflow's migrate-and-compare) picks up the new columns
+  automatically.
+- No churn on existing tests; the existing enqueue paths don't
+  populate the new columns.
