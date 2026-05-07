@@ -1,16 +1,22 @@
 # Sort by Reviewee — functional spec
 
-**Status.** Forward-looking design spec for the sort item within
-**Segment 13B** (instrument-card enhancements; renamed from
-"reviewer-surface sort UX" so the segment can absorb additional
-per-instrument improvements). Sort is currently 13B's only item.
-Split out of the original Segment 13 during the 2026-05-07 wrap-
-up. Locks in the decisions reached during the Segment 11 §2.6
-discussion (2026-05-03); promoted from sketch. The sibling rule-
-builder work lives in **Segment 13A**
-(`guide/segment_13A_rulebased_assignment_builder.md`); the 13B
-plan stub lives in `guide/segment_13B_instrument_enhance.md`. The
-two segments are independent.
+**Status.** Forward-looking design spec for **Segment 13B**
+(reviewer-surface sort UX). Split out of the original Segment 13
+during the 2026-05-07 wrap-up. Locks in the decisions reached
+during the Segment 11 §2.6 discussion (2026-05-03); promoted
+from sketch.
+
+13B is now single-purpose: this sort feature. Sibling segments
+on the same surface family:
+
+- **13A** — rule-based assignment generation
+  (`guide/segment_13A_rulebased_assignment_builder.md`).
+- **13C** — enhanced instruments (group-scoped + duplicate
+  button) (`guide/segment_13C_enhanced_instrument.md`).
+
+The implementation plan for this spec lives at
+`guide/segment_13B_sort_by_reviewee.md`. The three sibling
+segments are independent.
 
 This file is the source of truth for the design. Segment 13B
 work implements against it; subsequent edits go here and
@@ -236,6 +242,6 @@ These are notes for whoever picks this up; the spec above is the contract.
 - **`spec/operator_ui_concept.md`** — per-instrument Display Fields card layout. The Sort column lands here when implemented.
 - **`spec/reviewer-surface.md`** — review surface table. The header-click override lands here when implemented.
 - **`spec/quick_setup_card_spec.md`** — adjacent operator-card design pattern (single source of truth for an operator-side feature spec).
-- **`guide/segment_13B_instrument_enhance.md`** — the segment plan stub that picks this up; 13B's sole item today.
+- **`guide/segment_13B_sort_by_reviewee.md`** — the implementation plan that picks this up.
 - **`guide/unfinished_business.md`** — catalog stub pointing here.
 - **`docs/status.md`** "What's deliberately not yet there" — entry pointing here, target Segment 13.
