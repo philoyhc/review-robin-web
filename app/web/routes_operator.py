@@ -943,11 +943,36 @@ def _render_assignments_hub(
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Assignments"
             ),
+            "rule_based_card": views.build_rule_based_card_context(
+                review_session, assignment_count=assignment_count
+            ),
         },
         status_code=status_code,
     )
 
 
+@router.get(
+    "/sessions/{session_id}/assignments/rule-based/edit",
+    response_class=HTMLResponse,
+)
+def rule_based_editor_stub(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_rule_based_editor.html",
+        {
+            "user": user,
+            "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Rule Based editor"
+            ),
+        },
+    )
 
 
 

@@ -2155,3 +2155,30 @@ def build_surface_preview_context(
         target_reviewer=reviewer,
     )
     return SurfacePreviewContext(preview=preview, missing=None)
+
+
+# Segment 13A PR 0 — Rule Based card scaffold on Setup → Assignments.
+# Mirrors the 11H pattern: ship the visual shape first behind a single
+# ``is_wired`` flag, then PRs 4 and 5 flip it live and supply real
+# selector options + handlers without re-laying-out the partial.
+
+
+@dataclass(frozen=True)
+class RuleBasedCardContext:
+    is_wired: bool
+    assignment_count: int
+    edit_url: str
+    coming_in: str
+
+
+def build_rule_based_card_context(
+    review_session: ReviewSession, *, assignment_count: int
+) -> RuleBasedCardContext:
+    return RuleBasedCardContext(
+        is_wired=False,
+        assignment_count=assignment_count,
+        edit_url=(
+            f"/operator/sessions/{review_session.id}/assignments/rule-based/edit"
+        ),
+        coming_in="Rule Based generation lands in Segment 13A PR 4.",
+    )

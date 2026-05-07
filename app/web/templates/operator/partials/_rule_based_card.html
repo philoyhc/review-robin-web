@@ -1,0 +1,77 @@
+{# Rule Based Assignment card — Segment 13A PR 0 scaffold.
+
+   Renders the final-shape Advanced-mode card: RuleSet selector,
+   persisted Exclude self-review checkbox, cascade-replace
+   confirmation checkbox (when assignments exist), Edit ruleset
+   link, and Generate button. Everything except the Edit ruleset
+   link renders disabled until PR 4 flips ``is_wired=True`` and
+   supplies a live selector + writer.
+
+   The DOM contract here is what PRs 4-5 wire against; layout and
+   class names should not change between PR 0 and PR 4.
+
+   Reads ``rule_based_card`` from the template context (a
+   ``RuleBasedCardContext`` from
+   ``views.build_rule_based_card_context``).
+#}
+<section class="card" id="rule-based-assignment">
+  <h2>Rule Based Assignment</h2>
+  <p class="form-help">
+    Generate assignments by matching reviewer and reviewee
+    attributes via rules.
+  </p>
+
+  <p>
+    <label for="rule-based-ruleset">RuleSet</label>
+    <select id="rule-based-ruleset"
+            name="rule_set_id"
+            disabled
+            aria-disabled="true"
+            title="{{ rule_based_card.coming_in }}">
+      <option>Intra-group peer review (seeded — coming in PR 4)</option>
+    </select>
+  </p>
+  <p class="form-help" id="rule-based-description">
+    Reviewer and reviewee share tag1.
+  </p>
+
+  <p>
+    <label style="font-weight: normal;">
+      <input type="checkbox"
+             name="exclude_self_review"
+             value="true"
+             checked
+             disabled
+             aria-disabled="true"
+             title="{{ rule_based_card.coming_in }}">
+      Exclude self-review (when a reviewer's email matches a
+      reviewee's identifier)
+    </label>
+  </p>
+
+  {% if rule_based_card.assignment_count and rule_based_card.assignment_count > 0 %}
+    <p>
+      <label style="font-weight: normal;">
+        <input type="checkbox"
+               name="confirm_replace"
+               value="true"
+               disabled
+               aria-disabled="true"
+               title="{{ rule_based_card.coming_in }}">
+        Yes, replace the existing
+        <span class="pill pill-empty">{{ rule_based_card.assignment_count }} assignment{% if rule_based_card.assignment_count != 1 %}s{% endif %}</span>.
+      </label>
+    </p>
+  {% endif %}
+
+  <div class="btn-pair" style="margin-top: 20px;">
+    <a class="btn secondary"
+       id="rule-based-edit"
+       href="{{ rule_based_card.edit_url }}">Edit ruleset</a>
+    <button class="btn secondary"
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="{{ rule_based_card.coming_in }}">Generate</button>
+  </div>
+</section>
