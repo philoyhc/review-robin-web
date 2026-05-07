@@ -24,19 +24,17 @@ def test_resolve_returns_invitation_when_key_blank() -> None:
     assert tab.key == "invitation"
 
 
-def test_resolve_returns_invitation_when_key_is_unshipped_reminder() -> None:
+def test_resolve_returns_reminder_when_key_matches() -> None:
+    # Segment 11F PR D ships the reminder render adapter, so
+    # ?email=reminder now resolves to the reminder tab rather than
+    # falling through to invitation.
     tab = views.resolve_email_preview_tab("reminder")
 
-    # PR B has the Reminder tab in the registry but unshipped, so the
-    # caller falls through to the first shipped tab — invitation —
-    # rather than rendering an empty region.
-    assert tab.key == "invitation"
+    assert tab.key == "reminder"
+    assert tab.is_shipped is True
 
 
 def test_resolve_returns_responses_received_when_key_matches() -> None:
-    # Segment 11E PR 6 ships the render adapter, so ?email=responses_received
-    # now resolves to the responses-received tab rather than falling
-    # through to invitation.
     tab = views.resolve_email_preview_tab("responses_received")
 
     assert tab.key == "responses_received"
@@ -55,11 +53,10 @@ def test_email_preview_tabs_pin_chronological_order() -> None:
     assert keys == ["invitation", "reminder", "responses_received"]
 
 
-def test_invitation_and_responses_received_are_shipped() -> None:
+def test_all_three_email_preview_tabs_are_shipped() -> None:
     shipped = {t.key for t in views.EMAIL_PREVIEW_TABS if t.is_shipped}
 
-    # Reminder remains unshipped pending Segment 11F PR D.
-    assert shipped == {"invitation", "responses_received"}
+    assert shipped == {"invitation", "reminder", "responses_received"}
 
 
 # --- email_preview_from_display ------------------------------------------ #
@@ -173,16 +170,40 @@ def test_invitation_render_substitutes_invite_url_placeholder() -> None:
     assert views.PREVIEW_INVITE_URL_PLACEHOLDER in body.body
 
 
-def test_unshipped_tab_returns_none() -> None:
-    """If a caller bypasses ``resolve_email_preview_tab`` and asks
-    for a tab whose render adapter hasn't shipped, the dispatch
-    returns None rather than blowing up."""
-    reminder_tab = next(
-        t for t in views.EMAIL_PREVIEW_TABS if t.key == "reminder"
+def test_reminder_render_returns_subject_and_body() -> None:
+    tab = views.resolve_email_preview_tab("reminder")
+
+    body = views.build_email_preview_body(
+        tab=tab,
+        review_session=_session(),  # type: ignore[arg-type]
+        reviewer=_reviewer(),  # type: ignore[arg-type]
+        from_display="op@x.edu",
+    )
+
+    assert body is not None
+    assert body.subject == "Reminder: review for Spring Reviews"
+    # `$invite_url` substitutes the preview placeholder, not a real
+    # one-time-use token (those would be wasted on previews).
+    assert views.PREVIEW_INVITE_URL_PLACEHOLDER in body.body
+    assert body.from_display == "op@x.edu"
+    assert body.to_display == "alice@x.edu"
+
+
+def test_unshipped_tab_returns_none_when_caller_bypasses_resolve() -> None:
+    """All three registry tabs ship live render adapters today. The
+    None-return path remains for any future tab additions that land
+    registry-first and dispatch-second; this test pins the contract
+    by faking such a tab inline."""
+    fake_tab = views.EmailPreviewTab(
+        key="future_artifact",
+        label="Future artifact",
+        template_setup_param="future_artifact",
+        is_shipped=False,
+        description="Reserved for a future render adapter.",
     )
 
     body = views.build_email_preview_body(
-        tab=reminder_tab,
+        tab=fake_tab,
         review_session=_session(),  # type: ignore[arg-type]
         reviewer=_reviewer(),  # type: ignore[arg-type]
         from_display="op@x.edu",
