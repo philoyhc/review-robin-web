@@ -1,15 +1,14 @@
-{# Segment 13A PR 5b — Inline JS for the rule editor.
+{# Segment 13A PR 5b/5c — Inline JS for the rule editor.
 
-   Walks the visible rule list on form submit and serialises it
-   into a JSON tree, written into the hidden ``rules_json`` field.
-   Also handles add-rule / remove-rule. Composite editing is a
-   PR 5c follow-on; composite rows preserve their original
-   ``data-composite-children`` payload through Save As untouched.
+   Walks the visible rule list on form submit and reconstructs the
+   nested rule tree from each row's ``data-indent`` attribute,
+   writing the JSON into the hidden ``rules_json`` field.
 
-   Convention: each rule row carries ``data-rule-id``, ``data-kind``,
-   and ``data-indent``. Per-kind controls are class-tagged
-   (``.rule-kind``, ``.rule-field``, ``.rule-operator``,
-   ``.rule-operand``, ``.rule-quota-*``).
+   Indent semantics: a row at indent N belongs to the nearest
+   preceding row at indent N-1 if that preceding row is a COMPOSITE.
+   Top-level rules have ``data-indent="0"``. Add/remove buttons
+   work on any row; removing a composite also removes all its
+   children (rows immediately following with greater indent).
 #}
 <script>
   (function () {
@@ -24,7 +23,32 @@
       return prefix + "_" + ts + rand;
     }
 
-    function serialiseRow(row) {
+    function readPredicate(row) {
+      var field = row.querySelector(".rule-field");
+      var operator = row.querySelector(".rule-operator");
+      var operandInput = row.querySelector(".rule-operand");
+      var operatorValue = operator ? operator.value : "equals";
+      var operandText = operandInput ? operandInput.value : "";
+      var operand;
+      if (operatorValue === "is_empty" || operatorValue === "is_not_empty") {
+        operand = null;
+      } else if (operatorValue === "in" || operatorValue === "not_in") {
+        operand = operandText
+          .split(",")
+          .map(function (s) { return s.trim(); })
+          .filter(function (s) { return s.length > 0; });
+      } else {
+        operand = operandText;
+      }
+      return {
+        field: field ? field.value : "",
+        operator: operatorValue,
+        operand: operand,
+        case_sensitive: false,
+      };
+    }
+
+    function readRow(row) {
       var kind = row.dataset.kind;
       var enabled = row.querySelector(".rule-enabled");
       var rule = {
@@ -35,28 +59,7 @@
       if (kind === "MATCH" || kind === "FILTER") {
         var kindSelect = row.querySelector(".rule-kind");
         if (kindSelect) rule.kind = kindSelect.value;
-        var field = row.querySelector(".rule-field");
-        var operator = row.querySelector(".rule-operator");
-        var operandInput = row.querySelector(".rule-operand");
-        var operatorValue = operator ? operator.value : "equals";
-        var operandText = operandInput ? operandInput.value : "";
-        var operand;
-        if (operatorValue === "is_empty" || operatorValue === "is_not_empty") {
-          operand = null;
-        } else if (operatorValue === "in" || operatorValue === "not_in") {
-          operand = operandText
-            .split(",")
-            .map(function (s) { return s.trim(); })
-            .filter(function (s) { return s.length > 0; });
-        } else {
-          operand = operandText;
-        }
-        rule.predicate = {
-          field: field ? field.value : "",
-          operator: operatorValue,
-          operand: operand,
-          case_sensitive: false,
-        };
+        rule.predicate = readPredicate(row);
       } else if (kind === "QUOTA") {
         var minVal = row.querySelector(".rule-quota-min").value;
         var maxVal = row.querySelector(".rule-quota-max").value;
@@ -69,24 +72,44 @@
           seed: seedVal === "" ? null : parseInt(seedVal, 10),
         };
       } else if (kind === "COMPOSITE") {
-        rule.op = row.dataset.compositeOp || "AND";
-        try {
-          rule.rules = JSON.parse(row.dataset.compositeChildren || "[]");
-        } catch (e) {
-          rule.rules = [];
-        }
+        var opSelect = row.querySelector(".rule-composite-op");
+        rule.op = opSelect ? opSelect.value : "AND";
+        rule.rules = [];
       }
       return rule;
     }
 
     function serialiseRules() {
-      // Top-level rules are rows with data-indent="0". Composite
-      // child rows render read-only inline for visual context; the
-      // parent's data-composite-children carries the canonical
-      // children JSON for round-trip on Save As.
-      var rows = ruleList.querySelectorAll('.rule-edit-row[data-indent="0"]');
+      // Walk DOM order; reconstruct the nested tree from data-indent.
+      // ``stack[i]`` holds the parent rule at indent ``i``; a row at
+      // indent ``N`` appends to ``stack[N-1].rules`` (or to the
+      // output list when N is 0). When the row is itself a
+      // COMPOSITE, push it onto stack at index N so subsequent
+      // greater-indent rows nest into it.
+      var rows = ruleList.querySelectorAll(".rule-edit-row");
       var out = [];
-      rows.forEach(function (row) { out.push(serialiseRow(row)); });
+      var stack = [];
+      rows.forEach(function (row) {
+        var indent = parseInt(row.dataset.indent || "0", 10);
+        var rule = readRow(row);
+        if (indent === 0) {
+          out.push(rule);
+        } else if (stack[indent - 1]) {
+          if (!stack[indent - 1].rules) stack[indent - 1].rules = [];
+          stack[indent - 1].rules.push(rule);
+        } else {
+          // Defensive: a child with no preceding parent at indent-1
+          // (shouldn't happen with our DOM operations) — fall back
+          // to top-level so the rule isn't silently dropped.
+          out.push(rule);
+        }
+        if (rule.kind === "COMPOSITE") {
+          stack[indent] = rule;
+          stack.length = indent + 1;
+        } else {
+          stack.length = indent;
+        }
+      });
       return out;
     }
 
@@ -98,15 +121,25 @@
       refreshHidden();
     });
 
-    // Remove-rule click handler (delegated).
+    // Click delegation for remove + composite add-child.
     ruleList.addEventListener("click", function (event) {
-      var btn = event.target.closest(".rule-remove");
-      if (!btn) return;
-      var row = btn.closest(".rule-edit-row");
+      var addBtn = event.target.closest(".composite-add-child");
+      if (addBtn) {
+        var compositeRow = addBtn.closest(".rule-edit-row");
+        if (!compositeRow) return;
+        appendChild(compositeRow, addBtn.dataset.addKind || "MATCH");
+        refreshHidden();
+        return;
+      }
+      var removeBtn = event.target.closest(".rule-remove");
+      if (!removeBtn) return;
+      var row = removeBtn.closest(".rule-edit-row");
       if (!row) return;
-      // Removing a top-level row also removes any composite child
-      // rows rendered immediately after it (they share the same
-      // top-level position).
+      removeRowAndChildren(row);
+      refreshHidden();
+    });
+
+    function removeRowAndChildren(row) {
       var parentIndent = parseInt(row.dataset.indent || "0", 10);
       var next = row.nextElementSibling;
       while (next && parseInt(next.dataset.indent || "0", 10) > parentIndent) {
@@ -115,22 +148,36 @@
         toRemove.remove();
       }
       row.remove();
-      refreshHidden();
-    });
+    }
 
-    // Add-rule handlers — append a new row template per kind.
-    function appendRule(kind) {
+    function appendChild(parentRow, kind) {
+      // Insertion point: just after the last existing child of the
+      // parent (consecutive following rows with strictly greater
+      // indent). If none, just after the parent itself.
+      var parentIndent = parseInt(parentRow.dataset.indent || "0", 10);
+      var insertAfter = parentRow;
+      var probe = parentRow.nextElementSibling;
+      while (probe && parseInt(probe.dataset.indent || "0", 10) > parentIndent) {
+        insertAfter = probe;
+        probe = probe.nextElementSibling;
+      }
+      var newRow = buildRow(kind, parentIndent + 1);
+      insertAfter.parentNode.insertBefore(newRow, insertAfter.nextSibling);
+    }
+
+    function buildRow(kind, indent) {
       var row = document.createElement("div");
       row.className = "rule-edit-row";
       row.dataset.ruleId = nextId(kind.toLowerCase());
       row.dataset.kind = kind;
-      row.dataset.indent = "0";
+      row.dataset.indent = String(indent);
       row.style.padding = "10px 12px";
+      row.style.paddingLeft = (12 + indent * 24) + "px";
       row.style.margin = "6px 0";
-      row.style.borderLeft = "3px solid #ddd";
+      row.style.borderLeft = "3px solid " + (kind === "COMPOSITE" ? "#999" : "#ddd");
 
       var inner = '<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">';
-      inner += '<span class="pill pill-info">' + kind + '</span>';
+      inner += '<span class="pill ' + (kind === "COMPOSITE" ? "pill-info" : (kind === "QUOTA" ? "pill-count" : "pill-info")) + '">' + kind + '</span>';
       inner += '<label style="font-weight: normal;"><input type="checkbox" class="rule-enabled" checked> enabled</label>';
       if (kind === "MATCH" || kind === "FILTER") {
         inner += '<select class="rule-kind">';
@@ -169,20 +216,36 @@
         inner += '<option value="ROUND_ROBIN">round-robin</option>';
         inner += '</select>';
         inner += '<input type="number" class="rule-quota-seed" placeholder="seed" style="width: 80px;">';
+      } else if (kind === "COMPOSITE") {
+        inner += '<select class="rule-composite-op">';
+        inner += '<option value="AND">All of:</option>';
+        inner += '<option value="OR">Any of:</option>';
+        inner += '<option value="NOT">None of:</option>';
+        inner += '</select>';
+        inner += '<button type="button" class="btn secondary composite-add-child" data-add-kind="MATCH" title="Add a MATCH child rule">+ child MATCH</button>';
+        inner += '<button type="button" class="btn secondary composite-add-child" data-add-kind="FILTER" title="Add a FILTER child rule">+ child FILTER</button>';
       }
       inner += '<button type="button" class="btn alert rule-remove" title="Remove this rule">×</button>';
       inner += '</div>';
       row.innerHTML = inner;
-      ruleList.appendChild(row);
+      return row;
+    }
+
+    function appendTopLevel(kind) {
+      ruleList.appendChild(buildRow(kind, 0));
       refreshHidden();
     }
 
     document.getElementById("rule-based-editor-add-match")
-      .addEventListener("click", function () { appendRule("MATCH"); });
+      .addEventListener("click", function () { appendTopLevel("MATCH"); });
     document.getElementById("rule-based-editor-add-filter")
-      .addEventListener("click", function () { appendRule("FILTER"); });
+      .addEventListener("click", function () { appendTopLevel("FILTER"); });
     document.getElementById("rule-based-editor-add-quota")
-      .addEventListener("click", function () { appendRule("QUOTA"); });
+      .addEventListener("click", function () { appendTopLevel("QUOTA"); });
+    var compositeBtn = document.getElementById("rule-based-editor-add-composite");
+    if (compositeBtn) {
+      compositeBtn.addEventListener("click", function () { appendTopLevel("COMPOSITE"); });
+    }
 
     // Initial sync so the hidden field is populated even if the
     // operator clicks Save As without touching anything.

@@ -156,8 +156,6 @@
                      data-rule-id="{{ rule.rule_id }}"
                      data-kind="{{ rule.kind }}"
                      data-indent="{{ rule.indent }}"
-                     data-composite-op="{{ rule.composite_op or '' }}"
-                     data-composite-children="{{ rule.composite_children_json or '' }}"
                      style="padding: 10px 12px; padding-left: {{ 12 + rule.indent * 24 }}px; margin: 6px 0; border-left: 3px solid {% if rule.kind == 'COMPOSITE' %}#999{% else %}#ddd{% endif %}; background: {% if not rule.enabled %}#f5f5f5{% else %}transparent{% endif %};">
                   <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                     <span class="pill {% if rule.kind == 'COMPOSITE' %}pill-info{% elif rule.kind == 'QUOTA' %}pill-count{% else %}pill-info{% endif %}">{{ rule.kind }}</span>
@@ -213,12 +211,18 @@
                              value="{{ rule.quota_seed if rule.quota_seed is not none else '' }}"
                              style="width: 80px;">
                     {% elif rule.kind == "COMPOSITE" %}
-                      <span>Composite ({{ rule.composite_op }}). Inline editing of composite trees lands in PR 5c.</span>
+                      <select class="rule-composite-op">
+                        {% for value, label in editor.composite_op_options %}
+                          <option value="{{ value }}" {% if value == rule.composite_op %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      <button type="button" class="btn secondary composite-add-child"
+                              data-add-kind="MATCH" title="Add a MATCH child rule">+ child MATCH</button>
+                      <button type="button" class="btn secondary composite-add-child"
+                              data-add-kind="FILTER" title="Add a FILTER child rule">+ child FILTER</button>
                     {% endif %}
 
-                    {% if rule.indent == 0 %}
-                      <button type="button" class="btn alert rule-remove" title="Remove this rule">×</button>
-                    {% endif %}
+                    <button type="button" class="btn alert rule-remove" title="Remove this rule">×</button>
                   </div>
                 </div>
               {% endfor %}
@@ -228,6 +232,7 @@
               <button type="button" class="btn secondary" id="rule-based-editor-add-match">+ Add MATCH rule</button>
               <button type="button" class="btn secondary" id="rule-based-editor-add-filter">+ Add FILTER rule</button>
               <button type="button" class="btn secondary" id="rule-based-editor-add-quota">+ Add QUOTA rule</button>
+              <button type="button" class="btn secondary" id="rule-based-editor-add-composite">+ Add COMPOSITE rule</button>
             </div>
 
             <h3 style="margin-top: 24px;">Save As</h3>

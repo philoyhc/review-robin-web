@@ -556,6 +556,248 @@ def test_save_as_round_trips_composite_children_untouched(
     assert len(revision.rules_json[0]["rules"]) == 2
 
 
+# ---------------------------------------------------------------------------
+# PR 5c — composite-tree editing
+# ---------------------------------------------------------------------------
+
+
+def test_composite_renders_op_picker_and_add_child_buttons(
+    client: TestClient, db: Session
+) -> None:
+    """A Personal RuleSet whose tree contains a COMPOSITE renders an
+    op picker (AND / OR / NOT) and per-composite ``+ child MATCH`` /
+    ``+ child FILTER`` buttons. The composite's children render as
+    full edit rows immediately after the parent."""
+
+    review_session = _make_session(client, db, code="ed-comp-render")
+
+    # Save As a composite tree directly to construct the source state.
+    seed_id = _seed_id(db, "Intra-group peer review")
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/copy",
+        data={"rule_set_id": seed_id, "new_name": "Comp-source"},
+        follow_redirects=False,
+    )
+    base = db.execute(
+        select(RuleSet).where(RuleSet.name == "Comp-source")
+    ).scalar_one()
+    composite_rules = [
+        {
+            "id": "leads_intra",
+            "kind": "COMPOSITE",
+            "enabled": True,
+            "op": "OR",
+            "rules": [
+                {
+                    "id": "lead_r",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewer.tag2",
+                        "operator": "equals",
+                        "operand": "Lead",
+                        "case_sensitive": False,
+                    },
+                },
+                {
+                    "id": "intra",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewer.tag1",
+                        "operator": "same_as",
+                        "operand": "reviewee.tag1",
+                        "case_sensitive": False,
+                    },
+                },
+            ],
+        }
+    ]
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save-as",
+        data={
+            "source_rule_set_id": base.id,
+            "new_name": "Comp-rendered",
+            "combinator": "ALL_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": json.dumps(composite_rules),
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+    composite_rs = db.execute(
+        select(RuleSet).where(RuleSet.name == "Comp-rendered")
+    ).scalar_one()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{composite_rs.id}"
+    ).text
+
+    # Composite renders as an editable row with op picker + add-
+    # child buttons.
+    assert 'class="rule-composite-op"' in body
+    assert 'class="btn secondary composite-add-child"' in body
+    # Children render as full edit rows with their own field /
+    # operator pickers (i.e. PR 5c — not the read-only context line
+    # from PR 5b).
+    assert 'data-indent="1"' in body
+    # Top-level + Add COMPOSITE button is present.
+    assert 'id="rule-based-editor-add-composite"' in body
+
+
+def test_save_as_round_trips_composite_with_op_change(
+    client: TestClient, db: Session
+) -> None:
+    """Edit a composite's op (AND → OR) and Save As. The new RuleSet
+    persists the changed op + the same children."""
+
+    review_session = _make_session(client, db, code="ed-comp-op")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Comp-op-source",
+    )
+
+    edited = [
+        {
+            "id": "outer",
+            "kind": "COMPOSITE",
+            "enabled": True,
+            "op": "OR",
+            "rules": [
+                {
+                    "id": "intra",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewer.tag1",
+                        "operator": "same_as",
+                        "operand": "reviewee.tag1",
+                        "case_sensitive": False,
+                    },
+                },
+                {
+                    "id": "cross_role",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewer.tag2",
+                        "operator": "different_from",
+                        "operand": "reviewee.tag2",
+                        "case_sensitive": False,
+                    },
+                },
+            ],
+        }
+    ]
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save-as",
+        data={
+            "source_rule_set_id": personal.id,
+            "new_name": "Comp-op-out",
+            "combinator": "ANY_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": json.dumps(edited),
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+
+    new_rs = db.execute(
+        select(RuleSet).where(RuleSet.name == "Comp-op-out")
+    ).scalar_one()
+    revision = db.execute(
+        select(RuleSetRevision).where(
+            RuleSetRevision.id == new_rs.current_revision_id
+        )
+    ).scalar_one()
+    assert revision.rules_json[0]["op"] == "OR"
+    children = revision.rules_json[0]["rules"]
+    assert len(children) == 2
+    assert children[1]["predicate"]["operator"] == "different_from"
+
+
+def test_save_as_persists_added_top_level_composite(
+    client: TestClient, db: Session
+) -> None:
+    """Build a fresh top-level COMPOSITE with two children and
+    Save As. Pins the round-trip the JS serialiser produces when an
+    operator clicks ``+ Add COMPOSITE`` and then ``+ child MATCH``
+    twice on the new row."""
+
+    review_session = _make_session(client, db, code="ed-comp-add")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Comp-add-source",
+    )
+
+    rules = [
+        {
+            "id": "new_c",
+            "kind": "COMPOSITE",
+            "enabled": True,
+            "op": "AND",
+            "rules": [
+                {
+                    "id": "child1",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewer.tag1",
+                        "operator": "equals",
+                        "operand": "GroupA",
+                        "case_sensitive": False,
+                    },
+                },
+                {
+                    "id": "child2",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewee.tag1",
+                        "operator": "equals",
+                        "operand": "GroupA",
+                        "case_sensitive": False,
+                    },
+                },
+            ],
+        }
+    ]
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save-as",
+        data={
+            "source_rule_set_id": personal.id,
+            "new_name": "Comp-add-out",
+            "combinator": "ALL_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": json.dumps(rules),
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+
+    new_rs = db.execute(
+        select(RuleSet).where(RuleSet.name == "Comp-add-out")
+    ).scalar_one()
+    revision = db.execute(
+        select(RuleSetRevision).where(
+            RuleSetRevision.id == new_rs.current_revision_id
+        )
+    ).scalar_one()
+    composite = revision.rules_json[0]
+    assert composite["kind"] == "COMPOSITE"
+    assert composite["op"] == "AND"
+    assert len(composite["rules"]) == 2
+    assert all(child["kind"] == "MATCH" for child in composite["rules"])
+
+
 def test_other_users_personal_rule_set_returns_403(
     db: Session,
     alice: AuthenticatedUser,
