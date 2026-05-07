@@ -332,9 +332,16 @@ def test_invitation_tab_active_by_default(
         '<button type="button" class="btn disabled" aria-disabled="true">Invitation</button>'
         in body
     )
-    # Reminder + Responses received are disabled with "(coming soon)".
+    # Reminder remains "(coming soon)" pending Segment 11F PR D.
     assert "Reminder (coming soon)" in body
-    assert "Responses received (coming soon)" in body
+    # Responses received now ships (Segment 11E PR 6) so it renders as
+    # an active link rather than a disabled "(coming soon)" button.
+    assert "Responses received (coming soon)" not in body
+    assert (
+        f'href="/operator/sessions/{session.id}/previews'
+        in body
+        and "email=responses_received" in body
+    )
 
 
 def test_invitation_body_renders_with_substituted_session_name(
@@ -419,6 +426,44 @@ def test_unshipped_email_param_falls_back_to_invitation(
     # Reminder is still rendered as a "(coming soon)" tab in the strip
     # (just not activated).
     assert "Reminder (coming soon)" in body
+
+
+def test_responses_received_tab_renders_card_when_selected(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 11E PR 6 ships the responses-received render adapter,
+    so ``?email=responses_received`` activates the tab and renders
+    the email body. Pre-submit, the body shows the
+    "(not yet submitted)" placeholder for ``$submitted_at``."""
+    session = _create_session(client, db, code="prev-rr-active")
+    _import_reviewers(
+        client,
+        session.id,
+        b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+    )
+
+    response = client.get(
+        f"/operator/sessions/{session.id}/previews",
+        params={
+            "reviewer_email": "alice@example.edu",
+            "email": "responses_received",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.text
+    # Active tab is responses received (rendered as a disabled "current
+    # view" button via the same chrome the invitation tab uses).
+    assert (
+        '<button type="button" class="btn disabled" aria-disabled="true">Responses received</button>'
+        in body
+    )
+    # Default subject substitutes the session name.
+    assert "Responses received: Prev-Rr-Active" in body
+    # Pre-submit placeholder for $submitted_at.
+    assert "(not yet submitted)" in body
+    # The "To:" header lands the picked reviewer's email.
+    assert "<strong>To:</strong> alice@example.edu" in body
 
 
 def test_email_footer_links_to_setup_pages(

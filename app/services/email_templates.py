@@ -1,15 +1,22 @@
-"""Email-template rendering for invitations + reminders.
+"""Email-template rendering for invitations, reminders, and the
+post-submit responses-received confirmation.
 
-Layered between ``app/services/invitations.py`` (which writes outbox
-rows) and the ``email_template_overrides`` JSON column on
-``ReviewSession`` (which an operator-facing editor — Segment 11E PR 2
-— will populate). Per-session overrides fall through key-by-key to
-the in-code defaults below; rendering uses
+Layered between ``app/services/invitations.py`` / the reviewer-submit
+handler (Segment 11C Part 2 PR H) and the ``email_template_overrides``
+JSON column on ``ReviewSession`` (populated by the operator-facing
+editor — Segment 11E PRs 2 + 6). Per-session overrides fall through
+key-by-key to the in-code defaults below; rendering uses
 ``string.Template.safe_substitute`` so a typo'd merge tag in an
 override doesn't 500 the send path.
 
-Merge-field set is closed and small: ``$reviewer_name``,
-``$session_name``, ``$deadline``, ``$help_contact``, ``$invite_url``.
+Merge-field sets:
+
+- Invitation / reminder: ``$reviewer_name``, ``$session_name``,
+  ``$deadline``, ``$help_contact``, ``$invite_url`` — five tags.
+- Responses-received: ``$reviewer_name``, ``$session_name``,
+  ``$deadline``, ``$help_contact``, ``$submitted_at`` — drops
+  ``$invite_url`` (moot post-submit), adds ``$submitted_at``.
+
 Operators type their templates with these tags and we substitute at
 send time.
 
@@ -23,10 +30,15 @@ notation in operator-facing copy.
 
 from __future__ import annotations
 
+from datetime import datetime
 from string import Template
 from typing import Any
 
-from app.db.models import ReviewSession, Reviewer
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session as ORMSession
+from sqlalchemy.orm.exc import UnmappedInstanceError
+
+from app.db.models import Assignment, Response, Reviewer, ReviewSession
 
 # Default templates — verbatim parameterisations of the strings the
 # original ``invitations._email_body`` / ``_reminder_body`` helpers
@@ -45,11 +57,35 @@ DEFAULT_REMINDER_BODY = (
     "Reminder — your review for $session_name isn't complete yet.\n"
     "Open this link (sign in with your work email): $invite_url\n"
 )
+DEFAULT_RESPONSES_RECEIVED_SUBJECT = "Responses received: $session_name"
+DEFAULT_RESPONSES_RECEIVED_BODY = (
+    "Hi $reviewer_name,\n"
+    "\n"
+    "Thanks. Your responses for $session_name are recorded as of "
+    "$submitted_at.\n"
+    "\n"
+    "Questions? Contact $help_contact.\n"
+)
+# Variant rendered automatically when ``session.help_contact`` is
+# unset and the operator hasn't overridden the body — printing
+# "Questions? Contact ()" reads worse in a closing confirmation
+# than just dropping the line. Override bodies that reference
+# ``$help_contact`` always go through the substitute path verbatim,
+# so an operator who explicitly wants the placeholder behaviour
+# gets it.
+DEFAULT_RESPONSES_RECEIVED_BODY_NO_HELP_CONTACT = (
+    "Hi $reviewer_name,\n"
+    "\n"
+    "Thanks. Your responses for $session_name are recorded as of "
+    "$submitted_at.\n"
+)
 
 
 # Override-keys recognised on ``ReviewSession.email_template_overrides``.
 # Listed here so a future addition (or the editor in PR 2) has one
-# place to update.
+# place to update. The ``responses_received_enabled`` boolean toggle
+# lives outside this tuple — ``set_overrides`` only handles string
+# overrides; ``responses_received_enabled`` has its own getter / setter.
 OVERRIDE_KEYS = (
     "invitation_subject",
     "invitation_body",
@@ -59,7 +95,12 @@ OVERRIDE_KEYS = (
     "reminder_body",
     "reminder_cc",
     "reminder_bcc",
+    "responses_received_subject",
+    "responses_received_body",
+    "responses_received_cc",
+    "responses_received_bcc",
 )
+RESPONSES_RECEIVED_ENABLED_KEY = "responses_received_enabled"
 
 
 def _resolve(
@@ -147,13 +188,133 @@ def render_reminder(
     return subject, body
 
 
+def _latest_submitted_at(
+    review_session: ReviewSession, reviewer: Reviewer
+) -> datetime | None:
+    """Most recent ``Response.submitted_at`` across all responses for
+    ``reviewer`` in ``review_session``, or ``None`` if nothing has been
+    submitted yet.
+
+    Used by ``render_responses_received`` to resolve ``$submitted_at``.
+    Pulls the SQLAlchemy session off ``reviewer`` via ``object_session``
+    to keep the render signature symmetric with ``render_invitation``
+    / ``render_reminder`` (no ``db`` parameter). Returns ``None`` for
+    duck-typed test stand-ins (``object_session`` raises
+    ``UnmappedInstanceError``) and for mapped instances detached from
+    a session — callers fall back to a placeholder string."""
+    try:
+        db = ORMSession.object_session(reviewer)
+    except UnmappedInstanceError:
+        return None
+    if db is None:
+        return None
+    return db.execute(
+        select(func.max(Response.submitted_at))
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .where(
+            Assignment.session_id == review_session.id,
+            Assignment.reviewer_id == reviewer.id,
+        )
+    ).scalar()
+
+
+def _format_submitted_at(submitted_at: datetime | None) -> str:
+    """Format ``$submitted_at`` for the responses-received body.
+
+    Returns ``"(not yet submitted)"`` when no submission exists yet —
+    only the editor preview path hits this branch in practice; the
+    live send path always has a stamped ``submitted_at``."""
+    if submitted_at is None:
+        return "(not yet submitted)"
+    return submitted_at.strftime("%Y-%m-%d %H:%M %Z").rstrip()
+
+
+def render_responses_received(
+    review_session: ReviewSession, reviewer: Reviewer
+) -> tuple[str, str]:
+    """Returns ``(subject, body)`` for the responses-received
+    confirmation sent when a reviewer submits their review.
+
+    Drops ``$invite_url`` (moot post-submit); adds ``$submitted_at``,
+    formatted ``YYYY-MM-DD HH:MM TZ``. When the operator hasn't
+    overridden the body and ``session.help_contact`` is unset, the
+    "Questions? Contact …" line is dropped from the default body
+    rather than rendering a hollow ``Contact .`` — operator-supplied
+    bodies that reference ``$help_contact`` substitute verbatim
+    (empty string), preserving operator intent."""
+    submitted_at = _latest_submitted_at(review_session, reviewer)
+    merge: dict[str, str] = {
+        "reviewer_name": (reviewer.name if reviewer is not None else ""),
+        "session_name": review_session.name,
+        "deadline": _format_deadline(review_session),
+        "help_contact": review_session.help_contact or "",
+        "submitted_at": _format_submitted_at(submitted_at),
+    }
+    subject = _substitute(
+        _resolve(
+            review_session,
+            "responses_received_subject",
+            DEFAULT_RESPONSES_RECEIVED_SUBJECT,
+        ),
+        **merge,
+    )
+    body_override = get_override(review_session, "responses_received_body")
+    if body_override is not None and body_override.strip():
+        body_template = body_override
+    elif review_session.help_contact:
+        body_template = DEFAULT_RESPONSES_RECEIVED_BODY
+    else:
+        body_template = DEFAULT_RESPONSES_RECEIVED_BODY_NO_HELP_CONTACT
+    body = _substitute(body_template, **merge)
+    return subject, body
+
+
+def responses_received_enabled(review_session: ReviewSession) -> bool:
+    """Per-session toggle: should the responses-received confirmation
+    auto-send when a reviewer submits?
+
+    Default ``True`` when the override key is missing or stored as a
+    non-bool (the editor's checkbox starts checked). Honours an
+    explicit ``True`` and an explicit ``False``. Consumed by Segment
+    11C Part 2 PR H's submit-time enqueue."""
+    overrides = review_session.email_template_overrides or {}
+    value = overrides.get(RESPONSES_RECEIVED_ENABLED_KEY)
+    if isinstance(value, bool):
+        return value
+    return True
+
+
+def set_responses_received_enabled(
+    review_session: ReviewSession, enabled: bool
+) -> list[Any] | None:
+    """Update the per-session "send on submit" toggle.
+
+    Stores explicit ``False`` when the operator opts out. When
+    ``enabled`` is ``True`` (the default), removes the key entirely so
+    the JSON stays minimal — the reader treats both "key absent" and
+    "explicit ``True``" identically. Returns ``[old, new]`` for the
+    audit detail when the effective value changes; ``None`` otherwise."""
+    current: dict[str, Any] = dict(review_session.email_template_overrides or {})
+    raw = current.get(RESPONSES_RECEIVED_ENABLED_KEY)
+    old_effective = raw if isinstance(raw, bool) else True
+    if old_effective == enabled:
+        return None
+    if enabled:
+        current.pop(RESPONSES_RECEIVED_ENABLED_KEY, None)
+    else:
+        current[RESPONSES_RECEIVED_ENABLED_KEY] = False
+    review_session.email_template_overrides = current or None
+    return [old_effective, enabled]
+
+
 def cc_bcc_for(
     review_session: ReviewSession, kind: str
 ) -> tuple[str | None, str | None]:
     """Returns ``(cc, bcc)`` from the override JSON for the given email
-    kind. ``kind`` is ``"invitation"`` or ``"reminder"``; values are the
-    raw operator-entered comma-separated strings, or ``None`` when the
-    override is unset / blank.
+    kind. ``kind`` is ``"invitation"``, ``"reminder"``, or
+    ``"responses_received"``; values are the raw operator-entered
+    comma-separated strings, or ``None`` when the override is unset
+    / blank.
 
     Consumed by the queue path in ``app.services.invitations`` to
     populate ``EmailOutbox.cc_emails`` / ``bcc_emails`` (added by the
@@ -187,6 +348,20 @@ TEMPLATE_FIELDS: dict[str, list[dict[str, str]]] = {
         {"field": "body", "key": "reminder_body", "default": DEFAULT_REMINDER_BODY},
         {"field": "cc", "key": "reminder_cc", "default": ""},
         {"field": "bcc", "key": "reminder_bcc", "default": ""},
+    ],
+    "responses_received": [
+        {
+            "field": "subject",
+            "key": "responses_received_subject",
+            "default": DEFAULT_RESPONSES_RECEIVED_SUBJECT,
+        },
+        {
+            "field": "body",
+            "key": "responses_received_body",
+            "default": DEFAULT_RESPONSES_RECEIVED_BODY,
+        },
+        {"field": "cc", "key": "responses_received_cc", "default": ""},
+        {"field": "bcc", "key": "responses_received_bcc", "default": ""},
     ],
 }
 

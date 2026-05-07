@@ -1513,7 +1513,7 @@ def instruments_index(
     )
 
 
-_VALID_TEMPLATES = ("invitation", "reminder")
+_VALID_TEMPLATES = ("invitation", "reminder", "responses_received")
 
 
 def _build_field_rows(
@@ -1561,13 +1561,10 @@ def setupinvite_form(
             "active_template": template,
             "valid_templates": _VALID_TEMPLATES,
             "rows": _build_field_rows(review_session, template),
-            "merge_tags": [
-                {"tag": "$reviewer_name", "description": "Reviewer's name from the roster."},
-                {"tag": "$session_name", "description": "Session name."},
-                {"tag": "$deadline", "description": "Session deadline (YYYY-MM-DD), blank when unset."},
-                {"tag": "$help_contact", "description": "Per-session help contact."},
-                {"tag": "$invite_url", "description": "Reviewer-specific invitation URL."},
-            ],
+            "merge_tags": views.merge_tags_for_template(template),
+            "responses_received_enabled": (
+                email_templates.responses_received_enabled(review_session)
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Email Template"
             ),
@@ -1599,6 +1596,17 @@ async def setupinvite_save(
         # empty for the same reason.
         updates[spec["key"]] = raw if raw.strip() else None
     changes = email_templates.set_overrides(review_session, updates)
+    # Responses-received tab carries one extra control: a checkbox
+    # backing ``responses_received_enabled``. Browsers omit unchecked
+    # checkboxes from the form payload entirely, so absence == off
+    # for this template; absence on any other template is ignored.
+    if template == "responses_received":
+        enabled_change = email_templates.set_responses_received_enabled(
+            review_session,
+            enabled=("enabled" in form),
+        )
+        if enabled_change is not None:
+            changes[email_templates.RESPONSES_RECEIVED_ENABLED_KEY] = enabled_change
     if changes:
         audit_service.write_event(
             db,

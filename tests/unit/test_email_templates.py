@@ -143,3 +143,149 @@ def test_deadline_unset_renders_empty_string() -> None:
         session, _reviewer(), invite_url="https://app/x"
     )
     assert body == "Deadline: []"
+
+
+# ── Responses-received render (Segment 11E PR 6) ─────────────────────────
+
+
+def test_render_responses_received_uses_no_help_contact_default_when_unset() -> None:
+    """With no help_contact and no body override, the default body
+    drops the trailing "Questions? Contact …" line — printing a
+    hollow ``Contact .`` reads worse in a closing confirmation."""
+    session = _session()
+    subject, body = email_templates.render_responses_received(
+        session, _reviewer("Rae")
+    )
+    assert subject == "Responses received: Spring 2026"
+    assert body == (
+        "Hi Rae,\n"
+        "\n"
+        "Thanks. Your responses for Spring 2026 are recorded as of "
+        "(not yet submitted).\n"
+    )
+
+
+def test_render_responses_received_uses_help_contact_default_when_set() -> None:
+    session = _session(help_contact="help@example.edu")
+    _, body = email_templates.render_responses_received(
+        session, _reviewer("Rae")
+    )
+    assert body == (
+        "Hi Rae,\n"
+        "\n"
+        "Thanks. Your responses for Spring 2026 are recorded as of "
+        "(not yet submitted).\n"
+        "\n"
+        "Questions? Contact help@example.edu.\n"
+    )
+
+
+def test_render_responses_received_override_body_substitutes_verbatim() -> None:
+    """Operator-supplied bodies that reference ``$help_contact`` get
+    the placeholder behaviour (empty string) — that's their decision
+    to make."""
+    session = _session(
+        overrides={
+            "responses_received_body": (
+                "Submitted at $submitted_at — contact [$help_contact]."
+            ),
+        },
+    )
+    _, body = email_templates.render_responses_received(
+        session, _reviewer("Rae")
+    )
+    assert body == "Submitted at (not yet submitted) — contact []."
+
+
+def test_render_responses_received_override_subject_substitutes() -> None:
+    session = _session(
+        overrides={"responses_received_subject": "Got it: $session_name"},
+    )
+    subject, _ = email_templates.render_responses_received(
+        session, _reviewer()
+    )
+    assert subject == "Got it: Spring 2026"
+
+
+def test_render_responses_received_drops_invite_url_tag() -> None:
+    """``$invite_url`` is moot post-submit; an override that
+    references it leaves the literal placeholder in the output
+    (safe_substitute behaviour)."""
+    session = _session(
+        overrides={"responses_received_body": "Link was: $invite_url"},
+    )
+    _, body = email_templates.render_responses_received(
+        session, _reviewer()
+    )
+    assert body == "Link was: $invite_url"
+
+
+# ── responses_received_enabled toggle ────────────────────────────────────
+
+
+def test_responses_received_enabled_default_is_true_when_no_overrides() -> None:
+    assert email_templates.responses_received_enabled(_session()) is True
+
+
+def test_responses_received_enabled_default_is_true_when_key_absent() -> None:
+    session = _session(overrides={"invitation_subject": "Custom"})
+    assert email_templates.responses_received_enabled(session) is True
+
+
+def test_responses_received_enabled_honours_explicit_false() -> None:
+    session = _session(overrides={"responses_received_enabled": False})
+    assert email_templates.responses_received_enabled(session) is False
+
+
+def test_responses_received_enabled_honours_explicit_true() -> None:
+    session = _session(overrides={"responses_received_enabled": True})
+    assert email_templates.responses_received_enabled(session) is True
+
+
+def test_responses_received_enabled_ignores_non_bool_value() -> None:
+    """Defensive: a stale non-bool value (e.g. operator manually
+    poking the JSON) falls through to the default rather than
+    truthy-coercing."""
+    session = _session(overrides={"responses_received_enabled": "yes"})
+    assert email_templates.responses_received_enabled(session) is True
+
+
+def test_set_responses_received_enabled_returns_none_when_unchanged() -> None:
+    session = _session()  # default-on
+    assert (
+        email_templates.set_responses_received_enabled(session, enabled=True)
+        is None
+    )
+    assert session.email_template_overrides is None
+
+
+def test_set_responses_received_enabled_to_false_stores_explicit_value() -> None:
+    session = _session()
+    diff = email_templates.set_responses_received_enabled(session, enabled=False)
+    assert diff == [True, False]
+    assert session.email_template_overrides == {
+        "responses_received_enabled": False
+    }
+
+
+def test_set_responses_received_enabled_back_to_true_removes_key() -> None:
+    """Re-checking the editor checkbox returns the JSON to its
+    minimal form rather than storing an explicit ``True``."""
+    session = _session(overrides={"responses_received_enabled": False})
+    diff = email_templates.set_responses_received_enabled(session, enabled=True)
+    assert diff == [False, True]
+    # Removing the only key empties the dict; the setter coerces an
+    # empty dict back to None to keep the column tidy.
+    assert session.email_template_overrides is None
+
+
+def test_set_responses_received_enabled_preserves_other_overrides() -> None:
+    session = _session(
+        overrides={
+            "invitation_subject": "Custom",
+            "responses_received_enabled": False,
+        },
+    )
+    diff = email_templates.set_responses_received_enabled(session, enabled=True)
+    assert diff == [False, True]
+    assert session.email_template_overrides == {"invitation_subject": "Custom"}

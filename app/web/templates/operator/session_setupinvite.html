@@ -11,17 +11,20 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# Template selector — Invitation / Reminder. Plain row of normal-
-     sized buttons flushed left; no wrapping card (these are page-
-     level navigation, not their own concern). The active tab
-     renders disabled to read like a current-page anchor. #}
+  {# Template selector — Invitation / Reminder / Responses received.
+     Plain row of normal-sized buttons flushed left; no wrapping card
+     (these are page-level navigation, not their own concern). The
+     active tab renders disabled to read like a current-page anchor.
+     ``replace`` strips the underscore from "responses_received" so
+     the button reads "Responses received" rather than the raw key. #}
   <div class="btn-pair" style="margin-bottom: 16px;">
     {% for t in valid_templates %}
+      {% set label = (t|replace("_", " "))|capitalize %}
       {% if t == active_template %}
-        <button type="button" class="btn disabled" aria-disabled="true">{{ t|capitalize }}</button>
+        <button type="button" class="btn disabled" aria-disabled="true">{{ label }}</button>
       {% else %}
         <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/setupinvite?template={{ t }}">{{ t|capitalize }}</a>
+           href="/operator/sessions/{{ session.id }}/setupinvite?template={{ t }}">{{ label }}</a>
       {% endif %}
     {% endfor %}
   </div>
@@ -40,7 +43,7 @@
      signal. #}
   <div class="bottom-grid">
     <div class="card email-composer" id="email-composer">
-      <h2>{{ active_template|capitalize }} email</h2>
+      <h2>{{ (active_template|replace("_", " "))|capitalize }} email</h2>
 
       <form method="post"
             action="/operator/sessions/{{ session.id }}/setupinvite"
@@ -53,6 +56,25 @@
         <div class="form-row muted">
           <strong>To:</strong> <em>(sent individually to each reviewer)</em>
         </div>
+
+        {% if active_template == "responses_received" %}
+          {# Send-on-submit toggle. Default-on; uncheck to suppress
+             the confirmation entirely for this session. The submit-
+             time enqueue (Segment 11C Part 2 PR H) reads this flag.
+             "Reset to default" for the toggle is just re-checking
+             the box — no separate reset link. #}
+          <div class="form-row">
+            <label>
+              <input type="checkbox" name="enabled" value="on"
+                     {% if responses_received_enabled %}checked{% endif %}>
+              Send this confirmation when a reviewer submits.
+            </label>
+            <p class="muted" style="margin-top: 4px;">
+              Default is on. Uncheck to suppress the confirmation
+              email for this session.
+            </p>
+          </div>
+        {% endif %}
 
         {% for row in rows %}
           <div class="form-row">
