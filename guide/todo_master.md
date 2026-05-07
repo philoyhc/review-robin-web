@@ -134,9 +134,13 @@ pinned to each segment. The catalog itself lives in
 
 1. **11K — Audit-event `detail` schema convention.**
    Pin canonical envelopes (`changes` / `snapshot` / `counts` /
-   `set_changes`) + typed audit helpers + incremental emitter
-   migration. Sized as ~8 PRs. Catalog `unfinished_business.md`
-   #5. Gates 12B (audit export reads against the pinned shape).
+   `set_changes`) + orthogonal slots (`reason` / `refs` /
+   `context`) + typed audit helpers + incremental emitter
+   migration across the ~36 emitters in-tree today. Sized as
+   8 PRs (spec + 4 service-module families + email-template
+   route→service refactor + settings sweep + Pydantic
+   validation gate). Catalog `unfinished_business.md` #5.
+   Gates 12B (audit export reads against the pinned shape).
    **Plan:** `guide/segment_11K_audit_event_detail_schema.md`.
 
 2. **12A — Session settings import + export.**
