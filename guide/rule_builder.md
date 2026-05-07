@@ -20,19 +20,20 @@ that holds the selector + form.
 │  │                                       (only when an editable name exists)    │  │
 │  └──────────────────────────────────────────────────────────────────────────────┘  │
 │                                                                                    │
-│   Combinator               │    Self-review                                        │
-│   [ All of  ▾ ]            │    [✓] Exclude self-review …                          │
-│                            │                                                       │
-│                            │    Rules                                              │
-│                            │    1. Match — reviewer.tag1 …                         │
-│                            │    2. Filter — reviewer.email …                       │
-│                            │                                                       │
-│                            │    [ + Add MATCH ] [ + Add FILTER ] …                 │
-│                            │                                                       │
-│   ↑ 1/3 width              ↑ 2/3 width, vertical line separates                    │
+│   Combinator                                                                       │
+│   [ All of  ▾ ]                                                                    │
+│                                                                                    │
+│   Self-review                                                                      │
+│   [✓] Exclude self-review …                                                        │
+│                                                                                    │
+│   Rules                                                                            │
+│   1. Match — reviewer.tag1 …                                                       │
+│   2. Filter — reviewer.email …                                                     │
+│                                                                                    │
+│   [ + Add MATCH ] [ + Add FILTER ] …                                               │
 │                                                                                    │
 │   [ Copy ] [ Save ] [ Cancel ] [ Delete ]                                          │
-│   ↑ bottom-left, OUTSIDE the two columns                                           │
+│   ↑ bottom-left, outside the body                                                  │
 └────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -58,18 +59,15 @@ that holds the selector + form.
      *is* the title. The "seed" pill goes away (the `(seeded)`
      suffix in the dropdown carries the same signal).
 
-4. **Two-column body** below the inner card:
-   - **Left column, 1/3 width.** "Combinator" heading + the
-     combinator selector / read-only label.
-   - **Right column, 2/3 width.** Everything else from the current
-     card body — Self-review, Random seed (when applicable), Rules
-     list, "+ Add MATCH/FILTER/QUOTA/COMPOSITE" buttons.
-   - **Vertical divider** between the two columns. (1px line, same
-     visual weight as the inner-card border.)
+4. **Body keeps its current single-column layout.** Combinator,
+   Self-review, Random seed (when applicable), Rules list, and the
+   "+ Add MATCH/FILTER/QUOTA/COMPOSITE" buttons render top-to-
+   bottom inside the outer card, exactly as the current Segment
+   13A-1 PR 1–3 implementation does.
 
 5. **Action row.** Stays at the bottom of the outer card, **outside**
-   the two-column body. Left-aligned. Same selection-aware buttons
-   as today (Segment 13A-1 PR 2 locked decisions):
+   the body. Left-aligned. Same selection-aware buttons as today
+   (Segment 13A-1 PR 2 locked decisions):
    - Seeded → `[ Copy ]`
    - Saved Personal → `[ Copy ] [ Save ] [ Cancel ] [ Delete ]`
    - Copy draft / blank draft → `[ Save ] [ Cancel ]`
@@ -78,14 +76,8 @@ that holds the selector + form.
    (seeded selection), the selector stays at half width — it does
    **not** expand. The right half of the inner card stays empty.
 
-7. **Read-only seeded body split.** The seeded read-only body uses
-   the same two-column convention as the editable body: Combinator
-   label on the left (1/3), sentence-shaped rule lines + self-
-   review status on the right (2/3), vertical divider between them.
-
 ## Out of scope
 
 - Mobile / narrow viewport: the half-width outer card will need a
   collapse rule. Capture when we wire responsive breakpoints in
   Segment 14.
-
