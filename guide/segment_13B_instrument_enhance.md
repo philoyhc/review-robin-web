@@ -5,7 +5,7 @@ improvements. Currently scoped to one item:
 
 1. **Sort by reviewee** — operator-side default sort + reviewer-
    side live override. Functional spec at
-   [`guide/sort_by_reviewee.md`](sort_by_reviewee.md).
+   [`spec/sort_by_reviewee.md`](sort_by_reviewee.md).
 
 Future instrument-card enhancements slot in here as additional
 items rather than spawning new segments — the segment frames

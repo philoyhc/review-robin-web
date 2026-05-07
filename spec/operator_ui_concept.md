@@ -2,7 +2,7 @@
 
 **Conceptual map of the operator-facing page surface plus per-page contracts.** Names the page set's groupings, the navigation principles that govern movement between them, the lifecycle vocabulary the surface is built around, and a per-page contract summary for each operator page.
 
-This file sits one level above the visual style spec for Review Robin (`spec/visual_style_rrw.md`, which owns chrome and component details) and one level below the audience model (`spec/audience_and_identity_model.md`) and the architecture spec (`spec/architecture.md`, which owns the domain). When the page set or its navigation changes, this is the file to update first; visual chrome decisions in `visual_style_rrw.md` follow from the page taxonomy here, and per-page deep-dive specs (e.g. `spec/session_home.md`, `guide/instruments.md`) assume this doc's contracts as their starting point.
+This file sits one level above the visual style spec for Review Robin (`spec/visual_style_rrw.md`, which owns chrome and component details) and one level below the audience model (`spec/audience_and_identity_model.md`) and the architecture spec (`spec/architecture.md`, which owns the domain). When the page set or its navigation changes, this is the file to update first; visual chrome decisions in `visual_style_rrw.md` follow from the page taxonomy here, and per-page deep-dive specs (e.g. `spec/session_home.md`, `spec/instruments.md`) assume this doc's contracts as their starting point.
 
 For the reviewer-facing surface — out of scope here — see `spec/reviewer-surface.md` and the reviewer chrome section of `spec/visual_style_rrw.md`.
 
@@ -18,7 +18,7 @@ This doc reads downstream from:
 
 - **`spec/visual_style_rrw.md`** — Review-Robin instantiation of the design system, including chrome implementation details. Where this doc says "two-row chrome", `visual_style_rrw.md` says exactly which colors, classes, and tints realize it.
 - **`spec/session_home.md`** — functional spec for the Session Home (Control Panel) page in detail.
-- **`guide/instruments.md`** — locked spec for the Instruments page, post-Segment-10D rebuild.
+- **`spec/instruments.md`** — locked spec for the Instruments page, post-Segment-10D rebuild.
 - **`spec/preview_hub.md`** — Preview Pages contract.
 - **`spec/quick_setup_card_spec.md`** — the Quick Setup card on Session Home.
 
@@ -84,7 +84,7 @@ The five surfaces where the operator does the work needed to make the session ru
 
 The URL slug `setupinvite` predates the Setup Page / Operations Page split; the settled name for the page is **Email Template**. The page houses the email-template editor (Segment 15 work, currently a stub). The run-time invitation management lives in the Operations Page below.
 
-The Reviewers / Reviewees / Assignments pages share an identical chrome shape (info card → upload-CSV card → data table → danger zone). Instruments has a heavier custom layout — see `guide/instruments.md` for the locked spec.
+The Reviewers / Reviewees / Assignments pages share an identical chrome shape (info card → upload-CSV card → data table → danger zone). Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
 
 ### 4. Preview Pages
 
@@ -92,7 +92,7 @@ Read-only renderings spun off from one or other Setup Page, showing what the con
 
 The Preview hub lives at `GET /operator/sessions/{id}/previews` (Operations row, tab label "Previews") — see `spec/preview_hub.md` for the contract. The standalone reviewer-surface preview at `GET /operator/sessions/{id}/preview` (singular) was retired in Segment 11F PR C; the URL is now a permanent (308) redirect to `/operator/sessions/{id}/previews#reviewer-surface` (the surface card on the consolidated hub). The hub bypasses session-status / deadline / acceptance gates.
 
-The grouping name stays plural because additional Preview surfaces are anticipated (e.g. per-instrument preview integration is open per `guide/instruments.md` Section D).
+The grouping name stays plural because additional Preview surfaces are anticipated (e.g. per-instrument preview integration is open per `spec/instruments.md` Section D).
 
 ### 5. Per Session Operations Pages
 
@@ -234,7 +234,7 @@ The Assignments page additionally carries an anchored `#rules` "Assign by Rules"
 
 A consolidated page for everything per-instrument: session-wide status + bulk toggles, then one card per instrument with in-place editing for description, response fields, and display fields, ending with a live Preview Instrument table.
 
-**Detailed spec: `guide/instruments.md`.** That doc holds the locked surface definition post-Segment-10D rebuild (single bulk-save form, `?editing={iid}` URL state machine, mutual-exclusion edit lock, zero-RF save guard, RTD card with cascade-confirm and would-empty guards). Multi-instrument UI is intentionally deferred (the `Add an instrument` button renders disabled).
+**Detailed spec: `spec/instruments.md`.** That doc holds the locked surface definition post-Segment-10D rebuild (single bulk-save form, `?editing={iid}` URL state machine, mutual-exclusion edit lock, zero-RF save guard, RTD card with cascade-confirm and would-empty guards). Multi-instrument UI is intentionally deferred (the `Add an instrument` button renders disabled).
 
 ### `/operator/sessions/{id}/setupinvite` — Email Template
 
@@ -311,5 +311,5 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/operations_renew.md`** — Invitations + Responses functional spec; consolidates the Manage Invitations + Monitoring pages into a reviewer-centric Invitations page and adds a reviewee-centric Responses page.
 - **`spec/reviewer-surface.md`** — reviewer-facing surface contracts (separate audience).
 - **`spec/ui_elements.md`** — implementation catalogue mapping the canonical primitives to CSS classes and templates.
-- **`guide/instruments.md`** — locked spec for the Instruments page.
+- **`spec/instruments.md`** — locked spec for the Instruments page.
 - **`docs/status.md`** — current implementation state and per-route detail.

@@ -111,7 +111,7 @@ _CSV_COL_TO_SOURCE: dict[str, tuple[str, str]] = {
 }
 
 # Locked rows in the Display Fields table. Per
-# guide/instruments.md, ``RevieweeName`` and ``RevieweeEmail``
+# spec/instruments.md, ``RevieweeName`` and ``RevieweeEmail``
 # always sit at positions 1 and 2 (orders 0 and 1) on every
 # instrument. Their visible flag is locked-checked, their order
 # is locked, and they cannot be deleted.
@@ -203,7 +203,7 @@ def validation_block_for_rtd(
 ) -> dict[str, Any] | None:
     """Map an RTD row to the JSON shape written to
     ``instrument_response_fields.validation`` per
-    ``guide/instruments.md`` "Validation derivation"."""
+    ``spec/instruments.md`` "Validation derivation"."""
     if rtd.data_type == "List":
         if not rtd.list_csv:
             return {"choices": []}
@@ -237,7 +237,7 @@ def validation_block_for_rtd(
 class RTDPrecisionError(ValueError):
     """Raised when an operator-defined RTD's numeric cell violates
     the precision rule for its Data Type. Per
-    ``guide/instruments.md`` "Save-time validation rules":
+    ``spec/instruments.md`` "Save-time validation rules":
 
     - ``Integer`` ``Min`` / ``Max`` / ``Step`` must have no
       fractional part.
@@ -330,7 +330,7 @@ def _rtd_by_name(
 
 class RTDValidationError(ValueError):
     """Raised when an operator-defined RTD violates a save-time rule
-    (per ``guide/instruments.md`` "Save-time validation rules"):
+    (per ``spec/instruments.md`` "Save-time validation rules"):
     empty list, Min > Max, Step doesn't evenly divide (Max − Min),
     incomplete row, etc. ``RTDPrecisionError`` is the more specific
     subclass for the precision rules."""
@@ -453,7 +453,7 @@ def _validate_rtd_payload(
     list_csv: str | None,
 ) -> None:
     """Apply the save-time validation rules from
-    ``guide/instruments.md`` for a fresh-or-updated RTD payload."""
+    ``spec/instruments.md`` for a fresh-or-updated RTD payload."""
     cleaned_name = (response_type or "").strip()
     if not cleaned_name:
         raise RTDValidationError("Response Type name is required.")
@@ -590,7 +590,7 @@ def update_response_type_definition(
     """Update an operator-defined RTD's parameters. Name + Data Type
     are spec-locked. Propagates the new ``validation`` block to every
     Response Fields row that references this RTD (per
-    ``guide/instruments.md`` "Locked vs. operator-added rows")."""
+    ``spec/instruments.md`` "Locked vs. operator-added rows")."""
     if rtd.is_seeded:
         raise RTDLockedError(
             f"Seeded Response Type {rtd.response_type!r} cannot be edited."
