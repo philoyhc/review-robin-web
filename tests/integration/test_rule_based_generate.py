@@ -311,13 +311,21 @@ def test_assignments_page_shows_last_generated_with_ruleset_name(
     rb_section = body.split('id="rule-based-assignment"', 1)[1]
     rb_section = rb_section.split("</section>", 1)[0]
     assert "Last generated using" in rb_section
-    assert "<strong>Intra-group peer review</strong>" in rb_section
+    # RuleSet name + both counts render as pills.
+    assert (
+        '<span class="pill pill-info">Intra-group peer review</span>'
+        in rb_section
+    )
     # Intra-group across the seed population (two reviewers in
     # different tag1 groups, two reviewees likewise) yields exactly
     # two intra-group pairs. Default-instrument fan-out keeps
     # assignments == pairs on this single-instrument session.
-    assert "2 unique pairs" in rb_section
-    assert "(2 assignments)" in rb_section
+    assert (
+        '<span class="pill pill-info">2 unique pairs</span>' in rb_section
+    )
+    assert (
+        '<span class="pill pill-info">2 assignments</span>' in rb_section
+    )
 
 
 def test_assignments_page_renders_description_on_first_load(
