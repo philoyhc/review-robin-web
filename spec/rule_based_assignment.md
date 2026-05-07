@@ -205,7 +205,6 @@ The system ships with the following seeds. Each is intended to be useful as-is a
 | **Cross-group peer review** | `ALL_OF`, exclude self | Reviewer and reviewee have *different* `tag1`. Useful for fresh-perspective rounds. |
 | **Same group, different role** | `ALL_OF`, exclude self | Same `tag1`, different `tag2`. Pair within the team but never with someone of the same role. |
 | **Three reviewers per reviewee** | `ALL_OF`, exclude self | Full candidate pool, then a `PER_REVIEWEE` quota of `min=3, max=3`, random with a fixed seed. |
-| **Lead-led review** | `ANY_OF`, exclude self | Union of (a) intra-group pairings and (b) cross-group pairings where both sides have `tag2 = "Lead"`. |
 
 Seed names are illustrative; the final set is chosen with the product owner before release. The point is that the library is non-empty on first use, so a user can pick a working RuleSet without authoring one from scratch.
 

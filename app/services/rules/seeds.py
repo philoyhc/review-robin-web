@@ -25,8 +25,6 @@ from typing import Final
 
 from app.schemas.rules import (
     Combinator,
-    CompositeOp,
-    CompositeRule,
     MatchRule,
     Predicate,
     QuotaRule,
@@ -149,59 +147,6 @@ SEED_THREE_REVIEWERS_PER_REVIEWEE: Final[RuleSetSchema] = RuleSetSchema(
 )
 
 
-SEED_LEAD_LED: Final[RuleSetSchema] = RuleSetSchema(
-    name="Lead-led review",
-    description=(
-        "Union of (a) intra-group pairings and (b) cross-group "
-        "pairings where both sides have tag2 = Lead."
-    ),
-    scope=RuleSetScope.seed,
-    combinator=Combinator.ANY_OF,
-    rules=[
-        MatchRule(
-            id="intra_group",
-            predicate=Predicate(
-                field="reviewer.tag1",
-                operator="same_as",
-                operand="reviewee.tag1",
-            ),
-        ),
-        CompositeRule(
-            id="cross_group_leads",
-            op=CompositeOp.AND,
-            rules=[
-                MatchRule(
-                    id="rev_lead",
-                    predicate=Predicate(
-                        field="reviewer.tag2",
-                        operator="equals",
-                        operand="Lead",
-                    ),
-                ),
-                MatchRule(
-                    id="rvw_lead",
-                    predicate=Predicate(
-                        field="reviewee.tag2",
-                        operator="equals",
-                        operand="Lead",
-                    ),
-                ),
-                MatchRule(
-                    id="diff_tag1",
-                    predicate=Predicate(
-                        field="reviewer.tag1",
-                        operator="different_from",
-                        operand="reviewee.tag1",
-                    ),
-                ),
-            ],
-        ),
-    ],
-    options=RuleSetOptions(excludeSelfReviews=True, seed=None),
-    metadata=RuleSetMetadata(isSeed=True),
-)
-
-
 # Order matters: drives ``seed_order`` on the inserted rows and the
 # library selector's order in the editor (alphabetical-by-name within
 # the seed group, but the install order pins the tie-breaker for any
@@ -212,5 +157,4 @@ SEEDS: Final[list[RuleSetSchema]] = [
     SEED_CROSS_GROUP,
     SEED_SAME_GROUP_DIFFERENT_ROLE,
     SEED_THREE_REVIEWERS_PER_REVIEWEE,
-    SEED_LEAD_LED,
 ]

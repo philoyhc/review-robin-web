@@ -1,6 +1,6 @@
 """Integration test for Segment 13A PR 3's seed-install migration.
 
-Verifies that the migration installed exactly the six seeded
+Verifies that the migration installed exactly the five seeded
 RuleSets from ``app/services/rules/seeds.py`` with the right shape
 in the DB. Re-loads each row's ``rules_json`` through Pydantic and
 asserts byte-equivalence with the in-memory definition.
@@ -22,11 +22,11 @@ from app.schemas.rules import Rule
 from app.services.rules.seeds import SEEDS
 
 
-def test_migration_installs_six_seeds(db: Session) -> None:
+def test_migration_installs_five_seeds(db: Session) -> None:
     rows = db.execute(
         select(RuleSet).where(RuleSet.is_seed.is_(True)).order_by(RuleSet.id)
     ).scalars().all()
-    assert len(rows) == 6
+    assert len(rows) == 5
     assert [row.name for row in rows] == [seed.name for seed in SEEDS]
 
 

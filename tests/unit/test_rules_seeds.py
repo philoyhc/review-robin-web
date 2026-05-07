@@ -22,7 +22,6 @@ from app.services.rules.seeds import (
     SEED_CROSS_GROUP,
     SEED_FULL_MATRIX,
     SEED_INTRA_GROUP,
-    SEED_LEAD_LED,
     SEED_SAME_GROUP_DIFFERENT_ROLE,
     SEED_THREE_REVIEWERS_PER_REVIEWEE,
     SEEDS,
@@ -182,37 +181,6 @@ def test_three_reviewers_seed_is_deterministic_across_runs() -> None:
     assert _emails(a.pairs) == _emails(b.pairs)
 
 
-def test_lead_led_seed_unions_intra_and_cross_group_leads() -> None:
-    reviewers, reviewees = _build_population()
-    result = evaluate(
-        SEED_LEAD_LED, reviewers=reviewers, reviewees=reviewees
-    )
-    pairs = _emails(result.pairs)
-
-    # Branch A: intra-group (excl. self) — 4 × 20 = 80 pairs.
-    intra = {
-        (r.email, e.email_or_identifier)
-        for r in reviewers
-        for e in reviewees
-        if r.tag_1 == e.tag_1 and r.email != e.email_or_identifier
-    }
-    assert intra <= pairs
-
-    # Branch B: cross-group Lead-Lead — 4 leads × 3 cross-group leads
-    # = 12 pairs.
-    cross_leads = {
-        (r.email, e.email_or_identifier)
-        for r in reviewers
-        for e in reviewees
-        if r.tag_2 == "Lead"
-        and e.tag_2 == "Lead"
-        and r.tag_1 != e.tag_1
-    }
-    assert cross_leads <= pairs
-    # Union, no extras.
-    assert pairs == intra | cross_leads
-
-
 # ---------------------------------------------------------------------------
 # Full Matrix equivalence pin (load-bearing for PR 8's retirement)
 # ---------------------------------------------------------------------------
@@ -242,7 +210,7 @@ def test_full_matrix_seed_matches_generate_full_matrix() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_seeds_list_has_six_unique_names_in_install_order() -> None:
+def test_seeds_list_has_five_unique_names_in_install_order() -> None:
     names = [seed.name for seed in SEEDS]
     assert names == [
         "Full Matrix",
@@ -250,9 +218,8 @@ def test_seeds_list_has_six_unique_names_in_install_order() -> None:
         "Cross-group peer review",
         "Same group, different role",
         "Three reviewers per reviewee",
-        "Lead-led review",
     ]
-    assert len(set(names)) == 6
+    assert len(set(names)) == 5
 
 
 def test_every_seed_is_marked_as_seed_scope() -> None:

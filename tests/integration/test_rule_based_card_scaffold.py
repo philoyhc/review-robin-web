@@ -70,24 +70,23 @@ def _seed_with_assignments(
 def test_rule_based_card_renders_seed_selector_after_pr4(
     client: TestClient, db: Session
 ) -> None:
-    """The card flips live in PR 4: the selector lists the six seeded
-    RuleSets, the Exclude self-review checkbox is enabled, the
-    Generate button is a real submit button, and the Edit ruleset
-    link still points at the editor stub."""
+    """The card flips live in PR 4: the selector lists the five
+    seeded RuleSets, the Exclude self-review checkbox is enabled,
+    the Generate button is a real submit button, and the Edit
+    ruleset link still points at the editor stub."""
 
     review_session = _make_session(client, db, code="rb-render")
     body = client.get(f"/operator/sessions/{review_session.id}/assignments").text
 
     assert 'id="rule-based-assignment"' in body
     assert 'id="rule-based-ruleset"' in body
-    # All six canonical seeds render as <option> entries.
+    # All five canonical seeds render as <option> entries.
     for seed_name in (
         "Full Matrix",
         "Intra-group peer review",
         "Cross-group peer review",
         "Same group, different role",
         "Three reviewers per reviewee",
-        "Lead-led review",
     ):
         assert f">{seed_name}</option>" in body
     # The form posts to the live Generate route.
