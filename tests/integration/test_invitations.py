@@ -418,7 +418,7 @@ def test_audit_events_written_for_lifecycle(
         select(AuditEvent).where(AuditEvent.event_type == "invitations.generated")
     ).scalar_one()
     assert generated.detail is not None
-    assert generated.detail["count"] == 1
+    assert len(generated.detail["set_changes"]["added"]) == 1
 
 
 def test_record_open_audit_event_written(
@@ -449,7 +449,7 @@ def test_record_open_audit_event_written(
         select(AuditEvent).where(AuditEvent.event_type == "invitation.opened")
     ).scalar_one()
     assert opened.detail is not None
-    assert opened.detail["invitation_id"] == invitation.id
+    assert opened.detail["refs"]["invitation_id"] == invitation.id
 
 
 # --------------------------------------------------------------------------- #
@@ -939,9 +939,9 @@ def test_regenerate_all_writes_single_batch_audit_event(
     assert len(audit_rows) == 1
     detail = audit_rows[0].detail
     assert detail is not None
-    assert detail["count"] == 2
-    assert len(detail["invitation_ids"]) == 2
-    assert len(detail["reviewer_ids"]) == 2
+    updated = detail["set_changes"]["updated"]
+    assert len(updated) == 2
+    assert all("invitation_id" in entry and "reviewer_id" in entry for entry in updated)
 
 
 def test_regenerate_all_409_while_session_draft(

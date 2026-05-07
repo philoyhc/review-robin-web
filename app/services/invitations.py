@@ -119,13 +119,13 @@ def generate_invitations(
                 f"{'' if len(new_ids) == 1 else 's'}"
             ),
             actor_user_id=user.id,
-            session_id=review_session.id,
-            detail={
-                "session_id": review_session.id,
-                "count": len(new_ids),
-                "invitation_ids": new_ids,
-                "reviewer_ids": sorted(to_create),
-            },
+            session=review_session,
+            payload=audit.set_changes(
+                added=[
+                    {"invitation_id": iid, "reviewer_id": rid}
+                    for iid, rid in zip(new_ids, sorted(to_create))
+                ]
+            ),
             correlation_id=correlation_id,
         )
     db.commit()
@@ -161,8 +161,8 @@ def regenerate_token(
         event_type="invitation.regenerated",
         summary=f"Regenerated invitation #{invitation.id}",
         actor_user_id=user.id,
-        session_id=invitation.session_id,
-        detail={
+        session=invitation.session,
+        refs={
             "invitation_id": invitation.id,
             "reviewer_id": invitation.reviewer_id,
         },
@@ -219,13 +219,13 @@ def regenerate_all_tokens(
                 f"{'' if len(rotated_ids) == 1 else 's'}"
             ),
             actor_user_id=user.id,
-            session_id=review_session.id,
-            detail={
-                "session_id": review_session.id,
-                "count": len(rotated_ids),
-                "invitation_ids": rotated_ids,
-                "reviewer_ids": rotated_reviewer_ids,
-            },
+            session=review_session,
+            payload=audit.set_changes(
+                updated=[
+                    {"invitation_id": iid, "reviewer_id": rid}
+                    for iid, rid in zip(rotated_ids, rotated_reviewer_ids)
+                ]
+            ),
             correlation_id=correlation_id,
         )
         db.commit()
@@ -307,8 +307,8 @@ def send_invitation(
             f"Sent invitation #{invitation.id} to {reviewer.email}"
         ),
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
+        session=review_session,
+        refs={
             "invitation_id": invitation.id,
             "reviewer_id": reviewer.id,
             "outbox_id": outbox.id,
@@ -361,8 +361,8 @@ def record_open(
         event_type="invitation.opened",
         summary=f"Invitation #{invitation.id} opened",
         actor_user_id=user.id,
-        session_id=invitation.session_id,
-        detail={
+        session=invitation.session,
+        refs={
             "invitation_id": invitation.id,
             "reviewer_id": invitation.reviewer_id,
         },
@@ -580,14 +580,14 @@ def send_reminders_to_incomplete(
                 f"{'' if len(sent_invitation_ids) == 1 else 's'}"
             ),
             actor_user_id=user.id,
-            session_id=review_session.id,
-            detail={
-                "session_id": review_session.id,
-                "count": len(sent_invitation_ids),
-                "invitation_ids": sent_invitation_ids,
-                "reviewer_ids": sent_reviewer_ids,
-                "fell_back_count": fell_back,
-            },
+            session=review_session,
+            payload=audit.set_changes(
+                updated=[
+                    {"invitation_id": iid, "reviewer_id": rid}
+                    for iid, rid in zip(sent_invitation_ids, sent_reviewer_ids)
+                ]
+            ),
+            context={"fell_back": fell_back},
             correlation_id=correlation_id,
         )
         db.commit()

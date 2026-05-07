@@ -293,7 +293,7 @@ def test_remind_incomplete_writes_single_batch_audit_event(
     ).scalars().all()
     assert len(events) == 1
     assert events[0].detail is not None
-    assert events[0].detail["count"] == 2
+    assert len(events[0].detail["set_changes"]["updated"]) == 2
 
 
 def test_per_row_and_bulk_reminders_stamp_last_reminder_at(
