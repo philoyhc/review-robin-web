@@ -1,24 +1,35 @@
-"""Integration tests for Segment 13A PR 5a — the RuleSet editor
-read-only view + Copy action.
+"""Integration tests for Segment 13A PR 5a — the legacy RuleSet
+editor child page.
 
-The editor child page renders the loaded RuleSet's metadata + rule
-tree as the locked sentence-shaped surface form (segment plan
-§"Rule semantics surface form"). PR 5a only ships the read-only
-view + a Copy button that duplicates the loaded RuleSet into a new
-Personal-scope RuleSet owned by the current user; PR 5b adds the
-inline-JS predicate / quota editors.
+Segment 13A-1 PR 4a rewires the operator's main link target to the
+new single-card Rule Builder surface and 303-redirects the legacy
+``/edit/{rule_set_id}`` GET to it. The legacy template + companion
+POST routes are still alive in 4a but no longer reachable through
+any UI link. The whole file is scheduled for deletion alongside
+the routes and template in PR 4b — the new test files
+(``test_rule_builder_page.py``, ``test_rule_builder_copy_save_delete.py``,
+``test_rule_builder_new_blank.py``) carry the equivalent coverage
+for the new surface.
 """
 
 from __future__ import annotations
 
 import json
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import AuditEvent, ReviewSession, RuleSet, RuleSetRevision
+
+pytestmark = pytest.mark.skip(
+    reason=(
+        "Segment 13A-1 PR 4a: legacy editor surface superseded by the "
+        "single-card Rule Builder. File retired wholesale in PR 4b."
+    )
+)
 
 
 def _make_session(

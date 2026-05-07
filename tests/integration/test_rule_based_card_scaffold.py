@@ -105,10 +105,12 @@ def test_rule_based_card_renders_seed_selector_after_pr4(
         '/assignments/rule-based/generate"'
     )
     assert generate_action in body
-    # Edit ruleset link points at the editor for the currently-
-    # selected RuleSet (id-suffixed path; PR 5 wires the editor).
+    # Edit ruleset link points at the new single-card Rule Builder
+    # surface, with the currently-selected RuleSet pinned in the
+    # ``?rule_set_id=`` query (Segment 13A-1 PR 4a).
     edit_url_prefix = (
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/edit/"
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based-editor?rule_set_id="
     )
     assert f'href="{edit_url_prefix}' in body
     assert ">Edit ruleset</a>" in body

@@ -1528,81 +1528,27 @@ def _name_taken_by_other(
     response_model=None,
 )
 def rule_based_editor(
-    request: Request,
     rule_set_id: int,
-    error: str | None = Query(default=None),
-    saved: str | None = Query(default=None),
-    renamed: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse | RedirectResponse:
-    from app.services.rules import library
+) -> RedirectResponse:
+    """Segment 13A-1 PR 4a — legacy editor URL → new Rule Builder.
 
-    loaded = library.load_rule_set(db, rule_set_id)
-    if loaded is None:
-        return RedirectResponse(
-            url=(
-                f"/operator/sessions/{review_session.id}/assignments"
-                "?rule_based_error=missing_rule_set"
-            ),
-            status_code=status.HTTP_303_SEE_OTHER,
-        )
-    rule_set, revision = loaded
+    The single-card Rule Builder at
+    ``/assignments/rule-based-editor`` is now the canonical surface
+    (Segment 13A-1 PRs 1–3). This handler stays as a 303 redirect
+    so any bookmarked legacy URLs land on the new page with the
+    same RuleSet selected. The companion POST routes
+    (``/copy``, ``/save``, ``/save-as``, ``/rename``, ``/delete``,
+    ``/preview``) are still alive in PR 4a — they get retired in
+    PR 4b.
+    """
 
-    # Personal RuleSets are operator-private — only the owner can
-    # open the editor on them. Seeds are visible to every operator.
-    if not rule_set.is_seed and rule_set.owner_user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="That RuleSet is private to its owner.",
-        )
-
-    error_messages = {
-        "empty_name": "Pick a name for the new RuleSet before clicking Save.",
-        "malformed_json": "The edited rule list could not be parsed.",
-        "validation": (
-            "One or more rules failed validation. Check operator-"
-            "operand pairings, regexes, and quota bounds."
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}"
+            f"/assignments/rule-based-editor?rule_set_id={rule_set_id}"
         ),
-        "bad_combinator": "Pick a combinator (All / Any / In sequence).",
-        "bad_seed": "RuleSet seed must be an integer.",
-        "needs_delete_confirm": (
-            "Delete not confirmed. Tick the confirm checkbox before "
-            "clicking Delete."
-        ),
-        "needs_lose_draft_confirm": (
-            "Copy not confirmed. Tick the discard-draft checkbox before "
-            "clicking Copy — the in-editor draft will be discarded."
-        ),
-    }
-    preview = _build_rule_based_preview(
-        db, review_session, rule_set=rule_set, revision=revision
-    )
-    editor = views.build_rule_based_editor_context(
-        review_session,
-        db=db,
-        rule_set=rule_set,
-        revision=revision,
-        user=user,
-        error_kind=error,
-        error_message=error_messages.get(error or "") if error else None,
-        saved_flash=(saved == "1"),
-        renamed_flash=(renamed == "1"),
-        preview=preview,
-    )
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_rule_based_editor.html",
-        {
-            "user": user,
-            "session": review_session,
-            "status_pills": views.session_status_pills(db, review_session),
-            "editor": editor,
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, f"Rule Based · {rule_set.name}"
-            ),
-        },
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

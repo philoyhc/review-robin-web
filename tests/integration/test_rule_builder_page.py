@@ -294,3 +294,31 @@ def test_non_operator_returns_403(
         "/assignments/rule-based-editor"
     )
     assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Legacy /edit/{rule_set_id} → new surface (PR 4a)
+# ---------------------------------------------------------------------------
+
+
+def test_legacy_edit_url_redirects_to_new_rule_builder(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 13A-1 PR 4a: the legacy editor URL 303-redirects to
+    the new single-card Rule Builder, with the same RuleSet selected
+    via ``?rule_set_id=``."""
+
+    review_session = _make_session(client, db, code="rb-legacy-redir")
+    intra_id = _seed_id(db, "Intra-group peer review")
+
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{intra_id}",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers.get("location") == (
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based-editor?rule_set_id={intra_id}"
+    )
