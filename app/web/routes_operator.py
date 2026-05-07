@@ -882,11 +882,18 @@ async def quick_setup_assignments_submit(
 @router.get("/sessions/{session_id}/assignments", response_class=HTMLResponse)
 def assignments_hub(
     request: Request,
+    rule_based_error: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    return _render_assignments_hub(request, db, review_session, user)
+    return _render_assignments_hub(
+        request,
+        db,
+        review_session,
+        user,
+        rule_based_error=rule_based_error,
+    )
 
 
 def _render_assignments_hub(
@@ -898,6 +905,7 @@ def _render_assignments_hub(
     issues: list | None = None,
     missing_confirm: bool = False,
     is_blocked: bool = False,
+    rule_based_error: str | None = None,
 ) -> HTMLResponse:
     assignment_count = assignments.existing_count(db, review_session.id)
     pair_sample = (
@@ -944,7 +952,11 @@ def _render_assignments_hub(
                 review_session, "Assignments"
             ),
             "rule_based_card": views.build_rule_based_card_context(
-                review_session, assignment_count=assignment_count
+                db,
+                review_session,
+                user=user,
+                assignment_count=assignment_count,
+                error_kind=rule_based_error,
             ),
         },
         status_code=status_code,
@@ -972,6 +984,103 @@ def rule_based_editor_stub(
                 review_session, "Rule Based editor"
             ),
         },
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/rule-based/generate",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def rule_based_generate(
+    request: Request,
+    rule_set_id: int = Form(...),
+    exclude_self_review: str | None = Form(default=None),
+    confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    from pydantic import TypeAdapter
+
+    from app.schemas.rules import Combinator, Rule, RuleSetOptions, RuleSetSchema
+    from app.services.rules import engine, library
+
+    _require_editable(review_session)
+
+    loaded = library.load_rule_set(db, rule_set_id)
+    if loaded is None:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/assignments"
+                "?rule_based_error=missing_rule_set"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    rule_set_row, revision = loaded
+
+    existing = assignments.existing_count(db, review_session.id)
+    if existing > 0 and confirm_replace != "true":
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/assignments"
+                "?rule_based_error=needs_confirm"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    if existing > 0:
+        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
+
+    # Rehydrate the persisted RuleSet through the typed schema so the
+    # engine sees the same shape as the editor would. Validators run
+    # at ``model_validate`` time; the seed installer + editor save
+    # paths already gate on that, so a malformed row here is a
+    # data-integrity bug rather than user error.
+    rule_adapter = TypeAdapter(Rule)
+    rule_set_schema = RuleSetSchema(
+        id=rule_set_row.id,
+        name=rule_set_row.name,
+        description=rule_set_row.description or "",
+        scope=rule_set_row.scope,  # type: ignore[arg-type]
+        combinator=Combinator(revision.combinator),
+        rules=[
+            rule_adapter.validate_python(payload)
+            for payload in revision.rules_json
+        ],
+        options=RuleSetOptions(
+            excludeSelfReviews=revision.exclude_self_reviews,
+            seed=revision.seed,
+        ),
+    )
+
+    override_exclude_self = exclude_self_review == "true"
+    reviewers = assignments.list_reviewers(db, review_session.id)
+    reviewees = assignments.list_reviewees(db, review_session.id)
+    result = engine.evaluate(
+        rule_set_schema,
+        reviewers=reviewers,
+        reviewees=reviewees,
+        override_exclude_self_reviews=override_exclude_self,
+        revision_seed=revision.id,
+    )
+
+    assignments.replace_assignments(
+        db,
+        review_session=review_session,
+        user=user,
+        pairs=result.pairs,
+        mode=AssignmentMode.rule_based,
+        correlation_id=request_correlation_id(),
+        excluded_counts=result.excluded_counts,
+        rule_set_revision=revision,
+        exclude_self_reviews=override_exclude_self,
+    )
+
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/assignments",
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

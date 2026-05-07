@@ -2161,6 +2161,30 @@ def build_surface_preview_context(
 # Mirrors the 11H pattern: ship the visual shape first behind a single
 # ``is_wired`` flag, then PRs 4 and 5 flip it live and supply real
 # selector options + handlers without re-laying-out the partial.
+# PR 4 flipped the card live with seed-only library entries; PR 5
+# extends the selector to include Personal RuleSets owned by the
+# operator and adds the Build / Edit rules button.
+
+
+@dataclass(frozen=True)
+class RuleBasedSelectorOption:
+    id: int
+    label: str
+    description: str
+    exclude_self_reviews: bool
+    is_seed: bool
+
+
+@dataclass(frozen=True)
+class RuleBasedLastGenerated:
+    """One-line summary of the most recent rule-based generation.
+
+    Reads from ``assignments.generated`` audit rows where
+    ``context.mode == 'rule_based'``. Empty when no rule-based
+    generation has happened yet on this session."""
+
+    pair_count: int
+    when: datetime
 
 
 @dataclass(frozen=True)
@@ -2169,16 +2193,87 @@ class RuleBasedCardContext:
     assignment_count: int
     edit_url: str
     coming_in: str
+    options: list[RuleBasedSelectorOption]
+    selected_option_id: int | None
+    needs_confirm_replace: bool
+    error_kind: str | None
+    last_generated: RuleBasedLastGenerated | None
 
 
 def build_rule_based_card_context(
-    review_session: ReviewSession, *, assignment_count: int
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    user: User | None = None,
+    assignment_count: int,
+    error_kind: str | None = None,
 ) -> RuleBasedCardContext:
+    """Build the live context for the Rule Based card.
+
+    PR 4 ships the seed-only library; ``user`` is accepted now so PR 5
+    can extend the query to include the operator's Personal RuleSets
+    without further surgery here.
+    """
+
+    from app.db.models import AuditEvent
+    from app.services.rules import library
+
+    options: list[RuleBasedSelectorOption] = []
+    selected_option_id: int | None = None
+    if user is not None:
+        rule_sets = library.list_visible_rule_sets(db, user=user)
+        for rs in rule_sets:
+            revision = rs.current_revision
+            exclude_self = (
+                revision.exclude_self_reviews if revision is not None else True
+            )
+            options.append(
+                RuleBasedSelectorOption(
+                    id=rs.id,
+                    label=rs.name,
+                    description=rs.description or "",
+                    exclude_self_reviews=exclude_self,
+                    is_seed=rs.is_seed,
+                )
+            )
+        # Default selection: the alphabetically-first seed (per the
+        # plan, "Intra-group peer review" given install order).
+        seed_options = [opt for opt in options if opt.is_seed]
+        if seed_options:
+            selected_option_id = seed_options[0].id
+        elif options:
+            selected_option_id = options[0].id
+
+    last_generated: RuleBasedLastGenerated | None = None
+    last_event = db.execute(
+        select(AuditEvent)
+        .where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "assignments.generated",
+        )
+        .order_by(AuditEvent.created_at.desc())
+    ).scalars().first()
+    if last_event is not None and last_event.detail is not None:
+        ctx = last_event.detail.get("context") or {}
+        if ctx.get("mode") == "rule_based":
+            counts = last_event.detail.get("counts") or {}
+            pair_count = counts.get("pairs")
+            if isinstance(pair_count, int):
+                last_generated = RuleBasedLastGenerated(
+                    pair_count=pair_count,
+                    when=last_event.created_at,
+                )
+
     return RuleBasedCardContext(
-        is_wired=False,
+        is_wired=user is not None,
         assignment_count=assignment_count,
         edit_url=(
             f"/operator/sessions/{review_session.id}/assignments/rule-based/edit"
         ),
-        coming_in="Rule Based generation lands in Segment 13A PR 4.",
+        coming_in="The Rule Based editor child page ships in Segment 13A PR 5.",
+        options=options,
+        selected_option_id=selected_option_id,
+        needs_confirm_replace=assignment_count > 0,
+        error_kind=error_kind,
+        last_generated=last_generated,
     )

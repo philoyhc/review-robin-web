@@ -17,7 +17,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
-from app.web import views
 
 
 def _make_session(
@@ -68,41 +67,36 @@ def _seed_with_assignments(
     return review_session
 
 
-def test_rule_based_card_context_is_inert_at_scaffold_time(
+def test_rule_based_card_renders_seed_selector_after_pr4(
     client: TestClient, db: Session
 ) -> None:
-    """The view-shape adapter returns a frozen scaffold context —
-    ``is_wired=False`` and a workspace edit URL."""
-
-    review_session = _make_session(client, db, code="rb-shape")
-    context = views.build_rule_based_card_context(
-        review_session, assignment_count=0
-    )
-
-    assert context.is_wired is False
-    assert context.assignment_count == 0
-    assert context.edit_url == (
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/edit"
-    )
-    assert "PR 4" in context.coming_in
-
-
-def test_rule_based_card_renders_disabled_controls_with_edit_link_live(
-    client: TestClient, db: Session
-) -> None:
-    """The card renders the final-shape DOM: a disabled selector +
-    Exclude-self-review checkbox + Generate button, with only the
-    ``Edit ruleset`` link enabled and pointing at the stub editor."""
+    """The card flips live in PR 4: the selector lists the six seeded
+    RuleSets, the Exclude self-review checkbox is enabled, the
+    Generate button is a real submit button, and the Edit ruleset
+    link still points at the editor stub."""
 
     review_session = _make_session(client, db, code="rb-render")
     body = client.get(f"/operator/sessions/{review_session.id}/assignments").text
 
     assert 'id="rule-based-assignment"' in body
     assert 'id="rule-based-ruleset"' in body
-    # Selector + Exclude-self-review + Generate are all disabled.
-    assert 'name="rule_set_id"' in body
-    assert 'name="exclude_self_review"' in body
-    # Edit ruleset is the lone live affordance.
+    # All six canonical seeds render as <option> entries.
+    for seed_name in (
+        "Full Matrix",
+        "Intra-group peer review",
+        "Cross-group peer review",
+        "Same group, different role",
+        "Three reviewers per reviewee",
+        "Lead-led review",
+    ):
+        assert f">{seed_name}</option>" in body
+    # The form posts to the live Generate route.
+    generate_action = (
+        f'action="/operator/sessions/{review_session.id}'
+        '/assignments/rule-based/generate"'
+    )
+    assert generate_action in body
+    # Edit ruleset link is still present, pointing at the editor stub.
     edit_url = (
         f"/operator/sessions/{review_session.id}/assignments/rule-based/edit"
     )
@@ -132,8 +126,8 @@ def test_rule_based_card_shows_cascade_confirm_when_assignments_exist(
     rb_section_pop = pop_body.split('id="rule-based-assignment"', 1)[1]
     rb_section_pop = rb_section_pop.split("</section>", 1)[0]
     assert 'name="confirm_replace"' in rb_section_pop
-    # The disabled attribute keeps the checkbox inert at PR 0.
-    assert "disabled" in rb_section_pop
+    # PR 4: the checkbox is required (not disabled).
+    assert "required" in rb_section_pop
 
 
 def test_rule_based_editor_stub_renders_with_back_link(

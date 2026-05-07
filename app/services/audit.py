@@ -410,7 +410,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "responses.cleared": EventSchema(_IDENTITY | {"counts", "refs"}),
     "responses.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     # PR 5 — assignments
-    "assignments.generated": EventSchema(_IDENTITY | {"counts", "context"}),
+    "assignments.generated": EventSchema(
+        _IDENTITY | {"counts", "context", "refs"}
+    ),
     "assignments.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     # PR 7 — settings
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
