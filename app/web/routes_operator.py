@@ -26,7 +26,6 @@ from app.schemas.assignments import AssignmentMode
 from app.schemas.sessions import SessionCreate
 from app.services import (
     assignments,
-    audit as audit_service,
     csv_imports,
     email_templates,
     instruments as instruments_service,
@@ -1607,22 +1606,14 @@ async def setupinvite_save(
         )
         if enabled_change is not None:
             changes[email_templates.RESPONSES_RECEIVED_ENABLED_KEY] = enabled_change
-    if changes:
-        audit_service.write_event(
-            db,
-            event_type="email_template.updated",
-            summary=(
-                f"Session {review_session.code}: "
-                f"{template} template updated"
-            ),
-            actor_user_id=user.id,
-            session_id=review_session.id,
-            detail={
-                "template": template,
-                "changes": {k: list(v) for k, v in changes.items()},
-            },
-            correlation_id=request_correlation_id(),
-        )
+    email_templates.record_template_change(
+        db,
+        review_session=review_session,
+        user=user,
+        template=template,
+        changes=changes,
+        correlation_id=request_correlation_id(),
+    )
     db.commit()
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/setupinvite?template={template}",
@@ -1653,23 +1644,15 @@ def setupinvite_reset(
             detail="Unknown field",
         )
     changes = email_templates.set_overrides(review_session, {spec["key"]: None})
-    if changes:
-        audit_service.write_event(
-            db,
-            event_type="email_template.reset",
-            summary=(
-                f"Session {review_session.code}: "
-                f"{template}.{field} reset to default"
-            ),
-            actor_user_id=user.id,
-            session_id=review_session.id,
-            detail={
-                "template": template,
-                "field": field,
-                "changes": {k: list(v) for k, v in changes.items()},
-            },
-            correlation_id=request_correlation_id(),
-        )
+    email_templates.record_template_reset(
+        db,
+        review_session=review_session,
+        user=user,
+        template=template,
+        field=field,
+        changes=changes,
+        correlation_id=request_correlation_id(),
+    )
     db.commit()
     return RedirectResponse(
         url=(
