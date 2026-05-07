@@ -20,6 +20,7 @@ that holds the selector + form.
 │  │                                       (only when an editable name exists)    │  │
 │  └──────────────────────────────────────────────────────────────────────────────┘  │
 │                                                                                    │
+│   Combine these rules with:                                                        │
 │   [ All of  ▾ ]                                                                    │
 │                                                                                    │
 │   Rules                                                                            │
@@ -60,9 +61,10 @@ that holds the selector + form.
    "+ MATCH/FILTER/QUOTA/COMPOSITE rule" buttons render top-to-
    bottom inside the outer card, exactly as the current Segment
    13A-1 PR 1–3 implementation does, with these trims:
-   - **Drop the "Combinator" heading.** The selector / read-only
-     pill stands on its own — its purpose is obvious from the
-     dropdown's labels (`All of` / `Any of` / `In sequence`).
+   - **Drop the "Combinator" heading**, but keep the existing
+     "Combine these rules with:" helper text above the selector
+     (and above the read-only pill on seeded views) so the role
+     of the dropdown stays obvious in plain English.
    - **Drop the "Exclude self-review" checkbox** (and its "Self-
      review" heading). The same affordance is exposed on the main
      Assignments page; surfacing it inside the Rule Builder card
