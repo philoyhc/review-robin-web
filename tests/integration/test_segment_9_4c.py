@@ -174,11 +174,11 @@ def test_assignments_hub_inlines_method_forms(
         f'action="/operator/sessions/{review_session.id}/assignments/full-matrix"'
         in body
     )
-    # Rule Based card is a placeholder rendered via the canonical
-    # placeholder_card macro (replaces the "Under construction"
-    # one-liner from the original 9.4c slice).
+    # Rule Based card scaffold (Segment 13A PR 0) replaced the
+    # original placeholder_card stub. The card renders fully but
+    # inert — only the Edit ruleset link is live.
     assert "Rule Based Assignment" in body
-    assert 'class="card placeholder" id="rule-based-assignment"' in body
+    assert 'id="rule-based-assignment"' in body
 
 
 # ---------------------------------------------------------------------------

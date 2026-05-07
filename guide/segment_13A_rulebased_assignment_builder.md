@@ -39,8 +39,16 @@ is byte-equivalent on output. Manual upload is unchanged.
 
 ## Status
 
-Planning. Sized as **8 PRs** in dependency order:
+Planning. Sized as **9 PRs** in dependency order:
 
+0. **PR 0 — Card scaffold + editor stub.** Replace the assignments-
+   page `placeholder_card` with a fully-rendered Rule Based card —
+   selector, Exclude self-review checkbox, cascade-replace banner +
+   confirmation checkbox, Generate button, Last-generated summary —
+   with **everything disabled** except a single working **Edit
+   ruleset** button that links to a stub editor child page (chrome
+   + back link only, no body). Pins the DOM contract for PRs 4-5
+   so they're thin diffs. No engine, no DB.
 1. **PR 1 — Schema.** RuleSet + RuleSetRevision tables, Pydantic
    schemas mirroring the JSON rule tree, migration. No engine, no UI.
 2. **PR 2 — Engine.** Pure-Python evaluator (predicates, combinators,
@@ -76,10 +84,14 @@ Planning. Sized as **8 PRs** in dependency order:
    with `mode='full_matrix'`) for backward-compatibility — only the
    UI surface goes; the writer is unchanged.
 
-PRs 4-7 each gain user-visible value on top of the previous; PR 5 is
-the biggest and may need to split into 5a (editor scaffolding,
-Save As of unchanged seed copy) and 5b (predicate + quota editor) if
-scope balloons. PRs 1-3 are infrastructure-only with no operator UI.
+PR 0 ships the inert card + editor stub, mirroring Segment 11H's
+"scaffold first, wire later" pattern: it pins the DOM contract,
+template structure, and route shape so PRs 4-5 are thin diffs that
+flip `is_wired=False → True` and supply real handlers. PRs 4-7 each
+gain user-visible value on top of the previous; PR 5 is the biggest
+and may need to split into 5a (editor scaffolding, Save As of
+unchanged seed copy) and 5b (predicate + quota editor) if scope
+balloons. PRs 1-3 are infrastructure-only with no operator UI.
 PR 8 is intentionally the last PR — by the time it lands, the Rule
 Based path has been live and exercised through PRs 4-7.
 
@@ -454,7 +466,141 @@ engine never raises on missing fields.
   does for Full Matrix; rules don't gain instrument-awareness in
   this segment.
 
+## Editor concept (locked, drives PRs 0 and 5)
+
+The editor child page resolves the `spec/rule_based_assignment.md`
+§7.1 sketch into a concrete UI. Decisions pinned 2026-05-07:
+
+- **Two-column layout.** Left column: metadata strip, combinator,
+  persisted `excludeSelfReviews` checkbox, rule list, predicate /
+  quota editors, Save / Save As / Cancel actions. Right column: a
+  reserved preview panel slot, rendered empty (or with a "Preview
+  ships in PR 7" placeholder line) until PR 7 fills it. PR 5 lays
+  out the slot so PR 7 is a pure fill-in.
+- **Inline-JS rule list, single hidden `rules_json` field.** The
+  rule list is rendered server-side on first paint, then mutated
+  client-side via targeted inline JS that edits a single
+  `rules_json` hidden form field. Save / Save As POSTs the JSON
+  blob in one shot; the server re-validates via
+  `validate_rule_set(...)` before persisting. Matches how the data
+  is stored (one JSON column on `rule_set_revisions`) and how
+  other progressive-enhancement surfaces in this codebase work
+  (instruments live preview, Quick Setup lock toggle). No SPA, no
+  build step.
+- **Indented inline composite rules.** Composite (AND / OR) rules
+  render their children inline below the parent row with a left
+  guideline / indentation, not in a modal or expanding child
+  editor. Matches the project's no-modal convention.
+- **No operand picker for non-tag fields.** Operator-authored
+  rule predicates only address `reviewer.tag1/2/3` and
+  `reviewee.tag1/2/3` in practice (the spec's worked examples in
+  §8 all use tags). The field-mapping table at
+  `app/services/rules/fields.py` keeps `email` for completeness
+  and for the engine's `excludeSelfReviews` desugar, but the
+  editor's field picker omits email — adding it would force an
+  operand-picker UX that's not needed and not specified. If a
+  future rule needs to reference email, fold the picker in then.
+- **Seed → "Copy" semantics, not "Save As".** When the loaded
+  RuleSet is a seed, all controls render disabled with a
+  banner-info reading "This is a seeded RuleSet. Click Copy to
+  create an editable Personal copy." The only enabled action is
+  a primary **Copy** button that creates a new Personal-scope
+  RuleSet from the seed's current revision and 303s back to the
+  editor at the new RuleSet's URL. No "Save As" affordance on
+  seeds — the Copy / edit flow is two clicks instead of "edit a
+  seed, then save it elsewhere".
+- **Inline rename on Personal RuleSets.** The metadata strip's
+  name and description render as click-to-edit fields, mirroring
+  the Response Field Definitions table's edit pattern. No modal
+  Save dialogue. Rename + description edits flow through PR 6's
+  in-place Save (which writes a new revision); rename-only edits
+  go through PR 6's `…/rename` route which doesn't bump the
+  revision number.
+- **Reorder via dropdown, not drag.** Each rule row renders an
+  ordinal dropdown (`1`, `2`, …, `N`) that reorders the list on
+  change. Dropdown-driven reorder is keyboard-accessible and
+  doesn't require a drag-and-drop library; HTML5 drag-and-drop
+  is brittle without one. If operators ask for drag later, add
+  it as a progressive enhancement on top of the dropdown.
+
+These decisions drive PR 0's scaffold (DOM contract for the
+columns + dropdown + Copy button) and PR 5's wiring. PR 7's
+preview panel slots into the right column without layout churn.
+
 ## Proposed PR sequence
+
+### PR 0 — Card scaffold + editor stub
+
+**Goal.** Pin the DOM contract for the Rule Based card and the
+editor child page. Everything renders fully but inert; only one
+control is live — the **Edit ruleset** button on the card, which
+links to the stub editor page. PRs 4-5 then flip `is_wired=False
+→ True` per affordance without re-laying-out the card.
+
+This mirrors Segment 11H's PR-A/PR-B pattern: ship the visual
+shape first behind a single-line `is_wired` flag, then wire each
+slot to a live route in a follow-on PR. Operators see the final
+layout immediately; reviewers can validate spacing, copy, and tab
+order before the writers land.
+
+- **New partial** `app/web/templates/operator/partials/_rule_based_card.html`
+  rendering the card per the "Card design" section above:
+  - RuleSet selector dropdown — disabled, with one option
+    `Intra-group peer review (seeded — coming in PR 4)` and a
+    title attribute pointing at the segment. The selected
+    RuleSet's one-line description renders below the selector
+    with placeholder copy.
+  - Persisted `Exclude self-review` checkbox — disabled, checked
+    by default to match the seed default.
+  - Cascade-replace `banner-warning` + required confirmation
+    checkbox — rendered when `assignment_count > 0`, both
+    disabled. Reuses `views.cascade_message_for_replace` for the
+    copy.
+  - **`Edit ruleset` button** — the *only* live control. Links
+    to `/operator/sessions/{id}/assignments/rule-based/edit` (the
+    no-id stub variant; PR 5 adds the per-id form). Renders as a
+    `.btn.secondary` next to the Generate button.
+  - `Generate` button — disabled, with a title pointing at PR 4.
+  - Last-generated summary — omitted on a session with no
+    rule-based generations yet (which is every session in PR 0,
+    since the writer doesn't exist).
+- **New view-shape adapter** `views.build_rule_based_card_context(
+  session, *, assignment_count)` returning a `RuleBasedCardContext`
+  dataclass with the fields the partial reads. PR 4 extends this
+  with live data; PR 0 returns a frozen "scaffold" instance.
+- **Wire the partial into `session_assignments.html`** —
+  replace the `placeholder_card(...)` macro at lines 133-142
+  with `{% include "operator/partials/_rule_based_card.html" %}`.
+  The card stays in the same grid cell; no layout change to the
+  page.
+- **New stub route** `GET /operator/sessions/{id}/assignments/rule-based/edit`
+  rendering a new template
+  `operator/session_rule_based_editor.html` with:
+  - Standard operator chrome (`base.html`, `ui-v2` body class).
+  - Breadcrumbs via `breadcrumbs.operator_session_child(session,
+    "Rule Based editor")`.
+  - A back link `← Back to Assignments` pointing at
+    `/operator/sessions/{id}/assignments`.
+  - A single placeholder card body reading "The RuleSet editor
+    ships in Segment 13A PR 5." No form, no rule list, no
+    metadata strip.
+- **No new audit events** — nothing mutates.
+- **No DB changes** — no models, no migration.
+- **Tests:**
+  - `tests/integration/test_rule_based_card_scaffold.py` — GET
+    the assignments page, assert the Rule Based card renders
+    with the disabled selector + checkboxes + Generate, and the
+    `Edit ruleset` link points at the editor stub URL.
+  - GET the editor stub route, assert it 200s, has the
+    breadcrumb crumb chain, and contains the back link.
+  - Lifecycle: on `ready`, the card still renders but the
+    existing yellow lock card pattern at the top of the page
+    covers the rejection (no per-card change in PR 0).
+
+After PR 0, an operator visiting Setup → Assignments sees the
+final-shape Rule Based card and can click through to a stub
+editor page. Nothing functional changes; the page is a visual
+preview of the Advanced-mode surface.
 
 ### PR 1 — Schema + Pydantic shapes
 
