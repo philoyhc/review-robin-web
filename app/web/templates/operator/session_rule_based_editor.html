@@ -26,6 +26,67 @@
     </div>
   {% endif %}
 
+  <div class="card" id="rule-based-editor-library">
+    <h2 style="margin-top: 0;">Library</h2>
+    <p class="form-help">
+      Switch to another RuleSet without leaving the editor.
+      {% if editor.editable %}
+        Unsaved edits to <strong>{{ editor.rule_set_name }}</strong>
+        will prompt before navigating away.
+      {% endif %}
+    </p>
+
+    {% if editor.library_seeds %}
+      <h3 style="margin-top: 16px;">Seeded</h3>
+      <ul class="rule-based-library-list" style="list-style: none; padding-left: 0;">
+        {% for entry in editor.library_seeds %}
+          <li class="rule-based-library-row{% if entry.is_active %} rule-based-library-row-active{% endif %}"
+              style="padding: 6px 0;">
+            {% if entry.is_active %}<strong>▶ {{ entry.name }}</strong>{% else %}<a class="rule-based-library-link" href="{{ entry.edit_url }}">{{ entry.name }}</a>{% endif %}
+            {% if entry.description %}
+              <span class="form-help" style="margin-left: 8px;">{{ entry.description }}</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <h3 style="margin-top: 16px;">Yours</h3>
+    {% if editor.library_personal %}
+      <ul class="rule-based-library-list" style="list-style: none; padding-left: 0;">
+        {% for entry in editor.library_personal %}
+          <li class="rule-based-library-row{% if entry.is_active %} rule-based-library-row-active{% endif %}"
+              style="padding: 6px 0; display: flex; gap: 12px; align-items: center;">
+            <span style="flex: 1;">
+              {% if entry.is_active %}<strong>▶ {{ entry.name }}</strong>{% else %}<a class="rule-based-library-link" href="{{ entry.edit_url }}">{{ entry.name }}</a>{% endif %}
+              {% if entry.description %}
+                <span class="form-help" style="margin-left: 8px;">{{ entry.description }}</span>
+              {% endif %}
+            </span>
+            {% if entry.delete_url %}
+              <form method="post" action="{{ entry.delete_url }}"
+                    class="rule-based-library-delete-form"
+                    style="margin: 0;">
+                <input type="hidden" name="rule_set_id" value="{{ entry.id }}">
+                <input type="hidden" name="confirm" value="true">
+                <button class="btn alert"
+                        type="submit"
+                        title="Delete {{ entry.name }} (soft — past assignments still reference it)"
+                        data-rule-set-name="{{ entry.name }}">×</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="form-help">
+        No Personal RuleSets yet — Copy a seed below to start your library.
+      </p>
+    {% endif %}
+  </div>
+
+  {% include "operator/partials/_rule_based_library_panel_js.html" %}
+
   <div class="bottom-grid">
     <div class="bottom-left">
       <div class="card" id="rule-based-editor-main">

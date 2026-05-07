@@ -2479,6 +2479,23 @@ class EditableRule:
 
 
 @dataclass(frozen=True)
+class LibraryEntry:
+    """One row in the editor's Library panel (Segment 13A PR 10).
+
+    Seed entries are read-only and have ``delete_url=None``;
+    Personal entries owned by the caller carry a ``delete_url``
+    that submits to ``POST /assignments/rule-based/delete``."""
+
+    id: int
+    name: str
+    description: str
+    is_seed: bool
+    is_active: bool
+    edit_url: str
+    delete_url: str | None
+
+
+@dataclass(frozen=True)
 class RuleBasedEditorContext:
     rule_set_id: int
     rule_set_name: str
@@ -2532,6 +2549,16 @@ class RuleBasedEditorContext:
     the template's source-picker JS reuses the
     ``data-description`` / ``data-name`` attributes for inline
     description + name-suggestion updates on selector change."""
+    # Segment 13A PR 10 — Library panel inside the editor.
+    library_seeds: list["LibraryEntry"]
+    library_personal: list["LibraryEntry"]
+    """Two lists drive the Library panel above the main editor
+    card. Seeds render in install order; Personal renders the
+    caller-owned RuleSets only. Each entry has ``is_active=True``
+    on the currently-loaded RuleSet so the panel can highlight it.
+    Personal entries carry a delete URL so the panel can render
+    inline soft-delete forms reusing PR 6's
+    ``POST /assignments/rule-based/delete``."""
 
 
 def _render_field_reference(dotted: str) -> str:
@@ -2789,9 +2816,13 @@ def build_rule_based_editor_context(
     # Segment 13A PR 9 — source picker. List every visible RuleSet
     # so the operator can pick a source for the Copy form without
     # leaving the editor.
+    # Segment 13A PR 10 — Library panel. Build the per-row entries
+    # for the Library card from the same query.
     from app.services.rules import library
 
     source_options: list[RuleBasedSelectorOption] = []
+    library_seeds: list[LibraryEntry] = []
+    library_personal: list[LibraryEntry] = []
     for rs in library.list_visible_rule_sets(db, user=user):
         rev = rs.current_revision
         exclude_self = (
@@ -2806,6 +2837,29 @@ def build_rule_based_editor_context(
                 is_seed=rs.is_seed,
             )
         )
+        edit_url = (
+            f"/operator/sessions/{review_session.id}"
+            f"/assignments/rule-based/edit/{rs.id}"
+        )
+        delete_url: str | None = None
+        if not rs.is_seed and rs.owner_user_id == user.id:
+            delete_url = (
+                f"/operator/sessions/{review_session.id}"
+                "/assignments/rule-based/delete"
+            )
+        entry = LibraryEntry(
+            id=rs.id,
+            name=rs.name,
+            description=rs.description or "",
+            is_seed=rs.is_seed,
+            is_active=(rs.id == rule_set.id),
+            edit_url=edit_url,
+            delete_url=delete_url,
+        )
+        if rs.is_seed:
+            library_seeds.append(entry)
+        else:
+            library_personal.append(entry)
     return RuleBasedEditorContext(
         rule_set_id=rule_set.id,
         rule_set_name=rule_set.name,
@@ -2856,4 +2910,6 @@ def build_rule_based_editor_context(
         quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
         composite_op_options=list(_COMPOSITE_OP_OPTIONS),
         source_options=source_options,
+        library_seeds=library_seeds,
+        library_personal=library_personal,
     )
