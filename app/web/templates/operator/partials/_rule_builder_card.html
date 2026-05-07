@@ -22,31 +22,35 @@
      id="rule-builder-card"
      style="max-width: 50%;">
 
-  <div class="card"
-       id="rule-builder-inner"
-       style="display: flex; gap: 16px; align-items: end;">
-    <form method="get"
-          action="{{ builder.page_url }}"
-          id="rule-builder-selector-form"
-          style="margin: 0; flex: 1 1 0;">
-      <p style="margin: 0;">
-        <label for="rule-builder-selector"><strong>RuleSet</strong></label>
-        <select id="rule-builder-selector"
-                name="rule_set_id"
-                onchange="this.form.submit()"
-                style="width: 100%;">
-          {% for option in builder.options %}
-            <option value="{{ option.id }}"
-                    {% if option.id == builder.selected_id and not builder.selected_is_blank and not builder.selected_is_draft %}selected{% elif option.is_blank_sentinel and builder.selected_is_blank %}selected{% endif %}
-                    data-is-seed="{{ 'true' if option.is_seed else 'false' }}"
-                    data-is-blank="{{ 'true' if option.is_blank_sentinel else 'false' }}">{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
-          {% endfor %}
-        </select>
-        <noscript>
-          <button class="btn primary-outline" type="submit">Load</button>
-        </noscript>
-      </p>
-    </form>
+  <div id="rule-builder-inner"
+       style="display: flex; gap: 16px; align-items: start; border: none; padding: 0; background: transparent;">
+    <div style="flex: 1 1 0;">
+      <form method="get"
+            action="{{ builder.page_url }}"
+            id="rule-builder-selector-form"
+            style="margin: 0;">
+        <p style="margin: 0;">
+          <label for="rule-builder-selector"><strong>RuleSet</strong></label>
+          <select id="rule-builder-selector"
+                  name="rule_set_id"
+                  onchange="this.form.submit()"
+                  style="width: 100%;">
+            {% for option in builder.options %}
+              <option value="{{ option.id }}"
+                      {% if option.id == builder.selected_id and not builder.selected_is_blank and not builder.selected_is_draft %}selected{% elif option.is_blank_sentinel and builder.selected_is_blank %}selected{% endif %}
+                      data-is-seed="{{ 'true' if option.is_seed else 'false' }}"
+                      data-is-blank="{{ 'true' if option.is_blank_sentinel else 'false' }}">{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
+            {% endfor %}
+          </select>
+          <noscript>
+            <button class="btn primary-outline" type="submit">Load</button>
+          </noscript>
+        </p>
+        {% if builder.description %}
+          <p class="form-help" style="margin: 6px 0 0 0;">{{ builder.description }}</p>
+        {% endif %}
+      </form>
+    </div>
 
     {% if builder.editable %}
       <div style="flex: 1 1 0;">
@@ -78,10 +82,6 @@
     </div>
   {% endif %}
 
-  {% if builder.description %}
-    <p class="form-help" style="margin-top: 12px;">{{ builder.description }}</p>
-  {% endif %}
-
   {% if builder.selected_is_seed %}
     <div class="banner banner-info"
          id="rule-builder-seed-banner"
@@ -105,8 +105,8 @@
          id="rule-builder-draft-banner"
          style="margin-top: 12px;">
       <p style="margin: 0;">
-        Unsaved draft. Edit the rules below and click <strong>Save</strong>
-        to persist a new Personal RuleSet, or <strong>Cancel</strong> to discard.
+        Unsaved draft. Edit and <strong>Save</strong> to persist a new
+        Personal RuleSet, or <strong>Cancel</strong> to discard.
       </p>
     </div>
   {% endif %}
