@@ -527,6 +527,101 @@ These decisions drive PR 0's scaffold (DOM contract for the
 columns + dropdown + Copy button) and PR 5's wiring. PR 7's
 preview panel slots into the right column without layout churn.
 
+## Rule semantics surface form (locked, drives PR 5)
+
+The schema's technical operator names (`equals`, `same_as`,
+`is_empty`, …) are not what operators read in the editor. PR 5
+renders rules as **English-readable sentences** with click-to-edit
+pill-dropdowns, so a rule list reads like a bulleted set of
+declarative statements rather than a stack of forms. Decisions
+pinned 2026-05-07:
+
+### Predicate phrasing
+
+A FILTER / MATCH rule's predicate renders as a sentence with three
+(occasionally four) interactive segments. Schema operators map to
+plain-language verbs:
+
+| Schema operator | Editor verb |
+|---|---|
+| `equals` | `is` |
+| `not_equals` | `is not` |
+| `in` | `is one of` |
+| `not_in` | `is not one of` |
+| `matches` | `matches the pattern` |
+| `not_matches` | `does not match the pattern` |
+| `is_empty` | `is empty` |
+| `is_not_empty` | `is set` |
+| `same_as` | `is the same as` |
+| `different_from` | `is different from` |
+
+Example MATCH render:
+
+> Reviewer's **tag1** **is the same as** reviewee's **tag1**.
+
+The three bold tokens are click-to-edit pill-dropdowns. The operand
+picker shape switches with the operator: a literal text input for
+`equals` / `not_equals`, a comma-separated list builder for
+`in` / `not_in`, a regex input for `matches` / `not_matches`, no
+operand for `is_empty` / `is_not_empty`, and a side+field cascade
+for `same_as` / `different_from`.
+
+### Rule-kind verb prefix
+
+The `kind` selector is rendered as a verb in front of the predicate
+sentence rather than a separate dropdown after the rule list:
+
+| Kind | Sentence prefix |
+|---|---|
+| `MATCH` | `Include pairs where …` |
+| `FILTER` | `Exclude pairs where …` |
+| `QUOTA` | `Cap at [N] [reviewers / reviewees] per [reviewer / reviewee], chosen [randomly / round-robin]` |
+| `COMPOSITE` | `All of:` / `Any of:` / `None of:` (children indented below) |
+
+For a unary `COMPOSITE(NOT, [child])` the prefix renders as
+`Not …` instead of `None of:` so a single-child negation reads
+naturally.
+
+### Top-level combinator
+
+A single line above the rule list:
+
+> Combine these rules with: **[All / Any / In sequence]** ▾
+
+Labels desugar to `ALL_OF` / `ANY_OF` / `PIPELINE`. The combinator
+selector only renders when the rule list has length ≥ 2 — a
+single-rule RuleSet behaves identically under any combinator, so
+showing the picker just adds noise.
+
+### Why sentence-shaped over form-stacked
+
+The alternative — three labelled inputs (`Field:` / `Operator:` /
+`Operand:`) stacked vertically per rule — is mechanically simpler
+to lay out but reads as a form, not a rule. Operators read
+filtering rules in plain English elsewhere (Notion filters,
+Salesforce report filters, GitHub issue search) and the
+sentence-shaped list looks like a bulleted set of declarative
+statements rather than a stack of forms. Tradeoff: the editor JS
+must swap the operand picker shape on operator-change, which is
+real work — but it's the same hidden `rules_json` field either
+way, so the swap is a per-row partial replace, not a page
+reload.
+
+### Out of scope (filed for follow-on)
+
+- **Per-tag display labels.** `tag1` / `tag2` / `tag3` are opaque;
+  a session-level config that maps `tag1 → "Group"` would let the
+  predicate sentence read "Reviewer's **Group** is the same as
+  reviewee's **Group**." Not part of 13A — it's a session-config
+  feature with its own surface. The editor stays on
+  `tag1` / `tag2` / `tag3` for 13A.
+- **Sentence-shaped QUOTA inline operand picker.** The QUOTA
+  prefix above is already sentence-shaped, but its three operand
+  segments (N, axis, selection) require their own pill-picker
+  shapes. PR 5 ships a simple inline form for QUOTA editors and
+  the sentence-shaped pill version is a follow-on if PR 5
+  scope balloons.
+
 ## Proposed PR sequence
 
 ### PR 0 — Card scaffold + editor stub
