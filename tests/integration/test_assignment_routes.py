@@ -231,6 +231,31 @@ def test_full_matrix_re_save_with_confirm_replaces(
     assert events[0].detail["counts"]["replaced"] == 1
 
 
+def test_assignments_hub_no_longer_renders_standalone_full_matrix_card(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 13A PR 8 retired the standalone Full Matrix card.
+    Full-matrix behaviour ships via the seeded Full Matrix RuleSet
+    inside the Rule Based card, which PR 3 pinned as engine-level
+    equivalent."""
+
+    review_session = _make_session(client, db)
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+
+    # The card heading + form action are both gone from the markup.
+    assert "<h2>Full Matrix Assignment</h2>" not in body
+    assert (
+        f'action="/operator/sessions/{review_session.id}'
+        '/assignments/full-matrix"'
+        not in body
+    )
+    # Manual upload + Rule Based remain.
+    assert 'id="upload-csv"' in body
+    assert 'id="rule-based-assignment"' in body
+
+
 def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     _seed_roster(

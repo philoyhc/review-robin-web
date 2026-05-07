@@ -129,37 +129,6 @@
       {% endif %}
     </section>
 
-    <div class="card">
-      <h2>Full Matrix Assignment</h2>
-      <p class="form-help">Pair every reviewer with every reviewee.</p>
-      {% if reviewer_count == 0 or reviewee_count == 0 %}
-        <p class="form-help">Import reviewers and reviewees first.</p>
-      {% else %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/assignments/full-matrix">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="exclude_self_review" value="true" checked>
-              Exclude self-review (when a reviewer's email matches a reviewee's identifier)
-            </label>
-          </p>
-
-          {% if assignment_count and assignment_count > 0 %}
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm_replace" value="true" required>
-                Yes, replace the existing
-                <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>.
-              </label>
-            </p>
-          {% endif %}
-
-          <div style="margin-top: 20px;">
-            <button class="btn secondary" type="submit">Generate</button>
-          </div>
-        </form>
-      {% endif %}
-    </div>
     </div>{# /bottom-left #}
 
     <div class="bottom-left">
