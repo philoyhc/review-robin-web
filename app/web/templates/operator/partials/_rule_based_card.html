@@ -36,6 +36,13 @@
         That RuleSet could not be loaded. Pick another and try again.
       </p>
     </div>
+  {% elif rule_based_card.error_kind == "rule_set_deleted" %}
+    <div class="banner banner-info" id="rule-based-deleted-banner">
+      <p style="margin: 0;">
+        RuleSet deleted. Past assignments still reference it for
+        provenance.
+      </p>
+    </div>
   {% endif %}
 
   {% if rule_based_card.is_wired %}

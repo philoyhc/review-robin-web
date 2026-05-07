@@ -2503,7 +2503,13 @@ class RuleBasedEditorContext:
     editable_rules: list[EditableRule]
     copy_url: str
     save_as_url: str
+    save_url: str
+    rename_url: str
+    delete_url: str
     back_url: str
+    revision_no: int
+    saved_flash: bool
+    renamed_flash: bool
     error_kind: str | None
     error_message: str | None
     # Picker option lists exposed to the template.
@@ -2744,6 +2750,8 @@ def build_rule_based_editor_context(
     user: User,
     error_kind: str | None = None,
     error_message: str | None = None,
+    saved_flash: bool = False,
+    renamed_flash: bool = False,
 ) -> RuleBasedEditorContext:
     """Build the editor child page's render context.
 
@@ -2786,6 +2794,21 @@ def build_rule_based_editor_context(
             f"/operator/sessions/{review_session.id}"
             "/assignments/rule-based/save-as"
         ),
+        save_url=(
+            f"/operator/sessions/{review_session.id}"
+            "/assignments/rule-based/save"
+        ),
+        rename_url=(
+            f"/operator/sessions/{review_session.id}"
+            "/assignments/rule-based/rename"
+        ),
+        delete_url=(
+            f"/operator/sessions/{review_session.id}"
+            "/assignments/rule-based/delete"
+        ),
+        revision_no=revision.revision_no,
+        saved_flash=saved_flash,
+        renamed_flash=renamed_flash,
         back_url=f"/operator/sessions/{review_session.id}/assignments",
         error_kind=error_kind,
         error_message=error_message,

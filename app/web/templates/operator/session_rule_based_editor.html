@@ -99,18 +99,30 @@
           </form>
 
         {% elif editor.editable %}
-          {# Editable Personal RuleSet — Segment 13A PR 5b. #}
-          <div class="banner banner-info" id="rule-based-editor-readonly-banner" style="margin-top: 12px;">
-            <p style="margin: 0;">
-              Edit any rule below, then <strong>Save As</strong> to write
-              a new Personal RuleSet. In-place Save (overwrites this
-              RuleSet's revision) ships in Segment 13A PR 6.
-              Composite rule editing is read-only here for now;
-              non-composite edits round-trip through Save As.
-            </p>
-          </div>
+          {# Editable Personal RuleSet — Segment 13A PR 5b / 5c / 6. #}
+          {% if editor.saved_flash %}
+            <div class="banner banner-info" id="rule-based-editor-saved-banner" style="margin-top: 12px;">
+              <p style="margin: 0;">
+                Saved. Now on revision <strong>{{ editor.revision_no }}</strong>.
+                Past Generate runs still reference older revisions for
+                provenance.
+              </p>
+            </div>
+          {% elif editor.renamed_flash %}
+            <div class="banner banner-info" id="rule-based-editor-renamed-banner" style="margin-top: 12px;">
+              <p style="margin: 0;">Renamed.</p>
+            </div>
+          {% endif %}
 
-          <form method="post" action="{{ editor.save_as_url }}" id="rule-based-editor-form">
+          <p class="form-help" style="margin-top: 12px;">
+            Revision <span class="pill pill-info">{{ editor.revision_no }}</span>
+            — each Save bumps this number. Save As writes a new
+            Personal RuleSet from the edited tree without touching
+            this one.
+          </p>
+
+          <form method="post" action="{{ editor.save_url }}" id="rule-based-editor-form">
+            <input type="hidden" name="rule_set_id" value="{{ editor.rule_set_id }}">
             <input type="hidden" name="source_rule_set_id" value="{{ editor.rule_set_id }}">
             <input type="hidden" name="rules_json" id="rule-based-editor-rules-json">
 
@@ -235,28 +247,80 @@
               <button type="button" class="btn secondary" id="rule-based-editor-add-composite">+ Add COMPOSITE rule</button>
             </div>
 
-            <h3 style="margin-top: 24px;">Save As</h3>
+            <h3 style="margin-top: 24px;">Save</h3>
             <p class="form-help">
-              Save the edited rule list as a new Personal RuleSet. The
-              loaded RuleSet stays unchanged until in-place Save lands
-              in PR 6.
+              <strong>Save</strong> overwrites this RuleSet by appending
+              a new revision. <strong>Save As</strong> writes a brand-
+              new Personal RuleSet from the edited tree, leaving this
+              one untouched.
             </p>
             <p>
-              <label for="rule-based-editor-new-name">Name for the new RuleSet</label>
+              <label for="rule-based-editor-new-name">Name (used by Save As)</label>
               <input type="text"
                      id="rule-based-editor-new-name"
                      name="new_name"
-                     required
                      value="{{ editor.rule_set_name }} (edited)"
                      style="width: 100%; max-width: 480px;">
             </p>
             <div class="btn-pair" style="margin-top: 12px;">
-              <button class="btn primary" type="submit">Save As</button>
+              <button class="btn primary" type="submit"
+                      id="rule-based-editor-save-button">Save</button>
+              <button class="btn secondary" type="submit"
+                      formaction="{{ editor.save_as_url }}"
+                      id="rule-based-editor-save-as-button">Save As</button>
               <a class="btn alert" href="{{ editor.back_url }}">Cancel</a>
             </div>
           </form>
 
           {% include "operator/partials/_rule_based_editor_js.html" %}
+
+          <h3 style="margin-top: 32px;">Rename</h3>
+          <p class="form-help">
+            Rename or update the description without bumping the
+            revision number.
+          </p>
+          <form method="post" action="{{ editor.rename_url }}"
+                style="margin-top: 12px;">
+            <input type="hidden" name="rule_set_id" value="{{ editor.rule_set_id }}">
+            <p>
+              <label for="rule-based-editor-rename-name">Name</label>
+              <input type="text"
+                     id="rule-based-editor-rename-name"
+                     name="new_name"
+                     required
+                     value="{{ editor.rule_set_name }}"
+                     style="width: 100%; max-width: 480px;">
+            </p>
+            <p>
+              <label for="rule-based-editor-rename-description">Description</label>
+              <input type="text"
+                     id="rule-based-editor-rename-description"
+                     name="new_description"
+                     value="{{ editor.rule_set_description }}"
+                     style="width: 100%; max-width: 480px;">
+            </p>
+            <div class="btn-pair" style="margin-top: 12px;">
+              <button class="btn secondary" type="submit">Rename</button>
+            </div>
+          </form>
+
+          <div class="card danger-zone" style="margin-top: 32px;">
+            <h2 style="margin-top: 0;">Danger Zone</h2>
+            <form method="post" action="{{ editor.delete_url }}">
+              <input type="hidden" name="rule_set_id" value="{{ editor.rule_set_id }}">
+              <p>
+                <label style="font-weight: normal;">
+                  <input type="checkbox" name="confirm" value="true" required>
+                  Yes, soft-delete <strong>{{ editor.rule_set_name }}</strong>.
+                  Past assignments still reference it for provenance;
+                  the library hides it.
+                </label>
+              </p>
+              <p style="margin-bottom: 0;">
+                <button class="btn destructive" type="submit">Delete RuleSet</button>
+              </p>
+            </form>
+          </div>
         {% else %}
           {# Non-owner view of a Personal RuleSet — read-only, no Copy.
              This branch is defensive: routes already 403 non-owners. #}

@@ -418,6 +418,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # scoped (no session identity), so the schema omits ``session_id``
     # / ``session_code`` from the allowed slot set.
     "rule_set.created": EventSchema(frozenset({"snapshot", "refs", "context"})),
+    # Segment 13A PR 6 — in-place Save / Rename / Delete.
+    "rule_set.updated": EventSchema(frozenset({"changes", "refs", "context"})),
+    "rule_set.deleted": EventSchema(frozenset({"snapshot", "refs", "context"})),
     # PR 7 — settings
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "reviewees.imported": EventSchema(_IDENTITY | {"counts", "context"}),
