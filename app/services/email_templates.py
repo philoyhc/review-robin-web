@@ -443,11 +443,9 @@ def record_template_change(
             f"{template} template updated"
         ),
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "template": template,
-            "changes": {k: list(v) for k, v in changes.items()},
-        },
+        session=review_session,
+        payload=audit_service.changes({k: list(v) for k, v in changes.items()}),
+        context={"template": template},
         correlation_id=correlation_id,
     )
 
@@ -476,11 +474,8 @@ def record_template_reset(
             f"{template}.{field} reset to default"
         ),
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "template": template,
-            "field": field,
-            "changes": {k: list(v) for k, v in changes.items()},
-        },
+        session=review_session,
+        payload=audit_service.changes({k: list(v) for k, v in changes.items()}),
+        context={"template": template, "field": field},
         correlation_id=correlation_id,
     )

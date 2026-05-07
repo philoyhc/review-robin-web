@@ -113,7 +113,7 @@ def test_save_persists_overrides_and_audits(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "email_template.updated")
     ).scalar_one()
-    assert event.detail["template"] == "invitation"
+    assert event.detail["context"]["template"] == "invitation"
     changes = event.detail["changes"]
     assert "invitation_subject" in changes
     assert changes["invitation_subject"][0] is None
@@ -220,8 +220,8 @@ def test_reset_removes_override_and_audits(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "email_template.reset")
     ).scalar_one()
-    assert event.detail["template"] == "invitation"
-    assert event.detail["field"] == "subject"
+    assert event.detail["context"]["template"] == "invitation"
+    assert event.detail["context"]["field"] == "subject"
 
 
 def test_reset_unknown_field_404s(
@@ -342,7 +342,7 @@ def test_save_responses_received_persists_overrides_and_audits(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "email_template.updated")
     ).scalar_one()
-    assert event.detail["template"] == "responses_received"
+    assert event.detail["context"]["template"] == "responses_received"
     assert "responses_received_subject" in event.detail["changes"]
 
 
