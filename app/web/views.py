@@ -1968,7 +1968,7 @@ EMAIL_PREVIEW_TABS: tuple[EmailPreviewTab, ...] = (
         key="responses_received",
         label="Responses received",
         template_setup_param="responses_received",
-        is_shipped=False,
+        is_shipped=True,
         description="Sent the moment the reviewer submits their review.",
     ),
 )
@@ -2026,9 +2026,7 @@ def build_email_preview_body(
     (the route falls back to the invitation tab via
     ``resolve_email_preview_tab`` before reaching this, so a None
     return today only happens if a caller passes an unshipped tab
-    directly). PR D / PR E extend the dispatch to cover reminder /
-    responses-received.
-    """
+    directly). PR D extends the dispatch to cover reminder."""
     if tab.key == "invitation":
         subject, body = email_templates.render_invitation(
             review_session, reviewer, PREVIEW_INVITE_URL_PLACEHOLDER
@@ -2039,7 +2037,71 @@ def build_email_preview_body(
             to_display=reviewer.email,
             body=body,
         )
+    if tab.key == "responses_received":
+        subject, body = email_templates.render_responses_received(
+            review_session, reviewer
+        )
+        return EmailBody(
+            subject=subject,
+            from_display=from_display,
+            to_display=reviewer.email,
+            body=body,
+        )
     return None
+
+
+# Per-template merge-tag list surfaced by the email-template editor's
+# right card. Invitation / reminder share the canonical five tags;
+# responses-received drops ``$invite_url`` (moot post-submit) and adds
+# ``$submitted_at``. Kept here (not in ``email_templates``) because the
+# tag *descriptions* are operator-facing copy — view-shape rather than
+# render-time data.
+_MERGE_TAG_DESCRIPTIONS = {
+    "$reviewer_name": "Reviewer's name from the roster.",
+    "$session_name": "Session name.",
+    "$deadline": "Session deadline (YYYY-MM-DD), blank when unset.",
+    "$help_contact": "Per-session help contact.",
+    "$invite_url": "Reviewer-specific invitation URL.",
+    "$submitted_at": (
+        "When the reviewer submitted, formatted YYYY-MM-DD HH:MM TZ. "
+        "Renders \"(not yet submitted)\" in previews before the "
+        "reviewer has submitted anything."
+    ),
+}
+
+_MERGE_TAGS_BY_TEMPLATE: dict[str, tuple[str, ...]] = {
+    "invitation": (
+        "$reviewer_name",
+        "$session_name",
+        "$deadline",
+        "$help_contact",
+        "$invite_url",
+    ),
+    "reminder": (
+        "$reviewer_name",
+        "$session_name",
+        "$deadline",
+        "$help_contact",
+        "$invite_url",
+    ),
+    "responses_received": (
+        "$reviewer_name",
+        "$session_name",
+        "$deadline",
+        "$help_contact",
+        "$submitted_at",
+    ),
+}
+
+
+def merge_tags_for_template(template: str) -> list[dict[str, str]]:
+    """Returns the editor's right-card merge-tag list for ``template``.
+    Unknown ``template`` values raise ``KeyError`` — the route already
+    validates against ``_VALID_TEMPLATES`` before dispatching here."""
+    return [
+        {"tag": tag, "description": _MERGE_TAG_DESCRIPTIONS[tag]}
+        for tag in _MERGE_TAGS_BY_TEMPLATE[template]
+    ]
 
 
 # ─────────────────────────────────────────────────────────────────

@@ -31,6 +31,13 @@ class ReviewSession(Base, TimestampMixin):
     deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     assignment_mode: Mapped[str | None] = mapped_column(String(32))
     help_contact: Mapped[str | None] = mapped_column(String(320))
+    # Free-form JSON; recognised string-override keys live in
+    # ``app.services.email_templates.OVERRIDE_KEYS``
+    # (``invitation_*`` / ``reminder_*`` / ``responses_received_*``,
+    # each with ``_subject`` / ``_body`` / ``_cc`` / ``_bcc`` variants).
+    # Plus one bool flag — ``responses_received_enabled`` — gating the
+    # post-submit confirmation auto-send (default ``True`` when absent;
+    # consumed by Segment 11C Part 2 PR H).
     email_template_overrides: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
     created_by_user_id: Mapped[int] = mapped_column(

@@ -33,10 +33,14 @@ def test_resolve_returns_invitation_when_key_is_unshipped_reminder() -> None:
     assert tab.key == "invitation"
 
 
-def test_resolve_returns_invitation_when_key_is_unshipped_responses() -> None:
+def test_resolve_returns_responses_received_when_key_matches() -> None:
+    # Segment 11E PR 6 ships the render adapter, so ?email=responses_received
+    # now resolves to the responses-received tab rather than falling
+    # through to invitation.
     tab = views.resolve_email_preview_tab("responses_received")
 
-    assert tab.key == "invitation"
+    assert tab.key == "responses_received"
+    assert tab.is_shipped is True
 
 
 def test_resolve_returns_invitation_when_key_matches() -> None:
@@ -51,10 +55,11 @@ def test_email_preview_tabs_pin_chronological_order() -> None:
     assert keys == ["invitation", "reminder", "responses_received"]
 
 
-def test_only_invitation_is_shipped_in_pr_b() -> None:
+def test_invitation_and_responses_received_are_shipped() -> None:
     shipped = {t.key for t in views.EMAIL_PREVIEW_TABS if t.is_shipped}
 
-    assert shipped == {"invitation"}
+    # Reminder remains unshipped pending Segment 11F PR D.
+    assert shipped == {"invitation", "responses_received"}
 
 
 # --- email_preview_from_display ------------------------------------------ #
@@ -184,3 +189,59 @@ def test_unshipped_tab_returns_none() -> None:
     )
 
     assert body is None
+
+
+def test_responses_received_render_returns_subject_and_body() -> None:
+    tab = views.resolve_email_preview_tab("responses_received")
+
+    body = views.build_email_preview_body(
+        tab=tab,
+        review_session=_session(),  # type: ignore[arg-type]
+        reviewer=_reviewer(),  # type: ignore[arg-type]
+        from_display="op@x.edu",
+    )
+
+    assert body is not None
+    assert body.subject == "Responses received: Spring Reviews"
+    # Pre-submit preview surfaces the placeholder for $submitted_at
+    # because the duck-typed reviewer isn't attached to a SQLAlchemy
+    # session, so the lookup falls through to the placeholder branch.
+    assert "(not yet submitted)" in body.body
+    assert body.from_display == "op@x.edu"
+    assert body.to_display == "alice@x.edu"
+
+
+# --- merge_tags_for_template -------------------------------------------- #
+
+
+def test_merge_tags_for_invitation_includes_invite_url() -> None:
+    tags = views.merge_tags_for_template("invitation")
+    keys = [t["tag"] for t in tags]
+
+    assert "$invite_url" in keys
+    assert "$submitted_at" not in keys
+
+
+def test_merge_tags_for_reminder_matches_invitation() -> None:
+    assert (
+        views.merge_tags_for_template("reminder")
+        == views.merge_tags_for_template("invitation")
+    )
+
+
+def test_merge_tags_for_responses_received_drops_invite_url_adds_submitted_at() -> None:
+    tags = views.merge_tags_for_template("responses_received")
+    keys = [t["tag"] for t in tags]
+
+    assert "$invite_url" not in keys
+    assert "$submitted_at" in keys
+    assert keys == [
+        "$reviewer_name",
+        "$session_name",
+        "$deadline",
+        "$help_contact",
+        "$submitted_at",
+    ]
+    # Each tag carries a non-empty operator-facing description.
+    for tag in tags:
+        assert tag["description"]
