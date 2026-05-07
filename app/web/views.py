@@ -2371,6 +2371,60 @@ _COMPOSITE_PREFIXES: dict[str, str] = {
 }
 
 
+# Segment 13A PR 5b — Picker option lists for the editor surface.
+# Field picker: tag1/2/3 on each side only, per the locked editor
+# concept (segment plan §"Editor concept" — "No operand picker for
+# non-tag fields"). The schema's full ALLOWED_PREDICATE_FIELDS
+# includes email; the editor's picker omits it because operator-
+# authored rules don't reach for email comparisons (the engine's
+# excludeSelfReviews desugar handles that case implicitly).
+_FIELD_PICKER_VALUES: list[str] = [
+    "reviewer.tag1",
+    "reviewer.tag2",
+    "reviewer.tag3",
+    "reviewee.tag1",
+    "reviewee.tag2",
+    "reviewee.tag3",
+]
+
+# Operator picker labels match the locked sentence-form vocabulary
+# (segment plan §"Rule semantics surface form").
+_OPERATOR_PICKER_OPTIONS: list[tuple[str, str]] = [
+    ("equals", "is"),
+    ("not_equals", "is not"),
+    ("in", "is one of"),
+    ("not_in", "is not one of"),
+    ("matches", "matches the pattern"),
+    ("not_matches", "does not match the pattern"),
+    ("is_empty", "is empty"),
+    ("is_not_empty", "is set"),
+    ("same_as", "is the same as"),
+    ("different_from", "is different from"),
+]
+
+_KIND_PICKER_OPTIONS: list[tuple[str, str]] = [
+    ("MATCH", "Include pairs where"),
+    ("FILTER", "Exclude pairs where"),
+    ("QUOTA", "Cap the number of"),
+]
+
+_COMBINATOR_PICKER_OPTIONS: list[tuple[str, str]] = [
+    ("ALL_OF", "All of"),
+    ("ANY_OF", "Any of"),
+    ("PIPELINE", "In sequence"),
+]
+
+_QUOTA_SCOPE_OPTIONS: list[tuple[str, str]] = [
+    ("PER_REVIEWEE", "reviewers per reviewee"),
+    ("PER_REVIEWER", "reviewees per reviewer"),
+]
+
+_QUOTA_STRATEGY_OPTIONS: list[tuple[str, str]] = [
+    ("RANDOM", "chosen randomly"),
+    ("ROUND_ROBIN", "round-robin"),
+]
+
+
 @dataclass(frozen=True)
 class RuleLine:
     """One rendered line on the read-only rule list.
@@ -2388,6 +2442,41 @@ class RuleLine:
 
 
 @dataclass(frozen=True)
+class EditableRule:
+    """A rule rendered for in-place editing on Personal RuleSets.
+
+    Carries the structured shape so the template can populate the
+    field/operator/operand pickers and the quota-editor inputs.
+    Composite rules render their children inline; PR 5b ships the
+    leaf-rule editor only — composite-tree editing (add/remove
+    children, change ``op``) is a 5c follow-on. Composites still
+    serialise correctly via the inline JS through their
+    ``data-children`` payload, so seed Composites round-trip
+    untouched on Save As.
+    """
+
+    rule_id: str
+    kind: str  # MATCH / FILTER / QUOTA / COMPOSITE
+    enabled: bool
+    indent: int
+    # MATCH / FILTER:
+    field: str | None = None
+    operator: str | None = None
+    operand_text: str | None = None  # rendered as form-input value
+    # QUOTA:
+    quota_scope: str | None = None
+    quota_min: int | None = None
+    quota_max: int | None = None
+    quota_strategy: str | None = None
+    quota_seed: int | None = None
+    # COMPOSITE — children carried as opaque JSON so the JS
+    # serialiser can reattach them to the parent on submit without
+    # PR 5b having to ship the inline composite editor.
+    composite_op: str | None = None
+    composite_children_json: str | None = None
+
+
+@dataclass(frozen=True)
 class RuleBasedEditorContext:
     rule_set_id: int
     rule_set_name: str
@@ -2395,16 +2484,33 @@ class RuleBasedEditorContext:
     is_seed: bool
     is_owner: bool
     """True when the loaded RuleSet is a Personal RuleSet owned by
-    the current user. PR 5b will branch on this to enable in-place
-    edit affordances; PR 5a renders read-only either way."""
+    the current user. Drives ``editable`` below — seeds render
+    read-only with a Copy form; Personal renders editable with a
+    Save As form (and PR 6's Save in-place)."""
+    editable: bool
+    """Editor controls render live when True. False on seeds and on
+    any non-owner view."""
     combinator: str
     combinator_label: str
     exclude_self_reviews: bool
     seed_value: int | None
+    # Read-only sentence-shaped rule lines (used in non-editable mode).
     rule_lines: list[RuleLine]
+    # Edit-mode rule list (one entry per top-level rule, plus child
+    # rules for composites flattened with indent for visual nesting).
+    editable_rules: list[EditableRule]
     copy_url: str
+    save_as_url: str
     back_url: str
     error_kind: str | None
+    error_message: str | None
+    # Picker option lists exposed to the template.
+    field_options: list[str]
+    operator_options: list[tuple[str, str]]
+    kind_options: list[tuple[str, str]]
+    combinator_options: list[tuple[str, str]]
+    quota_scope_options: list[tuple[str, str]]
+    quota_strategy_options: list[tuple[str, str]]
 
 
 def _render_field_reference(dotted: str) -> str:
@@ -2543,6 +2649,95 @@ def _flatten_rule_lines(
     return lines
 
 
+def _operand_to_text(rule: dict[str, Any]) -> str | None:
+    """Render the operand value for a form input.
+
+    ``in`` / ``not_in`` operands are stored as ``list[str]`` and
+    presented as a comma-separated text field that the JS serialiser
+    splits back on submit. Other operators carry the operand as a
+    string (or None for nullary operators)."""
+
+    predicate = rule.get("predicate") or {}
+    operator = predicate.get("operator")
+    operand = predicate.get("operand")
+    if operator in ("is_empty", "is_not_empty"):
+        return None
+    if operator in ("in", "not_in"):
+        if isinstance(operand, list):
+            return ", ".join(str(item) for item in operand)
+        return ""
+    if operand is None:
+        return ""
+    return str(operand)
+
+
+def _flatten_editable_rules(
+    rules: list[dict[str, Any]], *, indent: int = 0
+) -> list[EditableRule]:
+    """Walk the rule tree and emit per-rule edit-form rows.
+
+    Composite rules emit one parent row + one child row per
+    composite child (with ``indent`` bumped). PR 5b doesn't ship
+    inline composite-tree editing, so the parent's
+    ``composite_children_json`` carries the raw child JSON for the
+    JS serialiser to reattach untouched on Save As — round-tripping
+    seed Composites without operator interaction."""
+
+    import json
+
+    out: list[EditableRule] = []
+    for rule in rules:
+        kind = str(rule.get("kind", ""))
+        rule_id = str(rule.get("id", ""))
+        enabled = bool(rule.get("enabled", True))
+        if kind in ("MATCH", "FILTER"):
+            predicate = rule.get("predicate") or {}
+            out.append(
+                EditableRule(
+                    rule_id=rule_id,
+                    kind=kind,
+                    enabled=enabled,
+                    indent=indent,
+                    field=predicate.get("field"),
+                    operator=predicate.get("operator"),
+                    operand_text=_operand_to_text(rule),
+                )
+            )
+        elif kind == "QUOTA":
+            selection = rule.get("selection") or {}
+            out.append(
+                EditableRule(
+                    rule_id=rule_id,
+                    kind=kind,
+                    enabled=enabled,
+                    indent=indent,
+                    quota_scope=rule.get("scope"),
+                    quota_min=rule.get("min"),
+                    quota_max=rule.get("max"),
+                    quota_strategy=selection.get("strategy"),
+                    quota_seed=selection.get("seed"),
+                )
+            )
+        elif kind == "COMPOSITE":
+            children = rule.get("rules") or []
+            out.append(
+                EditableRule(
+                    rule_id=rule_id,
+                    kind=kind,
+                    enabled=enabled,
+                    indent=indent,
+                    composite_op=rule.get("op"),
+                    composite_children_json=json.dumps(children),
+                )
+            )
+            # Render children read-only inline so the operator can see
+            # what's nested. Editing them is a 5c follow-on.
+            out.extend(
+                _flatten_editable_rules(children, indent=indent + 1)
+            )
+    return out
+
+
 def build_rule_based_editor_context(
     review_session: ReviewSession,
     *,
@@ -2550,19 +2745,33 @@ def build_rule_based_editor_context(
     revision,  # RuleSetRevision
     user: User,
     error_kind: str | None = None,
+    error_message: str | None = None,
 ) -> RuleBasedEditorContext:
-    """Render the editor's read-only view of a loaded RuleSet."""
+    """Build the editor child page's render context.
 
-    rule_lines = _flatten_rule_lines(revision.rules_json or [])
+    Editable mode renders form-element rule rows + a hidden
+    ``rules_json`` field that the inline JS keeps in sync with the
+    visible controls; submitting the Save As form POSTs the
+    serialised tree (segment 13A PR 5b). Read-only mode (seeds
+    or non-owner views) keeps PR 5a's sentence-shaped rule lines.
+    """
+
+    is_seed = bool(rule_set.is_seed)
+    is_owner = not is_seed and rule_set.owner_user_id == user.id
+    editable = is_owner
+
+    rules_json = revision.rules_json or []
+    rule_lines = _flatten_rule_lines(rules_json)
+    editable_rules = (
+        _flatten_editable_rules(rules_json) if editable else []
+    )
     return RuleBasedEditorContext(
         rule_set_id=rule_set.id,
         rule_set_name=rule_set.name,
         rule_set_description=rule_set.description or "",
-        is_seed=bool(rule_set.is_seed),
-        is_owner=(
-            not rule_set.is_seed
-            and rule_set.owner_user_id == user.id
-        ),
+        is_seed=is_seed,
+        is_owner=is_owner,
+        editable=editable,
         combinator=revision.combinator,
         combinator_label=_COMBINATOR_LABELS.get(
             revision.combinator, revision.combinator
@@ -2570,10 +2779,22 @@ def build_rule_based_editor_context(
         exclude_self_reviews=bool(revision.exclude_self_reviews),
         seed_value=revision.seed,
         rule_lines=rule_lines,
+        editable_rules=editable_rules,
         copy_url=(
             f"/operator/sessions/{review_session.id}"
             "/assignments/rule-based/copy"
         ),
+        save_as_url=(
+            f"/operator/sessions/{review_session.id}"
+            "/assignments/rule-based/save-as"
+        ),
         back_url=f"/operator/sessions/{review_session.id}/assignments",
         error_kind=error_kind,
+        error_message=error_message,
+        field_options=list(_FIELD_PICKER_VALUES),
+        operator_options=list(_OPERATOR_PICKER_OPTIONS),
+        kind_options=list(_KIND_PICKER_OPTIONS),
+        combinator_options=list(_COMBINATOR_PICKER_OPTIONS),
+        quota_scope_options=list(_QUOTA_SCOPE_OPTIONS),
+        quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
     )

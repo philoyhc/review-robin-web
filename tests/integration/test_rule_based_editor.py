@@ -11,6 +11,8 @@ inline-JS predicate / quota editors.
 
 from __future__ import annotations
 
+import json
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -243,6 +245,315 @@ def test_copy_of_unknown_rule_set_redirects_to_assignments(
 # ---------------------------------------------------------------------------
 # Permission gates (Personal RuleSets are owner-private)
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# PR 5b — Personal RuleSet edit mode + Save As
+# ---------------------------------------------------------------------------
+
+
+def _copy_seed_to_personal(
+    client: TestClient, db: Session, *, session_id: int, seed_name: str,
+    personal_name: str,
+) -> RuleSet:
+    seed_id = _seed_id(db, seed_name)
+    client.post(
+        f"/operator/sessions/{session_id}/assignments/rule-based/copy",
+        data={"rule_set_id": seed_id, "new_name": personal_name},
+        follow_redirects=False,
+    )
+    return db.execute(
+        select(RuleSet).where(RuleSet.name == personal_name)
+    ).scalar_one()
+
+
+def test_personal_rule_set_renders_edit_controls(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ed-edit")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Edit-me",
+    )
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{personal.id}"
+    ).text
+
+    # Save As form + the inline JS hidden field marker.
+    assert 'id="rule-based-editor-form"' in body
+    assert 'id="rule-based-editor-rules-json"' in body
+    # Combinator is now a <select>, not a static pill.
+    assert 'name="combinator"' in body
+    assert 'name="exclude_self_reviews"' in body
+    # Field + operator pickers render with the expected values.
+    assert 'class="rule-field"' in body
+    assert 'class="rule-operator"' in body
+    # Add-rule buttons are present.
+    assert 'id="rule-based-editor-add-match"' in body
+    assert 'id="rule-based-editor-add-filter"' in body
+    assert 'id="rule-based-editor-add-quota"' in body
+
+
+def test_save_as_with_edited_predicate_creates_new_personal_rule_set(
+    client: TestClient, db: Session
+) -> None:
+    """Edit a Personal RuleSet's MATCH predicate (tag1 → tag2) and
+    Save As. The new RuleSet picks up the edited tree; the loaded
+    RuleSet stays unchanged (PR 6 will land in-place Save)."""
+
+    review_session = _make_session(client, db, code="ed-saveas")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="To-edit",
+    )
+
+    edited_rules = [
+        {
+            "id": "same_tag2",
+            "kind": "MATCH",
+            "enabled": True,
+            "predicate": {
+                "field": "reviewer.tag2",
+                "operator": "same_as",
+                "operand": "reviewee.tag2",
+                "case_sensitive": False,
+            },
+        }
+    ]
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save-as",
+        data={
+            "source_rule_set_id": personal.id,
+            "new_name": "Edited copy",
+            "combinator": "ALL_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": json.dumps(edited_rules),
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    new_rs = db.execute(
+        select(RuleSet).where(RuleSet.name == "Edited copy")
+    ).scalar_one()
+    assert new_rs.scope == "personal"
+    revision = db.execute(
+        select(RuleSetRevision).where(
+            RuleSetRevision.id == new_rs.current_revision_id
+        )
+    ).scalar_one()
+    assert revision.rules_json[0]["predicate"]["field"] == "reviewer.tag2"
+    assert revision.rules_json[0]["predicate"]["operator"] == "same_as"
+
+    # The loaded RuleSet's revision is untouched.
+    source_revision = db.execute(
+        select(RuleSetRevision).where(
+            RuleSetRevision.rule_set_id == personal.id
+        )
+    ).scalar_one()
+    assert source_revision.rules_json[0]["predicate"]["field"] == "reviewer.tag1"
+
+
+def test_save_as_emits_audit_with_via_save_as(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ed-saveas-audit")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Audit-source",
+    )
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save-as",
+        data={
+            "source_rule_set_id": personal.id,
+            "new_name": "Audit-saveas",
+            "combinator": "ALL_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": "[]",
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+
+    new_rs = db.execute(
+        select(RuleSet).where(RuleSet.name == "Audit-saveas")
+    ).scalar_one()
+    events = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "rule_set.created")
+    ).scalars().all()
+    save_as_event = next(
+        e for e in events
+        if (e.detail or {}).get("refs", {}).get("rule_set_id") == new_rs.id
+    )
+    detail = save_as_event.detail or {}
+    assert detail.get("context", {}).get("via") == "save_as"
+    assert detail.get("refs", {}).get("source_rule_set_id") == personal.id
+
+
+def test_save_as_rejects_malformed_json(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ed-malformed")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Malformed-source",
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save-as",
+        data={
+            "source_rule_set_id": personal.id,
+            "new_name": "x",
+            "combinator": "ALL_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": "{not json}",
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/edit/{personal.id}?error=malformed_json"
+    )
+
+
+def test_save_as_rejects_invalid_rule_tree(
+    client: TestClient, db: Session
+) -> None:
+    """A malformed predicate (unknown operator) fails Pydantic
+    validation and 303s back with ``?error=validation``."""
+
+    review_session = _make_session(client, db, code="ed-validation")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Validation-source",
+    )
+
+    bad_rules = [
+        {
+            "id": "bad",
+            "kind": "MATCH",
+            "enabled": True,
+            "predicate": {
+                "field": "reviewer.tag1",
+                "operator": "INVENTED",
+                "operand": "x",
+                "case_sensitive": False,
+            },
+        }
+    ]
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save-as",
+        data={
+            "source_rule_set_id": personal.id,
+            "new_name": "x",
+            "combinator": "ALL_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": json.dumps(bad_rules),
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/edit/{personal.id}?error=validation"
+    )
+
+
+def test_save_as_round_trips_composite_children_untouched(
+    client: TestClient, db: Session
+) -> None:
+    """Composite editing is a 5c follow-on; PR 5b serialises a
+    composite rule by reading the parent's
+    ``data-composite-children`` attribute. To pin that round-trip
+    works at the route level (the JS submission produces a
+    composite-shape ``rules_json``), construct the composite tree
+    by hand and submit it directly."""
+
+    review_session = _make_session(client, db, code="ed-composite")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Composite-source",
+    )
+
+    composite_rules = [
+        {
+            "id": "leads_intra",
+            "kind": "COMPOSITE",
+            "enabled": True,
+            "op": "AND",
+            "rules": [
+                {
+                    "id": "lead_r",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewer.tag2",
+                        "operator": "equals",
+                        "operand": "Lead",
+                        "case_sensitive": False,
+                    },
+                },
+                {
+                    "id": "intra",
+                    "kind": "MATCH",
+                    "enabled": True,
+                    "predicate": {
+                        "field": "reviewer.tag1",
+                        "operator": "same_as",
+                        "operand": "reviewee.tag1",
+                        "case_sensitive": False,
+                    },
+                },
+            ],
+        }
+    ]
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save-as",
+        data={
+            "source_rule_set_id": personal.id,
+            "new_name": "Composite-out",
+            "combinator": "ALL_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": json.dumps(composite_rules),
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+
+    new_rs = db.execute(
+        select(RuleSet).where(RuleSet.name == "Composite-out")
+    ).scalar_one()
+    revision = db.execute(
+        select(RuleSetRevision).where(
+            RuleSetRevision.id == new_rs.current_revision_id
+        )
+    ).scalar_one()
+    assert revision.rules_json[0]["kind"] == "COMPOSITE"
+    assert revision.rules_json[0]["op"] == "AND"
+    assert len(revision.rules_json[0]["rules"]) == 2
 
 
 def test_other_users_personal_rule_set_returns_403(

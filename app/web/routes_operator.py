@@ -997,12 +997,23 @@ def rule_based_editor(
             detail="That RuleSet is private to its owner.",
         )
 
+    error_messages = {
+        "empty_name": "Pick a name for the new RuleSet before clicking Save.",
+        "malformed_json": "The edited rule list could not be parsed.",
+        "validation": (
+            "One or more rules failed validation. Check operator-"
+            "operand pairings, regexes, and quota bounds."
+        ),
+        "bad_combinator": "Pick a combinator (All / Any / In sequence).",
+        "bad_seed": "RuleSet seed must be an integer.",
+    }
     editor = views.build_rule_based_editor_context(
         review_session,
         rule_set=rule_set,
         revision=revision,
         user=user,
         error_kind=error,
+        error_message=error_messages.get(error or "") if error else None,
     )
     return _templates.TemplateResponse(
         request,
@@ -1074,6 +1085,140 @@ def rule_based_copy(
         source_revision=source_revision,
         owner=user,
         new_name=cleaned_name,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}"
+            f"/assignments/rule-based/edit/{new_rule_set.id}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/rule-based/save-as",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def rule_based_save_as(
+    request: Request,
+    source_rule_set_id: int = Form(...),
+    new_name: str = Form(...),
+    combinator: str = Form(...),
+    exclude_self_reviews: str | None = Form(default=None),
+    seed: str | None = Form(default=None),
+    rules_json: str = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Save the in-editor edited tree as a new Personal RuleSet
+    (Segment 13A PR 5b). Always creates a new row; PR 6's Save will
+    add the in-place revision write."""
+
+    import json
+
+    from pydantic import ValidationError
+
+    from app.schemas.rules import (
+        Combinator,
+        RuleSetOptions,
+        RuleSetSchema,
+    )
+    from app.services.rules import library
+
+    cleaned_name = new_name.strip()
+    redirect_back = (
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{source_rule_set_id}"
+    )
+
+    if not cleaned_name:
+        return RedirectResponse(
+            url=f"{redirect_back}?error=empty_name",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    # Source RuleSet must exist + be visible to caller. Even though
+    # Save As writes a brand-new row, we tie the audit's
+    # ``refs.source_rule_set_id`` back to it for provenance, and the
+    # 403 guard is the same as the Copy path.
+    loaded = library.load_rule_set(db, source_rule_set_id)
+    if loaded is None:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/assignments"
+                "?rule_based_error=missing_rule_set"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    source_rule_set, source_revision = loaded
+    if (
+        not source_rule_set.is_seed
+        and source_rule_set.owner_user_id != user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="That RuleSet is private to its owner.",
+        )
+
+    try:
+        parsed_rules = json.loads(rules_json)
+    except json.JSONDecodeError:
+        return RedirectResponse(
+            url=f"{redirect_back}?error=malformed_json",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    if not isinstance(parsed_rules, list):
+        return RedirectResponse(
+            url=f"{redirect_back}?error=malformed_json",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    if combinator not in {c.value for c in Combinator}:
+        return RedirectResponse(
+            url=f"{redirect_back}?error=bad_combinator",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    seed_value: int | None = None
+    if seed is not None and seed.strip():
+        try:
+            seed_value = int(seed.strip())
+        except ValueError:
+            return RedirectResponse(
+                url=f"{redirect_back}?error=bad_seed",
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
+
+    try:
+        rule_set_schema = RuleSetSchema(
+            id=None,
+            name=cleaned_name,
+            description=source_rule_set.description or "",
+            scope="personal",  # type: ignore[arg-type]
+            combinator=Combinator(combinator),
+            rules=parsed_rules,  # type: ignore[arg-type]
+            options=RuleSetOptions(
+                excludeSelfReviews=(exclude_self_reviews == "true"),
+                seed=seed_value,
+            ),
+        )
+    except ValidationError:
+        return RedirectResponse(
+            url=f"{redirect_back}?error=validation",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    new_rule_set = library.save_as_rule_set_from_schema(
+        db,
+        rule_set_schema=rule_set_schema,
+        owner=user,
+        new_name=cleaned_name,
+        source_rule_set_id=source_rule_set.id,
+        source_revision_id=source_revision.id,
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(

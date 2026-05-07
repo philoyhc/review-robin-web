@@ -18,10 +18,10 @@
     </p>
   </div>
 
-  {% if editor.error_kind == "empty_name" %}
-    <div class="banner banner-error" id="rule-based-editor-empty-name-banner">
+  {% if editor.error_kind %}
+    <div class="banner banner-error" id="rule-based-editor-error-banner">
       <p style="margin: 0;">
-        Pick a name for the new RuleSet before clicking Copy.
+        {{ editor.error_message or "Save failed." }}
       </p>
     </div>
   {% endif %}
@@ -38,73 +38,227 @@
         {% endif %}
 
         {% if editor.is_seed %}
+          {# Read-only seed view + Copy form (Segment 13A PR 5a). #}
           <div class="banner banner-info" id="rule-based-editor-seed-banner" style="margin-top: 12px;">
             <p style="margin: 0;">
               This is a seeded RuleSet and read-only. Click <strong>Copy</strong>
               below to create an editable Personal copy.
             </p>
           </div>
-        {% else %}
+
+          <h3 style="margin-top: 20px;">Combinator</h3>
+          <p>
+            Combine these rules with:
+            <span class="pill pill-info">{{ editor.combinator_label }}</span>
+          </p>
+
+          <h3 style="margin-top: 20px;">Self-review</h3>
+          <p>
+            Exclude self-review:
+            {% if editor.exclude_self_reviews %}
+              <span class="pill pill-info">on</span>
+            {% else %}
+              <span class="pill pill-warning">off</span>
+            {% endif %}
+          </p>
+
+          <h3 style="margin-top: 20px;">Rules</h3>
+          {% if editor.rule_lines %}
+            <ol id="rule-based-editor-rules" style="list-style: none; padding-left: 0;">
+              {% for line in editor.rule_lines %}
+                <li style="padding-left: {{ line.indent * 24 }}px; margin: 6px 0;{% if not line.enabled %} opacity: 0.5;{% endif %}">
+                  <span class="pill {% if line.kind == 'COMPOSITE' %}pill-info{% elif line.kind == 'QUOTA' %}pill-count{% else %}pill-info{% endif %}">{{ line.kind }}</span>
+                  {{ line.text }}
+                </li>
+              {% endfor %}
+            </ol>
+          {% else %}
+            <p class="form-help">No rules — every candidate pair flows through.</p>
+          {% endif %}
+
+          <h3 style="margin-top: 24px;">Copy</h3>
+          <p class="form-help">
+            Create a new Personal RuleSet from this one. The new copy is
+            editable; the source stays unchanged.
+          </p>
+          <form method="post" action="{{ editor.copy_url }}" style="margin-top: 12px;">
+            <input type="hidden" name="rule_set_id" value="{{ editor.rule_set_id }}">
+            <p>
+              <label for="rule-based-editor-new-name">Name for the new RuleSet</label>
+              <input type="text"
+                     id="rule-based-editor-new-name"
+                     name="new_name"
+                     required
+                     value="{{ editor.rule_set_name }} (copy)"
+                     style="width: 100%; max-width: 480px;">
+            </p>
+            <div class="btn-pair" style="margin-top: 12px;">
+              <button class="btn primary" type="submit">Copy</button>
+              <a class="btn alert" href="{{ editor.back_url }}">Cancel</a>
+            </div>
+          </form>
+
+        {% elif editor.editable %}
+          {# Editable Personal RuleSet — Segment 13A PR 5b. #}
           <div class="banner banner-info" id="rule-based-editor-readonly-banner" style="margin-top: 12px;">
             <p style="margin: 0;">
-              In-place editing of Personal RuleSets ships in Segment 13A
-              PR 5b. For now, use <strong>Copy</strong> to make a new
-              RuleSet from this one.
+              Edit any rule below, then <strong>Save As</strong> to write
+              a new Personal RuleSet. In-place Save (overwrites this
+              RuleSet's revision) ships in Segment 13A PR 6.
+              Composite rule editing is read-only here for now;
+              non-composite edits round-trip through Save As.
             </p>
           </div>
-        {% endif %}
 
-        <h3 style="margin-top: 20px;">Combinator</h3>
-        <p>
-          Combine these rules with:
-          <span class="pill pill-info">{{ editor.combinator_label }}</span>
-        </p>
+          <form method="post" action="{{ editor.save_as_url }}" id="rule-based-editor-form">
+            <input type="hidden" name="source_rule_set_id" value="{{ editor.rule_set_id }}">
+            <input type="hidden" name="rules_json" id="rule-based-editor-rules-json">
 
-        <h3 style="margin-top: 20px;">Self-review</h3>
-        <p>
-          Exclude self-review:
-          {% if editor.exclude_self_reviews %}
-            <span class="pill pill-info">on</span>
-          {% else %}
-            <span class="pill pill-warning">off</span>
-          {% endif %}
-        </p>
+            <h3 style="margin-top: 20px;">Combinator</h3>
+            <p>
+              Combine these rules with:
+              <select name="combinator" id="rule-based-editor-combinator">
+                {% for value, label in editor.combinator_options %}
+                  <option value="{{ value }}" {% if value == editor.combinator %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </p>
 
-        <h3 style="margin-top: 20px;">Rules</h3>
-        {% if editor.rule_lines %}
-          <ol id="rule-based-editor-rules" style="list-style: none; padding-left: 0;">
-            {% for line in editor.rule_lines %}
-              <li style="padding-left: {{ line.indent * 24 }}px; margin: 6px 0;{% if not line.enabled %} opacity: 0.5;{% endif %}">
-                <span class="pill {% if line.kind == 'COMPOSITE' %}pill-info{% elif line.kind == 'QUOTA' %}pill-count{% else %}pill-info{% endif %}">{{ line.kind }}</span>
-                {{ line.text }}
-              </li>
-            {% endfor %}
-          </ol>
+            <h3 style="margin-top: 20px;">Self-review</h3>
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox"
+                       name="exclude_self_reviews"
+                       value="true"
+                       id="rule-based-editor-exclude-self"
+                       {% if editor.exclude_self_reviews %}checked{% endif %}>
+                Exclude self-review (when reviewer email matches reviewee identifier).
+              </label>
+            </p>
+
+            {% if editor.seed_value is not none %}
+              <p>
+                <label for="rule-based-editor-seed">Random seed</label>
+                <input type="text"
+                       id="rule-based-editor-seed"
+                       name="seed"
+                       value="{{ editor.seed_value }}"
+                       style="width: 120px;">
+              </p>
+            {% else %}
+              <input type="hidden" name="seed" value="">
+            {% endif %}
+
+            <h3 style="margin-top: 20px;">Rules</h3>
+            <div id="rule-based-editor-rule-list">
+              {% for rule in editor.editable_rules %}
+                <div class="rule-edit-row"
+                     data-rule-id="{{ rule.rule_id }}"
+                     data-kind="{{ rule.kind }}"
+                     data-indent="{{ rule.indent }}"
+                     data-composite-op="{{ rule.composite_op or '' }}"
+                     data-composite-children="{{ rule.composite_children_json or '' }}"
+                     style="padding: 10px 12px; padding-left: {{ 12 + rule.indent * 24 }}px; margin: 6px 0; border-left: 3px solid {% if rule.kind == 'COMPOSITE' %}#999{% else %}#ddd{% endif %}; background: {% if not rule.enabled %}#f5f5f5{% else %}transparent{% endif %};">
+                  <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <span class="pill {% if rule.kind == 'COMPOSITE' %}pill-info{% elif rule.kind == 'QUOTA' %}pill-count{% else %}pill-info{% endif %}">{{ rule.kind }}</span>
+                    <label style="font-weight: normal;">
+                      <input type="checkbox" class="rule-enabled" {% if rule.enabled %}checked{% endif %}>
+                      enabled
+                    </label>
+
+                    {% if rule.kind in ("MATCH", "FILTER") %}
+                      <select class="rule-kind">
+                        {% for value, label in editor.kind_options if value != "QUOTA" %}
+                          <option value="{{ value }}" {% if value == rule.kind %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      <select class="rule-field">
+                        {% for value in editor.field_options %}
+                          <option value="{{ value }}" {% if value == rule.field %}selected{% endif %}>{{ value }}</option>
+                        {% endfor %}
+                      </select>
+                      <select class="rule-operator">
+                        {% for value, label in editor.operator_options %}
+                          <option value="{{ value }}" {% if value == rule.operator %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      <input type="text"
+                             class="rule-operand"
+                             value="{{ rule.operand_text or '' }}"
+                             placeholder="operand"
+                             style="min-width: 160px;">
+                    {% elif rule.kind == "QUOTA" %}
+                      <span>Cap at</span>
+                      <input type="number" class="rule-quota-min"
+                             min="0" placeholder="min"
+                             value="{{ rule.quota_min if rule.quota_min is not none else '' }}"
+                             style="width: 80px;">
+                      <span>to</span>
+                      <input type="number" class="rule-quota-max"
+                             min="0" placeholder="max"
+                             value="{{ rule.quota_max if rule.quota_max is not none else '' }}"
+                             style="width: 80px;">
+                      <select class="rule-quota-scope">
+                        {% for value, label in editor.quota_scope_options %}
+                          <option value="{{ value }}" {% if value == rule.quota_scope %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      <select class="rule-quota-strategy">
+                        {% for value, label in editor.quota_strategy_options %}
+                          <option value="{{ value }}" {% if value == rule.quota_strategy %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                      <input type="number" class="rule-quota-seed"
+                             placeholder="seed"
+                             value="{{ rule.quota_seed if rule.quota_seed is not none else '' }}"
+                             style="width: 80px;">
+                    {% elif rule.kind == "COMPOSITE" %}
+                      <span>Composite ({{ rule.composite_op }}). Inline editing of composite trees lands in PR 5c.</span>
+                    {% endif %}
+
+                    {% if rule.indent == 0 %}
+                      <button type="button" class="btn alert rule-remove" title="Remove this rule">×</button>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+
+            <div style="margin-top: 12px;">
+              <button type="button" class="btn secondary" id="rule-based-editor-add-match">+ Add MATCH rule</button>
+              <button type="button" class="btn secondary" id="rule-based-editor-add-filter">+ Add FILTER rule</button>
+              <button type="button" class="btn secondary" id="rule-based-editor-add-quota">+ Add QUOTA rule</button>
+            </div>
+
+            <h3 style="margin-top: 24px;">Save As</h3>
+            <p class="form-help">
+              Save the edited rule list as a new Personal RuleSet. The
+              loaded RuleSet stays unchanged until in-place Save lands
+              in PR 6.
+            </p>
+            <p>
+              <label for="rule-based-editor-new-name">Name for the new RuleSet</label>
+              <input type="text"
+                     id="rule-based-editor-new-name"
+                     name="new_name"
+                     required
+                     value="{{ editor.rule_set_name }} (edited)"
+                     style="width: 100%; max-width: 480px;">
+            </p>
+            <div class="btn-pair" style="margin-top: 12px;">
+              <button class="btn primary" type="submit">Save As</button>
+              <a class="btn alert" href="{{ editor.back_url }}">Cancel</a>
+            </div>
+          </form>
+
+          {% include "operator/partials/_rule_based_editor_js.html" %}
         {% else %}
-          <p class="form-help">No rules — every candidate pair flows through.</p>
-        {% endif %}
-
-        <h3 style="margin-top: 24px;">Copy</h3>
-        <p class="form-help">
-          Create a new Personal RuleSet from this one. The new copy is
-          editable; the source stays unchanged.
-        </p>
-        <form method="post" action="{{ editor.copy_url }}" style="margin-top: 12px;">
-          <input type="hidden" name="rule_set_id" value="{{ editor.rule_set_id }}">
-          <p>
-            <label for="rule-based-editor-new-name">Name for the new RuleSet</label>
-            <input type="text"
-                   id="rule-based-editor-new-name"
-                   name="new_name"
-                   required
-                   value="{{ editor.rule_set_name }} (copy)"
-                   style="width: 100%; max-width: 480px;">
+          {# Non-owner view of a Personal RuleSet — read-only, no Copy.
+             This branch is defensive: routes already 403 non-owners. #}
+          <p class="form-help">
+            You don't own this RuleSet. Read-only view.
           </p>
-          <div class="btn-pair" style="margin-top: 12px;">
-            <button class="btn primary" type="submit">Copy</button>
-            <a class="btn alert" href="{{ editor.back_url }}">Cancel</a>
-          </div>
-        </form>
+        {% endif %}
       </div>
     </div>
 
