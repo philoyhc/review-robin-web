@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -48,12 +46,14 @@ def create_session(
         event_type="session.created",
         summary=f"Session {review_session.code} created",
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "session_id": review_session.id,
-            "code": review_session.code,
-            "name": review_session.name,
-        },
+        session=review_session,
+        payload=audit.snapshot(
+            {
+                "id": review_session.id,
+                "code": review_session.code,
+                "name": review_session.name,
+            }
+        ),
         correlation_id=correlation_id,
     )
 
@@ -100,13 +100,13 @@ def update_session(
         reason="session_edited",
         correlation_id=correlation_id,
     )
-    changes: dict[str, list[Any]] = {}
-    for field in ("name", "code", "description", "deadline", "help_contact"):
-        old = getattr(review_session, field)
-        new = getattr(payload, field)
+    diffs: dict[str, list[object]] = {}
+    for field_name in ("name", "code", "description", "deadline", "help_contact"):
+        old = getattr(review_session, field_name)
+        new = getattr(payload, field_name)
         if old != new:
-            changes[field] = [old, new]
-            setattr(review_session, field, new)
+            diffs[field_name] = [old, new]
+            setattr(review_session, field_name, new)
     db.flush()
 
     audit.write_event(
@@ -114,36 +114,17 @@ def update_session(
         event_type="session.updated",
         summary=(
             f"Session {review_session.code} updated"
-            if changes
+            if diffs
             else f"Session {review_session.code} edited (no changes)"
         ),
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "session_id": review_session.id,
-            "code": review_session.code,
-            "changes": _serialise_changes(changes),
-        },
+        session=review_session,
+        payload=audit.changes(diffs),
         correlation_id=correlation_id,
     )
     db.commit()
     db.refresh(review_session)
     return review_session
-
-
-def _serialise_changes(changes: dict[str, list[Any]]) -> dict[str, list[Any]]:
-    out: dict[str, list[Any]] = {}
-    for field, (old, new) in changes.items():
-        out[field] = [_serialise(old), _serialise(new)]
-    return out
-
-
-def _serialise(value: Any) -> Any:
-    if value is None:
-        return None
-    if hasattr(value, "isoformat"):
-        return value.isoformat()
-    return value
 
 
 def delete_session(
@@ -159,8 +140,8 @@ def delete_session(
     ``session.deleted`` event is then written with ``session_id=None``
     so the deletion itself stays in the global audit log.
     """
-    snapshot = {
-        "session_id": review_session.id,
+    captured = {
+        "id": review_session.id,
         "code": review_session.code,
         "name": review_session.name,
     }
@@ -171,10 +152,10 @@ def delete_session(
     audit.write_event(
         db,
         event_type="session.deleted",
-        summary=f"Deleted session {snapshot['code']}",
+        summary=f"Deleted session {captured['code']}",
         actor_user_id=user.id,
-        session_id=None,
-        detail=snapshot,
+        session=None,
+        payload=audit.snapshot(captured),
         correlation_id=correlation_id,
     )
     db.commit()

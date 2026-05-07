@@ -156,7 +156,7 @@ def test_activate_opens_all_instruments_and_writes_audit(
         )
     ).scalar_one()
     assert audit.detail is not None
-    assert audit.detail["override_warnings"] is False
+    assert audit.detail["context"]["override_warnings"] is False
 
 
 def test_revert_requires_confirm_and_preserves_responses(
@@ -213,7 +213,7 @@ def test_revert_requires_confirm_and_preserves_responses(
         )
     ).scalar_one()
     assert audit.detail is not None
-    assert audit.detail["response_count_at_revert"] == 1
+    assert audit.detail["counts"]["responses_at_revert"] == 1
 
 
 def test_each_mutating_endpoint_returns_409_while_ready(

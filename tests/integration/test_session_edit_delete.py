@@ -135,9 +135,7 @@ def test_session_delete_removes_session_and_all_dependents(
     ).scalar_one()
     assert deletion_event.session_id is None
     assert deletion_event.detail == {
-        "session_id": sid,
-        "code": "kill-me",
-        "name": "Spring",
+        "snapshot": {"id": sid, "code": "kill-me", "name": "Spring"},
     }
 
     older_events = db.execute(

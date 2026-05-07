@@ -439,7 +439,16 @@ The Cancel link on the surface is just `<a>` back to `GET /reviewer/sessions/{id
 ### Audit log
 
 Every destructive operation writes an `audit_events` row with
-`event_type`, `summary`, JSON `detail`, and a per-request `correlation_id`:
+`event_type`, `summary`, JSON `detail`, and a per-request
+`correlation_id`. As of 2026-05-07 (Segment 11K PR 1) new
+`detail` writes follow the canonical envelope schema documented
+in [`spec/architecture.md`](../spec/architecture.md) "Audit-event
+detail schema"; the per-event-type sample shapes below are the
+**legacy** shapes from before the cutover and remain accurate
+for `audit_events` rows written before that date. PRs 2-7 of
+Segment 11K migrate the emitters listed below to the canonical
+envelopes; the legacy shapes will fall away one family at a
+time as those PRs ship.
 
 | event_type | When |
 |---|---|
