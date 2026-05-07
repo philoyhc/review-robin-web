@@ -115,20 +115,23 @@ following affordances after PR 5. PR 4 ships everything except the
 "Build / Edit rules" button.
 
 ```
-┌─ Rule Based Assignment ────────────────────────┐
-│                                                 │
-│  RuleSet:  [▼ Intra-group peer review        ]  │
-│            Reviewer and reviewee share tag1.    │
-│                                                 │
-│  ☑ Exclude self-review                          │
-│    (when a reviewer's email matches a           │
-│     reviewee's identifier)                      │
-│                                                 │
-│  [ Build / Edit rules… ]      [ Generate ]      │
-│                                                 │
-│  Last generated: 47 assignments • 3 minutes ago │
-│                                                 │
-└─────────────────────────────────────────────────┘
+┌─ Rule Based Assignment ────────────────────────────┐
+│                                                     │
+│  RuleSet:  [▼ Intra-group peer review            ]  │
+│            Reviewer and reviewee share tag1.        │
+│                                                     │
+│  ☑ Exclude self-review                              │
+│    (when a reviewer's email matches a               │
+│     reviewee's identifier)                          │
+│                                                     │
+│  ⚠ This will replace the 47 existing assignments.   │
+│  ☐ Yes, replace the 47 existing assignments         │
+│                                                     │
+│  [ Build / Edit rules… ]          [ Generate ]      │
+│                                                     │
+│  Last generated: 47 assignments • 3 minutes ago     │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
 
 Element-by-element:
@@ -171,11 +174,27 @@ Element-by-element:
   A `+ New blank RuleSet` entry at the top of the selector opens
   the editor with no RuleSet pre-loaded; Save As is required.
 
+- **Replace-existing confirmation.** When the session already has
+  assignments, the card renders a `banner-warning` reading "This
+  will replace the N existing assignments." plus a required
+  `Yes, replace the N existing assignments` checkbox immediately
+  above the Generate button. The Generate button is disabled until
+  the checkbox is ticked. Reuses the same shape Quick Setup
+  established in Segment 11J via `views.cascade_message_for_replace`
+  — pull the helper rather than re-roll the copy. On a session
+  with zero existing assignments the warning + checkbox are not
+  rendered and Generate is enabled directly. On submit-without-
+  checkbox (e.g. an operator hand-crafts the form payload), the
+  POST 303s back with `?rule_based_error=needs_confirm` so the
+  GET render places a scoped `.banner.banner-error` on the card,
+  matching the Quick Setup convention.
+
 - **Generate button.** POSTs to
   `/operator/sessions/{id}/assignments/rule-based/generate` with
-  `rule_set_id` and the checkbox value. Runs the engine, calls
-  `replace_assignments(...)`, and 303s back to the assignments page
-  with a banner.
+  `rule_set_id`, the exclude-self-review checkbox value, and the
+  `confirm_replace=on` payload from the cascade-confirmation
+  checkbox. Runs the engine, calls `replace_assignments(...)`, and
+  303s back to the assignments page with a banner.
 
 - **Last generated summary.** Inline passive line below the buttons,
   rendered when an `assignments.generated` audit row with
@@ -581,10 +600,13 @@ rotates the audit log.
     `session_assignments.html` without a dedicated GET; choose
     whichever fits the existing page's render pattern.)*
   - `POST /operator/sessions/{id}/assignments/rule-based/generate` —
-    body has `rule_set_id` and `exclude_self_reviews` (the
-    checkbox). Loads the RuleSet, runs PR 2's engine with the
-    override, invokes `replace_assignments(...)`, 303s back to the
-    assignments page with a banner.
+    body has `rule_set_id`, `exclude_self_reviews` (the override
+    checkbox), and `confirm_replace` (the cascade-confirmation
+    checkbox; required when the session has existing assignments).
+    Loads the RuleSet, runs PR 2's engine with the override, invokes
+    `replace_assignments(...)`, 303s back to the assignments page
+    with a banner. Missing `confirm_replace` on a populated session
+    303s back with `?rule_based_error=needs_confirm` instead.
 - Template work: replace the placeholder card with a real partial
   `_rule_based_card.html`. The partial renders the layout described
   in "Card design" above:
@@ -596,7 +618,13 @@ rotates the audit log.
     the default selection's value; the editor in PR 5 adds an
     inline JS hook to update it on selector change without a page
     reload).
-  - The Generate button.
+  - The cascade-replace `banner-warning` + required confirmation
+    checkbox above Generate when the session already has
+    assignments. Reuses `views.cascade_message_for_replace` from
+    Segment 11J for the copy. Hidden / not rendered when there are
+    no existing assignments.
+  - The Generate button (disabled until the cascade checkbox is
+    ticked, when one is present).
   - The Last-generated summary (read from the most recent
     `assignments.generated` audit row for this session with
     `mode='rule_based'`).
@@ -615,6 +643,12 @@ rotates the audit log.
   - `tests/unit/test_rules_library.py` — `list_visible_rule_sets`
     returns the six seeds, sorted by name, when no Personal rows
     exist.
+  - Cascade-confirmation gate: on a session with existing
+    assignments, POST Generate without `confirm_replace` 303s back
+    with `?rule_based_error=needs_confirm` and writes nothing; with
+    `confirm_replace=on` the assignments wipe-and-replace as
+    expected. On a session with zero existing assignments,
+    `confirm_replace` is not required and Generate proceeds.
   - Lifecycle gate: posting Generate on a `ready` / `closed`
     session 409s with the standard yellow lock card explanation
     (the existing assignments-page gate covers this — extend the
