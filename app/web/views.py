@@ -2308,17 +2308,25 @@ def build_rule_based_card_context(
                     ),
                 )
 
+    # Segment 13A-1 PR 4a — the assignments-page Rule Based card's
+    # "Edit ruleset" link now points at the new single-card Rule
+    # Builder surface (``/assignments/rule-based-editor``). The
+    # legacy ``/assignments/rule-based/edit/{id}`` GET handler still
+    # 303-redirects to the same place so any bookmarks / external
+    # links keep working.
     if selected_option_id is not None:
         edit_url = (
             f"/operator/sessions/{review_session.id}"
-            f"/assignments/rule-based/edit/{selected_option_id}"
+            f"/assignments/rule-based-editor"
+            f"?rule_set_id={selected_option_id}"
         )
     else:
-        # Inert-branch placeholder; PR 5 ships the editor and any
-        # session with at least one seed always has a selected option.
+        # Inert-branch placeholder — every session with at least one
+        # seed has a selected option, so this only fires when the
+        # card renders unwired (PR 0 fallback).
         edit_url = (
             f"/operator/sessions/{review_session.id}"
-            "/assignments/rule-based/edit/0"
+            "/assignments/rule-based-editor"
         )
 
     return RuleBasedCardContext(

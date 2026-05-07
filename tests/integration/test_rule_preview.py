@@ -1,21 +1,30 @@
 """Integration tests for the live preview surface — Segment 13A
 PR 7.
 
-The editor renders a synchronous initial preview on first load and
-exposes a POST endpoint that returns the rendered preview partial
-for the JS hook to swap in. The preview is read-only — running
-multiple POSTs produces no audit churn.
+The new single-card Rule Builder (Segment 13A-1) explicitly drops
+the preview slot. PR 4a rewires the operator's link target away
+from the legacy editor; the preview surface is unreachable
+through any UI link. This file is scheduled for deletion in PR 4b
+alongside the legacy template + the ``/preview`` POST route.
 """
 
 from __future__ import annotations
 
 import json
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession, RuleSet
+
+pytestmark = pytest.mark.skip(
+    reason=(
+        "Segment 13A-1 PR 4a: legacy editor preview surface "
+        "unreachable from the new Rule Builder. File retired in PR 4b."
+    )
+)
 
 
 def _make_session(
