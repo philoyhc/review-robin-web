@@ -2510,6 +2510,10 @@ class RuleBasedEditorContext:
     revision_no: int
     saved_flash: bool
     renamed_flash: bool
+    preview: object | None  # ``RulePreview`` from app.services.rules.preview
+    """Read-only live preview rendered server-side on initial load.
+    The editor's right column renders this synchronously; a JS hook
+    refetches on form-element edits via POST /preview."""
     error_kind: str | None
     error_message: str | None
     # Picker option lists exposed to the template.
@@ -2752,6 +2756,7 @@ def build_rule_based_editor_context(
     error_message: str | None = None,
     saved_flash: bool = False,
     renamed_flash: bool = False,
+    preview: object | None = None,
 ) -> RuleBasedEditorContext:
     """Build the editor child page's render context.
 
@@ -2809,6 +2814,7 @@ def build_rule_based_editor_context(
         revision_no=revision.revision_no,
         saved_flash=saved_flash,
         renamed_flash=renamed_flash,
+        preview=preview,
         back_url=f"/operator/sessions/{review_session.id}/assignments",
         error_kind=error_kind,
         error_message=error_message,

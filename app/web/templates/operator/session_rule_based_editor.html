@@ -121,7 +121,10 @@
             this one.
           </p>
 
-          <form method="post" action="{{ editor.save_url }}" id="rule-based-editor-form">
+          <form method="post" action="{{ editor.save_url }}"
+                id="rule-based-editor-form"
+                data-preview-url="/operator/sessions/{{ session.id }}/assignments/rule-based/preview"
+                data-source-rule-set-id="{{ editor.rule_set_id }}">
             <input type="hidden" name="rule_set_id" value="{{ editor.rule_set_id }}">
             <input type="hidden" name="source_rule_set_id" value="{{ editor.rule_set_id }}">
             <input type="hidden" name="rules_json" id="rule-based-editor-rules-json">
@@ -334,11 +337,11 @@
     <div class="bottom-left">
       <div class="card" id="rule-based-editor-preview">
         <h2 style="margin-top: 0;">Preview</h2>
-        <p class="form-help">
-          The live distribution / sampled-pairs preview ships in
-          Segment 13A PR 7. The slot is reserved here so the layout
-          doesn't reflow when it lands.
-        </p>
+        <div id="rule-based-editor-preview-container">
+          {% with preview = editor.preview %}
+            {% include "operator/partials/_rule_set_preview.html" %}
+          {% endwith %}
+        </div>
       </div>
     </div>
   </div>

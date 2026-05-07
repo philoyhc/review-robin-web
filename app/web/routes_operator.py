@@ -1013,6 +1013,9 @@ def rule_based_editor(
             "clicking Delete."
         ),
     }
+    preview = _build_rule_based_preview(
+        db, review_session, rule_set=rule_set, revision=revision
+    )
     editor = views.build_rule_based_editor_context(
         review_session,
         rule_set=rule_set,
@@ -1022,6 +1025,7 @@ def rule_based_editor(
         error_message=error_messages.get(error or "") if error else None,
         saved_flash=(saved == "1"),
         renamed_flash=(renamed == "1"),
+        preview=preview,
     )
     return _templates.TemplateResponse(
         request,
@@ -1035,6 +1039,76 @@ def rule_based_editor(
                 review_session, f"Rule Based · {rule_set.name}"
             ),
         },
+    )
+
+
+def _build_rule_based_preview(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    rule_set,  # RuleSet
+    revision,  # RuleSetRevision
+):
+    """Compute the live preview from a persisted RuleSet revision.
+    Used by the editor's GET render; the POST /preview path uses
+    the in-progress edited schema instead."""
+
+    from pydantic import TypeAdapter
+
+    from app.schemas.rules import (
+        Combinator,
+        Rule,
+        RuleSetOptions,
+        RuleSetSchema,
+    )
+
+    rule_adapter = TypeAdapter(Rule)
+    rule_set_schema = RuleSetSchema(
+        id=rule_set.id,
+        name=rule_set.name,
+        description=rule_set.description or "",
+        scope=rule_set.scope,  # type: ignore[arg-type]
+        combinator=Combinator(revision.combinator),
+        rules=[
+            rule_adapter.validate_python(payload)
+            for payload in (revision.rules_json or [])
+        ],
+        options=RuleSetOptions(
+            excludeSelfReviews=revision.exclude_self_reviews,
+            seed=revision.seed,
+        ),
+    )
+    return _run_rule_based_preview(
+        db, review_session, rule_set_schema, revision_seed=revision.id
+    )
+
+
+def _run_rule_based_preview(
+    db: Session,
+    review_session: ReviewSession,
+    rule_set_schema,  # RuleSetSchema
+    *,
+    revision_seed: int,
+):
+    """Run the engine against the session's populations and shape
+    the result into a ``RulePreview``. Read-only — no audit, no
+    DB writes."""
+
+    from app.services.rules import engine
+    from app.services.rules.preview import build_preview
+
+    reviewers = assignments.list_reviewers(db, review_session.id)
+    reviewees = assignments.list_reviewees(db, review_session.id)
+    result = engine.evaluate(
+        rule_set_schema,
+        reviewers=reviewers,
+        reviewees=reviewees,
+        revision_seed=revision_seed,
+    )
+    return build_preview(
+        result=result,
+        reviewer_count=len(reviewers),
+        reviewee_count=len(reviewees),
     )
 
 
@@ -1235,6 +1309,139 @@ def rule_based_save_as(
             f"/assignments/rule-based/edit/{new_rule_set.id}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/rule-based/preview",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def rule_based_preview(
+    request: Request,
+    rule_set_id: int = Form(...),
+    combinator: str = Form(...),
+    exclude_self_reviews: str | None = Form(default=None),
+    seed: str | None = Form(default=None),
+    rules_json: str = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    """Render the live preview partial against the in-progress
+    edited tree (Segment 13A PR 7). Read-only — no audit, no DB
+    writes. The editor's JS hook POSTs here on form-element changes
+    and replaces the preview container's innerHTML with the
+    response."""
+
+    import json
+
+    from pydantic import TypeAdapter, ValidationError
+
+    from app.schemas.rules import (
+        Combinator,
+        Rule,
+        RuleSetOptions,
+        RuleSetSchema,
+    )
+    from app.services.rules import library
+
+    loaded = library.load_rule_set(db, rule_set_id)
+    revision_seed = loaded[1].id if loaded is not None else 0
+
+    # Visibility gate: same as the editor — operators can preview
+    # any seed plus their own Personal RuleSets, not someone else's
+    # Personal RuleSet. Defensive — the editor that posts here has
+    # already applied the same gate.
+    if loaded is not None:
+        rule_set, _revision = loaded
+        if not rule_set.is_seed and rule_set.owner_user_id != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="That RuleSet is private to its owner.",
+            )
+
+    if combinator not in {c.value for c in Combinator}:
+        return _render_preview_error(
+            request, review_session, "Pick a combinator first."
+        )
+
+    seed_value: int | None = None
+    if seed is not None and seed.strip():
+        try:
+            seed_value = int(seed.strip())
+        except ValueError:
+            return _render_preview_error(
+                request, review_session, "Seed must be an integer."
+            )
+
+    try:
+        parsed_rules = json.loads(rules_json)
+    except json.JSONDecodeError:
+        return _render_preview_error(
+            request, review_session, "Rule list could not be parsed."
+        )
+    if not isinstance(parsed_rules, list):
+        return _render_preview_error(
+            request, review_session, "Rule list must be a JSON array."
+        )
+
+    rule_adapter = TypeAdapter(Rule)
+    try:
+        rules = [rule_adapter.validate_python(p) for p in parsed_rules]
+        rule_set_schema = RuleSetSchema(
+            id=loaded[0].id if loaded is not None else None,
+            name=loaded[0].name if loaded is not None else "draft",
+            description=loaded[0].description if loaded is not None else "",
+            scope="personal",  # type: ignore[arg-type]
+            combinator=Combinator(combinator),
+            rules=rules,
+            options=RuleSetOptions(
+                excludeSelfReviews=(exclude_self_reviews == "true"),
+                seed=seed_value,
+            ),
+        )
+    except ValidationError:
+        return _render_preview_error(
+            request,
+            review_session,
+            (
+                "One or more rules are invalid. Fix the highlighted "
+                "rule before the preview can run."
+            ),
+        )
+
+    preview = _run_rule_based_preview(
+        db, review_session, rule_set_schema, revision_seed=revision_seed
+    )
+    return _templates.TemplateResponse(
+        request,
+        "operator/partials/_rule_set_preview.html",
+        {"session": review_session, "preview": preview},
+    )
+
+
+def _render_preview_error(
+    request: Request, review_session: ReviewSession, message: str
+) -> HTMLResponse:
+    """Render the preview partial wrapped around a single warning so
+    the editor's preview pane stays informative when the in-progress
+    tree fails validation."""
+
+    from app.services.rules.preview import RulePreview
+
+    placeholder = RulePreview(
+        pair_count=0,
+        distribution_per_reviewer=[],
+        distribution_per_reviewee=[],
+        sampled_pairs=[],
+        warnings=[message],
+        populations_empty=False,
+    )
+    return _templates.TemplateResponse(
+        request,
+        "operator/partials/_rule_set_preview.html",
+        {"session": review_session, "preview": placeholder},
     )
 
 
