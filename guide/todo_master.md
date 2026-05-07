@@ -157,19 +157,24 @@ pinned to each segment. The catalog itself lives in
    12A.
    **Plan:** `guide/segment_12B_audit_retention.md`.
 
-5. **13 — Rule-based assignment builder + sort UX.**
+5. **13A — Rule-based assignment builder.**
    Real `RuleBased` rule menu replaces the `assignments`
-   placeholder card; sort-by-reviewee column on Manage pages
-   (operator default + reviewer live override).
-   **Plans:** `guide/segment_13_rulebased_assignment_builder_plan.md`
-   + `guide/sort_by_reviewee.md`.
+   placeholder card on `/operator/sessions/{id}/assignments`.
+   **Plan:** `guide/segment_13A_rulebased_assignment_builder.md`.
 
-6. **14 — Production hardening.**
+6. **13B — Reviewer surface sort.**
+   Sort-by-reviewee column on the reviewer surface — operator
+   default + reviewer live override. Functional spec ready;
+   implementation plan lands when 13B starts. Independent of
+   13A; ships in either order.
+   **Spec:** `guide/sort_by_reviewee.md`.
+
+7. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-7. **14-1 — Email infrastructure (send activation + backends).**
+8. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. **Hard prereq: 11C Part 2**
    (the schema columns Part A populates).
    - **Parts A → E** (sequential): SMTP send activation →
@@ -185,7 +190,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-8. **15 — Operator polish + documentation.**
+9. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -200,7 +205,8 @@ pinned to each segment. The catalog itself lives in
   writer.
 - **11K → 12B** is the audit pipeline: 11K pins the `detail`
   shape; 12B's export reads against it.
-- **12A and 13 are independent** of the email + audit pipelines
-  and can interleave at any time.
+- **12A, 13A, 13B** are independent of the email + audit
+  pipelines and can interleave at any time. 13A and 13B are
+  also independent of each other.
 - **Within 14-1**, Parts B-E are sequential enhancements on top
   of Part A; Parts F-H are independent backend swaps.

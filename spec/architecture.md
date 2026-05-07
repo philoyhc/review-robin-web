@@ -23,7 +23,7 @@ perspective:
   matrix that determines which reviewer-reviewee pairs are reviewed.
   The matrix is computed once per session — manually (Manual import)
   or via a deterministic preset (FullMatrix today, RuleBased in
-  Segment 13).
+  Segment 13A).
 - **Instruments** are the *response forms* attached to a session. A
   session has one or more instruments, each defining its own set of
   response fields and display fields. The schema, services, and

@@ -1,13 +1,16 @@
 # Sort by Reviewee — functional spec
 
-**Status.** Forward-looking design spec for **Segment 13**
-(`guide/segment_13_rulebased_assignment_builder_plan.md`). Locks in
-the decisions reached during the Segment 11 §2.6 discussion (2026-05-03);
-promoted from sketch.
+**Status.** Forward-looking design spec for **Segment 13B**
+(reviewer-surface sort UX, split out of the original Segment 13
+during the 2026-05-07 wrap-up). Locks in the decisions reached
+during the Segment 11 §2.6 discussion (2026-05-03); promoted
+from sketch. The sibling rule-builder work lives in **Segment
+13A** (`guide/segment_13A_rulebased_assignment_builder.md`); the
+two are independent.
 
-This file is the source of truth for the design. Segment 13 work
-implements against it; subsequent edits go here and propagate to the
-implementation, not the other way around.
+This file is the source of truth for the design. Segment 13B
+work implements against it; subsequent edits go here and
+propagate to the implementation, not the other way around.
 
 ---
 

@@ -228,7 +228,7 @@ All three setup-roster pages share an identical chrome shape:
 
 The **Edit Reviewers / Reviewees / Assignments** affordance for inline-editable rows is not yet implemented; today these pages expose only the bulk Upload-CSV / Delete-all flow.
 
-The Assignments page additionally carries an anchored `#rules` "Assign by Rules" placeholder card (Rules editor — Segment 13).
+The Assignments page additionally carries an anchored `#rules` "Assign by Rules" placeholder card (Rules editor — Segment 13A).
 
 ### `/operator/sessions/{id}/instruments` — Instruments
 

@@ -276,7 +276,7 @@ def test_assignments_hub_rule_based_card_uses_placeholder_macro(
     assert 'class="card placeholder" id="rule-based-assignment"' in body
     assert "<h2>Rule Based Assignment</h2>" in body
     assert "matching reviewer and reviewee attributes via rules" in body
-    assert "Rule Based Assignment lands in Segment 13" in body
+    assert "Rule Based Assignment lands in Segment 13A" in body
     assert ">Build rules</button>" in body
 
 
