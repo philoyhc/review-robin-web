@@ -170,3 +170,97 @@ def copy_rule_set(
 
     db.commit()
     return new_rule_set
+
+
+def save_as_rule_set_from_schema(
+    db: Session,
+    *,
+    rule_set_schema,  # RuleSetSchema (avoid Pydantic forward refs)
+    owner: User,
+    new_name: str,
+    source_rule_set_id: int | None,
+    source_revision_id: int | None,
+    correlation_id: str,
+) -> RuleSet:
+    """Persist an edited RuleSet (Segment 13A PR 5b's Save As).
+
+    Validation has already happened: ``rule_set_schema`` is a fully-
+    validated ``RuleSetSchema`` instance from the route. This helper
+    is the DB-write counterpart to ``copy_rule_set`` for the edited-
+    tree path. Always creates a new Personal RuleSet; PR 6's Save
+    will land the in-place revision write that branches on
+    ``source_rule_set_id`` matching the loaded ID.
+
+    Audit event: ``rule_set.created`` with ``context.via='save_as'``
+    (vs. ``via='copy'`` for the unchanged-tree path) and
+    ``refs.source_rule_set_id`` / ``source_revision_id`` for
+    provenance back to the row the operator started editing from.
+    """
+
+    now = datetime.now(timezone.utc)
+
+    new_rule_set = RuleSet(
+        name=new_name,
+        description=rule_set_schema.description or "",
+        scope="personal",
+        owner_user_id=owner.id,
+        is_seed=False,
+    )
+    db.add(new_rule_set)
+    db.flush()
+
+    rules_payload = [
+        rule.model_dump(mode="json") for rule in rule_set_schema.rules
+    ]
+    new_revision = RuleSetRevision(
+        rule_set_id=new_rule_set.id,
+        revision_no=1,
+        combinator=rule_set_schema.combinator.value,
+        exclude_self_reviews=rule_set_schema.options.excludeSelfReviews,
+        seed=rule_set_schema.options.seed,
+        rules_json=rules_payload,
+        created_at=now,
+        created_by_user_id=owner.id,
+    )
+    db.add(new_revision)
+    db.flush()
+    new_rule_set.current_revision_id = new_revision.id
+    db.flush()
+
+    refs: dict[str, int] = {
+        "rule_set_id": new_rule_set.id,
+        "rule_set_revision_id": new_revision.id,
+    }
+    if source_rule_set_id is not None:
+        refs["source_rule_set_id"] = source_rule_set_id
+    if source_revision_id is not None:
+        refs["source_revision_id"] = source_revision_id
+
+    audit.write_event(
+        db,
+        event_type="rule_set.created",
+        summary=(
+            f"Saved As RuleSet {new_name!r} "
+            f"(personal scope, owned by user_id={owner.id})"
+        ),
+        actor_user_id=owner.id,
+        payload=audit.snapshot(
+            {
+                "id": new_rule_set.id,
+                "name": new_rule_set.name,
+                "scope": new_rule_set.scope,
+                "is_seed": new_rule_set.is_seed,
+                "combinator": new_revision.combinator,
+                "exclude_self_reviews": (
+                    new_revision.exclude_self_reviews
+                ),
+                "rule_count": len(new_revision.rules_json or []),
+            }
+        ),
+        refs=refs,
+        context={"via": "save_as"},
+        correlation_id=correlation_id,
+    )
+
+    db.commit()
+    return new_rule_set

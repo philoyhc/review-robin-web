@@ -1,0 +1,191 @@
+{# Segment 13A PR 5b — Inline JS for the rule editor.
+
+   Walks the visible rule list on form submit and serialises it
+   into a JSON tree, written into the hidden ``rules_json`` field.
+   Also handles add-rule / remove-rule. Composite editing is a
+   PR 5c follow-on; composite rows preserve their original
+   ``data-composite-children`` payload through Save As untouched.
+
+   Convention: each rule row carries ``data-rule-id``, ``data-kind``,
+   and ``data-indent``. Per-kind controls are class-tagged
+   (``.rule-kind``, ``.rule-field``, ``.rule-operator``,
+   ``.rule-operand``, ``.rule-quota-*``).
+#}
+<script>
+  (function () {
+    var form = document.getElementById("rule-based-editor-form");
+    if (!form) return;
+    var ruleList = document.getElementById("rule-based-editor-rule-list");
+    var hidden = document.getElementById("rule-based-editor-rules-json");
+
+    function nextId(prefix) {
+      var ts = Date.now().toString(36);
+      var rand = Math.random().toString(36).slice(2, 6);
+      return prefix + "_" + ts + rand;
+    }
+
+    function serialiseRow(row) {
+      var kind = row.dataset.kind;
+      var enabled = row.querySelector(".rule-enabled");
+      var rule = {
+        id: row.dataset.ruleId,
+        kind: kind,
+        enabled: enabled ? !!enabled.checked : true,
+      };
+      if (kind === "MATCH" || kind === "FILTER") {
+        var kindSelect = row.querySelector(".rule-kind");
+        if (kindSelect) rule.kind = kindSelect.value;
+        var field = row.querySelector(".rule-field");
+        var operator = row.querySelector(".rule-operator");
+        var operandInput = row.querySelector(".rule-operand");
+        var operatorValue = operator ? operator.value : "equals";
+        var operandText = operandInput ? operandInput.value : "";
+        var operand;
+        if (operatorValue === "is_empty" || operatorValue === "is_not_empty") {
+          operand = null;
+        } else if (operatorValue === "in" || operatorValue === "not_in") {
+          operand = operandText
+            .split(",")
+            .map(function (s) { return s.trim(); })
+            .filter(function (s) { return s.length > 0; });
+        } else {
+          operand = operandText;
+        }
+        rule.predicate = {
+          field: field ? field.value : "",
+          operator: operatorValue,
+          operand: operand,
+          case_sensitive: false,
+        };
+      } else if (kind === "QUOTA") {
+        var minVal = row.querySelector(".rule-quota-min").value;
+        var maxVal = row.querySelector(".rule-quota-max").value;
+        var seedVal = row.querySelector(".rule-quota-seed").value;
+        rule.scope = row.querySelector(".rule-quota-scope").value;
+        rule.min = minVal === "" ? null : parseInt(minVal, 10);
+        rule.max = maxVal === "" ? null : parseInt(maxVal, 10);
+        rule.selection = {
+          strategy: row.querySelector(".rule-quota-strategy").value,
+          seed: seedVal === "" ? null : parseInt(seedVal, 10),
+        };
+      } else if (kind === "COMPOSITE") {
+        rule.op = row.dataset.compositeOp || "AND";
+        try {
+          rule.rules = JSON.parse(row.dataset.compositeChildren || "[]");
+        } catch (e) {
+          rule.rules = [];
+        }
+      }
+      return rule;
+    }
+
+    function serialiseRules() {
+      // Top-level rules are rows with data-indent="0". Composite
+      // child rows render read-only inline for visual context; the
+      // parent's data-composite-children carries the canonical
+      // children JSON for round-trip on Save As.
+      var rows = ruleList.querySelectorAll('.rule-edit-row[data-indent="0"]');
+      var out = [];
+      rows.forEach(function (row) { out.push(serialiseRow(row)); });
+      return out;
+    }
+
+    function refreshHidden() {
+      hidden.value = JSON.stringify(serialiseRules());
+    }
+
+    form.addEventListener("submit", function () {
+      refreshHidden();
+    });
+
+    // Remove-rule click handler (delegated).
+    ruleList.addEventListener("click", function (event) {
+      var btn = event.target.closest(".rule-remove");
+      if (!btn) return;
+      var row = btn.closest(".rule-edit-row");
+      if (!row) return;
+      // Removing a top-level row also removes any composite child
+      // rows rendered immediately after it (they share the same
+      // top-level position).
+      var parentIndent = parseInt(row.dataset.indent || "0", 10);
+      var next = row.nextElementSibling;
+      while (next && parseInt(next.dataset.indent || "0", 10) > parentIndent) {
+        var toRemove = next;
+        next = next.nextElementSibling;
+        toRemove.remove();
+      }
+      row.remove();
+      refreshHidden();
+    });
+
+    // Add-rule handlers — append a new row template per kind.
+    function appendRule(kind) {
+      var row = document.createElement("div");
+      row.className = "rule-edit-row";
+      row.dataset.ruleId = nextId(kind.toLowerCase());
+      row.dataset.kind = kind;
+      row.dataset.indent = "0";
+      row.style.padding = "10px 12px";
+      row.style.margin = "6px 0";
+      row.style.borderLeft = "3px solid #ddd";
+
+      var inner = '<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">';
+      inner += '<span class="pill pill-info">' + kind + '</span>';
+      inner += '<label style="font-weight: normal;"><input type="checkbox" class="rule-enabled" checked> enabled</label>';
+      if (kind === "MATCH" || kind === "FILTER") {
+        inner += '<select class="rule-kind">';
+        inner += '<option value="MATCH"' + (kind === "MATCH" ? " selected" : "") + '>Include pairs where</option>';
+        inner += '<option value="FILTER"' + (kind === "FILTER" ? " selected" : "") + '>Exclude pairs where</option>';
+        inner += '</select>';
+        inner += '<select class="rule-field">';
+        ['reviewer.tag1','reviewer.tag2','reviewer.tag3','reviewee.tag1','reviewee.tag2','reviewee.tag3'].forEach(function (f) {
+          inner += '<option value="' + f + '">' + f + '</option>';
+        });
+        inner += '</select>';
+        inner += '<select class="rule-operator">';
+        var ops = [
+          ['equals','is'],['not_equals','is not'],
+          ['in','is one of'],['not_in','is not one of'],
+          ['matches','matches the pattern'],['not_matches','does not match the pattern'],
+          ['is_empty','is empty'],['is_not_empty','is set'],
+          ['same_as','is the same as'],['different_from','is different from'],
+        ];
+        ops.forEach(function (pair) {
+          inner += '<option value="' + pair[0] + '">' + pair[1] + '</option>';
+        });
+        inner += '</select>';
+        inner += '<input type="text" class="rule-operand" placeholder="operand" style="min-width: 160px;">';
+      } else if (kind === "QUOTA") {
+        inner += '<span>Cap at</span>';
+        inner += '<input type="number" class="rule-quota-min" min="0" placeholder="min" style="width: 80px;">';
+        inner += '<span>to</span>';
+        inner += '<input type="number" class="rule-quota-max" min="0" placeholder="max" style="width: 80px;">';
+        inner += '<select class="rule-quota-scope">';
+        inner += '<option value="PER_REVIEWEE">reviewers per reviewee</option>';
+        inner += '<option value="PER_REVIEWER">reviewees per reviewer</option>';
+        inner += '</select>';
+        inner += '<select class="rule-quota-strategy">';
+        inner += '<option value="RANDOM">chosen randomly</option>';
+        inner += '<option value="ROUND_ROBIN">round-robin</option>';
+        inner += '</select>';
+        inner += '<input type="number" class="rule-quota-seed" placeholder="seed" style="width: 80px;">';
+      }
+      inner += '<button type="button" class="btn alert rule-remove" title="Remove this rule">×</button>';
+      inner += '</div>';
+      row.innerHTML = inner;
+      ruleList.appendChild(row);
+      refreshHidden();
+    }
+
+    document.getElementById("rule-based-editor-add-match")
+      .addEventListener("click", function () { appendRule("MATCH"); });
+    document.getElementById("rule-based-editor-add-filter")
+      .addEventListener("click", function () { appendRule("FILTER"); });
+    document.getElementById("rule-based-editor-add-quota")
+      .addEventListener("click", function () { appendRule("QUOTA"); });
+
+    // Initial sync so the hidden field is populated even if the
+    // operator clicks Save As without touching anything.
+    refreshHidden();
+  })();
+</script>
