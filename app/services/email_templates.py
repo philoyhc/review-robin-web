@@ -38,7 +38,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session as ORMSession
 from sqlalchemy.orm.exc import UnmappedInstanceError
 
-from app.db.models import Assignment, Response, Reviewer, ReviewSession
+from app.db.models import Assignment, Response, Reviewer, ReviewSession, User
+from app.services import audit as audit_service
 
 # Default templates — verbatim parameterisations of the strings the
 # original ``invitations._email_body`` / ``_reminder_body`` helpers
@@ -403,3 +404,83 @@ def set_overrides(
                 current[key] = new_value
     review_session.email_template_overrides = current or None
     return changes
+
+
+# --------------------------------------------------------------------------- #
+# Audit emit helpers (Segment 11K PR 6)
+#
+# These two helpers were lifted from the ``setupinvite_save`` and
+# ``setupinvite_reset`` route handlers in ``app/web/routes_operator.py``
+# so the route stays thin and PR 7 of Segment 11K can sweep them
+# through the canonical-shape migration alongside the other settings
+# emitters in one PR. The emitted ``detail`` shape is byte-identical
+# to the pre-relocation form; canonical-shape conversion happens in
+# PR 7.
+# --------------------------------------------------------------------------- #
+
+
+def record_template_change(
+    db: ORMSession,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    template: str,
+    changes: dict[str, list[Any]],
+    correlation_id: str | None,
+) -> None:
+    """Emit ``email_template.updated`` for a Save on the editor.
+
+    No-op if ``changes`` is empty (a Save with no diffs writes no
+    audit row, matching the pre-relocation behaviour).
+    """
+    if not changes:
+        return
+    audit_service.write_event(
+        db,
+        event_type="email_template.updated",
+        summary=(
+            f"Session {review_session.code}: "
+            f"{template} template updated"
+        ),
+        actor_user_id=user.id,
+        session_id=review_session.id,
+        detail={
+            "template": template,
+            "changes": {k: list(v) for k, v in changes.items()},
+        },
+        correlation_id=correlation_id,
+    )
+
+
+def record_template_reset(
+    db: ORMSession,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    template: str,
+    field: str,
+    changes: dict[str, list[Any]],
+    correlation_id: str | None,
+) -> None:
+    """Emit ``email_template.reset`` for a per-field Reset to default.
+
+    No-op if ``changes`` is empty (the field was already at default).
+    """
+    if not changes:
+        return
+    audit_service.write_event(
+        db,
+        event_type="email_template.reset",
+        summary=(
+            f"Session {review_session.code}: "
+            f"{template}.{field} reset to default"
+        ),
+        actor_user_id=user.id,
+        session_id=review_session.id,
+        detail={
+            "template": template,
+            "field": field,
+            "changes": {k: list(v) for k, v in changes.items()},
+        },
+        correlation_id=correlation_id,
+    )
