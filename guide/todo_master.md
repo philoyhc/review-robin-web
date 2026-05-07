@@ -146,7 +146,7 @@ pinned to each segment. The catalog itself lives in
    Slot 4 of the Quick Setup card. New emitters
    (`session.config_imported`, per-entity `*_extracted`) inherit
    the canonical detail shape pinned by 11K.
-   **Plan:** `guide/segment_12A.md`.
+   **Plan:** `guide/segment_12A_import_export.md`.
 
 2. **12B — Audit retention.**
    `audit_events` export + retention / purge tooling. Reads

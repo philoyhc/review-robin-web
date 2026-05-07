@@ -700,7 +700,7 @@ def test_extract_data_card_stays_interactive_in_ready(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Segment 11H PR B — the Extract Data card has no lifecycle
-    gate. Per ``guide/segment_12A.md`` the card stays interactive
+    gate. Per ``guide/segment_12A_import_export.md`` the card stays interactive
     in every lifecycle state; in 11H every row is inert across the
     board, so this only confirms that ready doesn't add a
     ``.disabled`` class."""
