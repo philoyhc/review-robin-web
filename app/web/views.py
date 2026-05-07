@@ -2524,6 +2524,14 @@ class RuleBasedEditorContext:
     quota_scope_options: list[tuple[str, str]]
     quota_strategy_options: list[tuple[str, str]]
     composite_op_options: list[tuple[str, str]]
+    # Segment 13A PR 9 — source picker on the Copy form.
+    source_options: list[RuleBasedSelectorOption]
+    """Visible RuleSets (seeds + caller-owned Personal) the
+    operator can pick as the *source* for a Copy without leaving
+    the editor. Same dataclass as the Rule Based card's selector;
+    the template's source-picker JS reuses the
+    ``data-description`` / ``data-name`` attributes for inline
+    description + name-suggestion updates on selector change."""
 
 
 def _render_field_reference(dotted: str) -> str:
@@ -2749,6 +2757,7 @@ def _flatten_editable_rules(
 def build_rule_based_editor_context(
     review_session: ReviewSession,
     *,
+    db: Session,
     rule_set,  # RuleSet (avoid forward ref noise)
     revision,  # RuleSetRevision
     user: User,
@@ -2776,6 +2785,27 @@ def build_rule_based_editor_context(
     editable_rules = (
         _flatten_editable_rules(rules_json) if editable else []
     )
+
+    # Segment 13A PR 9 — source picker. List every visible RuleSet
+    # so the operator can pick a source for the Copy form without
+    # leaving the editor.
+    from app.services.rules import library
+
+    source_options: list[RuleBasedSelectorOption] = []
+    for rs in library.list_visible_rule_sets(db, user=user):
+        rev = rs.current_revision
+        exclude_self = (
+            rev.exclude_self_reviews if rev is not None else True
+        )
+        source_options.append(
+            RuleBasedSelectorOption(
+                id=rs.id,
+                label=rs.name,
+                description=rs.description or "",
+                exclude_self_reviews=exclude_self,
+                is_seed=rs.is_seed,
+            )
+        )
     return RuleBasedEditorContext(
         rule_set_id=rule_set.id,
         rule_set_name=rule_set.name,
@@ -2825,4 +2855,5 @@ def build_rule_based_editor_context(
         quota_scope_options=list(_QUOTA_SCOPE_OPTIONS),
         quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
         composite_op_options=list(_COMPOSITE_OP_OPTIONS),
+        source_options=source_options,
     )

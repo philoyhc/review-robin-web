@@ -1,0 +1,48 @@
+{# Segment 13A PR 9 — source-picker JS for the Copy form.
+
+   Each Copy form has a ``<select class="rule-based-copy-source">``
+   listing visible RuleSets and a ``<input class="rule-based-copy-
+   new-name">`` for the new name. On selector change, this JS
+   updates:
+
+   - The description line (``.rule-based-copy-source-description``)
+     to the picked option's ``data-description``.
+   - The new-name input to ``"<picked source name> (copy)"``, but
+     only if the operator hasn't manually edited the name yet
+     (tracked via a ``data-user-edited`` flag set on the input's
+     first ``input`` event).
+#}
+<script>
+  (function () {
+    var pickers = document.querySelectorAll(".rule-based-copy-source");
+    pickers.forEach(function (picker) {
+      var form = picker.closest("form");
+      if (!form) return;
+      var description = form.querySelector(
+        ".rule-based-copy-source-description"
+      );
+      var nameInput = form.querySelector(".rule-based-copy-new-name");
+
+      // Track whether the operator has hand-edited the name input —
+      // only auto-update when they haven't, so we don't clobber a
+      // deliberate name choice on selector change.
+      if (nameInput) {
+        nameInput.addEventListener("input", function () {
+          nameInput.dataset.userEdited = "true";
+        });
+      }
+
+      picker.addEventListener("change", function () {
+        var option = picker.options[picker.selectedIndex];
+        if (!option) return;
+        if (description) {
+          description.textContent = option.dataset.description || "";
+        }
+        if (nameInput && nameInput.dataset.userEdited !== "true") {
+          var sourceName = option.dataset.name || "";
+          nameInput.value = sourceName + " (copy)";
+        }
+      });
+    });
+  })();
+</script>

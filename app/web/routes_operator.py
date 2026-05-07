@@ -1012,12 +1012,17 @@ def rule_based_editor(
             "Delete not confirmed. Tick the confirm checkbox before "
             "clicking Delete."
         ),
+        "needs_lose_draft_confirm": (
+            "Copy not confirmed. Tick the discard-draft checkbox before "
+            "clicking Copy — the in-editor draft will be discarded."
+        ),
     }
     preview = _build_rule_based_preview(
         db, review_session, rule_set=rule_set, revision=revision
     )
     editor = views.build_rule_based_editor_context(
         review_session,
+        db=db,
         rule_set=rule_set,
         revision=revision,
         user=user,
@@ -1121,6 +1126,9 @@ def rule_based_copy(
     request: Request,
     rule_set_id: int = Form(...),
     new_name: str = Form(...),
+    confirm_lose_draft: str | None = Form(default=None),
+    from_editor_with_draft: str | None = Form(default=None),
+    referrer_rule_set_id: int | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1128,11 +1136,18 @@ def rule_based_copy(
     from app.services.rules import library
 
     cleaned_name = new_name.strip()
+    # The editor URL the operator is redirected back to on error —
+    # the *referrer* RuleSet (the editor they came from), not the
+    # picked source. Falls back to the picked source id when the
+    # form didn't carry a referrer.
+    redirect_back_id = (
+        referrer_rule_set_id if referrer_rule_set_id is not None else rule_set_id
+    )
     if not cleaned_name:
         return RedirectResponse(
             url=(
                 f"/operator/sessions/{review_session.id}"
-                f"/assignments/rule-based/edit/{rule_set_id}"
+                f"/assignments/rule-based/edit/{redirect_back_id}"
                 "?error=empty_name"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
@@ -1159,6 +1174,30 @@ def rule_based_copy(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="That RuleSet is private to its owner.",
+        )
+
+    # Segment 13A PR 9 — when Copy is initiated from inside a
+    # Personal editor (``from_editor_with_draft=true``), the
+    # caller's in-DOM draft (rules_json hidden field) is silently
+    # discarded by the navigation. ``confirm_lose_draft`` is
+    # required on that form so the operator acknowledges the loss.
+    # The seed-view Copy form has no draft to lose and omits both
+    # the flag and the checkbox.
+    if (
+        from_editor_with_draft == "true"
+        and confirm_lose_draft != "true"
+    ):
+        # Defensive — the HTML form already marks the checkbox
+        # ``required`` so a normal browser submit blocks here. A
+        # crafted POST that omits it falls back to a flag-bearing
+        # 303 instead of writing.
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}"
+                f"/assignments/rule-based/edit/{redirect_back_id}"
+                "?error=needs_lose_draft_confirm"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
         )
 
     new_rule_set = library.copy_rule_set(

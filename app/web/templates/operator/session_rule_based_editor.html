@@ -78,16 +78,35 @@
 
           <h3 style="margin-top: 24px;">Copy</h3>
           <p class="form-help">
-            Create a new Personal RuleSet from this one. The new copy is
-            editable; the source stays unchanged.
+            Create a new Personal RuleSet from any visible source.
+            The new copy is editable; the source stays unchanged.
           </p>
-          <form method="post" action="{{ editor.copy_url }}" style="margin-top: 12px;">
-            <input type="hidden" name="rule_set_id" value="{{ editor.rule_set_id }}">
+          <form method="post" action="{{ editor.copy_url }}"
+                id="rule-based-seed-copy-form"
+                style="margin-top: 12px;">
+            <p>
+              <label for="rule-based-copy-source">Copy from</label>
+              <select id="rule-based-copy-source"
+                      name="rule_set_id"
+                      class="rule-based-copy-source"
+                      data-default-name="{{ editor.rule_set_name }} (copy)">
+                {% for option in editor.source_options %}
+                  <option value="{{ option.id }}"
+                          {% if option.id == editor.rule_set_id %}selected{% endif %}
+                          data-name="{{ option.label }}"
+                          data-description="{{ option.description }}">{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
+                {% endfor %}
+              </select>
+            </p>
+            <p class="form-help rule-based-copy-source-description">
+              {{ editor.rule_set_description }}
+            </p>
             <p>
               <label for="rule-based-editor-new-name">Name for the new RuleSet</label>
               <input type="text"
                      id="rule-based-editor-new-name"
                      name="new_name"
+                     class="rule-based-copy-new-name"
                      required
                      value="{{ editor.rule_set_name }} (copy)"
                      style="width: 100%; max-width: 480px;">
@@ -307,6 +326,58 @@
             </div>
           </form>
 
+          <h3 style="margin-top: 32px;">Copy from another</h3>
+          <p class="form-help">
+            Clone any visible RuleSet (seed or your own Personal) into a
+            new Personal RuleSet without leaving this editor. Unsaved
+            edits to <strong>{{ editor.rule_set_name }}</strong> won't be
+            preserved — Save or Save As before clicking Copy if you
+            want to keep them.
+          </p>
+          <form method="post" action="{{ editor.copy_url }}"
+                id="rule-based-personal-copy-form"
+                style="margin-top: 12px;">
+            <input type="hidden" name="from_editor_with_draft" value="true">
+            <input type="hidden" name="referrer_rule_set_id" value="{{ editor.rule_set_id }}">
+            <p>
+              <label for="rule-based-copy-source-personal">Copy from</label>
+              <select id="rule-based-copy-source-personal"
+                      name="rule_set_id"
+                      class="rule-based-copy-source"
+                      data-default-name="{{ editor.rule_set_name }} (copy)">
+                {% for option in editor.source_options %}
+                  <option value="{{ option.id }}"
+                          {% if option.id == editor.rule_set_id %}selected{% endif %}
+                          data-name="{{ option.label }}"
+                          data-description="{{ option.description }}">{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
+                {% endfor %}
+              </select>
+            </p>
+            <p class="form-help rule-based-copy-source-description">
+              {{ editor.rule_set_description }}
+            </p>
+            <p>
+              <label for="rule-based-copy-personal-new-name">Name for the new RuleSet</label>
+              <input type="text"
+                     id="rule-based-copy-personal-new-name"
+                     name="new_name"
+                     class="rule-based-copy-new-name"
+                     required
+                     value="{{ editor.rule_set_name }} (copy)"
+                     style="width: 100%; max-width: 480px;">
+            </p>
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm_lose_draft" value="true" required>
+                Yes, discard any in-editor edits to
+                <strong>{{ editor.rule_set_name }}</strong> and copy.
+              </label>
+            </p>
+            <div class="btn-pair" style="margin-top: 12px;">
+              <button class="btn secondary" type="submit">Copy</button>
+            </div>
+          </form>
+
           <div class="card danger-zone" style="margin-top: 32px;">
             <h2 style="margin-top: 0;">Danger Zone</h2>
             <form method="post" action="{{ editor.delete_url }}">
@@ -330,6 +401,10 @@
           <p class="form-help">
             You don't own this RuleSet. Read-only view.
           </p>
+        {% endif %}
+
+        {% if editor.is_seed or editor.editable %}
+          {% include "operator/partials/_rule_based_copy_picker_js.html" %}
         {% endif %}
       </div>
     </div>
