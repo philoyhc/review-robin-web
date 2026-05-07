@@ -160,7 +160,7 @@ def test_add_instrument_appends_with_seeded_fields_and_audit(
         .where(AuditEvent.event_type == "instrument.created")
         .where(AuditEvent.session_id == session.id)
     ).scalar_one()
-    assert event.detail["instrument_id"] == new.id
+    assert event.detail["refs"]["instrument_id"] == new.id
 
 
 def test_add_instrument_with_after_inserts_mid_stack(
@@ -285,7 +285,7 @@ def test_add_instrument_clones_existing_full_matrix_assignments(
         .where(AuditEvent.event_type == "instrument.created")
         .where(AuditEvent.session_id == session.id)
     ).scalar_one()
-    assert event.detail["cloned_assignments"] == len(pre_assignments)
+    assert event.detail["context"]["cloned_assignments"] == len(pre_assignments)
 
 
 def test_add_instrument_with_no_existing_assignments_clones_zero(
@@ -315,7 +315,7 @@ def test_add_instrument_with_no_existing_assignments_clones_zero(
         .where(AuditEvent.event_type == "instrument.created")
         .where(AuditEvent.session_id == session.id)
     ).scalar_one()
-    assert event.detail["cloned_assignments"] == 0
+    assert event.detail["context"]["cloned_assignments"] == 0
 
 
 def test_add_instrument_invalidates_validated_session(
@@ -414,7 +414,7 @@ def test_delete_instrument_cascades_and_repacks_order(
         .where(AuditEvent.event_type == "instrument.deleted")
         .where(AuditEvent.session_id == session.id)
     ).scalar_one()
-    assert event.detail["instrument_id"] == middle.id
+    assert event.detail["refs"]["instrument_id"] == middle.id
 
 
 def test_delete_instrument_refuses_last_instrument(

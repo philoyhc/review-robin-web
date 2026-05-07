@@ -166,8 +166,9 @@ def test_add_response_field_appends_with_packed_order_and_audits(db: Session) ->
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "instrument.field_added")
     ).scalar_one()
-    assert audit.detail["field_key"] == "decision"
-    assert audit.detail["help_text"] == "Pick yes or no."
+    snapshot = audit.detail["snapshot"]
+    assert snapshot["field_key"] == "decision"
+    assert snapshot["help_text"] == "Pick yes or no."
 
 
 def test_update_response_field_records_only_changed_keys(db: Session) -> None:
@@ -296,7 +297,7 @@ def test_delete_response_field_with_responses_blocks_without_confirm(
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "instrument.field_deleted")
     ).scalar_one()
-    assert audit.detail["cascaded_response_count"] == 1
+    assert audit.detail["context"]["cascaded_responses"] == 1
 
 
 def test_move_response_field_swaps_and_audits_full_order(db: Session) -> None:
@@ -320,8 +321,10 @@ def test_move_response_field_swaps_and_audits_full_order(db: Session) -> None:
             AuditEvent.event_type == "instrument.fields_reordered"
         )
     ).scalar_one()
-    assert audit.detail["old_order"] == ["rating", "comments"]
-    assert audit.detail["new_order"] == ["comments", "rating"]
+    assert audit.detail["changes"]["order"] == [
+        ["rating", "comments"],
+        ["comments", "rating"],
+    ]
 
 
 def test_update_instrument_description_normalises_blank_to_none(db: Session) -> None:
@@ -340,7 +343,7 @@ def test_update_instrument_description_normalises_blank_to_none(db: Session) -> 
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "instrument.described")
     ).scalar_one()
-    assert audit.detail["description"] == ["Old", None]
+    assert audit.detail["changes"]["description"] == ["Old", None]
 
 
 def test_bulk_set_accepting_writes_one_event_for_changed_only(db: Session) -> None:

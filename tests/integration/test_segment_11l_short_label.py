@@ -199,8 +199,8 @@ def test_update_short_label_emits_audit_with_old_new_list(
         .all()
     )
     assert len(events) == 2
-    assert events[0].detail["short_label"] == [None, "Skills"]
-    assert events[1].detail["short_label"] == ["Skills", "Cultural Fit"]
+    assert events[0].detail["changes"]["short_label"] == [None, "Skills"]
+    assert events[1].detail["changes"]["short_label"] == ["Skills", "Cultural Fit"]
 
 
 # ── _instrument_label fallback rule ────────────────────────────────────
