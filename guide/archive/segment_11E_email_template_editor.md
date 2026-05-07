@@ -634,8 +634,11 @@ single import.
   forward dependency from Segment 11C.
 - `guide/unfinished_business.md` #24 — strikethrough closure once
   PR 5 ships, naming the merge PRs.
-- `guide/segment_11C_operations_consolidation.md` — picks up the
-  Manage Invitations send-activation scope. Update separately.
+- `guide/archive/segment_11C_operations_consolidation.md` — picks
+  up the Manage Invitations send-activation scope. Update
+  separately. (Send-activation scope subsequently moved to
+  Segment 14-1 Part A; 11C Part 2 shipped only the schema slice
+  on 2026-05-07.)
 - `spec/architecture.md` "Data import / export" can pick up a one-
   liner about the merge-tag rendering layer; verify on PR 1 review.
 - No new spec doc — this guide doubles as the spec until / unless
@@ -904,11 +907,11 @@ submit (that's PR H in 11C Part 2).
   entry, citing PR 6's number; mention the 11C PR H seam in
   the entry.
 - `docs/status.md` — timeline entry + summary-table row.
-- `guide/segment_11C_operations_consolidation.md` — PR H's
-  hard prerequisite is PR 6 (the helper + the
-  `responses_received_enabled` flag both live in the editor
-  side); cross-reference both in PR H's description when it
-  lands.
+- `guide/archive/segment_11C_operations_consolidation.md` — the
+  formerly-PR-H send-activation scope moved to **Segment 14-1
+  Part A**; the helper + the `responses_received_enabled` flag
+  remain hard prerequisites and should be cross-referenced in
+  14-1 PRs that depend on them.
 - After PR 6 ships, **archive this guide**: `git mv
   guide/segment_11E_email_template_editor.md
   guide/archive/`. Then update the cross-references in

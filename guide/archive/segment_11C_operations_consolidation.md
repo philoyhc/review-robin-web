@@ -49,12 +49,20 @@ detail.
 
 ## Status
 
-**Part 1 shipped 2026-05-06** across PRs **#490 → #491 → #492 →
-#493** (folded from the planned 5 PRs into 4 — see "Proposed PR
-sequence (Part 1)" below for what landed where). **Part 2 is
-upcoming**: 1 PR (PR F: outbox audit-log scaffolding — the
-schema piece only; the wiring formerly planned here moves to
-**Segment 14-1**, see `guide/segment_14-1_email_infra.md`).
+**Segment fully shipped.** **Part 1 shipped 2026-05-06** across
+PRs **#490 → #491 → #492 → #493** (folded from the planned 5 PRs
+into 4 — see "Proposed PR sequence (Part 1)" below for what
+landed where). **Part 2 shipped 2026-05-07** in **PR #541** (PR
+F: outbox audit-log scaffolding — Migration `c4f6a8b0d2e5` adds
+the seven nullable audit-log columns + `correlation_id` index;
+`EMAIL_OUTBOX_STATUSES` / `EMAIL_OUTBOX_KINDS` constants pin the
+canonical value sets at the service layer; new
+`tests/integration/test_email_outbox_schema.py` round-trips every
+new column on both SQLite and the `ci-postgres` dialect). The
+wiring formerly planned here moved to **Segment 14-1** (see
+`guide/segment_14-1_email_infra.md`); the columns sit inert until
+that segment lights up the actual send paths against this stable
+schema.
 
 ## Gap against the spec
 

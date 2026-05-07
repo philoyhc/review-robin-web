@@ -456,7 +456,7 @@ shape from day one as long as PR 1 is live.
 - `guide/todo_master.md` — move 11K from **Upcoming** to
   **Done** once PR 7 ships; cross-reference Segment 12
   (which can now begin).
-- `guide/segment_11C_operations_consolidation.md`,
+- `guide/archive/segment_11C_operations_consolidation.md`,
   `guide/segment_11F_previews_page.md`,
   `guide/archive/segment_11G_validate_page.md`,
   `guide/archive/segment_11J_quick_setup_card.md`,

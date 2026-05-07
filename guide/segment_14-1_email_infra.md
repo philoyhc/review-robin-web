@@ -11,10 +11,11 @@ backends.
 The functional spec is **`spec/email_infra_options.md`**. The
 template-authoring side already shipped (Segment 11E,
 `guide/archive/segment_11E_email_template_editor.md`) and the
-audit-log column scaffolding lands in **Segment 11C Part 2**
-(`guide/segment_11C_operations_consolidation.md`). With those
-in place, this segment is "everything else email-related" up to
-and including the downstream backend implementations
+audit-log column scaffolding shipped in **Segment 11C Part 2**
+(PR #541, 2026-05-07 — Migration `c4f6a8b0d2e5`; plan archived at
+`guide/archive/segment_11C_operations_consolidation.md`). With
+those in place, this segment is "everything else email-related"
+up to and including the downstream backend implementations
 (Options B / C / D).
 
 This file is a stub: each Part below names the absorbed scope at

@@ -86,6 +86,8 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - Spec at `spec/email_infra_options.md` for the broader transport landscape (Options A–D: SMTP, Microsoft Graph application permission, Azure Communication Services, third-party transactional). The Graph stub will become Option B once the institution's IT conversation lands; the wiring lives in **Segment 14-1**.
   - Plan: `guide/archive/segment_11E_email_template_editor.md`. Catalog `unfinished_business.md` #24 (closed by this segment). The submit-time send wiring (formerly planned as 11E PR 7) absorbed into **Segment 14-1 Part A** so all email *sending* lives on one segment regardless of which transport backend lights up.
 
+- **Segment 11C Part 2 — Outbox audit-log scaffolding** — done 2026-05-07. **PR #541** (PR F). Migration `c4f6a8b0d2e5` adds the seven nullable audit-log columns to `email_outbox` (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`, `correlation_id`) + an index on `correlation_id` (the dispatch helper's idempotent-retry lookup key). `app/db/models/email_outbox.py` gains matching `Mapped[X | None]` declarations and the canonical value-set constants `EMAIL_OUTBOX_STATUSES = (queued, sending, sent, failed)` / `EMAIL_OUTBOX_KINDS = (invitation, reminder, responses_received)` so any future widening is a deliberate edit. Pure additive — all columns nullable, no defaults, no backfill, no service-layer reads or writes; today's enqueue paths continue to write only the existing columns. New tests at `tests/integration/test_email_outbox_schema.py`. The columns sit inert until **Segment 14-1 Part A** lights up the dispatch helper against this stable schema. Plan: `guide/archive/segment_11C_operations_consolidation.md` "Part 2".
+
 - **Segment 11C Part 1 — Operations consolidation** — done 2026-05-06. PRs **#490 → #491 → #492 → #493**.
   - **#490** — chrome restored Outbox as a tab (later removed in #493).
   - **#491** — Manage Invitations (`/operator/sessions/{id}/invitations`) rewrite. Seven-column reviewer-centric table — Reviewer / Email Status / Email Sent / Review Progress / Required Fields / Last reminder / Action — absorbs the retired Monitoring page's reviewer-centric surface (per-reviewer progress, per-row reminders). New helper `views.build_invitations_rows` joins `monitoring.per_reviewer_progress` with a single batched outbox query for "latest invitation outbox row per reviewer". Reviewer drill-in scaffold at `.../invitations/{inv_id}/detail`. Outbox schema slice: Migration `b3d5e7f9a1c4` adds `email_outbox.cc_emails` / `bcc_emails` (Text); `send_invitation` / `send_reminder` populate them at queue time from the `email_template_overrides` JSON (new `email_templates.cc_bcc_for(session, kind)` helper). Columns sit unused at send time until Part 2.
@@ -93,7 +95,7 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - **#493** — drops Outbox from chrome (Operations row is now four tabs: Validate / Previews / Invitations / Responses). The Outbox page itself stays accessible via the "View outbox" button on Manage Invitations — it's a dev-diagnostic surface, not part of day-to-day Operations. Same PR styles the five Manage Invitations data cells as pills (`pill-count` for filled / good states, `pill-empty` for absent / not-yet states) so the table reads as a sparkline of state at a glance.
   - **Polish stream (#494 → #500).** Docs sync (#494); Responses table column rename + pill styling on `Reviewers completed` + `Last response` (#495); status-dropdown + name/email search filter strip on both pages closing the `spec/operations_renew.md` "Filtering" gap (#496) plus visual refinements — half-width filter card, side-by-side inputs, bottom-right Apply (#497); summary card + filter card paired side-by-side in `.bottom-grid` with new generic `.card-action-row` v2 primitive on Responses (#498) then Manage Invitations (#499); bulk **Regenerate all** secondary button + `invitations.regenerate_all_tokens` service helper + batch `invitations.regenerated` audit event (#500).
   - Test reorg: `tests/integration/test_monitoring.py` → `test_reminders.py`; new `test_segment_11c_pr3_responses.py`.
-  - Plan: `guide/segment_11C_operations_consolidation.md`. Functional spec: `spec/operations_renew.md`.
+  - Plan: `guide/archive/segment_11C_operations_consolidation.md`. Functional spec: `spec/operations_renew.md`.
 
 - **Segment 11H — Placeholder card scaffolds (Quick Setup + Extract Data)** — done. Both Session Home placeholder cards have shipped their inert-but-fully-rendered real shapes via the `_quick_setup_card.html` and `_extract_data_card.html` partials (included from `session_detail.html`), backed by the `QuickSetupSlot` / `QuickSetupContext` and `ExtractDataRow` / `ExtractDataContext` dataclasses + builder helpers in `app/web/views.py`. Every slot / row / button is laid out and accessible; every interactive control renders disabled (`is_wired=False`, `wire_url=None`) until the wiring segments. The Quick Setup card on `/operator/sessions/new` is also wired to the same scaffold via `build_new_session_quick_setup_context`. Plan: `guide/archive/segment_11H_placeholder_card_scaffolds.md`. Unblocks Segment 11J (Quick Setup wiring) and Segment 12A PR 6 (Configuration import slot graduation).
 
@@ -130,53 +132,47 @@ are 1-3 lines for at-a-glance sequencing + the catalog items
 pinned to each segment. The catalog itself lives in
 `unfinished_business.md`.
 
-1. **11C Part 2 — Outbox audit-log scaffolding.**
-   Single PR (PR F): `email_outbox` columns + status / kind
-   value-set widening so all four 14-1 transport options have
-   a stable schema to write to at send time. No wiring; columns
-   sit inert until 14-1.
-   **Plan:** `guide/segment_11C_operations_consolidation.md` "Part 2".
-
-2. **11K — Audit-event `detail` schema convention.**
+1. **11K — Audit-event `detail` schema convention.**
    Pin canonical envelopes (`changes` / `snapshot` / `counts` /
    `set_changes`) + typed audit helpers + incremental emitter
    migration. Sized as ~8 PRs. Catalog `unfinished_business.md`
    #5. Gates 12B (audit export reads against the pinned shape).
    **Plan:** `guide/segment_11K_audit_event_detail_schema.md`.
 
-3. **12A — Session settings import + export.**
+2. **12A — Session settings import + export.**
    Configuration round-trip (PRs 1-2) + Extract Data card with
    five per-entity CSVs + Download-all zip (PRs 3-6). Wires
    Slot 4 of the Quick Setup card.
    **Plan:** `guide/segment_12A.md`.
 
-4. **12B — Audit retention.**
+3. **12B — Audit retention.**
    `audit_events` export + retention / purge tooling. Hard
    prerequisite: **11K** (stable detail schema). Folded out of
    the original Segment 12 plan when Extract Data moved into
    12A.
    **Plan:** `guide/segment_12B_audit_retention.md`.
 
-5. **13A — Rule-based assignment builder.**
+4. **13A — Rule-based assignment builder.**
    Real `RuleBased` rule menu replaces the `assignments`
    placeholder card on `/operator/sessions/{id}/assignments`.
    **Plan:** `guide/segment_13A_rulebased_assignment_builder.md`.
 
-6. **13B — Reviewer surface sort.**
+5. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
    default + reviewer live override. Functional spec ready;
    implementation plan lands when 13B starts. Independent of
    13A; ships in either order.
    **Spec:** `guide/sort_by_reviewee.md`.
 
-7. **14 — Production hardening.**
+6. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-8. **14-1 — Email infrastructure (send activation + backends).**
-   All email *wiring* lives here. **Hard prereq: 11C Part 2**
-   (the schema columns Part A populates).
+7. **14-1 — Email infrastructure (send activation + backends).**
+   All email *wiring* lives here. The schema columns Part A
+   writes to landed with **Segment 11C Part 2** (PR #541,
+   2026-05-07) and are ready for the dispatch helper.
    - **Parts A → E** (sequential): SMTP send activation →
      `correlation_id` strategy → bulk-send queue + worker →
      per-deployment from-identity defaults → generalised
@@ -190,7 +186,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-9. **15 — Operator polish + documentation.**
+8. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -201,8 +197,8 @@ pinned to each segment. The catalog itself lives in
 ### Sequencing notes
 
 - **11C Part 2 → 14-1 Part A** is the email pipeline: 11C Part 2
-  lands the schema (small migration); 14-1 Part A is the first
-  writer.
+  landed the schema (Migration `c4f6a8b0d2e5`, 2026-05-07); 14-1
+  Part A is the first writer.
 - **11K → 12B** is the audit pipeline: 11K pins the `detail`
   shape; 12B's export reads against it.
 - **12A, 13A, 13B** are independent of the email + audit
