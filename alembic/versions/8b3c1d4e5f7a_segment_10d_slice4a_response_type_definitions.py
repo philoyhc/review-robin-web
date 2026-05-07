@@ -25,7 +25,7 @@ depends_on: Union[str, Sequence[str], None] = None
 # Order matters — the index drives ``seed_order`` and the on-screen
 # read-only catalog ordering. Keep in sync with
 # ``app/services/instruments.py:SEEDED_RESPONSE_TYPE_DEFINITIONS``
-# and ``guide/instruments.md`` "Default seed".
+# and ``spec/instruments.md`` "Default seed".
 _SEEDED_RTDS: list[dict] = [
     {"response_type": "Long_text",  "data_type": "String",  "min": 0,    "max": 200,  "step": None, "list_csv": None},
     {"response_type": "Short_text", "data_type": "String",  "min": 0,    "max": 50,   "step": None, "list_csv": None},

@@ -1379,7 +1379,7 @@ assignments after a roster replacement, undo, save-as-template).
 ### 31. Sort by reviewee on the reviewer surface · [feature] · medium · target Segment 13
 
 **Status.** Promoted from Segment 11 §2.6 sketch (2026-05-03).
-Full design spec at `guide/sort_by_reviewee.md`. Target segment:
+Full design spec at `spec/sort_by_reviewee.md`. Target segment:
 **13** (RuleBased assignment builder) — the natural touch-up of
 the per-instrument card during that segment's work.
 
@@ -1394,7 +1394,7 @@ per-instrument card's Display Fields table (no new card).
 Reviewer side: clickable column headers on the review-surface
 table for live, non-persisted override.
 
-**Spec.** See `guide/sort_by_reviewee.md` for the full design —
+**Spec.** See `spec/sort_by_reviewee.md` for the full design —
 storage shape, click semantics on the operator widget, reviewer-
 side override behaviour, cascade rules, audit event,
 lifecycle-invalidation, out-of-scope items, and implementation
@@ -1444,7 +1444,7 @@ the bucket those land in.
 
 **Sequencing notes.** This sits alongside but doesn't depend on
 **#31** (sort by reviewee, target Segment 13 — see
-`guide/sort_by_reviewee.md`). The sort feature implements its own
+`spec/sort_by_reviewee.md`). The sort feature implements its own
 reviewer-surface changes (clickable column headers, server-side
 default sort) and lands in Segment 13; this catch-all picks up
 everything else.

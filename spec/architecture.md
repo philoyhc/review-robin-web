@@ -96,7 +96,7 @@ is in place:
   page for everything per-instrument: All Instrument Status card +
   one card per instrument (description, acceptance + visibility
   toggles, response-fields builder, display-fields placeholder,
-  live preview). See `guide/instruments.md` for the per-section
+  live preview). See `spec/instruments.md` for the per-section
   contract and `docs/status.md` for the URL table + audit events.
 - The reviewer surface renders one tabular artifact per instrument
   in DOM order, with section heading from `Instrument.description`

@@ -169,7 +169,7 @@ pinned to each segment. The catalog itself lives in
    default + reviewer live override. Functional spec ready;
    implementation plan lands when 13B starts. Independent of
    13A; ships in either order.
-   **Spec:** `guide/sort_by_reviewee.md`.
+   **Spec:** `spec/sort_by_reviewee.md`.
 
 5. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.

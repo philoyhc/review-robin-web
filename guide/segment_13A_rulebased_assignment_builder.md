@@ -7,7 +7,7 @@
 >   `/operator/sessions/{id}/assignments`.
 > - **13B** — instrument-card enhancements. First item is the
 >   reviewer-surface sort UX (operator default sort + reviewer live
->   override; functional spec at `guide/sort_by_reviewee.md`); the
+>   override; functional spec at `spec/sort_by_reviewee.md`); the
 >   segment frames a basket so future per-instrument improvements
 >   slot in alongside without spawning new segments. Plan stub at
 >   `guide/segment_13B_instrument_enhance.md`; full implementation

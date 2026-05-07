@@ -334,7 +334,7 @@ that doesn't care about the underlying fanout.
 - `guide/segment_13A_rulebased_assignment_builder.md` — likely
   home for the rule-engine work that materializes group
   assignments.
-- `guide/sort_by_reviewee.md` — the other in-flight reviewer-
+- `spec/sort_by_reviewee.md` — the other in-flight reviewer-
   surface spec; group-scoped instruments interact with sort UX
   only loosely (a group-scoped sub-table sorts by group name,
   not by individual reviewee).

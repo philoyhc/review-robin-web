@@ -48,7 +48,7 @@ def _session(
 
 def test_seeded_constants_match_spec_count_and_order() -> None:
     """The 10 seeded RTDs match the locked spec in
-    ``guide/instruments.md`` (count + order + parameters)."""
+    ``spec/instruments.md`` (count + order + parameters)."""
     names = [r["response_type"] for r in SEEDED_RESPONSE_TYPE_DEFINITIONS]
     assert names == [
         "Long_text",

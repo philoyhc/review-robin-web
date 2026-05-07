@@ -2,7 +2,7 @@
 
 **Status:** Stub. Picks up the operator polish + documentation scope
 named in the master workplan
-(`guide/low_intensity_workplan_review_robin_web.md` §18) so the
+(`guide/archive/low_intensity_workplan_review_robin_web.md` §18) so the
 intent isn't lost. Forward-looking detail (slice ladder, design
 notes, cross-cuts) lands in a follow-up plan once Segments 11–14 land
 and the operator surface is ready to receive its first real pilot.
