@@ -74,17 +74,18 @@ that holds the selector + form.
    - Saved Personal → `[ Copy ] [ Save ] [ Cancel ] [ Delete ]`
    - Copy draft / blank draft → `[ Save ] [ Cancel ]`
 
-## Open questions
+6. **Name input hidden state.** When the Name input is hidden
+   (seeded selection), the selector stays at half width — it does
+   **not** expand. The right half of the inner card stays empty.
 
-- When the Name input is hidden (seeded selection), does the right
-  half of the inner card stay empty, or expand the selector to fill
-  the inner card? Spec assumes **stay empty** — but flag this on
-  implementation if it looks awkward.
-- Does the read-only seeded body (sentence-shaped rule lines) split
-  across the two columns the same way as the editable body?
-  Assumption: yes — Combinator label on the left, sentence-shaped
-  rules + self-review status on the right. Flag if reviewers prefer
-  a single-column read-only layout.
+7. **Read-only seeded body split.** The seeded read-only body uses
+   the same two-column convention as the editable body: Combinator
+   label on the left (1/3), sentence-shaped rule lines + self-
+   review status on the right (2/3), vertical divider between them.
+
+## Out of scope
+
 - Mobile / narrow viewport: the half-width outer card will need a
-  collapse rule. Out of scope here — capture when we wire the
-  responsive breakpoints in Segment 14.
+  collapse rule. Capture when we wire responsive breakpoints in
+  Segment 14.
+
