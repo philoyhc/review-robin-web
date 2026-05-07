@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     # set. Generate with ``cryptography.fernet.Fernet.generate_key()``.
     smtp_encryption_key: str | None = None
 
+    # When True, ``audit.write_event`` raises on a detail-shape violation;
+    # when False (production default), it logs a warning and writes the
+    # row anyway. Auditing is observability — dropping events because of
+    # a shape bug would hide the very mutations we're auditing. Tests flip
+    # this on via ``tests/conftest.py`` so drift surfaces in CI before
+    # deploy. See ``spec/architecture.md`` "Audit-event detail schema".
+    audit_strict_mode: bool = False
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

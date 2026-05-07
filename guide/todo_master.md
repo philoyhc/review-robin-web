@@ -86,6 +86,14 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - Spec at `spec/email_infra_options.md` for the broader transport landscape (Options A–D: SMTP, Microsoft Graph application permission, Azure Communication Services, third-party transactional). The Graph stub will become Option B once the institution's IT conversation lands; the wiring lives in **Segment 14-1**.
   - Plan: `guide/archive/segment_11E_email_template_editor.md`. Catalog `unfinished_business.md` #24 (closed by this segment). The submit-time send wiring (formerly planned as 11E PR 7) absorbed into **Segment 14-1 Part A** so all email *sending* lives on one segment regardless of which transport backend lights up.
 
+- **Segment 11K — Audit-event `detail` schema convention** — done 2026-05-07. PRs **#544 (PR 1) → #545 (PR 2) → #546 (PR 3) → #547 (PR 4) → #548 (PR 5) → #549 (PR 6) → #550 (PR 7) → this PR (PR 8)**. Pins the canonical envelope schema for `AuditEvent.detail` and migrates every emitter in the codebase to it.
+  - **PR 1 (#544)** — spec section in `spec/architecture.md` ("Audit-event detail schema") + typed envelope helpers (`audit.changes` / `.snapshot` / `.counts` / `.set_changes`) + new `write_event` kwargs (`session=` / `payload=` / `reason=` / `refs=` / `context=`) + session-lifecycle family migrated as proof.
+  - **PRs 2–5 (#545 → #548)** — service-module sweeps: instruments (~18 emitters), invitations (6), responses (4), assignments (2). PR 5 introduced the `excluded_<reason>` flatten-into-counts pattern that lets 13A's RuleBased exclusions plug in without schema churn.
+  - **PR 6 (#549)** — relocated `email_template.updated` / `.reset` from `routes_operator.py` into `app/services/email_templates.py::record_template_change` / `.record_template_reset` so PR 7 could sweep them with the rest of the settings family. Pure relocation; no shape change.
+  - **PR 7 (#550)** — settings sweep: CSV imports (4), operator settings (2), email templates (2). Replaces the legacy `detail={}` on `operator_email_settings.cleared` with the canonical `detail=None`. Every emitter in the codebase now uses canonical shape.
+  - **PR 8 (this PR)** — Pydantic write-validation gate. New `app/services/audit.py::EVENT_SCHEMAS` registry pins the allowed envelopes/slots per event_type; `validate_detail` runs in `write_event` after composition. `settings.audit_strict_mode` gates strict (raise) vs lenient (warn-and-write). `tests/conftest.py` flips strict on so CI catches drift. New `tests/unit/test_audit_detail_schema.py` covers the gate.
+  - Closes catalog `unfinished_business.md` #5. Plan: `guide/archive/segment_11K_audit_event_detail_schema.md`. Spec: `spec/architecture.md` "Audit-event detail schema".
+
 - **Segment 11C Part 2 — Outbox audit-log scaffolding** — done 2026-05-07. **PR #541** (PR F). Migration `c4f6a8b0d2e5` adds the seven nullable audit-log columns to `email_outbox` (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`, `correlation_id`) + an index on `correlation_id` (the dispatch helper's idempotent-retry lookup key). `app/db/models/email_outbox.py` gains matching `Mapped[X | None]` declarations and the canonical value-set constants `EMAIL_OUTBOX_STATUSES = (queued, sending, sent, failed)` / `EMAIL_OUTBOX_KINDS = (invitation, reminder, responses_received)` so any future widening is a deliberate edit. Pure additive — all columns nullable, no defaults, no backfill, no service-layer reads or writes; today's enqueue paths continue to write only the existing columns. New tests at `tests/integration/test_email_outbox_schema.py`. The columns sit inert until **Segment 14-1 Part A** lights up the dispatch helper against this stable schema. Plan: `guide/archive/segment_11C_operations_consolidation.md` "Part 2".
 
 - **Segment 11C Part 1 — Operations consolidation** — done 2026-05-06. PRs **#490 → #491 → #492 → #493**.
@@ -132,48 +140,43 @@ are 1-3 lines for at-a-glance sequencing + the catalog items
 pinned to each segment. The catalog itself lives in
 `unfinished_business.md`.
 
-1. **11K — Audit-event `detail` schema convention.**
-   Pin canonical envelopes (`changes` / `snapshot` / `counts` /
-   `set_changes`) + orthogonal slots (`reason` / `refs` /
-   `context`) + typed audit helpers + incremental emitter
-   migration across the ~36 emitters in-tree today. Sized as
-   8 PRs (spec + 4 service-module families + email-template
-   route→service refactor + settings sweep + Pydantic
-   validation gate). Catalog `unfinished_business.md` #5.
-   Gates 12B (audit export reads against the pinned shape).
-   **Plan:** `guide/segment_11K_audit_event_detail_schema.md`.
-
-2. **12A — Session settings import + export.**
+1. **12A — Session settings import + export.**
    Configuration round-trip (PRs 1-2) + Extract Data card with
    five per-entity CSVs + Download-all zip (PRs 3-6). Wires
-   Slot 4 of the Quick Setup card.
+   Slot 4 of the Quick Setup card. New emitters
+   (`session.config_imported`, per-entity `*_extracted`) inherit
+   the canonical detail shape pinned by 11K.
    **Plan:** `guide/segment_12A.md`.
 
-3. **12B — Audit retention.**
-   `audit_events` export + retention / purge tooling. Hard
-   prerequisite: **11K** (stable detail schema). Folded out of
-   the original Segment 12 plan when Extract Data moved into
-   12A.
+2. **12B — Audit retention.**
+   `audit_events` export + retention / purge tooling. Reads
+   against the canonical detail shape pinned by 11K (shipped
+   2026-05-07). Folded out of the original Segment 12 plan when
+   Extract Data moved into 12A.
    **Plan:** `guide/segment_12B_audit_retention.md`.
 
-4. **13A — Rule-based assignment builder.**
+3. **13A — Rule-based assignment builder.**
    Real `RuleBased` rule menu replaces the `assignments`
    placeholder card on `/operator/sessions/{id}/assignments`.
+   New rule-application emit reuses
+   `assignments.generated` with `context.mode="rule_based"`;
+   any new rule-CRUD event_types must register a schema in
+   `audit.EVENT_SCHEMAS` per 11K PR 8.
    **Plan:** `guide/segment_13A_rulebased_assignment_builder.md`.
 
-5. **13B — Reviewer surface sort.**
+4. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
    default + reviewer live override. Functional spec ready;
    implementation plan lands when 13B starts. Independent of
    13A; ships in either order.
    **Spec:** `guide/sort_by_reviewee.md`.
 
-6. **14 — Production hardening.**
+5. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-7. **14-1 — Email infrastructure (send activation + backends).**
+6. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. The schema columns Part A
    writes to landed with **Segment 11C Part 2** (PR #541,
    2026-05-07) and are ready for the dispatch helper.
@@ -190,7 +193,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-8. **15 — Operator polish + documentation.**
+7. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -203,8 +206,8 @@ pinned to each segment. The catalog itself lives in
 - **11C Part 2 → 14-1 Part A** is the email pipeline: 11C Part 2
   landed the schema (Migration `c4f6a8b0d2e5`, 2026-05-07); 14-1
   Part A is the first writer.
-- **11K → 12B** is the audit pipeline: 11K pins the `detail`
-  shape; 12B's export reads against it.
+- **11K → 12B** is the audit pipeline: 11K pinned the `detail`
+  shape (shipped 2026-05-07); 12B's export reads against it.
 - **12A, 13A, 13B** are independent of the email + audit
   pipelines and can interleave at any time. 13A and 13B are
   also independent of each other.

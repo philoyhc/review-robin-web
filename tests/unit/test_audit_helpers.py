@@ -23,6 +23,7 @@ from datetime import date, datetime, timezone
 import pytest
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import ReviewSession, User
 from app.services import audit
 
@@ -99,20 +100,32 @@ def test_set_changes_defaults_each_branch_to_empty_list() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_write_event_packs_identity_payload_and_orthogonal_slots(db: Session) -> None:
+def test_write_event_packs_identity_payload_and_orthogonal_slots(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pin the composition mechanics: every passed slot lands in
+    detail in the right place. No real event_type allows all four
+    of (changes, reason, refs, context) together — that's the
+    point — so flip lenient mode on for this composition test;
+    the per-event-type schema gate has its own coverage in
+    test_audit_detail_schema.py.
+    """
+    monkeypatch.setattr(settings, "audit_strict_mode", False)
     user, review_session = _make_user_and_session(db, "wrt-canon")
-    event = audit.write_event(
-        db,
-        event_type="session.updated",
-        summary="Session wrt-canon updated",
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.changes({"name": ["A", "B"]}),
-        reason="operator_edit",
-        refs={"reviewer_id": 42},
-        context={"source": "edit_form"},
-        correlation_id="corr-1",
-    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        event = audit.write_event(
+            db,
+            event_type="session.updated",
+            summary="Session wrt-canon updated",
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.changes({"name": ["A", "B"]}),
+            reason="operator_edit",
+            refs={"reviewer_id": 42},
+            context={"source": "edit_form"},
+            correlation_id="corr-1",
+        )
     assert event.session_id == review_session.id
     assert event.detail == {
         "session_id": review_session.id,
@@ -188,10 +201,19 @@ def test_write_event_rejects_mixing_canonical_and_legacy_kwargs(db: Session) -> 
 # --------------------------------------------------------------------------- #
 
 
-def test_write_event_legacy_detail_path_still_writes_dict_as_is(db: Session) -> None:
+def test_write_event_legacy_detail_path_still_writes_dict_as_is(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The legacy ``detail=`` kwarg path stays callable for ad-hoc
+    use, but PR 8's strict gate would reject the freeform dict.
+    Flip lenient mode on so the legacy mechanics can be exercised
+    in isolation; the gate's interaction with legacy emits has
+    its own coverage in test_audit_detail_schema.py.
+    """
+    monkeypatch.setattr(settings, "audit_strict_mode", False)
     user, review_session = _make_user_and_session(db, "wrt-legacy")
     with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always", DeprecationWarning)
+        warnings.simplefilter("always")
         event = audit.write_event(
             db,
             event_type="legacy.event",

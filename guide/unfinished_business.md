@@ -152,7 +152,29 @@ the 4 pill states + projection equivalence.
 
 ---
 
-### 5. Define an audit-event `detail` schema convention · [arch] · medium
+### 5. Define an audit-event `detail` schema convention · [arch] · medium · ✅ shipped 2026-05-07
+
+**Closed by Segment 11K.** PRs **#544 (PR 1: spec + helpers + lifecycle)
+→ #545 (PR 2: instruments) → #546 (PR 3: invitations) → #547 (PR 4:
+responses) → #548 (PR 5: assignments) → #549 (PR 6: route → service
+refactor for `email_template.*`) → #550 (PR 7: settings sweep) →
+**this PR** (PR 8: Pydantic write-validation gate)** ship the
+canonical envelope schema documented at
+`spec/architecture.md` "Audit-event detail schema". Plan archived at
+`guide/archive/segment_11K_audit_event_detail_schema.md`.
+
+The four payload envelopes (`changes` / `snapshot` / `counts` /
+`set_changes`), the identity slots (top-level `session_id` /
+`session_code`), and the orthogonal slots (`reason` / `refs` /
+`context`) replace the per-callsite idiosyncratic dicts the
+original framing called out. ~46 emitters across 6 service modules
+now compose `detail` via the typed `audit.changes(...)` /
+`audit.snapshot(...)` / `audit.counts(...)` / `audit.set_changes(...)`
+helpers; PR 8's per-event-type Pydantic gate (in `EVENT_SCHEMAS`)
+catches drift back into the legacy shapes — strict in tests,
+lenient in production with a structured warning.
+
+(Original framing preserved below for archaeology.)
 
 **Why now.** Every audit-writing service invents its own `detail`
 JSON shape:

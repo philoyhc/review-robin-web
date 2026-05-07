@@ -1,14 +1,24 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
-from pathlib import Path
 
-import pytest
-from alembic import command
-from alembic.config import Config
-from sqlalchemy import Engine, create_engine, text
-from sqlalchemy.orm import Session
+# Flip ``settings.audit_strict_mode`` on for the test session before
+# anything imports ``app.config`` (Pydantic-settings reads env vars
+# at instantiation time). Strict mode raises
+# ``AuditDetailValidationError`` on any audit-detail shape violation
+# so drift back into the pre-canonical idiosyncratic shapes surfaces
+# in CI rather than silently logging in production. See Segment 11K
+# PR 8 and ``spec/architecture.md`` "Audit-event detail schema".
+os.environ.setdefault("AUDIT_STRICT_MODE", "true")
+
+from collections.abc import Iterator  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+import pytest  # noqa: E402
+from alembic import command  # noqa: E402
+from alembic.config import Config  # noqa: E402
+from sqlalchemy import Engine, create_engine, text  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
