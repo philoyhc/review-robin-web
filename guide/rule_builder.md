@@ -20,11 +20,7 @@ that holds the selector + form.
 │  │                                       (only when an editable name exists)    │  │
 │  └──────────────────────────────────────────────────────────────────────────────┘  │
 │                                                                                    │
-│   Combinator                                                                       │
 │   [ All of  ▾ ]                                                                    │
-│                                                                                    │
-│   Self-review                                                                      │
-│   [✓] Exclude self-review …                                                        │
 │                                                                                    │
 │   Rules                                                                            │
 │   1. Match — reviewer.tag1 …                                                       │
@@ -59,11 +55,21 @@ that holds the selector + form.
      *is* the title. The "seed" pill goes away (the `(seeded)`
      suffix in the dropdown carries the same signal).
 
-4. **Body keeps its current single-column layout.** Combinator,
-   Self-review, Random seed (when applicable), Rules list, and the
+4. **Body keeps its current single-column layout.** Combinator
+   selector, Random seed (when applicable), Rules list, and the
    "+ Add MATCH/FILTER/QUOTA/COMPOSITE" buttons render top-to-
    bottom inside the outer card, exactly as the current Segment
-   13A-1 PR 1–3 implementation does.
+   13A-1 PR 1–3 implementation does, with these trims:
+   - **Drop the "Combinator" heading.** The selector / read-only
+     pill stands on its own — its purpose is obvious from the
+     dropdown's labels (`All of` / `Any of` / `In sequence`).
+   - **Drop the "Exclude self-review" checkbox** (and its "Self-
+     review" heading). The same affordance is exposed on the main
+     Assignments page; surfacing it inside the Rule Builder card
+     duplicates a control. The underlying `exclude_self_reviews`
+     value still travels with each RuleSet revision — the editor
+     just doesn't expose a UI for it. Read-only seeded views also
+     drop the "Exclude self-review: on/off" pill row.
 
 5. **Action row.** Stays at the bottom of the outer card, **outside**
    the body. Left-aligned. Same selection-aware buttons as today
