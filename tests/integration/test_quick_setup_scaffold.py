@@ -153,9 +153,9 @@ def test_quick_setup_disables_when_session_is_activated(
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Per ``spec/session_home.md``, an Activated session greys the
-    Quick Setup card via ``.card.disabled`` (plain greying, not a
-    yellow lock card)."""
+    """An Activated session marks Quick Setup unavailable
+    (``is_disabled=True``). Description copy is the single static
+    line covering both gates (draft-only + no-responses)."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
@@ -166,7 +166,37 @@ def test_quick_setup_disables_when_session_is_activated(
     context = views.build_quick_setup_context(db, review_session)
 
     assert context.is_disabled is True
-    assert "paused while the session is Activated" in context.description
+    assert (
+        "Available only when session is in draft mode and does not "
+        "have any responses." in context.description
+    )
+
+
+def test_quick_setup_unavailable_when_responses_exist_even_on_draft(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """A draft session that carries persisted responses (e.g. from a
+    prior activation cycle that bumped back to draft) is treated as
+    unavailable for Quick Setup. The route layer's
+    ``_require_response_loss_ack`` already rejects submits in this
+    case; the card-level signal makes the constraint visible by
+    locking the body and hiding the Lock / Unlock toggle."""
+
+    from app.services import responses as responses_service
+
+    review_session = _make_session(client, db, code="qs-has-responses")
+    # The session is freshly created (draft, no responses). Stub the
+    # response-count helper so the context-builder treats it as if
+    # responses were persisted.
+    monkeypatch.setattr(
+        responses_service,
+        "session_response_count",
+        lambda db, session_id: 1,
+    )
+    context = views.build_quick_setup_context(db, review_session)
+    assert context.is_disabled is True
+    assert context.is_locked is True
+    assert context.show_lock_toggle is False
 
 
 def test_quick_setup_slot_assignments_uses_rule_or_csv_mode(
@@ -278,17 +308,16 @@ def test_quick_setup_locks_by_default_in_draft(
     assert ">Unlock</button>" in body
 
 
-def test_quick_setup_lock_toggle_renders_when_session_activated(
+def test_quick_setup_lock_toggle_hidden_when_session_activated(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Per Segment 11J PR A's unified status-awareness model the
-    Lock / Unlock toggle renders in every editable-conceivable
-    state (``draft`` / ``validated`` / ``ready``). On ``ready`` the
-    body still greys via ``.locked`` by default; unlocking is
-    visual only — submits are rejected at the service layer with
-    a banner-error inside the offending slot."""
+    """Quick Setup is available only on ``draft`` AND when no
+    persisted responses exist. On any other state — here ``ready`` —
+    the card is permanently locked and the Lock / Unlock toggle is
+    hidden entirely, so the operator can't even cosmetically unlock
+    something the route layer would reject."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
@@ -299,13 +328,11 @@ def test_quick_setup_lock_toggle_renders_when_session_activated(
     context = views.build_quick_setup_context(db, review_session)
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
-    # ``is_disabled`` stays as a label-only signal driving the
-    # description copy; the visual treatment unifies on
-    # ``.quick-setup-body.locked``.
+    # Permanent-locked, no-toggle state.
     assert context.is_disabled is True
     assert context.is_locked is True
-    assert context.show_lock_toggle is True
-    assert 'id="quick-setup-lock-toggle"' in body
+    assert context.show_lock_toggle is False
+    assert 'id="quick-setup-lock-toggle"' not in body
     # ``.card.disabled`` is retired in favour of the body-greying.
     assert 'class="card disabled"' not in body
     assert 'class="quick-setup-body locked"' in body

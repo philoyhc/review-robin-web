@@ -878,27 +878,26 @@ class QuickSetupContext:
     ``slots`` renders top-to-bottom in the order given; the card
     iterates and the ``quick_setup_slot`` macro renders each one.
 
-    Status awareness collapses on a single signal — ``is_locked`` —
-    so the card's visual state is the same in every editable-
-    conceivable lifecycle state (``draft`` / ``validated`` /
-    ``ready``):
+    Two status signals — ``is_locked`` (visual greying) and
+    ``show_lock_toggle`` (whether the operator can unlock) —
+    together capture the card's availability:
 
-    - ``is_locked`` is ``True`` by default on every fresh page
-      load. The body wrapper picks up ``.locked`` greying; the
-      Lock / Unlock button sits outside the wrapper so it stays
-      vivid. The operator must explicitly Unlock before any
-      submit.
-    - On ``ready``, the toggle still renders and unlocking still
-      reveals the controls. Submits are then rejected at the
-      service layer (``_require_editable``); the rejection
-      surfaces as an inline ``banner-error`` with copy that names
-      the next move.
+    - **Available** (``draft`` AND no persisted responses):
+      ``show_lock_toggle=True``. ``is_locked`` is ``True`` by
+      default on every fresh page load; the cookie-driven
+      ``is_unlocked`` flips it off. The operator must explicitly
+      Unlock before any submit.
+    - **Unavailable** (``validated`` / ``ready`` / ``closed``, or
+      any state with persisted responses): ``show_lock_toggle=False``
+      and ``is_locked=True`` permanently. The body greys; the
+      operator can't unlock. Defense-in-depth route gates
+      (``_require_editable`` + ``_require_response_loss_ack``)
+      stay in place but never fire from this surface because the
+      submit forms aren't reachable when the body's locked.
 
-    ``is_disabled`` stays as a label-only signal driving the
-    description copy ("Setup edits are paused while the session
-    is Activated…") — it does **not** drive a separate visual
-    treatment. The body's ``.locked`` greying is the single
-    visual lock signal.
+    ``is_disabled`` mirrors ``not is_available`` for templates
+    that want a single boolean to drive label-only signals; it's
+    not a separate visual lock primitive.
 
     ``title`` overrides the H2 text. Session Home uses the default
     ``"Quick Setup"``; the new-session preview variant uses
@@ -906,10 +905,9 @@ class QuickSetupContext:
     early as a hint about post-creation setup paths.
 
     ``show_lock_toggle`` gates the Lock / Unlock footer button.
-    Session Home renders it whenever the card is reachable
-    (``draft`` / ``validated`` / ``ready``); the new-session
-    preview variant suppresses it (no session row → nothing to
-    lock).
+    Session Home renders it only while the card is available
+    (``draft`` AND no responses); the new-session preview variant
+    also suppresses it (no session row → nothing to lock).
     """
 
     slots: list[QuickSetupSlot]
@@ -942,7 +940,17 @@ def build_quick_setup_context(
     """
 
     sid = review_session.id
-    is_disabled = lifecycle.is_ready(review_session)
+    # Card is functional only on ``draft`` AND when no reviewer
+    # responses exist yet. Outside that window — ``validated`` /
+    # ``ready`` / ``closed``, or any state with persisted responses
+    # from a prior activation cycle — the card stays permanently
+    # locked (body greyed, Lock / Unlock toggle hidden, submits
+    # rejected at the service layer via ``_require_editable`` +
+    # ``_require_response_loss_ack``). The single description copy
+    # names both conditions.
+    has_responses = responses_service.session_response_count(db, sid) > 0
+    is_available = lifecycle.is_draft(review_session) and not has_responses
+    is_disabled = not is_available
 
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
@@ -1018,27 +1026,26 @@ def build_quick_setup_context(
     ]
 
     description = (
-        "Setup edits are paused while the session is Activated. "
-        "Pause the session to re-enable bulk setup."
-        if is_disabled
-        else "Bulk-populate reviewers, reviewees, and assignments "
-        "from files or rules in one place."
+        "Bulk-populate reviewers, reviewees, and assignments from "
+        "files or rules in one place. Available only when session "
+        "is in draft mode and does not have any responses."
     )
 
-    # Default-locked on every fresh page load (in every editable-
-    # conceivable state). The cookie-driven ``is_unlocked`` flips it
-    # off until the operator locks again or the cookie is cleared.
-    is_locked = not is_unlocked
+    # Default-locked on every fresh page load when the card is
+    # available; the cookie-driven ``is_unlocked`` flips it off
+    # until the operator locks again or the cookie is cleared.
+    # When the card isn't available (validated / ready / closed
+    # / or any state with persisted responses), force-lock and
+    # hide the toggle entirely so the operator can't visually
+    # unlock something the route layer would reject anyway.
+    is_locked = True if not is_available else not is_unlocked
 
     return QuickSetupContext(
         slots=slots,
         is_disabled=is_disabled,
         is_locked=is_locked,
         description=description,
-        # Toggle renders in every editable-conceivable state,
-        # including ``ready``. On ``ready`` the unlock is purely
-        # cosmetic — the service layer rejects mutating submits.
-        show_lock_toggle=True,
+        show_lock_toggle=is_available,
     )
 
 
