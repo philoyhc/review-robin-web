@@ -583,34 +583,41 @@ single import.
 
 ---
 
-## Follow-on — Responses-received email
+## Follow-on — Responses-received email (editor-only)
 
 PRs 1-5 shipped invitation + reminder. The third reviewer-facing
 email — the **responses-received** confirmation sent to the
-reviewer the moment they submit their review — slots in on top
-of the same primitives without re-architecting anything: the
-`email_template_overrides` JSON column gets four more keys, the
-editor grows a third selector tab, the renderer gets one more
-function, and the reviewer-submit handler enqueues an outbox row.
+reviewer when they submit their review — slots in on top of the
+same primitives without re-architecting anything: the
+`email_template_overrides` JSON column gets new keys (subject /
+body / cc / bcc + an enabled flag), the editor grows a third
+selector tab, the renderer gets one more function, and the
+Preview hub registry picks up the artifact card.
 
 The Preview hub (`spec/preview_hub.md`) lists this artifact in
 its registry; Segment 11F deferred its preview card explicitly
 on the grounds that no render path existed yet. This follow-on
 ships the render path, which lights up that card too.
 
+**The submit-time send wiring is *not* in this segment.** Per
+the Segment 11C Part 2 consolidation, all email *sending* —
+buttons, dispatch helpers, audit events, transport readiness —
+lives on the Operations side. 11E owns "what does this email
+say, and should it auto-send?"; 11C Part 2 owns "queue, send,
+report status." The two surfaces meet at the
+`email_template_overrides.responses_received_enabled` flag this
+PR introduces and the `render_responses_received` helper this
+PR ships, both of which 11C Part 2's PR H consumes.
+
 ### Status
 
-Planning. Sized as **2 PRs** in dependency order:
+Planning. Sized as **1 PR (PR 6)** — editor-only.
 
-1. **PR 6 — Schema + render helper + editor third tab.** The
-   template is editable but not yet auto-sent on submit.
-2. **PR 7 — Submit-time send wiring.** Reviewer-submit enqueues
-   an outbox row; Segment 11C's transport-activation path
-   carries it to `sent` like the invitation / reminder rows.
-
-PR 7 depends on Segment 11C PR F having landed (the transport
-seam that lets queued outbox rows actually go out). PR 6 is
-independent and can ship before 11C PR F.
+After PR 6 ships, **11E retires** and the plan moves to
+`guide/archive/`. Anything further on the responses-received
+email (auto-send wiring, audit event, the Operations-side
+buttons) lands in **Segment 11C Part 2 PR H** instead — see
+`guide/segment_11C_operations_consolidation.md` "Part 2".
 
 ### Why a third email type, not a fold-into-an-existing-one
 
@@ -633,12 +640,18 @@ independent and can ship before 11C PR F.
 
 In:
 
-- **Schema additions** to `email_template_overrides` JSON. Four
-  new optional keys, mirroring the invitation / reminder shape:
+- **Schema additions** to `email_template_overrides` JSON.
+  Five new optional keys, mirroring the invitation / reminder
+  shape plus a new on/off toggle:
   - `responses_received_subject`
   - `responses_received_body`
   - `responses_received_cc`
   - `responses_received_bcc`
+  - `responses_received_enabled` *(bool, default `True` when
+    absent — the per-session "Send this email when a reviewer
+    submits?" toggle the editor exposes as a checkbox; consumed
+    by Segment 11C Part 2 PR H's submit-time enqueue)*
+
   No Alembic migration — the column is already a free-form JSON;
   new keys land at write time. Defaults live in code alongside
   `DEFAULT_INVITATION_*` / `DEFAULT_REMINDER_*` constants in
@@ -654,6 +667,16 @@ In:
   `?template=responses_received` selects it via the same
   query-param convention PR 2 shipped. The composer + merge-
   tags cards re-render with this template's fields.
+- **Send-on-submit checkbox.** The Responses-received tab
+  carries a single extra control above (or alongside) the
+  subject / body fields: a checkbox labelled e.g.
+  *"Send this confirmation when a reviewer submits."*,
+  defaulting to checked, backed by the
+  `responses_received_enabled` JSON key. Per-field "Reset to
+  default" mirrors the existing pattern (resets to `True`).
+  This is the only operator-facing send-policy control on the
+  page; everything else about *how* it sends (transport, queue,
+  retry) lives on Operations per Segment 11C Part 2.
 - **Per-template merge-tag list.** The right-card merge-tag
   list is now per-template:
   - **Invitation / Reminder:** unchanged (the canonical five —
@@ -680,43 +703,30 @@ In:
 
     Questions? Contact $help_contact.
     ```
-- **Submit-time send trigger** (PR 7). The reviewer-submit
-  handler at the end of `routes_reviewer.submit_review` (or
-  whichever helper closes the submit transaction) enqueues a
-  new `email_outbox` row with `kind="responses_received"`,
-  `to_email=reviewer.email`, populated `subject` / `body` from
-  `render_responses_received`, and `status="queued"`. Segment
-  11C's transport activation (PR F) picks it up like any other
-  queued row.
-- **One audit event** added to PR 7:
-  `responses_received_email.queued`, with detail
-  `{"reviewer_id": <int>, "assignment_count": <int>}`. Mirrors
-  the existing `invitation.queued` / `reminder.queued` shape.
 - **Preview hub registry append** (lands here, not in 11F):
   one new `PreviewArtifactSpec` entry for the responses-received
   card. Render adapter calls `render_responses_received` with
   the picker-selected reviewer. Card source-of-truth footer
   points at `setupinvite?template=responses_received` and the
-  Reviewers Setup page. PR 6 ships this together with the
-  editor work since they share the render helper.
+  Reviewers Setup page. Ships as part of this PR since the
+  render helper lands here too.
 
-Out (deferred):
+Out (handed to Segment 11C Part 2 PR H):
 
-- **Configurable trigger threshold.** The email fires on submit
-  unconditionally; no operator opt-out, no "only after the
-  deadline closes" gate. If a session needs to suppress the
-  confirmation for a privacy / compliance reason, that's a
-  follow-on toggle in `email_template_overrides`
-  (`responses_received_enabled: bool`, defaulting to `true`).
-  Out of scope here — most operators want the confirmation,
-  and the current scope is "ship the artifact".
-- **Multiple send on resubmit.** The reviewer surface allows
-  edit-and-resubmit before the deadline. The simplest semantic
-  is "fire once per submit transition", which is what the
-  outbox-enqueue at submit time gives you. Operators who want
-  "fire once total per reviewer per session" can revisit with
-  a `last_responses_received_sent_at` column on `Assignment`;
-  not needed for the MVP.
+- **Submit-time send wiring.** The reviewer-submit handler
+  enqueueing an `email_outbox` row with
+  `kind="responses_received"` lives on the Operations / send
+  side, alongside the per-row Send / bulk-Send / dispatch
+  helpers PR F + PR G already own. PR H reads
+  `email_template_overrides.responses_received_enabled` (the
+  flag this PR introduces) to decide whether to enqueue, and
+  calls `render_responses_received` (the helper this PR
+  introduces) to populate the row.
+- **The `responses_received_email.queued` audit event.** Same
+  rationale as above — emitted from the enqueue site in 11C
+  Part 2 PR H.
+- **Re-submit semantics, idempotency, "once per reviewer per
+  session" toggles.** All on the send-side; PR H's concern.
 - **Operator BCC of every responses-received email.** Some
   operators will want a copy. The CC / BCC fields in the
   override JSON cover this once Segment 15's outbox CC / BCC
@@ -728,17 +738,19 @@ Out (deferred):
 
 ### Proposed PR sequence
 
-#### PR 6 — Schema + render helper + editor tab
+#### PR 6 — Schema + render helper + editor tab + Preview hub card
 
 **Goal.** The third email type is fully editable in the
-operator UI and previewable in the Preview hub; nothing yet
-fires on submit.
+operator UI and previewable in the Preview hub; an operator
+can flip the auto-send toggle on or off; nothing yet fires on
+submit (that's PR H in 11C Part 2).
 
-- Add the four new keys to the override JSON's documented
+- Add the five new keys to the override JSON's documented
   shape (in this guide and the `email_template_overrides`
   docstring). No Alembic migration.
 - New `DEFAULT_RESPONSES_RECEIVED_SUBJECT` /
-  `DEFAULT_RESPONSES_RECEIVED_BODY` constants in
+  `DEFAULT_RESPONSES_RECEIVED_BODY` constants and a
+  `responses_received_enabled_default = True` constant in
   `app/services/email_templates.py`.
 - New `render_responses_received(session, reviewer) ->
   RenderedEmail`. Same Template-substitution path as the
@@ -747,11 +759,19 @@ fires on submit.
   reviewer's assignments in this session and taking the
   newest `submitted_at`; falls back to "(not yet submitted)"
   if no submitted assignment exists (only the Preview hub
-  hits that branch — the live send path always has one).
+  hits that branch — when 11C PR H lights up the live send
+  path, `submitted_at` is always set on enqueue).
+- New helper
+  `email_templates.responses_received_enabled(session) -> bool`
+  that reads the flag from `email_template_overrides` with
+  the documented `True` default. PR H in 11C Part 2 imports
+  and consumes this.
 - Editor: extend the template selector partial to render the
   third option; extend `views.merge_tags_for_template` to
   return the four-tag set; per-field "Reset to default"
-  links re-use the existing pattern.
+  links re-use the existing pattern. Add the
+  send-on-submit checkbox above the subject / body fields,
+  posting under the same Save form.
 - Preview hub: append the registry entry; the
   responses-received card renders inline below the reviewer-
   surface card on `/operator/sessions/{id}/previews`.
@@ -764,56 +784,18 @@ fires on submit.
     selects the tab; merge-tag list shows four tags (no
     `$invite_url`).
   - Save / Reset round-trip on the new fields persists to
-    `email_template_overrides`.
+    `email_template_overrides`, including the
+    send-on-submit checkbox (default `True`, flips to
+    `False` when unchecked, "Reset to default" returns it to
+    `True`).
+  - `responses_received_enabled(session)` returns `True` on
+    a session with no overrides, honours an explicit
+    `False`, and honours an explicit `True`.
   - Preview hub renders the card with the right body for
     the picker-selected reviewer.
 
-#### PR 7 — Submit-time send trigger
-
-**Goal.** Wire the reviewer-submit handler to enqueue the
-responses-received email so Segment 11C's transport activation
-delivers it.
-
-- In `routes_reviewer.submit_review` (or its service-layer
-  helper, depending on where the submit-success branch lives),
-  after the assignment's `submitted_at` is stamped and before
-  the redirect, call `email_outbox.enqueue(
-  kind="responses_received", reviewer=reviewer,
-  rendered=render_responses_received(session, reviewer))`.
-- New audit event `responses_received_email.queued` with
-  detail `{"reviewer_id": <int>, "assignment_count": <int>}`.
-  Emitted alongside the existing submit audit (
-  `assignment.submitted` or whatever it's named today).
-- Idempotency: re-submit of the same assignment fires another
-  enqueue. This matches the simple semantic; the deferred
-  "once per session" toggle is the escape hatch if operators
-  push back.
-- Tests:
-  - Submit on a draft assignment enqueues exactly one
-    outbox row with `kind="responses_received"` and the
-    rendered subject / body.
-  - Submit-then-resubmit enqueues two rows (documented
-    behaviour, locked-in by the test).
-  - Submit on a reviewer with multiple assignments in the
-    session enqueues a single email per submit transition,
-    not one per assignment (the email is per-reviewer-per-
-    session, not per-assignment).
-  - Audit event fires alongside the submit audit and carries
-    the right `assignment_count`.
-
 ### Implementation pointers
 
-- **Reuse the existing `email_outbox.enqueue` helper.** The
-  invitation / reminder send paths already enqueue rows with
-  `kind="invitation"` / `kind="reminder"`. Adding
-  `kind="responses_received"` is a string addition; the
-  outbox model already has the columns.
-- **Don't gate on transport readiness.** PR 7 enqueues the row
-  regardless of whether the operator has SMTP configured. If
-  the operator skipped Settings, the row sits at `queued`
-  forever — same as the invitation / reminder flows today.
-  Surfacing "you have unsent confirmations" is a Segment 11C
-  Manage-Invitations / Outbox concern.
 - **Submitted-at formatting.** Use the same
   `format_datetime_for_display` helper the invitation /
   reminder `$deadline` formatting uses. Keep the merge-tag
@@ -825,21 +807,50 @@ delivers it.
   rather than printing the placeholder. Operator-supplied
   bodies that reference `$help_contact` still get the
   placeholder — that's their decision to make.
+- **Checkbox copy.** Phrase the editor toggle so an operator
+  reading it cold understands the behaviour change without
+  scrolling — "Send this confirmation when a reviewer
+  submits." (default checked) is clearer than
+  "Auto-send enabled." Keep the on-state copy short; the
+  details about *how* it sends (transport, queue, retries) are
+  Operations-side concerns the operator already knows about
+  from Manage Invitations.
+- **Don't pre-emit anything from the send path.** The
+  enqueue logic, audit event, and any "you have N
+  responses-received queued" surfacing all belong in 11C
+  Part 2 PR H. Resist the temptation to wire even a stub
+  here — keeping 11E strictly authoring-side keeps the
+  retire-after-PR-6 line crisp.
 
 ### Test impact
 
-- Two new test files —
-  `tests/unit/test_render_responses_received.py` and
-  `tests/integration/test_responses_received_send.py`.
+- One new unit test file —
+  `tests/unit/test_render_responses_received.py` (covers the
+  render helper + the `responses_received_enabled` reader).
 - Existing `tests/integration/test_session_setupinvite.py`
-  picks up cases for the third tab; existing
-  `tests/integration/test_session_previews.py` (from 11F) picks
-  up the new artifact card.
+  picks up cases for the third tab (selector, save / reset
+  round-trip, send-on-submit checkbox round-trip).
+- Existing `tests/integration/test_session_previews.py` (from
+  11F) picks up the new artifact card.
 - No churn on the existing invitation / reminder test suites.
+- No `tests/integration/test_responses_received_send.py` here
+  — that file lands in 11C Part 2 PR H alongside the enqueue
+  logic.
 
 ### Doc impact
 
-This follow-on is intentionally docs-light per the user
-direction — no `todo_master.md`, `status.md`, or
-`unfinished_business.md` updates land here. Those move when
-the PRs ship.
+- `guide/todo_master.md` — when PR 6 ships, move 11E from its
+  un-archived "follow-on PR pending" note to a clean Done
+  entry, citing PR 6's number; mention the 11C PR H seam in
+  the entry.
+- `docs/status.md` — timeline entry + summary-table row.
+- `guide/segment_11C_operations_consolidation.md` — PR H's
+  hard prerequisite is PR 6 (the helper + the
+  `responses_received_enabled` flag both live in the editor
+  side); cross-reference both in PR H's description when it
+  lands.
+- After PR 6 ships, **archive this guide**: `git mv
+  guide/segment_11E_email_template_editor.md
+  guide/archive/`. Then update the cross-references in
+  `todo_master.md`, `docs/status.md`, and `segment_11C` /
+  `segment_11F` if any still point at the un-archived path.

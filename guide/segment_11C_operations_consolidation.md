@@ -36,9 +36,13 @@ detail.
 **Part 1 shipped 2026-05-06** across PRs **#490 → #491 → #492 →
 #493** (folded from the planned 5 PRs into 4 — see "Proposed PR
 sequence (Part 1)" below for what landed where). **Part 2 is
-upcoming**: 2 PRs (PR F: outbox schema move + dispatch helper +
-per-row Send + Send-test-to-me + chrome pill + audit events;
-PR G: bulk Send-all-queued).
+upcoming**: 3 PRs (PR F: outbox schema move + dispatch helper +
+per-row Send + Send-test-to-me + chrome pill + audit events; PR
+G: bulk Send-all-queued; **PR H: responses-received submit-time
+enqueue + audit event** — formerly Segment 11E PR 7, absorbed
+here so all email *sending* lives on the Operations side, with
+11E owning only "what does this email say, and should it
+auto-send?").
 
 ## Gap against the spec
 
@@ -54,6 +58,7 @@ PR G: bulk Send-all-queued).
 | Outbox rows can move from queued → sent / failed | Today they're written `queued` and never re-touched | Wire 11E transport interface; widen status enum; capture `error_message` | 2 |
 | Operator can Send / bulk-Send / test-Send from Invitations | No such affordances exist | Add per-row + bulk + test-send affordances | 2 |
 | Transport-ready chrome pill | None | Compute from operator's `EmailSettings` | 2 |
+| Reviewer-submit enqueues a responses-received outbox row when the per-session toggle is on | Submit handler doesn't enqueue anything for responses-received; the `kind` doesn't exist on the outbox yet | Reviewer-submit handler reads `email_template_overrides.responses_received_enabled` (default `True`, defined in Segment 11E PR 6); if on, enqueue an outbox row rendered via `email_templates.render_responses_received` and emit the `responses_received_email.queued` audit event | 2 (PR H) |
 
 ---
 
@@ -261,10 +266,18 @@ moves into the new Invitations + Responses test files).
 
 ## Part 2 — Email send activation
 
-Hard prerequisites: Part 1 PR C ships the consolidated Manage
-Invitations page (Part 2 hangs the new affordances off it); Segment
-11E PRs 4 + 5 ship the operator Settings page + the
-`EmailTransport` Protocol / `SmtpEmailTransport`.
+Hard prerequisites:
+
+- **Part 1 PR C** ships the consolidated Manage Invitations page
+  (PRs F + G hang the new send affordances off it).
+- **Segment 11E PRs 4 + 5** ship the operator Settings page + the
+  `EmailTransport` Protocol / `SmtpEmailTransport`.
+- **Segment 11E PR 6** (the responses-received editor follow-on)
+  is a hard prerequisite for **PR H specifically** — PR H reads
+  the `email_template_overrides.responses_received_enabled` flag
+  PR 6 introduces and calls the `render_responses_received`
+  helper PR 6 ships. PRs F and G are unaffected and can land
+  before PR 6.
 
 ### Scope (Part 2)
 
@@ -307,6 +320,23 @@ In:
 - **Two new audit events:** `email.sent` (with the outbox row id,
   recipient, transport response truncation) and
   `email.send_failed` (with the outbox row id, error message).
+- **Reviewer-submit responses-received enqueue (PR H).** When the
+  reviewer-submit handler stamps `submitted_at` on an assignment,
+  it reads `email_templates.responses_received_enabled(session)`
+  (the helper Segment 11E PR 6 introduces, backed by the
+  per-session `email_template_overrides.responses_received_enabled`
+  flag the editor surfaces as a checkbox); when `True` (the
+  default), the handler enqueues a single `email_outbox` row with
+  `kind="responses_received"`, `to_email=reviewer.email`, and
+  `subject` / `body` populated by `render_responses_received`.
+  PR F's transport dispatch picks the row up the same way it
+  picks up invitations / reminders.
+- **One additional audit event (PR H):**
+  `responses_received_email.queued`, with detail
+  `{"reviewer_id": <int>, "assignment_count": <int>}`. Mirrors
+  the existing `invitation.queued` / `reminder.queued` shape.
+  Emitted alongside the existing submit audit (i.e. immediately
+  after `assignment.submitted`).
 
 Out (deferred):
 
@@ -346,6 +376,50 @@ this in the PR G description.
 
 Folding F + G into one PR is fine if the bulk handler is small;
 keeping them split protects rollback if bulk semantics need
+reshuffling.
+
+**PR H — Responses-received submit-time enqueue.** Wires the
+reviewer-submit handler to enqueue a responses-received outbox
+row when the per-session toggle is on. Lands alongside (or after)
+PRs F + G; depends on Segment 11E PR 6 having shipped the
+editor side (the `responses_received_enabled` flag + the
+`render_responses_received` helper).
+
+- In the reviewer-submit code path (likely `routes_reviewer.submit_review`
+  or the service-layer helper that closes the submit transaction),
+  after `Assignment.submitted_at` is stamped and before the
+  redirect:
+  - Call `email_templates.responses_received_enabled(session)`;
+    skip the rest when `False`.
+  - Otherwise call `email_outbox.enqueue(
+    kind="responses_received", reviewer=reviewer,
+    rendered=email_templates.render_responses_received(session,
+    reviewer))`.
+  - Emit `responses_received_email.queued` with the documented
+    detail shape.
+- **Per-reviewer-per-session, not per-assignment.** A reviewer
+  with multiple assignments in the same session that all submit
+  in one request still produces a single enqueued row. The
+  enqueue site computes `assignment_count` from
+  `monitoring.per_reviewer_progress` (or whatever helper the
+  submit-success branch already has on hand) and fires the
+  `responses_received_email.queued` audit with that count.
+- **Idempotency.** Re-submit of the same assignment (the
+  reviewer surface allows edit-and-resubmit before the
+  deadline) fires another enqueue. This matches the simple "one
+  enqueue per submit transition" semantic; if operators push
+  back, a `last_responses_received_sent_at` column on
+  `Assignment` is the escape hatch but not in scope here.
+- **Don't gate on transport readiness.** PR H enqueues the row
+  regardless of whether the operator has SMTP configured. If
+  the operator skipped Settings, the row sits at `queued`
+  forever — same as the invitation / reminder flows. Surfacing
+  "you have unsent confirmations" stays a Manage Invitations /
+  Outbox concern (visible via the existing per-row Send +
+  bulk-Send affordances PRs F + G ship).
+
+PR H can fold into PR F or G if the diff stays small; keeping it
+split protects rollback if the per-session toggle semantic needs
 reshuffling.
 
 ### Implementation pointers (Part 2)
@@ -389,3 +463,19 @@ PR G adds bulk-Send coverage to the integration test file
 (selection-driven bulk action over a mix of queued / non-queued
 rows; non-queued rows are skipped, not 409'd, when reached via
 the bulk path).
+
+PR H adds:
+- `tests/integration/test_responses_received_send.py` —
+  reviewer submit on a fresh assignment enqueues exactly one
+  outbox row with `kind="responses_received"` and the rendered
+  subject / body when the per-session toggle is on; submit when
+  the toggle is `False` enqueues nothing; submit-then-resubmit
+  enqueues two rows (documented behaviour); a reviewer with
+  multiple assignments in the session enqueues a single email
+  per submit transition, not one per assignment; the
+  `responses_received_email.queued` audit event fires alongside
+  `assignment.submitted` with the right `assignment_count`.
+- A short addition to `tests/unit/test_email_send_dispatch.py`
+  confirming PR F's dispatch picks up
+  `kind="responses_received"` rows the same way it picks up
+  invitation / reminder rows (no special-case branch needed).
