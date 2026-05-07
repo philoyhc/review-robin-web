@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** end of Segment 11G — Validate page rebuilt as a find-and-fix surface (2026-05-06)
+**As of:** end of Segment 11K — Audit-event detail schema convention (2026-05-07)
 
 This document is a periodic snapshot of what Review Robin Web actually
 does today, vs. what is planned but not yet implemented. It is updated

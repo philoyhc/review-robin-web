@@ -80,6 +80,22 @@ A small but important fourth seam:
 
 - **`app/web/views.py`** holds **view-shape adapters** that translate domain objects into the dataclasses / row tuples templates iterate over (e.g. `build_setup_rows` for the session-detail Session Setup card). Keep services business-logic-only and templates markup-only — anything in between (e.g. computing a status label string from instrument state) belongs in `views.py`.
 
+### Audit events
+
+Every mutating service writes an `audit_events` row via
+`app.services.audit.write_event(...)`. The `detail` JSON follows the
+canonical envelope schema documented in `spec/architecture.md`
+"Audit-event detail schema" — pick exactly one payload envelope
+(`audit.changes(...)` / `.snapshot(...)` / `.counts(...)` /
+`.set_changes(...)`), pass `session=` for top-level identity slots,
+and use the orthogonal slots (`reason=` / `refs=` / `context=`) for
+event-triggering cause / cross-entity int PKs / descriptive scalars.
+A per-event-type allowlist in `EVENT_SCHEMAS` validates each emit
+on write — strict mode in tests fails any drift; production mode
+logs and writes through. **When you add a new emitter, register its
+event_type in `EVENT_SCHEMAS`** or the strict-mode test gate will
+reject it.
+
 ### Identity and auth
 
 - `app/auth/identity.py` parses Azure Easy Auth headers (`X-MS-CLIENT-PRINCIPAL` and friends) into an `AuthenticatedUser`. When `ALLOW_FAKE_AUTH=true`, a fake user is injected.

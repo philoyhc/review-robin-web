@@ -25,19 +25,38 @@ chrome:
   Display + Response Fields tables, Response Type Definitions
   catalog (10 seeded RTDs + operator-defined ones), live-preview
   pane, multi-instrument support.
-- **Email template editor.** Per-template (Invitation / Reminder)
-  override of subject + body + CC + BCC, with five canonical
-  merge tags (`$reviewer_name`, `$session_name`, `$deadline`,
-  `$help_contact`, `$invite_url`). Per-field "Reset to default";
-  the renderer falls through to in-code defaults when nothing's
-  overridden.
+- **Email template editor.** Per-template (Invitation / Reminder
+  / Responses-received) override of subject + body + CC + BCC,
+  with the canonical merge tags (`$reviewer_name`,
+  `$session_name`, `$deadline`, `$help_contact`, plus
+  `$invite_url` on Invitation / Reminder and `$submitted_at` on
+  Responses-received). Per-field "Reset to default"; the
+  renderer falls through to in-code defaults when nothing's
+  overridden. A per-session "Send confirmation when a reviewer
+  submits?" checkbox gates the responses-received auto-send.
 - **Operator Settings page.** Per-operator SMTP credentials
   encrypted at rest. Honours `?return_to=<path>` so the chrome
   user-menu Settings link returns the operator to wherever they
   came from.
-- **Operations pages.** Validate (errors / warnings / info pill
-  rows), Reviewer Experience Preview, Manage Invitations,
-  Monitoring, Outbox.
+- **Quick Setup card** on Session Home wires Reviewers /
+  Reviewees / Assignments slots to live POST forms over the
+  existing per-entity import pipelines, behind a single Lock /
+  Unlock toggle. Slot 4 (Session settings / configuration
+  import) graduates with Segment 12A.
+- **Extract Data card** on Session Home renders the per-entity
+  download row scaffold (settings / reviewers / reviewees /
+  assignments / responses / bundle), inert until Segment 12A
+  wires the download paths.
+- **Operations pages.** Validate (find-and-fix surface with
+  severity filter chip strip + per-issue Fix-on-Setup deep
+  links), Reviewer Experience Preview hub (tabbed email
+  previews + iframed reviewer-surface card for an
+  operator-picked reviewer), Manage Invitations (consolidated
+  reviewer-centric table absorbing the retired Monitoring
+  page), Responses (reviewee-centric coverage view classifying
+  each reviewee per `monitoring.AT_RISK_THRESHOLDS`). Outbox
+  stays a dev-diagnostic surface reachable via the "View
+  outbox" button on Manage Invitations.
 
 **Reviewer surface** — `/reviewer/sessions/{id}/{page}`:
 
@@ -56,15 +75,26 @@ chrome:
   gate on missing required.
 
 **Lifecycle + audit.** Every mutating service writes an
-`audit_events` row with a typed `event_type` + `detail` JSON.
-Setup mutations invalidate `validated → draft` automatically via
+`audit_events` row with a typed `event_type` + canonical
+envelope `detail` (Segment 11K — see
+[`spec/architecture.md`](spec/architecture.md#audit-event-detail-schema)).
+The four envelopes (`changes` / `snapshot` / `counts` /
+`set_changes`) plus identity slots and orthogonal slots
+(`reason` / `refs` / `context`) are validated on write through
+the `EVENT_SCHEMAS` registry in `app/services/audit.py` —
+strict in tests, lenient in production. Setup mutations
+invalidate `validated → draft` automatically via
 `lifecycle.invalidate_if_validated`.
 
 **Email send is queued, not sent.** Outbox rows stamp
-`status="queued"`. The transport interface (`EmailTransport`
-Protocol + `SmtpEmailTransport` + typed-stub `GraphEmailTransport`)
-is shipped and waiting to be wired into Manage Invitations
-(Segment 11C PR F).
+`status="queued"`; the audit-log columns the dispatch helper
+will write to (`error_message`, `from_address`, `backend`,
+`backend_message_id`, `delivered_at`, `payload_hash`,
+`correlation_id`) landed inert with Segment 11C Part 2. The
+transport interface (`EmailTransport` Protocol +
+`SmtpEmailTransport` + typed-stub `GraphEmailTransport`) is
+shipped and waiting to be wired up by **Segment 14-1 Part A**
+(the email send-activation segment).
 
 For the latest snapshot of what's shipped vs. pending, see
 [`docs/status.md`](docs/status.md).
