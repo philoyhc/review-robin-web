@@ -972,6 +972,8 @@ def rule_based_editor(
     request: Request,
     rule_set_id: int,
     error: str | None = Query(default=None),
+    saved: str | None = Query(default=None),
+    renamed: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1006,6 +1008,10 @@ def rule_based_editor(
         ),
         "bad_combinator": "Pick a combinator (All / Any / In sequence).",
         "bad_seed": "RuleSet seed must be an integer.",
+        "needs_delete_confirm": (
+            "Delete not confirmed. Tick the confirm checkbox before "
+            "clicking Delete."
+        ),
     }
     editor = views.build_rule_based_editor_context(
         review_session,
@@ -1014,6 +1020,8 @@ def rule_based_editor(
         user=user,
         error_kind=error,
         error_message=error_messages.get(error or "") if error else None,
+        saved_flash=(saved == "1"),
+        renamed_flash=(renamed == "1"),
     )
     return _templates.TemplateResponse(
         request,
@@ -1225,6 +1233,249 @@ def rule_based_save_as(
         url=(
             f"/operator/sessions/{review_session.id}"
             f"/assignments/rule-based/edit/{new_rule_set.id}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/rule-based/save",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def rule_based_save(
+    request: Request,
+    rule_set_id: int = Form(...),
+    combinator: str = Form(...),
+    exclude_self_reviews: str | None = Form(default=None),
+    seed: str | None = Form(default=None),
+    rules_json: str = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """In-place Save for a Personal RuleSet — appends a new revision
+    (Segment 13A PR 6). Past audit refs to old revisions stay
+    resolvable because revisions are retained, not deleted."""
+
+    import json
+
+    from pydantic import ValidationError
+
+    from app.schemas.rules import (
+        Combinator,
+        RuleSetOptions,
+        RuleSetSchema,
+    )
+    from app.services.rules import library
+
+    redirect_back = (
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{rule_set_id}"
+    )
+
+    loaded = library.load_rule_set(db, rule_set_id)
+    if loaded is None:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/assignments"
+                "?rule_based_error=missing_rule_set"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    rule_set, _ = loaded
+    if rule_set.is_seed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Seeded RuleSets are read-only.",
+        )
+    if rule_set.owner_user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="That RuleSet is private to its owner.",
+        )
+
+    if combinator not in {c.value for c in Combinator}:
+        return RedirectResponse(
+            url=f"{redirect_back}?error=bad_combinator",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    seed_value: int | None = None
+    if seed is not None and seed.strip():
+        try:
+            seed_value = int(seed.strip())
+        except ValueError:
+            return RedirectResponse(
+                url=f"{redirect_back}?error=bad_seed",
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
+
+    try:
+        parsed_rules = json.loads(rules_json)
+    except json.JSONDecodeError:
+        return RedirectResponse(
+            url=f"{redirect_back}?error=malformed_json",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    if not isinstance(parsed_rules, list):
+        return RedirectResponse(
+            url=f"{redirect_back}?error=malformed_json",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    try:
+        rule_set_schema = RuleSetSchema(
+            id=rule_set.id,
+            name=rule_set.name,
+            description=rule_set.description or "",
+            scope="personal",  # type: ignore[arg-type]
+            combinator=Combinator(combinator),
+            rules=parsed_rules,  # type: ignore[arg-type]
+            options=RuleSetOptions(
+                excludeSelfReviews=(exclude_self_reviews == "true"),
+                seed=seed_value,
+            ),
+        )
+    except ValidationError:
+        return RedirectResponse(
+            url=f"{redirect_back}?error=validation",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    library.save_in_place(
+        db,
+        rule_set=rule_set,
+        rule_set_schema=rule_set_schema,
+        actor=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"{redirect_back}?saved=1",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/rule-based/rename",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def rule_based_rename(
+    request: Request,
+    rule_set_id: int = Form(...),
+    new_name: str = Form(...),
+    new_description: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    from app.services.rules import library
+
+    redirect_back = (
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{rule_set_id}"
+    )
+
+    cleaned_name = new_name.strip()
+    if not cleaned_name:
+        return RedirectResponse(
+            url=f"{redirect_back}?error=empty_name",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    loaded = library.load_rule_set(db, rule_set_id)
+    if loaded is None:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/assignments"
+                "?rule_based_error=missing_rule_set"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    rule_set, _ = loaded
+    if rule_set.is_seed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Seeded RuleSets are read-only.",
+        )
+    if rule_set.owner_user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="That RuleSet is private to its owner.",
+        )
+
+    library.rename_rule_set(
+        db,
+        rule_set=rule_set,
+        new_name=cleaned_name,
+        new_description=(new_description or "").strip(),
+        actor=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"{redirect_back}?renamed=1",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/rule-based/delete",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def rule_based_delete(
+    request: Request,
+    rule_set_id: int = Form(...),
+    confirm: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    from app.services.rules import library
+
+    redirect_back = (
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{rule_set_id}"
+    )
+
+    if confirm != "true":
+        return RedirectResponse(
+            url=f"{redirect_back}?error=needs_delete_confirm",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    loaded = library.load_rule_set(db, rule_set_id)
+    if loaded is None:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/assignments"
+                "?rule_based_error=missing_rule_set"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    rule_set, _ = loaded
+    if rule_set.is_seed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Seeded RuleSets are read-only.",
+        )
+    if rule_set.owner_user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="That RuleSet is private to its owner.",
+        )
+
+    library.soft_delete_rule_set(
+        db,
+        rule_set=rule_set,
+        actor=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/assignments"
+            "?rule_based_error=rule_set_deleted"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
     )

@@ -832,3 +832,361 @@ def test_other_users_personal_rule_set_returns_403(
     # session-permission gate, which fires before the RuleSet
     # ownership check. Either way: not 200.
     assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# PR 6 — Save (in-place) / Rename / Delete + revisioning
+# ---------------------------------------------------------------------------
+
+
+def test_save_in_place_appends_revision_and_keeps_rule_set_id(
+    client: TestClient, db: Session
+) -> None:
+    """In-place Save bumps ``revision_no`` and keeps the same
+    RuleSet row. Past Generate runs that pinned the previous
+    revision id stay resolvable because old revisions are
+    retained."""
+
+    review_session = _make_session(client, db, code="ed-save")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Save-source",
+    )
+    initial_revision_id = personal.current_revision_id
+
+    edited_rules = [
+        {
+            "id": "intra",
+            "kind": "MATCH",
+            "enabled": True,
+            "predicate": {
+                "field": "reviewer.tag2",
+                "operator": "same_as",
+                "operand": "reviewee.tag2",
+                "case_sensitive": False,
+            },
+        }
+    ]
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save",
+        data={
+            "rule_set_id": personal.id,
+            "combinator": "ALL_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": json.dumps(edited_rules),
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/edit/{personal.id}?saved=1"
+    )
+
+    db.refresh(personal)
+    assert personal.current_revision_id != initial_revision_id
+
+    revisions = db.execute(
+        select(RuleSetRevision)
+        .where(RuleSetRevision.rule_set_id == personal.id)
+        .order_by(RuleSetRevision.revision_no)
+    ).scalars().all()
+    assert [r.revision_no for r in revisions] == [1, 2]
+    assert revisions[1].rules_json[0]["predicate"]["field"] == "reviewer.tag2"
+    # Old revision row retained for audit-ref resolution.
+    assert revisions[0].rules_json[0]["predicate"]["field"] == "reviewer.tag1"
+
+
+def test_save_emits_rule_set_updated_audit_with_changes(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ed-save-audit")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Save-audit",
+    )
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save",
+        data={
+            "rule_set_id": personal.id,
+            "combinator": "ANY_OF",  # changed from ALL_OF
+            "exclude_self_reviews": "false",  # changed
+            "rules_json": "[]",
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "rule_set.updated"
+        )
+    ).scalars().one()
+    detail = event.detail or {}
+    assert detail.get("context", {}).get("via") == "save"
+    changes = detail.get("changes") or {}
+    assert "combinator" in changes
+    assert changes["combinator"] == ["ALL_OF", "ANY_OF"]
+    assert "exclude_self_reviews" in changes
+    refs = detail.get("refs") or {}
+    assert refs.get("rule_set_id") == personal.id
+
+
+def test_save_rejects_seed(client: TestClient, db: Session) -> None:
+    """In-place Save must reject seeds — they're read-only."""
+
+    review_session = _make_session(client, db, code="ed-save-seed")
+    seed_id = _seed_id(db, "Full Matrix")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save",
+        data={
+            "rule_set_id": seed_id,
+            "combinator": "ALL_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": "[]",
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+
+
+def test_save_rejects_other_users_personal_rule_set(
+    db: Session,
+    alice: AuthenticatedUser,
+    bob: AuthenticatedUser,
+    make_client,  # noqa: ANN001
+) -> None:
+    alice_client = make_client(alice)
+    review_session = _make_session(alice_client, db, code="ed-save-priv")
+    intra_id = _seed_id(db, "Intra-group peer review")
+    alice_client.post(
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/copy",
+        data={"rule_set_id": intra_id, "new_name": "Alice's"},
+        follow_redirects=False,
+    )
+    alice_rs = db.execute(
+        select(RuleSet).where(RuleSet.name == "Alice's")
+    ).scalar_one()
+
+    bob_client = make_client(bob)
+    response = bob_client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/save",
+        data={
+            "rule_set_id": alice_rs.id,
+            "combinator": "ALL_OF",
+            "exclude_self_reviews": "true",
+            "rules_json": "[]",
+            "seed": "",
+        },
+        follow_redirects=False,
+    )
+    # Bob isn't an operator on Alice's session → 403 from the
+    # session gate; ownership gate would also 403 if he were.
+    assert response.status_code == 403
+
+
+def test_rename_updates_metadata_without_bumping_revision(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ed-rename")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Rename-source",
+    )
+    initial_revision_id = personal.current_revision_id
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/rename",
+        data={
+            "rule_set_id": personal.id,
+            "new_name": "Renamed",
+            "new_description": "Updated description",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/edit/{personal.id}?renamed=1"
+    )
+
+    db.refresh(personal)
+    assert personal.name == "Renamed"
+    assert personal.description == "Updated description"
+    # Revision pointer untouched.
+    assert personal.current_revision_id == initial_revision_id
+
+    revisions = db.execute(
+        select(RuleSetRevision).where(RuleSetRevision.rule_set_id == personal.id)
+    ).scalars().all()
+    assert len(revisions) == 1
+
+
+def test_rename_emits_audit_with_changes_and_via_rename(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ed-rename-audit")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Rename-audit",
+    )
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/rename",
+        data={
+            "rule_set_id": personal.id,
+            "new_name": "Rename-audit-2",
+            "new_description": "",
+        },
+        follow_redirects=False,
+    )
+
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "rule_set.updated"
+        )
+    ).scalars().one()
+    detail = event.detail or {}
+    assert detail.get("context", {}).get("via") == "rename"
+    assert detail.get("changes", {}).get("name") == [
+        "Rename-audit", "Rename-audit-2"
+    ]
+
+
+def test_delete_soft_deletes_and_redirects_to_assignments(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ed-delete")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Delete-source",
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/delete",
+        data={"rule_set_id": personal.id, "confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        "?rule_based_error=rule_set_deleted"
+    )
+
+    db.refresh(personal)
+    assert personal.deleted_at is not None
+    # Revisions retained for audit-ref resolution.
+    revisions = db.execute(
+        select(RuleSetRevision).where(RuleSetRevision.rule_set_id == personal.id)
+    ).scalars().all()
+    assert len(revisions) == 1
+
+
+def test_delete_without_confirm_redirects_back_with_error(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ed-delete-noconfirm")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="No-confirm",
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/delete",
+        data={"rule_set_id": personal.id},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/edit/{personal.id}?error=needs_delete_confirm"
+    )
+
+    db.refresh(personal)
+    assert personal.deleted_at is None
+
+
+def test_delete_emits_rule_set_deleted_audit(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ed-delete-audit")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Delete-audit",
+    )
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/delete",
+        data={"rule_set_id": personal.id, "confirm": "true"},
+        follow_redirects=False,
+    )
+
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "rule_set.deleted"
+        )
+    ).scalars().one()
+    detail = event.detail or {}
+    assert detail.get("context", {}).get("soft") is True
+    assert detail.get("snapshot", {}).get("name") == "Delete-audit"
+    assert detail.get("refs", {}).get("rule_set_id") == personal.id
+
+
+def test_delete_hides_rule_set_from_library_list(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="ed-delete-lib")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="Delete-lib",
+    )
+
+    # Pre-delete: the card's selector includes the Personal RuleSet.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    assert ">Delete-lib</option>" in body
+
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/delete",
+        data={"rule_set_id": personal.id, "confirm": "true"},
+        follow_redirects=False,
+    )
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    assert ">Delete-lib</option>" not in body
+    # Soft-deleted rule sets remain resolvable for audit refs (i.e.
+    # ``load_rule_set`` doesn't filter on deleted_at), so the editor
+    # URL still 200s on the deleted RuleSet.
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{personal.id}"
+    )
+    assert response.status_code == 200
