@@ -115,9 +115,9 @@
 
     {% if rule_based_card.last_generated %}
       <p class="form-help" id="rule-based-last-generated" style="margin-top: 12px;">
-        Last generated{% if rule_based_card.last_generated.rule_set_name %} using <strong>{{ rule_based_card.last_generated.rule_set_name }}</strong>{% endif %}:
-        {{ rule_based_card.last_generated.pair_count }} unique pair{% if rule_based_card.last_generated.pair_count != 1 %}s{% endif %}{% if rule_based_card.last_generated.assignment_count is not none %}
-        ({{ rule_based_card.last_generated.assignment_count }} assignment{% if rule_based_card.last_generated.assignment_count != 1 %}s{% endif %}){% endif %}.
+        Last generated{% if rule_based_card.last_generated.rule_set_name %} using <span class="pill pill-info">{{ rule_based_card.last_generated.rule_set_name }}</span>{% endif %}:
+        <span class="pill pill-info">{{ rule_based_card.last_generated.pair_count }} unique pair{% if rule_based_card.last_generated.pair_count != 1 %}s{% endif %}</span>{% if rule_based_card.last_generated.assignment_count is not none %}
+        <span class="pill pill-info">{{ rule_based_card.last_generated.assignment_count }} assignment{% if rule_based_card.last_generated.assignment_count != 1 %}s{% endif %}</span>{% endif %}
       </p>
     {% endif %}
   {% else %}
