@@ -15,6 +15,7 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
+    RuleSetRevision,
     User,
 )
 from app.schemas.assignments import AssignmentMode, ManualAssignmentRow
@@ -534,6 +535,8 @@ def replace_assignments(
     filename: str | None = None,
     contexts: list[dict[str, Any] | None] | None = None,
     includes: list[bool] | None = None,
+    rule_set_revision: RuleSetRevision | None = None,
+    exclude_self_reviews: bool | None = None,
 ) -> tuple[int, int]:
     """Replace all assignments for the session. Returns (replaced, new).
 
@@ -621,6 +624,16 @@ def replace_assignments(
     context: dict[str, str | int | bool] = {"mode": mode.value}
     if filename is not None:
         context["filename"] = filename
+    if exclude_self_reviews is not None:
+        # The actually-applied value the engine ran with — distinct
+        # from the RuleSet's stored ``options.excludeSelfReviews``
+        # because PR 4's card-level checkbox can override it for one
+        # Generate. The audit log is the source of truth for what ran.
+        context["exclude_self_reviews"] = exclude_self_reviews
+    refs: dict[str, int] = {}
+    if rule_set_revision is not None:
+        refs["rule_set_id"] = rule_set_revision.rule_set_id
+        refs["rule_set_revision_id"] = rule_set_revision.id
     audit.write_event(
         db,
         event_type="assignments.generated",
@@ -634,6 +647,7 @@ def replace_assignments(
         session=review_session,
         payload=audit.counts(**counts_kwargs),
         context=context,
+        refs=refs or None,
         correlation_id=correlation_id,
     )
 

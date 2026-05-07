@@ -1,18 +1,20 @@
-{# Rule Based Assignment card — Segment 13A PR 0 scaffold.
+{# Rule Based Assignment card — Segment 13A PR 4 (seeds-only live).
 
    Renders the final-shape Advanced-mode card: RuleSet selector,
    persisted Exclude self-review checkbox, cascade-replace
    confirmation checkbox (when assignments exist), Edit ruleset
-   link, and Generate button. Everything except the Edit ruleset
-   link renders disabled until PR 4 flips ``is_wired=True`` and
-   supplies a live selector + writer.
+   link, and Generate button.
 
-   The DOM contract here is what PRs 4-5 wire against; layout and
-   class names should not change between PR 0 and PR 4.
+   PR 4 flipped ``is_wired=True``: the selector lists seeds (PR 5
+   adds Personal RuleSets), Generate POSTs to the live route, and
+   the Edit ruleset link goes to the editor stub. The DOM contract
+   here is stable from PR 0 onward.
 
    Reads ``rule_based_card`` from the template context (a
    ``RuleBasedCardContext`` from
-   ``views.build_rule_based_card_context``).
+   ``views.build_rule_based_card_context``). When ``is_wired`` is
+   False, the card renders inert (used by ``/operator/sessions/new``
+   and any other non-operator render path).
 #}
 <section class="card" id="rule-based-assignment">
   <h2>Rule Based Assignment</h2>
@@ -21,57 +23,138 @@
     attributes via rules.
   </p>
 
-  <p>
-    <label for="rule-based-ruleset">RuleSet</label>
-    <select id="rule-based-ruleset"
-            name="rule_set_id"
-            disabled
-            aria-disabled="true"
-            title="{{ rule_based_card.coming_in }}">
-      <option>Intra-group peer review (seeded — coming in PR 4)</option>
-    </select>
-  </p>
-  <p class="form-help" id="rule-based-description">
-    Reviewer and reviewee share tag1.
-  </p>
-
-  <p>
-    <label style="font-weight: normal;">
-      <input type="checkbox"
-             name="exclude_self_review"
-             value="true"
-             checked
-             disabled
-             aria-disabled="true"
-             title="{{ rule_based_card.coming_in }}">
-      Exclude self-review (when a reviewer's email matches a
-      reviewee's identifier)
-    </label>
-  </p>
-
-  {% if rule_based_card.assignment_count and rule_based_card.assignment_count > 0 %}
-    <p>
-      <label style="font-weight: normal;">
-        <input type="checkbox"
-               name="confirm_replace"
-               value="true"
-               disabled
-               aria-disabled="true"
-               title="{{ rule_based_card.coming_in }}">
-        Yes, replace the existing
-        <span class="pill pill-empty">{{ rule_based_card.assignment_count }} assignment{% if rule_based_card.assignment_count != 1 %}s{% endif %}</span>.
-      </label>
-    </p>
+  {% if rule_based_card.error_kind == "needs_confirm" %}
+    <div class="banner banner-error" id="rule-based-needs-confirm-banner">
+      <p style="margin: 0;">
+        Replace not confirmed. Tick the confirm checkbox below before
+        clicking Generate.
+      </p>
+    </div>
+  {% elif rule_based_card.error_kind == "missing_rule_set" %}
+    <div class="banner banner-error" id="rule-based-missing-ruleset-banner">
+      <p style="margin: 0;">
+        That RuleSet could not be loaded. Pick another and try again.
+      </p>
+    </div>
   {% endif %}
 
-  <div class="btn-pair" style="margin-top: 20px;">
-    <button class="btn secondary"
-            type="button"
-            disabled
-            aria-disabled="true"
-            title="{{ rule_based_card.coming_in }}">Generate</button>
-    <a class="btn secondary"
-       id="rule-based-edit"
-       href="{{ rule_based_card.edit_url }}">Edit ruleset</a>
-  </div>
+  {% if rule_based_card.is_wired %}
+    <form method="post"
+          action="/operator/sessions/{{ session.id }}/assignments/rule-based/generate">
+      <p>
+        <label for="rule-based-ruleset">RuleSet</label>
+        <select id="rule-based-ruleset" name="rule_set_id" required>
+          {% for option in rule_based_card.options %}
+            <option value="{{ option.id }}"
+                    {% if option.id == rule_based_card.selected_option_id %}selected{% endif %}
+                    data-description="{{ option.description }}"
+                    data-exclude-self-reviews="{{ 'true' if option.exclude_self_reviews else 'false' }}">{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </p>
+      {% set selected_description = "" %}
+      {% set selected_exclude_self = true %}
+      {% for option in rule_based_card.options %}
+        {% if option.id == rule_based_card.selected_option_id %}
+          {% set selected_description = option.description %}
+          {% set selected_exclude_self = option.exclude_self_reviews %}
+        {% endif %}
+      {% endfor %}
+      <p class="form-help" id="rule-based-description">
+        {{ selected_description }}
+      </p>
+
+      <p>
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 name="exclude_self_review"
+                 value="true"
+                 {% if selected_exclude_self %}checked{% endif %}>
+          Exclude self-review (when a reviewer's email matches a
+          reviewee's identifier)
+        </label>
+      </p>
+
+      {% if rule_based_card.needs_confirm_replace %}
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox"
+                   name="confirm_replace"
+                   value="true"
+                   required>
+            Yes, replace the existing
+            <span class="pill pill-empty">{{ rule_based_card.assignment_count }} assignment{% if rule_based_card.assignment_count != 1 %}s{% endif %}</span>.
+          </label>
+        </p>
+      {% endif %}
+
+      <div class="btn-pair" style="margin-top: 20px;">
+        <button class="btn secondary" type="submit">Generate</button>
+        <a class="btn secondary"
+           id="rule-based-edit"
+           href="{{ rule_based_card.edit_url }}">Edit ruleset</a>
+      </div>
+    </form>
+
+    {# Inline progressive enhancement: keep the description line and
+       the Exclude self-review checkbox in sync with the selected
+       RuleSet without a page reload. The form still works without
+       JS — the page reload after Generate re-renders the selected
+       option's defaults. #}
+    <script>
+      (function () {
+        var selector = document.getElementById("rule-based-ruleset");
+        if (!selector) return;
+        var description = document.getElementById("rule-based-description");
+        var checkbox = document.querySelector(
+          '#rule-based-assignment input[name="exclude_self_review"]'
+        );
+        selector.addEventListener("change", function () {
+          var option = selector.options[selector.selectedIndex];
+          if (description) {
+            description.textContent = option.dataset.description || "";
+          }
+          if (checkbox) {
+            checkbox.checked = option.dataset.excludeSelfReviews === "true";
+          }
+        });
+      })();
+    </script>
+
+    {% if rule_based_card.last_generated %}
+      <p class="form-help" id="rule-based-last-generated" style="margin-top: 12px;">
+        Last generated: {{ rule_based_card.last_generated.pair_count }} pair{% if rule_based_card.last_generated.pair_count != 1 %}s{% endif %}.
+      </p>
+    {% endif %}
+  {% else %}
+    <p>
+      <label for="rule-based-ruleset">RuleSet</label>
+      <select id="rule-based-ruleset"
+              name="rule_set_id"
+              disabled
+              aria-disabled="true"
+              title="{{ rule_based_card.coming_in }}">
+        <option>Intra-group peer review (seeded — coming in PR 4)</option>
+      </select>
+    </p>
+    <p class="form-help" id="rule-based-description">
+      Reviewer and reviewee share tag1.
+    </p>
+    <p>
+      <label style="font-weight: normal;">
+        <input type="checkbox" name="exclude_self_review" value="true"
+               checked disabled aria-disabled="true"
+               title="{{ rule_based_card.coming_in }}">
+        Exclude self-review (when a reviewer's email matches a
+        reviewee's identifier)
+      </label>
+    </p>
+    <div class="btn-pair" style="margin-top: 20px;">
+      <button class="btn secondary" type="button" disabled
+              aria-disabled="true"
+              title="{{ rule_based_card.coming_in }}">Generate</button>
+      <a class="btn secondary" id="rule-based-edit"
+         href="{{ rule_based_card.edit_url }}">Edit ruleset</a>
+    </div>
+  {% endif %}
 </section>
