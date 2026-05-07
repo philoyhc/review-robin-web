@@ -39,70 +39,90 @@ def upgrade() -> None:
     # Local import keeps the migration's dependency graph explicit and
     # avoids paying the import cost on chains that don't reach this
     # revision.
-    import json
-
     from app.services.rules.seeds import SEEDS
 
     bind = op.get_bind()
     now = datetime.now(timezone.utc)
 
+    # Lightweight column-typed table descriptors so SQLAlchemy's bind
+    # processors handle Boolean / JSON correctly across SQLite and
+    # Postgres. The full ORM models are too tightly coupled to current
+    # app state for migration-time use.
+    rule_sets = sa.table(
+        "rule_sets",
+        sa.column("id", sa.Integer),
+        sa.column("name", sa.String),
+        sa.column("description", sa.Text),
+        sa.column("scope", sa.String),
+        sa.column("owner_user_id", sa.Integer),
+        sa.column("is_seed", sa.Boolean),
+        sa.column("current_revision_id", sa.Integer),
+        sa.column("deleted_at", sa.DateTime),
+        sa.column("created_at", sa.DateTime),
+        sa.column("updated_at", sa.DateTime),
+    )
+    revisions = sa.table(
+        "rule_set_revisions",
+        sa.column("id", sa.Integer),
+        sa.column("rule_set_id", sa.Integer),
+        sa.column("revision_no", sa.Integer),
+        sa.column("combinator", sa.String),
+        sa.column("exclude_self_reviews", sa.Boolean),
+        sa.column("seed", sa.Integer),
+        sa.column("rules_json", sa.JSON),
+        sa.column("created_at", sa.DateTime),
+        sa.column("created_by_user_id", sa.Integer),
+    )
+
     for seed in SEEDS:
         bind.execute(
-            sa.text(
-                "INSERT INTO rule_sets "
-                "(name, description, scope, owner_user_id, is_seed, "
-                " current_revision_id, deleted_at, created_at, updated_at) "
-                "VALUES (:name, :description, 'seed', NULL, 1, "
-                "        NULL, NULL, :now, :now)"
-            ),
-            {"name": seed.name, "description": seed.description, "now": now},
+            rule_sets.insert().values(
+                name=seed.name,
+                description=seed.description,
+                scope="seed",
+                owner_user_id=None,
+                is_seed=True,
+                current_revision_id=None,
+                deleted_at=None,
+                created_at=now,
+                updated_at=now,
+            )
         )
         rule_set_id = bind.execute(
-            sa.text(
-                "SELECT id FROM rule_sets "
-                "WHERE name = :name AND is_seed = 1"
-            ),
-            {"name": seed.name},
+            sa.select(rule_sets.c.id).where(
+                sa.and_(
+                    rule_sets.c.name == seed.name,
+                    rule_sets.c.is_seed.is_(True),
+                )
+            )
         ).scalar_one()
 
         rules_payload = [rule.model_dump(mode="json") for rule in seed.rules]
         bind.execute(
-            sa.text(
-                "INSERT INTO rule_set_revisions "
-                "(rule_set_id, revision_no, combinator, "
-                " exclude_self_reviews, seed, rules_json, "
-                " created_at, created_by_user_id) "
-                "VALUES (:rule_set_id, 1, :combinator, "
-                "        :exclude_self_reviews, :seed, :rules_json, "
-                "        :now, NULL)"
-            ),
-            {
-                "rule_set_id": rule_set_id,
-                "combinator": seed.combinator.value,
-                "exclude_self_reviews": seed.options.excludeSelfReviews,
-                "seed": seed.options.seed,
-                # Both SQLite (TEXT-encoded) and Postgres (JSONB-encoded)
-                # accept a JSON-string blob through the JSON type adapter,
-                # but going through ``json.dumps`` keeps the column
-                # contents identical across dialects.
-                "rules_json": json.dumps(rules_payload),
-                "now": now,
-            },
+            revisions.insert().values(
+                rule_set_id=rule_set_id,
+                revision_no=1,
+                combinator=seed.combinator.value,
+                exclude_self_reviews=seed.options.excludeSelfReviews,
+                seed=seed.options.seed,
+                rules_json=rules_payload,
+                created_at=now,
+                created_by_user_id=None,
+            )
         )
         revision_id = bind.execute(
-            sa.text(
-                "SELECT id FROM rule_set_revisions "
-                "WHERE rule_set_id = :rule_set_id AND revision_no = 1"
-            ),
-            {"rule_set_id": rule_set_id},
+            sa.select(revisions.c.id).where(
+                sa.and_(
+                    revisions.c.rule_set_id == rule_set_id,
+                    revisions.c.revision_no == 1,
+                )
+            )
         ).scalar_one()
 
         bind.execute(
-            sa.text(
-                "UPDATE rule_sets SET current_revision_id = :rev "
-                "WHERE id = :rs"
-            ),
-            {"rev": revision_id, "rs": rule_set_id},
+            sa.update(rule_sets)
+            .where(rule_sets.c.id == rule_set_id)
+            .values(current_revision_id=revision_id)
         )
 
 
@@ -114,16 +134,30 @@ def downgrade() -> None:
     # forward FK ``rule_sets.current_revision_id → rule_set_revisions.id``
     # blocks the parent delete in the wrong order. Null the pointer
     # first, then delete revisions, then delete rule_sets.
+    rule_sets = sa.table(
+        "rule_sets",
+        sa.column("id", sa.Integer),
+        sa.column("is_seed", sa.Boolean),
+        sa.column("current_revision_id", sa.Integer),
+    )
+    revisions = sa.table(
+        "rule_set_revisions",
+        sa.column("rule_set_id", sa.Integer),
+    )
+
     bind.execute(
-        sa.text(
-            "UPDATE rule_sets SET current_revision_id = NULL "
-            "WHERE is_seed = 1"
+        sa.update(rule_sets)
+        .where(rule_sets.c.is_seed.is_(True))
+        .values(current_revision_id=None)
+    )
+    seed_ids_subquery = sa.select(rule_sets.c.id).where(
+        rule_sets.c.is_seed.is_(True)
+    )
+    bind.execute(
+        sa.delete(revisions).where(
+            revisions.c.rule_set_id.in_(seed_ids_subquery)
         )
     )
     bind.execute(
-        sa.text(
-            "DELETE FROM rule_set_revisions WHERE rule_set_id IN "
-            "(SELECT id FROM rule_sets WHERE is_seed = 1)"
-        )
+        sa.delete(rule_sets).where(rule_sets.c.is_seed.is_(True))
     )
-    bind.execute(sa.text("DELETE FROM rule_sets WHERE is_seed = 1"))
