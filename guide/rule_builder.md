@@ -26,7 +26,7 @@ that holds the selector + form.
 │   1. Match — reviewer.tag1 …                                                       │
 │   2. Filter — reviewer.email …                                                     │
 │                                                                                    │
-│   [ + Add MATCH ] [ + Add FILTER ] …                                               │
+│   [ + MATCH rule ] [ + FILTER rule ] …                                             │
 │                                                                                    │
 │   [ Copy ] [ Save ] [ Cancel ] [ Delete ]                                          │
 │   ↑ bottom-left, outside the body                                                  │
@@ -57,7 +57,7 @@ that holds the selector + form.
 
 4. **Body keeps its current single-column layout.** Combinator
    selector, Random seed (when applicable), Rules list, and the
-   "+ Add MATCH/FILTER/QUOTA/COMPOSITE" buttons render top-to-
+   "+ MATCH/FILTER/QUOTA/COMPOSITE rule" buttons render top-to-
    bottom inside the outer card, exactly as the current Segment
    13A-1 PR 1–3 implementation does, with these trims:
    - **Drop the "Combinator" heading.** The selector / read-only
