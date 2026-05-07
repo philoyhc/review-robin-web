@@ -100,7 +100,7 @@ def test_build_quick_setup_context_returns_four_slots(
         "settings",
     ]
     by_key = {slot.key: slot for slot in context.slots}
-    # PR A — Reviewers and Reviewees are live.
+    # PR A + PR B — Reviewers, Reviewees, and Assignments are live.
     assert by_key["reviewers"].is_wired is True
     assert by_key["reviewers"].wire_url == (
         f"/operator/sessions/{review_session.id}/quick-setup/reviewers"
@@ -110,9 +110,12 @@ def test_build_quick_setup_context_returns_four_slots(
     assert by_key["reviewees"].wire_url == (
         f"/operator/sessions/{review_session.id}/quick-setup/reviewees"
     )
-    # Assignments + Settings remain inert.
-    assert by_key["assignments"].is_wired is False
-    assert by_key["assignments"].coming_in == "Wired in Segment 11J PR B"
+    assert by_key["assignments"].is_wired is True
+    assert by_key["assignments"].wire_url == (
+        f"/operator/sessions/{review_session.id}/quick-setup/assignments"
+    )
+    assert by_key["assignments"].coming_in is None
+    # Settings remains inert pending Segment 12A PR 6.
     assert by_key["settings"].is_wired is False
     assert by_key["settings"].coming_in == "Wired in Segment 12A PR 6"
     # Default state is not disabled in draft.

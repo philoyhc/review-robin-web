@@ -39,44 +39,91 @@
   </div>
   {% if slot.mode == "rule_or_csv" %}
     {# Slot 3 — Assignments. Rule selector default; CSV upload
-       alternative. The selector renders FullMatrix today.
-       Wiring is Segment 11J PR B; controls stay disabled until then. #}
-    <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
-      Generate by rule, or upload a CSV.
-    </p>
-    <div class="quick-setup-slot-controls">
-      <select disabled
-              aria-disabled="true"
-              {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
-        <option>Full matrix</option>
-      </select>
-      <span class="muted">or</span>
-      <input type="file"
-             accept=".csv"
-             disabled
-             aria-disabled="true"
-             {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
-      <button type="button"
-              class="btn secondary"
-              disabled
-              aria-disabled="true"
-              {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>Submit</button>
-    </div>
-    <p style="margin: var(--space-2) 0 0 0;">
-      <label style="font-weight: normal;">
-        <input type="checkbox"
-               name="exclude_self_review"
+       alternative. The selector renders FullMatrix today; richer
+       rule menu lands with Segment 13.
+
+       Single submit; the route auto-detects mode from the form
+       payload — when ``file`` is attached, the route runs the
+       manual-CSV pipeline; when it's empty, the route generates
+       full-matrix from the stored rule. #}
+    {% if slot.is_wired %}
+      <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
+        Generate by rule, or upload a CSV.
+      </p>
+      <form method="post"
+            action="{{ slot.wire_url }}"
+            enctype="multipart/form-data">
+        <div class="quick-setup-slot-controls">
+          <select name="rule">
+            <option value="full_matrix">Full matrix</option>
+          </select>
+          <span class="muted">or</span>
+          <input type="file" name="file" accept=".csv">
+          {% if not slot.cascade_message %}
+            <button type="submit" class="btn secondary">Submit</button>
+          {% endif %}
+        </div>
+        <p style="margin: var(--space-2) 0 0 0;">
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="exclude_self_review" value="true">
+            Exclude self-review
+          </label>
+        </p>
+        <div class="banner banner-warning banner-scroll-target"
+             id="quick-setup-{{ slot.key }}-confirm-banner"
+             {% if not slot.cascade_message %}hidden{% endif %}
+             style="margin-top: var(--space-2);">
+          {% if slot.cascade_message %}
+            <p style="margin: 0 0 var(--space-2) 0;">{{ slot.cascade_message }}</p>
+            <p style="margin: 0 0 var(--space-2) 0;">
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm_replace" value="true" required>
+                Yes, replace.
+              </label>
+            </p>
+            <div style="display: flex; gap: var(--space-2); justify-content: flex-end;">
+              <a class="btn alert" href="{{ slot.cancel_url }}">Cancel</a>
+              <button type="submit" class="btn danger-solid">Confirm replacement</button>
+            </div>
+          {% endif %}
+        </div>
+      </form>
+    {% else %}
+      <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
+        Generate by rule, or upload a CSV.
+      </p>
+      <div class="quick-setup-slot-controls">
+        <select disabled
+                aria-disabled="true"
+                {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
+          <option>Full matrix</option>
+        </select>
+        <span class="muted">or</span>
+        <input type="file"
+               accept=".csv"
                disabled
                aria-disabled="true"
                {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
-        Exclude self-review
-      </label>
-    </p>
-    {# Dormant confirm-banner placeholder — populated when 11J PR B
-       wires the slot. Markup contract pinned for the wiring patch. #}
-    <div class="banner banner-warning banner-scroll-target"
-         id="quick-setup-{{ slot.key }}-confirm-banner"
-         hidden></div>
+        <button type="button"
+                class="btn secondary"
+                disabled
+                aria-disabled="true"
+                {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>Submit</button>
+      </div>
+      <p style="margin: var(--space-2) 0 0 0;">
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 name="exclude_self_review"
+                 disabled
+                 aria-disabled="true"
+                 {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
+          Exclude self-review
+        </label>
+      </p>
+      <div class="banner banner-warning banner-scroll-target"
+           id="quick-setup-{{ slot.key }}-confirm-banner"
+           hidden></div>
+    {% endif %}
   {% elif slot.is_wired %}
     {# Slots 1, 2 (file upload + Submit) — live wiring. The cascade-
        confirmation banner-warning renders inside the form so the

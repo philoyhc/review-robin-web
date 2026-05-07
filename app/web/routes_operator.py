@@ -761,6 +761,125 @@ async def _handle_quick_setup_import(
     )
 
 
+@router.post(
+    "/sessions/{session_id}/quick-setup/assignments",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def quick_setup_assignments_submit(
+    file: UploadFile | None = File(default=None),
+    rule: str = Form(default="full_matrix"),
+    exclude_self_review: str | None = Form(default=None),
+    confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Quick Setup card slot 3 (Assignments) handler.
+
+    Auto-detects mode from the form payload: when ``file`` is
+    attached and non-empty, the route runs the manual-CSV pipeline;
+    otherwise it generates assignments from the selected rule
+    (FullMatrix only today; richer rule menu lands in Segment 13).
+
+    Lifecycle / parse / confirm-required failures 303 → Home with
+    ``?quick_setup_error=assignments&quick_setup_reason=...``; the
+    GET render places the corresponding ``.banner.banner-error``
+    inside the slot. Success 303s back to Home with no flag — the
+    slot's count + active-rule indicator updates in place.
+    """
+
+    home_url = f"/operator/sessions/{review_session.id}"
+    fragment = "#quick-setup-assignments"
+
+    def error_redirect(reason: str) -> RedirectResponse:
+        return RedirectResponse(
+            url=(
+                f"{home_url}?quick_setup_error=assignments"
+                f"&quick_setup_reason={reason}{fragment}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    if not lifecycle.is_editable(review_session):
+        return error_redirect("lifecycle")
+
+    file_content = b""
+    if file is not None and file.filename:
+        file_content = await file.read()
+
+    use_csv_mode = bool(file_content)
+    existing = assignments.existing_count(db, review_session.id)
+    if existing > 0 and confirm_replace != "true":
+        return error_redirect("needs_confirm")
+    if existing > 0:
+        try:
+            _require_response_loss_ack(
+                db, review_session, acknowledge_response_loss
+            )
+        except HTTPException:
+            return error_redirect("needs_confirm")
+
+    exclude_self = exclude_self_review == "true"
+    reviewers = assignments.list_reviewers(db, review_session.id)
+    reviewees = assignments.list_reviewees(db, review_session.id)
+
+    if use_csv_mode:
+        assert file is not None  # narrowed by ``use_csv_mode`` guard
+        result = assignments.parse_manual_csv(
+            file_content, reviewers, reviewees
+        )
+        if result.is_blocked or any(
+            issue.severity == "error" for issue in result.issues
+        ):
+            return error_redirect("parse")
+        rows = result.rows
+        if exclude_self:
+            rows = [
+                r
+                for r in rows
+                if r.reviewer_email.casefold()
+                != r.reviewee_identifier.casefold()
+            ]
+        pairs, contexts, includes = assignments.manual_rows_to_pairs(
+            rows, reviewers, reviewees
+        )
+        assignments.replace_assignments(
+            db,
+            review_session=review_session,
+            user=user,
+            pairs=pairs,
+            mode=AssignmentMode.manual,
+            correlation_id=request_correlation_id(),
+            filename=file.filename,
+            contexts=contexts,
+            includes=includes,
+        )
+    else:
+        # Rule mode. ``rule`` is FullMatrix-only today; richer menu
+        # lands in Segment 13. Reject unknown values defensively.
+        if rule != "full_matrix":
+            return error_redirect("parse")
+        pairs, excluded_counts = assignments.generate_full_matrix(
+            reviewers, reviewees, exclude_self_review=exclude_self
+        )
+        assignments.replace_assignments(
+            db,
+            review_session=review_session,
+            user=user,
+            pairs=pairs,
+            mode=AssignmentMode.full_matrix,
+            correlation_id=request_correlation_id(),
+            excluded_counts=excluded_counts,
+        )
+
+    return RedirectResponse(
+        url=f"{home_url}{fragment}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @router.get("/sessions/{session_id}/assignments", response_class=HTMLResponse)
 def assignments_hub(
     request: Request,

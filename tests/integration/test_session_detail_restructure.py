@@ -529,13 +529,18 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     # Four slots render with stable fragment anchors.
     for key in ("reviewers", "reviewees", "assignments", "settings"):
         assert f'id="quick-setup-{key}"' in body
-    # Inert slots carry wiring tooltips; the live slots have shed theirs.
-    assert "Wired in Segment 11J PR A" not in body  # reviewers/reviewees live
-    assert "Wired in Segment 11J PR B" in body  # assignments still inert
-    assert "Wired in Segment 12A PR 6" in body  # settings still inert
-    # Live slot's form posts to its wire URL.
+    # Slot 4 (Settings) remains inert pending Segment 12A PR 6;
+    # slots 1-3 are wired and have shed their wiring tooltips.
+    assert "Wired in Segment 11J PR A" not in body
+    assert "Wired in Segment 11J PR B" not in body
+    assert "Wired in Segment 12A PR 6" in body
+    # Live slots' forms post to their wire URLs.
     assert (
         f'action="/operator/sessions/{review_session.id}/quick-setup/reviewers"'
+        in body
+    )
+    assert (
+        f'action="/operator/sessions/{review_session.id}/quick-setup/assignments"'
         in body
     )
     # Dormant banner containers per slot per spec/assumptions.md.

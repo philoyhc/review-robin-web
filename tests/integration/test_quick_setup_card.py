@@ -377,3 +377,154 @@ def test_reviewers_submit_on_ready_routes_to_lifecycle_banner(
 
     body = operator.get(location).text
     assert "Pause the session before applying setup changes." in body
+
+
+# --------------------------------------------------------------------------- #
+# Assignments slot — Segment 11J PR B
+# --------------------------------------------------------------------------- #
+
+
+MANUAL_CSV = (
+    b"ReviewerEmail,RevieweeEmail\n"
+    b"alice@example.edu,carol@example.edu\n"
+)
+BAD_MANUAL_CSV = b"WrongHeader,Whatever\nfoo,bar\n"
+
+
+def test_assignments_rule_mode_golden_path(
+    client: TestClient, db: Session
+) -> None:
+    """Submitting Slot 3 with no file falls back to rule mode and
+    generates a full-matrix assignment set. Success: 303 → Home,
+    no flash banner; the slot's count + rule indicator updates in
+    place."""
+
+    review_session = _seed_pair(client, db, code="qs-a-rule")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/assignments",
+        data={"rule": "full_matrix"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        "#quick-setup-assignments"
+    )
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    assert "Assignments" in body and "1 currently, full_matrix" in body
+    # Error banner stays hidden.
+    assert (
+        'id="quick-setup-assignments-error-banner"' in body
+        and "hidden" in body
+    )
+
+
+def test_assignments_rule_mode_replace_requires_confirm(
+    client: TestClient, db: Session
+) -> None:
+    """Re-submitting Slot 3 when an assignment set already exists
+    triggers the replace-confirmation banner and rejects the
+    second submit unless ``confirm_replace=true`` is set."""
+
+    review_session = _seed_pair(client, db, code="qs-a-confirm")
+    # First generate so the slot is populated.
+    client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/assignments",
+        data={"rule": "full_matrix"},
+        follow_redirects=False,
+    )
+    # Now the cascade banner-warning renders inside the slot.
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    assert "This will replace 1 existing assignment." in body
+    cancel_href = (
+        f'href="/operator/sessions/{review_session.id}'
+        "#quick-setup-assignments\""
+    )
+    assert cancel_href in body
+    # Re-submit without ``confirm_replace`` → needs_confirm.
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/assignments",
+        data={"rule": "full_matrix"},
+        follow_redirects=False,
+    )
+    location = response.headers["location"]
+    assert "quick_setup_error=assignments" in location
+    assert "quick_setup_reason=needs_confirm" in location
+    body = client.get(location).text
+    assert (
+        "Tick the confirmation box to replace existing assignments."
+        in body
+    )
+    # Re-submit with confirm → applies, no error.
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/assignments",
+        data={"rule": "full_matrix", "confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "quick_setup_error" not in response.headers["location"]
+
+
+def test_assignments_csv_mode_golden_path(
+    client: TestClient, db: Session
+) -> None:
+    """Uploading a non-empty file flips the route into CSV mode and
+    runs the manual-import pipeline. Success path matches rule mode
+    — count updates in place, no flash banner."""
+
+    review_session = _seed_pair(client, db, code="qs-a-csv")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/assignments",
+        files={"file": ("a.csv", MANUAL_CSV, "text/csv")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    assert "Assignments" in body and "1 currently, manual" in body
+
+
+def test_assignments_csv_mode_parse_error_routes_to_scoped_banner(
+    client: TestClient, db: Session
+) -> None:
+    """Bad CSV: 303 → Home with parse error scoped to slot 3 only.
+    Reviewers / Reviewees error banners stay hidden."""
+
+    review_session = _seed_pair(client, db, code="qs-a-parse")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/assignments",
+        files={"file": ("bad.csv", BAD_MANUAL_CSV, "text/csv")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert "quick_setup_error=assignments" in location
+    assert "quick_setup_reason=parse" in location
+    body = client.get(location).text
+    assert "Could not import assignments." in body
+    # Reviewers slot not affected.
+    assert "Could not import reviewers." not in body
+
+
+def test_assignments_submit_on_ready_routes_to_lifecycle_banner(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """On ``ready`` the route rejects mutating submits at the
+    service layer regardless of whether the card is visually
+    unlocked. The rejection scopes to slot 3."""
+
+    operator = make_client(alice)
+    review_session = _seed_pair(operator, db, code="qs-a-ready")
+    _activate(operator, db, review_session)
+
+    response = operator.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/assignments",
+        data={"rule": "full_matrix", "confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert "quick_setup_error=assignments" in location
+    assert "quick_setup_reason=lifecycle" in location
+    body = operator.get(location).text
+    assert "Pause the session before applying setup changes." in body
