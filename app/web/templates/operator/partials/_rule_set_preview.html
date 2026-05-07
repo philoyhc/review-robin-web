@@ -1,0 +1,78 @@
+{# RuleSet preview partial — Segment 13A PR 7.
+
+   Renders a ``RulePreview`` from
+   ``app/services/rules/preview.py`` into the editor's right
+   column. The editor template renders this on initial load; the
+   editor's JS hook replaces this fragment in place after each
+   edit by POSTing to ``…/rule-based/preview`` and swapping the
+   container's innerHTML.
+
+   Reads ``preview`` from the template context.
+#}
+<div id="rule-based-preview-body">
+  {% if preview is none %}
+    <p class="form-help">Preview unavailable.</p>
+  {% elif preview.populations_empty %}
+    <p class="form-help">
+      Add reviewers and reviewees on the
+      <a href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
+      and
+      <a href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+      pages to see a preview here.
+    </p>
+  {% else %}
+    <p>
+      <strong>{{ preview.pair_count }} unique pair{% if preview.pair_count != 1 %}s{% endif %}</strong>
+      would be generated.
+    </p>
+
+    {% if preview.distribution_per_reviewer %}
+      <h3 style="margin-top: 16px;">Per reviewer</h3>
+      <ul style="margin: 0; padding-left: 20px;">
+        {% for bucket in preview.distribution_per_reviewer %}
+          <li>
+            {{ bucket.individuals }} reviewer{% if bucket.individuals != 1 %}s{% endif %}
+            →
+            <span class="pill pill-info">{{ bucket.pair_count }} pair{% if bucket.pair_count != 1 %}s{% endif %} each</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if preview.distribution_per_reviewee %}
+      <h3 style="margin-top: 16px;">Per reviewee</h3>
+      <ul style="margin: 0; padding-left: 20px;">
+        {% for bucket in preview.distribution_per_reviewee %}
+          <li>
+            {{ bucket.individuals }} reviewee{% if bucket.individuals != 1 %}s{% endif %}
+            →
+            <span class="pill pill-info">{{ bucket.pair_count }} pair{% if bucket.pair_count != 1 %}s{% endif %} each</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if preview.sampled_pairs %}
+      <h3 style="margin-top: 16px;">Sampled pairs</h3>
+      <p class="form-help">First {{ preview.sampled_pairs | length }}, in deterministic order.</p>
+      <ul style="margin: 0; padding-left: 20px;">
+        {% for pair in preview.sampled_pairs %}
+          <li>
+            <code>{{ pair.reviewer_email }}</code>
+            &mdash;
+            <code>{{ pair.reviewee_identifier }}</code>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if preview.warnings %}
+      <h3 style="margin-top: 16px;">Warnings</h3>
+      <ul style="margin: 0; padding-left: 20px;">
+        {% for warning in preview.warnings %}
+          <li class="form-help">{{ warning }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+</div>

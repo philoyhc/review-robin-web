@@ -237,15 +237,70 @@
     }
 
     document.getElementById("rule-based-editor-add-match")
-      .addEventListener("click", function () { appendTopLevel("MATCH"); });
+      .addEventListener("click", function () { appendTopLevel("MATCH"); refetchPreview(); });
     document.getElementById("rule-based-editor-add-filter")
-      .addEventListener("click", function () { appendTopLevel("FILTER"); });
+      .addEventListener("click", function () { appendTopLevel("FILTER"); refetchPreview(); });
     document.getElementById("rule-based-editor-add-quota")
-      .addEventListener("click", function () { appendTopLevel("QUOTA"); });
+      .addEventListener("click", function () { appendTopLevel("QUOTA"); refetchPreview(); });
     var compositeBtn = document.getElementById("rule-based-editor-add-composite");
     if (compositeBtn) {
-      compositeBtn.addEventListener("click", function () { appendTopLevel("COMPOSITE"); });
+      compositeBtn.addEventListener("click", function () { appendTopLevel("COMPOSITE"); refetchPreview(); });
     }
+
+    // Segment 13A PR 7 — live preview hook.
+    //
+    // On any form-element change inside the editor, refresh the
+    // hidden rules_json field, then POST it to the preview
+    // endpoint and swap the preview container's innerHTML with
+    // the response. Debounced so a fast edit (e.g. typing in an
+    // operand) doesn't flood the server.
+    var previewContainer = document.getElementById(
+      "rule-based-editor-preview-container"
+    );
+    var previewUrl = form.dataset.previewUrl;
+    var previewSourceId = form.dataset.sourceRuleSetId;
+    var pendingPreview = null;
+    function refetchPreview() {
+      if (!previewContainer || !previewUrl) return;
+      refreshHidden();
+      if (pendingPreview) clearTimeout(pendingPreview);
+      pendingPreview = setTimeout(function () {
+        var body = new URLSearchParams();
+        body.set("rule_set_id", previewSourceId || "");
+        body.set("combinator", document.getElementById(
+          "rule-based-editor-combinator"
+        ).value);
+        var excludeSelf = document.getElementById(
+          "rule-based-editor-exclude-self"
+        );
+        body.set(
+          "exclude_self_reviews",
+          excludeSelf && excludeSelf.checked ? "true" : "false"
+        );
+        var seedField = document.getElementById("rule-based-editor-seed");
+        body.set("seed", seedField ? seedField.value : "");
+        body.set("rules_json", hidden.value);
+        fetch(previewUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: body,
+          credentials: "same-origin",
+        }).then(function (response) {
+          if (!response.ok) return null;
+          return response.text();
+        }).then(function (html) {
+          if (html != null) previewContainer.innerHTML = html;
+        }).catch(function () {
+          /* network error — leave the prior preview in place */
+        });
+      }, 250);
+    }
+
+    // Wire change events on every form element inside the editor.
+    form.addEventListener("change", refetchPreview);
+    form.addEventListener("input", refetchPreview);
 
     // Initial sync so the hidden field is populated even if the
     // operator clicks Save As without touching anything.
