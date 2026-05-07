@@ -1,13 +1,22 @@
-{# Quick Setup card — Segment 11J PR A.
+{# Quick Setup card — Segment 11J PR A; consolidated-checkbox revision.
 
    Renders the four-slot Quick Setup card. Slots whose
    ``slot.is_wired=True`` carry a live POST form to ``slot.wire_url``;
    inert slots render disabled controls and a wiring-tooltip.
 
+   Replacement confirmation lives in **one card-level checkbox** at
+   the top of the body wrapper rather than per-slot inline banners —
+   the operator ticks once and any of the slot Submits proceed
+   through the same ``confirm_replace=true`` route gate. The
+   checkbox state mirrors into each form's hidden ``confirm_replace``
+   input via inline JS on the form's submit event; the route's
+   server-side gate stays the source of truth.
+
    Status awareness collapses on a single signal — ``is_locked`` —
    so the card's visual state is the same in every editable-
    conceivable lifecycle state. The body wrapper picks up
-   ``.locked`` greying when locked; the Lock / Unlock toggle in the
+   ``.locked`` greying when locked (which now includes the H2 title
+   and the confirmation checkbox); the Lock / Unlock toggle in the
    footer flips it via ``POST /operator/sessions/{id}/quick-setup/lock``
    (a per-session ``HttpOnly`` cookie carries the operator's last
    choice).
@@ -52,16 +61,16 @@
       </p>
       <form method="post"
             action="{{ slot.wire_url }}"
-            enctype="multipart/form-data">
+            enctype="multipart/form-data"
+            data-quick-setup-form>
+        <input type="hidden" name="confirm_replace" value="">
         <div class="quick-setup-slot-controls">
           <select name="rule">
             <option value="full_matrix">Full matrix</option>
           </select>
           <span class="muted">or</span>
           <input type="file" name="file" accept=".csv">
-          {% if not slot.cascade_message %}
-            <button type="submit" class="btn secondary">Submit</button>
-          {% endif %}
+          <button type="submit" class="btn secondary">Submit</button>
         </div>
         <p style="margin: var(--space-2) 0 0 0;">
           <label style="font-weight: normal;">
@@ -69,24 +78,6 @@
             Exclude self-review
           </label>
         </p>
-        <div class="banner banner-warning banner-scroll-target"
-             id="quick-setup-{{ slot.key }}-confirm-banner"
-             {% if not slot.cascade_message %}hidden{% endif %}
-             style="margin-top: var(--space-2);">
-          {% if slot.cascade_message %}
-            <p style="margin: 0 0 var(--space-2) 0;">{{ slot.cascade_message }}</p>
-            <p style="margin: 0 0 var(--space-2) 0;">
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm_replace" value="true" required>
-                Yes, replace.
-              </label>
-            </p>
-            <div style="display: flex; gap: var(--space-2); justify-content: flex-end;">
-              <a class="btn alert" href="{{ slot.cancel_url }}">Cancel</a>
-              <button type="submit" class="btn danger-solid">Confirm replacement</button>
-            </div>
-          {% endif %}
-        </div>
       </form>
     {% else %}
       <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
@@ -120,44 +111,20 @@
           Exclude self-review
         </label>
       </p>
-      <div class="banner banner-warning banner-scroll-target"
-           id="quick-setup-{{ slot.key }}-confirm-banner"
-           hidden></div>
     {% endif %}
   {% elif slot.is_wired %}
-    {# Slots 1, 2 (file upload + Submit) — live wiring. The cascade-
-       confirmation banner-warning renders inside the form so the
-       confirm checkbox + cancel + submit live in one visual unit
-       (per spec/quick_setup_card_spec.md "Confirmation UI: inline
-       within the slot, not a modal dialog"). When the slot is
-       empty, the banner is dormant and the submit is a plain
-       Submit button. #}
+    {# Slots 1, 2 (file upload + Submit) — live wiring. Replacement
+       confirmation lives at the card level (checkbox above the slot
+       grid); the form's hidden ``confirm_replace`` input is set on
+       submit by the inline script below. #}
     <form method="post"
           action="{{ slot.wire_url }}"
-          enctype="multipart/form-data">
+          enctype="multipart/form-data"
+          data-quick-setup-form>
+      <input type="hidden" name="confirm_replace" value="">
       <div class="quick-setup-slot-controls">
         <input type="file" name="file" accept=".csv" required>
-        {% if not slot.cascade_message %}
-          <button type="submit" class="btn secondary">Submit</button>
-        {% endif %}
-      </div>
-      <div class="banner banner-warning banner-scroll-target"
-           id="quick-setup-{{ slot.key }}-confirm-banner"
-           {% if not slot.cascade_message %}hidden{% endif %}
-           style="margin-top: var(--space-2);">
-        {% if slot.cascade_message %}
-          <p style="margin: 0 0 var(--space-2) 0;">{{ slot.cascade_message }}</p>
-          <p style="margin: 0 0 var(--space-2) 0;">
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm_replace" value="true" required>
-              Yes, replace.
-            </label>
-          </p>
-          <div style="display: flex; gap: var(--space-2); justify-content: flex-end;">
-            <a class="btn alert" href="{{ slot.cancel_url }}">Cancel</a>
-            <button type="submit" class="btn danger-solid">Confirm replacement</button>
-          </div>
-        {% endif %}
+        <button type="submit" class="btn secondary">Submit</button>
       </div>
     </form>
   {% else %}
@@ -175,20 +142,36 @@
               aria-disabled="true"
               {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>Submit</button>
     </div>
-    <div class="banner banner-warning banner-scroll-target"
-         id="quick-setup-{{ slot.key }}-confirm-banner"
-         hidden></div>
   {% endif %}
 </section>
 {%- endmacro %}
 
 <div class="card" id="quick-setup">
-  <h2>{{ quick_setup.title }}</h2>
-  <p class="form-help">{{ quick_setup.description }}</p>
   {# Body wrapper carries ``.locked`` greying when the card is
-     locked. The Lock / Unlock button below sits outside this wrapper
-     so it stays vivid even while the body is greyed. #}
+     locked. The H2 title + replacement-confirmation checkbox both
+     sit inside the wrapper so they grey along with the slot
+     controls. The Lock / Unlock button below sits outside this
+     wrapper so it stays vivid even while the body is greyed. #}
   <div class="quick-setup-body{% if quick_setup.is_locked %} locked{% endif %}">
+    <h2>{{ quick_setup.title }}</h2>
+    <p class="form-help">{{ quick_setup.description }}</p>
+    {# Card-level replacement-confirmation checkbox. One source of
+       truth for "I am OK overwriting whatever's already in these
+       slots." Inline JS below copies its state into each slot
+       form's hidden ``confirm_replace`` input on submit; the route's
+       server-side ``confirm_replace == "true"`` gate stays the
+       source of truth.
+
+       Sits inside the locked-body wrapper so the operator can't
+       interact with it (or accidentally tick it) while the card
+       is locked. #}
+    <p class="form-help">
+      <label style="font-weight: normal;">
+        <input type="checkbox" id="quick-setup-confirm-replace-toggle">
+        This will replace any existing reviewers, reviewees,
+        assignments or settings, according to what is uploaded.
+      </label>
+    </p>
     <div class="quick-setup-top-grid">
       <div class="quick-setup-top-grid-col">
         {% for slot in quick_setup.slots if slot.key in ("reviewers", "reviewees") %}
@@ -230,3 +213,21 @@
     </div>
   {% endif %}
 </div>
+
+{# Mirror the card-level confirmation checkbox into each slot
+   form's hidden ``confirm_replace`` input on submit. Server-side
+   ``confirm_replace == "true"`` gate stays the source of truth;
+   this just spares the operator from per-slot bookkeeping. #}
+<script>
+  (function () {
+    var toggle = document.getElementById("quick-setup-confirm-replace-toggle");
+    if (!toggle) return;
+    var forms = document.querySelectorAll("[data-quick-setup-form]");
+    forms.forEach(function (form) {
+      form.addEventListener("submit", function () {
+        var hidden = form.querySelector('input[name="confirm_replace"]');
+        if (hidden) hidden.value = toggle.checked ? "true" : "";
+      });
+    });
+  })();
+</script>

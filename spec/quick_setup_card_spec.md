@@ -51,22 +51,19 @@ Each CSV's expected schema (column names, required vs. optional fields, encoding
 
 **Per-slot, replace semantics.** Submitting a slot replaces the entire corresponding dataset for the session. Merge semantics are not supported in this card; per-record edits remain on the per-entity Setup pages.
 
-**Empty slot, populated submission.** No confirmation. Process directly.
+**Replacement confirmation.** A single card-level checkbox sits above the slot grid, inside the `.quick-setup-body` wrapper:
 
-**Populated slot, submission.** An inline confirmation step appears before processing:
-- For Reviewers: "This will replace 8 existing reviewers. Replace?"
-- For Reviewees: "This will replace 13 existing reviewees. Replace?"
-- For Assignments: "This will replace 104 existing assignments. Replace?"
+> ☐ This will replace any existing reviewers, reviewees, assignments or settings, according to what is uploaded.
 
-**Cascading effects.** Replacing reviewers or reviewees may invalidate existing assignments (if assignments reference reviewer/reviewee IDs that no longer exist or have changed). The confirmation must name the cascade explicitly:
+Submitting any slot reads the checkbox state and posts it as `confirm_replace=true|""`. The route gate stays the source of truth: when `existing > 0` and `confirm_replace != "true"`, the submit 303s with `?quick_setup_error={kind}&quick_setup_reason=needs_confirm` and the slot's banner-error directs the operator at the card-level checkbox.
 
-- Replacing Reviewers when assignments exist: "This will replace 8 reviewers. 104 existing assignments will be cleared (they reference the current reviewers)."
-- Replacing Reviewees when assignments exist: same pattern.
-- Replacing Assignments: no cascade; assignments are leaf data.
+**Empty-slot submissions** ignore the checkbox — the route gate doesn't fire when nothing's there to replace.
 
-The cascading clearance happens automatically as part of the replacement transaction. The card does not auto-regenerate assignments after a reviewer/reviewee replacement; the operator returns to Slot 3 to regenerate or re-upload.
+**Cascading effects.** Replacing reviewers or reviewees automatically clears existing assignments (they reference reviewer/reviewee IDs); replacing assignments has no cascade (assignments are leaf data). The cascade happens inside the replacement transaction; the card does not auto-regenerate assignments after a reviewer/reviewee replacement, and the operator returns to Slot 3 to regenerate or re-upload.
 
-**Confirmation UI.** Inline within the slot, not a modal dialog. The submit button transforms into a "Confirm replacement" button (or similar) with a Cancel adjacent. Avoids the dismissal hazards of modal dialogs and keeps the operator's context.
+The single card-level checkbox covers the cascade implicitly — its copy ("any existing reviewers, reviewees, assignments or settings") names every entity that might be cleared by any combination of slot uploads. Per-slot inline cascade banners (formerly the `banner-warning` per slot) are not used.
+
+**Locked state.** The card-level checkbox sits inside `.quick-setup-body`, so it greys along with the H2 title and slot controls when the card is locked.
 
 ### Result reporting
 
@@ -115,7 +112,7 @@ The card does not appear in the page taxonomy or the chrome. The chrome (two-row
 
 - Reuse the existing per-entity CSV parsing and validation modules. The card is a UI affordance over the same import paths the Setup pages already expose.
 - Reuse the cascading-clearance logic that the per-entity pages already implement (or should implement) when reviewers/reviewees are replaced — the card should not introduce a parallel cascade implementation.
-- The card's locked-state styling is a single `.quick-setup-body.locked` body wrapper applied uniformly across `draft` / `validated` / `ready`. The Lock / Unlock toggle is the consistent affordance; lifecycle-driven differences live in the description copy and the route layer's `_require_editable` rejection, not in a separate visual primitive.
-- Confirmation UI should follow whatever pattern Edit Session and other destructive operations on Home use, for consistency.
+- The card's locked-state styling is a single `.quick-setup-body.locked` body wrapper applied uniformly across `draft` / `validated` / `ready`, and includes the H2 title + the card-level confirmation checkbox alongside the slot controls. The Lock / Unlock toggle is the consistent affordance; lifecycle-driven differences live in the description copy and the route layer's `_require_editable` rejection, not in a separate visual primitive.
+- The card-level confirmation checkbox is a plain `<input type="checkbox">` outside any slot form. Inline JS on each form's `submit` event mirrors the checkbox state into a hidden `confirm_replace` input on the form. Server-side `confirm_replace == "true"` gate stays the source of truth — the JS just spares the operator from per-slot bookkeeping.
 
 The intent throughout: Quick Setup is a thin convenience surface over existing import primitives. It should not own meaningful logic of its own.

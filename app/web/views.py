@@ -859,13 +859,6 @@ class QuickSetupSlot:
     """``"Wired in Segment 11J PR A"``-style tooltip while
     ``is_wired=False``. ``None`` once wired."""
 
-    cascade_message: str | None = None
-    """Cascade-aware "this will replace N existing X" copy. Populated
-    when ``count > 0`` and the slot is wired; rendered as the inline
-    ``banner-warning`` confirmation surface alongside the slot's
-    submit form. ``None`` when the slot is empty (no confirmation
-    required) or when the slot is inert."""
-
     error_message: str | None = None
     """Populated when the operator's last submit for this slot was
     rejected (parse / validation failure, or a lifecycle rejection
@@ -875,8 +868,7 @@ class QuickSetupSlot:
 
     cancel_url: str | None = None
     """Clean Home URL with this slot's fragment anchor. Used as the
-    Cancel target for both the cascade-confirmation banner and the
-    error banner. Stable across renders."""
+    Cancel target for the error banner. Stable across renders."""
 
 
 @dataclass(frozen=True)
@@ -966,21 +958,6 @@ def build_quick_setup_context(
             return None
         return _quick_setup_error_message(slot_key, error_reason)
 
-    reviewers_cascade = cascade_message_for_replace(
-        "reviewers",
-        reviewer_count=reviewer_count,
-        assignment_count=assignment_count,
-    )
-    reviewees_cascade = cascade_message_for_replace(
-        "reviewees",
-        reviewee_count=reviewee_count,
-        assignment_count=assignment_count,
-    )
-    assignments_cascade = cascade_message_for_replace(
-        "assignments",
-        assignment_count=assignment_count,
-    )
-
     slots = [
         QuickSetupSlot(
             key="reviewers",
@@ -995,7 +972,6 @@ def build_quick_setup_context(
             is_wired=True,
             wire_url=f"/operator/sessions/{sid}/quick-setup/reviewers",
             coming_in=None,
-            cascade_message=reviewers_cascade,
             error_message=_error_for("reviewers"),
             cancel_url=cancel_url_for("reviewers"),
         ),
@@ -1012,7 +988,6 @@ def build_quick_setup_context(
             is_wired=True,
             wire_url=f"/operator/sessions/{sid}/quick-setup/reviewees",
             coming_in=None,
-            cascade_message=reviewees_cascade,
             error_message=_error_for("reviewees"),
             cancel_url=cancel_url_for("reviewees"),
         ),
@@ -1025,7 +1000,6 @@ def build_quick_setup_context(
             is_wired=True,
             wire_url=f"/operator/sessions/{sid}/quick-setup/assignments",
             coming_in=None,
-            cascade_message=assignments_cascade,
             error_message=_error_for("assignments"),
             cancel_url=cancel_url_for("assignments"),
         ),
@@ -1038,7 +1012,6 @@ def build_quick_setup_context(
             is_wired=False,
             wire_url=None,
             coming_in="Wired in Segment 12A PR 6",
-            cascade_message=None,
             error_message=None,
             cancel_url=cancel_url_for("settings"),
         ),
@@ -1069,61 +1042,6 @@ def build_quick_setup_context(
     )
 
 
-# Per-kind cascade-aware confirmation copy. Shared by both the
-# Quick Setup card (banner-warning above the slot's submit form) and
-# the per-entity Setup pages (the inline confirm checkbox above the
-# upload form), once those pages migrate over. The card-level call
-# site populates ``QuickSetupSlot.cascade_message`` whenever a slot
-# already has data; the message is ``None`` for an empty slot.
-def cascade_message_for_replace(
-    kind: str,
-    *,
-    reviewer_count: int = 0,
-    reviewee_count: int = 0,
-    assignment_count: int = 0,
-) -> str | None:
-    """Cascade-aware "this will replace N existing X" copy.
-
-    Returns ``None`` when no replacement is in play (i.e. the
-    target count is zero — there's nothing to confirm).
-    """
-
-    if kind == "reviewers":
-        if reviewer_count == 0:
-            return None
-        noun = "reviewer" if reviewer_count == 1 else "reviewers"
-        base = f"This will replace {reviewer_count} existing {noun}."
-        if assignment_count > 0:
-            assn_noun = (
-                "assignment" if assignment_count == 1 else "assignments"
-            )
-            base += (
-                f" {assignment_count} existing {assn_noun} will be cleared "
-                "(they reference the current reviewers)."
-            )
-        return base
-    if kind == "reviewees":
-        if reviewee_count == 0:
-            return None
-        noun = "reviewee" if reviewee_count == 1 else "reviewees"
-        base = f"This will replace {reviewee_count} existing {noun}."
-        if assignment_count > 0:
-            assn_noun = (
-                "assignment" if assignment_count == 1 else "assignments"
-            )
-            base += (
-                f" {assignment_count} existing {assn_noun} will be cleared "
-                "(they reference the current reviewees)."
-            )
-        return base
-    if kind == "assignments":
-        if assignment_count == 0:
-            return None
-        noun = "assignment" if assignment_count == 1 else "assignments"
-        return f"This will replace {assignment_count} existing {noun}."
-    return None
-
-
 def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
     """Render the banner-error copy for a slot's last failed submit.
 
@@ -1135,8 +1053,8 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
     - ``"lifecycle"`` — the submit hit ``_require_editable`` on a
       ``ready`` session. The message names the next move (Pause).
     - ``"needs_confirm"`` — the form was submitted without ticking
-      the confirm box. Defense in depth; the HTML5 ``required``
-      attribute on the checkbox blocks this in normal browsers.
+      the card-level replacement-confirmation checkbox at the top
+      of Quick Setup.
     """
 
     label_for = {
@@ -1153,7 +1071,8 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
         )
     if reason == "needs_confirm":
         return (
-            f"Tick the confirmation box to replace existing {label.lower()}."
+            "Tick the replacement-confirmation box at the top of "
+            "Quick Setup before submitting."
         )
     # Default / parse-error path. Keep the message short — the
     # per-entity Setup page is the authoritative error surface.

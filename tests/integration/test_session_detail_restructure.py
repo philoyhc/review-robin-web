@@ -543,8 +543,11 @@ def test_quick_setup_card_renders_scaffold_in_draft(
         f'action="/operator/sessions/{review_session.id}/quick-setup/assignments"'
         in body
     )
-    # Dormant banner containers per slot per spec/assumptions.md.
-    assert 'id="quick-setup-reviewers-confirm-banner"' in body
+    # Replacement confirmation lives at the card level (single
+    # checkbox above the slot grid), not per-slot inline banners.
+    # Per-slot error banners stay (parse / lifecycle).
+    assert 'id="quick-setup-confirm-replace-toggle"' in body
+    assert "quick-setup-reviewers-confirm-banner" not in body
     assert 'id="quick-setup-reviewers-error-banner"' in body
 
 
