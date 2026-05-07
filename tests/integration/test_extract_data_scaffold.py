@@ -2,7 +2,7 @@
 
 The scaffold replaces the ``placeholder_card(id="extract-data")``
 stub with the full five-row + zip-bundle layout per
-``guide/segment_12A.md`` PR 6. Every Download button is inert
+``guide/segment_12A_import_export.md`` PR 6. Every Download button is inert
 (``aria-disabled="true"``) until 12A wires the routes.
 """
 
@@ -238,7 +238,7 @@ def test_extract_data_card_renders_when_session_is_activated(
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Per ``guide/segment_12A.md`` "No lifecycle gate", the
+    """Per ``guide/segment_12A_import_export.md`` "No lifecycle gate", the
     Extract Data card stays visible and laid out in every state.
     Today every row is inert; once 12A wires the routes, the card
     will be interactive even on Activated sessions."""

@@ -400,7 +400,7 @@ engine never raises on missing fields.
   (the workplan's import/export segment). 12A grows a new PR for
   RuleSet JSON round-trip; 13A ships without portability. Cross-
   reference: see the new "RuleSet round-trip" subsection in
-  [`guide/segment_12A.md`](segment_12A.md).
+  [`guide/segment_12A_import_export.md`](segment_12A_import_export.md).
 - **Shared scope.** Personal-only in 13A. A workspace-shared scope
   is a plausible future extension but isn't 13A-blocking. The DB
   shape leaves room for it (`rule_sets.scope` column accepts a
