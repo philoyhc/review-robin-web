@@ -423,7 +423,7 @@ def test_delete_data_wipes_responses_and_preserves_setup(
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.deleted_all")
     ).scalar_one()
-    assert audit.detail == {"deleted_count": count_before}
+    assert audit.detail["counts"]["deleted"] == count_before
     assert audit.session_id == review_session.id
 
 
@@ -471,7 +471,7 @@ def test_delete_data_allowed_in_ready_status(
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.deleted_all")
     ).scalar_one()
-    assert audit.detail == {"deleted_count": count_before}
+    assert audit.detail["counts"]["deleted"] == count_before
 
 
 # ---------------------------------------------------------------------------
