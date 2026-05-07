@@ -81,11 +81,15 @@ In:
 - **Import** at `POST /operator/sessions/{id}/import-config` with
   a `file=…` multipart payload. Reads the CSV, validates every row,
   applies all mutations atomically, and 303s back to Session Home
-  on success or the same page with a validation summary card on
-  failure. Anchor: the configuration-import slot of the Quick Setup
-  card (Segment 11J's fourth slot — placeholder today, lit up in
-  PR 6 of this segment). Gated to `draft` / `validated` sessions
-  only; locked sessions reject the upload at the service layer.
+  on success or to Home with a `?quick_setup_error=settings&quick_setup_reason=parse`
+  flag on failure (so the GET render places a `.banner.banner-error`
+  inside slot 4 — the same scoped-error pattern Segment 11J
+  established for slots 1-3). Anchor: the configuration-import
+  slot of the Quick Setup card (slot 4 — inert from Segment 11H,
+  graduates in PR 6 of this segment). Gated at the service layer
+  via `_require_editable`; on `ready` the slot's submit 303s with
+  `quick_setup_reason=lifecycle` and the banner names the next
+  move (Pause), matching the lock-toggle pattern 11J established.
 - New service module `app/services/session_config_io.py` with two
   pure functions: `serialize_session_config(session) -> list[Row]`
   and `apply_session_config(session, rows) -> ApplyResult`. Routes
@@ -392,12 +396,16 @@ session into the same shape.
   - On validation error: re-render Session Home with a
     `.banner.banner-warning` enumerating the errors.
 - "Import config" form on Session Home: lives in the Quick Setup
-  card's fourth slot (the "Configuration import" placeholder
-  Segment 11J shipped). PR 2 swaps the placeholder for a real
-  `<input type="file">` + submit; no new anchor on Home. The
-  visibility rule is already enforced by the slot's lifecycle
-  framing (`draft` / `validated` only; disabled behind the yellow
-  lock card otherwise).
+  card's fourth slot (the Session settings slot — inert from
+  Segment 11H, untouched by Segment 11J). PR 6 of this segment
+  flips slot 4's `is_wired=False → True` and supplies a
+  `wire_url` so the slot renders as a real `<input type="file">`
+  + submit; no new anchor on Home. The visibility rule is the
+  same body-greying lock pattern Segment 11J established for
+  slots 1-3 (default-locked in every editable-conceivable state;
+  Lock / Unlock toggle visible across `draft` / `validated` /
+  `ready`; on `ready` unlocking is cosmetic and the importer
+  rejects with a scoped `banner-error`).
 - Audit `session.config_imported` with detail
   `{"counts": {"session": 1, "rtds": 3, "instruments": 2,
   "display_fields": 6, "response_fields": 8}}` (real numbers per
@@ -589,10 +597,12 @@ changes.
   action="…/import-config" method="post"
   enctype="multipart/form-data">` with the same file input +
   submit shape as slots 1-3 and the same inline confirmation
-  banner pattern (replacement-confirmation on populated
-  session, `.banner.banner-error` on parse / validation
-  failure with mandatory `.btn.alert` Cancel per Segment 11J's
-  convention).
+  banner pattern Segment 11J established (cookie-driven lock
+  state via `qsu_{session_id}`, banner-warning above the submit
+  form on populated session, scoped `.banner.banner-error` via
+  `?quick_setup_error=settings&quick_setup_reason={parse|lifecycle|needs_confirm}`
+  on rejection, mandatory `.btn.alert` Cancel returning to a
+  clean URL with the slot fragment).
 - Retire the temporary Session Details "Download config"
   button from PR 1 — its place is taken by the Session settings
   row in the new Extract Data card (already rendered by 11H,
