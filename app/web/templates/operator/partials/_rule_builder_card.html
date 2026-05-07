@@ -1,0 +1,101 @@
+{# Segment 13A-1 PR 1 — single-card Rule Builder.
+
+   Read-only scaffold: dropdown selects any visible RuleSet (seed or
+   Personal); the body renders sentence-shaped rule lines reusing
+   PR 5a's renderer. Editable Personal rendering, Save / Cancel /
+   Delete, and the blank-draft branch ship in PRs 2–3 without
+   re-laying-out this partial.
+#}
+<div class="card" id="rule-builder-card">
+  <form method="get"
+        action="/operator/sessions/{{ session.id }}/assignments/rule-based-editor"
+        id="rule-builder-selector-form"
+        style="margin: 0;">
+    <p style="margin: 0;">
+      <label for="rule-builder-selector"><strong>RuleSet</strong></label>
+      <select id="rule-builder-selector"
+              name="rule_set_id"
+              onchange="this.form.submit()">
+        {% for option in builder.options %}
+          <option value="{{ option.id }}"
+                  {% if option.id == builder.selected_id %}selected{% endif %}
+                  data-is-seed="{{ 'true' if option.is_seed else 'false' }}"
+                  data-is-blank="{{ 'true' if option.is_blank_sentinel else 'false' }}">{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
+        {% endfor %}
+      </select>
+      <noscript>
+        <button class="btn primary-outline" type="submit">Load</button>
+      </noscript>
+    </p>
+  </form>
+
+  {% if builder.selected_is_blank %}
+    <div class="banner banner-info"
+         id="rule-builder-blank-placeholder"
+         style="margin-top: 16px;">
+      <p style="margin: 0;">
+        Starting a blank RuleSet ships in Segment 13A-1 PR 3.
+        For now, pick a seeded or Personal RuleSet from the dropdown
+        above to view its rules.
+      </p>
+    </div>
+  {% else %}
+    <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 16px;">
+      <h2 style="margin: 0;" id="rule-builder-name">{{ builder.name }}</h2>
+      <span class="pill {% if builder.is_seed %}pill-info{% else %}pill-count{% endif %}">{% if builder.is_seed %}seed{% else %}personal{% endif %}</span>
+    </div>
+    {% if builder.description %}
+      <p class="form-help">{{ builder.description }}</p>
+    {% endif %}
+
+    {% if builder.is_seed %}
+      <div class="banner banner-info"
+           id="rule-builder-seed-banner"
+           style="margin-top: 12px;">
+        <p style="margin: 0;">
+          This is a seeded RuleSet and read-only.
+          Copy / Save / Delete actions ship in Segment 13A-1 PR 2.
+        </p>
+      </div>
+    {% else %}
+      <div class="banner banner-info"
+           id="rule-builder-personal-readonly-banner"
+           style="margin-top: 12px;">
+        <p style="margin: 0;">
+          Personal RuleSet shown read-only for now.
+          Inline editing + Save / Cancel / Delete ship in Segment 13A-1 PR 2.
+        </p>
+      </div>
+    {% endif %}
+
+    <h3 style="margin-top: 20px;">Combinator</h3>
+    <p>
+      Combine these rules with:
+      <span class="pill pill-info">{{ builder.combinator_label }}</span>
+    </p>
+
+    <h3 style="margin-top: 20px;">Self-review</h3>
+    <p>
+      Exclude self-review:
+      {% if builder.exclude_self_reviews %}
+        <span class="pill pill-info">on</span>
+      {% else %}
+        <span class="pill pill-warning">off</span>
+      {% endif %}
+    </p>
+
+    <h3 style="margin-top: 20px;">Rules</h3>
+    {% if builder.rule_lines %}
+      <ol id="rule-builder-rules" style="list-style: none; padding-left: 0;">
+        {% for line in builder.rule_lines %}
+          <li style="padding-left: {{ line.indent * 24 }}px; margin: 6px 0;{% if not line.enabled %} opacity: 0.5;{% endif %}">
+            <span class="pill {% if line.kind == 'COMPOSITE' %}pill-info{% elif line.kind == 'QUOTA' %}pill-count{% else %}pill-info{% endif %}">{{ line.kind }}</span>
+            {{ line.text }}
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="form-help">No rules — every candidate pair flows through.</p>
+    {% endif %}
+  {% endif %}
+</div>
