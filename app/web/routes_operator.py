@@ -1082,6 +1082,7 @@ def rule_builder_save(
     rule_set_id: int | None = Form(default=None),
     source_rule_set_id: int | None = Form(default=None),
     name: str = Form(...),
+    description: str | None = Form(default=None),
     combinator: str = Form(...),
     rules_json: str = Form(...),
     exclude_self_reviews: str | None = Form(default=None),
@@ -1216,11 +1217,13 @@ def rule_builder_save(
         if final_name is None:
             return _redirect_back("name_collision", blank=True)
 
+        cleaned_description = (description or "").strip()
+
         try:
             rule_set_schema = RuleSetSchema(
                 id=None,
                 name=final_name,
-                description="",
+                description=cleaned_description,
                 scope="personal",  # type: ignore[arg-type]
                 combinator=Combinator(combinator),
                 rules=parsed_rules,  # type: ignore[arg-type]
@@ -1285,11 +1288,13 @@ def rule_builder_save(
                 draft_source=source_rule_set_id,
             )
 
+        cleaned_description = (description or "").strip()
+
         try:
             rule_set_schema = RuleSetSchema(
                 id=None,
                 name=final_name,
-                description=source_rule_set.description or "",
+                description=cleaned_description,
                 scope="personal",  # type: ignore[arg-type]
                 combinator=Combinator(combinator),
                 rules=parsed_rules,  # type: ignore[arg-type]
@@ -1350,6 +1355,15 @@ def rule_builder_save(
 
     if cleaned_name != rule_set.name:
         rule_set.name = cleaned_name
+
+    # Description is editable via the inline textarea on the card.
+    # ``None`` means the form didn't carry a description field (older
+    # client / crafted POST) — leave the existing description in
+    # place rather than blanking it.
+    if description is not None:
+        cleaned_description = description.strip()
+        if cleaned_description != (rule_set.description or ""):
+            rule_set.description = cleaned_description
 
     try:
         rule_set_schema = RuleSetSchema(
