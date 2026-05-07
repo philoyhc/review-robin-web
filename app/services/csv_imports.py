@@ -540,13 +540,13 @@ def _save(
         event_type=event_type,
         summary=f"Imported {len(rows)} {source_label} (replaced {replaced})",
         actor_user_id=user.id,
-        session_id=session.id,
-        detail={
-            "replaced_count": replaced,
-            "new_count": len(rows),
-            "filename": filename,
-            "cascaded_assignment_count": cascaded_assignment_count,
-        },
+        session=session,
+        payload=audit.counts(
+            new=len(rows),
+            replaced=replaced,
+            cascaded_assignments=cascaded_assignment_count,
+        ),
+        context={"filename": filename} if filename else None,
         correlation_id=correlation_id,
     )
 
@@ -635,11 +635,11 @@ def _delete_all(
         event_type=event_type,
         summary=f"Deleted all {deleted} {source_label}",
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "deleted_count": deleted,
-            "cascaded_assignment_count": cascaded,
-        },
+        session=review_session,
+        payload=audit.counts(
+            deleted=deleted,
+            cascaded_assignments=cascaded,
+        ),
         correlation_id=correlation_id,
     )
     db.commit()

@@ -156,8 +156,8 @@ def save_email_settings(
             event_type="operator_email_settings.updated",
             summary=f"Operator {user.email} updated SMTP settings",
             actor_user_id=user.id,
-            session_id=None,
-            detail={"changes": audit_changes},
+            session=None,
+            payload=audit.changes(audit_changes),
             correlation_id=correlation_id,
         )
 
@@ -187,8 +187,7 @@ def clear_email_settings(
         event_type="operator_email_settings.cleared",
         summary=f"Operator {user.email} cleared SMTP settings",
         actor_user_id=user.id,
-        session_id=None,
-        detail={},
+        session=None,
         correlation_id=correlation_id,
     )
     db.flush()

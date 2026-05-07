@@ -71,12 +71,12 @@ def test_reviewer_import_writes_audit_event(client: TestClient, db: Session) -> 
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")
     ).scalar_one()
-    assert event.detail == {
-        "replaced_count": 0,
-        "new_count": 1,
-        "filename": "reviewers.csv",
-        "cascaded_assignment_count": 0,
+    assert event.detail["counts"] == {
+        "new": 1,
+        "replaced": 0,
+        "cascaded_assignments": 0,
     }
+    assert event.detail["context"] == {"filename": "reviewers.csv"}
     assert "Imported 1 reviewers" in event.summary
 
 
@@ -161,12 +161,12 @@ def test_reviewer_import_replace_with_confirm_succeeds(
             .order_by(AuditEvent.id.desc())
         ).scalars()
     )
-    assert events[0].detail == {
-        "replaced_count": 1,
-        "new_count": 1,
-        "filename": "reviewers.csv",
-        "cascaded_assignment_count": 0,
+    assert events[0].detail["counts"] == {
+        "new": 1,
+        "replaced": 1,
+        "cascaded_assignments": 0,
     }
+    assert events[0].detail["context"] == {"filename": "reviewers.csv"}
 
 
 def test_reviewer_import_renders_issues_for_bad_csv(
@@ -405,8 +405,8 @@ def test_reviewer_replace_cascades_assignments(
             .order_by(AuditEvent.id.desc())
         ).scalars()
     )
-    assert events[0].detail["cascaded_assignment_count"] == 1
-    assert events[0].detail["replaced_count"] == 1
+    assert events[0].detail["counts"]["cascaded_assignments"] == 1
+    assert events[0].detail["counts"]["replaced"] == 1
 
 
 def test_reviewee_replace_cascades_assignments(
@@ -496,7 +496,7 @@ def test_reviewee_replace_cascades_assignments(
             .order_by(AuditEvent.id.desc())
         ).scalars()
     )
-    assert events[0].detail["cascaded_assignment_count"] == 2
+    assert events[0].detail["counts"]["cascaded_assignments"] == 2
 
 
 def test_reviewer_import_form_warns_about_cascade(
