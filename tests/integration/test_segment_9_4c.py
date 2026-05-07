@@ -164,19 +164,20 @@ def test_assignments_hub_inlines_method_forms(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
 
-    # Both Upload Manual and Full Matrix forms now live inline on the hub.
+    # The Manual upload form lives inline on the hub.
     assert 'id="upload-csv"' in body
     assert (
         f'action="/operator/sessions/{review_session.id}/assignments/manual/import"'
         in body
     )
+    # Segment 13A PR 8 retired the standalone Full Matrix card —
+    # full-matrix behaviour ships via the seeded "Full Matrix"
+    # RuleSet inside the Rule Based card.
     assert (
         f'action="/operator/sessions/{review_session.id}/assignments/full-matrix"'
-        in body
+        not in body
     )
-    # Rule Based card scaffold (Segment 13A PR 0) replaced the
-    # original placeholder_card stub. The card renders fully but
-    # inert — only the Edit ruleset link is live.
+    # Rule Based card (Segment 13A PR 4 onward) — selector + Generate.
     assert "Rule Based Assignment" in body
     assert 'id="rule-based-assignment"' in body
 

@@ -1786,6 +1786,18 @@ def rule_based_generate(
 
 
 
+# Segment 13A PR 8 — the standalone Full Matrix *card* has been
+# retired from the assignments page in favour of the seeded
+# "Full Matrix" RuleSet inside the Rule Based card. The route
+# below stays alive as a backend-only entry point: the Quick Setup
+# card on Session Home (Segment 11J) still calls into
+# ``generate_full_matrix(...)`` via its own slot, and a follow-on
+# cleanup PR can migrate the test-suite setup callers from this
+# route to the rule-based path. PR 3 pinned the engine-level
+# equivalence between the seeded RuleSet and this writer, so any
+# such migration is mechanical.
+
+
 @router.post(
     "/sessions/{session_id}/assignments/full-matrix",
     response_class=HTMLResponse,
