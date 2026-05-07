@@ -1,7 +1,7 @@
-# Segment 12A — Session export / import + data extraction (CSV)
+# Segment 12A — Session export / import + data extraction (CSV) + RuleSet JSON round-trip
 
-Stub. Implementation plan covering two paired concerns that share
-the same CSV vocabulary and the same Session Home anchor:
+Stub. Implementation plan covering three concerns under one
+import/export umbrella:
 
 1. **Configuration export / import.** A round-trippable CSV that
    captures the user-inputted *configuration* of a review session
@@ -15,20 +15,37 @@ the same CSV vocabulary and the same Session Home anchor:
    separate CSV downloads — Session settings, Reviewers,
    Reviewees, Assignments, Responses — plus a "Download all"
    zip bundle. Read-only; no import counterpart.
+3. **Operator-created RuleSets — JSON round-trip.** Personal-scope
+   RuleSets created in Segment 13A become portable: any RuleSet
+   exports as a single JSON file; an uploaded JSON file creates a
+   new Personal RuleSet owned by the importing user. Workspace-
+   scoped (not session-scoped), so the anchors live on the Rule
+   Based card on the assignments page and the editor child page,
+   not on Session Home's Extract Data card.
 
-Both halves live in 12A because the configuration export is
-already one of the five extracts, and the Extract Data card is the
-natural anchor for it. Folding them avoids a second segment (the
-prior "Segment 11H — Extract Data" placeholder in
-`guide/todo_master.md`) and keeps one CSV vocabulary.
+The first two halves live in 12A because the configuration export
+is already one of the five extracts, and the Extract Data card is
+the natural anchor for it. The third half — RuleSet I/O — is folded
+in here because it's the same kind of plumbing (operator-typed
+configuration, round-trippable, rejected-on-version-mismatch) and
+12A already owns the import/export hat. JSON instead of CSV is
+the only awkwardness; it's mechanical, not conceptual (rule trees
+are recursive — composites contain rules — which doesn't flatten
+to a wide CSV the way reviewer / reviewee / assignment rows do).
 
 This is the smallest useful slice of Segment 12 (export / audit
 retention / data-rehydration), pulled forward as **12A** so the
 rest of Segment 12 (audit retention) can land on top.
 
+> **Sequencing note (2026-05-07).** Segment 13A executes *before*
+> 12A in the workplan. 13A ships the seeded + Personal-scope
+> RuleSet model; 12A's PR 7 picks up portability afterwards. PR 7
+> is therefore gated on 13A having shipped — if 12A starts before
+> 13A, ship PRs 1-6 and defer PR 7 until 13A lands.
+
 ## Status
 
-Planning. Sized as **6 PRs** in dependency order:
+Planning. Sized as **7 PRs** in dependency order:
 
 1. **PR 1 — Config export.** Narrow contract; single source of
    truth on the CSV shape.
@@ -43,10 +60,15 @@ Planning. Sized as **6 PRs** in dependency order:
    placeholder, wires all five downloads + the zip bundle, swaps
    the Quick Setup configuration-import slot's placeholder for
    the live PR 2 form.
+7. **PR 7 — RuleSet JSON export / import.** Workspace-scoped
+   round-trip for operator-created RuleSets. Anchors on the Rule
+   Based card and the editor child page (Segment 13A surfaces).
+   Gated on 13A having shipped.
 
 PRs 3-5 are parallelizable once PR 1's serialization helpers
 (`Row` shape, filename convention, audit event family) are in
-place. PR 6 depends on 1-5.
+place. PR 6 depends on 1-5. PR 7 is independent of 1-6 and
+parallel-shippable once 13A lands.
 
 ## Why CSV (not JSON / YAML)
 
@@ -66,6 +88,15 @@ The 3-column shape is **not** a general data-dump format — it's
 configuration only. Reviewers / reviewees / assignments / responses
 ship via the data-extraction CSVs (this segment) using their natural
 per-entity column shapes, not the 3-column key/value shape.
+
+**RuleSets export as JSON, not CSV** (PR 7). The rule tree is
+recursive — composite rules contain rules — and predicates are
+nested operator/operand structures. CSV's flat-row shape can't
+represent either without a brittle escape encoding. JSON matches
+the in-memory `RuleSetSchema` exactly and round-trips with no
+information loss. The JSON shape is the same one Segment 13A
+already serialises into `rule_set_revisions.rules_json`, so PR 7
+is a thin wrapper around what's already there.
 
 ## Scope
 
@@ -150,6 +181,35 @@ In:
   `{"row_count": <int>}`. Audit-event detail-schema convention
   lands in Segment 11K; until then these match the simplest
   shape `audit_events.detail` already carries.
+
+### RuleSet round-trip (PR 7)
+
+- **Export** at `GET /operator/rule-sets/{id}/export.json` — streams
+  a single RuleSet (current revision only) as
+  `application/json`. Filename:
+  `rule-set-{slug(name)}-r{revision_no}.json`. Both seeds and
+  Personal RuleSets are exportable. Anchor: an Export button on the
+  editor child page from Segment 13A (`/operator/sessions/{id}/assignments/rule-based/edit/{rule_set_id}`).
+- **Import** at `POST /operator/rule-sets/import` with a `file=…`
+  multipart payload. Validates against `RuleSetSchema`, rejects
+  unknown `spec_version`, creates a new Personal-scope RuleSet
+  owned by the importing user. Anchor: an Import button on the
+  Rule Based card on the assignments page (next to the RuleSet
+  selector).
+- **Workspace-scoped, not session-scoped.** RuleSets aren't tied to
+  a particular session; the Import button creates a Personal
+  RuleSet visible across every session the operator runs. Export
+  is similarly session-agnostic — the exported file carries no
+  session reference.
+- **Schema versioning.** Top-level `spec_version: 1` field on every
+  exported file. The importer accepts `1` exactly; mismatches
+  return 400 with a clear "schema version not supported" message.
+  Bumps add a converter, not silent coercion.
+- **Audit reuse.** Imports emit `rule_set.created` (the same event
+  Segment 13A PR 5 ships for operator-typed creates) with
+  `context.via='import'` and `context.source_filename=<filename>`.
+  Exports are reads and emit nothing — same convention as the rest
+  of the read paths in this segment.
 
 Out (deferred):
 
@@ -620,6 +680,97 @@ changes.
     upload via the slot 303s through PR 2's import path; lock
     states gate per the existing slot rules.
 
+### PR 7 — RuleSet JSON export / import
+
+**Goal.** Make operator-created RuleSets portable across users,
+workspaces, and deployments. Export downloads a single RuleSet as
+a JSON file; import accepts a JSON file and creates a new Personal
+RuleSet owned by the importing user. Workspace-scoped (not
+session-scoped) — the anchors live on the Rule Based card and the
+editor child page from Segment 13A, not on Session Home's Extract
+Data card.
+
+**Depends on Segment 13A** (the rule-builder segment) having
+landed. PR 7 consumes the `rule_sets` + `rule_set_revisions`
+tables, the `RuleSetSchema` Pydantic shape, and the editor child
+page from 13A.
+
+- New module `app/services/rules/portability.py` exposing two pure
+  functions:
+  - `serialize_rule_set(rule_set: RuleSet, revision: RuleSetRevision)
+    -> dict` — returns a JSON-serializable dict matching the
+    canonical `RuleSetSchema` shape, plus a top-level
+    `spec_version: 1` field (forward-compat marker) and
+    `exported_at` / `exported_from` metadata. Strips the database
+    id, timestamps, and `owner_user_id` so the export is a pure
+    declarative artefact (the importer always assigns its own ids
+    + owner).
+  - `apply_rule_set_json(db, *, payload: dict, importing_user)
+    -> RuleSet` — validates `payload` against `RuleSetSchema`,
+    rejects unknown `spec_version`, creates a fresh `rule_sets`
+    row in `personal` scope owned by `importing_user`, inserts
+    a `rule_set_revisions` row (`revision_no=1`) with the rule
+    tree, points `current_revision_id` at it.
+- New routes in `app/web/routes_operator.py`:
+  - `GET /operator/rule-sets/{id}/export.json` — streams the
+    serialized RuleSet as `application/json` with
+    `Content-Disposition: attachment; filename="rule-set-{slug(name)}.json"`.
+    Both seeds and Personal RuleSets are exportable (a seed is
+    just a starting point another operator might want).
+  - `POST /operator/rule-sets/import` — accepts a multipart `file`
+    upload. Validates against `RuleSetSchema`. On success, creates
+    a Personal RuleSet owned by the current user; 303s back to the
+    assignments page (or to the editor for the new RuleSet — TBD on
+    PR-prep review). On validation error, renders a banner with the
+    rejected field.
+- Anchors:
+  - **Export button** on the editor child page (top of the page,
+    next to Save / Save As). Per-RuleSet action.
+  - **Import button** on the Rule Based card on the assignments
+    page (next to the RuleSet selector). Workspace-level action.
+- Audit:
+  - `rule_set.created` (already shipped by 13A PR 5) covers
+    imports. The detail's `context` gains a `via='import'` flag
+    and a `source_filename` field so the audit log distinguishes
+    imports from operator-typed creates. Register the new context
+    keys via the strict-mode test gate.
+  - **No `rule_set.exported` event.** Exports are reads — per the
+    project audit convention (Segment 11C / 11K), reads aren't
+    emitted as audit rows. If a downstream concern needs export
+    tracking later, fold it in then.
+- `spec_version` semantics: the current engine writes
+  `spec_version: 1` on every export. The importer accepts `1`
+  exactly; any other value (newer or older) returns 400 with
+  "RuleSet schema version not supported by this deployment". When
+  the engine evolves, bump the version and add a converter rather
+  than silently coercing.
+- Filename convention: exports use
+  `rule-set-{slug(name)}-r{revision_no}.json` so two exports of the
+  same RuleSet at different revisions don't collide on disk.
+- Tests:
+  - `tests/unit/test_rule_set_portability.py` — round-trip:
+    `serialize_rule_set(seed) → dict → apply_rule_set_json → new
+    RuleSet with revision_no=1 and identical rules JSON`. Same for
+    Personal RuleSets with multi-revision history (the export only
+    captures the current revision; imports start fresh at
+    revision 1).
+  - Schema-version mismatch rejected with 400.
+  - Malformed JSON (not a dict, missing required keys, invalid
+    operator) rejected with the field-name in the error.
+  - `tests/integration/test_rule_set_export_import.py` — full
+    HTTP round-trip: GET export, POST import, assert library now
+    shows the new Personal RuleSet, audit emitted with
+    `via='import'`.
+  - Permission gates: any authenticated operator can export any
+    visible RuleSet (seeds are visible to all; Personal only to
+    the owner). Import always creates a Personal RuleSet owned by
+    the current user — there's no "import to user X's library"
+    path.
+
+After PR 7, an operator can hand a `.json` file to a colleague (or
+commit it to a repo as a workflow template) and the recipient can
+re-import it on any deployment running the same `spec_version`.
+
 ## Implementation pointers
 
 - **One CSV vocabulary, two shapes.** PRs 1-2's configuration CSV
@@ -725,6 +876,12 @@ changes.
   upload from session A → extract → re-upload to session B →
   assert state matches. These pin the contract that the extracts
   feed the existing importers without conversion.
+- **PR 7 RuleSet round-trip** —
+  `tests/unit/test_rule_set_portability.py` (serialize / apply
+  pure-function round-trip, schema-version rejection, malformed
+  JSON rejection) and
+  `tests/integration/test_rule_set_export_import.py` (HTTP
+  round-trip, audit emission, permission gates).
 - No changes to the existing reviewer / reviewee / assignment
   upload tests — those flows stay untouched.
 
@@ -734,7 +891,7 @@ changes.
 - `guide/todo_master.md`:
   - Adds Segment 12A under **Upcoming** before PR 1 ships;
     moves to **Done** under the existing Segment 11 / Resolved
-    siblings once PR 6 lands.
+    siblings once PR 7 lands.
   - **Removes the standalone "Segment 11H — Extract Data"
     entry** from "Upcoming" (folded into 12A by this plan).
   - Updates the "Open question on Segment 12 scope" footer:
@@ -744,8 +901,17 @@ changes.
   configuration-import slot's graduation step (PR 6) is now
   pinned; the now-archived 11J plan's "Interaction with Segment
   12A" section already points at PR 6 by name.
+- `guide/segment_13A_rulebased_assignment_builder.md` — already
+  cross-references PR 7 in its "Out of scope" section as the home
+  for RuleSet portability. When 13A archives (post-Segment-13A
+  ship), update that pointer to the archived path.
 - `spec/architecture.md` — one-liner under "Data import /
-  export" pointing at the CSV shapes; verify on PR 1 review.
+  export" pointing at the CSV shapes; verify on PR 1 review. PR 7
+  adds a follow-on one-liner about the RuleSet JSON shape.
+- `spec/rule_based_assignment.md` — the canonical RuleSet spec
+  already describes the JSON shape under §5.2 (Operations:
+  Export / Import). PR 7 implements that section; verify on
+  PR 7 review that the implementation matches.
 - No spec doc for the CSV shapes themselves — this guide doubles
   as the spec until the format proves stable across two or three
   consumers; promote then.
