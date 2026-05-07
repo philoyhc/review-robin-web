@@ -101,9 +101,8 @@ Available rulesets card is on the right.
    driven, copy-locked:
    - Seeded → "This is a read-only seeded RuleSet. Click **Copy**
      to create an editable Personal copy."
-   - Blank-draft sentinel → "Starting from scratch. Add at least
-     one rule, then click **Save** to persist a new Personal
-     RuleSet."
+   - Blank-draft sentinel → "Starting from scratch. Add a rule,
+     then **Save** to persist new Personal RuleSet."
    - Copy / draft → "Unsaved draft. Edit and **Save** to persist a
      new Personal RuleSet, or **Cancel** to discard."
    - Save error / save success → standard error / info banners
