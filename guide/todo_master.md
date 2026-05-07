@@ -125,64 +125,82 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
 
 ## Upcoming
 
-Items still open, in shipping order. Each is a sub-segment of Segment 11; sequence and rationale on each line. Every entry below now has a detailed plan in `guide/`; "Plan TBD" is gone.
+Each item below has a detailed plan in its own doc; entries here
+are 1-3 lines for at-a-glance sequencing + the catalog items
+pinned to each segment. The catalog itself lives in
+`unfinished_business.md`.
 
-1. **Segment 11C Part 2 — Outbox audit-log scaffolding (truncated).** Single PR (PR F) landing the `email_outbox` columns + status / kind value-set widening that *all four* transport options in `spec/email_infra_options.md` will need to write at send time (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`, `correlation_id`; status enum widened to `{queued, sending, sent, failed}`; kind enum widened to include `responses_received`). **No wiring, no UI** — the columns sit inert until **Segment 14-1** lights up the actual send paths. Schedule: small migration + model edit + tests; can land alongside any other 11C-adjacent work without coupling to 14-1's sequence. Hard prerequisites already met (Part 1 PR C-schema scaffolds the same model file). **Plan: `guide/segment_11C_operations_consolidation.md` "Part 2".**
-2. **Segment 14-1 — Email infrastructure (send activation + backends).** Absorbs *all* email *wiring* work — formerly distributed across Segment 11C Part 2 PRs F / G / H + the broader transport landscape in `spec/email_infra_options.md`. Sized as multiple Parts:
-   - **Part A — SMTP send activation.** Lights up the existing operator-as-relay path. Per-row Send + bulk Send + Send-test-to-me + transport-ready chrome pill + `email_send_dispatch.py` helper + `email.sent` / `email.send_failed` audit events + reviewer-submit responses-received enqueue (with `responses_received_email.queued` audit). Populates the columns 11C Part 2 scaffolds.
-   - **Parts B → E** — `correlation_id` strategy + idempotent retry (B), bulk-send queue + worker (C), per-deployment from-identity defaults (D), generalised Outbox diagnostic surface (E).
-   - **Parts F → H** — Option B (Microsoft Graph application permission, MSAL + Graph), Option C (Azure Communication Services, ACS SDK), Option D (third-party transactional, e.g. SendGrid). Independent backend swaps; ship as deployment demand dictates.
+1. **11C Part 2 — Outbox audit-log scaffolding.**
+   Single PR (PR F): `email_outbox` columns + status / kind
+   value-set widening so all four 14-1 transport options have
+   a stable schema to write to at send time. No wiring; columns
+   sit inert until 14-1.
+   **Plan:** `guide/segment_11C_operations_consolidation.md` "Part 2".
 
-   Functional spec: **`spec/email_infra_options.md`**. Plan: **`guide/segment_14-1_email_infra.md`**. Hard prerequisite: **Segment 11C Part 2** (the schema columns Part A populates).
-3. **Segment 11K — #5 Audit-event `detail` schema convention.** Spec write-up in `spec/architecture.md` (canonical envelopes — `changes` / `snapshot` / `counts` / `set_changes` — plus orthogonal identity / `reason` / `refs` slots) + typed audit helpers in `app/services/audit.py` + incremental emitter migration (one PR per family) + optional Pydantic write-validation gate. Sized as ~8 PRs. The last sub-segment before Segment 12; pinning the `detail` shape now means Segment 12's audit-export consumer reads a stable schema. Catalog `unfinished_business.md` #5. **Plan: `guide/segment_11K_audit_event_detail_schema.md`.**
+2. **11K — Audit-event `detail` schema convention.**
+   Pin canonical envelopes (`changes` / `snapshot` / `counts` /
+   `set_changes`) + typed audit helpers + incremental emitter
+   migration. Sized as ~8 PRs. Catalog `unfinished_business.md`
+   #5. Gates 12B (audit export reads against the pinned shape).
+   **Plan:** `guide/segment_11K_audit_event_detail_schema.md`.
 
-### Notes on the order
+3. **12A — Session settings import + export.**
+   Configuration round-trip (PRs 1-2) + Extract Data card with
+   five per-entity CSVs + Download-all zip (PRs 3-6). Wires
+   Slot 4 of the Quick Setup card.
+   **Plan:** `guide/segment_12A.md`.
 
-- **Item 1 (truncated 11C Part 2)** is small (one migration + model edit) and unblocks Item 2 Part A. Land it whenever a tidy diff is available.
-- **Item 2 (14-1)** is the load-bearing piece for getting real emails out the door. Part A is the first call site for 11E's `EmailTransport` interface and the first consumer of 11C Part 2's new columns. Parts B → E are sequential enhancements; Parts F → H are independent backend swaps driven by deployment demand.
-- **Item 3 (11K)** gates Segment 12 (audit retention). Last sub-segment before Segment 12 starts.
+4. **12B — Audit retention.**
+   `audit_events` export + retention / purge tooling. Hard
+   prerequisite: **11K** (stable detail schema). Folded out of
+   the original Segment 12 plan when Extract Data moved into
+   12A.
+   **Plan:** `guide/segment_12B_audit_retention.md`.
 
-### Segment 12 scope — resolved
+5. **13 — Rule-based assignment builder + sort UX.**
+   Real `RuleBased` rule menu replaces the `assignments`
+   placeholder card; sort-by-reviewee column on Manage pages
+   (operator default + reviewer live override).
+   **Plans:** `guide/segment_13_rulebased_assignment_builder_plan.md`
+   + `guide/sort_by_reviewee.md`.
 
-Earlier this segment carried an "open question" footer on whether Extract Data should be a standalone 11H or fold into Segment 12. **Resolved:** Extract Data has folded into **Segment 12A** (`guide/segment_12A.md`), which is now broader than the original "session metadata export / import" framing — it ships the configuration round-trip (PRs 1-2) **and** the Extract Data card with five separate per-entity CSVs + a "Download all" zip bundle (PRs 3-6). The original Segment 12 (`guide/segment_12_export_audit_retention_mvp_plan.md`) narrows to "audit retention" only and gates on 11K landing first.
+6. **14 — Production hardening.**
+   Observability, security, support runbooks, real-pilot prep.
+   Catalog #26 (local Postgres docker-compose for dev).
+   **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-Likewise, the broader email-transport work (Microsoft Graph application permission, ACS, third-party transactional) all lives under **Segment 14-1** (`guide/segment_14-1_email_infra.md`); `spec/email_infra_options.md` is the menu of options the IT conversation drives, with 11E having shipped the abstraction layer those backends slot into and 14-1 being the home for the actual wiring + each backend's concrete `EmailTransport` implementation.
+7. **14-1 — Email infrastructure (send activation + backends).**
+   All email *wiring* lives here. **Hard prereq: 11C Part 2**
+   (the schema columns Part A populates).
+   - **Parts A → E** (sequential): SMTP send activation →
+     `correlation_id` strategy → bulk-send queue + worker →
+     per-deployment from-identity defaults → generalised
+     Outbox diagnostic surface.
+   - **Parts F → H** (independent backend swaps): Option B
+     (Microsoft Graph), Option C (Azure Communication Services),
+     Option D (third-party transactional). Ship as deployment
+     demand dictates.
 
----
+   Catalog #34 (queue-based batch invitation sending — Part C).
+   **Plan:** `guide/segment_14-1_email_infra.md`.
+   **Functional spec:** `spec/email_infra_options.md`.
 
-## Deferred to later segments
+8. **15 — Operator polish + documentation.**
+   Inline-edit Manage rows, Inactivate UI, sessions-list per-
+   row Delete, AG Grid integration, tech-support contact, the
+   "make the system understandable to a new operator" pass
+   before broader pilot. Runs after 14.
+   Catalog #23, #25, #33, #35, #36, §2.2.
+   **Plan:** `guide/segment_15_operator_polish_and_documentation.md`.
 
-Items intentionally pushed to where they bundle with related work. Not in the active sequence.
+### Sequencing notes
 
-### Segment 12 (export / audit retention MVP)
-
-- **AG Grid evaluation extension** — folds in if the export surface needs interactive grid editing (otherwise stays in Segment 15 with #33).
-
-### Segment 13 (rule-based assignment builder + sort UX)
-
-- **§2.6 / `guide/sort_by_reviewee.md`** — sort-column UX on Manage pages. Functional spec ready; ships with the rule-builder work.
-- **Rule Based Assignment** card on `/assignments` is currently a placeholder (uses `placeholder_card` macro); real implementation lands in 13.
-
-### Segment 15 (operator polish + production hardening + real SMTP)
-
-- **#23** — Sessions-list per-row Delete button (anchor → POST form).
-- **#25** — Inline-editable rows for Reviewers / Reviewees / Assignments Manage pages.
-- **#26** — Local Postgres docker-compose for dev.
-- **#33** — AG Grid integration on Manage pages (was §2.1).
-- **#34** — Queue-based batch invitation sending (was §2.3; bundled with real SMTP).
-- **#35** — Technical-support contact (split out from §24 / #24).
-- **#36** — Operator Inactivate UI on Reviewers / Reviewees Manage pages (was §2.4).
-- **§2.2** — Vanilla-JS autosave on `/save` (folded into AG Grid #33's cell-edit lifecycle).
-
-### Future / undated
-
-Anything in `docs/status.md` "What's deliberately not yet there" with a named target segment ≥12 (export, RuleBased assignment, production hardening, real SMTP). Owned by their target segments, not this list.
-
----
-
-## Notes on the order
-
-- **Why CI items (#1 / #2) preceded the arch slate.** Without Postgres-flavoured pytest and `ruff check` in CI, the arch refactors (#3 / #4 / #11 / #16) would have shipped silently-broken code on every PR until the dev-slot deploy.
-- **Why Segment 11B closed before 11C.** Home is the operator's anchor page; settling its layout, vocabulary (`.card.placeholder`, `.card.next-action`, `lifecycle_label`), and disabled-state pattern first means 11C can compose on top of stable primitives.
-- **Why #5 (audit-event detail schema) gates Segment 12.** Segment 12's first deliverable is exporting `audit_events`; the export is much less work if the JSON shape is pinned first.
-- **Why #21b / 11C / #24 can ship in parallel.** Disjoint surfaces — #21b touches non-session chrome, 11C touches Operations pages, #24 touches the invitation pipeline.
+- **11C Part 2 → 14-1 Part A** is the email pipeline: 11C Part 2
+  lands the schema (small migration); 14-1 Part A is the first
+  writer.
+- **11K → 12B** is the audit pipeline: 11K pins the `detail`
+  shape; 12B's export reads against it.
+- **12A and 13 are independent** of the email + audit pipelines
+  and can interleave at any time.
+- **Within 14-1**, Parts B-E are sequential enhancements on top
+  of Part A; Parts F-H are independent backend swaps.
