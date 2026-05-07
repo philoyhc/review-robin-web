@@ -1087,21 +1087,27 @@ def rule_builder_save(
     exclude_self_reviews: str | None = Form(default=None),
     seed: str | None = Form(default=None),
     auto_name: str | None = Form(default=None),
+    is_blank_draft: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Segment 13A-1 PR 2 — Save.
+    """Segment 13A-1 PR 2 / PR 3 — Save.
 
-    Two branches:
+    Three branches:
     - ``rule_set_id`` set → in-place revision write on a Personal
       RuleSet owned by the caller. Mirrors the existing
       ``/rule-based/save`` route.
-    - ``rule_set_id`` unset → Save-As from an unsaved draft (Copy
-      flow). Creates a new Personal RuleSet from the form's edited
-      tree, pinning provenance to ``source_rule_set_id`` if set.
-      ``auto_name=true`` opts into the auto-suffix on collision per
-      locked decision #5 — operator-edited names get a 422 instead.
+    - ``rule_set_id`` unset + ``source_rule_set_id`` set → Save-As
+      from an unsaved Copy draft. Creates a new Personal RuleSet
+      from the form's edited tree, pinning provenance to the
+      source. ``auto_name=true`` opts into the auto-suffix on
+      collision per locked decision #5 — operator-edited names get
+      a 422 instead.
+    - ``rule_set_id`` unset + ``is_blank_draft=true`` → Save from
+      the blank-draft sentinel (PR 3). Creates a new Personal
+      RuleSet with no provenance source. Server-side gate: the
+      rules list must be non-empty (locked decision #8).
     """
 
     import json as _json
@@ -1121,12 +1127,19 @@ def rule_builder_save(
     )
 
     cleaned_name = name.strip()
+    blank_draft = is_blank_draft == "true" and rule_set_id is None
 
     def _redirect_back(
-        error: str, *, draft: bool = False, draft_source: int | None = None
+        error: str,
+        *,
+        draft: bool = False,
+        draft_source: int | None = None,
+        blank: bool = False,
     ) -> RedirectResponse:
         target = base_url
-        if draft and draft_source is not None:
+        if blank:
+            target = f"{base_url}?new=1&error={error}"
+        elif draft and draft_source is not None:
             target = f"{base_url}?draft_from={draft_source}&error={error}"
         elif rule_set_id is not None:
             target = f"{base_url}?rule_set_id={rule_set_id}&error={error}"
@@ -1140,11 +1153,17 @@ def rule_builder_save(
 
     if not cleaned_name:
         return _redirect_back(
-            "empty_name", draft=is_draft, draft_source=source_rule_set_id
+            "empty_name",
+            draft=is_draft,
+            draft_source=source_rule_set_id,
+            blank=blank_draft,
         )
     if combinator not in {c.value for c in Combinator}:
         return _redirect_back(
-            "bad_combinator", draft=is_draft, draft_source=source_rule_set_id
+            "bad_combinator",
+            draft=is_draft,
+            draft_source=source_rule_set_id,
+            blank=blank_draft,
         )
 
     seed_value: int | None = None
@@ -1153,7 +1172,10 @@ def rule_builder_save(
             seed_value = int(seed.strip())
         except ValueError:
             return _redirect_back(
-                "bad_seed", draft=is_draft, draft_source=source_rule_set_id
+                "bad_seed",
+                draft=is_draft,
+                draft_source=source_rule_set_id,
+                blank=blank_draft,
             )
 
     try:
@@ -1163,16 +1185,70 @@ def rule_builder_save(
             "malformed_json",
             draft=is_draft,
             draft_source=source_rule_set_id,
+            blank=blank_draft,
         )
     if not isinstance(parsed_rules, list):
         return _redirect_back(
             "malformed_json",
             draft=is_draft,
             draft_source=source_rule_set_id,
+            blank=blank_draft,
+        )
+
+    if blank_draft:
+        # Server-side gate: a blank-draft Save must carry at least
+        # one rule (locked decision #8). The client-side JS in
+        # ``_rule_builder_card.html`` keeps the Save button disabled
+        # until the indent-stack serialiser reports ≥1 row, so this
+        # branch only fires for crafted POSTs / no-JS clients.
+        if not parsed_rules:
+            return _redirect_back("empty_rules", blank=True)
+
+        final_name = _resolve_save_as_name(
+            db,
+            user=user,
+            requested_name=cleaned_name,
+            # The blank-draft default is the literal "New RuleSet"
+            # — auto-suffix on collision to mirror the Copy flow.
+            source_default="New RuleSet",
+            auto_suffix=True,
+        )
+        if final_name is None:
+            return _redirect_back("name_collision", blank=True)
+
+        try:
+            rule_set_schema = RuleSetSchema(
+                id=None,
+                name=final_name,
+                description="",
+                scope="personal",  # type: ignore[arg-type]
+                combinator=Combinator(combinator),
+                rules=parsed_rules,  # type: ignore[arg-type]
+                options=RuleSetOptions(
+                    excludeSelfReviews=(exclude_self_reviews == "true"),
+                    seed=seed_value,
+                ),
+            )
+        except ValidationError:
+            return _redirect_back("validation", blank=True)
+
+        new_rule_set = library.save_as_rule_set_from_schema(
+            db,
+            rule_set_schema=rule_set_schema,
+            owner=user,
+            new_name=final_name,
+            # No source — this is a from-scratch RuleSet.
+            source_rule_set_id=None,
+            source_revision_id=None,
+            correlation_id=request_correlation_id(),
+        )
+        return RedirectResponse(
+            url=f"{base_url}?rule_set_id={new_rule_set.id}&saved=1",
+            status_code=status.HTTP_303_SEE_OTHER,
         )
 
     if is_draft:
-        # Save-As from a draft. Source must exist + be visible.
+        # Save-As from a Copy draft. Source must exist + be visible.
         if source_rule_set_id is None:
             return _redirect_back(
                 "validation", draft=True, draft_source=None
