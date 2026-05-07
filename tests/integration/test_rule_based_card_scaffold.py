@@ -71,24 +71,34 @@ def test_rule_based_card_renders_seed_selector_after_pr4(
     client: TestClient, db: Session
 ) -> None:
     """The card flips live in PR 4: the selector lists the five
-    seeded RuleSets, the Exclude self-review checkbox is enabled,
-    the Generate button is a real submit button, and the Edit
-    ruleset link still points at the editor stub."""
+    seeded RuleSets in install order (Full Matrix first), the
+    Exclude self-review checkbox is enabled, the Generate button is
+    a real submit button, and the Edit ruleset link still points at
+    the editor stub."""
 
     review_session = _make_session(client, db, code="rb-render")
     body = client.get(f"/operator/sessions/{review_session.id}/assignments").text
 
     assert 'id="rule-based-assignment"' in body
     assert 'id="rule-based-ruleset"' in body
-    # All five canonical seeds render as <option> entries.
-    for seed_name in (
+    # All five canonical seeds render in install order — Full Matrix
+    # first, then Intra / Cross / Same-group-different-role / Three.
+    expected_order = [
         "Full Matrix",
         "Intra-group peer review",
         "Cross-group peer review",
         "Same group, different role",
         "Three reviewers per reviewee",
-    ):
-        assert f">{seed_name}</option>" in body
+    ]
+    last_pos = -1
+    for seed_name in expected_order:
+        marker = f">{seed_name}</option>"
+        pos = body.find(marker)
+        assert pos != -1, f"missing {seed_name}"
+        assert pos > last_pos, (
+            f"{seed_name} rendered out of install order"
+        )
+        last_pos = pos
     # The form posts to the live Generate route.
     generate_action = (
         f'action="/operator/sessions/{review_session.id}'

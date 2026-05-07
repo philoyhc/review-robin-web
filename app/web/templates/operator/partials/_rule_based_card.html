@@ -123,7 +123,7 @@
 
     {% if rule_based_card.last_generated %}
       <p class="form-help" id="rule-based-last-generated" style="margin-top: 12px;">
-        Last generated: {{ rule_based_card.last_generated.pair_count }} pair{% if rule_based_card.last_generated.pair_count != 1 %}s{% endif %}.
+        Last generated{% if rule_based_card.last_generated.rule_set_name %} using <strong>{{ rule_based_card.last_generated.rule_set_name }}</strong>{% endif %}: {{ rule_based_card.last_generated.pair_count }} pair{% if rule_based_card.last_generated.pair_count != 1 %}s{% endif %}.
       </p>
     {% endif %}
   {% else %}

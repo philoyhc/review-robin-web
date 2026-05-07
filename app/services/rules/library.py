@@ -26,8 +26,16 @@ def list_visible_rule_sets(
     db: Session, *, user: User
 ) -> list[RuleSet]:
     """Seeds + ``user``'s Personal RuleSets (excluding soft-deleted),
-    sorted by ``(scope, name)`` so seeds render in the editor selector
-    above Personal entries."""
+    sorted so the editor selector renders seeds first in their
+    deliberate install order, then Personal RuleSets.
+
+    Within seeds, install-time id ordering pins the canonical sequence
+    (Full Matrix → Intra-group → Cross-group → Same-group-different-
+    role → Three-per-reviewee). PR 5 will refine the Personal half to
+    sort by most-recently-updated; the inline `id` ordering here
+    happens to coincide with most-recently-updated for the empty PR 4
+    Personal library and is a placeholder until then.
+    """
 
     stmt = (
         select(RuleSet)
@@ -38,7 +46,7 @@ def list_visible_rule_sets(
             ),
             RuleSet.deleted_at.is_(None),
         )
-        .order_by(RuleSet.scope, RuleSet.name)
+        .order_by(RuleSet.scope, RuleSet.id)
     )
     return list(db.execute(stmt).scalars())
 
