@@ -105,11 +105,12 @@ def test_rule_based_card_renders_seed_selector_after_pr4(
         '/assignments/rule-based/generate"'
     )
     assert generate_action in body
-    # Edit ruleset link is still present, pointing at the editor stub.
-    edit_url = (
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/edit"
+    # Edit ruleset link points at the editor for the currently-
+    # selected RuleSet (id-suffixed path; PR 5 wires the editor).
+    edit_url_prefix = (
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/edit/"
     )
-    assert f'href="{edit_url}"' in body
+    assert f'href="{edit_url_prefix}' in body
     assert ">Edit ruleset</a>" in body
 
 
@@ -139,20 +140,16 @@ def test_rule_based_card_shows_cascade_confirm_when_assignments_exist(
     assert "required" in rb_section_pop
 
 
-def test_rule_based_editor_stub_renders_with_back_link(
+def test_rule_based_editor_no_id_redirects_to_assignments(
     client: TestClient, db: Session
 ) -> None:
-    """The editor stub page ships with the standard operator chrome,
-    a back link to Assignments, and a placeholder card pointing at
-    PR 5."""
+    """The id-less editor URL is now a 404; the real editor at
+    ``…/edit/{rule_set_id}`` is exercised in
+    ``test_rule_based_editor.py``."""
 
-    review_session = _make_session(client, db, code="rb-stub")
+    review_session = _make_session(client, db, code="rb-no-id")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/edit"
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/edit",
+        follow_redirects=False,
     )
-    assert response.status_code == 200, response.text
-    body = response.text
-    back_url = f"/operator/sessions/{review_session.id}/assignments"
-    assert f'href="{back_url}"' in body
-    assert "Back to Assignments" in body
-    assert "PR 5" in body
+    assert response.status_code in (404, 405)

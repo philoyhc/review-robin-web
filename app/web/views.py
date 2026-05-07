@@ -2308,12 +2308,23 @@ def build_rule_based_card_context(
                     ),
                 )
 
+    if selected_option_id is not None:
+        edit_url = (
+            f"/operator/sessions/{review_session.id}"
+            f"/assignments/rule-based/edit/{selected_option_id}"
+        )
+    else:
+        # Inert-branch placeholder; PR 5 ships the editor and any
+        # session with at least one seed always has a selected option.
+        edit_url = (
+            f"/operator/sessions/{review_session.id}"
+            "/assignments/rule-based/edit/0"
+        )
+
     return RuleBasedCardContext(
         is_wired=user is not None,
         assignment_count=assignment_count,
-        edit_url=(
-            f"/operator/sessions/{review_session.id}/assignments/rule-based/edit"
-        ),
+        edit_url=edit_url,
         coming_in="The Rule Based editor child page ships in Segment 13A PR 5.",
         options=options,
         selected_option_id=selected_option_id,
@@ -2322,4 +2333,247 @@ def build_rule_based_card_context(
         needs_confirm_replace=assignment_count > 0,
         error_kind=error_kind,
         last_generated=last_generated,
+    )
+
+
+# Segment 13A PR 5a — RuleSet editor child page (read-only scaffold).
+# Renders the loaded RuleSet's metadata + rule tree as the locked
+# sentence-shaped surface form (segment plan §"Rule semantics surface
+# form"). PR 5a only ships the read-only view + a Copy action that
+# duplicates the loaded RuleSet into a new Personal-scope RuleSet.
+# PR 5b adds the inline-JS predicate / quota editors that mutate
+# the rule list before Save / Save As.
+
+
+_COMBINATOR_LABELS: dict[str, str] = {
+    "ALL_OF": "All of",
+    "ANY_OF": "Any of",
+    "PIPELINE": "In sequence",
+}
+
+_OPERATOR_PHRASES: dict[str, str] = {
+    "equals": "is",
+    "not_equals": "is not",
+    "in": "is one of",
+    "not_in": "is not one of",
+    "matches": "matches the pattern",
+    "not_matches": "does not match the pattern",
+    "is_empty": "is empty",
+    "is_not_empty": "is set",
+    "same_as": "is the same as",
+    "different_from": "is different from",
+}
+
+_COMPOSITE_PREFIXES: dict[str, str] = {
+    "AND": "All of:",
+    "OR": "Any of:",
+    "NOT": "None of:",
+}
+
+
+@dataclass(frozen=True)
+class RuleLine:
+    """One rendered line on the read-only rule list.
+
+    ``indent`` drives the left guideline / padding for nested
+    composite children. ``text`` is the sentence-shaped rule body.
+    ``kind`` lets the template apply per-kind classes (e.g. a
+    different colour for FILTER vs MATCH if needed)."""
+
+    indent: int
+    text: str
+    rule_id: str
+    kind: str
+    enabled: bool
+
+
+@dataclass(frozen=True)
+class RuleBasedEditorContext:
+    rule_set_id: int
+    rule_set_name: str
+    rule_set_description: str
+    is_seed: bool
+    is_owner: bool
+    """True when the loaded RuleSet is a Personal RuleSet owned by
+    the current user. PR 5b will branch on this to enable in-place
+    edit affordances; PR 5a renders read-only either way."""
+    combinator: str
+    combinator_label: str
+    exclude_self_reviews: bool
+    seed_value: int | None
+    rule_lines: list[RuleLine]
+    copy_url: str
+    back_url: str
+    error_kind: str | None
+
+
+def _render_field_reference(dotted: str) -> str:
+    """``reviewer.tag1`` → ``reviewer tag1``. The dotted operator-
+    facing form lives in the schema; the editor surface renders the
+    side and attr space-separated so the sentence reads cleanly
+    without an apostrophe (which Jinja's auto-escape would render as
+    ``&#39;``)."""
+
+    side, attr = dotted.split(".", 1)
+    return f"{side} {attr}"
+
+
+def _render_predicate_sentence(predicate: dict[str, Any]) -> str:
+    field = predicate.get("field", "")
+    op = predicate.get("operator", "")
+    operand = predicate.get("operand")
+    field_label = _render_field_reference(field) if field else "?"
+    op_phrase = _OPERATOR_PHRASES.get(op, op)
+
+    if op in ("is_empty", "is_not_empty"):
+        return f"{field_label} {op_phrase}"
+
+    if op in ("same_as", "different_from"):
+        if isinstance(operand, str) and "." in operand:
+            return f"{field_label} {op_phrase} {_render_field_reference(operand)}"
+        return f"{field_label} {op_phrase} {operand!r}"
+
+    if op in ("in", "not_in"):
+        if isinstance(operand, list):
+            items = ", ".join(repr(item) for item in operand)
+            return f"{field_label} {op_phrase} [{items}]"
+        return f"{field_label} {op_phrase} {operand!r}"
+
+    if op in ("matches", "not_matches"):
+        return f"{field_label} {op_phrase} /{operand}/"
+
+    # equals / not_equals — literal scalar.
+    return f"{field_label} {op_phrase} {operand!r}"
+
+
+def _render_quota_sentence(rule: dict[str, Any]) -> str:
+    scope = rule.get("scope", "")
+    axis_target = "reviewee" if scope == "PER_REVIEWEE" else "reviewer"
+    axis_obligor = "reviewer" if scope == "PER_REVIEWEE" else "reviewee"
+    min_v = rule.get("min")
+    max_v = rule.get("max")
+    selection = rule.get("selection") or {}
+    strategy = selection.get("strategy", "ROUND_ROBIN")
+    seed = selection.get("seed")
+
+    bound: str
+    if min_v is not None and max_v is not None:
+        bound = f"{min_v} to {max_v}" if min_v != max_v else f"{min_v}"
+    elif max_v is not None:
+        bound = f"up to {max_v}"
+    elif min_v is not None:
+        bound = f"at least {min_v}"
+    else:
+        bound = "any number of"
+
+    strategy_phrase = (
+        "chosen randomly" if strategy == "RANDOM" else "round-robin"
+    )
+    if strategy == "RANDOM" and seed is not None:
+        strategy_phrase = f"{strategy_phrase} (seed={seed})"
+
+    return (
+        f"Cap at {bound} {axis_obligor}{'s' if bound not in ('1', 'at least 1') else ''} "
+        f"per {axis_target}, {strategy_phrase}"
+    )
+
+
+def _flatten_rule_lines(
+    rules: list[dict[str, Any]], *, indent: int = 0
+) -> list[RuleLine]:
+    lines: list[RuleLine] = []
+    for rule in rules:
+        kind = rule.get("kind", "")
+        rule_id = str(rule.get("id", ""))
+        enabled = bool(rule.get("enabled", True))
+
+        if kind in ("MATCH", "FILTER"):
+            verb = (
+                "Include pairs where"
+                if kind == "MATCH"
+                else "Exclude pairs where"
+            )
+            sentence = f"{verb} {_render_predicate_sentence(rule.get('predicate', {}))}."
+            lines.append(
+                RuleLine(
+                    indent=indent,
+                    text=sentence,
+                    rule_id=rule_id,
+                    kind=kind,
+                    enabled=enabled,
+                )
+            )
+        elif kind == "QUOTA":
+            lines.append(
+                RuleLine(
+                    indent=indent,
+                    text=_render_quota_sentence(rule) + ".",
+                    rule_id=rule_id,
+                    kind=kind,
+                    enabled=enabled,
+                )
+            )
+        elif kind == "COMPOSITE":
+            op = rule.get("op", "AND")
+            prefix = _COMPOSITE_PREFIXES.get(op, "All of:")
+            lines.append(
+                RuleLine(
+                    indent=indent,
+                    text=prefix,
+                    rule_id=rule_id,
+                    kind=kind,
+                    enabled=enabled,
+                )
+            )
+            lines.extend(
+                _flatten_rule_lines(
+                    rule.get("rules") or [], indent=indent + 1
+                )
+            )
+        else:
+            lines.append(
+                RuleLine(
+                    indent=indent,
+                    text=f"(unknown rule kind {kind!r})",
+                    rule_id=rule_id,
+                    kind=kind,
+                    enabled=enabled,
+                )
+            )
+    return lines
+
+
+def build_rule_based_editor_context(
+    review_session: ReviewSession,
+    *,
+    rule_set,  # RuleSet (avoid forward ref noise)
+    revision,  # RuleSetRevision
+    user: User,
+    error_kind: str | None = None,
+) -> RuleBasedEditorContext:
+    """Render the editor's read-only view of a loaded RuleSet."""
+
+    rule_lines = _flatten_rule_lines(revision.rules_json or [])
+    return RuleBasedEditorContext(
+        rule_set_id=rule_set.id,
+        rule_set_name=rule_set.name,
+        rule_set_description=rule_set.description or "",
+        is_seed=bool(rule_set.is_seed),
+        is_owner=(
+            not rule_set.is_seed
+            and rule_set.owner_user_id == user.id
+        ),
+        combinator=revision.combinator,
+        combinator_label=_COMBINATOR_LABELS.get(
+            revision.combinator, revision.combinator
+        ),
+        exclude_self_reviews=bool(revision.exclude_self_reviews),
+        seed_value=revision.seed,
+        rule_lines=rule_lines,
+        copy_url=(
+            f"/operator/sessions/{review_session.id}"
+            "/assignments/rule-based/copy"
+        ),
+        back_url=f"/operator/sessions/{review_session.id}/assignments",
+        error_kind=error_kind,
     )

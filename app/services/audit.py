@@ -414,6 +414,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
         _IDENTITY | {"counts", "context", "refs"}
     ),
     "assignments.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    # Segment 13A PR 5a — RuleSet library mutation events. Workspace-
+    # scoped (no session identity), so the schema omits ``session_id``
+    # / ``session_code`` from the allowed slot set.
+    "rule_set.created": EventSchema(frozenset({"snapshot", "refs", "context"})),
     # PR 7 — settings
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "reviewees.imported": EventSchema(_IDENTITY | {"counts", "context"}),
