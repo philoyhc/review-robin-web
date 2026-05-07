@@ -60,7 +60,8 @@ def test_create_writes_session_created_audit_event(
     ).scalar_one()
     assert event.summary == "Session spring-2026 created"
     assert event.detail is not None
-    assert event.detail["code"] == "spring-2026"
+    assert event.detail["session_code"] == "spring-2026"
+    assert event.detail["snapshot"]["code"] == "spring-2026"
     assert event.correlation_id is not None
     assert event.actor_user_id is not None
 

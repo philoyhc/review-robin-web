@@ -245,6 +245,204 @@ for every existing instrument, drops `pair_context_N` rows whose
 slot is unpopulated across the session's assignments. Rows whose
 slot has data (including operator-typed labels) are preserved.
 
+## Audit-event detail schema
+
+`AuditEvent.detail` is a free-form `JSON` column, but every new
+write composes from a small set of named envelopes plus a few
+orthogonal slots. Emitters pick the envelope that fits the
+event's nature; mixing two payload envelopes in one event is a
+smell that reads as the event trying to do two things at once.
+
+The convention is enforced by the typed helpers in
+`app/services/audit.py` (`audit.changes(...)` /
+`audit.snapshot(...)` / `audit.counts(...)` /
+`audit.set_changes(...)`); a future Pydantic
+write-validation gate (Segment 11K PR 8) will catch drift back
+into the old idiosyncratic shapes.
+
+### Identity slots (top-level, almost always present)
+
+```jsonc
+{
+  "session_id": <int | null>,
+  "session_code": "<str | null>",
+  // … plus exactly one payload envelope, see below …
+}
+```
+
+`session_id` mirrors the FK column; including it in `detail`
+costs ~6 bytes per row and saves the audit-export consumer a
+join. `session_code` is the operator-typed stable identifier;
+including it stabilises bookmarks and search ("show me every
+event for code 'CS101'") without joining against `sessions`.
+
+For events whose FK column is null because the session row is
+gone (`session.deleted`), top-level identity slots are absent
+and identity lives inside the `snapshot` envelope on
+column-mirror keys (`id` / `code`) instead.
+
+### Payload envelopes (pick one)
+
+#### `changes` — scalar-key updates
+
+```jsonc
+{
+  "changes": {
+    "name": ["old", "new"],
+    "deadline": ["2026-05-01T00:00:00+00:00", "2026-05-15T00:00:00+00:00"],
+    "help_contact": [null, "support@x.edu"]
+  }
+}
+```
+
+For `session.updated`, `instrument.field_updated`,
+`email_template.updated`, `operator_email_settings.updated`.
+Each value is a `[old, new]` two-tuple; `null` is allowed on
+either side. No nested keys (use `set_changes` if you're
+mutating a collection). Datetime / date values are serialised
+to ISO-8601 strings by the helper.
+
+#### `snapshot` — full-state capture
+
+```jsonc
+{
+  "snapshot": {
+    "id": 17,
+    "name": "Final Review",
+    "code": "FR2026",
+    "deadline": "2026-06-01T00:00:00+00:00",
+    "status": "draft"
+    // … every column at the moment of the event …
+  }
+}
+```
+
+For events where the row is the subject — `session.created`,
+`session.deleted`, `instrument.deleted`, `reviewer.deleted`.
+Snapshot keys mirror DB column names; nested objects are
+allowed (e.g. `snapshot.instruments` on `session.deleted`).
+
+#### `counts` — aggregate ops
+
+```jsonc
+{
+  "counts": {
+    "reviewers": 8,
+    "reviewees": 13,
+    "assignments": 104
+  }
+}
+```
+
+For bulk operations — `assignments.generated`,
+`reviewers.imported`, `reviewees.imported`,
+`responses.deleted_all`, `responses.cleared`. All values are
+non-negative integers.
+
+#### `set_changes` — collection mutations
+
+```jsonc
+{
+  "set_changes": {
+    "added":   [{ "key": "tag_1", "label": "Department" }],
+    "removed": [{ "key": "tag_old", "label": "Legacy" }],
+    "updated": [{ "key": "tag_2", "changes": { "label": ["A", "B"] }}]
+  }
+}
+```
+
+For events that mutate a collection of children —
+`instrument.display_fields_saved`,
+`instrument.response_fields_saved`. Each entry in `added` /
+`removed` is a flat dict (no nested envelopes). `updated`
+entries carry their own `changes` sub-dict (same shape as the
+top-level `changes` envelope; one level of nesting only).
+
+### Orthogonal slots (combine freely with any envelope)
+
+#### `reason` — top-level string
+
+```jsonc
+{ "reason": "operator_revert", "snapshot": { … } }
+```
+
+For events triggered by a known cause: invalidation
+(`reason: "setup_mutation"`), revert
+(`reason: "operator_revert"`), cascade close
+(`reason: "deadline"` / `"manual"`). Free-form `str`; emitters
+pick from a small documented set per event family rather than
+typing freely.
+
+#### `refs` — cross-entity reference IDs
+
+```jsonc
+{ "refs": { "instrument_id": 7, "reviewer_id": 42 } }
+```
+
+For events whose subject isn't the session itself — when an
+event scoped to a session is *about* a child entity (an
+instrument, a reviewer, a response field). Keys end in `_id`
+and values are integer PKs. The audit-export consumer reads
+this to thread cross-entity rows together without re-joining
+through every event's bespoke detail shape.
+
+#### `context` — descriptive scalar metadata
+
+```jsonc
+{ "context": { "mode": "full_matrix", "filename": "manual.csv" } }
+```
+
+For events that carry descriptive scalars that are part of the
+audit story but don't fit any payload envelope or other slot —
+`assignments.generated`'s `mode` (`"full_matrix"` /
+`"manual"`), `csv_imports`' `filename`,
+`email_template.updated`'s `template`,
+`session.activated`'s `prev_status` and `override_warnings`,
+`instruments.bulk_accepting_responses`'s `target`. Keys are
+short identifiers; values are `str`, `int`, or `bool` (no
+nesting, no lists). `refs` stays int-PKs only and `counts`
+stays non-negative-int only — `context` is the slot for
+everything else that's a single scalar describing the *how*
+or *from where* of the event.
+
+`context` is small by design: if a key list reaches more than
+4-5 entries, the event is probably trying to do two things at
+once and should split.
+
+### Empty-detail case
+
+For events that need no payload (rare but legal, e.g. a
+"viewed" event), `detail = None` is correct. Don't write
+`detail = {}` — the model column is nullable; `None` is the
+canonical "no payload" marker.
+
+### Worked examples
+
+| Event type | Envelope(s) | Canonical detail |
+|---|---|---|
+| `session.created` | `snapshot` | `{"session_id": 17, "session_code": "CS101", "snapshot": {"id": 17, "code": "CS101", "name": "Final Review"}}` |
+| `session.updated` | `changes` | `{"session_id": 17, "session_code": "CS101", "changes": {"name": ["Spring", "Spring v2"]}}` |
+| `session.deleted` | `snapshot` (no top-level identity) | `{"snapshot": {"id": 17, "code": "CS101", "name": "Final Review"}}` |
+| `session.invalidated` | `reason` (no payload) | `{"session_id": 17, "session_code": "CS101", "reason": "setup_mutation"}` |
+| `instrument.closed` | `reason` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "reason": "deadline", "context": {"deadline": "2026-06-01T00:00:00+00:00"}}` |
+| `assignments.generated` | `counts` + `context` | `{"session_id": 17, "session_code": "CS101", "counts": {"assignments": 104, "pairs": 13, "instruments": 8, "replaced": 0}, "context": {"mode": "full_matrix"}}` |
+| `responses.saved` | `refs` + `counts` | `{"session_id": 17, "session_code": "CS101", "refs": {"reviewer_id": 42}, "counts": {"saved": 5, "validation_errors": 0}}` |
+| `instrument.display_fields_saved` | `set_changes` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "set_changes": {"added": [], "removed": [], "updated": [...]}}` |
+
+### Cutover
+
+Rows written **before 2026-05-07** use legacy per-emitter
+shapes (each event family had its own idiosyncratic dict
+layout — see `git log app/services/audit.py` and the
+pre-migration emitters for the historical shapes). The
+canonical convention applies to every new write from PR 1 of
+Segment 11K (2026-05-07) onward; existing rows are not
+rewritten, since the audit log is append-only.
+
+The `audit_events.created_at` timestamp is the cutover
+boundary the audit-export consumer (Segment 12B) reads to
+decide which shape to interpret.
+
 ## Implementation principles
 
 - Keep routes thin.

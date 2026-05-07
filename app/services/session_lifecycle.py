@@ -139,12 +139,11 @@ def mark_validated(
         event_type="session.validated",
         summary=f"Session {review_session.code} marked validated",
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "session_id": review_session.id,
-            "warning_count": len(report.warnings),
-            "info_count": len(report.info),
-        },
+        session=review_session,
+        payload=audit.counts(
+            warnings=len(report.warnings),
+            info=len(report.info),
+        ),
         correlation_id=correlation_id,
     )
     db.commit()
@@ -212,8 +211,8 @@ def invalidate_session(
         event_type="session.invalidated",
         summary=f"Session {review_session.code} invalidated ({reason})",
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={"session_id": review_session.id, "reason": reason},
+        session=review_session,
+        reason=reason,
         correlation_id=correlation_id,
     )
     db.commit()
@@ -269,14 +268,15 @@ def activate_session(
         event_type="session.activated",
         summary=f"Session {review_session.code} activated",
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "session_id": review_session.id,
+        session=review_session,
+        payload=audit.counts(
+            warnings=len(report.warnings),
+            info=len(report.info),
+            instruments=len(instruments),
+        ),
+        context={
             "prev_status": prev_status,
             "override_warnings": bool(report.has_non_blocking_findings),
-            "warning_count": len(report.warnings),
-            "info_count": len(report.info),
-            "instrument_ids": [i.id for i in instruments],
         },
         correlation_id=correlation_id,
     )
@@ -333,12 +333,11 @@ def revert_session_to_draft(
         event_type="session.reverted_to_draft",
         summary=f"Session {review_session.code} reverted to draft",
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "session_id": review_session.id,
-            "closed_instrument_ids": closed_instrument_ids,
-            "response_count_at_revert": response_count,
-        },
+        session=review_session,
+        payload=audit.counts(
+            closed_instruments=len(closed_instrument_ids),
+            responses_at_revert=response_count,
+        ),
         correlation_id=correlation_id,
     )
     db.commit()
@@ -384,8 +383,8 @@ def open_instrument(
             event_type="instrument.opened",
             summary=f"Instrument {instrument.name} opened",
             actor_user_id=user.id,
-            session_id=review_session.id,
-            detail={"instrument_id": instrument.id},
+            session=review_session,
+            refs={"instrument_id": instrument.id},
             correlation_id=correlation_id,
         )
     db.commit()
@@ -411,8 +410,9 @@ def close_instrument(
             event_type="instrument.closed",
             summary=f"Instrument {instrument.name} closed ({reason})",
             actor_user_id=user.id,
-            session_id=review_session.id,
-            detail={"instrument_id": instrument.id, "reason": reason},
+            session=review_session,
+            refs={"instrument_id": instrument.id},
+            reason=reason,
             correlation_id=correlation_id,
         )
     db.commit()
@@ -515,12 +515,10 @@ def observe_deadline(
             event_type="instrument.closed",
             summary=f"Instrument {instrument.name} closed (deadline)",
             actor_user_id=None,
-            session_id=review_session.id,
-            detail={
-                "instrument_id": instrument.id,
-                "reason": "deadline",
-                "deadline": review_session.deadline.isoformat(),
-            },
+            session=review_session,
+            refs={"instrument_id": instrument.id},
+            reason="deadline",
+            context={"deadline": review_session.deadline.isoformat()},
             correlation_id=correlation_id,
         )
         closed += 1
