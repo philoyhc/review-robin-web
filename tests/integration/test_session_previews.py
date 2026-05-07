@@ -337,11 +337,12 @@ def test_invitation_tab_active_by_default(
     # renders as a "(coming soon)" button anymore.
     assert "Reminder (coming soon)" not in body
     assert "Responses received (coming soon)" not in body
-    assert (
-        f'href="/operator/sessions/{session.id}/previews'
-        in body
-        and "email=responses_received" in body
-    )
+    # Tab links carry an ``#email-previews`` fragment so switching
+    # tabs scrolls back to the email-preview card after the full-page
+    # reload, instead of jumping to the top of the page.
+    assert "email=responses_received#email-previews" in body
+    assert "email=reminder#email-previews" in body
+    assert 'id="email-previews"' in body
 
 
 def test_invitation_body_renders_with_substituted_session_name(
@@ -516,7 +517,7 @@ def test_hr_separator_sits_between_email_region_and_surface_card(
     # The email card precedes the <hr> precedes the reviewer-surface
     # card. Pin the relative DOM order so PRs D / E can rely on the
     # contract.
-    email_idx = body.index('<div class="card email-preview-card">')
+    email_idx = body.index('<div class="card email-preview-card" id="email-previews">')
     hr_idx = body.index('<hr class="preview-region-divider">')
     surface_idx = body.index('id="reviewer-surface"')
     assert email_idx < hr_idx < surface_idx

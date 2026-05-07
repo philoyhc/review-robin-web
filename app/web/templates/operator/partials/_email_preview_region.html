@@ -18,14 +18,19 @@
      - active_email_tab: views.EmailPreviewTab
      - email_body: views.EmailBody | None
 #}
-<div class="card email-preview-card">
+<div class="card email-preview-card" id="email-previews">
   <div class="btn-pair email-preview-tabs">
+    {# Each shipped tab's href ends in ``#email-previews`` so the
+       browser scrolls back to this card after the full-page reload
+       — without the fragment, switching tabs jumps the operator to
+       the top of the page (above the chrome + picker), which is
+       jarring when their working context is the email body below. #}
     {% for tab in email_tabs %}
       {% if tab.key == active_email_tab.key %}
         <button type="button" class="btn disabled" aria-disabled="true">{{ tab.label }}</button>
       {% elif tab.is_shipped %}
         <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/previews?reviewer_email={{ picker.current.email | urlencode }}&email={{ tab.key }}">{{ tab.label }}</a>
+           href="/operator/sessions/{{ session.id }}/previews?reviewer_email={{ picker.current.email | urlencode }}&email={{ tab.key }}#email-previews">{{ tab.label }}</a>
       {% else %}
         <button type="button" class="btn secondary" disabled aria-disabled="true">{{ tab.label }} (coming soon)</button>
       {% endif %}
