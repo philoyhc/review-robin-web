@@ -1,4 +1,16 @@
-# Segment 12 Plan — Export, Audit, and Retention MVP
+# Segment 12B Plan — Audit retention
+
+> **Renamed 2026-05-07** from `segment_12_export_audit_retention_mvp_plan.md`.
+> The export half of the original Segment 12 scope (response-data
+> CSV / Excel exports, the Extract Data card on Session Home)
+> folded into **Segment 12A** (`guide/segment_12A.md`); 12B retains
+> only the `audit_events` export + retention / purge tooling. The
+> original "Segment 12" framing below predates that split — read
+> it as a historical record; the operative scope when 12B starts
+> is the audit-retention portion (sections covering
+> `audit_events`, retention, and deletion). Hard prerequisite:
+> **Segment 11K** ships the audit-event `detail` schema
+> convention that 12B's export reads against.
 
 **Project:** Review Robin Web  
 **Repository:** <https://github.com/philoyhc/review-robin-web>  
