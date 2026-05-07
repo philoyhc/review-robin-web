@@ -2424,6 +2424,12 @@ _QUOTA_STRATEGY_OPTIONS: list[tuple[str, str]] = [
     ("ROUND_ROBIN", "round-robin"),
 ]
 
+_COMPOSITE_OP_OPTIONS: list[tuple[str, str]] = [
+    ("AND", "All of:"),
+    ("OR", "Any of:"),
+    ("NOT", "None of:"),
+]
+
 
 @dataclass(frozen=True)
 class RuleLine:
@@ -2447,12 +2453,11 @@ class EditableRule:
 
     Carries the structured shape so the template can populate the
     field/operator/operand pickers and the quota-editor inputs.
-    Composite rules render their children inline; PR 5b ships the
-    leaf-rule editor only — composite-tree editing (add/remove
-    children, change ``op``) is a 5c follow-on. Composites still
-    serialise correctly via the inline JS through their
-    ``data-children`` payload, so seed Composites round-trip
-    untouched on Save As.
+    Composite rules render their op picker + an "Add child rule"
+    button; their children render as full edit rows immediately
+    after the parent with ``indent`` bumped (Segment 13A PR 5c).
+    The JS serialiser walks the rendered DOM order and reconstructs
+    the nested tree from each row's ``data-indent`` attribute.
     """
 
     rule_id: str
@@ -2469,11 +2474,8 @@ class EditableRule:
     quota_max: int | None = None
     quota_strategy: str | None = None
     quota_seed: int | None = None
-    # COMPOSITE — children carried as opaque JSON so the JS
-    # serialiser can reattach them to the parent on submit without
-    # PR 5b having to ship the inline composite editor.
+    # COMPOSITE:
     composite_op: str | None = None
-    composite_children_json: str | None = None
 
 
 @dataclass(frozen=True)
@@ -2511,6 +2513,7 @@ class RuleBasedEditorContext:
     combinator_options: list[tuple[str, str]]
     quota_scope_options: list[tuple[str, str]]
     quota_strategy_options: list[tuple[str, str]]
+    composite_op_options: list[tuple[str, str]]
 
 
 def _render_field_reference(dotted: str) -> str:
@@ -2676,14 +2679,12 @@ def _flatten_editable_rules(
 ) -> list[EditableRule]:
     """Walk the rule tree and emit per-rule edit-form rows.
 
-    Composite rules emit one parent row + one child row per
-    composite child (with ``indent`` bumped). PR 5b doesn't ship
-    inline composite-tree editing, so the parent's
-    ``composite_children_json`` carries the raw child JSON for the
-    JS serialiser to reattach untouched on Save As — round-tripping
-    seed Composites without operator interaction."""
-
-    import json
+    Composite rules emit one parent row + one full edit row per
+    composite child (Segment 13A PR 5c). The JS serialiser walks
+    rendered DOM order and reconstructs the nested tree from each
+    row's ``data-indent`` attribute — children are the consecutive
+    rows with strictly greater indent following a composite.
+    """
 
     out: list[EditableRule] = []
     for rule in rules:
@@ -2727,11 +2728,8 @@ def _flatten_editable_rules(
                     enabled=enabled,
                     indent=indent,
                     composite_op=rule.get("op"),
-                    composite_children_json=json.dumps(children),
                 )
             )
-            # Render children read-only inline so the operator can see
-            # what's nested. Editing them is a 5c follow-on.
             out.extend(
                 _flatten_editable_rules(children, indent=indent + 1)
             )
@@ -2797,4 +2795,5 @@ def build_rule_based_editor_context(
         combinator_options=list(_COMBINATOR_PICKER_OPTIONS),
         quota_scope_options=list(_QUOTA_SCOPE_OPTIONS),
         quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
+        composite_op_options=list(_COMPOSITE_OP_OPTIONS),
     )
