@@ -1,91 +1,158 @@
-# Rule Builder card layout — spec
+# Rule Builder card layout
 
-Layout spec for the rule-editing card on the Rule Builder page
-(`/operator/sessions/{id}/assignments/rule-based-editor`). The
-title card with the breadcrumb and the `<h1>Rule Builder</h1>`
-heading is **not** in scope here — this is just the card below it
-that holds the selector + form.
+Layout spec for the Rule Builder page
+(`/operator/sessions/{id}/assignments/rule-based-editor`).
+The title card with the breadcrumb and the `<h1>Rule Builder</h1>`
+heading is **not** in scope here — this spec covers the two cards
+below it: the **Rule Builder card** (left) and the **Available
+rulesets** card (right).
 
-> Status: spec only, not implemented. Apply on top of Segment 13A-1.
+> Status: implemented in Segment 13A-1 (PRs #587, #588, #589, #596,
+> #597, #598, #599). This doc captures the as-shipped layout so a
+> future revisit has a single reference point.
 
-## Shape
+## Page shape
+
+The two cards sit side-by-side in a flex grid, each at half the
+page content width. The Rule Builder card is on the left; the
+Available rulesets card is on the right.
 
 ```
-┌─────────────────────────── outer card (½ width of page) ──────────────────────────┐
-│                                                                                    │
-│  ┌─────────────────────── inner card ──────────────────────────────────────────┐  │
-│  │                                                                              │  │
-│  │   [ RuleSet selector ▾ ]              [ Copy Name input        ]             │  │
-│  │   ←——— ½ of inner ———→                ←——— ½ of inner ———→                   │  │
-│  │                                       (only when an editable name exists)    │  │
-│  └──────────────────────────────────────────────────────────────────────────────┘  │
-│                                                                                    │
-│   Combine these rules with:                                                        │
-│   [ All of  ▾ ]                                                                    │
-│                                                                                    │
-│   Rules                                                                            │
-│   1. Match — reviewer.tag1 …                                                       │
-│   2. Filter — reviewer.email …                                                     │
-│                                                                                    │
-│   [ + MATCH rule ] [ + FILTER rule ] …                                             │
-│                                                                                    │
-│   [ Copy ] [ Save ] [ Cancel ] [ Delete ]                                          │
-│   ↑ bottom-left, outside the body                                                  │
-└────────────────────────────────────────────────────────────────────────────────────┘
+┌─────────── Rule Builder card (½) ──────────┐  ┌──── Available rulesets card (½) ────┐
+│                                             │  │                                      │
+│  [ RuleSet selector ▾ ]   [ Name input  ]   │  │  ▶ Full Matrix          [seed]       │
+│  Pair every reviewer with every reviewee.   │  │    Pair every reviewer with every…   │
+│  (caption only on seeded read-only)         │  │                                      │
+│                                             │  │    Intra-group peer review  [seed]   │
+│  Friendly Description (optional)            │  │    Match same-group reviewer/…       │
+│  [ User created ruleset                  ]  │  │                                      │
+│  (only on editable branches)                │  │    Cross-group peer review  [seed]   │
+│                                             │  │    …                                 │
+│  Combine these rules with:                  │  │                                      │
+│  [ All of  ▾ ]                              │  │    My team review     [personal]     │
+│                                             │  │    A team review                     │
+│  Rules                                      │  │                                      │
+│  1. Match — reviewer.tag1 is the same as …  │  └──────────────────────────────────────┘
+│  2. Filter — reviewer.email is set          │
+│                                             │
+│  [ + MATCH rule ] [ + FILTER rule ] …       │
+│                                             │
+│  [ Copy ] [ Save ] [ Cancel ] [ Delete ]    │
+│  ↑ bottom-left, outside the body            │
+└─────────────────────────────────────────────┘
 ```
 
-## Rules
+## Rule Builder card (left)
 
-1. **Outer card width.** Half the page content width. (Sits in a
-   layout that leaves the right half free for a future preview /
-   adjacent panel; nothing renders there in this spec.)
+1. **Width.** Half the page content width. The width comes from a
+   page-level flex grid that holds the Rule Builder card + the
+   Available rulesets card; the card itself doesn't carry a
+   `max-width`.
 
-2. **Nested inner card** at the top of the outer card. Holds:
-   - **RuleSet selector** (the dropdown). Half width of the inner
-     card. Always present, in every state.
-   - **Name input** to its right. Half width of the inner card.
-     Visible only when an editable name exists — i.e., on saved
-     Personal RuleSets, on Copy drafts (pre-populated with `Copy of
-     <source>`), and on the blank draft (pre-populated with
-     `New RuleSet`). Hidden for seeded selections (read-only).
+2. **Inner row** at the top — chromeless (no card border, no
+   padding, transparent background — visually part of the outer
+   card, structurally a flex row). Two flex children at 1/2 each:
+   - **RuleSet selector** (left). Always present, in every state.
+   - **Name input** (right). Visible only when an editable name
+     exists — i.e., on saved Personal RuleSets, Copy drafts (pre-
+     populated with `Copy of <source>`), and the blank draft (pre-
+     populated with `New RuleSet`). Hidden for seeded selections;
+     when hidden, the selector stays at 1/2 width and the right
+     half stays empty (the selector does **not** expand).
+   - On seeded read-only selections the RuleSet's stored
+     description renders as a one-line caption immediately under
+     the dropdown, as a passive helper. Editable branches drop
+     this caption — the description moves into the editable
+     textarea below (rule #4).
 
-3. **No separate title heading.** Drop the current
-   `<h2>{name}</h2> + <pill>{seed|personal|draft}</pill>` row.
-   - For editable selections the name input *is* the title.
-   - For seeded read-only selections the dropdown's selected option
-     *is* the title. The "seed" pill goes away (the `(seeded)`
-     suffix in the dropdown carries the same signal).
+3. **No separate title heading.** The dropdown's selected option
+   (for seeds) and the inline name input (for editable selections)
+   carry the title. No `<h2>` heading row, no scope pill above the
+   body.
 
-4. **Body keeps its current single-column layout.** Combinator
-   selector, Random seed (when applicable), Rules list, and the
-   "+ MATCH/FILTER/QUOTA/COMPOSITE rule" buttons render top-to-
-   bottom inside the outer card, exactly as the current Segment
-   13A-1 PR 1–3 implementation does, with these trims:
-   - **Drop the "Combinator" heading**, but keep the existing
-     "Combine these rules with:" helper text above the selector
-     (and above the read-only pill on seeded views) so the role
-     of the dropdown stays obvious in plain English.
-   - **Drop the "Exclude self-review" checkbox** (and its "Self-
-     review" heading). The same affordance is exposed on the main
-     Assignments page; surfacing it inside the Rule Builder card
-     duplicates a control. The underlying `exclude_self_reviews`
-     value still travels with each RuleSet revision — the editor
-     just doesn't expose a UI for it. Read-only seeded views also
-     drop the "Exclude self-review: on/off" pill row.
+4. **Friendly Description (optional)** textarea, full width, below
+   the inner row. Editable branches only (drafts + saved Personal).
+   - Hoisted into the editable POST form via the HTML
+     `form="rule-based-editor-form"` attribute so it can sit
+     visually outside the form's body but still submit with it.
+   - **Default value on a fresh Copy / blank draft:** `"User
+     created ruleset"`. Operators are expected to overwrite.
+     Saved-Personal selections preserve their stored description
+     across reloads.
+   - Persists via the existing `/save` route, which writes
+     through to `rule_sets.description`.
 
-5. **Action row.** Stays at the bottom of the outer card, **outside**
-   the body. Left-aligned. Same selection-aware buttons as today
-   (Segment 13A-1 PR 2 locked decisions):
+5. **Body** — single column, top-to-bottom:
+   - `Combine these rules with:` helper sentence above the
+     combinator selector / read-only pill. No bold "Combinator"
+     heading.
+   - Random seed input (when the RuleSet revision carries one).
+   - "Rules" list — sentence-shaped sentences for seeds (read-
+     only), inline-composite editable form for editable branches.
+   - `+ MATCH rule`, `+ FILTER rule`, `+ QUOTA rule`, `+ COMPOSITE
+     rule` buttons (no `Add` prefix) on editable branches.
+   - **No "Exclude self-review" affordance** — that control lives
+     on the main Assignments page. The `exclude_self_reviews`
+     value still travels with each RuleSet revision; the Rule
+     Builder card just doesn't expose a UI for it. Seeded views
+     similarly omit the "Exclude self-review: on/off" pill row.
+
+6. **Banners** sit between the inner row and the body. State-
+   driven, copy-locked:
+   - Seeded → "This is a read-only seeded RuleSet. Click **Copy**
+     to create an editable Personal copy."
+   - Blank-draft sentinel → "Starting from scratch. Add at least
+     one rule, then click **Save** to persist a new Personal
+     RuleSet."
+   - Copy / draft → "Unsaved draft. Edit and **Save** to persist a
+     new Personal RuleSet, or **Cancel** to discard."
+   - Save error / save success → standard error / info banners
+     keyed off `?error=` / `?saved=1`.
+
+7. **Action row** at the bottom of the card, **outside** the body.
+   Left-aligned. Selection-aware:
    - Seeded → `[ Copy ]`
    - Saved Personal → `[ Copy ] [ Save ] [ Cancel ] [ Delete ]`
    - Copy draft / blank draft → `[ Save ] [ Cancel ]`
+   - Blank draft's `Save` is `disabled` client-side until the
+     rule list grows past zero rows; the server-side gate is the
+     source of truth and rejects a zero-rule submit with
+     `?error=empty_rules`.
 
-6. **Name input hidden state.** When the Name input is hidden
-   (seeded selection), the selector stays at half width — it does
-   **not** expand. The right half of the inner card stays empty.
+## Available rulesets card (right)
+
+1. **Width.** Half the page content width — paired with the Rule
+   Builder card via the page-level flex grid.
+
+2. **Title.** `<h2>Available rulesets</h2>` at the top of the
+   card.
+
+3. **List.** One row per visible RuleSet, in the same order as the
+   Rule Builder dropdown:
+   - Seeds first, in install order (Full Matrix → Intra-group →
+     Cross-group → Same-group different-role → Three reviewers
+     per reviewee).
+   - Caller-owned Personal RuleSets after, in id order (matches
+     the dropdown convention until the field reports a need for
+     most-recently-updated sort).
+   - Each row carries `name`, a `seed` / `personal` pill, and the
+     RuleSet's `description` as a `form-help` caption beneath.
+
+4. **Active row highlight.** The row matching the Rule Builder's
+   current selection renders highlighted (`▶` prefix on the name
+   + `available-ruleset-row-active` class). Drafts (Copy / blank)
+   produce no highlight — they don't correspond to a persisted
+   row.
+
+5. **Click behaviour.** Out of scope — rows are read-only at the
+   moment. Operators switch RuleSets via the Rule Builder
+   dropdown. Adding "click row to load" is a future enhancement.
 
 ## Out of scope
 
-- Mobile / narrow viewport: the half-width outer card will need a
-  collapse rule. Capture when we wire responsive breakpoints in
-  Segment 14.
+- Mobile / narrow viewport: the side-by-side flex grid will need a
+  collapse rule when the page narrows. Capture when we wire
+  responsive breakpoints in Segment 14.
+- Click-to-load on Available rulesets rows.
+- Search / filter on the Available rulesets list (assumes
+  operators have a handful of saved RuleSets per session).
