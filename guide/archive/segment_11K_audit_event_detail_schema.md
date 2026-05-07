@@ -20,11 +20,19 @@ This is the **gate before Segment 12B** per
 
 ## Status
 
-Planning. Sized as **8 PRs**: one spec PR, one PR per emitter
-family (current count: five families across the service modules,
-plus one route→service refactor for the `email_template.*`
-emitters), and one validation-on-write PR. Each migration PR is
-small and independently shippable; the spec PR has to land first.
+**Segment fully shipped 2026-05-07** across **PRs #544 → #545
+→ #546 → #547 → #548 → #549 → #550 → this PR** (eight PRs, in
+the per-section order below). Spec lives at
+`spec/architecture.md` "Audit-event detail schema"; the
+per-event-type registry + Pydantic gate live at
+`app/services/audit.py::EVENT_SCHEMAS` /
+`audit.validate_detail` / `audit._CanonicalDetail`. Catalog
+`unfinished_business.md` §5 is closed by this segment.
+
+Originally sized as **8 PRs**: one spec PR, one PR per emitter
+family (five families across the service modules, plus one
+route→service refactor for the `email_template.*` emitters),
+and one validation-on-write PR. Shipped as planned.
 
 1. **PR 1 — Spec write-up + audit helpers + one family migrated
    as proof.** Adds the canonical shapes to `spec/architecture.md`,

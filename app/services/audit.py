@@ -6,11 +6,14 @@
 canonical `detail` shape documented in
 ``spec/architecture.md`` "Audit-event detail schema".
 
-The legacy ``detail=`` kwarg path is preserved during the
-Segment 11K migration window and emits a ``DeprecationWarning``
-when called from the test environment so drift surfaces in CI;
-PR 8 of Segment 11K replaces the warning with a Pydantic
-write-validation gate.
+Every emitted ``detail`` is validated against a per-event-type
+schema in ``EVENT_SCHEMAS`` before the row is written. Under
+``settings.audit_strict_mode`` (flipped on by ``tests/conftest.py``)
+a shape violation raises ``AuditDetailValidationError``; in
+production the violation logs a structured warning and the row
+writes anyway — auditing is observability, and dropping audit
+events because of a shape bug would hide the very mutations
+we're auditing.
 """
 from __future__ import annotations
 
@@ -20,8 +23,10 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, ValidationError
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
 
 
@@ -187,6 +192,17 @@ def write_event(
         resolved_session_id = session_id
         resolved_detail = detail
 
+    try:
+        validate_detail(event_type, resolved_detail)
+    except AuditDetailValidationError as exc:
+        if _audit_strict_mode():
+            raise
+        warnings.warn(
+            f"audit.write_event {exc}; writing the row anyway because "
+            f"settings.audit_strict_mode is False",
+            stacklevel=2,
+        )
+
     event = AuditEvent(
         event_type=event_type,
         summary=summary,
@@ -246,3 +262,208 @@ def _is_test_env() -> bool:
     return "PYTEST_CURRENT_TEST" in os.environ or "pytest" in os.environ.get(
         "_", ""
     )
+
+
+# --------------------------------------------------------------------------- #
+# Shape validation (Segment 11K PR 8)
+# --------------------------------------------------------------------------- #
+
+
+class AuditDetailValidationError(ValueError):
+    """Raised when a written ``detail`` doesn't match the canonical
+    envelope schema for its ``event_type``.
+
+    Strict-mode-only by default — production lenient mode logs a
+    structured warning and lets the write proceed (auditing is
+    observability; dropping events would hide mutations).
+    """
+
+    def __init__(
+        self, event_type: str, detail: dict[str, Any] | None, message: str
+    ) -> None:
+        super().__init__(f"{event_type}: {message}")
+        self.event_type = event_type
+        self.detail = detail
+
+
+class _SetChangesShape(BaseModel):
+    """Inner shape for the ``set_changes`` envelope."""
+
+    model_config = ConfigDict(extra="forbid")
+    added: list[dict[str, Any]] = []
+    removed: list[dict[str, Any]] = []
+    updated: list[dict[str, Any]] = []
+
+
+class _CanonicalDetail(BaseModel):
+    """Top-level structural shape of ``AuditEvent.detail``.
+
+    ``extra="forbid"`` catches drift back into the pre-canonical
+    idiosyncratic dicts (e.g. a top-level ``instrument_id`` would
+    fail here — instrument IDs go in ``refs``). Each key carries
+    its own value-shape validation; the per-event-type allowlist
+    (``EVENT_SCHEMAS``) then narrows which keys may appear for a
+    given emitter.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    session_id: int | None = None
+    session_code: str | None = None
+    changes: dict[str, list[Any]] | None = None
+    snapshot: dict[str, Any] | None = None
+    counts: dict[str, int] | None = None
+    set_changes: _SetChangesShape | None = None
+    reason: str | None = None
+    refs: dict[str, int] | None = None
+    context: dict[str, str | int | bool] | None = None
+
+
+@dataclass(frozen=True)
+class EventSchema:
+    """Per-event-type allowlist of canonical detail keys.
+
+    ``allows`` is the set of top-level keys that may appear in
+    ``detail`` for this event type. Present keys must be a subset
+    of ``allows``; not all allowed keys need to appear (e.g.
+    ``instrument.closed`` allows ``context`` for the deadline path
+    but the manual path doesn't carry it).
+    """
+
+    allows: frozenset[str]
+
+
+_IDENTITY: frozenset[str] = frozenset({"session_id", "session_code"})
+
+# Registry of every event_type the codebase emits. Adding a new
+# emitter requires adding its entry here so PR 8's validation gate
+# can confirm the shape; ``test_every_event_type_has_a_schema``
+# pins the registry to the actual emitters.
+EVENT_SCHEMAS: dict[str, EventSchema] = {
+    # PR 1 — session lifecycle
+    "session.created": EventSchema(_IDENTITY | {"snapshot"}),
+    "session.updated": EventSchema(_IDENTITY | {"changes"}),
+    "session.deleted": EventSchema(frozenset({"snapshot"})),
+    "session.validated": EventSchema(_IDENTITY | {"counts"}),
+    "session.invalidated": EventSchema(_IDENTITY | {"reason"}),
+    "session.activated": EventSchema(_IDENTITY | {"counts", "context"}),
+    "session.reverted_to_draft": EventSchema(_IDENTITY | {"counts"}),
+    "instrument.opened": EventSchema(_IDENTITY | {"refs"}),
+    "instrument.closed": EventSchema(_IDENTITY | {"refs", "reason", "context"}),
+    # PR 2 — instruments
+    "response_type.added": EventSchema(_IDENTITY | {"snapshot"}),
+    "response_type.updated": EventSchema(
+        _IDENTITY | {"changes", "refs", "context"}
+    ),
+    "response_type.deleted": EventSchema(
+        _IDENTITY | {"snapshot", "refs", "context"}
+    ),
+    "instrument.created": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
+    "instrument.deleted": EventSchema(_IDENTITY | {"snapshot", "refs"}),
+    "instrument.display_field_added": EventSchema(
+        _IDENTITY | {"snapshot", "refs"}
+    ),
+    "instrument.display_field_updated": EventSchema(
+        _IDENTITY | {"changes", "refs", "context"}
+    ),
+    "instrument.display_field_deleted": EventSchema(
+        _IDENTITY | {"snapshot", "refs", "context"}
+    ),
+    "instrument.display_field_moved": EventSchema(
+        _IDENTITY | {"refs", "context"}
+    ),
+    "instrument.field_added": EventSchema(
+        _IDENTITY | {"snapshot", "refs", "context"}
+    ),
+    "instrument.field_updated": EventSchema(
+        _IDENTITY | {"changes", "refs", "context"}
+    ),
+    "instrument.field_deleted": EventSchema(
+        _IDENTITY | {"snapshot", "refs", "context"}
+    ),
+    "instrument.fields_reordered": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "instrument.display_fields_saved": EventSchema(
+        _IDENTITY | {"set_changes", "refs"}
+    ),
+    "instrument.response_fields_saved": EventSchema(
+        _IDENTITY | {"set_changes", "refs"}
+    ),
+    "instrument.described": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "instrument.short_label_updated": EventSchema(
+        _IDENTITY | {"changes", "refs"}
+    ),
+    "instruments.bulk_accepting_responses": EventSchema(
+        _IDENTITY | {"set_changes", "context"}
+    ),
+    "instruments.bulk_visibility_when_closed": EventSchema(
+        _IDENTITY | {"set_changes", "context"}
+    ),
+    # PR 3 — invitations
+    "invitations.generated": EventSchema(_IDENTITY | {"set_changes"}),
+    "invitation.regenerated": EventSchema(_IDENTITY | {"refs"}),
+    "invitations.regenerated": EventSchema(_IDENTITY | {"set_changes"}),
+    "invitation.sent": EventSchema(_IDENTITY | {"refs"}),
+    "invitation.opened": EventSchema(_IDENTITY | {"refs"}),
+    "reminders.sent": EventSchema(_IDENTITY | {"set_changes", "context"}),
+    # PR 4 — responses
+    "responses.saved": EventSchema(_IDENTITY | {"counts", "refs"}),
+    "responses.submitted": EventSchema(_IDENTITY | {"counts", "refs"}),
+    "responses.cleared": EventSchema(_IDENTITY | {"counts", "refs"}),
+    "responses.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    # PR 5 — assignments
+    "assignments.generated": EventSchema(_IDENTITY | {"counts", "context"}),
+    "assignments.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    # PR 7 — settings
+    "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
+    "reviewees.imported": EventSchema(_IDENTITY | {"counts", "context"}),
+    "reviewers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    "reviewees.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    "operator_email_settings.updated": EventSchema(frozenset({"changes"})),
+    "operator_email_settings.cleared": EventSchema(frozenset()),
+    "email_template.updated": EventSchema(_IDENTITY | {"changes", "context"}),
+    "email_template.reset": EventSchema(_IDENTITY | {"changes", "context"}),
+}
+
+
+def validate_detail(
+    event_type: str, detail: dict[str, Any] | None
+) -> None:
+    """Raise ``AuditDetailValidationError`` if ``detail`` doesn't
+    conform to the canonical schema for ``event_type``.
+
+    ``detail = None`` (legitimately empty events) always passes.
+    """
+    if detail is None:
+        return
+    try:
+        _CanonicalDetail.model_validate(detail)
+    except ValidationError as exc:
+        raise AuditDetailValidationError(
+            event_type, detail, f"shape: {exc.errors()!r}"
+        ) from exc
+
+    schema = EVENT_SCHEMAS.get(event_type)
+    if schema is None:
+        raise AuditDetailValidationError(
+            event_type,
+            detail,
+            f"event_type {event_type!r} is not registered in "
+            f"EVENT_SCHEMAS in app/services/audit.py",
+        )
+
+    extra = set(detail.keys()) - schema.allows
+    if extra:
+        raise AuditDetailValidationError(
+            event_type,
+            detail,
+            f"keys {sorted(extra)!r} are not allowed for event_type "
+            f"{event_type!r}; allowed keys are {sorted(schema.allows)!r}",
+        )
+
+
+def _audit_strict_mode() -> bool:
+    """True when shape violations should fail-loud.
+
+    Tests flip the settings flag via ``tests/conftest.py`` so CI
+    catches drift before deploy. Production stays lenient.
+    """
+    return bool(settings.audit_strict_mode)
