@@ -7,12 +7,18 @@ instrument, so a reviewer can record one rating / comment / etc.
 about a *group* of reviewees rather than per-individual.
 
 This file is the source of truth for the design. Implementation
-work — likely landing alongside or after **Segment 13A**
-(`guide/segment_13A_rulebased_assignment_builder.md`), since the
-rule engine is the natural place to materialize group
-assignments — implements against this spec; subsequent edits
-go here and propagate to the implementation, not the other way
-around.
+plan lives at **`guide/segment_13C_enhanced_instrument.md`**;
+13C also picks up the duplicate-instrument button on the same
+action-row sweep. Sibling segments: **13A** (rule-based
+assignments — `guide/segment_13A_rulebased_assignment_builder.md`)
+and **13B** (sort by reviewee —
+`guide/segment_13B_sort_by_reviewee.md`). The three are
+independent and can ship in any order, though 13A's rule engine
+is the natural place to materialize group assignments and 13C
+PR 3 leans on it.
+
+Subsequent edits to this design go here and propagate to the
+implementation, not the other way around.
 
 ---
 

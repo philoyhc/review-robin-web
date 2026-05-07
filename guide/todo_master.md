@@ -166,17 +166,31 @@ pinned to each segment. The catalog itself lives in
 
 4. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
-   default + reviewer live override. Functional spec ready;
-   implementation plan lands when 13B starts. Independent of
-   13A; ships in either order.
-   **Spec:** `spec/sort_by_reviewee.md`.
+   default + reviewer live override. Sized as 3 PRs (schema +
+   read path → operator UI tri-state Sort column → reviewer-
+   side live override). Independent of 13A and 13C; ships in
+   any order.
+   **Plan:** `guide/segment_13B_sort_by_reviewee.md`.
+   **Functional spec:** `spec/sort_by_reviewee.md`.
 
-5. **14 — Production hardening.**
+5. **13C — Enhanced instruments.**
+   Group-scoped instruments (per-instrument flavour where one
+   answer covers a group of reviewees) + a "Duplicate
+   instrument" action-row button. Sized as 5 PRs. Action row
+   ends up with: Edit / Save / Cancel (state-aware) + Add new
+   instrument + Add group-scoped instrument (new) + Duplicate
+   instrument (new). No `Response` schema change — duplicate-
+   and-stamp on `Assignment.context`. Independent of 13A and
+   13B.
+   **Plan:** `guide/segment_13C_enhanced_instrument.md`.
+   **Functional spec:** `spec/enhanced_instruments.md`.
+
+6. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-6. **14-1 — Email infrastructure (send activation + backends).**
+7. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. The schema columns Part A
    writes to landed with **Segment 11C Part 2** (PR #541,
    2026-05-07) and are ready for the dispatch helper.
@@ -193,7 +207,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-7. **15 — Operator polish + documentation.**
+8. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -208,8 +222,11 @@ pinned to each segment. The catalog itself lives in
   Part A is the first writer.
 - **11K → 12B** is the audit pipeline: 11K pinned the `detail`
   shape (shipped 2026-05-07); 12B's export reads against it.
-- **12A, 13A, 13B** are independent of the email + audit
-  pipelines and can interleave at any time. 13A and 13B are
-  also independent of each other.
+- **12A, 13A, 13B, 13C** are independent of the email + audit
+  pipelines and can interleave at any time. The three 13-family
+  segments are also independent of each other; 13C PR 3
+  (rule-engine fanout for group-scoped instruments) lands more
+  naturally after 13A's RuleSet machinery exists, but 13C
+  PRs 1 / 2 / 4 / 5 don't depend on 13A.
 - **Within 14-1**, Parts B-E are sequential enhancements on top
   of Part A; Parts F-H are independent backend swaps.

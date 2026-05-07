@@ -1,21 +1,24 @@
 # Segment 13A — Advanced (RuleBased) assignment mode
 
 > **Renamed 2026-05-07** from `segment_13_rulebased_assignment_builder_plan.md`.
-> Segment 13 split into two sibling segments:
+> Segment 13 split into three sibling segments:
 > - **13A** (this file) — the rule-builder work: real `RuleBased`
 >   rule menu replaces the placeholder card on
 >   `/operator/sessions/{id}/assignments`.
-> - **13B** — instrument-card enhancements. First item is the
->   reviewer-surface sort UX (operator default sort + reviewer live
->   override; functional spec at `spec/sort_by_reviewee.md`); the
->   segment frames a basket so future per-instrument improvements
->   slot in alongside without spawning new segments. Plan stub at
->   `guide/segment_13B_instrument_enhance.md`; full implementation
->   plan lands when 13B starts.
+> - **13B** — sort by reviewee. Reviewer-surface sort UX (operator
+>   default sort + reviewer live override). Functional spec at
+>   `spec/sort_by_reviewee.md`; plan at
+>   `guide/segment_13B_sort_by_reviewee.md`.
+> - **13C** — enhanced instruments. Group-scoped instruments
+>   (per-instrument flavour where one answer covers a group of
+>   reviewees) + a "Duplicate instrument" action-row button.
+>   Functional spec at `spec/enhanced_instruments.md`; plan at
+>   `guide/segment_13C_enhanced_instrument.md`.
 >
-> The two are independent and can ship in either order. Together
-> they cover what the original Segment 13 framing called "rule-
-> based assignment builder + sort UX" in the master workplan.
+> The three are independent and can ship in any order. Together
+> they cover the original Segment 13 framing ("rule-based
+> assignment builder + sort UX") plus the group-scoped enhancement
+> that surfaced later.
 
 > **Plan refreshed 2026-05-07** against [`spec/rule_based_assignment.md`](../spec/rule_based_assignment.md)
 > — the canonical functional spec for Advanced mode. This plan
