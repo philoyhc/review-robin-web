@@ -1,14 +1,19 @@
-{# Segment 13A-1 PR 1 — single-card Rule Builder.
+{# Segment 13A-1 PR 1/PR 2 — single-card Rule Builder.
 
-   Read-only scaffold: dropdown selects any visible RuleSet (seed or
-   Personal); the body renders sentence-shaped rule lines reusing
-   PR 5a's renderer. Editable Personal rendering, Save / Cancel /
-   Delete, and the blank-draft branch ship in PRs 2–3 without
-   re-laying-out this partial.
+   Three render branches off ``builder``:
+   - Seeded RuleSet → read-only sentence body, Copy action only.
+   - Saved Personal RuleSet → PR 5b/5c inline-composite editable form,
+     full Copy + Save + Cancel + Delete action row.
+   - Unsaved draft (Copy from seed/Personal) → same editable form,
+     no ``rule_set_id`` field; Save creates the row, Cancel reverts
+     to the previous selection.
+
+   PR 3 will land the functional blank-draft branch by replacing the
+   placeholder banner block.
 #}
 <div class="card" id="rule-builder-card">
   <form method="get"
-        action="/operator/sessions/{{ session.id }}/assignments/rule-based-editor"
+        action="{{ builder.page_url }}"
         id="rule-builder-selector-form"
         style="margin: 0;">
     <p style="margin: 0;">
@@ -18,7 +23,7 @@
               onchange="this.form.submit()">
         {% for option in builder.options %}
           <option value="{{ option.id }}"
-                  {% if option.id == builder.selected_id %}selected{% endif %}
+                  {% if option.id == builder.selected_id and not builder.selected_is_blank and not builder.selected_is_draft %}selected{% elif option.is_blank_sentinel and builder.selected_is_blank %}selected{% endif %}
                   data-is-seed="{{ 'true' if option.is_seed else 'false' }}"
                   data-is-blank="{{ 'true' if option.is_blank_sentinel else 'false' }}">{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
         {% endfor %}
@@ -28,6 +33,16 @@
       </noscript>
     </p>
   </form>
+
+  {% if builder.error_kind %}
+    <div class="banner banner-error" id="rule-builder-error-banner" style="margin-top: 12px;">
+      <p style="margin: 0;">{{ builder.error_message or "Save failed." }}</p>
+    </div>
+  {% elif builder.saved_flash %}
+    <div class="banner banner-info" id="rule-builder-saved-banner" style="margin-top: 12px;">
+      <p style="margin: 0;">Saved.</p>
+    </div>
+  {% endif %}
 
   {% if builder.selected_is_blank %}
     <div class="banner banner-info"
@@ -41,61 +56,265 @@
     </div>
   {% else %}
     <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 16px;">
-      <h2 style="margin: 0;" id="rule-builder-name">{{ builder.name }}</h2>
-      <span class="pill {% if builder.is_seed %}pill-info{% else %}pill-count{% endif %}">{% if builder.is_seed %}seed{% else %}personal{% endif %}</span>
+      {% if builder.editable %}
+        <h2 style="margin: 0;" id="rule-builder-name-heading">{{ builder.name }}</h2>
+      {% else %}
+        <h2 style="margin: 0;" id="rule-builder-name">{{ builder.name }}</h2>
+      {% endif %}
+      <span class="pill {% if builder.selected_is_seed %}pill-info{% elif builder.selected_is_draft %}pill-warning{% else %}pill-count{% endif %}">{% if builder.selected_is_seed %}seed{% elif builder.selected_is_draft %}draft{% else %}personal{% endif %}</span>
     </div>
     {% if builder.description %}
       <p class="form-help">{{ builder.description }}</p>
     {% endif %}
 
-    {% if builder.is_seed %}
+    {% if builder.selected_is_seed %}
       <div class="banner banner-info"
            id="rule-builder-seed-banner"
            style="margin-top: 12px;">
         <p style="margin: 0;">
           This is a seeded RuleSet and read-only.
-          Copy / Save / Delete actions ship in Segment 13A-1 PR 2.
+          Click <strong>Copy</strong> below to create an editable Personal copy.
         </p>
       </div>
-    {% else %}
+    {% elif builder.selected_is_draft %}
       <div class="banner banner-info"
-           id="rule-builder-personal-readonly-banner"
+           id="rule-builder-draft-banner"
            style="margin-top: 12px;">
         <p style="margin: 0;">
-          Personal RuleSet shown read-only for now.
-          Inline editing + Save / Cancel / Delete ship in Segment 13A-1 PR 2.
+          Unsaved draft. Edit the rules below and click <strong>Save</strong>
+          to persist a new Personal RuleSet, or <strong>Cancel</strong> to discard.
         </p>
       </div>
     {% endif %}
 
-    <h3 style="margin-top: 20px;">Combinator</h3>
-    <p>
-      Combine these rules with:
-      <span class="pill pill-info">{{ builder.combinator_label }}</span>
-    </p>
+    {% if builder.editable %}
+      {# Editable Personal RuleSet (or unsaved draft). Reuses the
+         PR 5b/5c form IDs and class names so the existing
+         _rule_based_editor_js.html serialiser binds without changes. #}
+      <form method="post"
+            action="{{ builder.save_url }}"
+            id="rule-based-editor-form"
+            data-source-rule-set-id="{{ builder.draft_source_id or builder.selected_id }}">
+        {% if not builder.selected_is_draft %}
+          <input type="hidden" name="rule_set_id" value="{{ builder.selected_id }}">
+        {% endif %}
+        {% if builder.draft_source_id %}
+          <input type="hidden" name="source_rule_set_id" value="{{ builder.draft_source_id }}">
+        {% endif %}
+        {% if builder.selected_is_draft %}
+          <input type="hidden" name="auto_name" value="{{ 'true' if builder.draft_auto_name else 'false' }}">
+        {% endif %}
+        <input type="hidden" name="rules_json" id="rule-based-editor-rules-json" value="{{ builder.rules_json_initial }}">
 
-    <h3 style="margin-top: 20px;">Self-review</h3>
-    <p>
-      Exclude self-review:
-      {% if builder.exclude_self_reviews %}
-        <span class="pill pill-info">on</span>
-      {% else %}
-        <span class="pill pill-warning">off</span>
-      {% endif %}
-    </p>
+        <p>
+          <label for="rule-builder-name-input"><strong>Name</strong></label>
+          <input type="text"
+                 id="rule-builder-name-input"
+                 name="name"
+                 value="{{ builder.name }}"
+                 required
+                 style="width: 100%; max-width: 480px;">
+        </p>
 
-    <h3 style="margin-top: 20px;">Rules</h3>
-    {% if builder.rule_lines %}
-      <ol id="rule-builder-rules" style="list-style: none; padding-left: 0;">
-        {% for line in builder.rule_lines %}
-          <li style="padding-left: {{ line.indent * 24 }}px; margin: 6px 0;{% if not line.enabled %} opacity: 0.5;{% endif %}">
-            <span class="pill {% if line.kind == 'COMPOSITE' %}pill-info{% elif line.kind == 'QUOTA' %}pill-count{% else %}pill-info{% endif %}">{{ line.kind }}</span>
-            {{ line.text }}
-          </li>
-        {% endfor %}
-      </ol>
+        <h3 style="margin-top: 20px;">Combinator</h3>
+        <p>
+          Combine these rules with:
+          <select name="combinator" id="rule-based-editor-combinator">
+            {% for value, label in builder.combinator_options %}
+              <option value="{{ value }}" {% if value == builder.combinator %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </p>
+
+        <h3 style="margin-top: 20px;">Self-review</h3>
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox"
+                   name="exclude_self_reviews"
+                   value="true"
+                   id="rule-based-editor-exclude-self"
+                   {% if builder.exclude_self_reviews %}checked{% endif %}>
+            Exclude self-review (when reviewer email matches reviewee identifier).
+          </label>
+        </p>
+
+        {% if builder.seed_value is not none %}
+          <p>
+            <label for="rule-based-editor-seed">Random seed</label>
+            <input type="text"
+                   id="rule-based-editor-seed"
+                   name="seed"
+                   value="{{ builder.seed_value }}"
+                   style="width: 120px;">
+          </p>
+        {% else %}
+          <input type="hidden" name="seed" value="">
+        {% endif %}
+
+        <h3 style="margin-top: 20px;">Rules</h3>
+        <div id="rule-based-editor-rule-list">
+          {% for rule in builder.editable_rules %}
+            <div class="rule-edit-row"
+                 data-rule-id="{{ rule.rule_id }}"
+                 data-kind="{{ rule.kind }}"
+                 data-indent="{{ rule.indent }}"
+                 style="padding: 10px 12px; padding-left: {{ 12 + rule.indent * 24 }}px; margin: 6px 0; border-left: 3px solid {% if rule.kind == 'COMPOSITE' %}#999{% else %}#ddd{% endif %}; background: {% if not rule.enabled %}#f5f5f5{% else %}transparent{% endif %};">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <span class="pill {% if rule.kind == 'COMPOSITE' %}pill-info{% elif rule.kind == 'QUOTA' %}pill-count{% else %}pill-info{% endif %}">{{ rule.kind }}</span>
+                <label style="font-weight: normal;">
+                  <input type="checkbox" class="rule-enabled" {% if rule.enabled %}checked{% endif %}>
+                  enabled
+                </label>
+
+                {% if rule.kind in ("MATCH", "FILTER") %}
+                  <select class="rule-kind">
+                    {% for value, label in builder.kind_options if value != "QUOTA" %}
+                      <option value="{{ value }}" {% if value == rule.kind %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <select class="rule-field">
+                    {% for value in builder.field_options %}
+                      <option value="{{ value }}" {% if value == rule.field %}selected{% endif %}>{{ value }}</option>
+                    {% endfor %}
+                  </select>
+                  <select class="rule-operator">
+                    {% for value, label in builder.operator_options %}
+                      <option value="{{ value }}" {% if value == rule.operator %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <input type="text"
+                         class="rule-operand"
+                         value="{{ rule.operand_text or '' }}"
+                         placeholder="operand"
+                         style="min-width: 160px;">
+                {% elif rule.kind == "QUOTA" %}
+                  <span>Cap at</span>
+                  <input type="number" class="rule-quota-min"
+                         min="0" placeholder="min"
+                         value="{{ rule.quota_min if rule.quota_min is not none else '' }}"
+                         style="width: 80px;">
+                  <span>to</span>
+                  <input type="number" class="rule-quota-max"
+                         min="0" placeholder="max"
+                         value="{{ rule.quota_max if rule.quota_max is not none else '' }}"
+                         style="width: 80px;">
+                  <select class="rule-quota-scope">
+                    {% for value, label in builder.quota_scope_options %}
+                      <option value="{{ value }}" {% if value == rule.quota_scope %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <select class="rule-quota-strategy">
+                    {% for value, label in builder.quota_strategy_options %}
+                      <option value="{{ value }}" {% if value == rule.quota_strategy %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <input type="number" class="rule-quota-seed"
+                         placeholder="seed"
+                         value="{{ rule.quota_seed if rule.quota_seed is not none else '' }}"
+                         style="width: 80px;">
+                {% elif rule.kind == "COMPOSITE" %}
+                  <select class="rule-composite-op">
+                    {% for value, label in builder.composite_op_options %}
+                      <option value="{{ value }}" {% if value == rule.composite_op %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="button" class="btn secondary composite-add-child"
+                          data-add-kind="MATCH" title="Add a MATCH child rule">+ child MATCH</button>
+                  <button type="button" class="btn secondary composite-add-child"
+                          data-add-kind="FILTER" title="Add a FILTER child rule">+ child FILTER</button>
+                {% endif %}
+
+                <button type="button" class="btn alert rule-remove" title="Remove this rule">×</button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div style="margin-top: 12px;">
+          <button type="button" class="btn secondary" id="rule-based-editor-add-match">+ Add MATCH rule</button>
+          <button type="button" class="btn secondary" id="rule-based-editor-add-filter">+ Add FILTER rule</button>
+          <button type="button" class="btn secondary" id="rule-based-editor-add-quota">+ Add QUOTA rule</button>
+          <button type="button" class="btn secondary" id="rule-based-editor-add-composite">+ Add COMPOSITE rule</button>
+        </div>
+
+        <div class="btn-pair" id="rule-builder-action-row" style="margin-top: 24px; display: flex; gap: 8px; flex-wrap: wrap;">
+          {% if builder.can_copy %}
+            <button class="btn secondary"
+                    type="submit"
+                    formaction="{{ builder.copy_url }}"
+                    formmethod="post"
+                    formnovalidate
+                    name="from_rule_set_id"
+                    value="{{ builder.selected_id }}"
+                    id="rule-builder-copy-button">Copy</button>
+          {% endif %}
+          {% if builder.can_save %}
+            <button class="btn primary"
+                    type="submit"
+                    id="rule-builder-save-button">Save</button>
+          {% endif %}
+          {% if builder.can_cancel %}
+            <a class="btn alert"
+               href="{{ builder.cancel_url }}"
+               id="rule-builder-cancel-button">Cancel</a>
+          {% endif %}
+          {% if builder.can_delete %}
+            <button class="btn alert-outline"
+                    type="submit"
+                    formaction="{{ builder.delete_url }}"
+                    formmethod="post"
+                    formnovalidate
+                    name="confirm"
+                    value="true"
+                    onclick="return confirm('Soft-delete this RuleSet? Past Generate runs still reference it for provenance.');"
+                    id="rule-builder-delete-button">Delete</button>
+          {% endif %}
+        </div>
+      </form>
+
+      {% include "operator/partials/_rule_based_editor_js.html" %}
     {% else %}
-      <p class="form-help">No rules — every candidate pair flows through.</p>
+      {# Seeded read-only sentence view. #}
+      <h3 style="margin-top: 20px;">Combinator</h3>
+      <p>
+        Combine these rules with:
+        <span class="pill pill-info">{{ builder.combinator_label }}</span>
+      </p>
+
+      <h3 style="margin-top: 20px;">Self-review</h3>
+      <p>
+        Exclude self-review:
+        {% if builder.exclude_self_reviews %}
+          <span class="pill pill-info">on</span>
+        {% else %}
+          <span class="pill pill-warning">off</span>
+        {% endif %}
+      </p>
+
+      <h3 style="margin-top: 20px;">Rules</h3>
+      {% if builder.rule_lines %}
+        <ol id="rule-builder-rules" style="list-style: none; padding-left: 0;">
+          {% for line in builder.rule_lines %}
+            <li style="padding-left: {{ line.indent * 24 }}px; margin: 6px 0;{% if not line.enabled %} opacity: 0.5;{% endif %}">
+              <span class="pill {% if line.kind == 'COMPOSITE' %}pill-info{% elif line.kind == 'QUOTA' %}pill-count{% else %}pill-info{% endif %}">{{ line.kind }}</span>
+              {{ line.text }}
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="form-help">No rules — every candidate pair flows through.</p>
+      {% endif %}
+
+      <div class="btn-pair" id="rule-builder-action-row" style="margin-top: 24px; display: flex; gap: 8px; flex-wrap: wrap;">
+        {% if builder.can_copy %}
+          <form method="post" action="{{ builder.copy_url }}" style="margin: 0;">
+            <input type="hidden" name="from_rule_set_id" value="{{ builder.selected_id }}">
+            <button class="btn secondary"
+                    type="submit"
+                    id="rule-builder-copy-button">Copy</button>
+          </form>
+        {% endif %}
+      </div>
     {% endif %}
   {% endif %}
 </div>
