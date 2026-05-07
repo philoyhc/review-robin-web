@@ -458,8 +458,8 @@ shape from day one as long as PR 1 is live.
   (which can now begin).
 - `guide/segment_11C_operations_consolidation.md`,
   `guide/segment_11F_previews_page.md`,
-  `guide/segment_11G_validate_page.md`,
-  `guide/segment_11J_quick_setup_card.md`,
+  `guide/archive/segment_11G_validate_page.md`,
+  `guide/archive/segment_11J_quick_setup_card.md`,
   `guide/segment_12A.md` — each plan has emitter scope that
   inherits the canonical shape automatically once PR 1 lands.
   No edits to those plans required; the canonical shape

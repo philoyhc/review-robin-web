@@ -740,10 +740,10 @@ changes.
   - Updates the "Open question on Segment 12 scope" footer:
     with Extract Data folded in, Segment 12 narrows to
     audit-retention only, gated on Segment 11K.
-- `guide/segment_11J_quick_setup_card.md` — the configuration-import slot's
-  graduation step (PR 6) is now pinned; update 11J's
-  "Interaction with Segment 12A" section to point at PR 6 by
-  name when 12A lands.
+- `guide/archive/segment_11J_quick_setup_card.md` — the
+  configuration-import slot's graduation step (PR 6) is now
+  pinned; the now-archived 11J plan's "Interaction with Segment
+  12A" section already points at PR 6 by name.
 - `spec/architecture.md` — one-liner under "Data import /
   export" pointing at the CSV shapes; verify on PR 1 review.
 - No spec doc for the CSV shapes themselves — this guide doubles
