@@ -1190,3 +1190,232 @@ def test_delete_hides_rule_set_from_library_list(
         f"/assignments/rule-based/edit/{personal.id}"
     )
     assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# PR 9 — source picker on the Copy form
+# ---------------------------------------------------------------------------
+
+
+def test_seed_copy_form_renders_source_picker(
+    client: TestClient, db: Session
+) -> None:
+    """The seed-view Copy form's hidden ``rule_set_id`` is replaced
+    with a visible source picker. Default selection is the loaded
+    seed so the no-change behaviour matches PR 5a's Copy."""
+
+    review_session = _make_session(client, db, code="ed-pr9-seed")
+    intra_id = _seed_id(db, "Intra-group peer review")
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{intra_id}"
+    ).text
+
+    seed_form = body.split('id="rule-based-seed-copy-form"', 1)[1]
+    seed_form = seed_form.split("</form>", 1)[0]
+    # The picker is named ``rule_set_id`` (matches the /copy route's
+    # form parameter) and lists every visible seed.
+    assert 'class="rule-based-copy-source"' in seed_form
+    assert 'name="rule_set_id"' in seed_form
+    for seed_name in (
+        "Full Matrix",
+        "Intra-group peer review",
+        "Cross-group peer review",
+        "Same group, different role",
+        "Three reviewers per reviewee",
+    ):
+        assert seed_name in seed_form
+    # Default selection is the loaded seed.
+    assert (
+        f'value="{intra_id}"\n                          selected'
+        in seed_form
+        or f'value="{intra_id}" selected' in seed_form
+        or f'value="{intra_id}"' in seed_form
+        and "selected" in seed_form
+    )
+
+
+def test_seed_copy_with_different_source_creates_from_picked(
+    client: TestClient, db: Session
+) -> None:
+    """The operator opens the editor on Intra-group, picks
+    Cross-group from the source picker, and submits Copy. The new
+    Personal RuleSet's tree matches Cross-group, not Intra-group."""
+
+    review_session = _make_session(client, db, code="ed-pr9-pick")
+    intra_id = _seed_id(db, "Intra-group peer review")
+    cross_id = _seed_id(db, "Cross-group peer review")
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/copy",
+        data={"rule_set_id": cross_id, "new_name": "PickedCross"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    new_rs = db.execute(
+        select(RuleSet).where(RuleSet.name == "PickedCross")
+    ).scalar_one()
+    revision = db.execute(
+        select(RuleSetRevision).where(
+            RuleSetRevision.id == new_rs.current_revision_id
+        )
+    ).scalar_one()
+    # Cross-group seed: MATCH(reviewer.tag1 different_from reviewee.tag1)
+    assert (
+        revision.rules_json[0]["predicate"]["operator"] == "different_from"
+    )
+    # The audit ref points back at the picked source, not the editor URL.
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "rule_set.created"
+        )
+    ).scalars().one()
+    refs = (event.detail or {}).get("refs", {})
+    assert refs.get("source_rule_set_id") == cross_id
+    # Make sure we didn't accidentally point Intra-group as the source.
+    assert refs.get("source_rule_set_id") != intra_id
+
+
+def test_personal_copy_form_renders_with_lose_draft_checkbox(
+    client: TestClient, db: Session
+) -> None:
+    """The Personal-view Copy form carries the
+    ``confirm_lose_draft`` required checkbox + the
+    ``from_editor_with_draft=true`` hidden flag."""
+
+    review_session = _make_session(client, db, code="ed-pr9-personal")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="PR9-personal",
+    )
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{personal.id}"
+    ).text
+
+    personal_form = body.split('id="rule-based-personal-copy-form"', 1)[1]
+    personal_form = personal_form.split("</form>", 1)[0]
+    assert 'name="from_editor_with_draft"' in personal_form
+    assert 'name="referrer_rule_set_id"' in personal_form
+    assert 'name="confirm_lose_draft"' in personal_form
+    assert "required" in personal_form
+
+
+def test_personal_copy_without_lose_draft_confirm_redirects_back(
+    client: TestClient, db: Session
+) -> None:
+    """A POST that omits ``confirm_lose_draft`` from a Personal
+    editor 303s back with ``?error=needs_lose_draft_confirm`` and
+    writes nothing."""
+
+    review_session = _make_session(client, db, code="ed-pr9-noconfirm")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="NoConfirm",
+    )
+    cross_id = _seed_id(db, "Cross-group peer review")
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/copy",
+        data={
+            "rule_set_id": cross_id,
+            "new_name": "ShouldNotPersist",
+            "from_editor_with_draft": "true",
+            "referrer_rule_set_id": personal.id,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        f"/edit/{personal.id}?error=needs_lose_draft_confirm"
+    )
+    assert (
+        db.execute(
+            select(RuleSet).where(RuleSet.name == "ShouldNotPersist")
+        ).scalar_one_or_none()
+        is None
+    )
+
+
+def test_personal_copy_with_lose_draft_confirm_creates_personal(
+    client: TestClient, db: Session
+) -> None:
+    """With the confirm checkbox ticked, the Personal-editor Copy
+    submission writes a new Personal RuleSet from the picked
+    source, leaving the editor's loaded RuleSet untouched."""
+
+    review_session = _make_session(client, db, code="ed-pr9-confirm")
+    personal = _copy_seed_to_personal(
+        client, db,
+        session_id=review_session.id,
+        seed_name="Intra-group peer review",
+        personal_name="WithConfirm",
+    )
+    cross_id = _seed_id(db, "Cross-group peer review")
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/copy",
+        data={
+            "rule_set_id": cross_id,
+            "new_name": "Confirmed-copy",
+            "from_editor_with_draft": "true",
+            "referrer_rule_set_id": personal.id,
+            "confirm_lose_draft": "true",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    new_rs = db.execute(
+        select(RuleSet).where(RuleSet.name == "Confirmed-copy")
+    ).scalar_one()
+    assert new_rs.scope == "personal"
+    # Source RuleSet (the editor's loaded one) is untouched.
+    db.refresh(personal)
+    assert personal.deleted_at is None
+    revisions = db.execute(
+        select(RuleSetRevision).where(
+            RuleSetRevision.rule_set_id == personal.id
+        )
+    ).scalars().all()
+    assert len(revisions) == 1
+
+
+def test_source_picker_omits_other_users_personal_rule_sets(
+    db: Session,
+    alice: AuthenticatedUser,
+    bob: AuthenticatedUser,
+    make_client,  # noqa: ANN001
+) -> None:
+    """Visibility gate: the source picker only lists seeds + the
+    caller's own Personal RuleSets."""
+
+    alice_client = make_client(alice)
+    review_session = _make_session(alice_client, db, code="ed-pr9-vis")
+    intra_id = _seed_id(db, "Intra-group peer review")
+    alice_client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/copy",
+        data={"rule_set_id": intra_id, "new_name": "Alice-only"},
+        follow_redirects=False,
+    )
+
+    # Bob isn't an operator on Alice's session; the editor 403s
+    # before we'd even render the picker. Validate Alice's view
+    # instead — her picker lists "Alice-only" but no Bob entry.
+    body = alice_client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/rule-based/edit/{intra_id}"
+    ).text
+    seed_form = body.split('id="rule-based-seed-copy-form"', 1)[1]
+    seed_form = seed_form.split("</form>", 1)[0]
+    assert "Alice-only" in seed_form
