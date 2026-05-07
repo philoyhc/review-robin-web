@@ -18,7 +18,7 @@ Position in the Home body, top to bottom:
 
 The card is always rendered on Home for `draft` and `validated` sessions. Visibility does not depend on whether setup data exists — the card is a stable, learnable location for bulk setup regardless of session population.
 
-For `ready` and `closed` sessions, the card renders **disabled** behind the existing yellow lock card pattern, consistent with the lifecycle-disables-never-hides principle (P4). The lock card's explanatory text matches what the Setup tabs show in the same states ("Revert to draft to modify setup"). All three slots are non-interactive in this state; current-state indicators (counts, rule label) still render.
+For `ready` and `closed` sessions, the card renders the same body-greying as the default `is_locked=True` treatment in `draft` / `validated` — the body wrapper carries `.quick-setup-body.locked`, and the Lock / Unlock toggle stays visible in every editable-conceivable state. Per `spec/session_home.md` ("Disabled treatment on Home is plain greying-out, not yellow lock cards"), Home does not stack a yellow lock card on top of the body greying. On `ready`, unlocking the card is purely visual — the importer rejects mutating submits at the service layer (`_require_editable`) and the rejection surfaces inline as a scoped `banner-error` carrying "Pause the session before applying setup changes" copy. Current-state indicators (counts, rule label) render in every state.
 
 ### Slots
 
@@ -102,8 +102,8 @@ The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Assig
 |---|---|
 | `draft` | Fully interactive. All slots usable; confirmations apply when replacing populated data. |
 | `validated` | Fully interactive. Same as `draft`. (Re-uploading may invalidate the validated state — see below.) |
-| `ready` | Disabled behind yellow lock card. Counts/rule still display. |
-| `closed` | Disabled behind yellow lock card. |
+| `ready` | Body-greyed via `.quick-setup-body.locked`; Lock / Unlock toggle still visible. Unlocking is cosmetic only — submits 303 → Home with a scoped `banner-error` ("Pause first") via `_require_editable`. Counts / rule still display. |
+| `closed` | Same body-greying treatment as `ready`; submits rejected at the service layer. |
 
 **Note on `validated` → re-upload.** If an operator successfully submits a slot on a `validated` session, the session's validated state is invalidated and the session returns to `draft`. This matches existing behavior on the per-entity Setup pages and should reuse the same state-transition logic.
 
@@ -115,7 +115,7 @@ The card does not appear in the page taxonomy or the chrome. The chrome (two-row
 
 - Reuse the existing per-entity CSV parsing and validation modules. The card is a UI affordance over the same import paths the Setup pages already expose.
 - Reuse the cascading-clearance logic that the per-entity pages already implement (or should implement) when reviewers/reviewees are replaced — the card should not introduce a parallel cascade implementation.
-- The disabled / lock-card state should reuse the same component the Setup tabs use for lifecycle locking, not be a bespoke rendering.
+- The card's locked-state styling is a single `.quick-setup-body.locked` body wrapper applied uniformly across `draft` / `validated` / `ready`. The Lock / Unlock toggle is the consistent affordance; lifecycle-driven differences live in the description copy and the route layer's `_require_editable` rejection, not in a separate visual primitive.
 - Confirmation UI should follow whatever pattern Edit Session and other destructive operations on Home use, for consistency.
 
 The intent throughout: Quick Setup is a thin convenience surface over existing import primitives. It should not own meaningful logic of its own.

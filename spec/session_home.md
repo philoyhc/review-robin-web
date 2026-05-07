@@ -251,18 +251,22 @@ when relevant.
 
 ### 5. Quick Setup card (right column, bottom)
 
-The Quick Setup card scaffold (Segment 11H PR A) renders the
-real four-slot shape with all interactive controls inert; full
-wiring lands in Segment 11J. The functional spec is
-`spec/quick_setup_card_spec.md`.
+The Quick Setup card on Session Home renders the real four-slot
+shape: Reviewers / Reviewees / Assignments are wired (Segment
+11J); Session settings stays inert pending Segment 12A PR 6.
+The functional spec is `spec/quick_setup_card_spec.md`.
 
 Layout: a 2-column top grid carrying the three setup slots
 (Reviewers + Reviewees stacked in the left column, Assignments
 in the right column), then a horizontal divider, then the
 full-width Session settings slot. A Lock / Unlock button sits
-in a footer at the bottom-right, rendered only when the
-session is editable; the card defaults to locked so the
-operator must explicitly Unlock before any setup change.
+in a footer at the bottom-right and renders in every
+editable-conceivable state on Session Home (`draft` /
+`validated` / `ready`); the card defaults to locked so the
+operator must explicitly Unlock before any setup change. Lock
+state lives in a per-session `HttpOnly` cookie scoped to
+`/operator/sessions/{id}` (`qsu_{session_id}=1` when
+unlocked).
 
 State-conditional copy only — the card frame is constant:
 
@@ -270,14 +274,19 @@ State-conditional copy only — the card frame is constant:
   assignments from files or rules in one place."
 - **Ready / Activated:** "Setup edits are paused while the
   session is Activated. Pause the session to re-enable bulk
-  setup." The Lock / Unlock button does not render in this
-  state — the operator's path forward is Pause, not Unlock.
+  setup." The Lock / Unlock button stays visible — unlocking
+  is purely visual; the importer rejects mutating submits at
+  the service layer (`_require_editable`) and the rejection
+  surfaces inline as a scoped `banner-error` carrying "Pause
+  the session before applying setup changes" copy. The
+  operator's actual path forward is Pause, but the cosmetic
+  unlock affordance stays consistent across states.
 
 ## Placeholder cards
 
-Quick Setup and Extract Data on Home, plus Rule Based Assignment
-on the Assignments page, all render via a single shared Jinja
-macro and a single canonical CSS class:
+Extract Data on Home and Rule Based Assignment on the Assignments
+page render via a single shared Jinja macro and a single
+canonical CSS class:
 
 - **Macro:** `app/web/templates/operator/partials/_placeholder_card.html`,
   exporting `placeholder_card(id, title, description,
@@ -293,14 +302,21 @@ would desynchronise sibling placeholders. A future placeholder
 card on any page reuses the same macro without further design
 work.
 
+(Quick Setup graduated out of the placeholder pattern in Segment
+11H — it now ships as a full four-slot card via the dedicated
+`_quick_setup_card.html` partial, with Reviewers / Reviewees /
+Assignments wired live in Segment 11J and Session settings still
+inert pending Segment 12A PR 6. Extract Data graduates the same
+way when 12A's PRs 3-6 wire its rows.)
+
 ## Lifecycle behavior summary
 
 | State (enum / display) | Next Action card | Quick Setup | Extract Data | Danger Zone Delete Session |
 |---|---|---|---|---|
-| `draft` / Draft, rosters empty | "Session not fully set up…" — no buttons | Active (placeholder) | Greyed (placeholder) | Active |
-| `draft` / Draft, rosters populated | Primary: Validate Setup | Active (placeholder) | Greyed (placeholder) | Active |
-| `validated` / Validated | Primary: Activate Session (or See validation details on errors) | Active (placeholder) | Greyed (placeholder) | Active |
-| `ready` / Activated | Two sections: Manage invitations (Primary) + Monitor responses; `<hr>`; Pause Session (Primary, with confirm) | Greyed (placeholder) | Active (placeholder, button still disabled until Segment 12) | Visible-but-disabled |
+| `draft` / Draft, rosters empty | "Session not fully set up…" — no buttons | Live (slots 1-3 wired; default-locked) | Greyed (placeholder, until Segment 12A) | Active |
+| `draft` / Draft, rosters populated | Primary: Validate Setup | Live (slots 1-3 wired; default-locked) | Greyed (placeholder, until Segment 12A) | Active |
+| `validated` / Validated | Primary: Activate Session (or See validation details on errors) | Live (slots 1-3 wired; default-locked) | Greyed (placeholder, until Segment 12A) | Active |
+| `ready` / Activated | Two sections: Manage invitations (Primary) + Monitor responses; `<hr>`; Pause Session (Primary, with confirm) | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Active (placeholder, button still disabled until Segment 12) | Visible-but-disabled |
 
 Reserved states (Expired, Archived) not yet in scope. When
 introduced, this table extends with their treatment.
