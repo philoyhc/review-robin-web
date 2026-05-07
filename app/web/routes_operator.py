@@ -781,7 +781,7 @@ async def quick_setup_assignments_submit(
     Auto-detects mode from the form payload: when ``file`` is
     attached and non-empty, the route runs the manual-CSV pipeline;
     otherwise it generates assignments from the selected rule
-    (FullMatrix only today; richer rule menu lands in Segment 13).
+    (FullMatrix only today; richer rule menu lands in Segment 13A).
 
     Lifecycle / parse / confirm-required failures 303 → Home with
     ``?quick_setup_error=assignments&quick_setup_reason=...``; the
@@ -858,7 +858,7 @@ async def quick_setup_assignments_submit(
         )
     else:
         # Rule mode. ``rule`` is FullMatrix-only today; richer menu
-        # lands in Segment 13. Reject unknown values defensively.
+        # lands in Segment 13A. Reject unknown values defensively.
         if rule != "full_matrix":
             return error_redirect("parse")
         pairs, excluded_counts = assignments.generate_full_matrix(

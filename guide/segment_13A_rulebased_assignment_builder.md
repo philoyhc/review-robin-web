@@ -1,4 +1,17 @@
-# Segment 13 Plan — RuleBased Assignment Builder
+# Segment 13A Plan — RuleBased Assignment Builder
+
+> **Renamed 2026-05-07** from `segment_13_rulebased_assignment_builder_plan.md`.
+> Segment 13 split into two sibling segments:
+> - **13A** (this file) — the rule-builder work: real `RuleBased`
+>   rule menu replaces the placeholder card on `/operator/sessions/{id}/assignments`.
+> - **13B** — the reviewer-surface sort UX (operator default sort
+>   + reviewer live override). Functional spec at
+>   `guide/sort_by_reviewee.md`; an implementation plan lands when
+>   13B starts.
+>
+> The two are independent and can ship in either order. Together
+> they cover what the original Segment 13 framing called "rule-
+> based assignment builder + sort UX" in the master workplan.
 
 **Project:** Review Robin Web  
 **Repository:** <https://github.com/philoyhc/review-robin-web>  
