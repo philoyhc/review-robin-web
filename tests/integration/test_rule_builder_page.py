@@ -163,12 +163,13 @@ def test_switching_dropdown_to_another_seed_updates_body(
     assert "reviewer tag1 is the same as reviewee tag1" in body
 
 
-def test_blank_sentinel_renders_pr3_placeholder(
+def test_blank_sentinel_renders_live_empty_draft(
     client: TestClient, db: Session
 ) -> None:
-    """Selecting the blank sentinel in PR 1 surfaces a placeholder
-    pointing at PR 3 — the functional blank-draft branch lands then.
-    Tests both ``?new=1`` and the sentinel id directly."""
+    """Selecting the blank sentinel renders the live empty-draft form
+    (Segment 13A-1 PR 3): editable form, no rules, default name
+    ``New RuleSet``, and a blank-specific banner. Both ``?new=1``
+    and ``?rule_set_id=-1`` reach the same branch."""
 
     review_session = _make_session(client, db, code="rb-blank")
 
@@ -177,11 +178,17 @@ def test_blank_sentinel_renders_pr3_placeholder(
             f"/operator/sessions/{review_session.id}"
             f"/assignments/rule-based-editor?{query}"
         ).text
-        assert 'id="rule-builder-blank-placeholder"' in body, (
-            f"blank placeholder missing for query={query!r}"
+        # Blank-specific banner replaced PR 1's placeholder.
+        assert 'id="rule-builder-blank-banner"' in body, (
+            f"blank banner missing for query={query!r}"
         )
-        # No seeded card heading on the blank branch.
-        assert 'id="rule-builder-name"' not in body
+        assert 'id="rule-builder-blank-placeholder"' not in body
+        # Editable form renders with the auto-generated default name.
+        assert 'id="rule-based-editor-form"' in body
+        assert 'value="New RuleSet"' in body
+        # Save button starts disabled (≥1 rule gate, locked decision #8).
+        assert 'id="rule-builder-save-button"' in body
+        assert "disabled" in body
 
 
 def test_unknown_rule_set_id_falls_back_to_first_seed(

@@ -44,48 +44,50 @@
     </div>
   {% endif %}
 
-  {% if builder.selected_is_blank %}
+  <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 16px;">
+    {% if builder.editable %}
+      <h2 style="margin: 0;" id="rule-builder-name-heading">{{ builder.name }}</h2>
+    {% else %}
+      <h2 style="margin: 0;" id="rule-builder-name">{{ builder.name }}</h2>
+    {% endif %}
+    <span class="pill {% if builder.selected_is_seed %}pill-info{% elif builder.selected_is_draft %}pill-warning{% else %}pill-count{% endif %}">{% if builder.selected_is_seed %}seed{% elif builder.selected_is_draft %}draft{% else %}personal{% endif %}</span>
+  </div>
+  {% if builder.description %}
+    <p class="form-help">{{ builder.description }}</p>
+  {% endif %}
+
+  {% if builder.selected_is_seed %}
     <div class="banner banner-info"
-         id="rule-builder-blank-placeholder"
-         style="margin-top: 16px;">
+         id="rule-builder-seed-banner"
+         style="margin-top: 12px;">
       <p style="margin: 0;">
-        Starting a blank RuleSet ships in Segment 13A-1 PR 3.
-        For now, pick a seeded or Personal RuleSet from the dropdown
-        above to view its rules.
+        This is a seeded RuleSet and read-only.
+        Click <strong>Copy</strong> below to create an editable Personal copy.
       </p>
     </div>
-  {% else %}
-    <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 16px;">
-      {% if builder.editable %}
-        <h2 style="margin: 0;" id="rule-builder-name-heading">{{ builder.name }}</h2>
-      {% else %}
-        <h2 style="margin: 0;" id="rule-builder-name">{{ builder.name }}</h2>
-      {% endif %}
-      <span class="pill {% if builder.selected_is_seed %}pill-info{% elif builder.selected_is_draft %}pill-warning{% else %}pill-count{% endif %}">{% if builder.selected_is_seed %}seed{% elif builder.selected_is_draft %}draft{% else %}personal{% endif %}</span>
+  {% elif builder.selected_is_blank %}
+    <div class="banner banner-info"
+         id="rule-builder-blank-banner"
+         style="margin-top: 12px;">
+      <p style="margin: 0;">
+        Starting from scratch. Add at least one rule, then click
+        <strong>Save</strong> to persist a new Personal RuleSet.
+      </p>
     </div>
-    {% if builder.description %}
-      <p class="form-help">{{ builder.description }}</p>
-    {% endif %}
-
-    {% if builder.selected_is_seed %}
-      <div class="banner banner-info"
-           id="rule-builder-seed-banner"
-           style="margin-top: 12px;">
-        <p style="margin: 0;">
-          This is a seeded RuleSet and read-only.
-          Click <strong>Copy</strong> below to create an editable Personal copy.
-        </p>
-      </div>
-    {% elif builder.selected_is_draft %}
-      <div class="banner banner-info"
-           id="rule-builder-draft-banner"
-           style="margin-top: 12px;">
-        <p style="margin: 0;">
-          Unsaved draft. Edit the rules below and click <strong>Save</strong>
-          to persist a new Personal RuleSet, or <strong>Cancel</strong> to discard.
-        </p>
-      </div>
-    {% endif %}
+  {% elif builder.selected_is_draft %}
+    <div class="banner banner-info"
+         id="rule-builder-draft-banner"
+         style="margin-top: 12px;">
+      <p style="margin: 0;">
+        Unsaved draft. Edit the rules below and click <strong>Save</strong>
+        to persist a new Personal RuleSet, or <strong>Cancel</strong> to discard.
+      </p>
+    </div>
+  {% endif %}
+  {# Layout below covers all editable / read-only branches —
+     blank-draft falls into the editable form branch since
+     ``builder.editable`` is True for the live blank-sentinel
+     selection (Segment 13A-1 PR 3). #}
 
     {% if builder.editable %}
       {# Editable Personal RuleSet (or unsaved draft). Reuses the
@@ -101,8 +103,11 @@
         {% if builder.draft_source_id %}
           <input type="hidden" name="source_rule_set_id" value="{{ builder.draft_source_id }}">
         {% endif %}
-        {% if builder.selected_is_draft %}
+        {% if builder.selected_is_draft and not builder.selected_is_blank %}
           <input type="hidden" name="auto_name" value="{{ 'true' if builder.draft_auto_name else 'false' }}">
+        {% endif %}
+        {% if builder.selected_is_blank %}
+          <input type="hidden" name="is_blank_draft" value="true">
         {% endif %}
         <input type="hidden" name="rules_json" id="rule-based-editor-rules-json" value="{{ builder.rules_json_initial }}">
 
@@ -251,7 +256,8 @@
           {% if builder.can_save %}
             <button class="btn primary"
                     type="submit"
-                    id="rule-builder-save-button">Save</button>
+                    id="rule-builder-save-button"
+                    {% if builder.selected_is_blank %}disabled{% endif %}>Save</button>
           {% endif %}
           {% if builder.can_cancel %}
             <a class="btn alert"
@@ -273,6 +279,28 @@
       </form>
 
       {% include "operator/partials/_rule_based_editor_js.html" %}
+
+      {% if builder.selected_is_blank %}
+        {# Segment 13A-1 PR 3 — gate the blank-draft Save button on
+           ≥1 rule. Watches the rule-list element for childList
+           mutations and toggles the Save button's ``disabled``
+           attribute. The server-side gate in ``rule_builder_save``
+           is the source of truth — this is the UX layer. #}
+        <script>
+          (function () {
+            var saveBtn = document.getElementById("rule-builder-save-button");
+            var ruleList = document.getElementById("rule-based-editor-rule-list");
+            if (!saveBtn || !ruleList) return;
+            function refresh() {
+              var hasRows = ruleList.querySelectorAll(".rule-edit-row").length > 0;
+              saveBtn.disabled = !hasRows;
+            }
+            refresh();
+            var observer = new MutationObserver(refresh);
+            observer.observe(ruleList, { childList: true });
+          })();
+        </script>
+      {% endif %}
     {% else %}
       {# Seeded read-only sentence view. #}
       <h3 style="margin-top: 20px;">Combinator</h3>
@@ -316,5 +344,4 @@
         {% endif %}
       </div>
     {% endif %}
-  {% endif %}
 </div>

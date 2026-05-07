@@ -3043,20 +3043,29 @@ _RULE_BUILDER_ERROR_MESSAGES: dict[str, str] = {
         "Delete not confirmed. Tick the confirm checkbox before "
         "clicking Delete."
     ),
+    "empty_rules": (
+        "Add at least one rule before saving the new RuleSet."
+    ),
 }
 
 
-def _rule_builder_default_blank(
+def _rule_builder_blank_draft(
     review_session: ReviewSession,
     options: list[RuleBuilderOption],
     *,
     error_kind: str | None,
     saved_flash: bool,
+    name_override: str | None = None,
 ) -> RuleBuilderContext:
-    """Defensive blank-sentinel fallback used when no real selection
-    can be resolved (no visible RuleSets, or a stale id that no
-    longer loads). PR 3 will replace this with the live blank-draft
-    branch — for PR 1/PR 2 it stays as the placeholder."""
+    """Live blank-draft context (Segment 13A-1 PR 3).
+
+    Replaces the PR 1/PR 2 placeholder branch — selecting
+    ``+ New blank RuleSet`` from the dropdown now renders an
+    editable form with zero rules, default combinator ``ALL_OF``,
+    and the auto-generated name ``"New RuleSet"``. Save is gated
+    server-side until at least one rule exists; the Save button is
+    also gated client-side via the inline JS in
+    ``_rule_builder_card.html``."""
 
     return RuleBuilderContext(
         options=options,
@@ -3064,12 +3073,12 @@ def _rule_builder_default_blank(
         selected_is_blank=True,
         selected_is_seed=False,
         selected_is_personal=False,
-        selected_is_draft=False,
-        editable=False,
-        name="New RuleSet",
+        selected_is_draft=True,
+        editable=True,
+        name=name_override or "New RuleSet",
         description="",
         combinator="ALL_OF",
-        combinator_label="",
+        combinator_label=_COMBINATOR_LABELS.get("ALL_OF", "All of"),
         exclude_self_reviews=True,
         seed_value=None,
         rule_lines=[],
@@ -3078,8 +3087,8 @@ def _rule_builder_default_blank(
         draft_source_id=None,
         draft_auto_name=False,
         previous_id=None,
-        can_save=False,
-        can_cancel=False,
+        can_save=True,
+        can_cancel=True,
         can_delete=False,
         can_copy=False,
         copy_url=_rule_builder_url(review_session, "copy"),
@@ -3098,6 +3107,12 @@ def _rule_builder_default_blank(
         quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
         composite_op_options=list(_COMPOSITE_OP_OPTIONS),
     )
+
+
+# Back-compat alias: the PR 1/PR 2 default-blank fallback is now the
+# same shape as the live blank-draft branch. Defensive fallbacks
+# (no visible RuleSets, stale id) reuse it.
+_rule_builder_default_blank = _rule_builder_blank_draft
 
 
 def _rule_builder_url(review_session: ReviewSession, suffix: str) -> str:
