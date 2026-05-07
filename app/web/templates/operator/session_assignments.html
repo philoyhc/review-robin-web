@@ -129,10 +129,6 @@
       {% endif %}
     </section>
 
-    {% include "operator/partials/_rule_based_card.html" %}
-    </div>{# /bottom-left #}
-
-    <div class="bottom-left">
     <div class="card">
       <h2>Full Matrix Assignment</h2>
       <p class="form-help">Pair every reviewer with every reviewee.</p>
@@ -164,6 +160,10 @@
         </form>
       {% endif %}
     </div>
+    </div>{# /bottom-left #}
+
+    <div class="bottom-left">
+    {% include "operator/partials/_rule_based_card.html" %}
 
     {% if assignment_count %}
       <div class="card danger-zone">
