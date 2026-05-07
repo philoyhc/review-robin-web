@@ -23,27 +23,11 @@
     attributes via rules.
   </p>
 
-  {% if rule_based_card.error_kind == "needs_confirm" %}
-    <div class="banner banner-error" id="rule-based-needs-confirm-banner">
-      <p style="margin: 0;">
-        Replace not confirmed. Tick the confirm checkbox below before
-        clicking Generate.
-      </p>
-    </div>
-  {% elif rule_based_card.error_kind == "missing_rule_set" %}
-    <div class="banner banner-error" id="rule-based-missing-ruleset-banner">
-      <p style="margin: 0;">
-        That RuleSet could not be loaded. Pick another and try again.
-      </p>
-    </div>
-  {% elif rule_based_card.error_kind == "rule_set_deleted" %}
-    <div class="banner banner-info" id="rule-based-deleted-banner">
-      <p style="margin: 0;">
-        RuleSet deleted. Past assignments still reference it for
-        provenance.
-      </p>
-    </div>
-  {% endif %}
+  {# Flash banners (needs_confirm / missing_rule_set / rule_set_deleted)
+     intentionally suppressed — the card design favours quiet
+     reload over inline error / info chrome. The route layer still
+     redirects with ``?rule_based_error=...`` for back-channel
+     signalling, but the operator sees just the page reload. #}
 
   {% if rule_based_card.is_wired %}
     <form method="post"
