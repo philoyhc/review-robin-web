@@ -373,13 +373,9 @@ def save_draft(
         event_type="responses.saved",
         summary=f"Saved {written} response{'' if written == 1 else 's'} (draft)",
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "session_id": review_session.id,
-            "reviewer_id": reviewer.id,
-            "count": written,
-            "validation_errors": len(errors),
-        },
+        session=review_session,
+        payload=audit.counts(saved=written, validation_errors=len(errors)),
+        refs={"reviewer_id": reviewer.id},
         correlation_id=correlation_id,
     )
     db.commit()
@@ -486,12 +482,9 @@ def submit(
             f"Submitted {submitted_count} response{'' if submitted_count == 1 else 's'}"
         ),
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "session_id": review_session.id,
-            "reviewer_id": reviewer.id,
-            "count": submitted_count,
-        },
+        session=review_session,
+        payload=audit.counts(submitted=submitted_count),
+        refs={"reviewer_id": reviewer.id},
         correlation_id=correlation_id,
     )
     db.commit()
@@ -535,12 +528,9 @@ def clear_all(
         event_type="responses.cleared",
         summary=f"Cleared {deleted} response{'' if deleted == 1 else 's'}",
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "session_id": review_session.id,
-            "reviewer_id": reviewer.id,
-            "deleted_count": deleted,
-        },
+        session=review_session,
+        payload=audit.counts(deleted=deleted),
+        refs={"reviewer_id": reviewer.id},
         correlation_id=correlation_id,
     )
     db.commit()
@@ -591,8 +581,8 @@ def delete_all_for_session(
         event_type="responses.deleted_all",
         summary=f"Deleted {deleted} response{'' if deleted == 1 else 's'} (operator)",
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={"deleted_count": deleted},
+        session=review_session,
+        payload=audit.counts(deleted=deleted),
         correlation_id=correlation_id,
     )
     db.commit()

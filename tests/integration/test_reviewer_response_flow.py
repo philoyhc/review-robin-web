@@ -774,7 +774,7 @@ def test_submit_with_all_required_filled_succeeds_and_writes_audit(
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")
     ).scalar_one()
-    assert audit.detail["count"] >= 1
+    assert audit.detail["counts"]["submitted"] >= 1
 
 
 def test_submit_with_missing_required_warns_without_audit(
@@ -881,7 +881,7 @@ def test_clear_all_with_confirm_deletes_responses(
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.cleared")
     ).scalar_one()
-    assert audit.detail["deleted_count"] >= 1
+    assert audit.detail["counts"]["deleted"] >= 1
 
 
 def test_clear_all_without_confirm_400s(
