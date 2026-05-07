@@ -19,17 +19,25 @@ Catalog item: `guide/todo_master.md` "Upcoming" item 2
 
 ## Status
 
-In progress. Originally sized as 5 PRs (A-E); shipped state:
+**Done. All 5 planned PRs shipped:**
 
 - **PRs A / B / C** ✅ shipped 2026-05-06 (#517 / #520 / #521 /
   #522 / #523 plus follow-ups).
+- **PR D** ✅ shipped 2026-05-07 — wires the reminder tab's
+  render adapter to `email_templates.render_reminder` (with
+  `PREVIEW_INVITE_URL_PLACEHOLDER` for `$invite_url`); flips
+  `EMAIL_PREVIEW_TABS["reminder"].is_shipped=True`. Same shape
+  as the responses-received activation in PR 6.
 - **PR E** ✅ shipped 2026-05-07 via Segment 11E PR 6 (#532) —
   the registry mutation + render-adapter dispatch branch rode
   along with the editor third tab on the same
   `render_responses_received` helper.
-- **PR D** remains as the only unshipped item — wires the
-  Reminder tab's render adapter to
-  `email_templates.render_reminder`.
+
+After PR D ships, **11F retires** — the plan moves to
+`guide/archive/`. Send-test affordances (originally deferred
+to "either a small 11F follow-on or to Segment 11C PR F") now
+live in **Segment 14-1 Part A** as part of the wider email
+send-activation work.
 
 1. **PR A — Page chrome + reviewer picker.** ✅ Shipped. No
    artifact regions yet; the body renders the picker and a

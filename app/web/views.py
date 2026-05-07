@@ -1821,8 +1821,10 @@ def _picker_assigned_reviewee_names(
 # tabbed card. The `EMAIL_PREVIEW_TABS` registry pins the tab order
 # (chronological: invitation → reminder → responses-received) and tells the
 # template which tabs are shipped vs. coming. The route's render dispatch
-# lives in `build_email_preview_body` below; PRs D / E flip the matching
-# tab from "coming" to live.
+# lives in `build_email_preview_body` below. All three are live as of
+# Segment 11F PR D (reminder) + Segment 11E PR 6 (responses-received);
+# the ``is_shipped`` field stays for any future tab additions that need
+# to land registry-first and dispatch-second.
 
 # A placeholder URL the operator-facing preview substitutes for `$invite_url`.
 # Real invitation tokens are one-time-use and would be wasted (and audit-
@@ -1863,8 +1865,10 @@ class EmailPreviewTab:
     without ripple."""
 
     is_shipped: bool
-    """`True` once the matching render adapter is wired in. PR B sets
-    only `invitation` to True; PRs D / E flip the others."""
+    """`True` once the matching render adapter is wired in. All three
+    tabs are shipped as of Segment 11F PR D (reminder) + Segment 11E
+    PR 6 (responses-received); the field stays for any future tab
+    additions that land registry-first and dispatch-second."""
 
     description: str
     """One-line description rendered below the tab strip when this tab
@@ -1883,7 +1887,7 @@ EMAIL_PREVIEW_TABS: tuple[EmailPreviewTab, ...] = (
         key="reminder",
         label="Reminder",
         template_setup_param="reminder",
-        is_shipped=False,
+        is_shipped=True,
         description=(
             "Sent against an active session past the configured "
             "reminder threshold. Operators trigger reminders from "
@@ -1948,13 +1952,22 @@ def build_email_preview_body(
 ) -> EmailBody | None:
     """Render the active tab's email for the picker-selected reviewer.
 
-    Returns ``None`` for tabs whose render adapter hasn't shipped yet
-    (the route falls back to the invitation tab via
-    ``resolve_email_preview_tab`` before reaching this, so a None
-    return today only happens if a caller passes an unshipped tab
-    directly). PR D extends the dispatch to cover reminder."""
+    All three tabs ship live render adapters as of Segment 11F PR D
+    (reminder) + Segment 11E PR 6 (responses-received); a ``None``
+    return only happens if a caller passes a future-unshipped tab
+    directly."""
     if tab.key == "invitation":
         subject, body = email_templates.render_invitation(
+            review_session, reviewer, PREVIEW_INVITE_URL_PLACEHOLDER
+        )
+        return EmailBody(
+            subject=subject,
+            from_display=from_display,
+            to_display=reviewer.email,
+            body=body,
+        )
+    if tab.key == "reminder":
+        subject, body = email_templates.render_reminder(
             review_session, reviewer, PREVIEW_INVITE_URL_PLACEHOLDER
         )
         return EmailBody(

@@ -332,10 +332,10 @@ def test_invitation_tab_active_by_default(
         '<button type="button" class="btn disabled" aria-disabled="true">Invitation</button>'
         in body
     )
-    # Reminder remains "(coming soon)" pending Segment 11F PR D.
-    assert "Reminder (coming soon)" in body
-    # Responses received now ships (Segment 11E PR 6) so it renders as
-    # an active link rather than a disabled "(coming soon)" button.
+    # All three tabs ship live render adapters as of Segment 11F PR D
+    # (reminder) + Segment 11E PR 6 (responses-received), so neither
+    # renders as a "(coming soon)" button anymore.
+    assert "Reminder (coming soon)" not in body
     assert "Responses received (coming soon)" not in body
     assert (
         f'href="/operator/sessions/{session.id}/previews'
@@ -396,13 +396,14 @@ def test_unknown_email_param_falls_back_to_invitation(
     )
 
 
-def test_unshipped_email_param_falls_back_to_invitation(
+def test_reminder_tab_renders_card_when_selected(
     client: TestClient, db: Session
 ) -> None:
-    """`?email=reminder` is in the registry but unshipped in PR B,
-    so the route falls back to invitation — does not render an
-    empty / broken region."""
-    session = _create_session(client, db, code="prev-email-unshipped")
+    """Segment 11F PR D ships the reminder render adapter, so
+    ``?email=reminder`` activates the tab and renders the email body.
+    Same shape as the invitation tab; same `$invite_url` placeholder
+    in the rendered body."""
+    session = _create_session(client, db, code="prev-reminder-active")
     _import_reviewers(
         client,
         session.id,
@@ -419,13 +420,18 @@ def test_unshipped_email_param_falls_back_to_invitation(
 
     assert response.status_code == 200
     body = response.text
+    # Active tab is reminder (rendered as a disabled "current view"
+    # button via the same chrome the invitation tab uses).
     assert (
-        '<button type="button" class="btn disabled" aria-disabled="true">Invitation</button>'
+        '<button type="button" class="btn disabled" aria-disabled="true">Reminder</button>'
         in body
     )
-    # Reminder is still rendered as a "(coming soon)" tab in the strip
-    # (just not activated).
-    assert "Reminder (coming soon)" in body
+    # Default subject substitutes the session name.
+    assert "Reminder: review for Prev-Reminder-Active" in body
+    # `$invite_url` substitutes the preview placeholder, not a real URL.
+    assert "preview link" in body.lower()
+    # The "To:" header lands the picked reviewer's email.
+    assert "<strong>To:</strong> alice@example.edu" in body
 
 
 def test_responses_received_tab_renders_card_when_selected(
