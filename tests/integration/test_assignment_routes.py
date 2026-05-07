@@ -84,15 +84,14 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "assignments.generated")
     ).scalar_one()
-    assert event.detail == {
-        "mode": "full_matrix",
-        "replaced_count": 0,
-        "new_count": 2,
-        "pair_count": 2,
-        "instrument_count": 1,
-        "excluded_counts": {},
-        "filename": None,
+    assert event.detail["session_code"] == "spring-2026"
+    assert event.detail["counts"] == {
+        "new": 2,
+        "replaced": 0,
+        "pairs": 2,
+        "instruments": 1,
     }
+    assert event.detail["context"] == {"mode": "full_matrix"}
 
 
 def test_full_matrix_fans_pairs_out_per_instrument(
@@ -155,9 +154,10 @@ def test_full_matrix_fans_pairs_out_per_instrument(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "assignments.generated")
     ).scalar_one()
-    assert event.detail["new_count"] == 4
-    assert event.detail["pair_count"] == 2
-    assert event.detail["instrument_count"] == 2
+    counts = event.detail["counts"]
+    assert counts["new"] == 4
+    assert counts["pairs"] == 2
+    assert counts["instruments"] == 2
 
 
 def test_full_matrix_re_save_without_confirm_blocks(
@@ -228,7 +228,7 @@ def test_full_matrix_re_save_with_confirm_replaces(
             .order_by(AuditEvent.id.desc())
         ).scalars()
     )
-    assert events[0].detail["replaced_count"] == 1
+    assert events[0].detail["counts"]["replaced"] == 1
 
 
 def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session) -> None:
@@ -376,9 +376,9 @@ def test_manual_save_persists_with_include_and_context(
         .where(AuditEvent.event_type == "assignments.generated")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
-    assert event.detail["mode"] == "manual"
-    assert event.detail["new_count"] == 2
-    assert event.detail["filename"] == "manual.csv"
+    assert event.detail["context"]["mode"] == "manual"
+    assert event.detail["counts"]["new"] == 2
+    assert event.detail["context"]["filename"] == "manual.csv"
 
 
 def test_manual_import_blocks_unknown_reviewer(
