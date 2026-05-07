@@ -98,6 +98,7 @@
         var selector = document.getElementById("rule-based-ruleset");
         if (!selector) return;
         var description = document.getElementById("rule-based-description");
+        var editLink = document.getElementById("rule-based-edit");
         var checkbox = document.querySelector(
           '#rule-based-assignment input[name="exclude_self_review"]'
         );
@@ -108,6 +109,14 @@
           }
           if (checkbox) {
             checkbox.checked = option.dataset.excludeSelfReviews === "true";
+          }
+          if (editLink && option.value) {
+            // Replace the trailing /<id> on the editor URL so the
+            // Edit ruleset button always points at the currently-
+            // selected RuleSet without a page reload.
+            editLink.href = editLink.href.replace(
+              /\/edit\/[^/?#]+$/, "/edit/" + option.value
+            );
           }
         });
       })();

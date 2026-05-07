@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Rule Based editor — {{ session.name }}{% endblock %}
+{% block title %}{{ editor.rule_set_name }} — Rule Based editor — {{ session.name }}{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
@@ -14,11 +14,109 @@
   <div class="card">
     <h1 style="margin-top: 0;">Rule Based editor</h1>
     <p>
-      <a href="/operator/sessions/{{ session.id }}/assignments">← Back to Assignments</a>
+      <a href="{{ editor.back_url }}">← Back to Assignments</a>
     </p>
   </div>
 
-  <div class="card placeholder">
-    <p>The RuleSet editor ships in Segment 13A PR 5.</p>
+  {% if editor.error_kind == "empty_name" %}
+    <div class="banner banner-error" id="rule-based-editor-empty-name-banner">
+      <p style="margin: 0;">
+        Pick a name for the new RuleSet before clicking Copy.
+      </p>
+    </div>
+  {% endif %}
+
+  <div class="bottom-grid">
+    <div class="bottom-left">
+      <div class="card" id="rule-based-editor-main">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <h2 style="margin: 0;">{{ editor.rule_set_name }}</h2>
+          <span class="pill {% if editor.is_seed %}pill-info{% else %}pill-count{% endif %}">{% if editor.is_seed %}seed{% else %}personal{% endif %}</span>
+        </div>
+        {% if editor.rule_set_description %}
+          <p class="form-help">{{ editor.rule_set_description }}</p>
+        {% endif %}
+
+        {% if editor.is_seed %}
+          <div class="banner banner-info" id="rule-based-editor-seed-banner" style="margin-top: 12px;">
+            <p style="margin: 0;">
+              This is a seeded RuleSet and read-only. Click <strong>Copy</strong>
+              below to create an editable Personal copy.
+            </p>
+          </div>
+        {% else %}
+          <div class="banner banner-info" id="rule-based-editor-readonly-banner" style="margin-top: 12px;">
+            <p style="margin: 0;">
+              In-place editing of Personal RuleSets ships in Segment 13A
+              PR 5b. For now, use <strong>Copy</strong> to make a new
+              RuleSet from this one.
+            </p>
+          </div>
+        {% endif %}
+
+        <h3 style="margin-top: 20px;">Combinator</h3>
+        <p>
+          Combine these rules with:
+          <span class="pill pill-info">{{ editor.combinator_label }}</span>
+        </p>
+
+        <h3 style="margin-top: 20px;">Self-review</h3>
+        <p>
+          Exclude self-review:
+          {% if editor.exclude_self_reviews %}
+            <span class="pill pill-info">on</span>
+          {% else %}
+            <span class="pill pill-warning">off</span>
+          {% endif %}
+        </p>
+
+        <h3 style="margin-top: 20px;">Rules</h3>
+        {% if editor.rule_lines %}
+          <ol id="rule-based-editor-rules" style="list-style: none; padding-left: 0;">
+            {% for line in editor.rule_lines %}
+              <li style="padding-left: {{ line.indent * 24 }}px; margin: 6px 0;{% if not line.enabled %} opacity: 0.5;{% endif %}">
+                <span class="pill {% if line.kind == 'COMPOSITE' %}pill-info{% elif line.kind == 'QUOTA' %}pill-count{% else %}pill-info{% endif %}">{{ line.kind }}</span>
+                {{ line.text }}
+              </li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <p class="form-help">No rules — every candidate pair flows through.</p>
+        {% endif %}
+
+        <h3 style="margin-top: 24px;">Copy</h3>
+        <p class="form-help">
+          Create a new Personal RuleSet from this one. The new copy is
+          editable; the source stays unchanged.
+        </p>
+        <form method="post" action="{{ editor.copy_url }}" style="margin-top: 12px;">
+          <input type="hidden" name="rule_set_id" value="{{ editor.rule_set_id }}">
+          <p>
+            <label for="rule-based-editor-new-name">Name for the new RuleSet</label>
+            <input type="text"
+                   id="rule-based-editor-new-name"
+                   name="new_name"
+                   required
+                   value="{{ editor.rule_set_name }} (copy)"
+                   style="width: 100%; max-width: 480px;">
+          </p>
+          <div class="btn-pair" style="margin-top: 12px;">
+            <button class="btn primary" type="submit">Copy</button>
+            <a class="btn alert" href="{{ editor.back_url }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="bottom-left">
+      <div class="card" id="rule-based-editor-preview">
+        <h2 style="margin-top: 0;">Preview</h2>
+        <p class="form-help">
+          The live distribution / sampled-pairs preview ships in
+          Segment 13A PR 7. The slot is reserved here so the layout
+          doesn't reflow when it lands.
+        </p>
+      </div>
+    </div>
   </div>
 {% endblock %}

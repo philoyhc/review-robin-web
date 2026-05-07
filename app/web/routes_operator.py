@@ -964,15 +964,46 @@ def _render_assignments_hub(
 
 
 @router.get(
-    "/sessions/{session_id}/assignments/rule-based/edit",
+    "/sessions/{session_id}/assignments/rule-based/edit/{rule_set_id}",
     response_class=HTMLResponse,
+    response_model=None,
 )
-def rule_based_editor_stub(
+def rule_based_editor(
     request: Request,
+    rule_set_id: int,
+    error: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> HTMLResponse:
+) -> HTMLResponse | RedirectResponse:
+    from app.services.rules import library
+
+    loaded = library.load_rule_set(db, rule_set_id)
+    if loaded is None:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/assignments"
+                "?rule_based_error=missing_rule_set"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    rule_set, revision = loaded
+
+    # Personal RuleSets are operator-private — only the owner can
+    # open the editor on them. Seeds are visible to every operator.
+    if not rule_set.is_seed and rule_set.owner_user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="That RuleSet is private to its owner.",
+        )
+
+    editor = views.build_rule_based_editor_context(
+        review_session,
+        rule_set=rule_set,
+        revision=revision,
+        user=user,
+        error_kind=error,
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_rule_based_editor.html",
@@ -980,10 +1011,77 @@ def rule_based_editor_stub(
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
+            "editor": editor,
             "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Rule Based editor"
+                review_session, f"Rule Based · {rule_set.name}"
             ),
         },
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/rule-based/copy",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def rule_based_copy(
+    request: Request,
+    rule_set_id: int = Form(...),
+    new_name: str = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    from app.services.rules import library
+
+    cleaned_name = new_name.strip()
+    if not cleaned_name:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}"
+                f"/assignments/rule-based/edit/{rule_set_id}"
+                "?error=empty_name"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    loaded = library.load_rule_set(db, rule_set_id)
+    if loaded is None:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/assignments"
+                "?rule_based_error=missing_rule_set"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    source_rule_set, source_revision = loaded
+
+    # Visibility rule: operators can copy any seed (visible to all)
+    # plus any of their own Personal RuleSets, but not someone else's
+    # Personal RuleSets.
+    if (
+        not source_rule_set.is_seed
+        and source_rule_set.owner_user_id != user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="That RuleSet is private to its owner.",
+        )
+
+    new_rule_set = library.copy_rule_set(
+        db,
+        source=source_rule_set,
+        source_revision=source_revision,
+        owner=user,
+        new_name=cleaned_name,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}"
+            f"/assignments/rule-based/edit/{new_rule_set.id}"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
