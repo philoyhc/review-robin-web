@@ -42,10 +42,7 @@ from app.schemas.rules import (
 
 SEED_FULL_MATRIX: Final[RuleSetSchema] = RuleSetSchema(
     name="Full Matrix",
-    description=(
-        "Pair every reviewer with every reviewee. Equivalent to "
-        "Simple mode's default."
-    ),
+    description="Pair every reviewer with every reviewee.",
     scope=RuleSetScope.seed,
     combinator=Combinator.ALL_OF,
     rules=[],
