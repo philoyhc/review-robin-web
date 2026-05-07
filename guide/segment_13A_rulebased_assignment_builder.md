@@ -54,10 +54,12 @@ Planning. Sized as **9 PRs** in dependency order:
 2. **PR 2 — Engine.** Pure-Python evaluator (predicates, combinators,
    quotas, deterministic ordering). No DB, no UI; unit tests on
    synthetic populations. Does not yet wire to `replace_assignments`.
-3. **PR 3 — Seeded RuleSets.** Install the six seeds spelt out in
-   the spec (Full Matrix, Intra-group, Cross-group, Same-group-
-   different-role, Three-per-reviewee, Lead-led). Read-only marker;
-   round-trip tests through PR 2's engine on canonical fixtures.
+3. **PR 3 — Seeded RuleSets.** Install the five canonical seeds
+   (Full Matrix, Intra-group, Cross-group, Same-group-different-
+   role, Three-per-reviewee). Read-only marker; round-trip tests
+   through PR 2's engine on canonical fixtures. Lead-led was
+   shipped here originally and dropped in a follow-up — the
+   seed convention (`tag2 = "Lead"`) was over-specific.
 4. **PR 4 — Rule Based card (seeds-only).** Replace the placeholder
    card with a real card carrying a RuleSet selector, an
    "Exclude self-review" checkbox, and a Generate button. Wired to
@@ -778,7 +780,9 @@ for everyone (no UI yet); the seeds are read-only DB rows.
   migration file — the migration imports from `seeds.py` and writes
   the JSON. This way the seed definitions stay close to the rest of
   the engine code and edits don't churn migration files.
-- Six seeds, names per spec §5.4:
+- Five seeds, names per spec §5.4 (Lead-led shipped originally and
+  was dropped in a follow-up because the `tag2 = "Lead"` convention
+  was over-specific to one workspace pattern):
   1. **Full Matrix** — empty rules, ALL_OF, `excludeSelfReviews=true`.
      Drives PR 8's retirement of the standalone Full Matrix card.
   2. **Intra-group peer review** — single MATCH rule
@@ -792,9 +796,6 @@ for everyone (no UI yet); the seeds are read-only DB rows.
   5. **Three reviewers per reviewee** — empty content rules, single
      QUOTA rule `PER_REVIEWEE min=3 max=3 RANDOM seed=42`,
      `excludeSelfReviews=true`.
-  6. **Lead-led review** — ANY_OF combinator with two branches:
-     intra-group MATCH; and a COMPOSITE AND of (`reviewer.tag2=Lead`,
-     `reviewee.tag2=Lead`, `tag1 different_from`).
 - `tests/unit/test_rules_seeds.py` runs each seed through PR 2's
   engine on a canonical fixture population (e.g. 4 groups × 5
   members, 1 lead per group) and asserts the pair count + a sample

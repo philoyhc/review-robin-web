@@ -53,10 +53,10 @@ def _add_personal_rule_set(
     return rs
 
 
-def test_list_visible_returns_six_seeds_when_no_personal_rows(
+def test_list_visible_returns_five_seeds_when_no_personal_rows(
     db: Session,
 ) -> None:
-    """Fresh DB ships the six seeds installed by Segment 13A PR 3."""
+    """Fresh DB ships the five seeds installed by Segment 13A PR 3."""
 
     alice = _make_user(db, "alice@example.edu")
     rule_sets = library.list_visible_rule_sets(db, user=alice)
@@ -66,7 +66,6 @@ def test_list_visible_returns_six_seeds_when_no_personal_rows(
             "Cross-group peer review",
             "Full Matrix",
             "Intra-group peer review",
-            "Lead-led review",
             "Same group, different role",
             "Three reviewers per reviewee",
         ]
