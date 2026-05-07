@@ -285,3 +285,33 @@ def test_generate_rejects_unknown_rule_set_id(
     assert response.headers["location"].endswith(
         "/assignments?rule_based_error=missing_rule_set"
     )
+
+
+def test_assignments_page_shows_last_generated_with_ruleset_name(
+    client: TestClient, db: Session
+) -> None:
+    """After a successful Generate, the assignments page renders a
+    `Last generated using <RuleSet name>: N pairs.` line that reads
+    the name from ``refs.rule_set_id`` of the most recent
+    ``assignments.generated`` audit row."""
+
+    review_session = _make_session(client, db, code="rb-last")
+    _seed_population(client, review_session)
+    rule_set_id = _intra_group_seed_id(db)
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": rule_set_id, "exclude_self_review": "true"},
+        follow_redirects=False,
+    )
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    rb_section = body.split('id="rule-based-assignment"', 1)[1]
+    rb_section = rb_section.split("</section>", 1)[0]
+    assert "Last generated using" in rb_section
+    assert "<strong>Intra-group peer review</strong>" in rb_section
+    # Intra-group across the seed population (two reviewers in
+    # different tag1 groups, two reviewees likewise) yields exactly
+    # two intra-group pairs.
+    assert "2 pairs" in rb_section

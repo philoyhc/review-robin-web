@@ -2181,10 +2181,18 @@ class RuleBasedLastGenerated:
 
     Reads from ``assignments.generated`` audit rows where
     ``context.mode == 'rule_based'``. Empty when no rule-based
-    generation has happened yet on this session."""
+    generation has happened yet on this session.
+
+    ``rule_set_name`` is the name of the RuleSet at the time of the
+    generation if the row is still resolvable (including
+    soft-deleted Personal RuleSets — ``library.load_rule_set`` does
+    not filter on ``deleted_at``). Falls back to ``None`` if the
+    audit row predates the refs slot or the RuleSet has been hard-
+    deleted in the past."""
 
     pair_count: int
     when: datetime
+    rule_set_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -2236,8 +2244,11 @@ def build_rule_based_card_context(
                     is_seed=rs.is_seed,
                 )
             )
-        # Default selection: the alphabetically-first seed (per the
-        # plan, "Intra-group peer review" given install order).
+        # Default selection: the first seed in install order (Full
+        # Matrix). The list is short enough that the operator scrolls
+        # the dropdown either way; pinning the default to the
+        # install-order-first row keeps the rendered UI free of any
+        # special-casing on seed name.
         seed_options = [opt for opt in options if opt.is_seed]
         if seed_options:
             selected_option_id = seed_options[0].id
@@ -2259,9 +2270,17 @@ def build_rule_based_card_context(
             counts = last_event.detail.get("counts") or {}
             pair_count = counts.get("pairs")
             if isinstance(pair_count, int):
+                rule_set_name: str | None = None
+                refs = last_event.detail.get("refs") or {}
+                rule_set_id = refs.get("rule_set_id")
+                if isinstance(rule_set_id, int):
+                    loaded = library.load_rule_set(db, rule_set_id)
+                    if loaded is not None:
+                        rule_set_name = loaded[0].name
                 last_generated = RuleBasedLastGenerated(
                     pair_count=pair_count,
                     when=last_event.created_at,
+                    rule_set_name=rule_set_name,
                 )
 
     return RuleBasedCardContext(
