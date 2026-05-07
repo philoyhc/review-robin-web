@@ -1,35 +1,95 @@
 # Segment 11E — Operator-editable email template editor + SMTP scaffolding
 
-Implementation plan for `unfinished_business.md` #24 — the operator-
-facing email template editor at
-`/operator/sessions/{id}/setupinvite`. The current page is a stub
-("lands in Segment 15"); the underlying `_email_body` /
-`_reminder_body` helpers in `app/services/invitations.py` are two
-hardcoded plain-text strings. This segment ships the editor + the
+**Shipped 2026-05-05 → 2026-05-07.** Archived for historical
+reference; consult `docs/status.md` for the authoritative summary
+of what's in production and `unfinished_business.md` #24 for the
+catalog entry.
+
+Implementation plan for `unfinished_business.md` #24 — the
+operator-facing email template editor at
+`/operator/sessions/{id}/setupinvite`. Pre-segment, that page was a
+stub ("lands in Segment 15"); the underlying `_email_body` /
+`_reminder_body` helpers in `app/services/invitations.py` were two
+hardcoded plain-text strings. This segment shipped the editor + the
 merge-field rendering layer so operators can shape their own
-invitations and reminders without code changes, **plus the SMTP
-transport scaffolding** — a per-operator Settings page, encrypted
-credential storage, and a transport-agnostic send interface — that
-Segment 11C wires up on the Manage Invitations page. **Real SMTP
-sends do not happen in 11E**: outbox rows still write
+invitations, reminders, and post-submit responses-received
+confirmations without code changes, **plus the SMTP transport
+scaffolding** — a per-operator Settings page, encrypted credential
+storage, and a transport-agnostic send interface — that **Segment
+14-1 Part A** will wire up on the Manage Invitations page. **Real
+SMTP sends do not happen in 11E**: outbox rows still write
 `status="queued"` and the dev outbox is the only sink the operator
 sees on this surface.
 
 ## Status
 
-Planning. Sized as **5 PRs** in dependency order:
-1. Email-template schema + service-layer rendering.
-2. Editor UI (the two-card layout).
-3. Send-side refactor (template renderer wired into existing send
-   path; outbox rows still queued).
-4. Operator Settings page + per-operator credential storage
-   (encrypted at rest).
-5. Transport interface + SMTP backend (in code only, not yet
-   triggered).
+**Done. Six PRs landed against the planned five (PR 3 collapsed
+into PR 1 — the renderer wiring landed there) plus one polish PR
+plus the Follow-on PR 6:**
 
-Each PR ships independently on top of `main`. Segment 11C picks up
-PR 5's interface and wires the Manage Invitations page to actually
-hit Send.
+- **PR 1 (#461)** — schema + service-layer renderer.
+  `sessions.help_contact` (String 320, nullable) and
+  `sessions.email_template_overrides` (JSON, nullable) columns;
+  new `app/services/email_templates.py` rendering
+  `string.Template.safe_substitute` over the canonical five-tag
+  merge-field set (`$reviewer_name` / `$session_name` /
+  `$deadline` / `$help_contact` / `$invite_url`); the legacy
+  `_email_body` / `_reminder_body` helpers retire in favour of
+  `render_invitation` / `render_reminder`. Help-contact also
+  surfaces on the reviewer surface as a small "Questions? Contact
+  X" line.
+- **PR 2-A (#462)** — placeholder cards on `/setupinvite` framing
+  the editor surface ahead of the actual editor.
+- **PR 4 (#463)** — operator Settings page at `/operator/settings`.
+  Per-operator SMTP credentials (seven new columns on `users`);
+  password encrypted at rest via `cryptography.fernet` keyed off
+  the `SMTP_ENCRYPTION_KEY` env var; new
+  `app/services/operator_settings.py` + `app/services/_secrets.py`;
+  user-menu Settings link in the chrome.
+- **PR 5 (#464)** — `EmailTransport` Protocol + `EmailMessage` /
+  `SendResult` dataclasses + concrete `SmtpEmailTransport`
+  (`smtplib`, STARTTLS / implicit-SSL) + typed-stub
+  `GraphEmailTransport` placeholder + `transport_for(settings)`
+  factory. Nothing in the app calls this yet; **Segment 14-1
+  Part A** is the first call site.
+- **PR 2 (#465)** — actual editor UI on `/setupinvite`. Two-card
+  `.bottom-grid` layout: composer left, merge tags + Save / Cancel
+  right. Per-template selection via `?template=` query.
+  Per-field "Reset to default" forms; `email_template.updated` /
+  `email_template.reset` audit events.
+- **#468 polish** — Email Template + Settings button consistency:
+  Invitation / Reminder tabs out of card / normal-sized / flushed
+  left, Save / Cancel at bottom-right of their card, no flash
+  banners (Save disables until dirty), Settings page picks up
+  `?return_to=` plumbing matching the About-page convention.
+- **PR 6 (#532, 2026-05-07)** — responses-received template
+  editor third tab. Adds the responses-received subject / body /
+  cc / bcc keys to `email_template_overrides` plus a per-session
+  `responses_received_enabled` bool flag (default `True`) the
+  editor surfaces as a "Send this confirmation when a reviewer
+  submits." checkbox. New
+  `email_templates.render_responses_received(session, reviewer)`
+  helper (drops `$invite_url`, adds `$submitted_at` resolved via
+  `_latest_submitted_at` against the reviewer's responses) +
+  `responses_received_enabled(session)` reader +
+  `set_responses_received_enabled(session, enabled)` writer.
+  Editor's right-card merge-tag list goes per-template via new
+  `views.merge_tags_for_template(template)` helper.
+  `views.EMAIL_PREVIEW_TABS` flips `is_shipped=True` on the
+  responses-received entry — lights up the previously deferred
+  Preview hub artifact card without needing a new registry seam.
+  The submit-time send wiring (originally planned as PR 7) was
+  absorbed into **Segment 14-1 Part A** so all email *sending*
+  lives in one segment regardless of which transport backend
+  lights up.
+
+The plan below preserves the original PR-sequence text as a
+historical record of how the segment was scoped before any of it
+shipped. The "Follow-on — Responses-received email" section near
+the bottom captures PR 6's revised scope (the cross-segment
+reshuffle around 11C Part 2 / 14-1 happened mid-flight; #531
+narrowed 11E to editor-only + reframed the send wiring as a 14-1
+seam, then #532 shipped that scope).
 
 ## Reference
 
@@ -611,13 +671,13 @@ PR ships, both of which 11C Part 2's PR H consumes.
 
 ### Status
 
-Planning. Sized as **1 PR (PR 6)** — editor-only.
-
-After PR 6 ships, **11E retires** and the plan moves to
-`guide/archive/`. Anything further on the responses-received
+**Shipped 2026-05-07 as PR 6 (#532).** This Follow-on landed
+exactly as scoped: editor-only — schema additions + render
+helper + editor third tab + send-on-submit checkbox + Preview
+hub registry flip. Anything further on the responses-received
 email (auto-send wiring, audit event, the Operations-side
-buttons) lands in **Segment 11C Part 2 PR H** instead — see
-`guide/segment_11C_operations_consolidation.md` "Part 2".
+buttons) moved to **Segment 14-1 Part A** during the cross-
+segment reshuffle (#533) — see `guide/segment_14-1_email_infra.md`.
 
 ### Why a third email type, not a fold-into-an-existing-one
 
