@@ -291,9 +291,10 @@ def test_assignments_page_shows_last_generated_with_ruleset_name(
     client: TestClient, db: Session
 ) -> None:
     """After a successful Generate, the assignments page renders a
-    `Last generated using <RuleSet name>: N pairs.` line that reads
-    the name from ``refs.rule_set_id`` of the most recent
-    ``assignments.generated`` audit row."""
+    `Last generated using <RuleSet name>: N unique pairs (M
+    assignments).` line that reads the name from
+    ``refs.rule_set_id`` of the most recent ``assignments.generated``
+    audit row."""
 
     review_session = _make_session(client, db, code="rb-last")
     _seed_population(client, review_session)
@@ -313,5 +314,33 @@ def test_assignments_page_shows_last_generated_with_ruleset_name(
     assert "<strong>Intra-group peer review</strong>" in rb_section
     # Intra-group across the seed population (two reviewers in
     # different tag1 groups, two reviewees likewise) yields exactly
-    # two intra-group pairs.
-    assert "2 pairs" in rb_section
+    # two intra-group pairs. Default-instrument fan-out keeps
+    # assignments == pairs on this single-instrument session.
+    assert "2 unique pairs" in rb_section
+    assert "(2 assignments)" in rb_section
+
+
+def test_assignments_page_renders_description_on_first_load(
+    client: TestClient, db: Session
+) -> None:
+    """The selector's description line must show on first render —
+    not only after a JS-driven change event. Previously the Jinja
+    loop-scoped ``{% set %}`` for ``selected_description`` reset
+    when the loop exited; the view-shape adapter now resolves the
+    selected description in Python."""
+
+    review_session = _make_session(client, db, code="rb-desc")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+
+    rb_section = body.split('id="rule-based-assignment"', 1)[1]
+    rb_section = rb_section.split("</section>", 1)[0]
+    # First seed in install order is Full Matrix; its description is
+    # what the description line should carry on first paint.
+    assert (
+        'id="rule-based-description"' in rb_section
+    )
+    desc_html = rb_section.split('id="rule-based-description"', 1)[1]
+    desc_html = desc_html.split("</p>", 1)[0]
+    assert "Pair every reviewer with every reviewee" in desc_html

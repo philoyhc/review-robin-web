@@ -52,16 +52,8 @@
           {% endfor %}
         </select>
       </p>
-      {% set selected_description = "" %}
-      {% set selected_exclude_self = true %}
-      {% for option in rule_based_card.options %}
-        {% if option.id == rule_based_card.selected_option_id %}
-          {% set selected_description = option.description %}
-          {% set selected_exclude_self = option.exclude_self_reviews %}
-        {% endif %}
-      {% endfor %}
       <p class="form-help" id="rule-based-description">
-        {{ selected_description }}
+        {{ rule_based_card.selected_description }}
       </p>
 
       <p>
@@ -69,7 +61,7 @@
           <input type="checkbox"
                  name="exclude_self_review"
                  value="true"
-                 {% if selected_exclude_self %}checked{% endif %}>
+                 {% if rule_based_card.selected_exclude_self_reviews %}checked{% endif %}>
           Exclude self-review (when a reviewer's email matches a
           reviewee's identifier)
         </label>
@@ -123,7 +115,9 @@
 
     {% if rule_based_card.last_generated %}
       <p class="form-help" id="rule-based-last-generated" style="margin-top: 12px;">
-        Last generated{% if rule_based_card.last_generated.rule_set_name %} using <strong>{{ rule_based_card.last_generated.rule_set_name }}</strong>{% endif %}: {{ rule_based_card.last_generated.pair_count }} pair{% if rule_based_card.last_generated.pair_count != 1 %}s{% endif %}.
+        Last generated{% if rule_based_card.last_generated.rule_set_name %} using <strong>{{ rule_based_card.last_generated.rule_set_name }}</strong>{% endif %}:
+        {{ rule_based_card.last_generated.pair_count }} unique pair{% if rule_based_card.last_generated.pair_count != 1 %}s{% endif %}{% if rule_based_card.last_generated.assignment_count is not none %}
+        ({{ rule_based_card.last_generated.assignment_count }} assignment{% if rule_based_card.last_generated.assignment_count != 1 %}s{% endif %}){% endif %}.
       </p>
     {% endif %}
   {% else %}

@@ -2193,6 +2193,12 @@ class RuleBasedLastGenerated:
     pair_count: int
     when: datetime
     rule_set_name: str | None = None
+    assignment_count: int | None = None
+    """Total Assignment rows written by the run (= pair_count
+    × instrument count). Surfaced alongside the unique-pair count so
+    operators on multi-instrument sessions can read both numbers
+    inline. ``None`` for older audit rows that wrote ``new`` under a
+    different key."""
 
 
 @dataclass(frozen=True)
@@ -2203,6 +2209,8 @@ class RuleBasedCardContext:
     coming_in: str
     options: list[RuleBasedSelectorOption]
     selected_option_id: int | None
+    selected_description: str
+    selected_exclude_self_reviews: bool
     needs_confirm_replace: bool
     error_kind: str | None
     last_generated: RuleBasedLastGenerated | None
@@ -2255,6 +2263,19 @@ def build_rule_based_card_context(
         elif options:
             selected_option_id = options[0].id
 
+    # Resolve the selected option's description and exclude-self-
+    # reviews default in Python, not Jinja. ``{% set %}`` inside a
+    # ``{% for %}`` is loop-scoped in Jinja and resets when the loop
+    # exits, which left ``selected_description`` blank on first
+    # render and only populated after a JS-driven change event.
+    selected_description = ""
+    selected_exclude_self_reviews = True
+    for option in options:
+        if option.id == selected_option_id:
+            selected_description = option.description
+            selected_exclude_self_reviews = option.exclude_self_reviews
+            break
+
     last_generated: RuleBasedLastGenerated | None = None
     last_event = db.execute(
         select(AuditEvent)
@@ -2277,10 +2298,14 @@ def build_rule_based_card_context(
                     loaded = library.load_rule_set(db, rule_set_id)
                     if loaded is not None:
                         rule_set_name = loaded[0].name
+                new_count = counts.get("new")
                 last_generated = RuleBasedLastGenerated(
                     pair_count=pair_count,
                     when=last_event.created_at,
                     rule_set_name=rule_set_name,
+                    assignment_count=(
+                        new_count if isinstance(new_count, int) else None
+                    ),
                 )
 
     return RuleBasedCardContext(
@@ -2292,6 +2317,8 @@ def build_rule_based_card_context(
         coming_in="The Rule Based editor child page ships in Segment 13A PR 5.",
         options=options,
         selected_option_id=selected_option_id,
+        selected_description=selected_description,
+        selected_exclude_self_reviews=selected_exclude_self_reviews,
         needs_confirm_replace=assignment_count > 0,
         error_kind=error_kind,
         last_generated=last_generated,
