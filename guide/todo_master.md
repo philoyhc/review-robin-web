@@ -131,6 +131,19 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - **#509 → #511 polish** — readiness summary card removed (severity counts already live in the chip strip); setup-coverage matrix moved off `<table>` markup onto a flex-row-per-cell + 4-column grid layout (3-col → 4-col after #511) with the descriptive subtitle inline next to the H2.
   - Plan: `guide/archive/segment_11G_validate_page.md`. New: `tests/integration/test_session_validate_page.py` covering the four-PR surface end-to-end.
 
+### Segment 13
+
+- **Segment 13A — Rule-based assignment builder** — done 2026-05-07. PRs **#563 / #565 / #566 / #569 / #570 / #576 / #577 / #578 / #579 / #580 / #581** plus follow-on polish **#564 / #571 / #572 / #573 / #574 / #575**. Replaces the placeholder Rule Based card on `/operator/sessions/{id}/assignments` with a real RuleSet-driven rule menu — schema (`rule_sets` + `rule_set_revisions`), pure-Python engine (predicates / combinators / quotas / deterministic ordering), five seeded RuleSets in install order, an editor child page at `/assignments/rule-based/edit/{rule_set_id}` with Save / Save As / in-place revisioning + soft-delete, and a server-side live preview pane reusing the engine. New audit emitters (`rule_set.created` / `.updated` / `.deleted`) registered in `audit.EVENT_SCHEMAS` per 11K PR 8. The retired-card cleanup (PR 8) removed the standalone Full Matrix card from the assignments page; the seeded `Full Matrix` RuleSet covers the same case from inside the new card. Plan: `guide/segment_13A_rulebased_assignment_builder.md`.
+
+- **Segment 13A-1 — Rule Based editor revamp** — done 2026-05-07. PRs **#587 (PR 1) → #588 (PR 2) → #589 (PR 3) → #601 (PR 4a) → #602 (PR 4b)** plus an iterated layout-spec stream **#590 → #591 → #592 → #593 → #594 → #595 → #596 → #597 → #598 → #599 → #600**. Supersedes 13A's two-column editor (Library panel + Personal editable view + seed view + preview) with a single-card **Rule Builder** at `/operator/sessions/{id}/assignments/rule-based-editor` paired with an **Available Rulesets** sibling card. Highlights:
+  - Single self-sufficient page — no redirect back to assignments on Save / Copy / Cancel / Delete; the dropdown switches in-place.
+  - Three render branches share one form: seeded read-only (sentence-shaped rule lines), saved Personal (PR 5b/5c indented inline-composite editable form lifted unchanged), unsaved draft (Copy from seed/Personal **and** "+ New blank RuleSet"). Action row is selection-aware per locked decision #3.
+  - **Friendly Description** textarea on editable branches (default `"User created ruleset"` on fresh drafts) replaces 13A's read-only description caption; persists via the same `/save` route. Caption stays for seeded read-only views.
+  - **"Available rulesets"** sibling card at half page width lists every visible RuleSet with its description and a seed/personal pill; the active row highlights.
+  - Locked banner copy + "Combine these rules with:" helper inline (no "Combinator" heading); `+ MATCH/FILTER/QUOTA/COMPOSITE rule` button labels (no "Add"); no "Exclude self-review" affordance on the card (lives on the main Assignments page).
+  - 13A's standalone editor surface (`/edit/{rule_set_id}` + companion POSTs `/copy`, `/save`, `/save-as`, `/rename`, `/delete`, `/preview`) and template / partials retired in PR 4b; the reused PR 5b/5c rules-JSON serializer (`_rule_based_editor_js.html`) and shared view-shape helpers (`RuleLine`, `EditableRule`, `_flatten_rule_lines`, `_flatten_editable_rules`, picker option lists) stayed.
+  - Plan: `guide/segment_13A_1_rule_based_editor_revamp.md`. As-built layout: `guide/rule_builder.md`. New tests: `tests/integration/test_rule_builder_page.py`, `test_rule_builder_copy_save_delete.py`, `test_rule_builder_new_blank.py`. Net diff after 4b: **-3487 lines** of legacy editor surface.
+
 ---
 
 ## Upcoming
@@ -155,16 +168,7 @@ pinned to each segment. The catalog itself lives in
    Extract Data moved into 12A.
    **Plan:** `guide/segment_12B_audit_retention.md`.
 
-3. **13A — Rule-based assignment builder.**
-   Real `RuleBased` rule menu replaces the `assignments`
-   placeholder card on `/operator/sessions/{id}/assignments`.
-   New rule-application emit reuses
-   `assignments.generated` with `context.mode="rule_based"`;
-   any new rule-CRUD event_types must register a schema in
-   `audit.EVENT_SCHEMAS` per 11K PR 8.
-   **Plan:** `guide/segment_13A_rulebased_assignment_builder.md`.
-
-4. **13B — Reviewer surface sort.**
+3. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
    default + reviewer live override. Sized as 3 PRs (schema +
    read path → operator UI tri-state Sort column → reviewer-
@@ -173,7 +177,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13B_sort_by_reviewee.md`.
    **Functional spec:** `spec/sort_by_reviewee.md`.
 
-5. **13C — Enhanced instruments.**
+4. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
    instrument" action-row button. Sized as 5 PRs. Action row
@@ -185,12 +189,12 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/enhanced_instruments.md`.
 
-6. **14 — Production hardening.**
+5. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-7. **14-1 — Email infrastructure (send activation + backends).**
+6. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. The schema columns Part A
    writes to landed with **Segment 11C Part 2** (PR #541,
    2026-05-07) and are ready for the dispatch helper.
@@ -207,7 +211,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-8. **15 — Operator polish + documentation.**
+7. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
