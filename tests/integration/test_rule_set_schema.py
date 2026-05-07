@@ -80,11 +80,12 @@ def test_rule_set_persists_with_first_revision(db: Session) -> None:
 
 def test_rule_set_seed_has_null_owner(db: Session) -> None:
     """Seed RuleSets carry no owner; the FK is nullable for that
-    case."""
+    case. Uses a sentinel name so it doesn't collide with the
+    canonical seeds installed by Segment 13A PR 3's migration."""
 
     rs = RuleSet(
-        name="Full Matrix",
-        description="Pair every reviewer with every reviewee.",
+        name="__test_seed__",
+        description="Sentinel seed for the null-owner test.",
         scope="seed",
         owner_user_id=None,
         is_seed=True,
@@ -107,7 +108,7 @@ def test_rule_set_seed_has_null_owner(db: Session) -> None:
     db.flush()
 
     fetched = db.execute(
-        select(RuleSet).where(RuleSet.is_seed.is_(True))
+        select(RuleSet).where(RuleSet.name == "__test_seed__")
     ).scalar_one()
     assert fetched.owner_user_id is None
     assert fetched.current_revision.rules_json == []
