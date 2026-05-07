@@ -236,11 +236,17 @@ def test_personal_rule_sets_appear_in_dropdown_after_copy(
     # Personal RuleSet name appears in the dropdown options and as
     # the card heading.
     assert "Team review" in body
-    # Personal-readonly banner signals PR 2's editable form is not
-    # live yet.
-    assert 'id="rule-builder-personal-readonly-banner"' in body
+    # Editable form is rendered (PR 2) — the PR 5b/5c indent-stack
+    # form's marker IDs are present.
+    assert 'id="rule-based-editor-form"' in body
+    assert 'id="rule-based-editor-rules-json"' in body
     # No seeded banner on a Personal selection.
     assert 'id="rule-builder-seed-banner"' not in body
+    # Action row carries Save / Cancel / Delete + Copy.
+    assert 'id="rule-builder-save-button"' in body
+    assert 'id="rule-builder-cancel-button"' in body
+    assert 'id="rule-builder-delete-button"' in body
+    assert 'id="rule-builder-copy-button"' in body
 
 
 # ---------------------------------------------------------------------------
