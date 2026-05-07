@@ -201,28 +201,28 @@ def test_quick_setup_dom_carries_wire_target_attributes(
         assert f'data-wire-target="quick-setup-{key}"' in body
 
 
-def test_quick_setup_dormant_banner_containers_render_hidden(
+def test_quick_setup_card_level_replacement_checkbox_renders(
     client: TestClient, db: Session
 ) -> None:
-    """Per ``spec/assumptions.md``, every redirect-back-with-
-    banner pattern carries the ``banner-scroll-target`` class.
-    The scaffold ships dormant banner containers per slot —
-    confirmation (``banner-warning``) and error
-    (``banner-error``) — so 11J can populate them without
-    re-rolling the markup."""
+    """Replacement-confirmation moved from per-slot inline banners
+    to a single card-level checkbox above the slot grid. The
+    checkbox state mirrors into each form's hidden ``confirm_replace``
+    input via inline JS on submit."""
 
-    review_session = _make_session(client, db, code="qs-banners")
+    review_session = _make_session(client, db, code="qs-confirm-checkbox")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
+    assert 'id="quick-setup-confirm-replace-toggle"' in body
+    assert (
+        "This will replace any existing reviewers, reviewees,"
+        in body
+    )
+    # No per-slot ``banner-warning`` confirm-banners anymore — the
+    # global checkbox is the single confirmation surface.
     for key in ("reviewers", "reviewees", "assignments", "settings"):
-        assert (
-            'class="banner banner-warning banner-scroll-target"\n'
-            f'       id="quick-setup-{key}-confirm-banner"\n'
-            "       hidden"
-        ) in body or (
-            f'id="quick-setup-{key}-confirm-banner"' in body
-            and 'class="banner banner-warning' in body
-        )
+        assert f"quick-setup-{key}-confirm-banner" not in body
+    # Error-banner containers per slot stay (parse / lifecycle / etc.).
+    for key in ("reviewers", "reviewees", "assignments", "settings"):
         assert f'id="quick-setup-{key}-error-banner"' in body
 
 

@@ -19,7 +19,6 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import ReviewSession
-from app.web import views
 
 
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
@@ -187,84 +186,36 @@ def test_reviewees_upload_golden_path(client: TestClient, db: Session) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Replacement-confirmation banner + cascade copy
+# Replacement-confirmation — single card-level checkbox
 # --------------------------------------------------------------------------- #
 
 
-def test_replacement_banner_appears_when_slot_populated(
+def test_card_level_replacement_checkbox_renders_once(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _seed_pair(client, db, code="qs-replace-banner")
+    """One card-level confirmation checkbox at the top of the body
+    wrapper, regardless of how many slots already have data. Inline
+    JS mirrors its state into each slot form's hidden
+    ``confirm_replace`` input on submit; the route's server-side
+    gate stays the source of truth."""
+
+    review_session = _seed_pair(client, db, code="qs-confirm-checkbox")
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    # cascade_message populated for both Reviewers and Reviewees.
-    assert "This will replace 1 existing reviewer." in body
-    assert "This will replace 1 existing reviewee." in body
-    # The banner-warning containers are visible (no ``hidden`` attr).
+
+    # Exactly one card-level toggle.
+    assert body.count('id="quick-setup-confirm-replace-toggle"') == 1
     assert (
-        'id="quick-setup-reviewers-confirm-banner"\n'
-        '           ' in body
-    ) or 'id="quick-setup-reviewers-confirm-banner"' in body
-    # Cancel + Confirm-replacement buttons render.
-    assert "Confirm replacement" in body
-    # Cancel link points at clean URL with the slot fragment.
-    cancel_href = (
-        f'href="/operator/sessions/{review_session.id}#quick-setup-reviewers"'
+        "This will replace any existing reviewers, reviewees,"
+        in body
     )
-    assert cancel_href in body
-
-
-def test_cascade_message_calls_out_assignment_clearance(
-    client: TestClient, db: Session
-) -> None:
-    """When assignments exist, replacing reviewers / reviewees must
-    surface the cascade explicitly per the spec."""
-
-    review_session = _seed_pair(client, db, code="qs-cascade")
-    # Generate full-matrix assignments so the cascade has something
-    # to mention.
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
-        follow_redirects=False,
-    )
-    body = client.get(f"/operator/sessions/{review_session.id}").text
-    # Reviewers cascade calls out the existing assignments.
-    assert (
-        "1 existing assignment will be cleared" in body
-        or "existing assignment will be cleared" in body
-    )
-
-
-def test_cascade_helper_zero_count_returns_none() -> None:
-    assert (
-        views.cascade_message_for_replace("reviewers", reviewer_count=0)
-        is None
-    )
-    assert (
-        views.cascade_message_for_replace("reviewees", reviewee_count=0)
-        is None
-    )
-    assert (
-        views.cascade_message_for_replace(
-            "assignments", assignment_count=0
-        )
-        is None
-    )
-
-
-def test_cascade_helper_pluralisation() -> None:
-    # Singular vs plural noun for the target entity.
-    assert "1 existing reviewer." in views.cascade_message_for_replace(
-        "reviewers", reviewer_count=1
-    )
-    assert "8 existing reviewers." in views.cascade_message_for_replace(
-        "reviewers", reviewer_count=8
-    )
-    # Singular for one assignment in the cascade phrase.
-    msg = views.cascade_message_for_replace(
-        "reviewers", reviewer_count=2, assignment_count=1
-    )
-    assert "1 existing assignment will be cleared" in msg
+    # No per-slot ``banner-warning`` cascade-confirm banners anymore.
+    for key in ("reviewers", "reviewees", "assignments", "settings"):
+        assert f"quick-setup-{key}-confirm-banner" not in body
+    # No "Confirm replacement" button (that was on the per-slot banner).
+    assert "Confirm replacement" not in body
+    # Each live slot's form carries a hidden ``confirm_replace``
+    # input that the inline JS sets from the toggle.
+    assert body.count('name="confirm_replace"') >= 3
 
 
 # --------------------------------------------------------------------------- #
@@ -288,7 +239,10 @@ def test_reviewers_replace_without_confirm_redirects_with_error(
     assert "#quick-setup-reviewers" in location
 
     body = client.get(location).text
-    assert "Tick the confirmation box to replace existing reviewers." in body
+    assert (
+        "Tick the replacement-confirmation box at the top of "
+        "Quick Setup before submitting."
+    ) in body
     # Cancel button on the error banner points at clean URL with the
     # slot fragment.
     assert (
@@ -422,8 +376,9 @@ def test_assignments_rule_mode_replace_requires_confirm(
     client: TestClient, db: Session
 ) -> None:
     """Re-submitting Slot 3 when an assignment set already exists
-    triggers the replace-confirmation banner and rejects the
-    second submit unless ``confirm_replace=true`` is set."""
+    rejects unless the card-level ``confirm_replace`` checkbox was
+    ticked. The route gate stays the source of truth; the
+    rejection redirects with ``needs_confirm``."""
 
     review_session = _seed_pair(client, db, code="qs-a-confirm")
     # First generate so the slot is populated.
@@ -432,14 +387,6 @@ def test_assignments_rule_mode_replace_requires_confirm(
         data={"rule": "full_matrix"},
         follow_redirects=False,
     )
-    # Now the cascade banner-warning renders inside the slot.
-    body = client.get(f"/operator/sessions/{review_session.id}").text
-    assert "This will replace 1 existing assignment." in body
-    cancel_href = (
-        f'href="/operator/sessions/{review_session.id}'
-        "#quick-setup-assignments\""
-    )
-    assert cancel_href in body
     # Re-submit without ``confirm_replace`` → needs_confirm.
     response = client.post(
         f"/operator/sessions/{review_session.id}/quick-setup/assignments",
@@ -451,9 +398,9 @@ def test_assignments_rule_mode_replace_requires_confirm(
     assert "quick_setup_reason=needs_confirm" in location
     body = client.get(location).text
     assert (
-        "Tick the confirmation box to replace existing assignments."
-        in body
-    )
+        "Tick the replacement-confirmation box at the top of "
+        "Quick Setup before submitting."
+    ) in body
     # Re-submit with confirm → applies, no error.
     response = client.post(
         f"/operator/sessions/{review_session.id}/quick-setup/assignments",
