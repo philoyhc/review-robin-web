@@ -2913,3 +2913,190 @@ def build_rule_based_editor_context(
         library_seeds=library_seeds,
         library_personal=library_personal,
     )
+
+
+# Segment 13A-1 PR 1 — single-card Rule Builder page.
+#
+# Read-only scaffold: the dropdown enumerates every visible RuleSet
+# (seeds first, then caller-owned Personal, then a blank-draft
+# sentinel) and the card body renders the selected RuleSet as
+# sentence-shaped text. Editable Personal rendering, Save / Cancel /
+# Delete, and the functional blank-draft branch all land in PRs 2–3
+# without re-shaping this context — extra fields are added in place.
+
+# Sentinel id used in dropdown / query params to mean "+ New blank
+# RuleSet". An int doesn't collide with any real RuleSet primary key
+# and round-trips through ``int`` query params unchanged.
+RULE_BUILDER_BLANK_SENTINEL_ID = -1
+
+
+@dataclass(frozen=True)
+class RuleBuilderOption:
+    """One entry in the Rule Builder dropdown.
+
+    ``id`` is the RuleSet primary key for real entries, or
+    ``RULE_BUILDER_BLANK_SENTINEL_ID`` for the "+ New blank RuleSet"
+    sentinel that PR 3 wires up. ``is_blank_sentinel`` lets the
+    template branch on the sentinel without comparing magic numbers.
+    """
+
+    id: int
+    label: str
+    is_seed: bool
+    is_personal: bool
+    is_blank_sentinel: bool
+
+
+@dataclass(frozen=True)
+class RuleBuilderContext:
+    """Render context for the new Rule Builder single-card page.
+
+    PR 1 ships read-only only: every selection (seed or Personal)
+    renders the sentence-shaped ``rule_lines`` view; the blank
+    sentinel renders a placeholder pointing at PR 3. PR 2 will add
+    editable-form state (``editable_rules``, ``rules_json``,
+    ``can_save`` / ``can_delete``) to this dataclass without
+    reshuffling the existing fields.
+    """
+
+    options: list[RuleBuilderOption]
+    selected_id: int  # RuleSet pk, or RULE_BUILDER_BLANK_SENTINEL_ID
+    selected_is_blank: bool
+    name: str
+    description: str
+    is_seed: bool
+    combinator_label: str
+    exclude_self_reviews: bool
+    rule_lines: list[RuleLine]
+
+
+def build_rule_builder_context(
+    review_session: ReviewSession,
+    *,
+    db: Session,
+    user: User,
+    selected_id: int | None = None,
+) -> RuleBuilderContext:
+    """Build the Rule Builder card context.
+
+    ``selected_id`` is the operator-supplied dropdown selection
+    (server-side query param). ``None`` defaults to the first seed in
+    install order. ``RULE_BUILDER_BLANK_SENTINEL_ID`` selects the
+    blank-draft sentinel. Any other id that isn't currently visible
+    to ``user`` falls back to the first seed — the page never raises
+    on a stale id, since the URL bar is intentionally clean of
+    selection state and a refresh shouldn't 404.
+    """
+
+    from app.services.rules import library
+
+    visible = library.list_visible_rule_sets(db, user=user)
+    seeds = [rs for rs in visible if rs.is_seed]
+    personal = [rs for rs in visible if not rs.is_seed]
+
+    options: list[RuleBuilderOption] = []
+    for rs in seeds:
+        options.append(
+            RuleBuilderOption(
+                id=rs.id,
+                label=rs.name,
+                is_seed=True,
+                is_personal=False,
+                is_blank_sentinel=False,
+            )
+        )
+    for rs in personal:
+        options.append(
+            RuleBuilderOption(
+                id=rs.id,
+                label=rs.name,
+                is_seed=False,
+                is_personal=True,
+                is_blank_sentinel=False,
+            )
+        )
+    options.append(
+        RuleBuilderOption(
+            id=RULE_BUILDER_BLANK_SENTINEL_ID,
+            label="+ New blank RuleSet",
+            is_seed=False,
+            is_personal=False,
+            is_blank_sentinel=True,
+        )
+    )
+
+    visible_ids = {rs.id for rs in visible}
+    if selected_id == RULE_BUILDER_BLANK_SENTINEL_ID:
+        return RuleBuilderContext(
+            options=options,
+            selected_id=RULE_BUILDER_BLANK_SENTINEL_ID,
+            selected_is_blank=True,
+            name="New RuleSet",
+            description="",
+            is_seed=False,
+            combinator_label="",
+            exclude_self_reviews=True,
+            rule_lines=[],
+        )
+
+    if selected_id is None or selected_id not in visible_ids:
+        # Default: first seed in install order. ``list_visible_rule_sets``
+        # already orders seeds first by ``scope`` then by id, which
+        # matches the install-time ordering pinned in seeds.py.
+        if seeds:
+            selected_id = seeds[0].id
+        elif personal:
+            selected_id = personal[0].id
+        else:
+            # No visible RuleSets at all (shouldn't happen — seeds
+            # ship with the schema). Fall through to blank sentinel
+            # so the page still renders without raising.
+            return RuleBuilderContext(
+                options=options,
+                selected_id=RULE_BUILDER_BLANK_SENTINEL_ID,
+                selected_is_blank=True,
+                name="New RuleSet",
+                description="",
+                is_seed=False,
+                combinator_label="",
+                exclude_self_reviews=True,
+                rule_lines=[],
+            )
+
+    loaded = library.load_rule_set(db, selected_id)
+    if loaded is None:
+        # Same defensive fallback as above — the id was in
+        # ``visible_ids`` but the row resolved to no current revision.
+        if seeds:
+            selected_id = seeds[0].id
+            loaded = library.load_rule_set(db, selected_id)
+        if loaded is None:
+            return RuleBuilderContext(
+                options=options,
+                selected_id=RULE_BUILDER_BLANK_SENTINEL_ID,
+                selected_is_blank=True,
+                name="New RuleSet",
+                description="",
+                is_seed=False,
+                combinator_label="",
+                exclude_self_reviews=True,
+                rule_lines=[],
+            )
+    rule_set, revision = loaded
+
+    rules_json = revision.rules_json or []
+    rule_lines = _flatten_rule_lines(rules_json)
+
+    return RuleBuilderContext(
+        options=options,
+        selected_id=rule_set.id,
+        selected_is_blank=False,
+        name=rule_set.name,
+        description=rule_set.description or "",
+        is_seed=bool(rule_set.is_seed),
+        combinator_label=_COMBINATOR_LABELS.get(
+            revision.combinator, revision.combinator
+        ),
+        exclude_self_reviews=bool(revision.exclude_self_reviews),
+        rule_lines=rule_lines,
+    )

@@ -964,6 +964,55 @@ def _render_assignments_hub(
 
 
 @router.get(
+    "/sessions/{session_id}/assignments/rule-based-editor",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def rule_builder_page(
+    request: Request,
+    rule_set_id: int | None = Query(default=None),
+    new: int | None = Query(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    """Segment 13A-1 PR 1 — single-card Rule Builder page (read-only).
+
+    Selection comes in via the optional ``rule_set_id`` query param;
+    ``?new=1`` selects the blank-draft sentinel. Stale / non-visible
+    ids fall back to the first seed (refresh always renders rather
+    than 404, since the URL bar is intentionally clean of selection
+    state). PRs 2–3 add the editable form, Save / Cancel / Delete,
+    and the functional blank-draft branch.
+    """
+
+    if new == 1:
+        selected_id: int | None = views.RULE_BUILDER_BLANK_SENTINEL_ID
+    else:
+        selected_id = rule_set_id
+
+    context = views.build_rule_builder_context(
+        review_session,
+        db=db,
+        user=user,
+        selected_id=selected_id,
+    )
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_rule_builder.html",
+        {
+            "user": user,
+            "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
+            "builder": context,
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Rule Builder"
+            ),
+        },
+    )
+
+
+@router.get(
     "/sessions/{session_id}/assignments/rule-based/edit/{rule_set_id}",
     response_class=HTMLResponse,
     response_model=None,
