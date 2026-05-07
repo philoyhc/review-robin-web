@@ -147,12 +147,12 @@ def test_add_display_field_appends_packed_order_and_audits(db: Session) -> None:
         )
     ).scalars().all()
     assert len(events) == 1
-    detail = events[0].detail
-    assert detail["source_type"] == "reviewee"
-    assert detail["source_field"] == "tag_1"
-    assert detail["label"] == "Cohort"
-    assert detail["order"] == 5
-    assert detail["visible"] is True
+    snapshot = events[0].detail["snapshot"]
+    assert snapshot["source_type"] == "reviewee"
+    assert snapshot["source_field"] == "tag_1"
+    assert snapshot["label"] == "Cohort"
+    assert snapshot["order"] == 5
+    assert snapshot["visible"] is True
 
 
 def test_update_display_field_records_only_changed_keys(db: Session) -> None:
@@ -314,8 +314,8 @@ def test_bulk_save_fields_emits_fields_reordered_when_response_order_changes(
         .order_by(AuditEvent.id)
     ).scalars().all()
     assert len(events) == 1
-    assert events[0].detail["old_order"] == ["rating", "comments"]
-    assert events[0].detail["new_order"] == ["comments", "rating"]
+    order_change = events[0].detail["changes"]["order"]
+    assert order_change == [["rating", "comments"], ["comments", "rating"]]
 
 
 def test_bulk_save_fields_emits_display_fields_saved_with_diff(
@@ -351,10 +351,13 @@ def test_bulk_save_fields_emits_display_fields_saved_with_diff(
         .where(AuditEvent.event_type == "instrument.display_fields_saved")
     ).scalars().all()
     assert len(events) == 1
-    detail = events[0].detail
-    assert detail["added"] == []
-    assert detail["removed"] == []
-    updated = {(e["source_type"], e["source_field"]): e["changes"] for e in detail["updated"]}
+    set_changes = events[0].detail["set_changes"]
+    assert set_changes["added"] == []
+    assert set_changes["removed"] == []
+    updated = {
+        (e["source_type"], e["source_field"]): e["changes"]
+        for e in set_changes["updated"]
+    }
     assert updated == {
         ("pair_context", "1"): {"label": ["", "P1"]},
         ("pair_context", "2"): {"visible": [True, False]},

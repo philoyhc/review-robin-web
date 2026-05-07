@@ -19,7 +19,7 @@ from app.db.models import (
     User,
 )
 from app.services import session_lifecycle as lifecycle
-from app.services.audit import write_event
+from app.services import audit
 
 # Audit-event types that signal "this instrument's field tables were
 # saved by the operator" — used by ``saved_state_for_session`` to
@@ -54,7 +54,12 @@ def saved_state_for_session(
     for event_type, detail in rows:
         if not detail:
             continue
-        instrument_id = detail.get("instrument_id")
+        # Canonical shape (Segment 11K PR 2): refs.instrument_id.
+        # Pre-migration rows kept the id at the top level.
+        refs = detail.get("refs") or {}
+        instrument_id = refs.get("instrument_id")
+        if instrument_id is None:
+            instrument_id = detail.get("instrument_id")
         if isinstance(instrument_id, int):
             saved[instrument_id] = True
     return saved
@@ -547,7 +552,7 @@ def add_response_type_definition(
     db.add(rtd)
     db.flush()
 
-    write_event(
+    audit.write_event(
         db,
         event_type="response_type.added",
         summary=(
@@ -555,17 +560,18 @@ def add_response_type_definition(
             f"({rtd.data_type}) on session {review_session.code}"
         ),
         actor_user_id=actor.id if actor else None,
-        session_id=review_session.id,
-        detail={
-            "response_type_id": rtd.id,
-            "session_id": review_session.id,
-            "response_type": rtd.response_type,
-            "data_type": rtd.data_type,
-            "min": rtd.min,
-            "max": rtd.max,
-            "step": rtd.step,
-            "list_csv": rtd.list_csv,
-        },
+        session=review_session,
+        payload=audit.snapshot(
+            {
+                "id": rtd.id,
+                "response_type": rtd.response_type,
+                "data_type": rtd.data_type,
+                "min": rtd.min,
+                "max": rtd.max,
+                "step": rtd.step,
+                "list_csv": rtd.list_csv,
+            }
+        ),
     )
     db.commit()
     return rtd
@@ -649,7 +655,7 @@ def update_response_type_definition(
         db.flush()
 
     if changes or propagated:
-        write_event(
+        audit.write_event(
             db,
             event_type="response_type.updated",
             summary=(
@@ -657,14 +663,13 @@ def update_response_type_definition(
                 f"session {rtd.session_id}"
             ),
             actor_user_id=actor.id if actor else None,
-            session_id=rtd.session_id,
-            detail={
-                "response_type_id": rtd.id,
-                "session_id": rtd.session_id,
+            session=rtd.session,
+            payload=audit.changes(changes),
+            refs={"response_type_id": rtd.id},
+            context={
                 "response_type": rtd.response_type,
                 "data_type": rtd.data_type,
-                "changes": changes,
-                "propagated_response_field_count": propagated,
+                "propagated_response_fields": propagated,
             },
         )
     db.commit()
@@ -706,7 +711,8 @@ def delete_response_type_definition(
         db, review_session=rtd.session, user=actor, reason="response_type_deleted"
     )
 
-    snapshot = {
+    captured = {
+        "id": rtd.id,
         "response_type": rtd.response_type,
         "data_type": rtd.data_type,
         "min": rtd.min,
@@ -714,25 +720,27 @@ def delete_response_type_definition(
         "step": rtd.step,
         "list_csv": rtd.list_csv,
     }
-    session_id = rtd.session_id
+    review_session = rtd.session
     rtd_id = rtd.id
     db.delete(rtd)
     db.flush()
 
-    write_event(
+    audit.write_event(
         db,
         event_type="response_type.deleted",
         summary=(
-            f"Deleted Response Type '{snapshot['response_type']}' on "
-            f"session {session_id}"
+            f"Deleted Response Type '{captured['response_type']}' on "
+            f"session {review_session.id}"
         ),
         actor_user_id=actor.id if actor else None,
-        session_id=session_id,
-        detail={
-            "response_type_id": rtd_id,
-            "session_id": session_id,
-            "snapshot": snapshot,
-            "cascaded": dependents,
+        session=review_session,
+        payload=audit.snapshot(captured),
+        refs={"response_type_id": rtd_id},
+        context={
+            "cascaded_response_fields": dependents["response_field_count"],
+            "cascaded_instruments": dependents["instrument_count"],
+            "cascaded_responses": dependents["response_count"],
+            "cascaded_assignments": dependents["assignment_count"],
         },
     )
     db.commit()
@@ -1019,19 +1027,26 @@ def create_instrument(
             cloned_assignments += 1
         db.flush()
 
-    write_event(
+    created_refs: dict[str, int] = {"instrument_id": instrument.id}
+    if after_instrument_id is not None:
+        created_refs["after_instrument_id"] = after_instrument_id
+    audit.write_event(
         db,
         event_type="instrument.created",
         summary=f"Created instrument {instrument.name}",
         actor_user_id=actor.id if actor else None,
-        session_id=review_session.id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": review_session.id,
-            "order": new_order,
-            "after_instrument_id": after_instrument_id,
-            "cloned_assignments": cloned_assignments,
-        },
+        session=review_session,
+        payload=audit.snapshot(
+            {
+                "id": instrument.id,
+                "name": instrument.name,
+                "order": new_order,
+                "description": instrument.description,
+                "short_label": instrument.short_label,
+            }
+        ),
+        refs=created_refs,
+        context={"cloned_assignments": cloned_assignments},
     )
     db.commit()
     return instrument
@@ -1066,10 +1081,10 @@ def delete_instrument(
     surviving instruments' ``order`` values to ``0..N-1``. Returns the
     deleted instrument's id.
     """
+    review_session = instrument.session
     lifecycle.invalidate_if_validated(
-        db, review_session=instrument.session, user=actor, reason="instrument_deleted"
+        db, review_session=review_session, user=actor, reason="instrument_deleted"
     )
-    session_id = instrument.session_id
     deleted_id = instrument.id
     deleted_name = instrument.name
     deleted_order = instrument.order
@@ -1080,7 +1095,7 @@ def delete_instrument(
     remaining = list(
         db.execute(
             select(Instrument)
-            .where(Instrument.session_id == session_id)
+            .where(Instrument.session_id == review_session.id)
             .order_by(Instrument.order, Instrument.id)
         ).scalars().all()
     )
@@ -1089,18 +1104,16 @@ def delete_instrument(
             inst.order = idx
     db.flush()
 
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.deleted",
         summary=f"Deleted instrument {deleted_name}",
         actor_user_id=actor.id if actor else None,
-        session_id=session_id,
-        detail={
-            "instrument_id": deleted_id,
-            "session_id": session_id,
-            "name": deleted_name,
-            "order": deleted_order,
-        },
+        session=review_session,
+        payload=audit.snapshot(
+            {"id": deleted_id, "name": deleted_name, "order": deleted_order}
+        ),
+        refs={"instrument_id": deleted_id},
     )
     db.commit()
     return deleted_id
@@ -1225,7 +1238,7 @@ def add_display_field(
     _repack_display_orders(existing)
     db.flush()
 
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.display_field_added",
         summary=(
@@ -1233,12 +1246,9 @@ def add_display_field(
             f"to instrument {_instrument_label(instrument)}"
         ),
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
-            **_display_field_snapshot(new_field),
-        },
+        session=instrument.session,
+        payload=audit.snapshot(_display_field_snapshot(new_field)),
+        refs={"instrument_id": instrument.id, "display_field_id": new_field.id},
     )
     db.commit()
     return new_field
@@ -1288,7 +1298,7 @@ def update_display_field(
     field.visible = visible
     db.flush()
 
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.display_field_updated",
         summary=(
@@ -1296,13 +1306,12 @@ def update_display_field(
             f"on instrument {_instrument_label(instrument)}"
         ),
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
+        session=instrument.session,
+        payload=audit.changes(changes),
+        refs={"instrument_id": instrument.id, "display_field_id": field.id},
+        context={
             "source_type": field.source_type,
             "source_field": field.source_field,
-            "changes": changes,
         },
     )
     db.commit()
@@ -1329,7 +1338,7 @@ def delete_display_field(
         user=actor,
         reason="instrument_display_field_deleted",
     )
-    snapshot = _display_field_snapshot(field)
+    captured = _display_field_snapshot(field)
     db.delete(field)
     db.flush()
 
@@ -1337,19 +1346,20 @@ def delete_display_field(
     _repack_display_orders(remaining)
     db.flush()
 
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.display_field_deleted",
         summary=(
-            f"Deleted display field {snapshot['source_type']}.{snapshot['source_field']} "
+            f"Deleted display field {captured['source_type']}.{captured['source_field']} "
             f"from instrument {_instrument_label(instrument)}"
         ),
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
-            "snapshot": snapshot,
+        session=instrument.session,
+        payload=audit.snapshot(captured),
+        refs={"instrument_id": instrument.id},
+        context={
+            "source_type": captured["source_type"],
+            "source_field": captured["source_field"],
         },
     )
     db.commit()
@@ -1402,7 +1412,7 @@ def move_display_field(
     _repack_display_orders(fields)
     db.flush()
 
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.display_field_moved",
         summary=(
@@ -1410,10 +1420,9 @@ def move_display_field(
             f"{direction} on instrument {_instrument_label(instrument)}"
         ),
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
+        session=instrument.session,
+        refs={"instrument_id": instrument.id, "display_field_id": field.id},
+        context={
             "source_type": field.source_type,
             "source_field": field.source_field,
             "direction": direction,
@@ -1824,22 +1833,18 @@ def bulk_save_fields(
             f.field_key for f in _ordered_fields(db, instrument)
         ]
         old_order_keys = [f.field_key for f in existing_response_list]
-        write_event(
+        audit.write_event(
             db,
             event_type="instrument.fields_reordered",
             summary=f"Reordered fields on instrument {_instrument_label(instrument)}",
             actor_user_id=actor.id if actor else None,
-            session_id=instrument.session_id,
-            detail={
-                "instrument_id": instrument.id,
-                "session_id": instrument.session_id,
-                "old_order": old_order_keys,
-                "new_order": new_response_keys,
-            },
+            session=instrument.session,
+            payload=audit.changes({"order": [old_order_keys, new_response_keys]}),
+            refs={"instrument_id": instrument.id},
         )
 
     if display_changed:
-        write_event(
+        audit.write_event(
             db,
             event_type="instrument.display_fields_saved",
             summary=(
@@ -1847,19 +1852,14 @@ def bulk_save_fields(
                 f"instrument {_instrument_label(instrument)}"
             ),
             actor_user_id=actor.id if actor else None,
-            session_id=instrument.session_id,
-            detail={
-                "instrument_id": instrument.id,
-                "session_id": instrument.session_id,
-                "added": [],
-                "removed": [],
-                "updated": final_display_updated,
-            },
+            session=instrument.session,
+            payload=audit.set_changes(updated=final_display_updated),
+            refs={"instrument_id": instrument.id},
         )
 
     response_changed = bool(response_updated)
     if response_changed:
-        write_event(
+        audit.write_event(
             db,
             event_type="instrument.response_fields_saved",
             summary=(
@@ -1867,12 +1867,9 @@ def bulk_save_fields(
                 f"instrument {_instrument_label(instrument)}"
             ),
             actor_user_id=actor.id if actor else None,
-            session_id=instrument.session_id,
-            detail={
-                "instrument_id": instrument.id,
-                "session_id": instrument.session_id,
-                "updated": response_updated,
-            },
+            session=instrument.session,
+            payload=audit.set_changes(updated=response_updated),
+            refs={"instrument_id": instrument.id},
         )
 
     db.commit()
@@ -1935,7 +1932,7 @@ def add_response_field(
     fields.append(new_field)
     _repack_orders(fields)
 
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.field_added",
         summary=(
@@ -1943,19 +1940,22 @@ def add_response_field(
             f"to instrument {_instrument_label(instrument)}"
         ),
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
-            "field_key": new_field.field_key,
-            "label": new_field.label,
-            "response_type": rtd.response_type,
-            "response_type_id": rtd.id,
-            "required": new_field.required,
-            "validation": new_field.validation,
-            "help_text": new_field.help_text,
-            "help_text_visible": new_field.help_text_visible,
-        },
+        session=instrument.session,
+        payload=audit.snapshot(
+            {
+                "id": new_field.id,
+                "field_key": new_field.field_key,
+                "label": new_field.label,
+                "response_type_id": rtd.id,
+                "required": new_field.required,
+                "order": new_field.order,
+                "validation": new_field.validation,
+                "help_text": new_field.help_text,
+                "help_text_visible": new_field.help_text_visible,
+            }
+        ),
+        refs={"instrument_id": instrument.id, "response_type_id": rtd.id},
+        context={"response_type": rtd.response_type},
     )
     db.commit()
 
@@ -2065,7 +2065,13 @@ def add_default_response_field(
     db.add(new_field)
     db.flush()
 
-    write_event(
+    default_add_refs: dict[str, int] = {
+        "instrument_id": instrument.id,
+        "response_type_id": chosen_rtd.id,
+    }
+    if after_field_id is not None:
+        default_add_refs["after_field_id"] = after_field_id
+    audit.write_event(
         db,
         event_type="instrument.field_added",
         summary=(
@@ -2073,18 +2079,19 @@ def add_default_response_field(
             f"to instrument {_instrument_label(instrument)}"
         ),
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
-            "field_key": new_field.field_key,
-            "label": new_field.label,
-            "response_type": chosen_rtd.response_type,
-            "response_type_id": chosen_rtd.id,
-            "required": new_field.required,
-            "order": new_order,
-            "after_field_id": after_field_id,
-        },
+        session=instrument.session,
+        payload=audit.snapshot(
+            {
+                "id": new_field.id,
+                "field_key": new_field.field_key,
+                "label": new_field.label,
+                "response_type_id": chosen_rtd.id,
+                "required": new_field.required,
+                "order": new_order,
+            }
+        ),
+        refs=default_add_refs,
+        context={"response_type": chosen_rtd.response_type},
     )
     db.commit()
     return new_field
@@ -2175,18 +2182,15 @@ def update_response_field(
     field.help_text_visible = help_text_visible
     db.flush()
 
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.field_updated",
         summary=f"Updated field '{field.label}' on instrument {_instrument_label(instrument)}",
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
-            "field_key": field.field_key,
-            "changes": changes,
-        },
+        session=instrument.session,
+        payload=audit.changes(changes),
+        refs={"instrument_id": instrument.id, "response_field_id": field.id},
+        context={"field_key": field.field_key},
     )
     db.commit()
 
@@ -2218,10 +2222,11 @@ def delete_response_field(
         reason="instrument_field_deleted",
     )
 
-    snapshot = {
+    captured = {
+        "id": field.id,
         "field_key": field.field_key,
         "label": field.label,
-        "response_type": field.response_type,
+        "response_type_id": field.response_type_id,
         "required": field.required,
         "order": field.order,
         "validation": field.validation,
@@ -2236,18 +2241,17 @@ def delete_response_field(
     _repack_orders(remaining)
     db.flush()
 
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.field_deleted",
         summary=f"Deleted field '{label_for_summary}' from instrument {_instrument_label(instrument)}",
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
-            "field_key": snapshot["field_key"],
-            "snapshot": snapshot,
-            "cascaded_response_count": response_count,
+        session=instrument.session,
+        payload=audit.snapshot(captured),
+        refs={"instrument_id": instrument.id},
+        context={
+            "field_key": captured["field_key"],
+            "cascaded_responses": response_count,
         },
     )
     db.commit()
@@ -2286,18 +2290,14 @@ def move_response_field(
     db.flush()
 
     new_keys = [f.field_key for f in fields]
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.fields_reordered",
         summary=f"Reordered fields on instrument {_instrument_label(instrument)}",
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
-            "old_order": old_keys,
-            "new_order": new_keys,
-        },
+        session=instrument.session,
+        payload=audit.changes({"order": [old_keys, new_keys]}),
+        refs={"instrument_id": instrument.id},
     )
     db.commit()
 
@@ -2321,17 +2321,14 @@ def update_instrument_description(
     instrument.description = new_value
     db.flush()
 
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.described",
         summary=f"Updated description on instrument {instrument.name}",
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
-            "description": [old_value, new_value],
-        },
+        session=instrument.session,
+        payload=audit.changes({"description": [old_value, new_value]}),
+        refs={"instrument_id": instrument.id},
     )
     db.commit()
     return instrument
@@ -2375,19 +2372,16 @@ def update_short_label(
     old_value = instrument.short_label
     instrument.short_label = new_value
     db.flush()
-    write_event(
+    audit.write_event(
         db,
         event_type="instrument.short_label_updated",
         summary=(
             f"Updated short_label on instrument {_instrument_label(instrument)}"
         ),
         actor_user_id=actor.id if actor else None,
-        session_id=instrument.session_id,
-        detail={
-            "instrument_id": instrument.id,
-            "session_id": instrument.session_id,
-            "short_label": [old_value, new_value],
-        },
+        session=instrument.session,
+        payload=audit.changes({"short_label": [old_value, new_value]}),
+        refs={"instrument_id": instrument.id},
     )
     db.commit()
     return instrument
@@ -2414,7 +2408,7 @@ def bulk_set_accepting(
             changed.append(instrument.id)
     if changed:
         db.flush()
-        write_event(
+        audit.write_event(
             db,
             event_type="instruments.bulk_accepting_responses",
             summary=(
@@ -2422,12 +2416,11 @@ def bulk_set_accepting(
                 f"{len(changed)} instrument(s)"
             ),
             actor_user_id=actor.id if actor else None,
-            session_id=review_session.id,
-            detail={
-                "session_id": review_session.id,
-                "target": target,
-                "changed_instrument_ids": changed,
-            },
+            session=review_session,
+            payload=audit.set_changes(
+                updated=[{"instrument_id": i} for i in changed]
+            ),
+            context={"target": bool(target)},
         )
         db.commit()
     return changed
@@ -2458,7 +2451,7 @@ def bulk_set_visibility(
             changed.append(instrument.id)
     if changed:
         db.flush()
-        write_event(
+        audit.write_event(
             db,
             event_type="instruments.bulk_visibility_when_closed",
             summary=(
@@ -2466,12 +2459,11 @@ def bulk_set_visibility(
                 f"{len(changed)} instrument(s)"
             ),
             actor_user_id=actor.id if actor else None,
-            session_id=review_session.id,
-            detail={
-                "session_id": review_session.id,
-                "target": target,
-                "changed_instrument_ids": changed,
-            },
+            session=review_session,
+            payload=audit.set_changes(
+                updated=[{"instrument_id": i} for i in changed]
+            ),
+            context={"target": bool(target)},
         )
         db.commit()
     return changed

@@ -124,11 +124,13 @@ def test_bulk_visibility_all_on_flips_mixed_state_and_emits_audit(
     assert all(inst.responses_visible_when_closed for inst in instruments)
 
     [event] = _bulk_visibility_events(db, session.id)
-    assert event.detail["target"] is True
+    assert event.detail["context"]["target"] is True
     assert event.detail["session_id"] == session.id
     # Only the previously-False instrument is in the changed list — the
     # second was already True so it's a no-op for that row.
-    assert event.detail["changed_instrument_ids"] == [default.id]
+    assert event.detail["set_changes"]["updated"] == [
+        {"instrument_id": default.id}
+    ]
 
 
 def test_bulk_visibility_all_off_flips_to_false_and_emits_audit(
@@ -160,11 +162,11 @@ def test_bulk_visibility_all_off_flips_to_false_and_emits_audit(
     events = _bulk_visibility_events(db, session.id)
     assert len(events) == 2
     on_event, off_event = events
-    assert on_event.detail["target"] is True
-    assert off_event.detail["target"] is False
-    assert sorted(off_event.detail["changed_instrument_ids"]) == sorted(
-        [default.id, second.id]
-    )
+    assert on_event.detail["context"]["target"] is True
+    assert off_event.detail["context"]["target"] is False
+    assert sorted(
+        e["instrument_id"] for e in off_event.detail["set_changes"]["updated"]
+    ) == sorted([default.id, second.id])
 
 
 def test_bulk_visibility_is_idempotent_no_audit_when_already_target(
