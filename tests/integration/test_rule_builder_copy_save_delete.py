@@ -495,3 +495,184 @@ def test_copy_other_users_personal_returns_403(
     # Bob isn't an operator on Alice's session — the session-permission
     # gate fires before the ownership check.
     assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Friendly description — default + persistence + Available RuleSets card
+# ---------------------------------------------------------------------------
+
+
+def test_draft_from_seeds_default_description_to_user_created_ruleset(
+    client: TestClient, db: Session
+) -> None:
+    """Copy from a seed renders the draft with the textarea pre-filled
+    with the operator-friendly default ``"User created ruleset"``,
+    not the seed's own description."""
+
+    review_session = _make_session(client, db, code="rb-desc-default")
+    intra_id = _seed_id(db, "Intra-group peer review")
+
+    body = client.get(
+        _builder_url(review_session.id) + f"?draft_from={intra_id}"
+    ).text
+
+    # Description textarea is rendered with the operator-friendly
+    # default. Inspect the textarea block specifically — the sibling
+    # "Available rulesets" card legitimately echoes seed descriptions
+    # elsewhere on the page.
+    assert 'id="rule-builder-description-input"' in body
+    textarea_start = body.index('id="rule-builder-description-input"')
+    textarea_end = body.index("</textarea>", textarea_start)
+    textarea_block = body[textarea_start:textarea_end]
+    assert "User created ruleset" in textarea_block
+    # The Intra-group seed's own description (its first word "Match")
+    # does not leak into the textarea — it's specifically replaced.
+    assert "Match" not in textarea_block
+
+
+def test_save_persists_description_for_blank_draft(
+    client: TestClient, db: Session
+) -> None:
+    """Submitting a blank draft with a custom description writes the
+    string to ``rule_sets.description``."""
+
+    review_session = _make_session(client, db, code="rb-desc-blank")
+    rules = [
+        {
+            "id": "x",
+            "kind": "MATCH",
+            "enabled": True,
+            "predicate": {
+                "field": "reviewer.tag1",
+                "operator": "same_as",
+                "operand": "reviewee.tag1",
+            },
+        }
+    ]
+
+    client.post(
+        _builder_url(review_session.id, "save"),
+        data={
+            "is_blank_draft": "true",
+            "name": "DescTest",
+            "description": "Pairs same-team reviewers",
+            "combinator": "ALL_OF",
+            "rules_json": json.dumps(rules),
+        },
+        follow_redirects=False,
+    )
+
+    saved = db.execute(
+        select(RuleSet).where(RuleSet.name == "DescTest")
+    ).scalar_one()
+    assert saved.description == "Pairs same-team reviewers"
+
+
+def test_save_in_place_updates_description(
+    client: TestClient, db: Session
+) -> None:
+    """Editing the description on a saved Personal RuleSet and
+    submitting Save persists the new value."""
+
+    review_session = _make_session(client, db, code="rb-desc-update")
+    intra_id = _seed_id(db, "Intra-group peer review")
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based/copy",
+        data={"rule_set_id": intra_id, "new_name": "DescUpdate"},
+        follow_redirects=False,
+    )
+    personal = db.execute(
+        select(RuleSet).where(RuleSet.name == "DescUpdate")
+    ).scalar_one()
+
+    client.post(
+        _builder_url(review_session.id, "save"),
+        data={
+            "rule_set_id": personal.id,
+            "name": "DescUpdate",
+            "description": "Edited helper text",
+            "combinator": "ALL_OF",
+            "rules_json": json.dumps([]),
+        },
+        follow_redirects=False,
+    )
+
+    db.refresh(personal)
+    assert personal.description == "Edited helper text"
+
+
+# ---------------------------------------------------------------------------
+# Available RuleSets sibling card
+# ---------------------------------------------------------------------------
+
+
+def test_available_rulesets_card_lists_seeds_with_descriptions(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="rb-avail-seeds")
+
+    body = client.get(_builder_url(review_session.id)).text
+
+    assert 'id="available-rulesets-card"' in body
+    assert "Available rulesets" in body
+    # Seed names appear in the sibling card.
+    for seed_name in ("Full Matrix", "Intra-group peer review"):
+        assert seed_name in body
+    # Seed descriptions appear too — the seeded "Full Matrix"
+    # description is part of the seed catalog.
+    assert "Pair every reviewer" in body
+
+
+def test_available_rulesets_card_marks_active_row(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="rb-avail-active")
+    intra_id = _seed_id(db, "Intra-group peer review")
+
+    body = client.get(
+        _builder_url(review_session.id) + f"?rule_set_id={intra_id}"
+    ).text
+
+    assert "available-ruleset-row-active" in body
+    # The active row carries the active-class marker on the line that
+    # references the selected seed's id.
+    active_marker = (
+        f'data-rule-set-id="{intra_id}"'
+    )
+    assert active_marker in body
+
+
+def test_available_rulesets_card_shows_personal_after_save(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="rb-avail-personal")
+    intra_id = _seed_id(db, "Intra-group peer review")
+    rules = [
+        {
+            "id": "y",
+            "kind": "MATCH",
+            "enabled": True,
+            "predicate": {
+                "field": "reviewer.tag1",
+                "operator": "same_as",
+                "operand": "reviewee.tag1",
+            },
+        }
+    ]
+
+    client.post(
+        _builder_url(review_session.id, "save"),
+        data={
+            "source_rule_set_id": intra_id,
+            "name": "MyAvail",
+            "description": "A team review",
+            "combinator": "ALL_OF",
+            "rules_json": json.dumps(rules),
+        },
+        follow_redirects=False,
+    )
+
+    body = client.get(_builder_url(review_session.id)).text
+    assert "MyAvail" in body
+    assert "A team review" in body

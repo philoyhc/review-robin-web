@@ -2946,6 +2946,30 @@ class RuleBuilderOption:
     is_blank_sentinel: bool
 
 
+# Default description seeded into the textarea on a fresh Copy /
+# blank draft. Operators are expected to overwrite this with a
+# friendlier explanation; saved-Personal selections preserve their
+# stored description across reloads.
+RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION = "User created ruleset"
+
+
+@dataclass(frozen=True)
+class AvailableRuleSetEntry:
+    """One row in the sibling "Available rulesets" card.
+
+    Carries the description so the card can show the operator-facing
+    helper sentence next to the name. ``is_active`` lets the
+    template highlight the row matching the current Rule Builder
+    selection."""
+
+    id: int
+    name: str
+    description: str
+    is_seed: bool
+    is_personal: bool
+    is_active: bool
+
+
 @dataclass(frozen=True)
 class RuleBuilderContext:
     """Render context for the Rule Builder single-card page.
@@ -3024,6 +3048,10 @@ class RuleBuilderContext:
     quota_scope_options: list[tuple[str, str]]
     quota_strategy_options: list[tuple[str, str]]
     composite_op_options: list[tuple[str, str]]
+    available_rulesets: list[AvailableRuleSetEntry]
+    """Rows for the sibling "Available rulesets" card. Same ordering
+    as the dropdown — seeds first in install order, then caller-
+    owned Personal."""
 
 
 _RULE_BUILDER_ERROR_MESSAGES: dict[str, str] = {
@@ -3056,6 +3084,8 @@ def _rule_builder_blank_draft(
     error_kind: str | None,
     saved_flash: bool,
     name_override: str | None = None,
+    description_override: str | None = None,
+    available_rulesets: list[AvailableRuleSetEntry] | None = None,
 ) -> RuleBuilderContext:
     """Live blank-draft context (Segment 13A-1 PR 3).
 
@@ -3076,7 +3106,11 @@ def _rule_builder_blank_draft(
         selected_is_draft=True,
         editable=True,
         name=name_override or "New RuleSet",
-        description="",
+        description=(
+            description_override
+            if description_override is not None
+            else RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION
+        ),
         combinator="ALL_OF",
         combinator_label=_COMBINATOR_LABELS.get("ALL_OF", "All of"),
         exclude_self_reviews=True,
@@ -3106,6 +3140,7 @@ def _rule_builder_blank_draft(
         quota_scope_options=list(_QUOTA_SCOPE_OPTIONS),
         quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
         composite_op_options=list(_COMPOSITE_OP_OPTIONS),
+        available_rulesets=available_rulesets or [],
     )
 
 
@@ -3176,6 +3211,42 @@ def _build_rule_builder_options(
     return options, seeds, personal, by_id
 
 
+def _build_available_rulesets(
+    seeds: list, personal: list, *, active_id: int | None
+) -> list[AvailableRuleSetEntry]:
+    """Shape the visible RuleSet list for the sibling
+    "Available rulesets" card. Same ordering as the dropdown:
+    seeds first in install order, then caller-owned Personal.
+    ``active_id`` is the currently-selected RuleSet id (or None
+    when the operator is on a draft / blank); the matching row
+    renders highlighted."""
+
+    rows: list[AvailableRuleSetEntry] = []
+    for rs in seeds:
+        rows.append(
+            AvailableRuleSetEntry(
+                id=rs.id,
+                name=rs.name,
+                description=rs.description or "",
+                is_seed=True,
+                is_personal=False,
+                is_active=(active_id == rs.id),
+            )
+        )
+    for rs in personal:
+        rows.append(
+            AvailableRuleSetEntry(
+                id=rs.id,
+                name=rs.name,
+                description=rs.description or "",
+                is_seed=False,
+                is_personal=True,
+                is_active=(active_id == rs.id),
+            )
+        )
+    return rows
+
+
 def build_rule_builder_context(
     review_session: ReviewSession,
     *,
@@ -3219,25 +3290,32 @@ def build_rule_builder_context(
             saved_flash=saved_flash,
             draft_name_override=draft_name_override,
             seeds=seeds,
+            personal=_personal,
         )
 
     if selected_id == RULE_BUILDER_BLANK_SENTINEL_ID:
-        return _rule_builder_default_blank(
+        return _rule_builder_blank_draft(
             review_session,
             options,
             error_kind=error_kind,
             saved_flash=saved_flash,
+            available_rulesets=_build_available_rulesets(
+                seeds, _personal, active_id=None
+            ),
         )
 
     if selected_id is None or selected_id not in by_id:
         if seeds:
             selected_id = seeds[0].id
         else:
-            return _rule_builder_default_blank(
+            return _rule_builder_blank_draft(
                 review_session,
                 options,
                 error_kind=error_kind,
                 saved_flash=saved_flash,
+                available_rulesets=_build_available_rulesets(
+                    seeds, _personal, active_id=None
+                ),
             )
 
     loaded = library.load_rule_set(db, selected_id)
@@ -3246,11 +3324,14 @@ def build_rule_builder_context(
             selected_id = seeds[0].id
             loaded = library.load_rule_set(db, selected_id)
         if loaded is None:
-            return _rule_builder_default_blank(
+            return _rule_builder_blank_draft(
                 review_session,
                 options,
                 error_kind=error_kind,
                 saved_flash=saved_flash,
+                available_rulesets=_build_available_rulesets(
+                    seeds, _personal, active_id=None
+                ),
             )
     rule_set, revision = loaded
 
@@ -3305,6 +3386,9 @@ def build_rule_builder_context(
         quota_scope_options=list(_QUOTA_SCOPE_OPTIONS),
         quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
         composite_op_options=list(_COMPOSITE_OP_OPTIONS),
+        available_rulesets=_build_available_rulesets(
+            seeds, _personal, active_id=rule_set.id
+        ),
     )
 
 
@@ -3319,7 +3403,9 @@ def _build_draft_context(
     error_kind: str | None,
     saved_flash: bool,
     draft_name_override: str | None,
+    draft_description_override: str | None = None,
     seeds: list,
+    personal: list,
 ) -> RuleBuilderContext:
     """Render the page as an unsaved draft cloning ``source_id``'s
     rules + combinator + seed (Copy from seed/Personal). Falls back
@@ -3340,11 +3426,14 @@ def _build_draft_context(
                 error_kind=error_kind,
                 saved_flash=saved_flash,
             )
-        return _rule_builder_default_blank(
+        return _rule_builder_blank_draft(
             review_session,
             options,
             error_kind=error_kind,
             saved_flash=saved_flash,
+            available_rulesets=_build_available_rulesets(
+                seeds, personal, active_id=None
+            ),
         )
     source_rule_set, source_revision = loaded
     if (
@@ -3363,16 +3452,24 @@ def _build_draft_context(
                 error_kind=error_kind,
                 saved_flash=saved_flash,
             )
-        return _rule_builder_default_blank(
+        return _rule_builder_blank_draft(
             review_session,
             options,
             error_kind=error_kind,
             saved_flash=saved_flash,
+            available_rulesets=_build_available_rulesets(
+                seeds, personal, active_id=None
+            ),
         )
 
     rules = source_revision.rules_json or []
     auto_name = f"Copy of {source_rule_set.name}"
     rendered_name = draft_name_override or auto_name
+    rendered_description = (
+        draft_description_override
+        if draft_description_override is not None
+        else RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION
+    )
     cancel_url = _rule_builder_url(review_session, "")
     if previous_id is not None and previous_id > 0:
         cancel_url = f"{cancel_url}?rule_set_id={previous_id}"
@@ -3388,7 +3485,7 @@ def _build_draft_context(
         selected_is_draft=True,
         editable=True,
         name=rendered_name,
-        description=source_rule_set.description or "",
+        description=rendered_description,
         combinator=source_revision.combinator,
         combinator_label=_COMBINATOR_LABELS.get(
             source_revision.combinator, source_revision.combinator
@@ -3420,6 +3517,9 @@ def _build_draft_context(
         quota_scope_options=list(_QUOTA_SCOPE_OPTIONS),
         quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
         composite_op_options=list(_COMPOSITE_OP_OPTIONS),
+        available_rulesets=_build_available_rulesets(
+            seeds, personal, active_id=source_rule_set.id
+        ),
     )
 
 

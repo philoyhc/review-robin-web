@@ -18,5 +18,13 @@
     </p>
   </div>
 
-  {% include "operator/partials/_rule_builder_card.html" %}
+  <div id="rule-builder-page-grid"
+       style="display: flex; gap: 16px; align-items: flex-start;">
+    <div style="flex: 1 1 0; min-width: 0;">
+      {% include "operator/partials/_rule_builder_card.html" %}
+    </div>
+    <div style="flex: 1 1 0; min-width: 0;">
+      {% include "operator/partials/_available_rulesets_card.html" %}
+    </div>
+  </div>
 {% endblock %}

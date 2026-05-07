@@ -1,0 +1,32 @@
+{# Sibling card to the Rule Builder. Lists every visible RuleSet
+   (seeds first in install order, then caller-owned Personal) with
+   its friendly description. The currently-selected row in the Rule
+   Builder is rendered highlighted. #}
+<div class="card" id="available-rulesets-card">
+  <h2 style="margin-top: 0;">Available rulesets</h2>
+
+  {% if builder.available_rulesets %}
+    <ul id="available-rulesets-list"
+        style="list-style: none; padding-left: 0; margin: 0;">
+      {% for entry in builder.available_rulesets %}
+        <li class="available-ruleset-row{% if entry.is_active %} available-ruleset-row-active{% endif %}"
+            data-rule-set-id="{{ entry.id }}"
+            style="padding: 10px 0; border-bottom: 1px solid #eee;">
+          <div style="display: flex; gap: 8px; align-items: baseline;">
+            {% if entry.is_active %}
+              <strong>▶ {{ entry.name }}</strong>
+            {% else %}
+              <strong>{{ entry.name }}</strong>
+            {% endif %}
+            <span class="pill {% if entry.is_seed %}pill-info{% else %}pill-count{% endif %}">{% if entry.is_seed %}seed{% else %}personal{% endif %}</span>
+          </div>
+          {% if entry.description %}
+            <p class="form-help" style="margin: 4px 0 0 0;">{{ entry.description }}</p>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="form-help">No rulesets visible.</p>
+  {% endif %}
+</div>

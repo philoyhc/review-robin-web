@@ -19,8 +19,7 @@
    inline name input / dropdown selection carry that signal.
 #}
 <div class="card"
-     id="rule-builder-card"
-     style="max-width: 50%;">
+     id="rule-builder-card">
 
   <div id="rule-builder-inner"
        style="display: flex; gap: 16px; align-items: start; border: none; padding: 0; background: transparent;">
@@ -46,7 +45,9 @@
             <button class="btn primary-outline" type="submit">Load</button>
           </noscript>
         </p>
-        {% if builder.description %}
+        {% if builder.description and not builder.editable %}
+          {# Seeded read-only caption only — editable selections
+             expose the description as a textarea below. #}
           <p class="form-help" style="margin: 6px 0 0 0;">{{ builder.description }}</p>
         {% endif %}
       </form>
@@ -71,6 +72,21 @@
       <div style="flex: 1 1 0;"></div>
     {% endif %}
   </div>
+
+  {% if builder.editable %}
+    <p style="margin-top: 12px;">
+      <label for="rule-builder-description-input">
+        <strong>Friendly Description</strong>
+        <span class="form-help" style="font-weight: normal;">(optional)</span>
+      </label>
+      <br>
+      <textarea id="rule-builder-description-input"
+                name="description"
+                form="rule-based-editor-form"
+                rows="2"
+                style="width: 100%;">{{ builder.description }}</textarea>
+    </p>
+  {% endif %}
 
   {% if builder.error_kind %}
     <div class="banner banner-error" id="rule-builder-error-banner" style="margin-top: 12px;">
