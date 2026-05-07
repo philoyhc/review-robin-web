@@ -266,7 +266,7 @@ def test_delete_all_assignments_clears_mode(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "assignments.deleted_all")
     ).scalar_one()
-    assert event.detail == {"deleted_count": 1}
+    assert event.detail["counts"] == {"deleted": 1}
 
 
 def test_non_operator_gets_403_on_destructive_routes(

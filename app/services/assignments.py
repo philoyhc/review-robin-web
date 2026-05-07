@@ -610,6 +610,17 @@ def replace_assignments(
     review_session.assignment_mode = mode.value
     db.flush()
 
+    counts_kwargs: dict[str, int] = {
+        "new": new_count,
+        "replaced": replaced,
+        "pairs": len(pairs),
+        "instruments": len(instruments),
+    }
+    for reason, n in (excluded_counts or {}).items():
+        counts_kwargs[f"excluded_{reason}"] = n
+    context: dict[str, str | int | bool] = {"mode": mode.value}
+    if filename is not None:
+        context["filename"] = filename
     audit.write_event(
         db,
         event_type="assignments.generated",
@@ -620,16 +631,9 @@ def replace_assignments(
             f"via {mode.value} (replaced {replaced})"
         ),
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={
-            "mode": mode.value,
-            "replaced_count": replaced,
-            "new_count": new_count,
-            "pair_count": len(pairs),
-            "instrument_count": len(instruments),
-            "excluded_counts": excluded_counts or {},
-            "filename": filename,
-        },
+        session=review_session,
+        payload=audit.counts(**counts_kwargs),
+        context=context,
         correlation_id=correlation_id,
     )
 
@@ -712,8 +716,8 @@ def delete_all_assignments(
         event_type="assignments.deleted_all",
         summary=f"Deleted all {deleted} assignments",
         actor_user_id=user.id,
-        session_id=review_session.id,
-        detail={"deleted_count": deleted},
+        session=review_session,
+        payload=audit.counts(deleted=deleted),
         correlation_id=correlation_id,
     )
     db.commit()
