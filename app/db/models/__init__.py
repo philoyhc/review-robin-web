@@ -9,6 +9,7 @@ from app.db.models.response_type_definition import ResponseTypeDefinition
 from app.db.models.review_session import ReviewSession
 from app.db.models.reviewee import Reviewee
 from app.db.models.reviewer import Reviewer
+from app.db.models.rule_set import RuleSet, RuleSetRevision
 from app.db.models.session_operator import SessionOperator
 from app.db.models.user import User
 
@@ -25,6 +26,8 @@ __all__ = [
     "ReviewSession",
     "Reviewee",
     "Reviewer",
+    "RuleSet",
+    "RuleSetRevision",
     "SessionOperator",
     "User",
 ]
