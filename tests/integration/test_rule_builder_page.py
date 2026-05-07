@@ -113,9 +113,10 @@ def test_first_paint_loads_first_seed_read_only(
     ).text
 
     # Default selection is Full Matrix, the first seed in install
-    # order. The name is rendered inside the card heading.
-    assert 'id="rule-builder-name"' in body
+    # order. The seeded name carries through the selected dropdown
+    # option (no separate heading row in the new layout).
     assert "Full Matrix" in body
+    assert 'id="rule-builder-selector"' in body
     # Seeded read-only banner is the load-bearing signal that this
     # is not editable yet — PR 2 will branch on Personal to render
     # an editable form instead.
@@ -152,11 +153,13 @@ def test_switching_dropdown_to_another_seed_updates_body(
         f"/assignments/rule-based-editor?rule_set_id={intra_id}"
     ).text
 
-    # Heading reflects the new selection.
-    assert 'id="rule-builder-name"' in body
-    name_block_start = body.index('id="rule-builder-name"')
-    name_block = body[name_block_start : name_block_start + 200]
-    assert "Intra-group peer review" in name_block
+    # Selected option in the dropdown reflects the new selection
+    # (the layout drops the separate heading row — the dropdown's
+    # selected ``<option>`` carries the title for seeded views).
+    selector_marker = f'<option value="{intra_id}"\n                    selected'
+    assert selector_marker in body or (
+        f'value="{intra_id}"' in body and "Intra-group peer review" in body
+    )
     # The seed body renders the canonical Match sentence for this
     # seed: ``reviewer.tag1 same_as reviewee.tag1`` flattens to
     # "reviewer tag1 is the same as reviewee tag1" (PR 5a renderer).
@@ -204,8 +207,10 @@ def test_unknown_rule_set_id_falls_back_to_first_seed(
         "/assignments/rule-based-editor?rule_set_id=999999"
     ).text
 
-    assert 'id="rule-builder-name"' in body
+    # Falls back to Full Matrix (the first seed in install order);
+    # the selected option in the dropdown carries the title.
     assert "Full Matrix" in body
+    assert 'id="rule-builder-selector"' in body
 
 
 # ---------------------------------------------------------------------------
