@@ -59,6 +59,30 @@ def _builder_url(session_id: int, *parts: str) -> str:
     return base if not parts else base + "/" + "/".join(parts)
 
 
+def _make_personal_via_save(
+    client: TestClient,
+    session_id: int,
+    *,
+    source_id: int,
+    name: str,
+) -> None:
+    """Persist a Personal RuleSet by submitting the new POST /save
+    save-as flow. Replaces the legacy POST /assignments/rule-based/copy
+    helper that PR 4b retired."""
+
+    response = client.post(
+        _builder_url(session_id, "save"),
+        data={
+            "source_rule_set_id": source_id,
+            "name": name,
+            "combinator": "ALL_OF",
+            "rules_json": "[]",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+
 # ---------------------------------------------------------------------------
 # POST /copy — draft-from-source (no persistence)
 # ---------------------------------------------------------------------------
@@ -176,11 +200,11 @@ def test_save_in_place_appends_revision(
 
     review_session = _make_session(client, db, code="rb-save-2")
     intra_id = _seed_id(db, "Intra-group peer review")
-    client.post(
-        f"/operator/sessions/{review_session.id}"
-        "/assignments/rule-based/copy",
-        data={"rule_set_id": intra_id, "new_name": "Saveable"},
-        follow_redirects=False,
+    _make_personal_via_save(
+        client,
+        review_session.id,
+        source_id=intra_id,
+        name="Saveable",
     )
     personal = db.execute(
         select(RuleSet).where(RuleSet.name == "Saveable")
@@ -217,11 +241,11 @@ def test_save_in_place_inline_rename(
 
     review_session = _make_session(client, db, code="rb-rename")
     intra_id = _seed_id(db, "Intra-group peer review")
-    client.post(
-        f"/operator/sessions/{review_session.id}"
-        "/assignments/rule-based/copy",
-        data={"rule_set_id": intra_id, "new_name": "Old name"},
-        follow_redirects=False,
+    _make_personal_via_save(
+        client,
+        review_session.id,
+        source_id=intra_id,
+        name="Old name",
     )
     personal = db.execute(
         select(RuleSet).where(RuleSet.name == "Old name")
@@ -323,11 +347,11 @@ def test_save_collision_on_edited_name_returns_error(
 
     review_session = _make_session(client, db, code="rb-collide")
     intra_id = _seed_id(db, "Intra-group peer review")
-    client.post(
-        f"/operator/sessions/{review_session.id}"
-        "/assignments/rule-based/copy",
-        data={"rule_set_id": intra_id, "new_name": "Already taken"},
-        follow_redirects=False,
+    _make_personal_via_save(
+        client,
+        review_session.id,
+        source_id=intra_id,
+        name="Already taken",
     )
 
     response = client.post(
@@ -358,11 +382,11 @@ def test_delete_soft_deletes_and_redirects_to_first_seed(
 ) -> None:
     review_session = _make_session(client, db, code="rb-delete")
     intra_id = _seed_id(db, "Intra-group peer review")
-    client.post(
-        f"/operator/sessions/{review_session.id}"
-        "/assignments/rule-based/copy",
-        data={"rule_set_id": intra_id, "new_name": "ToDelete"},
-        follow_redirects=False,
+    _make_personal_via_save(
+        client,
+        review_session.id,
+        source_id=intra_id,
+        name="ToDelete",
     )
     personal = db.execute(
         select(RuleSet).where(RuleSet.name == "ToDelete")
@@ -389,11 +413,11 @@ def test_delete_without_confirm_redirects_with_error(
 ) -> None:
     review_session = _make_session(client, db, code="rb-del-noconf")
     intra_id = _seed_id(db, "Intra-group peer review")
-    client.post(
-        f"/operator/sessions/{review_session.id}"
-        "/assignments/rule-based/copy",
-        data={"rule_set_id": intra_id, "new_name": "PR2 keep"},
-        follow_redirects=False,
+    _make_personal_via_save(
+        client,
+        review_session.id,
+        source_id=intra_id,
+        name="PR2 keep",
     )
     personal = db.execute(
         select(RuleSet).where(RuleSet.name == "PR2 keep")
@@ -443,11 +467,11 @@ def test_get_after_cancel_renders_saved_state(
 
     review_session = _make_session(client, db, code="rb-cancel")
     intra_id = _seed_id(db, "Intra-group peer review")
-    client.post(
-        f"/operator/sessions/{review_session.id}"
-        "/assignments/rule-based/copy",
-        data={"rule_set_id": intra_id, "new_name": "Cancel me"},
-        follow_redirects=False,
+    _make_personal_via_save(
+        client,
+        review_session.id,
+        source_id=intra_id,
+        name="Cancel me",
     )
     personal = db.execute(
         select(RuleSet).where(RuleSet.name == "Cancel me")
@@ -476,11 +500,11 @@ def test_copy_other_users_personal_returns_403(
     review_session = _make_session(alice_client, db, code="rb-priv-copy")
     intra_id = _seed_id(db, "Intra-group peer review")
 
-    alice_client.post(
-        f"/operator/sessions/{review_session.id}"
-        "/assignments/rule-based/copy",
-        data={"rule_set_id": intra_id, "new_name": "Alice private 2"},
-        follow_redirects=False,
+    _make_personal_via_save(
+        alice_client,
+        review_session.id,
+        source_id=intra_id,
+        name="Alice private 2",
     )
     alice_rs = db.execute(
         select(RuleSet).where(RuleSet.name == "Alice private 2")
@@ -576,11 +600,11 @@ def test_save_in_place_updates_description(
 
     review_session = _make_session(client, db, code="rb-desc-update")
     intra_id = _seed_id(db, "Intra-group peer review")
-    client.post(
-        f"/operator/sessions/{review_session.id}"
-        "/assignments/rule-based/copy",
-        data={"rule_set_id": intra_id, "new_name": "DescUpdate"},
-        follow_redirects=False,
+    _make_personal_via_save(
+        client,
+        review_session.id,
+        source_id=intra_id,
+        name="DescUpdate",
     )
     personal = db.execute(
         select(RuleSet).where(RuleSet.name == "DescUpdate")
