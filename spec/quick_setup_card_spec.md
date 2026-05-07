@@ -95,14 +95,15 @@ The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Assig
 
 ### Lifecycle and state behavior summary
 
-| Session state | Card behavior |
-|---|---|
-| `draft` | Fully interactive. All slots usable; confirmations apply when replacing populated data. |
-| `validated` | Fully interactive. Same as `draft`. (Re-uploading may invalidate the validated state — see below.) |
-| `ready` | Body-greyed via `.quick-setup-body.locked`; Lock / Unlock toggle still visible. Unlocking is cosmetic only — submits 303 → Home with a scoped `banner-error` ("Pause first") via `_require_editable`. Counts / rule still display. |
-| `closed` | Same body-greying treatment as `ready`; submits rejected at the service layer. |
+| Session state | Persisted responses? | Card behavior |
+|---|---|---|
+| `draft` | None | **Available.** Fully interactive. Lock / Unlock toggle visible; unlocking reveals the slot controls. |
+| `draft` | Any | **Unavailable.** Body greyed via `.quick-setup-body.locked`; Lock / Unlock toggle hidden entirely. Operator routes to per-entity Setup pages (which have the response-loss-acknowledgment flow) for any further changes. |
+| `validated` | (any) | **Unavailable.** Same body-greying + no-toggle treatment as `draft`-with-responses. The validated state is meant to be a final-check state; bulk re-uploads route through per-entity Setup pages instead. |
+| `ready` | (any) | **Unavailable.** Same treatment. Counts / rule still display in the greyed body for context. |
+| `closed` | (any) | Same as `ready`. |
 
-**Note on `validated` → re-upload.** If an operator successfully submits a slot on a `validated` session, the session's validated state is invalidated and the session returns to `draft`. This matches existing behavior on the per-entity Setup pages and should reuse the same state-transition logic.
+The single description copy ("Available only when session is in draft mode and does not have any responses.") covers the rule from the operator's vantage point — both gates show up as the same visual signal (greyed body, no toggle). Defense-in-depth route gates (`_require_editable` + `_require_response_loss_ack`) stay in place but never fire from this surface because the submit forms aren't reachable when the body's locked.
 
 ### Doc taxonomy
 

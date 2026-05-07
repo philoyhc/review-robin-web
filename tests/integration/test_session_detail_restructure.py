@@ -556,13 +556,12 @@ def test_quick_setup_card_greys_in_ready(
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Per Segment 11J PR A's unified status-awareness model the
-    Quick Setup card greys via the body wrapper's ``.locked``
-    treatment in ``ready`` — same visual signal as the default-
-    locked draft state. The Lock / Unlock toggle stays visible
-    (the operator can still cosmetically unlock; the service
-    layer rejects mutating submits). The description copy switches
-    to the "paused while Activated" line."""
+    """On a session outside ``draft`` (here ``ready``), Quick Setup
+    is permanently locked and the Lock / Unlock toggle disappears
+    entirely — the operator can't even cosmetically unlock something
+    the route layer would reject. Body-greying via the
+    ``.quick-setup-body.locked`` wrapper is the visual signal; the
+    description's single static copy names the availability rule."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
@@ -575,15 +574,17 @@ def test_quick_setup_card_greys_in_ready(
     # Body-greying via .locked, no separate .card.disabled treatment.
     assert 'class="card disabled"' not in body
     assert 'class="quick-setup-body locked"' in body
-    # Description copy switches.
+    # Description copy is the single static line naming the
+    # availability rule.
     assert (
-        "Setup edits are paused while the session is Activated" in body
+        "Available only when session is in draft mode and does not "
+        "have any responses." in body
     )
-    # Slots + lock toggle still present so the operator can navigate
-    # the card in any state.
+    # Slot anchors still rendered (the body's still in the DOM, just
+    # greyed) but the Lock / Unlock toggle is suppressed entirely.
     assert 'id="quick-setup-reviewers"' in body
     assert 'id="quick-setup-assignments"' in body
-    assert 'id="quick-setup-lock-toggle"' in body
+    assert 'id="quick-setup-lock-toggle"' not in body
 
 
 # ---------------------------------------------------------------------------
