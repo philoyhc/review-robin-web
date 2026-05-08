@@ -7,8 +7,9 @@ small slices.
 
 This file describes **what should be on the page**. It does not
 describe the routes, services, or schema that back it — those live
-in `app/web/routes_operator.py`, `app/services/instruments.py`, and
-`app/db/models/instrument*.py`. When a behaviour below is unwired
+in `app/web/routes_operator/_instruments.py`,
+`app/services/instruments.py`, and `app/db/models/instrument*.py`.
+When a behaviour below is unwired
 ("Save writes to the database"), the rebuild slice that lands it
 also wires the route + service + persistence.
 
