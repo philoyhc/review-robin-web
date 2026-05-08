@@ -242,6 +242,14 @@
             <p style="margin: 0 0 var(--space-3) 0;">
               <span class="pill pill-count">{{ session.created_by_user.display_name or session.created_by_user.email }}</span>
             </p>
+            <p class="form-help" style="margin: 0;">Created</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              <span class="pill pill-count">{{ session.created_at.strftime("%Y-%m-%d") }}</span>
+            </p>
+            <p class="form-help" style="margin: 0;">Last Modified</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              <span class="pill pill-count">{{ session.updated_at.strftime("%Y-%m-%d") }}</span>
+            </p>
           </div>
           <div>
             <p class="form-help" style="margin: 0;">Deadline</p>
@@ -252,8 +260,14 @@
                 <span class="pill pill-empty">Not set</span>
               {% endif %}
             </p>
+            <p class="form-help" style="margin: 0;">Code</p>
+            <p style="margin: 0 0 var(--space-3) 0;"><code>{{ session.code }}</code></p>
+            <p class="form-help" style="margin: 0;">Help contact</p>
+            <p style="margin: 0 0 var(--space-3) 0;">{{ session.help_contact or "—" }}</p>
           </div>
         </div>
+        <p class="form-help" style="margin: 0;">Name</p>
+        <p style="margin: 0 0 var(--space-3) 0;">{{ session.name }}</p>
         <p class="form-help" style="margin: 0;">Description</p>
         <p style="margin: 0 0 var(--space-3) 0;">{{ session.description or "—" }}</p>
         {# Lifecycle state shown in the chrome status strip — no
