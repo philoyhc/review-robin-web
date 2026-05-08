@@ -1,9 +1,8 @@
 # Refactor Plan — Split `routes_operator.py` by feature area
 
 **Project:** Review Robin Web
-**Status:** In flight — PRs 0-9 landed; PR 10 (Instruments) is the
-final slice. After PR 10 lands, `_legacy.py` is empty and gets
-deleted.
+**Status:** Complete — all 11 PRs landed; `_legacy.py` deleted in
+PR 10 by renaming to `_instruments.py`.
 **Sizing:** 1 package-conversion PR + 10 mechanical slice PRs
 
 ### Progress (2026-05-08)
@@ -20,7 +19,7 @@ deleted.
 | 7  | Quick Setup (+ deferred `create_session`) | `_quick_setup.py` | Landed (#655) |
 | 8  | Rule Builder                         | `_rule_builder.py`  | Landed (#656) |
 | 9  | Operations                           | `_operations.py`    | Landed (#657) |
-| 10 | Instruments                          | `_instruments.py`   | **Pending** |
+| 10 | Instruments                          | `_instruments.py`   | Landed |
 
 ---
 
