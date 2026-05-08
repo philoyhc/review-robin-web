@@ -209,7 +209,7 @@ Out:
 - **Slot 4 — Session settings.** The configuration-import slot's
   wiring is **out of scope for 11J**. It stays inert per 11H, and
   its graduation lands in Segment 12A PR 6 as already documented
-  in `guide/segment_12A.md`. See "Session settings — separate
+  in `guide/segment_12A_export_and_import.md`. See "Session settings — separate
   sub-plan" below.
 - **Real configuration import format / service.** Segment 12A owns
   the CSV format, the `apply_session_config` service, and the
@@ -555,7 +555,7 @@ unchanged.
   way: the `ready` description "The Lock / Unlock button does
   not render in this state" line is removed; the "Pause the
   session to re-enable bulk setup" copy stays as the description.
-- `guide/segment_12A.md` — small follow-on note when 12A's PR 6
+- `guide/segment_12A_export_and_import.md` — small follow-on note when 12A's PR 6
   lands: replace its "Anchor: a 'Import config' button on Session
   Home" line (or equivalent) with "swap 11J's slot-4 placeholder
   for the real upload form, reusing the lock-toggle pattern PR A

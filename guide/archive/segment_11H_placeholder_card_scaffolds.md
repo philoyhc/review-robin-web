@@ -46,7 +46,7 @@ Planning. Sized as **2 PRs**, independent and parallelizable
 2. **PR B — Extract Data scaffold.** Replaces
    `placeholder_card(id="extract-data", …)` with the
    five-download + zip layout from
-   `guide/segment_12A.md`. All controls disabled.
+   `guide/segment_12A_export_and_import.md`. All controls disabled.
 
 ## Why a scaffold-only segment
 
@@ -164,7 +164,7 @@ In:
 - New template partial
   `app/web/templates/operator/partials/_extract_data_card.html`
   with the five-row + zip-bundle layout from
-  `guide/segment_12A.md` PR 6:
+  `guide/segment_12A_export_and_import.md` PR 6:
   - Row 1 — Session settings (`session-{code}-settings.csv`).
   - Row 2 — Reviewers (`session-{code}-reviewers.csv`).
   - Row 3 — Reviewees (`session-{code}-reviewees.csv`).
@@ -209,7 +209,7 @@ In:
 - "Download all" footer button — disabled, same copy
   treatment.
 - **No lifecycle gate** per
-  `guide/segment_12A.md` "Data extraction (PRs 3-6)" — the
+  `guide/segment_12A_export_and_import.md` "Data extraction (PRs 3-6)" — the
   card stays visible and interactive in every lifecycle
   state. Extraction is read-only and useful at any state.
   Once 12A's PRs wire the buttons, they remain clickable
@@ -338,7 +338,7 @@ inert.
   `href="#"` with a `preventDefault` not needed since
   there's no JS) — anchors don't honour native `disabled`.
   PR B's "Download" buttons are anchors today (per
-  `guide/segment_12A.md` PR 6 → `<a class="btn ...">`
+  `guide/segment_12A_export_and_import.md` PR 6 → `<a class="btn ...">`
   with `Content-Disposition` header), so they get the
   `aria-disabled` treatment.
 - **Tooltip wording.** Each disabled control's `title`
@@ -431,7 +431,7 @@ inert.
   audit emit, banner population, lifecycle gate enforced
   at the route layer) all stay; only the markup-creation
   bullets move to 11H.
-- `guide/segment_12A.md` — PR 6's scope shrinks the same
+- `guide/segment_12A_export_and_import.md` — PR 6's scope shrinks the same
   way: the markup-creation bullets move to 11H, leaving
   PR 6 as a thin "wire the rows" diff plus the zip
   bundle (which is genuinely new code) plus the

@@ -77,7 +77,7 @@ and one validation-on-write PR. Shipped as planned.
   before 12A ships avoids a mechanical sweep through 12A code
   later (and 12A's own plan already calls out 11K as a
   precondition: "if 11K lands first, fold its convention in"
-  — `guide/segment_12A.md`).
+  — `guide/segment_12A_export_and_import.md`).
 - **Segment 12B consumer.** 12B's audit-export CSV needs a
   predictable column model. Without a canonical shape, the
   export has to special-case every emitter — fragile and
@@ -579,7 +579,7 @@ boundaries.
 - `guide/todo_master.md` — move 11K from **Upcoming** to
   **Done** once PR 8 ships; cross-reference Segment 12B
   (which can now begin).
-- `guide/segment_12A.md` — already calls out 11K as a
+- `guide/segment_12A_export_and_import.md` — already calls out 11K as a
   precondition for its emitter scope; once PR 1 lands, 12A
   picks up the canonical shape automatically. The shipped
   segments (`guide/archive/segment_11C_operations_consolidation.md`,
