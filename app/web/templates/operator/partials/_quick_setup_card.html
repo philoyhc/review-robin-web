@@ -63,21 +63,18 @@
             enctype="multipart/form-data"
             data-quick-setup-form>
         <input type="hidden" name="confirm_replace" value="">
-        <p style="margin: 0;">
-          <label for="quick-setup-assignments-rule"
-                 class="form-help"
-                 style="display: block; margin-bottom: var(--space-1);">
-            Generate by rule
-          </label>
-          <select id="quick-setup-assignments-rule"
-                  name="rule_set_id"
-                  style="width: 100%;">
-            {% for option in slot.rule_set_options %}
-              <option value="{{ option.id }}"
-                      {% if option.id == slot.selected_rule_set_id %}selected{% endif %}>{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
-            {% endfor %}
-          </select>
+        <p class="form-help" style="margin: 0 0 var(--space-1) 0;">
+          Generate by rule
         </p>
+        <select id="quick-setup-assignments-rule"
+                name="rule_set_id"
+                aria-label="Generate by rule"
+                style="width: 100%;">
+          {% for option in slot.rule_set_options %}
+            <option value="{{ option.id }}"
+                    {% if option.id == slot.selected_rule_set_id %}selected{% endif %}>{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
+          {% endfor %}
+        </select>
         <p class="form-help" style="margin: var(--space-2) 0 var(--space-1) 0;">
           or upload a CSV.
         </p>
@@ -93,8 +90,7 @@
         </p>
       </form>
     {% else %}
-      <p class="form-help"
-         style="display: block; margin: 0 0 var(--space-1) 0;">
+      <p class="form-help" style="margin: 0 0 var(--space-1) 0;">
         Generate by rule
       </p>
       <select disabled
