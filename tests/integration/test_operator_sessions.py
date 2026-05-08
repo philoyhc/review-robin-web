@@ -198,3 +198,155 @@ def test_delete_session_with_email_outbox_rows_succeeds(
     assert db.execute(
         select(EmailOutbox).where(EmailOutbox.id == outbox.id)
     ).scalar_one_or_none() is None
+
+
+# ---------------------------------------------------------------------------
+# Bulk delete via the Danger Zone card on /operator/sessions
+# ---------------------------------------------------------------------------
+
+
+def test_sessions_list_renders_danger_zone_with_delete_form(
+    client: TestClient,
+) -> None:
+    """When at least one session exists, the sessions list renders a
+    Danger Zone card in the bottom-right with a confirm checkbox and a
+    submit button posting to /operator/sessions/delete-selected."""
+
+    client.post(
+        "/operator/sessions",
+        data={"name": "Spring Reviews", "code": "spring-2026"},
+        follow_redirects=False,
+    )
+
+    body = client.get("/operator/sessions").text
+    assert 'id="sessions-list-danger-zone"' in body
+    assert 'action="/operator/sessions/delete-selected"' in body
+    assert 'name="session_ids"' in body
+    assert 'name="confirm"' in body
+    assert "Delete selected sessions" in body
+
+
+def test_delete_selected_removes_ticked_drafts(
+    client: TestClient, db: Session
+) -> None:
+    client.post(
+        "/operator/sessions",
+        data={"name": "Keep", "code": "keep-1"},
+        follow_redirects=False,
+    )
+    client.post(
+        "/operator/sessions",
+        data={"name": "Bin", "code": "bin-1"},
+        follow_redirects=False,
+    )
+    keep = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "keep-1")
+    ).scalar_one()
+    bin_ = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "bin-1")
+    ).scalar_one()
+
+    response = client.post(
+        "/operator/sessions/delete-selected",
+        data={"session_ids": [bin_.id], "confirm": "true"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers.get("location") == "/operator/sessions"
+    assert db.execute(
+        select(ReviewSession).where(ReviewSession.id == bin_.id)
+    ).scalar_one_or_none() is None
+    assert db.execute(
+        select(ReviewSession).where(ReviewSession.id == keep.id)
+    ).scalar_one_or_none() is not None
+
+
+def test_delete_selected_without_confirm_returns_400(
+    client: TestClient, db: Session
+) -> None:
+    client.post(
+        "/operator/sessions",
+        data={"name": "NoConfirm", "code": "noconf-1"},
+        follow_redirects=False,
+    )
+    target = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "noconf-1")
+    ).scalar_one()
+
+    response = client.post(
+        "/operator/sessions/delete-selected",
+        data={"session_ids": [target.id]},  # no confirm flag
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 400
+    # Session is still in place.
+    assert db.execute(
+        select(ReviewSession).where(ReviewSession.id == target.id)
+    ).scalar_one_or_none() is not None
+
+
+def test_delete_selected_with_no_ids_is_a_clean_redirect(
+    client: TestClient,
+) -> None:
+    """Submitting the form with zero ticked rows is a no-op redirect
+    back to the list. No 4xx — the operator just gets the page back."""
+
+    response = client.post(
+        "/operator/sessions/delete-selected",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers.get("location") == "/operator/sessions"
+
+
+def test_delete_selected_skips_other_users_sessions(
+    db: Session,
+    alice: AuthenticatedUser,
+    bob: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A crafted POST that includes an id the caller doesn't operate
+    is silently skipped — get_for_user returns None for non-operators
+    and the loop continues."""
+
+    alice_client = make_client(alice)
+    alice_client.post(
+        "/operator/sessions",
+        data={"name": "Alice's", "code": "alice-private"},
+        follow_redirects=False,
+    )
+    alice_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "alice-private")
+    ).scalar_one()
+
+    bob_client = make_client(bob)
+    bob_client.post(
+        "/operator/sessions",
+        data={"name": "Bob's", "code": "bob-self"},
+        follow_redirects=False,
+    )
+    bob_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "bob-self")
+    ).scalar_one()
+
+    # Bob crafts a POST with both his own id + Alice's id. His own
+    # gets deleted; Alice's stays.
+    response = bob_client.post(
+        "/operator/sessions/delete-selected",
+        data={
+            "session_ids": [bob_session.id, alice_session.id],
+            "confirm": "true",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    assert db.execute(
+        select(ReviewSession).where(ReviewSession.id == bob_session.id)
+    ).scalar_one_or_none() is None
+    assert db.execute(
+        select(ReviewSession).where(ReviewSession.id == alice_session.id)
+    ).scalar_one_or_none() is not None

@@ -121,14 +121,13 @@ def test_sessions_list_row_renders_name_link_and_select_checkbox(
         in body
     )
     assert ">Access</a>" not in body
-    # The trailing column carries an unwired select-row checkbox; the
-    # per-row Delete anchor that briefly lived here was retired in
-    # favour of a future bulk-action affordance.
+    # The trailing column carries the bulk-action select-row checkbox;
+    # the per-row Delete anchor that briefly lived here was retired in
+    # favour of the Danger Zone card on the same page.
     assert ">Delete</a>" not in body
-    assert (
-        f'<input type="checkbox" aria-label="Select {review_session.name}">'
-        in body
-    )
+    assert f'aria-label="Select {review_session.name}"' in body
+    assert 'name="session_ids"' in body
+    assert f'value="{review_session.id}"' in body
 
 
 def test_sessions_list_create_button_lives_in_header(

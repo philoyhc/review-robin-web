@@ -79,6 +79,50 @@ def list_sessions(
     )
 
 
+@router.post("/sessions/delete-selected")
+def sessions_delete_selected(
+    session_ids: list[int] = Form(default=[]),
+    confirm: str | None = Form(default=None),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Bulk-delete the sessions ticked on the operator sessions list.
+
+    Filters server-side to caller-owned + editable (draft / validated)
+    sessions; non-editable rows are silently skipped per the existing
+    ``_require_editable`` posture. The Danger Zone card on the list
+    page surfaces a confirm checkbox and an explicit destructive
+    button — without ``confirm=true`` the request is rejected with
+    ``400`` (matches the single-session ``/sessions/{id}/delete``
+    handler). Each deletion goes through ``sessions.delete_session``
+    which already cascades reviewers / reviewees / instruments /
+    assignments / invitations / email_outbox rows + writes the
+    ``session.deleted`` audit row."""
+
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required",
+        )
+    correlation_id = request_correlation_id()
+    for session_id in session_ids:
+        review_session = sessions.get_for_user(db, user, session_id)
+        if review_session is None:
+            continue
+        if not lifecycle.is_editable(review_session):
+            continue
+        sessions.delete_session(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id,
+        )
+    return RedirectResponse(
+        url="/operator/sessions",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 def _settings_redirect_url(return_to_raw: str | None) -> str:
     """Save / Clear keep the operator on the Settings page (so they
     can verify their changes); the ``return_to`` query param rides
