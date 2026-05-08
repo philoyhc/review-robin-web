@@ -242,25 +242,33 @@ def operator_settings_clear(
 def new_session_form(
     request: Request,
     user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
 ) -> HTMLResponse:
     return _templates.TemplateResponse(
         request,
         "operator/session_new.html",
         {
             "user": user,
-            "quick_setup": views.build_new_session_quick_setup_context(),
+            "quick_setup": views.build_new_session_quick_setup_context(
+                db, user
+            ),
             "breadcrumbs": breadcrumbs.operator_new_session(),
         },
     )
 
 
-@router.post("/sessions")
-def create_session(
+@router.post("/sessions", response_model=None)
+async def create_session(
     name: str = Form(...),
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
     help_contact: str | None = Form(default=None),
+    reviewers_file: UploadFile | None = File(default=None),
+    reviewees_file: UploadFile | None = File(default=None),
+    assignments_file: UploadFile | None = File(default=None),
+    rule_set_id: str | None = Form(default=None),
+    exclude_self_review: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -287,8 +295,90 @@ def create_session(
         payload=payload,
         correlation_id=request_correlation_id(),
     )
+
+    # If the operator staged any Quick Setup uploads on the new-session
+    # page, dispatch them through the same per-slot pipeline used by
+    # the consolidated submit-all handler on Session Home. The session
+    # was just created — no replace-confirmation is needed (there's
+    # nothing to overwrite). On the first slot's failure, redirect to
+    # Home with the slot's error flag.
+    home_url = f"/operator/sessions/{review_session.id}"
+
+    def quick_setup_error_redirect(
+        kind: str, reason: str
+    ) -> RedirectResponse:
+        return RedirectResponse(
+            url=(
+                f"{home_url}?quick_setup_error={kind}"
+                f"&quick_setup_reason={reason}#quick-setup-{kind}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    last_fragment = ""
+
+    if reviewers_file is not None and reviewers_file.filename:
+        reason = await _run_quick_setup_import(
+            file=reviewers_file,
+            confirm_replace="true",
+            acknowledge_response_loss=None,
+            review_session=review_session,
+            user=user,
+            db=db,
+            kind="reviewers",
+            existing_count_fn=csv_imports.existing_reviewer_count,
+            parse_fn=csv_imports.parse_reviewer_csv,
+            save_fn=csv_imports.save_reviewers,
+        )
+        if reason is not None:
+            return quick_setup_error_redirect("reviewers", reason)
+        last_fragment = "#quick-setup-reviewers"
+
+    if reviewees_file is not None and reviewees_file.filename:
+        reason = await _run_quick_setup_import(
+            file=reviewees_file,
+            confirm_replace="true",
+            acknowledge_response_loss=None,
+            review_session=review_session,
+            user=user,
+            db=db,
+            kind="reviewees",
+            existing_count_fn=csv_imports.existing_reviewee_count,
+            parse_fn=csv_imports.parse_reviewee_csv,
+            save_fn=csv_imports.save_reviewees,
+        )
+        if reason is not None:
+            return quick_setup_error_redirect("reviewees", reason)
+        last_fragment = "#quick-setup-reviewees"
+
+    has_assignments_file = (
+        assignments_file is not None and assignments_file.filename
+    )
+    parsed_rule_set_id: int | None = None
+    if rule_set_id is not None and rule_set_id.strip():
+        candidate = rule_set_id.strip()
+        if candidate.lstrip("-").isdigit():
+            parsed = int(candidate)
+            if parsed > 0:
+                parsed_rule_set_id = parsed
+    if has_assignments_file or parsed_rule_set_id is not None:
+        reason = await _run_quick_setup_assignments(
+            file=assignments_file,
+            rule_set_id=parsed_rule_set_id,
+            rule=None,
+            exclude_self_review=exclude_self_review,
+            confirm_replace="true",
+            acknowledge_response_loss=None,
+            review_session=review_session,
+            user=user,
+            db=db,
+        )
+        if reason is not None:
+            return quick_setup_error_redirect("assignments", reason)
+        last_fragment = "#quick-setup-assignments"
+
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}",
+        url=f"{home_url}{last_fragment}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

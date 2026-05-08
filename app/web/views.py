@@ -941,6 +941,19 @@ class QuickSetupContext:
     description: str
     title: str = "Quick Setup"
     show_lock_toggle: bool = True
+    show_confirm_replace: bool = True
+    """Gate the card-level "This will replace any existing reviewers,
+    reviewees, assignments or settings, according to what is uploaded."
+    checkbox at the top of the body. Suppressed on the new-session
+    Quick Setup variant — there's nothing to replace yet."""
+
+    external_form_id: str | None = None
+    """When set, slot inputs are associated with this external form
+    via the HTML ``form="..."`` attribute, and the partial skips
+    rendering its own ``<form>`` scaffold + footer. Used on the
+    new-session page so the Create-session form's submit also
+    carries any Quick Setup uploads through to the same dispatch
+    pipeline."""
 
 
 def build_quick_setup_context(
@@ -1145,15 +1158,48 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
     return f"Could not import {label.lower()}."
 
 
-def build_new_session_quick_setup_context() -> QuickSetupContext:
-    """Quick Setup placeholder for the ``/operator/sessions/new`` page.
+def build_new_session_quick_setup_context(
+    db: Session | None = None,
+    user: User | None = None,
+) -> QuickSetupContext:
+    """Quick Setup card for the ``/operator/sessions/new`` page.
 
-    There is no session row yet, so all four slots show zero counts
-    and no wire URLs. The card is always unlocked (``is_locked=False``)
-    and the Lock / Unlock toggle is suppressed (the lock concept has
-    nothing to lock here). Heading reads ``"Quick setup (optional)"``
-    to convey this is a forward-looking hint, not a working surface.
+    When called with ``db`` and ``user``, the slots render wired and
+    their inputs associate with the create-session form (via the
+    ``external_form_id`` HTML attribute) so the operator can stage
+    Quick Setup uploads alongside the session-creation form. The
+    POST ``/operator/sessions`` handler creates the session and then
+    dispatches the same per-slot pipeline used by the Session Home
+    consolidated submit.
+
+    Called with no arguments, the function returns an inert preview
+    shape — every slot ``is_wired=False`` — for callers that want
+    the eventual visual without hooking up the back end.
+
+    The card is always unlocked (``is_locked=False``) and the
+    Lock / Unlock toggle is suppressed: there's no session to lock.
+    The card-level replace-confirmation checkbox is also suppressed
+    (``show_confirm_replace=False``) — there's nothing to replace
+    on a freshly-created session.
     """
+
+    is_wired = db is not None and user is not None
+
+    rule_set_options: list[QuickSetupRuleSetOption] = []
+    selected_rule_set_id: int | None = None
+    if is_wired:
+        from app.services.rules import library
+
+        for rs in library.list_visible_rule_sets(db, user=user):
+            rule_set_options.append(
+                QuickSetupRuleSetOption(
+                    id=rs.id,
+                    label=rs.name,
+                    is_seed=rs.is_seed,
+                )
+            )
+        if rule_set_options:
+            selected_rule_set_id = rule_set_options[0].id
 
     slots = [
         QuickSetupSlot(
@@ -1162,9 +1208,9 @@ def build_new_session_quick_setup_context() -> QuickSetupContext:
             count=0,
             count_summary="none yet",
             mode="file_upload",
-            is_wired=False,
+            is_wired=is_wired,
             wire_url=None,
-            coming_in="Wired in Segment 11J PR A",
+            coming_in=None if is_wired else "Wired in Segment 11J PR A",
         ),
         QuickSetupSlot(
             key="reviewees",
@@ -1172,9 +1218,9 @@ def build_new_session_quick_setup_context() -> QuickSetupContext:
             count=0,
             count_summary="none yet",
             mode="file_upload",
-            is_wired=False,
+            is_wired=is_wired,
             wire_url=None,
-            coming_in="Wired in Segment 11J PR A",
+            coming_in=None if is_wired else "Wired in Segment 11J PR A",
         ),
         QuickSetupSlot(
             key="assignments",
@@ -1182,9 +1228,11 @@ def build_new_session_quick_setup_context() -> QuickSetupContext:
             count=0,
             count_summary="none yet",
             mode="rule_or_csv",
-            is_wired=False,
+            is_wired=is_wired,
             wire_url=None,
-            coming_in="Wired in Segment 11J PR B",
+            coming_in=None if is_wired else "Wired in Segment 11J PR B",
+            rule_set_options=rule_set_options,
+            selected_rule_set_id=selected_rule_set_id,
         ),
         QuickSetupSlot(
             key="settings",
@@ -1204,11 +1252,13 @@ def build_new_session_quick_setup_context() -> QuickSetupContext:
         is_locked=False,
         description=(
             "Bulk-populate reviewers, reviewees, and assignments "
-            "from files or rules in one place — available on "
-            "Session Home after the session is created."
+            "from files or rules in one place — submitted alongside "
+            "the session details above."
         ),
         title="Quick setup (optional)",
         show_lock_toggle=False,
+        show_confirm_replace=False,
+        external_form_id="create-session-form" if is_wired else None,
     )
 
 

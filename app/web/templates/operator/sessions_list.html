@@ -39,9 +39,15 @@
                   <span class="muted">No deadline</span>
                 {% endif %}
               </td>
-              <td>{{ s.created_by_user.display_name or s.created_by_user.email }}</td>
-              <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
-              <td>{{ s.updated_at.strftime("%Y-%m-%d") }}</td>
+              <td>
+                <span class="pill pill-count">{{ s.created_by_user.display_name or s.created_by_user.email }}</span>
+              </td>
+              <td>
+                <span class="pill pill-count">{{ s.created_at.isoformat() }}</span>
+              </td>
+              <td>
+                <span class="pill pill-count">{{ s.updated_at.isoformat() }}</span>
+              </td>
               <td class="col-shrink">
                 <input type="checkbox"
                        name="session_ids"
