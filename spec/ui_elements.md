@@ -308,6 +308,7 @@ vocabulary as follows.
 | `.btn-cta` | **Primary (large / centered variant)** | Layout variant only. Keep, but normalize fill to Primary. |
 | `.btn-cta.disabled` | **Primary (disabled)** | Opacity 0.5, `pointer-events: none`. Same disabled rule as the regular Primary. |
 | `.btn-icon` | **Icon button** | Borderless inline action (move-up / move-down / delete-row). Keep; add canonical disabled treatment. |
+| `—` (net-new in this spec) | **Nav button** (page-internal view switcher) | Used for in-page tab-like navigation between sibling views inside a single operator page — *not* the page chrome. Reference example: the Email Template page's `Invitation` / `Reminder` / `Responses received` row at the top of the body (`session_setupinvite.html`). Active view renders `<button class="btn disabled" aria-disabled="true">` so it reads as the current location and can't be clicked again; sibling views render `<a class="btn secondary">` anchors. Sit in a flushed-left `.btn-pair` row above the page's working cards. The pattern reuses existing button modifiers — no new CSS classes — so any sweep is template-only. |
 
 **Hover** (per `visual_style_general.md` P6 — pilot-validated):
 - *Filled buttons* (Primary, `.alert-solid`): bg/border move from `accent-blue` to `accent-blue-light` (lighten).
