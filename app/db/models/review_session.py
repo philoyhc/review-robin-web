@@ -11,6 +11,7 @@ from app.db.base import Base, TimestampMixin
 if TYPE_CHECKING:
     from app.db.models.assignment import Assignment
     from app.db.models.audit_event import AuditEvent
+    from app.db.models.email_outbox import EmailOutbox
     from app.db.models.instrument import Instrument
     from app.db.models.invitation import Invitation
     from app.db.models.response_type_definition import ResponseTypeDefinition
@@ -70,6 +71,18 @@ class ReviewSession(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
     response_type_definitions: Mapped[list[ResponseTypeDefinition]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
+    # ``email_outbox`` rows carry FKs to both ``sessions`` and the
+    # session-scoped ``invitations`` they originated from. Without an
+    # ORM-level cascade here, ``ReviewSession`` deletion blocks on the
+    # FK from ``email_outbox.invitation_id`` to ``invitations.id``
+    # (the unit-of-work tries to flush invitation deletes first and
+    # SQLite/Postgres reject them while outbox rows still reference
+    # the invitations). Cascading from the session deletes outbox
+    # rows before invitations, breaking the cycle.
+    email_outbox_rows: Mapped[list[EmailOutbox]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",
     )
