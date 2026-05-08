@@ -63,8 +63,20 @@ from ._setup import (
     session_status_pills,
 )
 
+# Instruments page context + reviewer-surface heading / page-button
+# helpers (sliced in PR 6).
+from ._instruments import (
+    InstrumentHeading,
+    PageButton,
+    build_instruments_context,
+    constraint_summary_for_field,
+    instrument_heading,
+    page_button_label,
+    placeholder_for_field,
+)
+
 # Everything else still in the legacy container; carved out by
-# PRs 6-10.
+# PRs 7-10.
 from ._legacy import (
     EMAIL_PREVIEW_TABS,
     PREVIEW_INVITE_URL_PLACEHOLDER,
@@ -75,9 +87,7 @@ from ._legacy import (
     EditableRule,
     EmailBody,
     EmailPreviewTab,
-    InstrumentHeading,
     IssueSourceGroup,
-    PageButton,
     PreviewPickerContext,
     PreviewPickerOption,
     QuickSetupContext,
@@ -95,7 +105,6 @@ from ._legacy import (
     SurfacePreviewMissing,
     ValidateContext,
     build_email_preview_body,
-    build_instruments_context,
     build_new_session_quick_setup_context,
     build_preview_picker_context,
     build_quick_setup_context,
@@ -103,12 +112,8 @@ from ._legacy import (
     build_rule_builder_context,
     build_surface_preview_context,
     build_validate_context,
-    constraint_summary_for_field,
     email_preview_from_display,
-    instrument_heading,
     merge_tags_for_template,
-    page_button_label,
-    placeholder_for_field,
     resolve_email_preview_tab,
     validate_lifecycle_copy,
 )
