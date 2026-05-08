@@ -16,9 +16,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from . import _legacy, _lobby, _settings
+from . import _legacy, _lobby, _settings, _setup_invite
 
 router = APIRouter(prefix="/operator", tags=["operator"])
 router.include_router(_lobby.router)
 router.include_router(_settings.router)
+router.include_router(_setup_invite.router)
 router.include_router(_legacy.router)
