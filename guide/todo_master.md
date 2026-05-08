@@ -142,7 +142,7 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - **"Available rulesets"** sibling card at half page width lists every visible RuleSet with its description and a seed/personal pill; the active row highlights.
   - Locked banner copy + "Combine these rules with:" helper inline (no "Combinator" heading); `+ MATCH/FILTER/QUOTA/COMPOSITE rule` button labels (no "Add"); no "Exclude self-review" affordance on the card (lives on the main Assignments page).
   - 13A's standalone editor surface (`/edit/{rule_set_id}` + companion POSTs `/copy`, `/save`, `/save-as`, `/rename`, `/delete`, `/preview`) and template / partials retired in PR 4b; the reused PR 5b/5c rules-JSON serializer (`_rule_based_editor_js.html`) and shared view-shape helpers (`RuleLine`, `EditableRule`, `_flatten_rule_lines`, `_flatten_editable_rules`, picker option lists) stayed.
-  - Plan archived: `guide/archive/segment_13A_1_rule_based_editor_revamp.md`. As-built layout: `spec/rule_based_assignment.md` §7.1 (Rule Builder page). New tests: `tests/integration/test_rule_builder_page.py`, `test_rule_builder_copy_save_delete.py`, `test_rule_builder_new_blank.py`. Net diff after 4b: **-3487 lines** of legacy editor surface.
+  - Plan archived: `guide/archive/segment_13A_1_rule_based_editor_revamp.md`. As-built layout: `spec/rule_based_assignment.md` §7.2 (Rule Builder page). New tests: `tests/integration/test_rule_builder_page.py`, `test_rule_builder_copy_save_delete.py`, `test_rule_builder_new_blank.py`. Net diff after 4b: **-3487 lines** of legacy editor surface.
 
 ---
 

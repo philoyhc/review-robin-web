@@ -168,7 +168,7 @@ reject it.
 - **`spec/session_home.md`** / **`spec/sessions_overview.md`** — per-page specs for Session Home and the sessions lobby.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home (consolidated Submit, slot layout, lock-on-nav).
 - **`spec/setup_pages.md`** — Setup Pages (Reviewers / Reviewees / Assignments / Instruments / Settings) — shared body shape, preview-table column orders, the visibility-toggle pattern.
-- **`spec/rule_based_assignment.md`** — Advanced-mode assignment engine + Rule Builder page (§7 covers the as-built UI).
+- **`spec/rule_based_assignment.md`** — Advanced-mode assignment engine + UI (§7.1 covers the Rule Based card on the Assignments page; §7.2 covers the Rule Builder page).
 - **`guide/segment_*.md`** — segment-by-segment plans (current and upcoming). The latest one names the current segment's contract. Older / shipped segment plans live in `guide/archive/`.
 - **`guide/todo_master.md`** — Done / Upcoming roadmap. Read for the sequence; `guide/unfinished_business.md` is the per-item catalog.
 - **`docs/authentication.md`** / **`docs/database.md`** / **`docs/imports.md`** — deeper dives on those subsystems.
