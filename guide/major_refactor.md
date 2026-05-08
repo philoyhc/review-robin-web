@@ -538,3 +538,235 @@ The legacy container in `__init__.py` (or `_legacy.py`) is the
 intentional "still works" backstop during the slice migration —
 don't delete it until PR 10 lands and routes_operator/__init__.py
 contains nothing but the prefix-mounting boilerplate.
+
+---
+
+## 12. Follow-on refactor candidates (post-routes_operator)
+
+With the `routes_operator` ladder complete (#651 → #659) plus its
+doc sweep (#660), an architectural audit of the rest of the codebase
+surfaced **four** distinct next-target candidates. They're sketched
+here at the same level of detail as §3-§11 above so any of them can
+be picked up as a self-contained ladder when the time comes.
+
+The audit also confirmed what's *not* a problem: layering is clean
+(services don't import from `app/web/`), tests cleanly exercise HTTP
+routes (no internal-helper coupling), and there's no dead code or
+stale scaffolding hanging around.
+
+### 12.A — Split `app/services/instruments.py` (highest architectural value)
+
+**Why.** 2,469 LOC, ~50 public functions, owns five unrelated
+concerns (Response Type Definitions / display fields / response
+fields / instrument CRUD / shared state). Imported by 5 sibling
+files (`csv_imports.py`, `sessions.py`, `assignments.py`,
+`routes_reviewer.py`, `routes_operator/_shared.py`). Only candidate
+that's both size-and-coupling debt rather than just size.
+
+**Slice boundaries (line ranges verified against the current file):**
+
+| Slice | Module | Lines | Highlights |
+|---|---|---|---|
+| 1 | `_rtds.py` (Response Type Definitions) | 158-749 | `add/update/delete_response_type_definition`, `get_session_rtds`, `assert_rtd_precision`, RTD error classes |
+| 2 | `_display_fields.py` | 1122-1648 | `add/update/delete/move_display_field`, `seed_display_fields_from_*`, `prune_unpopulated_display_fields` |
+| 3 | `_response_fields.py` | 1650-2303 | `bulk_save_fields` (~230 LOC, the largest function in the codebase), `add/update/delete/move_response_field` |
+| 4 | `_instrument_crud.py` | 750-1121 + 2305-2469 | `create_instrument`, `delete_instrument`, `update_instrument_description`, `update_short_label`, `bulk_set_accepting`, `bulk_set_visibility` |
+| 5 | `_state.py` (lifted in PR 0) | 41-156 | `saved_state_for_session` — read by all four other slices |
+
+**Approach.** Convert `app/services/instruments.py` into a package
+(`app/services/instruments/__init__.py`) that re-exports the public
+surface. Callers continue to write `from app.services import
+instruments` and `instruments.add_response_field(...)` unchanged —
+the public names move into sub-modules but `__init__.py` does
+explicit `from ._rtds import (...)` re-exports, so the import
+surface stays byte-identical. Mirrors the `routes_operator` playbook
+except the public symbols are functions (not a `router`).
+
+**Sequencing.**
+
+| PR | Slice | ~Lines moved | Risk |
+|---|---|---|---|
+| 0 | Package conversion + `_state.py` lift + `__init__.py` re-export wall | ~120 | Medium — prove the import surface stays stable before slicing |
+| 1 | RTDs → `_rtds.py` | ~590 | Low — self-contained, only `add/update/delete` emit audit events |
+| 2 | Display fields → `_display_fields.py` | ~530 | Medium — `seed_*` helpers called from `csv_imports.py` |
+| 3 | Response fields → `_response_fields.py` | ~650 | Medium — `bulk_save_fields` is ~230 LOC |
+| 4 | Instrument CRUD → `_instrument_crud.py` | ~540 | Low — leftover after the above land |
+
+**Total:** 1 prep PR + 4 slice PRs = 5 PRs.
+
+**Risks.**
+
+- 19+ audit emitters spread across these slices, all using the
+  Segment 11K canonical envelope schema. Pure relocation — the
+  EVENT_SCHEMAS registry doesn't care which file the emitter lives
+  in. The strict-mode test gate
+  (`tests/unit/test_audit_detail_schema.py`) catches any drift.
+- All 5 importers use `from app.services import instruments`
+  (module-level), not symbol imports — re-export wall keeps them
+  green.
+- `test_display_field_routes.py` (2,167 LOC) and
+  `test_response_type_definitions.py` (817 LOC) exercise routes,
+  not service symbols — no test rewrites expected.
+
+### 12.B — Split `app/web/views.py` (largest size win, lowest risk)
+
+**Why.** 3,483 LOC, 79 builders / dataclasses, no architectural
+debt — `views.py` is the canonical "view-shape adapter" seam from
+CLAUDE.md. The file's existing `# ----` section comments already
+group it cleanly along entity / page lines.
+
+**Slice boundaries (verified):**
+
+| Slice | Module | Lines | Pages / entities served |
+|---|---|---|---|
+| 1 | `_setup.py`           | 44-272    | Setup overview rows, `SetupRow`, status pills |
+| 2 | `_instruments.py`     | 273-422   | Instruments page context, `InstrumentHeading`, `PageButton`, constraint summaries |
+| 3 | `_validate.py`        | 424-803   | Validate page (`SetupCoverageRow`, `SeverityChip`, `ValidateContext`, `build_validate_context`) |
+| 4 | `_quick_setup.py`     | 806-1271  | Quick Setup card on Session Home + new-session page |
+| 5 | `_extract_data.py`    | 1273-1417 | Extract Data card |
+| 6 | `_invitations.py`     | 1418-1535 | Invitations page rows |
+| 7 | `_responses.py`       | 1537-1571 | Responses page rows |
+| 8 | `_filters.py`         | 1572-1733 | Shared filter / search helpers across Invitations + Responses |
+| 9 | `_previews.py`        | 1735-2267 | Email Previews + reviewer-surface preview iframe |
+| 10 | `_rule_builder.py`   | 2269-3483 | Rule Builder + Rule Based card (~1,200 LOC, largest slice) |
+
+**Approach.** Identical to `routes_operator` playbook: package
+conversion (`app/web/views/__init__.py`) + re-export wall. Callsites
+(`from app.web import views`) stay byte-identical.
+
+**Sequencing.** 1 package-conversion PR + 9 slice PRs = 10 PRs.
+Smallest first: Responses → Extract Data → Invitations → Filters →
+Setup → Instruments → Quick Setup → Validate → Previews → Rule
+Builder (largest, isolate last).
+
+**Risks.**
+
+- 6 importers in `app/web/`: every operator route slice +
+  `routes_reviewer.py`. All use `from app.web import views` — re-
+  export wall keeps them green.
+- 8 inline `from app.services.rules import library` callsites at
+  `views.py` lines 1016, 1191, 2348, 3123, 3226, 3365 (plus the 2
+  in `_rule_builder` and `_quick_setup` route slices). These are
+  stylistic relics — confirmed no circular-import risk. §12.C2
+  addresses them; if §12.C2 lands first, §12.B's slice PRs lift
+  them to module scope as part of the move.
+
+### 12.C — Cross-cutting hygiene bundle (small, fast, multiple wins)
+
+Three independent low-risk PRs landing the audit's small findings.
+Each PR is ~50-200 LOC; can interleave with §12.A or §12.B.
+
+#### 12.C1 — Shared CSV decode helper
+
+**Today.** `app/services/assignments.py:187-200` and
+`app/services/csv_imports.py:33-152` both implement
+`content.decode("utf-8-sig")` + `csv.DictReader(io.StringIO(...))`.
+`csv_imports.py` factored its version into `_decode_csv()` (line
+33); `assignments.py` didn't reuse it.
+
+**Plan.** Promote `_decode_csv` to public `csv_imports.decode_csv`
+(or move to `app/services/_csv_shared.py` if `csv_imports`
+shouldn't be the home) and rewrite `assignments.parse_manual_csv`
+to call it. 1 PR, ~30 LOC delta, zero behaviour change.
+
+**Risk.** Trivial. Existing CSV-import tests exercise the decode
+path; no rewrites needed.
+
+#### 12.C2 — Lift inline rules-library / TypeAdapter imports to module scope
+
+**Today.** 14 inline `from app.services.rules import library/engine`
+or `from pydantic import TypeAdapter` callsites inside function
+bodies in `_quick_setup.py` (2), `_rule_builder.py` (5), and
+`views.py` (7). The audit confirmed they're **not** masking
+circular imports — purely stylistic relics from the segment 13A-1
+build-out.
+
+**Plan.** 1 PR per file (3 PRs) or one omnibus PR. Each diff is
+"delete N inline imports, add 1 module-level import" — extremely
+mechanical.
+
+**Risk.** Minimal. `pytest -q` is the gate.
+
+#### 12.C3 — Session-scoped query builder
+
+**Today.** Repeated `select(X).where(X.session_id == session.id)`
+patterns across `assignments.py`, `invitations.py`, `instruments.py`,
+`responses.py`, and `csv_imports.py`. ~40 callsites.
+
+**Plan.** New tiny helper
+`app/services/_queries.py::session_scoped(model, session_id)`
+returning a partially-applied `select`. 1 PR introducing the helper
++ migrating 5-10 highest-frequency callsites; subsequent migrations
+piggyback on related-area PRs. Net win: ~3 lines saved per
+callsite, plus a single audit point if the session-id column ever
+changes name.
+
+**Risk.** Slightly higher than C1 / C2 — introduces a new
+abstraction. Recommend landing it after the bigger refactors
+(§12.A and/or §12.B) settle so its callsite migrations don't
+conflict with file-level moves.
+
+### 12.D — Split large integration test files
+
+**Why.** `tests/integration/test_display_field_routes.py` is 2,167
+LOC, 40+ test functions covering at least 5 distinct surfaces
+(display-field CRUD, lazy-seeding from reviewees / assignments,
+locked-row gates, state-machine renders, response-field bulk save,
+RTD card renders). It outgrew its filename — a fresh contributor
+reading "display field routes" wouldn't expect to find RTD or
+response-field assertions inside.
+
+**Slice boundaries (by `def test_*` headers):**
+
+| New file | Tests (~) | Surface |
+|---|---|---|
+| `test_display_field_routes.py` | ~10 | Display-field CRUD (the original scope) |
+| `test_display_field_lazy_seeding.py` | ~3 | `reviewees_import_lazy_seeds_*`, `manual_assignments_import_lazy_seeds_pair_context_*` |
+| `test_display_field_locked_rows.py` | ~5 | locked-name / locked-email gate tests |
+| `test_display_field_state_machine.py` | ~6 | `state_machine_*` editing-param render tests |
+| `test_response_field_bulk_save.py` | ~10 | `bulk_save_*` tests (live here today by accident) |
+| `test_response_type_card.py` | ~6 | RTD card render tests + `rtd_*_route_*` tests |
+
+**Approach.** Pure file-level relocation — no fixture changes, no
+test changes. 1 PR with 6 commits, or 6 small PRs.
+
+**Risks.** Lowest risk + lowest architectural value. Recommend
+doing this **after** §12.A so the test split aligns with the new
+service boundaries it tests.
+
+### 12.E — Recommendation
+
+| Goal | Pick |
+|---|---|
+| Pay down the biggest architectural debt | **§12.A — instruments service** |
+| Largest LOC reduction with lowest risk | **§12.B — views.py** |
+| Quick wins between bigger refactors | **§12.C — hygiene bundle** |
+| Test-suite legibility (best after A) | **§12.D — test files** |
+
+**Recommended order:** §12.A first (highest value), then §12.B
+(largest mechanical win), interleaved with §12.C1 + §12.C2 (free
+wins that don't conflict). Defer §12.C3 and §12.D until §12.A
+lands so callsite migrations and test-file boundaries align with
+the new service boundaries.
+
+If only one ladder gets authored: **§12.A**. It's the only target
+where the size pain is also a coupling pain — splitting it earns
+both a smaller file and clearer boundaries between RTDs / display
+fields / response fields / instrument CRUD.
+
+### 12.F — Verification (applies to every plan in §12)
+
+- `pytest -q` green on SQLite + `ci-postgres` (currently 1007
+  tests).
+- `ruff check .` green.
+- Source-range citations in each slice PR description so reviewers
+  can diff "before" against the pre-refactor file (the same pattern
+  the §6 ladder used).
+- Strict-mode audit-event gate
+  (`tests/unit/test_audit_detail_schema.py`) catches any accidental
+  envelope drift in §12.A's slice PRs.
+- For §12.B, add a smoke test on `GET /operator/sessions/{id}` to
+  the package-conversion PR (catches re-export wall regressions on
+  the most-imported builders), mirroring the
+  `routes_operator/_shared.py::_templates` template-path hop
+  smoke test in §6 PR 0.
