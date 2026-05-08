@@ -16,7 +16,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from . import _legacy
+from . import _legacy, _lobby
 
 router = APIRouter(prefix="/operator", tags=["operator"])
+router.include_router(_lobby.router)
 router.include_router(_legacy.router)
