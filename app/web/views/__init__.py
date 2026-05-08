@@ -30,6 +30,11 @@ from this package; templates do not.
 
 from __future__ import annotations
 
+# Responses page rows (sliced in PR 1).
+from ._responses import ResponsesRow, build_responses_rows
+
+# Everything else still in the legacy container; carved out by
+# PRs 2-10.
 from ._legacy import (
     EMAIL_PREVIEW_TABS,
     INVITATIONS_STATUS_OPTIONS,
@@ -53,7 +58,6 @@ from ._legacy import (
     QuickSetupContext,
     QuickSetupRuleSetOption,
     QuickSetupSlot,
-    ResponsesRow,
     RuleBasedCardContext,
     RuleBasedLastGenerated,
     RuleBasedSelectorOption,
@@ -74,7 +78,6 @@ from ._legacy import (
     build_new_session_quick_setup_context,
     build_preview_picker_context,
     build_quick_setup_context,
-    build_responses_rows,
     build_rule_based_card_context,
     build_rule_builder_context,
     build_setup_rows,
