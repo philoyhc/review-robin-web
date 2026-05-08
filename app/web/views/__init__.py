@@ -43,14 +43,23 @@ from ._extract_data import (
 # Manage Invitations page rows (sliced in PR 3).
 from ._invitations import InvitationsRow, build_invitations_rows
 
+# Filter / search helpers shared by Invitations + Responses
+# (sliced in PR 4).
+from ._filters import (
+    INVITATIONS_STATUS_OPTIONS,
+    RESPONSES_STATUS_OPTIONS,
+    filter_invitations_rows,
+    filter_responses_rows,
+    invitations_search_options,
+    responses_search_options,
+)
+
 # Everything else still in the legacy container; carved out by
-# PRs 4-10.
+# PRs 5-10.
 from ._legacy import (
     EMAIL_PREVIEW_TABS,
-    INVITATIONS_STATUS_OPTIONS,
     PREVIEW_INVITE_URL_PLACEHOLDER,
     PREVIEW_PICKER_REVIEWEE_PEEK_COUNT,
-    RESPONSES_STATUS_OPTIONS,
     RULE_BUILDER_BLANK_SENTINEL_ID,
     RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION,
     AvailableRuleSetEntry,
@@ -90,15 +99,11 @@ from ._legacy import (
     build_validate_context,
     constraint_summary_for_field,
     email_preview_from_display,
-    filter_invitations_rows,
-    filter_responses_rows,
     instrument_heading,
-    invitations_search_options,
     merge_tags_for_template,
     page_button_label,
     placeholder_for_field,
     resolve_email_preview_tab,
-    responses_search_options,
     session_status_pills,
     validate_lifecycle_copy,
 )
