@@ -251,10 +251,10 @@ def test_setupinvite_renders(client: TestClient, db: Session) -> None:
     body = response.text
     # Page title lives in the active nav tab, not a separate <h1>.
     assert ">Email Template<" in body
-    # Two-card editor layout (Segment 11E PR 2): composer on the
-    # left, merge tags + actions on the right.
+    # Two-card editor layout: composer (with Cancel / Save action
+    # row anchored bottom-left) on the left, merge tags on the right.
     assert 'id="email-composer"' in body
-    assert 'id="merge-tags-and-actions"' in body
+    assert 'id="merge-tags"' in body
     # Active template defaults to Invitation; the Save button wires
     # to the form via the form="..." attribute pattern.
     assert "Invitation email" in body

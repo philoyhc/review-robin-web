@@ -123,9 +123,22 @@
           </form>
         {% endif %}
       {% endfor %}
+
+      {# Cancel / Save row, anchored to the bottom-left of the
+         email-composer card. The Save button submits the composer
+         form via the HTML5 ``form="..."`` attribute, so the action
+         row can sit visually outside the form's HTML scope while
+         still posting it. Cancel is an anchor back to Session Home. #}
+      <div class="setupinvite-actions"
+           style="display: flex; justify-content: flex-start; gap: 16px; margin-top: 20px;">
+        <a class="btn secondary"
+           href="/operator/sessions/{{ session.id }}">Cancel</a>
+        <button class="btn" type="submit" form="setupinvite-form"
+                id="setupinvite-save-button" disabled>Save</button>
+      </div>
     </div>
 
-    <div class="card merge-tags" id="merge-tags-and-actions">
+    <div class="card merge-tags" id="merge-tags">
       <h2>Merge tags</h2>
       <p class="muted">
         Use these placeholders in the subject or body; they're substituted at send time.
@@ -137,14 +150,6 @@
           </li>
         {% endfor %}
       </ul>
-
-      <div class="setupinvite-actions"
-           style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px;">
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}">Cancel</a>
-        <button class="btn" type="submit" form="setupinvite-form"
-                id="setupinvite-save-button" disabled>Save</button>
-      </div>
     </div>
   </div>
 
