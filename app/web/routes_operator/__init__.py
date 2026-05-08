@@ -20,6 +20,7 @@ from . import (
     _assignments,
     _legacy,
     _lobby,
+    _quick_setup,
     _session_home,
     _settings,
     _setup_invite,
@@ -30,6 +31,7 @@ router = APIRouter(prefix="/operator", tags=["operator"])
 router.include_router(_lobby.router)
 router.include_router(_settings.router)
 router.include_router(_session_home.router)
+router.include_router(_quick_setup.router)
 router.include_router(_setup_rosters.router)
 router.include_router(_setup_invite.router)
 router.include_router(_assignments.router)
