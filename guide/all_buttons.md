@@ -40,6 +40,8 @@ shorthand:
 | **Primary (CTA)** | Layout variant of Primary — large, centered. `.btn-cta`. |
 | **Nav (page-internal)** | Page-internal view switcher (e.g. Email Template tabs). Reuses the chrome's `.nav-tab` styling for visual consistency: active uses `<span class="nav-tab active" aria-current="page">`, siblings use `<a class="nav-tab">`, "coming soon" uses `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `.tab-strip`. (See `spec/ui_elements.md` §6.) |
 | **Inline text-button (`.btn-reset`)** | Single-line link-styled button used to revert a single field inside an editor without cancelling and exiting. (See `spec/ui_elements.md` §6.) |
+| **Return-to (`.back-link`)** | Top-of-body inline link to "wherever you came from" (`return_to_url` round-trip). Used by chrome-detour pages (Operator Settings, About) and session-level child pages (Rule Builder). (See `spec/ui_elements.md` §6.) |
+| **Chrome utility link** | Top-right chrome anchors — Sign-out (`signout`), Settings / About (`chrome-link`). Defined in `spec/visual_style_rrw.md`, not in `.btn` family. |
 | **Chrome nav** | The two-row session top-nav tabs (`.nav-tab`). Lives in `spec/visual_style_rrw.md` "Operator session chrome", not in the `.btn` family. |
 | **Disabled** | Visual variant of any role — opacity 0.5, `cursor: not-allowed`, `aria-disabled="true"`. |
 | **Inline link** | `<a>` rendered without a `.btn` class; reads as a hyperlink, not a button. |
@@ -347,10 +349,47 @@ This audit captures the canonical button shapes.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 95 | Rule Builder header | ← Back to Assignments | `<a>` | (no `.btn` class — plain anchor) | Inline link | The page lacks a chrome top-nav |
+| 95 | Rule Builder header | ← Back to Assignments | `<a>` | `back-link` | Return-to (`.back-link`) | Top-of-body navigation; same class as Operator Settings / About |
 | 96 | Rule Builder action row | Copy | `<button type="submit">` | `btn secondary` | Secondary | Forks the selected ruleset into a new Personal draft |
 | 97 | Rule Builder action row | Save | `<button type="submit">` | `btn secondary` | Secondary | Persists the in-progress draft |
 | 98 | Rule Builder action row | Delete | `<button type="submit">` | `btn destructive` | Destructive | Soft-deletes the selected Personal ruleset |
+
+---
+
+## Section 17 — Global chrome utility menu (every page)
+
+Source: `app/web/templates/base.html` (chrome top-right). Renders
+on every page (operator + reviewer); only the operator view is
+enumerated here.
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 99 | Chrome user menu | Settings | `<a>` | `chrome-link` | Chrome utility link | Round-trips via `?return_to=<path>` |
+| 100 | Chrome user menu | About | `<a>` | `chrome-link` | Chrome utility link | Same `?return_to=<path>` pattern |
+| 101 | Chrome user menu | Sign out | `<a>` | `signout` | Chrome utility link | Hits `/.auth/logout` (Easy Auth) |
+
+---
+
+## Section 18 — About page (`/about`)
+
+Source: `app/web/templates/about.html`. Read-only chrome-detour
+page; the only interactive control is the back-link.
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 102 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns operator to wherever they came from |
+
+---
+
+## Section 15 supplement — Operator Settings back-link
+
+Operator Settings also renders a top-of-body back-link that the
+original audit missed. Listed here with a continuing number; the
+canonical home is the `.back-link` row in `spec/ui_elements.md` §6.
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 103 | Page top (above the SMTP form card) | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | |
 
 ---
 
@@ -359,38 +398,35 @@ This audit captures the canonical button shapes.
 Status of the rough edges the original audit surfaced (now post the
 first follow-up sweep):
 
-### 1. Session-level child-page navigation pattern (open / proposing)
+### 1. "Return to where you came from" affordance (resolved + class adopted)
 
-Two sub-pages today qualify as "session-level child page" (i.e.
-hung off Session Home but not part of the chrome top-nav rows):
+Several pages share a "go back to the page you came from"
+pattern:
 
-- **Edit Session** (`session_edit.html`) — button #16 `Save changes`
-  + #17 `Cancel`. The Cancel anchor returns to Session Home. Reads
-  as a classic "form editor" pattern.
-- **Rule Builder** (`session_rule_builder.html`) — button #95
-  `← Back to Assignments` (plain anchor) + Save / Copy / Delete
-  inside the working card. There's no Cancel because the page is
-  a stateful editor, not a one-shot form.
+- **Chrome-detour pages** — Operator Settings (#103), About
+  (#102). Both surfaced from the chrome top-right utility menu
+  (#99 / #100), round-trip via `?return_to=<path>`.
+- **Session-level child pages** — Rule Builder (#95). Off the
+  Assignments page, no chrome of its own.
 
-Two patterns, both awkward. The Edit Session Cancel disguises a
-"navigate up" as a form action; the Rule Builder back-link rolls
-its own affordance because Cancel doesn't fit the stateful editor.
+These pages now use the canonical **`.back-link`** class — a
+small inline link rendered as
+`<a class="back-link" href="{{ return_to_url }}">← Back to
+{{ return_to_label }}</a>` at the top of the body, above the
+working cards. Documented in `spec/ui_elements.md` §6.
 
-**Proposed unifying pattern (not yet adopted — design call):**
-every session-level child page renders a top-of-body
-`← Back to <parent>` link styled as an inline link (or a
-`.btn-back` if a class is warranted), placed where the
-breadcrumb/back affordance lives in the chrome. The page's
-working card carries Save / Cancel / Delete / etc. as
-**actions on the working state**, not as navigation. Cancel
-discards uncommitted edits; the back link navigates regardless
-of edit state. Edit Session would lose its Cancel anchor in
-favour of a back link plus an inline Cancel that reverts the
-form (or, if the form has no working state to discard, drops
-the Cancel entirely).
+The Rule Builder previously rolled its own plain `<a>` anchor
+inside a card; this PR moves it to `.back-link`, putting it in
+visual line with Operator Settings and About.
 
-This proposal is captured here pending a design pass; the back-
-link wiring on Rule Builder stays as-is until then.
+**Edit Session (`session_edit.html`)** is a remaining outlier —
+it carries a `Cancel` anchor (#17) instead of a back-link. The
+Cancel and a back-link would do roughly the same thing today
+(both navigate to Session Home), but the form-editor pattern
+reads coherently as Save+Cancel. Migrating to a back-link would
+either drop Cancel entirely or change Cancel's semantics to
+"revert the form in place"; either is a design call deferred to
+a follow-up.
 
 ### 2. Send → Primary, generate → Secondary (resolved)
 
@@ -428,9 +464,15 @@ email-preview tabs #76/#77/#78) now reuse the chrome's
 `.nav-tab` styling. Active tab is `<span class="nav-tab active"
 aria-current="page">`; siblings are `<a class="nav-tab">`;
 "coming soon" tabs are `<span class="nav-tab disabled"
-aria-disabled="true">`. The `.tab-strip` flex wrapper is the
-same one the chrome uses. `spec/ui_elements.md` §6 "Nav button"
-documents the convention.
+aria-disabled="true">`.
+
+Wrapper is `<div class="tab-strip tab-strip-page">` — the new
+`.tab-strip-page` modifier (in `base.html`) gives the row the
+chrome's grey row tint (`#f3f4f6`), a thin `#d1d5db` border, and
+rounded corners so the active tab's white background reads
+against the strip just like the chrome's Setup row. Hover and
+disabled treatments fall out of the existing `.nav-tab` rules.
+`spec/ui_elements.md` §6 "Nav button" documents the convention.
 
 ### 5. Inline-styled "Reset to default" promoted to `.btn-reset` (resolved)
 

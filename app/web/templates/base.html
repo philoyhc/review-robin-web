@@ -487,6 +487,21 @@
       }
       .tab-strip-setup { background: #f3f4f6; grid-column: 3; grid-row: 1; }
       .tab-strip-ops   { background: #f0fdf4; grid-column: 3; grid-row: 2; }
+      /* Page-internal nav-tab strip — same `.nav-tab` children as the
+         chrome but framed for page body usage: light grey row tint
+         (matches the Setup-row tint from `.tab-strip-setup`), thin
+         border, rounded corners. Active tab reads white-on-grey,
+         hover lightens to white. Used by the Email Template selector
+         and the Previews-page email-tab strip. */
+      .tab-strip-page {
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .tab-strip-page .nav-tab.active::after {
+        background: var(--neutral-marker, #9ca3af);
+      }
       .row-label.setup-row { grid-column: 2; grid-row: 1; }
       .row-label.ops-row   { grid-column: 2; grid-row: 2; }
       /* Setup row gets a bottom border to separate from Ops row. */

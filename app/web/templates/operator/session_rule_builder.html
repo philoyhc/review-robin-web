@@ -11,11 +11,10 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
+  <a class="back-link" href="/operator/sessions/{{ session.id }}/assignments">← Back to Assignments</a>
+
   <div class="card">
     <h1 style="margin-top: 0;">Rule Builder</h1>
-    <p>
-      <a href="/operator/sessions/{{ session.id }}/assignments">← Back to Assignments</a>
-    </p>
   </div>
 
   <div id="rule-builder-page-grid"

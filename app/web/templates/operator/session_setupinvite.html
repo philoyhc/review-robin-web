@@ -18,7 +18,7 @@
      and renders as a non-anchor element. ``replace`` strips the
      underscore from "responses_received" so the button reads
      "Responses received" rather than the raw key. #}
-  <div class="tab-strip" style="margin-bottom: 16px;">
+  <div class="tab-strip tab-strip-page" style="margin-bottom: 16px;">
     {% for t in valid_templates %}
       {% set label = (t|replace("_", " "))|capitalize %}
       {% if t == active_template %}
