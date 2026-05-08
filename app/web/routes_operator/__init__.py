@@ -2,17 +2,14 @@ from __future__ import annotations
 
 import secrets
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db.models import (
     Instrument,
     Invitation,
@@ -36,7 +33,7 @@ from app.services import (
     sessions,
     validation,
 )
-from app.services import lifecycle_display, session_lifecycle as lifecycle
+from app.services import session_lifecycle as lifecycle
 from app.services._secrets import MissingEncryptionKey
 from app.web.return_to import resolve_return_to
 from app.web import breadcrumbs, views
@@ -45,20 +42,16 @@ from app.web.deps import (
     request_correlation_id,
     require_session_operator,
 )
+from ._shared import (
+    _lifecycle_error_response,
+    _quick_setup_cookie_name,
+    _quick_setup_unlocked,
+    _require_editable,
+    _require_response_loss_ack,
+    _templates,
+)
 
 router = APIRouter(prefix="/operator", tags=["operator"])
-
-_templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
-_templates.env.globals["app_version"] = settings.app_version
-_templates.env.globals["display_field_label"] = (
-    instruments_service.display_field_label
-)
-_templates.env.globals["is_locked_display_source"] = (
-    instruments_service.is_locked_display_source
-)
-_templates.env.filters["lifecycle_label"] = (
-    lifecycle_display.lifecycle_display_label
-)
 
 
 @router.get("/sessions", response_class=HTMLResponse)
@@ -686,23 +679,6 @@ async def _handle_import(
 #
 # Slot 3 (Assignments) and slot 4 (Settings) ship in PR B / Segment
 # 12A respectively and are not yet wired here.
-
-
-_QUICK_SETUP_COOKIE_PREFIX = "qsu"
-
-
-def _quick_setup_cookie_name(session_id: int) -> str:
-    return f"{_QUICK_SETUP_COOKIE_PREFIX}_{session_id}"
-
-
-def _quick_setup_unlocked(request: Request, review_session: ReviewSession) -> bool:
-    """``True`` when the operator's last lock-toggle action was Unlock.
-
-    Read from the per-session cookie set by
-    ``POST /sessions/{id}/quick-setup/lock``. Absent ⇒ default locked.
-    """
-
-    return request.cookies.get(_quick_setup_cookie_name(review_session.id)) == "1"
 
 
 @router.post(
@@ -2379,33 +2355,6 @@ def assignments_delete_all(
 # --------------------------------------------------------------------------- #
 
 
-def _require_editable(review_session: ReviewSession) -> None:
-    """Reject mutating operator actions while session is not draft/validated."""
-    if not lifecycle.is_editable(review_session):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Session is {review_session.status}; revert to draft to edit"
-            ),
-        )
-
-
-def _require_response_loss_ack(
-    db: Session, review_session: ReviewSession, ack: str | None
-) -> None:
-    """When responses exist, require explicit acknowledge_response_loss=true."""
-    if not lifecycle.session_has_responses(db, review_session):
-        return
-    if ack != "true":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Existing reviewer responses will be discarded; tick "
-                "'acknowledge response loss' to proceed"
-            ),
-        )
-
-
 def _require_instrument_in_session(
     instrument_id: int,
     review_session: ReviewSession = Depends(require_session_operator),
@@ -2420,23 +2369,6 @@ def _require_instrument_in_session(
     if instrument is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return instrument, review_session
-
-
-def _lifecycle_error_response(exc: lifecycle.LifecycleError) -> HTTPException:
-    code_to_status = {
-        "not_draft": status.HTTP_409_CONFLICT,
-        "not_ready": status.HTTP_409_CONFLICT,
-        "session_not_ready": status.HTTP_409_CONFLICT,
-        "deadline_passed": status.HTTP_409_CONFLICT,
-        "locked": status.HTTP_409_CONFLICT,
-        "has_errors": status.HTTP_400_BAD_REQUEST,
-        "needs_acknowledge": status.HTTP_400_BAD_REQUEST,
-        "needs_confirm": status.HTTP_400_BAD_REQUEST,
-    }
-    return HTTPException(
-        status_code=code_to_status.get(exc.code, status.HTTP_400_BAD_REQUEST),
-        detail=str(exc),
-    )
 
 
 # --------------------------------------------------------------------------- #
