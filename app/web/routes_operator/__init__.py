@@ -21,6 +21,7 @@ from . import (
     _legacy,
     _lobby,
     _quick_setup,
+    _rule_builder,
     _session_home,
     _settings,
     _setup_invite,
@@ -35,4 +36,5 @@ router.include_router(_quick_setup.router)
 router.include_router(_setup_rosters.router)
 router.include_router(_setup_invite.router)
 router.include_router(_assignments.router)
+router.include_router(_rule_builder.router)
 router.include_router(_legacy.router)
