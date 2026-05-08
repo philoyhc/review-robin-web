@@ -523,13 +523,24 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     assert ">bench-a</td>" in body
     assert ">note-3</td>" in body
 
-    # Toggle initial state — only the slots that have data are ticked.
+    # Toggle initial state — only the slots that have data are ticked,
+    # and slots without data render disabled with a tooltip.
     assert 'data-col-toggle="rt1"\n                       checked' in body
     assert 'data-col-toggle="et2"\n                       checked' in body
     assert 'data-col-toggle="p1"\n                       checked' in body
     assert 'data-col-toggle="a3"\n                       checked' in body
     assert 'data-col-toggle="rt2"\n                       checked' not in body
     assert 'data-col-toggle="p3"\n                       checked' not in body
+    assert (
+        'data-col-toggle="rt2"\n                       '
+        'disabled aria-disabled="true" title="No data in this column"'
+    ) in body
+    assert (
+        'data-col-toggle="p3"\n                       '
+        'disabled aria-disabled="true" title="No data in this column"'
+    ) in body
+    # Ticked toggles are NOT disabled.
+    assert 'data-col-toggle="rt1"\n                       disabled' not in body
 
 
 def test_manual_setup_page_shows_saved_pair_after_import(

@@ -606,10 +606,18 @@ def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
     assert "<th>Tags</th>" not in body
 
     # Toggle row above the table — Tag1 / Tag2 ticked (have data),
-    # Tag3 unticked (no data anywhere).
+    # Tag3 disabled because the column has no data anywhere.
     assert 'data-tag-toggle="1"\n                 checked' in body
     assert 'data-tag-toggle="2"\n                 checked' in body
     assert 'data-tag-toggle="3"\n                 checked' not in body
+    assert (
+        'data-tag-toggle="3"\n                 disabled aria-disabled="true" '
+        'title="No data in this column"'
+    ) in body
+    # Tag1 / Tag2 are NOT disabled (they have data).
+    assert (
+        'data-tag-toggle="1"\n                 disabled' not in body
+    )
 
     # Tag values render in their own cells (no "1: " prefix).
     assert "1: senior" not in body
