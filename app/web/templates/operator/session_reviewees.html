@@ -108,22 +108,51 @@
 
   {% if reviewees %}
     {% set has_photo = reviewees | selectattr("profile_link") | list | length > 0 %}
-    {% set has_tags = reviewees | selectattr("tag_1") | list | length > 0
-                    or reviewees | selectattr("tag_2") | list | length > 0
-                    or reviewees | selectattr("tag_3") | list | length > 0 %}
+    {% set has_tag_1 = reviewees | selectattr("tag_1") | list | length > 0 %}
+    {% set has_tag_2 = reviewees | selectattr("tag_2") | list | length > 0 %}
+    {% set has_tag_3 = reviewees | selectattr("tag_3") | list | length > 0 %}
     <div class="card">
-      <table>
+      <div class="tag-col-toggles"
+           style="display: flex; justify-content: flex-end; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2);">
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 class="tag-col-toggle"
+                 data-tag-toggle="1"
+                 {% if has_tag_1 %}checked{% endif %}>
+          Tag1
+        </label>
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 class="tag-col-toggle"
+                 data-tag-toggle="2"
+                 {% if has_tag_2 %}checked{% endif %}>
+          Tag2
+        </label>
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 class="tag-col-toggle"
+                 data-tag-toggle="3"
+                 {% if has_tag_3 %}checked{% endif %}>
+          Tag3
+        </label>
+      </div>
+      <table id="reviewees-table">
         <tr>
           <th>Name</th>
           <th>Email / Identifier</th>
+          <th class="tag-col tag-col-1">Tag1</th>
+          <th class="tag-col tag-col-2">Tag2</th>
+          <th class="tag-col tag-col-3">Tag3</th>
           <th>Status</th>
           {% if has_photo %}<th>Photo</th>{% endif %}
-          {% if has_tags %}<th>Tags</th>{% endif %}
         </tr>
         {% for reviewee in reviewees %}
           <tr id="reviewee-row-{{ reviewee.id }}">
             <td>{{ reviewee.name }}</td>
             <td><code>{{ reviewee.email_or_identifier }}</code></td>
+            <td class="tag-col tag-col-1">{{ reviewee.tag_1 or "" }}</td>
+            <td class="tag-col tag-col-2">{{ reviewee.tag_2 or "" }}</td>
+            <td class="tag-col tag-col-3">{{ reviewee.tag_3 or "" }}</td>
             <td>{{ reviewee.status }}</td>
             {% if has_photo %}
               <td>
@@ -132,16 +161,51 @@
                 {% endif %}
               </td>
             {% endif %}
-            {% if has_tags %}
-              <td>
-                {% if reviewee.tag_1 %}1: {{ reviewee.tag_1 }}<br>{% endif %}
-                {% if reviewee.tag_2 %}2: {{ reviewee.tag_2 }}<br>{% endif %}
-                {% if reviewee.tag_3 %}3: {{ reviewee.tag_3 }}{% endif %}
-              </td>
-            {% endif %}
           </tr>
         {% endfor %}
       </table>
     </div>
+    <style>
+      #reviewees-table.tag-hidden-1 .tag-col-1,
+      #reviewees-table.tag-hidden-2 .tag-col-2,
+      #reviewees-table.tag-hidden-3 .tag-col-3 {
+        display: none;
+      }
+    </style>
+    <script>
+      (function () {
+        var STORAGE_KEY = "rrw-reviewee-tag-visibility";
+        var table = document.getElementById("reviewees-table");
+        var toggles = document.querySelectorAll(".tag-col-toggle");
+        if (!table || !toggles.length) return;
+        var stored = null;
+        try {
+          stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
+        } catch (e) {}
+        toggles.forEach(function (cb) {
+          var slot = cb.getAttribute("data-tag-toggle");
+          if (stored && Object.prototype.hasOwnProperty.call(stored, slot)) {
+            cb.checked = !!stored[slot];
+          }
+          apply(slot, cb.checked);
+          cb.addEventListener("change", function () {
+            apply(slot, cb.checked);
+            persist();
+          });
+        });
+        function apply(slot, visible) {
+          table.classList.toggle("tag-hidden-" + slot, !visible);
+        }
+        function persist() {
+          var state = {};
+          toggles.forEach(function (cb) {
+            state[cb.getAttribute("data-tag-toggle")] = cb.checked;
+          });
+          try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          } catch (e) {}
+        }
+      })();
+    </script>
   {% endif %}
 {% endblock %}
