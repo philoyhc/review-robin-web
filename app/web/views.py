@@ -2222,6 +2222,13 @@ class RuleBasedSelectorOption:
     description: str
     exclude_self_reviews: bool
     is_seed: bool
+    eligible_pair_count: int = 0
+    """Pairs the engine produces when this RuleSet is evaluated
+    against the current reviewer / reviewee populations. Surfaces
+    in the card as a "Number of eligible pairs found: {n}" pill so
+    the operator can see the dry-run count before clicking
+    Generate. Zero when populations are empty or the engine bails
+    on the schema."""
 
 
 @dataclass(frozen=True)
@@ -2260,6 +2267,7 @@ class RuleBasedCardContext:
     selected_option_id: int | None
     selected_description: str
     selected_exclude_self_reviews: bool
+    selected_eligible_pair_count: int
     needs_confirm_replace: bool
     error_kind: str | None
     last_generated: RuleBasedLastGenerated | None
@@ -2281,17 +2289,64 @@ def build_rule_based_card_context(
     """
 
     from app.db.models import AuditEvent
-    from app.services.rules import library
+    from app.schemas.rules import (
+        Combinator,
+        RuleSetOptions,
+        RuleSetSchema,
+    )
+    from app.services import assignments as assignments_service
+    from app.services.rules import engine, library
+
+    from pydantic import TypeAdapter
+
+    rule_adapter = TypeAdapter(__import__(
+        "app.schemas.rules", fromlist=["Rule"]
+    ).Rule)
 
     options: list[RuleBasedSelectorOption] = []
     selected_option_id: int | None = None
     if user is not None:
+        # Load populations once so each option's engine.evaluate call
+        # iterates the same in-memory lists rather than re-querying.
+        reviewers = assignments_service.list_reviewers(db, review_session.id)
+        reviewees = assignments_service.list_reviewees(db, review_session.id)
+
         rule_sets = library.list_visible_rule_sets(db, user=user)
         for rs in rule_sets:
             revision = rs.current_revision
             exclude_self = (
                 revision.exclude_self_reviews if revision is not None else True
             )
+            eligible_pair_count = 0
+            if revision is not None:
+                try:
+                    rule_set_schema = RuleSetSchema(
+                        id=rs.id,
+                        name=rs.name,
+                        description=rs.description or "",
+                        scope=rs.scope,  # type: ignore[arg-type]
+                        combinator=Combinator(revision.combinator),
+                        rules=[
+                            rule_adapter.validate_python(payload)
+                            for payload in revision.rules_json
+                        ],
+                        options=RuleSetOptions(
+                            excludeSelfReviews=revision.exclude_self_reviews,
+                            seed=revision.seed,
+                        ),
+                    )
+                    result = engine.evaluate(
+                        rule_set_schema,
+                        reviewers=reviewers,
+                        reviewees=reviewees,
+                        revision_seed=revision.id,
+                    )
+                    eligible_pair_count = len(result.pairs)
+                except Exception:
+                    # Swallow — a malformed schema shouldn't crash the
+                    # card; surface 0 so the operator sees the option
+                    # produces no pairs and can fix the ruleset.
+                    eligible_pair_count = 0
             options.append(
                 RuleBasedSelectorOption(
                     id=rs.id,
@@ -2299,6 +2354,7 @@ def build_rule_based_card_context(
                     description=rs.description or "",
                     exclude_self_reviews=exclude_self,
                     is_seed=rs.is_seed,
+                    eligible_pair_count=eligible_pair_count,
                 )
             )
         # Default selection: the first seed in install order (Full
@@ -2319,10 +2375,12 @@ def build_rule_based_card_context(
     # render and only populated after a JS-driven change event.
     selected_description = ""
     selected_exclude_self_reviews = True
+    selected_eligible_pair_count = 0
     for option in options:
         if option.id == selected_option_id:
             selected_description = option.description
             selected_exclude_self_reviews = option.exclude_self_reviews
+            selected_eligible_pair_count = option.eligible_pair_count
             break
 
     last_generated: RuleBasedLastGenerated | None = None
@@ -2387,6 +2445,7 @@ def build_rule_based_card_context(
         selected_option_id=selected_option_id,
         selected_description=selected_description,
         selected_exclude_self_reviews=selected_exclude_self_reviews,
+        selected_eligible_pair_count=selected_eligible_pair_count,
         needs_confirm_replace=assignment_count > 0,
         error_kind=error_kind,
         last_generated=last_generated,

@@ -318,11 +318,13 @@ def test_assignments_page_shows_last_generated_with_ruleset_name(
     )
     # Intra-group across the seed population (two reviewers in
     # different tag1 groups, two reviewees likewise) yields exactly
-    # two intra-group pairs. Default-instrument fan-out keeps
-    # assignments == pairs on this single-instrument session.
-    assert (
-        '<span class="pill pill-info">2 unique pairs</span>' in rb_section
-    )
+    # two intra-group pairs. The "Last generated" line surfaces only
+    # the assignments count now — the redundant "{n} unique pairs"
+    # pill was retired alongside the new "Number of eligible pairs
+    # found: {n}" row above the Exclude self-review checkbox.
+    # Default-instrument fan-out keeps assignments == pairs on this
+    # single-instrument session.
+    assert "unique pair" not in rb_section
     assert (
         '<span class="pill pill-info">2 assignments</span>' in rb_section
     )
@@ -352,3 +354,40 @@ def test_assignments_page_renders_description_on_first_load(
     desc_html = rb_section.split('id="rule-based-description"', 1)[1]
     desc_html = desc_html.split("</p>", 1)[0]
     assert "Pair every reviewer with every reviewee" in desc_html
+
+
+def test_assignments_page_renders_eligible_pair_count(
+    client: TestClient, db: Session
+) -> None:
+    """The Rule Based card displays the engine's dry-run pair count
+    for the currently-selected RuleSet — sourced from
+    ``views.RuleBasedSelectorOption.eligible_pair_count`` and surfaced
+    as a ``#rule-based-eligible-count`` pill above the Exclude self-
+    review checkbox. Sample-population reviewers + reviewees are
+    seeded by ``_make_session``; the default selection (Full Matrix
+    seed) over those populations should produce a non-zero count.
+    Each option also carries the count as a ``data-eligible-pairs``
+    attribute so the inline JS can update the pill on dropdown
+    change without a page reload."""
+
+    review_session = _make_session(client, db, code="rb-eligible")
+    _seed_population(client, review_session)
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+
+    rb_section = body.split('id="rule-based-assignment"', 1)[1]
+    rb_section = rb_section.split("</section>", 1)[0]
+    assert "Number of eligible pairs found:" in rb_section
+    assert 'id="rule-based-eligible-count"' in rb_section
+    # data-eligible-pairs is on every option; assert presence and a
+    # non-zero default-selection count.
+    assert "data-eligible-pairs=" in rb_section
+    pill = rb_section.split('id="rule-based-eligible-count"', 1)[1]
+    pill = pill.split("</span>", 1)[0]
+    # Full Matrix over the seeded sample populations yields > 0
+    # candidate pairs. The exact number depends on _make_session's
+    # roster shape; an int >= 1 is the contract.
+    pill_value = pill.rsplit(">", 1)[-1].strip()
+    assert pill_value.isdigit()
+    assert int(pill_value) > 0
