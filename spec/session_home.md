@@ -286,9 +286,8 @@ State-conditional copy only — the card frame is constant:
 
 ## Placeholder cards
 
-Extract Data on Home and Rule Based Assignment on the Assignments
-page render via a single shared Jinja macro and a single
-canonical CSS class:
+Extract Data on Home renders via the shared placeholder Jinja
+macro and a single canonical CSS class:
 
 - **Macro:** `app/web/templates/operator/partials/_placeholder_card.html`,
   exporting `placeholder_card(id, title, description,
@@ -304,12 +303,20 @@ would desynchronise sibling placeholders. A future placeholder
 card on any page reuses the same macro without further design
 work.
 
-(Quick Setup graduated out of the placeholder pattern in Segment
-11H — it now ships as a full four-slot card via the dedicated
-`_quick_setup_card.html` partial, with Reviewers / Reviewees /
-Assignments wired live in Segment 11J and Session settings still
-inert pending Segment 12A PR 6. Extract Data graduates the same
-way when 12A's PRs 3-6 wire its rows.)
+Cards that have graduated out of the placeholder pattern:
+
+- **Quick Setup** graduated in Segment 11H — now ships as a full
+  four-slot card via the dedicated `_quick_setup_card.html`
+  partial, with Reviewers / Reviewees / Assignments wired live in
+  Segment 11J and Session settings still inert pending Segment
+  12A PR 6.
+- **Rule Based Assignment** (on the Assignments page, not Home)
+  graduated across Segments 13A → 13A-1 — now ships as a wired
+  card via `_rule_based_card.html` with a live RuleSet dropdown
+  and a Generate submit. See `spec/rule_based_assignment.md`.
+
+Extract Data graduates the same way when Segment 12A PRs 3-6 wire
+its rows.
 
 ## Lifecycle behavior summary
 
