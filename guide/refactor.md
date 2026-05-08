@@ -2,7 +2,7 @@
 
 **Project:** Review Robin Web
 **Status:** Stub — not yet started
-**Sizing:** ~1 prep PR + ~10 mechanical slice PRs
+**Sizing:** 1 package-conversion PR + 10 mechanical slice PRs
 
 ---
 
@@ -45,52 +45,129 @@ than fattening the monolith further.
 Convert `app/web/routes_operator.py` into a package
 (`app/web/routes_operator/__init__.py`) that re-exports a single
 assembled `router`. App registration in `app/main.py` does not
-change. Each sub-module owns its own `APIRouter()` instance with
-the appropriate path prefix; `__init__.py` includes them all into
-the top-level router so the public import surface
-(`from app.web.routes_operator import router`) is preserved.
+change. The public import surface
+(`from app.web.routes_operator import router`) is preserved —
+this is the only external import site (verified: only `app/main.py`
+imports the symbol; no test imports any internal symbol).
 
 Slices are organised by feature area, matching the operator
 chrome's tab structure (Setup / Operations / Settings) plus the
 session-lifecycle and lobby boundaries that already exist
 implicitly in the file.
 
+### Sub-module pattern (pin once, reuse in every slice)
+
+Each sub-module under `app/web/routes_operator/` declares an
+unprefixed router:
+
+```python
+router = APIRouter()
+```
+
+and writes full paths starting with `/sessions/{session_id}/...`
+(or `/sessions`, `/settings`, etc.). The package
+`__init__.py` owns the operator-wide prefix and mounts every
+sub-module:
+
+```python
+router = APIRouter(prefix="/operator", tags=["operator"])
+router.include_router(_settings.router)
+router.include_router(_lobby.router)
+# …one line per sub-module
+```
+
+This avoids per-area prefix decisions in each slice PR and keeps
+the cross-area URL families that already exist (Assignments and
+Rule Builder both live under `/sessions/{id}/assignments/...`)
+working without any router gymnastics.
+
+### Shared `Jinja2Templates` instance
+
+Lines 51–61 of today's file instantiate one `Jinja2Templates`
+and register three operator-only Jinja entries
+(`display_field_label`, `is_locked_display_source`,
+`lifecycle_label`). After the split, every sub-module needs the
+same configured instance. Put the single `_templates` in the new
+`_shared.py` and import it from each sub-module — one
+registration point, zero risk of drift across 10 files. (The peer
+modules `routes_about.py` / `routes_auth.py` / `routes_reviewer.py`
+each build their own `Jinja2Templates`, but they don't share
+custom globals the way operator does, so the duplication
+wouldn't cost anything there.)
+
 ## 4. PR ladder
 
 PRs land in this order; smallest and most self-contained first to
 de-risk the package conversion before tackling the heaviest slices.
 
-1. **Prep PR — extract shared helpers.** Move the cross-area
-   helpers (the lifecycle / editability gates, the response-loss
-   acknowledgement gate, the instrument-membership check, the
-   lifecycle-error response shaper, and the quick-setup cookie
-   helpers) into a new sibling module. Pure relocation. Unblocks
-   every later split.
+1. **Package conversion + shared-helpers PR.** Turn
+   `routes_operator.py` into a package directory
+   (`app/web/routes_operator/__init__.py`) and lift the genuinely
+   cross-area helpers into a new `_shared.py` inside the package.
+   Both moves are pure mechanical relocation; landing them
+   together avoids one cycle of import-path churn and removes the
+   "what does sibling mean now?" naming question. Existing route
+   registration in `app/main.py` stays identical.
 
-2. **Package conversion PR.** Turn `routes_operator.py` into a
-   package directory; the original file becomes
-   `__init__.py` and gets thinned down as later PRs lift slices
-   out. Existing route registration in `app/main.py` stays
-   identical.
+   Cross-area helpers to lift into `_shared.py`:
+   - `_require_editable` — used by ~9 of the 10 slices.
+   - `_require_response_loss_ack` — used by ~9 of the 10 slices.
+   - `_lifecycle_error_response` — Session Home + Instruments.
+   - `_quick_setup_cookie_name` + `_quick_setup_unlocked` —
+     Quick Setup *and* Session Home (the latter reads
+     `_quick_setup_unlocked` while building the Quick Setup card
+     context at line 450 of today's file).
+   - `_QUICK_SETUP_COOKIE_PREFIX` — the constant the cookie
+     helpers reference.
+   - The shared `_templates = Jinja2Templates(...)` and its
+     globals/filter registration.
 
-3. **Slice PRs**, in this order. Each is a single feature area
-   moving to its own file under the new package; smallest first.
+   Helpers that are NOT cross-area and stay with their slice:
+   - `_require_instrument_in_session` — every callsite is inside
+     instrument routes; travels with the Instruments slice.
+   - `_require_ready` / `_require_invitation_in_session` — used
+     only inside Operations routes; travel with the Operations
+     slice.
+   - `_require_rtd_in_session`, `_can_edit_instrument`,
+     `_require_instrument_editable`, `_instruments_redirect`,
+     `_build_field_rows`, `_parse_optional_float`,
+     `_rtd_redirect_with_error` — instruments-only.
+   - `_settings_redirect_url` — settings-only.
+   - `_resolve_save_as_name`, `_name_taken_by_other` —
+     Rule Builder only.
+   - `_render_assignments_hub` — Assignments slice only.
+   - `_handle_import` — Setup rosters slice only.
+   - `_handle_quick_setup_import`, `_run_quick_setup_import`,
+     `_run_quick_setup_assignments` — Quick Setup slice only.
 
-   1. Operator settings (the per-operator credentials surface).
-   2. Sessions lobby (list / create / bulk-delete-selected).
-   3. Session Home (detail / edit / delete / lifecycle transitions).
-   4. Quick Setup (lock toggle, per-slot routes, submit-all).
-   5. Setup rosters (Reviewers + Reviewees pages and their imports).
-   6. Assignments (manual + full-matrix + delete-all).
-   7. Rule Builder (the editor page + copy / save / delete /
-      generate).
-   8. Setup-invite + email-template editor.
-   9. Operations pages (Validate, Previews, Manage Invitations,
-      Responses, Outbox).
-   10. Instruments — landed last because it's the largest slice;
-       deferring it keeps the diff size of every earlier PR
-       manageable, and isolates the riskiest move into its own
-       reviewable PR.
+2. **Slice PRs**, in this order (smallest first; sizes measured
+   against the post-13A-1 file at 4,423 lines). Each is a single
+   feature area moving to its own file under the new package.
+
+   1. Sessions lobby (~73 lines; 2 routes — list / bulk-delete-
+      selected). Smallest and most self-contained — the cleanest
+      first slice to validate the package plumbing.
+   2. Operator settings (~115 lines; the per-operator credentials
+      surface).
+   3. Setup-invite + email-template editor (~125 lines).
+   4. Assignments (~316 lines; manual + full-matrix + delete-all).
+   5. Session Home (~365 lines; detail / new / create / edit /
+      delete / lifecycle transitions).
+   6. Setup rosters (~370 lines; Reviewers + Reviewees pages and
+      their imports).
+   7. Quick Setup (~566 lines; lock toggle, per-slot routes,
+      submit-all). Will gain one more route when **Segment 12A
+      PR 6** wires Slot 4 (configuration import) — that route
+      lands in this sub-module.
+   8. Rule Builder (~669 lines; the editor page + copy / save /
+      delete / generate). Freshly bounded by Segment 13A-1 PR 4b
+      (PR #602, 2026-05-07) — clean self-contained block.
+   9. Operations pages (~750 lines; Validate, Previews, Manage
+      Invitations, Responses, Outbox).
+   10. Instruments (~1,500 lines) — landed last because it's the
+       largest slice; deferring it keeps the diff size of every
+       earlier PR manageable, and isolates the riskiest move into
+       its own reviewable PR.
 
 ## 5. Land-safety checklist (per slice)
 
@@ -120,6 +197,6 @@ Each slice PR follows the same shape:
 
 Every slice PR is independently revertable — reverting any one
 slice puts those routes back into a single file without affecting
-the others. The package conversion (PR 2) is the only PR with a
+the others. The package conversion (PR 1) is the only PR with a
 broader blast radius; if it needs to be reverted, all subsequent
 slice PRs revert with it as a unit.
