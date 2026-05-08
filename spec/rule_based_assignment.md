@@ -230,7 +230,25 @@ The Advanced mode UI is split between two surfaces:
 - The **Rule Based card** on the per-session Assignments page (`/operator/sessions/{id}/assignments`) — picks a RuleSet from the visible library, runs `Generate` against the current populations, and writes the resulting Assignments into the cycle. Records which RuleSet (and revision) was used so the cycle's provenance is preserved.
 - The **Rule Builder page** at `/operator/sessions/{id}/assignments/rule-based-editor` — an authoring surface for creating, copying, editing, and deleting Personal RuleSets.
 
-### 7.1 Rule Builder page
+### 7.1 Rule Based card on the Assignments page
+
+Lives in the top-left of the action grid on `/operator/sessions/{id}/assignments` (per `spec/setup_pages.md` "Assignments page"). The card lets the operator pick a RuleSet from the visible library, dry-run it against the current populations, and click `Generate` to write the resulting Assignments. Top to bottom:
+
+1. **RuleSet dropdown.** Populated with every visible RuleSet (5 seeds in install order, then caller-owned Personal RuleSets, sorted oldest-first). Default selection is the first seed (Full Matrix).
+
+2. **Description line.** A `form-help` paragraph rendering the selected RuleSet's `description`. Inline JS keeps it in sync with the dropdown selection without a page reload.
+
+3. **"Number of eligible pairs found: {N}"** pill row. The `{N}` is the engine's dry-run pair-count for the selected RuleSet against the *current* reviewer / reviewee populations. Computed at view-shape build time by running `engine.evaluate(rule_set_schema, reviewers, reviewees)` per visible RuleSet and recording `len(result.pairs)` on `RuleBasedSelectorOption.eligible_pair_count`. Each `<option>` carries the count as a `data-eligible-pairs` attribute so the inline JS can swap the pill text on dropdown `change` without a reload. Engine bails (malformed schema) fall back to `0` so the card still renders. Empty populations → `0`.
+
+4. **Exclude self-review** checkbox. Default mirrors the selected RuleSet's `excludeSelfReviews` flag; the checkbox value is the override that travels with the audit row.
+
+5. **Confirm-replace** checkbox (only when assignments already exist on the session).
+
+6. **Action row** (bottom-left): `Generate` (Secondary, posts `/assignments/rule-based/generate`) + `Edit ruleset` (Secondary, opens the Rule Builder page focused on the currently-selected RuleSet).
+
+7. **"Last generated using {RuleSet}: {N} assignments"** form-help line. Renders only when the session has a prior rule-based generation in the audit log. The card previously surfaced a redundant `{N} unique pairs` pill alongside `{N} assignments` — that pill was retired since the new "Number of eligible pairs found" row covers the pre-Generate visibility.
+
+### 7.2 Rule Builder page
 
 > Implemented in Segment 13A-1 (PRs #587, #588, #589, #596, #597, #598, #599 plus the iterated layout-spec stream #590–#600).
 
@@ -262,7 +280,7 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 └─────────────────────────────────────────────┘
 ```
 
-#### 7.1.1 Rule Builder card (left)
+#### 7.2.1 Rule Builder card (left)
 
 1. **Width.** Half the page content width. The width comes from a page-level flex grid that holds the Rule Builder card + the Available rulesets card; the card itself doesn't carry a `max-width`.
 
@@ -297,7 +315,7 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
    - Copy draft / blank draft → `[ Save ] [ Cancel ]`
    - Blank draft's `Save` is `disabled` client-side until the rule list grows past zero rows; the server-side gate is the source of truth and rejects a zero-rule submit with `?error=empty_rules`.
 
-#### 7.1.2 Available rulesets card (right)
+#### 7.2.2 Available rulesets card (right)
 
 1. **Width.** Half the page content width — paired with the Rule Builder card via the page-level flex grid.
 
@@ -312,7 +330,7 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 
 5. **Click behaviour.** Out of scope today — rows are read-only. Operators switch RuleSets via the Rule Builder dropdown. Adding "click row to load" is a future enhancement.
 
-#### 7.1.3 Out of scope
+#### 7.2.3 Out of scope
 
 - Mobile / narrow viewport: the side-by-side flex grid will need a collapse rule when the page narrows. Capture when we wire responsive breakpoints in Segment 14.
 - Click-to-load on Available rulesets rows.
