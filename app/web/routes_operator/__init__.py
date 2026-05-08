@@ -20,6 +20,7 @@ from . import (
     _assignments,
     _legacy,
     _lobby,
+    _operations,
     _quick_setup,
     _rule_builder,
     _session_home,
@@ -37,4 +38,5 @@ router.include_router(_setup_rosters.router)
 router.include_router(_setup_invite.router)
 router.include_router(_assignments.router)
 router.include_router(_rule_builder.router)
+router.include_router(_operations.router)
 router.include_router(_legacy.router)
