@@ -105,13 +105,18 @@ derived from RuleSet `<name>`; the RuleSet is bundled at
 #### Concretely, the snapshot includes:
 
 - **Session metadata the operator typed** — `name`, `code`,
-  `description`, `deadline`, `help_contact`. `code` is included
-  as a *seed*: on the create-from-snapshot flow (see "Triggered
-  actions on import" below) the importer derives a fresh unique
-  code by appending an `_uploaded01` / `_uploaded02` / ... suffix
-  until the result clears the global uniqueness check. On the
-  fill-existing-session flow the importer ignores the snapshot's
-  code (the destination session already has one).
+  `description`, `deadline`, `help_contact`. The snapshot is a
+  **fallback** for these fields, never an override: the importer
+  applies a snapshot value only when nothing more authoritative
+  is present (operator-typed value on Create New Session, or
+  existing value on a session being filled in). See "Import
+  flows" below for the three flows and how each resolves
+  authority. `code` carries an additional rule: when the
+  importer is using the snapshot's `code` (no operator-typed
+  override and no existing destination code), it derives a
+  fresh unique code by suffix — `{seed}_uploaded01`,
+  `{seed}_uploaded02`, ... until the result clears the global
+  uniqueness check.
 - **Email-template overrides** — the 12 string keys + the
   `responses_received_enabled` boolean from
   `sessions.email_template_overrides`. Empty value cell ⇒ "use
@@ -151,30 +156,59 @@ derived from RuleSet `<name>`; the RuleSet is bundled at
 - **Browser-local UI state** — cookies, localStorage, URL params.
   Cosmetic per-browser preferences.
 
-#### Two import flows
+#### Import flows
 
-The snapshot supports two entry points; both consume the same
-zip but the import semantics around `session.code` differ:
+The snapshot supports three entry points. All three consume the
+same zip; the difference is what the importer treats as
+authoritative for `session.name` and `session.code`. The same
+rule applies to all three:
 
-1. **Create new session from snapshot.** Anchor: a "Create from
-   snapshot" button on the sessions lobby (`/operator/sessions`),
-   alongside "Create new session". This is the canonical
-   port-my-session flow. The importer creates a fresh
-   `ReviewSession` row, derives a unique code from the
-   snapshot's `session.code` seed (`{seed}_uploaded01`,
-   incrementing on collision), then walks the rest of the
-   snapshot through the triggered-actions chain below. New
-   sessions are born in `draft`; lifecycle transitions remain
-   the operator's call.
-2. **Fill existing session from snapshot.** Anchor: Quick Setup
-   slot 4 (the configuration-import slot, graduated to live in
-   PR 6). Targets `POST /operator/sessions/{id}/import-config`.
-   Useful when the operator already created a session (perhaps
-   to nail down `code` and `deadline` before bringing in the
-   shape) and just wants to populate it. The destination
-   session's existing `code` is preserved; the snapshot's `code`
-   is read-and-ignored. Lifecycle gate stays
+> **The snapshot is a fallback.** Apply the snapshot's
+> `session.name` / `session.code` *only* when nothing more
+> authoritative is present (operator-typed values on Create New
+> Session, or existing values on a session being filled in).
+> Same logic extends to `session.description`,
+> `session.deadline`, and `session.help_contact` — operator
+> typing or existing-session values win; the snapshot fills in
+> the gaps.
+
+1. **Create from snapshot** (sessions lobby anchor — "Create
+   from snapshot" button alongside "Create new session"). Pure
+   snapshot-driven: no form to fill out. The importer creates a
+   fresh `ReviewSession` row and applies every `session.*` field
+   from the snapshot. The snapshot's `session.code` is the seed
+   for the new code; on global uniqueness collision the
+   importer derives `{seed}_uploaded01`, `{seed}_uploaded02`,
+   ... until it clears.
+2. **Create new session form + snapshot upload** (Create New
+   Session page, with the snapshot attached as part of Quick
+   Setup). Operator-typed values win:
+   - If the operator typed `name`, that's the session's name;
+     the snapshot's `session.name` is ignored.
+   - If the operator typed `code`, that's the session's code;
+     the snapshot's `session.code` is ignored. Code uniqueness
+     is enforced by the existing Create New Session validator
+     (the form returns the existing 422 on collision).
+   - If the operator left a field blank, the snapshot's value
+     fills it in. For `code` specifically, the suffix-derivation
+     rule from flow 1 applies — the snapshot's `code` becomes
+     the seed.
+3. **Fill existing session from snapshot** (Quick Setup slot 4
+   on Session Home, targeting
+   `POST /operator/sessions/{id}/import-config`). The
+   destination session already has `name` and `code` (typed at
+   creation time) and possibly the rest of the metadata too.
+   **Existing values always win.** The snapshot's `session.*`
+   fields are read-and-ignored. Lifecycle gate stays
    `status in {"draft", "validated"}` per the original plan.
+
+For all three flows, the rest of the snapshot (instruments,
+RTDs, display fields, response fields, email-template overrides,
+bundled roster CSVs, RuleSet JSON) is **wipe-and-replace** —
+those are the "shape" the snapshot owns end-to-end. The
+fallback rule applies only to the operator-typeable session
+metadata, where there's a meaningful "did the operator type
+this on the destination?" question to answer.
 
 #### Triggered actions on import
 
@@ -493,12 +527,15 @@ reviewer surface and operator UI count pages):
   ("snapshot the inputs, never the outputs"),
   `session.assignment_mode` and `session.status` are excluded —
   assignment_mode is auto-set by the next Generate run, and
-  status always lands back in `draft`. `session.code` is *included
-  as a seed*; the create-from-snapshot importer derives a fresh
-  unique code by suffix; the fill-existing-session importer
-  ignores it. (See Scenario A "Two import flows".)
-  - `session.name` (string, required)
-  - `session.code` (string; **seed only** — see Scenario A)
+  status always lands back in `draft`. `session.name` and
+  `session.code` are **fallback values**, applied only when
+  nothing more authoritative is present (operator-typed values
+  on Create New Session, or existing values on a session being
+  filled in); see Scenario A "Import flows". The same fallback
+  semantics extend to `session.description` /
+  `session.deadline` / `session.help_contact`.
+  - `session.name` (string)
+  - `session.code` (string; **fallback / seed** — see Scenario A)
   - `session.description` (string)
   - `session.deadline` (datetime)
   - `session.help_contact` (string)
@@ -609,14 +646,16 @@ The importer is **wipe-and-replace** for everything it owns:
 1. Validate every row (parse `data_type`, check enum membership,
    confirm RTD references resolve). Abort the whole transaction
    if any row is malformed; no partial application.
-2. Update session-level fields in place. `session.assignment_mode`
-   and `session.status` are *not* written even if a stray row
-   carries them — Scenario A excludes them at export time, and the
-   importer ignores them defensively. `session.code` handling
-   depends on the import flow (see Scenario A "Two import flows"):
-   the create-from-snapshot importer derives a fresh code by
-   suffix from the seed; the fill-existing-session importer
-   ignores the snapshot's code (the destination already has one).
+2. Update session-level fields in place per the **fallback
+   rule**: apply each `session.*` row only when nothing more
+   authoritative is present (operator-typed value on Create New
+   Session; existing value on a session being filled in). See
+   Scenario A "Import flows" for the three flows. `session.code`
+   carries the additional suffix-derivation rule when the
+   snapshot value is the source. `session.assignment_mode` and
+   `session.status` are *never* written even if a stray row
+   carries them — Scenario A excludes them at export time, and
+   the importer ignores them defensively.
 3. Replace `sessions.email_template_overrides` JSON in place with
    the dict reconstructed from the `email_overrides.*` rows.
    Empty value cells map to "key absent" in the dict (matches the
