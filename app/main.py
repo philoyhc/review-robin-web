@@ -15,6 +15,11 @@ from app.web.routes_reviewer import router as reviewer_router
 # ``/quick-setup/...`` endpoint (lock toggle, file submits). Everything
 # else under ``/operator/`` clears the cookie so navigating away from
 # Home and returning relocks the Quick Setup card.
+#
+# The ``qsu_`` literal in ``_QUICK_SETUP_COOKIE_RE`` mirrors
+# ``_QUICK_SETUP_COOKIE_PREFIX`` in
+# ``app/web/routes_operator/_shared.py``. If you rename the cookie
+# prefix in either file, update the other.
 _QUICK_SETUP_KEEP_COOKIE_RE = re.compile(
     r"^/operator/sessions/\d+(?:/quick-setup(?:/.*)?)?/?$"
 )
