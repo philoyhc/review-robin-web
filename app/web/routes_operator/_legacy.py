@@ -35,7 +35,6 @@ from app.services import (
     instruments as instruments_service,
     invitations,
     monitoring,
-    responses,
     sessions,
     validation,
 )
@@ -49,32 +48,12 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _lifecycle_error_response,
     _quick_setup_cookie_name,
-    _quick_setup_unlocked,
     _require_editable,
     _require_response_loss_ack,
     _templates,
 )
 
 router = APIRouter()
-
-
-@router.get("/sessions/new", response_class=HTMLResponse)
-def new_session_form(
-    request: Request,
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_new.html",
-        {
-            "user": user,
-            "quick_setup": views.build_new_session_quick_setup_context(
-                db, user
-            ),
-            "breadcrumbs": breadcrumbs.operator_new_session(),
-        },
-    )
 
 
 @router.post("/sessions", response_model=None)
@@ -200,80 +179,6 @@ async def create_session(
     return RedirectResponse(
         url=f"{home_url}{last_fragment}",
         status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-@router.get("/sessions/{session_id}", response_class=HTMLResponse)
-def session_detail(
-    request: Request,
-    validated: bool = Query(default=False),
-    quick_setup_error: str | None = Query(default=None),
-    quick_setup_reason: str | None = Query(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    setup_rows = views.build_setup_rows(db, review_session)
-    validation_summary: dict[str, object] | None = None
-    # Run validation on the ?validated=1 entry path AND whenever the
-    # session is already in validated — the Activate Session control on
-    # the contextual action card needs ``can_activate`` /
-    # ``needs_acknowledge`` to render the right form shape.
-    if validated or lifecycle.is_validated(review_session):
-        issues = validation.validate_session_setup(db, review_session)
-        report = lifecycle.build_readiness_report(issues)
-        if report.can_activate and lifecycle.is_draft(review_session):
-            lifecycle.mark_validated(
-                db,
-                review_session=review_session,
-                user=user,
-                report=report,
-                correlation_id=request_correlation_id(),
-            )
-        validation_summary = {
-            "error_count": len(report.errors),
-            "warning_count": len(report.warnings),
-            "info_count": len(report.info),
-            "can_activate": report.can_activate
-            and lifecycle.is_validated(review_session),
-            "needs_acknowledge": report.has_non_blocking_findings,
-        }
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_detail.html",
-        {
-            "user": user,
-            "session": review_session,
-            "setup_rows": setup_rows,
-            "status_pills": views.session_status_pills(db, review_session),
-            "validation_summary": validation_summary,
-            "is_draft": lifecycle.is_draft(review_session),
-            "is_validated": lifecycle.is_validated(review_session),
-            "is_ready": lifecycle.is_ready(review_session),
-            # Freshly-created draft with at least one of reviewers /
-            # reviewees / assignments still empty. Computed after the
-            # validation flow so a session that just transitioned
-            # ``draft → validated`` no longer falls through this gate.
-            "is_setup_empty": (
-                lifecycle.is_draft(review_session)
-                and (
-                    csv_imports.existing_reviewer_count(db, review_session.id) == 0
-                    or csv_imports.existing_reviewee_count(db, review_session.id) == 0
-                    or assignments.existing_count(db, review_session.id) == 0
-                )
-            ),
-            "has_responses": lifecycle.session_has_responses(db, review_session),
-            "quick_setup": views.build_quick_setup_context(
-                db,
-                review_session,
-                user=user,
-                is_unlocked=_quick_setup_unlocked(request, review_session),
-                error_kind=quick_setup_error,
-                error_reason=quick_setup_reason,
-            ),
-            "extract_data": views.build_extract_data_context(db, review_session),
-            "breadcrumbs": breadcrumbs.operator_session(review_session),
-        },
     )
 
 
@@ -1779,120 +1684,6 @@ def reviewees_list(
     )
 
 
-@router.get("/sessions/{session_id}/edit", response_class=HTMLResponse)
-def session_edit_form(
-    request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_edit.html",
-        {
-            "user": user,
-            "session": review_session,
-            "status_pills": views.session_status_pills(db, review_session),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Edit details"
-            ),
-        },
-    )
-
-
-@router.post("/sessions/{session_id}/edit")
-def session_edit_submit(
-    name: str = Form(...),
-    code: str = Form(...),
-    description: str | None = Form(default=None),
-    deadline: str | None = Form(default=None),
-    help_contact: str | None = Form(default=None),
-    acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    _require_editable(review_session)
-    _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    parsed_deadline: datetime | None = None
-    if deadline:
-        try:
-            parsed_deadline = datetime.fromisoformat(deadline)
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="deadline must be ISO-8601",
-            ) from exc
-
-    payload = SessionCreate(
-        name=name,
-        code=code,
-        description=description or None,
-        deadline=parsed_deadline,
-        help_contact=help_contact or None,
-    )
-    sessions.update_session(
-        db,
-        review_session=review_session,
-        user=user,
-        payload=payload,
-        correlation_id=request_correlation_id(),
-    )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-@router.post("/sessions/{session_id}/delete-data")
-def session_delete_data(
-    confirm: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    if confirm != "true":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="confirm checkbox required",
-        )
-    responses.delete_all_for_session(
-        db,
-        review_session=review_session,
-        user=user,
-        correlation_id=request_correlation_id(),
-    )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-@router.post("/sessions/{session_id}/delete")
-def session_delete(
-    confirm: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    _require_editable(review_session)
-    if confirm != "true":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="confirm checkbox required",
-        )
-    sessions.delete_session(
-        db,
-        review_session=review_session,
-        user=user,
-        correlation_id=request_correlation_id(),
-    )
-    return RedirectResponse(
-        url="/operator/sessions",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
 @router.post("/sessions/{session_id}/reviewers/delete-all")
 def reviewers_delete_all(
     confirm: str | None = Form(default=None),
@@ -1973,71 +1764,6 @@ def _require_instrument_in_session(
 # --------------------------------------------------------------------------- #
 # Lifecycle routes (Segment 9.1)
 # --------------------------------------------------------------------------- #
-
-
-@router.post("/sessions/{session_id}/activate")
-def session_activate(
-    acknowledge_warnings: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    issues = validation.validate_session_setup(db, review_session)
-    report = lifecycle.build_readiness_report(issues)
-    try:
-        lifecycle.activate_session(
-            db,
-            review_session=review_session,
-            user=user,
-            report=report,
-            acknowledge_warnings=acknowledge_warnings == "true",
-            correlation_id=request_correlation_id(),
-        )
-    except lifecycle.LifecycleError as exc:
-        raise _lifecycle_error_response(exc) from exc
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-_REVERT_RETURN_TO = {"reviewers", "reviewees", "assignments", "instruments"}
-
-
-@router.post("/sessions/{session_id}/revert")
-def session_revert_to_draft(
-    confirm: str | None = Form(default=None),
-    return_to: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    try:
-        if lifecycle.is_validated(review_session):
-            lifecycle.invalidate_session(
-                db,
-                review_session=review_session,
-                user=user,
-                reason="operator_revert",
-                correlation_id=request_correlation_id(),
-            )
-        else:
-            lifecycle.revert_session_to_draft(
-                db,
-                review_session=review_session,
-                user=user,
-                confirm=confirm == "true",
-                correlation_id=request_correlation_id(),
-            )
-    except lifecycle.LifecycleError as exc:
-        raise _lifecycle_error_response(exc) from exc
-    target = f"/operator/sessions/{review_session.id}"
-    if return_to in _REVERT_RETURN_TO:
-        target = f"{target}/{return_to}"
-    return RedirectResponse(
-        url=target,
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
 
 
 def _can_edit_instrument(review_session: ReviewSession) -> bool:
