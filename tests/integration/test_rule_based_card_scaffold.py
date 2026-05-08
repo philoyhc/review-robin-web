@@ -155,3 +155,63 @@ def test_rule_based_editor_no_id_redirects_to_assignments(
         follow_redirects=False,
     )
     assert response.status_code in (404, 405)
+
+
+def test_rule_based_card_dropdown_lists_seeds_before_personal(
+    client: TestClient, db: Session
+) -> None:
+    """The Rule Based card on the Assignments page renders seeds
+    first (in install order) followed by caller-owned Personal
+    RuleSets — same canonical ordering as the new Rule Builder
+    dropdown. Pre-fix, ``list_visible_rule_sets`` ordered by
+    ``scope ASC`` which placed Personal before Seeds alphabetically.
+    """
+
+    from app.db.models import RuleSet
+
+    review_session = _make_session(client, db, code="rb-order")
+
+    # Seed a Personal RuleSet via the new Save-As flow (Save with no
+    # rule_set_id, source = first seed).
+    intra_id = db.execute(
+        select(RuleSet.id).where(
+            RuleSet.is_seed.is_(True),
+            RuleSet.name == "Intra-group peer review",
+        )
+    ).scalar_one()
+    save_response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based-editor/save",
+        data={
+            "source_rule_set_id": intra_id,
+            "name": "Personal Aaa",
+            "combinator": "ALL_OF",
+            "rules_json": "[]",
+        },
+        follow_redirects=False,
+    )
+    assert save_response.status_code == 303, save_response.text
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+
+    # Pull out the order of rule-based-card option labels.
+    selector_marker = 'name="rule_set_id"'
+    if selector_marker not in body:
+        # Fallback: card may render the id under a different attribute;
+        # tag-based search keeps the test robust.
+        selector_marker = 'data-rule-set-id'
+    selector_start = body.index(selector_marker)
+    # Just take a wide slice — the dropdown's options live within a
+    # few hundred bytes of the marker.
+    slice_window = body[selector_start : selector_start + 4000]
+
+    seed_pos = slice_window.find("Full Matrix")
+    personal_pos = slice_window.find("Personal Aaa")
+    assert seed_pos != -1, "Full Matrix seed missing from selector"
+    assert personal_pos != -1, "Personal RuleSet missing from selector"
+    assert seed_pos < personal_pos, (
+        "Seeds must render before Personal RuleSets in the Rule "
+        "Based card selector"
+    )
