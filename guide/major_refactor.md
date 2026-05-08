@@ -66,6 +66,33 @@ other reference is a docstring / comment / spec callout):
   no symbol import.
 - No test file imports anything from `routes_operator`.
 
+### 3.0 Pinned decisions
+
+These were settled before authoring PR 0; later sections defer to them.
+
+- **PR 0 scope.** Package shape + every cross-slice helper lifted into
+  `_shared.py` + `_legacy.py` housing all 79 routes unchanged. No real
+  slice ships in PR 0. See §6 for the full checklist.
+- **Legacy container.** `app/web/routes_operator/_legacy.py`. The
+  package `__init__.py` does `from . import _legacy` and mounts
+  `_legacy.router`. Slice PRs carve routes out of `_legacy.py` into
+  their sibling `_<area>.py` until `_legacy.py` is empty and gets
+  deleted in PR 10.
+- **Slice file naming.** Underscore-prefixed
+  (`_lobby.py`, `_session_home.py`, …) — package-private, matches
+  `_shared.py`, deliberate divergence from peer `routes_*.py` modules
+  because the package directory already namespaces them.
+- **Import-graph invariant.** Every slice imports only from
+  `_shared.py` and from outside the package
+  (`app.services.*`, `app.db.*`, `app.web.deps`, `app.web.views`,
+  `app.web.breadcrumbs`, `app.web.return_to`). **No slice-to-slice
+  imports.** `_shared.py` imports nothing from the package. PR review
+  must reject any future drift on this invariant.
+- **Sequencing with feature segments.** Segment 12A and Segment 13C
+  PR authoring is paused for the duration of the 11-PR refactor
+  ladder. 12B (audit retention), 13B (sort by reviewee), 14-1 (email
+  infra) remain free to interleave. See §9.
+
 ### 3.1 Sub-module pattern (pin once, reuse in every slice)
 
 Each sub-module under `app/web/routes_operator/` declares an
@@ -297,11 +324,9 @@ copies. Today's file has exactly one definition of each, used by:
 - `_require_editable`: ~9 of 10 slices. Lifts cleanly.
 - `_require_response_loss_ack`: roster imports + Quick Setup
   imports. Lifts cleanly.
-- `_lifecycle_error_response`: Session Home (activate / revert) +
-  Instruments (no — only the lifecycle routes call it). Re-verify
-  with `grep -n "_lifecycle_error_response" app/web/routes_operator.py`
-  in the package-conversion PR; if it ends up single-slice, drop
-  it from `_shared.py` and keep it with Session Home.
+- `_lifecycle_error_response`: verified 2026-05-08, three callsites
+  in today's file: lines 2466 + 2502 (Session Home activate /
+  revert) and 3916 (Instruments). Cross-slice — keep in `_shared.py`.
 
 ## 6. PR ladder
 
@@ -311,41 +336,44 @@ conversion before tackling the heaviest slices.
 ### PR 0 — Package conversion + shared helpers
 
 Turn `routes_operator.py` into a package directory
-(`app/web/routes_operator/__init__.py`) and lift the cross-slice
-helpers into a new `_shared.py`. Both moves are pure mechanical
-relocation; landing them together avoids one cycle of import-path
-churn and removes the "what does sibling mean now?" naming
-question.
+(`app/web/routes_operator/__init__.py`) and lift every cross-slice
+helper into a new `_shared.py`. The legacy file is renamed to
+`_legacy.py` inside the new package; all 79 routes continue to
+live there unchanged. No real slice ships in PR 0.
 
-After this PR lands, **all 79 routes still live in a single big
-`__init__.py`** (or in a sibling `_legacy.py` mounted from
-`__init__.py`). The package shape is in place; the slice files are
-empty placeholders or don't exist yet. This keeps PR 0's diff as
-small as possible — net change is "rename the file and lift ~10
-helpers" — and surfaces any template-path / import / cookie
-regressions in isolation.
-
-**Decision point in PR 0 review:** is the legacy `__init__.py`
-acceptable as a temporary container, or should we land the first
-real slice (Sessions lobby) in PR 0 alongside the package
-conversion to validate the slice plumbing? Recommend the latter:
-if PR 0 lands the package shape *and* one tiny real slice, the
-per-slice template (router declaration, full-path routes, shared
-imports) is locked in before PRs 1-9 try to follow it. Cost: PR 0
-gets ~70 lines bigger.
+This shape isolates the three things that are most likely to
+regress (template-directory path, import graph, cookie cross-file
+constant) into a single reviewable diff before PRs 1-10 start
+moving routes.
 
 **PR 0 explicit checklist:**
 
-- `app/web/routes_operator.py` deleted.
-- `app/web/routes_operator/__init__.py` exports `router`.
-- `app/web/routes_operator/_shared.py` owns the template factory
-  and the helpers in §5.
-- Template directory uses `.parent.parent / "templates"`.
+- `app/web/routes_operator.py` → `app/web/routes_operator/_legacy.py`
+  (route bodies unchanged; helper definitions deleted because
+  they've moved to `_shared.py`; helper *call sites* now import
+  from `._shared`).
+- `app/web/routes_operator/__init__.py` does
+  `from . import _legacy` (and only `_legacy` for now), declares
+  `router = APIRouter(prefix="/operator", tags=["operator"])`,
+  and calls `router.include_router(_legacy.router)`.
+- `app/web/routes_operator/_shared.py` owns the template factory,
+  Jinja globals, all helpers in §5, and `_QUICK_SETUP_COOKIE_PREFIX`.
+- Template directory uses `.parent.parent / "templates"` with a
+  comment explaining the hop.
 - `app/main.py:9` import unchanged.
 - `app/main.py:21` `_QUICK_SETUP_COOKIE_RE` unchanged; add a
-  cross-reference comment to `_shared.py`'s constant.
+  cross-reference comment to `_shared.py`'s constant and vice-versa.
+- New smoke test `tests/integration/test_operator_smoke.py` (or
+  added to the nearest existing routes-smoke file) hits
+  `GET /operator/sessions` and asserts 200 + a known string from
+  `sessions_list.html`. This catches a `.parent.parent` template-
+  path regression that would otherwise 500 every operator page.
 - `pytest` passes (SQLite + Postgres CI).
 - `ruff check .` passes.
+- Helper call-site audit: every `_require_editable`,
+  `_require_response_loss_ack`, `_lifecycle_error_response` call
+  in `_legacy.py` resolves via `from ._shared import ...` — no
+  shadowed local copies left behind.
 
 ### PRs 1-10 — Slice PRs
 
@@ -419,18 +447,20 @@ Each slice PR follows the same shape:
 
 ## 9. Sequencing
 
-- **Land PR 0 (package conversion) before any 12A or 13C PR is
-  authored.** 12A PR 6 (Quick Setup Slot 4) and 12A PR 7 (RuleSet
-  routes) and every 13C PR target the post-split files.
-- **Land PR 7 (Quick Setup) before 12A PR 6** so 12A's Slot 4
-  import lands in `_quick_setup.py` not in the legacy container.
-- **Land PR 10 (Instruments) before any 13C PR** so 13C's
-  group-scoped + duplicate routes land in `_instruments.py`.
+- **Segments 12A and 13C are paused for the duration of the 11-PR
+  ladder.** No 12A or 13C PR is authored until PR 10 (Instruments)
+  has landed. This avoids interleave merge-conflict surface in
+  the slice PRs and means every new route from those segments
+  lands in the post-refactor target file from day one.
 - 12B (audit retention), 13B (sort by reviewee), and 14-1
   (email infra) are independent of this refactor and can interleave
   freely between slice PRs.
-- PRs 1-9 are independent of each other in either order — pick
-  smallest-first per the table.
+- PRs 1-9 are independent of each other — pick smallest-first per
+  the §6 table to keep review load even.
+- PR 10 (Instruments) lands last; it's the largest move and the
+  one that empties `_legacy.py`. Once it merges, delete
+  `_legacy.py` and the `from . import _legacy` line in
+  `__init__.py` in the same PR.
 
 ## 10. New-routes home for in-flight segments
 
@@ -446,6 +476,38 @@ Once PR 0 lands, in-flight segments target these files:
 
 12A PR 7's `_rule_sets.py` is the only genuinely new module past
 PR 0-10; the rest fit in slices already drawn.
+
+## 10.1 Per-slice PR description template
+
+Standardize slice PR bodies so reviewers can scan all 10 the same way:
+
+```markdown
+## Slice: <name>  (PR <n> of 10)
+
+### Routes moved
+- `GET  /operator/<path>` — <handler name>
+- `POST /operator/<path>` — <handler name>
+- …
+
+### Helpers moved
+- Slice-local: <list>
+- Lifted to `_shared.py`: <list, or "none — already in PR 0">
+
+### Source ranges (in pre-refactor `routes_operator.py`)
+- <line range> → `_<area>.py`
+
+### Audit-event impact
+None — pure relocation. No `event_type`, envelope shape, or identity
+slot changed. Verified by diffing the moved blocks against the source
+ranges above.
+
+### Verification
+- [ ] `pytest` (SQLite) green
+- [ ] `pytest` (Postgres CI) green
+- [ ] `ruff check .` green
+- [ ] §7 land-safety checklist all ticked
+- [ ] §8 targeted tests for this slice exercised
+```
 
 ## 11. Rollback
 
