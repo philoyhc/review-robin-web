@@ -105,18 +105,18 @@ derived from RuleSet `<name>`; the RuleSet is bundled at
 #### Concretely, the snapshot includes:
 
 - **Session metadata the operator typed** — `name`, `code`,
-  `description`, `deadline`, `help_contact`. The snapshot is a
-  **fallback** for these fields, never an override: the importer
-  applies a snapshot value only when nothing more authoritative
-  is present (operator-typed value on Create New Session, or
-  existing value on a session being filled in). See "Import
-  flows" below for the three flows and how each resolves
-  authority. `code` carries an additional rule: when the
-  importer is using the snapshot's `code` (no operator-typed
-  override and no existing destination code), it derives a
-  fresh unique code by suffix — `{seed}_uploaded01`,
-  `{seed}_uploaded02`, ... until the result clears the global
-  uniqueness check.
+  `description`, `deadline`, `help_contact`. The Settings CSV
+  is a **fallback** for these fields, never an override: the
+  importer applies a snapshot value only when nothing more
+  authoritative is present (operator-typed value on Create New
+  Session, or existing value on a session being filled in).
+  See "Import flows" below for the two flows and how each
+  resolves authority. `code` carries an additional rule: when
+  the importer is using the snapshot's `code` (no operator-
+  typed override and no existing destination code, on the
+  Create New Session flow), it derives a fresh unique code by
+  suffix — `{seed}_uploaded01`, `{seed}_uploaded02`, ... until
+  the result clears the global uniqueness check.
 - **Email-template overrides** — the 12 string keys + the
   `responses_received_enabled` boolean from
   `sessions.email_template_overrides`. Empty value cell ⇒ "use
@@ -156,101 +156,120 @@ derived from RuleSet `<name>`; the RuleSet is bundled at
 - **Browser-local UI state** — cookies, localStorage, URL params.
   Cosmetic per-browser preferences.
 
-#### Import flows
+#### Import flows (in scope this segment)
 
-The snapshot supports three entry points. All three consume the
-same zip; the difference is what the importer treats as
-authoritative for `session.name` and `session.code`. The same
-rule applies to all three:
+The snapshot import lives on the **existing Quick Setup card** —
+no new entry point. Quick Setup already runs in two contexts;
+both pick up the new Settings slot (slot 4) the same way once
+PR 6 of this segment graduates it to live. Slot 4 accepts a
+**single Settings CSV** (the 3-column config shape from PR 1) —
+not a zip, not the per-entity files. Roster CSVs go in slots
+1 and 2; assignments CSVs go in slot 3 (or the operator picks a
+RuleSet from slot 3's dropdown). The slot stays single-purpose,
+matching the rest of the card.
 
-> **The snapshot is a fallback.** Apply the snapshot's
-> `session.name` / `session.code` *only* when nothing more
-> authoritative is present (operator-typed values on Create New
-> Session, or existing values on a session being filled in).
-> Same logic extends to `session.description`,
-> `session.deadline`, and `session.help_contact` — operator
-> typing or existing-session values win; the snapshot fills in
-> the gaps.
+The same **fallback rule** applies in both contexts:
 
-1. **Create from snapshot** (sessions lobby anchor — "Create
-   from snapshot" button alongside "Create new session"). Pure
-   snapshot-driven: no form to fill out. The importer creates a
-   fresh `ReviewSession` row and applies every `session.*` field
-   from the snapshot. The snapshot's `session.code` is the seed
-   for the new code; on global uniqueness collision the
-   importer derives `{seed}_uploaded01`, `{seed}_uploaded02`,
-   ... until it clears.
-2. **Create new session form + snapshot upload** (Create New
-   Session page, with the snapshot attached as part of Quick
-   Setup). Operator-typed values win:
-   - If the operator typed `name`, that's the session's name;
-     the snapshot's `session.name` is ignored.
-   - If the operator typed `code`, that's the session's code;
-     the snapshot's `session.code` is ignored. Code uniqueness
-     is enforced by the existing Create New Session validator
-     (the form returns the existing 422 on collision).
-   - If the operator left a field blank, the snapshot's value
-     fills it in. For `code` specifically, the suffix-derivation
-     rule from flow 1 applies — the snapshot's `code` becomes
-     the seed.
-3. **Fill existing session from snapshot** (Quick Setup slot 4
-   on Session Home, targeting
-   `POST /operator/sessions/{id}/import-config`). The
-   destination session already has `name` and `code` (typed at
-   creation time) and possibly the rest of the metadata too.
-   **Existing values always win.** The snapshot's `session.*`
-   fields are read-and-ignored. Lifecycle gate stays
-   `status in {"draft", "validated"}` per the original plan.
+> Apply the snapshot's `session.name` / `session.code`
+> *only* when nothing more authoritative is present (operator-
+> typed values on Create New Session, or existing values on a
+> session being filled in). Same logic extends to
+> `session.description`, `session.deadline`, and
+> `session.help_contact`.
 
-For all three flows, the rest of the snapshot (instruments,
-RTDs, display fields, response fields, email-template overrides,
-bundled roster CSVs, RuleSet JSON) is **wipe-and-replace** —
-those are the "shape" the snapshot owns end-to-end. The
-fallback rule applies only to the operator-typeable session
-metadata, where there's a meaningful "did the operator type
-this on the destination?" question to answer.
+1. **Create New Session page (Quick Setup attached to the
+   form).** Operator types name / code (some / all / none) +
+   the optional metadata fields, and attaches files to Quick
+   Setup slots 1-4. The single "Create session" button creates
+   the session and dispatches each slot's payload through the
+   existing per-slot pipeline. Operator-typed form fields
+   *win*; the Settings CSV's `session.*` fields fill in
+   anything the operator left blank. `code` carries the
+   suffix-derivation rule (`{seed}_uploaded01`,
+   `{seed}_uploaded02`, ...) when the snapshot's `code` is the
+   source.
+   - Slots 1-3 (reviewers / reviewees / assignments-or-rule)
+     are already wired (PR #635).
+   - Slot 4 (Settings) graduates to live in PR 6 of this
+     segment.
+2. **Session Home Quick Setup card (existing-session fill).**
+   Operator hits an existing session's Home page, unlocks
+   Quick Setup, and uses any combination of slots 1-4 to
+   refresh data. The destination session's existing metadata
+   *always* wins; the Settings CSV's `session.*` fields are
+   read-and-ignored. The wipe-and-replace shape (instruments,
+   RTDs, display fields, response fields, email-template
+   overrides) still applies to everything else the Settings
+   CSV carries. Lifecycle gate stays
+   `status in {"draft", "validated"}` per the original plan;
+   targets `POST /operator/sessions/{id}/import-config`.
+
+For both flows the rest of the snapshot's content (instruments,
+RTDs, display fields, response fields, email-template
+overrides) is **wipe-and-replace** — those are the "shape" the
+Settings CSV owns end-to-end. The fallback rule applies only to
+the operator-typeable session metadata, where there's a
+meaningful "did the operator type this on the destination?"
+question to answer.
+
+**RuleSet portability** lives on a separate surface, not Quick
+Setup. PR 7 wires Import / Export buttons on the Rule Builder
+card — workspace-scoped, not per-session. Once an operator
+imports a RuleSet there, every session's slot-3 dropdown picks
+it up immediately, so the operator who wants to bring a
+RuleSet across sessions does it once on the Rule Builder, then
+selects it from slot 3 on subsequent Quick Setup runs.
+
+#### Future features (out of scope this segment)
+
+Both items below build on the in-scope flows and can land later
+without re-architecting them:
+
+- **Multi-file / zip-aware Settings slot.** Extend slot 4 to
+  also accept (a) a single zip carrying the full per-kind
+  bundle (config + roster + assignments + RuleSet) or (b) a
+  multi-file selection of those same loose files, with
+  filename-based dispatch. Useful for the "operator hands a
+  colleague a single file" workflow. Today's slot stays
+  single-purpose (Settings CSV only); the operator who has a
+  full bundle uses slots 1-4 individually.
+- **Sessions lobby "Create from snapshot" button.** A shortcut
+  that bypasses the Create New Session form: the operator
+  drops a snapshot zip and the server creates a fresh session
+  whose name / code / metadata come from the snapshot's values
+  (with `code` suffix-derivation on collision). Folds in
+  cleanly once the multi-file slot exists; same dispatch chain.
 
 #### Triggered actions on import
 
-The importer doesn't just write fields — it fires the same
-downstream chain Quick Setup fires when slots are submitted
-together, so the operator doesn't have to re-do the post-load
-clicks. Mirroring the shape of `quick_setup_submit_all`:
+The Settings slot doesn't just write fields — it plugs into the
+**existing Quick Setup chain** so the operator doesn't have to
+re-do the post-load clicks. Quick Setup's
+`quick_setup_submit_all` already dispatches reviewers →
+reviewees → assignments in order; PR 6 plugs slot 4 (Settings)
+into the same chain in front:
 
-1. **Apply session-level config** — write
-   `name` / `description` / `deadline` / `help_contact` and
-   replace `email_template_overrides` from the reconstructed
-   dict.
-2. **Apply RTDs + instruments + display fields + response fields**
-   from the config CSV.
-3. **Save reviewers** if a `reviewers.csv` is in the bundle.
-4. **Save reviewees** if a `reviewees.csv` is in the bundle.
-5. **Generate assignments**, picking the path the snapshot's
-   index dictates:
-   - **Manual mode** (snapshot bundles `assignments.csv`): run
-     the existing manual-assignments save path.
-   - **Rule-based mode** (snapshot bundles a `rule-set-…json`
-     and an `assignments-note.txt`): import the RuleSet via
-     PR 7's `apply_rule_set_json` (creates a Personal RuleSet
-     owned by the importing user, on first import — re-imports
-     are no-ops if the schema-equivalent RuleSet already
-     exists), then fire `engine.evaluate` against the new
-     session's roster and persist the result. This is the
-     headline triggered action: the operator stages a snapshot
-     and the new session ends up with materialised assignments
-     against the new roster, without a separate Generate click.
-   - **Neither**: skip the assignments step. The operator picks
-     a path manually via the Assignments page.
+1. **Apply session-level config** from slot 4 — write
+   `name` / `description` / `deadline` / `help_contact` per the
+   fallback rule, and replace `email_template_overrides` from
+   the reconstructed dict.
+2. **Apply RTDs + instruments + display fields + response
+   fields** from slot 4's config CSV (wipe-and-replace).
+3. **Save reviewers** from slot 1 (existing behaviour).
+4. **Save reviewees** from slot 2 (existing behaviour).
+5. **Materialise assignments** from slot 3 (existing behaviour
+   — manual CSV save *or* rule-based engine evaluation against
+   the just-saved roster).
 
 The chain **stops at assignments**. Validate, Activate, Generate
 Invitations, and Send are explicitly *not* fired on import — they
 sit on the lifecycle progression and require operator decisions
-the snapshot can't authoritatively make (the new roster's
-validation outcome may differ from the source session's; the new
-session's deadline may be in the past; the new session's
-email-template tweaks may need a second pass before the operator
-is ready to send). Each of those is one operator click away on
-Session Home; the snapshot import shouldn't anticipate them.
+the import can't authoritatively make (the new roster's
+validation outcome may differ from the source session's; the
+deadline may be in the past; the email-template tweaks may need
+a second pass before the operator is ready to send). Each of
+those is one operator click away on Session Home; the import
+shouldn't anticipate them.
 
 Per-step failures surface the same way slot failures do today:
 the importer 303s back to Session Home with a slot-scoped
