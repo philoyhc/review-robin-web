@@ -234,10 +234,11 @@ The Advanced mode UI is split between two surfaces:
 
 > Implemented in Segment 13A-1 (PRs #587, #588, #589, #596, #597, #598, #599 plus the iterated layout-spec stream #590–#600).
 
-The page hosts two cards side-by-side in a flex grid, each at half the page content width: the **Rule Builder card** (left) and the **Available rulesets card** (right). The title card with the breadcrumb and the `<h1>Rule Builder</h1>` heading sits above and is not in scope here.
+The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as the current Setup tab), a top-of-body `<a class="back-link">← Back to Assignments</a>`, then two cards side-by-side in a flex grid, each at half the page content width — the **Rule Builder card** (left) and the **Available rulesets card** (right). The Rule Builder's H2 title sits inside the Rule Builder card itself; there is no separate title card on the page.
 
 ```
 ┌─────────── Rule Builder card (½) ──────────┐  ┌──── Available rulesets card (½) ────┐
+│  Rule Builder                               │  │                                      │
 │                                             │  │                                      │
 │  [ RuleSet selector ▾ ]   [ Name input  ]   │  │  ▶ Full Matrix          [seed]       │
 │  Pair every reviewer with every reviewee.   │  │    Pair every reviewer with every…   │

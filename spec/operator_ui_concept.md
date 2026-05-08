@@ -82,7 +82,7 @@ The five surfaces where the operator does the work needed to make the session ru
 | Instruments | `instruments_index.html` | `/sessions/{id}/instruments` |
 | Email Template | `session_setupinvite.html` | `/sessions/{id}/setupinvite` |
 
-The URL slug `setupinvite` predates the Setup Page / Operations Page split; the settled name for the page is **Email Template**. The page houses the email-template editor (Segment 15 work, currently a stub). The run-time invitation management lives in the Operations Page below.
+The URL slug `setupinvite` predates the Setup Page / Operations Page split; the settled name for the page is **Email Template**. The page houses the email-template editor (shipped in Segment 11E): per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send confirmation when a reviewer submits?" toggle. The run-time invitation management lives in the Operations Page below.
 
 The Reviewers / Reviewees / Assignments pages share a common body shape (chrome → status strip → "Fields with data" pill row → optional lifecycle lock card → upload-and-Danger-Zone grid → preview table with visibility toggles). The full UI contract for these pages — including the per-page preview-table column order and the shared visibility-toggle pattern — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
 
@@ -238,7 +238,11 @@ A consolidated page for everything per-instrument: session-wide status + bulk to
 
 ### `/operator/sessions/{id}/setupinvite` — Email Template
 
-Currently a stub. Hosts the email-template editor when Segment 15 ships. Reached from the Email Template tab in the chrome's Setup row.
+Per-session email-template editor for the Invitation, Reminder, and Responses-received outbound emails. Reached from the Email Template tab in the chrome's Setup row.
+
+The page renders, top-to-bottom: chrome (with `Email Template` highlighted as the current Setup tab); a `<div class="tab-strip tab-strip-page">` row of three page-internal nav tabs (`Invitation` / `Reminder` / `Responses received`) using the chrome's `.nav-tab` styling — see `spec/ui_elements.md` §6 "Nav button"; then a two-card body with the email composer on the left (form fields per template + per-field `Reset to default` `.btn-reset` button) and the Merge tags reference card on the right. Cancel + Save sit bottom-left of the composer card; Save is Secondary (routine submit) and renders disabled until any composer field is touched.
+
+The composer's `?template=` query param keeps each tab bookmarkable. The `responses_received` tab also surfaces a "Send this confirmation when a reviewer submits?" checkbox above the composer fields that gates the per-session auto-send.
 
 ### `/operator/sessions/{id}/validate` — Setup validation
 
