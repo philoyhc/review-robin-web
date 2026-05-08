@@ -10,7 +10,7 @@ This file is the source of truth for the design. Implementation
 plan lives at **`guide/segment_13C_enhanced_instrument.md`**;
 13C also picks up the duplicate-instrument button on the same
 action-row sweep. Sibling segments: **13A** (rule-based
-assignments — `guide/segment_13A_rulebased_assignment_builder.md`)
+assignments — `guide/archive/segment_13A_rulebased_assignment_builder.md`)
 and **13B** (sort by reviewee —
 `guide/segment_13B_sort_by_reviewee.md`). The three are
 independent and can ship in any order, though 13A's rule engine
@@ -218,7 +218,7 @@ per-reviewee ones for the picker-selected reviewer.
 ## Rule-engine integration
 
 Segment 13A's rule engine
-(`guide/segment_13A_rulebased_assignment_builder.md`) is the
+(`guide/archive/segment_13A_rulebased_assignment_builder.md`) is the
 natural place to materialize group assignments. When the
 operator runs assignment generation against a group-scoped
 instrument:
@@ -337,7 +337,7 @@ that doesn't care about the underlying fanout.
 - `app/services/instruments.py` — `DISPLAY_FIELD_LABELS` /
   `DISPLAY_FIELD_KEYS` mappings; group-scoped instrument editor
   picks against a restricted subset of the same registry.
-- `guide/segment_13A_rulebased_assignment_builder.md` — likely
+- `guide/archive/segment_13A_rulebased_assignment_builder.md` — likely
   home for the rule-engine work that materializes group
   assignments.
 - `spec/sort_by_reviewee.md` — the other in-flight reviewer-

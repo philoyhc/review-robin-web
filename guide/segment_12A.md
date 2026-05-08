@@ -901,7 +901,7 @@ re-import it on any deployment running the same `spec_version`.
   configuration-import slot's graduation step (PR 6) is now
   pinned; the now-archived 11J plan's "Interaction with Segment
   12A" section already points at PR 6 by name.
-- `guide/segment_13A_rulebased_assignment_builder.md` — already
+- `guide/archive/segment_13A_rulebased_assignment_builder.md` — already
   cross-references PR 7 in its "Out of scope" section as the home
   for RuleSet portability. When 13A archives (post-Segment-13A
   ship), update that pointer to the archived path.

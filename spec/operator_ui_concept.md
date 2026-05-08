@@ -84,7 +84,7 @@ The five surfaces where the operator does the work needed to make the session ru
 
 The URL slug `setupinvite` predates the Setup Page / Operations Page split; the settled name for the page is **Email Template**. The page houses the email-template editor (Segment 15 work, currently a stub). The run-time invitation management lives in the Operations Page below.
 
-The Reviewers / Reviewees / Assignments pages share an identical chrome shape (info card → upload-CSV card → data table → danger zone). Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
+The Reviewers / Reviewees / Assignments pages share a common body shape (chrome → status strip → "Fields with data" pill row → optional lifecycle lock card → upload-and-Danger-Zone grid → preview table with visibility toggles). The full UI contract for these pages — including the per-page preview-table column order and the shared visibility-toggle pattern — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
 
 ### 4. Preview Pages
 
