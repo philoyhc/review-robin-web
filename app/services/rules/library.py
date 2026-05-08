@@ -32,15 +32,21 @@ def list_visible_rule_sets(
     db: Session, *, user: User
 ) -> list[RuleSet]:
     """Seeds + ``user``'s Personal RuleSets (excluding soft-deleted),
-    sorted so the editor selector renders seeds first in their
-    deliberate install order, then Personal RuleSets.
+    sorted so every consumer renders seeds first in their deliberate
+    install order, then Personal RuleSets.
 
     Within seeds, install-time id ordering pins the canonical sequence
     (Full Matrix → Intra-group → Cross-group → Same-group-different-
-    role → Three-per-reviewee). PR 5 will refine the Personal half to
-    sort by most-recently-updated; the inline `id` ordering here
-    happens to coincide with most-recently-updated for the empty PR 4
-    Personal library and is a placeholder until then.
+    role → Three-per-reviewee). Personal RuleSets follow in id order
+    — a placeholder until a future PR refines that half to sort by
+    most-recently-updated.
+
+    The ordering is ``is_seed DESC, id ASC``: ``is_seed=True`` (i.e.
+    seed rows) sorts before ``is_seed=False`` (Personal rows) under
+    descending order, then id ascending pins the canonical sub-
+    sequence within each group. Sorting by ``scope`` directly would
+    put ``"personal"`` ahead of ``"seed"`` alphabetically, which is
+    the opposite of what every dropdown wants.
     """
 
     stmt = (
@@ -52,7 +58,7 @@ def list_visible_rule_sets(
             ),
             RuleSet.deleted_at.is_(None),
         )
-        .order_by(RuleSet.scope, RuleSet.id)
+        .order_by(RuleSet.is_seed.desc(), RuleSet.id)
     )
     return list(db.execute(stmt).scalars())
 
