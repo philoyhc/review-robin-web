@@ -24,6 +24,7 @@ deliberately as part of a feature change, never silently).
 | `sort_by_reviewee.md` | Forward-looking functional spec for **Segment 13B** — reviewer-surface sort UX (operator default sort + reviewer live override) on Manage pages. Display Fields only on the operator side; reviewer side gets clickable column headers with live-only persistence. |
 | `reviewer-surface.md` | Reviewer-facing app — multi-instrument-aware response surface (`/reviewer/sessions/{id}/{position}`), dashboard (`/reviewer`), and invitation landing (`/reviewer/invite/{token}`). |
 | `assumptions.md` | UI vocabulary — six canonical button styles, typography knob, layout defaults, load-bearing assumptions. |
+| `settings_inventory.md` | Single-stop reference for every operator- and per-session setting Review Robin Web persists — operator SMTP config, session metadata, email-template overrides, instrument settings, reviewer / reviewee tags, RuleSets, and the browser-local UI-state primitives (cookies / localStorage / URL params). Names where each setting lives, the UI surface that edits it, and the canonical per-page spec. |
 
 Sibling folders:
 
