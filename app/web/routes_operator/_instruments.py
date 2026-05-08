@@ -1,9 +1,15 @@
-"""Legacy container holding every operator route until the slice PRs
-relocate them. See ``guide/major_refactor.md`` §6 — this file shrinks
-once per slice PR and is deleted in PR 10.
+"""Instruments slice — instrument CRUD (page, add, delete, edit
+description, bulk save fields), per-instrument response/display
+field CRUD (add / edit / delete / move + bulk save), response-type
+definition CRUD, lifecycle (open / close / visibility), and the
+session-level bulk visibility / accepting toggles.
 
-Mounted unprefixed; the package ``__init__`` owns the ``/operator``
-prefix and tag.
+Slice 10 of the major refactor — the final slice; with this file
+in place, ``_legacy.py`` is gone and the operator routes package
+is fully sliced.
+
+Source ranges in pre-refactor ``routes_operator.py``: 2512-2575,
+2871-3962.
 """
 
 from __future__ import annotations
@@ -40,7 +46,7 @@ router = APIRouter()
 
 
 # --------------------------------------------------------------------------- #
-# Slice-local helper (Instruments). The cross-slice edit-lock guards
+# Slice-local helpers. The cross-slice edit-lock guards
 # (``_require_editable`` / ``_require_response_loss_ack`` /
 # ``_lifecycle_error_response``) live in ``_shared.py``.
 # --------------------------------------------------------------------------- #
@@ -60,11 +66,6 @@ def _require_instrument_in_session(
     if instrument is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return instrument, review_session
-
-
-# --------------------------------------------------------------------------- #
-# Lifecycle routes (Segment 9.1)
-# --------------------------------------------------------------------------- #
 
 
 def _can_edit_instrument(review_session: ReviewSession) -> bool:

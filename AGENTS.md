@@ -79,15 +79,14 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    feature area into sibling sub-modules (`_lobby.py`,
    `_settings.py`, `_session_home.py`, `_quick_setup.py`,
    `_setup_rosters.py`, `_setup_invite.py`, `_assignments.py`,
-   `_rule_builder.py`, `_operations.py`), with shared plumbing
-   (the `Jinja2Templates` instance, lifecycle / edit-lock guards,
-   Quick Setup cookie naming) in `_shared.py`. The Instruments
-   slice still lives in `_legacy.py` until PR 10 of the refactor
-   ladder lands; new operator routes belong in their feature-area
-   sub-module, not in `_legacy.py`. Slices import only from
-   `_shared.py` and from outside the package — no slice-to-slice
-   imports. See `guide/major_refactor.md` for the full split
-   rationale and slice boundaries.
+   `_rule_builder.py`, `_operations.py`, `_instruments.py`), with
+   shared plumbing (the `Jinja2Templates` instance, lifecycle /
+   edit-lock guards, Quick Setup cookie naming) in `_shared.py`.
+   New operator routes belong in their feature-area sub-module.
+   Slices import only from `_shared.py` and from outside the
+   package — no slice-to-slice imports. See
+   `guide/major_refactor.md` for the full split rationale and
+   slice boundaries.
 2. **Service modules** (`app/services/*.py`) hold all business logic — querying, mutation, validation, lifecycle transitions, audit-event emission. Routes import these; templates do not.
 3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative classes using `Mapped[]` / `mapped_column`. **Do not import `sqlalchemy.dialects.postgresql` here** — Postgres-specific column types are deferred to Segment 14.
 
