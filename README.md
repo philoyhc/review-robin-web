@@ -17,10 +17,20 @@ chrome:
 
 - **Session lifecycle.** `draft → validated → ready` (Activated)
   with edit-locks, deadline tracking, response-window gates, and
-  audit events on every state transition.
+  audit events on every state transition. The sessions lobby
+  (`/operator/sessions`) carries a Danger Zone bulk-delete
+  affordance for ticked draft / validated sessions; deletion
+  cascades reviewers / reviewees / instruments / assignments /
+  invitations / email-outbox rows in one transaction.
 - **Roster management.** Reviewer / reviewee CSV imports with
-  cross-table identity validation; full-matrix and manual
-  assignment generation.
+  cross-table identity validation; full-matrix, manual, and
+  rule-based assignment generation. Rule-based assignments are
+  authored on the **Rule Builder page**
+  (`/operator/sessions/{id}/assignments/rule-based-editor`) — a
+  single-card surface paired with an Available Rulesets sidebar
+  listing every visible RuleSet (5 seeds + caller-owned
+  Personal). Generation runs through `app/services/rules/engine.py`
+  (predicates / combinators / quotas / deterministic ordering).
 - **Instruments builder.** Per-instrument card with state-machine
   Display + Response Fields tables, Response Type Definitions
   catalog (10 seeded RTDs + operator-defined ones), live-preview
@@ -39,10 +49,16 @@ chrome:
   user-menu Settings link returns the operator to wherever they
   came from.
 - **Quick Setup card** on Session Home wires Reviewers /
-  Reviewees / Assignments slots to live POST forms over the
+  Reviewees / Assignments / Session settings slots over the
   existing per-entity import pipelines, behind a single Lock /
-  Unlock toggle. Slot 4 (Session settings / configuration
-  import) graduates with Segment 12A.
+  Unlock toggle. One bottom-right Submit button (next to Lock /
+  Unlock) runs every slot whose file is attached; the
+  Assignments slot's "Generate by rule" dropdown is populated
+  with the full visible RuleSet list and routes through the
+  rule-based engine on submit. Unlock state resets when the
+  operator navigates away (per-route middleware in
+  `app/main.py`). Settings slot stays inert pending Segment 12A
+  PR 6.
 - **Extract Data card** on Session Home renders the per-entity
   download row scaffold (settings / reviewers / reviewees /
   assignments / responses / bundle), inert until Segment 12A
@@ -150,7 +166,9 @@ README:
 - **[`spec/`](spec/)** — surface specifications and design intent
   ([`spec/README.md`](spec/README.md)). Includes `architecture.md`,
   `functional_spec.md`, `assumptions.md`, `operator_ui_concept.md`,
-  `session_home.md`, `reviewer-surface.md`, `email_infra_options.md`.
+  `session_home.md`, `sessions_overview.md`, `reviewer-surface.md`,
+  `quick_setup_card_spec.md`, `rule_based_assignment.md`,
+  `email_infra_options.md`.
 - **[`docs/`](docs/)** — reference material about the running
   system ([`docs/README.md`](docs/README.md)). Includes
   `status.md`, `authentication.md`, `database.md`, `imports.md`,

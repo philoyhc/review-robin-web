@@ -165,7 +165,11 @@ reject it.
 - **`spec/assumptions.md`** — UI vocabulary (button styles, typography knob, layout defaults).
 - **`spec/architecture.md`** — domain entities, layering, conceptual hierarchy.
 - **`spec/functional_spec.md`** — technology-neutral functional spec.
+- **`spec/session_home.md`** / **`spec/sessions_overview.md`** — per-page specs for Session Home and the sessions lobby.
+- **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home (consolidated Submit, slot layout, lock-on-nav).
+- **`spec/rule_based_assignment.md`** — Advanced-mode assignment engine + Rule Builder page (§7 covers the as-built UI).
 - **`guide/segment_*.md`** — segment-by-segment plans (current and upcoming). The latest one names the current segment's contract. Older / shipped segment plans live in `guide/archive/`.
+- **`guide/todo_master.md`** — Done / Upcoming roadmap. Read for the sequence; `guide/unfinished_business.md` is the per-item catalog.
 - **`docs/authentication.md`** / **`docs/database.md`** / **`docs/imports.md`** — deeper dives on those subsystems.
 - **`docs/local_setup.md`** / **`docs/deployment_dev.md`** — developer setup and dev-deploy notes.
 
