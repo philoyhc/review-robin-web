@@ -13,6 +13,7 @@ becomes a historical record, move it into `guide/archive/`.
 | `todo_master.md` | Prioritized sequence — the recommended order for working through the catalog (P0 → P3). Read this first when picking up between segments. |
 | `unfinished_business.md` | The catalog itself — every open item with Why / Where / Plan, sized as small PR slices. `todo_master.md` points back at items in here. |
 | `ui_checklist.md` | Cross-cutting UI primitives + per-page restructure checklist. |
+| `all_buttons.md` | Operator-surface button audit — every button (and button-styled anchor) across the operator templates, organised by page and card with continuous numbering and per-button canonical-style labels (per `spec/ui_elements.md` §6). |
 | `archive/` | Shipped segment plans (kept for historical reference; not the source of truth for current behavior — see `docs/status.md` for that). The early `low_intensity_workplan_review_robin_web.md` is archived here too — superseded by the segment plans + `todo_master.md`. |
 
 Sibling folders:
