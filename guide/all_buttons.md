@@ -352,7 +352,8 @@ This audit captures the canonical button shapes.
 | 95 | Rule Builder header | ← Back to Assignments | `<a>` | `back-link` | Return-to (`.back-link`) | Top-of-body navigation; same class as Operator Settings / About |
 | 96 | Rule Builder action row | Copy | `<button type="submit">` | `btn secondary` | Secondary | Forks the selected ruleset into a new Personal draft |
 | 97 | Rule Builder action row | Save | `<button type="submit">` | `btn secondary` | Secondary | Persists the in-progress draft |
-| 98 | Rule Builder action row | Delete | `<button type="submit">` | `btn destructive` | Destructive | Soft-deletes the selected Personal ruleset |
+| 98 | Rule Builder action row | Cancel | `<a>` | `btn secondary` | Secondary | Discards in-progress edits and returns to the saved selection |
+| 99 | Rule Builder action row | Delete | `<button type="submit">` | `btn destructive` | Destructive | Soft-deletes the selected Personal ruleset |
 
 ---
 
@@ -364,9 +365,9 @@ enumerated here.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 99 | Chrome user menu | Settings | `<a>` | `chrome-link` | Chrome utility link | Round-trips via `?return_to=<path>` |
-| 100 | Chrome user menu | About | `<a>` | `chrome-link` | Chrome utility link | Same `?return_to=<path>` pattern |
-| 101 | Chrome user menu | Sign out | `<a>` | `signout` | Chrome utility link | Hits `/.auth/logout` (Easy Auth) |
+| 100 | Chrome user menu | Settings | `<a>` | `chrome-link` | Chrome utility link | Round-trips via `?return_to=<path>` |
+| 101 | Chrome user menu | About | `<a>` | `chrome-link` | Chrome utility link | Same `?return_to=<path>` pattern |
+| 102 | Chrome user menu | Sign out | `<a>` | `signout` | Chrome utility link | Hits `/.auth/logout` (Easy Auth) |
 
 ---
 
@@ -377,7 +378,7 @@ page; the only interactive control is the back-link.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 102 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns operator to wherever they came from |
+| 103 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns operator to wherever they came from |
 
 ---
 
@@ -389,7 +390,7 @@ canonical home is the `.back-link` row in `spec/ui_elements.md` §6.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 103 | Page top (above the SMTP form card) | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | |
+| 104 | Page top (above the SMTP form card) | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | |
 
 ---
 
@@ -403,9 +404,9 @@ first follow-up sweep):
 Several pages share a "go back to the page you came from"
 pattern:
 
-- **Chrome-detour pages** — Operator Settings (#103), About
-  (#102). Both surfaced from the chrome top-right utility menu
-  (#99 / #100), round-trip via `?return_to=<path>`.
+- **Chrome-detour pages** — Operator Settings (#104), About
+  (#103). Both surfaced from the chrome top-right utility menu
+  (#100 / #101), round-trip via `?return_to=<path>`.
 - **Session-level child pages** — Rule Builder (#95). Off the
   Assignments page, no chrome of its own.
 

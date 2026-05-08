@@ -1796,6 +1796,28 @@
           margin-left: 0;
         }
       }
+
+      /* Rule Builder per-rule rows (`_rule_builder_card.html`).
+         Each row carries a left-edge bar that visually demarcates the
+         rule. The bar is rendered as an absolutely-positioned ::before
+         so it can be thicker than the row's border AND shorter than
+         the row's full height, giving a visible gap between
+         consecutive rows. The bar colour comes from the inline
+         ``--rule-bar-color`` custom property (defaults to #ddd; the
+         template sets #999 on COMPOSITE rows). */
+      body.ui-v2 .rule-edit-row {
+        position: relative;
+      }
+      body.ui-v2 .rule-edit-row::before {
+        content: "";
+        position: absolute;
+        top: 6px;
+        bottom: 6px;
+        left: 0;
+        width: 6px;
+        background-color: var(--rule-bar-color, #ddd);
+        border-radius: 1px;
+      }
     </style>
   </head>
   <body class="{% block body_class %}{% endblock %}">
