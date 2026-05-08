@@ -506,8 +506,8 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     # JS hides the empty ones via the toggle row.
     assert '<th class="assignment-col col-rt1">Tag1</th>' in body
     assert '<th class="assignment-col col-et2">Tag2</th>' in body
-    assert '<th class="assignment-col col-p1">PairContext1</th>' in body
-    assert '<th class="assignment-col col-a3">AssignmentContext3</th>' in body
+    assert '<th class="assignment-col col-p1">Pair1</th>' in body
+    assert '<th class="assignment-col col-a3">Assign3</th>' in body
     assert "<th>Reviewer</th>" in body
     assert "<th>Reviewee</th>" in body
     assert "<th>Include</th>" in body
