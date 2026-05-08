@@ -43,6 +43,133 @@ rest of Segment 12 (audit retention) can land on top.
 > is therefore gated on 13A having shipped — if 12A starts before
 > 13A, ship PRs 1-6 and defer PR 7 until 13A lands.
 
+## Export scenarios
+
+The "right" thing to extract depends on **why** the operator is
+extracting. Two scenarios drive different cuts of the persisted
+state; the rest of this plan is keyed on the first.
+
+### Scenario A — Exporting to facilitate importing a session
+
+> "I want to set up a new session that looks like this one — same
+> instrument design, same custom answer types, same email-template
+> tweaks, same RuleSet I built up. I'll bring my own people."
+
+The export is a **snapshot of operator typing** — the things the
+operator authored that they would otherwise have to retype on the
+new session. PRs 1 → 7 of this segment all serve this scenario.
+
+Inclusion test: *if I were setting up the new session from
+scratch, would I have to retype this?*
+
+- **Yes** → include in the snapshot.
+- **No (machine-derived from operator typing)** → exclude. The
+  new session re-derives.
+- **No (system-emitted record / per-instance state / per-operator
+  credential)** → exclude. Forensic audit is Scenario B's job.
+
+**Snapshot the inputs, never the outputs.** Anything a machine
+step derives from operator typing — assignment rows from a
+RuleSet + roster, validation reports from setup, lifecycle state
+from Activate / Pause / Close — is omitted. The new operator
+re-runs the corresponding step on the new session. Rule-based
+assignments are the headline example: snapshotting the rows would
+freeze a derivation against the source roster and silently
+overwrite whatever the new-side Generate produces against the new
+roster.
+
+**Reviewers, reviewees, and (when needed) assignments are
+downloaded separately.** They're their own per-kind CSVs under
+the existing naming convention (`session-{code}-reviewers.csv`,
+`-reviewees.csv`, `-assignments.csv`). The Extract Data card
+exposes them as separate per-row downloads next to the snapshot
+download; the operator picks what to bring. Reasoning:
+
+- Roster files are typically maintained outside the app
+  (registrar export, course-roster CSV, etc.), so the import side
+  often pulls from a fresh copy rather than the source session's
+  extract.
+- An operator porting a session to a different cohort wants the
+  config + RuleSet + email overrides without the source roster.
+- Bundling them anyway is a one-click "Download all" zip on the
+  Extract Data card; the choice stays per-operator at download
+  time.
+
+The assignments CSV is **only emitted when
+`session.assignment_mode == "manual"`** — i.e. the operator typed
+the rows by hand. On a rule-based session the CSV is omitted and
+a one-line note appears in the snapshot index: "Assignments
+derived from RuleSet `<name>`; the RuleSet is bundled at
+`rule-set-…json`. Run Generate on the new session to materialise."
+
+#### Concretely, the snapshot includes:
+
+- **Session metadata the operator typed** — `name`, `description`,
+  `deadline`, `help_contact`.
+- **Email-template overrides** — the 12 string keys + the
+  `responses_received_enabled` boolean from
+  `sessions.email_template_overrides`. Empty value cell ⇒ "use
+  the default" (matches the live resolver semantics in
+  `app.services.email_templates`).
+- **Operator-defined response type definitions** — the
+  `is_seeded=False` rows on `response_type_definitions`.
+- **Instruments + their display fields + response fields** — the
+  full question schema.
+- **Personal RuleSets the source session actually used** — when
+  the last `assignments.generated` audit row references a
+  Personal RuleSet, bundle that RuleSet's JSON alongside the
+  config CSV. Seeded RuleSets are everywhere; no need to bundle.
+  The new operator gets a Personal copy on import (PR 7's
+  `apply_rule_set_json` path).
+
+#### Concretely, the snapshot excludes:
+
+- `session.code` — must be unique on the new session; the
+  operator picks one at create time.
+- `session.assignment_mode` — auto-set by the next assignment
+  generation path.
+- `session.status` — every imported session lands in `draft`; the
+  operator re-runs Validate / Activate.
+- **Rule-based assignment rows** — derived. Bundle the RuleSet
+  instead.
+- **Validation report state** — derived. Re-run Validate.
+- **Invitations + tokens** — derived from the roster + the
+  Generate Invitations action.
+- **Email outbox rows** — derived from send actions.
+- **Reviewer responses** — reviewer-determined work; not
+  operator-authored.
+- **Audit events** — system-emitted record of derivations that
+  already happened on this session instance.
+- **Operator SMTP credentials** — per-operator (each operator
+  configures their own under Operator Settings).
+- **Browser-local UI state** — cookies, localStorage, URL params.
+  Cosmetic per-browser preferences.
+
+### Scenario B — Exporting for forensic audit purposes
+
+**Stub.** Deferred to **Segment 12B — Audit retention**
+(`guide/segment_12B_audit_retention.md`). The forensic export is
+the natural complement to Scenario A: it captures everything
+Scenario A omits — the system-emitted record of *what happened on
+this session*, not *what the operator typed to set it up*.
+
+Anticipated scope when 12B picks this up:
+
+- Audit-event log for the session (all `audit_events.detail` rows
+  in the canonical 11K shape).
+- Email outbox — every send attempt with timestamps and outcome.
+- Invitation rows — tokens redacted, send / open / completion
+  timestamps preserved.
+- Reviewer responses — full snapshot at extract time, including
+  saved-but-not-submitted drafts.
+- Lifecycle history — Activate / Pause / Close timestamps,
+  validation report at each transition.
+- The Scenario A snapshot too — the audit makes more sense
+  alongside the inputs that produced it.
+
+Format and shape are 12B's call; pencilled in as a single zip
+with one file per concern.
+
 ## Status
 
 Planning. Sized as **7 PRs** in dependency order:
@@ -233,10 +360,12 @@ Out (deferred):
   `is_seeded` on RTDs). Lifecycle is owned by the activation /
   deadline / pause flow; the importer never writes these and the
   Session settings extract omits them.
-- **Operator-editable email templates.** Coming in Segment 11E
-  (`email_template_overrides` JSON column on `ReviewSession`). When
-  that ships, fold the column into the export schema as a follow-on
-  one-liner.
+- ~~**Operator-editable email templates.** Coming in Segment 11E~~
+  ~~(`email_template_overrides` JSON column on `ReviewSession`). When~~
+  ~~that ships, fold the column into the export schema as a follow-on~~
+  ~~one-liner.~~ — **Folded in.** 11E shipped; the 12 override keys +
+  `responses_received_enabled` are part of PR 1's exporter and PR 2's
+  importer per Scenario A above.
 - **Cross-session migration** (export from session A → import into
   session B at a different deployment). Today's contract assumes
   same schema version on both ends; cross-version is a Segment 12
@@ -279,12 +408,36 @@ the value `"Integer"` is one of a fixed set.
 Hierarchical keys, position-indexed (1-based, matching how the
 reviewer surface and operator UI count pages):
 
-- **Session-level** — flat `session.<column>`:
+- **Session-level** — flat `session.<column>`. Per Scenario A
+  ("snapshot the inputs, never the outputs"), `session.code`,
+  `session.assignment_mode`, and `session.status` are excluded —
+  the new session picks its own code, assignment_mode is
+  auto-set by the next Generate run, and status always lands
+  back in `draft`.
   - `session.name` (string, required)
-  - `session.code` (string, required)
   - `session.description` (string)
   - `session.deadline` (datetime)
-  - `session.assignment_mode` (enum: `FullMatrix` / `Manual` / empty)
+  - `session.help_contact` (string)
+- **Email-template overrides** — flat keys mirroring
+  `app.services.email_templates.OVERRIDE_KEYS` plus the
+  `responses_received_enabled` toggle. Each is exported even when
+  the operator left it at default; an empty `value` cell means
+  "use the default" on import (matches the live resolver: missing
+  / empty override falls through to `DEFAULT_*`).
+  - `email_overrides.invitation.subject` (string)
+  - `email_overrides.invitation.body` (string)
+  - `email_overrides.invitation.cc` (string)
+  - `email_overrides.invitation.bcc` (string)
+  - `email_overrides.reminder.subject` (string)
+  - `email_overrides.reminder.body` (string)
+  - `email_overrides.reminder.cc` (string)
+  - `email_overrides.reminder.bcc` (string)
+  - `email_overrides.responses_received.subject` (string)
+  - `email_overrides.responses_received.body` (string)
+  - `email_overrides.responses_received.cc` (string)
+  - `email_overrides.responses_received.bcc` (string)
+  - `email_overrides.responses_received.enabled` (boolean;
+    default `true` when absent)
 - **Operator-defined RTDs** — keyed by `response_type` (the
   operator-typed name; unique within a session):
   - `rtds[<response_type>].data_type` (enum: `String` / `Integer` /
@@ -344,8 +497,11 @@ Stable, deterministic, designed to read top-to-bottom like a setup
 walkthrough:
 
 1. Session-level rows (in column-definition order).
-2. Operator-defined RTDs, sorted by `seed_order` then `response_type`.
-3. Each instrument block in order:
+2. Email-template override rows (invitation → reminder →
+   responses_received, with subject → body → cc → bcc → enabled
+   inside each kind).
+3. Operator-defined RTDs, sorted by `seed_order` then `response_type`.
+4. Each instrument block in order:
    1. Instrument-level rows.
    2. Display fields for that instrument.
    3. Response fields for that instrument.
@@ -369,15 +525,26 @@ The importer is **wipe-and-replace** for everything it owns:
 1. Validate every row (parse `data_type`, check enum membership,
    confirm RTD references resolve). Abort the whole transaction
    if any row is malformed; no partial application.
-2. Update session-level fields in place.
-3. For RTDs: upsert operator-defined rows by `response_type`;
+2. Update session-level fields in place. `session.code`,
+   `session.assignment_mode`, and `session.status` are *not*
+   written even if a stray row carries them — Scenario A
+   excludes them at export time, and the importer ignores them
+   defensively.
+3. Replace `sessions.email_template_overrides` JSON in place with
+   the dict reconstructed from the `email_overrides.*` rows.
+   Empty value cells map to "key absent" in the dict (matches the
+   resolver's "fall through to `DEFAULT_*`" semantics). The
+   `responses_received_enabled` boolean is written into the same
+   dict under the canonical
+   `app.services.email_templates.RESPONSES_RECEIVED_ENABLED_KEY`.
+4. For RTDs: upsert operator-defined rows by `response_type`;
    delete existing operator-defined rows not present in the CSV.
    Seeded rows are untouched.
-4. For instruments: delete every existing instrument on the session
+5. For instruments: delete every existing instrument on the session
    then re-create from the CSV. Display fields and response fields
    cascade with the instrument they belong to (FK
    `ON DELETE CASCADE`).
-5. Audit `session.config_imported` with `{"counts": {...}}` detail.
+6. Audit `session.config_imported` with `{"counts": {...}}` detail.
 
 The wipe-and-replace cost is acceptable because:
 - The lifecycle gate keeps Response rows (which have FKs to RFs)
@@ -528,6 +695,17 @@ session and feed the file straight into another session's upload.
 **Goal.** Round-trippable CSV matching the manual-assignments
 upload at `assignments.parse_manual_csv:166`.
 
+- **Conditional emission.** Per Scenario A's "snapshot the inputs,
+  never the outputs" rule, the assignments CSV is only emitted
+  when `session.assignment_mode == "manual"` — i.e. the operator
+  typed the rows by hand. On a rule-based session the route
+  returns 404 (or, from the Extract Data card, the row renders
+  disabled with the explanatory note "Assignments derived from
+  RuleSet `<name>`; bundle the RuleSet JSON instead and run
+  Generate on the new session"). The "Download all" zip in PR 6
+  honours the same gate: it includes the assignments CSV on
+  manual sessions, omits it on rule-based ones, and writes the
+  RuleSet JSON + a small `assignments-note.txt` instead.
 - New module `app/services/extracts/assignments_extract.py` with
   `serialize_assignments(session) -> Iterable[Row]`. Column order
   matches the importer: `ReviewerEmail`, `RevieweeEmail`,
