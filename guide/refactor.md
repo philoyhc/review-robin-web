@@ -120,7 +120,14 @@ de-risk the package conversion before tackling the heaviest slices.
    - `_QUICK_SETUP_COOKIE_PREFIX` — the constant the cookie
      helpers reference.
    - The shared `_templates = Jinja2Templates(...)` and its
-     globals/filter registration.
+     globals/filter registration. **Update the directory argument
+     to `Path(__file__).parent.parent / "templates"`** (one level
+     deeper than today) so it still resolves to
+     `app/web/templates/` — `__file__` will be
+     `app/web/routes_operator/_shared.py` post-conversion, so the
+     existing `Path(__file__).parent / "templates"` would resolve
+     to a non-existent `app/web/routes_operator/templates/` and
+     every operator template render would 500.
 
    Helpers that are NOT cross-area and stay with their slice:
    - `_require_instrument_in_session` — every callsite is inside
@@ -130,8 +137,13 @@ de-risk the package conversion before tackling the heaviest slices.
      slice.
    - `_require_rtd_in_session`, `_can_edit_instrument`,
      `_require_instrument_editable`, `_instruments_redirect`,
-     `_build_field_rows`, `_parse_optional_float`,
-     `_rtd_redirect_with_error` — instruments-only.
+     `_parse_optional_float`, `_rtd_redirect_with_error` —
+     instruments-only.
+   - `_build_field_rows`, `_VALID_TEMPLATES` — Setup-invite-only.
+     `_build_field_rows` (line 2579) and `_VALID_TEMPLATES`
+     (line 2576) sit between the Instruments and Setup-invite
+     sections of today's file but only `setupinvite_form`
+     (line 2623) calls them. Travel with the Setup-invite slice.
    - `_settings_redirect_url` — settings-only.
    - `_resolve_save_as_name`, `_name_taken_by_other` —
      Rule Builder only.
@@ -183,6 +195,11 @@ Each slice PR follows the same shape:
 - `ruff check .` passes.
 - The PR description names the slice and lists the routes moved,
   for the audit trail.
+- If the slice's routes are referenced by file path in any
+  `spec/` doc, update the path in the same PR. Today the only
+  live references are `spec/instruments.md:10` (Instruments
+  slice) and `spec/sessions_overview.md:203` (Sessions lobby
+  slice).
 
 ## 6. Sequencing
 
