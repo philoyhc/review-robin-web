@@ -1,32 +1,40 @@
-{# Quick Setup card — Segment 11J PR A; consolidated-checkbox revision.
+{# Quick Setup card — Segment 11J PR A, with consolidated Submit
+   landed in PR C of the rule-builder follow-on stream.
 
-   Renders the four-slot Quick Setup card. Slots whose
-   ``slot.is_wired=True`` carry a live POST form to ``slot.wire_url``;
-   inert slots render disabled controls and a wiring-tooltip.
+   One outer ``<form>`` wraps every slot's inputs and posts to the
+   single ``/quick-setup/submit-all`` endpoint. The bottom of the
+   card carries one Submit button (next to Lock / Unlock); the per-
+   slot Submit buttons are gone. The bottom Submit is gated client-
+   side on file presence — disabled until at least one ``<input
+   type="file">`` inside the form has a file selected.
 
-   Replacement confirmation lives in **one card-level checkbox** at
-   the top of the body wrapper rather than per-slot inline banners —
-   the operator ticks once and any of the slot Submits proceed
-   through the same ``confirm_replace=true`` route gate. The
-   checkbox state mirrors into each form's hidden ``confirm_replace``
-   input via inline JS on the form's submit event; the route's
-   server-side gate stays the source of truth.
+   The submit-all endpoint dispatches per slot whose file is
+   attached: Reviewers / Reviewees go through the per-entity CSV
+   pipeline; Assignments runs manual-CSV (file present) or the new
+   rule-based engine (file absent + a ``rule_set_id`` from the
+   populated dropdown). The per-slot routes (``/quick-setup/{kind}``)
+   stay alive as backend-only entry points — no UI references after
+   this PR — so the existing test fixtures keep working without a
+   wholesale rewrite.
+
+   The card-level replacement-confirmation checkbox at the top of
+   the body still mirrors into the form's hidden ``confirm_replace``
+   input on submit; the route's server-side gate is the source of
+   truth.
 
    Status awareness collapses on a single signal — ``is_locked`` —
-   so the card's visual state is the same in every editable-
-   conceivable lifecycle state. The body wrapper picks up
-   ``.locked`` greying when locked (which now includes the H2 title
-   and the confirmation checkbox); the Lock / Unlock toggle in the
-   footer flips it via ``POST /operator/sessions/{id}/quick-setup/lock``
-   (a per-session ``HttpOnly`` cookie carries the operator's last
-   choice).
+   so the body picks up ``.locked`` greying when locked (which now
+   includes the H2 title and the confirmation checkbox). The
+   Lock / Unlock toggle in the footer flips it via
+   ``POST /operator/sessions/{id}/quick-setup/lock`` (a per-session
+   ``HttpOnly`` cookie carries the operator's last choice).
 
    On ``ready`` the toggle still renders and unlocks visually; the
    service layer's ``_require_editable`` is the hard gate, and the
    rejection surfaces inside the offending slot as a ``banner-error``
    (see ``views._quick_setup_error_message``).
 #}
-{% macro quick_setup_slot(slot) -%}
+{% macro quick_setup_slot(slot, form_id) -%}
 <section class="quick-setup-slot"
          id="quick-setup-{{ slot.key }}"
          data-wire-target="quick-setup-{{ slot.key }}">
@@ -48,47 +56,41 @@
   </div>
   {% if slot.mode == "rule_or_csv" %}
     {# Slot 3 — Assignments. Rule selector + CSV upload alternative.
-       The selector lists every visible RuleSet (seeds first in
-       install order, then caller-owned Personal); selecting a non-
-       Full-Matrix rule routes the slot handler through the new
-       rule-based engine.
-
-       Single submit; the route auto-detects mode from the form
-       payload — when ``file`` is attached, the route runs the
-       manual-CSV pipeline; when it's empty, the route generates
-       assignments from the selected RuleSet. #}
+       Both inputs are associated with the outer ``submit-all`` form
+       via the HTML ``form="..."`` attribute. #}
     {% if slot.is_wired %}
-      <form method="post"
-            action="{{ slot.wire_url }}"
-            enctype="multipart/form-data"
-            data-quick-setup-form>
-        <input type="hidden" name="confirm_replace" value="">
-        <p class="form-help" style="margin: 0 0 var(--space-1) 0;">
-          Generate by rule
-        </p>
-        <select id="quick-setup-assignments-rule"
-                name="rule_set_id"
-                aria-label="Generate by rule"
-                style="width: 100%;">
-          {% for option in slot.rule_set_options %}
-            <option value="{{ option.id }}"
-                    {% if option.id == slot.selected_rule_set_id %}selected{% endif %}>{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
-          {% endfor %}
-        </select>
-        <p class="form-help" style="margin: var(--space-2) 0 var(--space-1) 0;">
-          or upload a CSV.
-        </p>
-        <div class="quick-setup-slot-controls">
-          <input type="file" name="file" accept=".csv">
-          <button type="submit" class="btn secondary">Submit</button>
-        </div>
-        <p style="margin: var(--space-2) 0 0 0;">
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="exclude_self_review" value="true">
-            Exclude self-review
-          </label>
-        </p>
-      </form>
+      <p class="form-help" style="margin: 0 0 var(--space-1) 0;">
+        Generate by rule
+      </p>
+      <select id="quick-setup-assignments-rule"
+              name="rule_set_id"
+              form="{{ form_id }}"
+              aria-label="Generate by rule"
+              style="width: 100%;">
+        {% for option in slot.rule_set_options %}
+          <option value="{{ option.id }}"
+                  {% if option.id == slot.selected_rule_set_id %}selected{% endif %}>{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
+        {% endfor %}
+      </select>
+      <p class="form-help" style="margin: var(--space-2) 0 var(--space-1) 0;">
+        or upload a CSV.
+      </p>
+      <div class="quick-setup-slot-controls">
+        <input type="file"
+               name="assignments_file"
+               accept=".csv"
+               form="{{ form_id }}"
+               data-quick-setup-file>
+      </div>
+      <p style="margin: var(--space-2) 0 0 0;">
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 name="exclude_self_review"
+                 value="true"
+                 form="{{ form_id }}">
+          Exclude self-review
+        </label>
+      </p>
     {% else %}
       <p class="form-help" style="margin: 0 0 var(--space-1) 0;">
         Generate by rule
@@ -108,11 +110,6 @@
                disabled
                aria-disabled="true"
                {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
-        <button type="button"
-                class="btn secondary"
-                disabled
-                aria-disabled="true"
-                {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>Submit</button>
       </div>
       <p style="margin: var(--space-2) 0 0 0;">
         <label style="font-weight: normal;">
@@ -126,58 +123,67 @@
       </p>
     {% endif %}
   {% elif slot.is_wired %}
-    {# Slots 1, 2 (file upload + Submit) — live wiring. Replacement
-       confirmation lives at the card level (checkbox above the slot
-       grid); the form's hidden ``confirm_replace`` input is set on
-       submit by the inline script below. #}
-    <form method="post"
-          action="{{ slot.wire_url }}"
-          enctype="multipart/form-data"
-          data-quick-setup-form>
-      <input type="hidden" name="confirm_replace" value="">
-      <div class="quick-setup-slot-controls">
-        <input type="file" name="file" accept=".csv" required>
-        <button type="submit" class="btn secondary">Submit</button>
-      </div>
-    </form>
+    {# Slots 1, 2 (file upload) — live wiring. Submit lives at the
+       bottom of the card, not per-slot. #}
+    <div class="quick-setup-slot-controls">
+      <input type="file"
+             name="{{ slot.key }}_file"
+             accept=".csv"
+             form="{{ form_id }}"
+             data-quick-setup-file>
+    </div>
   {% else %}
     {# Inert slot (slot 4 — Settings, until Segment 12A PR 6 wires
-       it). Same shape as the live slot but every control disabled. #}
+       it). Same shape as the live slot but the file input is
+       disabled. #}
     <div class="quick-setup-slot-controls">
       <input type="file"
              accept=".csv"
              disabled
              aria-disabled="true"
              {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
-      <button type="button"
-              class="btn secondary"
-              disabled
-              aria-disabled="true"
-              {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>Submit</button>
     </div>
   {% endif %}
 </section>
 {%- endmacro %}
 
+{% set submit_all_form_id = "quick-setup-submit-all-form" %}
+{% set is_session_scoped = session is defined and session %}
 <div class="card" id="quick-setup">
+  {# The outer submit-all form wraps the body wrapper so file-input
+     name attributes survive submission. Rendered as an empty form
+     element — the inputs themselves live inside the slots and use
+     the HTML ``form="..."`` attribute to associate. The Submit
+     button at the bottom of the card uses the same association so
+     it can sit visually outside the form's HTML scope while still
+     submitting it.
+
+     Suppressed on the new-session preview (no real session yet);
+     the card is purely visual there and inputs render disabled
+     via ``is_wired=False``. #}
+  {% if is_session_scoped %}
+    <form id="{{ submit_all_form_id }}"
+          action="/operator/sessions/{{ session.id }}/quick-setup/submit-all"
+          method="post"
+          enctype="multipart/form-data"
+          style="margin: 0;">
+      <input type="hidden" name="confirm_replace" value="">
+    </form>
+  {% endif %}
+
   {# Body wrapper carries ``.locked`` greying when the card is
      locked. The H2 title + replacement-confirmation checkbox both
      sit inside the wrapper so they grey along with the slot
-     controls. The Lock / Unlock button below sits outside this
-     wrapper so it stays vivid even while the body is greyed. #}
+     controls. The footer (Submit + Lock toggle) sits outside this
+     wrapper so the toggle stays vivid even while the body is
+     greyed. #}
   <div class="quick-setup-body{% if quick_setup.is_locked %} locked{% endif %}">
     <h2>{{ quick_setup.title }}</h2>
     <p class="form-help">{{ quick_setup.description }}</p>
     {# Card-level replacement-confirmation checkbox. One source of
        truth for "I am OK overwriting whatever's already in these
-       slots." Inline JS below copies its state into each slot
-       form's hidden ``confirm_replace`` input on submit; the route's
-       server-side ``confirm_replace == "true"`` gate stays the
-       source of truth.
-
-       Sits inside the locked-body wrapper so the operator can't
-       interact with it (or accidentally tick it) while the card
-       is locked. #}
+       slots." Inline JS below copies its state into the outer
+       form's hidden ``confirm_replace`` input on submit. #}
     <p class="form-help">
       <label style="font-weight: normal;">
         <input type="checkbox" id="quick-setup-confirm-replace-toggle">
@@ -188,59 +194,85 @@
     <div class="quick-setup-top-grid">
       <div class="quick-setup-top-grid-col">
         {% for slot in quick_setup.slots if slot.key in ("reviewers", "reviewees") %}
-          {{ quick_setup_slot(slot) }}
+          {{ quick_setup_slot(slot, submit_all_form_id) }}
         {% endfor %}
       </div>
       <div class="quick-setup-top-grid-col">
         {% for slot in quick_setup.slots if slot.key == "assignments" %}
-          {{ quick_setup_slot(slot) }}
+          {{ quick_setup_slot(slot, submit_all_form_id) }}
         {% endfor %}
       </div>
     </div>
-    {# Bottom: full-width Session settings slot below a divider.
-       Settings's live wiring lands in Segment 12A PR 6; until then
-       the slot stays inert (same shape as the live slots). #}
+    {# Bottom: full-width Session settings slot below a divider. #}
     <hr class="quick-setup-divider">
     {% for slot in quick_setup.slots if slot.key == "settings" %}
-      {{ quick_setup_slot(slot) }}
+      {{ quick_setup_slot(slot, submit_all_form_id) }}
     {% endfor %}
   </div>
-  {# Footer: Lock / Unlock toggle, bottom-right. Renders in every
-     editable-conceivable state on Session Home (the new-session
-     preview variant suppresses it via ``show_lock_toggle=False``).
-     The form posts to the lock-toggle route which flips a per-
-     session ``HttpOnly`` cookie that the context-builder reads on
-     subsequent renders. #}
-  {% if quick_setup.show_lock_toggle %}
-    <div class="quick-setup-card-footer">
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/quick-setup/lock"
-            style="margin: 0;">
-        <input type="hidden"
-               name="action"
-               value="{% if quick_setup.is_locked %}unlock{% else %}lock{% endif %}">
-        <button type="submit"
-                class="btn secondary"
-                id="quick-setup-lock-toggle">{% if quick_setup.is_locked %}Unlock{% else %}Lock{% endif %}</button>
-      </form>
+  {# Footer: bottom-aligned row with the consolidated Submit button
+     on the left and the Lock / Unlock toggle on the right. The
+     Submit button is associated with the outer submit-all form via
+     the HTML ``form="..."`` attribute and starts ``disabled``;
+     inline JS below toggles it on/off based on whether any file
+     input has a file selected.
+
+     Footer is suppressed on the new-session preview where the
+     card is purely visual. #}
+  {% if is_session_scoped %}
+    <div class="quick-setup-card-footer"
+         style="display: flex; gap: var(--space-2); align-items: center;">
+      <button type="submit"
+              class="btn primary"
+              form="{{ submit_all_form_id }}"
+              id="quick-setup-submit-all"
+              disabled>Submit</button>
+      {% if quick_setup.show_lock_toggle %}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/quick-setup/lock"
+              style="margin: 0; margin-left: auto;">
+          <input type="hidden"
+                 name="action"
+                 value="{% if quick_setup.is_locked %}unlock{% else %}lock{% endif %}">
+          <button type="submit"
+                  class="btn secondary"
+                  id="quick-setup-lock-toggle">{% if quick_setup.is_locked %}Unlock{% else %}Lock{% endif %}</button>
+        </form>
+      {% endif %}
     </div>
   {% endif %}
 </div>
 
-{# Mirror the card-level confirmation checkbox into each slot
-   form's hidden ``confirm_replace`` input on submit. Server-side
-   ``confirm_replace == "true"`` gate stays the source of truth;
-   this just spares the operator from per-slot bookkeeping. #}
 <script>
   (function () {
+    var formId = {{ submit_all_form_id|tojson }};
+    var form = document.getElementById(formId);
+    var submit = document.getElementById("quick-setup-submit-all");
     var toggle = document.getElementById("quick-setup-confirm-replace-toggle");
-    if (!toggle) return;
-    var forms = document.querySelectorAll("[data-quick-setup-form]");
-    forms.forEach(function (form) {
+    if (form && toggle) {
+      // Mirror the card-level confirmation checkbox into the form's
+      // hidden ``confirm_replace`` input on submit. Server-side
+      // ``confirm_replace == "true"`` gate stays the source of truth.
       form.addEventListener("submit", function () {
         var hidden = form.querySelector('input[name="confirm_replace"]');
         if (hidden) hidden.value = toggle.checked ? "true" : "";
       });
-    });
+    }
+    // Gate the bottom Submit button on file-input presence. Walks the
+    // page (not the form, since inputs use ``form="..."`` to
+    // associate) for any element marked ``data-quick-setup-file``.
+    if (submit) {
+      var inputs = document.querySelectorAll("[data-quick-setup-file]");
+      function refresh() {
+        var any = false;
+        inputs.forEach(function (i) {
+          if (i.files && i.files.length > 0) any = true;
+        });
+        submit.disabled = !any;
+      }
+      inputs.forEach(function (i) {
+        i.addEventListener("change", refresh);
+      });
+      refresh();
+    }
   })();
 </script>

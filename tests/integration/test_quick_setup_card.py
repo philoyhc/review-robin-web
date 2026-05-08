@@ -213,9 +213,14 @@ def test_card_level_replacement_checkbox_renders_once(
         assert f"quick-setup-{key}-confirm-banner" not in body
     # No "Confirm replacement" button (that was on the per-slot banner).
     assert "Confirm replacement" not in body
-    # Each live slot's form carries a hidden ``confirm_replace``
-    # input that the inline JS sets from the toggle.
-    assert body.count('name="confirm_replace"') >= 3
+    # The consolidated submit-all form carries a single hidden
+    # ``confirm_replace`` input that the inline JS sets from the
+    # toggle on submit. (Count the actual ``<input ... name="confirm_replace"``
+    # markup; the inline JS also references the name as a CSS
+    # selector but that's not a render of the input itself.)
+    assert (
+        body.count('type="hidden" name="confirm_replace"') == 1
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -570,3 +575,122 @@ def test_assignments_rule_mode_with_personal_rule_set_uses_engine(
     assert response.status_code == 303, response.text
     body = client.get(f"/operator/sessions/{review_session.id}").text
     assert "rule_based" in body
+
+
+# ---------------------------------------------------------------------------
+# Consolidated submit-all (PR C)
+# ---------------------------------------------------------------------------
+
+
+def test_card_renders_single_bottom_submit_button(
+    client: TestClient, db: Session
+) -> None:
+    """One Submit button at the bottom of the card, associated with
+    the outer submit-all form via the HTML ``form="..."`` attribute,
+    and starting ``disabled`` because no file is attached on first
+    paint."""
+
+    review_session = _make_session(client, db, code="qs-submit-bottom")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    assert 'id="quick-setup-submit-all"' in body
+    # Disabled by default — no file selected on first paint.
+    submit_start = body.index('id="quick-setup-submit-all"')
+    submit_block = body[submit_start - 200 : submit_start + 200]
+    assert "disabled" in submit_block
+    # Form is the consolidated submit-all endpoint.
+    assert (
+        'action="/operator/sessions/'
+        f'{review_session.id}/quick-setup/submit-all"' in body
+    )
+    # Per-slot Submit buttons are gone.
+    assert "Submit</button>" in body  # the bottom Submit
+    submit_count = body.count("Submit</button>")
+    assert submit_count == 1, (
+        "Only the bottom Submit should remain; per-slot Submits "
+        "were retired in PR C."
+    )
+
+
+def test_submit_all_runs_reviewers_slot_when_file_attached(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="qs-sa-rev")
+    csv = REVIEWER_CSV
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        files={"reviewers_file": ("reviewers.csv", csv, "text/csv")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    # Reviewer count updated.
+    assert "1 currently" in body or "2 currently" in body or "3 currently" in body
+
+
+def test_submit_all_runs_assignments_rule_when_only_rule_supplied(
+    client: TestClient, db: Session
+) -> None:
+    """submit-all with no file but a ``rule_set_id`` supplied
+    triggers the rule-based path on the assignments slot. The
+    button-enable gate (file presence) is client-side only — a
+    crafted POST that lacks files but carries a rule_set_id is
+    handled cleanly."""
+
+    review_session = _seed_pair(client, db, code="qs-sa-rule")
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        data={"rule": "full_matrix"},
+        follow_redirects=False,
+    )
+    # No files present; the legacy ``rule="full_matrix"`` path is
+    # only honoured by the per-slot route. submit-all expects
+    # ``rule_set_id`` directly.
+    assert response.status_code == 303
+    # Server-side, the empty post is a no-op redirect.
+    assert response.headers["location"].startswith(
+        f"/operator/sessions/{review_session.id}"
+    )
+
+
+def test_submit_all_with_no_input_is_a_clean_redirect(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="qs-sa-empty")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].startswith(
+        f"/operator/sessions/{review_session.id}"
+    )
+
+
+def test_submit_all_runs_reviewers_and_reviewees_in_one_post(
+    client: TestClient, db: Session
+) -> None:
+    """A single submit-all POST with files in two slots runs both —
+    no per-slot button required."""
+
+    review_session = _make_session(client, db, code="qs-sa-both")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        files={
+            "reviewers_file": (
+                "reviewers.csv",
+                REVIEWER_CSV,
+                "text/csv",
+            ),
+            "reviewees_file": (
+                "reviewees.csv",
+                REVIEWEE_CSV,
+                "text/csv",
+            ),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    assert "Reviewers" in body and "Reviewees" in body

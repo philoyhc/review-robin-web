@@ -749,18 +749,51 @@ async def _handle_quick_setup_import(
 
     home_url = f"/operator/sessions/{review_session.id}"
     fragment = f"#quick-setup-{kind}"
-
-    def error_redirect(reason: str) -> RedirectResponse:
+    error_reason = await _run_quick_setup_import(
+        file=file,
+        confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
+        review_session=review_session,
+        user=user,
+        db=db,
+        kind=kind,
+        existing_count_fn=existing_count_fn,
+        parse_fn=parse_fn,
+        save_fn=save_fn,
+    )
+    if error_reason is not None:
         return RedirectResponse(
             url=(
                 f"{home_url}?quick_setup_error={kind}"
-                f"&quick_setup_reason={reason}{fragment}"
+                f"&quick_setup_reason={error_reason}{fragment}"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
+    return RedirectResponse(
+        url=f"{home_url}{fragment}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+async def _run_quick_setup_import(
+    *,
+    file: UploadFile,
+    confirm_replace: str | None,
+    acknowledge_response_loss: str | None,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+    kind: str,
+    existing_count_fn,
+    parse_fn,
+    save_fn,
+) -> str | None:
+    """Reusable parse / save pipeline shared by the per-slot routes
+    and the consolidated ``submit-all`` handler. Returns the
+    ``quick_setup_reason`` token on failure, ``None`` on success."""
 
     if not lifecycle.is_editable(review_session):
-        return error_redirect("lifecycle")
+        return "lifecycle"
 
     content = await file.read()
     result = parse_fn(content)
@@ -777,11 +810,11 @@ async def _handle_quick_setup_import(
     if result.is_blocked or any(
         issue.severity == "error" for issue in result.issues
     ):
-        return error_redirect("parse")
+        return "parse"
 
     existing = existing_count_fn(db, review_session.id)
     if existing > 0 and confirm_replace != "true":
-        return error_redirect("needs_confirm")
+        return "needs_confirm"
 
     if existing > 0:
         try:
@@ -789,7 +822,7 @@ async def _handle_quick_setup_import(
                 db, review_session, acknowledge_response_loss
             )
         except HTTPException:
-            return error_redirect("needs_confirm")
+            return "needs_confirm"
 
     save_fn(
         db,
@@ -799,10 +832,7 @@ async def _handle_quick_setup_import(
         filename=file.filename or "",
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
-        url=f"{home_url}{fragment}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+    return None
 
 
 @router.post(
@@ -844,17 +874,49 @@ async def quick_setup_assignments_submit(
     home_url = f"/operator/sessions/{review_session.id}"
     fragment = "#quick-setup-assignments"
 
-    def error_redirect(reason: str) -> RedirectResponse:
+    error_reason = await _run_quick_setup_assignments(
+        file=file,
+        rule_set_id=rule_set_id,
+        rule=rule,
+        exclude_self_review=exclude_self_review,
+        confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
+        review_session=review_session,
+        user=user,
+        db=db,
+    )
+    if error_reason is not None:
         return RedirectResponse(
             url=(
                 f"{home_url}?quick_setup_error=assignments"
-                f"&quick_setup_reason={reason}{fragment}"
+                f"&quick_setup_reason={error_reason}{fragment}"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
+    return RedirectResponse(
+        url=f"{home_url}{fragment}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+async def _run_quick_setup_assignments(
+    *,
+    file: UploadFile | None,
+    rule_set_id: int | None,
+    rule: str | None,
+    exclude_self_review: str | None,
+    confirm_replace: str | None,
+    acknowledge_response_loss: str | None,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+) -> str | None:
+    """Reusable assignments-slot pipeline shared by the per-slot
+    route and the consolidated ``submit-all`` handler. Returns the
+    ``quick_setup_reason`` token on failure, ``None`` on success."""
 
     if not lifecycle.is_editable(review_session):
-        return error_redirect("lifecycle")
+        return "lifecycle"
 
     file_content = b""
     if file is not None and file.filename:
@@ -863,14 +925,14 @@ async def quick_setup_assignments_submit(
     use_csv_mode = bool(file_content)
     existing = assignments.existing_count(db, review_session.id)
     if existing > 0 and confirm_replace != "true":
-        return error_redirect("needs_confirm")
+        return "needs_confirm"
     if existing > 0:
         try:
             _require_response_loss_ack(
                 db, review_session, acknowledge_response_loss
             )
         except HTTPException:
-            return error_redirect("needs_confirm")
+            return "needs_confirm"
 
     exclude_self = exclude_self_review == "true"
     reviewers = assignments.list_reviewers(db, review_session.id)
@@ -884,7 +946,7 @@ async def quick_setup_assignments_submit(
         if result.is_blocked or any(
             issue.severity == "error" for issue in result.issues
         ):
-            return error_redirect("parse")
+            return "parse"
         rows = result.rows
         if exclude_self:
             rows = [
@@ -907,81 +969,190 @@ async def quick_setup_assignments_submit(
             contexts=contexts,
             includes=includes,
         )
-    else:
-        # Rule mode. Route through the same library + engine pair
-        # that drives the Rule Based card on the Assignments page —
-        # one engine path, one audit shape, regardless of which
-        # surface initiated the generation.
-        from pydantic import TypeAdapter
+        return None
 
-        from app.schemas.rules import (
-            Combinator,
-            Rule,
-            RuleSetOptions,
-            RuleSetSchema,
-        )
-        from app.services.rules import engine, library
+    # Rule mode. Route through the same library + engine pair that
+    # drives the Rule Based card on the Assignments page — one
+    # engine path, one audit shape, regardless of which surface
+    # initiated the generation.
+    from pydantic import TypeAdapter
 
-        resolved_id = rule_set_id
-        if resolved_id is None and rule == "full_matrix":
-            # Legacy ``rule="full_matrix"`` payload — fall through to
-            # the seeded Full Matrix RuleSet so existing tests +
-            # bookmarks keep working.
-            full_matrix = next(
-                (
-                    rs
-                    for rs in library.list_visible_rule_sets(db, user=user)
-                    if rs.is_seed and rs.name == "Full Matrix"
-                ),
-                None,
-            )
-            if full_matrix is not None:
-                resolved_id = full_matrix.id
-        if resolved_id is None:
-            return error_redirect("parse")
+    from app.schemas.rules import (
+        Combinator,
+        Rule,
+        RuleSetOptions,
+        RuleSetSchema,
+    )
+    from app.services.rules import engine, library
 
-        loaded = library.load_rule_set(db, resolved_id)
-        if loaded is None:
-            return error_redirect("parse")
-        rule_set_row, revision = loaded
-
-        rule_adapter = TypeAdapter(Rule)
-        rule_set_schema = RuleSetSchema(
-            id=rule_set_row.id,
-            name=rule_set_row.name,
-            description=rule_set_row.description or "",
-            scope=rule_set_row.scope,  # type: ignore[arg-type]
-            combinator=Combinator(revision.combinator),
-            rules=[
-                rule_adapter.validate_python(payload)
-                for payload in revision.rules_json
-            ],
-            options=RuleSetOptions(
-                excludeSelfReviews=revision.exclude_self_reviews,
-                seed=revision.seed,
+    resolved_id = rule_set_id
+    if resolved_id is None and rule == "full_matrix":
+        # Legacy ``rule="full_matrix"`` payload — fall through to
+        # the seeded Full Matrix RuleSet so existing tests +
+        # bookmarks keep working.
+        full_matrix = next(
+            (
+                rs
+                for rs in library.list_visible_rule_sets(db, user=user)
+                if rs.is_seed and rs.name == "Full Matrix"
             ),
+            None,
         )
-        result = engine.evaluate(
-            rule_set_schema,
-            reviewers=reviewers,
-            reviewees=reviewees,
-            override_exclude_self_reviews=exclude_self,
-            revision_seed=revision.id,
+        if full_matrix is not None:
+            resolved_id = full_matrix.id
+    if resolved_id is None:
+        return "parse"
+
+    loaded = library.load_rule_set(db, resolved_id)
+    if loaded is None:
+        return "parse"
+    rule_set_row, revision = loaded
+
+    rule_adapter = TypeAdapter(Rule)
+    rule_set_schema = RuleSetSchema(
+        id=rule_set_row.id,
+        name=rule_set_row.name,
+        description=rule_set_row.description or "",
+        scope=rule_set_row.scope,  # type: ignore[arg-type]
+        combinator=Combinator(revision.combinator),
+        rules=[
+            rule_adapter.validate_python(payload)
+            for payload in revision.rules_json
+        ],
+        options=RuleSetOptions(
+            excludeSelfReviews=revision.exclude_self_reviews,
+            seed=revision.seed,
+        ),
+    )
+    result = engine.evaluate(
+        rule_set_schema,
+        reviewers=reviewers,
+        reviewees=reviewees,
+        override_exclude_self_reviews=exclude_self,
+        revision_seed=revision.id,
+    )
+    assignments.replace_assignments(
+        db,
+        review_session=review_session,
+        user=user,
+        pairs=result.pairs,
+        mode=AssignmentMode.rule_based,
+        correlation_id=request_correlation_id(),
+        excluded_counts=result.excluded_counts,
+        rule_set_revision=revision,
+        exclude_self_reviews=exclude_self,
+    )
+    return None
+
+
+@router.post(
+    "/sessions/{session_id}/quick-setup/submit-all",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def quick_setup_submit_all(
+    request: Request,
+    reviewers_file: UploadFile | None = File(default=None),
+    reviewees_file: UploadFile | None = File(default=None),
+    assignments_file: UploadFile | None = File(default=None),
+    rule_set_id: int | None = Form(default=None),
+    exclude_self_review: str | None = Form(default=None),
+    confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Consolidated Quick Setup submit handler.
+
+    Replaces the per-slot Submit buttons (one per slot) with a
+    single bottom Submit on the card. For each slot whose file is
+    attached, dispatches to the same internal pipeline the per-slot
+    route uses (kept alive as backend-only entry points). The
+    Assignments slot also runs when no file is attached but a
+    ``rule_set_id`` is supplied — the rule-based path through
+    ``engine.evaluate``.
+
+    Per the locked decision, the Submit button itself is gated
+    client-side on file presence; this server-side handler is the
+    source of truth and skips empty slots silently.
+
+    On the first slot's failure the operator is redirected back to
+    Home with that slot's ``?quick_setup_error=...&quick_setup_reason=...``
+    flag; later slots in the dispatch order don't run on a failure
+    upstream. Success 303s to Home with no flag and the slot
+    fragment of the last slot that ran (or the card root when
+    nothing did).
+    """
+
+    home_url = f"/operator/sessions/{review_session.id}"
+
+    def error_redirect(kind: str, reason: str) -> RedirectResponse:
+        return RedirectResponse(
+            url=(
+                f"{home_url}?quick_setup_error={kind}"
+                f"&quick_setup_reason={reason}#quick-setup-{kind}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
         )
-        assignments.replace_assignments(
-            db,
+
+    last_fragment = ""
+
+    if reviewers_file is not None and reviewers_file.filename:
+        reason = await _run_quick_setup_import(
+            file=reviewers_file,
+            confirm_replace=confirm_replace,
+            acknowledge_response_loss=acknowledge_response_loss,
             review_session=review_session,
             user=user,
-            pairs=result.pairs,
-            mode=AssignmentMode.rule_based,
-            correlation_id=request_correlation_id(),
-            excluded_counts=result.excluded_counts,
-            rule_set_revision=revision,
-            exclude_self_reviews=exclude_self,
+            db=db,
+            kind="reviewers",
+            existing_count_fn=csv_imports.existing_reviewer_count,
+            parse_fn=csv_imports.parse_reviewer_csv,
+            save_fn=csv_imports.save_reviewers,
         )
+        if reason is not None:
+            return error_redirect("reviewers", reason)
+        last_fragment = "#quick-setup-reviewers"
+
+    if reviewees_file is not None and reviewees_file.filename:
+        reason = await _run_quick_setup_import(
+            file=reviewees_file,
+            confirm_replace=confirm_replace,
+            acknowledge_response_loss=acknowledge_response_loss,
+            review_session=review_session,
+            user=user,
+            db=db,
+            kind="reviewees",
+            existing_count_fn=csv_imports.existing_reviewee_count,
+            parse_fn=csv_imports.parse_reviewee_csv,
+            save_fn=csv_imports.save_reviewees,
+        )
+        if reason is not None:
+            return error_redirect("reviewees", reason)
+        last_fragment = "#quick-setup-reviewees"
+
+    has_assignments_file = (
+        assignments_file is not None and assignments_file.filename
+    )
+    if has_assignments_file or rule_set_id is not None:
+        reason = await _run_quick_setup_assignments(
+            file=assignments_file,
+            rule_set_id=rule_set_id,
+            rule=None,
+            exclude_self_review=exclude_self_review,
+            confirm_replace=confirm_replace,
+            acknowledge_response_loss=acknowledge_response_loss,
+            review_session=review_session,
+            user=user,
+            db=db,
+        )
+        if reason is not None:
+            return error_redirect("assignments", reason)
+        last_fragment = "#quick-setup-assignments"
 
     return RedirectResponse(
-        url=f"{home_url}{fragment}",
+        url=f"{home_url}{last_fragment}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
