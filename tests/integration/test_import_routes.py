@@ -582,6 +582,40 @@ def test_reviewers_page_lists_imported_rows(client: TestClient, db: Session) -> 
     assert f"/operator/sessions/{review_session.id}\"" in body  # back link
 
 
+def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="r-tags")
+    csv_body = (
+        b"ReviewerName,ReviewerEmail,ReviewerTag1,ReviewerTag2\n"
+        b"Alice,alice@example.edu,senior,cohort-a\n"
+        b"Bob,bob@example.edu,,\n"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={"file": ("r.csv", csv_body, "text/csv")},
+        follow_redirects=False,
+    )
+
+    body = client.get(f"/operator/sessions/{review_session.id}/reviewers").text
+
+    # New per-tag columns replace the combined "Tags" cell.
+    assert '<th class="tag-col tag-col-1">Tag1</th>' in body
+    assert '<th class="tag-col tag-col-2">Tag2</th>' in body
+    assert '<th class="tag-col tag-col-3">Tag3</th>' in body
+    assert "<th>Tags</th>" not in body
+
+    # Toggle row above the table — Tag1 / Tag2 ticked (have data),
+    # Tag3 unticked (no data anywhere).
+    assert 'data-tag-toggle="1"\n                 checked' in body
+    assert 'data-tag-toggle="2"\n                 checked' in body
+    assert 'data-tag-toggle="3"\n                 checked' not in body
+
+    # Tag values render in their own cells (no "1: " prefix).
+    assert "1: senior" not in body
+    assert ">senior</td>" in body
+
+
 def test_reviewees_page_lists_imported_rows_with_photolink(
     client: TestClient, db: Session
 ) -> None:
