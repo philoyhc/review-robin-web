@@ -40,8 +40,11 @@ from ._extract_data import (
     build_extract_data_context,
 )
 
+# Manage Invitations page rows (sliced in PR 3).
+from ._invitations import InvitationsRow, build_invitations_rows
+
 # Everything else still in the legacy container; carved out by
-# PRs 3-10.
+# PRs 4-10.
 from ._legacy import (
     EMAIL_PREVIEW_TABS,
     INVITATIONS_STATUS_OPTIONS,
@@ -55,7 +58,6 @@ from ._legacy import (
     EmailBody,
     EmailPreviewTab,
     InstrumentHeading,
-    InvitationsRow,
     IssueSourceGroup,
     PageButton,
     PreviewPickerContext,
@@ -78,7 +80,6 @@ from ._legacy import (
     ValidateContext,
     build_email_preview_body,
     build_instruments_context,
-    build_invitations_rows,
     build_new_session_quick_setup_context,
     build_preview_picker_context,
     build_quick_setup_context,
