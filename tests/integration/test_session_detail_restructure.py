@@ -534,13 +534,11 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     assert "Wired in Segment 11J PR A" not in body
     assert "Wired in Segment 11J PR B" not in body
     assert "Wired in Segment 12A PR 6" in body
-    # Live slots' forms post to their wire URLs.
+    # The consolidated submit-all form posts at the card level —
+    # the per-slot Submit buttons + per-slot form actions were
+    # retired in PR C of the rule-builder follow-on stream.
     assert (
-        f'action="/operator/sessions/{review_session.id}/quick-setup/reviewers"'
-        in body
-    )
-    assert (
-        f'action="/operator/sessions/{review_session.id}/quick-setup/assignments"'
+        f'action="/operator/sessions/{review_session.id}/quick-setup/submit-all"'
         in body
     )
     # Replacement confirmation lives at the card level (single
