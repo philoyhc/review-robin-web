@@ -39,12 +39,19 @@
             <option value="{{ option.id }}"
                     {% if option.id == rule_based_card.selected_option_id %}selected{% endif %}
                     data-description="{{ option.description }}"
-                    data-exclude-self-reviews="{{ 'true' if option.exclude_self_reviews else 'false' }}">{{ option.label }}</option>
+                    data-exclude-self-reviews="{{ 'true' if option.exclude_self_reviews else 'false' }}"
+                    data-eligible-pairs="{{ option.eligible_pair_count }}">{{ option.label }}</option>
           {% endfor %}
         </select>
       </p>
       <p class="form-help" id="rule-based-description">
         {{ rule_based_card.selected_description }}
+      </p>
+
+      <p>
+        Number of eligible pairs found:
+        <span class="pill pill-info"
+              id="rule-based-eligible-count">{{ rule_based_card.selected_eligible_pair_count }}</span>
       </p>
 
       <p>
@@ -89,6 +96,7 @@
         var selector = document.getElementById("rule-based-ruleset");
         if (!selector) return;
         var description = document.getElementById("rule-based-description");
+        var eligibleCount = document.getElementById("rule-based-eligible-count");
         var editLink = document.getElementById("rule-based-edit");
         var checkbox = document.querySelector(
           '#rule-based-assignment input[name="exclude_self_review"]'
@@ -97,6 +105,9 @@
           var option = selector.options[selector.selectedIndex];
           if (description) {
             description.textContent = option.dataset.description || "";
+          }
+          if (eligibleCount) {
+            eligibleCount.textContent = option.dataset.eligiblePairs || "0";
           }
           if (checkbox) {
             checkbox.checked = option.dataset.excludeSelfReviews === "true";
@@ -115,8 +126,7 @@
 
     {% if rule_based_card.last_generated %}
       <p class="form-help" id="rule-based-last-generated" style="margin-top: 12px;">
-        Last generated{% if rule_based_card.last_generated.rule_set_name %} using <span class="pill pill-info">{{ rule_based_card.last_generated.rule_set_name }}</span>{% endif %}:
-        <span class="pill pill-info">{{ rule_based_card.last_generated.pair_count }} unique pair{% if rule_based_card.last_generated.pair_count != 1 %}s{% endif %}</span>{% if rule_based_card.last_generated.assignment_count is not none %}
+        Last generated{% if rule_based_card.last_generated.rule_set_name %} using <span class="pill pill-info">{{ rule_based_card.last_generated.rule_set_name }}</span>{% endif %}{% if rule_based_card.last_generated.assignment_count is not none %}:
         <span class="pill pill-info">{{ rule_based_card.last_generated.assignment_count }} assignment{% if rule_based_card.last_generated.assignment_count != 1 %}s{% endif %}</span>{% endif %}
       </p>
     {% endif %}
