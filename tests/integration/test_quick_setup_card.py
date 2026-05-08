@@ -364,7 +364,7 @@ def test_assignments_rule_mode_golden_path(
         "#quick-setup-assignments"
     )
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    assert "Assignments" in body and "1 currently, full_matrix" in body
+    assert "Assignments" in body and "1 currently, rule_based" in body
     # Error banner stays hidden.
     assert (
         'id="quick-setup-assignments-error-banner"' in body
@@ -475,3 +475,98 @@ def test_assignments_submit_on_ready_routes_to_lifecycle_banner(
     assert "quick_setup_reason=lifecycle" in location
     body = operator.get(location).text
     assert "Pause the session before applying setup changes." in body
+
+
+def test_assignments_slot_dropdown_lists_seeds_then_personal(
+    client: TestClient, db: Session
+) -> None:
+    """The "Generate by rule" dropdown is populated with every
+    visible RuleSet in canonical order (seeds in install order,
+    then caller-owned Personal). Replaces the static "Full Matrix"-
+    only option."""
+
+    from app.db.models import RuleSet as RuleSetModel
+
+    review_session = _seed_pair(client, db, code="qs-a-rules-list")
+
+    # Seed a Personal RuleSet via the new Save-As flow.
+    intra_id = db.execute(
+        select(RuleSetModel.id).where(
+            RuleSetModel.is_seed.is_(True),
+            RuleSetModel.name == "Intra-group peer review",
+        )
+    ).scalar_one()
+    save_response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based-editor/save",
+        data={
+            "source_rule_set_id": intra_id,
+            "name": "Personal Bbb",
+            "combinator": "ALL_OF",
+            "rules_json": "[]",
+        },
+        follow_redirects=False,
+    )
+    assert save_response.status_code == 303
+
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    # Both seed names + the Personal name appear in the slot 3
+    # dropdown, with seeds first.
+    slot_marker = 'id="quick-setup-assignments-rule"'
+    assert slot_marker in body, "assignments slot dropdown missing"
+    slot_start = body.index(slot_marker)
+    slot_block = body[slot_start : slot_start + 2000]
+    full_matrix_pos = slot_block.find("Full Matrix")
+    intra_pos = slot_block.find("Intra-group peer review")
+    personal_pos = slot_block.find("Personal Bbb")
+    assert full_matrix_pos != -1
+    assert intra_pos != -1
+    assert personal_pos != -1
+    assert full_matrix_pos < personal_pos
+    assert intra_pos < personal_pos
+
+
+def test_assignments_rule_mode_with_personal_rule_set_uses_engine(
+    client: TestClient, db: Session
+) -> None:
+    """Submitting the slot with a Personal ``rule_set_id`` routes
+    through the new rule-based engine and writes
+    ``mode=rule_based`` plus the rule_set provenance refs on the
+    audit row."""
+
+    from app.db.models import RuleSet as RuleSetModel
+
+    review_session = _seed_pair(client, db, code="qs-a-personal")
+
+    intra_id = db.execute(
+        select(RuleSetModel.id).where(
+            RuleSetModel.is_seed.is_(True),
+            RuleSetModel.name == "Intra-group peer review",
+        )
+    ).scalar_one()
+    save_response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based-editor/save",
+        data={
+            "source_rule_set_id": intra_id,
+            "name": "Personal Ccc",
+            "combinator": "ALL_OF",
+            "rules_json": "[]",
+        },
+        follow_redirects=False,
+    )
+    personal_id = int(
+        save_response.headers["location"]
+        .split("rule_set_id=", 1)[1]
+        .split("&", 1)[0]
+    )
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/assignments",
+        data={"rule_set_id": personal_id},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    assert "rule_based" in body

@@ -870,6 +870,31 @@ class QuickSetupSlot:
     """Clean Home URL with this slot's fragment anchor. Used as the
     Cancel target for the error banner. Stable across renders."""
 
+    rule_set_options: list["QuickSetupRuleSetOption"] = field(
+        default_factory=list
+    )
+    """Populated only on the ``rule_or_csv`` slot (Assignments). The
+    full visible-RuleSet list (seeds + caller-owned Personal,
+    canonical order) for the slot's "Generate by rule" dropdown.
+    Empty for every other slot."""
+
+    selected_rule_set_id: int | None = None
+    """Initially-selected RuleSet on the assignments slot's
+    dropdown. Defaults to the first seed in install order. ``None``
+    when the slot doesn't carry a rule dropdown."""
+
+
+@dataclass(frozen=True)
+class QuickSetupRuleSetOption:
+    """One option in the assignments slot's "Generate by rule"
+    dropdown. Same shape conventions as ``RuleBasedSelectorOption``
+    on the Assignments page; a separate dataclass keeps the Quick
+    Setup code path independent of the assignments-card adapter."""
+
+    id: int
+    label: str
+    is_seed: bool
+
 
 @dataclass(frozen=True)
 class QuickSetupContext:
@@ -922,6 +947,7 @@ def build_quick_setup_context(
     db: Session,
     review_session: ReviewSession,
     *,
+    user: User | None = None,
     is_unlocked: bool = False,
     error_kind: str | None = None,
     error_reason: str | None = None,
@@ -965,6 +991,27 @@ def build_quick_setup_context(
         if error_kind != slot_key:
             return None
         return _quick_setup_error_message(slot_key, error_reason)
+
+    # Pull the visible RuleSet list once for the assignments slot's
+    # "Generate by rule" dropdown. ``list_visible_rule_sets`` already
+    # returns the canonical ordering (seeds first in install order,
+    # then caller-owned Personal). Empty when ``user`` is None — the
+    # new-session preview / inert-card path has no caller identity.
+    rule_set_options: list[QuickSetupRuleSetOption] = []
+    selected_rule_set_id: int | None = None
+    if user is not None:
+        from app.services.rules import library
+
+        for rs in library.list_visible_rule_sets(db, user=user):
+            rule_set_options.append(
+                QuickSetupRuleSetOption(
+                    id=rs.id,
+                    label=rs.name,
+                    is_seed=rs.is_seed,
+                )
+            )
+        if rule_set_options:
+            selected_rule_set_id = rule_set_options[0].id
 
     slots = [
         QuickSetupSlot(
@@ -1010,6 +1057,8 @@ def build_quick_setup_context(
             coming_in=None,
             error_message=_error_for("assignments"),
             cancel_url=cancel_url_for("assignments"),
+            rule_set_options=rule_set_options,
+            selected_rule_set_id=selected_rule_set_id,
         ),
         QuickSetupSlot(
             key="settings",
