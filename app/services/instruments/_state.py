@@ -17,7 +17,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent
+from app.db.models import AuditEvent, Instrument
 
 # Audit-event types that signal "this instrument's field tables were
 # saved by the operator" — used by ``saved_state_for_session`` to
@@ -34,6 +34,28 @@ _SAVED_STATE_EVENT_TYPES: frozenset[str] = frozenset({
     "instrument.fields_reordered",
     "instrument.response_fields_saved",
 })
+
+
+def _instrument_label(instrument: Instrument) -> str:
+    """Operator-facing label for audit-event copy.
+
+    Prefers ``short_label`` (the operator-set reviewer-facing framing
+    added in Segment 11L) over ``description.strip()`` over the
+    auto-generated ``name`` system handle. Lets ``"Updated description
+    on instrument Skills"`` read better than ``"…on instrument
+    instrument_3"`` once an operator has set a short label.
+
+    Lifted to ``_state.py`` in PR 2 of the §12.A ladder so display-
+    fields / response-fields / instrument-CRUD slices can all reach
+    it without a slice-to-slice import cycle.
+    """
+    short = (instrument.short_label or "").strip()
+    if short:
+        return short
+    desc = (instrument.description or "").strip()
+    if desc:
+        return desc
+    return instrument.name
 
 
 def saved_state_for_session(
