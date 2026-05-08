@@ -225,21 +225,107 @@ Given populations R and E and a RuleSet S:
 
 ## 7. Advanced Mode UI
 
-### 7.1 Editor
+The Advanced mode UI is split between two surfaces:
 
-The Advanced mode screen has three regions:
+- The **Rule Based card** on the per-session Assignments page (`/operator/sessions/{id}/assignments`) — picks a RuleSet from the visible library, runs `Generate` against the current populations, and writes the resulting Assignments into the cycle. Records which RuleSet (and revision) was used so the cycle's provenance is preserved.
+- The **Rule Builder page** at `/operator/sessions/{id}/assignments/rule-based-editor` — an authoring surface for creating, copying, editing, and deleting Personal RuleSets.
 
-- **Library panel** — lists Seeded, Personal, and Shared RuleSets. Selecting one loads it into the editor. A New button creates a blank RuleSet.
-- **Rule editor** — shows the RuleSet's metadata (name, description), the combinator selector, the `excludeSelfReviews` checkbox, and the ordered list of rules. Each rule has an enable toggle, a kind selector, and a predicate editor. The predicate editor's field, operator, and operand pickers are populated from the actual tag values present in the loaded populations, so users select from real data rather than typing strings.
-- **Preview panel** — shows the assignment count the current RuleSet would produce, the distribution per reviewer and per reviewee, and a sampled set of pairs. The preview updates as rules are edited so misconfiguration is caught before generation.
+### 7.1 Rule Builder page
 
-### 7.2 Save Dialogue
+> Implemented in Segment 13A-1 (PRs #587, #588, #589, #596, #597, #598, #599 plus the iterated layout-spec stream #590–#600).
 
-The Save action prompts for name, description, and scope (Personal / Shared). Saving an existing RuleSet offers Save (overwrite) and Save As (new copy). Save As is the primary action when the loaded RuleSet is a seed, because seeds are read-only.
+The page hosts two cards side-by-side in a flex grid, each at half the page content width: the **Rule Builder card** (left) and the **Available rulesets card** (right). The title card with the breadcrumb and the `<h1>Rule Builder</h1>` heading sits above and is not in scope here.
 
-### 7.3 Generate
+```
+┌─────────── Rule Builder card (½) ──────────┐  ┌──── Available rulesets card (½) ────┐
+│                                             │  │                                      │
+│  [ RuleSet selector ▾ ]   [ Name input  ]   │  │  ▶ Full Matrix          [seed]       │
+│  Pair every reviewer with every reviewee.   │  │    Pair every reviewer with every…   │
+│  (caption only on seeded read-only)         │  │                                      │
+│                                             │  │    Intra-group peer review  [seed]   │
+│  Friendly Description (optional)            │  │    Match same-group reviewer/…       │
+│  [ User created ruleset                  ]  │  │                                      │
+│  (only on editable branches)                │  │    Cross-group peer review  [seed]   │
+│                                             │  │    …                                 │
+│  Combine these rules with:                  │  │                                      │
+│  [ All of  ▾ ]                              │  │    My team review     [personal]     │
+│                                             │  │    A team review                     │
+│  Rules                                      │  │                                      │
+│  1. Match — reviewer.tag1 is the same as …  │  └──────────────────────────────────────┘
+│  2. Filter — reviewer.email is set          │
+│                                             │
+│  [ + MATCH rule ] [ + FILTER rule ] …       │
+│                                             │
+│  [ Copy ] [ Save ] [ Cancel ] [ Delete ]    │
+│  ↑ bottom-left, outside the body            │
+└─────────────────────────────────────────────┘
+```
 
-A Generate button at the bottom of the editor runs the evaluation algorithm against the current populations and writes the resulting Assignments into the cycle. The button records which RuleSet (and revision) was used so the cycle's provenance is preserved.
+#### 7.1.1 Rule Builder card (left)
+
+1. **Width.** Half the page content width. The width comes from a page-level flex grid that holds the Rule Builder card + the Available rulesets card; the card itself doesn't carry a `max-width`.
+
+2. **Inner row** at the top — chromeless (no card border, no padding, transparent background — visually part of the outer card, structurally a flex row). Two flex children at 1/2 each:
+   - **RuleSet selector** (left). Always present, in every state.
+   - **Name input** (right). Visible only when an editable name exists — i.e., on saved Personal RuleSets, Copy drafts (pre-populated with `Copy of <source>`), and the blank draft (pre-populated with `New RuleSet`). Hidden for seeded selections; when hidden, the selector stays at 1/2 width and the right half stays empty (the selector does **not** expand).
+   - On seeded read-only selections the RuleSet's stored description renders as a one-line caption immediately under the dropdown. Editable branches drop this caption — the description moves into the editable textarea below (rule #4).
+
+3. **No separate title heading.** The dropdown's selected option (for seeds) and the inline name input (for editable selections) carry the title. No `<h2>` heading row, no scope pill above the body.
+
+4. **Friendly Description (optional)** textarea, full width, below the inner row. Editable branches only (drafts + saved Personal).
+   - Hoisted into the editable POST form via the HTML `form="rule-based-editor-form"` attribute so it can sit visually outside the form's body but still submit with it.
+   - **Default value on a fresh Copy / blank draft:** `"User created ruleset"`. Operators are expected to overwrite. Saved-Personal selections preserve their stored description across reloads.
+   - Persists via the existing `/save` route, which writes through to `rule_sets.description`.
+
+5. **Body** — single column, top-to-bottom:
+   - `Combine these rules with:` helper sentence above the combinator selector / read-only pill. No bold "Combinator" heading.
+   - Random seed input (when the RuleSet revision carries one).
+   - "Rules" list — sentence-shaped sentences for seeds (read-only), inline-composite editable form for editable branches.
+   - `+ MATCH rule`, `+ FILTER rule`, `+ QUOTA rule`, `+ COMPOSITE rule` buttons (no `Add` prefix) on editable branches.
+   - **No "Exclude self-review" affordance** — that control lives on the main Assignments page. The `exclude_self_reviews` value still travels with each RuleSet revision; the Rule Builder card just doesn't expose a UI for it. Seeded views similarly omit the "Exclude self-review: on/off" pill row.
+
+6. **Banners** sit between the inner row and the body. State-driven, copy-locked:
+   - Seeded → "This is a read-only seeded RuleSet. Click **Copy** to create an editable Personal copy."
+   - Blank-draft sentinel → "Starting from scratch. Add a rule, then **Save** to persist new Personal RuleSet."
+   - Copy / draft → "Unsaved draft. Edit and **Save** to persist a new Personal RuleSet, or **Cancel** to discard."
+   - Save error / save success → standard error / info banners keyed off `?error=` / `?saved=1`.
+
+7. **Action row** at the bottom of the card, **outside** the body. Left-aligned. Selection-aware:
+   - Seeded → `[ Copy ]`
+   - Saved Personal → `[ Copy ] [ Save ] [ Cancel ] [ Delete ]`
+   - Copy draft / blank draft → `[ Save ] [ Cancel ]`
+   - Blank draft's `Save` is `disabled` client-side until the rule list grows past zero rows; the server-side gate is the source of truth and rejects a zero-rule submit with `?error=empty_rules`.
+
+#### 7.1.2 Available rulesets card (right)
+
+1. **Width.** Half the page content width — paired with the Rule Builder card via the page-level flex grid.
+
+2. **Title.** `<h2>Available rulesets</h2>` at the top of the card.
+
+3. **List.** One row per visible RuleSet, in the same order as the Rule Builder dropdown:
+   - Seeds first, in install order (Full Matrix → Intra-group → Cross-group → Same-group different-role → Three reviewers per reviewee).
+   - Caller-owned Personal RuleSets after, in id order (matches the dropdown convention until the field reports a need for most-recently-updated sort).
+   - Each row carries `name`, a `seed` / `personal` pill, and the RuleSet's `description` as a `form-help` caption beneath.
+
+4. **Active row highlight.** The row matching the Rule Builder's current selection renders highlighted (`▶` prefix on the name + `available-ruleset-row-active` class). Drafts (Copy / blank) produce no highlight — they don't correspond to a persisted row.
+
+5. **Click behaviour.** Out of scope today — rows are read-only. Operators switch RuleSets via the Rule Builder dropdown. Adding "click row to load" is a future enhancement.
+
+#### 7.1.3 Out of scope
+
+- Mobile / narrow viewport: the side-by-side flex grid will need a collapse rule when the page narrows. Capture when we wire responsive breakpoints in Segment 14.
+- Click-to-load on Available rulesets rows.
+- Search / filter on the Available rulesets list (assumes operators have a handful of saved RuleSets per session).
+
+### 7.2 Predicate editor
+
+Inside the Rule Builder card's editable branches, each rule row is an indented inline-composite form: an `enabled` checkbox + a kind selector + a field/operator/operand picker (or quota controls for `QUOTA`, or a child rule list for `COMPOSITE`). Field, operator, and operand pickers are populated from the schema's vocabulary (§4.4); they aren't tied to the loaded populations' actual values — populations may not yet exist when the RuleSet is authored. (A future enhancement could populate operand suggestions from the live populations once present.)
+
+### 7.3 Save / Save-As / Delete
+
+Saving an existing Personal RuleSet appends a new revision in place; saving a draft (Copy or blank) creates a new Personal row. The Copy flow stores no row until the operator hits Save (locked decision: "Copy creates an unsaved draft"). Delete soft-deletes the RuleSet — past `assignments.generated` audit refs still resolve through `library.load_rule_set`, which intentionally doesn't filter on `deleted_at`.
+
+Seeded RuleSets are read-only — their action row exposes only `[ Copy ]`. Selecting a seed and clicking Copy creates an unsaved draft cloning that seed's rules; saving the draft creates a Personal RuleSet.
 
 ---
 

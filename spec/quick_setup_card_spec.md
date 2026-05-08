@@ -22,26 +22,30 @@ For `ready` and `closed` sessions, the card renders the same body-greying as the
 
 ### Slots
 
-The card contains three independent slots:
+The card contains four slots — three live (Reviewers, Reviewees, Assignments) and one inert pending Segment 12A PR 6 (Session settings). Slots 1 / 2 / 4 share a "file upload" shape; slot 3 (Assignments) carries an extra rule selector.
 
-**Slot 1 — Reviewers.**
+**Layout.** A two-column grid hosts the slots. Reviewers, Reviewees, and Session settings stack in the left column; Assignments stands alone in the right column. There is no horizontal divider between the slot groups.
+
+**Slot 1 — Reviewers** (left column, top).
 - File upload accepting CSV.
 - Passive indicator showing current count: "Reviewers (8 currently)" or "Reviewers (none yet)".
-- Submit button scoped to this slot.
 
-**Slot 2 — Reviewees.**
+**Slot 2 — Reviewees** (left column, middle).
 - Same shape as Reviewers.
 - Passive indicator: "Reviewees (13 currently)" or "Reviewees (none yet)".
 
-**Slot 3 — Assignments.**
-
+**Slot 3 — Assignments** (right column).
 - Two interchangeable input modes:
-  - **Rule selector** (default): dropdown or radio group with the supported assignment rules (full matrix, etc. — exact rule set defined elsewhere in the spec).
-  - **CSV upload**: alternative to the rule selector for operators who want explicit assignments.
-- Passive indicator showing current state: "Assignments (104 currently, full-matrix rule)" / "Assignments (104 currently, uploaded)" / "Assignments (none yet)".
-- Submit button scoped to this slot.
+  - **"Generate by rule" dropdown** (default): populated with every visible RuleSet — seeds first in install order, then caller-owned Personal RuleSets — same canonical ordering as the Rule Based card on the Assignments page (§7 of `spec/rule_based_assignment.md`). The default option is a `"— —"` sentinel that means "skip the assignments slot at submit time"; the operator may not want Quick Setup to generate assignments and can leave the dropdown alone.
+  - **"or upload a CSV." file upload**: alternative to the rule selector for operators who want explicit assignments. File-takes-precedence over rule when both are provided.
+- A self-review checkbox sits below the pair of inputs. Override only — the underlying RuleSet revision's `excludeSelfReviews` value still travels with the audit row.
+- Passive indicator showing current state: "Assignments (104 currently, rule_based)" / "Assignments (104 currently, manual)" / "Assignments (none yet)".
 
-The slots are independent: an operator can fill any subset and submit each separately. Submitting one slot does not affect the others.
+**Slot 4 — Session settings** (left column, bottom).
+- File upload accepting a session-settings CSV. Wired in Segment 12A PR 6; until then renders disabled with a wiring tooltip.
+- No count copy (the slot is inert; populating one would imply the wiring exists).
+
+There is **no** per-slot Submit button. The card carries a single bottom Submit (see "Submission semantics" below) that runs every slot whose input is present.
 
 ### CSV format
 
@@ -49,21 +53,29 @@ Each CSV's expected schema (column names, required vs. optional fields, encoding
 
 ### Submission semantics
 
-**Per-slot, replace semantics.** Submitting a slot replaces the entire corresponding dataset for the session. Merge semantics are not supported in this card; per-record edits remain on the per-entity Setup pages.
+**Single bottom Submit.** The card carries one Submit button at the bottom, on the same row as the Lock / Unlock toggle. Submit sits left, Lock / Unlock sits right; both render `btn secondary`. Clicking Submit posts every slot's input in one form to `POST /operator/sessions/{id}/quick-setup/submit-all`.
+
+**Submit-enable gate.** The Submit button starts `disabled` and enables only when at least one `<input type="file">` on any slot has a file selected. Inline JS toggles the `disabled` attribute on `change`. Selecting a non-default option in the assignments rule dropdown alone does **not** enable Submit — operators wanting rule-based generation without a file use the Rule Based card on the Assignments page instead. (The handler still runs the assignments slot's rule when Submit fires from another slot's file selection — the gate is only on button enable, not on what runs.)
+
+**Replace semantics.** Each slot replaces the entire corresponding dataset for the session. Merge semantics are not supported; per-record edits remain on the per-entity Setup pages. Replacing reviewers or reviewees automatically clears existing assignments (cascade inside the replacement transaction).
 
 **Replacement confirmation.** A single card-level checkbox sits above the slot grid, inside the `.quick-setup-body` wrapper:
 
 > ☐ This will replace any existing reviewers, reviewees, assignments or settings, according to what is uploaded.
 
-Submitting any slot reads the checkbox state and posts it as `confirm_replace=true|""`. The route gate stays the source of truth: when `existing > 0` and `confirm_replace != "true"`, the submit 303s with `?quick_setup_error={kind}&quick_setup_reason=needs_confirm` and the slot's banner-error directs the operator at the card-level checkbox.
+Inline JS mirrors the checkbox state into the form's hidden `confirm_replace` input on submit. The route gate stays the source of truth: when any slot whose `existing > 0` runs without `confirm_replace == "true"`, the submit 303s with `?quick_setup_error={kind}&quick_setup_reason=needs_confirm` and the slot's banner-error directs the operator at the card-level checkbox.
 
-**Empty-slot submissions** ignore the checkbox — the route gate doesn't fire when nothing's there to replace.
+**Per-slot dispatch.** The submit-all handler dispatches each slot whose input is present, in order: Reviewers → Reviewees → Assignments. On the first slot's failure it 303s with that slot's `quick_setup_error` flag and later slots don't run. The Assignments slot runs when either an `assignments_file` is attached (manual CSV) or a positive `rule_set_id` is sent (rule-based via `engine.evaluate`); the `"— —"` sentinel value resolves to "skip the slot".
+
+**Empty submissions** are clean no-op redirects — submit-all without any input 303s back to Home with no slot fragment.
 
 **Cascading effects.** Replacing reviewers or reviewees automatically clears existing assignments (they reference reviewer/reviewee IDs); replacing assignments has no cascade (assignments are leaf data). The cascade happens inside the replacement transaction; the card does not auto-regenerate assignments after a reviewer/reviewee replacement, and the operator returns to Slot 3 to regenerate or re-upload.
 
 The single card-level checkbox covers the cascade implicitly — its copy ("any existing reviewers, reviewees, assignments or settings") names every entity that might be cleared by any combination of slot uploads. Per-slot inline cascade banners (formerly the `banner-warning` per slot) are not used.
 
 **Locked state.** The card-level checkbox sits inside `.quick-setup-body`, so it greys along with the H2 title and slot controls when the card is locked.
+
+**Lock state on navigation.** Unlocking the card sets a per-session cookie (`qsu_{session_id}=1`, scoped to `/operator/sessions/{id}`) that survives form submissions on Session Home itself — the operator can unlock once, upload through several slots, and stay unlocked. Navigating to **any other page** (per-entity Setup pages, Operations tabs, the sessions lobby, any other operator route) expires the cookie via a Starlette HTTP middleware. Returning to Session Home then renders the card locked again. The Quick Setup endpoints themselves (`/quick-setup/lock`, `/quick-setup/submit-all`, and the legacy per-slot endpoints retained for fixture compatibility) are whitelisted so the card's own form submissions don't trigger the relock.
 
 ### Result reporting
 
