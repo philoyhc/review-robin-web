@@ -117,6 +117,29 @@ documentation pass:
   `guide/unfinished_business.md` #26. The developer-setup-guide
   work item above is the natural place for the Postgres-vs-SQLite
   local-dev story to settle.
+- **Session Home → Next Action card, Activated state — split on
+  invitation-send progress.** Today the Activated branch always
+  renders Manage invitations (Primary) + Monitor responses
+  (Secondary) above the horizontal rule, regardless of whether any
+  invitation emails have actually gone out. Replace it with two
+  sub-states (the content from the horizontal rule down — Pause
+  Session — stays unchanged in both):
+  - **Activated, no invitations sent yet.** Body keeps the existing
+    "Session is currently activated. Reviewers can access forms and
+    save responses. Don't forget to generate and send out emails to
+    notify the reviewers." copy. Single button: **Generate and
+    send** (Primary). One-click flow that generates invitations and
+    dispatches the pending batch — replaces the current two-hop
+    detour through Manage invitations.
+  - **Activated, invitations sent.** Body reads "Session is
+    currently activated. Reviewers can access forms and save
+    responses. Email invitations have been generated and sent."
+    Buttons: **Manage invitations** (Secondary) + **Monitor
+    responses** (Secondary). Both demoted to Secondary because
+    the Primary "do something now" affordance has already fired.
+
+  Cross-ref: flagged in `guide/all_buttons.md` "Drift /
+  inconsistencies" §3.
 
 ---
 
