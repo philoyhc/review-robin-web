@@ -24,8 +24,26 @@ from __future__ import annotations
 # is part of the public surface (called from ``views.py``).
 from ._state import saved_state_for_session
 
+# Response Type Definitions (sliced in PR 1).
+from ._rtds import (
+    SEEDED_RESPONSE_TYPE_DEFINITIONS,
+    RTDDeleteWouldEmptyInstrumentError,
+    RTDInUseError,
+    RTDLockedError,
+    RTDPrecisionError,
+    RTDValidationError,
+    add_response_type_definition,
+    assert_rtd_precision,
+    count_rtd_dependents,
+    delete_response_type_definition,
+    ensure_default_response_type_definitions,
+    get_session_rtds,
+    update_response_type_definition,
+    validation_block_for_rtd,
+)
+
 # Everything else still in the legacy container; carved out by
-# PRs 1-4.
+# PRs 2-4.
 #
 # Model-class re-exports (``InstrumentResponseField``,
 # ``ResponseTypeDefinition``) preserve the pre-package surface —
@@ -41,39 +59,27 @@ from ._state import saved_state_for_session
 from ._legacy import (
     DEFAULT_INSTRUMENT_NAME,
     DEFAULT_RESPONSE_FIELDS,
-    SEEDED_RESPONSE_TYPE_DEFINITIONS,
     DisplaySourceError,
     FieldKeyError,
     InstrumentResponseField,
     LockedDisplayFieldError,
     ResponseTypeDefinition,
     ResponsesPresentError,
-    RTDDeleteWouldEmptyInstrumentError,
-    RTDInUseError,
-    RTDLockedError,
-    RTDPrecisionError,
-    RTDValidationError,
     _instrument_label,
     add_default_response_field,
     add_display_field,
     add_response_field,
-    add_response_type_definition,
-    assert_rtd_precision,
     bulk_save_fields,
     bulk_set_accepting,
     bulk_set_visibility,
-    count_rtd_dependents,
     create_instrument,
     delete_display_field,
     delete_instrument,
     delete_response_field,
-    delete_response_type_definition,
     display_field_label,
     display_field_value,
     ensure_default_instrument,
-    ensure_default_response_type_definitions,
     ensure_locked_display_fields,
-    get_session_rtds,
     is_locked_display_source,
     move_display_field,
     move_response_field,
@@ -84,9 +90,7 @@ from ._legacy import (
     update_display_field,
     update_instrument_description,
     update_response_field,
-    update_response_type_definition,
     update_short_label,
-    validation_block_for_rtd,
 )
 
 
