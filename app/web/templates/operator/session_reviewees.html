@@ -140,20 +140,16 @@
         <tr>
           <th>Name</th>
           <th>Email / Identifier</th>
+          {% if has_photo %}<th>Photo</th>{% endif %}
           <th class="tag-col tag-col-1">Tag1</th>
           <th class="tag-col tag-col-2">Tag2</th>
           <th class="tag-col tag-col-3">Tag3</th>
           <th>Status</th>
-          {% if has_photo %}<th>Photo</th>{% endif %}
         </tr>
         {% for reviewee in reviewees %}
           <tr id="reviewee-row-{{ reviewee.id }}">
             <td>{{ reviewee.name }}</td>
             <td><code>{{ reviewee.email_or_identifier }}</code></td>
-            <td class="tag-col tag-col-1">{{ reviewee.tag_1 or "" }}</td>
-            <td class="tag-col tag-col-2">{{ reviewee.tag_2 or "" }}</td>
-            <td class="tag-col tag-col-3">{{ reviewee.tag_3 or "" }}</td>
-            <td>{{ reviewee.status }}</td>
             {% if has_photo %}
               <td>
                 {% if reviewee.profile_link %}
@@ -161,6 +157,10 @@
                 {% endif %}
               </td>
             {% endif %}
+            <td class="tag-col tag-col-1">{{ reviewee.tag_1 or "" }}</td>
+            <td class="tag-col tag-col-2">{{ reviewee.tag_2 or "" }}</td>
+            <td class="tag-col tag-col-3">{{ reviewee.tag_3 or "" }}</td>
+            <td>{{ reviewee.status }}</td>
           </tr>
         {% endfor %}
       </table>
