@@ -198,6 +198,8 @@ operator can identify the file downstream.
 Destructive cleanup actions. Visually distinct (`accent-amber-dark`
 border, H2 in the same warning brown).
 
+**Description copy:** "Delete Data wipes every reviewer response while leaving session setup intact. Delete session removes the entire session and is locked while session is Activated."
+
 **Contents:**
 
 - **Delete Data** — wipes all reviewer responses while preserving
@@ -223,11 +225,11 @@ operator does occasionally need to update session metadata
 and Home is the natural place for that since it's where session
 identity lives.
 
-**Contents:**
+**Contents.** Two-column meta row above a single-column Name + Description block:
 
-- Deadline.
-- Created by.
-- Description (full text, may be long).
+- **Column 1 (all rendered as count pills):** Created by · Created (date) · Last Modified.
+- **Column 2:** Deadline (count pill, or `pill-empty` "Not set" when null) · Code (rendered in `<code>`) · Help contact (plain text, "—" when null).
+- **Below the meta row:** full-width Name and Description rows.
 - **Edit button** (Secondary styling), bottom-right of the card.
   Opens `session_edit.html` as a sub-page of Home for full
   metadata editing.

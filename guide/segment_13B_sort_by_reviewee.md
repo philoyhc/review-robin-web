@@ -67,7 +67,7 @@ later.
 
 - **13A** — rule-based assignment generation (Advanced mode +
   seed library + editor + retire Full Matrix card). Plan at
-  [`segment_13A_rulebased_assignment_builder.md`](segment_13A_rulebased_assignment_builder.md).
+  [`archive/segment_13A_rulebased_assignment_builder.md`](archive/segment_13A_rulebased_assignment_builder.md).
 - **13B** (this segment) — sort by reviewee.
 - **13C** — group-scoped instruments + duplicate-instrument
   button. Plan at

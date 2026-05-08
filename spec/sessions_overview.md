@@ -120,6 +120,8 @@ Sits below the table at half page width, right-aligned. CSS:
 `max-width: 50%; margin-left: auto;`. Class: `card danger-zone`.
 DOM id: `sessions-list-danger-zone`.
 
+**Hidden-until-selected.** The card initially renders with `display: none`. An inline JS listener on the row checkboxes (`.sessions-list-select-row`) toggles visibility on each `change`: visible when at least one row is ticked, hidden again when the last tick is cleared. The card stays in the DOM throughout, so the destructive surface only appears once the operator has explicit selection intent.
+
 ### Body
 
 - **`<h2>Danger Zone</h2>`** at the top.

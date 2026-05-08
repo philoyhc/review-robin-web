@@ -10,7 +10,7 @@ from sketch.
 on the same surface family:
 
 - **13A** — rule-based assignment generation
-  (`guide/segment_13A_rulebased_assignment_builder.md`).
+  (`guide/archive/segment_13A_rulebased_assignment_builder.md`).
 - **13C** — enhanced instruments (group-scoped + duplicate
   button) (`guide/segment_13C_enhanced_instrument.md`).
 
