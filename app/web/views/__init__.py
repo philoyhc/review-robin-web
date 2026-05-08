@@ -33,8 +33,15 @@ from __future__ import annotations
 # Responses page rows (sliced in PR 1).
 from ._responses import ResponsesRow, build_responses_rows
 
+# Extract Data card on Session Home (sliced in PR 2).
+from ._extract_data import (
+    ExtractDataContext,
+    ExtractDataRow,
+    build_extract_data_context,
+)
+
 # Everything else still in the legacy container; carved out by
-# PRs 2-10.
+# PRs 3-10.
 from ._legacy import (
     EMAIL_PREVIEW_TABS,
     INVITATIONS_STATUS_OPTIONS,
@@ -47,8 +54,6 @@ from ._legacy import (
     EditableRule,
     EmailBody,
     EmailPreviewTab,
-    ExtractDataContext,
-    ExtractDataRow,
     InstrumentHeading,
     InvitationsRow,
     IssueSourceGroup,
@@ -72,7 +77,6 @@ from ._legacy import (
     SurfacePreviewMissing,
     ValidateContext,
     build_email_preview_body,
-    build_extract_data_context,
     build_instruments_context,
     build_invitations_rows,
     build_new_session_quick_setup_context,
