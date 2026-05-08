@@ -468,6 +468,70 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
     assert "carol@example.edu" in body
 
 
+def test_hub_renders_per_slot_columns_with_visibility_toggles(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="hub-cols")
+    reviewer_csv = (
+        "ReviewerName,ReviewerEmail,ReviewerTag1\n"
+        "Alice,alice@example.edu,senior\n"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={"file": ("r.csv", reviewer_csv.encode(), "text/csv")},
+        follow_redirects=False,
+    )
+    reviewee_csv = (
+        "RevieweeName,RevieweeEmail,RevieweeTag2\n"
+        "Carol,carol@example.edu,cohort-a\n"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={"file": ("e.csv", reviewee_csv.encode(), "text/csv")},
+        follow_redirects=False,
+    )
+    asgn_csv = (
+        "ReviewerEmail,RevieweeEmail,IncludeAssignment,PairContext1,AssignmentContext3\n"
+        "alice@example.edu,carol@example.edu,yes,bench-a,note-3\n"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/manual/import",
+        files={"file": ("a.csv", asgn_csv.encode(), "text/csv")},
+        follow_redirects=False,
+    )
+
+    body = client.get(f"/operator/sessions/{review_session.id}/assignments").text
+
+    # Header carries every per-slot column even when the data is sparse;
+    # JS hides the empty ones via the toggle row.
+    assert '<th class="assignment-col col-rt1">Tag1</th>' in body
+    assert '<th class="assignment-col col-et2">Tag2</th>' in body
+    assert '<th class="assignment-col col-p1">PairContext1</th>' in body
+    assert '<th class="assignment-col col-a3">AssignmentContext3</th>' in body
+    assert "<th>Reviewer</th>" in body
+    assert "<th>Reviewee</th>" in body
+    assert "<th>Include</th>" in body
+
+    # Old combined "Context" column is gone.
+    assert "<th>Context</th>" not in body
+    assert "P1: bench-a" not in body
+    assert "A3: note-3" not in body
+
+    # Per-slot cells render the actual values without the "P1: " prefix.
+    assert ">senior</td>" in body
+    assert ">cohort-a</td>" in body
+    assert ">bench-a</td>" in body
+    assert ">note-3</td>" in body
+
+    # Toggle initial state — only the slots that have data are ticked.
+    assert 'data-col-toggle="rt1"\n                       checked' in body
+    assert 'data-col-toggle="et2"\n                       checked' in body
+    assert 'data-col-toggle="p1"\n                       checked' in body
+    assert 'data-col-toggle="a3"\n                       checked' in body
+    assert 'data-col-toggle="rt2"\n                       checked' not in body
+    assert 'data-col-toggle="p3"\n                       checked' not in body
+
+
 def test_manual_setup_page_shows_saved_pair_after_import(
     client: TestClient, db: Session
 ) -> None:

@@ -157,6 +157,21 @@
   {% endif %}
 
   {% if pair_sample %}
+    {% set has_r_tag_1 = pair_sample | selectattr("reviewer.tag_1") | list | length > 0 %}
+    {% set has_r_tag_2 = pair_sample | selectattr("reviewer.tag_2") | list | length > 0 %}
+    {% set has_r_tag_3 = pair_sample | selectattr("reviewer.tag_3") | list | length > 0 %}
+    {% set has_e_tag_1 = pair_sample | selectattr("reviewee.tag_1") | list | length > 0 %}
+    {% set has_e_tag_2 = pair_sample | selectattr("reviewee.tag_2") | list | length > 0 %}
+    {% set has_e_tag_3 = pair_sample | selectattr("reviewee.tag_3") | list | length > 0 %}
+    {% set ctx = namespace(p1=false, p2=false, p3=false, a1=false, a2=false, a3=false) %}
+    {% for asgn in pair_sample if asgn.context %}
+      {% if asgn.context.get("pair_context_1") %}{% set ctx.p1 = true %}{% endif %}
+      {% if asgn.context.get("pair_context_2") %}{% set ctx.p2 = true %}{% endif %}
+      {% if asgn.context.get("pair_context_3") %}{% set ctx.p3 = true %}{% endif %}
+      {% if asgn.context.get("assignment_context_1") %}{% set ctx.a1 = true %}{% endif %}
+      {% if asgn.context.get("assignment_context_2") %}{% set ctx.a2 = true %}{% endif %}
+      {% if asgn.context.get("assignment_context_3") %}{% set ctx.a3 = true %}{% endif %}
+    {% endfor %}
     <div class="card">
       <h2>Current pairs</h2>
       {% if truncated_count %}
@@ -164,13 +179,62 @@
           Showing first {{ pair_sample | length }} of {{ "{:,}".format(assignment_count) }} unique pairs.
         </p>
       {% endif %}
-      <table>
+      <div class="assignment-col-toggles"
+           style="display: flex; justify-content: flex-end; gap: var(--space-3) var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-2);">
+        {% set toggle_groups = [
+          ("Reviewer", [
+            ("rt1", "Tag1", has_r_tag_1),
+            ("rt2", "Tag2", has_r_tag_2),
+            ("rt3", "Tag3", has_r_tag_3),
+          ]),
+          ("Reviewee", [
+            ("et1", "Tag1", has_e_tag_1),
+            ("et2", "Tag2", has_e_tag_2),
+            ("et3", "Tag3", has_e_tag_3),
+          ]),
+          ("Pair", [
+            ("p1", "Ctx1", ctx.p1),
+            ("p2", "Ctx2", ctx.p2),
+            ("p3", "Ctx3", ctx.p3),
+          ]),
+          ("Assignment", [
+            ("a1", "Ctx1", ctx.a1),
+            ("a2", "Ctx2", ctx.a2),
+            ("a3", "Ctx3", ctx.a3),
+          ]),
+        ] %}
+        {% for group_label, items in toggle_groups %}
+          <div style="display: flex; gap: var(--space-2); align-items: center;">
+            <span class="muted" style="font-size: 0.875em;">{{ group_label }}:</span>
+            {% for slot, label, has_data in items %}
+              <label style="font-weight: normal;">
+                <input type="checkbox"
+                       class="assignment-col-toggle"
+                       data-col-toggle="{{ slot }}"
+                       {% if has_data %}checked{% endif %}>
+                {{ label }}
+              </label>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+      <table id="assignments-table">
         <tr>
           <th>Reviewer</th>
+          <th class="assignment-col col-rt1">Tag1</th>
+          <th class="assignment-col col-rt2">Tag2</th>
+          <th class="assignment-col col-rt3">Tag3</th>
           <th>Reviewee</th>
+          <th class="assignment-col col-et1">Tag1</th>
+          <th class="assignment-col col-et2">Tag2</th>
+          <th class="assignment-col col-et3">Tag3</th>
+          <th class="assignment-col col-p1">PairContext1</th>
+          <th class="assignment-col col-p2">PairContext2</th>
+          <th class="assignment-col col-p3">PairContext3</th>
+          <th class="assignment-col col-a1">AssignmentContext1</th>
+          <th class="assignment-col col-a2">AssignmentContext2</th>
+          <th class="assignment-col col-a3">AssignmentContext3</th>
           <th>Include</th>
-          {% set has_context = pair_sample | selectattr("context") | list | length > 0 %}
-          {% if has_context %}<th>Context</th>{% endif %}
         </tr>
         {% for assignment in pair_sample %}
           <tr>
@@ -178,23 +242,23 @@
               {{ assignment.reviewer.name }} &middot;
               <code>{{ assignment.reviewer.email }}</code>
             </td>
+            <td class="assignment-col col-rt1">{{ assignment.reviewer.tag_1 or "" }}</td>
+            <td class="assignment-col col-rt2">{{ assignment.reviewer.tag_2 or "" }}</td>
+            <td class="assignment-col col-rt3">{{ assignment.reviewer.tag_3 or "" }}</td>
             <td>
               {{ assignment.reviewee.name }} &middot;
               <code>{{ assignment.reviewee.email_or_identifier }}</code>
             </td>
+            <td class="assignment-col col-et1">{{ assignment.reviewee.tag_1 or "" }}</td>
+            <td class="assignment-col col-et2">{{ assignment.reviewee.tag_2 or "" }}</td>
+            <td class="assignment-col col-et3">{{ assignment.reviewee.tag_3 or "" }}</td>
+            <td class="assignment-col col-p1">{{ assignment.context.get("pair_context_1", "") if assignment.context else "" }}</td>
+            <td class="assignment-col col-p2">{{ assignment.context.get("pair_context_2", "") if assignment.context else "" }}</td>
+            <td class="assignment-col col-p3">{{ assignment.context.get("pair_context_3", "") if assignment.context else "" }}</td>
+            <td class="assignment-col col-a1">{{ assignment.context.get("assignment_context_1", "") if assignment.context else "" }}</td>
+            <td class="assignment-col col-a2">{{ assignment.context.get("assignment_context_2", "") if assignment.context else "" }}</td>
+            <td class="assignment-col col-a3">{{ assignment.context.get("assignment_context_3", "") if assignment.context else "" }}</td>
             <td>{{ "yes" if assignment.include else "no" }}</td>
-            {% if has_context %}
-              <td>
-                {% if assignment.context %}
-                  {% if assignment.context.pair_context_1 %}P1: {{ assignment.context.pair_context_1 }}<br>{% endif %}
-                  {% if assignment.context.pair_context_2 %}P2: {{ assignment.context.pair_context_2 }}<br>{% endif %}
-                  {% if assignment.context.pair_context_3 %}P3: {{ assignment.context.pair_context_3 }}<br>{% endif %}
-                  {% if assignment.context.assignment_context_1 %}A1: {{ assignment.context.assignment_context_1 }}<br>{% endif %}
-                  {% if assignment.context.assignment_context_2 %}A2: {{ assignment.context.assignment_context_2 }}<br>{% endif %}
-                  {% if assignment.context.assignment_context_3 %}A3: {{ assignment.context.assignment_context_3 }}{% endif %}
-                {% endif %}
-              </td>
-            {% endif %}
           </tr>
         {% endfor %}
       </table>
@@ -202,5 +266,47 @@
         <p class="form-help">…and {{ truncated_count }} more not shown.</p>
       {% endif %}
     </div>
+    <style>
+      {% for slot in ["rt1", "rt2", "rt3", "et1", "et2", "et3", "p1", "p2", "p3", "a1", "a2", "a3"] -%}
+        #assignments-table.col-hidden-{{ slot }} .col-{{ slot }}{% if not loop.last %},{% endif %}
+      {% endfor %} {
+        display: none;
+      }
+    </style>
+    <script>
+      (function () {
+        var STORAGE_KEY = "rrw-assignment-col-visibility";
+        var table = document.getElementById("assignments-table");
+        var toggles = document.querySelectorAll(".assignment-col-toggle");
+        if (!table || !toggles.length) return;
+        var stored = null;
+        try {
+          stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
+        } catch (e) {}
+        toggles.forEach(function (cb) {
+          var slot = cb.getAttribute("data-col-toggle");
+          if (stored && Object.prototype.hasOwnProperty.call(stored, slot)) {
+            cb.checked = !!stored[slot];
+          }
+          apply(slot, cb.checked);
+          cb.addEventListener("change", function () {
+            apply(slot, cb.checked);
+            persist();
+          });
+        });
+        function apply(slot, visible) {
+          table.classList.toggle("col-hidden-" + slot, !visible);
+        }
+        function persist() {
+          var state = {};
+          toggles.forEach(function (cb) {
+            state[cb.getAttribute("data-col-toggle")] = cb.checked;
+          });
+          try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          } catch (e) {}
+        }
+      })();
+    </script>
   {% endif %}
 {% endblock %}
