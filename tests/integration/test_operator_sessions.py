@@ -131,3 +131,70 @@ def test_list_empty_state_renders_for_new_user(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.text
     assert "don't have any sessions yet" in body or "no sessions" in body.lower()
+
+
+def test_delete_session_with_email_outbox_rows_succeeds(
+    client: TestClient, db: Session
+) -> None:
+    """Regression: deleting a session that has ``email_outbox`` rows
+    pointing at its invitations must not trip a FOREIGN KEY constraint
+    failure. Before the fix, ``ReviewSession.invitations`` cascade-
+    deleted invitation rows but the ``email_outbox.invitation_id`` FK
+    held them in place, raising ``sqlalchemy.exc.IntegrityError`` when
+    the unit-of-work flushed the deletes."""
+
+    from app.db.models import EmailOutbox, Invitation, Reviewer
+
+    client.post(
+        "/operator/sessions",
+        data={"name": "DeleteMe", "code": "del-outbox"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "del-outbox")
+    ).scalar_one()
+
+    # Seed a reviewer + invitation + outbox row tied to all three.
+    reviewer = Reviewer(
+        session_id=review_session.id,
+        name="Reviewer One",
+        email="r1@example.edu",
+    )
+    db.add(reviewer)
+    db.flush()
+    invitation = Invitation(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        token_hash="hash-del-outbox",
+    )
+    db.add(invitation)
+    db.flush()
+    outbox = EmailOutbox(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        invitation_id=invitation.id,
+        kind="invitation",
+        to_email="r1@example.edu",
+        subject="Invite",
+        body="…",
+    )
+    db.add(outbox)
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/delete",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    # All session-scoped rows are gone.
+    assert db.execute(
+        select(ReviewSession).where(ReviewSession.id == review_session.id)
+    ).scalar_one_or_none() is None
+    assert db.execute(
+        select(Invitation).where(Invitation.id == invitation.id)
+    ).scalar_one_or_none() is None
+    assert db.execute(
+        select(EmailOutbox).where(EmailOutbox.id == outbox.id)
+    ).scalar_one_or_none() is None

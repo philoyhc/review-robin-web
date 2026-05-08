@@ -91,6 +91,8 @@ class EmailOutbox(Base):
         String(128), index=True, nullable=True
     )
 
-    session: Mapped[ReviewSession] = relationship()
+    session: Mapped[ReviewSession] = relationship(
+        back_populates="email_outbox_rows"
+    )
     reviewer: Mapped[Reviewer | None] = relationship()
     invitation: Mapped[Invitation | None] = relationship()
