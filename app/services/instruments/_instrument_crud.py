@@ -1,6 +1,25 @@
-"""Legacy container holding every instruments-service function not
-yet sliced. See ``guide/major_refactor.md`` §12.A — this file
-shrinks once per slice PR and is deleted in PR 4.
+"""Instrument CRUD slice — instrument lifecycle (create / delete /
+update description / update short_label) plus the default-
+instrument seeding helpers and the session-level bulk
+accepting / visibility toggles.
+
+Slice 4 of the §12.A ladder (``guide/major_refactor.md``) — the
+final slice; with this file in place, ``_legacy.py`` is gone and
+the instruments service package is fully sliced.
+
+Owns the ``DEFAULT_INSTRUMENT_NAME`` constant and the seeding
+helpers (``ensure_default_instrument`` /
+``ensure_locked_display_fields``) that fire on session creation,
+plus the post-creation mutation surface (``create_instrument`` /
+``delete_instrument`` / ``update_instrument_description`` /
+``update_short_label``) and the session-level bulk toggles
+(``bulk_set_accepting`` / ``bulk_set_visibility``). Saves emit
+``instrument.created`` / ``.deleted`` / ``.description_updated`` /
+``.short_label_updated`` / ``instruments.bulk_accepting_responses``
+/ ``instruments.bulk_visibility_when_closed`` audit events.
+
+Source range in pre-PR-4 ``_legacy.py``: the entire file post-
+PR-3 strip (~485 LOC).
 """
 
 from __future__ import annotations
