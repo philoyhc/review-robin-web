@@ -356,6 +356,7 @@ def session_detail(
             "quick_setup": views.build_quick_setup_context(
                 db,
                 review_session,
+                user=user,
                 is_unlocked=_quick_setup_unlocked(request, review_session),
                 error_kind=quick_setup_error,
                 error_reason=quick_setup_reason,
@@ -811,7 +812,8 @@ async def _handle_quick_setup_import(
 )
 async def quick_setup_assignments_submit(
     file: UploadFile | None = File(default=None),
-    rule: str = Form(default="full_matrix"),
+    rule_set_id: int | None = Form(default=None),
+    rule: str | None = Form(default=None),
     exclude_self_review: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
@@ -823,8 +825,14 @@ async def quick_setup_assignments_submit(
 
     Auto-detects mode from the form payload: when ``file`` is
     attached and non-empty, the route runs the manual-CSV pipeline;
-    otherwise it generates assignments from the selected rule
-    (FullMatrix only today; richer rule menu lands in Segment 13A).
+    otherwise it routes the selected RuleSet through the new rule-
+    based engine (``app.services.rules.engine.evaluate``).
+
+    ``rule_set_id`` is the canonical input from the populated
+    "Generate by rule" dropdown; ``rule`` is the legacy parameter
+    name retained for the test fixtures' ``rule="full_matrix"``
+    posts — when set, it falls through to the seeded Full Matrix
+    RuleSet.
 
     Lifecycle / parse / confirm-required failures 303 → Home with
     ``?quick_setup_error=assignments&quick_setup_reason=...``; the
@@ -900,21 +908,76 @@ async def quick_setup_assignments_submit(
             includes=includes,
         )
     else:
-        # Rule mode. ``rule`` is FullMatrix-only today; richer menu
-        # lands in Segment 13A. Reject unknown values defensively.
-        if rule != "full_matrix":
+        # Rule mode. Route through the same library + engine pair
+        # that drives the Rule Based card on the Assignments page —
+        # one engine path, one audit shape, regardless of which
+        # surface initiated the generation.
+        from pydantic import TypeAdapter
+
+        from app.schemas.rules import (
+            Combinator,
+            Rule,
+            RuleSetOptions,
+            RuleSetSchema,
+        )
+        from app.services.rules import engine, library
+
+        resolved_id = rule_set_id
+        if resolved_id is None and rule == "full_matrix":
+            # Legacy ``rule="full_matrix"`` payload — fall through to
+            # the seeded Full Matrix RuleSet so existing tests +
+            # bookmarks keep working.
+            full_matrix = next(
+                (
+                    rs
+                    for rs in library.list_visible_rule_sets(db, user=user)
+                    if rs.is_seed and rs.name == "Full Matrix"
+                ),
+                None,
+            )
+            if full_matrix is not None:
+                resolved_id = full_matrix.id
+        if resolved_id is None:
             return error_redirect("parse")
-        pairs, excluded_counts = assignments.generate_full_matrix(
-            reviewers, reviewees, exclude_self_review=exclude_self
+
+        loaded = library.load_rule_set(db, resolved_id)
+        if loaded is None:
+            return error_redirect("parse")
+        rule_set_row, revision = loaded
+
+        rule_adapter = TypeAdapter(Rule)
+        rule_set_schema = RuleSetSchema(
+            id=rule_set_row.id,
+            name=rule_set_row.name,
+            description=rule_set_row.description or "",
+            scope=rule_set_row.scope,  # type: ignore[arg-type]
+            combinator=Combinator(revision.combinator),
+            rules=[
+                rule_adapter.validate_python(payload)
+                for payload in revision.rules_json
+            ],
+            options=RuleSetOptions(
+                excludeSelfReviews=revision.exclude_self_reviews,
+                seed=revision.seed,
+            ),
+        )
+        result = engine.evaluate(
+            rule_set_schema,
+            reviewers=reviewers,
+            reviewees=reviewees,
+            override_exclude_self_reviews=exclude_self,
+            revision_seed=revision.id,
         )
         assignments.replace_assignments(
             db,
             review_session=review_session,
             user=user,
-            pairs=pairs,
-            mode=AssignmentMode.full_matrix,
+            pairs=result.pairs,
+            mode=AssignmentMode.rule_based,
             correlation_id=request_correlation_id(),
-            excluded_counts=excluded_counts,
+            excluded_counts=result.excluded_counts,
+            rule_set_revision=revision,
+            exclude_self_reviews=exclude_self,
         )
 
     return RedirectResponse(

@@ -47,28 +47,41 @@
     {% endif %}
   </div>
   {% if slot.mode == "rule_or_csv" %}
-    {# Slot 3 — Assignments. Rule selector default; CSV upload
-       alternative. The selector renders FullMatrix today; richer
-       rule menu lands with Segment 13A.
+    {# Slot 3 — Assignments. Rule selector + CSV upload alternative.
+       The selector lists every visible RuleSet (seeds first in
+       install order, then caller-owned Personal); selecting a non-
+       Full-Matrix rule routes the slot handler through the new
+       rule-based engine.
 
        Single submit; the route auto-detects mode from the form
        payload — when ``file`` is attached, the route runs the
        manual-CSV pipeline; when it's empty, the route generates
-       full-matrix from the stored rule. #}
+       assignments from the selected RuleSet. #}
     {% if slot.is_wired %}
-      <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
-        Generate by rule, or upload a CSV.
-      </p>
       <form method="post"
             action="{{ slot.wire_url }}"
             enctype="multipart/form-data"
             data-quick-setup-form>
         <input type="hidden" name="confirm_replace" value="">
-        <div class="quick-setup-slot-controls">
-          <select name="rule">
-            <option value="full_matrix">Full matrix</option>
+        <p style="margin: 0;">
+          <label for="quick-setup-assignments-rule"
+                 class="form-help"
+                 style="display: block; margin-bottom: var(--space-1);">
+            Generate by rule
+          </label>
+          <select id="quick-setup-assignments-rule"
+                  name="rule_set_id"
+                  style="width: 100%;">
+            {% for option in slot.rule_set_options %}
+              <option value="{{ option.id }}"
+                      {% if option.id == slot.selected_rule_set_id %}selected{% endif %}>{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
+            {% endfor %}
           </select>
-          <span class="muted">or</span>
+        </p>
+        <p class="form-help" style="margin: var(--space-2) 0 var(--space-1) 0;">
+          or upload a CSV.
+        </p>
+        <div class="quick-setup-slot-controls">
           <input type="file" name="file" accept=".csv">
           <button type="submit" class="btn secondary">Submit</button>
         </div>
@@ -80,16 +93,20 @@
         </p>
       </form>
     {% else %}
-      <p class="form-help" style="margin: 0 0 var(--space-2) 0;">
-        Generate by rule, or upload a CSV.
+      <p class="form-help"
+         style="display: block; margin: 0 0 var(--space-1) 0;">
+        Generate by rule
+      </p>
+      <select disabled
+              aria-disabled="true"
+              style="width: 100%;"
+              {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
+        <option>Full Matrix</option>
+      </select>
+      <p class="form-help" style="margin: var(--space-2) 0 var(--space-1) 0;">
+        or upload a CSV.
       </p>
       <div class="quick-setup-slot-controls">
-        <select disabled
-                aria-disabled="true"
-                {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
-          <option>Full matrix</option>
-        </select>
-        <span class="muted">or</span>
         <input type="file"
                accept=".csv"
                disabled
