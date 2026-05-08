@@ -87,6 +87,10 @@
   {% if not is_ready %}
   <div class="bottom-grid">
     <div class="bottom-left">
+    {% include "operator/partials/_rule_based_card.html" %}
+    </div>{# /bottom-left (left column — Rule Based) #}
+
+    <div class="bottom-left">
     <section class="card" id="upload-csv">
       <h2>Upload Manual Assignment</h2>
       <p class="form-help">
@@ -129,11 +133,6 @@
       {% endif %}
     </section>
 
-    </div>{# /bottom-left #}
-
-    <div class="bottom-left">
-    {% include "operator/partials/_rule_based_card.html" %}
-
     {% if assignment_count %}
       <div class="card danger-zone">
         <h2>Danger Zone</h2>
@@ -152,7 +151,7 @@
         </form>
       </div>
     {% endif %}
-    </div>{# /bottom-left (right column) #}
+    </div>{# /bottom-left (right column — Upload Manual + Danger Zone) #}
   </div>
   {% endif %}
 
