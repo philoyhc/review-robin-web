@@ -27,9 +27,13 @@ from __future__ import annotations
 # it in the re-export wall so the test surface stays byte-identical.
 from ._state import _instrument_label, saved_state_for_session
 
-# Response Type Definitions (sliced in PR 1).
+# Response Type Definitions (sliced in PR 1). ``ResponseTypeDefinition``
+# is the model class — re-exported through the RTDs slice (which is
+# its natural home) to preserve the pre-package surface where two
+# route handlers reach it as ``instruments_service.ResponseTypeDefinition``.
 from ._rtds import (
     SEEDED_RESPONSE_TYPE_DEFINITIONS,
+    ResponseTypeDefinition,
     RTDDeleteWouldEmptyInstrumentError,
     RTDInUseError,
     RTDLockedError,
@@ -61,8 +65,27 @@ from ._display_fields import (
     update_display_field,
 )
 
+# Response fields (sliced in PR 3). ``InstrumentResponseField`` is
+# the model class — re-exported through the response-fields slice
+# (its natural home) to preserve the pre-package surface where two
+# route handlers reach it as
+# ``instruments_service.InstrumentResponseField``.
+from ._response_fields import (
+    DEFAULT_RESPONSE_FIELDS,
+    FieldKeyError,
+    InstrumentResponseField,
+    ResponsesPresentError,
+    add_default_response_field,
+    add_response_field,
+    bulk_save_fields,
+    delete_response_field,
+    move_response_field,
+    slugify_field_key,
+    update_response_field,
+)
+
 # Everything else still in the legacy container; carved out by
-# PRs 3-4.
+# PR 4.
 #
 # Model-class re-exports (``InstrumentResponseField``,
 # ``ResponseTypeDefinition``) preserve the pre-package surface —
@@ -73,25 +96,13 @@ from ._display_fields import (
 # is out of scope for the §12.A pure-relocation ladder.
 from ._legacy import (
     DEFAULT_INSTRUMENT_NAME,
-    DEFAULT_RESPONSE_FIELDS,
-    FieldKeyError,
-    InstrumentResponseField,
-    ResponseTypeDefinition,
-    ResponsesPresentError,
-    add_default_response_field,
-    add_response_field,
-    bulk_save_fields,
     bulk_set_accepting,
     bulk_set_visibility,
     create_instrument,
     delete_instrument,
-    delete_response_field,
     ensure_default_instrument,
     ensure_locked_display_fields,
-    move_response_field,
-    slugify_field_key,
     update_instrument_description,
-    update_response_field,
     update_short_label,
 )
 
