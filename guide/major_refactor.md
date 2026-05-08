@@ -1,8 +1,26 @@
 # Refactor Plan — Split `routes_operator.py` by feature area
 
 **Project:** Review Robin Web
-**Status:** Planning — not yet started
+**Status:** In flight — PRs 0-9 landed; PR 10 (Instruments) is the
+final slice. After PR 10 lands, `_legacy.py` is empty and gets
+deleted.
 **Sizing:** 1 package-conversion PR + 10 mechanical slice PRs
+
+### Progress (2026-05-08)
+
+| PR | Slice | Module | Status |
+|---|---|---|---|
+| 0  | Package shape + `_shared.py`         | `__init__.py`, `_shared.py`, `_legacy.py` | Landed (#651) |
+| 1  | Sessions lobby                       | `_lobby.py`         | Landed (#651) |
+| 2  | Operator settings                    | `_settings.py`      | Landed (#651) |
+| 3  | Setup-invite + email template editor | `_setup_invite.py`  | Landed (#651) |
+| 4  | Assignments                          | `_assignments.py`   | Landed (#652) |
+| 5  | Session Home                         | `_session_home.py`  | Landed (#653) |
+| 6  | Setup rosters                        | `_setup_rosters.py` | Landed (#654) |
+| 7  | Quick Setup (+ deferred `create_session`) | `_quick_setup.py` | Landed (#655) |
+| 8  | Rule Builder                         | `_rule_builder.py`  | Landed (#656) |
+| 9  | Operations                           | `_operations.py`    | Landed (#657) |
+| 10 | Instruments                          | `_instruments.py`   | **Pending** |
 
 ---
 
