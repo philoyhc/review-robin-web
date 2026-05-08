@@ -43,7 +43,7 @@
            href="/operator/sessions/{{ session.id }}/outbox">View outbox</a>
         <form method="post"
               action="/operator/sessions/{{ session.id }}/invitations/generate">
-          <button class="btn"
+          <button class="btn secondary"
                   type="submit"
                   {% if not is_ready or uninvited_count == 0 %}disabled{% endif %}>
             Generate invitations
@@ -51,7 +51,7 @@
         </form>
         <form method="post"
               action="/operator/sessions/{{ session.id }}/invitations/send-all">
-          <button class="btn secondary"
+          <button class="btn"
                   type="submit"
                   {% if not is_ready or pending_count == 0 %}disabled{% endif %}>
             Send all pending
@@ -67,7 +67,7 @@
         </form>
         <form method="post"
               action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete">
-          <button class="btn secondary"
+          <button class="btn"
                   type="submit"
                   {% if not is_ready or incomplete_count == 0 %}disabled{% endif %}>
             Send reminders to {{ incomplete_count }} incomplete reviewer{% if incomplete_count != 1 %}s{% endif %}

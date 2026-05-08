@@ -1,7 +1,11 @@
 # All buttons — operator surface audit
 
 Snapshot of every interactive button (and button-styled anchor)
-across the operator-facing templates as of 2026-05-08. Use it to:
+across the operator-facing templates. Last refreshed 2026-05-08
+after the first follow-up sweep (PR #629 area — see "Drift /
+inconsistencies" below for what changed).
+
+Use it to:
 
 - spot drift between similar buttons on different pages,
 - pick the canonical class when adding a new button,
@@ -34,7 +38,8 @@ shorthand:
 | **Destructive** | Outline `accent-red`. Confirm-step inside `.card.danger-zone`. |
 | **Outline-amber** | Outline `accent-amber-dark`. Recovery action inside a `.card.lock`. |
 | **Primary (CTA)** | Layout variant of Primary — large, centered. `.btn-cta`. |
-| **Nav (page-internal)** | Page-internal view switcher (e.g. Email Template tabs). Active tab renders disabled-Primary; siblings render as Secondary anchors. (See `spec/ui_elements.md` §6.) |
+| **Nav (page-internal)** | Page-internal view switcher (e.g. Email Template tabs). Reuses the chrome's `.nav-tab` styling for visual consistency: active uses `<span class="nav-tab active" aria-current="page">`, siblings use `<a class="nav-tab">`, "coming soon" uses `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `.tab-strip`. (See `spec/ui_elements.md` §6.) |
+| **Inline text-button (`.btn-reset`)** | Single-line link-styled button used to revert a single field inside an editor without cancelling and exiting. (See `spec/ui_elements.md` §6.) |
 | **Chrome nav** | The two-row session top-nav tabs (`.nav-tab`). Lives in `spec/visual_style_rrw.md` "Operator session chrome", not in the `.btn` family. |
 | **Disabled** | Visual variant of any role — opacity 0.5, `cursor: not-allowed`, `aria-disabled="true"`. |
 | **Inline link** | `<a>` rendered without a `.btn` class; reads as a hyperlink, not a button. |
@@ -241,11 +246,11 @@ Source: `app/web/templates/operator/session_setupinvite.html`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 63 | Template selector (top-of-body) | Invitation / Reminder / Responses received (active) | `<button type="button">` | `btn disabled aria-disabled="true"` | **Nav (page-internal)** — current view | One per template; only the active one renders disabled |
-| 64 | Template selector (top-of-body) | Invitation / Reminder / Responses received (inactive) | `<a>` | `btn secondary` | **Nav (page-internal)** — sibling views | One per template |
-| 65 | Email composer (per-field reset) | Reset {{ row.field }} to default | `<button type="submit">` | `chrome-link` (inline-styled) | Inline link | One per field that carries an override |
+| 63 | Template selector (top-of-body) | Invitation / Reminder / Responses received (active) | `<span aria-current="page">` | `nav-tab active` | **Nav (page-internal)** — current view | Reuses the chrome's `.nav-tab` styling for visual consistency |
+| 64 | Template selector (top-of-body) | Invitation / Reminder / Responses received (inactive) | `<a>` | `nav-tab` | **Nav (page-internal)** — sibling views | One per template |
+| 65 | Email composer (per-field reset) | Reset {{ row.field }} to default | `<button type="submit">` | `btn-reset` | Inline text-button (`.btn-reset`) | Canonical link-styled inline button — reverts a single field without exiting the editor |
 | 66 | Email composer actions (bottom-left) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to Session Home |
-| 67 | Email composer actions (bottom-left) | Save | `<button type="submit">` | `btn` | Primary | Disabled until a composer field is touched; posts `/setupinvite` |
+| 67 | Email composer actions (bottom-left) | Save | `<button type="submit">` | `btn secondary` | Secondary | Disabled until a composer field is touched; posts `/setupinvite` |
 
 ---
 
@@ -281,9 +286,9 @@ partials.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 76 | Email preview tabs (active) | {{ tab.label }} | `<button type="button">` | `btn disabled` | **Nav (page-internal)** — current view | Same pattern as Email Template selector |
-| 77 | Email preview tabs (sibling) | {{ tab.label }} | `<a>` | `btn secondary` | **Nav (page-internal)** — sibling views | |
-| 78 | Email preview tabs (coming soon) | {{ tab.label }} | `<button type="button">` | `btn secondary disabled` | Secondary (Disabled) | Reserved tabs not yet wired |
+| 76 | Email preview tabs (active) | {{ tab.label }} | `<span aria-current="page">` | `nav-tab active` | **Nav (page-internal)** — current view | Same pattern as Email Template selector |
+| 77 | Email preview tabs (sibling) | {{ tab.label }} | `<a>` | `nav-tab` | **Nav (page-internal)** — sibling views | |
+| 78 | Email preview tabs (coming soon) | {{ tab.label }} (coming soon) | `<span aria-disabled="true">` | `nav-tab disabled` | **Nav (page-internal)** — disabled | Reserved tabs not yet wired |
 
 ---
 
@@ -294,10 +299,10 @@ Source: `app/web/templates/operator/session_invitations.html`.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 79 | Main action card | View outbox | `<a>` | `btn secondary` | Secondary | Dev-diagnostic surface |
-| 80 | Main action card | Generate invitations | `<button type="submit">` | `btn` | Primary (Disabled when no uninvited reviewers or session not ready) | |
-| 81 | Main action card | Send all pending | `<button type="submit">` | `btn secondary` | Secondary (Disabled when nothing pending or session not ready) | |
+| 80 | Main action card | Generate invitations | `<button type="submit">` | `btn secondary` | Secondary (Disabled when no uninvited reviewers or session not ready) | Generate-only (no send) is Secondary per the "send is Primary" rule |
+| 81 | Main action card | Send all pending | `<button type="submit">` | `btn` | Primary (Disabled when nothing pending or session not ready) | Sending → Primary |
 | 82 | Main action card | Regenerate all | `<button type="submit">` | `btn secondary` | Secondary (Disabled when no invitations or session not ready) | |
-| 83 | Main action card | Send reminders to {{ N }} incomplete reviewer(s) | `<button type="submit">` | `btn secondary` | Secondary (Disabled when no incomplete or session not ready) | |
+| 83 | Main action card | Send reminders to {{ N }} incomplete reviewer(s) | `<button type="submit">` | `btn` | Primary (Disabled when no incomplete or session not ready) | Sending → Primary |
 | 84 | Filter card | Clear | `<a>` | `btn secondary` | Secondary | |
 | 85 | Filter card | Apply | `<button type="submit">` | `btn secondary` | Secondary | |
 | 86 | Invitations table (per row) | Send | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row |
@@ -312,7 +317,7 @@ Source: `app/web/templates/operator/session_responses.html`.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 88 | Main action card | Manage Invitations | `<a>` | `btn secondary` | Secondary | Cross-link to the Invitations page |
-| 89 | Main action card | Send reminders to {{ N }} incomplete reviewer(s) | `<button type="submit">` | `btn` | Primary (Disabled when no incomplete or session not ready) | Note: rendered as Primary here even though the same affordance on the Invitations page is Secondary — see "Drift" below |
+| 89 | Main action card | Send reminders to {{ N }} incomplete reviewer(s) | `<button type="submit">` | `btn` | Primary (Disabled when no incomplete or session not ready) | Sending → Primary; matches button #83 on the Invitations page |
 | 90 | Filter card | Clear | `<a>` | `btn secondary` | Secondary | |
 | 91 | Filter card | Apply | `<button type="submit">` | `btn secondary` | Secondary | |
 
@@ -325,7 +330,7 @@ Source: `app/web/templates/operator/operator_settings.html`.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 92 | Email send (SMTP) form | Cancel | `<a>` | `btn secondary` | Secondary | Returns to `?return_to=<path>` |
-| 93 | Email send (SMTP) form | Save | `<button type="submit">` | `btn` | Primary | Disabled until input touched |
+| 93 | Email send (SMTP) form | Save | `<button type="submit">` | `btn secondary` | Secondary | Disabled until input touched |
 | 94 | Danger Zone | Clear all settings | `<button type="submit">` | `btn destructive` | Destructive | Posts `/operator/settings/clear` |
 
 ---
@@ -344,56 +349,104 @@ This audit captures the canonical button shapes.
 |---|---|---|---|---|---|---|
 | 95 | Rule Builder header | ← Back to Assignments | `<a>` | (no `.btn` class — plain anchor) | Inline link | The page lacks a chrome top-nav |
 | 96 | Rule Builder action row | Copy | `<button type="submit">` | `btn secondary` | Secondary | Forks the selected ruleset into a new Personal draft |
-| 97 | Rule Builder action row | Save | `<button type="submit">` | `btn` | Primary | Persists the in-progress draft |
+| 97 | Rule Builder action row | Save | `<button type="submit">` | `btn secondary` | Secondary | Persists the in-progress draft |
 | 98 | Rule Builder action row | Delete | `<button type="submit">` | `btn destructive` | Destructive | Soft-deletes the selected Personal ruleset |
 
 ---
 
 ## Drift / inconsistencies surfaced by the audit
 
-A short list of rough edges to consider in a follow-up sweep. Not
-fixed in this PR.
+Status of the rough edges the original audit surfaced (now post the
+first follow-up sweep):
 
-1. **Rule Builder back link (#95)** is a plain `<a>` without a
-   `.btn` class. Every other "back to <page>" affordance on
-   operator surfaces lives inside the chrome top-nav; the Rule
-   Builder is the only sub-page that rolls its own back link.
-   Either add it to the chrome or style it as a Secondary button.
+### 1. Session-level child-page navigation pattern (open / proposing)
 
-2. **"Send reminders" affordance** (#83 vs #89) renders Secondary
-   on the Invitations page and Primary on the Responses page. Same
-   POST endpoint, same disabled rules, same label format. Unless
-   the Responses page intends "Send reminders" to be the page's
-   single affirmative action (it might — the page is monitor-
-   focused), one of the two should be brought in line.
+Two sub-pages today qualify as "session-level child page" (i.e.
+hung off Session Home but not part of the chrome top-nav rows):
 
-3. **Manage invitations links** (#25 inside Next Action's
-   activated state and #88 on the Responses page) — both link to
-   the same `/invitations` page. The Next Action one is Primary
-   ("the page's single affirmative action"); the Responses one is
-   Secondary ("cross-link"). Consistent with the role each page
-   plays; flagged here for future ergonomics review.
+- **Edit Session** (`session_edit.html`) — button #16 `Save changes`
+  + #17 `Cancel`. The Cancel anchor returns to Session Home. Reads
+  as a classic "form editor" pattern.
+- **Rule Builder** (`session_rule_builder.html`) — button #95
+  `← Back to Assignments` (plain anchor) + Save / Copy / Delete
+  inside the working card. There's no Cancel because the page is
+  a stateful editor, not a one-shot form.
 
-4. **Active-tab styling.** The Email Template selector (#63) and
-   the email-preview tabs (#76) use `btn disabled` for the active
-   state; the chrome's session-level nav tabs (#1–#10) use a
-   different `.nav-tab.active` class. Both work, but the duplicate
-   patterns are a likely source of confusion for new contributors.
-   The new "Nav button" class in `spec/ui_elements.md` §6 names
-   the page-internal flavour; the chrome flavour is documented in
-   `spec/visual_style_rrw.md`.
+Two patterns, both awkward. The Edit Session Cancel disguises a
+"navigate up" as a form action; the Rule Builder back-link rolls
+its own affordance because Cancel doesn't fit the stateful editor.
 
-5. **Inline `style=` on `chrome-link`** for the per-field "Reset
-   to default" button (#65). Documented as out-of-scope inline
-   styling in `spec/ui_elements.md` "Drift catalogue" — folded
-   into the same sweep that retires the rest of the inline-styled
-   buttons.
+**Proposed unifying pattern (not yet adopted — design call):**
+every session-level child page renders a top-of-body
+`← Back to <parent>` link styled as an inline link (or a
+`.btn-back` if a class is warranted), placed where the
+breadcrumb/back affordance lives in the chrome. The page's
+working card carries Save / Cancel / Delete / etc. as
+**actions on the working state**, not as navigation. Cancel
+discards uncommitted edits; the back link navigates regardless
+of edit state. Edit Session would lose its Cancel anchor in
+favour of a back link plus an inline Cancel that reverts the
+form (or, if the form has no working state to discard, drops
+the Cancel entirely).
 
-6. **"Edit Reviewers" / "Edit Reviewees"** (#36, #40) render as
-   `btn secondary disabled` anchors with a "coming soon" tooltip.
-   They've stayed disabled across the chrome migration; either
-   wire them up as part of a per-record-edit segment or hide the
-   anchors entirely until that segment lands.
+This proposal is captured here pending a design pass; the back-
+link wiring on Rule Builder stays as-is until then.
+
+### 2. Send → Primary, generate → Secondary (resolved)
+
+Adopted convention: any button that **actually sends email** is
+Primary; buttons that prepare or rebuild local state without
+sending are Secondary. Applied to the Invitations / Responses
+pages as part of the follow-up sweep:
+
+- #80 Generate invitations → Secondary.
+- #81 Send all pending → Primary.
+- #82 Regenerate all → Secondary (it doesn't send).
+- #83 Send reminders to N incomplete reviewer(s) → Primary.
+- #89 Send reminders … on the Responses page → Primary
+  (already was; now consistent with #83).
+
+Per-row Send / Remind (#86, #87) stay Secondary — per-row context
+overrides the role-based convention.
+
+### 3. Next Action card during Activated state (flagged for follow-up)
+
+The current activated-state Next Action surface renders Manage
+invitations (Primary) + Monitor responses (Secondary) +
+Pause Session (separate confirm-step Primary). The proposed
+direction is for the activated-state Primary action to be a
+single **Generate + send invitations** flow, with the existing
+Manage / Monitor anchors demoted to Secondary supporting actions.
+
+Flagged here for a future Next-Action-card segment; the current
+treatment ships unchanged.
+
+### 4. Active-tab styling harmonised (resolved)
+
+Page-internal nav tabs (Email Template selector #63/#64 and
+email-preview tabs #76/#77/#78) now reuse the chrome's
+`.nav-tab` styling. Active tab is `<span class="nav-tab active"
+aria-current="page">`; siblings are `<a class="nav-tab">`;
+"coming soon" tabs are `<span class="nav-tab disabled"
+aria-disabled="true">`. The `.tab-strip` flex wrapper is the
+same one the chrome uses. `spec/ui_elements.md` §6 "Nav button"
+documents the convention.
+
+### 5. Inline-styled "Reset to default" promoted to `.btn-reset` (resolved)
+
+The previously inline-styled `chrome-link` reset button (#65) is
+now a canonical `.btn-reset` class — link-styled inline button
+that posts a form to revert a single field inside an editor
+without cancelling and exiting. Documented in
+`spec/ui_elements.md` §6. The CSS rule sits in `base.html`;
+no other templates use it yet, but it can apply to any future
+editor with per-field overrides.
+
+### 6. Perma-disabled `Edit Reviewers` / `Edit Reviewees` (deferred)
+
+#36 and #40 stay as `btn secondary disabled` anchors with a
+"coming soon" tooltip. Acceptable today; wire them when a
+per-record-edit segment lands.
 
 ---
 
