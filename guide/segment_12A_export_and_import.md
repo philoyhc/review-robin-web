@@ -104,8 +104,14 @@ derived from RuleSet `<name>`; the RuleSet is bundled at
 
 #### Concretely, the snapshot includes:
 
-- **Session metadata the operator typed** — `name`, `description`,
-  `deadline`, `help_contact`.
+- **Session metadata the operator typed** — `name`, `code`,
+  `description`, `deadline`, `help_contact`. `code` is included
+  as a *seed*: on the create-from-snapshot flow (see "Triggered
+  actions on import" below) the importer derives a fresh unique
+  code by appending an `_uploaded01` / `_uploaded02` / ... suffix
+  until the result clears the global uniqueness check. On the
+  fill-existing-session flow the importer ignores the snapshot's
+  code (the destination session already has one).
 - **Email-template overrides** — the 12 string keys + the
   `responses_received_enabled` boolean from
   `sessions.email_template_overrides`. Empty value cell ⇒ "use
@@ -124,10 +130,10 @@ derived from RuleSet `<name>`; the RuleSet is bundled at
 
 #### Concretely, the snapshot excludes:
 
-- `session.code` — must be unique on the new session; the
-  operator picks one at create time.
 - `session.assignment_mode` — auto-set by the next assignment
-  generation path.
+  generation path. Snapshot consults it once at *export* time to
+  decide whether to bundle the manual assignments CSV vs. the
+  RuleSet JSON; not written on import.
 - `session.status` — every imported session lands in `draft`; the
   operator re-runs Validate / Activate.
 - **Rule-based assignment rows** — derived. Bundle the RuleSet
@@ -144,6 +150,81 @@ derived from RuleSet `<name>`; the RuleSet is bundled at
   configures their own under Operator Settings).
 - **Browser-local UI state** — cookies, localStorage, URL params.
   Cosmetic per-browser preferences.
+
+#### Two import flows
+
+The snapshot supports two entry points; both consume the same
+zip but the import semantics around `session.code` differ:
+
+1. **Create new session from snapshot.** Anchor: a "Create from
+   snapshot" button on the sessions lobby (`/operator/sessions`),
+   alongside "Create new session". This is the canonical
+   port-my-session flow. The importer creates a fresh
+   `ReviewSession` row, derives a unique code from the
+   snapshot's `session.code` seed (`{seed}_uploaded01`,
+   incrementing on collision), then walks the rest of the
+   snapshot through the triggered-actions chain below. New
+   sessions are born in `draft`; lifecycle transitions remain
+   the operator's call.
+2. **Fill existing session from snapshot.** Anchor: Quick Setup
+   slot 4 (the configuration-import slot, graduated to live in
+   PR 6). Targets `POST /operator/sessions/{id}/import-config`.
+   Useful when the operator already created a session (perhaps
+   to nail down `code` and `deadline` before bringing in the
+   shape) and just wants to populate it. The destination
+   session's existing `code` is preserved; the snapshot's `code`
+   is read-and-ignored. Lifecycle gate stays
+   `status in {"draft", "validated"}` per the original plan.
+
+#### Triggered actions on import
+
+The importer doesn't just write fields — it fires the same
+downstream chain Quick Setup fires when slots are submitted
+together, so the operator doesn't have to re-do the post-load
+clicks. Mirroring the shape of `quick_setup_submit_all`:
+
+1. **Apply session-level config** — write
+   `name` / `description` / `deadline` / `help_contact` and
+   replace `email_template_overrides` from the reconstructed
+   dict.
+2. **Apply RTDs + instruments + display fields + response fields**
+   from the config CSV.
+3. **Save reviewers** if a `reviewers.csv` is in the bundle.
+4. **Save reviewees** if a `reviewees.csv` is in the bundle.
+5. **Generate assignments**, picking the path the snapshot's
+   index dictates:
+   - **Manual mode** (snapshot bundles `assignments.csv`): run
+     the existing manual-assignments save path.
+   - **Rule-based mode** (snapshot bundles a `rule-set-…json`
+     and an `assignments-note.txt`): import the RuleSet via
+     PR 7's `apply_rule_set_json` (creates a Personal RuleSet
+     owned by the importing user, on first import — re-imports
+     are no-ops if the schema-equivalent RuleSet already
+     exists), then fire `engine.evaluate` against the new
+     session's roster and persist the result. This is the
+     headline triggered action: the operator stages a snapshot
+     and the new session ends up with materialised assignments
+     against the new roster, without a separate Generate click.
+   - **Neither**: skip the assignments step. The operator picks
+     a path manually via the Assignments page.
+
+The chain **stops at assignments**. Validate, Activate, Generate
+Invitations, and Send are explicitly *not* fired on import — they
+sit on the lifecycle progression and require operator decisions
+the snapshot can't authoritatively make (the new roster's
+validation outcome may differ from the source session's; the new
+session's deadline may be in the past; the new session's
+email-template tweaks may need a second pass before the operator
+is ready to send). Each of those is one operator click away on
+Session Home; the snapshot import shouldn't anticipate them.
+
+Per-step failures surface the same way slot failures do today:
+the importer 303s back to Session Home with a slot-scoped
+`?quick_setup_error=…&quick_setup_reason=…` flag and a
+`.banner.banner-error` rendered inside the offending slot.
+Upstream slots that already succeeded are *not* rolled back —
+the operator picks up where the failure happened, mirroring
+Quick Setup's per-slot dispatch ordering.
 
 ### Scenario B — Exporting for forensic audit purposes
 
@@ -409,12 +490,15 @@ Hierarchical keys, position-indexed (1-based, matching how the
 reviewer surface and operator UI count pages):
 
 - **Session-level** — flat `session.<column>`. Per Scenario A
-  ("snapshot the inputs, never the outputs"), `session.code`,
-  `session.assignment_mode`, and `session.status` are excluded —
-  the new session picks its own code, assignment_mode is
-  auto-set by the next Generate run, and status always lands
-  back in `draft`.
+  ("snapshot the inputs, never the outputs"),
+  `session.assignment_mode` and `session.status` are excluded —
+  assignment_mode is auto-set by the next Generate run, and
+  status always lands back in `draft`. `session.code` is *included
+  as a seed*; the create-from-snapshot importer derives a fresh
+  unique code by suffix; the fill-existing-session importer
+  ignores it. (See Scenario A "Two import flows".)
   - `session.name` (string, required)
+  - `session.code` (string; **seed only** — see Scenario A)
   - `session.description` (string)
   - `session.deadline` (datetime)
   - `session.help_contact` (string)
@@ -525,11 +609,14 @@ The importer is **wipe-and-replace** for everything it owns:
 1. Validate every row (parse `data_type`, check enum membership,
    confirm RTD references resolve). Abort the whole transaction
    if any row is malformed; no partial application.
-2. Update session-level fields in place. `session.code`,
-   `session.assignment_mode`, and `session.status` are *not*
-   written even if a stray row carries them — Scenario A
-   excludes them at export time, and the importer ignores them
-   defensively.
+2. Update session-level fields in place. `session.assignment_mode`
+   and `session.status` are *not* written even if a stray row
+   carries them — Scenario A excludes them at export time, and the
+   importer ignores them defensively. `session.code` handling
+   depends on the import flow (see Scenario A "Two import flows"):
+   the create-from-snapshot importer derives a fresh code by
+   suffix from the seed; the fill-existing-session importer
+   ignores the snapshot's code (the destination already has one).
 3. Replace `sessions.email_template_overrides` JSON in place with
    the dict reconstructed from the `email_overrides.*` rows.
    Empty value cells map to "key absent" in the dict (matches the
