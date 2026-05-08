@@ -694,3 +694,66 @@ def test_submit_all_runs_reviewers_and_reviewees_in_one_post(
     assert response.status_code == 303
     body = client.get(f"/operator/sessions/{review_session.id}").text
     assert "Reviewers" in body and "Reviewees" in body
+
+
+# ---------------------------------------------------------------------------
+# Lock-state-resets-on-navigation (PR D — Quick Setup polish)
+# ---------------------------------------------------------------------------
+
+
+def test_unlock_cookie_clears_on_navigation_to_other_operator_page(
+    client: TestClient, db: Session
+) -> None:
+    """Navigating to any non-Session-Home operator page expires the
+    ``qsu_{id}`` unlock cookie. Returning to Home then renders the
+    card locked again — operators don't carry an unlocked card
+    across page navigations."""
+
+    review_session = _make_session(client, db, code="qs-nav-relock")
+    # Unlock the card.
+    client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/lock",
+        data={"action": "unlock"},
+        follow_redirects=False,
+    )
+    home_unlocked = client.get(
+        f"/operator/sessions/{review_session.id}"
+    ).text
+    assert 'class="quick-setup-body"' in home_unlocked  # no .locked
+
+    # Navigate to a sibling operator page — Reviewers setup.
+    away = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    )
+    assert away.status_code == 200
+    # That response expires the ``qsu_*`` cookie via the middleware
+    # so the next request to Home doesn't carry it.
+    home_relocked = client.get(
+        f"/operator/sessions/{review_session.id}"
+    ).text
+    assert 'class="quick-setup-body locked"' in home_relocked
+
+
+def test_unlock_cookie_persists_across_quick_setup_form_submissions(
+    client: TestClient, db: Session
+) -> None:
+    """The unlock cookie must NOT clear on the Quick Setup card's own
+    form submissions (lock toggle, submit-all). Only navigations
+    *away* from the card surface clear it."""
+
+    review_session = _make_session(client, db, code="qs-nav-keep")
+    client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/lock",
+        data={"action": "unlock"},
+        follow_redirects=False,
+    )
+    # POST submit-all with no inputs (a no-op redirect) should not
+    # invalidate the cookie.
+    client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        follow_redirects=False,
+    )
+    home_after = client.get(
+        f"/operator/sessions/{review_session.id}"
+    ).text
+    assert 'class="quick-setup-body"' in home_after  # still unlocked
