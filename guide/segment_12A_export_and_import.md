@@ -1034,7 +1034,9 @@ page from 13A.
     row in `personal` scope owned by `importing_user`, inserts
     a `rule_set_revisions` row (`revision_no=1`) with the rule
     tree, points `current_revision_id` at it.
-- New routes in `app/web/routes_operator.py`:
+- New routes (workspace-level, not session-scoped — land in a new
+  `app/web/routes_operator/_rule_sets.py` slice per
+  `guide/major_refactor.md` §10):
   - `GET /operator/rule-sets/{id}/export.json` — streams the
     serialized RuleSet as `application/json` with
     `Content-Disposition: attachment; filename="rule-set-{slug(name)}.json"`.

@@ -200,7 +200,7 @@ confused, layer a `?skipped=N` flash on top.)
 
 ## Implementation pointers
 
-- **Route handlers** (`app/web/routes_operator.py`):
+- **Route handlers** (`app/web/routes_operator/_lobby.py`):
   - `list_sessions` — GET `/operator/sessions`.
   - `sessions_delete_selected` — POST `/operator/sessions/delete-selected`.
 - **Template:** `app/web/templates/operator/sessions_list.html`.

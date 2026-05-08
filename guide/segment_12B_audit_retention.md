@@ -188,7 +188,9 @@ app/
     retention.py
 
   web/
-    routes_operator.py
+    routes_operator/
+      _session_home.py     # Extract Data card on Session Home
+      # (or new sibling slice if the export surface grows past ~100 lines)
     templates/operator/
       session_export.html
       session_retention.html
