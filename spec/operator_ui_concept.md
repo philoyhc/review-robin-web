@@ -228,7 +228,7 @@ All three setup-roster pages share an identical chrome shape:
 
 The **Edit Reviewers / Reviewees / Assignments** affordance for inline-editable rows is not yet implemented; today these pages expose only the bulk Upload-CSV / Delete-all flow.
 
-The Assignments page additionally carries an anchored `#rules` "Assign by Rules" placeholder card (Rules editor — Segment 13A).
+The Assignments page additionally carries a wired **Rule Based Assignment** card (top-left of the action grid). It exposes a RuleSet dropdown listing every visible RuleSet — seeded RuleSets first, then caller-owned Personal RuleSets — plus a Generate button and an inline link to the Rule Builder page (`/operator/sessions/{id}/assignments/rule-based-editor`). Shipped in Segment 13A and revamped in Segment 13A-1; see `spec/rule_based_assignment.md` for the engine and Rule Builder UI contract.
 
 ### `/operator/sessions/{id}/instruments` — Instruments
 
