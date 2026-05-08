@@ -16,74 +16,63 @@ also wires the route + service + persistence.
 
 Top to bottom:
 
-1. **Page title** (H1) — `Instruments`.
-2. **Full-width header card** combining session-wide instrument
-   status with the 6-button setup nav. Layout in "Header card"
-   below.
-3. **Full-width "Actions for All Instruments" card**. Bulk
-   visibility toggle + Preview reviewer surface action,
-   left-aligned. See "Actions for All Instruments" below.
-4. **Full-width yellow "session ongoing" lock card**, only when
+1. **Chrome** (`session-nav-card` partial) — wraps the two-row
+   top nav (Manage row + Setup row) and the per-entity status
+   strip. The Setup-row `Instruments` tab renders active.
+2. **Full-width status + bulk-actions card** carrying session-wide
+   instrument status (deadline, accepting / not accepting,
+   visibility-when-closed counts) plus the bulk
+   visibility-when-closed toggle right-aligned at the bottom.
+   Layout in "Status + bulk-actions card" below.
+3. **Full-width yellow "session ongoing" lock card**, only when
    the session status is `ready`. See `spec/visual_style_rrw.md`
    "Warning surfaces — shared brown framing > Lock card uses".
-5. **One full-width per-instrument card per instrument**, in
+4. **One full-width per-instrument card per instrument**, in
    `Instrument.order`. Card layout in "Per-instrument card" below.
-6. **Full-width "Response Type Definitions" card**. Catalog of
+5. **Full-width "Response Type Definitions" card**. Catalog of
    response types (with validation rules) referenced by every
    instrument's Response Fields table. Layout in
    "Response Type Definitions card" below.
 
-## Header card
+## Status + bulk-actions card
 
-A single full-width card. Same shape pattern as the other
-session-scoped operator pages (e.g. `session_assignments.html`):
-status text rows on the left, nav row right-aligned. Three rows,
-top to bottom:
+Below the chrome (`session-nav-card` partial, which itself wraps
+the Setup-row navigation tabs and the per-entity status strip),
+the page renders a single full-width info card carrying both the
+status counts and the page-wide bulk-visibility toggle. The card
+has two rows:
 
-1. **Session deadline + instrument-count summary** (left-aligned).
-   Format: `Session deadline (auto-close): {deadline pill} ·
-   {N instrument(s)}: {N accepting} · {N not accepting}`. The
-   deadline pill renders the ISO-formatted deadline if set, else
-   `not set`. Pluralisation follows instrument count.
-2. **Visibility-when-closed summary** (left-aligned). Format:
-   `Visibility when closed: {N instrument(s) showing} · {N
-   instrument(s) not showing}`. Pluralisation follows count.
-3. **Setup nav** (right-aligned). The 6 setup-nav buttons
-   (`Session`, `Reviewers`, `Reviewees`, `Assignments`,
-   `Instruments`, `Email Invites`) inside `.setup-nav`. The
-   `Instruments` button is rendered as Primary Outline; the
-   rest are Primary. See `spec/visual_style_rrw.md` "Operator session chrome >
-   Navigation chrome (two-row layout)" for the canonical contract.
+1. **Status row** (left-aligned, all on one line). Format:
+   `Session deadline (auto-close): {deadline pill} · {N accepting} ·
+   {N not accepting} · Visibility when closed: {N showing} ·
+   {N not showing}`. The deadline pill renders the ISO-formatted
+   deadline (or `not set`); the four counts render as count /
+   empty pills. Pluralisation on the visibility-when-closed pills
+   follows the count.
+2. **Bulk visibility-toggle row** (right-aligned). A single
+   `btn secondary` POST: `Show all when closed` when at least
+   one instrument is currently hidden, otherwise
+   `Don't show any when closed`. Clicking it bulk-flips
+   `responses_visible_when_closed` across every instrument in
+   the session.
 
-The standalone "All Instrument Status" card from earlier drafts
-of the spec is **gone** — its status reporting moves into rows 1
-and 2 of this header card. The bulk visibility / preview
-buttons no longer sit on the header card either; they live in
-the dedicated `Actions for All Instruments` card below (see
-next section). The bulk `Open all instruments` / `Close all
-instruments` buttons are **dropped** in this revision; operators
-open and close instruments individually via the per-instrument
-card's status sub-card.
+Earlier drafts of this spec called for a separate
+`Actions for All Instruments` card below the header to host the
+bulk visibility toggle plus a `Preview reviewer surface` button.
+That split is **retired**. The bulk toggle was small enough to
+co-locate with status; the preview affordance lives in the
+chrome's Operations row → Previews tab (see
+`spec/preview_hub.md`) rather than on Instruments. The bulk
+`Open all instruments` / `Close all instruments` actions stay
+**dropped** — operators open and close instruments individually
+via the per-instrument card's status sub-card.
 
-## Actions for All Instruments
-
-A full-width card immediately below the header. Title:
-`Actions for All Instruments`. Buttons sit left-aligned, in this
-order:
-
-- `Show all when closed` / `Don't show any when closed` —
-  Alert. Toggles the bulk visibility-when-closed flag across
-  every instrument. Which of the two is shown follows the
-  current state: when at least one instrument is hidden, show
-  `Show all when closed`; when every instrument is showing,
-  show `Don't show any when closed`.
-- `Preview reviewer surface` — Alert. Opens the operator's
-  preview of the reviewer surface for this session.
-
-The card isolates session-wide bulk actions from the per-card
-details so the header card can focus on at-a-glance instrument
-status, and the per-instrument cards can focus on the
-field-builder + RTD work.
+The Setup-row nav itself (which highlights the `Instruments`
+tab when active) is owned by the shared
+`session_top_nav.html` partial and styled via the `.nav-tab`
+classes in `spec/visual_style_rrw.md` "Operator session chrome
+> Navigation chrome (two-row layout)" — *not* the canonical
+button modifiers from `spec/assumptions.md`.
 
 ## Per-instrument card
 
@@ -117,6 +106,15 @@ Equal-height, top + bottom aligned (`.bottom-grid` with
 
 - Header: `Instrument #{N}` rendered in a font size larger than
   normal card titles but smaller than the page H1.
+- **Short label** (Segment 11L) — operator-typed friendly handle
+  used wherever the instrument needs a short name (multi-instrument
+  page tabs, reviewer-surface page anchors). In **locked** mode
+  renders as a bold one-line caption above the description (or is
+  hidden entirely when empty); in **edit** mode renders as a
+  small `<input form="dfsave-{iid}" name="short_label">` text
+  field above the description textarea, joined to the same bulk-
+  save form. Optional, capped at the column width of the
+  underlying `Instrument.short_label` field.
 - Friendly description (free text, operator-typed). In **locked**
   mode renders as plain text (`(no description)` when empty); in
   **edit** mode renders as a `<textarea form="dfsave-{iid}"
@@ -250,11 +248,18 @@ classes from `spec/assumptions.md`:
 
 | Button | Style | Behaviour |
 |---|---|---|
-| `Save` | Primary | Writes the current friendly description, Display Fields, Response Fields, and Response Fields Help to the database in one bulk-save round-trip. On success, the page **stays in place**, the description and both tables lock, and a `saved` pill on the per-instrument status sub-card replaces the `not saved` pill. The button is replaced by `Edit`. |
-| `Cancel` | Alert Outline | Discards any unsaved edits across description + tables and locks them. The button is replaced by `Edit`. Only shown alongside `Save` (i.e. while the card is open for editing). |
-| `Edit` | Alert | Re-opens the description textarea and both tables for editing. The button is replaced by the `Save` + `Cancel` pair. |
-| `Add new instrument` | Alert | Adds a new Instrument card immediately below this one and persists the new instrument to the database. |
-| `Delete this instrument` | Danger | Deletes this instrument. Triggers an on-screen warning + confirmation before the request fires. Lives in the right-hand Danger Zone card. |
+| `Save` | Primary Outline (`btn secondary`) | Writes the current friendly description, Display Fields, Response Fields, and Response Fields Help to the database in one bulk-save round-trip. On success, the page **stays in place**, the description and both tables lock, and a `saved` pill on the per-instrument status sub-card replaces the `not saved` pill. The button is replaced by `Edit`. |
+| `Cancel` | Primary Outline (`btn secondary`) | Discards any unsaved edits across description + tables and locks them. The button is replaced by `Edit`. Only shown alongside `Save` (i.e. while the card is open for editing). |
+| `Edit` | Primary Outline (`btn secondary`) | Re-opens the description textarea and both tables for editing. The button is replaced by the `Save` + `Cancel` pair. |
+| `Add new instrument` | Primary Outline (`btn secondary`) | Adds a new Instrument card immediately below this one and persists the new instrument to the database. |
+| `Delete this instrument` | Danger (`btn destructive`) | Deletes this instrument. Triggers an on-screen warning + confirmation before the request fires. Lives in the right-hand Danger Zone card. |
+
+The Instruments page leans on Primary Outline (`btn secondary`)
+across the per-instrument action surface so the visual difference
+between Save / Cancel / Edit / Add stays minimal — the role each
+button plays is conveyed by its label and position, not by colour.
+The `Delete this instrument` Danger button is the single
+exception, isolated inside the right-hand Danger Zone card.
 
 `Save` + `Cancel` and `Edit` are **mutually exclusive** — only
 one of the two states is shown at a time. When the card is open
