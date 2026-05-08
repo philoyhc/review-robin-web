@@ -116,21 +116,21 @@
           <input type="checkbox"
                  class="tag-col-toggle"
                  data-tag-toggle="1"
-                 {% if has_tag_1 %}checked{% endif %}>
+                 {% if has_tag_1 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
           Tag1
         </label>
         <label style="font-weight: normal;">
           <input type="checkbox"
                  class="tag-col-toggle"
                  data-tag-toggle="2"
-                 {% if has_tag_2 %}checked{% endif %}>
+                 {% if has_tag_2 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
           Tag2
         </label>
         <label style="font-weight: normal;">
           <input type="checkbox"
                  class="tag-col-toggle"
                  data-tag-toggle="3"
-                 {% if has_tag_3 %}checked{% endif %}>
+                 {% if has_tag_3 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
           Tag3
         </label>
       </div>
@@ -174,6 +174,10 @@
         } catch (e) {}
         toggles.forEach(function (cb) {
           var slot = cb.getAttribute("data-tag-toggle");
+          if (cb.disabled) {
+            apply(slot, false);
+            return;
+          }
           if (stored && Object.prototype.hasOwnProperty.call(stored, slot)) {
             cb.checked = !!stored[slot];
           }

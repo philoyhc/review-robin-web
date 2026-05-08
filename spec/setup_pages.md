@@ -64,16 +64,25 @@ columns. The pattern:
   `tag-col-1`).
 - Each toggle defaults to **ticked iff that column has at least
   one populated value** in the current preview rows.
+- **Empty columns render the toggle disabled** (`disabled
+  aria-disabled="true" title="No data in this column"`). The
+  operator can't tick an empty column on, and stored "show"
+  preferences carried over from a load when the column had data
+  are ignored — the toggle stays unticked and the column stays
+  hidden until the next import populates it.
 - Operator choice persists per browser via `localStorage` under a
   per-page key:
   - Reviewers preview: `rrw-reviewer-tag-visibility`.
   - Reviewees preview: `rrw-reviewee-tag-visibility`.
   - Assignments preview: `rrw-assignment-col-visibility`.
-- Stored choice wins over the data-driven default. Stored "show"
-  reveals an empty column on next load; stored "hide" keeps a
-  populated column hidden.
+- Stored choice wins over the data-driven default for live
+  toggles. Stored "hide" keeps a populated column hidden;
+  stored "show" reveals an explicitly-toggled-on column on next
+  load. Disabled toggles ignore storage entirely (see above).
 - The toggle inputs carry `data-tag-toggle="<slot>"` /
-  `data-col-toggle="<slot>"` for the inline JS to target.
+  `data-col-toggle="<slot>"` for the inline JS to target. The JS
+  early-returns on `cb.disabled` so listeners aren't bound and
+  storage isn't applied.
 
 The pattern is intentionally not extracted into a Jinja macro —
 each page's column shape differs enough (Reviewers has 3 toggles,

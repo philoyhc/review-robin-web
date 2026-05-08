@@ -210,7 +210,7 @@
                 <input type="checkbox"
                        class="assignment-col-toggle"
                        data-col-toggle="{{ slot }}"
-                       {% if has_data %}checked{% endif %}>
+                       {% if has_data %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
                 {{ label }}
               </label>
             {% endfor %}
@@ -284,6 +284,10 @@
         } catch (e) {}
         toggles.forEach(function (cb) {
           var slot = cb.getAttribute("data-col-toggle");
+          if (cb.disabled) {
+            apply(slot, false);
+            return;
+          }
           if (stored && Object.prototype.hasOwnProperty.call(stored, slot)) {
             cb.checked = !!stored[slot];
           }
