@@ -1,18 +1,23 @@
+"""Legacy container holding every operator route until the slice PRs
+relocate them. See ``guide/major_refactor.md`` §6 — this file shrinks
+once per slice PR and is deleted in PR 10.
+
+Mounted unprefixed; the package ``__init__`` owns the ``/operator``
+prefix and tag.
+"""
+
 from __future__ import annotations
 
 import secrets
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db.models import (
     Instrument,
     Invitation,
@@ -27,215 +32,30 @@ from app.schemas.sessions import SessionCreate
 from app.services import (
     assignments,
     csv_imports,
-    email_templates,
     instruments as instruments_service,
     invitations,
     monitoring,
-    operator_settings,
     responses,
     sessions,
     validation,
 )
-from app.services import lifecycle_display, session_lifecycle as lifecycle
-from app.services._secrets import MissingEncryptionKey
-from app.web.return_to import resolve_return_to
+from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
     require_session_operator,
 )
-
-router = APIRouter(prefix="/operator", tags=["operator"])
-
-_templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
-_templates.env.globals["app_version"] = settings.app_version
-_templates.env.globals["display_field_label"] = (
-    instruments_service.display_field_label
-)
-_templates.env.globals["is_locked_display_source"] = (
-    instruments_service.is_locked_display_source
-)
-_templates.env.filters["lifecycle_label"] = (
-    lifecycle_display.lifecycle_display_label
+from app.web.routes_operator._shared import (
+    _lifecycle_error_response,
+    _quick_setup_cookie_name,
+    _quick_setup_unlocked,
+    _require_editable,
+    _require_response_loss_ack,
+    _templates,
 )
 
-
-@router.get("/sessions", response_class=HTMLResponse)
-def list_sessions(
-    request: Request,
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    review_sessions = sessions.list_for_user(db, user)
-    return _templates.TemplateResponse(
-        request,
-        "operator/sessions_list.html",
-        {
-            "user": user,
-            "sessions": review_sessions,
-            "breadcrumbs": breadcrumbs.operator_root(),
-        },
-    )
-
-
-@router.post("/sessions/delete-selected")
-def sessions_delete_selected(
-    session_ids: list[int] = Form(default=[]),
-    confirm: str | None = Form(default=None),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    """Bulk-delete the sessions ticked on the operator sessions list.
-
-    Filters server-side to caller-owned + editable (draft / validated)
-    sessions; non-editable rows are silently skipped per the existing
-    ``_require_editable`` posture. The Danger Zone card on the list
-    page surfaces a confirm checkbox and an explicit destructive
-    button — without ``confirm=true`` the request is rejected with
-    ``400`` (matches the single-session ``/sessions/{id}/delete``
-    handler). Each deletion goes through ``sessions.delete_session``
-    which already cascades reviewers / reviewees / instruments /
-    assignments / invitations / email_outbox rows + writes the
-    ``session.deleted`` audit row."""
-
-    if confirm != "true":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="confirm checkbox required",
-        )
-    correlation_id = request_correlation_id()
-    for session_id in session_ids:
-        review_session = sessions.get_for_user(db, user, session_id)
-        if review_session is None:
-            continue
-        if not lifecycle.is_editable(review_session):
-            continue
-        sessions.delete_session(
-            db,
-            review_session=review_session,
-            user=user,
-            correlation_id=correlation_id,
-        )
-    return RedirectResponse(
-        url="/operator/sessions",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-def _settings_redirect_url(return_to_raw: str | None) -> str:
-    """Save / Clear keep the operator on the Settings page (so they
-    can verify their changes); the ``return_to`` query param rides
-    along on the redirect so the back-link stays wired through the
-    Save → reload cycle."""
-    if return_to_raw:
-        from urllib.parse import quote
-
-        return f"/operator/settings?return_to={quote(return_to_raw, safe='/')}"
-    return "/operator/settings"
-
-
-@router.get("/settings", response_class=HTMLResponse)
-def operator_settings_form(
-    request: Request,
-    return_to: str | None = Query(default=None),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    """Operator-level Settings page — today: SMTP credentials only.
-
-    Per-operator (send-as-me identity model). The page renders even
-    when ``SMTP_ENCRYPTION_KEY`` isn't configured — the encryption
-    helper only fires on Save / Clear, so a deployment can defer
-    setting the env var until operators actually start configuring.
-
-    Honours ``?return_to=<path>`` per ``app.web.return_to`` (same
-    allowlist as the About page) so the page surfaces a "← Back to
-    {context}" link and Cancel routes to the originating surface.
-    """
-    db.refresh(user)
-    has_password = user.smtp_password_encrypted is not None
-    target = resolve_return_to(return_to, db)
-    return _templates.TemplateResponse(
-        request,
-        "operator/operator_settings.html",
-        {
-            "user": user,
-            "has_password": has_password,
-            "encryption_modes": operator_settings.SMTP_ENCRYPTION_MODES,
-            "return_to_raw": return_to,
-            "return_to_url": target.url,
-            "return_to_label": target.label,
-            "breadcrumbs": breadcrumbs.operator_root(),
-        },
-    )
-
-
-@router.post("/settings")
-def operator_settings_save(
-    smtp_host: str | None = Form(default=None),
-    smtp_port: str | None = Form(default=None),
-    smtp_username: str | None = Form(default=None),
-    smtp_password: str | None = Form(default=None),
-    smtp_from_display_name: str | None = Form(default=None),
-    smtp_encryption: str | None = Form(default=None),
-    return_to: str | None = Form(default=None),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    parsed_port: int | None = None
-    if smtp_port and smtp_port.strip():
-        try:
-            parsed_port = int(smtp_port)
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="smtp_port must be an integer",
-            ) from exc
-    if smtp_encryption and smtp_encryption not in operator_settings.SMTP_ENCRYPTION_MODES:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                "smtp_encryption must be one of "
-                f"{operator_settings.SMTP_ENCRYPTION_MODES}"
-            ),
-        )
-    try:
-        operator_settings.save_email_settings(
-            db,
-            user=user,
-            host=smtp_host,
-            port=parsed_port,
-            username=smtp_username,
-            plaintext_password=smtp_password,
-            from_display_name=smtp_from_display_name,
-            encryption=smtp_encryption,
-            correlation_id=request_correlation_id(),
-        )
-    except MissingEncryptionKey as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        ) from exc
-    return RedirectResponse(
-        url=_settings_redirect_url(return_to),
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-@router.post("/settings/clear")
-def operator_settings_clear(
-    return_to: str | None = Form(default=None),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    operator_settings.clear_email_settings(
-        db, user=user, correlation_id=request_correlation_id()
-    )
-    return RedirectResponse(
-        url=_settings_redirect_url(return_to),
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+router = APIRouter()
 
 
 @router.get("/sessions/new", response_class=HTMLResponse)
@@ -686,23 +506,6 @@ async def _handle_import(
 #
 # Slot 3 (Assignments) and slot 4 (Settings) ship in PR B / Segment
 # 12A respectively and are not yet wired here.
-
-
-_QUICK_SETUP_COOKIE_PREFIX = "qsu"
-
-
-def _quick_setup_cookie_name(session_id: int) -> str:
-    return f"{_QUICK_SETUP_COOKIE_PREFIX}_{session_id}"
-
-
-def _quick_setup_unlocked(request: Request, review_session: ReviewSession) -> bool:
-    """``True`` when the operator's last lock-toggle action was Unlock.
-
-    Read from the per-session cookie set by
-    ``POST /sessions/{id}/quick-setup/lock``. Absent ⇒ default locked.
-    """
-
-    return request.cookies.get(_quick_setup_cookie_name(review_session.id)) == "1"
 
 
 @router.post(
@@ -2375,35 +2178,10 @@ def assignments_delete_all(
 
 
 # --------------------------------------------------------------------------- #
-# Edit-lock helpers
+# Slice-local helper (Instruments). The cross-slice edit-lock guards
+# (``_require_editable`` / ``_require_response_loss_ack`` /
+# ``_lifecycle_error_response``) live in ``_shared.py``.
 # --------------------------------------------------------------------------- #
-
-
-def _require_editable(review_session: ReviewSession) -> None:
-    """Reject mutating operator actions while session is not draft/validated."""
-    if not lifecycle.is_editable(review_session):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Session is {review_session.status}; revert to draft to edit"
-            ),
-        )
-
-
-def _require_response_loss_ack(
-    db: Session, review_session: ReviewSession, ack: str | None
-) -> None:
-    """When responses exist, require explicit acknowledge_response_loss=true."""
-    if not lifecycle.session_has_responses(db, review_session):
-        return
-    if ack != "true":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Existing reviewer responses will be discarded; tick "
-                "'acknowledge response loss' to proceed"
-            ),
-        )
 
 
 def _require_instrument_in_session(
@@ -2420,23 +2198,6 @@ def _require_instrument_in_session(
     if instrument is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return instrument, review_session
-
-
-def _lifecycle_error_response(exc: lifecycle.LifecycleError) -> HTTPException:
-    code_to_status = {
-        "not_draft": status.HTTP_409_CONFLICT,
-        "not_ready": status.HTTP_409_CONFLICT,
-        "session_not_ready": status.HTTP_409_CONFLICT,
-        "deadline_passed": status.HTTP_409_CONFLICT,
-        "locked": status.HTTP_409_CONFLICT,
-        "has_errors": status.HTTP_400_BAD_REQUEST,
-        "needs_acknowledge": status.HTTP_400_BAD_REQUEST,
-        "needs_confirm": status.HTTP_400_BAD_REQUEST,
-    }
-    return HTTPException(
-        status_code=code_to_status.get(exc.code, status.HTTP_400_BAD_REQUEST),
-        detail=str(exc),
-    )
 
 
 # --------------------------------------------------------------------------- #
@@ -2570,157 +2331,6 @@ def instruments_index(
     )
     return _templates.TemplateResponse(
         request, "operator/instruments_index.html", context
-    )
-
-
-_VALID_TEMPLATES = ("invitation", "reminder", "responses_received")
-
-
-def _build_field_rows(
-    review_session: ReviewSession, template: str
-) -> list[dict[str, Any]]:
-    """For each (field, key, default) tuple on the active template,
-    return the dict the editor template iterates over to render
-    each editable field plus its per-field "Reset to default" link.
-    """
-    rows: list[dict[str, Any]] = []
-    for spec in email_templates.TEMPLATE_FIELDS[template]:
-        override = email_templates.get_override(review_session, spec["key"])
-        rows.append(
-            {
-                "field": spec["field"],
-                "key": spec["key"],
-                "value": override if override is not None else spec["default"],
-                "default": spec["default"],
-                "has_override": override is not None,
-            }
-        )
-    return rows
-
-
-@router.get("/sessions/{session_id}/setupinvite", response_class=HTMLResponse)
-def setupinvite_form(
-    request: Request,
-    template: str = Query(default="invitation"),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    if template not in _VALID_TEMPLATES:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Unknown template",
-        )
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_setupinvite.html",
-        {
-            "user": user,
-            "session": review_session,
-            "status_pills": views.session_status_pills(db, review_session),
-            "active_template": template,
-            "valid_templates": _VALID_TEMPLATES,
-            "rows": _build_field_rows(review_session, template),
-            "merge_tags": views.merge_tags_for_template(template),
-            "responses_received_enabled": (
-                email_templates.responses_received_enabled(review_session)
-            ),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Email Template"
-            ),
-        },
-    )
-
-
-@router.post("/sessions/{session_id}/setupinvite")
-async def setupinvite_save(
-    request: Request,
-    template: str = Form(default="invitation"),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    if template not in _VALID_TEMPLATES:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Unknown template",
-        )
-    form = await request.form()
-    updates: dict[str, str | None] = {}
-    for spec in email_templates.TEMPLATE_FIELDS[template]:
-        raw = form.get(spec["field"])
-        if not isinstance(raw, str):
-            continue
-        # Empty submission for any field falls through to the default
-        # by removing the override key. Whitespace-only is treated as
-        # empty for the same reason.
-        updates[spec["key"]] = raw if raw.strip() else None
-    changes = email_templates.set_overrides(review_session, updates)
-    # Responses-received tab carries one extra control: a checkbox
-    # backing ``responses_received_enabled``. Browsers omit unchecked
-    # checkboxes from the form payload entirely, so absence == off
-    # for this template; absence on any other template is ignored.
-    if template == "responses_received":
-        enabled_change = email_templates.set_responses_received_enabled(
-            review_session,
-            enabled=("enabled" in form),
-        )
-        if enabled_change is not None:
-            changes[email_templates.RESPONSES_RECEIVED_ENABLED_KEY] = enabled_change
-    email_templates.record_template_change(
-        db,
-        review_session=review_session,
-        user=user,
-        template=template,
-        changes=changes,
-        correlation_id=request_correlation_id(),
-    )
-    db.commit()
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/setupinvite?template={template}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-@router.post("/sessions/{session_id}/setupinvite/reset")
-def setupinvite_reset(
-    template: str = Form(...),
-    field: str = Form(...),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    if template not in _VALID_TEMPLATES:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Unknown template",
-        )
-    spec = next(
-        (s for s in email_templates.TEMPLATE_FIELDS[template] if s["field"] == field),
-        None,
-    )
-    if spec is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Unknown field",
-        )
-    changes = email_templates.set_overrides(review_session, {spec["key"]: None})
-    email_templates.record_template_reset(
-        db,
-        review_session=review_session,
-        user=user,
-        template=template,
-        field=field,
-        changes=changes,
-        correlation_id=request_correlation_id(),
-    )
-    db.commit()
-    return RedirectResponse(
-        url=(
-            f"/operator/sessions/{review_session.id}/setupinvite"
-            f"?template={template}"
-        ),
-        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
