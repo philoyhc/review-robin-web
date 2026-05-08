@@ -150,8 +150,9 @@
 </section>
 {%- endmacro %}
 
-{% set submit_all_form_id = "quick-setup-submit-all-form" %}
+{% set submit_all_form_id = quick_setup.external_form_id or "quick-setup-submit-all-form" %}
 {% set is_session_scoped = session is defined and session %}
+{% set has_own_form = is_session_scoped and not quick_setup.external_form_id %}
 <div class="card" id="quick-setup">
   {# The outer submit-all form wraps the body wrapper so file-input
      name attributes survive submission. Rendered as an empty form
@@ -161,10 +162,10 @@
      it can sit visually outside the form's HTML scope while still
      submitting it.
 
-     Suppressed on the new-session preview (no real session yet);
-     the card is purely visual there and inputs render disabled
-     via ``is_wired=False``. #}
-  {% if is_session_scoped %}
+     Suppressed when an external form id is supplied (the new-
+     session page wires slot inputs to its create-session form via
+     ``form="..."``) or when there's no session row to scope to. #}
+  {% if has_own_form %}
     <form id="{{ submit_all_form_id }}"
           action="/operator/sessions/{{ session.id }}/quick-setup/submit-all"
           method="post"
@@ -186,14 +187,18 @@
     {# Card-level replacement-confirmation checkbox. One source of
        truth for "I am OK overwriting whatever's already in these
        slots." Inline JS below copies its state into the outer
-       form's hidden ``confirm_replace`` input on submit. #}
-    <p class="form-help">
-      <label style="font-weight: normal;">
-        <input type="checkbox" id="quick-setup-confirm-replace-toggle">
-        This will replace any existing reviewers, reviewees,
-        assignments or settings, according to what is uploaded.
-      </label>
-    </p>
+       form's hidden ``confirm_replace`` input on submit.
+       Suppressed on the new-session variant — there's nothing to
+       replace before the session has been created. #}
+    {% if quick_setup.show_confirm_replace %}
+      <p class="form-help">
+        <label style="font-weight: normal;">
+          <input type="checkbox" id="quick-setup-confirm-replace-toggle">
+          This will replace any existing reviewers, reviewees,
+          assignments or settings, according to what is uploaded.
+        </label>
+      </p>
+    {% endif %}
     <div class="quick-setup-top-grid">
       <div class="quick-setup-top-grid-col">
         {% for slot in quick_setup.slots if slot.key in ("reviewers", "reviewees", "settings") %}
@@ -214,9 +219,9 @@
      inline JS below toggles it on/off based on whether any file
      input has a file selected.
 
-     Footer is suppressed on the new-session preview where the
-     card is purely visual. #}
-  {% if is_session_scoped %}
+     Footer is suppressed on the new-session variant where the
+     create-session button drives submission. #}
+  {% if has_own_form %}
     <div class="quick-setup-card-footer"
          style="display: flex; gap: var(--space-2); align-items: center; justify-content: flex-end;">
       <button type="submit"

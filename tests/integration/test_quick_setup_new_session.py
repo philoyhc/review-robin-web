@@ -1,17 +1,26 @@
-"""Tests for the Quick Setup placeholder card on the
-``/operator/sessions/new`` page.
+"""Tests for the Quick Setup card on the ``/operator/sessions/new``
+page.
 
 Mirrors the Session Home scaffold (per Segment 11H PR A) but in
-its always-unlocked / no-Lock-button preview shape so the
-operator sees the eventual setup workflow before creating the
-session.
+its always-unlocked / no-Lock-button shape. The slot inputs are
+wired to the create-session form via the HTML ``form="..."``
+attribute so any uploads / rule selection the operator stages
+here are processed by ``POST /operator/sessions`` after the
+session row is created.
 """
 
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from app.db.models import Reviewee, ReviewSession, Reviewer
 from app.web import views
+
+
+REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
+REVIEWEE_CSV = b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"
 
 
 def test_new_session_page_renders_quick_setup_card(
@@ -83,6 +92,91 @@ def test_build_new_session_quick_setup_context_shape() -> None:
     assert context.is_locked is False
     assert context.show_lock_toggle is False
     assert context.title == "Quick setup (optional)"
+
+
+def test_new_session_quick_setup_omits_confirm_replace_checkbox(
+    client: TestClient,
+) -> None:
+    """The card-level "This will replace any existing reviewers,
+    reviewees, assignments or settings ..." checkbox is suppressed
+    on the new-session variant — there's nothing to replace yet."""
+
+    body = client.get("/operator/sessions/new").text
+
+    assert 'id="quick-setup-confirm-replace-toggle"' not in body
+    assert "This will replace any existing reviewers" not in body
+
+
+def test_new_session_quick_setup_inputs_wired_to_create_session_form(
+    client: TestClient,
+) -> None:
+    """Slot inputs use ``form="create-session-form"`` so the
+    Create-session button submits both the session details and any
+    staged Quick Setup uploads in one POST."""
+
+    body = client.get("/operator/sessions/new").text
+
+    # Create-session form id is set so HTML5 form-association works.
+    assert 'id="create-session-form"' in body
+    # File inputs target the create-session form, not a separate
+    # submit-all form.
+    assert 'name="reviewers_file"' in body
+    assert 'form="create-session-form"' in body
+    # Slot 4 (settings) stays inert since 12A PR 6 hasn't shipped.
+    # No separate submit-all form is rendered.
+    assert "/quick-setup/submit-all" not in body
+
+
+def test_create_session_with_quick_setup_files_processes_uploads(
+    client: TestClient, db: Session
+) -> None:
+    """POST /operator/sessions with reviewers + reviewees files
+    creates the session and applies the imports so the operator
+    lands on Session Home with a populated roster."""
+
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Spring", "code": "qs-newsess-roster", "description": "d"},
+        files={
+            "reviewers_file": ("r.csv", REVIEWER_CSV, "text/csv"),
+            "reviewees_file": ("e.csv", REVIEWEE_CSV, "text/csv"),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "qs-newsess-roster")
+    ).scalar_one()
+    reviewers = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().all()
+    reviewees = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().all()
+    assert len(reviewers) == 1
+    assert len(reviewees) == 1
+
+
+def test_create_session_with_no_quick_setup_files_still_works(
+    client: TestClient, db: Session
+) -> None:
+    """The original create-session-only path still works when no
+    Quick Setup uploads are staged."""
+
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Spring", "code": "qs-newsess-bare"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "qs-newsess-bare")
+    ).scalar_one()
+    assert (
+        response.headers["location"]
+        == f"/operator/sessions/{review_session.id}"
+    )
 
 
 def test_session_home_quick_setup_keeps_default_title_and_lock_toggle(
