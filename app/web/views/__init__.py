@@ -54,8 +54,17 @@ from ._filters import (
     responses_search_options,
 )
 
+# Setup overview rows + standardized status-pills row (sliced in
+# PR 5).
+from ._setup import (
+    SessionStatusPills,
+    SetupRow,
+    build_setup_rows,
+    session_status_pills,
+)
+
 # Everything else still in the legacy container; carved out by
-# PRs 5-10.
+# PRs 6-10.
 from ._legacy import (
     EMAIL_PREVIEW_TABS,
     PREVIEW_INVITE_URL_PLACEHOLDER,
@@ -80,9 +89,7 @@ from ._legacy import (
     RuleBuilderContext,
     RuleBuilderOption,
     RuleLine,
-    SessionStatusPills,
     SetupCoverageRow,
-    SetupRow,
     SeverityChip,
     SurfacePreviewContext,
     SurfacePreviewMissing,
@@ -94,7 +101,6 @@ from ._legacy import (
     build_quick_setup_context,
     build_rule_based_card_context,
     build_rule_builder_context,
-    build_setup_rows,
     build_surface_preview_context,
     build_validate_context,
     constraint_summary_for_field,
@@ -104,7 +110,6 @@ from ._legacy import (
     page_button_label,
     placeholder_for_field,
     resolve_email_preview_tab,
-    session_status_pills,
     validate_lifecycle_copy,
 )
 
