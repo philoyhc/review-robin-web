@@ -31,6 +31,13 @@ chrome:
   listing every visible RuleSet (5 seeds + caller-owned
   Personal). Generation runs through `app/services/rules/engine.py`
   (predicates / combinators / quotas / deterministic ordering).
+  The Reviewers / Reviewees / Assignments preview tables share a
+  per-slot column-visibility pattern — right-flushed checkbox row
+  above each table, default ticked iff the column has data, choice
+  persisted per browser via `localStorage`. Assignments preview
+  carries the full 15-column shape (Reviewer · R Tag1..3 · Reviewee
+  · E Tag1..3 · Pair1..3 · Assign1..3 · Include); see
+  `spec/setup_pages.md` for the contract.
 - **Instruments builder.** Per-instrument card with state-machine
   Display + Response Fields tables, Response Type Definitions
   catalog (10 seeded RTDs + operator-defined ones), live-preview
