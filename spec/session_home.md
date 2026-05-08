@@ -227,8 +227,8 @@ identity lives.
 
 **Contents.** Two-column meta row above a single-column Name + Description block:
 
-- **Column 1 (all rendered as count pills):** Created by · Created (date) · Last Modified.
-- **Column 2:** Deadline (count pill, or `pill-empty` "Not set" when null) · Code (rendered in `<code>`) · Help contact (plain text, "—" when null).
+- **Column 1 (all rendered as count pills):** Created by · Created · Last Modified. Created and Last Modified render the full ISO 8601 timestamp (date + time), matching Deadline's grain.
+- **Column 2:** Deadline (count pill with the full ISO 8601 timestamp, or `pill-empty` "Not set" when null) · Code (rendered in `<code>`) · Help contact (plain text, "—" when null).
 - **Below the meta row:** full-width Name and Description rows.
 - **Edit button** (Secondary styling), bottom-right of the card.
   Opens `session_edit.html` as a sub-page of Home for full

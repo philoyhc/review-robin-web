@@ -117,6 +117,20 @@ The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Assig
 
 The single description copy ("Available only when session is in draft mode and does not have any responses.") covers the rule from the operator's vantage point — both gates show up as the same visual signal (greyed body, no toggle). Defense-in-depth route gates (`_require_editable` + `_require_response_loss_ack`) stay in place but never fire from this surface because the submit forms aren't reachable when the body's locked.
 
+### New-session variant (`/operator/sessions/new`)
+
+The Quick Setup card also renders on the create-new-session page, below the Session details form. The variant has three differences from the Home version:
+
+- **Title.** "Quick setup (optional)" — flags that the operator can fill it in alongside the session details, but doesn't have to.
+- **Lock / Unlock toggle suppressed.** There's no session row to lock; the card is always-unlocked. The footer row that holds Submit + Lock on Home doesn't render.
+- **No card-level replacement-confirmation checkbox.** A freshly-created session has nothing to replace, so the "This will replace any existing reviewers, reviewees, assignments or settings…" affordance is omitted. The body wrapper still exists; only the checkbox is suppressed.
+
+**Submission semantics.** The card has no Submit button of its own. Each slot's inputs associate with the create-session form via the HTML `form="create-session-form"` attribute, so the single "Create session" button submits both the session details and any staged Quick Setup uploads in one POST. After `POST /operator/sessions` creates the session, the handler dispatches each provided slot through the same per-slot pipeline (`_run_quick_setup_import` for Reviewers / Reviewees, `_run_quick_setup_assignments` for Assignments) the Home consolidated submit-all uses. `confirm_replace` is implicitly `"true"` on this path — there's nothing to overwrite, so the route layer's gate is satisfied trivially.
+
+**Slot 4 (Session settings) stays inert** here just as on Home — it follows the same Segment 12A PR 6 wiring schedule.
+
+**Failure mode.** Session creation runs first; if it succeeds and a downstream slot fails, the operator lands on Session Home with that slot's `?quick_setup_error=…&quick_setup_reason=…` flag and the slot's banner-error rendered in place. The session row stays — the operator retries the failing slot from the Home Quick Setup card.
+
 ### Doc taxonomy
 
 The card does not appear in the page taxonomy or the chrome. The chrome (two-row navigation, Home anchor, Setup/Operations rows) is unaffected by this work. The only doc change is in the description of what Home's body contains; the page list, the nav model, and the principles (P1–P4) are unchanged.

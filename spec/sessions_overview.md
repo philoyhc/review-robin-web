@@ -84,9 +84,9 @@ ordered by `created_at DESC` (most recent first).
 | 1 | **Session Name** | `session.name` | `<a href="/operator/sessions/{id}">{name}</a>` — clicking the name lands the operator on Session Home. |
 | 2 | **Session Code** | `session.code` | Inline `<code>` tag. |
 | 3 | **Deadline** | `session.deadline` | `<span class="pill pill-info">{iso}</span>` when set, `<span class="muted">No deadline</span>` otherwise. ISO 8601 format. |
-| 4 | **Created by** | `session.created_by_user.display_name` (falls back to `.email`) | Plain text. |
-| 5 | **Created** | `session.created_at` | `YYYY-MM-DD`. |
-| 6 | **Last Modified** | `session.updated_at` | `YYYY-MM-DD`. |
+| 4 | **Created by** | `session.created_by_user.display_name` (falls back to `.email`) | `<span class="pill pill-count">{name}</span>`. |
+| 5 | **Created** | `session.created_at` | `<span class="pill pill-count">{iso}</span>`. ISO 8601 with date and time. |
+| 6 | **Last Modified** | `session.updated_at` | `<span class="pill pill-count">{iso}</span>`. ISO 8601 with date and time. |
 | 7 | *(unlabelled)* | `session.id` | Bulk-action select-row checkbox. |
 
 The trailing column has `class="col-shrink"` (auto-narrow CSS).
