@@ -299,7 +299,7 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 5. **Body** — single column, top-to-bottom:
    - `Combine these rules with:` helper sentence above the combinator selector / read-only pill. No bold "Combinator" heading.
    - Random seed input (when the RuleSet revision carries one).
-   - "Rules" list — sentence-shaped sentences for seeds (read-only), inline-composite editable form for editable branches.
+   - "Rules" list — sentence-shaped sentences for seeds (read-only), inline-composite editable form for editable branches. Each editable rule row carries a 6 px-wide vertical bar at its left edge (rendered as an absolutely-positioned `::before` so it can be inset 6 px top + bottom for a small gap between consecutive rows). The bar colour comes from a per-row inline `--rule-bar-color` CSS custom property — `#999` on COMPOSITE rows, `#ddd` elsewhere.
    - `+ MATCH rule`, `+ FILTER rule`, `+ QUOTA rule`, `+ COMPOSITE rule` buttons (no `Add` prefix) on editable branches.
    - **No "Exclude self-review" affordance** — that control lives on the main Assignments page. The `exclude_self_reviews` value still travels with each RuleSet revision; the Rule Builder card just doesn't expose a UI for it. Seeded views similarly omit the "Exclude self-review: on/off" pill row.
 
@@ -313,6 +313,7 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
    - Seeded → `[ Copy ]`
    - Saved Personal → `[ Copy ] [ Save ] [ Cancel ] [ Delete ]`
    - Copy draft / blank draft → `[ Save ] [ Cancel ]`
+   - Button taxonomy: Copy, Save, and Cancel render `btn secondary` (Secondary); Delete renders `btn destructive` (Destructive). See `guide/all_buttons.md` Section 16 for the canonical row.
    - Blank draft's `Save` is `disabled` client-side until the rule list grows past zero rows; the server-side gate is the source of truth and rejects a zero-rule submit with `?error=empty_rules`.
 
 #### 7.2.2 Available rulesets card (right)
