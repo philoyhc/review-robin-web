@@ -56,7 +56,7 @@
 
       <div class="card danger-zone"
            id="sessions-list-danger-zone"
-           style="max-width: 50%; margin-left: auto; margin-top: 16px;">
+           style="max-width: 50%; margin-left: auto; margin-top: 16px; display: none;">
         <h2 style="margin-top: 0;">Danger Zone</h2>
         <p class="form-help">
           Tick the rows above, then submit here to delete the selected
@@ -78,6 +78,24 @@
         </p>
       </div>
     </form>
+    <script>
+      (function () {
+        var dangerZone = document.getElementById("sessions-list-danger-zone");
+        var rowCheckboxes = document.querySelectorAll(".sessions-list-select-row");
+        if (!dangerZone || !rowCheckboxes.length) return;
+        function refresh() {
+          var anyChecked = false;
+          rowCheckboxes.forEach(function (cb) {
+            if (cb.checked) anyChecked = true;
+          });
+          dangerZone.style.display = anyChecked ? "" : "none";
+        }
+        rowCheckboxes.forEach(function (cb) {
+          cb.addEventListener("change", refresh);
+        });
+        refresh();
+      })();
+    </script>
   {% else %}
     <div class="card">
       <p>You don't have any sessions yet.</p>
