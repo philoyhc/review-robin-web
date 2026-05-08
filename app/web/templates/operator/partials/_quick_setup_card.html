@@ -67,9 +67,12 @@
               form="{{ form_id }}"
               aria-label="Generate by rule"
               style="width: 100%;">
+        {# Default is the no-op sentinel — the operator may not want
+           Quick Setup to generate assignments at all. Server-side
+           treats an empty / non-numeric value as "skip the slot". #}
+        <option value="" selected>— —</option>
         {% for option in slot.rule_set_options %}
-          <option value="{{ option.id }}"
-                  {% if option.id == slot.selected_rule_set_id %}selected{% endif %}>{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
+          <option value="{{ option.id }}">{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
         {% endfor %}
       </select>
       <p class="form-help" style="margin: var(--space-2) 0 var(--space-1) 0;">
@@ -193,7 +196,7 @@
     </p>
     <div class="quick-setup-top-grid">
       <div class="quick-setup-top-grid-col">
-        {% for slot in quick_setup.slots if slot.key in ("reviewers", "reviewees") %}
+        {% for slot in quick_setup.slots if slot.key in ("reviewers", "reviewees", "settings") %}
           {{ quick_setup_slot(slot, submit_all_form_id) }}
         {% endfor %}
       </div>
@@ -203,11 +206,6 @@
         {% endfor %}
       </div>
     </div>
-    {# Bottom: full-width Session settings slot below a divider. #}
-    <hr class="quick-setup-divider">
-    {% for slot in quick_setup.slots if slot.key == "settings" %}
-      {{ quick_setup_slot(slot, submit_all_form_id) }}
-    {% endfor %}
   </div>
   {# Footer: bottom-aligned row with the consolidated Submit button
      on the left and the Lock / Unlock toggle on the right. The
@@ -220,16 +218,16 @@
      card is purely visual. #}
   {% if is_session_scoped %}
     <div class="quick-setup-card-footer"
-         style="display: flex; gap: var(--space-2); align-items: center;">
+         style="display: flex; gap: var(--space-2); align-items: center; justify-content: flex-end;">
       <button type="submit"
-              class="btn primary"
+              class="btn secondary"
               form="{{ submit_all_form_id }}"
               id="quick-setup-submit-all"
               disabled>Submit</button>
       {% if quick_setup.show_lock_toggle %}
         <form method="post"
               action="/operator/sessions/{{ session.id }}/quick-setup/lock"
-              style="margin: 0; margin-left: auto;">
+              style="margin: 0;">
           <input type="hidden"
                  name="action"
                  value="{% if quick_setup.is_locked %}unlock{% else %}lock{% endif %}">

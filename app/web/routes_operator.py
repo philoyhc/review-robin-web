@@ -1055,7 +1055,7 @@ async def quick_setup_submit_all(
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
     assignments_file: UploadFile | None = File(default=None),
-    rule_set_id: int | None = Form(default=None),
+    rule_set_id: str | None = Form(default=None),
     exclude_self_review: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
@@ -1135,10 +1135,21 @@ async def quick_setup_submit_all(
     has_assignments_file = (
         assignments_file is not None and assignments_file.filename
     )
-    if has_assignments_file or rule_set_id is not None:
+    # ``rule_set_id`` arrives as a string because the dropdown's
+    # default option is the empty-value sentinel ("— —") that means
+    # "skip the assignments slot". Coerce to int when we have a
+    # positive integer literal; treat anything else as no rule.
+    parsed_rule_set_id: int | None = None
+    if rule_set_id is not None and rule_set_id.strip():
+        candidate = rule_set_id.strip()
+        if candidate.lstrip("-").isdigit():
+            parsed = int(candidate)
+            if parsed > 0:
+                parsed_rule_set_id = parsed
+    if has_assignments_file or parsed_rule_set_id is not None:
         reason = await _run_quick_setup_assignments(
             file=assignments_file,
-            rule_set_id=rule_set_id,
+            rule_set_id=parsed_rule_set_id,
             rule=None,
             exclude_self_review=exclude_self_review,
             confirm_replace=confirm_replace,

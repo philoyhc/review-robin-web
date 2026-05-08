@@ -1064,7 +1064,7 @@ def build_quick_setup_context(
             key="settings",
             label="Session settings",
             count=0,
-            count_summary="upload a session-settings CSV",
+            count_summary="",
             mode="file_upload",
             is_wired=False,
             wire_url=None,
