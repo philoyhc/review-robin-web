@@ -556,6 +556,28 @@ stale scaffolding hanging around.
 
 ### 12.A — Split `app/services/instruments.py` (highest architectural value)
 
+**Status: Complete (2026-05-09).** All 5 PRs landed (#663 → #666 →
+the PR 4 finale that deletes `_legacy.py` by renaming it to
+`_instrument_crud.py`). Final layout:
+
+```
+app/services/instruments/
+├── __init__.py           # Re-export wall (preserves pre-package surface)
+├── _state.py             # saved_state_for_session + _instrument_label
+├── _rtds.py              # Response Type Definitions (PR 1)
+├── _display_fields.py    # Display fields (PR 2)
+├── _response_fields.py   # Response fields + bulk_save_fields (PR 3)
+└── _instrument_crud.py   # Instrument lifecycle + bulk toggles (PR 4)
+```
+
+`_instrument_label` lifted to `_state.py` in PR 2 to break a
+display-fields ↔ legacy import cycle (it's used in audit-summary
+copy by every slice). Model classes (`InstrumentResponseField`,
+`ResponseTypeDefinition`) re-exported through their natural slices
+(`_response_fields.py` and `_rtds.py`) to preserve the pre-package
+surface where two route handlers reach them as
+`instruments_service.<Model>`.
+
 **Why.** 2,469 LOC, ~50 public functions, owns five unrelated
 concerns (Response Type Definitions / display fields / response
 fields / instrument CRUD / shared state). Imported by 5 sibling

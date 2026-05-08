@@ -8,13 +8,19 @@ re-export wall so external callers — both
 ``from app.services.instruments import <symbol>`` — continue to
 work byte-identical to the pre-package shape.
 
-Slice modules (``_rtds.py``, ``_display_fields.py``,
-``_response_fields.py``, ``_instrument_crud.py``) get carved out
-of ``_legacy.py`` across PRs 1-4 of the §12.A ladder. ``_state.py``
-already houses ``saved_state_for_session`` plus its companion
-constant — those are read by every slice and live at the top to
-keep the import graph one-way (slices → _state, never the other
-direction).
+Final layout (post-PR-4):
+
+- ``_state.py`` — cross-slice plumbing
+  (``saved_state_for_session`` + ``_instrument_label``); read by
+  every other slice, never reads from them.
+- ``_rtds.py`` — Response Type Definitions catalog + operator
+  CRUD (PR 1).
+- ``_display_fields.py`` — display-field constants, locked-row
+  gates, operator CRUD, lazy-seeding helpers (PR 2).
+- ``_response_fields.py`` — response-field catalog, slug helpers,
+  operator CRUD, ``bulk_save_fields`` (PR 3).
+- ``_instrument_crud.py`` — instrument lifecycle, default-
+  instrument seeding, session-level bulk toggles (PR 4).
 """
 
 from __future__ import annotations
@@ -84,17 +90,8 @@ from ._response_fields import (
     update_response_field,
 )
 
-# Everything else still in the legacy container; carved out by
-# PR 4.
-#
-# Model-class re-exports (``InstrumentResponseField``,
-# ``ResponseTypeDefinition``) preserve the pre-package surface —
-# the flat module surfaced these as attributes via its own
-# ``from app.db.models import ...`` block, and a couple of route
-# handlers reach them as ``instruments_service.<Model>``. Callers
-# could import from ``app.db.models`` directly; cleaning those up
-# is out of scope for the §12.A pure-relocation ladder.
-from ._legacy import (
+# Instrument CRUD (sliced in PR 4 — the final slice).
+from ._instrument_crud import (
     DEFAULT_INSTRUMENT_NAME,
     bulk_set_accepting,
     bulk_set_visibility,
