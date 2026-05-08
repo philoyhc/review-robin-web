@@ -12,18 +12,19 @@
   </div>
 
   {# Template selector — Invitation / Reminder / Responses received.
-     Plain row of normal-sized buttons flushed left; no wrapping card
-     (these are page-level navigation, not their own concern). The
-     active tab renders disabled to read like a current-page anchor.
-     ``replace`` strips the underscore from "responses_received" so
-     the button reads "Responses received" rather than the raw key. #}
-  <div class="btn-pair" style="margin-bottom: 16px;">
+     Page-internal nav tabs sharing the chrome's ``.nav-tab`` styling
+     so the visual vocabulary stays consistent (per spec/ui_elements.md
+     §6 "Nav button"). The active tab carries ``aria-current="page"``
+     and renders as a non-anchor element. ``replace`` strips the
+     underscore from "responses_received" so the button reads
+     "Responses received" rather than the raw key. #}
+  <div class="tab-strip" style="margin-bottom: 16px;">
     {% for t in valid_templates %}
       {% set label = (t|replace("_", " "))|capitalize %}
       {% if t == active_template %}
-        <button type="button" class="btn disabled" aria-disabled="true">{{ label }}</button>
+        <span class="nav-tab active" aria-current="page">{{ label }}</span>
       {% else %}
-        <a class="btn secondary"
+        <a class="nav-tab"
            href="/operator/sessions/{{ session.id }}/setupinvite?template={{ t }}">{{ label }}</a>
       {% endif %}
     {% endfor %}
@@ -99,8 +100,7 @@
             <div class="form-row" style="margin-top: -8px;">
               <button type="submit"
                       form="setupinvite-reset-{{ row.field }}-form"
-                      class="chrome-link"
-                      style="background: none; border: 0; padding: 0; cursor: pointer;">
+                      class="btn-reset">
                 Reset {{ row.field }} to default
               </button>
             </div>
@@ -133,7 +133,7 @@
            style="display: flex; justify-content: flex-start; gap: 16px; margin-top: 20px;">
         <a class="btn secondary"
            href="/operator/sessions/{{ session.id }}">Cancel</a>
-        <button class="btn" type="submit" form="setupinvite-form"
+        <button class="btn secondary" type="submit" form="setupinvite-form"
                 id="setupinvite-save-button" disabled>Save</button>
       </div>
     </div>

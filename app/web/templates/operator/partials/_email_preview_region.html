@@ -5,10 +5,12 @@
    tab's rendered email below: subject, from, to, body, and a
    source-of-truth footer.
 
-   Tab styling mirrors `session_setupinvite.html:14-27`:
-     - Active tab: `<button class="btn disabled" aria-disabled="true">`
-     - Other shipped tabs: `<a class="btn secondary" href="?email=…">`
-     - Unshipped tabs: `<button class="btn secondary" disabled
+   Tab styling mirrors `session_setupinvite.html` — page-internal
+   nav tabs use the chrome's `.nav-tab` class (per spec/ui_elements.md
+   §6 "Nav button"):
+     - Active tab: `<span class="nav-tab active" aria-current="page">`.
+     - Other shipped tabs: `<a class="nav-tab" href="?email=…">`.
+     - Unshipped tabs: `<span class="nav-tab disabled"
        aria-disabled="true">` with "(coming soon)" suffix.
 
    Required context:
@@ -19,7 +21,7 @@
      - email_body: views.EmailBody | None
 #}
 <div class="card email-preview-card" id="email-previews">
-  <div class="btn-pair email-preview-tabs">
+  <div class="tab-strip email-preview-tabs">
     {# Each shipped tab's href ends in ``#email-previews`` so the
        browser scrolls back to this card after the full-page reload
        — without the fragment, switching tabs jumps the operator to
@@ -27,12 +29,12 @@
        jarring when their working context is the email body below. #}
     {% for tab in email_tabs %}
       {% if tab.key == active_email_tab.key %}
-        <button type="button" class="btn disabled" aria-disabled="true">{{ tab.label }}</button>
+        <span class="nav-tab active" aria-current="page">{{ tab.label }}</span>
       {% elif tab.is_shipped %}
-        <a class="btn secondary"
+        <a class="nav-tab"
            href="/operator/sessions/{{ session.id }}/previews?reviewer_email={{ picker.current.email | urlencode }}&email={{ tab.key }}#email-previews">{{ tab.label }}</a>
       {% else %}
-        <button type="button" class="btn secondary" disabled aria-disabled="true">{{ tab.label }} (coming soon)</button>
+        <span class="nav-tab disabled" aria-disabled="true">{{ tab.label }} (coming soon)</span>
       {% endif %}
     {% endfor %}
   </div>

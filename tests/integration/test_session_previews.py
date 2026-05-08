@@ -329,7 +329,7 @@ def test_invitation_tab_active_by_default(
     body = response.text
     # Invitation tab is the disabled "current view" button.
     assert (
-        '<button type="button" class="btn disabled" aria-disabled="true">Invitation</button>'
+        '<span class="nav-tab active" aria-current="page">Invitation</span>'
         in body
     )
     # All three tabs ship live render adapters as of Segment 11F PR D
@@ -392,7 +392,7 @@ def test_unknown_email_param_falls_back_to_invitation(
     body = response.text
     # Fell through to invitation — Invitation tab is the active button.
     assert (
-        '<button type="button" class="btn disabled" aria-disabled="true">Invitation</button>'
+        '<span class="nav-tab active" aria-current="page">Invitation</span>'
         in body
     )
 
@@ -424,7 +424,7 @@ def test_reminder_tab_renders_card_when_selected(
     # Active tab is reminder (rendered as a disabled "current view"
     # button via the same chrome the invitation tab uses).
     assert (
-        '<button type="button" class="btn disabled" aria-disabled="true">Reminder</button>'
+        '<span class="nav-tab active" aria-current="page">Reminder</span>'
         in body
     )
     # Default subject substitutes the session name.
@@ -462,7 +462,7 @@ def test_responses_received_tab_renders_card_when_selected(
     # Active tab is responses received (rendered as a disabled "current
     # view" button via the same chrome the invitation tab uses).
     assert (
-        '<button type="button" class="btn disabled" aria-disabled="true">Responses received</button>'
+        '<span class="nav-tab active" aria-current="page">Responses received</span>'
         in body
     )
     # Default subject substitutes the session name.

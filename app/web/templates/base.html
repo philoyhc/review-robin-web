@@ -329,6 +329,23 @@
         color: #374151;
       }
       .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+      /* Inline text-style "reset to default" button. Reads like a
+         link, posts a form. The standard way to revert a single
+         field inside an editor short of cancelling and exiting the
+         whole editor (per spec/ui_elements.md §6 "Inline text
+         button — `.btn-reset`"). Keep the click target identical to
+         a small text link; underline on hover for affordance. */
+      .btn-reset {
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        color: #2563eb;
+        font: inherit;
+        text-decoration: none;
+      }
+      .btn-reset:hover { text-decoration: underline; }
+      .btn-reset:disabled { opacity: 0.5; cursor: not-allowed; text-decoration: none; }
       .setup-nav {
         display: flex;
         gap: 8px;
@@ -493,6 +510,16 @@
         background: #fff;
         color: #1e40af;
         font-weight: 500;
+      }
+      .nav-tab.disabled,
+      .nav-tab[aria-disabled="true"]:not(.active) {
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
+      .nav-tab.disabled:hover,
+      .nav-tab[aria-disabled="true"]:not(.active):hover {
+        background: transparent;
+        color: #9ca3af;
       }
       .nav-tab.active::after {
         content: "";
