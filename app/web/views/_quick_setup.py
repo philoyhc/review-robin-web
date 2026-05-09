@@ -27,6 +27,7 @@ from app.db.models import ReviewSession, User
 from app.services import assignments, csv_imports
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
+from app.services.rules import library
 
 
 @dataclass(frozen=True)
@@ -227,7 +228,6 @@ def build_quick_setup_context(
     rule_set_options: list[QuickSetupRuleSetOption] = []
     selected_rule_set_id: int | None = None
     if user is not None:
-        from app.services.rules import library
 
         for rs in library.list_visible_rule_sets(db, user=user):
             rule_set_options.append(
@@ -402,7 +402,6 @@ def build_new_session_quick_setup_context(
     rule_set_options: list[QuickSetupRuleSetOption] = []
     selected_rule_set_id: int | None = None
     if is_wired:
-        from app.services.rules import library
 
         for rs in library.list_visible_rule_sets(db, user=user):
             rule_set_options.append(
