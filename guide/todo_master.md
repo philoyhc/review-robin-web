@@ -144,12 +144,19 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - 13A's standalone editor surface (`/edit/{rule_set_id}` + companion POSTs `/copy`, `/save`, `/save-as`, `/rename`, `/delete`, `/preview`) and template / partials retired in PR 4b; the reused PR 5b/5c rules-JSON serializer (`_rule_based_editor_js.html`) and shared view-shape helpers (`RuleLine`, `EditableRule`, `_flatten_rule_lines`, `_flatten_editable_rules`, picker option lists) stayed.
   - Plan archived: `guide/archive/segment_13A_1_rule_based_editor_revamp.md`. As-built layout: `spec/rule_based_assignment.md` §7.2 (Rule Builder page). New tests: `tests/integration/test_rule_builder_page.py`, `test_rule_builder_copy_save_delete.py`, `test_rule_builder_new_blank.py`. Net diff after 4b: **-3487 lines** of legacy editor surface.
 
-### Major refactor — §12 (post-`routes_operator` ladder)
+### Major refactor — done 2026-05-08 → 2026-05-09 (PRs #651 → #683)
 
-- **§12.A — `app/services/instruments.py` package split** — done 2026-05-09 (PRs **#663 → #664 → #665 → #666 → #667**, 1 prep + 4 slice PRs). 2,469 LOC god-object split by concern into `_state.py` / `_rtds.py` / `_display_fields.py` / `_response_fields.py` / `_instrument_crud.py`; `__init__.py` re-export wall keeps the pre-package surface byte-identical for all 5 importers. `_instrument_label` lifted to `_state.py` to break a display-fields ↔ legacy import cycle. Plan: `guide/major_refactor.md` §12.A.
-- **§12.B — `app/web/views.py` package split** — done 2026-05-09 (PRs **#668 → #678**, 1 prep + 10 slice PRs). 3,483 LOC view-shape adapter file split by page / entity into 10 sub-modules (Setup / Instruments / Validate / Quick Setup / Extract Data / Invitations / Responses / Filters / Previews / Rule Builder); same re-export-wall pattern. Plan: `guide/major_refactor.md` §12.B.
-- **§12.C — Cross-cutting hygiene bundle** — done 2026-05-09 (PRs **#680 → #681 → #682**, 3 PRs). C1 promoted `csv_imports._decode_csv` → public `decode_csv`; C2 lifted 14 inline rules-library / TypeAdapter imports to module scope; C3 added `app/services/_queries.py::session_scoped(target, session_id)` + migrated busiest callers. Plan: `guide/major_refactor.md` §12.C.
-- **§12.D — Integration test split** — done 2026-05-09 (PR **#683**, single PR with 6 commits). `tests/integration/test_display_field_routes.py` (2,167 LOC, 53 tests) split into 6 per-surface files backed by new `tests/integration/_display_field_helpers.py` shared-helper module (mirroring the `_preview_iframe.py` convention). Pure relocation. Plan: `guide/major_refactor.md` §12.D.
+Three large monoliths split into per-concern packages with re-export
+walls (callers stay byte-identical), plus a hygiene bundle and a
+test-file split. Pattern across all three ladders: package
+conversion + `_legacy.py` shrinks slice-by-slice, `git mv` finale
+preserves blame. Plan + slice-by-slice ranges: `guide/major_refactor.md`.
+
+- **`app/web/routes_operator.py`** (4,423 LOC, 79 routes) → `app/web/routes_operator/` with 10 feature-area sub-modules + `_shared.py`. PRs **#651 → #659** (1 package-conversion + 10 slice PRs). 2026-05-08.
+- **`app/services/instruments.py`** (2,469 LOC, ~50 public functions, 5 concerns) → `app/services/instruments/` with `_state.py` / `_rtds.py` / `_display_fields.py` / `_response_fields.py` / `_instrument_crud.py`. PRs **#663 → #667** (§12.A). 2026-05-09.
+- **`app/web/views.py`** (3,483 LOC, 79 builders / dataclasses) → `app/web/views/` with 10 page / entity sub-modules. PRs **#668 → #678** (§12.B). 2026-05-09.
+- **Cross-cutting hygiene** (§12.C): public `csv_imports.decode_csv`, 14 inline imports lifted to module scope, new `app/services/_queries.py::session_scoped`. PRs **#680 → #682**. 2026-05-09.
+- **`tests/integration/test_display_field_routes.py`** (2,167 LOC, 53 tests) split into 6 per-surface files + `_display_field_helpers.py` shared module. PR **#683** (§12.D). 2026-05-09.
 
 ---
 
