@@ -194,7 +194,76 @@ pinned to each segment. The catalog itself lives in
    Extract Data moved into 12A.
    **Plan:** `guide/segment_12B_audit_retention.md`.
 
-3. **13B — Reviewer surface sort.**
+3. **13A-2 — `session_rule_sets` name uniqueness within a session.**
+   Closes the schema gap surfaced while planning 12A-1: the
+   `response_type_definitions` table already enforces
+   `uq_rtd_session_name` so per-session RTD names are unique,
+   but `session_rule_sets` (landed schema-only by 13D PR 2) has
+   no equivalent constraint. The 12A-1 export contract leans on
+   per-session name uniqueness for the name-based
+   `instruments[N].rule_set_name` reference; without the
+   constraint a duplicate-name pair anywhere in the table makes
+   the reference ambiguous. Lands ahead of 12A-1's PRs, 15B, and
+   15C so each downstream consumer can rely on the invariant.
+
+   **PR 1 — DB-level unique constraint.** Sized as a single
+   schema-only PR because the table is empty and inert today
+   (no service module reads or writes it yet, per 13D PR 2).
+
+   - Alembic migration adding
+     `UniqueConstraint("session_id", "name",
+     name="uq_session_rule_set_session_name")` to
+     `session_rule_sets`. Mirrors the
+     `response_type_definitions.uq_rtd_session_name` shape so
+     the two per-session settings tables read symmetrically.
+     Migration is a pure DDL change — no data backfill, no
+     pre-flight cleanup, because the table has zero rows on
+     every deployment running this migration.
+   - Update `app/db/models/session_rule_set.py` to declare the
+     constraint via `__table_args__ = (UniqueConstraint(...),)`
+     so future autogenerate runs see it.
+   - New `tests/integration/test_session_rule_set_uniqueness.py`
+     pinning that two rows with the same `(session_id, name)`
+     raise `IntegrityError`; same name across different
+     sessions remains legal.
+   - Doc updates (1-2 lines each, all in the same PR):
+     - `spec/settings_inventory.md` §9 `session_rule_sets` —
+       add a "Unique on `(session_id, name)`" note next to the
+       `name` row, mirroring the RTD note in §4.5.
+     - `guide/segment_12A-1_export.md` — collapse the "Name
+       uniqueness within a session is assumed by the export
+       contract" caveat into "enforced by
+       `uq_session_rule_set_session_name`".
+     - `guide/segment_15B_per_instrument_assignments.md` /
+       `guide/segment_15C_operator_libraries.md` — note that
+       per-instrument selection (15B) and Save-to-library /
+       Add-from-library (15C) rely on this constraint for stable
+       name-based references.
+
+   **Service-layer enforcement.** Deferred to 15C Slice 4
+   (where the Rule Builder editor is rerouted to save into
+   `session_rule_sets` instead of `operator_rule_sets`). 13A-2
+   intentionally pins only the DB invariant; the service-layer
+   collision check + redirect-with-error pattern that
+   `_resolve_save_as_name` / `_name_taken_by_other` already
+   implements for `operator_rule_sets` (see
+   `app/web/routes_operator/_rule_builder.py:532`) gets adapted
+   one-for-one in 15C Slice 4 to check `(session_id, name)`
+   instead of `(owner_user_id, name)`. The DB unique constraint
+   from this PR is the safety net behind that adaptation —
+   guarantees uniqueness even if a future code path bypasses
+   the service helper. Today the editor still saves into
+   `operator_rule_sets`, so there's no service-layer surface to
+   adapt yet.
+
+   On completion, move the body of this section (PR 1 contents
+   + service-layer note) into
+   `guide/archive/segment_13A_1_rule_based_editor_revamp.md` as
+   a "Follow-on — `session_rule_sets` name uniqueness" addendum;
+   the todo_master entry collapses to the same 1-line "done +
+   PR #..." shape as the other shipped items under "Done".
+
+4. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
    default + reviewer live override. Sized as 3 PRs (schema +
    read path → operator UI tri-state Sort column → reviewer-
@@ -203,7 +272,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13B_sort_by_reviewee.md`.
    **Functional spec:** `spec/sort_by_reviewee.md`.
 
-4. **13C — Enhanced instruments.**
+5. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
    instrument" action-row button. Sized as 5 PRs. Action row
@@ -215,12 +284,12 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/enhanced_instruments.md`.
 
-5. **14 — Production hardening.**
+6. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-6. **14-1 — Email infrastructure (send activation + backends).**
+7. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. The schema columns Part A
    writes to landed with **Segment 11C Part 2** (PR #541,
    2026-05-07) and are ready for the dispatch helper.
@@ -237,7 +306,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-7. **15 — Operator polish + documentation.**
+8. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -245,7 +314,7 @@ pinned to each segment. The catalog itself lives in
    Catalog #23, #25, #33, #35, #36, §2.2.
    **Plan:** `guide/segment_15_operator_polish_and_documentation.md`.
 
-8. **15A — Pervasive friendly labels.**
+9. **15A — Pervasive friendly labels.**
    Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
    `PairContext1-3` (and optional `AssignmentContext1-3`) flowing
    through every header / picker / tooltip via a session-level
@@ -257,7 +326,7 @@ pinned to each segment. The catalog itself lives in
    re-introducing hardcoded literals.
    **Plan:** `guide/segment_15A_friendly_labels.md`.
 
-9. **15C — Operator RTD / RuleSet libraries.**
+10. **15C — Operator RTD / RuleSet libraries.**
    Symmetric two-tier model for both RTDs and RuleSets:
    operator master library (cross-session, reusable) +
    per-session copy (portable, independently editable). Explicit
@@ -269,7 +338,7 @@ pinned to each segment. The catalog itself lives in
    `instruments.rule_set_id` to point at.
    **Plan:** `guide/segment_15C_operator_libraries.md`.
 
-10. **15B — Per-instrument assignments.**
+11. **15B — Per-instrument assignments.**
    Each `Instrument` carries its own assignment set (e.g. the
    Manager survey collects different reviewer → reviewee pairings
    than the Peer survey within one session). Schema already
