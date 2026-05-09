@@ -108,7 +108,15 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
     assert by_key["settings"].download_url == (
         f"/operator/sessions/{review_session.id}/export/settings.csv"
     )
-    for inert_key in ("reviewers", "reviewees", "assignments", "responses"):
+    assert by_key["reviewers"].is_wired is True
+    assert by_key["reviewers"].download_url == (
+        f"/operator/sessions/{review_session.id}/export/reviewers.csv"
+    )
+    assert by_key["reviewees"].is_wired is True
+    assert by_key["reviewees"].download_url == (
+        f"/operator/sessions/{review_session.id}/export/reviewees.csv"
+    )
+    for inert_key in ("assignments", "responses"):
         assert by_key[inert_key].is_wired is False
     assert context.bundle.is_wired is False
 
@@ -123,7 +131,11 @@ def test_extract_data_filenames_carry_session_code(
     context = views.build_extract_data_context(db, review_session)
     by_key = {row.key: row for row in context.rows}
 
-    assert by_key["reviewers"].filename == "session-abc123-reviewers.csv"
+    # Live rows use the {code}_{kind}.csv convention; inert rows
+    # keep their pre-12A-1 placeholder filenames until their PR
+    # graduates them.
+    assert by_key["reviewers"].filename == "abc123_reviewers.csv"
+    assert by_key["reviewees"].filename == "abc123_reviewees.csv"
     assert by_key["responses"].filename == "session-abc123-responses.csv"
     assert context.bundle.filename == "session-abc123-export.zip"
 
@@ -241,10 +253,10 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
         '       role="button"\n'
         '       aria-disabled="true"'
     )
-    # Four inert per-entity rows (Reviewers / Reviewees /
-    # Assignments / Responses) + one inert bundle row = five
-    # aria-disabled anchors. Settings is now a real download.
-    assert download_count == 5
+    # Two inert per-entity rows (Assignments / Responses) + one
+    # inert bundle row = three aria-disabled anchors. Settings,
+    # Reviewers, and Reviewees are now real downloads.
+    assert download_count == 3
 
 
 def test_extract_data_card_renders_when_session_is_activated(
