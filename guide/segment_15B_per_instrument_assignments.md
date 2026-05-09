@@ -80,24 +80,57 @@ inside `assignments.replaced` payload (already part of 11K's
 canonical schema for this event family) starts carrying
 real per-instrument variation.
 
-### Slice 2 — RuleSet scope decision (1 PR, ~150 LOC)
+### Slice 2 — Persist the per-instrument RuleSet selection (1 PR, ~150 LOC)
 
-`RuleSet` is currently session-scoped (`rule_sets.session_id`). Two
-options:
+**Today.** RuleSets are owned at the user-library level
+(`rule_sets.scope ∈ {seed, personal}` + `owner_user_id`) and
+visible across all of an operator's sessions. There is **no
+stored "current RuleSet" pointer** — the operator picks a
+RuleSet in the Rule Builder UI, hits Generate, and the choice is
+used inline for one-shot generation but not persisted.
 
-- **Per-instrument override on top of a session default.** Add
-  nullable `instrument_id` to `rule_sets`; resolution reads the
-  instrument override first, falls back to the session-level
-  RuleSet. Mirrors the email-template-overrides pattern.
-- **Strictly per-instrument.** Replace `rule_sets.session_id` with
-  `rule_sets.instrument_id`. Simpler, but every existing seeded
-  RuleSet needs to be either duplicated per instrument or
-  retrofitted to "applies to all instruments" with a sentinel.
+**Goal.** Make the selection persistent and per-instrument: each
+instrument records the RuleSet currently in effect for it.
 
-Recommend the override pattern — preserves the "apply once to all
-instruments" affordance for operators who don't care about
-per-instrument differences, while keeping the per-instrument escape
-hatch for operators who do.
+**Schema dependency.** `instruments.rule_set_id` (nullable FK,
+`ON DELETE SET NULL`) is pre-positioned by **Segment 13D PR 2**
+(see `segment_13D_db_prep.md` for the FK-direction rationale).
+This slice is pure service / route work — no migration in 15B.
+
+**Service-layer change.** `replace_assignments` (touched in Slice
+1) accepts `instrument_id` and writes the chosen
+`rule_set_id` onto that instrument row alongside the new
+Assignment rows. The Rule Builder POST handlers
+(`app/web/routes_operator/_rule_builder.py`) thread the
+`instrument_id` from the URL through into the persistence call.
+
+**Resolution semantics.** No "session default + per-instrument
+override" inheritance — the column is the single source of
+truth per instrument. NULL = "no RuleSet currently applied to
+this instrument" (initial state for every existing instrument
+post-13D PR 2; also the state after a reset-assignments action).
+A future **session-level default** (e.g. a
+`sessions.default_rule_set_id` column to seed new instruments
+from) is left out of this segment; revisit if operator feedback
+asks for it. Most teams will set the same RuleSet on every
+instrument, which works fine without inheritance.
+
+**FK behaviour wired through to the UX:**
+
+- **Delete instrument** (existing 10D action): the instrument's
+  pointer dies with the row; the RuleSet is untouched. No UX
+  warning needed beyond what 10D already shows.
+- **Delete RuleSet** (operator removes from their library, 13A
+  action): SQL `SET NULL` on every `instruments.rule_set_id`
+  pointing at it. **UX gate to add in this slice:** the existing
+  Rule-Builder delete-confirm dialog grows a line listing every
+  instrument across every session that currently applies the
+  RuleSet ("Deleting will clear this rule from N instrument(s):
+  [list]. Their next assignment generation will require choosing
+  a new rule.").
+- **Reset an instrument's assignments** (a new 15B affordance):
+  `UPDATE instruments SET rule_set_id = NULL WHERE id = ?` plus
+  the existing assignment-row delete. RuleSet untouched.
 
 ### Slice 3 — Manual-assignment CSV column (1 PR, ~100 LOC)
 
@@ -120,8 +153,9 @@ The Assignments page becomes per-instrument. Two PR sub-slices:
   + an "All Instruments" tab showing the union (read-only) when
   multiple instruments diverge.
 - **4b — Per-instrument Rule Based card + Manual upload.** Each
-  per-instrument tab gets its own Rule Based card (consuming the
-  Slice 2 RuleSet override) and its own manual CSV upload.
+  per-instrument tab gets its own Rule Based card (the picker
+  writes through to `instruments.rule_set_id` per Slice 2) and
+  its own manual CSV upload.
 
 Operators who don't care about per-instrument differences keep an
 "apply to all" affordance — a button at the top of the All
@@ -207,12 +241,14 @@ plus rules?" sniff test before authoring the slice.
   remain identical until an operator divergent-edits them — no
   migration needed, but the audit log will show "no-op" assignment
   replays from the first divergent edit. Acceptable.
-- **RuleSet seed migration.** Slice 2's seeded RuleSets (Full
-  Matrix etc.) need to either stay session-level or be cloned
-  per-instrument on `ensure_default_instrument`. Recommend keeping
-  them session-level (the most common case is operators wanting
-  the same rules everywhere), and let per-instrument overrides be
-  the explicit opt-in.
+- **Seeded RuleSets stay shared.** Seeded RuleSets (Full Matrix
+  etc.) live in the workspace-level library — no migration
+  needed. They're applied to instruments by setting
+  `instruments.rule_set_id` to the seed's id, same mechanism as
+  any Personal RuleSet. Multiple instruments (across multiple
+  sessions, even) can point at the same seed; deleting a seed is
+  not an operator-facing action so the `SET NULL` cascade only
+  fires for Personal RuleSet deletes.
 - **Email invitations.** Reviewer-scoped, not instrument-scoped.
   No change needed — reviewers receive one invitation per session
   regardless of how their assignments break down by instrument.
@@ -229,12 +265,14 @@ plus rules?" sniff test before authoring the slice.
   `app/services/rules/library.py`,
   `app/services/rules/engine.py`,
   `app/services/validation.py`,
-  `app/db/models/rule_set.py` (gain optional `instrument_id`),
   `app/web/routes_operator/_assignments.py`,
+  `app/web/routes_operator/_rule_builder.py`,
   `app/web/routes_operator/_quick_setup.py`,
   `app/web/views/_rule_builder.py` + `_quick_setup.py`,
-  `app/web/templates/operator/session_assignments.html`,
-  Alembic migration (one column add to `rule_sets`).
+  `app/web/templates/operator/session_assignments.html`.
+- Schema dependency only: `instruments.rule_set_id` is
+  pre-positioned by Segment 13D PR 2 (`SET NULL` on RuleSet
+  delete). No migration in this segment.
 - Possibly touched in Slice 6: `app/web/views/_validate.py`,
   `app/web/templates/operator/session_validate.html`.
 
@@ -248,8 +286,12 @@ plus rules?" sniff test before authoring the slice.
   - Slice 1: `test_assignments_service.py` regression tests for the
     `instrument_id=None` (apply to all) vs. per-instrument paths;
     audit-event payload assertions.
-  - Slice 2: `test_rule_set_instrument_override.py` — resolution
-    order (instrument override → session default).
+  - Slice 2: `test_instrument_rule_set_persistence.py` — choosing
+    a RuleSet writes `instruments.rule_set_id`; Reset clears it
+    back to NULL; deleting the RuleSet clears every pointer to it
+    via SQL `SET NULL` (the schema-level cascade is covered by
+    13D PR 2's schema test, but the route-level UX warning copy
+    also lands here).
   - Slice 3: `test_manual_csv_per_instrument_column.py` — happy
     path + unknown-instrument error.
   - Slice 4 / 5: existing assignment-page integration tests
