@@ -167,7 +167,27 @@ are 1-3 lines for at-a-glance sequencing + the catalog items
 pinned to each segment. The catalog itself lives in
 `unfinished_business.md`.
 
-1. **12A — Session settings import + export.**
+1. **13D — DB prep for the library / per-session-copy split (and 13B / 13C / 15A ride-along).**
+   Pre-positions every schema change downstream feature segments
+   need, so those segments become pure service / UI / template
+   work. Mirrors how 11C Part 2 pre-positioned the seven
+   `email_outbox` audit-log columns. Sized as **7 PRs**:
+   PR 0 renames `rule_sets` → `operator_rule_sets` (Tier 1
+   table-name harmonisation; SQL only — Python class identifier
+   `RuleSet` unchanged); PR 1 `session_field_labels` table (15A);
+   PR 2 `session_rule_sets` snapshot table (15C);
+   PR 3 `operator_response_type_definitions` library table +
+   provenance column on `response_type_definitions` (15C);
+   PR 4 nullable `instruments.rule_set_id` FK targeting
+   `session_rule_sets` (15B); recommended fold-ins of
+   `instruments.sort_display_fields` JSON (PR 5 / 13B PR 1) and
+   `instruments.group_kind String(32) NULL` (PR 6 / 13C PR 1).
+   Every migration lands inert. **Sequenced first** — lands
+   before 12A so the rest of the roadmap builds on the
+   harmonised schema.
+   **Plan:** `guide/segment_13D_db_prep.md`.
+
+2. **12A — Session settings import + export.**
    Configuration round-trip (PRs 1-2) + Extract Data card with
    five per-entity CSVs + Download-all zip (PRs 3-6). Wires
    Slot 4 of the Quick Setup card. New emitters
@@ -175,14 +195,14 @@ pinned to each segment. The catalog itself lives in
    the canonical detail shape pinned by 11K.
    **Plan:** `guide/segment_12A_export_and_import.md`.
 
-2. **12B — Audit retention.**
+3. **12B — Audit retention.**
    `audit_events` export + retention / purge tooling. Reads
    against the canonical detail shape pinned by 11K (shipped
    2026-05-07). Folded out of the original Segment 12 plan when
    Extract Data moved into 12A.
    **Plan:** `guide/segment_12B_audit_retention.md`.
 
-3. **13B — Reviewer surface sort.**
+4. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
    default + reviewer live override. Sized as 3 PRs (schema +
    read path → operator UI tri-state Sort column → reviewer-
@@ -191,7 +211,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13B_sort_by_reviewee.md`.
    **Functional spec:** `spec/sort_by_reviewee.md`.
 
-4. **13C — Enhanced instruments.**
+5. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
    instrument" action-row button. Sized as 5 PRs. Action row
@@ -202,22 +222,6 @@ pinned to each segment. The catalog itself lives in
    13B.
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/enhanced_instruments.md`.
-
-5. **13D — DB prep for the library / per-session-copy split (and 13B / 13C / 15A ride-along).**
-   Pre-positions every additive, nullable, no-backfill schema
-   change downstream feature segments need, so those segments
-   become pure service / UI / template work. Mirrors how 11C
-   Part 2 pre-positioned the seven `email_outbox` audit-log
-   columns. Sized as **6 PRs**: `session_field_labels` table
-   (15A); `session_rule_sets` snapshot table (15C);
-   `operator_response_type_definitions` library table + provenance
-   column on `response_type_definitions` (15C); nullable
-   `instruments.rule_set_id` FK targeting `session_rule_sets`
-   (15B); recommended fold-ins of `instruments.sort_display_fields`
-   JSON (13B PR 1) and `instruments.group_kind String(32) NULL`
-   (13C PR 1). Every migration lands inert. Independent of every
-   other segment; can land any time.
-   **Plan:** `guide/segment_13D_db_prep.md`.
 
 6. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.

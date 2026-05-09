@@ -1,8 +1,8 @@
 # Segment 13D — DB prep for the library / per-session-copy split (and 13B / 13C / 15A ride-along)
 
 **Status:** Plan (revised 2026-05-09 to absorb the operator
-RTD/RuleSet library design).
-**Sizing:** 1 small segment, **6 PRs** (one per migration).
+RTD/RuleSet library design + table-name harmonisation).
+**Sizing:** 1 small segment, **7 PRs** (one per migration).
 **Depends on:** none.
 **Unblocks:** 15A, 15C (operator RTD/RuleSet libraries), 15B
 (per-instrument assignments). 13B PR 1 and 13C PR 1 collapse into
@@ -26,23 +26,34 @@ mirrors how Segment 11C Part 2 pre-positioned the seven
 
 ---
 
-## Naming asymmetry (locked 2026-05-09)
+## Table-name harmonisation (locked 2026-05-09)
 
-The library / per-session-copy split (15C) creates a deliberate
-naming asymmetry between the RuleSet and RTD tiers. Document it
-once here and don't fight it; renaming the existing tables for
-symmetry would be a larger migration with no functional gain.
+The library / per-session-copy split (15C) is much easier to
+reason about when both tiers carry tier-bearing prefixes. **PR 0**
+of this segment renames the existing `rule_sets` table to
+`operator_rule_sets` so the two libraries can sit side-by-side
+under symmetric names.
 
 | Concept | Operator library tier | Per-session copy tier |
 |---|---|---|
-| **RuleSets** | `rule_sets` *(existing — keep as is)* | `session_rule_sets` *(new, PR 2)* |
-| **RTDs**     | `operator_response_type_definitions` *(new, PR 3)* | `response_type_definitions` *(existing — keep as is)* |
+| **RuleSets** | `operator_rule_sets` *(renamed in PR 0 from `rule_sets`)* | `session_rule_sets` *(new, PR 2)* |
+| **RTDs**     | `operator_response_type_definitions` *(new, PR 3)* | `response_type_definitions` *(existing — kept)* |
 
-The asymmetry is purely historical: the RuleSet world started as
-a workspace library (`rule_sets`); the RTD world started as
-per-session rows. 15C harmonises behaviour without touching the
-existing table names. Each new model file gets a docstring naming
-its tier and pointing at this section.
+One tail of asymmetry remains: the RTD per-session table doesn't
+carry a `session_` prefix. Renaming it
+(`response_type_definitions` → `session_response_type_definitions`)
+is a larger sweep — the model class is referenced ~80x across
+services, routes, views, tests — and the "per-session is the
+default tier" assumption is already correct via context. Defer
+the optional follow-on; the post-PR-0 RuleSet side is symmetric,
+which is where the cognitive load was concentrated.
+
+The Python class `RuleSet` (and siblings `RuleSetRevision` /
+`RuleSetSchema` / `RuleSetOptions` / `RuleSetScope`) keep their
+names — only the SQL `__tablename__` flips. ~243 occurrences
+across `app/` + `tests/` reference the class identifier; renaming
+those is mechanical but adds churn for marginal readability win
+(see `Tier 2` analysis in PR conversation #694's follow-up).
 
 ---
 
@@ -53,6 +64,7 @@ needs that show up:
 
 | Source | Change | Why ride along here |
 |---|---|---|
+| **15C** — Operator RTD/RuleSet libraries | Rename existing table `rule_sets` → `operator_rule_sets` | Bedrock for the rest. Lets PR 2's `session_rule_sets` and PR 4's `instruments.rule_set_id` reference the harmonised name from birth. |
 | **15A** — Pervasive friendly labels | New table `session_field_labels` | Required by 15A. Pure additive; defaults read from code. |
 | **15C** — Operator RTD/RuleSet libraries | New table `session_rule_sets` (snapshot, no per-session revisions) | Required by 15C. Per-session copy of a RuleSet — what `instruments.rule_set_id` actually points at. |
 | **15C** — Operator RTD/RuleSet libraries | New table `operator_response_type_definitions` | Required by 15C. Operator's library tier for RTDs (mirror of how `rule_sets` is the library tier today). |
@@ -68,6 +80,90 @@ needs that show up:
 ---
 
 ## PRs
+
+### PR 0 — Rename `rule_sets` → `operator_rule_sets` (Tier 1 table-name harmonisation)
+
+**Why first.** Bedrock for PR 2 (`session_rule_sets` — picks up
+the symmetric name) and PR 4 (`instruments.rule_set_id` — gets to
+target `operator_rule_sets.id` from birth, no fix-up migration
+needed). Landing the rename last would force a follow-on FK
+constraint rename on every table this segment introduces.
+
+**Scope.** SQL only — the Python class `RuleSet` and its siblings
+(`RuleSetRevision` / `RuleSetSchema` / `RuleSetOptions` /
+`RuleSetScope`) keep their names. Just retag what table the class
+maps to.
+
+**Change.**
+
+```python
+# app/db/models/rule_set.py
+class RuleSet(Base, TimestampMixin):
+    __tablename__ = "operator_rule_sets"   # was: "rule_sets"
+    # … no other changes …
+```
+
+```python
+# app/db/models/rule_set.py (same file — RuleSetRevision class)
+rule_set_id: Mapped[int] = mapped_column(
+    ForeignKey("operator_rule_sets.id", ondelete="CASCADE"),
+    # was: ForeignKey("rule_sets.id", ondelete="CASCADE")
+    nullable=False, index=True,
+)
+```
+
+**Migration sketch.**
+
+```python
+def upgrade() -> None:
+    op.rename_table("rule_sets", "operator_rule_sets")
+    # SQLite drops + recreates the FK during rename_table; Postgres
+    # keeps the constraint but ties it to the renamed table. The
+    # constraint name itself doesn't need an explicit rename for
+    # SQLAlchemy to find it (it's resolved by tablename + column
+    # set), but rename for tidiness on Postgres:
+    with op.batch_alter_table("rule_set_revisions") as batch_op:
+        batch_op.drop_constraint(
+            "fk_rule_set_revisions_rule_set_id", type_="foreignkey"
+        )
+        batch_op.create_foreign_key(
+            "fk_rule_set_revisions_rule_set_id_operator",
+            "operator_rule_sets", ["rule_set_id"], ["id"],
+            ondelete="CASCADE",
+        )
+
+def downgrade() -> None:
+    # Symmetric reverse.
+    op.rename_table("operator_rule_sets", "rule_sets")
+    with op.batch_alter_table("rule_set_revisions") as batch_op:
+        batch_op.drop_constraint(
+            "fk_rule_set_revisions_rule_set_id_operator",
+            type_="foreignkey",
+        )
+        batch_op.create_foreign_key(
+            "fk_rule_set_revisions_rule_set_id",
+            "rule_sets", ["rule_set_id"], ["id"],
+            ondelete="CASCADE",
+        )
+```
+
+(Verify constraint names against `c5e9a8f3d4b1`'s autogenerated
+output before authoring — Alembic constraint naming may differ
+from the sketch above.)
+
+**Inert.** Class identifier `RuleSet` is unchanged; all 243+
+service / route / view / test references keep working without
+edit. Tests pass green on first try because they exercise the
+class, not the table-name string.
+
+**Sweep.** Doc references in `guide/`, `spec/`, etc. update
+mechanically (`s/\brule_sets\b table/operator_rule_sets table/`).
+~9 non-archive files; archive entries left as historical record.
+
+**Tests.** `tests/integration/test_rule_set_rename_schema.py` —
+asserts the table is reachable under the new name (round-trip
+insert + query) and that the FK from `rule_set_revisions` still
+cascades correctly.
 
 ### PR 1 — `session_field_labels` table (15A prep)
 
@@ -108,13 +204,13 @@ session-delete on both SQLite and the `ci-postgres` job.
 
 ### PR 2 — `session_rule_sets` table (15C prep)
 
-**Why.** Today's `rule_sets` table is the operator library tier
-(visible across all of an operator's sessions). Per-session
+**Why.** Post-PR-0, `operator_rule_sets` is the operator library
+tier (visible across all of an operator's sessions). Per-session
 **copies** need their own table so each session can carry a
 complete, portable, independently-edited snapshot of the RuleSets
 it uses. 15C populates these rows via "Add from library" / "Save
 to library" actions; 15B's `instruments.rule_set_id` (PR 4 below)
-points into this table, not into `rule_sets`.
+points into this table, not into `operator_rule_sets`.
 
 **Sketch shape.**
 
@@ -144,28 +240,29 @@ class SessionRuleSet(Base, TimestampMixin):
     )
     # Provenance only — survives library-RuleSet deletion via SET NULL.
     library_origin_id: Mapped[int | None] = mapped_column(
-        ForeignKey("rule_sets.id", ondelete="SET NULL"),
+        ForeignKey("operator_rule_sets.id", ondelete="SET NULL"),
         index=True, nullable=True,
     )
 ```
 
 **Inert.** No service code reads or writes the new table. The
 existing Rule Builder + assignments-generation pipeline stays
-pointed at `rule_sets` until 15C reroutes it.
+pointed at `operator_rule_sets` (via the `RuleSet` class) until
+15C reroutes it.
 
 **Tests.** `tests/integration/test_session_rule_set_schema.py` —
 round-trip insert with NULL + non-NULL `library_origin_id`;
-`SET NULL` behaviour when the referenced `rule_sets` row is
-deleted; CASCADE on `sessions.id`.
+`SET NULL` behaviour when the referenced `operator_rule_sets`
+row is deleted; CASCADE on `sessions.id`.
 
 ### PR 3 — `operator_response_type_definitions` table (15C prep)
 
 **Why.** Today's `response_type_definitions` is per-session.
 Operator-library RTDs need their own table so an operator can
 author "1-7 Likert" once and have it auto-copy into every new
-session they create. Mirror of the existing `rule_sets` shape on
-the RuleSet side (just minus revisioning, since RTDs are
-minimalistic per the 2026-05-09 design call).
+session they create. Mirror of the post-PR-0 `operator_rule_sets`
+shape on the RuleSet side (just minus revisioning, since RTDs
+are minimalistic per the 2026-05-09 design call).
 
 **Sketch shape.**
 
@@ -232,10 +329,10 @@ copy** so that:
   referenced it via SQL `SET NULL`. Instrument falls back to "no
   rule selected" until the operator picks one — never silently
   inherits a different rule.
-- Deleting from the operator library (`rule_sets`) does **not**
-  touch any instrument pointer — those point at session copies,
-  which survive library deletes (the library-origin FK is
-  `SET NULL` per PR 2).
+- Deleting from the operator library (`operator_rule_sets`) does
+  **not** touch any instrument pointer — those point at session
+  copies, which survive library deletes (the library-origin FK
+  is `SET NULL` per PR 2).
 - Resetting an instrument's assignments is just an `UPDATE …
   SET rule_set_id = NULL`. No `DELETE` cascade involved at all.
 
@@ -323,17 +420,20 @@ fold the schema work here. Recommend fold.
 
 ## Sequencing
 
-PR ordering matters for **PR 4** (depends on PR 2's
-`session_rule_sets` table existing) and **PR 3's** provenance
-column on the existing `response_type_definitions` table (no
-inter-PR ordering needed — that column-add and the new
-`operator_response_type_definitions` table land in the same
-PR for one migration). Otherwise PRs are independent.
+PR ordering matters for:
+
+- **PR 0** lands first — bedrock. PR 2 and PR 4 can then reference
+  `operator_rule_sets` from birth instead of writing the old name
+  and patching it later.
+- **PR 4** depends on PR 2's `session_rule_sets` table existing.
+- **PR 3** packages two related changes (new
+  `operator_response_type_definitions` table + provenance column on
+  the existing `response_type_definitions`) into one migration.
 
 Recommended order:
 
-1. **PR 1** — `session_field_labels` (smallest; locks the per-PR
-   template for the rest).
+0. **PR 0** — Rename `rule_sets` → `operator_rule_sets` (Tier 1).
+1. **PR 1** — `session_field_labels` table.
 2. **PR 2** — `session_rule_sets` table.
 3. **PR 3** — `operator_response_type_definitions` table + the
    `response_type_definitions.library_origin_id` provenance
@@ -344,14 +444,19 @@ Recommended order:
 
 Optional fold-out: PR 5 and PR 6 can defer to their owning
 segments if 13B / 13C plan owners prefer self-contained ladders;
-13D becomes a 4-PR segment in that case.
+13D becomes a 5-PR segment in that case.
 
 ---
 
 ## Risks + open questions
 
-- **All migrations are additive + nullable + no backfill** — same
-  shape as the 11C Part 2 outbox column scaffolding. The
+- **PR 0 is the only non-additive migration.** It renames an
+  existing table — `op.rename_table` is well-supported by both
+  SQLite and Postgres but is the highest-risk change in this
+  segment (constraint names, downgrade reversibility). Land it
+  first and on its own to isolate the failure mode.
+- **All other migrations are additive + nullable + no backfill** —
+  same shape as the 11C Part 2 outbox column scaffolding. The
   `ci-postgres` job round-trips every migration on a real Postgres
   16 service container; SQLite parity is exercised by the local
   pytest suite.
@@ -359,21 +464,31 @@ segments if 13B / 13C plan owners prefer self-contained ladders;
   `grep -rn "session_field_labels\|session_rule_sets\|operator_response_type_definitions\|sort_display_fields\|group_kind" app/services/ app/web/`
   should return zero hits in the service layer. The existing
   `rule_set_id` form-param wiring stays — that's not a new column
-  reference.
+  reference. PR 0's `operator_rule_sets` rename is also inert in
+  the sense that no Python code outside the model file even
+  references the table-name string.
 - **13B / 13C call to fold or not** — see "Optional" notes on PRs
   5 / 6. If the feature plan owners want to keep the slice self-
   contained, drop those PRs from this segment and 13D becomes a
-  4-PR segment.
+  5-PR segment.
 - **Workspace-seed migration NOT in 13D.** The cleanup that moves
-  `rule_sets` rows with `scope=seed` out to a code constant
-  (mirroring `SEEDED_RESPONSE_TYPE_DEFINITIONS`) is a service-
-  layer change, not a schema-only change — it lives in 15C.
+  `operator_rule_sets` rows with `scope=seed` out to a code
+  constant (mirroring `SEEDED_RESPONSE_TYPE_DEFINITIONS`) is a
+  service-layer change, not a schema-only change — it lives in
+  15C.
+- **RTD per-session table rename deferred.** The optional
+  `response_type_definitions` → `session_response_type_definitions`
+  rename for full symmetry isn't in PR 0; it would touch ~80
+  service / route / view / test references through the
+  `ResponseTypeDefinition` class. Worth doing if the asymmetry
+  proves confusing in practice; not worth doing pre-emptively.
 
 ---
 
 ## Critical files
 
 - New per PR:
+  - PR 0: One `__tablename__` flip + one FK string update in `app/db/models/rule_set.py` + Alembic `rename_table` migration. ~9 doc-file `s/rule_sets/operator_rule_sets/` sweeps in `guide/` + `spec/`. No service / route / view / test edits (class identifier `RuleSet` unchanged).
   - PR 1: `app/db/models/session_field_label.py` + Alembic migration.
   - PR 2: `app/db/models/session_rule_set.py` + Alembic migration.
   - PR 3: `app/db/models/operator_response_type_definition.py` + one column add to `app/db/models/response_type_definition.py` + Alembic migration.
