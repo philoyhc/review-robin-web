@@ -48,6 +48,63 @@ and the feature.
 
 ---
 
+## Migration & invariants (locked 2026-05-09)
+
+Three properties this segment must preserve. They're already
+implicit in today's behaviour; calling them out explicitly here
+so reviewers can hold each slice against them.
+
+1. **Schema migration is a no-op — pre-15B data already looks
+   like 15B data.** Sessions today have N Assignment rows per
+   `(reviewer, reviewee)` pair (one per instrument, identical
+   except for `instrument_id`), because `Assignment.instrument_id`
+   + the `(session_id, reviewer_id, reviewee_id, instrument_id)`
+   unique constraint are already present. Pre-15B sessions
+   simply have "instrument #1 has these assignments and
+   instrument #2 has the same assignments" — and stay that way
+   until an operator divergent-edits one of them. No backfill,
+   no Alembic migration in 15B itself (the only schema move is
+   `instruments.rule_set_id`, pre-positioned by Segment 13D PR 2).
+
+2. **Default instrument #1 always exists and always has
+   assignments.** `services.instruments.ensure_default_instrument`
+   (called from `replace_assignments`) already guarantees every
+   session has at least one instrument; `replace_assignments`
+   already writes Assignment rows for every instrument in the
+   session. The single-instrument flow continues to behave like
+   the old model — instrument #1 is the survivor of the
+   one-session-one-assignment-list world, and any single-
+   instrument session looks byte-identical to its pre-15B self.
+
+3. **Multi-instrument UX only activates when N > 1.** When a
+   session has exactly one instrument, the Assignments page,
+   the Quick Setup Assignments slot, and every other
+   assignment-related surface render exactly as they do today —
+   no tab strip, no "All Instruments" view, no per-instrument
+   repetition. The per-instrument selector / tabs / cards only
+   render when `len(instruments) > 1`. Operators who never add
+   a second instrument should not see any new chrome.
+
+### Rider — possible Instruments-page UI rethink (deferred)
+
+A side-effect of this segment is that operators who do exercise
+multi-instrument sessions will accumulate more instruments per
+session than the current Instruments page anticipates. The
+existing layout stacks per-instrument cards downward
+indefinitely; that becomes unwieldy past ~3-4 instruments.
+
+**Possible future direction:** convert the per-instrument cards
+into a tab strip (one tab per instrument, one card visible at a
+time), mirroring the Assignments-page tabs Slice 4 introduces.
+Same data, less scroll.
+
+**Out of scope here.** The Instruments-page rebuild belongs in a
+follow-on UI segment, not in 15B's already-substantial slice
+ladder. Surface it once 15B has shipped and operator feedback
+confirms the scroll burden is real.
+
+---
+
 ## Approach
 
 ### Slice 1 — Service-layer scope (1 PR, ~200 LOC)
@@ -146,7 +203,14 @@ same shape as unknown-reviewer / unknown-reviewee errors.
 
 ### Slice 4 — Assignments page UI (2 PRs, ~600 LOC total)
 
-The Assignments page becomes per-instrument. Two PR sub-slices:
+**Honours invariant #3** (multi-instrument UX only activates when
+N > 1). When `len(instruments) == 1`, this slice is a no-op
+visually — the page renders exactly as it does today. The tab
+strip, the "All Instruments" affordance, and the per-instrument
+chrome only mount when a second instrument exists.
+
+When N > 1, the Assignments page becomes per-instrument in two
+PR sub-slices:
 
 - **4a — Per-instrument tabs / cards.** A tab strip per instrument
   (consume `Instrument.short_label` via `views.page_button_label`)
@@ -159,8 +223,8 @@ The Assignments page becomes per-instrument. Two PR sub-slices:
 
 Operators who don't care about per-instrument differences keep an
 "apply to all" affordance — a button at the top of the All
-Instruments tab that promotes the current selection to a session
-default.
+Instruments tab that copies the current tab's selection to every
+other instrument in one click.
 
 ### Slice 5 — Quick Setup card (1 PR, ~100 LOC)
 
