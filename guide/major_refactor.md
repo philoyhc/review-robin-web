@@ -704,58 +704,230 @@ Builder (largest, isolate last).
 
 ### 12.C — Cross-cutting hygiene bundle (small, fast, multiple wins)
 
-Three independent low-risk PRs landing the audit's small findings.
-Each PR is ~50-200 LOC; can interleave with §12.A or §12.B.
+Three independent low-risk items the audit flagged that don't
+warrant a multi-PR ladder of their own. Sequencing recommendation
+in §12.C.0 below; per-item plans in §12.C.1 / §12.C.2 / §12.C.3.
 
-#### 12.C1 — Shared CSV decode helper
+#### 12.C.0 — Sequencing & total PR count
 
-**Today.** `app/services/assignments.py:187-200` and
-`app/services/csv_imports.py:33-152` both implement
-`content.decode("utf-8-sig")` + `csv.DictReader(io.StringIO(...))`.
-`csv_imports.py` factored its version into `_decode_csv()` (line
-33); `assignments.py` didn't reuse it.
+**Recommended order: C1 → C2 → C3.**
 
-**Plan.** Promote `_decode_csv` to public `csv_imports.decode_csv`
-(or move to `app/services/_csv_shared.py` if `csv_imports`
-shouldn't be the home) and rewrite `assignments.parse_manual_csv`
-to call it. 1 PR, ~30 LOC delta, zero behaviour change.
+| Sub-item | PRs | Why this order |
+|---|---|---|
+| C1 — CSV decode helper | 1 | Smallest + most contained. Pure dedup, ~30 net LOC. Locks in the per-PR template (verified ranges, ruff-clean diff, smoke tests untouched) before C2 / C3. |
+| C2 — Lift inline imports | 1 (omnibus) **or** 3 (per file) | Mechanical. Touches three files (`routes_operator/_quick_setup.py`, `routes_operator/_rule_builder.py`, `views/_quick_setup.py`, `views/_rule_builder.py` — see §12.C.2 callsite map). Recommend the omnibus PR — each per-file diff is too small to justify its own review. |
+| C3 — Session-scoped query helper | 1 (helper + busiest callers) | Introduces a new abstraction. Land last so its callsite migrations don't collide with file moves from any in-flight slice work. |
 
-**Risk.** Trivial. Existing CSV-import tests exercise the decode
-path; no rewrites needed.
+**Total: 3 PRs (recommended) or 5 PRs (if C2 is split per-file).**
 
-#### 12.C2 — Lift inline rules-library / TypeAdapter imports to module scope
+Each PR can interleave with feature work — none of them depends
+on a slice ladder being open or closed.
 
-**Today.** 14 inline `from app.services.rules import library/engine`
-or `from pydantic import TypeAdapter` callsites inside function
-bodies in `_quick_setup.py` (2), `_rule_builder.py` (5), and
-`views.py` (7). The audit confirmed they're **not** masking
-circular imports — purely stylistic relics from the segment 13A-1
-build-out.
+#### 12.C.1 — Shared CSV decode helper
 
-**Plan.** 1 PR per file (3 PRs) or one omnibus PR. Each diff is
-"delete N inline imports, add 1 module-level import" — extremely
-mechanical.
+**Today (verified 2026-05-09).**
+`app/services/csv_imports.py:33-49` already factors the
+"decode UTF-8-with-BOM + raise size-limit error + raise
+decode error" sequence into a private `_decode_csv(content,
+source)` helper. `csv_imports.parse_reviewer_csv` (callsite at
+line 142) and `csv_imports.parse_reviewee_csv` (callsite at
+line 240) both consume it.
 
-**Risk.** Minimal. `pytest -q` is the gate.
+`app/services/assignments.py:175-198` reimplements the same
+sequence inline inside `parse_manual_csv` — same shape, same
+1 MiB ceiling, same `"File too large"` / `"File is not valid
+UTF-8"` `ValidationIssue` copy — but with its own constant
+(`MANUAL_CSV_MAX_BYTES`, line 27) instead of `csv_imports.MAX_BYTES`
+(line 17). Both constants are `1 * 1024 * 1024`.
 
-#### 12.C3 — Session-scoped query builder
+**Plan (1 PR).**
 
-**Today.** Repeated `select(X).where(X.session_id == session.id)`
-patterns across `assignments.py`, `invitations.py`, `instruments.py`,
-`responses.py`, and `csv_imports.py`. ~40 callsites.
+Step 1. Promote `csv_imports._decode_csv` to a public helper.
+Two options for the home:
 
-**Plan.** New tiny helper
-`app/services/_queries.py::session_scoped(model, session_id)`
-returning a partially-applied `select`. 1 PR introducing the helper
-+ migrating 5-10 highest-frequency callsites; subsequent migrations
-piggyback on related-area PRs. Net win: ~3 lines saved per
-callsite, plus a single audit point if the session-id column ever
-changes name.
+- **A (recommended).** Keep it in `csv_imports.py`. Rename
+  `_decode_csv` → `decode_csv` (drop the underscore) and adjust
+  the two existing in-file callsites at 142 and 240. Net diff:
+  `_decode_csv` → `decode_csv`, plus the cross-module import.
+- B. Lift to a new `app/services/_csv_shared.py` if `csv_imports`
+  feels too entity-specific to host generic CSV plumbing. Net
+  diff is bigger and introduces an extra module — pick A unless
+  reviewer prefers B.
 
-**Risk.** Slightly higher than C1 / C2 — introduces a new
-abstraction. Recommend landing it after the bigger refactors
-(§12.A and/or §12.B) settle so its callsite migrations don't
-conflict with file-level moves.
+Step 2. Rewrite `assignments.parse_manual_csv` to call the
+promoted helper. The call passes the assignment's
+`MANUAL_CSV_MAX_BYTES` constant explicitly (since `_decode_csv`
+currently uses `csv_imports.MAX_BYTES` as a module-level
+default). To preserve the assignments-side error message wording
+(`"max {MAX_BYTES // 1024} KiB"`), the helper signature gains a
+`max_bytes` parameter:
+
+```python
+def decode_csv(
+    content: bytes, source: str, *, max_bytes: int = MAX_BYTES
+) -> tuple[str | None, ValidationIssue | None]:
+```
+
+Existing callers in `csv_imports.py` rely on the default; the
+new caller in `assignments.py` passes `max_bytes=MANUAL_CSV_MAX_BYTES`.
+
+Step 3. Drop the now-redundant inline decode block from
+`assignments.parse_manual_csv` (lines 175-198 in today's file).
+Net delta: ~25-30 lines removed, ~5 lines added.
+
+**Risk.** Trivial — pure dedup with no behaviour change.
+Existing tests cover both the size-limit and UTF-8 error paths
+(`tests/integration/test_import_routes.py`,
+`tests/integration/test_assignment_routes.py`); no rewrites
+expected.
+
+**Critical files.**
+- `app/services/csv_imports.py` (promote `_decode_csv` → `decode_csv`,
+  add `max_bytes` parameter).
+- `app/services/assignments.py` (replace inline decode block with
+  `csv_imports.decode_csv(...)` call).
+
+#### 12.C.2 — Lift inline rules-library / TypeAdapter imports to module scope
+
+**Today (verified 2026-05-09).** Fourteen inline imports inside
+function bodies, distributed:
+
+| File | Inline `library` / `engine` | Inline `TypeAdapter` | Total |
+|---|---|---|---|
+| `app/web/routes_operator/_rule_builder.py` | 4 (lines 120, 198, 491, 618) | 1 (line 615) | 5 |
+| `app/web/routes_operator/_quick_setup.py` | 1 (line 564) | 1 (line 556) | 2 |
+| `app/web/views/_rule_builder.py` | 4 (lines 133, 908, 1011, 1150) | 1 (line 135) | 5 |
+| `app/web/views/_quick_setup.py` | 2 (lines 230, 405) | 0 | 2 |
+| **Total** | **11** | **3** | **14** |
+
+The audit's import-graph trace (see §12.A's file-level imports +
+the views-package re-export wall) confirmed no circular imports
+exist between `app.services.rules.{library, engine}` /
+`pydantic.TypeAdapter` and the four files above. The inline
+imports are stylistic relics from the Segment 13A / 13A-1
+build-out, not cycle breaks.
+
+**Plan.**
+
+Either:
+
+- **Omnibus PR (recommended).** Single PR touches all 4 files;
+  for each file: delete every inline import, add the equivalent
+  module-level imports at the top. The 4 files are independent
+  — no ordering concerns within the PR. Net diff is ~14
+  inline-imports-deleted plus ~6 module-level-imports-added
+  (3 files import `library` only; 1 imports `library + engine`;
+  3 import `TypeAdapter`; the union dedups to 6 module-level
+  lines).
+- Per-file PR (4 PRs). Same diff, sliced. Reasonable if
+  reviewers prefer smaller diffs, but each per-file diff is
+  ~5 lines net — overhead per PR likely exceeds review time
+  saved.
+
+**Module-level imports each file gains.**
+
+| File | Adds at top |
+|---|---|
+| `routes_operator/_rule_builder.py` | `from pydantic import TypeAdapter`<br>`from app.services.rules import engine, library` |
+| `routes_operator/_quick_setup.py` | `from pydantic import TypeAdapter`<br>`from app.services.rules import engine, library` |
+| `views/_rule_builder.py` | `from pydantic import TypeAdapter`<br>`from app.services.rules import engine, library` |
+| `views/_quick_setup.py` | `from app.services.rules import library` |
+
+**Risk.** Minimal. `pytest -q` is the gate. Verification step
+in PR review: re-run the import-graph trace
+(`python -c "import app.web.routes_operator._rule_builder"`
+× 4 files) to prove no `ImportError` on package init — the
+single load-time check the inline imports were arguably
+inserted to defer.
+
+**Critical files.** The four listed above. No service / model /
+template changes.
+
+#### 12.C.3 — Session-scoped query builder
+
+**Today (verified 2026-05-09).** 38 callsites of
+`select(X).where(X.session_id == ...)` across the service layer:
+
+| Service module | Callsites |
+|---|---|
+| `app/services/assignments.py` | 15 |
+| `app/services/instruments/_instrument_crud.py` | 6 |
+| `app/services/csv_imports.py` | 6 |
+| `app/services/instruments/_display_fields.py` | 5 |
+| `app/services/responses.py` | 2 |
+| `app/services/invitations.py` | 2 |
+| `app/services/instruments/_state.py` | 1 |
+| `app/services/instruments/_rtds.py` | 1 |
+| **Total** | **38** |
+
+Each callsite saves ~3 lines after migration; the cumulative
+audit point (one place to look if the `session_id` column ever
+gets renamed) is the bigger win.
+
+**Plan (1 PR).**
+
+Step 1. Add `app/services/_queries.py` with a single helper:
+
+```python
+def session_scoped(model, session_id):
+    """Pre-filtered ``select(model).where(model.session_id == session_id)``.
+
+    Use as ``db.execute(session_scoped(Reviewer, sid).order_by(...))``.
+    Saves the repeated where-clause across the service layer and gives
+    the codebase one place to look if the column is ever renamed.
+    """
+    return select(model).where(model.session_id == session_id)
+```
+
+Step 2. Migrate the **15 highest-frequency callsites in
+`assignments.py`** in the same PR. That file dominates the
+callsite count and is the easiest place to validate the helper's
+fit before committing the rest. Pre-migration line tally:
+`grep -cE "\\.where\\(.*\\.session_id ==" app/services/assignments.py`
+should drop from 15 → 0 after the migration.
+
+Step 3. Leave the other 23 callsites for follow-up PRs that
+piggy-back on related-area work. (E.g. when a future PR touches
+`_instrument_crud.py`, it migrates that file's 6 callsites in
+the same diff.) The plan deliberately avoids a forced
+sweep-everything PR — incremental migration carries less merge-
+conflict risk.
+
+**Risk.** Slightly higher than C1 / C2 because it introduces a
+new abstraction. Mitigations:
+
+- **Validate the helper shape on `assignments.py` first**
+  (Step 2 above) — if the API turns out wrong, only one file is
+  affected.
+- **Don't rename / move `session_scoped` once it lands.** The
+  helper signature is the public contract; future migrations
+  trust it.
+- **Leave existing where-clauses alone outside `assignments.py`.**
+  Half-migration is fine; piecemeal migration is the plan, not
+  an oversight.
+
+**Sequencing concern.** Land C3 after any in-flight slice
+ladder closes. Migrating callsites in a file that's about to
+move would create needless merge churn. (As of 2026-05-09 §12.A
+and §12.B are both complete, so C3 is safe to author.)
+
+**Critical files.**
+- `app/services/_queries.py` (new).
+- `app/services/assignments.py` (15 callsites migrated in PR 1).
+
+#### 12.C.4 — Verification (applies to every C* PR)
+
+- `pytest -q` (1008 tests today) green on SQLite locally and on
+  the `ci-postgres` job in CI.
+- `ruff check .` green.
+- For C1: a one-line grep in the PR description confirming
+  `assignments.py` no longer carries
+  `content.decode("utf-8-sig")`.
+- For C2: a one-line `python -c "import …"` smoke for each of
+  the four files in the PR description, proving package init
+  doesn't `ImportError`.
+- For C3: a before/after callsite count for `assignments.py`
+  (15 → 0).
 
 ### 12.D — Split large integration test files
 
