@@ -141,36 +141,46 @@ For sessions where `assignment_mode == "rule_based"`:
    selectable on the destination.
 3. Validate is meaningful.
 
-### Pre-15B / pre-15C transient gap
+### Pre-15B / pre-15C transient gap (closed by PR 1a for seeded RuleSets)
 
 Today (pre-15B), `instruments.rule_set_id` is inert and
-session_rule_sets is empty. Today's rule-based generation
+`session_rule_sets` is empty. Today's rule-based generation
 selects a single workspace-tier RuleSet (`operator_rule_sets`)
 per session-wide Generate run; that selection lives only in the
-audit log. **An export taken today on a rule-based session
-captures every RuleSet the operator authored on the workspace
-tier only via 12A's separate RuleSet JSON portability surface
-(out of scope here)** — the settings CSV can't reference a
-workspace-tier RuleSet by name because workspace-tier
-operator-library RuleSets are explicitly excluded from this
-segment (per "Excluded from the settings CSV"). The honest
-position: a rule-based-mode export taken pre-15B carries
-everything except the RuleSet itself, and the operator on the
-destination side selects a RuleSet from their own workspace
-library when they re-run Generate. Once 15B + 15C ship, every
-RuleSet the source session used is either a seed (regenerated
-on the destination) or in the source session's
-`session_rule_sets` table (exported into the settings CSV) and
-the round-trip is closed.
+audit log.
 
-If closing this transient gap matters before 15B ships, the
-follow-on work is small: synthesise an `instruments[N].rule_set_name`
-cell at export time by joining the latest `assignments.generated`
-audit row's `refs.rule_set_id` against `operator_rule_sets.name`,
-and bundle the matching workspace-tier RuleSet's JSON sidecar
-in the export. That's the same surface 12A's PR 7 (RuleSet JSON
-portability) addresses; deferring is consistent with deferring
-the rest of PR 7.
+**PR 1a (below) closes this gap for the seeded-RuleSet case.**
+At export time, the serialiser reads the latest
+`assignments.generated` audit row, resolves
+`refs.rule_set_id` against `operator_rule_sets`, and — when the
+matching row is a seed (`is_seed=True`) — stamps that seed's
+name into every instrument's `instruments[N].rule_set_name`
+cell. The destination's session-create-time
+`materialise_seed_rule_sets` (Segment 15C Slice 1) materialises
+the same-named seed into `session_rule_sets`, so the
+name-based reference resolves locally without any
+workspace-tier portability.
+
+**Personal-library RuleSets remain out of scope.** PR 1a
+explicitly does not stamp `rule_set_name` for non-seed
+(`is_seed=False`) audit refs — those rules live in the
+operator's workspace library and don't travel with a
+per-session export. A rule-based session that used a Personal
+RuleSet exports an empty `rule_set_name` cell on every
+instrument, and the destination operator picks a RuleSet from
+their own library on re-Generate. Personal-library
+portability is a separate concern (workspace-scoped, anchored
+on Operator Settings + Rule Builder) — its own future segment.
+
+Once 15B + 15C ship, every RuleSet the source session used is
+either a seed (regenerated on the destination) or in the
+source session's `session_rule_sets` table (exported into the
+Settings CSV's `session_rule_sets[N]` block), and PR 1a's
+audit-log lookup becomes unnecessary — the per-instrument
+column is the source of truth. PR 1a's logic stays in the
+serialiser as a fallback for any session whose
+`instruments.rule_set_id` is still NULL post-15B (e.g.
+sessions that haven't been re-Generated since 15B shipped).
 
 ## Filename convention
 
@@ -675,9 +685,10 @@ maintaining as a template.
 
 ## PR sequence
 
-Sized as **3 PRs** in dependency order. PRs 2 + 3 are
+Sized as **4 PRs** in dependency order. PRs 2 + 3 are
 independent of each other and parallel-shippable once PR 1's
-shared helpers are in place.
+shared helpers are in place. PR 1a follows PR 1 — same module,
+small additive change to the serialiser.
 
 ### PR 1 — Settings export + shared helpers
 
@@ -714,6 +725,80 @@ shared helpers are in place.
     RuleSet alongside seeded ones emits exactly the
     operator-authored row, with its 1-based position
     counted against the non-seeded subset.
+
+### PR 1a — Capture seeded-RuleSet selection from the audit log
+
+**Goal.** Close the pre-15B rule-based-mode export gap (see
+"Round-trip readiness" → "Pre-15B / pre-15C transient gap")
+for the **seeded-RuleSet case only**. After this PR, a
+rule-based session that used a seed (Full Matrix /
+Intra-group / Cross-group / Same group, different role /
+Three reviewers per reviewee) round-trips its RuleSet
+selection through the export → re-Generate flow on the
+destination.
+
+**Scope simplification.** This PR explicitly **assumes the
+RuleSet in use is a seeded one**. Personal-library RuleSets
+(`operator_rule_sets` rows with `is_seed=False`) are out of
+scope — the export emits an empty `rule_set_name` cell when
+the audit log points at a Personal RuleSet, and the destination
+operator picks a RuleSet from their own library on re-Generate.
+Personal-library portability is a separate concern (workspace-
+scoped) and lands in its own future segment.
+
+**Change.**
+
+- New helper in `app/services/session_config_io.py`:
+  ``_audit_log_rule_set_name(db, review_session) -> str | None``.
+  Looks up the latest `assignments.generated` audit row for
+  ``review_session.id``, reads ``refs.rule_set_id``, joins
+  against ``operator_rule_sets``. Returns the row's ``name``
+  if ``is_seed=True``; returns ``None`` for non-seed (Personal)
+  hits, missing audit rows, missing RuleSet rows, or anything
+  else off the happy path.
+- Adjust `_instrument_rows` to fall back to the audit-log
+  helper when ``Instrument.rule_set_id`` is NULL:
+  - **Post-15B** (column populated): existing behaviour —
+    resolve `rule_set_id` against `session_rule_sets`.
+  - **Pre-15B** (column NULL): consult
+    ``_audit_log_rule_set_name``; stamp the resolved name on
+    every instrument's `rule_set_name` cell. NULL on every
+    instrument when the audit-log fallback returns ``None``
+    (matching today's empty-cell behaviour for sessions
+    without a rule-based generate).
+- Memoise the lookup once per `serialize_session_config`
+  call so a multi-instrument export hits the audit table only
+  once.
+
+**Tests.**
+
+- Rule-based session that used a seeded RuleSet: every
+  instrument's `rule_set_name` cell is stamped with the seed's
+  name (e.g. `"Full Matrix"`). Round-trip a Settings CSV from
+  such a session through the import side (when 12A-2 lands)
+  and assert the destination's instruments resolve to the
+  matching seed materialised by `materialise_seed_rule_sets`.
+- Rule-based session that used a Personal RuleSet: every
+  instrument's `rule_set_name` cell is empty (PR 1a
+  intentionally doesn't capture Personal RuleSets — see Scope
+  simplification above).
+- Manual session: `rule_set_name` cells are empty (no
+  `assignments.generated` audit row with a `rule_set_id`).
+- Sessions with no `assignments.generated` audit row at all
+  (operator never ran Generate): `rule_set_name` cells are
+  empty.
+- Multi-instrument session: every instrument shares the same
+  resolved `rule_set_name` value (today's session-wide
+  generate stamps every instrument identically). Asserts the
+  helper is called once per export.
+- Post-15B forward compatibility: when an instrument has
+  `rule_set_id` populated, that takes precedence over the
+  audit-log fallback. (Hand-construct the precondition since
+  15B's UI hasn't shipped — directly write `rule_set_id` on
+  the model and assert the per-instrument resolution wins.)
+
+**Audit / EVENT_SCHEMAS.** No new audit events. PR 1a is a
+pure read-side change.
 
 ### PR 2 — Reviewers + reviewees extract
 

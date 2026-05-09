@@ -172,6 +172,17 @@ Pre-positions every additive, nullable, no-backfill schema change downstream fea
 - **PR 5** (#701) — `instruments.sort_display_fields` JSON column (13B sort spec).
 - **PR 6** (#702) — `instruments.group_kind String(32)` column (13C group-scoped instruments).
 
+### Segment 12A-1 — Session export (settings + per-entity CSVs) — in flight 2026-05-09
+
+Splits the umbrella "Segment 12A — Session settings import + export" into the export half (this segment) and the import half (12A-2, see Upcoming below). Ships four CSV downloads off the Extract Data card on Session Home: Settings (PR 1) + Reviewers / Reviewees (PR 2) + Manual Assignments (PR 3) + an audit-log fallback that captures the seeded RuleSet a rule-based session was generated against (PR 1a). Plan: `guide/segment_12A-1_export.md`.
+
+- **PR 1** (#713, done 2026-05-09) — Settings export + shared `extracts/` plumbing. New `app/services/session_config_io.py` with `serialize_session_config`; new `app/services/extracts/__init__.py` with `stream_csv` + `filename({code}_{kind}.csv)` helper; new `GET /operator/sessions/{id}/export/settings.csv` route in a new `_extracts.py` slice; `session.settings_extracted` audit event registered in `EVENT_SCHEMAS`. Settings row on the Extract Data card flips live; the four other entity rows + zip bundle stay inert. Tests: 14 unit + 6 integration.
+- **PR 1a** — Capture seeded-RuleSet selection from the audit log. Pre-15B fallback that fills `instruments[N].rule_set_name` cells from the latest `assignments.generated` audit row when the matching RuleSet is a seed. Personal-library RuleSets are intentionally out of scope — empty cell + destination operator picks on re-Generate.
+- **PR 2** — Reviewers + reviewees extract. Two new routes (`/export/reviewers.csv`, `/export/reviewees.csv`) round-tripping with the existing per-entity CSV importers.
+- **PR 3** — Assignments extract (manual-only). New route `/export/assignments.csv` that returns 404 on rule-based sessions.
+
+Out of scope: responses extract, zip bundle, and the import side (12A-2).
+
 ---
 
 ## Upcoming
