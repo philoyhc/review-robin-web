@@ -18,11 +18,14 @@ import datetime as dt
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    AuditEvent,
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
     ResponseTypeDefinition,
     ReviewSession,
+    RuleSet,
+    RuleSetRevision,
     SessionFieldLabel,
     SessionRuleSet,
     User,
@@ -547,3 +550,241 @@ def test_header_constant_is_canonical_three_columns() -> None:
     change (4-column shape, etc.) requires deliberate test churn."""
 
     assert HEADER == ("field", "value", "data_type")
+
+
+# --------------------------------------------------------------------------- #
+# PR 1a — pre-15B audit-log fallback for rule_set_name
+# --------------------------------------------------------------------------- #
+
+
+def _add_instrument(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    name: str = "Only",
+    order: int = 0,
+    rule_set_id: int | None = None,
+) -> Instrument:
+    """Create a minimal instrument with one response field so the
+    settings export has something to serialise."""
+
+    instr = Instrument(
+        session_id=review_session.id,
+        name=name,
+        order=order,
+        rule_set_id=rule_set_id,
+    )
+    db.add(instr)
+    db.flush()
+    db.add(
+        InstrumentResponseField(
+            instrument_id=instr.id,
+            field_key="q1",
+            label="Q1",
+            response_type_id=_likert_id(db, review_session),
+            order=0,
+        )
+    )
+    db.flush()
+    return instr
+
+
+def _add_rule_set(
+    db: Session,
+    *,
+    name: str,
+    is_seed: bool,
+    owner: User | None = None,
+) -> RuleSet:
+    rs = RuleSet(
+        name=name,
+        description="",
+        scope="seed" if is_seed else "personal",
+        owner_user_id=None if is_seed else (owner.id if owner else None),
+        is_seed=is_seed,
+    )
+    db.add(rs)
+    db.flush()
+    rev = RuleSetRevision(
+        rule_set_id=rs.id,
+        revision_no=1,
+        combinator="ALL_OF",
+        exclude_self_reviews=True,
+        rules_json=[],
+        created_at=dt.datetime(2026, 5, 9, tzinfo=dt.timezone.utc),
+        created_by_user_id=None,
+    )
+    db.add(rev)
+    db.flush()
+    rs.current_revision_id = rev.id
+    db.flush()
+    return rs
+
+
+def _stamp_assignments_generated_audit(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    rule_set_id: int | None,
+) -> None:
+    """Hand-write an ``assignments.generated`` audit row mirroring
+    the shape ``assignments.replace_assignments`` writes."""
+
+    detail: dict = {
+        "session_id": review_session.id,
+        "session_code": review_session.code,
+        "counts": {"new": 0, "replaced": 0, "pairs": 0, "instruments": 0},
+        "context": {"mode": "rule_based"},
+    }
+    if rule_set_id is not None:
+        detail["refs"] = {"rule_set_id": rule_set_id}
+    db.add(
+        AuditEvent(
+            session_id=review_session.id,
+            event_type="assignments.generated",
+            severity="info",
+            summary="rule-based generate",
+            detail=detail,
+        )
+    )
+    db.flush()
+
+
+def test_audit_log_seeded_rule_set_stamps_every_instrument(
+    db: Session,
+) -> None:
+    """When the latest assignments.generated audit row references a
+    seed RuleSet, every instrument's ``rule_set_name`` cell is
+    stamped with the seed's name. Today's session-wide generate
+    pins the same name across all instruments."""
+
+    review_session = _bare_session(db, code="audit-seed")
+    seed = _add_rule_set(db, name="Full Matrix", is_seed=True)
+    _add_instrument(db, review_session, name="First", order=0)
+    _add_instrument(db, review_session, name="Second", order=1)
+    _stamp_assignments_generated_audit(
+        db, review_session, rule_set_id=seed.id
+    )
+
+    by_field = _row_dict(serialize_session_config(db, review_session))
+    assert by_field["instruments[1].rule_set_name"] == Row(
+        "instruments[1].rule_set_name", "Full Matrix", "string"
+    )
+    assert by_field["instruments[2].rule_set_name"] == Row(
+        "instruments[2].rule_set_name", "Full Matrix", "string"
+    )
+
+
+def test_audit_log_personal_rule_set_leaves_cells_empty(
+    db: Session,
+) -> None:
+    """Personal-library RuleSets are explicitly out of scope for
+    PR 1a — the helper returns ``None`` on ``is_seed=False``, which
+    surfaces as an empty cell. The destination operator picks a
+    RuleSet from their own library on re-Generate."""
+
+    review_session = _bare_session(db, code="audit-personal")
+    owner = _user(db, email="personal-owner@example.edu")
+    personal = _add_rule_set(
+        db, name="My personal RuleSet", is_seed=False, owner=owner
+    )
+    _add_instrument(db, review_session)
+    _stamp_assignments_generated_audit(
+        db, review_session, rule_set_id=personal.id
+    )
+
+    by_field = _row_dict(serialize_session_config(db, review_session))
+    assert by_field["instruments[1].rule_set_name"] == Row(
+        "instruments[1].rule_set_name", "", "string"
+    )
+
+
+def test_audit_log_no_generate_audit_leaves_cells_empty(
+    db: Session,
+) -> None:
+    """Sessions that never ran rule-based Generate (manual or
+    untouched) emit empty ``rule_set_name`` cells — matches today's
+    behaviour for sessions whose ``Instrument.rule_set_id`` is
+    NULL with no audit-log fallback to draw from."""
+
+    review_session = _bare_session(db, code="audit-no-row")
+    _add_instrument(db, review_session)
+
+    by_field = _row_dict(serialize_session_config(db, review_session))
+    assert by_field["instruments[1].rule_set_name"].value == ""
+
+
+def test_audit_log_manual_mode_leaves_cells_empty(db: Session) -> None:
+    """Manual-mode generate writes ``assignments.generated`` without
+    a ``refs.rule_set_id`` — the helper returns ``None`` and the
+    cell stays empty."""
+
+    review_session = _bare_session(db, code="audit-manual")
+    _add_instrument(db, review_session)
+    _stamp_assignments_generated_audit(
+        db, review_session, rule_set_id=None
+    )
+
+    by_field = _row_dict(serialize_session_config(db, review_session))
+    assert by_field["instruments[1].rule_set_name"].value == ""
+
+
+def test_audit_log_uses_latest_generate_when_multiple_exist(
+    db: Session,
+) -> None:
+    """If the operator regenerated against a different RuleSet, the
+    most recent ``assignments.generated`` row is the one that wins
+    (mirrors what's actually applied to the session)."""
+
+    review_session = _bare_session(db, code="audit-latest")
+    earlier = _add_rule_set(db, name="Full Matrix", is_seed=True)
+    later = _add_rule_set(
+        db, name="Three reviewers per reviewee", is_seed=True
+    )
+    _add_instrument(db, review_session)
+    _stamp_assignments_generated_audit(
+        db, review_session, rule_set_id=earlier.id
+    )
+    _stamp_assignments_generated_audit(
+        db, review_session, rule_set_id=later.id
+    )
+
+    by_field = _row_dict(serialize_session_config(db, review_session))
+    assert (
+        by_field["instruments[1].rule_set_name"].value
+        == "Three reviewers per reviewee"
+    )
+
+
+def test_post_15b_per_instrument_selection_takes_precedence(
+    db: Session,
+) -> None:
+    """When ``Instrument.rule_set_id`` is populated (post-15B), it
+    resolves through ``session_rule_sets`` and wins over the
+    audit-log fallback. Hand-construct the precondition since
+    15B's UI hasn't shipped — write ``rule_set_id`` directly."""
+
+    review_session = _bare_session(db, code="post-15b")
+    snap = SessionRuleSet(
+        session_id=review_session.id,
+        name="Cross-cohort fanout",
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=True,
+        rules_json=[],
+    )
+    db.add(snap)
+    db.flush()
+    _add_instrument(db, review_session, rule_set_id=snap.id)
+    # Audit log says a different (seed) RuleSet was used — the
+    # per-instrument column is more recent and should win.
+    seed = _add_rule_set(db, name="Full Matrix", is_seed=True)
+    _stamp_assignments_generated_audit(
+        db, review_session, rule_set_id=seed.id
+    )
+
+    by_field = _row_dict(serialize_session_config(db, review_session))
+    assert (
+        by_field["instruments[1].rule_set_name"].value
+        == "Cross-cohort fanout"
+    )
