@@ -435,6 +435,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.reviewers_extracted": EventSchema(_IDENTITY | {"counts"}),
     "session.reviewees_extracted": EventSchema(_IDENTITY | {"counts"}),
     "session.assignments_extracted": EventSchema(_IDENTITY | {"counts"}),
+    "session.responses_extracted": EventSchema(_IDENTITY | {"counts"}),
 }
 
 

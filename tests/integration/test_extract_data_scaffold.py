@@ -100,9 +100,10 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
     ]
     assert context.bundle.key == "bundle"
     assert context.bundle.label == "Zip all"
-    # 12A-1 PR 1 flipped the Settings row live; the four other
-    # entity rows + the zip bundle remain inert until subsequent
-    # PRs of this segment.
+    # 12A-1 PRs 1 / 2 / 4 flipped Settings / Reviewers / Reviewees
+    # / Responses live. Assignments stays inert on this freshly-
+    # created session because ``assignment_mode`` is unset; only
+    # the zip bundle row is permanently inert until its own PR.
     by_key = {r.key: r for r in context.rows}
     assert by_key["settings"].is_wired is True
     assert by_key["settings"].download_url == (
@@ -116,8 +117,15 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
     assert by_key["reviewees"].download_url == (
         f"/operator/sessions/{review_session.id}/export/reviewees.csv"
     )
-    for inert_key in ("assignments", "responses"):
-        assert by_key[inert_key].is_wired is False
+    assert by_key["responses"].is_wired is True
+    assert by_key["responses"].download_url == (
+        f"/operator/sessions/{review_session.id}/export/responses.csv"
+    )
+    # Assignments is inert here only because the session has no
+    # ``assignment_mode`` yet (PR 3's manual-only gate); the live
+    # branch is exercised in
+    # ``test_extracts_assignments_route.py``.
+    assert by_key["assignments"].is_wired is False
     assert context.bundle.is_wired is False
 
 
@@ -131,12 +139,12 @@ def test_extract_data_filenames_carry_session_code(
     context = views.build_extract_data_context(db, review_session)
     by_key = {row.key: row for row in context.rows}
 
-    # Live rows use the {code}_{kind}.csv convention; inert rows
-    # keep their pre-12A-1 placeholder filenames until their PR
-    # graduates them.
+    # Live rows use the {code}_{kind}.csv convention; only the
+    # zip bundle keeps its pre-12A-1 placeholder filename until
+    # its own PR graduates it.
     assert by_key["reviewers"].filename == "abc123_reviewers.csv"
     assert by_key["reviewees"].filename == "abc123_reviewees.csv"
-    assert by_key["responses"].filename == "session-abc123-responses.csv"
+    assert by_key["responses"].filename == "abc123_responses.csv"
     assert context.bundle.filename == "session-abc123-export.zip"
 
 
@@ -253,10 +261,12 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
         '       role="button"\n'
         '       aria-disabled="true"'
     )
-    # Two inert per-entity rows (Assignments / Responses) + one
-    # inert bundle row = three aria-disabled anchors. Settings,
-    # Reviewers, and Reviewees are now real downloads.
-    assert download_count == 3
+    # On a freshly-created session (no assignments generated
+    # yet), Assignments stays inert via the manual-only gate +
+    # the zip bundle row is inert until its own PR. Everything
+    # else (Settings, Reviewers, Reviewees, Responses) is live,
+    # so two aria-disabled anchors total.
+    assert download_count == 2
 
 
 def test_extract_data_card_renders_when_session_is_activated(
