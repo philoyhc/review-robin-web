@@ -181,13 +181,15 @@ are 1-3 lines for at-a-glance sequencing + the catalog items
 pinned to each segment. The catalog itself lives in
 `unfinished_business.md`.
 
-1. **12A — Session settings import + export.**
-   Configuration round-trip (PRs 1-2) + Extract Data card with
-   five per-entity CSVs + Download-all zip (PRs 3-6). Wires
-   Slot 4 of the Quick Setup card. New emitters
-   (`session.config_imported`, per-entity `*_extracted`) inherit
-   the canonical detail shape pinned by 11K.
-   **Plan:** `guide/segment_12A_export_and_import.md`.
+1. **12A-2 — Session settings import.**
+   The import counterpart to 12A-1 (export, shipped 2026-05-09).
+   Consumes the 3-column Settings CSV the export half emits and
+   rehydrates a fresh-named session into the same shape. Two
+   PRs: importer service + route, then Quick Setup slot 4
+   graduation in both contexts (Create New Session + Session
+   Home). New emitter `session.config_imported` inherits the
+   canonical detail shape pinned by 11K.
+   **Plan:** `guide/segment_12A-2_import.md`.
 
 2. **12B — Audit retention.**
    `audit_events` export + retention / purge tooling. Reads
