@@ -250,8 +250,22 @@ populated by Segment 15B Slice 2 once per-instrument selection
 wires it up. Included on export per the inclusion rule
 (operator-typed; will be in active use by 15B).
 
+**Seeded RuleSets are excluded** by the same logic that
+excludes seeded RTDs: they auto-materialise on session create
+from a code constant
+(`SEEDED_RULE_SETS` in `app/services/rules/seeds.py`, landing
+in Segment 15C Slice 1) via `materialise_seed_rule_sets(db,
+session)` — the mirror of `ensure_default_response_type_definitions`.
+Re-emitting them would either be a no-op or a name conflict on
+the destination side. Identified at export time by name-match
+against the `SEEDED_RULE_SETS` constant, mirroring how seeded
+RTDs are identified by `is_seeded=True`. (If a future
+operator-edit-on-seeded path lands, fold it in as
+`session_rule_sets[<name>].overrides.*` — same escape hatch
+the parent doc reserves for the RTD side.)
+
 Keyed by 1-based position (`session_rule_sets.id` order on
-export). User-typed:
+export, restricted to non-seeded rows). User-typed:
 
 - `session_rule_sets[N].name` (string, required)
 - `session_rule_sets[N].description` (string)
@@ -574,6 +588,13 @@ shared helpers are in place.
     `session_rule_sets` table, empty `session_field_labels`
     table all emit the expected default rows / no rows
     respectively.
+  - Seeded RuleSet exclusion: a session whose
+    `session_rule_sets` rows are all seeded (name-matches
+    against `SEEDED_RULE_SETS`) emits no rows in the
+    `session_rule_sets[N].*` block; an operator-authored
+    RuleSet alongside seeded ones emits exactly the
+    operator-authored row, with its 1-based position
+    counted against the non-seeded subset.
 
 ### PR 2 — Reviewers + reviewees extract
 
