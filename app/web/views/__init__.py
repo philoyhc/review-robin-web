@@ -75,8 +75,18 @@ from ._instruments import (
     placeholder_for_field,
 )
 
+# Quick Setup card on Session Home + new-session preview variant
+# (sliced in PR 7).
+from ._quick_setup import (
+    QuickSetupContext,
+    QuickSetupRuleSetOption,
+    QuickSetupSlot,
+    build_new_session_quick_setup_context,
+    build_quick_setup_context,
+)
+
 # Everything else still in the legacy container; carved out by
-# PRs 7-10.
+# PRs 8-10.
 from ._legacy import (
     EMAIL_PREVIEW_TABS,
     PREVIEW_INVITE_URL_PLACEHOLDER,
@@ -90,9 +100,6 @@ from ._legacy import (
     IssueSourceGroup,
     PreviewPickerContext,
     PreviewPickerOption,
-    QuickSetupContext,
-    QuickSetupRuleSetOption,
-    QuickSetupSlot,
     RuleBasedCardContext,
     RuleBasedLastGenerated,
     RuleBasedSelectorOption,
@@ -105,9 +112,7 @@ from ._legacy import (
     SurfacePreviewMissing,
     ValidateContext,
     build_email_preview_body,
-    build_new_session_quick_setup_context,
     build_preview_picker_context,
-    build_quick_setup_context,
     build_rule_based_card_context,
     build_rule_builder_context,
     build_surface_preview_context,
