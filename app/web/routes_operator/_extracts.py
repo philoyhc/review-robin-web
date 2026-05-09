@@ -21,6 +21,8 @@ from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import audit
 from app.services.extracts import filename, stream_csv
+from app.services.extracts.reviewees_extract import serialize_reviewees
+from app.services.extracts.reviewers_extract import serialize_reviewers
 from app.services.session_config_io import (
     HEADER,
     serialize_session_config,
@@ -55,6 +57,69 @@ def export_settings_csv(
     download_name = filename(review_session, "settings")
     return StreamingResponse(
         stream_csv(payload_rows),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name}"',
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/export/reviewers.csv")
+def export_reviewers_csv(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    rows = list(serialize_reviewers(db, review_session))
+    # First row is the header — body row count is everything else.
+    body_count = max(0, len(rows) - 1)
+
+    audit.write_event(
+        db,
+        event_type="session.reviewers_extracted",
+        summary=(
+            f"Extracted Reviewers CSV for session {review_session.code} "
+            f"({body_count} reviewers)"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(rows=body_count),
+    )
+
+    download_name = filename(review_session, "reviewers")
+    return StreamingResponse(
+        stream_csv(rows),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name}"',
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/export/reviewees.csv")
+def export_reviewees_csv(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    rows = list(serialize_reviewees(db, review_session))
+    body_count = max(0, len(rows) - 1)
+
+    audit.write_event(
+        db,
+        event_type="session.reviewees_extracted",
+        summary=(
+            f"Extracted Reviewees CSV for session {review_session.code} "
+            f"({body_count} reviewees)"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(rows=body_count),
+    )
+
+    download_name = filename(review_session, "reviewees")
+    return StreamingResponse(
+        stream_csv(rows),
         media_type="text/csv",
         headers={
             "Content-Disposition": f'attachment; filename="{download_name}"',

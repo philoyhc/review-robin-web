@@ -91,12 +91,12 @@ def build_extract_data_context(
         ExtractDataRow(
             key="reviewers",
             label="Reviewers",
-            filename=f"session-{code}-reviewers.csv",
+            filename=f"{code}_reviewers.csv",
             count=reviewer_count,
             count_summary=_extract_summary("reviewer", reviewer_count),
-            is_wired=False,
-            download_url=None,
-            coming_in="Wired in Segment 12A PR 3",
+            is_wired=True,
+            download_url=f"/operator/sessions/{sid}/export/reviewers.csv",
+            coming_in=None,
         ),
         ExtractDataRow(
             key="assignments",
@@ -111,12 +111,12 @@ def build_extract_data_context(
         ExtractDataRow(
             key="reviewees",
             label="Reviewees",
-            filename=f"session-{code}-reviewees.csv",
+            filename=f"{code}_reviewees.csv",
             count=reviewee_count,
             count_summary=_extract_summary("reviewee", reviewee_count),
-            is_wired=False,
-            download_url=None,
-            coming_in="Wired in Segment 12A PR 3",
+            is_wired=True,
+            download_url=f"/operator/sessions/{sid}/export/reviewees.csv",
+            coming_in=None,
         ),
         ExtractDataRow(
             key="responses",
