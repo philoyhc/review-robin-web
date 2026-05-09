@@ -36,9 +36,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    AuditEvent,
     Instrument,
     ResponseTypeDefinition,
     ReviewSession,
+    RuleSet,
     SessionFieldLabel,
     SessionRuleSet,
 )
@@ -235,10 +237,20 @@ def _instrument_blocks(
         .all()
     )
     rule_set_name_by_id = _rule_set_name_lookup(db, review_session)
+    # PR 1a — pre-15B fallback. Resolved once per export so a
+    # multi-instrument session hits the audit table once.
+    audit_log_rule_set_name = _audit_log_rule_set_name(db, review_session)
 
     rows: list[Row] = []
     for n, instrument in enumerate(instruments, start=1):
-        rows.extend(_instrument_rows(instrument, n, rule_set_name_by_id))
+        rows.extend(
+            _instrument_rows(
+                instrument,
+                n,
+                rule_set_name_by_id,
+                audit_log_rule_set_name,
+            )
+        )
         rows.extend(_display_field_rows(instrument, n))
         rows.extend(_response_field_rows(instrument, n))
     return rows
@@ -248,8 +260,19 @@ def _instrument_rows(
     instrument: Instrument,
     n: int,
     rule_set_name_by_id: dict[int, str],
+    audit_log_rule_set_name: str | None,
 ) -> list[Row]:
     prefix = f"instruments[{n}]"
+    # Per-instrument selection (post-15B) wins. Pre-15B
+    # ``Instrument.rule_set_id`` is always NULL, so we fall back
+    # to the seeded-RuleSet name resolved from the latest
+    # ``assignments.generated`` audit row (PR 1a). When neither
+    # source resolves, the cell stays empty — matches today's
+    # behaviour for sessions that never ran rule-based Generate.
+    if instrument.rule_set_id is not None:
+        rule_set_name_value = rule_set_name_by_id.get(instrument.rule_set_id)
+    else:
+        rule_set_name_value = audit_log_rule_set_name
     rows = [
         Row(f"{prefix}.name", _str(instrument.name), "string"),
         Row(
@@ -285,9 +308,7 @@ def _instrument_rows(
         ),
         Row(
             f"{prefix}.rule_set_name",
-            _str(rule_set_name_by_id.get(instrument.rule_set_id))
-            if instrument.rule_set_id is not None
-            else "",
+            _str(rule_set_name_value),
             "string",
         ),
     ]
@@ -391,6 +412,58 @@ def _non_seeded_session_rule_sets(
         .all()
         if snap.name not in _SEEDED_RULE_SET_NAMES
     ]
+
+
+def _audit_log_rule_set_name(
+    db: Session, review_session: ReviewSession
+) -> str | None:
+    """Pre-15B fallback for ``instruments[N].rule_set_name``.
+
+    Reads the latest ``assignments.generated`` audit row for
+    ``review_session``, resolves ``detail.refs.rule_set_id`` against
+    ``operator_rule_sets`` (the workspace-tier ``RuleSet`` model),
+    and returns the row's ``name`` **only when it's a seed**
+    (``is_seed=True``).
+
+    Returns ``None`` when:
+
+    - the session has no ``assignments.generated`` audit row
+      (operator never ran a rule-based Generate);
+    - the audit row has no ``refs.rule_set_id`` (e.g. a manual-mode
+      generation that wrote the same event_type without a RuleSet
+      reference);
+    - the referenced ``operator_rule_sets`` row no longer exists;
+    - the referenced row is a Personal-library RuleSet
+      (``is_seed=False``) — Personal-library portability is
+      out of scope for 12A-1, see "Pre-15B / pre-15C transient
+      gap" in the segment doc.
+
+    Once 15B + 15C ship and ``Instrument.rule_set_id`` becomes the
+    populated source of truth, this fallback only applies to
+    instruments whose per-instrument selection is still NULL.
+    """
+
+    audit_row = db.execute(
+        select(AuditEvent)
+        .where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "assignments.generated",
+        )
+        .order_by(AuditEvent.id.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if audit_row is None or not audit_row.detail:
+        return None
+    refs = audit_row.detail.get("refs") or {}
+    rule_set_id = refs.get("rule_set_id")
+    if rule_set_id is None:
+        return None
+    rule_set = db.execute(
+        select(RuleSet).where(RuleSet.id == rule_set_id)
+    ).scalar_one_or_none()
+    if rule_set is None or not rule_set.is_seed:
+        return None
+    return rule_set.name
 
 
 def _rule_set_name_lookup(
