@@ -632,6 +632,35 @@ except the public symbols are functions (not a `router`).
 
 ### 12.B — Split `app/web/views.py` (largest size win, lowest risk)
 
+**Status: Complete (2026-05-09).** All 11 PRs landed (#668 → #677
+plus the PR 10 finale that deletes `_legacy.py` by renaming it to
+`_rule_builder.py`). Final layout:
+
+```
+app/web/views/
+├── __init__.py           # Re-export wall (preserves pre-package surface)
+├── _responses.py         # Responses page rows (PR 1)
+├── _extract_data.py      # Extract Data card (PR 2)
+├── _invitations.py       # Invitations page rows (PR 3)
+├── _filters.py           # Shared filter / search helpers (PR 4)
+├── _setup.py             # Setup overview rows + status pills (PR 5)
+├── _instruments.py       # Instruments page context (PR 6)
+├── _quick_setup.py       # Quick Setup card (PR 7)
+├── _validate.py          # Validate page (PR 8)
+├── _previews.py          # Email + reviewer-surface previews (PR 9)
+└── _rule_builder.py      # Rule Builder + Rule Based card (PR 10)
+```
+
+The smoke test in `tests/integration/test_operator_smoke.py`
+caught one re-export wall oversight during PR 0 (covered by the
+extension to `test_operator_session_home_renders` for the
+view-builder-dense path); none thereafter. No cross-slice imports
+were needed beyond `_setup.session_status_pills` (used by
+`_instruments.build_instruments_context`) and the lazy
+`routes_reviewer.build_preview_context` import in
+`_previews.build_surface_preview_context` (a pre-existing cycle
+break preserved verbatim).
+
 **Why.** 3,483 LOC, 79 builders / dataclasses, no architectural
 debt — `views.py` is the canonical "view-shape adapter" seam from
 CLAUDE.md. The file's existing `# ----` section comments already
