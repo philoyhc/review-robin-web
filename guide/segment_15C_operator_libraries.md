@@ -19,9 +19,9 @@ Symmetric two-tier library / per-session-copy model for both RTDs
 and RuleSets:
 
 - **Operator master library** — survives across sessions; the
-  operator's reusable kit. Backed by the existing `rule_sets`
-  table (RuleSets) and the new
-  `operator_response_type_definitions` table (RTDs, post-13D
+  operator's reusable kit. Backed by the renamed
+  `operator_rule_sets` table (RuleSets, post-13D PR 0) and the
+  new `operator_response_type_definitions` table (RTDs, post-13D
   PR 3).
 - **Per-session copy** — what a session actually uses; portable
   with the session. Backed by the new `session_rule_sets` table
@@ -62,8 +62,8 @@ references between them.
    every new session **directly**, never via an operator's
    library. They live as code constants (mirroring how
    `SEEDED_RESPONSE_TYPE_DEFINITIONS` already works for RTDs);
-   this segment moves the existing `rule_sets` rows with
-   `scope=seed` over to the same pattern.
+   this segment moves the existing `operator_rule_sets` rows
+   with `scope=seed` over to the same pattern.
 6. **Snapshot, not live reference.** Per-session copies are
    point-in-time snapshots. Editing the library after a copy
    exists has no effect on the copy; editing the copy doesn't
@@ -78,12 +78,13 @@ references between them.
 
 ### Slice 1 — Workspace-seed migration (1 PR, ~150 LOC)
 
-**Why first.** Bedrock for the rest. Today `rule_sets` mixes
-operator-library Personal entries with workspace-shipped Seeds
-(`scope ∈ {seed, personal}`). The library / copy split makes that
-mix awkward — Seeds are vendor-shipped, never operator-edited,
-and shouldn't appear in operator-library management UIs. Move
-them to a code constant (mirroring `SEEDED_RESPONSE_TYPE_DEFINITIONS`).
+**Why first.** Bedrock for the rest. Today `operator_rule_sets`
+(post-13D PR 0 rename) mixes operator-library Personal entries
+with workspace-shipped Seeds (`scope ∈ {seed, personal}`). The
+library / copy split makes that mix awkward — Seeds are
+vendor-shipped, never operator-edited, and shouldn't appear in
+operator-library management UIs. Move them to a code constant
+(mirroring `SEEDED_RESPONSE_TYPE_DEFINITIONS`).
 
 **Change.**
 
@@ -94,8 +95,8 @@ them to a code constant (mirroring `SEEDED_RESPONSE_TYPE_DEFINITIONS`).
   `ensure_default_response_type_definitions` — copies each seed
   into `session_rule_sets` (the per-session table) on session
   create. Idempotent.
-- One-shot data migration: every existing `rule_sets` row with
-  `scope=seed` deleted (the constant is now the source of
+- One-shot data migration: every existing `operator_rule_sets`
+  row with `scope=seed` deleted (the constant is now the source of
   truth). For sessions that already had instruments pointing at
   a seed RuleSet — none today since `instruments.rule_set_id`
   is brand-new from 13D PR 4 and 15B hasn't shipped — no
@@ -117,9 +118,9 @@ canonical setup every time.
   - For each `operator_response_type_definitions` row owned by
     `owner_user`, insert a copy into `response_type_definitions`
     with `library_origin_id` set.
-  - For each `rule_sets` row owned by `owner_user` (Personal
-    only post-Slice 1), copy + current-revision-snapshot into
-    `session_rule_sets` with `library_origin_id` set.
+  - For each `operator_rule_sets` row owned by `owner_user`
+    (Personal only post-Slice 1), copy + current-revision-snapshot
+    into `session_rule_sets` with `library_origin_id` set.
 - Workspace seeds (RTD + RuleSet) materialise via the existing /
   Slice 1 helpers, in the same lifecycle hook.
 - Idempotent: re-running on a session that already has the
@@ -160,8 +161,9 @@ actions on each tier.
   (or wherever the picker lives post-13A-1).
 - "Saved to library" badge on session RuleSets whose
   `library_origin_id IS NOT NULL`.
-- The picker's source flips from `rule_sets` (today) to
-  `session_rule_sets` for the chosen session — operators see
+- The picker's source flips from `operator_rule_sets` (the
+  library, today's source) to `session_rule_sets` for the chosen
+  session — operators see
   *this session's* RuleSets, with "Add from library" as the
   bridge to bring more in.
 
@@ -176,8 +178,8 @@ entries that's not tied to any one session.
   - **Response Type Definitions library** — list every
     `operator_response_type_definitions` row the operator owns;
     Add / Edit / Delete affordances.
-  - **RuleSet library** — list every `rule_sets` row the
-    operator owns (Personal scope only post-Slice 1); Add / Edit
+  - **RuleSet library** — list every `operator_rule_sets` row
+    the operator owns (Personal scope only post-Slice 1); Add / Edit
     / Delete affordances. The Edit affordance reuses the Rule
     Builder UI pointed at the library row (not a session copy).
 - Delete-confirm dialog on each side surfaces a count of
@@ -198,8 +200,8 @@ exist:
   `session_rtd.saved_to_library` and equivalents on the RuleSet
   side).
 - Inert audit at PR-close: `grep` for any stale
-  `rule_sets.scope == "seed"` references in the codebase (Slice
-  1 should have removed them all).
+  `operator_rule_sets.scope == "seed"` references in the codebase
+  (Slice 1 should have removed them all).
 
 ---
 
@@ -218,7 +220,7 @@ exist:
   tooltip should communicate this clearly.
 - **Workspace-seed tier post-Slice 1.** Operators lose the
   ability to "Save to library" a seed (it's no longer in the
-  rule_sets table). They can still copy a session's seed
+  `operator_rule_sets` table). They can still copy a session's seed
   RuleSet into their library by name — Slice 4's "Save to
   library" runs unchanged on a session-RuleSet copy whose
   origin is a seed. Confirm this matches operator expectations
@@ -260,8 +262,8 @@ exist:
 - New tests per slice:
   - Slice 1: `test_seed_rule_set_materialisation.py` —
     seeds copy into `session_rule_sets` on session create;
-    `rule_sets.scope == "seed"` row count after migration is
-    zero.
+    `operator_rule_sets.scope == "seed"` row count after
+    migration is zero.
   - Slice 2: `test_session_create_auto_copies_library.py` —
     operator with N library RTDs / M library RuleSets gets N
     new `response_type_definitions` rows + M new

@@ -140,8 +140,9 @@ real per-instrument variation.
 ### Slice 2 — Persist the per-instrument RuleSet selection (1 PR, ~150 LOC)
 
 **Today (post-15C).** RuleSets live in two tiers: the operator
-library (`rule_sets` — visible across all of an operator's
-sessions) and per-session copies (`session_rule_sets` —
+library (`operator_rule_sets`, post-13D PR 0 rename — visible
+across all of an operator's sessions) and per-session copies
+(`session_rule_sets` —
 auto-copied from the operator library on session create + the
 operator's "Add from library" / "Save to library" actions; see
 `segment_15C_operator_libraries.md`). Per-instrument application
@@ -166,7 +167,7 @@ Assignment rows. The Rule Builder POST handlers
 (`app/web/routes_operator/_rule_builder.py`) thread the
 `instrument_id` from the URL through into the persistence call.
 The picker reads from `session_rule_sets` (the session's local
-copies), not from `rule_sets` (the library) — operators "Add from
+copies), not from `operator_rule_sets` (the library) — operators "Add from
 library" via the dedicated action introduced in 15C, then choose
 from the session's local pool here.
 
@@ -322,8 +323,8 @@ plus rules?" sniff test before authoring the slice.
   migration needed, but the audit log will show "no-op" assignment
   replays from the first divergent edit. Acceptable.
 - **Seeded RuleSets, post-15C.** Workspace seeds (Full Matrix
-  etc.) move out of `rule_sets` to a code constant in 15C
-  (mirroring how `SEEDED_RESPONSE_TYPE_DEFINITIONS` already
+  etc.) move out of `operator_rule_sets` to a code constant in
+  15C (mirroring how `SEEDED_RESPONSE_TYPE_DEFINITIONS` already
   works), and are materialised into `session_rule_sets` directly
   on session create — same mechanism as auto-copy from the
   operator library. The instrument's pointer therefore always
