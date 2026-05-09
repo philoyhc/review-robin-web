@@ -150,12 +150,12 @@ def build_extract_data_context(
         ExtractDataRow(
             key="responses",
             label="Responses",
-            filename=f"session-{code}-responses.csv",
+            filename=f"{code}_responses.csv",
             count=response_count,
             count_summary=_extract_summary("response", response_count),
-            is_wired=False,
-            download_url=None,
-            coming_in="Wired in Segment 12A PR 5",
+            is_wired=True,
+            download_url=f"/operator/sessions/{sid}/export/responses.csv",
+            coming_in=None,
         ),
         ExtractDataRow(
             key="settings",

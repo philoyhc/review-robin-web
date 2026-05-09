@@ -685,15 +685,14 @@ def test_extract_data_card_renders_scaffold_in_draft(
     # Cell labels — bundle is "Zip all" (was "Download all" pre-polish).
     assert "Zip all" in body
     # Wiring tooltips name the segment / PR that lights each row up.
-    # Settings (12A-1 PR 1) + Reviewers / Reviewees (12A-1 PR 2) +
-    # Assignments (12A-1 PR 3) are now live for manual sessions;
-    # their tooltips are gone. The Assignments row carries a
-    # mode-specific note instead of the old "Wired in" copy
-    # when the session is rule-based / full-matrix / unset.
+    # 12A-1 PRs 1 / 2 / 3 / 4 are all live; only the zip bundle
+    # row's tooltip remains. Assignments carries a mode-specific
+    # note instead of the old "Wired in" copy when the session is
+    # rule-based / full-matrix / unset.
     assert "Wired in Segment 12A PR 1" not in body  # settings — live
     assert "Wired in Segment 12A PR 3" not in body  # reviewers/reviewees — live
-    assert "Wired in Segment 12A PR 4" not in body  # assignments — replaced by mode-specific note
-    assert "Wired in Segment 12A PR 5" in body  # responses
+    assert "Wired in Segment 12A PR 4" not in body  # assignments — mode-specific note
+    assert "Wired in Segment 12A PR 5" not in body  # responses — live
     assert "Wired in Segment 12A PR 6" in body  # bundle
 
 
