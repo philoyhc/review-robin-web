@@ -1,12 +1,29 @@
 # Segment 13D — DB prep for the library / per-session-copy split (and 13B / 13C / 15A ride-along)
 
-**Status:** Plan (revised 2026-05-09 to absorb the operator
-RTD/RuleSet library design + table-name harmonisation).
+**Status:** Complete (2026-05-09). All 7 PRs landed (#696 → #702).
 **Sizing:** 1 small segment, **7 PRs** (one per migration).
 **Depends on:** none.
 **Unblocks:** 15A, 15C (operator RTD/RuleSet libraries), 15B
 (per-instrument assignments). 13B PR 1 and 13C PR 1 collapse into
 pure render-path slices.
+
+### Final layout
+
+```
+operator_rule_sets                       # PR 0: renamed from rule_sets
+session_field_labels                     # PR 1: 15A friendly-label resolver
+session_rule_sets                        # PR 2: per-session RuleSet copies
+operator_response_type_definitions       # PR 3: operator RTD library
+response_type_definitions.library_origin_id  # PR 3: provenance pointer
+instruments.rule_set_id                  # PR 4: per-instrument selection
+instruments.sort_display_fields          # PR 5: 13B sort spec (JSON)
+instruments.group_kind                   # PR 6: 13C group flavour
+```
+
+Every migration shipped inert — no service or web code reads or
+writes the new shape until its owning feature segment lights it
+up. Inert audits at PR-close time confirmed zero hits in
+`app/services/` + `app/web/` per PR.
 
 ---
 

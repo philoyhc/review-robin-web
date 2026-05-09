@@ -158,6 +158,18 @@ preserves blame. Plan + slice-by-slice ranges: `guide/major_refactor.md`.
 - **Cross-cutting hygiene** (§12.C): public `csv_imports.decode_csv`, 14 inline imports lifted to module scope, new `app/services/_queries.py::session_scoped`. PRs **#680 → #682**. 2026-05-09.
 - **`tests/integration/test_display_field_routes.py`** (2,167 LOC, 53 tests) split into 6 per-surface files + `_display_field_helpers.py` shared module. PR **#683** (§12.D). 2026-05-09.
 
+### Segment 13D — DB prep for the library / per-session-copy split — done 2026-05-09 (PRs #696 → #702)
+
+Pre-positions every additive, nullable, no-backfill schema change downstream feature segments need (15A, 15C, 15B; 13B / 13C ride-alongs). Mirrors how 11C Part 2 pre-positioned the seven `email_outbox` audit-log columns. **Every migration shipped inert** — no service or web code reads or writes the new shape until its owning feature segment lights it up. Plan: `guide/segment_13D_db_prep.md`.
+
+- **PR 0** (#696) — rename `rule_sets` → `operator_rule_sets` (Tier 1 table-name harmonisation; SQL only, Python class identifier `RuleSet` unchanged).
+- **PR 1** (#697) — new `session_field_labels` table (15A friendly-label resolver).
+- **PR 2** (#698) — new `session_rule_sets` snapshot table (15C per-session RuleSet copies).
+- **PR 3** (#699) — new `operator_response_type_definitions` library table + `response_type_definitions.library_origin_id` provenance pointer (15C).
+- **PR 4** (#700) — `instruments.rule_set_id` nullable FK → `session_rule_sets`, ON DELETE SET NULL (15B per-instrument selection).
+- **PR 5** (#701) — `instruments.sort_display_fields` JSON column (13B sort spec).
+- **PR 6** (#702) — `instruments.group_kind String(32)` column (13C group-scoped instruments).
+
 ---
 
 ## Upcoming
@@ -167,27 +179,7 @@ are 1-3 lines for at-a-glance sequencing + the catalog items
 pinned to each segment. The catalog itself lives in
 `unfinished_business.md`.
 
-1. **13D — DB prep for the library / per-session-copy split (and 13B / 13C / 15A ride-along).**
-   Pre-positions every schema change downstream feature segments
-   need, so those segments become pure service / UI / template
-   work. Mirrors how 11C Part 2 pre-positioned the seven
-   `email_outbox` audit-log columns. Sized as **7 PRs**:
-   PR 0 renames `rule_sets` → `operator_rule_sets` (Tier 1
-   table-name harmonisation; SQL only — Python class identifier
-   `RuleSet` unchanged); PR 1 `session_field_labels` table (15A);
-   PR 2 `session_rule_sets` snapshot table (15C);
-   PR 3 `operator_response_type_definitions` library table +
-   provenance column on `response_type_definitions` (15C);
-   PR 4 nullable `instruments.rule_set_id` FK targeting
-   `session_rule_sets` (15B); recommended fold-ins of
-   `instruments.sort_display_fields` JSON (PR 5 / 13B PR 1) and
-   `instruments.group_kind String(32) NULL` (PR 6 / 13C PR 1).
-   Every migration lands inert. **Sequenced first** — lands
-   before 12A so the rest of the roadmap builds on the
-   harmonised schema.
-   **Plan:** `guide/segment_13D_db_prep.md`.
-
-2. **12A — Session settings import + export.**
+1. **12A — Session settings import + export.**
    Configuration round-trip (PRs 1-2) + Extract Data card with
    five per-entity CSVs + Download-all zip (PRs 3-6). Wires
    Slot 4 of the Quick Setup card. New emitters
@@ -195,14 +187,14 @@ pinned to each segment. The catalog itself lives in
    the canonical detail shape pinned by 11K.
    **Plan:** `guide/segment_12A_export_and_import.md`.
 
-3. **12B — Audit retention.**
+2. **12B — Audit retention.**
    `audit_events` export + retention / purge tooling. Reads
    against the canonical detail shape pinned by 11K (shipped
    2026-05-07). Folded out of the original Segment 12 plan when
    Extract Data moved into 12A.
    **Plan:** `guide/segment_12B_audit_retention.md`.
 
-4. **13B — Reviewer surface sort.**
+3. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
    default + reviewer live override. Sized as 3 PRs (schema +
    read path → operator UI tri-state Sort column → reviewer-
@@ -211,7 +203,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13B_sort_by_reviewee.md`.
    **Functional spec:** `spec/sort_by_reviewee.md`.
 
-5. **13C — Enhanced instruments.**
+4. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
    instrument" action-row button. Sized as 5 PRs. Action row
@@ -223,12 +215,12 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/enhanced_instruments.md`.
 
-6. **14 — Production hardening.**
+5. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-7. **14-1 — Email infrastructure (send activation + backends).**
+6. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. The schema columns Part A
    writes to landed with **Segment 11C Part 2** (PR #541,
    2026-05-07) and are ready for the dispatch helper.
@@ -245,7 +237,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-8. **15 — Operator polish + documentation.**
+7. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -253,7 +245,7 @@ pinned to each segment. The catalog itself lives in
    Catalog #23, #25, #33, #35, #36, §2.2.
    **Plan:** `guide/segment_15_operator_polish_and_documentation.md`.
 
-9. **15A — Pervasive friendly labels.**
+8. **15A — Pervasive friendly labels.**
    Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
    `PairContext1-3` (and optional `AssignmentContext1-3`) flowing
    through every header / picker / tooltip via a session-level
@@ -265,7 +257,7 @@ pinned to each segment. The catalog itself lives in
    re-introducing hardcoded literals.
    **Plan:** `guide/segment_15A_friendly_labels.md`.
 
-10. **15C — Operator RTD / RuleSet libraries.**
+9. **15C — Operator RTD / RuleSet libraries.**
    Symmetric two-tier model for both RTDs and RuleSets:
    operator master library (cross-session, reusable) +
    per-session copy (portable, independently editable). Explicit
@@ -277,7 +269,7 @@ pinned to each segment. The catalog itself lives in
    `instruments.rule_set_id` to point at.
    **Plan:** `guide/segment_15C_operator_libraries.md`.
 
-11. **15B — Per-instrument assignments.**
+10. **15B — Per-instrument assignments.**
    Each `Instrument` carries its own assignment set (e.g. the
    Manager survey collects different reviewer → reviewee pairings
    than the Peer survey within one session). Schema already
