@@ -95,36 +95,42 @@ from ._validate import (
     validate_lifecycle_copy,
 )
 
-# Everything else still in the legacy container; carved out by
-# PRs 9-10.
-from ._legacy import (
+# Previews page view-shapes (sliced in PR 9): reviewer picker,
+# three-tab email previews, merge-tag editor strip, reviewer-
+# surface preview card.
+from ._previews import (
     EMAIL_PREVIEW_TABS,
     PREVIEW_INVITE_URL_PLACEHOLDER,
     PREVIEW_PICKER_REVIEWEE_PEEK_COUNT,
-    RULE_BUILDER_BLANK_SENTINEL_ID,
-    RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION,
-    AvailableRuleSetEntry,
-    EditableRule,
     EmailBody,
     EmailPreviewTab,
     PreviewPickerContext,
     PreviewPickerOption,
+    SurfacePreviewContext,
+    SurfacePreviewMissing,
+    build_email_preview_body,
+    build_preview_picker_context,
+    build_surface_preview_context,
+    email_preview_from_display,
+    merge_tags_for_template,
+    resolve_email_preview_tab,
+)
+
+# Everything else still in the legacy container; carved out by
+# PR 10.
+from ._legacy import (
+    RULE_BUILDER_BLANK_SENTINEL_ID,
+    RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION,
+    AvailableRuleSetEntry,
+    EditableRule,
     RuleBasedCardContext,
     RuleBasedLastGenerated,
     RuleBasedSelectorOption,
     RuleBuilderContext,
     RuleBuilderOption,
     RuleLine,
-    SurfacePreviewContext,
-    SurfacePreviewMissing,
-    build_email_preview_body,
-    build_preview_picker_context,
     build_rule_based_card_context,
     build_rule_builder_context,
-    build_surface_preview_context,
-    email_preview_from_display,
-    merge_tags_for_template,
-    resolve_email_preview_tab,
 )
 
 __all__ = [
