@@ -131,12 +131,12 @@ def build_extract_data_context(
         ExtractDataRow(
             key="settings",
             label="Session settings",
-            filename=f"session-{code}-settings.csv",
+            filename=f"{code}_settings.csv",
             count=instrument_count,
             count_summary=_extract_summary("instrument", instrument_count),
-            is_wired=False,
-            download_url=None,
-            coming_in="Wired in Segment 12A PR 1",
+            is_wired=True,
+            download_url=f"/operator/sessions/{sid}/export/settings.csv",
+            coming_in=None,
         ),
     ]
 

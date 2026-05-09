@@ -1,0 +1,488 @@
+"""Session settings export — Segment 12A-1 PR 1.
+
+Produces the Settings CSV the Extract Data card on Session Home
+serves at ``GET /operator/sessions/{id}/export/settings.csv``.
+3-column ``field,value,data_type`` shape; every row class
+documented in ``guide/segment_12A-1_export.md``.
+
+Pure read path. ``serialize_session_config(session)`` returns a
+deterministic ``list[Row]`` for a fully-loaded session; the
+route streams it through ``app.services.extracts.stream_csv``.
+
+Inclusion rule (paraphrased from the segment doc):
+
+    Snapshot the operator's typing — every per-session
+    configuration field they would otherwise have to retype to
+    set up an equivalent new session. Excludes
+    machine-derived state (``status``, ``assignment_mode``,
+    validation reports, lifecycle stamps), reviewer-determined
+    state (responses), system-emitted state (audit events),
+    operator-level state (SMTP credentials, operator-library
+    RTDs / RuleSets), and seeded RTDs / RuleSets that
+    auto-materialise on session create.
+
+The CSV is "fallback for what the operator would type", not a
+machine-only round-trip — the order is fixed so re-exporting
+the same session is byte-stable, and an operator hand-editing
+the file in Excel is a supported workflow.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import NamedTuple
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import (
+    Instrument,
+    ResponseTypeDefinition,
+    ReviewSession,
+    SessionFieldLabel,
+    SessionRuleSet,
+)
+from app.services.email_templates import (
+    OVERRIDE_KEYS,
+    RESPONSES_RECEIVED_ENABLED_KEY,
+)
+from app.services.rules.seeds import SEEDS as _SEEDED_RULE_SETS
+
+__all__ = ["Row", "serialize_session_config"]
+
+
+class Row(NamedTuple):
+    """One CSV row in the Settings export.
+
+    ``field`` is a stable, dotted / bracketed key path; ``value``
+    is the cell's string representation (empty cell ⇒ unset on
+    import); ``data_type`` is the cell's parsing rule, descriptive
+    of the cell only — independent of any underlying RTD's
+    ``data_type``.
+    """
+
+    field: str
+    value: str
+    data_type: str
+
+
+# Header row emitted on every export.
+HEADER: tuple[str, str, str] = ("field", "value", "data_type")
+
+
+# Names of seeded RuleSets — used to filter ``session_rule_sets``
+# rows on export. Seeded copies auto-materialise on the
+# destination session from this same list, so re-emitting them
+# would be a no-op or a name conflict (per
+# ``uq_session_rule_set_session_name``).
+_SEEDED_RULE_SET_NAMES: frozenset[str] = frozenset(
+    rs.name for rs in _SEEDED_RULE_SETS
+)
+
+
+# --------------------------------------------------------------------------- #
+# Public entry point
+# --------------------------------------------------------------------------- #
+
+
+def serialize_session_config(
+    db: Session, review_session: ReviewSession
+) -> list[Row]:
+    """Return every ``Row`` for the Settings CSV in deterministic
+    order.
+
+    Section ordering (also pinned in the unit-test golden
+    fixture):
+
+    1. Session-level rows (name → code → description → deadline →
+       help_contact).
+    2. Email-template overrides (invitation → reminder →
+       responses_received, with subject → body → cc → bcc →
+       enabled inside each kind).
+    3. Operator-defined RTDs, ``(seed_order, response_type)``.
+    4. Each instrument block in ``(order, id)``:
+       - Instrument-level rows (incl. ``rule_set_name`` if any).
+       - Display fields, ``(order, id)``.
+       - Response fields, ``(order, id)``.
+    5. Per-session RuleSets (non-seeded only), ``(id)``.
+    6. Field-label overrides, ``(source_type, source_field)``.
+    """
+
+    rows: list[Row] = []
+    rows.extend(_session_rows(review_session))
+    rows.extend(_email_override_rows(review_session))
+    rows.extend(_rtd_rows(db, review_session))
+    rows.extend(_instrument_blocks(db, review_session))
+    rows.extend(_session_rule_set_rows(db, review_session))
+    rows.extend(_field_label_rows(db, review_session))
+    return rows
+
+
+# --------------------------------------------------------------------------- #
+# Section 1 — session-level rows
+# --------------------------------------------------------------------------- #
+
+
+def _session_rows(review_session: ReviewSession) -> list[Row]:
+    return [
+        Row("session.name", _str(review_session.name), "string"),
+        Row("session.code", _str(review_session.code), "string"),
+        Row(
+            "session.description",
+            _str(review_session.description),
+            "string",
+        ),
+        Row(
+            "session.deadline",
+            _datetime(review_session.deadline),
+            "datetime",
+        ),
+        Row(
+            "session.help_contact",
+            _str(review_session.help_contact),
+            "string",
+        ),
+    ]
+
+
+# --------------------------------------------------------------------------- #
+# Section 2 — email-template overrides
+# --------------------------------------------------------------------------- #
+
+
+# ``OVERRIDE_KEYS`` lists the 12 string keys in canonical order
+# (invitation → reminder → responses_received, with subject →
+# body → cc → bcc inside each kind). Each maps to a
+# dotted-namespace key in the CSV by splitting off the trailing
+# ``_<slot>``. ``responses_received_subject`` therefore becomes
+# ``email_overrides.responses_received.subject``.
+def _override_field(key: str) -> str:
+    kind, slot = key.rsplit("_", 1)
+    return f"email_overrides.{kind}.{slot}"
+
+
+def _email_override_rows(review_session: ReviewSession) -> list[Row]:
+    overrides = review_session.email_template_overrides or {}
+    rows: list[Row] = []
+    for key in OVERRIDE_KEYS:
+        rows.append(
+            Row(
+                _override_field(key),
+                _str(overrides.get(key)),
+                "string",
+            )
+        )
+    enabled = overrides.get(RESPONSES_RECEIVED_ENABLED_KEY)
+    rows.append(
+        Row(
+            "email_overrides.responses_received.enabled",
+            _bool(enabled if enabled is not None else True),
+            "boolean",
+        )
+    )
+    return rows
+
+
+# --------------------------------------------------------------------------- #
+# Section 3 — operator-defined RTDs
+# --------------------------------------------------------------------------- #
+
+
+def _rtd_rows(db: Session, review_session: ReviewSession) -> list[Row]:
+    rtds = (
+        db.execute(
+            select(ResponseTypeDefinition)
+            .where(
+                ResponseTypeDefinition.session_id == review_session.id,
+                ResponseTypeDefinition.is_seeded.is_(False),
+            )
+            .order_by(
+                ResponseTypeDefinition.seed_order,
+                ResponseTypeDefinition.response_type,
+            )
+        )
+        .scalars()
+        .all()
+    )
+    rows: list[Row] = []
+    for rtd in rtds:
+        prefix = f"rtds[{rtd.response_type}]"
+        rows.append(Row(f"{prefix}.data_type", rtd.data_type, "enum"))
+        rows.append(Row(f"{prefix}.min", _decimal(rtd.min), "decimal"))
+        rows.append(Row(f"{prefix}.max", _decimal(rtd.max), "decimal"))
+        rows.append(Row(f"{prefix}.step", _decimal(rtd.step), "decimal"))
+        rows.append(
+            Row(f"{prefix}.list_csv", _str(rtd.list_csv), "csv_list")
+        )
+    return rows
+
+
+# --------------------------------------------------------------------------- #
+# Section 4 — instruments + display fields + response fields
+# --------------------------------------------------------------------------- #
+
+
+def _instrument_blocks(
+    db: Session, review_session: ReviewSession
+) -> list[Row]:
+    instruments = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        )
+        .scalars()
+        .all()
+    )
+    rule_set_name_by_id = _rule_set_name_lookup(db, review_session)
+
+    rows: list[Row] = []
+    for n, instrument in enumerate(instruments, start=1):
+        rows.extend(_instrument_rows(instrument, n, rule_set_name_by_id))
+        rows.extend(_display_field_rows(instrument, n))
+        rows.extend(_response_field_rows(instrument, n))
+    return rows
+
+
+def _instrument_rows(
+    instrument: Instrument,
+    n: int,
+    rule_set_name_by_id: dict[int, str],
+) -> list[Row]:
+    prefix = f"instruments[{n}]"
+    rows = [
+        Row(f"{prefix}.name", _str(instrument.name), "string"),
+        Row(
+            f"{prefix}.short_label",
+            _str(instrument.short_label),
+            "string",
+        ),
+        Row(
+            f"{prefix}.description",
+            _str(instrument.description),
+            "string",
+        ),
+        Row(f"{prefix}.order", _int(instrument.order), "integer"),
+        Row(
+            f"{prefix}.accepting_responses",
+            _bool(instrument.accepting_responses),
+            "boolean",
+        ),
+        Row(
+            f"{prefix}.responses_visible_when_closed",
+            _bool(instrument.responses_visible_when_closed),
+            "boolean",
+        ),
+        Row(
+            f"{prefix}.sort_display_fields",
+            _json(instrument.sort_display_fields or []),
+            "json",
+        ),
+        Row(
+            f"{prefix}.group_kind",
+            _str(instrument.group_kind),
+            "enum",
+        ),
+        Row(
+            f"{prefix}.rule_set_name",
+            _str(rule_set_name_by_id.get(instrument.rule_set_id))
+            if instrument.rule_set_id is not None
+            else "",
+            "string",
+        ),
+    ]
+    return rows
+
+
+def _display_field_rows(instrument: Instrument, n: int) -> list[Row]:
+    rows: list[Row] = []
+    fields = sorted(instrument.display_fields, key=lambda f: (f.order, f.id))
+    for m, field in enumerate(fields, start=1):
+        prefix = f"instruments[{n}].display_fields[{m}]"
+        rows.append(Row(f"{prefix}.source_type", field.source_type, "enum"))
+        rows.append(
+            Row(f"{prefix}.source_field", _str(field.source_field), "string")
+        )
+        rows.append(Row(f"{prefix}.label", _str(field.label), "string"))
+        rows.append(Row(f"{prefix}.visible", _bool(field.visible), "boolean"))
+    return rows
+
+
+def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
+    rows: list[Row] = []
+    fields = sorted(
+        instrument.response_fields, key=lambda f: (f.order, f.id)
+    )
+    for m, field in enumerate(fields, start=1):
+        prefix = f"instruments[{n}].response_fields[{m}]"
+        rows.append(Row(f"{prefix}.field_key", _str(field.field_key), "string"))
+        rows.append(Row(f"{prefix}.label", _str(field.label), "string"))
+        rows.append(
+            Row(
+                f"{prefix}.response_type",
+                _str(field.response_type),
+                "string",
+            )
+        )
+        rows.append(Row(f"{prefix}.required", _bool(field.required), "boolean"))
+        rows.append(Row(f"{prefix}.help_text", _str(field.help_text), "string"))
+        rows.append(
+            Row(
+                f"{prefix}.help_text_visible",
+                _bool(field.help_text_visible),
+                "boolean",
+            )
+        )
+    return rows
+
+
+# --------------------------------------------------------------------------- #
+# Section 5 — per-session RuleSets (non-seeded only)
+# --------------------------------------------------------------------------- #
+
+
+def _session_rule_set_rows(
+    db: Session, review_session: ReviewSession
+) -> list[Row]:
+    """Operator-authored ``session_rule_sets`` rows. Seeded ones
+    (name-matches ``SEEDS`` from ``app.services.rules.seeds``) are
+    excluded — they auto-materialise from the same constant on the
+    destination session, so re-emitting them would no-op against
+    ``uq_session_rule_set_session_name`` (Segment 13A-2)."""
+
+    snapshots = _non_seeded_session_rule_sets(db, review_session)
+    rows: list[Row] = []
+    for n, snap in enumerate(snapshots, start=1):
+        prefix = f"session_rule_sets[{n}]"
+        rows.append(Row(f"{prefix}.name", _str(snap.name), "string"))
+        rows.append(
+            Row(f"{prefix}.description", _str(snap.description), "string")
+        )
+        rows.append(Row(f"{prefix}.combinator", snap.combinator, "enum"))
+        rows.append(
+            Row(
+                f"{prefix}.exclude_self_reviews",
+                _bool(snap.exclude_self_reviews),
+                "boolean",
+            )
+        )
+        rows.append(Row(f"{prefix}.seed", _int(snap.seed), "integer"))
+        rows.append(
+            Row(
+                f"{prefix}.rules_json",
+                _json(snap.rules_json or []),
+                "json",
+            )
+        )
+    return rows
+
+
+def _non_seeded_session_rule_sets(
+    db: Session, review_session: ReviewSession
+) -> list[SessionRuleSet]:
+    return [
+        snap
+        for snap in db.execute(
+            select(SessionRuleSet)
+            .where(SessionRuleSet.session_id == review_session.id)
+            .order_by(SessionRuleSet.id)
+        )
+        .scalars()
+        .all()
+        if snap.name not in _SEEDED_RULE_SET_NAMES
+    ]
+
+
+def _rule_set_name_lookup(
+    db: Session, review_session: ReviewSession
+) -> dict[int, str]:
+    """Map every ``session_rule_sets.id`` in this session to its
+    name. Used to translate ``Instrument.rule_set_id`` (DB-id FK)
+    into the export's name-based reference. Includes seeded rows
+    too — an instrument may point at a seeded copy, and the
+    destination session will have the same-named seed materialised
+    by ``materialise_seed_rule_sets`` (15C Slice 1)."""
+
+    return {
+        row.id: row.name
+        for row in db.execute(
+            select(SessionRuleSet).where(
+                SessionRuleSet.session_id == review_session.id
+            )
+        ).scalars()
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Section 6 — field-label overrides (Segment 15A target)
+# --------------------------------------------------------------------------- #
+
+
+def _field_label_rows(
+    db: Session, review_session: ReviewSession
+) -> list[Row]:
+    labels = (
+        db.execute(
+            select(SessionFieldLabel)
+            .where(SessionFieldLabel.session_id == review_session.id)
+            .order_by(
+                SessionFieldLabel.source_type, SessionFieldLabel.source_field
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        Row(
+            f"field_labels.{lbl.source_type}.{lbl.source_field}",
+            _str(lbl.label),
+            "string",
+        )
+        for lbl in labels
+    ]
+
+
+# --------------------------------------------------------------------------- #
+# Cell formatters
+# --------------------------------------------------------------------------- #
+
+
+def _str(value: str | None) -> str:
+    if value is None:
+        return ""
+    return str(value)
+
+
+def _bool(value: bool | None) -> str:
+    if value is None:
+        return ""
+    return "true" if value else "false"
+
+
+def _int(value: int | None) -> str:
+    if value is None:
+        return ""
+    return str(value)
+
+
+def _decimal(value: float | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def _datetime(value: object | None) -> str:
+    if value is None:
+        return ""
+    # ``DateTime(timezone=True)`` round-trips through
+    # ``datetime.isoformat()`` faithfully on Python 3.12.
+    return value.isoformat()  # type: ignore[union-attr]
+
+
+def _json(value: object) -> str:
+    """Compact, key-stable JSON. ``sort_keys=True`` keeps re-export
+    bytes identical for the same logical content."""
+
+    return json.dumps(value, separators=(",", ":"), sort_keys=True)

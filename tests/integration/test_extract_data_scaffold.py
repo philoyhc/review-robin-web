@@ -100,8 +100,16 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
     ]
     assert context.bundle.key == "bundle"
     assert context.bundle.label == "Zip all"
-    # All inert at scaffold-time.
-    assert all(row.is_wired is False for row in context.rows)
+    # 12A-1 PR 1 flipped the Settings row live; the four other
+    # entity rows + the zip bundle remain inert until subsequent
+    # PRs of this segment.
+    by_key = {r.key: r for r in context.rows}
+    assert by_key["settings"].is_wired is True
+    assert by_key["settings"].download_url == (
+        f"/operator/sessions/{review_session.id}/export/settings.csv"
+    )
+    for inert_key in ("reviewers", "reviewees", "assignments", "responses"):
+        assert by_key[inert_key].is_wired is False
     assert context.bundle.is_wired is False
 
 
@@ -217,20 +225,26 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
 ) -> None:
     """While inert, every Download button renders as an anchor
     without an ``href`` and with ``aria-disabled="true"`` (anchors
-    don't honour native ``disabled``). 12A's wiring flips this
-    to a real ``href``."""
+    don't honour native ``disabled``). 12A wires each row by
+    flipping the anchor to a real ``href``.
+
+    12A-1 PR 1 flipped the Settings row live; PR 2 / PR 3 / the
+    bundle PR adjust this count as each subsequent row goes live.
+    """
 
     review_session = _make_session(client, db, code="ed-anchors")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    # Every "Download" anchor is aria-disabled.
+    # Inert rows render as aria-disabled anchors.
     download_count = body.count(
         '<a class="btn secondary"\n'
         '       role="button"\n'
         '       aria-disabled="true"'
     )
-    # Five per-entity rows + one bundle = six download anchors total.
-    assert download_count == 6
+    # Four inert per-entity rows (Reviewers / Reviewees /
+    # Assignments / Responses) + one inert bundle row = five
+    # aria-disabled anchors. Settings is now a real download.
+    assert download_count == 5
 
 
 def test_extract_data_card_renders_when_session_is_activated(

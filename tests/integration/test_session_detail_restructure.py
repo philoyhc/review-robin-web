@@ -685,7 +685,8 @@ def test_extract_data_card_renders_scaffold_in_draft(
     # Cell labels — bundle is "Zip all" (was "Download all" pre-polish).
     assert "Zip all" in body
     # Wiring tooltips name the segment / PR that lights each row up.
-    assert "Wired in Segment 12A PR 1" in body  # settings
+    # Settings flipped live in 12A-1 PR 1 — its tooltip is gone.
+    assert "Wired in Segment 12A PR 1" not in body  # settings — now live
     assert "Wired in Segment 12A PR 3" in body  # reviewers / reviewees
     assert "Wired in Segment 12A PR 4" in body  # assignments
     assert "Wired in Segment 12A PR 5" in body  # responses
