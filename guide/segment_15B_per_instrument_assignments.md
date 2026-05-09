@@ -64,7 +64,7 @@ so reviewers can hold each slice against them.
    instrument #2 has the same assignments" — and stay that way
    until an operator divergent-edits one of them. No backfill,
    no Alembic migration in 15B itself (the only schema move is
-   `instruments.rule_set_id`, pre-positioned by Segment 13D PR 2).
+   `instruments.rule_set_id`, pre-positioned by Segment 13D PR 4 — pointer targets `session_rule_sets`, the per-session copy table introduced by 13D PR 2 / 15C).
 
 2. **Default instrument #1 always exists and always has
    assignments.** `services.instruments.ensure_default_instrument`
@@ -139,55 +139,71 @@ real per-instrument variation.
 
 ### Slice 2 — Persist the per-instrument RuleSet selection (1 PR, ~150 LOC)
 
-**Today.** RuleSets are owned at the user-library level
-(`rule_sets.scope ∈ {seed, personal}` + `owner_user_id`) and
-visible across all of an operator's sessions. There is **no
-stored "current RuleSet" pointer** — the operator picks a
-RuleSet in the Rule Builder UI, hits Generate, and the choice is
-used inline for one-shot generation but not persisted.
+**Today (post-15C).** RuleSets live in two tiers: the operator
+library (`rule_sets` — visible across all of an operator's
+sessions) and per-session copies (`session_rule_sets` —
+auto-copied from the operator library on session create + the
+operator's "Add from library" / "Save to library" actions; see
+`segment_15C_operator_libraries.md`). Per-instrument application
+of a `session_rule_sets` row is the missing link this slice
+delivers.
 
 **Goal.** Make the selection persistent and per-instrument: each
-instrument records the RuleSet currently in effect for it.
+instrument records the per-session RuleSet copy currently in
+effect for it.
 
-**Schema dependency.** `instruments.rule_set_id` (nullable FK,
-`ON DELETE SET NULL`) is pre-positioned by **Segment 13D PR 2**
-(see `segment_13D_db_prep.md` for the FK-direction rationale).
-This slice is pure service / route work — no migration in 15B.
+**Schema dependency.** `instruments.rule_set_id` (nullable FK to
+`session_rule_sets`, `ON DELETE SET NULL`) is pre-positioned by
+**Segment 13D PR 4**; the `session_rule_sets` table itself by
+**13D PR 2** (see `segment_13D_db_prep.md` for the FK-direction
+rationale and the library / per-session-copy split). This slice
+is pure service / route work — no migration in 15B.
 
 **Service-layer change.** `replace_assignments` (touched in Slice
 1) accepts `instrument_id` and writes the chosen
-`rule_set_id` onto that instrument row alongside the new
+`session_rule_sets.id` onto that instrument row alongside the new
 Assignment rows. The Rule Builder POST handlers
 (`app/web/routes_operator/_rule_builder.py`) thread the
 `instrument_id` from the URL through into the persistence call.
+The picker reads from `session_rule_sets` (the session's local
+copies), not from `rule_sets` (the library) — operators "Add from
+library" via the dedicated action introduced in 15C, then choose
+from the session's local pool here.
 
 **Resolution semantics.** No "session default + per-instrument
 override" inheritance — the column is the single source of
 truth per instrument. NULL = "no RuleSet currently applied to
 this instrument" (initial state for every existing instrument
-post-13D PR 2; also the state after a reset-assignments action).
+post-13D PR 4; also the state after a reset-assignments action).
 A future **session-level default** (e.g. a
-`sessions.default_rule_set_id` column to seed new instruments
-from) is left out of this segment; revisit if operator feedback
-asks for it. Most teams will set the same RuleSet on every
-instrument, which works fine without inheritance.
+`sessions.default_session_rule_set_id` column to seed new
+instruments from) is left out of this segment; revisit if
+operator feedback asks for it. Most teams will set the same
+session-level RuleSet on every instrument, which works fine
+without inheritance.
 
 **FK behaviour wired through to the UX:**
 
 - **Delete instrument** (existing 10D action): the instrument's
-  pointer dies with the row; the RuleSet is untouched. No UX
-  warning needed beyond what 10D already shows.
-- **Delete RuleSet** (operator removes from their library, 13A
-  action): SQL `SET NULL` on every `instruments.rule_set_id`
-  pointing at it. **UX gate to add in this slice:** the existing
-  Rule-Builder delete-confirm dialog grows a line listing every
-  instrument across every session that currently applies the
-  RuleSet ("Deleting will clear this rule from N instrument(s):
+  pointer dies with the row; the session's RuleSet copy is
+  untouched. No UX warning needed beyond what 10D already shows.
+- **Delete a session's RuleSet copy** (operator removes it from
+  the session, a 15C affordance): SQL `SET NULL` on every
+  `instruments.rule_set_id` pointing at it. **UX gate to add in
+  this slice:** the delete-confirm dialog grows a line listing
+  every instrument in the session that currently applies the
+  RuleSet ("Removing will clear this rule from N instrument(s):
   [list]. Their next assignment generation will require choosing
   a new rule.").
+- **Delete from the operator library** (13A action, surfaced via
+  15C's library-management UI): does **not** touch any instrument
+  pointer. Instrument pointers target session copies, which
+  survive library deletes via the `library_origin_id SET NULL`
+  cascade introduced in 13D PR 2.
 - **Reset an instrument's assignments** (a new 15B affordance):
   `UPDATE instruments SET rule_set_id = NULL WHERE id = ?` plus
-  the existing assignment-row delete. RuleSet untouched.
+  the existing assignment-row delete. Session-RuleSet copy
+  untouched.
 
 ### Slice 3 — Manual-assignment CSV column (1 PR, ~100 LOC)
 
@@ -305,14 +321,15 @@ plus rules?" sniff test before authoring the slice.
   remain identical until an operator divergent-edits them — no
   migration needed, but the audit log will show "no-op" assignment
   replays from the first divergent edit. Acceptable.
-- **Seeded RuleSets stay shared.** Seeded RuleSets (Full Matrix
-  etc.) live in the workspace-level library — no migration
-  needed. They're applied to instruments by setting
-  `instruments.rule_set_id` to the seed's id, same mechanism as
-  any Personal RuleSet. Multiple instruments (across multiple
-  sessions, even) can point at the same seed; deleting a seed is
-  not an operator-facing action so the `SET NULL` cascade only
-  fires for Personal RuleSet deletes.
+- **Seeded RuleSets, post-15C.** Workspace seeds (Full Matrix
+  etc.) move out of `rule_sets` to a code constant in 15C
+  (mirroring how `SEEDED_RESPONSE_TYPE_DEFINITIONS` already
+  works), and are materialised into `session_rule_sets` directly
+  on session create — same mechanism as auto-copy from the
+  operator library. The instrument's pointer therefore always
+  targets a `session_rule_sets` row, regardless of whether the
+  origin is a seed, a library entry, or an inline-authored rule.
+  No special-casing in this slice's persistence code.
 - **Email invitations.** Reviewer-scoped, not instrument-scoped.
   No change needed — reviewers receive one invitation per session
   regardless of how their assignments break down by instrument.
