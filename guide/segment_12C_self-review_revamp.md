@@ -1,10 +1,29 @@
-# Segment 12C — Self-review revamp
+# Segment 12C — Self-review revamp + Quick Setup upload semantics
 
-**Status:** Planning — scope locked 2026-05-09. PR sequence and
-implementation pointers still being filled in; treat the
-"Implementation pointers" and "PR sequence" sections as drafts.
+**Status:** Planning. Part 1 scope locked 2026-05-09; Part 2
+open question captured 2026-05-09 — priority between
+overlapping Quick Setup slots still TBD.
 
-## Goal
+This doc covers **two related-but-distinct concerns** that
+both touch the Assignments slot of Quick Setup:
+
+- **Part 1 — Two-layer self-review model.** Replace today's
+  scattered ad-hoc `exclude_self_review` toggles with a clean
+  RuleSet-as-generator + Include-as-activator split.
+- **Part 2 — Quick Setup upload semantics.** Pin the
+  wipe-and-replace contract for every Quick Setup slot, and
+  resolve the priority order between slot 3 (assignments) and
+  slot 4 (settings) when they disagree on RuleSet selection.
+
+The two parts share the same surfaces but answer different
+questions; expect them to land as separate PR sequences once
+both have firmed up.
+
+---
+
+## Part 1 — Two-layer self-review model
+
+### Goal
 
 Replace today's three scattered ad-hoc `exclude_self_review`
 toggles with a clean two-layer model:
@@ -25,17 +44,22 @@ The two layers don't overlap: the RuleSet flag controls
 controls **activation** of rows that already exist. Nothing
 about the underlying schema changes —
 `RuleSetRevision.exclude_self_reviews` and
-`Assignment.include` are both already there. This segment is
-a UI re-routing exercise plus a small dead-code cleanup.
+`Assignment.include` are both already there. This part is a
+UI re-routing exercise plus a small dead-code cleanup.
 
-## Targeted behaviors (locked 2026-05-09)
+### Targeted behaviors (locked 2026-05-09)
 
 1. **Remove `exclude_self_review` as an ad-hoc generation
-   toggle.** Drop the form input from:
-   - **Quick Setup** (slot 3 of the Quick Setup card on
-     both Create New Session and Session Home).
+   toggle from every Assignments-upload surface.** Drop the
+   form input from:
+   - **Quick Setup** (slot 3, on both **Create New Session**
+     and **Session Home**).
    - **Assignments page** (the toggle that today sits
      alongside the Generate button on the Rule Based card).
+
+   The two surfaces share the slot-3 control vocabulary, so
+   the form-field removal is one change applied to both
+   contexts.
 2. **Surface `exclude_self_reviews` in the Rule Builder.**
    The flag already lives on `RuleSetRevision` — promote it
    into the Rule Builder UI as a first-class checkbox so an
@@ -53,7 +77,7 @@ a UI re-routing exercise plus a small dead-code cleanup.
    on the assignments table, today) keep their per-row role;
    the new toggle is a bulk shortcut.
 
-## Decisions (locked 2026-05-09)
+### Decisions (locked 2026-05-09)
 
 - **Toggle UX = bulk on/off.** A single switch that flips
   every self-review row's `Assignment.include` flag at
@@ -88,7 +112,7 @@ a UI re-routing exercise plus a small dead-code cleanup.
   - `count_self_reviews_in_assignments` already exists
     (validation rule needs the copy refresh).
 
-## Implementation pointers
+### Implementation pointers
 
 > Draft — flesh out as the PR sequence settles.
 
@@ -139,7 +163,7 @@ a UI re-routing exercise plus a small dead-code cleanup.
   use the bulk Include toggle on the Assignments page
   to deactivate if needed".
 
-## Out of scope
+### Out of scope
 
 - **Per-row Include UX changes.** The per-row Include
   checkboxes on the Assignments table stay exactly as
@@ -162,10 +186,10 @@ a UI re-routing exercise plus a small dead-code cleanup.
 - **Self-review export column.** The Responses CSV's
   `SelfReview` column (12A-1 PR 4a) is purely a
   derived flag for analyst convenience — orthogonal to
-  the generation / activation question this segment
+  the generation / activation question this part
   answers.
 
-## PR sequence
+### PR sequence
 
 > Draft — sized once Implementation pointers firm up.
 > Likely shape:
@@ -182,7 +206,119 @@ a UI re-routing exercise plus a small dead-code cleanup.
 >    route + enum value + legacy Quick Setup fallback,
 >    once the spike confirms no remaining callers.
 
-## Related context
+---
+
+## Part 2 — Quick Setup upload semantics
+
+### Replace-not-merge contract
+
+Quick Setup is the all-at-once retemplating surface. **Every
+slot is wipe-and-replace**: an upload replaces whatever was
+previously in that slot's table. There is no "merge with
+existing" mode. Operators who want partial updates use the
+Manage pages instead.
+
+| Slot | Upload | Replaces |
+|---|---|---|
+| 1 | Reviewers CSV | All `reviewers` rows on the session |
+| 2 | Reviewees CSV | All `reviewees` rows on the session |
+| 3 | Manual assignments CSV **or** RuleSet from the dropdown | All `assignments` rows on the session (manual CSV writes the new rows verbatim; RuleSet selection regenerates against the just-saved roster) |
+| 4 | Settings CSV (12A-2 target) | All instruments + display fields + response fields + per-session RTDs + per-session RuleSets + field-label overrides + email-template overrides |
+
+This already matches today's behaviour for slots 1-3 (11J's
+Quick Setup chain wipes-and-replaces) and the 12A-2 plan for
+slot 4 (the importer is wipe-and-replace for everything it
+owns; see "Idempotency model" in
+`guide/segment_12A-2_import.md`). Part 2's job is to write
+the contract down explicitly so the next ambiguity that
+crops up has a single authoritative answer.
+
+### Conflict matrix — slot 3 vs slot 4
+
+Slot 4 (Settings CSV) carries per-instrument
+`rule_set_name` references and per-session
+`session_rule_sets[N]` definitions; slot 3 (Assignments)
+carries either an explicit assignment-row file or a single
+session-level RuleSet pick from the dropdown. The two slots
+can disagree about which RuleSet powers a given
+instrument's rule-based generation, or about whether the
+assignment table should be populated from a manual CSV
+versus by re-running the engine.
+
+The four shapes the operator can submit:
+
+| Slot 3 | Slot 4 | Conflict? |
+|---|---|---|
+| Manual CSV | (any) | **Yes if slot 4 has `rule_set_name` references** — the operator says "use these specific rows" *and* "this instrument is rule-based". |
+| RuleSet dropdown | Settings CSV with matching `rule_set_name` | **No conflict** — both nominate the same RuleSet (resolved by name). |
+| RuleSet dropdown | Settings CSV with **different** `rule_set_name` | **Yes** — two RuleSet selections at different scopes (session-level dropdown vs. per-instrument). |
+| (empty) | Settings CSV | **No conflict** — chain stops at "assignments not generated yet"; operator runs Generate from the Assignments page after the session loads. |
+| (empty) | (empty) | **No conflict** — neither slot contributes; today's behaviour. |
+| Manual CSV / dropdown | (empty) | **No conflict** — slot 3 alone, today's behaviour. |
+
+### Question to resolve — priority order
+
+When slot 3 and slot 4 disagree, which wins? Two candidates,
+both internally consistent:
+
+- **Option A — Slot 3 wins (the explicit assignment-time
+  choice).** The operator's most-recent action is the
+  slot 3 upload / dropdown; slot 4 contributes the
+  structural config (instruments, fields, RTDs) but its
+  `rule_set_name` references are inert when slot 3
+  contradicts them. Simpler mental model: *"what I
+  selected in slot 3 is what runs"*.
+- **Option B — Slot 4 wins for per-instrument
+  selection, slot 3 only fills in the gaps.** The Settings
+  CSV is explicitly per-instrument; the slot 3 dropdown
+  is only meaningful when no per-instrument
+  `rule_set_name` exists. Closer to the long-term 15B
+  world where per-instrument selection is first-class
+  and the session-level dropdown becomes a "default for
+  new instruments" affordance.
+
+Option A is cheaper to reason about today; Option B is
+more aligned with the per-instrument direction that 15B is
+heading toward. **TBD.** Resolve before the Part 2 PR
+sequence is sized — the chosen priority drives the slot-4
+importer's apply step (does it skip `rule_set_name` rows
+when slot 3 contradicts? does it overwrite slot 3's
+selection? does it raise on conflict?).
+
+### Validation impact
+
+Whichever priority wins, the validation rule needs to agree.
+Today's `assignments.no_mode` warning fires when no
+`assignment_mode` is set; under the new conflict matrix,
+it should fire when the resolved priority chain produced no
+assignments. **No new validation row needed** — just confirm
+the rule reads against the resolved state, not against the
+slot inputs.
+
+### PR sequence (Part 2)
+
+> Draft — depends on the priority resolution above.
+>
+> 1. **Pin the contract.** Refactor the Quick Setup chain to
+>    surface a single
+>    `resolve_assignments_decision(slot_3, slot_4) ->
+>    AssignmentDecision` helper that encodes the priority
+>    order. Pure function; tested in isolation.
+> 2. **Wire slot 4 (12A-2 importer) to the resolver.**
+>    Coordinates with 12A-2 PR 1 — the importer's apply step
+>    consults the resolver before applying `rule_set_name`
+>    references.
+> 3. **UX cue on conflict.** When the operator's slot 3 +
+>    slot 4 inputs disagree, surface a banner-warning during
+>    the Quick Setup submit confirmation that names the
+>    resolution ("slot 3 manual CSV will be used; slot 4's
+>    rule_set_name references on instruments are
+>    preserved as metadata for future Generate runs"). Same
+>    pattern as 11J's slot-scoped warnings.
+
+---
+
+## Related context (cross-cutting)
 
 - 12A-1 PR 4a (#725, 2026-05-09) added the derived
   `SelfReview` column to the responses CSV. The canonical
@@ -208,8 +344,19 @@ a UI re-routing exercise plus a small dead-code cleanup.
   `AssignmentMode.full_matrix` enum value; legacy
   `rule="full_matrix"` payload fallback in
   `app/web/routes_operator/_quick_setup.py:573-586`.
+- 12A-2's wipe-and-replace import contract — single
+  source of truth for slot 4 semantics; see
+  `guide/segment_12A-2_import.md` "Idempotency model" +
+  "Import flows".
+- Quick Setup chain ordering — `quick_setup_submit_all`
+  in `app/web/routes_operator/_quick_setup.py` already
+  dispatches reviewers → reviewees → assignments per-slot;
+  Part 2 settles the cross-slot conflict layer above
+  that dispatch.
 
 ## Open questions
+
+### Part 1
 
 - Does the bulk Include toggle persist its **last state**
   per session as a UI cue (e.g. "self-reviews are off"
@@ -223,3 +370,16 @@ a UI re-routing exercise plus a small dead-code cleanup.
   `..._deactivated`? Two events is more verbose but the
   audit log reads naturally; one event with the boolean
   in the detail is more compact. Defer to PR 2.
+
+### Part 2
+
+- **Priority order between slot 3 and slot 4** — Option A
+  (slot 3 wins) vs. Option B (slot 4 per-instrument
+  wins, slot 3 fills gaps). Settle before the Part 2 PR
+  sequence is sized.
+- Should the conflict be **rejected at upload time** with
+  an error banner ("your slot 3 + slot 4 inputs
+  disagree on RuleSet selection — pick one") rather than
+  resolved silently with a warning? Trades operator
+  friction against silent surprise; depends on how often
+  the conflict naturally arises.
