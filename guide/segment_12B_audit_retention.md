@@ -3,7 +3,9 @@
 > **Renamed 2026-05-07** from `segment_12_export_audit_retention_mvp_plan.md`.
 > The export half of the original Segment 12 scope (response-data
 > CSV / Excel exports, the Extract Data card on Session Home)
-> folded into **Segment 12A** (`guide/segment_12A_export_and_import.md`); 12B retains
+> folded into **Segment 12A**, since split into 12A-1 (export —
+> see `guide/segment_12A-1_export.md`, shipped 2026-05-09) and
+> 12A-2 (import — `guide/segment_12A-2_import.md`); 12B retains
 > only the `audit_events` export + retention / purge tooling. The
 > original "Segment 12" framing below predates that split — read
 > it as a historical record; the operative scope when 12B starts
