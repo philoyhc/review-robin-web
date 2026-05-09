@@ -203,12 +203,27 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/enhanced_instruments.md`.
 
-5. **14 — Production hardening.**
+5. **13D — DB prep for 15A / 15B (and 13B / 13C ride-along).**
+   Pre-positions every additive, nullable, no-backfill schema
+   change downstream feature segments need, so those segments
+   become pure service / UI / template work. Mirrors how 11C
+   Part 2 pre-positioned the seven `email_outbox` audit-log
+   columns. Sized as 3-4 PRs (one per migration): new
+   `session_field_labels` table (15A); nullable
+   `rule_sets.instrument_id` FK (15B); recommended fold-ins of
+   `instruments.sort_display_fields` JSON (13B PR 1) and
+   `instruments.group_kind String(32) NULL` (13C PR 1). Every
+   migration lands inert — no service code reads the new shape
+   until its owning feature segment lights it up. Independent
+   of every other segment; can land any time.
+   **Plan:** `guide/segment_13D_db_prep.md`.
+
+6. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-6. **14-1 — Email infrastructure (send activation + backends).**
+7. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. The schema columns Part A
    writes to landed with **Segment 11C Part 2** (PR #541,
    2026-05-07) and are ready for the dispatch helper.
@@ -225,7 +240,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-7. **15 — Operator polish + documentation.**
+8. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -233,7 +248,7 @@ pinned to each segment. The catalog itself lives in
    Catalog #23, #25, #33, #35, #36, §2.2.
    **Plan:** `guide/segment_15_operator_polish_and_documentation.md`.
 
-8. **15A — Pervasive friendly labels.**
+9. **15A — Pervasive friendly labels.**
    Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
    `PairContext1-3` (and optional `AssignmentContext1-3`) flowing
    through every header / picker / tooltip via a session-level
@@ -245,7 +260,7 @@ pinned to each segment. The catalog itself lives in
    re-introducing hardcoded literals.
    **Plan:** `guide/segment_15A_friendly_labels.md`.
 
-9. **15B — Per-instrument assignments.**
+10. **15B — Per-instrument assignments.**
    Each `Instrument` carries its own assignment set (e.g. the
    Manager survey collects different reviewer → reviewee pairings
    than the Peer survey within one session). Schema already
