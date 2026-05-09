@@ -34,7 +34,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -46,6 +54,12 @@ if TYPE_CHECKING:
 
 class SessionRuleSet(Base, TimestampMixin):
     __tablename__ = "session_rule_sets"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "session_id", "name", name="uq_session_rule_set_session_name"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     session_id: Mapped[int] = mapped_column(

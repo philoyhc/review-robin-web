@@ -157,8 +157,13 @@ effect for it.
 `session_rule_sets`, `ON DELETE SET NULL`) is pre-positioned by
 **Segment 13D PR 4**; the `session_rule_sets` table itself by
 **13D PR 2** (see `segment_13D_db_prep.md` for the FK-direction
-rationale and the library / per-session-copy split). This slice
-is pure service / route work — no migration in 15B.
+rationale and the library / per-session-copy split). The
+`uq_session_rule_set_session_name` constraint added by
+**Segment 13A-2** guarantees name-based references into the
+table are unambiguous — relevant for 12A-1's settings-CSV
+serialisation (`instruments[N].rule_set_name` resolves by name)
+and for the picker label rendering this slice consumes. This
+slice is pure service / route work — no migration in 15B.
 
 **Service-layer change.** `replace_assignments` (touched in Slice
 1) accepts `instrument_id` and writes the chosen

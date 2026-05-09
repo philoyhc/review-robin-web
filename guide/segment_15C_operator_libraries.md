@@ -166,6 +166,16 @@ actions on each tier.
   session — operators see
   *this session's* RuleSets, with "Add from library" as the
   bridge to bring more in.
+- **Per-session name-collision check.** When this slice flips the
+  editor to write into `session_rule_sets`, port the existing
+  `_resolve_save_as_name` / `_name_taken_by_other` helpers
+  (`app/web/routes_operator/_rule_builder.py:532`) one-for-one
+  to check `(session_id, name)` instead of `(owner_user_id,
+  name)`. Same auto-suffix-on-Copy + reject-on-edited-name
+  semantics. The `uq_session_rule_set_session_name` constraint
+  from **Segment 13A-2** is the safety net behind that
+  service-layer check — it guarantees uniqueness even if a
+  future code path bypasses the helper.
 
 ### Slice 5 — Operator Settings: library management (1 PR, ~200 LOC)
 

@@ -398,10 +398,11 @@ references rows in this section by **name**, not by position or
 DB id. The same name resolution covers seeded RuleSets, which
 are not exported but materialise on the destination session
 from the `SEEDS` constant under their stable canonical names.
-**Name uniqueness within a session is assumed by the export
-contract** even though the `session_rule_sets` schema doesn't
-enforce it; the importer fails loudly if two non-seeded rows
-share a name.
+**Name uniqueness within a session is enforced** at the schema
+level by `uq_session_rule_set_session_name` (Segment 13A-2),
+mirroring the parallel `uq_rtd_session_name` on
+`response_type_definitions`. The export contract relies on this
+invariant for the name-based reference to resolve unambiguously.
 
 Excluded — not user-typed:
 
