@@ -151,6 +151,52 @@ instruments where the reviewer has no assignments. Confirm via a
 manual smoke test on the dev slot — there's no template change
 needed, but the empty-state copy may want polish.
 
+### Slice 7 (deferred — only on real use case) — `AssignmentContext1-3`
+
+**Out of 13D scope by design.** 13D's DB-prep segment explicitly
+*does not* pre-position columns for AssignmentContext (see
+`segment_13D_db_prep.md` scope-sweep table); this slice owns the
+schema + service + UI work end-to-end if it ever lands.
+
+**Semantics (locked 2026-05-09).** AssignmentContext is logic-
+bearing per-assignment information (e.g. "this assignment is for
+Award X category") that drives downstream filtering, reporting,
+or rule evaluation. Distinct from `PairContext1-3` which is
+display-only info about a (reviewer, reviewee) pairing (e.g.
+"she was your student in NN1101"). The two have categorically
+different infrastructure needs — labels for PairContext (handled
+in 15A); rule-engine integration for AssignmentContext.
+
+**Why deferred.** Most use cases for logic-bearing per-assignment
+fields are derivable from existing reviewer + reviewee tags
+evaluated through the rule engine. This slice should only land
+when a real use case surfaces that **cannot** be expressed via
+tags + rules.
+
+**If it lands, it needs (in one PR-sized slice):**
+
+1. **Schema.** Add `assignment_context_1 / _2 / _3 VARCHAR(255)`
+   columns on `Assignment` (mirrors the tag pattern, plays well
+   with CSV) **or** reserve well-known keys
+   `assignment_context_1/2/3` inside the existing
+   `Assignment.context` JSON dict (cheaper but harder to type and
+   to import / export). Recommendation at write time: named
+   columns.
+2. **Rule-engine integration.** New predicate operands so RuleSets
+   can filter / quota / order on AssignmentContext values. Touches
+   `app/services/rules/engine.py` + the Rule Builder UI.
+3. **CSV import column.** Manual-assignment CSV grows
+   `AssignmentContext1` / `2` / `3` columns alongside the existing
+   `PairContext1-3`.
+4. **Friendly labelling.** Once the columns exist, plumb them into
+   the 15A resolver (add `assignment_context` to the `source_type`
+   enum). The Settings editor subsection picks them up
+   automatically.
+
+**Triggering criterion.** Surface a concrete operator request
+that fails the "can this be expressed via reviewer + reviewee tags
+plus rules?" sniff test before authoring the slice.
+
 ---
 
 ## Risks + open questions
