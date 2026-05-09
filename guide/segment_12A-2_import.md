@@ -1,12 +1,15 @@
 # Segment 12A-2 — Session settings import
 
-The import counterpart to **Segment 12A-1** (export, shipped
-2026-05-09 — see `guide/segment_12A-1_export.md`). Consumes the
-3-column `field,value,data_type` Settings CSV the export half
-produces and rehydrates a fresh-named session into the same
-shape, so an operator can hand a CSV to a colleague (or commit
-it to a repo as a workflow template) and have the recipient
-reconstruct the source-session configuration without retyping.
+The import counterpart to **Segment 12A-1** (export, fully
+shipped 2026-05-09 across 5 PRs: settings (#713), seeded-RuleSet
+audit fallback (#716), rosters (#717), manual assignments
+(#718), responses (#721) — see
+`guide/segment_12A-1_export.md`). Consumes the 3-column
+`field,value,data_type` Settings CSV the export half produces
+and rehydrates a fresh-named session into the same shape, so an
+operator can hand a CSV to a colleague (or commit it to a repo
+as a workflow template) and have the recipient reconstruct the
+source-session configuration without retyping.
 
 > **Naming.** This segment was previously bundled with the
 > export half as "Segment 12A — Session settings import +
@@ -103,7 +106,15 @@ corresponding step on the new session.
   to either a seeded RuleSet (auto-materialised on session
   create) or a non-seeded `session_rule_sets[N]` row defined
   earlier in the same CSV. The importer fails loudly if a
-  referenced name doesn't resolve.
+  referenced name doesn't resolve. **Pre-15B / pre-15C apply
+  semantics:** mirroring 12A-1 PR 1a's seeded-only export
+  fallback, today's importer **validates** that the name
+  resolves but does **not** write `Instrument.rule_set_id` —
+  the column is universally NULL pre-15B, and Personal-library
+  RuleSets are out of scope for both halves of 12A. Once 15B
+  + 15C ship, the importer flips to writing the FK; the apply
+  rule changes in lockstep with the export-side fallback being
+  retired.
 - **Per-session field-label overrides** — the rows on
   `session_field_labels` (Segment 15A target — inert today;
   exporter emits no rows; importer is a no-op until the table
@@ -318,7 +329,12 @@ reviewer surface and operator UI count pages):
   when the operator left it at default; an empty `value` cell
   means "use the default" on import (matches the live
   resolver: missing / empty override falls through to
-  `DEFAULT_*`).
+  `DEFAULT_*`). The export collapses three on-disk states
+  (`None`, empty string, key-absent in
+  `email_template_overrides`) into the same empty cell — the
+  importer treats them all as "key absent in dict" on apply.
+  Acceptable lossy collapse; an operator who literally wants an
+  empty subject line is not a workflow we support.
   - `email_overrides.invitation.subject` (string)
   - `email_overrides.invitation.body` (string)
   - `email_overrides.invitation.cc` (string)
@@ -353,8 +369,12 @@ reviewer surface and operator UI count pages):
   - `instruments[N].name` (string, required)
   - `instruments[N].short_label` (string)
   - `instruments[N].description` (string)
-  - `instruments[N].order` (integer; emitted but typically
-    derivable from N — the importer treats N as authoritative)
+  - `instruments[N].order` (integer; informational on import —
+    the importer overwrites `Instrument.order` with N, the
+    1-based CSV position. The cell is exported for human
+    readability and self-describing-format reasons; a
+    hand-edited CSV that disagrees with N is silently
+    normalised to N)
   - `instruments[N].accepting_responses` (boolean)
   - `instruments[N].responses_visible_when_closed` (boolean)
   - `instruments[N].sort_display_fields` (json; default `[]`
@@ -401,7 +421,12 @@ reviewer surface and operator UI count pages):
   - `session_rule_sets[N].seed` (integer)
   - `session_rule_sets[N].rules_json` (json — full rule tree;
     schema validated against `RuleSetSchema` in
-    `app/schemas/rules.py`)
+    `app/schemas/rules.py`). The export emits `[]` for a
+    RuleSet with no rules authored yet (see
+    `_session_rule_set_rows` in
+    `app/services/session_config_io.py`); the importer accepts
+    `[]` as the no-rules default and writes it through to
+    `SessionRuleSet.rules_json` unchanged.
 - **Per-session field-label overrides** — keyed by
   `(source_type, source_field)` (Segment 15A target — inert
   today):
@@ -468,8 +493,10 @@ The importer is **wipe-and-replace** for everything it owns:
    pass.
 7. For field labels: upsert by `(source_type, source_field)`;
    delete existing rows not present in the CSV.
-8. Audit `session.config_imported` with `{"counts": {...}}`
-   detail.
+8. Audit `session.settings_imported` with `{"counts": {...}}`
+   detail. Naming mirrors the 12A-1 export-side events
+   (`session.{settings,reviewers,reviewees,assignments,responses}_extracted`)
+   so the verb pair reads cleanly in the audit log.
 
 The wipe-and-replace cost is acceptable because:
 - The lifecycle gate keeps Response rows (which have FKs to
@@ -543,24 +570,43 @@ fresh-named session into the same shape.
     `quick_setup_reason=lifecycle` and a banner naming the
     next move (Pause / revert), matching the lock-toggle
     pattern.
-- Audit `session.config_imported` registered in
+- Audit `session.settings_imported` registered in
   `EVENT_SCHEMAS` per the strict-mode test gate, with detail
-  `{"counts": {"session": 1, "rtds": 3, "instruments": 2,
-  "display_fields": 6, "response_fields": 8,
-  "session_rule_sets": 1, "field_labels": 0}}` (real numbers
-  per import).
+  shape `_IDENTITY | {"counts"}` to match the
+  `session.{kind}_extracted` family. Counts per import are
+  real numbers, e.g. `{"session": 1, "rtds": 3,
+  "instruments": 2, "display_fields": 6, "response_fields": 8,
+  "session_rule_sets": 1, "field_labels": 0}`.
 - Tests:
-  - **Round-trip** with the 12A-1 export:
-    `serialize_session_config` → file → `apply_session_config`
-    → `serialize_session_config` is byte-identical.
-  - Malformed `data_type` column rejected per row.
+  - **Two round-trip contracts**, both pinned in
+    `tests/integration/test_extracts_round_trip.py`:
+    1. **Byte-stable re-export from the same session.**
+       `serialize_session_config(A)` → file →
+       `apply_session_config(A)` →
+       `serialize_session_config(A)` is byte-identical.
+    2. **State-equivalent extract-import-extract across two
+       sessions.** Take session A's CSV, apply to a fresh
+       session B (different name / code), re-export B,
+       and assert the row stream — modulo the `session.name`
+       + `session.code` fallback rule — equals A's. Pins the
+       contract that the export and import halves stay in
+       lockstep on the CSV format.
+  - Malformed `data_type` column rejected per row (every value
+    of the cell-data-type set: `string` / `integer` /
+    `decimal` / `boolean` / `datetime` / `enum` / `csv_list` /
+    `json`).
   - Unknown RTD reference in
     `response_fields[].response_type` rejected with a "no
     such RTD on this session: X" error pointing at the
     offending row.
   - Unknown RuleSet name reference in
     `instruments[N].rule_set_name` rejected with a "no such
-    RuleSet on this session: X" error.
+    RuleSet on this session: X" error. Pre-15B: validate-only,
+    no `Instrument.rule_set_id` write — confirm the apply step
+    leaves the column NULL on success and surfaces the lookup
+    error on miss.
+  - `rules_json` accepts `[]` (empty rule tree) and round-trips
+    without diffing.
   - Lifecycle gate (`status="ready"` ⇒ 409).
   - Conflict path: session has assignments referencing a
     not-in-CSV instrument ⇒ 409, no rows written.
@@ -576,10 +622,20 @@ the same way they use slots 1-3.
   `views.build_quick_setup_context(session)`: flip slot 4's
   `is_wired=True` and supply
   `wire_url="/operator/sessions/{id}/import-config"` (the
-  route PR 1 shipped). The slot then renders as a live
-  `<form action="…/import-config" method="post"
-  enctype="multipart/form-data">` with the same file input +
-  submit shape as slots 1-3.
+  route PR 1 shipped). The Quick Setup card template
+  (`app/web/templates/operator/partials/_quick_setup_card.html`)
+  already routes wired slots through the
+  `{% elif slot.is_wired %}` branch — no template change
+  needed; flipping the flag swaps slot 4 from the inert
+  `<input type="file" disabled>` shape into a live file
+  input wired to the submit-all form via the `form="…"`
+  attribute, identical to slots 1-2. The
+  `{# Inert slot (slot 4 — Settings, until Segment 12A
+  PR 6 wires it) #}` comment in the template's `{% else %}`
+  branch is stale post-rename and gets refreshed in this PR
+  to point at 12A-2 PR 2 (or removed once slot 4 graduates,
+  since the inert branch will only serve future not-yet-wired
+  slots).
 - Same inline confirmation banner pattern Segment 11J
   established (cookie-driven lock state via
   `qsu_{session_id}`, banner-warning above the submit form on
@@ -653,13 +709,18 @@ the same way they use slots 1-3.
   Setup (Segment 11J) stay the source of truth. 12A-1's
   per-entity CSV extracts already round-trip with those
   importers without conversion.
-- **Settings export.** Shipped as Segment 12A-1 — see
+- **Settings export + per-entity CSV exports** (reviewers /
+  reviewees / manual assignments). All shipped as Segment
+  12A-1 (PRs #713, #716, #717, #718) — see
   `guide/segment_12A-1_export.md`.
-- **Per-entity CSV exports** (reviewers / reviewees / manual
-  assignments) — Segment 12A-1's PR 2 + PR 3 (in flight as
-  of 2026-05-09).
-- **Responses extract / zip bundle.** Deferred follow-ons of
-  the 12A-1 export track.
+- **Responses extract.** Shipped as Segment 12A-1 PR 4 (#721,
+  2026-05-09). Independent downstream-analysis use case — not
+  part of the round-trip / porting contract this segment
+  rehydrates.
+- **Zip bundle.** Deferred follow-on of the 12A-1 export track
+  (single `/export.zip` covering all CSVs); orthogonal to the
+  import side, which always reads a single Settings CSV per
+  upload.
 - **Operator-library RTD / RuleSet portability** —
   workspace-scoped (per-operator across sessions), anchored
   on Operator Settings + Rule Builder. Orthogonal to Session
@@ -672,7 +733,7 @@ the same way they use slots 1-3.
   are part of the CSV format.
 - **Audit retention / audit-log export** — Segment 12B. This
   segment's importer writes a single
-  `session.config_imported` audit event; per-row diffs are
+  `session.settings_imported` audit event; per-row diffs are
   not emitted (would balloon the event log).
 - **Audit-event `detail` schema convention** — Segment 11K
   (shipped). The import audit event uses the canonical
@@ -695,10 +756,19 @@ the same way they use slots 1-3.
   shipped by 12A-1 PR 1 (or its follow-on PR adding the
   fixture). The round-trip test reads from this fixture, so
   contract changes have to deliberately update it.
-- **Round-trip integration test** — extract from session A →
-  import into session B → assert state matches A. This pins
-  the contract that the export and import halves stay in
-  lockstep on the CSV format.
+- **Round-trip integration tests** (two contracts, both in
+  `tests/integration/test_extracts_round_trip.py`):
+  1. Byte-stable re-export from the same session
+     (`extract → apply → extract` is identical).
+  2. State-equivalent extract-import-extract across two
+     sessions (`extract(A) → apply(B) → extract(B)` matches
+     `extract(A)` modulo the `session.name` / `session.code`
+     fallback rule).
+  Together these pin the contract that the export and import
+  halves stay in lockstep on the CSV format. The Responses
+  CSV (12A-1 PR 4) is intentionally **not** part of the
+  round-trip — it serves the independent downstream-analysis
+  use case and has no import counterpart.
 
 ## Doc impact
 
