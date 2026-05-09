@@ -85,8 +85,18 @@ from ._quick_setup import (
     build_quick_setup_context,
 )
 
+# Validate page view-shape adapter (sliced in PR 8).
+from ._validate import (
+    IssueSourceGroup,
+    SetupCoverageRow,
+    SeverityChip,
+    ValidateContext,
+    build_validate_context,
+    validate_lifecycle_copy,
+)
+
 # Everything else still in the legacy container; carved out by
-# PRs 8-10.
+# PRs 9-10.
 from ._legacy import (
     EMAIL_PREVIEW_TABS,
     PREVIEW_INVITE_URL_PLACEHOLDER,
@@ -97,7 +107,6 @@ from ._legacy import (
     EditableRule,
     EmailBody,
     EmailPreviewTab,
-    IssueSourceGroup,
     PreviewPickerContext,
     PreviewPickerOption,
     RuleBasedCardContext,
@@ -106,21 +115,16 @@ from ._legacy import (
     RuleBuilderContext,
     RuleBuilderOption,
     RuleLine,
-    SetupCoverageRow,
-    SeverityChip,
     SurfacePreviewContext,
     SurfacePreviewMissing,
-    ValidateContext,
     build_email_preview_body,
     build_preview_picker_context,
     build_rule_based_card_context,
     build_rule_builder_context,
     build_surface_preview_context,
-    build_validate_context,
     email_preview_from_display,
     merge_tags_for_template,
     resolve_email_preview_tab,
-    validate_lifecycle_copy,
 )
 
 __all__ = [
