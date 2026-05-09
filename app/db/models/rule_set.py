@@ -40,7 +40,7 @@ class RuleSet(Base, TimestampMixin):
     id (see PR 6's revisioning model).
     """
 
-    __tablename__ = "rule_sets"
+    __tablename__ = "operator_rule_sets"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -97,7 +97,7 @@ class RuleSetRevision(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     rule_set_id: Mapped[int] = mapped_column(
-        ForeignKey("rule_sets.id", ondelete="CASCADE"),
+        ForeignKey("operator_rule_sets.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

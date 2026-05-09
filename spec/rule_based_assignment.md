@@ -294,7 +294,7 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 4. **Friendly Description (optional)** textarea, full width, below the inner row. Editable branches only (drafts + saved Personal).
    - Hoisted into the editable POST form via the HTML `form="rule-based-editor-form"` attribute so it can sit visually outside the form's body but still submit with it.
    - **Default value on a fresh Copy / blank draft:** `"User created ruleset"`. Operators are expected to overwrite. Saved-Personal selections preserve their stored description across reloads.
-   - Persists via the existing `/save` route, which writes through to `rule_sets.description`.
+   - Persists via the existing `/save` route, which writes through to `operator_rule_sets.description`.
 
 5. **Body** — single column, top-to-bottom:
    - `Combine these rules with:` helper sentence above the combinator selector / read-only pill. No bold "Combinator" heading.

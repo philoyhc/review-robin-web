@@ -1030,8 +1030,9 @@ page from 13A.
     + owner).
   - `apply_rule_set_json(db, *, payload: dict, importing_user)
     -> RuleSet` — validates `payload` against `RuleSetSchema`,
-    rejects unknown `spec_version`, creates a fresh `rule_sets`
-    row in `personal` scope owned by `importing_user`, inserts
+    rejects unknown `spec_version`, creates a fresh
+    `operator_rule_sets` row in `personal` scope owned by
+    `importing_user`, inserts
     a `rule_set_revisions` row (`revision_no=1`) with the rule
     tree, points `current_revision_id` at it.
 - New routes (workspace-level, not session-scoped — land in a new

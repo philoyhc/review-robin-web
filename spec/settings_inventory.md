@@ -190,7 +190,7 @@ read-only and shared.
 
 **Surface:** Rule Builder — `/operator/sessions/{id}/assignments/rule-based-editor`.
 
-### `rule_sets`
+### `operator_rule_sets`
 
 | Field | Type | Notes |
 |---|---|---|
