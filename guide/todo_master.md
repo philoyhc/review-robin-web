@@ -203,19 +203,20 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/enhanced_instruments.md`.
 
-5. **13D — DB prep for 15A / 15B (and 13B / 13C ride-along).**
+5. **13D — DB prep for the library / per-session-copy split (and 13B / 13C / 15A ride-along).**
    Pre-positions every additive, nullable, no-backfill schema
    change downstream feature segments need, so those segments
    become pure service / UI / template work. Mirrors how 11C
    Part 2 pre-positioned the seven `email_outbox` audit-log
-   columns. Sized as 3-4 PRs (one per migration): new
-   `session_field_labels` table (15A); nullable
-   `instruments.rule_set_id` FK (15B); recommended fold-ins of
-   `instruments.sort_display_fields` JSON (13B PR 1) and
-   `instruments.group_kind String(32) NULL` (13C PR 1). Every
-   migration lands inert — no service code reads the new shape
-   until its owning feature segment lights it up. Independent
-   of every other segment; can land any time.
+   columns. Sized as **6 PRs**: `session_field_labels` table
+   (15A); `session_rule_sets` snapshot table (15C);
+   `operator_response_type_definitions` library table + provenance
+   column on `response_type_definitions` (15C); nullable
+   `instruments.rule_set_id` FK targeting `session_rule_sets`
+   (15B); recommended fold-ins of `instruments.sort_display_fields`
+   JSON (13B PR 1) and `instruments.group_kind String(32) NULL`
+   (13C PR 1). Every migration lands inert. Independent of every
+   other segment; can land any time.
    **Plan:** `guide/segment_13D_db_prep.md`.
 
 6. **14 — Production hardening.**
@@ -260,17 +261,30 @@ pinned to each segment. The catalog itself lives in
    re-introducing hardcoded literals.
    **Plan:** `guide/segment_15A_friendly_labels.md`.
 
-10. **15B — Per-instrument assignments.**
+10. **15C — Operator RTD / RuleSet libraries.**
+   Symmetric two-tier model for both RTDs and RuleSets:
+   operator master library (cross-session, reusable) +
+   per-session copy (portable, independently editable). Explicit
+   "Save to library" / "Add from library" actions; auto-copy
+   whole library on session create; workspace seeds bypass the
+   library. ~5-7 PRs (service + UX only — every table comes
+   from 13D PR 2 / PR 3). Sequenced **before 15B** so
+   `session_rule_sets` rows exist for 15B's
+   `instruments.rule_set_id` to point at.
+   **Plan:** `guide/segment_15C_operator_libraries.md`.
+
+11. **15B — Per-instrument assignments.**
    Each `Instrument` carries its own assignment set (e.g. the
    Manager survey collects different reviewer → reviewee pairings
    than the Peer survey within one session). Schema already
    supports this — `Assignment` carries `instrument_id` with a
    `(session_id, reviewer_id, reviewee_id, instrument_id)` unique
    constraint — but `replace_assignments` fans out uniformly today.
-   Slices: per-instrument service scope, `RuleSet` override, manual
-   CSV `Instrument` column, per-instrument Assignments page UI,
-   Quick Setup selector, per-instrument validation. ~5-7 PRs.
-   Recommended after 15A.
+   Slices: per-instrument service scope, persist per-instrument
+   `instruments.rule_set_id` selection, manual CSV `Instrument`
+   column, per-instrument Assignments page UI, Quick Setup
+   selector, per-instrument validation. ~5-7 PRs. Recommended
+   after 15C.
    **Plan:** `guide/segment_15B_per_instrument_assignments.md`.
 
 ### Sequencing notes
