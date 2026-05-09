@@ -20,7 +20,7 @@ from app.db.models import (
 )
 from app.schemas.assignments import AssignmentMode, ManualAssignmentRow
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit, session_lifecycle as lifecycle
+from app.services import audit, csv_imports, session_lifecycle as lifecycle
 
 PAIR_PREVIEW_LIMIT = 200
 
@@ -172,30 +172,12 @@ def parse_manual_csv(
     source = "assignments"
     issues: list[ValidationIssue] = []
 
-    if len(content) > MANUAL_CSV_MAX_BYTES:
-        return ManualParseResult(
-            rows=[],
-            issues=[
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    message=f"File too large (max {MANUAL_CSV_MAX_BYTES // 1024} KiB)",
-                )
-            ],
-        )
-    try:
-        text = content.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        return ManualParseResult(
-            rows=[],
-            issues=[
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    message="File is not valid UTF-8",
-                )
-            ],
-        )
+    text, decode_issue = csv_imports.decode_csv(
+        content, source, max_bytes=MANUAL_CSV_MAX_BYTES
+    )
+    if decode_issue is not None:
+        return ManualParseResult(rows=[], issues=[decode_issue])
+    assert text is not None
 
     reader = csv.DictReader(io.StringIO(text))
     fieldnames = list(reader.fieldnames or [])
