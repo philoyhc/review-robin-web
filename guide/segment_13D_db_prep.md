@@ -32,7 +32,7 @@ needs that show up:
 | Source | Change | Why ride along here |
 |---|---|---|
 | **15A** — Pervasive friendly labels | New table `session_field_labels` | Required by 15A. Pure additive; defaults read from code. |
-| **15B** — Per-instrument assignments | `rule_sets.instrument_id` nullable FK | Required by 15B (RuleSet override pattern). One column add. |
+| **15B** — Per-instrument assignments | `instruments.rule_set_id` nullable FK | Required by 15B (per-instrument RuleSet selection). One column add. |
 | **13B** — Sort by reviewee | `instruments.sort_display_fields` JSON | 13B's own PR 1 is a schema-only PR ("infrastructure-only: schema + read path"). Lifting it here merges it with the rest of the schema work. |
 | **13C** — Enhanced instrument | `instruments.group_kind` String(32) NULL | 13C's own PR 1 is a schema + render-path PR. The column-add half lifts here cleanly; the render adapter stays in 13C. |
 | 12A — Export and import | none | Pure CSV read/write; no new schema. |
@@ -82,34 +82,66 @@ table.
 — round-trip insert / unique-constraint enforcement / cascade-on-
 session-delete on both SQLite and the `ci-postgres` job.
 
-### PR 2 — `rule_sets.instrument_id` nullable FK (15B prep)
+### PR 2 — `instruments.rule_set_id` nullable FK (15B prep)
 
-**Why.** 15B's RuleSet override pattern: per-instrument override on
-top of a session default. Detail in
+**Why.** 15B's per-instrument RuleSet selection. Each instrument
+points at the RuleSet currently in effect for it; RuleSets remain
+authored and owned at the user-library level (`scope ∈
+{seed, personal}`, `owner_user_id`) — they are *applied* per
+instrument via this pointer. Detail in
 `segment_15B_per_instrument_assignments.md` Slice 2.
+
+**FK direction rationale (locked 2026-05-09).** This column lives
+on `instruments`, not `rule_sets`. RuleSets are operator-authored
+content visible across all of an operator's sessions; instruments
+are session-scoped containers that *select* a RuleSet to apply.
+Putting the pointer on `instruments` means:
+
+- Deleting an instrument disposes of its pointer cleanly without
+  touching the RuleSet itself (matches the precedent set by
+  `assignments` / `instrument_display_fields` /
+  `instrument_response_fields` cascading off the instrument row,
+  but **without** that cascade reaching back to the user-authored
+  RuleSet).
+- Deleting a RuleSet (operator removes from their library): the
+  `ON DELETE SET NULL` on this FK clears the pointer on every
+  instrument that referenced it. The instrument falls back to "no
+  rule selected" until the operator picks one — never silently
+  inherits a different rule.
+- Resetting an instrument's assignments (a 15B UX action) is just
+  a separate `UPDATE … SET rule_set_id = NULL` on the instrument
+  row. No DELETE cascade involved at all; the RuleSet is never
+  at risk.
 
 **Change.**
 
 ```python
-# app/db/models/rule_set.py
-instrument_id: Mapped[int | None] = mapped_column(
-    ForeignKey("instruments.id", ondelete="CASCADE"),
+# app/db/models/instrument.py
+rule_set_id: Mapped[int | None] = mapped_column(
+    ForeignKey("rule_sets.id", ondelete="SET NULL"),
     index=True, nullable=True,
 )
 ```
 
-Plus an Alembic `op.add_column` migration. NULL = "applies to the
-whole session" (current behaviour); non-NULL = "applies to one
-instrument".
+Plus an Alembic `op.add_column` migration. NULL = "no rule
+currently selected for this instrument" (initial state for every
+existing instrument); non-NULL = "this is the RuleSet that
+generated the current assignments for this instrument" (15B Slice
+2 onwards).
 
-**Inert.** No service code reads it; `app/services/rules/library.py`
-and `app/services/rules/engine.py` continue resolving RuleSets by
-`session_id` only. 15B Slice 2 lifts the resolver to honour the
-override.
+**Inert.** No service code reads or writes the new column;
+`app/services/rules/library.py` and
+`app/services/rules/engine.py` continue passing `rule_set_id`
+through the URL / form parameters as today, and
+`assignments.replace_assignments` continues to fan one set of
+generated pairs across every instrument. 15B Slice 2 starts
+persisting the choice into this column.
 
-**Tests.** `tests/integration/test_rule_set_instrument_id_schema.py`
-— insert with NULL (session-default shape) + non-NULL (override
-shape); FK cascade on instrument delete.
+**Tests.** `tests/integration/test_instrument_rule_set_id_schema.py`
+— insert with NULL (initial state) + non-NULL (selected state);
+`SET NULL` behaviour when the referenced `rule_sets` row is
+deleted; `instrument_id` cascade deletes the pointer column with
+the row, RuleSet untouched.
 
 ### PR 3 — `instruments.sort_display_fields` JSON column (13B ride-along)
 
@@ -187,7 +219,7 @@ PR 3 / PR 4 open.
   16 service container; SQLite parity is exercised by the local
   pytest suite.
 - **Inert is enforceable.** `grep` audits at PR-close time:
-  `grep -rn "session_field_labels\|sort_display_fields\|group_kind\|rule_sets.instrument_id" app/services/ app/web/` should return zero hits in the service layer. (Schema-only test files are fine.)
+  `grep -rn "session_field_labels\|sort_display_fields\|group_kind\|rule_set_id" app/services/ app/web/` should return zero **new** hits in the service layer (the existing `rule_set_id` URL/form param wiring stays untouched). Schema-only test files are fine.
 - **13B / 13C call to fold or not** — see "Optional" notes on PRs
   3 / 4. If the feature plan owners want to keep the slice self-
   contained, drop those PRs from this segment and 13D becomes a
@@ -199,7 +231,7 @@ PR 3 / PR 4 open.
 
 - New per PR:
   - PR 1: `app/db/models/session_field_label.py` + Alembic migration
-  - PR 2: Alembic migration; one column add to `app/db/models/rule_set.py`
+  - PR 2: Alembic migration; one column add to `app/db/models/instrument.py`
   - PR 3: Alembic migration; one column add to `app/db/models/instrument.py`
   - PR 4: Alembic migration; one column add to `app/db/models/instrument.py`
 - Touched: `app/db/models/__init__.py` (re-export the new

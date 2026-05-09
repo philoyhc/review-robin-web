@@ -210,7 +210,7 @@ pinned to each segment. The catalog itself lives in
    Part 2 pre-positioned the seven `email_outbox` audit-log
    columns. Sized as 3-4 PRs (one per migration): new
    `session_field_labels` table (15A); nullable
-   `rule_sets.instrument_id` FK (15B); recommended fold-ins of
+   `instruments.rule_set_id` FK (15B); recommended fold-ins of
    `instruments.sort_display_fields` JSON (13B PR 1) and
    `instruments.group_kind String(32) NULL` (13C PR 1). Every
    migration lands inert — no service code reads the new shape
