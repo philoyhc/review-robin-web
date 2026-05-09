@@ -14,6 +14,7 @@ from fastapi import APIRouter
 
 from . import (
     _assignments,
+    _extracts,
     _instruments,
     _lobby,
     _operations,
@@ -36,3 +37,4 @@ router.include_router(_assignments.router)
 router.include_router(_rule_builder.router)
 router.include_router(_operations.router)
 router.include_router(_instruments.router)
+router.include_router(_extracts.router)
