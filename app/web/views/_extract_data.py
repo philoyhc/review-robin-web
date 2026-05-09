@@ -79,6 +79,31 @@ def build_extract_data_context(
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     assignment_count = assignments.existing_count(db, sid)
     response_count = responses_service.session_response_count(db, sid)
+    # 12A-1 PR 3 — assignments CSV is manual-mode only. Per
+    # Scenario A "snapshot the inputs, never the outputs",
+    # rule-based / full-matrix sessions don't export rows; the
+    # destination operator re-runs the same generation path
+    # (RuleSet pick + Generate, or Full Matrix).
+    assignment_mode = (review_session.assignment_mode or "").strip()
+    assignments_is_manual = assignment_mode == "manual"
+    if assignments_is_manual:
+        assignments_coming_in: str | None = None
+    elif assignment_mode == "rule_based":
+        assignments_coming_in = (
+            "Assignments derived from a RuleSet — re-run "
+            "Generate on the destination session against the "
+            "same RuleSet selection. Manual export only."
+        )
+    elif assignment_mode == "full_matrix":
+        assignments_coming_in = (
+            "Assignments derived from Full Matrix — re-run the "
+            "Full Matrix action on the destination session. "
+            "Manual export only."
+        )
+    else:
+        assignments_coming_in = (
+            "No assignments generated yet — manual export only."
+        )
     instrument_count = len(
         list(
             db.execute(
@@ -101,12 +126,16 @@ def build_extract_data_context(
         ExtractDataRow(
             key="assignments",
             label="Assignments",
-            filename=f"session-{code}-assignments.csv",
+            filename=f"{code}_assignments.csv",
             count=assignment_count,
             count_summary=_extract_summary("assignment", assignment_count),
-            is_wired=False,
-            download_url=None,
-            coming_in="Wired in Segment 12A PR 4",
+            is_wired=assignments_is_manual,
+            download_url=(
+                f"/operator/sessions/{sid}/export/assignments.csv"
+                if assignments_is_manual
+                else None
+            ),
+            coming_in=assignments_coming_in,
         ),
         ExtractDataRow(
             key="reviewees",
