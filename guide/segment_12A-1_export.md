@@ -1,29 +1,24 @@
 # Segment 12A-1 — Session export (settings + reviewers + reviewees + assignments)
 
-The first user-facing slice of Segment 12A
-(`guide/segment_12A_export_and_import.md`). Ships **four CSV
-downloads** off the Extract Data card on Session Home, no import
-counterpart, no zip bundle, no responses CSV, no RuleSet JSON
-portability. Those are 12A's later PRs — this slice exists to
-land the export half of the round-trip in isolation so operators
-can extract a session today even before the import side is wired.
+Ships **four CSV downloads** off the Extract Data card on Session
+Home, capturing everything the operator typed to set up a
+session:
 
-## Goal
-
-Give the operator four downloads on Session Home that together
-capture everything they typed to set up the session:
-
-- **Session settings** — every operator-typed configuration field
-  in one CSV (the 12A "Scenario A" snapshot, minus the per-entity
-  CSVs).
+- **Session settings** — every operator-typed configuration
+  field in one CSV (session metadata, email-template overrides,
+  per-session RTDs, instruments + their display / response
+  fields, per-session RuleSets, per-session friendly-label
+  overrides).
 - **Reviewers** — the reviewer roster as a CSV that round-trips
   with the existing reviewer upload.
 - **Reviewees** — same shape for reviewees.
 - **Assignments** — manual assignment rows as a CSV that
-  round-trips with the existing manual-assignments upload. **Only
-  emitted on `assignment_mode == "manual"` sessions** — rule-based
-  sessions surface the row disabled with an explanatory note (per
-  12A Scenario A: "snapshot the inputs, never the outputs").
+  round-trips with the existing manual-assignments upload.
+  **Only emitted on `assignment_mode == "manual"` sessions** —
+  rule-based sessions surface the row disabled with an
+  explanatory note ("snapshot the inputs, never the outputs" —
+  rule-based assignments are derived from the RuleSet, which
+  itself is in the settings CSV).
 
 Read-only. No lifecycle gate — extraction is useful in `draft`
 (sanity-check the config you typed), `validated`, `ready` (mid-
@@ -31,63 +26,59 @@ flight snapshot), and `closed` (final). The Extract Data card
 stays interactive in every state, including behind the yellow
 lock card (lock disables setup mutations only, not reads).
 
-## Scope vs. the parent 12A plan
+No import counterpart, no zip bundle, no responses CSV in this
+segment — see "Out of scope" at the bottom.
 
-| 12A PR | In 12A-1? | Notes |
-|---|---|---|
-| PR 1 — Config (settings) export | ✅ | Renamed file / row order tightened — see "Differences from 12A" below. |
-| PR 2 — Config import | ❌ | Deferred. 12A-1 ships export only. |
-| PR 3 — Reviewers + reviewees extract | ✅ | Same column shapes as the existing importers. |
-| PR 4 — Assignments extract | ✅ | Same `manual`-only gate as 12A. |
-| PR 5 — Responses extract | ❌ | Deferred. Responses are reviewer-determined; they don't belong in the same "operator-typed config" cut and they're the largest CSV to size for streaming. |
-| PR 6 — Wire Extract Data card + zip bundle | Partial | This segment flips four of the five `is_wired` rows live; the Responses row stays inert. Zip bundle is deferred to a follow-on slice. |
-| PR 7 — RuleSet JSON export / import | ❌ | Workspace-scoped, anchored on the Rule Builder card — orthogonal to Session Home and gated on Segment 13A. |
+## Inclusion rule
 
-After 12A-1 ships, the remaining 12A work is: the Responses
-extract (PR 5), the import side (PR 2), the zip bundle (the
-trailing half of PR 6), and the RuleSet JSON round-trip (PR 7).
-Each of those can land as a self-contained follow-on; nothing in
-12A-1 forecloses them.
+> *If the operator were setting up an equivalent new session
+> from scratch, would they have to retype this?*
+>
+> - **Yes** → include in the export.
+> - **No (machine-derived from operator typing)** → exclude.
+> - **No (system-emitted record / per-instance state /
+>   per-operator credential)** → exclude.
 
-## Differences from 12A
+**Snapshot the inputs, never the outputs.** Anything a machine
+step derives from operator typing — assignment rows from a
+RuleSet + roster, validation reports from setup, lifecycle state
+from Activate / Pause / Close, invitation tokens, the audit
+log, reviewer responses — is omitted.
 
-Three deliberate departures from the parent plan, all small:
+**Inert-but-coming columns are included.** Operator-typed
+columns scaffolded today (per `spec/settings_inventory.md` §9)
+but not yet wired by their owning segment are exported anyway
+— e.g. `instruments[N].sort_display_fields` (Segment 13B's
+target), `instruments[N].group_kind` (Segment 13C),
+per-session `session_rule_sets` snapshots (Segment 15B), and
+the `session_field_labels` overrides (Segment 15A). Reasoning:
+an operator who configures one of those settings after the
+owning segment lights up should not have to retype it on the
+next session just because the export shipped before the
+wire-up did. Until the owning segment lands, the corresponding
+section serialises empty / default rows — exporting an empty
+section is a no-op, but pinning the key shape now means
+future-equipped sessions round-trip without an export-shape
+change.
 
-1. **Filename convention.** Files use `{code}_{kind}.csv` (e.g.
-   `CS101_reviewers.csv`, `CS101_settings.csv`) rather than 12A's
-   `session-{code}-{kind}.csv`. Shorter; the `{code}_` prefix is
-   enough to disambiguate downloads from different sessions
-   sitting in a downloads folder. Centralised in
-   `extracts.filename(session, kind)` so the convention is one
-   string to change later if needed.
-2. **Inert-but-coming columns are included on the settings CSV.**
-   Per the parent plan's "snapshot the inputs" rule, 12A-1 also
-   exports operator-typed columns that are scaffolded today but
-   not yet wired by their owning segment — e.g.
-   `instruments[N].sort_display_fields` (Segment 13B),
-   `instruments[N].group_kind` (Segment 13C), and the
-   `session_field_labels` overrides (Segment 15A). Reasoning: an
-   operator who configures one of those settings on the session
-   side after the owning segment lights up should not have to
-   retype it on the next session just because the export shipped
-   before the wire-up did. Once the owning segment ships, the
-   row in this CSV is the same row the import would consume — no
-   re-cut of the export needed. See "Settings CSV contents" for
-   the full inert-but-included list and the rationale per row.
-3. **Card state after this segment.** PR 6 of 12A flips all five
-   Extract Data rows live in one shot. 12A-1 flips four (settings
-   / reviewers / reviewees / assignments) and leaves the
-   Responses row inert with its existing "Wired in Segment 12A
-   PR 5" coming-in note. The bundle footer also stays inert.
-   Operators see four working downloads; the two stragglers keep
-   the same scaffolded affordance they have today.
+**Operator-level (workspace-scoped) settings are excluded.**
+SMTP credentials, the operator-library RTDs
+(`operator_response_type_definitions`, Segment 15C), and
+operator-library RuleSets (`operator_rule_sets`) are
+per-operator, not per-session — each operator configures their
+own. Session-level copies (`response_type_definitions`,
+`session_rule_sets`) **are** included; they're the
+session-scoped state the operator built up for this particular
+session.
 
-Everything else in 12A's PRs 1 / 3 / 4 carries over verbatim:
-the 3-column `field,value,data_type` shape for the settings CSV,
-the per-entity column shapes that match the existing importers,
-the `manual`-only gate on assignments, and the per-download audit
-events (`session.{settings,reviewers,reviewees,assignments}_extracted`,
-each with `{"row_count": <int>}`).
+## Filename convention
+
+Every download is `{code}_{kind}.csv` — e.g.
+`CS101_settings.csv`, `CS101_reviewers.csv`. The `{code}_`
+prefix is enough to disambiguate downloads from different
+sessions sitting in a downloads folder. Centralised in
+`extracts.filename(session, kind)` so the convention is one
+string to change later if needed.
 
 ## Settings CSV contents
 
@@ -96,16 +87,16 @@ The cut is **everything the operator typed to set up this
 session, minus the per-entity rosters and minus assignments
 (which ride their own CSV when the mode is manual)**.
 
-### §2 Per-session settings (`sessions` table)
+### Per-session settings (`sessions` table — §2)
 
 User-typed and exported:
 
 - `session.name` (string)
 - `session.code` (string) — exported as the snapshot value.
-  When the import side lands (12A PR 2), this row becomes a
-  fallback per Scenario A — operator-typed values on Create New
-  Session win. 12A-1 just emits it; the suffix-derivation rule
-  is the importer's concern.
+  When an import side eventually lands, this row is a fallback:
+  operator-typed values on Create New Session win, and the
+  importer derives a fresh code by suffix on collision. 12A-1
+  just emits it.
 - `session.description` (string)
 - `session.deadline` (datetime; ISO-8601 with offset, empty cell
   ⇒ no deadline)
@@ -114,14 +105,14 @@ User-typed and exported:
 Excluded — not user-typed:
 
 - `session.status` — lifecycle output. Every imported session
-  lands back in `draft`; export omits.
+  lands back in `draft` once the import side ships.
 - `session.assignment_mode` — system-set by whichever assignment
-  generation path the operator runs. Snapshot consults it once at
-  export time to decide whether to emit the assignments CSV;
-  doesn't appear in the settings CSV.
+  generation path the operator runs. Snapshot consults it once
+  at export time to decide whether to emit the assignments CSV;
+  doesn't appear in the settings CSV itself.
 - `session.created_by_user_id` — identity / provenance.
 
-### §3 Email-template overrides
+### Email-template overrides (§3)
 
 All 12 string keys + the boolean toggle, mirroring
 `app.services.email_templates.OVERRIDE_KEYS`:
@@ -133,12 +124,12 @@ All 12 string keys + the boolean toggle, mirroring
 - `email_overrides.responses_received.enabled` (boolean; default
   `true` when absent)
 
-Empty value cell ⇒ "use the default" (matches the live resolver's
-`DEFAULT_*` fallback). Each key is exported even when the
-operator left it at default — a row with an empty value is the
-explicit "no override" signal.
+Empty value cell ⇒ "use the default" (matches the live
+resolver's `DEFAULT_*` fallback). Each key is exported even when
+the operator left it at default — a row with an empty value is
+the explicit "no override" signal.
 
-### §4 Per-instrument settings (`instruments` table)
+### Per-instrument settings (`instruments` table — §4)
 
 Keyed by 1-based position (`(Instrument.order, Instrument.id)`
 order on export). User-typed and exported per instrument N:
@@ -151,38 +142,47 @@ order on export). User-typed and exported per instrument N:
 - `instruments[N].accepting_responses` (boolean)
 - `instruments[N].responses_visible_when_closed` (boolean)
 
-**Inert-but-included** (per the §"Differences from 12A" §2
-note — operator-typed columns scaffolded today but not yet wired
-by their owning segment):
+**Inert-but-included** (per the inclusion rule above —
+operator-typed columns scaffolded today but not yet wired by
+their owning segment):
 
 - `instruments[N].sort_display_fields` (json) — operator-defined
-  default sort spec (Segment 13B). Wired by 13B PR 2; until then,
-  always serialises as the empty list `[]`. Included so once 13B
-  lights up, sessions with operator-set sort defaults round-trip
-  without an export-shape change.
-- `instruments[N].group_kind` (enum: `tag_1` / `tag_2` / `tag_3`
-  or empty for regular per-reviewee — Segment 13C). Wired by 13C
-  PR 2 (creation flow) — until then, always serialises as empty.
+  default sort spec (Segment 13B). Always serialises as the
+  empty list `[]` until 13B's operator UI ships. Included so
+  once 13B lights up, sessions with operator-set sort defaults
+  round-trip without an export-shape change.
+- `instruments[N].group_kind` (enum: `tag_1` / `tag_2` /
+  `tag_3`, or empty for the regular per-reviewee flavour —
+  Segment 13C). Always serialises as empty until 13C's creation
+  flow ships.
+- `instruments[N].rule_set_id` — reference into the
+  per-session RuleSet snapshots (`session_rule_sets`, Segment
+  15B). **Exported as the 1-based position of the matching
+  `session_rule_sets[N]` row** (e.g.
+  `instruments[1].rule_set_id = 2`), not as a numeric DB id —
+  the position is what the export's own
+  `session_rule_sets[N].name` block keys against, so the
+  reference round-trips across sessions. Empty cell ⇒ "no
+  RuleSet currently selected" (the initial state for every
+  existing instrument). Until 15B's per-instrument RuleSet
+  picker ships the column is always NULL on export, so the
+  cell is always empty in practice today.
 
 Excluded — not user-typed:
 
 - `instruments[N].deadline_closed_at` — auto-set when the
   deadline passes.
-- `instruments[N].rule_set_id` — selection of a per-session
-  RuleSet snapshot (Segment 15B). Although the operator picks
-  it, the value points at a `session_rule_sets` row that is
-  itself a snapshot of operator typing in the Rule Builder. For
-  cross-session export the RuleSet wants to travel as its own
-  JSON (12A PR 7's surface) rather than as an FK that won't
-  resolve on the destination. 12A-1 omits it; whichever PR
-  brings session-scoped RuleSet portability online folds it in.
 
-### §4.5 Per-session Response Type Definitions
+### Per-session Response Type Definitions (`response_type_definitions` — §4.5)
 
+Per-session RTDs are the **session-level** RTD store — the
+source of truth for `instrument_response_fields.response_type_id`.
 Keyed by `response_type` (operator-typed name; unique within a
-session). Only `is_seeded=False` rows are exported — seeded RTDs
-regenerate from `SEED_RESPONSE_TYPE_DEFINITIONS` on session
-create:
+session via `uq_rtd_session_name`). Only `is_seeded=False`
+rows are exported — seeded RTDs regenerate from
+`SEED_RESPONSE_TYPE_DEFINITIONS` on session create on the
+destination side, so re-emitting them would either be a no-op
+or a conflict. Operator-typed:
 
 - `rtds[<response_type>].data_type` (enum: `int` / `decimal` /
   `short_text` / `long_text` / `list`)
@@ -194,52 +194,104 @@ create:
 Excluded — not user-typed:
 
 - `is_seeded` / `seed_order` — system-emitted markers.
-- `library_origin_id` — provenance pointer (Segment 15C). The
-  per-session row is the source of truth; the link back to the
-  library row is informational and doesn't survive a
-  cross-deployment hop.
+- `library_origin_id` — provenance pointer back to the
+  operator-library row this per-session copy was cloned from
+  (Segment 15C). The per-session row is the source of truth;
+  the link back to the workspace library is informational and
+  doesn't survive a cross-deployment hop.
+
+The **operator-library RTD tier**
+(`operator_response_type_definitions`, Segment 15C) is **not**
+exported — it's a per-operator workspace concept, orthogonal to
+"this session's settings".
 
 ### Per-instrument display fields
 
 Keyed by 1-based position
-(`(InstrumentDisplayField.order, .id)` order on export). User-
-typed:
+(`(InstrumentDisplayField.order, .id)` order on export).
+User-typed:
 
 - `instruments[N].display_fields[M].source_type` (enum:
   `reviewee` / `pair_context`)
 - `instruments[N].display_fields[M].source_field` (string —
   e.g. `tag_1`, `profile_link`, `1`/`2`/`3`)
 - `instruments[N].display_fields[M].label` (string; empty ⇒
-  inferred fallback per `instruments_service.display_field_label`)
+  inferred fallback per
+  `instruments_service.display_field_label`)
 - `instruments[N].display_fields[M].visible` (boolean)
 
-`validation` JSON is **not exported** — it's derived on import
-from the RTD via `validation_block_for_rtd`.
+`validation` JSON is **not exported** — it's derived from the
+referenced RTD via `validation_block_for_rtd` on import.
 
 ### Per-instrument response fields
 
 Keyed by 1-based position. User-typed:
 
 - `instruments[N].response_fields[M].field_key` (string,
-  required) — stable machine identifier; `(N, field_key)` is the
-  upsert key on import so labels can be renamed without losing
-  field identity.
+  required) — stable machine identifier; `(N, field_key)` is
+  the upsert key on import so labels can be renamed without
+  losing field identity.
 - `instruments[N].response_fields[M].label` (string, required)
 - `instruments[N].response_fields[M].response_type` (string —
   references either a seeded RTD name or an operator-defined
   `rtds[<name>]` row exported earlier in the same file)
 - `instruments[N].response_fields[M].required` (boolean)
 - `instruments[N].response_fields[M].help_text` (string)
-- `instruments[N].response_fields[M].help_text_visible` (boolean)
+- `instruments[N].response_fields[M].help_text_visible`
+  (boolean)
 
-### §9 Inert-but-included (Segment 15A friendly labels)
+### Per-session RuleSets (`session_rule_sets` — Segment 15B target)
+
+Per-session snapshot copies of RuleSets — the session-level
+RuleSet store. Each row is a complete snapshot of a rule tree
+the operator built up in the Rule Builder for this session.
+Inert today (the table landed schema-only in Segment 13D PR 2);
+populated by Segment 15B Slice 2 once per-instrument selection
+wires it up. Included on export per the inclusion rule
+(operator-typed; will be in active use by 15B).
+
+Keyed by 1-based position (`session_rule_sets.id` order on
+export). User-typed:
+
+- `session_rule_sets[N].name` (string, required)
+- `session_rule_sets[N].description` (string)
+- `session_rule_sets[N].combinator` (enum: `ALL_OF` / `ANY_OF`
+  / `PIPELINE`)
+- `session_rule_sets[N].exclude_self_reviews` (boolean)
+- `session_rule_sets[N].seed` (integer)
+- `session_rule_sets[N].rules_json` (json) — the full rule
+  tree, schema validated against `RuleSetSchema` in
+  `app/schemas/rules.py`. The rule tree is recursive
+  (composites contain rules; predicates are nested operator /
+  operand structures), so it travels as a single JSON cell
+  rather than as flat per-rule rows. The CSV's `data_type=json`
+  escape handles the embedded JSON string.
+
+`instruments[N].rule_set_id` references rows in this section by
+1-based position so the link round-trips without depending on
+DB ids (see "Per-instrument settings" above).
+
+Excluded — not user-typed:
+
+- `library_origin_id` — provenance pointer back to the
+  operator-library RuleSet this snapshot was cloned from
+  (Segment 15C). Same logic as the RTD `library_origin_id`:
+  doesn't survive a cross-deployment hop.
+
+The **operator-library RuleSet tier**
+(`operator_rule_sets` + `rule_set_revisions`, §6) is **not**
+exported by this segment. Operator-library RuleSets are
+workspace-scoped, visible across every session the operator
+runs; the right home for their portability is a workspace-level
+import / export surface (anchored on the Rule Builder card),
+not Session Home's Extract Data card. Out of scope here.
+
+### Per-session field-label overrides (`session_field_labels` — Segment 15A target)
 
 Per-session friendly-label overrides for tag / pair-context
-fields. Wired by 15A Slice 1 (resolver) + Slice 3 (Settings
-editor surface). Until then, the table is empty in every
-session — exporting an empty section is a no-op, but pinning the
-key shape now means a future 15A-equipped session round-trips
-without an export-shape change.
+fields. Inert today (table landed schema-only in 13D PR 1);
+wired by 15A Slice 1 (resolver) + Slice 3 (Settings editor
+surface). Included per the inclusion rule.
 
 Keyed by `(source_type, source_field)`:
 
@@ -254,26 +306,20 @@ for the tag sources; `1` / `2` / `3` for `pair_context`).
 
 ### Excluded from the settings CSV
 
-All for the same reason — not operator-typed:
-
-- §1 Operator-level settings (SMTP credentials, etc.) — per-
-  operator, not per-session. Each operator configures their own
-  under Operator Settings.
+- §1 Operator-level settings — SMTP credentials and friends.
+  Per-operator, not per-session.
 - §5 Reviewers / Reviewees — ride their own per-entity CSVs in
   this segment.
-- §6 Personal RuleSets — workspace-scoped, not session-scoped.
-  12A PR 7 owns RuleSet portability via JSON.
+- §6 Operator-library RuleSets (`operator_rule_sets`) —
+  workspace-scoped; portability lives on a separate surface.
 - §7 Browser-local UI state — cookies, localStorage, URL
   params. Cosmetic per-browser preferences.
 - §8 Deployer-set environment configuration — bounds what the
   operator can do; the operator does not edit it.
-- §9 `session_rule_sets` snapshots — session-internal copies
-  derived from RuleSet editing. The RuleSet wants to travel as
-  its own JSON.
 - §9 `operator_response_type_definitions` — operator-library
-  tier (operator-level, not per-session).
+  tier (per-operator, not per-session).
 - Audit events — system-emitted record of derivations. Forensic
-  audit is Scenario B's job (Segment 12B).
+  audit is a separate segment's concern.
 - Invitations + tokens, email outbox rows, reviewer responses,
   validation report state — all derived / system-emitted /
   reviewer-determined.
@@ -305,9 +351,9 @@ Columns (matching the reviewee importer):
 RevieweeName,RevieweeEmail,RevieweeTag1,RevieweeTag2,RevieweeTag3,ProfileLink
 ```
 
-Plus any `pair_context_*` columns the per-session schema carries
-(read from the same place the importer reads them). Same
-ordering rule as reviewers.
+Plus any `pair_context_*` columns the per-session schema
+carries (read from the same place the importer reads them).
+Same ordering rule as reviewers.
 
 ### Assignments — `{code}_assignments.csv`
 
@@ -317,23 +363,22 @@ Columns (matching `assignments.parse_manual_csv`):
 ReviewerEmail,RevieweeEmail,IncludeAssignment,Instrument
 ```
 
-`IncludeAssignment` is `true` for active assignments and `false`
-for inactive — preserves the active/inactive split exactly across
-upload round-trip. `Instrument` carries the per-instrument label
-(matching `_instrument_label`). One row per
-(assignment, instrument) tuple — when a session has multiple
-instruments, the same `(ReviewerEmail, RevieweeEmail)` pair
-emits N rows.
+`IncludeAssignment` is `true` for active assignments and
+`false` for inactive — preserves the active/inactive split
+exactly across upload round-trip. `Instrument` carries the
+per-instrument label (matching `_instrument_label`). One row
+per (assignment, instrument) tuple — when a session has
+multiple instruments, the same `(ReviewerEmail, RevieweeEmail)`
+pair emits N rows.
 
-**Conditional emission.** Per 12A Scenario A, the assignments
-CSV is **only emitted when `session.assignment_mode == "manual"`**
-— i.e. the operator typed the rows by hand. On a rule-based
-session the route returns 404, and the Extract Data card row
-renders disabled with the explanatory note: "Assignments derived
-from RuleSet `<name>`; rule-based assignment export is part of
-the upcoming RuleSet JSON portability segment. Run Generate on
-the new session to materialise from the RuleSet there." (No
-zip-bundle change here — bundles are out of scope for 12A-1.)
+**Conditional emission.** The assignments CSV is **only emitted
+when `session.assignment_mode == "manual"`** — i.e. the
+operator typed the rows by hand. On a rule-based session the
+route returns 404, and the Extract Data card row renders
+disabled with the explanatory note: "Assignments derived from
+RuleSet `<name>`; the RuleSet is in the settings CSV. Run
+Generate on the new session to materialise from it." (No zip
+bundle in this segment — see "Out of scope".)
 
 ## Routes
 
@@ -354,13 +399,11 @@ with detail `{"row_count": <int>}`.
 
 ## Service modules
 
-Following 12A's split:
-
-- `app/services/session_config_io.py` — `Row = NamedTuple("Row",
-  [("field", str), ("value", str), ("data_type", str)])` and
-  `serialize_session_config(session) -> list[Row]`. Pure
-  function; no DB writes. Section ordering is pinned in a unit
-  test (see "Tests" below).
+- `app/services/session_config_io.py` —
+  `Row = NamedTuple("Row", [("field", str), ("value", str),
+  ("data_type", str)])` and `serialize_session_config(session)
+  -> list[Row]`. Pure function; no DB writes. Section ordering
+  is pinned in a unit test (see "Tests" below).
 - `app/services/extracts/__init__.py` — shared
   `stream_csv(rows, fieldnames) -> Iterator[bytes]` over a
   chunked `csv.writer`, plus `filename(session, kind) -> str`
@@ -376,30 +419,30 @@ Following 12A's split:
 
 Routes import these and stay thin (parse request → call
 service → wrap in `StreamingResponse` → emit audit). No
-template work for the route handlers themselves; the card render
-work happens in the view adapter (see next).
+template work for the route handlers themselves; the card
+render work happens in the view adapter (next).
 
 ## Card wire-up
 
-The Extract Data card already exists with all five rows scaffolded
-inert (Segment 11H PR B; current state visible at
+The Extract Data card already exists with all five rows
+scaffolded inert (Segment 11H PR B; current state visible at
 `app/web/views/_extract_data.py`). 12A-1 extends
 `build_extract_data_context` to:
 
-- Flip `is_wired=True` on the Settings, Reviewers, Reviewees, and
-  Assignments rows; supply `download_url` from the four routes
-  above.
+- Flip `is_wired=True` on the Settings, Reviewers, Reviewees,
+  and Assignments rows; supply `download_url` from the four
+  routes above.
 - Update each row's `filename` to the new `{code}_{kind}.csv`
   convention.
 - On the Assignments row: when `session.assignment_mode !=
-  "manual"`, leave `is_wired=False` and replace the `coming_in`
-  string with the rule-based explanatory note ("Assignments
-  derived from RuleSet `<name>`; …"). The DOM contract is
-  unchanged — the card already renders disabled rows that way.
-- Leave the Responses row inert with its existing
-  `coming_in="Wired in Segment 12A PR 5"`.
-- Leave the bundle footer inert with its existing
-  `coming_in="Wired in Segment 12A PR 6"`.
+  "manual"`, leave `is_wired=False` and replace the
+  `coming_in` string with the rule-based explanatory note
+  ("Assignments derived from RuleSet `<name>`; …"). The DOM
+  contract is unchanged — the card already renders disabled
+  rows that way.
+- Leave the Responses row inert and the bundle footer inert
+  with their existing `coming_in` strings (those are out of
+  scope for this segment — see "Out of scope" below).
 
 No partial / macro / dataclass changes — 11H PR B is the source
 of truth for the card's DOM contract.
@@ -412,7 +455,8 @@ the strict-mode test gate:
 - `session.settings_extracted` — detail `{"row_count": <int>}`.
 - `session.reviewers_extracted` — detail `{"row_count": <int>}`.
 - `session.reviewees_extracted` — detail `{"row_count": <int>}`.
-- `session.assignments_extracted` — detail `{"row_count": <int>}`.
+- `session.assignments_extracted` — detail `{"row_count":
+  <int>}`.
 
 All emitted from within the route handler after the
 `StreamingResponse` is built (the row count is known at
@@ -422,8 +466,7 @@ single-event audits per project convention; no per-row diffs.
 
 ## CSV format
 
-The settings CSV uses the 3-column `field,value,data_type`
-shape from 12A. Carry-over verbatim:
+The settings CSV uses a 3-column key/value/data-type shape:
 
 ```
 field,value,data_type
@@ -438,18 +481,33 @@ rtds[Likert5].max,5,decimal
 instruments[1].name,Peer evaluation,string
 instruments[1].accepting_responses,true,boolean
 instruments[1].sort_display_fields,[],json
+instruments[1].rule_set_id,1,integer
+session_rule_sets[1].name,Cross-cohort fanout,string
+session_rule_sets[1].combinator,PIPELINE,enum
+session_rule_sets[1].rules_json,"{...}",json
 field_labels.reviewer.tag_1,Cohort,string
 …
 ```
 
 `data_type` values (descriptive of the cell, not of any
-underlying RTD's `data_type`): `string` / `integer` / `decimal`
-/ `boolean` / `datetime` / `enum` / `csv_list` / `json`. The
-`json` type is new vs. 12A — needed for `sort_display_fields`
-which serialises a list of dicts. `boolean` accepts
-`true`/`false` (case-insensitive) on import; emits lowercase
-on export. `datetime` is ISO-8601 with timezone offset; empty
-cell ⇒ `None`.
+underlying RTD's `data_type`):
+
+- `string`
+- `integer`
+- `decimal`
+- `boolean` — accepts `true`/`false` (case-insensitive) on
+  import; emits lowercase on export
+- `datetime` — ISO-8601 with timezone offset
+  (`2026-05-15T17:00:00+00:00`); empty cell ⇒ `None`
+- `enum` — finite operator-set value (e.g.
+  `combinator = "ALL_OF" | "ANY_OF" | "PIPELINE"`); validated
+  server-side against the enum at import time
+- `csv_list` — a comma-separated literal stored as a single
+  Text column (today: `ResponseTypeDefinition.list_csv`)
+- `json` — JSON-encoded structured value; used for
+  `sort_display_fields` and `session_rule_sets[N].rules_json`.
+  The CSV `value` cell carries the JSON string with the
+  standard CSV double-quote escapes.
 
 The per-entity CSVs use their natural wide-row shapes — see
 "Per-entity CSVs" above.
@@ -462,16 +520,20 @@ setup walkthrough:
 1. Session-level rows (name → code → description → deadline →
    help_contact).
 2. Email-template override rows (invitation → reminder →
-   responses_received, with subject → body → cc → bcc → enabled
-   inside each kind).
+   responses_received, with subject → body → cc → bcc →
+   enabled inside each kind).
 3. Operator-defined RTDs, sorted by `seed_order` then
    `response_type`.
 4. Each instrument block in order (`(Instrument.order,
    Instrument.id)`):
-   1. Instrument-level rows.
+   1. Instrument-level rows (including `rule_set_id` reference
+      if any).
    2. Display fields for that instrument.
    3. Response fields for that instrument.
-5. Field-label overrides (sorted by `(source_type,
+5. Per-session RuleSets, in `session_rule_sets.id` order
+   (matches the 1-based position used by
+   `instruments[N].rule_set_id` references).
+6. Field-label overrides (sorted by `(source_type,
    source_field)`).
 
 Pinned in `serialize_session_config` and pinned again in a unit
@@ -488,8 +550,9 @@ shared helpers are in place.
 
 - `app/services/session_config_io.py` with `Row`,
   `serialize_session_config(session)`, and the per-section
-  helpers (session, email overrides, RTDs, instruments, display
-  fields, response fields, field labels).
+  helpers (session, email overrides, RTDs, instruments,
+  display fields, response fields, session RuleSets, field
+  labels).
 - `app/services/extracts/__init__.py` with `stream_csv` +
   `filename(session, kind)`.
 - New route `GET /operator/sessions/{id}/export/settings.csv`.
@@ -502,22 +565,25 @@ shared helpers are in place.
   - Unit per row class on `serialize_session_config` (one test
     per section).
   - Golden-fixture test pinning the byte-exact output for a
-    fully-populated session (`tests/fixtures/extracts/
-    settings.csv`).
+    fully-populated session
+    (`tests/fixtures/extracts/settings.csv`).
   - Integration test for the route (auth, audit emission, 404
     on unknown session, no lifecycle gate).
-  - Inert-but-included sections: empty `sort_display_fields`,
-    empty `group_kind`, empty `field_labels` block all emit the
-    expected default rows / no rows respectively.
+  - Inert-but-included sections: empty
+    `sort_display_fields`, empty `group_kind`, empty
+    `session_rule_sets` table, empty `session_field_labels`
+    table all emit the expected default rows / no rows
+    respectively.
 
 ### PR 2 — Reviewers + reviewees extract
 
 - `app/services/extracts/reviewers_extract.py` +
   `reviewees_extract.py`.
-- Two new routes (`/export/reviewers.csv`, `/export/reviewees.csv`).
+- Two new routes (`/export/reviewers.csv`,
+  `/export/reviewees.csv`).
 - Two new audit events registered in `EVENT_SCHEMAS`.
-- Card wire-up: flip both rows live; update filenames to the new
-  `{code}_{kind}.csv` convention.
+- Card wire-up: flip both rows live; update filenames to the
+  new `{code}_{kind}.csv` convention.
 - Tests:
   - Golden-fixture CSV per extract.
   - Round-trip: extract from session A → upload to session B
@@ -536,71 +602,84 @@ shared helpers are in place.
 - Audit `session.assignments_extracted` registered in
   `EVENT_SCHEMAS`.
 - Card wire-up: flip the Assignments row live on manual
-  sessions; on rule-based sessions render the row disabled with
-  the explanatory note instead.
+  sessions; on rule-based sessions render the row disabled
+  with the explanatory note instead.
 - Tests:
   - Golden-fixture CSV.
   - Round-trip: extract from session A → upload to session B
     (with reviewers / reviewees pre-populated to match) →
     assignments match.
-  - Multi-instrument session: N assignments × M instruments ⇒
-    N×M rows.
+  - Multi-instrument session: N assignments × M instruments
+    ⇒ N×M rows.
   - Rule-based session: route returns 404; card row renders
-    disabled with the rule-based note (assert by inspecting the
-    `ExtractDataRow` returned by `build_extract_data_context`).
+    disabled with the rule-based note (assert by inspecting
+    the `ExtractDataRow` returned by
+    `build_extract_data_context`).
 
-## Out of scope (carried in 12A's later PRs)
+## Out of scope
 
-- **Responses extract.** Deferred to 12A PR 5 — the largest
-  extract by row count, the one that needs streaming under
-  production load, and the only one with no import counterpart.
-- **Zip bundle (`/export.zip`).** Deferred to the trailing half
-  of 12A PR 6. Without the Responses extract the bundle would
-  be incomplete; ship them together.
-- **Configuration import (`POST /operator/sessions/{id}/import-config`)
-  + Quick Setup slot 4 graduation.** Deferred to 12A PR 2 + the
-  Quick Setup-side half of PR 6. The settings CSV PR 1 of this
-  segment ships is the exact shape PR 2 will consume — the
-  round-trip test lands when PR 2 does.
-- **RuleSet JSON export / import.** Deferred to 12A PR 7,
-  workspace-scoped, gated on Segment 13A.
-- **Cross-deployment / cross-version round-trip.** Same
-  schema-version assumption on both ends; a future
+Each item below is a self-contained follow-on; nothing in
+12A-1 forecloses it.
+
+- **Configuration import.** The settings CSV PR 1 ships is
+  designed to round-trip — a future import-side segment can
+  consume the exact shape this PR produces. The
+  `field_key`-based upsert key on response fields, the
+  `data_type` column as a parsing rule, and the position-based
+  `rule_set_id` reference all exist for that future round-trip.
+- **Responses extract.** The largest extract by row count, the
+  one that needs streaming under production load, and the only
+  one with no import counterpart. Defer until the streaming
+  shape is sized against production data.
+- **Zip bundle (`/export.zip`).** Without the responses extract
+  the bundle would be incomplete; ship them together when
+  responses lands.
+- **Operator-library RuleSet portability** — workspace-scoped
+  import / export of `operator_rule_sets` rows, anchored on
+  the Rule Builder card. Orthogonal to Session Home's Extract
+  Data card; gated on the Rule Builder segment shipping.
+  RuleSets travel as JSON (recursive rule trees don't flatten
+  to a wide CSV cleanly), so the file format is different from
+  the four CSVs this segment produces.
+- **Operator-library RTD portability** — same shape as
+  operator-library RuleSet portability; lives on the operator
+  Settings or RTD library surface, not on Session Home.
+- **Cross-deployment / cross-version round-trip.** Today's
+  contract assumes same schema version on both ends. A future
   `# version: 1` comment line at the top of each CSV is the
-  natural extension but not in scope here.
+  natural extension when cross-version becomes a concern.
+- **Forensic audit export.** The audit log + email outbox +
+  invitation send timestamps + reviewer responses snapshot. A
+  separate segment's job; complementary to this one (this one
+  captures the inputs; that one captures what happened to
+  them).
 
 ## Doc impact
 
 - `docs/status.md` gains one timeline entry per PR.
 - `guide/todo_master.md` adds Segment 12A-1 under **Upcoming**
-  before PR 1 ships; moves to **Done** once PR 3 lands. The
-  parent Segment 12A entry stays put — its remaining PRs
-  (Responses extract, import, zip bundle, RuleSet portability)
-  ship after.
-- `guide/segment_12A_export_and_import.md` gains a "Status
-  (2026-05-09)" note at the top pointing at this segment as the
-  shipped export half, plus a one-liner per affected PR
-  ("Settings export shipped in 12A-1 PR 1 — this PR is now the
-  import half only", etc.).
+  before PR 1 ships; moves to **Done** once PR 3 lands.
 - `spec/architecture.md` — one-liner under "Data import /
   export" pointing at the four CSV shapes; verify on PR 1
   review.
-- No spec doc for the CSV shapes themselves — this guide doubles
-  as the spec until the format proves stable across two or three
-  consumers; promote then.
+- No spec doc for the CSV shapes themselves — this guide
+  doubles as the spec until the format proves stable across
+  two or three consumers; promote then.
 
 ## Test impact
 
 - New unit tests:
   - `tests/unit/test_session_config_io.py` (round-trip per row
-    class, section ordering, inert-but-included defaults).
+    class, section ordering, inert-but-included defaults
+    including empty `session_rule_sets` and empty
+    `session_field_labels`).
   - `tests/unit/test_reviewers_extract.py`,
     `tests/unit/test_reviewees_extract.py`,
     `tests/unit/test_assignments_extract.py`.
 - New integration tests:
   - `tests/integration/test_extracts_routes.py` (auth, audit
-    events, manual-only gate on assignments, no lifecycle gate
-    on any of the four).
+    events, manual-only gate on assignments, no lifecycle
+    gate on any of the four).
 - Golden fixtures under `tests/fixtures/extracts/`:
   `settings.csv`, `reviewers.csv`, `reviewees.csv`,
   `assignments.csv`. Future contract changes have to
