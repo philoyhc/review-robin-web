@@ -1,10 +1,11 @@
 """Unit tests for ``app.services.extracts.responses_extract`` —
-Segment 12A-1 PR 4.
+Segment 12A-1 PR 4 + PR 4a.
 
-Covers the 19-column HEADER, the per-row column shape, the
-deterministic ordering, the empty-cell vs no-row semantics for
-null and absent responses, the lifecycle distinction (saved vs
-submitted vs version), and the multi-instrument interleaving.
+Covers the 20-column HEADER (incl. PR 4a's ``SelfReview`` flag),
+the per-row column shape, the deterministic ordering, the
+empty-cell vs no-row semantics for null and absent responses, the
+lifecycle distinction (saved vs submitted vs version), and the
+multi-instrument interleaving.
 """
 
 from __future__ import annotations
@@ -206,12 +207,13 @@ def _add_response(
 # --------------------------------------------------------------------------- #
 
 
-def test_header_is_19_columns_in_canonical_order() -> None:
+def test_header_is_20_columns_in_canonical_order() -> None:
     """Pin the column order so a rename or reorder fails loud
     and forces analysts of the file to update their pipelines
-    deliberately."""
+    deliberately. ``SelfReview`` (col index 16) was added in
+    PR 4a between ``Value`` and ``SavedAt``."""
 
-    assert len(HEADER) == 19
+    assert len(HEADER) == 20
     assert HEADER == (
         "ReviewerName",
         "ReviewerEmail",
@@ -229,6 +231,7 @@ def test_header_is_19_columns_in_canonical_order() -> None:
         "FieldLabel",
         "ResponseType",
         "Value",
+        "SelfReview",
         "SavedAt",
         "SubmittedAt",
         "Version",
@@ -290,13 +293,13 @@ def test_per_row_shape_denormalises_all_join_keys(db: Session) -> None:
     rows = list(serialize_responses(db, review_session))
     assert rows[0] == HEADER
     body_row = rows[1]
-    # 19 columns; spot-check identity, tags, instrument, field,
-    # response type, value, version. ``saved_at`` /
+    # 20 columns; spot-check identity, tags, instrument, field,
+    # response type, value, self-review, version. ``saved_at`` /
     # ``submitted_at`` round-trip an ISO-8601 prefix; the
     # exact timezone suffix varies between SQLite (strips tz)
     # and Postgres (preserves it), so just assert the
     # iso-prefix is present.
-    assert body_row[:16] == (
+    assert body_row[:17] == (
         "Alex Adams",
         "alex@example.edu",
         "cohort-a",
@@ -313,10 +316,11 @@ def test_per_row_shape_denormalises_all_join_keys(db: Session) -> None:
         "Overall",
         "Likert5",
         "4",
+        "FALSE",  # SelfReview — alex@ != carol@
     )
-    assert body_row[16].startswith("2026-05-01T12:00:00")  # SavedAt
-    assert body_row[17].startswith("2026-05-02T09:30:00")  # SubmittedAt
-    assert body_row[18] == "2"  # Version
+    assert body_row[17].startswith("2026-05-01T12:00:00")  # SavedAt
+    assert body_row[18].startswith("2026-05-02T09:30:00")  # SubmittedAt
+    assert body_row[19] == "2"  # Version
 
 
 def test_null_value_emits_empty_cell_with_row_still_present(
@@ -412,7 +416,7 @@ def test_submitted_at_distinguishes_drafts_from_submitted(
     )
 
     rows = list(serialize_responses(db, review_session))
-    assert rows[1][17] == ""  # SubmittedAt empty for drafts.
+    assert rows[1][18] == ""  # SubmittedAt empty for drafts.
 
 
 def test_ordering_groups_by_reviewer_then_reviewee_then_instrument_then_field(
@@ -576,3 +580,123 @@ def test_list_response_value_round_trips_as_stored(db: Session) -> None:
 
     body = list(serialize_responses(db, review_session))[1:]
     assert body[0][15] == "design,research"
+
+
+# --------------------------------------------------------------------------- #
+# PR 4a — SelfReview column
+# --------------------------------------------------------------------------- #
+
+
+def test_self_review_emits_TRUE_when_reviewer_email_matches_reviewee_id(
+    db: Session,
+) -> None:
+    """When ``reviewer.email`` matches ``reviewee.email_or_identifier``
+    (case-insensitive), the SelfReview cell is ``TRUE``."""
+
+    review_session = _session(db, code="self-true")
+    likert = _likert(db, review_session)
+    reviewer = _add_reviewer(
+        db, review_session, email="alex@example.edu", name="Alex"
+    )
+    reviewee = _add_reviewee(
+        db,
+        review_session,
+        identifier="alex@example.edu",
+        name="Alex (as reviewee)",
+    )
+    instr = _add_instrument(db, review_session, name="I")
+    field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
+    a = _add_assignment(
+        db,
+        review_session,
+        reviewer=reviewer,
+        reviewee=reviewee,
+        instrument=instr,
+    )
+    _add_response(db, assignment=a, field=field, value="3")
+
+    body = list(serialize_responses(db, review_session))[1:]
+    assert body[0][16] == "TRUE"
+
+
+def test_self_review_emits_FALSE_when_emails_differ(db: Session) -> None:
+    review_session = _session(db, code="self-false")
+    likert = _likert(db, review_session)
+    reviewer = _add_reviewer(
+        db, review_session, email="alex@example.edu", name="Alex"
+    )
+    reviewee = _add_reviewee(
+        db, review_session, identifier="carol@example.edu", name="Carol"
+    )
+    instr = _add_instrument(db, review_session, name="I")
+    field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
+    a = _add_assignment(
+        db,
+        review_session,
+        reviewer=reviewer,
+        reviewee=reviewee,
+        instrument=instr,
+    )
+    _add_response(db, assignment=a, field=field, value="3")
+
+    body = list(serialize_responses(db, review_session))[1:]
+    assert body[0][16] == "FALSE"
+
+
+def test_self_review_is_case_insensitive(db: Session) -> None:
+    """Email comparison casefolds both sides — an operator-typed
+    reviewer email and a roster-typed reviewee identifier with
+    different casing still match."""
+
+    review_session = _session(db, code="self-case")
+    likert = _likert(db, review_session)
+    reviewer = _add_reviewer(
+        db, review_session, email="Alex@Example.Edu", name="Alex"
+    )
+    reviewee = _add_reviewee(
+        db, review_session, identifier="alex@example.edu", name="Alex"
+    )
+    instr = _add_instrument(db, review_session, name="I")
+    field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
+    a = _add_assignment(
+        db,
+        review_session,
+        reviewer=reviewer,
+        reviewee=reviewee,
+        instrument=instr,
+    )
+    _add_response(db, assignment=a, field=field, value="3")
+
+    body = list(serialize_responses(db, review_session))[1:]
+    assert body[0][16] == "TRUE"
+
+
+def test_self_review_emits_FALSE_when_reviewee_id_is_not_an_email(
+    db: Session,
+) -> None:
+    """Non-email reviewee identifiers (cohorts that match by
+    student-id / handle) can't be self-reviews — there's no email
+    to compare against. Mirrors ``is_self_review``'s
+    ``"@" not in identifier`` guard."""
+
+    review_session = _session(db, code="self-noemail")
+    likert = _likert(db, review_session)
+    reviewer = _add_reviewer(
+        db, review_session, email="alex@example.edu", name="Alex"
+    )
+    reviewee = _add_reviewee(
+        db, review_session, identifier="student-001", name="Student 1"
+    )
+    instr = _add_instrument(db, review_session, name="I")
+    field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
+    a = _add_assignment(
+        db,
+        review_session,
+        reviewer=reviewer,
+        reviewee=reviewee,
+        instrument=instr,
+    )
+    _add_response(db, assignment=a, field=field, value="3")
+
+    body = list(serialize_responses(db, review_session))[1:]
+    assert body[0][16] == "FALSE"

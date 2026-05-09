@@ -398,7 +398,7 @@ def existing_count(db: Session, session_id: int) -> int:
     return len(db.execute(session_scoped(Assignment.id, session_id)).all())
 
 
-def _is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
+def is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
     identifier = reviewee.email_or_identifier
     if "@" not in identifier:
         return False
@@ -420,7 +420,7 @@ def count_self_review_candidates(
         1
         for r in reviewers_list
         for ree in reviewees_list
-        if _is_self_review(r, ree)
+        if is_self_review(r, ree)
     )
 
 
@@ -434,7 +434,7 @@ def count_self_reviews_in_assignments(
         .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
         .where(Assignment.session_id == session_id)
     ).all()
-    return sum(1 for _, reviewer, reviewee in rows if _is_self_review(reviewer, reviewee))
+    return sum(1 for _, reviewer, reviewee in rows if is_self_review(reviewer, reviewee))
 
 
 def generate_full_matrix(
@@ -465,7 +465,7 @@ def generate_full_matrix(
     excluded_self = 0
     for reviewer in active_reviewers:
         for reviewee in active_reviewees:
-            if exclude_self_review and _is_self_review(reviewer, reviewee):
+            if exclude_self_review and is_self_review(reviewer, reviewee):
                 excluded_self += 1
                 continue
             pairs.append((reviewer, reviewee))
