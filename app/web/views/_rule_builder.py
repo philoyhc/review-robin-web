@@ -1,6 +1,29 @@
-"""Legacy container holding every view-shape adapter not yet
-sliced. See ``guide/major_refactor.md`` §12.B — this file shrinks
-once per slice PR and is deleted in PR 10.
+"""Rule Builder + Rule Based card view-shapes (Segment 13A) —
+the largest slice in the §12.B ladder.
+
+Slice 10 of the §12.B ladder (``guide/major_refactor.md``) — the
+final slice; with this file in place, ``_legacy.py`` is gone and
+the views package is fully sliced.
+
+Owns:
+
+- **Rule Based card on Setup → Assignments** (Segment 13A PR 0
+  scaffold + PRs 4-5 wiring) — ``RuleBasedSelectorOption`` /
+  ``RuleBasedLastGenerated`` / ``RuleBasedCardContext`` +
+  ``build_rule_based_card_context``.
+- **Rule Builder page** (Segment 13A-1) — ``RuleLine`` /
+  ``EditableRule`` / ``RuleBuilderOption`` /
+  ``AvailableRuleSetEntry`` / ``RuleBuilderContext`` +
+  ``build_rule_builder_context`` plus the in-file rule-rendering
+  helpers (``_render_field_reference`` /
+  ``_render_predicate_sentence`` / ``_render_quota_sentence`` /
+  ``_flatten_rule_lines`` / ``_operand_to_text``) and the
+  blank-draft / default-description constants
+  (``RULE_BUILDER_BLANK_SENTINEL_ID`` /
+  ``RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION``).
+
+Source range in pre-PR-10 ``_legacy.py``: the entire file post-
+PR-9 strip (~1,245 LOC).
 """
 
 from __future__ import annotations

@@ -8,19 +8,18 @@ re-export wall so external callers — both
 ``from app.web.views import <symbol>`` — continue to work
 byte-identical to the pre-package shape.
 
-Slice modules get carved out of ``_legacy.py`` across PRs 1-9 of
-the §12.B ladder (smallest first):
+Final layout (post-PR-10):
 
-- PR 1  ``_responses.py``      — Responses page rows
-- PR 2  ``_extract_data.py``   — Extract Data card
-- PR 3  ``_invitations.py``    — Invitations page rows
-- PR 4  ``_filters.py``        — shared filter / search helpers
-- PR 5  ``_setup.py``           — Setup overview rows + status pills
-- PR 6  ``_instruments.py``    — Instruments page context
-- PR 7  ``_quick_setup.py``    — Quick Setup card
-- PR 8  ``_validate.py``       — Validate page
-- PR 9  ``_previews.py``       — Email + reviewer-surface previews
-- PR 10 ``_rule_builder.py``   — Rule Builder + Rule Based card
+- ``_responses.py``      — Responses page rows
+- ``_extract_data.py``   — Extract Data card
+- ``_invitations.py``    — Invitations page rows
+- ``_filters.py``        — shared filter / search helpers
+- ``_setup.py``          — Setup overview rows + status pills
+- ``_instruments.py``    — Instruments page context
+- ``_quick_setup.py``    — Quick Setup card
+- ``_validate.py``       — Validate page
+- ``_previews.py``       — Email + reviewer-surface previews
+- ``_rule_builder.py``   — Rule Builder + Rule Based card
 
 The ``views.py`` seam is the canonical "view-shape adapter" layer
 (per CLAUDE.md / AGENTS.md): translates domain objects into the
@@ -116,9 +115,9 @@ from ._previews import (
     resolve_email_preview_tab,
 )
 
-# Everything else still in the legacy container; carved out by
-# PR 10.
-from ._legacy import (
+# Rule Builder + Rule Based card on Setup → Assignments
+# (sliced in PR 10 — the final slice).
+from ._rule_builder import (
     RULE_BUILDER_BLANK_SENTINEL_ID,
     RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION,
     AvailableRuleSetEntry,
