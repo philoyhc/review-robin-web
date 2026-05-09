@@ -403,6 +403,79 @@ Save-to-library actions on the per-session RTD card).
 
 ---
 
+## 10. CSV export / import coverage
+
+Two segment plans co-author the porting / template-capture
+workflow:
+
+- **`guide/segment_12A-1_export.md`** — five CSVs off the Extract
+  Data card on Session Home (settings, reviewers, reviewees,
+  manual assignments, responses). Fully shipped 2026-05-09 across
+  PRs #713, #716, #717, #718, #721.
+- **`guide/segment_12A-2_import.md`** — Settings CSV importer +
+  Quick Setup slot 4 graduation. Planned, 2 PRs.
+
+> **Inclusion rule** (paraphrased from 12A-1): *if the operator
+> were setting up an equivalent new session from scratch, would
+> they have to retype this?* Yes → in the export. No
+> (machine-derived from operator typing, system-emitted record,
+> per-instance state, or per-operator credential) → excluded.
+
+The five CSVs split the work three ways:
+
+1. **Settings CSV** (`{code}_settings.csv`) — 3-column
+   `field,value,data_type` shape capturing every per-session
+   configuration field the operator typed. Round-trip target for
+   12A-2.
+2. **Per-entity CSVs** (`{code}_reviewers.csv`,
+   `{code}_reviewees.csv`, `{code}_assignments.csv`) — round-trip
+   with the existing per-entity importers. Manual assignments
+   only emitted on `assignment_mode == "manual"` sessions;
+   rule-based rows are derived from the RuleSet (captured in the
+   Settings CSV via the per-instrument `rule_set_name` field).
+3. **Responses CSV** (`{code}_responses.csv`) — wide
+   row-per-observation shape for downstream analysis.
+   **Independent of the porting workflow** — no import
+   counterpart, not part of round-trip.
+
+### Coverage by inventory section
+
+| § | Section | In CSV? | Where / why |
+|---|---------|---------|-------------|
+| §1 | Operator-level (`users` + SMTP) | ❌ | Per-operator credentials + identity, not per-session. Each operator configures their own. |
+| §2 | Per-session metadata | Partial | `name`, `code`, `description`, `deadline`, `help_contact` → Settings CSV. `status` and `assignment_mode` are machine-derived (excluded); `created_by_user_id` is identity (excluded). On import, `name` / `code` / `description` / `deadline` / `help_contact` are **fallback values** — applied only when nothing more authoritative is present. |
+| §3 | Email-template overrides | ✅ All | All 12 string keys + `responses_received_enabled` → Settings CSV. None / `""` / key-absent collapse to empty cell on export; importer treats empty as "use the default". |
+| §4 | Per-instrument | Partial | All operator-typed columns → Settings CSV, including the inert `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`). `deadline_closed_at` is machine-derived (excluded). Pre-15B, `rule_set_id` is universally NULL — 12A-1 PR 1a falls back to the latest `assignments.generated` audit row's `refs.rule_set_id` for **seeded** RuleSets only. |
+| §4.5 | Per-session RTDs | Partial | Operator-defined (`is_seeded=False`) rows → Settings CSV. Seeded RTDs are excluded — they auto-regenerate from `SEED_RESPONSE_TYPE_DEFINITIONS` on session create. `library_origin_id` is provenance-only (excluded). |
+| §5 | Reviewers / Reviewees | ✅ All | Each in its own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` audit-event paths). |
+| §6 | Operator-library RuleSets (`operator_rule_sets`) | ❌ | Workspace-scoped (per-operator across sessions), not per-session. Portability is deferred to its own segment; travels as JSON, not CSV. |
+| §7 | Browser-local UI state | ❌ | Cosmetic per-browser preferences; carry over via the operator's own browser, not via export. |
+| §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |
+| §9 | `session_field_labels` (inert, 15A target) | ✅ All | All listed columns → Settings CSV. Serialises empty rows today; pinning the key shape now means future-equipped sessions round-trip without an export-shape change once 15A lights up. |
+| §9 | `session_rule_sets` (inert, 15B / 15C target) | Partial | Non-seeded rows → Settings CSV. Seeded copies are excluded — they auto-materialise from `app/services/rules/seeds.py` via `materialise_seed_rule_sets` on session create. `library_origin_id` is provenance-only (excluded). |
+| §9 | `operator_response_type_definitions` (inert, 15C target) | ❌ | Workspace-scoped, parallel to §6. |
+| n/a | Assignments | Conditional | `{code}_assignments.csv` only when `assignment_mode == "manual"`. Rule-based rows are derived from the RuleSet + roster; the RuleSet itself travels in the Settings CSV via `instruments[N].rule_set_name`. |
+| n/a | Responses (reviewer-typed) | ✅ (analytics only) | `{code}_responses.csv` — wide row-per-observation shape for downstream analysis. **No import counterpart**, no round-trip. |
+| n/a | Audit events (`audit_events`) | ❌ | System-emitted; out of inventory scope per the top-of-doc exclusion. |
+
+### Deferred follow-ons
+
+- **Zip bundle** — single `/export.zip` covering all CSVs in
+  one click. Deferred follow-on of the 12A-1 export track;
+  orthogonal to the import side, which always reads a single
+  Settings CSV per upload.
+- **Operator-library RTD / RuleSet portability** — workspace-
+  scoped (per-operator across sessions). Anchored on Operator
+  Settings + Rule Builder; lives on a separate import / export
+  surface and travels as JSON. Excluded from the per-session
+  Settings CSV by design.
+
+**Canonical specs:** `guide/segment_12A-1_export.md` (export
+CSV shapes + inclusion rule), `guide/segment_12A-2_import.md`
+(import flows + apply semantics).
+
+---
+
 ## See also
 
 - `app/config.py` — env-config source of truth.
@@ -422,6 +495,8 @@ Save-to-library actions on the per-session RTD card).
   `app/web/routes_operator/_shared.py`).
 - `guide/segment_13D_db_prep.md` — rationale for every §9
   inert table / column.
+- `guide/segment_12A-1_export.md` / `guide/segment_12A-2_import.md`
+  — CSV export / import contract referenced by §10.
 - `guide/unfinished_business.md` — catalog of deferred settings
   surfaces (e.g. inline-editable Manage rows #25, Inactivate UI
   #36).
