@@ -139,10 +139,42 @@ a per-instrument Danger sub-card.
 | `accepting_responses` | `Boolean` | Per-instrument open/close. |
 | `responses_visible_when_closed` | `Boolean` | Whether reviewers can see their own past responses after the instrument closes. |
 | `deadline_closed_at` | `DateTime` | Auto-closed timestamp; populated when the deadline passes. |
+| `sort_display_fields` | `JSON` | Operator-defined default sort spec for this instrument's reviewer-surface table (Segment 13B). NULL = "no operator default". **Inert** until 13B's render-path slice consumes it (landed in 13D PR 5). |
+| `group_kind` | `String(32)` | Group-scoping flavour for Segment 13C's group-scoped instruments — one shared answer covers a whole group of reviewees instead of per-reviewee. NULL = "regular per-reviewee instrument". **Inert** until 13C wires the render adapter (landed in 13D PR 6). |
+| `rule_set_id` | `Integer` (FK → `session_rule_sets.id` ON DELETE SET NULL) | Per-instrument selection of which `session_rule_sets` row applies (Segment 15B). NULL = "no RuleSet currently selected" — the initial state for every existing instrument and the state after a reset-assignments action. **Inert** until 15B Slice 2 wires per-instrument selection (landed in 13D PR 4). |
 | Display fields (per-instrument list) | rows in `instrument_display_fields` | Operator picks which reviewee attributes (name, email, tags, etc.) the reviewer sees on the response surface. |
-| Response fields (per-instrument list) | rows in `instrument_response_fields` | The actual question schema — labels, types, options. |
+| Response fields (per-instrument list) | rows in `instrument_response_fields` | The actual question schema — labels, types, options. Each row references a `response_type_definitions` row (see §4.5 below) via `response_type_id`. |
 
 **Canonical spec:** `spec/instruments.md`.
+
+---
+
+## 4.5. Per-session Response Type Definitions
+
+Stored on the `response_type_definitions` table — one row per RTD,
+scoped to a session. Per-session RTDs are the source of truth for
+`instrument_response_fields.response_type_id`; the operator-library
+tier (`operator_response_type_definitions`, see §9) auto-copies into
+this table on session create.
+
+**Surface:** Instruments page > "Response Types" card (per-session
+list with add / edit / delete actions; deletes are blocked when the
+RTD is referenced by any response field).
+
+| Field | Type | Notes |
+|---|---|---|
+| `response_type` | `String(64)` | Operator-chosen name (e.g. `"Likert5"`, `"GPA4"`). Unique per session via `uq_rtd_session_name`. |
+| `data_type` | `String(16)` | `int` / `decimal` / `short_text` / `long_text` / `list`. |
+| `min` | `Float` | Lower bound for numeric types; NULL for text / list. |
+| `max` | `Float` | Upper bound for numeric types; NULL for text / list. |
+| `step` | `Float` | Discrete step; NULL when unbounded. |
+| `list_csv` | `Text` | Comma-separated option list for `list`-type RTDs; NULL otherwise. |
+| `is_seeded` | `Boolean` | `True` for RTDs auto-materialised from the seed catalogue at session create; `False` for operator-authored. |
+| `seed_order` | `Integer` | Sort key for seeded rows in their canonical install order. |
+| `library_origin_id` | `Integer` (FK → `operator_response_type_definitions.id` ON DELETE SET NULL) | Provenance pointer to the operator-library row this per-session copy was cloned from (Segment 15C). NULL when seeded, authored directly in the session, or when its library origin has since been deleted. **Provenance only** — never read for resolution; the per-session row is the source of truth. **Inert** until 15C wires Save-to-library / Add-from-library (landed in 13D PR 3). |
+
+**Canonical spec:** `spec/instruments.md` (Response Types card);
+`app/services/instruments/_rtds.py` (CRUD + seed materialisation).
 
 ---
 
@@ -184,9 +216,11 @@ preview tables, column toggles, per-page column orders).
 
 ## 6. Per-user RuleSets (rule-based assignment)
 
-Stored on `rule_sets` + `rule_set_revisions`. Each user can save
-**Personal** RuleSets visible only to them; seeded RuleSets are
-read-only and shared.
+Stored on `operator_rule_sets` + `rule_set_revisions`. Each user can
+save **Personal** RuleSets visible only to them; seeded RuleSets are
+read-only and shared. (The table was renamed from `rule_sets` →
+`operator_rule_sets` in Segment 13D PR 0 to mirror the upcoming
+library tier added in 13D PR 2 — see `session_rule_sets` in §9.)
 
 **Surface:** Rule Builder — `/operator/sessions/{id}/assignments/rule-based-editor`.
 
@@ -207,10 +241,12 @@ read-only and shared.
 | Field | Type | Notes |
 |---|---|---|
 | `revision_no` | `Integer` | Monotonic per RuleSet. |
-| `combinator` | `String(16)` | `AND` / `OR`. |
+| `combinator` | `String(16)` | `ALL_OF` / `ANY_OF` / `PIPELINE` — see `app/schemas/rules.py::Combinator`. |
 | `exclude_self_reviews` | `Boolean` | Default for runs against this revision. The override on the main Assignments page wins when present. |
-| `seed` | `Integer` | Random seed for stochastic rule kinds (e.g. random-pair quotas). |
+| `seed` | `Integer` | Global RNG seed for any RANDOM-strategy quota rule whose own selection seed is unset. |
 | `rules_json` | `JSON` | The full rule list. Schema validated against `RuleSetSchema` in `app/schemas/rules.py`. |
+| `created_at` | `DateTime(timezone=True)` | When this revision was committed. Distinct from the `TimestampMixin` pair on `operator_rule_sets` because `rule_set_revisions` is append-only. |
+| `created_by_user_id` | `Integer` (FK → `users.id`, nullable) | Who committed this revision. NULL on seeded revisions inserted by migrations / fixtures. |
 
 **Canonical spec:** `spec/rule_based_assignment.md` (§7.2 covers
 the Rule Builder page; §7.1 covers the Rule Based card on the
@@ -228,7 +264,7 @@ preference stored?" finds the answer quickly.
 
 | Cookie | Scope | Purpose |
 |---|---|---|
-| `qsu_{session_id}=1` | `/operator/sessions/{id}`, `HttpOnly` | Quick Setup card unlock state. Set by `POST /operator/sessions/{id}/quick-setup/lock?action=unlock`; cleared by a Starlette middleware whenever the operator navigates away from Session Home (or by the lock action). |
+| `qsu_{session_id}=1` | path `/`, `HttpOnly`, `SameSite=Lax` | Quick Setup card unlock state. Set by `POST /operator/sessions/{id}/quick-setup/lock?action=unlock`; cleared by a Starlette middleware in `app/main.py` whenever the operator navigates anywhere that isn't Session Home or a `/operator/sessions/{id}/quick-setup/...` endpoint (so leaving Home for the lobby, operator settings, or `/about` relocks the card on return). The path is `/` so the cookie is visible on every subsequent request — without that, navigations outside `/operator/sessions/{id}/` couldn't observe and clear the cookie. |
 
 ### `localStorage` (per browser, per origin; survives sessions)
 
@@ -253,6 +289,9 @@ preference stored?" finds the answer quickly.
 | `?activate=1` | Validate detail page | Surfaces the activate-warns acknowledgment banner. |
 | `?quick_setup_error=…&quick_setup_reason=…` | Session Home | Slot-scoped error feedback after a failed Quick Setup submit. |
 | `?rule_based_error=…` | Assignments page | Slot-scoped error feedback after a failed rule-based generate. |
+| `?template={invitation\|reminder\|responses_received}` | Email Template page (`/operator/sessions/{id}/setup-invite`) | Selects which of the three template tabs is active. Defaults to `invitation`. |
+| `?rule_set_id=…&new=…&draft_from=…&previous_id=…&saved=…&error=…` | Rule Builder | Round-trip state for the picker / Save flow — which RuleSet the page opened with, whether this is a fresh draft, the draft's source row, the prior selection (so Cancel returns), the just-saved id (drives the success flash), and a slot-scoped error token. |
+| `?editing=…&saved=…` plus `?rtd_*=…` and `?rf_save_error=…` flash params | Instruments page | Per-instrument editing target + post-Save success flash, plus a family of flash params for RTD / response-field errors and would-empty / delete-blocked confirmation flows. |
 
 **Canonical specs:** `spec/setup_pages.md` (visibility-toggle
 pattern), `spec/quick_setup_card_spec.md` (cookie + lock semantics),
@@ -286,15 +325,103 @@ deployed environments. Source: `app/config.py`.
 
 ---
 
+## 9. Pre-positioned (inert) schema for upcoming surfaces
+
+Tables / columns that landed in Segment 13D as schema-only
+scaffolding ahead of Segments 15A / 15B / 15C. **Inert today** — no
+service module reads or writes them and no UI surfaces them yet —
+but listed here so a developer auditing "where will this setting
+live?" finds the answer without reading the segment plans.
+
+When the wiring lands, the corresponding row should move out of
+this section into the appropriate per-feature section above (e.g.
+`session_field_labels` into a new sub-section under §2 once 15A
+ships its resolver + Settings editor).
+
+### `session_field_labels` (Segment 15A target)
+
+Per-session friendly-label overrides for tag / pair-context
+fields. One row per `(session_id, source_type, source_field)`
+override.
+
+| Field | Type | Notes |
+|---|---|---|
+| `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
+| `source_type` | `String(32)` | `reviewer` / `reviewee` / `pair_context`. Widening to `assignment_context` is gated on 15B Slice 7 (deferred). |
+| `source_field` | `String(64)` | e.g. `tag_1` / `tag_2` / `tag_3` for the tag sources; `1` / `2` / `3` for `pair_context`. |
+| `label` | `String(255)` | The override label. |
+
+Unique on `(session_id, source_type, source_field)`. Wired by
+15A Slice 1 (`app/services/field_labels.py` resolver) and Slice
+3 (Settings editor surface).
+
+**Canonical spec:** `guide/segment_15A_friendly_labels.md`.
+
+### `session_rule_sets` (Segment 15B + 15C target)
+
+Per-session snapshot copies of RuleSets. Each row carries a
+complete snapshot of the rule tree at copy / edit time;
+`library_origin_id` links back to the operator-library row it
+was cloned from (provenance only).
+
+| Field | Type | Notes |
+|---|---|---|
+| `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
+| `name` | `String(255)` | Snapshot name. |
+| `description` | `Text` | Snapshot description. |
+| `combinator` | `String(16)` | `ALL_OF` / `ANY_OF` / `PIPELINE`. |
+| `exclude_self_reviews` | `Boolean` | Snapshot flag. |
+| `seed` | `Integer` | Global RNG seed. |
+| `rules_json` | `JSON` | Serialised rule tree — same shape as `rule_set_revisions.rules_json`. |
+| `library_origin_id` | `Integer` (FK → `operator_rule_sets.id` ON DELETE SET NULL) | Provenance pointer; never read for resolution. NULL when the row was authored directly in the session or the library origin has been deleted. |
+
+Wired by 15B Slice 2 (`instruments.rule_set_id` points into this
+table) and 15C (auto-copy from operator library on session
+create + Save-to-library flow).
+
+**Canonical spec:** `guide/segment_15B_per_instrument_assignments.md`,
+`guide/segment_15C_operator_libraries.md`.
+
+### `operator_response_type_definitions` (Segment 15C target)
+
+Operator-library tier for Response Type Definitions — RTDs visible
+across all of an operator's sessions. Auto-copied into a
+session's `response_type_definitions` rows on session create.
+
+| Field | Type | Notes |
+|---|---|---|
+| `owner_user_id` | `Integer` (FK → `users.id` ON DELETE CASCADE) | Owning operator. |
+| `response_type` | `String(64)` | Operator-chosen name (e.g. `"Likert5"`). Unique per owner via `uq_operator_rtd_owner_name`. |
+| `data_type` | `String(16)` | `int` / `decimal` / `short_text` / `long_text` / `list`. Same value-set as `response_type_definitions.data_type`. |
+| `min`, `max`, `step` | `Float` | Numeric bounds; NULL for non-numeric types. |
+| `list_csv` | `Text` | Comma-separated option list for `list`-type RTDs. |
+
+Wired by 15C (auto-copy on session create + Add-from-library /
+Save-to-library actions on the per-session RTD card).
+
+**Canonical spec:** `guide/segment_15C_operator_libraries.md`.
+
+---
+
 ## See also
 
 - `app/config.py` — env-config source of truth.
 - `app/db/models/` — SQLAlchemy declarations for every persisted
-  setting named here.
+  setting named here. The §9 inert tables live in
+  `session_field_label.py`, `session_rule_set.py`, and
+  `operator_response_type_definition.py`; their docstrings link
+  back to the segment plans that will wire them.
 - `app/services/operator_settings.py` — Operator Settings save /
   load flow.
 - `app/services/email_templates.py` — `OVERRIDE_KEYS` +
   `RESPONSES_RECEIVED_ENABLED_KEY`.
+- `app/services/instruments/_rtds.py` — per-session RTD CRUD +
+  `SEEDED_RESPONSE_TYPE_DEFINITIONS` seed catalogue.
+- `app/main.py` — Quick Setup unlock-cookie navigation
+  middleware (mirrors the `qsu_` prefix in
+  `app/web/routes_operator/_shared.py`).
+- `guide/segment_13D_db_prep.md` — rationale for every §9
+  inert table / column.
 - `guide/unfinished_business.md` — catalog of deferred settings
   surfaces (e.g. inline-editable Manage rows #25, Inactivate UI
   #36).
