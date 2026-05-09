@@ -30,12 +30,23 @@ class ParseResult:
         return any(issue.is_blocking for issue in self.issues)
 
 
-def _decode_csv(content: bytes, source: str) -> tuple[str | None, ValidationIssue | None]:
-    if len(content) > MAX_BYTES:
+def decode_csv(
+    content: bytes, source: str, *, max_bytes: int = MAX_BYTES
+) -> tuple[str | None, ValidationIssue | None]:
+    """Decode a CSV upload body to text, returning a structured
+    ``ValidationIssue`` instead of raising on the two operator-facing
+    failure modes (file too large / not valid UTF-8).
+
+    ``max_bytes`` defaults to the reviewer / reviewee import ceiling
+    (``MAX_BYTES``) but is overridable so the manual-assignments
+    importer in ``app.services.assignments`` can stay on its own
+    ``MANUAL_CSV_MAX_BYTES`` constant without forking the helper.
+    """
+    if len(content) > max_bytes:
         return None, ValidationIssue(
             severity=Severity.error,
             source=source,
-            message=f"File too large (max {MAX_BYTES // 1024} KiB)",
+            message=f"File too large (max {max_bytes // 1024} KiB)",
         )
     try:
         text = content.decode("utf-8-sig")
@@ -139,7 +150,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
     source = "reviewers"
     issues: list[ValidationIssue] = []
 
-    text, decode_issue = _decode_csv(content, source)
+    text, decode_issue = decode_csv(content, source)
     if decode_issue is not None:
         return ParseResult(rows=[], issues=[decode_issue])
     assert text is not None
@@ -237,7 +248,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
     source = "reviewees"
     issues: list[ValidationIssue] = []
 
-    text, decode_issue = _decode_csv(content, source)
+    text, decode_issue = decode_csv(content, source)
     if decode_issue is not None:
         return ParseResult(rows=[], issues=[decode_issue])
     assert text is not None
