@@ -14,10 +14,15 @@ duplicate.
 ## Goal
 
 Let operators rename `ReviewerTag1-3`, `RevieweeTag1-3`, and
-`PairContext1-3` (and optionally a new `AssignmentContext1-3`) **once
-per session**, with the friendly label flowing through every header,
-picker, tooltip, and preview that names those fields — not just the
-Display Field column where it lives today.
+`PairContext1-3` **once per session**, with the friendly label
+flowing through every header, picker, tooltip, and preview that
+names those fields — not just the Display Field column where it
+lives today.
+
+(`AssignmentContext1-3` was originally listed as in-scope; the
+2026-05-09 semantic clarification — see Slice 4 — establishes that
+it's logic-bearing rather than display-only and probably doesn't
+belong in a labels segment.)
 
 ---
 
@@ -34,11 +39,16 @@ Display Field column where it lives today.
 - Reviewer tags don't appear in `_DEFAULT_DISPLAY_LABELS` at all —
   `app/web/templates/operator/session_assignments.html:184-186`
   carries the literal `"Tag1"` / `"Tag2"` / `"Tag3"` headings.
-- AssignmentContext (per-(reviewer, reviewee, instrument) context
-  beyond the existing pair-level `pair_context_1/2/3`) doesn't exist
-  yet; if we want it, this is the right segment to define its
-  surface, since the labelling story is the only thing that
-  meaningfully differs from PairContext.
+- `AssignmentContext1-3` is **categorically different** from
+  `PairContext` and probably doesn't belong in this segment at all.
+  PairContext is display-only info specific to a (reviewer,
+  reviewee) pairing (e.g. "she was your student in NN1101");
+  AssignmentContext is logic-bearing info about the assignment
+  (e.g. "this is for the Award X category") that drives downstream
+  rules, validation, or filtering. Logic-bearing fields aren't a
+  labels concern — and most use cases are already derivable from
+  reviewer + reviewee tags evaluated through the rule engine. See
+  Slice 4 below.
 
 ---
 
@@ -119,28 +129,38 @@ used by every other setup mutation — calls
 `lifecycle.invalidate_if_validated`). It does **not** require
 edit-lock; labels are pure presentation.
 
-### Slice 4 (optional) — `AssignmentContext1-3`
+### Slice 4 (optional, likely defer) — `AssignmentContext1-3`
 
-Only worth doing if Segment 15B (per-instrument assignments) lands
-or is queued. Otherwise this is just `PairContext` renamed.
+**Semantic note (locked 2026-05-09).** `PairContext` is **display-
+only** information about a specific reviewer ↔ reviewee pairing
+that doesn't generalise across multiple individuals (e.g. "she was
+your student in NN1101"). `AssignmentContext` is **logic-bearing**
+information about the assignment (e.g. "this assignment is for
+the Award X category" — drives downstream filtering, reporting,
+or rule evaluation). The two are categorically different, not
+just per-instrument vs. per-pair.
 
-Two sub-decisions, neither blocking the other three slices:
+That difference flips the calculus on this slice:
 
-1. **Schema.** Add `assignment_context_1 / _2 / _3 VARCHAR(255)`
-   columns on `Assignment` (mirrors the tag pattern, plays well
-   with CSV) **or** reserve well-known keys
-   `assignment_context_1/2/3` inside the existing
-   `Assignment.context` JSON dict (cheaper but harder to type and
-   to import/export). Recommendation: named columns once 15B is
-   real.
-2. **Semantics.** PairContext is replicated across every instrument
-   fan-out for a `(reviewer, reviewee)` pair; AssignmentContext
-   would carry per-(reviewer, reviewee, instrument) data. Only
-   meaningful if assignments are truly per-instrument (15B).
+- **Labelling** is the smaller half. The friendly-label resolver
+  from Slice 1 generalises to `assignment_context` trivially —
+  add it to the `source_type` enum and the Settings editor
+  subsection picks it up.
+- **Semantics** are the bigger half, and they're **out of scope
+  for 15A**. Logic-bearing fields need their own infrastructure
+  (rule-engine integration, validation, conditional rendering
+  in the reviewer surface) that doesn't belong in a labels
+  segment.
+- **Likely unnecessary anyway.** Most logic-bearing-per-assignment
+  cases (award category, purpose, creation method) are
+  derivable from existing reviewer + reviewee tags evaluated
+  through the rule engine. Spend the effort on a use case
+  before introducing new columns.
 
-Wire the labels in via the same resolver from Slice 1 — add
-`assignment_context` to the `source_type` enum and the same Settings
-editor subsection picks them up.
+Recommend: drop this slice from 15A. If a real use case for
+logic-bearing per-assignment fields surfaces later, write a
+dedicated plan for it (schema + rule-engine integration + UI)
+rather than retrofitting the labels segment.
 
 ---
 

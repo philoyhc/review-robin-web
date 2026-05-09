@@ -39,7 +39,7 @@ needs that show up:
 | 12B — Audit retention | none | Operates on existing `audit_events` + `responses`. |
 | 14-1 — Email send activation | none | All schema already shipped in 11C Part 2 (Migration `c4f6a8b0d2e5`). |
 | 14 — Production hardening | type migrations only | JSON → JSONB, String(36) → native UUID. Postgres-specific, not "additive nullable" — stays in 14. |
-| 15B optional — `AssignmentContext1-3` | Three nullable columns on `assignments` | **Deliberately deferred.** The use-case decision (do these differ from PairContext, and how) hasn't been made yet — pre-positioning them risks shipping unused columns. Land alongside 15B Slice 4 if and when the feature is greenlit. |
+| 15B optional — `AssignmentContext1-3` | Three nullable columns on `assignments` | **Deliberately deferred — likely never lands.** The 2026-05-09 semantic clarification establishes that AssignmentContext is logic-bearing (e.g. "this assignment is for Award X category"), not display-only like PairContext, and most use cases are derivable from existing reviewer + reviewee tags evaluated through the rule engine. If a real use case surfaces, it warrants its own plan (schema + rule-engine integration + UI), not a pre-positioned column. |
 
 ---
 
