@@ -34,6 +34,20 @@ class ResponseTypeDefinition(Base):
     list_csv: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_seeded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     seed_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    library_origin_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "operator_response_type_definitions.id", ondelete="SET NULL"
+        ),
+        index=True,
+        nullable=True,
+    )
+    """Provenance pointer back to the operator-library row this
+    per-session RTD was copied from (Segment 15C). NULL when the
+    row was authored directly in the session, was seeded, or its
+    library origin has since been deleted. **Provenance only** —
+    never read for resolution; the per-session row is the single
+    source of truth for instrument fields. See
+    ``app/db/models/operator_response_type_definition.py``."""
 
     session: Mapped[ReviewSession] = relationship(
         back_populates="response_type_definitions"
