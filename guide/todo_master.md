@@ -233,6 +233,31 @@ pinned to each segment. The catalog itself lives in
    Catalog #23, #25, #33, #35, #36, §2.2.
    **Plan:** `guide/segment_15_operator_polish_and_documentation.md`.
 
+8. **15A — Pervasive friendly labels.**
+   Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
+   `PairContext1-3` (and optional `AssignmentContext1-3`) flowing
+   through every header / picker / tooltip via a session-level
+   resolver, not just per-instrument Display Field rows. New
+   `session_field_labels` table + `app/services/field_labels.py`
+   resolver + Settings-page editor. ~3-4 PRs. Lands cleanly any
+   time after the major refactor; recommended **before 15B** so
+   15B's per-instrument UI consumes the resolver instead of
+   re-introducing hardcoded literals.
+   **Plan:** `guide/segment_15A_friendly_labels.md`.
+
+9. **15B — Per-instrument assignments.**
+   Each `Instrument` carries its own assignment set (e.g. the
+   Manager survey collects different reviewer → reviewee pairings
+   than the Peer survey within one session). Schema already
+   supports this — `Assignment` carries `instrument_id` with a
+   `(session_id, reviewer_id, reviewee_id, instrument_id)` unique
+   constraint — but `replace_assignments` fans out uniformly today.
+   Slices: per-instrument service scope, `RuleSet` override, manual
+   CSV `Instrument` column, per-instrument Assignments page UI,
+   Quick Setup selector, per-instrument validation. ~5-7 PRs.
+   Recommended after 15A.
+   **Plan:** `guide/segment_15B_per_instrument_assignments.md`.
+
 ### Sequencing notes
 
 - **11C Part 2 → 14-1 Part A** is the email pipeline: 11C Part 2
