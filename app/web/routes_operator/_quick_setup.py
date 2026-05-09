@@ -26,6 +26,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import TypeAdapter
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
@@ -34,6 +35,7 @@ from app.schemas.assignments import AssignmentMode
 from app.schemas.sessions import SessionCreate
 from app.services import assignments, csv_imports, sessions
 from app.services import session_lifecycle as lifecycle
+from app.services.rules import engine, library
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -553,7 +555,6 @@ async def _run_quick_setup_assignments(
     # drives the Rule Based card on the Assignments page — one
     # engine path, one audit shape, regardless of which surface
     # initiated the generation.
-    from pydantic import TypeAdapter
 
     from app.schemas.rules import (
         Combinator,
@@ -561,7 +562,6 @@ async def _run_quick_setup_assignments(
         RuleSetOptions,
         RuleSetSchema,
     )
-    from app.services.rules import engine, library
 
     resolved_id = rule_set_id
     if resolved_id is None and rule == "full_matrix":

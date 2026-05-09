@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,7 @@ from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
 from app.services import assignments
+from app.services.rules import engine, library
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -117,7 +119,6 @@ def rule_builder_copy(
     same draft from source rather than re-POSTing.
     """
 
-    from app.services.rules import library
 
     base_url = (
         f"/operator/sessions/{review_session.id}"
@@ -195,7 +196,6 @@ def rule_builder_save(
         RuleSetOptions,
         RuleSetSchema,
     )
-    from app.services.rules import library
 
     base_url = (
         f"/operator/sessions/{review_session.id}"
@@ -488,7 +488,6 @@ def rule_builder_delete(
     falls through to the first-seed default — locked decision says
     "reloads the next-visible RuleSet (first seed fallback)"."""
 
-    from app.services.rules import library
 
     base_url = (
         f"/operator/sessions/{review_session.id}"
@@ -612,10 +611,8 @@ def rule_based_generate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    from pydantic import TypeAdapter
 
     from app.schemas.rules import Combinator, Rule, RuleSetOptions, RuleSetSchema
-    from app.services.rules import engine, library
 
     _require_editable(review_session)
 

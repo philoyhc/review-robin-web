@@ -32,10 +32,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
+from app.services.rules import engine, library
 
 
 
@@ -130,9 +132,7 @@ def build_rule_based_card_context(
         RuleSetSchema,
     )
     from app.services import assignments as assignments_service
-    from app.services.rules import engine, library
 
-    from pydantic import TypeAdapter
 
     rule_adapter = TypeAdapter(__import__(
         "app.schemas.rules", fromlist=["Rule"]
@@ -905,7 +905,6 @@ def _build_rule_builder_options(
     dropdown options + the seed/personal lists used for fallback
     selection. Returns ``(options, seeds, personal, by_id)``."""
 
-    from app.services.rules import library
 
     visible = list(library.list_visible_rule_sets(db, user=user))
     seeds = [rs for rs in visible if rs.is_seed]
@@ -1008,7 +1007,6 @@ def build_rule_builder_context(
     intentionally clean of selection state.
     """
 
-    from app.services.rules import library
 
     options, seeds, _personal, by_id = _build_rule_builder_options(db, user=user)
 
@@ -1147,7 +1145,6 @@ def _build_draft_context(
     isn't visible to the caller — same posture as a stale
     ``rule_set_id`` query param."""
 
-    from app.services.rules import library
 
     loaded = library.load_rule_set(db, source_id)
     if loaded is None:
