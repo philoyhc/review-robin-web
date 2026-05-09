@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -38,6 +38,19 @@ class Instrument(Base, TimestampMixin):
     deadline_closed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
+    sort_display_fields: Mapped[list[dict[str, Any]] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    """Operator-defined default sort spec for this instrument's
+    reviewer-surface table (Segment 13B). Each entry shapes as
+    ``{"source_type": str, "source_field": str, "direction": "asc"|"desc"}``;
+    NULL = "no operator default" (the reviewer-surface render
+    falls back to its current sort policy of instrument order
+    then reviewee order).
+
+    Lands inert in 13D PR 5 — the reviewer surface keeps its
+    current sort behaviour. 13B's render-path slice consumes
+    this column."""
     rule_set_id: Mapped[int | None] = mapped_column(
         ForeignKey("session_rule_sets.id", ondelete="SET NULL"),
         index=True,
