@@ -370,3 +370,59 @@ fields, seeds, and library service are all unchanged.
   affordance from PR 5c carries through).
 - Multi-tab edit conflict detection (last-write-wins, same as
   Segment 13A).
+
+## Follow-on — `session_rule_sets` name uniqueness (Segment 13A-2)
+
+Shipped 2026-05-09 as PR **#711**, after the main 13A-1 segment
+archived. Closes a schema gap surfaced while planning 12A-1: the
+sister table `response_type_definitions` already enforces
+`uq_rtd_session_name` so per-session RTD names are unique, but
+`session_rule_sets` (landed schema-only by 13D PR 2) had no
+equivalent constraint. The 12A-1 export contract leans on
+per-session name uniqueness for the name-based
+`instruments[N].rule_set_name` reference; without the constraint
+a duplicate-name pair anywhere in the table would make the
+reference ambiguous.
+
+**PR 1 — DB-level unique constraint.** Pure DDL — the table was
+empty on every deployment running the migration (no service
+module reads or writes it yet, per 13D PR 2).
+
+- Alembic migration `7c2b94f1a5e3` adds
+  `UniqueConstraint("session_id", "name",
+  name="uq_session_rule_set_session_name")` to
+  `session_rule_sets`, via `batch_alter_table` so SQLite stays
+  happy (it has no `ALTER` for constraints; on Postgres the
+  helper resolves to a plain `ALTER TABLE … ADD CONSTRAINT`).
+- `app/db/models/session_rule_set.py` declares the constraint
+  via `__table_args__` so future autogenerate runs see it.
+- `tests/integration/test_session_rule_set_schema.py` gains
+  `test_unique_per_session_name` (duplicate raises
+  `IntegrityError`) and `test_same_name_different_sessions_ok`
+  (constraint is per-session — same name across different
+  sessions remains legal).
+- Doc updates: `spec/settings_inventory.md` §9 note on the
+  `name` row, `guide/segment_12A-1_export.md` caveat collapsed
+  to "enforced at the schema level",
+  `guide/segment_15B_per_instrument_assignments.md` Slice 2
+  note that per-instrument selection relies on the constraint
+  for stable name-based references in the 12A-1 export, and
+  `guide/segment_15C_operator_libraries.md` Slice 4 note that
+  the existing `_resolve_save_as_name` /
+  `_name_taken_by_other` helpers
+  (`app/web/routes_operator/_rule_builder.py:532`) get ported
+  one-for-one to check `(session_id, name)` instead of
+  `(owner_user_id, name)` when the editor reroutes there.
+
+**Service-layer enforcement.** Deferred to 15C Slice 4 where
+the Rule Builder editor is rerouted to save into
+`session_rule_sets` instead of `operator_rule_sets`. 13A-2
+intentionally pinned only the DB invariant; the service-layer
+collision check + redirect-with-error pattern that
+`_resolve_save_as_name` / `_name_taken_by_other` already
+implements for `operator_rule_sets` gets adapted one-for-one in
+15C Slice 4. The DB unique constraint from this PR is the
+safety net behind that adaptation — guarantees uniqueness even
+if a future code path bypasses the service helper.
+
+Net diff: +171 / −8 across 7 files.
