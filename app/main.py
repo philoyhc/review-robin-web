@@ -12,9 +12,11 @@ from app.web.routes_reviewer import router as reviewer_router
 
 # Paths whose responses should NOT clear the operator's
 # ``qsu_{session_id}=1`` cookie — Session Home itself + every
-# ``/quick-setup/...`` endpoint (lock toggle, file submits). Everything
-# else under ``/operator/`` clears the cookie so navigating away from
-# Home and returning relocks the Quick Setup card.
+# ``/quick-setup/...`` endpoint (lock toggle, file submits). Every
+# other path clears the cookie so navigating away from Home (whether
+# to another operator page like ``/operator/settings``, the sessions
+# lobby ``/operator/sessions``, or ``/about``) and returning relocks
+# the Quick Setup card.
 #
 # The ``qsu_`` literal in ``_QUICK_SETUP_COOKIE_RE`` mirrors
 # ``_QUICK_SETUP_COOKIE_PREFIX`` in
@@ -40,23 +42,19 @@ def create_app() -> FastAPI:
     ):
         response = await call_next(request)
         path = request.url.path
-        if not path.startswith("/operator/"):
-            return response
         if _QUICK_SETUP_KEEP_COOKIE_RE.match(path):
             return response
         # Operator navigated away from Session Home (and away from
         # the Quick Setup endpoints that own the cookie's
         # lifecycle). Expire any ``qsu_{session_id}`` cookies the
         # request carried so coming back to Home renders the card
-        # locked.
+        # locked. The cookie is set with path ``/`` (see
+        # ``app/web/routes_operator/_quick_setup.py``) so the same
+        # path here matches the browser's stored cookie.
         for cookie_name in list(request.cookies.keys()):
-            m = _QUICK_SETUP_COOKIE_RE.match(cookie_name)
-            if m is None:
+            if _QUICK_SETUP_COOKIE_RE.match(cookie_name) is None:
                 continue
-            sid = m.group(1)
-            response.delete_cookie(
-                key=cookie_name, path=f"/operator/sessions/{sid}"
-            )
+            response.delete_cookie(key=cookie_name, path="/")
         return response
 
     @app.get("/")

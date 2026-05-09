@@ -53,10 +53,6 @@ class QuickSetupSlot:
     """Current population — count of reviewers / reviewees /
     assignments. ``0`` for the configuration-import slot."""
 
-    count_summary: str
-    """Pre-rendered count copy, e.g. ``"8 currently"`` /
-    ``"none yet"`` / ``"104 currently, full-matrix"``."""
-
     mode: str
     """``"file_upload"`` for slots 1, 2, 4; ``"rule_or_csv"`` for
     slot 3 (Assignments). Slot mode controls which inputs render
@@ -209,7 +205,6 @@ def build_quick_setup_context(
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     assignment_count = assignments.existing_count(db, sid)
-    assignment_mode: str | None = review_session.assignment_mode
 
     cancel_url_for = lambda key: (  # noqa: E731
         f"/operator/sessions/{sid}#quick-setup-{key}"
@@ -245,11 +240,6 @@ def build_quick_setup_context(
             key="reviewers",
             label="Reviewers",
             count=reviewer_count,
-            count_summary=(
-                f"{reviewer_count} currently"
-                if reviewer_count
-                else "none yet"
-            ),
             mode="file_upload",
             is_wired=True,
             wire_url=f"/operator/sessions/{sid}/quick-setup/reviewers",
@@ -261,11 +251,6 @@ def build_quick_setup_context(
             key="reviewees",
             label="Reviewees",
             count=reviewee_count,
-            count_summary=(
-                f"{reviewee_count} currently"
-                if reviewee_count
-                else "none yet"
-            ),
             mode="file_upload",
             is_wired=True,
             wire_url=f"/operator/sessions/{sid}/quick-setup/reviewees",
@@ -277,7 +262,6 @@ def build_quick_setup_context(
             key="assignments",
             label="Assignments",
             count=assignment_count,
-            count_summary=_assignment_summary(assignment_count, assignment_mode),
             mode="rule_or_csv",
             is_wired=True,
             wire_url=f"/operator/sessions/{sid}/quick-setup/assignments",
@@ -291,7 +275,6 @@ def build_quick_setup_context(
             key="settings",
             label="Session settings",
             count=0,
-            count_summary="",
             mode="file_upload",
             is_wired=False,
             wire_url=None,
@@ -419,7 +402,6 @@ def build_new_session_quick_setup_context(
             key="reviewers",
             label="Reviewers",
             count=0,
-            count_summary="none yet",
             mode="file_upload",
             is_wired=is_wired,
             wire_url=None,
@@ -429,7 +411,6 @@ def build_new_session_quick_setup_context(
             key="reviewees",
             label="Reviewees",
             count=0,
-            count_summary="none yet",
             mode="file_upload",
             is_wired=is_wired,
             wire_url=None,
@@ -439,7 +420,6 @@ def build_new_session_quick_setup_context(
             key="assignments",
             label="Assignments",
             count=0,
-            count_summary="none yet",
             mode="rule_or_csv",
             is_wired=is_wired,
             wire_url=None,
@@ -451,7 +431,6 @@ def build_new_session_quick_setup_context(
             key="settings",
             label="Session settings",
             count=0,
-            count_summary="upload a session-settings CSV",
             mode="file_upload",
             is_wired=False,
             wire_url=None,
@@ -475,9 +454,3 @@ def build_new_session_quick_setup_context(
     )
 
 
-def _assignment_summary(count: int, mode: str | None) -> str:
-    if not count:
-        return "none yet"
-    if mode:
-        return f"{count} currently, {mode}"
-    return f"{count} currently"

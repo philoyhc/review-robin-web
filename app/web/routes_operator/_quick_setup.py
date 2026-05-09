@@ -222,7 +222,13 @@ def quick_setup_lock_toggle(
         status_code=status.HTTP_303_SEE_OTHER,
     )
     cookie_name = _quick_setup_cookie_name(review_session.id)
-    cookie_path = f"/operator/sessions/{review_session.id}"
+    # Path ``/`` so the cookie is visible on every subsequent request
+    # — including pages outside ``/operator/sessions/{id}/`` like
+    # ``/operator/sessions`` (lobby), ``/operator/settings``, and
+    # ``/about``. The navigation middleware in ``app/main.py`` deletes
+    # the cookie on any path that isn't Session Home or a quick-setup
+    # endpoint, so leaving Home from any direction relocks the card.
+    cookie_path = "/"
     if action == "unlock":
         redirect.set_cookie(
             key=cookie_name,

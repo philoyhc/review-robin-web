@@ -122,18 +122,18 @@ def test_build_quick_setup_context_returns_four_slots(
     assert context.is_disabled is False
 
 
-def test_quick_setup_count_summary_reflects_population(
+def test_quick_setup_count_reflects_population(
     client: TestClient, db: Session
 ) -> None:
-    """The slot count summary line surfaces the live population
-    so the operator can see at a glance what's on file."""
+    """The slot ``count`` field surfaces the live population so other
+    code paths can branch on whether the slot is empty."""
 
     empty = _make_session(client, db, code="qs-empty")
     empty_ctx = views.build_quick_setup_context(db, empty)
     by_key = {slot.key: slot for slot in empty_ctx.slots}
     assert by_key["reviewers"].count == 0
-    assert by_key["reviewers"].count_summary == "none yet"
-    assert by_key["assignments"].count_summary == "none yet"
+    assert by_key["reviewees"].count == 0
+    assert by_key["assignments"].count == 0
 
     populated = _seed_pair(
         client, db, code="qs-populated", reviewer_email="r@example.edu"
@@ -141,11 +141,7 @@ def test_quick_setup_count_summary_reflects_population(
     populated_ctx = views.build_quick_setup_context(db, populated)
     populated_by_key = {slot.key: slot for slot in populated_ctx.slots}
     assert populated_by_key["reviewers"].count == 1
-    assert populated_by_key["reviewers"].count_summary == "1 currently"
-    # Assignments slot includes the stored rule label (lowercase enum
-    # value as Text — ``full_matrix``).
     assert populated_by_key["assignments"].count >= 1
-    assert "full_matrix" in populated_by_key["assignments"].count_summary
 
 
 def test_quick_setup_disables_when_session_is_activated(
@@ -244,7 +240,7 @@ def test_quick_setup_card_level_replacement_checkbox_renders(
 
     assert 'id="quick-setup-confirm-replace-toggle"' in body
     assert (
-        "This will replace any existing reviewers, reviewees,"
+        "Yes, replace existing reviewers, reviewees,"
         in body
     )
     # No per-slot ``banner-warning`` confirm-banners anymore — the

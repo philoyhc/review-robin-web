@@ -61,16 +61,20 @@ def test_new_session_quick_setup_has_no_lock_toggle(
     assert "quick-setup-body locked" not in body
 
 
-def test_new_session_quick_setup_zero_counts(
+def test_new_session_quick_setup_renders_action_labels(
     client: TestClient,
 ) -> None:
-    """All four slots show zero / empty counts since there's no
+    """Each slot heading carries an inline action label —
+    ``Upload a CSV`` for the file-upload slots, ``Generate by rule``
+    for Assignments. No count copy renders here since there's no
     session row yet."""
 
     body = client.get("/operator/sessions/new").text
 
-    # Reviewers / Reviewees / Assignments slots all read "none yet".
-    assert body.count("none yet") >= 3
+    # Three file-upload slots (Reviewers, Reviewees, Session settings).
+    assert body.count(">Upload a CSV<") >= 3
+    # Assignments slot's inline label.
+    assert ">Generate by rule<" in body
 
 
 def test_build_new_session_quick_setup_context_shape() -> None:
@@ -104,7 +108,7 @@ def test_new_session_quick_setup_omits_confirm_replace_checkbox(
     body = client.get("/operator/sessions/new").text
 
     assert 'id="quick-setup-confirm-replace-toggle"' not in body
-    assert "This will replace any existing reviewers" not in body
+    assert "Yes, replace existing reviewers" not in body
 
 
 def test_new_session_quick_setup_inputs_wired_to_create_session_form(
