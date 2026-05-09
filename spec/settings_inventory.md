@@ -367,7 +367,7 @@ was cloned from (provenance only).
 | Field | Type | Notes |
 |---|---|---|
 | `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
-| `name` | `String(255)` | Snapshot name. |
+| `name` | `String(255)` | Snapshot name. Unique per session via `uq_session_rule_set_session_name` (Segment 13A-2). |
 | `description` | `Text` | Snapshot description. |
 | `combinator` | `String(16)` | `ALL_OF` / `ANY_OF` / `PIPELINE`. |
 | `exclude_self_reviews` | `Boolean` | Snapshot flag. |

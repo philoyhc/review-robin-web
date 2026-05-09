@@ -10,6 +10,8 @@ to consume:
   deleted (the session copy survives unchanged).
 - ``ON DELETE CASCADE`` on ``session_id`` reaps the rows when the
   owning session is deleted.
+- ``UNIQUE (session_id, name)`` enforced via
+  ``uq_session_rule_set_session_name`` (Segment 13A-2).
 
 The table sits inert until 15C wires the library / copy split;
 this file is the schema gate.
@@ -18,7 +20,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
+import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -194,6 +198,84 @@ def test_cascade_on_session_delete(db: Session) -> None:
         select(SessionRuleSet).where(SessionRuleSet.session_id == session_id)
     ).scalars().all()
     assert remaining == []
+
+
+def test_unique_per_session_name(db: Session) -> None:
+    """Two snapshots with the same ``(session_id, name)`` tuple violate
+    ``uq_session_rule_set_session_name`` (Segment 13A-2). The second
+    insert raises on flush, mirroring how ``response_type_definitions``
+    enforces ``uq_rtd_session_name``."""
+
+    review_session = _make_session(db, "srs-uq")
+    db.add(
+        SessionRuleSet(
+            session_id=review_session.id,
+            name="Cross-cohort fanout",
+            description="First copy",
+            combinator="ALL_OF",
+            exclude_self_reviews=True,
+            rules_json=[],
+            library_origin_id=None,
+        )
+    )
+    db.flush()
+
+    db.add(
+        SessionRuleSet(
+            session_id=review_session.id,
+            name="Cross-cohort fanout",
+            description="Conflict",
+            combinator="ANY_OF",
+            exclude_self_reviews=False,
+            rules_json=[],
+            library_origin_id=None,
+        )
+    )
+
+    with pytest.raises(IntegrityError):
+        db.flush()
+
+
+def test_same_name_different_sessions_ok(db: Session) -> None:
+    """The unique constraint is per-session — the same name can name
+    distinct snapshots in different sessions (e.g. two operators each
+    have a "Cross-cohort fanout" RuleSet copied into their own
+    session)."""
+
+    sess_a = _make_session(db, "srs-multi-a")
+    sess_b = _make_session(db, "srs-multi-b")
+    db.add(
+        SessionRuleSet(
+            session_id=sess_a.id,
+            name="Cross-cohort fanout",
+            description="Session A's copy",
+            combinator="ALL_OF",
+            exclude_self_reviews=True,
+            rules_json=[],
+        )
+    )
+    db.add(
+        SessionRuleSet(
+            session_id=sess_b.id,
+            name="Cross-cohort fanout",
+            description="Session B's copy",
+            combinator="ALL_OF",
+            exclude_self_reviews=True,
+            rules_json=[],
+        )
+    )
+    db.flush()
+
+    rows = db.execute(
+        select(SessionRuleSet)
+        .where(SessionRuleSet.name == "Cross-cohort fanout")
+        .order_by(SessionRuleSet.session_id)
+    ).scalars().all()
+    assert len(rows) == 2
+    assert {r.description for r in rows} == {
+        "Session A's copy",
+        "Session B's copy",
+    }
 
 
 def test_timestamp_columns_default_now(db: Session) -> None:
