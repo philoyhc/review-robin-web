@@ -704,6 +704,13 @@ Builder (largest, isolate last).
 
 ### 12.C — Cross-cutting hygiene bundle (small, fast, multiple wins)
 
+**Status: Complete (2026-05-09).** All 3 PRs landed (#680 → #681 →
+#682) in the recommended C1 → C2 → C3 order. C1 promoted the CSV
+decode helper to a public `decode_csv`; C2 lifted the 14 inline
+rules-library / TypeAdapter imports to module scope; C3 introduced
+`app/services/_queries.py::session_scoped(target, session_id)` and
+migrated the busiest callers in `assignments.py`.
+
 Three independent low-risk items the audit flagged that don't
 warrant a multi-PR ladder of their own. Sequencing recommendation
 in §12.C.0 below; per-item plans in §12.C.1 / §12.C.2 / §12.C.3.
@@ -930,6 +937,21 @@ and §12.B are both complete, so C3 is safe to author.)
   (15 → 0).
 
 ### 12.D — Split large integration test files
+
+**Status: Complete (2026-05-09).** Single PR #683 with 6 commits.
+`tests/integration/test_display_field_routes.py` (2,167 LOC, 53
+tests) split into 6 per-surface files
+(`test_display_field_routes.py` 7 CRUD tests +
+`test_display_field_lazy_seeding.py` 4 tests +
+`test_display_field_locked_rows.py` 3 tests +
+`test_display_field_state_machine.py` 8 tests +
+`test_response_field_bulk_save.py` 17 tests +
+`test_response_type_card.py` 14 tests) backed by a new
+`tests/integration/_display_field_helpers.py` shared-helper module
+(7 helpers, mirrors the `_preview_iframe.py` convention). The
+`reviewer_user` fixture stayed inline in `test_response_field_bulk_save.py`
+since exactly one test consumes it. Pure relocation — no fixture
+or test changes.
 
 **Why.** `tests/integration/test_display_field_routes.py` is 2,167
 LOC, 40+ test functions covering at least 5 distinct surfaces

@@ -334,7 +334,7 @@ that doesn't care about the underlying fanout.
 - `app/db/models/assignment.py` — `Assignment.context` column
   (already exists).
 - `app/db/models/instrument.py` — gains `group_kind` column.
-- `app/services/instruments.py` — `DISPLAY_FIELD_LABELS` /
+- `app/services/instruments/_display_fields.py` — `DISPLAY_FIELD_LABELS` /
   `DISPLAY_FIELD_KEYS` mappings; group-scoped instrument editor
   picks against a restricted subset of the same registry.
 - `guide/archive/segment_13A_rulebased_assignment_builder.md` — likely

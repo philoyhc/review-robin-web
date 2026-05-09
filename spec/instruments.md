@@ -8,7 +8,9 @@ small slices.
 This file describes **what should be on the page**. It does not
 describe the routes, services, or schema that back it — those live
 in `app/web/routes_operator/_instruments.py`,
-`app/services/instruments.py`, and `app/db/models/instrument*.py`.
+`app/services/instruments/` (split by concern: `_rtds.py`,
+`_display_fields.py`, `_response_fields.py`, `_instrument_crud.py`,
+`_state.py`), and `app/db/models/instrument*.py`.
 When a behaviour below is unwired
 ("Save writes to the database"), the rebuild slice that lands it
 also wires the route + service + persistence.
@@ -331,7 +333,7 @@ position. Example: if `Instrument #2` is deleted and `Instrument
 #3` exists, `Instrument #3` becomes `Instrument #2` (both in the
 database `Instrument.order` and in the on-screen `#N` header).
 This matches the existing service-layer repack in
-`delete_instrument` (`app/services/instruments.py`).
+`delete_instrument` (`app/services/instruments/_instrument_crud.py`).
 
 ## Response Type Definitions card
 
@@ -545,7 +547,7 @@ inputs to be fixed.
   #206. The rebuild slice that wires this is the first that
   consumes `InstrumentDisplayField` rows again from the operator
   UI; it also extends `_VALID_DISPLAY_SOURCES` in
-  `app/services/instruments.py` with `(reviewee, name)` and
+  `app/services/instruments/_display_fields.py` with `(reviewee, name)` and
   `(reviewee, email_or_identifier)` so the two mandatory rows
   can persist as ordinary display-field rows.
 - **Sort column** — placeholder; the *default row order on

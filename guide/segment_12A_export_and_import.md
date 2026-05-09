@@ -589,7 +589,7 @@ reviewer surface and operator UI count pages):
 
   Seeded RTDs (`is_seeded=true`) are **not exported** — they're
   regenerated from `SEED_RESPONSE_TYPE_DEFINITIONS` in
-  `app/services/instruments.py` on session creation, so the
+  `app/services/instruments/_rtds.py` on session creation, so the
   importer doesn't need to recreate them. If a future operator-
   edit-on-seeded path lands, fold it in as `rtds[<name>].overrides.*`.
 - **Per-instrument** — keyed by 1-based position
