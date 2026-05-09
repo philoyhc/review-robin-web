@@ -131,8 +131,8 @@ def test_route_streams_csv_with_canonical_filename(
     )
 
     rows = list(csv.reader(io.StringIO(response.text)))
-    # 19 columns in the header.
-    assert len(rows[0]) == 19
+    # 20 columns in the header (PR 4a added ``SelfReview``).
+    assert len(rows[0]) == 20
     assert rows[0][0] == "ReviewerName"
     assert rows[0][-1] == "Version"
     # One body row from the seeded response.
@@ -141,6 +141,7 @@ def test_route_streams_csv_with_canonical_filename(
     assert rows[1][6] == "carol@example.edu"
     assert rows[1][14] == "Likert5"
     assert rows[1][15] == "4"
+    assert rows[1][16] == "FALSE"  # alex@ != carol@
 
 
 def test_route_emits_audit_event_with_row_count(

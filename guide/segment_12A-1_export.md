@@ -571,10 +571,12 @@ RevieweeName,RevieweeEmail,RevieweeTag1,RevieweeTag2,RevieweeTag3,
 InstrumentName,InstrumentShortLabel,
 FieldKey,FieldLabel,ResponseType,
 Value,
+SelfReview,
 SavedAt,SubmittedAt,Version
 ```
 
-19 columns. Grouped logically:
+20 columns (PR 4 shipped 19; PR 4a added `SelfReview` between
+`Value` and `SavedAt`). Grouped logically:
 
 - **Reviewer identity + tags** (5 columns) — segment-by-tag is
   the most common analyst operation; tags are denormalised so
@@ -598,6 +600,17 @@ SavedAt,SubmittedAt,Version
 - **Value** (1 column) — the response cell. Empty for explicit
   clear (reviewer typed and then deleted); see "Empty / missing
   values" below.
+- **SelfReview** (1 column, PR 4a) — `TRUE` / `FALSE` derived
+  from `is_self_review(reviewer, reviewee)`
+  (`app/services/assignments.py`): case-insensitive match of
+  `reviewer.email` against `reviewee.email_or_identifier` when
+  the latter is an email; `FALSE` when the reviewee identifier
+  isn't an email (cohorts that match by student-id / handle
+  can't have self-reviews). Uppercase by deliberate choice for
+  Excel-idiom analyst tools — diverges from the lowercase
+  `true` / `false` the assignments CSV uses for
+  `IncludeAssignment`, but the responses CSV is
+  analyst-facing rather than round-trip-import-facing.
 - **Lifecycle** (3 columns) — `SavedAt` (always set; UTC ISO-8601
   with offset), `SubmittedAt` (empty for saved-but-not-submitted
   drafts), `Version` (autosave / re-submit revision count).
@@ -827,15 +840,19 @@ maintaining as a template.
 
 ## PR sequence
 
-Sized as **5 PRs** in dependency order. PRs 2 + 3 + 4 are
-independent of each other and parallel-shippable once PR 1's
-shared helpers are in place. PR 1a follows PR 1 — same module,
-small additive change to the serialiser. PR 4 (Responses)
-serves a different use case (downstream analysis) than the
-porting-flow PRs (1 / 1a / 2 / 3); its inclusion in this
-segment is convenience only — they share the Extract Data
+Sized as **5 PRs + 1 follow-on** in dependency order. PRs 2 +
+3 + 4 are independent of each other and parallel-shippable
+once PR 1's shared helpers are in place. PR 1a follows PR 1 —
+same module, small additive change to the serialiser. PR 4
+(Responses) serves a different use case (downstream analysis)
+than the porting-flow PRs (1 / 1a / 2 / 3); its inclusion in
+this segment is convenience only — they share the Extract Data
 card's anchor and the `stream_csv` plumbing, not the round-trip
-contract.
+contract. **PR 4a** follows PR 4: a single-column additive
+extension to the responses CSV (`SelfReview`) that an analyst
+working at scale would otherwise have to recompute by joining
+on email — small enough to land as its own slice rather than
+absorbing into a future PR.
 
 ### PR 1 — Settings export + shared helpers
 
@@ -1055,6 +1072,58 @@ plumbing as the prior PRs.
 - No format spec for the columns elsewhere — this guide is
   the source of truth until the format proves stable across
   two or three downstream consumers.
+
+### PR 4a — SelfReview column on the responses extract
+
+**Goal.** Add a single derived column to the responses CSV so
+analysts can segment / filter on self-reviews without
+recomputing the predicate by joining the reviewer + reviewee
+columns on email. Tiny additive change; no route changes,
+no audit changes, no card changes — purely a serialiser +
+header tweak.
+
+- New column **`SelfReview`** in `HEADER`, inserted between
+  `Value` (col 15) and `SavedAt` (now col 17). Body cells emit
+  uppercase `TRUE` / `FALSE` derived from
+  `is_self_review(reviewer, reviewee)`
+  (`app/services/assignments.py`).
+- Reuses the canonical predicate. The function was already
+  used by `count_self_review_candidates`,
+  `count_self_reviews_in_assignments`, and
+  `generate_full_matrix`; PR 4a renames it from the
+  module-private `_is_self_review` to the public
+  `is_self_review` and updates the three internal call sites
+  in lockstep. Cleanest way to expose the helper across
+  module boundaries; no new abstraction.
+- Predicate semantics (preserved verbatim from the existing
+  helper):
+  - Case-insensitive `casefold()` comparison of
+    `reviewer.email` against `reviewee.email_or_identifier`.
+  - Returns `False` when the reviewee identifier doesn't
+    contain `@` — cohorts that match by student-id / handle
+    can't have self-reviews because there's no email to
+    compare against; emit `FALSE`.
+- Format choice: **uppercase `TRUE` / `FALSE`** rather than
+  the lowercase `true` / `false` used by the assignments CSV's
+  `IncludeAssignment` and the settings CSV's boolean cells.
+  Deliberate divergence — the responses CSV is analyst-tool
+  facing (Excel idiomatically renders booleans uppercase;
+  pandas' `read_csv` parses both forms), whereas the other
+  CSVs are round-trip-import-facing where lowercase matches
+  the spec. Document the divergence in the file's docstring +
+  the segment-doc Column shape section above.
+- Tests:
+  - **Unit** (extends `tests/unit/test_responses_extract.py`):
+    pin the 20-column HEADER + position of `SelfReview`;
+    `TRUE` when reviewer email matches reviewee identifier;
+    `FALSE` when emails differ; case-insensitive match
+    succeeds (`Alex@Example.Edu` vs `alex@example.edu`);
+    `FALSE` when reviewee identifier isn't an email
+    (`student-001`).
+  - **Integration smoke** (extends
+    `tests/integration/test_extracts_responses_route.py`):
+    20 columns in the header, body cell at index 16 is
+    `FALSE` for the seeded non-self-review pair.
 
 ## Out of scope
 

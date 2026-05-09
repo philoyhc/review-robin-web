@@ -1,4 +1,4 @@
-"""Responses extract — Segment 12A-1 PR 4.
+"""Responses extract — Segment 12A-1 PR 4 + PR 4a.
 
 Streams the session's reviewer responses as a wide CSV designed
 for **downstream analysis** (Excel pivots, pandas groupby, BI
@@ -13,7 +13,7 @@ No import counterpart. Operators don't upload responses; only
 reviewers create them via the response surface.
 
 Plan: ``guide/segment_12A-1_export.md`` "Responses extract"
-section + PR 4.
+section + PR 4 + PR 4a (SelfReview column).
 """
 
 from __future__ import annotations
@@ -33,11 +33,12 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.services.assignments import is_self_review
 
 __all__ = ["HEADER", "serialize_responses"]
 
 
-# 19-column header. Pinned in unit tests so a rename here fails
+# 20-column header. Pinned in unit tests so a rename here fails
 # loud and forces analysts of the file to update their pipelines
 # deliberately.
 HEADER: tuple[str, ...] = (
@@ -64,6 +65,14 @@ HEADER: tuple[str, ...] = (
     "ResponseType",
     # Value (1 col). Empty cell ⇒ reviewer cleared the field.
     "Value",
+    # Self-review flag (1 col, PR 4a). Computed from
+    # ``is_self_review(reviewer, reviewee)`` — case-insensitive
+    # match of ``reviewer.email`` against
+    # ``reviewee.email_or_identifier`` when the latter is an
+    # email; ``FALSE`` for non-email reviewee identifiers.
+    # Uppercase ``TRUE`` / ``FALSE`` for analyst-tool
+    # friendliness (Excel idiom).
+    "SelfReview",
     # Lifecycle (3 cols). ``SubmittedAt`` empty ⇒
     # saved-but-not-submitted draft.
     "SavedAt",
@@ -150,6 +159,7 @@ def serialize_responses(
             field.label,
             rtd.response_type,
             response.value if response.value is not None else "",
+            "TRUE" if is_self_review(reviewer, reviewee) else "FALSE",
             response.saved_at.isoformat() if response.saved_at else "",
             (
                 response.submitted_at.isoformat()
