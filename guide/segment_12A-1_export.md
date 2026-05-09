@@ -71,6 +71,107 @@ own. Session-level copies (`response_type_definitions`,
 session-scoped state the operator built up for this particular
 session.
 
+## Round-trip readiness
+
+The four CSVs this segment ships, plus the session-create-time
+seed materialisation already in place on every deployment, plus
+**either** a manual assignments CSV **or** a re-run of Generate
+against an exported RuleSet, are sufficient to fully set up a
+new session into a state where Validate is meaningful. Walking
+through the validation rules in `app/services/validation.py` —
+each row names where the requirement is captured:
+
+| Validation rule | Severity | Captured in |
+|---|---|---|
+| `session.no_name` | error | `session.name` (settings CSV) |
+| `session.no_code` | error | `session.code` (settings CSV) |
+| `reviewers.empty` | error | reviewers CSV |
+| `reviewers.duplicate_email` | error | reviewers CSV (importer rejects on upload) |
+| `reviewees.empty` | error | reviewees CSV |
+| `reviewees.duplicate_id` | error | reviewees CSV (importer rejects on upload) |
+| `instruments.no_fields` | error | `instruments[N].response_fields[M].*` (settings CSV) |
+| `instruments.no_display_fields` | warning | `instruments[N].display_fields[M].*` (settings CSV) |
+| `assignments.no_mode` | warning | manual assignments CSV upload **or** rule-based Generate run on the destination |
+| `email_template.no_help_contact` | info | `session.help_contact` (settings CSV) |
+
+Cross-references each piece of operator typing relies on are
+also covered:
+
+- **RTD references on response fields.**
+  `instruments[N].response_fields[M].response_type` resolves to
+  either a seeded RTD name (auto-materialised from
+  `SEED_RESPONSE_TYPE_DEFINITIONS` on session create) or a
+  `rtds[<name>]` row exported earlier in the same CSV. The
+  importer fails loudly if a name doesn't resolve.
+- **RuleSet references on instruments (post-15B).**
+  `instruments[N].rule_set_name` resolves to either a seeded
+  RuleSet (auto-materialised from `SEEDS` /
+  `SEEDED_RULE_SETS` on session create) or a
+  `session_rule_sets[N].*` block exported earlier in the same
+  CSV. Same fail-loud rule.
+
+### Manual-mode round-trip
+
+For sessions where `assignment_mode == "manual"`:
+
+1. Operator imports settings CSV → reviewers CSV → reviewees
+   CSV in any order.
+2. Operator imports assignments CSV last (the importer
+   resolves reviewer / reviewee emails against the now-
+   populated rosters and resolves the `Instrument` column
+   against the now-populated instruments).
+3. Validate is meaningful — all errors above are addressable
+   with what's been imported.
+
+### Rule-based-mode round-trip
+
+For sessions where `assignment_mode == "rule_based"`:
+
+1. Operator imports settings CSV → reviewers CSV → reviewees
+   CSV in any order. The settings CSV's `session_rule_sets[N]`
+   blocks rehydrate every operator-authored RuleSet the source
+   session had; seeded RuleSets are already present on the
+   destination from the session-create-time materialisation.
+2. Operator runs Generate. **Post-15B**, the engine reads each
+   `instruments.rule_set_id` (set during the settings-CSV import
+   from the `instruments[N].rule_set_name` reference) and runs
+   per-instrument. **Pre-15B**, the operator selects a RuleSet
+   from the picker — the picker reads the same union of seeds +
+   session_rule_sets, so any RuleSet the source session used is
+   selectable on the destination.
+3. Validate is meaningful.
+
+### Pre-15B / pre-15C transient gap
+
+Today (pre-15B), `instruments.rule_set_id` is inert and
+session_rule_sets is empty. Today's rule-based generation
+selects a single workspace-tier RuleSet (`operator_rule_sets`)
+per session-wide Generate run; that selection lives only in the
+audit log. **An export taken today on a rule-based session
+captures every RuleSet the operator authored on the workspace
+tier only via 12A's separate RuleSet JSON portability surface
+(out of scope here)** — the settings CSV can't reference a
+workspace-tier RuleSet by name because workspace-tier
+operator-library RuleSets are explicitly excluded from this
+segment (per "Excluded from the settings CSV"). The honest
+position: a rule-based-mode export taken pre-15B carries
+everything except the RuleSet itself, and the operator on the
+destination side selects a RuleSet from their own workspace
+library when they re-run Generate. Once 15B + 15C ship, every
+RuleSet the source session used is either a seed (regenerated
+on the destination) or in the source session's
+`session_rule_sets` table (exported into the settings CSV) and
+the round-trip is closed.
+
+If closing this transient gap matters before 15B ships, the
+follow-on work is small: synthesise an `instruments[N].rule_set_name`
+cell at export time by joining the latest `assignments.generated`
+audit row's `refs.rule_set_id` against `operator_rule_sets.name`,
+and bundle the matching workspace-tier RuleSet's JSON sidecar
+in the export. That's the same surface 12A's PR 7 (RuleSet JSON
+portability) addresses; deferring is consistent with deferring
+the rest of PR 7.
+
 ## Filename convention
 
 Every download is `{code}_{kind}.csv` — e.g.
@@ -155,18 +256,29 @@ their owning segment):
   `tag_3`, or empty for the regular per-reviewee flavour —
   Segment 13C). Always serialises as empty until 13C's creation
   flow ships.
-- `instruments[N].rule_set_id` — reference into the
-  per-session RuleSet snapshots (`session_rule_sets`, Segment
-  15B). **Exported as the 1-based position of the matching
-  `session_rule_sets[N]` row** (e.g.
-  `instruments[1].rule_set_id = 2`), not as a numeric DB id —
-  the position is what the export's own
-  `session_rule_sets[N].name` block keys against, so the
-  reference round-trips across sessions. Empty cell ⇒ "no
-  RuleSet currently selected" (the initial state for every
-  existing instrument). Until 15B's per-instrument RuleSet
-  picker ships the column is always NULL on export, so the
-  cell is always empty in practice today.
+- `instruments[N].rule_set_name` (string) — reference into the
+  per-session RuleSet store (`session_rule_sets`, Segment 15B).
+  **Resolves by name, not by id**: on the destination side the
+  name must match either (a) a seeded RuleSet auto-materialised
+  on session create from `SEEDS` in
+  `app/services/rules/seeds.py` (post-15C Slice 1; renamed to
+  `SEEDED_RULE_SETS` by that slice per the symmetry with
+  `SEEDED_RESPONSE_TYPE_DEFINITIONS`), or (b) a non-seeded
+  RuleSet defined in the same CSV's `session_rule_sets[N].*`
+  blocks. The importer fails loudly if a referenced name
+  doesn't resolve. Empty cell ⇒ "no RuleSet currently selected"
+  (the initial state for every existing instrument). Resolution
+  at export time:
+  - **Post-15B** (per-instrument selection wired): read from
+    `instruments.rule_set_id` → look up the matching
+    `session_rule_sets.name`.
+  - **Pre-15B** (column inert): the cell is always empty.
+    Today's session-wide rule-based selection lives only in the
+    audit log (`assignments.generated` event's
+    `refs.rule_set_id` pointing at `operator_rule_sets`); the
+    export does **not** synthesise a per-instrument cell from
+    it. This is a transient gap — see "Round-trip readiness"
+    for the operator workflow it implies.
 
 Excluded — not user-typed:
 
@@ -281,9 +393,15 @@ export, restricted to non-seeded rows). User-typed:
   rather than as flat per-rule rows. The CSV's `data_type=json`
   escape handles the embedded JSON string.
 
-`instruments[N].rule_set_id` references rows in this section by
-1-based position so the link round-trips without depending on
-DB ids (see "Per-instrument settings" above).
+`instruments[N].rule_set_name` (per-instrument settings, above)
+references rows in this section by **name**, not by position or
+DB id. The same name resolution covers seeded RuleSets, which
+are not exported but materialise on the destination session
+from the `SEEDS` constant under their stable canonical names.
+**Name uniqueness within a session is assumed by the export
+contract** even though the `session_rule_sets` schema doesn't
+enforce it; the importer fails loudly if two non-seeded rows
+share a name.
 
 Excluded — not user-typed:
 
@@ -495,7 +613,7 @@ rtds[Likert5].max,5,decimal
 instruments[1].name,Peer evaluation,string
 instruments[1].accepting_responses,true,boolean
 instruments[1].sort_display_fields,[],json
-instruments[1].rule_set_id,1,integer
+instruments[1].rule_set_name,Cross-cohort fanout,string
 session_rule_sets[1].name,Cross-cohort fanout,string
 session_rule_sets[1].combinator,PIPELINE,enum
 session_rule_sets[1].rules_json,"{...}",json
@@ -540,8 +658,8 @@ setup walkthrough:
    `response_type`.
 4. Each instrument block in order (`(Instrument.order,
    Instrument.id)`):
-   1. Instrument-level rows (including `rule_set_id` reference
-      if any).
+   1. Instrument-level rows (including `rule_set_name`
+      reference if any).
    2. Display fields for that instrument.
    3. Response fields for that instrument.
 5. Per-session RuleSets, in `session_rule_sets.id` order
@@ -661,7 +779,11 @@ Each item below is a self-contained follow-on; nothing in
   Data card; gated on the Rule Builder segment shipping.
   RuleSets travel as JSON (recursive rule trees don't flatten
   to a wide CSV cleanly), so the file format is different from
-  the four CSVs this segment produces.
+  the four CSVs this segment produces. **This is also the
+  natural home for closing the pre-15B rule-based-mode round-
+  trip gap** (see "Round-trip readiness" — synthesising a
+  per-instrument `rule_set_name` cell from the audit log + a
+  JSON sidecar of the workspace-tier RuleSet).
 - **Operator-library RTD portability** — same shape as
   operator-library RuleSet portability; lives on the operator
   Settings or RTD library surface, not on Session Home.
