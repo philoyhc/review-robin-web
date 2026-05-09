@@ -148,11 +148,18 @@ operator-facing audit-history surface isn't built.
 
 1. **Architectural discipline.** Three-layer split (route → service
    → model) is enforced consistently. No SQL in routes, no business
-   logic in templates. The `app/web/views.py` "fourth seam" cleanly
-   absorbs view-shape adapters that shouldn't grow inside services.
-   PRs #651-#659 just split the formerly 4,423-line `routes_operator.py`
-   into 10 feature-area sub-modules with a written-down
-   "no slice-to-slice imports" invariant (`major_refactor.md` §3.0).
+   logic in templates. The `app/web/views/` "fourth seam" (split
+   from a 3,483-line single file into a 10-module package by §12.B)
+   cleanly absorbs view-shape adapters that shouldn't grow inside
+   services. PRs #651-#659 split the formerly 4,423-line
+   `routes_operator.py` into 10 feature-area sub-modules with a
+   written-down "no slice-to-slice imports" invariant
+   (`major_refactor.md` §3.0); the §12 follow-on ladder (PRs #663
+   → #683) extended the same package-split pattern to the
+   2,469-line `app/services/instruments.py` (now `app/services/instruments/`,
+   five sub-modules) and the 3,483-line `app/web/views.py` (now
+   `app/web/views/`, ten sub-modules) plus a hygiene bundle and a
+   test-file split.
 
 2. **Test coverage.** 1,007 tests passing; test code (29,811 LOC) is
    1.41 × production code (21,157 LOC). CI runs the full suite against

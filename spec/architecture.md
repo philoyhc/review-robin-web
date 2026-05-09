@@ -90,7 +90,7 @@ is in place:
 - Session creation auto-seeds one instrument (system handle
   `Default`) with two response fields (`rating` integer 1–5
   required, `comments` long text optional) and three pair-context
-  display fields. See `app/services/instruments.py`
+  display fields. See `app/services/instruments/_instrument_crud.py`
   (`ensure_default_instrument`).
 - `/operator/sessions/{id}/instruments` is the single consolidated
   page for everything per-instrument: All Instrument Status card +
