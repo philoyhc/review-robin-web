@@ -160,8 +160,8 @@ def test_reviewers_upload_golden_path_no_banner_on_success(
     assert response.headers["location"].endswith("#quick-setup-reviewers")
 
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    # Count indicator reflects the new state — the success signal.
-    assert "Reviewers" in body and "1 currently" in body
+    # Reviewers slot still rendered, no error banner content.
+    assert "Reviewers" in body
     # No flash banner — neither error nor confirm renders content.
     assert (
         '<div class="banner banner-error banner-scroll-target"\n'
@@ -170,6 +170,16 @@ def test_reviewers_upload_golden_path_no_banner_on_success(
     ) in body or (
         'id="quick-setup-reviewers-error-banner"' in body
         and "hidden" in body
+    )
+    # DB confirms the row landed.
+    from app.db.models import Reviewer
+
+    assert (
+        db.execute(
+            select(Reviewer).where(Reviewer.session_id == review_session.id)
+        )
+        .scalars()
+        .all()
     )
 
 
@@ -182,7 +192,16 @@ def test_reviewees_upload_golden_path(client: TestClient, db: Session) -> None:
     )
     assert response.status_code == 303
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    assert "Reviewees" in body and "1 currently" in body
+    assert "Reviewees" in body
+    from app.db.models import Reviewee
+
+    assert (
+        db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        )
+        .scalars()
+        .all()
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -205,7 +224,7 @@ def test_card_level_replacement_checkbox_renders_once(
     # Exactly one card-level toggle.
     assert body.count('id="quick-setup-confirm-replace-toggle"') == 1
     assert (
-        "This will replace any existing reviewers, reviewees,"
+        "Yes, replace existing reviewers, reviewees,"
         in body
     )
     # No per-slot ``banner-warning`` cascade-confirm banners anymore.
@@ -268,8 +287,17 @@ def test_reviewers_replace_with_confirm_applies(
     )
     assert response.status_code == 303
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    # New reviewer count reflected.
-    assert "Reviewers" in body and "2 currently" in body
+    assert "Reviewers" in body
+    from app.db.models import Reviewer
+
+    rows = (
+        db.execute(
+            select(Reviewer).where(Reviewer.session_id == review_session.id)
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 2
 
 
 # --------------------------------------------------------------------------- #
@@ -369,7 +397,20 @@ def test_assignments_rule_mode_golden_path(
         "#quick-setup-assignments"
     )
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    assert "Assignments" in body and "1 currently, rule_based" in body
+    assert "Assignments" in body
+    db.refresh(review_session)
+    assert review_session.assignment_mode == "rule_based"
+    from app.db.models import Assignment
+
+    assert (
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id
+            )
+        )
+        .scalars()
+        .all()
+    )
     # Error banner stays hidden.
     assert (
         'id="quick-setup-assignments-error-banner"' in body
@@ -431,7 +472,9 @@ def test_assignments_csv_mode_golden_path(
     )
     assert response.status_code == 303
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    assert "Assignments" in body and "1 currently, manual" in body
+    assert "Assignments" in body
+    db.refresh(review_session)
+    assert review_session.assignment_mode == "manual"
 
 
 def test_assignments_csv_mode_parse_error_routes_to_scoped_banner(
@@ -623,9 +666,17 @@ def test_submit_all_runs_reviewers_slot_when_file_attached(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    body = client.get(f"/operator/sessions/{review_session.id}").text
-    # Reviewer count updated.
-    assert "1 currently" in body or "2 currently" in body or "3 currently" in body
+    client.get(f"/operator/sessions/{review_session.id}")
+    from app.db.models import Reviewer
+
+    rows = (
+        db.execute(
+            select(Reviewer).where(Reviewer.session_id == review_session.id)
+        )
+        .scalars()
+        .all()
+    )
+    assert rows
 
 
 def test_submit_all_runs_assignments_rule_when_only_rule_supplied(
@@ -732,6 +783,35 @@ def test_unlock_cookie_clears_on_navigation_to_other_operator_page(
         f"/operator/sessions/{review_session.id}"
     ).text
     assert 'class="quick-setup-body locked"' in home_relocked
+
+
+def test_unlock_cookie_clears_on_navigation_outside_session_scope(
+    client: TestClient, db: Session
+) -> None:
+    """Navigating to pages outside ``/operator/sessions/{id}/`` —
+    the sessions lobby, operator settings, or ``/about`` — also
+    relocks the Quick Setup card on return. The cookie is set with
+    path ``/`` so the browser carries it on every page; the
+    middleware deletes it on any path that isn't Session Home or a
+    quick-setup endpoint."""
+
+    review_session = _make_session(client, db, code="qs-nav-outside")
+    home_url = f"/operator/sessions/{review_session.id}"
+
+    for away_url in (
+        "/operator/sessions",
+        "/operator/settings",
+        "/about",
+    ):
+        client.post(
+            f"{home_url}/quick-setup/lock",
+            data={"action": "unlock"},
+            follow_redirects=False,
+        )
+        assert 'class="quick-setup-body"' in client.get(home_url).text
+        away = client.get(away_url)
+        assert away.status_code == 200
+        assert 'class="quick-setup-body locked"' in client.get(home_url).text
 
 
 def test_unlock_cookie_persists_across_quick_setup_form_submissions(
