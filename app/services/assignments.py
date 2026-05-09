@@ -21,6 +21,7 @@ from app.db.models import (
 from app.schemas.assignments import AssignmentMode, ManualAssignmentRow
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, csv_imports, session_lifecycle as lifecycle
+from app.services._queries import session_scoped
 
 PAIR_PREVIEW_LIMIT = 200
 
@@ -36,7 +37,7 @@ def reviewer_fields_with_data(db: Session, session_id: int) -> list[str]:
     labels: list[str] = []
     has_any = (
         db.execute(
-            select(Reviewer.id).where(Reviewer.session_id == session_id).limit(1)
+            session_scoped(Reviewer.id, session_id).limit(1)
         ).first()
         is not None
     )
@@ -45,8 +46,7 @@ def reviewer_fields_with_data(db: Session, session_id: int) -> list[str]:
     for slot in (1, 2, 3):
         col = getattr(Reviewer, f"tag_{slot}")
         found = db.execute(
-            select(Reviewer.id)
-            .where(Reviewer.session_id == session_id)
+            session_scoped(Reviewer.id, session_id)
             .where(col.is_not(None))
             .where(col != "")
             .limit(1)
@@ -61,15 +61,14 @@ def reviewee_fields_with_data(db: Session, session_id: int) -> list[str]:
     labels: list[str] = []
     has_any = (
         db.execute(
-            select(Reviewee.id).where(Reviewee.session_id == session_id).limit(1)
+            session_scoped(Reviewee.id, session_id).limit(1)
         ).first()
         is not None
     )
     if has_any:
         labels.extend(["RevieweeName", "RevieweeEmail"])
     profile_found = db.execute(
-        select(Reviewee.id)
-        .where(Reviewee.session_id == session_id)
+        session_scoped(Reviewee.id, session_id)
         .where(Reviewee.profile_link.is_not(None))
         .where(Reviewee.profile_link != "")
         .limit(1)
@@ -79,8 +78,7 @@ def reviewee_fields_with_data(db: Session, session_id: int) -> list[str]:
     for slot in (1, 2, 3):
         col = getattr(Reviewee, f"tag_{slot}")
         found = db.execute(
-            select(Reviewee.id)
-            .where(Reviewee.session_id == session_id)
+            session_scoped(Reviewee.id, session_id)
             .where(col.is_not(None))
             .where(col != "")
             .limit(1)
@@ -95,7 +93,7 @@ def assignment_fields_with_data(db: Session, session_id: int) -> list[str]:
     labels: list[str] = []
     has_any = (
         db.execute(
-            select(Assignment.id).where(Assignment.session_id == session_id).limit(1)
+            session_scoped(Assignment.id, session_id).limit(1)
         ).first()
         is not None
     )
@@ -105,7 +103,7 @@ def assignment_fields_with_data(db: Session, session_id: int) -> list[str]:
     pair_present = {1: False, 2: False, 3: False}
     asgn_present = {1: False, 2: False, 3: False}
     for (ctx,) in db.execute(
-        select(Assignment.context).where(Assignment.session_id == session_id)
+        session_scoped(Assignment.context, session_id)
     ).all():
         if not ctx:
             continue
@@ -397,8 +395,7 @@ def get_or_create_default_instrument(
 
 
 def existing_count(db: Session, session_id: int) -> int:
-    stmt = select(Assignment.id).where(Assignment.session_id == session_id)
-    return len(db.execute(stmt).all())
+    return len(db.execute(session_scoped(Assignment.id, session_id)).all())
 
 
 def _is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
@@ -565,8 +562,7 @@ def replace_assignments(
     get_or_create_default_instrument(db, review_session)
     instruments = list(
         db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
+            session_scoped(Instrument, review_session.id)
             .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
@@ -647,9 +643,7 @@ def replace_assignments(
 def list_reviewers(db: Session, session_id: int) -> list[Reviewer]:
     return list(
         db.execute(
-            select(Reviewer)
-            .where(Reviewer.session_id == session_id)
-            .order_by(Reviewer.id)
+            session_scoped(Reviewer, session_id).order_by(Reviewer.id)
         ).scalars()
     )
 
@@ -657,9 +651,7 @@ def list_reviewers(db: Session, session_id: int) -> list[Reviewer]:
 def list_reviewees(db: Session, session_id: int) -> list[Reviewee]:
     return list(
         db.execute(
-            select(Reviewee)
-            .where(Reviewee.session_id == session_id)
-            .order_by(Reviewee.id)
+            session_scoped(Reviewee, session_id).order_by(Reviewee.id)
         ).scalars()
     )
 
@@ -672,9 +664,8 @@ def list_pairs(
     Ordered by (reviewer_id, reviewee_id) to match the FullMatrix preview.
     """
     stmt = (
-        select(Assignment)
+        session_scoped(Assignment, session_id)
         .options(joinedload(Assignment.reviewer), joinedload(Assignment.reviewee))
-        .where(Assignment.session_id == session_id)
         .order_by(Assignment.reviewer_id, Assignment.reviewee_id)
         .limit(limit)
     )
@@ -698,7 +689,7 @@ def delete_all_assignments(
     )
     rows = list(
         db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
+            session_scoped(Assignment, review_session.id)
         ).scalars()
     )
     deleted = len(rows)
