@@ -51,6 +51,17 @@ class Instrument(Base, TimestampMixin):
     Lands inert in 13D PR 5 — the reviewer surface keeps its
     current sort behaviour. 13B's render-path slice consumes
     this column."""
+    group_kind: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    """Group-scoping flavour for Segment 13C's group-scoped
+    instruments — e.g. one shared answer covers a whole group of
+    reviewees instead of per-reviewee. NULL = "regular per-reviewee
+    instrument" (current behaviour). 13C settles the value-set; 13D
+    PR 6 just pre-positions the column.
+
+    Lands inert in 13D PR 6 — no service module reads or writes
+    the column; reviewer-surface render behaviour unchanged. 13C
+    PR 1 (now pure render path) reads it via the new render
+    adapter."""
     rule_set_id: Mapped[int | None] = mapped_column(
         ForeignKey("session_rule_sets.id", ondelete="SET NULL"),
         index=True,
