@@ -523,6 +523,148 @@ RuleSet `<name>`; the RuleSet is in the settings CSV. Run
 Generate on the new session to materialise from it." (No zip
 bundle in this segment — see "Out of scope".)
 
+## Responses extract (downstream-analysis use case)
+
+The Settings + Reviewers + Reviewees + Assignments CSVs above
+all serve the **session-porting** use case (Scenario A — operator
+typing snapshot for cloning a session into a new one). The
+Responses CSV serves a **different, independent use case**:
+**downstream analysis** by folks who want to use the data —
+loading into Excel / pandas / R / a BI tool to compute
+aggregates, segment by tag, plot distributions, or correlate
+responses across instruments.
+
+The two use cases are independent of each other:
+
+- Porting an old session → new session does not consume the
+  Responses CSV (responses are reviewer-typed work; they don't
+  travel with the operator's setup).
+- Downstream analysis does not consume the Settings CSV (an
+  analyst opens the responses file directly; everything they
+  need to interpret a row — reviewer / reviewee identity, tags,
+  instrument, field, response-type name, timestamps — is
+  denormalised onto the row itself).
+
+That independence drives three deliberate departures from the
+prior CSVs:
+
+1. **Self-contained rows.** Each row carries the join keys an
+   analyst would otherwise have to look up — reviewer name +
+   email + tags, reviewee name + identifier + tags, instrument
+   name + short label, response-type name. The file is
+   readable in isolation, no need to join four CSVs to
+   understand a single value.
+2. **Wide column shape, not the 3-column key/value/data-type
+   shape.** The Settings CSV's hierarchical key/value shape is
+   structured-config-friendly; the Responses CSV is
+   row-per-observation analyst-friendly. Excel pivot tables and
+   pandas `groupby` operate on the latter naturally.
+3. **No import counterpart.** Operators don't upload responses;
+   only reviewers create them via the response surface. The CSV
+   is read-only.
+
+### Column shape
+
+```
+ReviewerName,ReviewerEmail,ReviewerTag1,ReviewerTag2,ReviewerTag3,
+RevieweeName,RevieweeEmail,RevieweeTag1,RevieweeTag2,RevieweeTag3,
+InstrumentName,InstrumentShortLabel,
+FieldKey,FieldLabel,ResponseType,
+Value,
+SavedAt,SubmittedAt,Version
+```
+
+19 columns. Grouped logically:
+
+- **Reviewer identity + tags** (5 columns) — segment-by-tag is
+  the most common analyst operation; tags are denormalised so
+  it works without a roster join.
+- **Reviewee identity + tags** (5 columns) — same logic. Note
+  the column header is `RevieweeEmail` (matching the rosters
+  CSV convention) even though the underlying value is
+  `Reviewee.email_or_identifier`.
+- **Instrument context** (2 columns) — `InstrumentName` is the
+  long form; `InstrumentShortLabel` is the short reviewer-facing
+  framing (Segment 11L). Both are emitted so analysts can
+  pick whichever displays cleaner in their tool.
+- **Field context** (3 columns) — `FieldKey` is the stable
+  machine identifier; `FieldLabel` is the display text;
+  `ResponseType` is the RTD name (`"Likert5"` / `"GPA4"` /
+  operator-defined). An analyst with `ResponseType=Likert5`
+  can derive the scale by joining against the Settings CSV's
+  `rtds[Likert5].*` block — but most won't need to; the value
+  is interpretable at face value (`"4"` on a Likert5 reads as
+  4 / 5 without further context).
+- **Value** (1 column) — the response cell. Empty for explicit
+  clear (reviewer typed and then deleted); see "Empty / missing
+  values" below.
+- **Lifecycle** (3 columns) — `SavedAt` (always set; UTC ISO-8601
+  with offset), `SubmittedAt` (empty for saved-but-not-submitted
+  drafts), `Version` (autosave / re-submit revision count).
+
+### Row order
+
+`(ReviewerEmail, RevieweeEmail, instrument.order, instrument.id,
+response_field.order, response_field.id)`. Deterministic so
+re-export of the same session is byte-stable; matches the
+reviewer surface's display order so an analyst recognising the
+structure can navigate without surprise.
+
+### Empty / missing values
+
+- **`Response.value IS NULL`** (the reviewer cleared the field)
+  → empty `Value` cell. The row is still emitted because the
+  reviewer did interact with the field; the empty cell is the
+  signal.
+- **No `Response` row at all** (the reviewer never saved any
+  value for this assignment + field) → no row in the CSV. The
+  absence is the signal. Keeps the CSV row count equal to
+  `len(responses)` so "responses received" is a one-line
+  count from the file (`wc -l - 1`).
+- **`SubmittedAt`** is empty for saved-but-not-submitted drafts
+  and populated for submitted responses. Distinguishes
+  in-flight from final.
+
+### Numeric / list values
+
+Numeric (`int` / `decimal`) responses serialise as their
+`Response.value` text representation (already
+serialisation-stable from the reviewer surface). List-type
+responses serialise as the same comma-separated literal the
+database stores. **No type column on the responses CSV** — if
+a downstream consumer needs typing, they join against the
+Settings CSV on `(InstrumentName, FieldKey)` → `ResponseType`
+→ `rtds[<name>].data_type`. Most analysts won't need that hop;
+the cell is human-readable.
+
+### Lifecycle gate
+
+None. The Responses CSV is most useful in `ready` (mid-flight
+snapshot — operator wants to see how completion is tracking) and
+`closed` (final dataset for analysis). Also useful in
+`validated` (pilot run with a few responses) and even `draft`
+(empty file as a sanity check that the route works). The
+Extract Data card stays interactive in every state including
+behind the yellow lock card — extraction is read-only.
+
+### Streaming considerations
+
+Responses are the largest extract by row count at production
+scale (e.g. 1000 reviewers × 50 reviewees × 5 fields = 250k
+rows). The shared `stream_csv` helper from PR 1 already yields
+chunked bytes over a `StringIO`, so memory stays flat as long
+as the upstream serialiser yields rows lazily rather than
+materialising them all up front. PR 4's serialiser uses a
+streaming `db.execute(stmt).yield_per(...)` cursor (or a
+plain generator that iterates the joined rows one at a time)
+so the route's memory footprint is proportional to chunk size,
+not row count.
+
+If the production responses CSV ever exceeds the 30s App
+Service request budget, the follow-on is to switch the route
+to a background-generated cached file (S3-style download URL)
+— call out as a Segment 14 follow-up if it happens.
+
 ## Routes
 
 Four new routes, all GET, all operator-only via the existing
@@ -685,10 +827,15 @@ maintaining as a template.
 
 ## PR sequence
 
-Sized as **4 PRs** in dependency order. PRs 2 + 3 are
+Sized as **5 PRs** in dependency order. PRs 2 + 3 + 4 are
 independent of each other and parallel-shippable once PR 1's
 shared helpers are in place. PR 1a follows PR 1 — same module,
-small additive change to the serialiser.
+small additive change to the serialiser. PR 4 (Responses)
+serves a different use case (downstream analysis) than the
+porting-flow PRs (1 / 1a / 2 / 3); its inclusion in this
+segment is convenience only — they share the Extract Data
+card's anchor and the `stream_csv` plumbing, not the round-trip
+contract.
 
 ### PR 1 — Settings export + shared helpers
 
@@ -841,6 +988,74 @@ pure read-side change.
     the `ExtractDataRow` returned by
     `build_extract_data_context`).
 
+### PR 4 — Responses extract (downstream-analysis)
+
+**Goal.** Ship the wide row-per-observation responses CSV the
+downstream-analysis section above specs. Read-only; no import
+counterpart; no round-trip with any other CSV. The largest
+extract at production scale; uses the same `stream_csv`
+plumbing as the prior PRs.
+
+- New module `app/services/extracts/responses_extract.py` with
+  `serialize_responses(db, session) -> Iterable[tuple[str,
+  ...]]`. Yields `HEADER` + one tuple per `Response` row, in
+  the deterministic order the use-case section pins
+  (`(reviewer.email, reviewee.email_or_identifier,
+  instrument.order, instrument.id, response_field.order,
+  response_field.id)`). Joins against `Reviewer` / `Reviewee`
+  / `Instrument` / `InstrumentResponseField` /
+  `ResponseTypeDefinition` to denormalise the columns
+  end-to-end; the helper does the joins once per export and
+  yields rows lazily so memory stays flat.
+- New route `GET /operator/sessions/{id}/export/responses.csv`
+  in `app/web/routes_operator/_extracts.py`. Streams
+  `text/csv` with `Content-Disposition: attachment;
+  filename="{code}_responses.csv"`. **No lifecycle gate** —
+  works in every state. Emits
+  `session.responses_extracted` registered in
+  `EVENT_SCHEMAS` with `counts.rows = body row count`
+  (header excluded).
+- Card wire-up: flip the Responses row live in
+  `views.build_extract_data_context`. Update its `filename`
+  to `{code}_responses.csv`. The body count source
+  (`responses.session_response_count`) is already shipped by
+  Segment 11H; just needs the row's `is_wired=True` +
+  `download_url=` flip.
+- Update existing scaffold tests
+  (`test_extract_data_scaffold` + `test_session_detail_restructure`):
+  the previously inert Responses anchor is now live, so the
+  pre-PR-4 count of "3 inert anchors" drops to "2 inert
+  anchors" (Assignments-on-non-manual + bundle), and the
+  `Wired in Segment 12A PR 5` tooltip string assertion goes
+  away.
+- Tests:
+  - **Unit** (`tests/unit/test_responses_extract.py`): per-row
+    column shape (all 19 columns, in the documented order);
+    deterministic ordering; empty-`Response.value` emits
+    empty cell; `SubmittedAt` populated for submitted vs
+    empty for saved-but-not-submitted; numeric / decimal /
+    list value text representation round-trips; multi-
+    instrument session interleaves rows per the
+    deterministic order; `ResponseType` resolves to the
+    seeded RTD name (`Likert5` etc.) and operator-defined
+    RTD names alike.
+  - **Integration**
+    (`tests/integration/test_extracts_responses_route.py`):
+    auth gate; canonical filename + Content-Disposition
+    header; audit emission with the right row count; empty
+    session emits header-only and `counts.rows=0`; no
+    lifecycle gate (works in `draft` / `validated` / `ready`
+    / `closed`).
+- **Streaming smoke check** in the integration test: assert
+  the response is `chunked` (or at least non-buffered) when
+  the body has thousands of rows. A coarse seed of N rows +
+  a memory-profiler is overkill for a unit test; a cursor
+  iteration count via SQL log inspection is enough to pin
+  the contract.
+- No format spec for the columns elsewhere — this guide is
+  the source of truth until the format proves stable across
+  two or three downstream consumers.
+
 ## Out of scope
 
 Each item below is a self-contained follow-on; nothing in
@@ -852,13 +1067,14 @@ Each item below is a self-contained follow-on; nothing in
   `field_key`-based upsert key on response fields, the
   `data_type` column as a parsing rule, and the position-based
   `rule_set_id` reference all exist for that future round-trip.
-- **Responses extract.** The largest extract by row count, the
-  one that needs streaming under production load, and the only
-  one with no import counterpart. Defer until the streaming
-  shape is sized against production data.
-- **Zip bundle (`/export.zip`).** Without the responses extract
-  the bundle would be incomplete; ship them together when
-  responses lands.
+- **Zip bundle (`/export.zip`).** A single download bundling
+  all five CSVs (settings + reviewers + reviewees + assignments
+  + responses) at the canonical `{code}_{kind}.csv` filenames.
+  Useful for the "operator hands a colleague the whole
+  session" workflow. Skipped here because (a) the per-entity
+  downloads cover the same ground individually and (b) the
+  bundle's mixed-use-case framing (porting + analysis) is
+  worth its own UX pass.
 - **Operator-library RuleSet portability** — workspace-scoped
   import / export of `operator_rule_sets` rows, anchored on
   the Rule Builder card. Orthogonal to Session Home's Extract
