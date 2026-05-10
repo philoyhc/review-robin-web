@@ -80,15 +80,17 @@ def test_new_session_quick_setup_renders_action_labels(
 
 
 def test_build_new_session_quick_setup_context_shape() -> None:
-    """Post-15D PR 7a the new-session adapter returns a 3-slot
-    context (Reviewers, Reviewees, Settings) with every wire flag
-    off, the lock toggle suppressed, and the customised title."""
+    """Post-15D PR 7c the new-session adapter returns a 4-slot
+    context (Reviewers, Reviewees, Relationships, Settings) with
+    every wire flag off, the lock toggle suppressed, and the
+    customised title."""
 
     context = views.build_new_session_quick_setup_context()
 
     assert [slot.key for slot in context.slots] == [
         "reviewers",
         "reviewees",
+        "relationships",
         "settings",
     ]
     assert all(slot.is_wired is False for slot in context.slots)

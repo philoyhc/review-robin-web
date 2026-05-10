@@ -82,13 +82,13 @@ def _activate(
     db.refresh(review_session)
 
 
-def test_build_quick_setup_context_returns_three_slots(
+def test_build_quick_setup_context_returns_four_slots(
     client: TestClient, db: Session
 ) -> None:
-    """15D PR 7a retired the legacy Assignments slot from Quick Setup
-    — generation no longer runs from this card. The slot list
-    shrinks to Reviewers, Reviewees, Session settings. PR 7c
-    re-introduces a Relationships slot at position 3."""
+    """15D PR 7c re-introduced a Relationships slot at position 3
+    after PR 7a retired the legacy Assignments slot. Reviewers,
+    Reviewees, and Relationships are wired live; Settings remains
+    inert pending Segment 12A PR 6."""
 
     review_session = _make_session(client, db, code="qs-shape")
     context = views.build_quick_setup_context(db, review_session)
@@ -96,6 +96,7 @@ def test_build_quick_setup_context_returns_three_slots(
     assert [slot.key for slot in context.slots] == [
         "reviewers",
         "reviewees",
+        "relationships",
         "settings",
     ]
     by_key = {slot.key: slot for slot in context.slots}
@@ -108,6 +109,11 @@ def test_build_quick_setup_context_returns_three_slots(
     assert by_key["reviewees"].wire_url == (
         f"/operator/sessions/{review_session.id}/quick-setup/reviewees"
     )
+    assert by_key["relationships"].is_wired is True
+    assert by_key["relationships"].wire_url == (
+        f"/operator/sessions/{review_session.id}/quick-setup/relationships"
+    )
+    assert by_key["relationships"].coming_in is None
     # Settings remains inert pending Segment 12A PR 6.
     assert by_key["settings"].is_wired is False
     assert by_key["settings"].coming_in == "Wired in Segment 12A PR 6"

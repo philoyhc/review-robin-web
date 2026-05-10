@@ -512,11 +512,10 @@ def test_session_card_buttons_when_draft(
 def test_quick_setup_card_renders_scaffold_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """Post-15D PR 7a the Quick Setup card on Session Home renders
-    a 3-slot layout in draft (Reviewers, Reviewees, Settings).
-    Reviewers + Reviewees are wired live; Settings remains inert
-    pending Segment 12A PR 6. PR 7c re-introduces a Relationships
-    slot at position 3."""
+    """Post-15D PR 7c the Quick Setup card on Session Home renders
+    a 4-slot layout in draft (Reviewers, Reviewees, Relationships,
+    Settings). Settings remains inert pending Segment 12A PR 6.
+    The legacy Assignments slot retired in PR 7a."""
 
     review_session = _make_session(client, db, code="qs-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
@@ -525,11 +524,11 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     assert 'class="card" id="quick-setup"' in body
     assert "<h2>Quick Setup</h2>" in body
     # Action-oriented body copy in draft / validated.
-    assert "Bulk-populate reviewers and reviewees" in body
-    # Three slots render with stable fragment anchors. Assignments
-    # slot retired in 15D PR 7a.
-    for key in ("reviewers", "reviewees", "settings"):
+    assert "Bulk-populate reviewers, reviewees, and relationships" in body
+    # Four slots render with stable fragment anchors.
+    for key in ("reviewers", "reviewees", "relationships", "settings"):
         assert f'id="quick-setup-{key}"' in body
+    # Legacy Assignments slot retired in PR 7a.
     assert 'id="quick-setup-assignments"' not in body
     # Slot 4 (Settings) remains inert pending Segment 12A PR 6;
     # the wired slots have shed their wiring tooltips.
