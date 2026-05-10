@@ -250,66 +250,31 @@ pinned to each segment. The catalog itself lives in
 > **12A-3** (export / import updates for 15D) is the
 > only remaining locked-sequence item.
 
-**12B (audit retention)** is the next item after the
-block clears. Other Upcoming items (13B / 13C / 14 /
-14-1 / 15 / 15A / 15B / 15C) ship around or after the
-locked block per their own plans; no schema conflicts
-detected.
+After 12A-3 lands, the next sensible item is **12B**
+(audit retention). Everything else in this list (13B,
+13C, 14, 14-1, 15, 15A, 15B, 15C, 15E, 16) ships around
+the locked-sequence block per its own plan; no ordering
+constraints beyond shared schema conflicts (none
+detected).
 
-12A-2 (Settings CSV import) and 12C-2 + 12C-3 are
-historical-reference entries — their work is folded
-into 12A-3 / 15D respectively.
+#### Numbered queue
 
 1. **12A-3 — Export / import updates for 15D** *(only
-   remaining locked-sequence item)*. Absorbs 12A-2 (Settings
-   CSV import) + adds Relationships per-entity export +
-   import + adjusts assignments CSV around 15D's
-   download-only model. Sized as 4 PRs.
+   remaining locked-sequence item)*. Absorbs the
+   previously-planned 12A-2 (Settings CSV import) + adds
+   Relationships per-entity export + import + adjusts
+   the assignments CSV around 15D's "always derived" model.
+   Sized as 4 PRs.
    **Plan:** `guide/segment_12A-3_export_import_updates.md`.
 
-- **15E — Next Action revamp + multi-step shortcuts**
-  *(carved out of 15D PR 8, 2026-05-10)*. Promotes the
-  Next Action card on Session Home to drive Validate →
-  Generate → Activate as one-click "super button"
-  chains, with single-step actions retained for granular
-  flows. Stub-state plan.
-  **Plan:** `guide/segment_15E_next_action_revamp.md`.
-
-- **16 — Sys admin page** *(stub created 2026-05-10)*.
-  Home for operator-internal / dev-only surfaces that
-  exist today but lack a dedicated chrome surface, plus a
-  few that retire from operator-facing routes under the
-  13E / 12C / 15D / 12A-3 block and will land here.
-  **Plan:** `guide/segment_16_sys_admin_page.md`.
-
-Other upcoming work (12B audit retention, 13B sort, 13C
-enhanced instruments, 14 production hardening, 14-1 email
-infra, 15 operator polish, 15A friendly labels, 15B
-per-instrument assignments, 15C operator libraries) ships
-around 12A-3 per its own plan; no ordering constraints
-beyond shared schema conflicts (none detected).
-
-2. **12A-2 — Session settings import.** *(Absorbed into
-   12A-3 under the 2026-05-10 holistic-sequence revision;
-   plan kept as historical reference for the contract /
-   inclusion model.)*
-   The import counterpart to 12A-1 (export, shipped 2026-05-09).
-   Consumes the 3-column Settings CSV the export half emits and
-   rehydrates a fresh-named session into the same shape. Two
-   PRs: importer service + route, then Quick Setup slot 4
-   graduation in both contexts (Create New Session + Session
-   Home). New emitter `session.config_imported` inherits the
-   canonical detail shape pinned by 11K.
-   **Plan:** `guide/segment_12A-2_import.md`.
-
-3. **12B — Audit retention.**
+2. **12B — Audit retention.**
    `audit_events` export + retention / purge tooling. Reads
-   against the canonical detail shape pinned by 11K (shipped
+   against the canonical `detail` shape pinned by 11K (shipped
    2026-05-07). Folded out of the original Segment 12 plan when
    Extract Data moved into 12A.
    **Plan:** `guide/segment_12B_audit_retention.md`.
 
-4. **13B — Reviewer surface sort.**
+3. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
    default + reviewer live override. Sized as 3 PRs (schema +
    read path → operator UI tri-state Sort column → reviewer-
@@ -318,24 +283,28 @@ beyond shared schema conflicts (none detected).
    **Plan:** `guide/segment_13B_sort_by_reviewee.md`.
    **Functional spec:** `spec/sort_by_reviewee.md`.
 
-5. **13C — Enhanced instruments.**
+4. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
    instrument" action-row button. Sized as 5 PRs. Action row
    ends up with: Edit / Save / Cancel (state-aware) + Add new
    instrument + Add group-scoped instrument (new) + Duplicate
-   instrument (new). No `Response` schema change — duplicate-
-   and-stamp on `Assignment.context`. Independent of 13A and
-   13B.
+   instrument (new). No `Response` schema change. **Note**
+   (post-15D): the original plan stamped per-instrument flavour
+   metadata onto the now-dropped `Assignment.context` JSON
+   column; that stash will need to relocate (likely onto the
+   `relationships` row or onto a new per-instrument column on
+   `assignments`) — flag for the 13C plan revision.
+   Independent of 13A and 13B.
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/enhanced_instruments.md`.
 
-6. **14 — Production hardening.**
+5. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-7. **14-1 — Email infrastructure (send activation + backends).**
+6. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. The schema columns Part A
    writes to landed with **Segment 11C Part 2** (PR #541,
    2026-05-07) and are ready for the dispatch helper.
@@ -352,7 +321,7 @@ beyond shared schema conflicts (none detected).
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-8. **15 — Operator polish + documentation.**
+7. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -360,19 +329,20 @@ beyond shared schema conflicts (none detected).
    Catalog #23, #25, #33, #35, #36, §2.2.
    **Plan:** `guide/segment_15_operator_polish_and_documentation.md`.
 
-9. **15A — Pervasive friendly labels.**
+8. **15A — Pervasive friendly labels.**
    Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
-   `PairContext1-3` (and optional `AssignmentContext1-3`) flowing
-   through every header / picker / tooltip via a session-level
-   resolver, not just per-instrument Display Field rows. New
-   `session_field_labels` table + `app/services/field_labels.py`
-   resolver + Settings-page editor. ~3-4 PRs. Lands cleanly any
-   time after the major refactor; recommended **before 15B** so
-   15B's per-instrument UI consumes the resolver instead of
-   re-introducing hardcoded literals.
+   `PairContext1-3` flowing through every header / picker /
+   tooltip via a session-level resolver, not just per-instrument
+   Display Field rows. New `session_field_labels` table +
+   `app/services/field_labels.py` resolver + Settings-page
+   editor. ~3-4 PRs. Lands cleanly any time after the major
+   refactor; recommended **before 15B** so 15B's per-instrument
+   UI consumes the resolver instead of re-introducing hardcoded
+   literals. (The originally-planned `AssignmentContext1-3`
+   slot retired with `Assignment.context` in 15D PR 6b.)
    **Plan:** `guide/segment_15A_friendly_labels.md`.
 
-10. **15C — Operator RTD / RuleSet libraries.**
+9. **15C — Operator RTD / RuleSet libraries.**
    Symmetric two-tier model for both RTDs and RuleSets:
    operator master library (cross-session, reusable) +
    per-session copy (portable, independently editable). Explicit
@@ -384,19 +354,54 @@ beyond shared schema conflicts (none detected).
    `instruments.rule_set_id` to point at.
    **Plan:** `guide/segment_15C_operator_libraries.md`.
 
-11. **15B — Per-instrument assignments.**
-   Each `Instrument` carries its own assignment set (e.g. the
-   Manager survey collects different reviewer → reviewee pairings
-   than the Peer survey within one session). Schema already
-   supports this — `Assignment` carries `instrument_id` with a
-   `(session_id, reviewer_id, reviewee_id, instrument_id)` unique
-   constraint — but `replace_assignments` fans out uniformly today.
-   Slices: per-instrument service scope, persist per-instrument
-   `instruments.rule_set_id` selection, manual CSV `Instrument`
-   column, per-instrument Assignments page UI, Quick Setup
-   selector, per-instrument validation. ~5-7 PRs. Recommended
-   after 15C.
-   **Plan:** `guide/segment_15B_per_instrument_assignments.md`.
+10. **15B — Per-instrument assignments.**
+    Each `Instrument` carries its own assignment set (e.g. the
+    Manager survey collects different reviewer → reviewee
+    pairings than the Peer survey within one session). Schema
+    already supports this — `Assignment` carries `instrument_id`
+    with a `(session_id, reviewer_id, reviewee_id, instrument_id)`
+    unique constraint — but `replace_assignments` fans out
+    uniformly today. Post-15D the per-instrument hook is
+    `instruments.rule_set_id` (the FK landed inert in 13D PR 4)
+    pointing at a `session_rule_sets` row that 15C populates.
+    Slices: per-instrument service scope, persist per-instrument
+    rule-set selection, per-instrument Assignments page UI,
+    Quick Setup selector, per-instrument validation. ~5-7 PRs.
+    Recommended after 15C. (Manual-CSV `Instrument` column
+    catalog item #28 is moot post-15D; manual-row authoring
+    retired.)
+    **Plan:** `guide/segment_15B_per_instrument_assignments.md`.
+
+#### Stubs
+
+- **15E — Next Action revamp + multi-step shortcuts**
+  *(carved out of 15D PR 8, 2026-05-10)*. Promotes the
+  Next Action card on Session Home to drive Validate →
+  Generate → Activate as one-click "super button"
+  chains, with single-step actions retained for granular
+  flows. Stub-state plan; sizing happens once 12A-3 lands.
+  **Plan:** `guide/segment_15E_next_action_revamp.md`.
+
+- **16 — Sys admin page** *(stub created 2026-05-10)*.
+  Home for operator-internal / dev-only surfaces that
+  exist today but lack a dedicated chrome surface, plus a
+  few that retire from operator-facing routes under the
+  13E / 12C / 15D / 12A-3 block and will land here.
+  **Plan:** `guide/segment_16_sys_admin_page.md`.
+
+#### Historical-reference entries
+
+These plan docs stay in `guide/` as references for the contract
+they pinned, but the work is folded into the locked block:
+
+- **12A-2 — Session settings import** — absorbed into 12A-3 under
+  the 2026-05-10 holistic-sequence revision; the import service +
+  route + Quick Setup slot 4 graduation all land in 12A-3 PRs.
+  Plan: `guide/segment_12A-2_import.md`.
+- **12C-2 / 12C-3** — absorbed into 15D under the same revision.
+  No standalone plan file; original scope (Quick Setup slot 3
+  retire-and-restore, chrome restructure, Operations Assignments
+  page move) shipped as part of 15D PRs 6a / 7a / 7c.
 
 ### Sequencing notes
 
