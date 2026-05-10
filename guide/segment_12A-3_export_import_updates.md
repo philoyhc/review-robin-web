@@ -1,16 +1,29 @@
 # Segment 12A-3 — Export / import updates for 15D
 
-**Status:** Planning. Sized 2026-05-10. **Last in the
-locked sequence 13E → 12C → 15D → 12A-3.** Subsumes the
+**Status:** Planning. Sized 2026-05-10; refreshed against
+the post-15D codebase 2026-05-10. **Last in the locked
+sequence 13E → 12C → 15D → 12A-3.** Subsumes the
 previously-planned 12A-2 (Settings CSV import) — see
 "Relationship to 12A-2" below.
 
 This segment evolves the export / import system to match
-15D's post-revamp shape: ships the Settings importer
-(absorbed from 12A-2), adds Relationships per-entity
-export + import (parallel to rosters), and adjusts the
-manual assignments CSV around 15D's "always derived"
-model.
+15D's post-revamp shape. The targeted Extract Data card
+becomes a **session-portability bundle** (everything an
+operator needs to fully set up a fresh session from scratch)
+plus a separate **analysis** download:
+
+```
+Setup (round-trip):  Reviewers · Reviewees · Relationships · Session settings
+Analysis only:       Responses
+```
+
+The pre-12A-3 Assignments tile is dropped from Extract
+Data — assignments are derived (rule-based engine + roster
++ relationships), not an input to a new session, so the
+download has no place in a porting bundle. (Operators who
+want to inspect current pairings stay on the Operations
+Assignments page, where the preview table already shows
+the live state.)
 
 ## Goal
 
@@ -18,19 +31,24 @@ Bring the export / import surface into alignment with the
 post-15D world:
 
 - **Round-trip the new Relationships table.** Add a
-  per-entity export + per-entity import for the
-  `relationships` table that 15D wires. Same shape /
-  flow as today's reviewer + reviewee per-entity
-  imports.
+  per-entity export + Extract Data tile + Manage-page
+  upload form for the `relationships` table that 15D
+  wired. The underlying `parse_relationship_csv` importer
+  service + `relationships.imported` audit event were
+  already shipped by 15D — this segment builds the
+  export route + UI surfaces on top of the existing
+  service.
 - **Ship the Settings CSV importer** (the 12A-2 work,
   absorbed). Quick Setup slot for Settings graduates
   to live (was 12A-2 PR 2's job).
-- **Update the assignments CSV** to download-only
-  semantics post-15D. Manual upload via the Assignments
-  page retires (handled in 15D); the export track keeps
-  the CSV for reference / debugging / one-time
-  analytical export from the Operations Assignments
-  page.
+- **Drop the Assignments tile from Extract Data.**
+  Post-15D the assignments table is system-derived —
+  there is no porting use case (no matching importer,
+  never was a round-trip target post-15D) and the
+  legacy debugging / analytical use case is better
+  served by the live preview table on the Operations
+  Assignments page. The underlying export route +
+  service code retire too.
 - **No new schema.** All schema for this round lands
   in 13E + 15D; 12A-3 is pure CSV-format / importer /
   route work.
@@ -52,16 +70,51 @@ verbatim to 12A-3 PR 1. Read 12A-2 for the
 contract / inclusion model / fallback rules; read 12A-3
 for the PR-by-PR delivery.
 
+## Codebase-check notes (2026-05-10)
+
+What 15D already shipped that 12A-3 builds on:
+
+- **`relationships` table** wired end-to-end:
+  per-entity Manage page (`/operator/sessions/{id}/relationships`)
+  + upload form + `parse_relationship_csv` importer
+  service + `relationships.imported` audit event +
+  `pair_context_lookup` consumption in
+  `app/services/rules/engine.py`. 12A-3 PR 2 only adds
+  the **export half** — there is no need to also ship
+  an importer.
+- **Manual-CSV assignment authoring retired.** 15D PR 6a
+  removed the upload form on the Operations Assignments
+  page; `assignment_mode == "manual"` survives only as
+  a dev-diagnostic surface for legacy data.
+- **`Assignment.context` JSON dropped.** Pair-context
+  tags now live exclusively in `relationships.tag_*`.
+  The pre-15D assignments-CSV column ordering (which
+  carried `Pair*Tag*` columns sourced from
+  `Assignment.context`) is no longer applicable — but
+  since the Assignments tile retires entirely in
+  PR 4, no CSV-shape rewrite is needed.
+
+What's still pre-12A-3:
+
+- Extract Data card has 5 tiles + bundle: Reviewers /
+  Reviewees / **Assignments** / Responses / Session
+  settings (+ inert Zip all). After 12A-3: Reviewers /
+  Reviewees / **Relationships** / Responses / Session
+  settings (+ inert Zip all). Net: same row count,
+  Assignments swaps for Relationships.
+- No Settings CSV importer; the Quick Setup Settings
+  slot is inert pending PR 1 + PR 3.
+
 ## Scope
 
 ### Settings importer (absorbed from 12A-2)
 
-- New service module `app/services/session_config_io.py`
-  gains an `apply_session_config(db, session, rows) ->
-  ApplyResult` function (mirroring the existing
-  `serialize_session_config` from 12A-1 PR 1). Two-phase
-  parse + apply per the 12A-2 plan's "Idempotency model"
-  section.
+- New `apply_session_config(db, session, rows) ->
+  ApplyResult` function in
+  `app/services/session_config_io.py` (mirroring the
+  existing `serialize_session_config` from 12A-1 PR 1).
+  Two-phase parse + apply per the 12A-2 plan's
+  "Idempotency model" section.
 - New route `POST /operator/sessions/{id}/import-config`
   with the lifecycle gate (`status in {"draft",
   "validated"}`).
@@ -75,12 +128,13 @@ for the PR-by-PR delivery.
   wipes instruments + assignments" matches the
   implementation).
 
-### Relationships per-entity export + import
+### Relationships per-entity export
 
-Mirrors the per-entity flows for reviewers + reviewees
-(12A-1 PR 2 shipped the rosters):
+The importer half is already shipped by 15D PR 1 — see
+codebase-check notes above. 12A-3 only adds the export
+half + UI tile:
 
-- **Export:** `app/services/extracts/relationships_extract.py`
+- **Export service:** `app/services/extracts/relationships_extract.py`
   with `serialize_relationships(session) -> Iterable[Row]`.
   6-column wide CSV:
 
@@ -90,24 +144,21 @@ Mirrors the per-entity flows for reviewers + reviewees
 
   Header pinned in unit tests; ordering deterministic
   (`(reviewer.email, reviewee.email_or_identifier)`).
-  Filename `{code}_relationships.csv`. New audit event
-  `session.relationships_extracted` (mirrors
+  Filename `{code}_relationships.csv`.
+
+- **Audit event:** `session.relationships_extracted`
+  registered in `EVENT_SCHEMAS` (mirror of
   `session.reviewers_extracted` etc.).
 
-- **Import:** `parse_relationship_csv` in
-  `app/services/csv_imports.py` (or a sibling
-  `app/services/relationships.py` module — slot during
-  PR scoping). Same wipe-and-replace per-row upsert
-  pattern as `parse_reviewer_csv` /
-  `parse_reviewee_csv`. Resolves `ReviewerEmail` against
-  the session's reviewers; resolves `RevieweeEmail`
-  against the session's reviewees; rejects rows that
-  reference unknown identifiers. Uniqueness enforced
-  by the 13E PR 2 unique constraint.
+- **Route:** `GET /operator/sessions/{id}/export/relationships.csv`
+  in `app/web/routes_operator/_extracts.py` (mirror of
+  the reviewers / reviewees / responses / settings
+  routes).
 
-- **Manage page:** new `/operator/sessions/{id}/relationships`
-  upload form mirrors today's reviewer / reviewee
-  upload pages.
+- **Extract Data tile:** new "Relationships" row in
+  `app/web/views/_extract_data.py` between Reviewees
+  and Responses. Conditionally suppresses count display
+  if 0 (mirrors the existing rosters' display rule).
 
 ### Quick Setup integration (Settings + Relationships slots)
 
@@ -116,41 +167,41 @@ Mirrors the per-entity flows for reviewers + reviewees
 ```
 Slot 1: Reviewers
 Slot 2: Reviewees
-Slot 3: Relationships  (new in 15D)
-Slot 4: Settings       (live in 12A-3)
+Slot 3: Relationships  (live in 15D)
+Slot 4: Settings       (graduates in 12A-3)
 ```
 
 12A-3 graduates the Settings slot to live (was 12A-2
-PR 2). The Relationships slot itself is wired by 15D;
-12A-3 just consumes the Relationships per-entity
-importer for slot 3's apply step (per 15D's Quick
-Setup chain ordering).
+PR 2). The Relationships slot itself is already wired
+by 15D; 12A-3 confirms the submit-all chain ordering
+runs reviewers → reviewees → relationships → settings.
 
-### Assignments CSV: download-only
+### Assignments CSV: dropped from Extract Data
 
-Post-15D the assignments table is system-derived. The
-existing per-entity assignments CSV (12A-1 PR 3)
-remains for **download-only**: operator clicks
-"Download Assignments CSV" on the Operations
-Assignments page to get a snapshot of the current
-state for reference / debugging / external analysis.
-**No matching importer** — manual row authoring
-retires in 15D.
+Post-15D the assignments table is system-derived —
+operator inputs (roster + relationships + RuleSet
+selection) determine it deterministically. There is
+no porting use case (assignments are output, not input)
+and no analytical use case the live preview on
+Operations Assignments doesn't already serve.
 
-12A-3 keeps the export route + audit event; removes
-any matching upload route / form that 12C-2 PR 3
-might have shipped (per the original 12C plan). If
-12C-2 PR 3 was deferred to 15D / 12A-3 (per the
-holistic-sequence revision), there's nothing to
-remove — this is a no-op for that path.
+12A-3 PR 4 retires the surface end-to-end:
 
-### Manual assignments importer retirement
+- Drop the **Extract Data tile** (`key="assignments"`
+  row in `app/web/views/_extract_data.py`).
+- Drop the **export route**
+  (`GET /operator/sessions/{id}/export/assignments.csv`
+  in `_extracts.py`).
+- Drop the **extract service**
+  (`app/services/extracts/assignments_extract.py`).
+- Drop the `session.assignments_extracted` audit-event
+  registration in `EVENT_SCHEMAS`.
+- Drop the related tests
+  (`tests/.../test_assignments_extract.py`).
 
-The legacy `parse_manual_csv` / `replace_assignments`
-flow (today's behaviour pre-15D) is removed by 15D.
-12A-3 doesn't ship anything new here; called out for
-completeness so the export / import surface
-inventory is accurate.
+The assignment-mode-aware count display + tile-suppression
+logic from 12A-1 PR 1a (the seeded-RuleSet audit-log
+fallback for pre-15B sessions) retires with the tile.
 
 ## PR sequence (4 PRs, locked 2026-05-10)
 
@@ -177,52 +228,48 @@ Exact 12A-2 PR 1 scope, absorbed:
   matches A` (modulo the `name` / `code` fallback
   rule).
 
-### PR 2 — Relationships per-entity export + import
+### PR 2 — Relationships export + Extract Data tile
 
-- `serialize_relationships(session)` extract +
-  `/export/relationships.csv` route.
-- New Manage page upload form at `/relationships`
-  (UI surface). The underlying `parse_relationship_csv`
-  importer service is **already shipped by 15D PR 1**
-  (codebase-check note 2026-05-10) — this PR builds the
-  per-entity export route + the Manage page form on top
-  of the existing service. Importer's `relationships.imported`
-  audit event is also defined in 15D PR 1; this PR
-  inherits it.
-- New audit event `session.relationships_extracted`
-  registered in `EVENT_SCHEMAS` (mirror of
-  `session.reviewers_extracted` etc.).
+- `serialize_relationships(session)` extract service +
+  `session.relationships_extracted` audit event.
+- `/export/relationships.csv` route in `_extracts.py`.
+- New "Relationships" tile in the Extract Data card
+  (between Reviewees and Responses).
 - Tests: round-trip (export → import via 15D's
   service → export byte-stable); export route auth +
   filename + audit emission with row count;
-  Manage-page upload form smoke (the underlying
-  importer's tests live in 15D PR 1).
+  Extract Data card tile renders + downloads.
 
-### PR 3 — Quick Setup Settings + Relationships slot graduation
+### PR 3 — Quick Setup Settings slot graduation
 
 - Settings slot (slot 4 in 15D's layout) graduates to
   live, pointing at PR 1's import-config route.
-- Relationships slot (slot 3 in 15D's layout) graduates
-  to live, pointing at PR 2's importer.
 - View-shape adapter `views.build_quick_setup_context`
-  flips both slots' `is_wired=True`.
+  flips slot 4's `is_wired=True`.
 - Tests: Quick Setup card renders 4 live slots in both
   Create New Session + Session Home contexts; submit-all
   chain runs reviewers → reviewees → relationships →
   settings; per-slot error banners surface in the right
-  slot.
+  slot. (Relationships slot is already live from 15D —
+  this PR just adds the Settings slot to the chain.)
 
-### PR 4 — Assignments-CSV download-only cleanup
+### PR 4 — Assignments-CSV retirement sweep
 
-- Confirms the assignments extract route stays live
-  (download remains useful as a reference snapshot).
-- Verifies any legacy upload form / route on the
-  Operations Assignments page is retired (should
-  already be done by 15D — this PR is a sweep).
-- Updates `spec/settings_inventory.md` §10's CSV
-  coverage matrix to reflect the post-15D state.
-- Tests: download route still works; no upload route
-  responds to POST.
+- Drop the Extract Data tile (`key="assignments"`).
+- Drop the `/export/assignments.csv` route.
+- Drop `app/services/extracts/assignments_extract.py`.
+- Drop `session.assignments_extracted` from
+  `EVENT_SCHEMAS`.
+- Drop the assignment-mode-aware count display + the
+  seeded-RuleSet audit-log fallback (12A-1 PR 1a).
+- Drop the related test files.
+- Update `spec/settings_inventory.md` §10 — remove the
+  assignments-CSV row from the coverage table.
+- Update `README.md` — Extract Data blurb shifts from
+  "five live CSV downloads (Settings, Reviewers,
+  Reviewees, Manual Assignments, Responses)" to
+  "five live CSV downloads (Settings, Reviewers,
+  Reviewees, Relationships, Responses)".
 
 ## Out of scope
 
@@ -230,16 +277,16 @@ Exact 12A-2 PR 1 scope, absorbed:
   `relationships` table) or 15D (drop
   `Assignment.context`).
 - **Generation-path consumption of relationships.**
-  15D wires it into `generate_full_matrix` + the
-  rule-based engine + manual-CSV save (pre-15D paths).
+  15D wires it into the rule-based engine via
+  `pair_context_lookup`.
 - **Rule grammar extensions.** 15D adds
   `pair_context.tag_N` matchers / filters / quotas
   to `app/schemas/rules.py`.
 - **Operations Assignments page UI.** Lives in 15D;
-  12A-3 just confirms the download route still works
-  on that page.
+  12A-3 doesn't touch it.
 - **Zip bundle export.** Deferred follow-on of the
-  12A-1 export track; orthogonal to 15D.
+  12A-1 export track; orthogonal to 15D. The
+  inert Zip all row stays inert.
 
 ## Test impact
 
@@ -250,9 +297,10 @@ Exact 12A-2 PR 1 scope, absorbed:
 - Quick Setup chain tests (PR 3) — 4 live slots,
   submit-all chain ordering, per-slot error
   surfacing.
-- Spec sweep (PR 4) — `spec/settings_inventory.md`
-  §10 + `spec/operator_ui_concept.md` enumerations of
-  per-entity CSVs.
+- Assignments-CSV removal sweep (PR 4) — confirm no
+  route responds, no extract service exists, no
+  audit-event registration remains, Extract Data card
+  renders 5 tiles in the new order.
 
 ## Doc impact
 
@@ -260,39 +308,45 @@ Exact 12A-2 PR 1 scope, absorbed:
 - `guide/todo_master.md`:
   - Move Segment 12A-3 from **Upcoming** to **Done**
     under "Segment 12" once all 4 PRs land.
-  - The 12A-2 entry retires from Upcoming when the
-    holistic-sequence revision lands; replaced by
-    12A-3.
+  - The 12A-2 entry stays in the
+    "Historical-reference entries" subsection per the
+    Post-Segment 15 todo_master refresh.
 - `spec/settings_inventory.md` — §10 (CSV coverage)
-  rewrites to reflect the post-15D Relationships
-  per-entity flow + assignments download-only state.
-- `guide/archive/segment_12A-1_export.md` — appendix update
-  noting the new Relationships extract; same
-  per-entity export pattern.
+  rewrites to reflect the post-12A-3 4-CSV porting
+  bundle + 1 analysis download. The pending
+  Relationships row (added in the post-15D refresh)
+  flips from "Pending 12A-3" to "✅ All". The
+  assignments-CSV row retires.
+- `README.md` — Extract Data blurb updated per PR 4.
+- `guide/archive/segment_12A-1_export.md` — appendix
+  update noting the new Relationships extract +
+  retired Assignments extract; same per-entity export
+  pattern.
 - `guide/segment_12A-2_import.md` — kept as
-  historical reference; status block updated to
-  point at 12A-3 as the actual delivery vehicle.
+  historical reference; status block already points at
+  12A-3 as the actual delivery vehicle (added in
+  Post-Segment 15 refresh).
 
 ## Related context
 
 - **Segment 12A-1** (export, shipped 2026-05-09;
   `guide/archive/segment_12A-1_export.md`) — the per-entity
-  CSV pattern this segment extends.
+  CSV pattern this segment extends + the Assignments
+  CSV that this segment retires.
 - **Segment 12A-2** (Settings CSV import, planned
   but absorbed into this segment;
   `guide/segment_12A-2_import.md`) — the contract
   this segment's PR 1 ships.
 - **Segment 13E** (DB prep for the 12C / 15D block;
   `guide/archive/segment_13E_db_prep.md`) — the
-  `relationships` table this segment's PR 2 reads
-  / writes.
+  `relationships` table this segment's PR 2 reads.
 - **Segment 12C** (self-review revamp;
   `guide/archive/segment_12C_self-review_revamp.md`) — 12C-2
   PR 2's "Settings importer wipes assignments
   explicitly" lock is folded into this segment's
   PR 1.
 - **Segment 15D** (assignments revamp;
-  `guide/archive/segment_15D_assignments_revamp.md`) — wires
+  `guide/archive/segment_15D_assignments_revamp.md`) — wired
   the Relationships table that this segment's PR 2
-  exports / imports; defines the post-15D Quick Setup
-  layout that this segment's PR 3 graduates.
+  exports; defines the post-15D Quick Setup layout
+  that this segment's PR 3 graduates.
