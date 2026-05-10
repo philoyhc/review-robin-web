@@ -572,7 +572,12 @@ def replace_assignments(
 
     new_count = 0
     for index, (reviewer, reviewee) in enumerate(pairs):
-        pair_include = includes[index] if includes is not None else True
+        if includes is not None:
+            pair_include = includes[index]
+        elif is_self_review(reviewer, reviewee):
+            pair_include = review_session.self_reviews_active
+        else:
+            pair_include = True
         pair_context = contexts[index] if contexts is not None else None
         for instrument in instruments:
             db.add(
