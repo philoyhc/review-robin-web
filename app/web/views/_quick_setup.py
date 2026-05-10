@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.services import csv_imports
+from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 
@@ -182,6 +183,7 @@ def build_quick_setup_context(
 
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
+    relationship_count = relationships_service.existing_count(db, sid)
 
     cancel_url_for = lambda key: (  # noqa: E731
         f"/operator/sessions/{sid}#quick-setup-{key}"
@@ -216,6 +218,17 @@ def build_quick_setup_context(
             cancel_url=cancel_url_for("reviewees"),
         ),
         QuickSetupSlot(
+            key="relationships",
+            label="Relationships",
+            count=relationship_count,
+            mode="file_upload",
+            is_wired=True,
+            wire_url=f"/operator/sessions/{sid}/quick-setup/relationships",
+            coming_in=None,
+            error_message=_error_for("relationships"),
+            cancel_url=cancel_url_for("relationships"),
+        ),
+        QuickSetupSlot(
             key="settings",
             label="Session settings",
             count=0,
@@ -229,9 +242,9 @@ def build_quick_setup_context(
     ]
 
     description = (
-        "Bulk-populate reviewers and reviewees from files in one "
-        "place. Available only when session is in draft mode and "
-        "does not have any responses."
+        "Bulk-populate reviewers, reviewees, and relationships from "
+        "files in one place. Available only when session is in draft "
+        "mode and does not have any responses."
     )
 
     # Default-locked on every fresh page load when the card is
@@ -270,6 +283,7 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
     label_for = {
         "reviewers": "Reviewers",
         "reviewees": "Reviewees",
+        "relationships": "Relationships",
         "settings": "Session settings",
     }
     label = label_for.get(slot_key, slot_key)
@@ -288,6 +302,7 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
     per_entity_path = {
         "reviewers": "reviewers",
         "reviewees": "reviewees",
+        "relationships": "relationships",
     }.get(slot_key)
     if per_entity_path:
         return (
@@ -344,6 +359,15 @@ def build_new_session_quick_setup_context(
             coming_in=None if is_wired else "Wired in Segment 11J PR A",
         ),
         QuickSetupSlot(
+            key="relationships",
+            label="Relationships",
+            count=0,
+            mode="file_upload",
+            is_wired=is_wired,
+            wire_url=None,
+            coming_in=None if is_wired else "Wired in Segment 15D PR 7c",
+        ),
+        QuickSetupSlot(
             key="settings",
             label="Session settings",
             count=0,
@@ -359,8 +383,9 @@ def build_new_session_quick_setup_context(
         is_disabled=False,
         is_locked=False,
         description=(
-            "Bulk-populate reviewers and reviewees from files in one "
-            "place — submitted alongside the session details above."
+            "Bulk-populate reviewers, reviewees, and relationships "
+            "from files in one place — submitted alongside the "
+            "session details above."
         ),
         title="Quick setup (optional)",
         show_lock_toggle=False,

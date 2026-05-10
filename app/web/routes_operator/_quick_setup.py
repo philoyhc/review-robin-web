@@ -31,7 +31,12 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
-from app.services import csv_imports, sessions
+from app.services import (
+    assignments,
+    csv_imports,
+    relationships as relationships_service,
+    sessions,
+)
 from app.services import session_lifecycle as lifecycle
 from app.web.deps import (
     get_or_create_user,
@@ -56,6 +61,7 @@ async def create_session(
     help_contact: str | None = Form(default=None),
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
+    relationships_file: UploadFile | None = File(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -137,6 +143,18 @@ async def create_session(
         if reason is not None:
             return quick_setup_error_redirect("reviewees", reason)
         last_fragment = "#quick-setup-reviewees"
+
+    if relationships_file is not None and relationships_file.filename:
+        reason = await _run_quick_setup_relationships(
+            file=relationships_file,
+            confirm_replace="true",
+            review_session=review_session,
+            user=user,
+            db=db,
+        )
+        if reason is not None:
+            return quick_setup_error_redirect("relationships", reason)
+        last_fragment = "#quick-setup-relationships"
 
     return RedirectResponse(
         url=f"{home_url}{last_fragment}",
@@ -329,6 +347,88 @@ async def _handle_quick_setup_import(
     )
 
 
+@router.post(
+    "/sessions/{session_id}/quick-setup/relationships",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def quick_setup_relationships_submit(
+    file: UploadFile = File(...),
+    confirm_replace: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Quick Setup card slot 3 (Relationships) handler. Mirrors the
+    Reviewers / Reviewees per-slot routes but resolves the parser's
+    ``reviewers=`` / ``reviewees=`` kwargs against the session's
+    rosters before calling
+    ``relationships_service.parse_relationship_csv``."""
+
+    home_url = f"/operator/sessions/{review_session.id}"
+    fragment = "#quick-setup-relationships"
+    error_reason = await _run_quick_setup_relationships(
+        file=file,
+        confirm_replace=confirm_replace,
+        review_session=review_session,
+        user=user,
+        db=db,
+    )
+    if error_reason is not None:
+        return RedirectResponse(
+            url=(
+                f"{home_url}?quick_setup_error=relationships"
+                f"&quick_setup_reason={error_reason}{fragment}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    return RedirectResponse(
+        url=f"{home_url}{fragment}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+async def _run_quick_setup_relationships(
+    *,
+    file: UploadFile,
+    confirm_replace: str | None,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+) -> str | None:
+    """Reusable Relationships-slot pipeline shared by the per-slot
+    route and the consolidated ``submit-all`` handler. Returns the
+    ``quick_setup_reason`` token on failure, ``None`` on success."""
+
+    if not lifecycle.is_editable(review_session):
+        return "lifecycle"
+
+    content = await file.read()
+    reviewers = assignments.list_reviewers(db, review_session.id)
+    reviewees = assignments.list_reviewees(db, review_session.id)
+    result = relationships_service.parse_relationship_csv(
+        content, reviewers=reviewers, reviewees=reviewees
+    )
+    if result.is_blocked or any(
+        issue.severity == "error" for issue in result.issues
+    ):
+        return "parse"
+
+    existing = relationships_service.existing_count(db, review_session.id)
+    if existing > 0 and confirm_replace != "true":
+        return "needs_confirm"
+
+    relationships_service.save_relationships(
+        db,
+        session=review_session,
+        user=user,
+        rows=result.rows,
+        filename=file.filename or "",
+        correlation_id=request_correlation_id(),
+    )
+    return None
+
+
 async def _run_quick_setup_import(
     *,
     file: UploadFile,
@@ -398,6 +498,7 @@ async def quick_setup_submit_all(
     request: Request,
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
+    relationships_file: UploadFile | None = File(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
@@ -473,6 +574,18 @@ async def quick_setup_submit_all(
         if reason is not None:
             return error_redirect("reviewees", reason)
         last_fragment = "#quick-setup-reviewees"
+
+    if relationships_file is not None and relationships_file.filename:
+        reason = await _run_quick_setup_relationships(
+            file=relationships_file,
+            confirm_replace=confirm_replace,
+            review_session=review_session,
+            user=user,
+            db=db,
+        )
+        if reason is not None:
+            return error_redirect("relationships", reason)
+        last_fragment = "#quick-setup-relationships"
 
     return RedirectResponse(
         url=f"{home_url}{last_fragment}",
