@@ -1,12 +1,14 @@
-# Segment 12C — Self-review revamp + Quick Setup upload semantics
+# Segment 12C — Self-review revamp + Quick Setup upload semantics + chrome reorder
 
 **Status:** Planning. **Sub-segment 12C-1 (Part 1) — sized
 2026-05-09; ready to start.** Sub-segment 12C-2 (Part 2) —
 slot-3 dropdown removal locked 2026-05-10; manual-CSV shape
 in a per-instrument world still open (Options A / B / C / D).
+**Sub-segment 12C-3 (Part 3) — locked 2026-05-10; ready to
+start.**
 
-This doc covers **two related-but-distinct concerns** that
-both touch the Assignments slot of Quick Setup:
+This doc covers **three related concerns** that all touch
+the Assignments / Instruments cluster of the operator chrome:
 
 - **Part 1 — Two-layer self-review model (Sub-segment
   12C-1).** Replace today's scattered ad-hoc
@@ -17,6 +19,12 @@ both touch the Assignments slot of Quick Setup:
   every Quick Setup slot, and resolve the priority order
   between slot 3 (assignments) and slot 4 (settings) when
   they disagree on RuleSet selection.
+- **Part 3 — Chrome reorder: Instruments before
+  Assignments (Sub-segment 12C-3).** Small UI move —
+  swap the Instruments and Assignments tabs in the
+  chrome's Setup nav row, and apply the same swap to the
+  status pills + the Session Home Setup card so the
+  "what's still left to set up?" reading order matches.
 
 The two parts share the same surfaces but answer different
 questions; expect them to land as separate PR sequences.
@@ -502,6 +510,106 @@ retired; that retirement is out of scope here.)
 >    names the resolution ("manual rows for Instrument
 >    #1 will override its `rule_set_name` reference").
 >    Same pattern as 11J's slot-scoped warnings.
+
+---
+
+## Part 3 — Chrome reorder: Instruments before Assignments (Sub-segment 12C-3)
+
+### Decision locked 2026-05-10
+
+In the chrome's Setup row, swap **Instruments** ahead of
+**Assignments**. Apply the same swap to the chrome status
+pills row and the Session Home Setup card so all three
+"what's left to set up?" surfaces read in the same order.
+
+**Why.** Instruments define *what* the operator asks
+reviewers about; assignments define *who* reviews *whom*
+per instrument. Instruments are conceptually upstream — the
+operator typically builds the question schema before
+deciding who answers it. The chrome ordering should match
+that workflow.
+
+### Targeted moves (locked 2026-05-10)
+
+1. **Chrome nav (Setup tab strip).** Swap the two `<a
+   class="nav-tab">` blocks in
+   `app/web/templates/operator/partials/session_top_nav.html`
+   so the Setup row reads:
+   `Reviewers · Reviewees · Instruments · Assignments ·
+   Email Template`. The `_setup_pages` list at the top of
+   the partial keeps the same five entries; only the
+   render order changes.
+2. **Chrome status pills row.** Swap the
+   `Assignments` + `Instruments` pill blocks in
+   `app/web/templates/operator/partials/session_setup_status_row.html`
+   (the Assignments block at lines 30-38 carries the
+   `assignment_mode` annex; preserve it intact when
+   moving). The underlying `SessionStatusPills` dataclass
+   in `app/web/views/_setup.py` stays as-is — fields are
+   accessed by attribute, not by position.
+3. **Session Home Setup card.** Swap the `SetupRow(label="Assignments", …)`
+   and `SetupRow(label="Instruments", …)` entries in
+   `build_setup_rows`
+   (`app/web/views/_setup.py:78-87`). The chrome change
+   only feels consistent if this card flips too, since
+   the operator sees both surfaces at once on Home.
+
+The Operations row tabs (Validate / Previews / Invitations
+/ Responses) and the Operations-row pills (Invitations /
+Responses placeholders) are not in scope for this swap —
+their order tracks the lifecycle, not the setup workflow.
+
+### Implementation pointers
+
+- Single small PR. Three template / view-shape edits +
+  any test reorder. No schema; no new audit events; no
+  copy changes (labels themselves stay).
+- **Test impact.** Anywhere a test asserts the pre-flip
+  order needs the matching reorder. Spot-check before
+  sizing — likely a handful of integration tests under
+  `tests/integration/` (e.g. tests that scan the chrome
+  HTML for tab strings, or that assert
+  `build_setup_rows` returns rows in a specific order).
+  No unit-level pin on `SessionStatusPills` field order
+  expected; if one exists, update it too.
+- **Spec doc touch-ups.** Sweep
+  `spec/operator_ui_concept.md` for any "Reviewers /
+  Reviewees / Assignments / Instruments / Email
+  Template" enumeration; flip to the new order so the
+  spec stays the source of truth. Same sweep on
+  `spec/setup_pages.md` and any segment doc that
+  enumerates the Setup tabs (`spec/session_home.md`?).
+- **No reflow / spacing concerns.** The two tabs are
+  sibling links inside `.tab-strip-setup`; swapping
+  them doesn't change the strip's width or layout
+  behaviour.
+
+### Out of scope
+
+- **Reordering the Operations row tabs or pills.** The
+  Operations row tracks lifecycle ordering
+  (`Validate → Previews → Invitations → Responses`)
+  and stays as-is.
+- **Reordering Quick Setup card slots.** Slot 3
+  (Assignments) follows slots 1 + 2 (Reviewers /
+  Reviewees) per the existing card spec; instruments
+  aren't a Quick Setup slot today, so there's nothing
+  to move.
+- **Renaming the tabs / labels.** Labels stay as-is;
+  only the order changes.
+- **Page-body content.** No changes to the Instruments
+  page or Assignments page bodies — they keep their
+  existing surfaces.
+
+### PR sequence
+
+> **Single PR.**
+>
+> 1. Swap Instruments ahead of Assignments in the chrome
+>    nav partial, the chrome status pills partial, and
+>    the Session Home Setup card's row list. Update
+>    affected tests + spec-doc enumerations in the same
+>    PR (small, scoped).
 
 ---
 
