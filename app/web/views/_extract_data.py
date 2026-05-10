@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, ReviewSession
+from app.db.models import AuditEvent, Instrument, ReviewSession
 from app.services import (
     csv_imports,
     relationships as relationships_service,
@@ -56,13 +56,15 @@ class ExtractDataRow:
     def show_count(self) -> bool:
         """True for the per-entity rows whose count is operator-
         meaningful inline alongside the title (Reviewers /
-        Reviewees / Relationships / Responses). Session settings +
-        the zip-bundle row keep the title-only treatment."""
+        Reviewees / Relationships / Responses / Audit log).
+        Session settings + the zip-bundle row keep the title-only
+        treatment."""
         return self.key in (
             "reviewers",
             "reviewees",
             "relationships",
             "responses",
+            "audit_log",
         )
 
 
@@ -82,6 +84,13 @@ def build_extract_data_context(
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     relationship_count = relationships_service.existing_count(db, sid)
     response_count = responses_service.session_response_count(db, sid)
+    audit_event_count = len(
+        list(
+            db.execute(
+                select(AuditEvent).where(AuditEvent.session_id == sid)
+            ).scalars()
+        )
+    )
     instrument_count = len(
         list(
             db.execute(
@@ -95,15 +104,16 @@ def build_extract_data_context(
     #
     #   Reviewers       |  Session settings
     #   Reviewees       |  Responses
-    #   Relationships   |  Zip all  (inert)
+    #   Relationships   |  Audit log
+    #                   |  Zip all  (inert)
     #
     # Left column = per-entity rosters (operator-uploaded porting
     # inputs). Right column = session-level outputs (settings,
-    # downstream-analysis, future bundle).
+    # downstream-analysis, audit history, future bundle).
     # Per-entity rows (Reviewers / Reviewees / Relationships /
-    # Responses) grey out when the count is 0 — there's nothing
-    # to download. Settings stays always-live: session metadata
-    # always exists even on a freshly-created draft.
+    # Responses / Audit log) grey out when the count is 0 — there's
+    # nothing to download. Settings stays always-live: session
+    # metadata always exists even on a freshly-created draft.
     rows = [
         _entity_row(
             key="reviewers",
@@ -147,6 +157,14 @@ def build_extract_data_context(
             sid=sid,
             code=code,
         ),
+        _entity_row(
+            key="audit_log",
+            label="Audit log",
+            noun="audit event",
+            count=audit_event_count,
+            sid=sid,
+            code=code,
+        ),
     ]
 
     bundle = ExtractDataRow(
@@ -154,7 +172,7 @@ def build_extract_data_context(
         label="Zip all",
         filename=f"session-{code}-export.zip",
         count=sum(r.count for r in rows),
-        count_summary="zip of all five CSVs above",
+        count_summary="zip of all six CSVs above",
         is_wired=False,
         download_url=None,
         coming_in="Wired in Segment 12A PR 6",

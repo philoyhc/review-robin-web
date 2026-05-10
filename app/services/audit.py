@@ -447,6 +447,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.relationships_extracted": EventSchema(_IDENTITY | {"counts"}),
     # Segment 12A-3 PR 3 — Settings importer.
     "session.settings_imported": EventSchema(_IDENTITY | {"counts"}),
+    # Segment 12B PR 1 — Audit-events export.
+    "session.audit_log_extracted": EventSchema(_IDENTITY | {"counts"}),
 }
 
 
