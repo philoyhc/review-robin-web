@@ -7,6 +7,7 @@ from app.db.models.invitation import Invitation
 from app.db.models.operator_response_type_definition import (
     OperatorResponseTypeDefinition,
 )
+from app.db.models.relationship import Relationship
 from app.db.models.response import Response
 from app.db.models.response_type_definition import ResponseTypeDefinition
 from app.db.models.review_session import ReviewSession
@@ -27,6 +28,7 @@ __all__ = [
     "InstrumentResponseField",
     "Invitation",
     "OperatorResponseTypeDefinition",
+    "Relationship",
     "Response",
     "ResponseTypeDefinition",
     "ReviewSession",
