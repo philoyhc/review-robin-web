@@ -215,6 +215,21 @@ The locked-sequence centrepiece. **Pair Context becomes Setup-primary** (new Rel
 - **PR 7b** (#757) — dev-only docstring labels on the manual-CSV path. The route still exists (test fixtures need it) but is no longer reachable from the operator UI.
 - **PR 7c** (#758) — re-introduce a Quick Setup Relationships slot at position 3. File-upload only; the chain is now Reviewers → Reviewees → Relationships → Settings.
 
+### Post-Segment 15 clean up — done 2026-05-10 (PRs #760 → #769)
+
+Small UI / behaviour polish on top of the freshly-shipped 15D. Each PR was a single-concern change driven by walking the new pages with the operator. Bundled here rather than carved into a new sub-segment because none of them needed planning beyond the one-sentence brief that triggered them.
+
+- **#760** — Relationships page mirrors Reviewers / Reviewees: explanatory paragraph card replaced by a stats card (`Number of pairwise relationships: N` + `Fields with data:` pills); new `relationships.fields_with_data` helper.
+- **#761** — Relationships info card collapses to a single line so count + pills sit side by side.
+- **#762** — Setup status row drops the **Assignments:** slot. With 15D's "Assignments are derived" model, count + mode surface on the Operations Assignments page itself.
+- **#763** — Assignments page layout polish: chrome moves Assignments between Validate and Previews (Validate · Assignments · Previews · Invitations · Responses); helping-info card retired; Rule Based card retitled **Assignment Rule** and lifted out of the wrapper card into a half-width slot in `.bottom-grid`; Self-reviews card sits half-width on the right; "Current pairs" → "Assignment pairs"; the third Ctx-toggle group label flips from "Pair" to "Relationship".
+- **#764** — Assignment Rule subtitle: lowercase "relationship" to match the surrounding casing of "reviewer" / "reviewee".
+- **#765** — Quick Setup card on Session Home + Create New Session now uses the two-column shape the CSS has always carried: Reviewers + Reviewees on the left, Relationships + Session settings on the right. Description copy gains "session settings" so the body matches the four slots.
+- **#766** — Seeded RuleSets default `excludeSelfReviews` to **false** (was `true`). New migration `d92f4a710e88` flips `rule_set_revisions.exclude_self_reviews` for revisions belonging to seeds; Personal forks untouched. Operators reach self-review activation through the bulk Include toggle on the Operations Assignments page rather than forking a seed.
+- **#767** — Rule Builder "+ New blank RuleSet" defaults to `exclude_self_reviews=false` to match the seed flip.
+- **#768** — bookkeeping: archive shipped 13E / 12C-1 / 15D plans into `guide/archive/`; Done entries land in this file.
+- **#769** — Reviewers / Reviewees / Relationships / Assignments preview tables: trailing `status` (or `Include`) cell renders as a `pill-info` (active / yes) or `pill-empty` (inactive / no) span so the column reads as a sparkline of state.
+
 ---
 
 ## Upcoming
