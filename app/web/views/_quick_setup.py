@@ -1,12 +1,11 @@
 """Quick Setup card view-shape adapter (Segment 11H scaffold +
-Segment 11J wiring) — the four-slot bulk-populate card on Session
-Home and the new-session preview variant.
+Segment 11J wiring) — the bulk-populate card on Session Home and
+the new-session preview variant.
 
 Slice 7 of the §12.B ladder (``guide/major_refactor.md``).
 
-Owns the ``QuickSetupSlot`` / ``QuickSetupRuleSetOption`` /
-``QuickSetupContext`` dataclasses, the per-slot error-message
-renderer, and the two context builders:
+Owns the ``QuickSetupSlot`` / ``QuickSetupContext`` dataclasses,
+the per-slot error-message renderer, and the two context builders:
 
 - ``build_quick_setup_context(...)`` — Session Home variant.
   Reads the operator's lock-toggle cookie + the session lifecycle
@@ -14,54 +13,58 @@ renderer, and the two context builders:
 - ``build_new_session_quick_setup_context(...)`` — new-session
   page variant. Card always unlocked, lock toggle suppressed.
 
+15D PR 7a retired the legacy "Assignments (manual CSV or RuleSet
+pick)" slot. Generation is now an explicit operator action on the
+Operations Assignments page (15D PR 6a) — not a Quick Setup
+side-effect. PR 7c re-introduces a slot 3 carrying Relationships.
+
 Source range in pre-PR-7 ``_legacy.py``: lines 398-863.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
-from app.services import assignments, csv_imports
+from app.services import csv_imports
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
-from app.services.rules import library
 
 
 @dataclass(frozen=True)
 class QuickSetupSlot:
     """One slot inside the Quick Setup card on Session Home.
 
-    11J's PRs flip ``is_wired`` and supply ``wire_url`` per slot;
-    11H ships every slot with ``is_wired=False`` and the controls
-    rendered ``disabled``.
+    Post-15D PR 7a every slot is a plain CSV file upload. The legacy
+    ``rule_or_csv`` mode (RuleSet dropdown + manual-CSV alternative)
+    retired with the assignments-slot retirement; PR 7c re-introduces
+    a ``relationships`` slot in the same file-upload mode.
     """
 
     key: str
     """Stable slot identifier — ``reviewers`` / ``reviewees`` /
-    ``assignments`` / ``settings``. Used as the DOM-id suffix
-    (``#quick-setup-{key}``) so URL fragments scroll directly to a
-    slot, and as the ``data-wire-target`` value so 11J's wiring
-    can locate the slot without a CSS-selector contract."""
+    ``settings`` (PR 7c re-adds ``relationships``). Used as the
+    DOM-id suffix (``#quick-setup-{key}``) so URL fragments scroll
+    directly to a slot, and as the ``data-wire-target`` value so
+    11J's wiring can locate the slot without a CSS-selector
+    contract."""
 
     label: str
     """Human-readable slot label, used in the H3 heading."""
 
     count: int
-    """Current population — count of reviewers / reviewees /
-    assignments. ``0`` for the configuration-import slot."""
+    """Current population — count of reviewers / reviewees.
+    ``0`` for the configuration-import slot."""
 
     mode: str
-    """``"file_upload"`` for slots 1, 2, 4; ``"rule_or_csv"`` for
-    slot 3 (Assignments). Slot mode controls which inputs render
-    inside the slot body."""
+    """``"file_upload"`` for every slot post-15D PR 7a."""
 
     is_wired: bool
-    """``True`` once 11J / 12A wires the slot. While ``False`` the
-    slot's controls render ``disabled`` and a ``coming_in`` tooltip
-    surfaces the wiring PR's name."""
+    """``True`` once 11J / 12A / 15D wires the slot. While ``False``
+    the slot's controls render ``disabled`` and a ``coming_in``
+    tooltip surfaces the wiring PR's name."""
 
     wire_url: str | None
     """POST URL once ``is_wired=True``. ``None`` while inert."""
@@ -80,31 +83,6 @@ class QuickSetupSlot:
     cancel_url: str | None = None
     """Clean Home URL with this slot's fragment anchor. Used as the
     Cancel target for the error banner. Stable across renders."""
-
-    rule_set_options: list["QuickSetupRuleSetOption"] = field(
-        default_factory=list
-    )
-    """Populated only on the ``rule_or_csv`` slot (Assignments). The
-    full visible-RuleSet list (seeds + caller-owned Personal,
-    canonical order) for the slot's "Generate by rule" dropdown.
-    Empty for every other slot."""
-
-    selected_rule_set_id: int | None = None
-    """Initially-selected RuleSet on the assignments slot's
-    dropdown. Defaults to the first seed in install order. ``None``
-    when the slot doesn't carry a rule dropdown."""
-
-
-@dataclass(frozen=True)
-class QuickSetupRuleSetOption:
-    """One option in the assignments slot's "Generate by rule"
-    dropdown. Same shape conventions as ``RuleBasedSelectorOption``
-    on the Assignments page; a separate dataclass keeps the Quick
-    Setup code path independent of the assignments-card adapter."""
-
-    id: int
-    label: str
-    is_seed: bool
 
 
 @dataclass(frozen=True)
@@ -204,7 +182,6 @@ def build_quick_setup_context(
 
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
-    assignment_count = assignments.existing_count(db, sid)
 
     cancel_url_for = lambda key: (  # noqa: E731
         f"/operator/sessions/{sid}#quick-setup-{key}"
@@ -214,26 +191,6 @@ def build_quick_setup_context(
         if error_kind != slot_key:
             return None
         return _quick_setup_error_message(slot_key, error_reason)
-
-    # Pull the visible RuleSet list once for the assignments slot's
-    # "Generate by rule" dropdown. ``list_visible_rule_sets`` already
-    # returns the canonical ordering (seeds first in install order,
-    # then caller-owned Personal). Empty when ``user`` is None — the
-    # new-session preview / inert-card path has no caller identity.
-    rule_set_options: list[QuickSetupRuleSetOption] = []
-    selected_rule_set_id: int | None = None
-    if user is not None:
-
-        for rs in library.list_visible_rule_sets(db, user=user):
-            rule_set_options.append(
-                QuickSetupRuleSetOption(
-                    id=rs.id,
-                    label=rs.name,
-                    is_seed=rs.is_seed,
-                )
-            )
-        if rule_set_options:
-            selected_rule_set_id = rule_set_options[0].id
 
     slots = [
         QuickSetupSlot(
@@ -259,19 +216,6 @@ def build_quick_setup_context(
             cancel_url=cancel_url_for("reviewees"),
         ),
         QuickSetupSlot(
-            key="assignments",
-            label="Assignments",
-            count=assignment_count,
-            mode="rule_or_csv",
-            is_wired=True,
-            wire_url=f"/operator/sessions/{sid}/quick-setup/assignments",
-            coming_in=None,
-            error_message=_error_for("assignments"),
-            cancel_url=cancel_url_for("assignments"),
-            rule_set_options=rule_set_options,
-            selected_rule_set_id=selected_rule_set_id,
-        ),
-        QuickSetupSlot(
             key="settings",
             label="Session settings",
             count=0,
@@ -285,9 +229,9 @@ def build_quick_setup_context(
     ]
 
     description = (
-        "Bulk-populate reviewers, reviewees, and assignments from "
-        "files or rules in one place. Available only when session "
-        "is in draft mode and does not have any responses."
+        "Bulk-populate reviewers and reviewees from files in one "
+        "place. Available only when session is in draft mode and "
+        "does not have any responses."
     )
 
     # Default-locked on every fresh page load when the card is
@@ -326,7 +270,6 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
     label_for = {
         "reviewers": "Reviewers",
         "reviewees": "Reviewees",
-        "assignments": "Assignments",
         "settings": "Session settings",
     }
     label = label_for.get(slot_key, slot_key)
@@ -345,7 +288,6 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
     per_entity_path = {
         "reviewers": "reviewers",
         "reviewees": "reviewees",
-        "assignments": "assignments",
     }.get(slot_key)
     if per_entity_path:
         return (
@@ -382,21 +324,6 @@ def build_new_session_quick_setup_context(
 
     is_wired = db is not None and user is not None
 
-    rule_set_options: list[QuickSetupRuleSetOption] = []
-    selected_rule_set_id: int | None = None
-    if is_wired:
-
-        for rs in library.list_visible_rule_sets(db, user=user):
-            rule_set_options.append(
-                QuickSetupRuleSetOption(
-                    id=rs.id,
-                    label=rs.name,
-                    is_seed=rs.is_seed,
-                )
-            )
-        if rule_set_options:
-            selected_rule_set_id = rule_set_options[0].id
-
     slots = [
         QuickSetupSlot(
             key="reviewers",
@@ -417,17 +344,6 @@ def build_new_session_quick_setup_context(
             coming_in=None if is_wired else "Wired in Segment 11J PR A",
         ),
         QuickSetupSlot(
-            key="assignments",
-            label="Assignments",
-            count=0,
-            mode="rule_or_csv",
-            is_wired=is_wired,
-            wire_url=None,
-            coming_in=None if is_wired else "Wired in Segment 11J PR B",
-            rule_set_options=rule_set_options,
-            selected_rule_set_id=selected_rule_set_id,
-        ),
-        QuickSetupSlot(
             key="settings",
             label="Session settings",
             count=0,
@@ -443,9 +359,8 @@ def build_new_session_quick_setup_context(
         is_disabled=False,
         is_locked=False,
         description=(
-            "Bulk-populate reviewers, reviewees, and assignments "
-            "from files or rules in one place — submitted alongside "
-            "the session details above."
+            "Bulk-populate reviewers and reviewees from files in one "
+            "place — submitted alongside the session details above."
         ),
         title="Quick setup (optional)",
         show_lock_toggle=False,

@@ -78,7 +78,6 @@ from ._instruments import (
 # (sliced in PR 7).
 from ._quick_setup import (
     QuickSetupContext,
-    QuickSetupRuleSetOption,
     QuickSetupSlot,
     build_new_session_quick_setup_context,
     build_quick_setup_context,
@@ -155,7 +154,6 @@ __all__ = [
     "PreviewPickerContext",
     "PreviewPickerOption",
     "QuickSetupContext",
-    "QuickSetupRuleSetOption",
     "QuickSetupSlot",
     "ResponsesRow",
     "RuleBasedCardContext",

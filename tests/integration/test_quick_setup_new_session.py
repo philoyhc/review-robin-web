@@ -40,9 +40,12 @@ def test_new_session_page_renders_quick_setup_card(
     assert "<h2>Quick setup (optional)</h2>" in body
     # Half-width slot grid is the same shape as on Home.
     assert 'class="quick-setup-top-grid"' in body
-    # Slots render with their stable fragment anchors.
-    for key in ("reviewers", "reviewees", "assignments", "settings"):
+    # Slots render with their stable fragment anchors. The
+    # Assignments slot retired in 15D PR 7a; Relationships
+    # arrives in PR 7c.
+    for key in ("reviewers", "reviewees", "settings"):
         assert f'id="quick-setup-{key}"' in body
+    assert 'id="quick-setup-assignments"' not in body
 
 
 def test_new_session_quick_setup_has_no_lock_toggle(
@@ -64,30 +67,28 @@ def test_new_session_quick_setup_has_no_lock_toggle(
 def test_new_session_quick_setup_renders_action_labels(
     client: TestClient,
 ) -> None:
-    """Each slot heading carries an inline action label —
-    ``Upload a CSV`` for the file-upload slots, ``Generate by rule``
-    for Assignments. No count copy renders here since there's no
+    """Every slot heading carries the ``Upload a CSV`` action label
+    post-15D PR 7a. No count copy renders here since there's no
     session row yet."""
 
     body = client.get("/operator/sessions/new").text
 
     # Three file-upload slots (Reviewers, Reviewees, Session settings).
     assert body.count(">Upload a CSV<") >= 3
-    # Assignments slot's inline label.
-    assert ">Generate by rule<" in body
+    # ``Generate by rule`` label retired with the Assignments slot.
+    assert ">Generate by rule<" not in body
 
 
 def test_build_new_session_quick_setup_context_shape() -> None:
-    """The new-session adapter returns a four-slot context with
-    every wire flag off, the lock toggle suppressed, and the
-    customised title."""
+    """Post-15D PR 7a the new-session adapter returns a 3-slot
+    context (Reviewers, Reviewees, Settings) with every wire flag
+    off, the lock toggle suppressed, and the customised title."""
 
     context = views.build_new_session_quick_setup_context()
 
     assert [slot.key for slot in context.slots] == [
         "reviewers",
         "reviewees",
-        "assignments",
         "settings",
     ]
     assert all(slot.is_wired is False for slot in context.slots)

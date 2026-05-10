@@ -512,11 +512,11 @@ def test_session_card_buttons_when_draft(
 def test_quick_setup_card_renders_scaffold_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """The Quick Setup card on Session Home renders the four-slot
-    layout in draft. Per Segment 11J PR A, the Reviewers and
-    Reviewees slots are live (no wiring tooltip); Assignments and
-    Settings remain inert pending Segment 11J PR B / Segment 12A
-    PR 6."""
+    """Post-15D PR 7a the Quick Setup card on Session Home renders
+    a 3-slot layout in draft (Reviewers, Reviewees, Settings).
+    Reviewers + Reviewees are wired live; Settings remains inert
+    pending Segment 12A PR 6. PR 7c re-introduces a Relationships
+    slot at position 3."""
 
     review_session = _make_session(client, db, code="qs-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
@@ -525,12 +525,14 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     assert 'class="card" id="quick-setup"' in body
     assert "<h2>Quick Setup</h2>" in body
     # Action-oriented body copy in draft / validated.
-    assert "Bulk-populate reviewers, reviewees, and assignments" in body
-    # Four slots render with stable fragment anchors.
-    for key in ("reviewers", "reviewees", "assignments", "settings"):
+    assert "Bulk-populate reviewers and reviewees" in body
+    # Three slots render with stable fragment anchors. Assignments
+    # slot retired in 15D PR 7a.
+    for key in ("reviewers", "reviewees", "settings"):
         assert f'id="quick-setup-{key}"' in body
+    assert 'id="quick-setup-assignments"' not in body
     # Slot 4 (Settings) remains inert pending Segment 12A PR 6;
-    # slots 1-3 are wired and have shed their wiring tooltips.
+    # the wired slots have shed their wiring tooltips.
     assert "Wired in Segment 11J PR A" not in body
     assert "Wired in Segment 11J PR B" not in body
     assert "Wired in Segment 12A PR 6" in body
@@ -581,7 +583,7 @@ def test_quick_setup_card_greys_in_ready(
     # Slot anchors still rendered (the body's still in the DOM, just
     # greyed) but the Lock / Unlock toggle is suppressed entirely.
     assert 'id="quick-setup-reviewers"' in body
-    assert 'id="quick-setup-assignments"' in body
+    assert 'id="quick-setup-reviewees"' in body
     assert 'id="quick-setup-lock-toggle"' not in body
 
 
