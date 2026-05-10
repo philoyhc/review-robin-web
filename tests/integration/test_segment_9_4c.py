@@ -175,7 +175,8 @@ def test_assignments_hub_inlines_method_forms(
         not in body
     )
     # Rule Based card stays — it's the Generate path post-15D.
-    assert "Rule Based Assignment" in body
+    # Title was renamed to "Assignment Rule" in the layout polish.
+    assert "Assignment Rule" in body
     assert 'id="rule-based-assignment"' in body
 
 

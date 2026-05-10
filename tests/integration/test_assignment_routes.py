@@ -285,9 +285,9 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
     )
 
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
-    # Populated state surfaces via the Current pairs / Self-reviews
+    # Populated state surfaces via the Assignment pairs / Self-reviews
     # cards on the page itself rather than a chrome-strip slot.
-    assert "Current pairs" in populated.text
+    assert "Assignment pairs" in populated.text
     assert 'id="self-reviews-toggle"' in populated.text
 
 
@@ -330,7 +330,7 @@ def test_assignments_hub_truncates_large_pair_list(
         follow_redirects=False,
     )
 
-    # The hub hosts the Current pairs preview after save
+    # The hub hosts the Assignment pairs preview after save
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
@@ -461,7 +461,7 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
     )
 
     empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
-    assert "Current pairs" not in empty.text
+    assert "Assignment pairs" not in empty.text
 
     client.post(
         f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
@@ -471,7 +471,7 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
 
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
     body = populated.text
-    assert "Current pairs" in body
+    assert "Assignment pairs" in body
     assert "alice@example.edu" in body
     assert "carol@example.edu" in body
 

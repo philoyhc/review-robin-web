@@ -126,13 +126,13 @@ def test_chrome_assignments_tab_now_on_operations_row(
     )[0]
     assert ">Assignments</a>" in ops_strip
 
-    # Order on Ops row: Validate · Previews · Assignments · Invitations · Responses
+    # Order on Ops row: Validate · Assignments · Previews · Invitations · Responses
     indices = {
         label: ops_strip.find(f">{label}</a>")
         for label in (
             "Validate",
-            "Previews",
             "Assignments",
+            "Previews",
             "Invitations",
             "Responses",
         )
@@ -140,8 +140,8 @@ def test_chrome_assignments_tab_now_on_operations_row(
     assert all(idx > 0 for idx in indices.values())
     assert (
         indices["Validate"]
-        < indices["Previews"]
         < indices["Assignments"]
+        < indices["Previews"]
         < indices["Invitations"]
         < indices["Responses"]
     )
@@ -203,7 +203,7 @@ def test_operations_page_keeps_rule_based_card(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
     assert 'id="rule-based-assignment"' in body
-    assert "Rule Based Assignment" in body
+    assert "Assignment Rule" in body
 
 
 def test_rule_based_card_drops_ad_hoc_exclude_self_review_checkbox(
