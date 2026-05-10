@@ -425,6 +425,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "reviewees.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "relationships.imported": EventSchema(_IDENTITY | {"counts", "context"}),
+    "relationships.migrated_from_assignment_context": EventSchema(
+        _IDENTITY | {"counts"}
+    ),
     "reviewers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "reviewees.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "relationships.deleted_all": EventSchema(_IDENTITY | {"counts"}),
