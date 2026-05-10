@@ -114,9 +114,12 @@ def test_build_quick_setup_context_returns_four_slots(
         f"/operator/sessions/{review_session.id}/quick-setup/relationships"
     )
     assert by_key["relationships"].coming_in is None
-    # Settings remains inert pending Segment 12A PR 6.
-    assert by_key["settings"].is_wired is False
-    assert by_key["settings"].coming_in == "Wired in Segment 12A PR 6"
+    # Settings graduates to live in 12A-3 PR 4.
+    assert by_key["settings"].is_wired is True
+    assert by_key["settings"].wire_url == (
+        f"/operator/sessions/{review_session.id}/import-config"
+    )
+    assert by_key["settings"].coming_in is None
     # Default state is not disabled in draft.
     assert context.is_disabled is False
 

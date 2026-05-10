@@ -63,6 +63,7 @@ async def create_session(
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
     relationships_file: UploadFile | None = File(default=None),
+    settings_file: UploadFile | None = File(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -156,6 +157,17 @@ async def create_session(
         if reason is not None:
             return quick_setup_error_redirect("relationships", reason)
         last_fragment = "#quick-setup-relationships"
+
+    if settings_file is not None and settings_file.filename:
+        reason = await _run_quick_setup_settings(
+            file=settings_file,
+            review_session=review_session,
+            user=user,
+            db=db,
+        )
+        if reason is not None:
+            return quick_setup_error_redirect("settings", reason)
+        last_fragment = "#quick-setup-settings"
 
     return RedirectResponse(
         url=f"{home_url}{last_fragment}",
@@ -500,6 +512,7 @@ async def quick_setup_submit_all(
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
     relationships_file: UploadFile | None = File(default=None),
+    settings_file: UploadFile | None = File(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
@@ -588,6 +601,17 @@ async def quick_setup_submit_all(
             return error_redirect("relationships", reason)
         last_fragment = "#quick-setup-relationships"
 
+    if settings_file is not None and settings_file.filename:
+        reason = await _run_quick_setup_settings(
+            file=settings_file,
+            review_session=review_session,
+            user=user,
+            db=db,
+        )
+        if reason is not None:
+            return error_redirect("settings", reason)
+        last_fragment = "#quick-setup-settings"
+
     return RedirectResponse(
         url=f"{home_url}{last_fragment}",
         status_code=status.HTTP_303_SEE_OTHER,
@@ -595,7 +619,7 @@ async def quick_setup_submit_all(
 
 
 # --------------------------------------------------------------------------- #
-# Segment 12A-3 PR 3 — Settings importer route
+# Segment 12A-3 PR 3 + PR 4 — Settings importer route + Quick Setup slot
 # --------------------------------------------------------------------------- #
 
 
@@ -616,17 +640,22 @@ async def import_session_config(
     importing into a session with reviewer responses is blocked
     via the gate (responses only exist in ``ready``).
 
-    Reachable only via Quick Setup slot 4 (graduated in
-    12A-3 PR 4) — there is no standalone Manage page. The same
-    success / error redirect shape the other Quick Setup slots
-    use applies: ``?config_imported=ok`` flash on success,
-    ``?quick_setup_error=settings&quick_setup_reason=...`` on
-    failure (lifecycle / parse / apply)."""
+    Reachable from Quick Setup slot 4 (PR 4) and as a direct
+    POST endpoint — same success / error redirect shape the
+    other Quick Setup slots use: ``?config_imported=ok`` flash
+    on success, ``?quick_setup_error=settings&quick_setup_reason=...``
+    on failure (lifecycle / parse / apply)."""
 
     home_url = f"/operator/sessions/{review_session.id}"
     fragment = "#quick-setup-settings"
 
-    def error_redirect(reason: str) -> RedirectResponse:
+    reason = await _run_quick_setup_settings(
+        file=file,
+        review_session=review_session,
+        user=user,
+        db=db,
+    )
+    if reason is not None:
         return RedirectResponse(
             url=(
                 f"{home_url}?quick_setup_error=settings"
@@ -635,16 +664,34 @@ async def import_session_config(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
+    return RedirectResponse(
+        url=f"{home_url}?config_imported=ok{fragment}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+async def _run_quick_setup_settings(
+    *,
+    file: UploadFile,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+) -> str | None:
+    """Reusable Settings-slot pipeline shared by the per-slot
+    route, the submit-all handler, and the create-session
+    handler. Returns the ``quick_setup_reason`` token on
+    failure, ``None`` on success."""
+
     if not lifecycle.is_editable(review_session):
-        return error_redirect("lifecycle")
+        return "lifecycle"
 
     content = await file.read()
     if not content:
-        return error_redirect("parse")
+        return "parse"
 
     rows, parse_error = _read_settings_csv(content)
     if parse_error is not None:
-        return error_redirect("parse")
+        return "parse"
 
     result = session_config_io.apply_session_config(
         db,
@@ -654,12 +701,8 @@ async def import_session_config(
         correlation_id=request_correlation_id(),
     )
     if not result.ok:
-        return error_redirect("parse")
-
-    return RedirectResponse(
-        url=f"{home_url}?config_imported=ok{fragment}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+        return "parse"
+    return None
 
 
 def _read_settings_csv(
