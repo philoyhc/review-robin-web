@@ -266,6 +266,14 @@ their work is folded into the locked block.
    download-only model. Sized as 4 PRs.
    **Plan:** `guide/segment_12A-3_export_import_updates.md`.
 
+- **15E — Next Action revamp + multi-step shortcuts**
+  *(carved out of 15D PR 8, 2026-05-10)*. Promotes the
+  Next Action card on Session Home to drive Validate →
+  Generate → Activate as one-click "super button"
+  chains, with single-step actions retained for granular
+  flows. Stub-state plan; sizing happens once 15D lands.
+  **Plan:** `guide/segment_15E_next_action_revamp.md`.
+
 Other upcoming work (12B audit retention, 13B sort, 13C
 enhanced instruments, 14 production hardening, 14-1 email
 infra, 15 operator polish, 15A friendly labels, 15B
