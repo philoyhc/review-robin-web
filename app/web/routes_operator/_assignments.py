@@ -154,6 +154,20 @@ async def assignments_manual_import(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
+    """Manual-assignments CSV import. **Dev-only** post-15D — no
+    operator UI surfaces this route. The Operations Assignments page
+    (15D PR 6a) dropped its upload card; the Quick Setup card's
+    legacy slot 3 retired in 15D PR 7a. The route stays accessible
+    for test fixtures and admin tooling that need to drop pre-canned
+    pair tuples into the assignments table without going through the
+    rule engine. ``parse_manual_csv`` carries the same dev-only
+    framing in its docstring.
+
+    Mirrors Segment 16's "dev-only-but-discoverable" stance —
+    documentation flags the path; no runtime gate / 404 for non-dev
+    environments.
+    """
+
     _require_editable(review_session)
     content = await file.read()
     reviewers = assignments.list_reviewers(db, review_session.id)
