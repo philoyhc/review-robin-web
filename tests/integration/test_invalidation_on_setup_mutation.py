@@ -182,7 +182,7 @@ def test_assignments_replace_invalidates(
         review_session=review_session,
         user=op,
         pairs=[(reviewer, reviewee)],
-        mode=AssignmentMode.full_matrix,
+        mode=AssignmentMode.rule_based,
         correlation_id="c1",
     )
 

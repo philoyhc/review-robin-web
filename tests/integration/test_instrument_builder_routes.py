@@ -18,6 +18,7 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
+from ._full_matrix import full_matrix_seed_id
 
 
 @pytest.fixture
@@ -69,10 +70,10 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
     )
 
 
-def _generate_full_matrix(client: TestClient, session_id: int) -> None:
+def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> None:
     client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
@@ -134,7 +135,7 @@ def test_edit_description_redirects_and_invalidates(
 ) -> None:
     review_session = _make_session(client, db, code="desc-1")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
     client.get(f"/operator/sessions/{review_session.id}?validated=1")
     db.refresh(review_session)
     assert review_session.status == "validated"
@@ -192,7 +193,7 @@ def test_edit_field_required_warning_redirects_with_query(
 ) -> None:
     review_session = _make_session(client, db, code="warn-edit")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
 
     instrument = _instrument(db, review_session.id)
     comments = db.execute(
@@ -223,7 +224,7 @@ def test_delete_field_with_responses_blocks_then_confirms(
 ) -> None:
     review_session = _make_session(client, db, code="del-cascade")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
 
     instrument = _instrument(db, review_session.id)
     rating = db.execute(
@@ -306,7 +307,7 @@ def test_bulk_accepting_all_off_writes_single_audit_no_invalidate(
 ) -> None:
     review_session = _make_session(client, db, code="bulk-r")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
     _activate(client, db, review_session.id)
     db.refresh(review_session)
     assert review_session.status == "ready"
@@ -339,7 +340,7 @@ def test_locked_when_ready_returns_409_for_mutations(
 ) -> None:
     review_session = _make_session(client, db, code="locked-1")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
     _activate(client, db, review_session.id)
     db.refresh(review_session)
     assert review_session.status == "ready"
@@ -376,7 +377,7 @@ def test_reviewer_surface_shows_help_block_only_for_visible_help_text(
     operator = make_client(alice)
     review_session = _make_session(operator, db, code="rev-help")
     _populate_rosters(operator, review_session.id)
-    _generate_full_matrix(operator, review_session.id)
+    _generate_full_matrix(operator, db, review_session.id)
 
     instrument = _instrument(db, review_session.id)
     rating = db.execute(
@@ -414,7 +415,7 @@ def test_reviewer_surface_uses_instrument_description_when_set(
     operator = make_client(alice)
     review_session = _make_session(operator, db, code="rev-desc")
     _populate_rosters(operator, review_session.id)
-    _generate_full_matrix(operator, review_session.id)
+    _generate_full_matrix(operator, db, review_session.id)
 
     instrument = _instrument(db, review_session.id)
     instrument.description = "Spring Peer Review"
@@ -435,7 +436,7 @@ def test_reviewer_surface_renders_yes_no_field_added_via_route(
     operator = make_client(alice)
     review_session = _make_session(operator, db, code="rev-add")
     _populate_rosters(operator, review_session.id)
-    _generate_full_matrix(operator, review_session.id)
+    _generate_full_matrix(operator, db, review_session.id)
 
     instrument = _instrument(db, review_session.id)
     response = operator.post(
@@ -462,7 +463,7 @@ def test_activation_blocked_when_instrument_has_no_response_fields(
 ) -> None:
     review_session = _make_session(client, db, code="empty-instr-route")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
 
     instrument = _instrument(db, review_session.id)
     fields = db.execute(

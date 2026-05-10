@@ -84,7 +84,7 @@ def test_self_review_row_inactive_when_session_flag_off(db: Session) -> None:
         review_session=review_session,
         user=user,
         pairs=pairs,
-        mode=AssignmentMode.full_matrix,
+        mode=AssignmentMode.rule_based,
         correlation_id="corr-off",
     )
 
@@ -117,7 +117,7 @@ def test_self_review_row_active_when_session_flag_on(db: Session) -> None:
         review_session=review_session,
         user=user,
         pairs=pairs,
-        mode=AssignmentMode.full_matrix,
+        mode=AssignmentMode.rule_based,
         correlation_id="corr-on",
     )
 

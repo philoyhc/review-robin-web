@@ -158,7 +158,6 @@ async def create_session(
         reason = await _run_quick_setup_assignments(
             file=assignments_file,
             rule_set_id=parsed_rule_set_id,
-            rule=None,
             exclude_self_review=exclude_self_review,
             confirm_replace="true",
             acknowledge_response_loss=None,
@@ -429,7 +428,6 @@ async def _run_quick_setup_import(
 async def quick_setup_assignments_submit(
     file: UploadFile | None = File(default=None),
     rule_set_id: int | None = Form(default=None),
-    rule: str | None = Form(default=None),
     exclude_self_review: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
@@ -445,10 +443,7 @@ async def quick_setup_assignments_submit(
     based engine (``app.services.rules.engine.evaluate``).
 
     ``rule_set_id`` is the canonical input from the populated
-    "Generate by rule" dropdown; ``rule`` is the legacy parameter
-    name retained for the test fixtures' ``rule="full_matrix"``
-    posts — when set, it falls through to the seeded Full Matrix
-    RuleSet.
+    "Generate by rule" dropdown.
 
     Lifecycle / parse / confirm-required failures 303 → Home with
     ``?quick_setup_error=assignments&quick_setup_reason=...``; the
@@ -463,7 +458,6 @@ async def quick_setup_assignments_submit(
     error_reason = await _run_quick_setup_assignments(
         file=file,
         rule_set_id=rule_set_id,
-        rule=rule,
         exclude_self_review=exclude_self_review,
         confirm_replace=confirm_replace,
         acknowledge_response_loss=acknowledge_response_loss,
@@ -489,7 +483,6 @@ async def _run_quick_setup_assignments(
     *,
     file: UploadFile | None,
     rule_set_id: int | None,
-    rule: str | None,
     exclude_self_review: str | None,
     confirm_replace: str | None,
     acknowledge_response_loss: str | None,
@@ -570,20 +563,6 @@ async def _run_quick_setup_assignments(
     )
 
     resolved_id = rule_set_id
-    if resolved_id is None and rule == "full_matrix":
-        # Legacy ``rule="full_matrix"`` payload — fall through to
-        # the seeded Full Matrix RuleSet so existing tests +
-        # bookmarks keep working.
-        full_matrix = next(
-            (
-                rs
-                for rs in library.list_visible_rule_sets(db, user=user)
-                if rs.is_seed and rs.name == "Full Matrix"
-            ),
-            None,
-        )
-        if full_matrix is not None:
-            resolved_id = full_matrix.id
     if resolved_id is None:
         return "parse"
 
@@ -734,7 +713,6 @@ async def quick_setup_submit_all(
         reason = await _run_quick_setup_assignments(
             file=assignments_file,
             rule_set_id=parsed_rule_set_id,
-            rule=None,
             exclude_self_review=exclude_self_review,
             confirm_replace=confirm_replace,
             acknowledge_response_loss=acknowledge_response_loss,

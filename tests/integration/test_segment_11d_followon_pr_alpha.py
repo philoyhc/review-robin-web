@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, Reviewer, ReviewSession
+from ._full_matrix import full_matrix_seed_id
 
 
 def _operator_creates_session_with_pair(
@@ -59,8 +60,8 @@ def _operator_creates_session_with_pair(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
     operator_client.get(f"/operator/sessions/{review_session.id}?validated=1")

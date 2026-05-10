@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.db.models import ReviewSession, RuleSet
 
 
 def _extract_iframe_srcdoc(body: str) -> str:
@@ -537,10 +537,20 @@ def _import_reviewees(
     assert response.status_code in (200, 303), response.text
 
 
-def _generate_full_matrix(client: TestClient, session_id: int) -> None:
+def _generate_full_matrix(
+    client: TestClient, db: Session, session_id: int
+) -> None:
+    rule_set_id = db.execute(
+        select(RuleSet.id).where(
+            RuleSet.is_seed.is_(True), RuleSet.name == "Full Matrix"
+        )
+    ).scalar_one()
     response = client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={
+            "rule_set_id": rule_set_id,
+            "exclude_self_review": "false",
+        },
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -568,7 +578,7 @@ def _seed_session_with_assignments(
             b"Dan,dan@example.edu\n"
         ),
     )
-    _generate_full_matrix(client, session.id)
+    _generate_full_matrix(client, db, session.id)
     return session
 
 
@@ -718,7 +728,7 @@ def test_session_home_see_previews_link_targets_hub(
         session.id,
         b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
     )
-    _generate_full_matrix(client, session.id)
+    _generate_full_matrix(client, db, session.id)
 
     body = client.get(
         f"/operator/sessions/{session.id}?validated=1"

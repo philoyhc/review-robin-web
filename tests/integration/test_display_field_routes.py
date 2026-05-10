@@ -29,7 +29,7 @@ def test_add_display_field_appends_row_and_invalidates_validated(
 ) -> None:
     review_session = _make_session(client, db, code="add-disp")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
     instrument = _instrument(db, review_session.id)
     _seed_pair_context_display_fields(db, instrument)
     _validate(client, db, review_session.id)
@@ -192,7 +192,7 @@ def test_locked_when_ready_returns_409_for_display_field_routes(
 ) -> None:
     review_session = _make_session(client, db, code="lock-disp")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
     instrument = _instrument(db, review_session.id)
     _seed_pair_context_display_fields(db, instrument)
     _activate(client, db, review_session.id)

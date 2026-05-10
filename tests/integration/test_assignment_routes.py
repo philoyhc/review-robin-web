@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, AuditEvent, ReviewSession
+from ._full_matrix import full_matrix_seed_id
 
 
 def _make_session(
@@ -61,8 +62,8 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
     )
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
 
@@ -76,10 +77,10 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
         ).scalars()
     )
     assert len(rows) == 2
-    assert all(r.created_by_mode == "full_matrix" for r in rows)
+    assert all(r.created_by_mode == "rule_based" for r in rows)
 
     db.refresh(review_session)
-    assert review_session.assignment_mode == "full_matrix"
+    assert review_session.assignment_mode == "rule_based"
 
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "assignments.generated")
@@ -91,7 +92,7 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
         "pairs": 2,
         "instruments": 1,
     }
-    assert event.detail["context"] == {"mode": "full_matrix"}
+    assert event.detail["context"]["mode"] == "rule_based"
 
 
 def test_full_matrix_fans_pairs_out_per_instrument(
@@ -129,8 +130,8 @@ def test_full_matrix_fans_pairs_out_per_instrument(
     )
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -171,19 +172,21 @@ def test_full_matrix_re_save_without_confirm_blocks(
         reviewee_idents=["carol@example.edu"],
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
-    assert response.status_code == 400
-    assert "Replace not confirmed" in response.text
+    # The rule-based-generate route 303s with the needs_confirm query
+    # param; assignments stay untouched until confirm_replace=true.
+    assert response.status_code == 303
+    assert "rule_based_error=needs_confirm" in response.headers["location"]
     assert (
         len(
             list(
@@ -209,14 +212,14 @@ def test_full_matrix_re_save_with_confirm_replaces(
         reviewee_idents=["carol@example.edu"],
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "", "confirm_replace": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "", "confirm_replace": "true"},
         follow_redirects=False,
     )
 
@@ -234,17 +237,18 @@ def test_full_matrix_re_save_with_confirm_replaces(
 def test_assignments_hub_no_longer_renders_standalone_full_matrix_card(
     client: TestClient, db: Session
 ) -> None:
-    """Segment 13A PR 8 retired the standalone Full Matrix card.
+    """Segment 13A PR 8 retired the standalone Full Matrix card; 12C-1
+    PR 3 deleted the underlying ``/assignments/full-matrix`` route.
     Full-matrix behaviour ships via the seeded Full Matrix RuleSet
-    inside the Rule Based card, which PR 3 pinned as engine-level
-    equivalent."""
+    inside the Rule Based card."""
 
     review_session = _make_session(client, db)
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
 
-    # The card heading + form action are both gone from the markup.
+    # The card heading + the legacy route URL are both gone from the
+    # markup.
     assert "<h2>Full Matrix Assignment</h2>" not in body
     assert (
         f'action="/operator/sessions/{review_session.id}'
@@ -273,14 +277,14 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
     assert ">Generate</button>" in empty.text
 
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
 
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
     assert 'pill-info">1</span>' in populated.text
-    assert "full_matrix" in populated.text
+    assert "rule_based" in populated.text
 
 
 def test_non_operator_gets_403_on_assignments_hub_and_post(
@@ -297,8 +301,8 @@ def test_non_operator_gets_403_on_assignments_hub_and_post(
     assert hub.status_code == 403
 
     post = bob_client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
     assert post.status_code == 403
@@ -317,8 +321,8 @@ def test_assignments_hub_truncates_large_pair_list(
 
     # Save 217 pairs
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
@@ -456,8 +460,8 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
     assert "Current pairs" not in empty.text
 
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
 

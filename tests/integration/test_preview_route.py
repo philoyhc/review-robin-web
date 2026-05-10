@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import AuditEvent, ReviewSession
+from ._full_matrix import full_matrix_seed_id
 
 from ._preview_iframe import get_surface_preview_html
 
@@ -76,10 +77,10 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
     )
 
 
-def _generate_full_matrix(client: TestClient, session_id: int) -> None:
+def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> None:
     client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
@@ -125,7 +126,7 @@ def test_preview_route_403s_for_non_operator(
     operator = make_client(alice)
     review_session = _make_session(operator, db, code="prev-308-403")
     _populate_rosters(operator, review_session.id)
-    _generate_full_matrix(operator, review_session.id)
+    _generate_full_matrix(operator, db, review_session.id)
 
     other_client = make_client(reviewer_user)
     response = other_client.get(
@@ -147,7 +148,7 @@ def test_preview_iframe_does_not_observe_deadline_side_effect(
 
     review_session = _make_session(client, db, code="prev-deadline")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
     _activate(client, db, review_session.id)
     db.refresh(review_session)
 
@@ -184,7 +185,7 @@ def test_reviewer_side_surface_still_renders_write_path(
     operator = make_client(alice)
     review_session = _make_session(operator, db, code="rev-regress")
     _populate_rosters(operator, review_session.id)
-    _generate_full_matrix(operator, review_session.id)
+    _generate_full_matrix(operator, db, review_session.id)
     _activate(operator, db, review_session.id)
 
     reviewer_client = make_client(reviewer_user)

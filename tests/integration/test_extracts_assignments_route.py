@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
 from app.web import views
+from ._full_matrix import full_matrix_seed_id
 
 
 def _make_session(
@@ -92,11 +93,11 @@ def _upload_manual(client: TestClient, review_session: ReviewSession) -> None:
 
 
 def _generate_full_matrix(
-    client: TestClient, review_session: ReviewSession
+    client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
@@ -206,9 +207,9 @@ def test_full_matrix_session_returns_404(
 ) -> None:
     review_session = _make_session(client, db, code="fm-404")
     _seed_roster(client, review_session)
-    _generate_full_matrix(client, review_session)
+    _generate_full_matrix(client, db, review_session)
     db.refresh(review_session)
-    assert review_session.assignment_mode == "full_matrix"
+    assert review_session.assignment_mode == "rule_based"
 
     response = client.get(
         f"/operator/sessions/{review_session.id}/export/assignments.csv"
@@ -255,18 +256,23 @@ def test_card_assignments_row_live_on_manual_session(
     assert by_key["assignments"].filename == "card-m_assignments.csv"
 
 
-def test_card_assignments_row_disabled_with_note_on_full_matrix(
+def test_card_assignments_row_disabled_with_note_on_rule_based(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="card-fm")
+    """12C-1 PR 3 retired the standalone full-matrix route; the seeded
+    Full Matrix RuleSet now writes ``assignment_mode='rule_based'``,
+    so the extract card surfaces the rule-based "Manual export only"
+    note here."""
+
+    review_session = _make_session(client, db, code="card-rb")
     _seed_roster(client, review_session)
-    _generate_full_matrix(client, review_session)
+    _generate_full_matrix(client, db, review_session)
     context = views.build_extract_data_context(db, review_session)
     by_key = {row.key: row for row in context.rows}
     assert by_key["assignments"].is_wired is False
     assert by_key["assignments"].download_url is None
     assert by_key["assignments"].coming_in is not None
-    assert "Full Matrix" in by_key["assignments"].coming_in
+    assert "RuleSet" in by_key["assignments"].coming_in
     assert "Manual export only" in by_key["assignments"].coming_in
 
 

@@ -21,7 +21,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, InstrumentDisplayField, ReviewSession
+from app.db.models import (
+    Instrument,
+    InstrumentDisplayField,
+    ReviewSession,
+    RuleSet,
+)
 
 
 def _make_session(
@@ -63,10 +68,31 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
     )
 
 
-def _generate_full_matrix(client: TestClient, session_id: int) -> None:
+def _full_matrix_seed_id(db: Session) -> int:
+    return db.execute(
+        select(RuleSet.id).where(
+            RuleSet.is_seed.is_(True), RuleSet.name == "Full Matrix"
+        )
+    ).scalar_one()
+
+
+def _generate_full_matrix(
+    client: TestClient, db: Session, session_id: int
+) -> None:
+    """Generate via the seeded "Full Matrix" RuleSet through the
+    rule-based generate route. Replaces the standalone full-matrix
+    route retired in 12C-1 PR 3.
+
+    ``exclude_self_review="false"`` mirrors the legacy helper's
+    pass-through behaviour (the legacy route's empty-string default
+    also resolved to ``False``)."""
+
     client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={
+            "rule_set_id": _full_matrix_seed_id(db),
+            "exclude_self_review": "false",
+        },
         follow_redirects=False,
     )
 
