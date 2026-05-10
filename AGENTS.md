@@ -79,12 +79,12 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    feature area into sibling sub-modules (`_lobby.py`,
    `_settings.py`, `_session_home.py`, `_quick_setup.py`,
    `_setup_rosters.py`, `_setup_invite.py`, `_assignments.py`,
-   `_rule_builder.py`, `_operations.py`, `_instruments.py`), with
-   shared plumbing (the `Jinja2Templates` instance, lifecycle /
-   edit-lock guards, Quick Setup cookie naming) in `_shared.py`.
-   New operator routes belong in their feature-area sub-module.
-   Slices import only from `_shared.py` and from outside the
-   package — no slice-to-slice imports. See
+   `_rule_builder.py`, `_operations.py`, `_instruments.py`,
+   `_extracts.py`), with shared plumbing (the `Jinja2Templates`
+   instance, lifecycle / edit-lock guards, Quick Setup cookie
+   naming) in `_shared.py`. New operator routes belong in their
+   feature-area sub-module. Slices import only from `_shared.py`
+   and from outside the package — no slice-to-slice imports. See
    `guide/major_refactor.md` for the full split rationale and
    slice boundaries.
 2. **Service modules** (`app/services/*.py`) hold all business logic — querying, mutation, validation, lifecycle transitions, audit-event emission. Routes import these; templates do not. The largest service, `app/services/instruments/`, is split by concern into a package — `_state.py` (cross-slice plumbing including `_instrument_label`), `_rtds.py` (Response Type Definitions), `_display_fields.py`, `_response_fields.py` (incl. `bulk_save_fields`), `_instrument_crud.py` — with `__init__.py` re-exporting the public surface so callers continue to write `from app.services import instruments` unchanged. See `guide/major_refactor.md` §12.A.
