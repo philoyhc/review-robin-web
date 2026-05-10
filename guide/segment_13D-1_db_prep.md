@@ -1,11 +1,17 @@
-# Segment 13D-2 — DB prep, wave 2 (for 12C + 15D)
+# Segment 13D-1 — DB prep, second pass (for 12C + 15D)
 
 **Status:** Planning. Sized 2026-05-10. **First in the
-locked sequence 13D-2 → 12C → 15D → 12A-3** (the next
+locked sequence 13D-1 → 12C → 15D → 12A-3** (the next
 big-picture block of operator-facing work). Mirrors the
 13D pattern: every migration lands inert, additive, and
 no-backfill so the feature segments downstream are pure
 service / UI work.
+
+> **Naming.** Original 13D shipped as a bare segment
+> (no `-N` suffix). This second pass picks up the
+> sub-segment numbering at `-1` since there's no prior
+> `13D-N`; sequencing reads "13D, then 13D-1" rather
+> than "13D-1, then 13D-2".
 
 **Sizing:** 2 PRs (one per migration).
 **Depends on:** 13D (#697 → #702, shipped 2026-05-09).
@@ -164,22 +170,22 @@ Mirrors the 13D test surface:
 
 - `docs/status.md` gains one timeline entry per PR.
 - `guide/todo_master.md`:
-  - Move Segment 13D-2 from **Upcoming** to **Done** under
+  - Move Segment 13D-1 from **Upcoming** to **Done** under
     "Segment 13" once both PRs land.
   - The Upcoming entry was added by the planning round
-    that locked the 13D-2 → 12C → 15D → 12A-3 sequence
+    that locked the 13D-1 → 12C → 15D → 12A-3 sequence
     on 2026-05-10.
 - `spec/architecture.md` — extend the "Database tables"
   enumeration to cover `relationships`.
 - `spec/settings_inventory.md` — extend §10 (CSV
   coverage) once 12A-3 ships the per-entity export +
-  import; not in 13D-2's scope to update yet.
+  import; not in 13D-1's scope to update yet.
 
 ## Related context
 
-- **Segment 13D — DB prep, wave 1** (shipped 2026-05-09;
+- **Segment 13D — DB prep, first pass** (shipped 2026-05-09;
   `guide/segment_13D_db_prep.md`). 7 PRs, every
-  migration inert. This wave-2 doc mirrors that
+  migration inert. This second-pass doc mirrors that
   pattern; differences are scope (only 2 PRs) +
   downstream consumers (12C / 15D vs. 13B / 13C / 15A
   / 15B / 15C).
