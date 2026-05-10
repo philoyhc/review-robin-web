@@ -150,7 +150,9 @@
             <td class="tag-col tag-col-1">{{ reviewer.tag_1 or "" }}</td>
             <td class="tag-col tag-col-2">{{ reviewer.tag_2 or "" }}</td>
             <td class="tag-col tag-col-3">{{ reviewer.tag_3 or "" }}</td>
-            <td>{{ reviewer.status }}</td>
+            <td>
+              <span class="pill {{ 'pill-info' if reviewer.status == 'active' else 'pill-empty' }}">{{ reviewer.status }}</span>
+            </td>
           </tr>
         {% endfor %}
       </table>

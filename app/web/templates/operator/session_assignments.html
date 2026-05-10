@@ -202,7 +202,9 @@
             <td class="assignment-col col-p1">{{ rel.tag_1 or "" if rel_active else "" }}</td>
             <td class="assignment-col col-p2">{{ rel.tag_2 or "" if rel_active else "" }}</td>
             <td class="assignment-col col-p3">{{ rel.tag_3 or "" if rel_active else "" }}</td>
-            <td>{{ "yes" if assignment.include else "no" }}</td>
+            <td>
+              <span class="pill {{ 'pill-info' if assignment.include else 'pill-empty' }}">{{ "yes" if assignment.include else "no" }}</span>
+            </td>
           </tr>
         {% endfor %}
       </table>
