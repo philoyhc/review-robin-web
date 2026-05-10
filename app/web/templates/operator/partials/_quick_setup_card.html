@@ -116,9 +116,17 @@
   <div class="quick-setup-body{% if quick_setup.is_locked %} locked{% endif %}">
     <h2>{{ quick_setup.title }}</h2>
     <p class="form-help">{{ quick_setup.description }}</p>
+    {# Slot layout: first half (Reviewers + Reviewees) on the left,
+       second half (Relationships + Session settings) on the right. #}
+    {% set _split = (quick_setup.slots | length + 1) // 2 %}
     <div class="quick-setup-top-grid">
       <div class="quick-setup-top-grid-col">
-        {% for slot in quick_setup.slots %}
+        {% for slot in quick_setup.slots[:_split] %}
+          {{ quick_setup_slot(slot, submit_all_form_id) }}
+        {% endfor %}
+      </div>
+      <div class="quick-setup-top-grid-col">
+        {% for slot in quick_setup.slots[_split:] %}
           {{ quick_setup_slot(slot, submit_all_form_id) }}
         {% endfor %}
       </div>

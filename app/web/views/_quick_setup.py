@@ -242,9 +242,10 @@ def build_quick_setup_context(
     ]
 
     description = (
-        "Bulk-populate reviewers, reviewees, and relationships from "
-        "files in one place. Available only when session is in draft "
-        "mode and does not have any responses."
+        "Bulk-populate reviewers, reviewees, relationships, and "
+        "session settings from files in one place. Available only "
+        "when session is in draft mode and does not have any "
+        "responses."
     )
 
     # Default-locked on every fresh page load when the card is
@@ -383,9 +384,9 @@ def build_new_session_quick_setup_context(
         is_disabled=False,
         is_locked=False,
         description=(
-            "Bulk-populate reviewers, reviewees, and relationships "
-            "from files in one place — submitted alongside the "
-            "session details above."
+            "Bulk-populate reviewers, reviewees, relationships, "
+            "and session settings from files in one place — "
+            "submitted alongside the session details above."
         ),
         title="Quick setup (optional)",
         show_lock_toggle=False,

@@ -524,7 +524,10 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     assert 'class="card" id="quick-setup"' in body
     assert "<h2>Quick Setup</h2>" in body
     # Action-oriented body copy in draft / validated.
-    assert "Bulk-populate reviewers, reviewees, and relationships" in body
+    assert (
+        "Bulk-populate reviewers, reviewees, relationships, and "
+        "session settings"
+    ) in body
     # Four slots render with stable fragment anchors.
     for key in ("reviewers", "reviewees", "relationships", "settings"):
         assert f'id="quick-setup-{key}"' in body
