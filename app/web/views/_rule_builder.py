@@ -856,7 +856,7 @@ def _rule_builder_blank_draft(
         ),
         combinator="ALL_OF",
         combinator_label=_COMBINATOR_LABELS.get("ALL_OF", "All of"),
-        exclude_self_reviews=True,
+        exclude_self_reviews=False,
         seed_value=None,
         rule_lines=[],
         editable_rules=[],
