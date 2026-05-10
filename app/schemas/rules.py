@@ -116,6 +116,9 @@ ALLOWED_PREDICATE_FIELDS: frozenset[str] = frozenset(
         "reviewee.tag1",
         "reviewee.tag2",
         "reviewee.tag3",
+        "pair_context.tag1",
+        "pair_context.tag2",
+        "pair_context.tag3",
     }
 )
 

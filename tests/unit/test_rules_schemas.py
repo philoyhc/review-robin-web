@@ -121,13 +121,16 @@ def test_predicate_case_sensitive_flag_round_trips() -> None:
 
 
 def test_allowed_predicate_fields_match_spec_vocabulary() -> None:
-    """Spec §4.4 names email + tag1/2/3 on each side; the allow-list
-    is exactly that set."""
+    """Spec §4.4 names email + tag1/2/3 on each side; Segment 15D PR 3
+    extends the allow-list with ``pair_context.tag1/2/3`` (per-pair
+    attributes living on the new ``relationships`` table)."""
 
     expected = {
         f"{side}.{name}"
         for side in ("reviewer", "reviewee")
         for name in ("email", "tag1", "tag2", "tag3")
+    } | {
+        f"pair_context.tag{n}" for n in (1, 2, 3)
     }
     assert ALLOWED_PREDICATE_FIELDS == expected
 
