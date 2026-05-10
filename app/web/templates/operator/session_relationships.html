@@ -12,12 +12,10 @@
   </div>
 
   <div class="card">
-    <p style="margin: 0 0 8px 0;">
+    <p style="margin: 0;">
       Number of pairwise relationships:
       <span class="pill pill-count">{{ existing_count or 0 }}</span>
-    </p>
-    <p style="margin: 0;">
-      Fields with data:
+      &nbsp;&nbsp;Fields with data:
       {% for label in fields_with_data %}
         <span class="pill pill-count">{{ label }}</span>
       {% else %}
