@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -31,6 +31,9 @@ class ReviewSession(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(32), default="draft", nullable=False)
     deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     assignment_mode: Mapped[str | None] = mapped_column(String(32))
+    self_reviews_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, server_default=true()
+    )
     help_contact: Mapped[str | None] = mapped_column(String(320))
     # Free-form JSON; recognised string-override keys live in
     # ``app.services.email_templates.OVERRIDE_KEYS``
