@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession
 from app.services import assignments, csv_imports
+from app.services import relationships as relationships_service
 
 
 @dataclass
@@ -42,6 +43,7 @@ def build_setup_rows(
     sid = review_session.id
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
+    relationship_count = relationships_service.existing_count(db, sid)
     assignment_count = assignments.existing_count(db, sid)
     instruments = list(
         db.execute(
@@ -76,6 +78,11 @@ def build_setup_rows(
             manage_url=f"/operator/sessions/{sid}/reviewees",
         ),
         SetupRow(
+            label="Relationships",
+            value=f"Number of relationships: {relationship_count}",
+            manage_url=f"/operator/sessions/{sid}/relationships",
+        ),
+        SetupRow(
             label="Assignments",
             value=f"Number of assignments: {assignment_count}",
             manage_url=f"/operator/sessions/{sid}/assignments",
@@ -97,11 +104,12 @@ def build_setup_rows(
 class SessionStatusPills:
     """Counts shown on the standardized session-level status row
     (rendered by ``partials/session_setup_status_row.html``). The
-    same five numbers / flags appear on every session-scoped page
-    so the chrome reads as a single contract."""
+    same numbers / flags appear on every session-scoped page so
+    the chrome reads as a single contract."""
 
     reviewer_count: int
     reviewee_count: int
+    relationship_count: int
     assignment_count: int
     instrument_count: int
     email_invites_set_up: bool
@@ -114,6 +122,7 @@ def session_status_pills(
     return SessionStatusPills(
         reviewer_count=csv_imports.existing_reviewer_count(db, sid),
         reviewee_count=csv_imports.existing_reviewee_count(db, sid),
+        relationship_count=relationships_service.existing_count(db, sid),
         assignment_count=assignments.existing_count(db, sid),
         instrument_count=len(
             list(

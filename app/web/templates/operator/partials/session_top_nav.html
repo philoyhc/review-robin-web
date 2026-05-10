@@ -18,7 +18,7 @@
                      Preview Pages pass the parent's name (or "Home"
                      for Home sub-pages).
 #}
-{% set _setup_pages = ["Reviewers", "Reviewees", "Assignments", "Instruments", "Email Template"] %}
+{% set _setup_pages = ["Reviewers", "Reviewees", "Relationships", "Assignments", "Instruments", "Email Template"] %}
 {% set _ops_pages = ["Validate", "Previews", "Invitations", "Responses"] %}
 {% set _setup_active = current_page in _setup_pages %}
 {% set _ops_active = current_page in _ops_pages %}
@@ -35,6 +35,8 @@
        href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
     <a class="nav-tab{% if current_page == 'Reviewees' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+    <a class="nav-tab{% if current_page == 'Relationships' %} active{% endif %}"
+       href="/operator/sessions/{{ session.id }}/relationships">Relationships</a>
     <a class="nav-tab{% if current_page == 'Assignments' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/assignments">Assignments</a>
     <a class="nav-tab{% if current_page == 'Instruments' %} active{% endif %}"

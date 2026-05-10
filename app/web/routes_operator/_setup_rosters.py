@@ -1,6 +1,7 @@
-"""Setup rosters — Reviewers / Reviewees pages, their CSV imports,
-and their delete-all destructive actions. Slice 6 of the major
-refactor.
+"""Setup rosters — Reviewers / Reviewees / Relationships pages,
+their CSV imports, and their delete-all destructive actions.
+Slice 6 of the major refactor; Relationships routes added in
+Segment 15D PR 2.
 
 Source ranges in pre-refactor ``routes_operator.py``: 528-667,
 2122-2180, 2296-2348.
@@ -23,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import assignments, csv_imports
+from app.services import assignments, csv_imports, relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
 from app.web.deps import (
@@ -293,4 +294,148 @@ def reviewees_delete_all(
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/reviewees",
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Relationships (Segment 15D PR 2)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/sessions/{session_id}/relationships", response_class=HTMLResponse)
+def relationships_list(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    return _render_relationships_page(
+        request=request,
+        review_session=review_session,
+        user=user,
+        db=db,
+        issues=[],
+        filename=None,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/relationships/import",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def relationships_import_submit(
+    request: Request,
+    file: UploadFile = File(...),
+    confirm_replace: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse | RedirectResponse:
+    _require_editable(review_session)
+    content = await file.read()
+    reviewers = assignments.list_reviewers(db, review_session.id)
+    reviewees = assignments.list_reviewees(db, review_session.id)
+    result = relationships_service.parse_relationship_csv(
+        content, reviewers=reviewers, reviewees=reviewees
+    )
+
+    existing = relationships_service.existing_count(db, review_session.id)
+    if result.is_blocked:
+        return _render_relationships_page(
+            request=request,
+            review_session=review_session,
+            user=user,
+            db=db,
+            issues=result.issues,
+            filename=file.filename,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    if existing > 0 and confirm_replace != "true":
+        return _render_relationships_page(
+            request=request,
+            review_session=review_session,
+            user=user,
+            db=db,
+            issues=result.issues,
+            filename=file.filename,
+            missing_confirm=True,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    relationships_service.save_relationships(
+        db,
+        session=review_session,
+        user=user,
+        rows=result.rows,
+        filename=file.filename or "",
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/relationships",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/relationships/delete-all")
+def relationships_delete_all(
+    confirm: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_editable(review_session)
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required",
+        )
+    relationships_service.delete_all_relationships(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/relationships",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+def _render_relationships_page(
+    *,
+    request: Request,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+    issues: list,
+    filename: str | None,
+    missing_confirm: bool = False,
+    status_code: int = status.HTTP_200_OK,
+) -> HTMLResponse:
+    rows = relationships_service.list_for_session(db, review_session.id)
+    reviewers = assignments.list_reviewers(db, review_session.id)
+    reviewees = assignments.list_reviewees(db, review_session.id)
+    reviewer_by_id = {r.id: r for r in reviewers}
+    reviewee_by_id = {r.id: r for r in reviewees}
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_relationships.html",
+        {
+            "user": user,
+            "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
+            "relationships": rows,
+            "reviewer_by_id": reviewer_by_id,
+            "reviewee_by_id": reviewee_by_id,
+            "existing_count": len(rows),
+            "issues": issues,
+            "missing_confirm": missing_confirm,
+            "filename": filename,
+            "is_ready": lifecycle.is_ready(review_session),
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, "Relationships"
+            ),
+        },
+        status_code=status_code,
     )

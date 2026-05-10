@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Relationships — {{ session.name }}{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <div class="session-nav-card">
+    {% with current_page = "Relationships" %}
+      {% include "operator/partials/session_top_nav.html" %}
+    {% endwith %}
+    {% include "operator/partials/session_setup_status_row.html" %}
+  </div>
+
+  <div class="card">
+    <p style="margin: 0;">
+      Per-pair attributes (mentorship / conflict-of-interest / prior cohort, etc.)
+      live here. Rules generated from the Rule Builder can match, filter, or quota
+      on these tags via <code>pair_context.tag_N</code>. Inactive rows are skipped
+      at generation time.
+    </p>
+  </div>
+
+  {% if is_ready %}
+    <div class="card lock">
+      <p style="margin: 0 0 12px 0;">
+        Relationships cannot be modified while the session is ongoing.
+        Revert the session to draft if you wish to modify anything.
+      </p>
+      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
+        <input type="hidden" name="return_to" value="relationships">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required>
+            Yes, revert <strong>{{ session.name }}</strong> to draft.
+          </label>
+        </p>
+        <p style="margin-bottom: 0;">
+          <button class="btn alert" type="submit">Revert to draft</button>
+        </p>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if not is_ready %}
+  <div class="bottom-grid">
+    <section class="card" id="upload-csv">
+      <h2>Upload Relationships</h2>
+      <p class="form-help">
+        CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
+        <code>ReviewerEmail</code>, <code>RevieweeEmail</code>. Optional columns:
+        <code>PairContextTag1</code>, <code>PairContextTag2</code>,
+        <code>PairContextTag3</code>, <code>Status</code> (<code>active</code> /
+        <code>inactive</code>; defaults to <code>active</code>). Other columns
+        are ignored.
+      </p>
+
+      {% include "operator/partials/validation_results.html" %}
+
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/relationships/import"
+            enctype="multipart/form-data">
+        <input type="file" id="file" name="file" accept=".csv,text/csv"
+               aria-label="CSV file" required>
+
+        {% if existing_count and existing_count > 0 %}
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm_replace" value="true" required>
+              Yes, replace the existing
+              <span class="pill pill-empty">{{ existing_count }} relationship{% if existing_count != 1 %}s{% endif %}</span>.
+            </label>
+          </p>
+        {% endif %}
+
+        <div class="btn-pair" style="margin-top: 20px;">
+          <button class="btn secondary" type="submit">Upload</button>
+          <a class="btn secondary disabled"
+             aria-disabled="true"
+             title="Inline editing — coming soon">Edit Relationships</a>
+        </div>
+      </form>
+    </section>
+
+    {% if relationships %}
+      <div class="card danger-zone">
+        <h2>Danger Zone</h2>
+        <form method="post" action="/operator/sessions/{{ session.id }}/relationships/delete-all">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required>
+              Yes, delete the existing
+              <span class="pill pill-empty">{{ relationships | length }} relationship{% if relationships | length != 1 %}s{% endif %}</span>.
+            </label>
+          </p>
+          <p>
+            <button class="btn destructive" type="submit">Delete all relationships</button>
+          </p>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if relationships %}
+    {% set has_tag_1 = relationships | selectattr("tag_1") | list | length > 0 %}
+    {% set has_tag_2 = relationships | selectattr("tag_2") | list | length > 0 %}
+    {% set has_tag_3 = relationships | selectattr("tag_3") | list | length > 0 %}
+    <div class="card">
+      <div class="tag-col-toggles"
+           style="display: flex; justify-content: flex-end; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2);">
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 class="tag-col-toggle"
+                 data-tag-toggle="1"
+                 {% if has_tag_1 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+          Tag1
+        </label>
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 class="tag-col-toggle"
+                 data-tag-toggle="2"
+                 {% if has_tag_2 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+          Tag2
+        </label>
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 class="tag-col-toggle"
+                 data-tag-toggle="3"
+                 {% if has_tag_3 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+          Tag3
+        </label>
+      </div>
+      <table id="relationships-table">
+        <tr>
+          <th>Reviewer</th>
+          <th>Reviewee</th>
+          <th class="tag-col tag-col-1">Tag1</th>
+          <th class="tag-col tag-col-2">Tag2</th>
+          <th class="tag-col tag-col-3">Tag3</th>
+          <th>Status</th>
+        </tr>
+        {% for row in relationships %}
+          {% set reviewer = reviewer_by_id.get(row.reviewer_id) %}
+          {% set reviewee = reviewee_by_id.get(row.reviewee_id) %}
+          <tr id="relationship-row-{{ row.id }}">
+            <td>
+              {% if reviewer %}
+                <code>{{ reviewer.email }}</code>
+              {% else %}
+                <span class="muted">(deleted reviewer)</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if reviewee %}
+                <code>{{ reviewee.email_or_identifier }}</code>
+              {% else %}
+                <span class="muted">(deleted reviewee)</span>
+              {% endif %}
+            </td>
+            <td class="tag-col tag-col-1">{{ row.tag_1 or "" }}</td>
+            <td class="tag-col tag-col-2">{{ row.tag_2 or "" }}</td>
+            <td class="tag-col tag-col-3">{{ row.tag_3 or "" }}</td>
+            <td>{{ row.status }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+    <style>
+      #relationships-table.tag-hidden-1 .tag-col-1,
+      #relationships-table.tag-hidden-2 .tag-col-2,
+      #relationships-table.tag-hidden-3 .tag-col-3 {
+        display: none;
+      }
+    </style>
+    <script>
+      (function () {
+        var STORAGE_KEY = "rrw-relationship-tag-visibility";
+        var table = document.getElementById("relationships-table");
+        var toggles = document.querySelectorAll(".tag-col-toggle");
+        if (!table || !toggles.length) return;
+        var stored = null;
+        try {
+          stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
+        } catch (e) {}
+        toggles.forEach(function (cb) {
+          var slot = cb.getAttribute("data-tag-toggle");
+          if (cb.disabled) {
+            apply(slot, false);
+            return;
+          }
+          if (stored && Object.prototype.hasOwnProperty.call(stored, slot)) {
+            cb.checked = !!stored[slot];
+          }
+          apply(slot, cb.checked);
+          cb.addEventListener("change", function () {
+            apply(slot, cb.checked);
+            persist();
+          });
+        });
+        function apply(slot, visible) {
+          table.classList.toggle("tag-hidden-" + slot, !visible);
+        }
+        function persist() {
+          var state = {};
+          toggles.forEach(function (cb) {
+            state[cb.getAttribute("data-tag-toggle")] = cb.checked;
+          });
+          try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          } catch (e) {}
+        }
+      })();
+    </script>
+  {% endif %}
+{% endblock %}
