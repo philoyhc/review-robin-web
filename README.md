@@ -22,22 +22,26 @@ chrome:
   affordance for ticked draft / validated sessions; deletion
   cascades reviewers / reviewees / instruments / assignments /
   invitations / email-outbox rows in one transaction.
-- **Roster management.** Reviewer / reviewee CSV imports with
-  cross-table identity validation; full-matrix, manual, and
-  rule-based assignment generation. Rule-based assignments are
-  authored on the **Rule Builder page**
+- **Roster management.** Reviewer / reviewee / **Relationships**
+  CSV imports with cross-table identity validation. Assignments
+  are **always derived** post-15D: rule-based generation only
+  (manual-row authoring retired in 15D PR 6a). Rule-based
+  assignments are authored on the **Rule Builder page**
   (`/operator/sessions/{id}/assignments/rule-based-editor`) — a
   single-card surface paired with an Available Rulesets sidebar
-  listing every visible RuleSet (5 seeds + caller-owned
-  Personal). Generation runs through `app/services/rules/engine.py`
-  (predicates / combinators / quotas / deterministic ordering).
-  The Reviewers / Reviewees / Assignments preview tables share a
-  per-slot column-visibility pattern — right-flushed checkbox row
-  above each table, default ticked iff the column has data, choice
-  persisted per browser via `localStorage`. Assignments preview
-  carries the full 15-column shape (Reviewer · R Tag1..3 · Reviewee
-  · E Tag1..3 · Pair1..3 · Assign1..3 · Include); see
-  `spec/setup_pages.md` for the contract.
+  listing every visible RuleSet (5 seeds + caller-owned Personal).
+  Generation runs through `app/services/rules/engine.py`
+  (predicates / combinators / quotas / deterministic ordering); the
+  engine consumes pair-context tags from the `relationships` table
+  via an eager `pair_context_lookup` dict (15D PR 4). The
+  Reviewers / Reviewees / Relationships / Assignments preview
+  tables share a per-slot column-visibility pattern — right-flushed
+  checkbox row above each table, default ticked iff the column has
+  data, choice persisted per browser via `localStorage`.
+  Assignments preview carries the 12-column shape (Reviewer · R
+  Tag1..3 · Reviewee · E Tag1..3 · Pair1..3 · Include); the trailing
+  Status / Include cell renders as a `pill-info` / `pill-empty`
+  pill. See `spec/setup_pages.md` for the contract.
 - **Instruments builder.** Per-instrument card with state-machine
   Display + Response Fields tables, Response Type Definitions
   catalog (10 seeded RTDs + operator-defined ones), live-preview
@@ -56,29 +60,35 @@ chrome:
   user-menu Settings link returns the operator to wherever they
   came from.
 - **Quick Setup card** on Session Home wires Reviewers /
-  Reviewees / Assignments / Session settings slots over the
+  Reviewees / **Relationships** / Session settings slots over the
   existing per-entity import pipelines, behind a single Lock /
-  Unlock toggle. One bottom-right Submit button (next to Lock /
-  Unlock) runs every slot whose file is attached; the
-  Assignments slot's "Generate by rule" dropdown is populated
-  with the full visible RuleSet list and routes through the
-  rule-based engine on submit. Unlock state resets when the
-  operator navigates away (per-route middleware in
-  `app/main.py`). Settings slot stays inert pending Segment 12A
-  PR 6.
-- **Extract Data card** on Session Home renders the per-entity
-  download row scaffold (settings / reviewers / reviewees /
-  assignments / responses / bundle), inert until Segment 12A
-  wires the download paths.
-- **Operations pages.** Validate (find-and-fix surface with
-  severity filter chip strip + per-issue Fix-on-Setup deep
-  links), Reviewer Experience Preview hub (tabbed email
-  previews + iframed reviewer-surface card for an
-  operator-picked reviewer), Manage Invitations (consolidated
-  reviewer-centric table absorbing the retired Monitoring
-  page), Responses (reviewee-centric coverage view classifying
-  each reviewee per `monitoring.AT_RISK_THRESHOLDS`). Outbox
-  stays a dev-diagnostic surface reachable via the "View
+  Unlock toggle. The card uses a two-column layout — Reviewers +
+  Reviewees on the left, Relationships + Session settings on the
+  right (Post-Segment 15 clean up, 2026-05-10). One bottom-right
+  Submit button (next to Lock / Unlock) runs every slot whose
+  file is attached. Unlock state resets when the operator
+  navigates away (per-route middleware in `app/main.py`).
+  Settings slot stays inert pending Segment 12A-3.
+- **Extract Data card** on Session Home now ships **five live
+  CSV downloads** (Segment 12A-1, shipped 2026-05-09): Settings,
+  Reviewers, Reviewees, Manual Assignments (for legacy manual
+  sessions only), and Responses (downstream-analysis-friendly,
+  20 columns including a `SelfReview` flag). The bundle row
+  stays inert. The matching importer side ships in Segment
+  12A-3.
+- **Operations pages.** Validate · **Assignments** · Previews ·
+  Invitations · Responses (Assignments moved into the Operations
+  row in 15D PR 6a). Validate is the find-and-fix surface
+  (severity filter chip strip + per-issue Fix-on-Setup deep
+  links). Assignments hosts the Assignment Rule card +
+  Self-reviews bulk toggle + the Assignment pairs preview
+  table. Previews is the Reviewer Experience Preview hub
+  (tabbed email previews + iframed reviewer-surface card for an
+  operator-picked reviewer). Manage Invitations is a consolidated
+  reviewer-centric table that absorbed the retired Monitoring
+  page. Responses is the reviewee-centric coverage view
+  classifying each reviewee per `monitoring.AT_RISK_THRESHOLDS`.
+  Outbox stays a dev-diagnostic surface reachable via the "View
   outbox" button on Manage Invitations.
 
 **Reviewer surface** — `/reviewer/sessions/{id}/{page}`:
