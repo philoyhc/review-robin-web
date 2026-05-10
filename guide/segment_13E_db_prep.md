@@ -96,7 +96,7 @@ PRs are independent and parallel-shippable.
       tag_2: Mapped[str | None] = mapped_column(String(255))
       tag_3: Mapped[str | None] = mapped_column(String(255))
       status: Mapped[str] = mapped_column(
-          String(16), default="active", nullable=False,
+          String(32), default="active", nullable=False,
           server_default="active",
       )
 

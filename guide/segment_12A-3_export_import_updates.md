@@ -181,14 +181,22 @@ Exact 12A-2 PR 1 scope, absorbed:
 
 - `serialize_relationships(session)` extract +
   `/export/relationships.csv` route.
-- `parse_relationship_csv` importer + `/relationships`
-  Manage page upload.
-- `session.relationships_extracted` +
-  `relationships.imported` audit events.
-- Tests: round-trip (export → import → export
-  byte-stable); FK rejection for unknown reviewer /
-  reviewee identifiers; unique-constraint enforcement;
-  status enum validation.
+- New Manage page upload form at `/relationships`
+  (UI surface). The underlying `parse_relationship_csv`
+  importer service is **already shipped by 15D PR 1**
+  (codebase-check note 2026-05-10) — this PR builds the
+  per-entity export route + the Manage page form on top
+  of the existing service. Importer's `relationships.imported`
+  audit event is also defined in 15D PR 1; this PR
+  inherits it.
+- New audit event `session.relationships_extracted`
+  registered in `EVENT_SCHEMAS` (mirror of
+  `session.reviewers_extracted` etc.).
+- Tests: round-trip (export → import via 15D's
+  service → export byte-stable); export route auth +
+  filename + audit emission with row count;
+  Manage-page upload form smoke (the underlying
+  importer's tests live in 15D PR 1).
 
 ### PR 3 — Quick Setup Settings + Relationships slot graduation
 

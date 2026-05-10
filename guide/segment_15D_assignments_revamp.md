@@ -11,6 +11,20 @@ slot 3 retire-and-restore, chrome restructure, Operations
 Assignments page move). Sized as **8 PRs** (locked
 2026-05-10).
 
+**Codebase-check revision 2026-05-10**: PR 6 expanded
+to absorb the now-deferred 12C-1 PR 3 + PR 4 work
+(bulk Include toggle + ad-hoc-toggle drop + validation
+copy refresh — they ship on the Operations Assignments
+page from the start, no Setup-page intermediate). PR 6's
+`Assignment.context` drop confirmed to retire the
+`assignment_context_*` keys alongside the
+`pair_context_*` lift (codebase scan confirmed both
+families are operator-typed via the manual CSV only;
+no rule-engine or non-display consumer). PR 7 keeps the
+manual-CSV `parse_manual_csv` / `replace_assignments`
+route as a **dev-only feature** (no operator UI; route
++ handler stay accessible).
+
 > **Schema prep handled by 13E** — see
 > `guide/segment_13E_db_prep.md`. The
 > `relationships` table is created inert in 13E PR 2;
@@ -515,6 +529,12 @@ parallel-ship within the dependency graph.
 
 ### PR 6 — Operations Assignments page + chrome restructure + drop `Assignment.context`
 
+Absorbs the deferred 12C-1 PR 3 + PR 4 work
+(Bulk Include toggle + ad-hoc-toggle drop) per the
+2026-05-10 codebase-check revision — the toggle
+lands on this page from the start instead of
+relocating from a brief Setup-page intermediate.
+
 - Move Assignments from the Setup row to the
   Operations row. Chrome nav after this PR:
   - Setup: Reviewers · Reviewees · Relationships ·
@@ -526,21 +546,61 @@ parallel-ship within the dependency graph.
     assignments table.
   - **Generate** button (replaces today's Setup-page
     Rule Based card's Generate).
-  - **Bulk Include toggle for self-reviews** (moved
-    from 12C-1 PR 3's Setup-page home). Route +
-    audit event + flip logic carry over verbatim.
+  - **Bulk Include toggle for self-reviews**
+    (absorbed from the deferred 12C-1 PR 3). Header
+    row above the preview table — toggle + state
+    pill + counts ("Self-reviews: ON (3 active, 0
+    deactivated)"). POSTs to
+    `/assignments/self-reviews/active`; single
+    transaction writes
+    `sessions.self_reviews_active` + updates every
+    self-review row's `include` to match. New
+    `assignments.self_reviews_active_set` event in
+    `EVENT_SCHEMAS` with `counts.flipped` + the
+    resulting boolean.
   - Per-instrument breakdown with zero-assignment
     warnings.
   - Per-row Include checkbox stays as last-mile
     override.
+- **Drop ad-hoc `exclude_self_review` form field
+  from the (formerly Setup-page) Rule Based card**
+  surface as it's reconstructed under the
+  Operations page (absorbed from the deferred
+  12C-1 PR 4).
+- **Refresh validation copy** for the
+  `assignments.self_reviews_present` row + any
+  related banner copy to point at the new bulk
+  toggle (absorbed from 12C-1 PR 4).
 - **Drop the `Assignment.context` JSON column.**
   Destructive Alembic migration; depends on PR 5
-  having shipped (backfill complete).
+  having shipped (backfill of `pair_context_*` to
+  `relationships` complete). **The
+  `assignment_context_*` keys retire alongside**
+  per the 2026-05-10 codebase-check decision —
+  they were operator-typed via the manual CSV only,
+  and 15D's "manual upload retires from operator
+  surfaces" leaves no operator workflow that
+  produces them. The future "friendly labels for
+  assignment_context" plan (noted in
+  `app/db/models/session_field_label.py:53` as
+  "deferred") is permanently retired by this drop.
+  No backfill — the column drops empty post-PR 5.
 - Status pills on every session-scoped page
   reflect the new chrome layout.
+- **Open consideration:** the Operations Assignments
+  page may make sense to combine with the Validate
+  page surface (one "what-just-happened? next
+  action?" Operations stop). Decide during PR
+  scoping; no schema impact either way.
 - Tests: chrome reorder integration tests; bulk
-  toggle still works post-relocation; drop migration
-  round-trips on SQLite + Postgres.
+  toggle works post-relocation; drop migration
+  round-trips on SQLite + Postgres; display fields
+  + assignments preview template correctly drop
+  references to `assignment_context_*` /
+  `pair_context_*` (latter now read from
+  `relationships`); assert no remaining production
+  code path writes to `Assignment.context` after
+  the drop.
 
 ### PR 7 — Quick Setup slot restructure
 
@@ -552,11 +612,24 @@ parallel-ship within the dependency graph.
   - Slot 4: Settings (was slot 3 in 12C-2 PR 1's
     deferred state; here flipped to live alongside
     12A-3 PR 1's Settings importer)
-- Drops the legacy slot-3 dropdown + manual upload
-  + handler-side branches in `_quick_setup.py`
-  (incl. `rule="full_matrix"` /
-  `rule="rule_based"` payload variants and the
-  `session_rule_set_id` form-data field).
+- **Operator UI: drops the legacy slot-3 dropdown
+  + manual upload from the Quick Setup card.** The
+  underlying `parse_manual_csv` /
+  `replace_assignments` route + handler stays as a
+  **dev-only feature** — no operator UI surfaces
+  it; tests + admin tooling can still hit the
+  endpoint. Documented in code (route docstring +
+  handler) as "dev-only — not exposed to
+  operators". The Quick Setup template branch +
+  view-shape adapter slot for slot 3 manual
+  upload + dropdown are removed; the route's
+  template form is retired.
+- Drops the legacy `rule="full_matrix"` /
+  `rule="rule_based"` payload variants in
+  `_quick_setup.py` (those handler branches retire
+  with the operator-facing Quick Setup slot 3
+  retirement). The `session_rule_set_id` form-data
+  field also retires.
 - `quick_setup_submit_all` chain: reviewers →
   reviewees → relationships → settings. **No
   auto-Generate** (per the locked manual-Generate-
