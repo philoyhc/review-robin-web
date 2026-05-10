@@ -1,19 +1,25 @@
-"""Per-session CSV extracts (Segment 12A-1).
+"""Per-session CSV extracts (Segment 12A-1 + 12A-3).
 
-Shared plumbing for the four downloads on the Extract Data card —
-filename convention + a chunked CSV-streaming helper. The
-per-extract serialisers live alongside this module:
+Shared plumbing for the five downloads on the Extract Data
+card — filename convention + a chunked CSV-streaming helper.
+The per-extract serialisers live alongside this module:
 
-- ``app/services/session_config_io.py`` — Settings CSV (3-column
-  ``field,value,data_type`` shape).
-- ``app/services/extracts/reviewers_extract.py`` — Reviewers CSV
-  (PR 2 of this segment).
-- ``app/services/extracts/reviewees_extract.py`` — Reviewees CSV
-  (PR 2).
-- ``app/services/extracts/assignments_extract.py`` — Assignments
-  CSV, manual-mode only (PR 3).
+- ``app/services/session_config_io.py`` — Settings CSV
+  (3-column ``field,value,data_type`` shape).
+- ``app/services/extracts/reviewers_extract.py`` — Reviewers
+  CSV (12A-1 PR 2).
+- ``app/services/extracts/reviewees_extract.py`` — Reviewees
+  CSV (12A-1 PR 2).
+- ``app/services/extracts/relationships_extract.py`` —
+  Relationships CSV (12A-3 PR 1).
+- ``app/services/extracts/responses_extract.py`` — Responses
+  CSV (12A-1 PR 4).
 
-Plan: ``guide/segment_12A-1_export.md``.
+The Manual Assignments extract from 12A-1 PR 3 retired in
+12A-3 PR 2.
+
+Plan: ``guide/archive/segment_12A-1_export.md``,
+``guide/segment_12A-3_export_import_updates.md``.
 """
 
 from __future__ import annotations

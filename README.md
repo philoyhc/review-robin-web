@@ -69,13 +69,17 @@ chrome:
   file is attached. Unlock state resets when the operator
   navigates away (per-route middleware in `app/main.py`).
   Settings slot stays inert pending Segment 12A-3.
-- **Extract Data card** on Session Home now ships **five live
-  CSV downloads** (Segment 12A-1, shipped 2026-05-09): Settings,
-  Reviewers, Reviewees, Manual Assignments (for legacy manual
-  sessions only), and Responses (downstream-analysis-friendly,
-  20 columns including a `SelfReview` flag). The bundle row
-  stays inert. The matching importer side ships in Segment
-  12A-3.
+- **Extract Data card** on Session Home ships **five live CSV
+  downloads** in a 2-column layout — left column for
+  per-entity rosters (Reviewers / Reviewees / Relationships),
+  right column for session-level outputs (Session settings /
+  Responses), with the inert Zip-all row in the bottom-right
+  slot. Settings + Reviewers / Reviewees / Responses landed
+  in Segment 12A-1 (2026-05-09); Relationships landed in
+  Segment 12A-3 PR 1, and the legacy Manual Assignments tile
+  retired in 12A-3 PR 2 (assignments are derived post-15D —
+  output, not input — and have no place in a porting bundle).
+  The matching Settings importer ships in 12A-3 PR 3.
 - **Operations pages.** Validate · **Assignments** · Previews ·
   Invitations · Responses (Assignments moved into the Operations
   row in 15D PR 6a). Validate is the find-and-fix surface
