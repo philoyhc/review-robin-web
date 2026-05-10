@@ -170,6 +170,21 @@ def parse_manual_csv(
     reviewers: list[Reviewer],
     reviewees: list[Reviewee],
 ) -> ManualParseResult:
+    """Parse a manual-assignments CSV. **Dev-only** post-15D —
+    no operator UI surfaces this path; the function exists for
+    test fixtures and admin tooling that need to drop pre-canned
+    pair tuples into the assignments table without going through
+    the rule engine.
+
+    Per-15D the canonical workflow is rosters + relationships +
+    RuleSet → Generate (Operations Assignments page). The
+    underlying ``replace_assignments`` write path stays accessible
+    so this dev-only entry point keeps working; the
+    ``PairContextN`` / ``AssignmentContextN`` columns the CSV
+    historically carried are silently ignored after the
+    ``Assignment.context`` column drop in 15D PR 6b.
+    """
+
     source = "assignments"
     issues: list[ValidationIssue] = []
 
