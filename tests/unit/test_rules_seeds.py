@@ -91,14 +91,16 @@ def _emails(pairs: Iterable[tuple[object, object]]) -> set[tuple[str, str]]:
 # ---------------------------------------------------------------------------
 
 
-def test_full_matrix_seed_pairs_everyone_excluding_self() -> None:
+def test_full_matrix_seed_pairs_everyone_including_self() -> None:
     reviewers, reviewees = _build_population()
     result = evaluate(
         SEED_FULL_MATRIX, reviewers=reviewers, reviewees=reviewees
     )
-    # 20 × 20 = 400 candidates, minus 20 self-pairings.
-    assert len(result.pairs) == 380
-    assert result.excluded_counts.get("self_review") == 20
+    # 20 × 20 = 400 candidates; the seed defaults to keeping
+    # self-review pairs (operators activate / deactivate them via
+    # the bulk Include toggle on the Operations Assignments page).
+    assert len(result.pairs) == 400
+    assert result.excluded_counts.get("self_review") is None
 
 
 def test_intra_group_seed_pairs_within_group_only() -> None:
@@ -106,11 +108,13 @@ def test_intra_group_seed_pairs_within_group_only() -> None:
     result = evaluate(
         SEED_INTRA_GROUP, reviewers=reviewers, reviewees=reviewees
     )
-    # 4 groups × (5 × 5 - 5 self) = 4 × 20 = 80.
-    assert len(result.pairs) == 80
+    # 4 groups × (5 × 5) = 100. Self-pairs are not excluded because
+    # the seed defaults to ``excludeSelfReviews=False``; the bulk
+    # Include toggle on the Operations Assignments page handles
+    # activation / deactivation post-generate.
+    assert len(result.pairs) == 100
     for r, e in result.pairs:
         assert r.tag_1 == e.tag_1
-        assert r.email != e.email_or_identifier
 
 
 def test_cross_group_seed_pairs_only_across_groups() -> None:
@@ -189,9 +193,11 @@ def test_three_reviewers_seed_is_deterministic_across_runs() -> None:
 def test_full_matrix_seed_matches_generate_full_matrix() -> None:
     """The seeded ``Full Matrix`` RuleSet must produce the same pair
     set as ``assignments.generate_full_matrix(...)`` with
-    ``exclude_self_review=True`` on the same population. This is the
-    equivalence Segment 13A PR 8 leans on to retire the standalone
-    Full Matrix card."""
+    ``exclude_self_review=False`` on the same population — i.e. all
+    reviewer × reviewee pairs including self-reviews. The seed-side
+    self-review default flipped to ``False`` so operators can reach
+    that state via the bulk Include toggle without forking the seed.
+    """
 
     from app.services.assignments import generate_full_matrix
 
@@ -200,7 +206,7 @@ def test_full_matrix_seed_matches_generate_full_matrix() -> None:
         SEED_FULL_MATRIX, reviewers=reviewers, reviewees=reviewees
     )
     legacy_pairs, _ = generate_full_matrix(
-        reviewers, reviewees, exclude_self_review=True
+        reviewers, reviewees, exclude_self_review=False
     )
     assert _emails(seed_result.pairs) == _emails(legacy_pairs)
 
@@ -226,4 +232,4 @@ def test_every_seed_is_marked_as_seed_scope() -> None:
     for seed in SEEDS:
         assert seed.scope.value == "seed"
         assert seed.metadata.isSeed is True
-        assert seed.options.excludeSelfReviews is True
+        assert seed.options.excludeSelfReviews is False

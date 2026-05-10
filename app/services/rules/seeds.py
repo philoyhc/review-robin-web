@@ -44,7 +44,7 @@ SEED_FULL_MATRIX: Final[RuleSetSchema] = RuleSetSchema(
     scope=RuleSetScope.seed,
     combinator=Combinator.ALL_OF,
     rules=[],
-    options=RuleSetOptions(excludeSelfReviews=True, seed=None),
+    options=RuleSetOptions(excludeSelfReviews=False, seed=None),
     metadata=RuleSetMetadata(isSeed=True),
 )
 
@@ -64,7 +64,7 @@ SEED_INTRA_GROUP: Final[RuleSetSchema] = RuleSetSchema(
             ),
         )
     ],
-    options=RuleSetOptions(excludeSelfReviews=True, seed=None),
+    options=RuleSetOptions(excludeSelfReviews=False, seed=None),
     metadata=RuleSetMetadata(isSeed=True),
 )
 
@@ -87,7 +87,7 @@ SEED_CROSS_GROUP: Final[RuleSetSchema] = RuleSetSchema(
             ),
         )
     ],
-    options=RuleSetOptions(excludeSelfReviews=True, seed=None),
+    options=RuleSetOptions(excludeSelfReviews=False, seed=None),
     metadata=RuleSetMetadata(isSeed=True),
 )
 
@@ -118,7 +118,7 @@ SEED_SAME_GROUP_DIFFERENT_ROLE: Final[RuleSetSchema] = RuleSetSchema(
             ),
         ),
     ],
-    options=RuleSetOptions(excludeSelfReviews=True, seed=None),
+    options=RuleSetOptions(excludeSelfReviews=False, seed=None),
     metadata=RuleSetMetadata(isSeed=True),
 )
 
@@ -142,7 +142,7 @@ SEED_THREE_REVIEWERS_PER_REVIEWEE: Final[RuleSetSchema] = RuleSetSchema(
             ),
         )
     ],
-    options=RuleSetOptions(excludeSelfReviews=True, seed=None),
+    options=RuleSetOptions(excludeSelfReviews=False, seed=None),
     metadata=RuleSetMetadata(isSeed=True),
 )
 
