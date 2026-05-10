@@ -9,7 +9,10 @@ Quick Setup entirely; manual-CSV shape locked at Option A
 (session-wide wipe; operator covers all instruments);
 Settings upload explicitly wipes instruments + assignments.
 **Sub-segment 12C-3 (Part 3) — locked 2026-05-10; ready
-to start.**
+to start.** **Compatibility revision 2026-05-10**: doc
+adjusted to be compatible with + pre-position for 15D
+(Assignments revamp); see new "Forward-looking — 15D
+alignment" section below.
 
 This doc covers **three related concerns** that all touch
 the Assignments / Instruments cluster of the operator chrome:
@@ -33,6 +36,56 @@ the Assignments / Instruments cluster of the operator chrome:
 
 The two parts share the same surfaces but answer different
 questions; expect them to land as separate PR sequences.
+
+---
+
+## Forward-looking — 15D alignment
+
+Segment 15D
+(`guide/segment_15D_assignments_revamp.md`, sketched
+2026-05-10) revamps Assignments around per-pair
+attributes — a new **Relationships** table + always-derived
+Assignments table + an Operations Assignments page that
+replaces today's Setup Assignments page. 12C ships
+**before** 15D and is structured to (a) not block 15D, and
+(b) deliver work that 15D inherits unchanged where
+possible.
+
+The per-PR map:
+
+| 12C piece | Post-15D fate |
+|---|---|
+| `sessions.self_reviews_active` schema (12C-1 PR 1) | **Inherited unchanged** — 15D's Operations Assignments page reads the same column. |
+| Generation-path wiring for the self-review default (12C-1 PR 1) | **Inherited unchanged** — generation paths still consult the column. |
+| Rule Builder `exclude_self_reviews` checkbox (12C-1 PR 2) | **Inherited unchanged** — 15D doesn't touch the Rule Builder for this. |
+| Bulk Include toggle on Setup Assignments page (12C-1 PR 3) | **Moves with the page.** 15D relocates the toggle to the Operations Assignments page; the route, audit event (`assignments.self_reviews_active_set`), and column-flip logic carry over verbatim. The Setup-page placement is a transient home; the underlying mechanism is durable. |
+| Drop ad-hoc toggles (12C-1 PR 4) | **Inherited unchanged** — toggles stay dropped. |
+| Full-matrix dead-code cleanup (12C-1 PR 5) | **Inherited unchanged** — `AssignmentMode.full_matrix` stays retired. |
+| Quick Setup slot 3 retirement (12C-2 PR 1) | **Transient.** 15D re-introduces a slot 3 — but with different content (Relationships, not Assignments). 12C-2 PR 1's slot-3 retirement reduces Quick Setup to 3 slots in the interim; 15D re-grows it to 4 with Relationships in the new slot 3 and Settings in slot 4. The retirement work is not wasted — 15D's Relationships slot is a fresh build. |
+| Settings importer wipes assignments + instruments (12C-2 PR 2) | **Pre-positioning win.** Aligns directly with 15D's "assignments are always derived" model. The wipe semantics carry over. |
+| Manual upload via Assignments page (12C-2 PR 3) | **Removed by 15D.** Option A's session-wide-wipe semantics ship in 12C as a cleaner intermediate state; 15D retires the upload entirely (manual rows give way to the Relationships table). Worth landing for the interim operator experience between 12C and 15D. |
+| Chrome reorder (12C-3) | **Partly transient.** 15D moves Assignments off the Setup row into Operations entirely. 12C-3's Setup-row swap is an interim UX improvement; the Operations-row tab order is set independently in 15D. |
+
+The interim work — Quick Setup slot 3 retirement, manual
+upload via Assignments page, Setup-row chrome reorder —
+is justified on its own. Operators get cleaner UX between
+12C ship and 15D ship, even if 15D ultimately supersedes
+those surfaces. None of it blocks 15D.
+
+**Specifically not pre-positioned by 12C** (lands fresh
+with 15D):
+
+- The new `relationships` table + per-entity importer +
+  Relationships Setup page.
+- Drop `Assignment.context` JSON column.
+- Rule grammar additions (`pair_context.tag_N` matchers
+  / filters / quotas).
+- Operations Assignments page (replaces Setup
+  Assignments).
+- "Super buttons" multi-step shortcut actions.
+
+These are 15D's net-new scope and aren't candidates for
+12C pre-positioning without scope creep.
 
 ---
 
@@ -316,6 +369,10 @@ can be removed). PR 5 is independent dead-code cleanup.
    directions; mixed-state row count surfaces in the
    header; audit emission with `counts.flipped` +
    resulting boolean.
+   *15D note: the toggle moves to the Operations
+   Assignments page when 15D ships (the page itself
+   relocates). Route + audit event + column-flip logic
+   carry over verbatim.*
 4. **PR 4 — Drop ad-hoc toggles + validation copy
    refresh.** Removes the `exclude_self_review` form
    field from Quick Setup slot 3 (template +
@@ -510,6 +567,11 @@ PR 1 below depends on 12A-2 PR 1 having shipped.
    step; existing tests that uploaded manual CSV via
    slot 3 are migrated to upload via the Assignments
    page after Quick Setup completes.
+   *15D note: 15D re-introduces a slot 3 with
+   different content (Relationships, not Assignments)
+   — Quick Setup goes 4 → 3 → 4 across this segment
+   and 15D. The interim 3-slot state is intentional;
+   the slot frame is not preserved for re-use.*
 2. **PR 2 — Settings importer wipes assignments
    explicitly.** 12A-2 PR 1 wires the Settings
    importer's wipe-and-replace; this PR adds the
@@ -532,6 +594,13 @@ PR 1 below depends on 12A-2 PR 1 having shipped.
    upload covering an instrument with `rule_set_id`
    set surfaces the banner-warning + preserves
    `rule_set_id` post-upload.
+   *15D note: 15D removes the manual upload entirely
+   (Assignments table becomes always-derived; manual
+   row authoring retires in favour of the
+   Relationships table). This PR ships the cleaner
+   intermediate behaviour — operators get
+   wipe-and-replace + clear coverage semantics
+   between 12C ship and 15D ship.*
 
 ---
 
@@ -633,6 +702,16 @@ their order tracks the lifecycle, not the setup workflow.
 >    affected tests + spec-doc enumerations in the same
 >    PR (small, scoped).
 
+*15D note: 15D moves Assignments off the Setup row
+entirely (becomes an Operations-row tab). The Setup-row
+swap landed here is an interim improvement; post-15D the
+Setup row will read `Reviewers · Reviewees ·
+Relationships · Instruments · Email Template` (one tab
+fewer) and the Operations row picks up the Assignments
+tab. The Session Home Setup card row list is
+restructured by 15D as part of the Setup-vs-Operations
+split.*
+
 ---
 
 ## Related context (cross-cutting)
@@ -674,6 +753,15 @@ their order tracks the lifecycle, not the setup workflow.
   uniqueness constraint) and 13D PR 5 / PR 6 (additive
   nullable columns with `server_default`) both mirror
   the shape Part 1 PR 1 lands.
+- **Segment 15D — Assignments revamp**
+  (`guide/segment_15D_assignments_revamp.md`). Replaces
+  today's Setup Assignments page with an Operations
+  Assignments page; introduces a new Relationships
+  table; assignments table becomes always derived;
+  manual assignment-row authoring retires entirely.
+  See "Forward-looking — 15D alignment" at the top of
+  this doc for the per-PR map of what 15D inherits
+  unchanged vs. what's transient.
 
 ## Open questions
 
