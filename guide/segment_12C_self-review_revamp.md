@@ -1,19 +1,33 @@
 # Segment 12C — Self-review revamp + Quick Setup upload semantics + chrome reorder
 
-**Status:** Planning. **Holistic-sequence revision
-2026-05-10**: locked sequence is **13E → 12C → 15D
-→ 12A-3**. Under the new sequence, 12C-2 + 12C-3 are
-**deferred / folded into 15D** (15D fast-tracked); 12C
-ships **only Sub-segment 12C-1** (5 PRs, simplified —
-schema lifted to 13E PR 1). See "Forward-looking — 15D
+**Status:** Planning. **Codebase-check revision
+2026-05-10** narrows 12C-1 from 5 PRs to **3 PRs**:
+the bulk Include toggle (was PR 3) and the
+ad-hoc-toggle-drop on the Rule Based card (was PR 4)
+both defer to 15D PR 6, where the Operations
+Assignments page is built. See the updated PR
+sequence below + the "Forward-looking — 15D
+alignment" matrix.
+
+**Holistic-sequence revision 2026-05-10**: locked
+sequence is **13E → 12C → 15D → 12A-3**. Under the
+new sequence, 12C-2 + 12C-3 are **deferred / folded
+into 15D** (15D fast-tracked); 12C ships **only
+Sub-segment 12C-1** (now 3 PRs — schema lifted to
+13E PR 1; bulk-toggle + ad-hoc-toggle-drop folded
+into 15D PR 6). See "Forward-looking — 15D
 alignment" below for the detailed map.
 
-**Sub-segment 12C-1 (Part 1) — sized 2026-05-09;
-ready to start once 13E PR 1 ships.** Schema
-(`sessions.self_reviews_active`) lifted to 13E PR 1;
-12C-1 PR 1 is now generation-path wiring only.
+**Sub-segment 12C-1 (Part 1) — sized 2026-05-10
+(narrowed to 3 PRs); ready to start once 13E PR 1
+ships.** Schema (`sessions.self_reviews_active`)
+lifted to 13E PR 1; 12C-1 PR 1 is now generation-path
+wiring only (manual-CSV save path skipped — 15D
+removes the operator-facing path entirely; dev-only
+path doesn't need the self-review default).
 Audit-event-name question settled 2026-05-10 (compact
-form).
+form). Bulk Include toggle (was PR 3) and ad-hoc-toggle
+drop (was PR 4) deferred to 15D PR 6.
 
 **Sub-segment 12C-2 (Part 2) — DEFERRED 2026-05-10.**
 The Quick Setup slot 3 retirement and Assignments-page
@@ -65,16 +79,18 @@ their would-be intermediate states would be replaced by
 15D's restructure within a single segment cycle, so the
 intermediate work isn't worth the churn.
 
-Per-PR map of what 12C ships vs. what 15D absorbs:
+Per-PR map of what 12C ships vs. what 15D absorbs
+(updated under the 2026-05-10 codebase-check
+revision):
 
-| 12C-1 piece | Status under the new sequence |
+| 12C-1 piece (in original 5-PR sketch) | Status under the new sequence |
 |---|---|
 | `sessions.self_reviews_active` schema | **Lifted to 13E PR 1.** 12C-1 PR 1 is now generation-path wiring only. |
-| Generation-path wiring for the self-review default (12C-1 PR 1) | **Ships from 12C.** Inherited unchanged by 15D. |
-| Rule Builder `exclude_self_reviews` checkbox (12C-1 PR 2) | **Ships from 12C.** Inherited unchanged by 15D. |
-| Bulk Include toggle on Setup Assignments page (12C-1 PR 3) | **Ships from 12C.** Lands on today's Setup Assignments page; 15D moves the toggle (route + audit event + flip logic carry over verbatim) to the Operations Assignments page. The Setup-page placement is brief but the mechanism is durable. |
-| Drop ad-hoc toggle on Assignments page Rule Based card + validation copy refresh (12C-1 PR 4) | **Ships from 12C, scoped narrower.** The Quick Setup slot 3 form-field drop (originally also in this PR) is folded into 15D's slot-3 retirement. |
-| Full-matrix dead-code cleanup (12C-1 PR 5) | **Ships from 12C.** Inherited unchanged by 15D. |
+| Generation-path wiring for the self-review default (was PR 1; now PR 1) | **Ships from 12C.** Wires `generate_full_matrix` and the rule-based engine; manual-CSV save path skipped (15D removes the operator-facing path; dev-only path doesn't need the default). Inherited unchanged by 15D. |
+| Rule Builder `exclude_self_reviews` checkbox (was PR 2; now PR 2) | **Ships from 12C.** Inherited unchanged by 15D. |
+| Bulk Include toggle on Setup Assignments page (was PR 3) | **Deferred to 15D PR 6.** Folded into the Operations Assignments page build. Avoids a Setup-page intermediate that 15D relocates within days. Same route + audit event + flip-logic spec carries over. |
+| Drop ad-hoc toggle on Rule Based card + validation copy refresh (was PR 4) | **Deferred to 15D PR 6.** Folded into the chrome restructure (the Rule Based card itself relocates with the page). |
+| Full-matrix dead-code cleanup (was PR 5; now PR 3) | **Ships from 12C.** Inherited unchanged by 15D. Standalone route + `AssignmentMode.full_matrix` enum + Quick Setup legacy fallback all retire. `generate_full_matrix` itself stays (the seeded full-matrix RuleSet uses it via the rules engine). |
 
 | 12C-2 piece | Where it goes |
 |---|---|
@@ -342,27 +358,38 @@ exist.
   for analyst convenience — orthogonal to the
   generation / activation question this part answers.
 
-### PR sequence (5 PRs, locked 2026-05-09)
+### PR sequence (3 PRs, locked 2026-05-10)
 
-PRs 2 + 3 are independent of each other and of PR 1's
-generation-path wiring (each touches a different surface);
-parallel-shippable. PR 4 depends on PRs 1 + 2 + 3 shipping
-(the new edit surfaces have to exist before the old ones
-can be removed). PR 5 is independent dead-code cleanup.
+Two PRs from the original 5-PR sketch are deferred and
+folded into 15D under the 2026-05-10 codebase-check
+revision: the bulk Include toggle (was PR 3) and the
+ad-hoc-toggle drop on the Rule Based card (was PR 4).
+Both surfaces relocate when 15D moves the Assignments
+page from Setup to Operations, so building them on
+today's Setup-page home only to relocate days later
+isn't worth the churn. They land alongside the full
+Operations Assignments page implementation in **15D
+PR 6** (where the page is rebuilt anyway). The
+remaining 3 PRs ship from 12C — independent of each
+other and parallel-shippable.
 
 1. **PR 1 — Generation-path wiring.** *Schema lifted to
    13E PR 1 under the 2026-05-10 holistic-sequence
-   revision.* Wires `generate_full_matrix`, the
-   rule-based engine, and the manual-CSV save path to
-   consult `sessions.self_reviews_active` when creating
+   revision.* Wires `generate_full_matrix` and the
+   rule-based engine to consult
+   `sessions.self_reviews_active` when creating
    self-review rows (new self-review rows get
-   `include = sessions.self_reviews_active`). No UI yet
-   — the column is universally `TRUE` on existing
-   sessions, so behaviour is unchanged. Depends on
-   13E PR 1 having shipped. Tests: each generation
-   path picks up the column when it's `FALSE`;
-   existing-session default behaviour preserved when
-   it's `TRUE`.
+   `include = sessions.self_reviews_active`).
+   *Manual-CSV save path skipped under the 2026-05-10
+   codebase-check revision* — 15D removes the
+   operator-facing manual upload entirely (route stays
+   as a dev-only feature; dev test data doesn't need
+   the self-review default applied). No UI yet — the
+   column is universally `TRUE` on existing sessions,
+   so behaviour is unchanged. Depends on 13E PR 1
+   having shipped. Tests: each generation path picks
+   up the column when it's `FALSE`; existing-session
+   default behaviour preserved when it's `TRUE`.
 2. **PR 2 — Rule Builder surfaces
    `exclude_self_reviews`.** Adds the labelled checkbox
    between the rule-list editor and the Save / Cancel
@@ -371,47 +398,53 @@ can be removed). PR 5 is independent dead-code cleanup.
    plumbed. Tests: checkbox renders; toggling it
    round-trips through the save flow; the saved
    RuleSet revision carries the flag.
-3. **PR 3 — Bulk Include toggle on the Assignments
-   page** + new route + audit event. Renders the
-   header row above the preview table (toggle + state
-   + counts); POSTs to
-   `/assignments/self-reviews/active`; single
-   transaction writes the column + updates every
-   self-review row's `include` to match. New
-   `assignments.self_reviews_active_set` event in
-   `EVENT_SCHEMAS`. Tests: route auth; transition both
-   directions; mixed-state row count surfaces in the
-   header; audit emission with `counts.flipped` +
-   resulting boolean.
-   *15D note: the toggle moves to the Operations
-   Assignments page when 15D ships (the page itself
-   relocates). Route + audit event + column-flip logic
-   carry over verbatim.*
-4. **PR 4 — Drop ad-hoc toggle on Assignments Rule
-   Based card + validation copy refresh.** Removes the
-   `exclude_self_review` form field from the
-   Assignments page Rule Based card. Refreshes the
-   `assignments.self_reviews_present` validation row
-   message + any related banner copy to point at the
-   new bulk toggle. *Quick Setup slot 3's
-   `exclude_self_review` form field stays in place
-   here — it goes with the rest of slot 3 when 15D
-   retires the slot entirely; doing it twice would be
-   churn.* Tests: previously-failing form-field
-   assertions on the Rule Based card are deleted;
-   validation row still fires + reads cleanly.
-5. **PR 5 — Full-matrix dead-code cleanup.** Removes
-   the standalone
+3. **PR 3 — Full-matrix dead-code cleanup.** *(was
+   PR 5 in the original sketch; renumbered after the
+   PR 3 + PR 4 deferrals.)* Removes the standalone
    `POST /assignments/full-matrix` route, the
    `assignments_full_matrix` handler, the
    `AssignmentMode.full_matrix` enum value, and the
    legacy `rule="full_matrix"` fallback in
-   `_quick_setup.py`. `generate_full_matrix` stays.
-   Tests: any test exercising the standalone route is
-   migrated to the seeded full-matrix RuleSet path
-   (mirrors how 11J's Quick Setup tests already use
-   the dropdown); enum-value test gate flagged if a
-   stray reference survives.
+   `_quick_setup.py`. `generate_full_matrix` stays
+   (the seeded full-matrix RuleSet uses it via the
+   rules engine). Tests: any test exercising the
+   standalone route is migrated to the seeded
+   full-matrix RuleSet path (mirrors how 11J's
+   Quick Setup tests already use the dropdown);
+   enum-value test gate flagged if a stray reference
+   survives.
+
+### Deferred PRs (folded into 15D PR 6)
+
+The following two PRs were sketched as part of 12C-1
+in the original plan but defer to 15D under the
+2026-05-10 codebase-check revision. The **work itself
+ships** — just lands on the Operations Assignments
+page (15D's home for it) instead of today's Setup
+Assignments page (which 15D restructures).
+
+- **(Was PR 3) Bulk Include toggle.** Header row
+  above the assignments preview table (toggle +
+  state + counts); POSTs to
+  `/assignments/self-reviews/active`; single
+  transaction writes
+  `sessions.self_reviews_active` + updates every
+  self-review row's `include` to match. New
+  `assignments.self_reviews_active_set` event in
+  `EVENT_SCHEMAS` with `counts.flipped` + the
+  resulting boolean. Folded into **15D PR 6** —
+  the Operations Assignments page builds the
+  toggle into its surface from the start, no
+  Setup-page intermediate.
+- **(Was PR 4) Drop ad-hoc toggle on Rule Based
+  card + validation copy refresh.** Removes the
+  `exclude_self_review` form field from the
+  Assignments page Rule Based card; refreshes the
+  `assignments.self_reviews_present` validation row
+  message + any related banner copy to point at
+  the new bulk toggle. Folded into **15D PR 6**
+  alongside the chrome restructure (the Rule
+  Based card itself relocates with the page).
 
 ---
 
