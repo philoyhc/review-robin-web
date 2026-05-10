@@ -12,11 +12,17 @@
   </div>
 
   <div class="card">
+    <p style="margin: 0 0 8px 0;">
+      Number of pairwise relationships:
+      <span class="pill pill-count">{{ existing_count or 0 }}</span>
+    </p>
     <p style="margin: 0;">
-      Per-pair attributes (mentorship / conflict-of-interest / prior cohort, etc.)
-      live here. Rules generated from the Rule Builder can match, filter, or quota
-      on these tags via <code>pair_context.tag_N</code>. Inactive rows are skipped
-      at generation time.
+      Fields with data:
+      {% for label in fields_with_data %}
+        <span class="pill pill-count">{{ label }}</span>
+      {% else %}
+        <span class="muted">—</span>
+      {% endfor %}
     </p>
   </div>
 
