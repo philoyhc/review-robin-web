@@ -1,9 +1,13 @@
 # Segment 15D — Assignments revamp: Pair Context as Setup primary, Assignments goes derived
 
-**Status:** Planning. Initial sketch 2026-05-10. Builds on
-12C's lock that manual assignments retire from Quick Setup;
-takes the next step and retires the manual assignments
-*table input* entirely.
+**Status:** Planning. Initial sketch 2026-05-10. **All open
+questions settled 2026-05-10** — page name, generation
+triggering, JSON-column fate, Quick Setup integration, and
+lifecycle gating all locked. Ready to size into PRs once
+the two follow-on docs land. Builds on 12C's lock that
+manual assignments retire from Quick Setup; takes the next
+step and retires the manual assignments *table input*
+entirely.
 
 > **Two follow-on docs to write next** (per the planning
 > conversation): (a) the schemas this segment needs
@@ -68,26 +72,20 @@ Builder) reads from all four.
 
 ## The new Relationships page (Setup)
 
-### Naming
+### Naming (locked 2026-05-10)
 
-Working title **"Relationships"**. Alternatives, with
-trade-offs:
+**Page title: "Relationships".** Schema-level identifier
+stays `pair_context` (matches the existing `source_type`
+enum used by display fields and — once 15D ships — by
+Rule Builder matchers / filters). Two-name strategy:
+friendly name in the chrome, machine-name in the data
+layer. Same pattern as `email_or_identifier` (machine)
+vs "Reviewee email" (UI).
 
-| Name | Pros | Cons |
-|---|---|---|
-| **Relationships** *(default)* | Reads naturally; matches the conceptual content (mentorship / COI / history). | Slightly broader than what's actually stored — could imply more semantics than 3 string tags + status. |
-| **Pairs** | Terse; matches the row-per-pair shape. | Generic; doesn't hint at what the pair attributes are. |
-| **Pair Notes** | Clear that this is annotation-style data. | "Notes" understates the rule-driving role. |
-| **Pair Context** | Matches existing schema vocabulary (`pair_context_1/2/3` already used in `Assignment.context` JSON, the display-fields seed catalogue, and the Rule Builder source enumeration). | Awkward as a page title; jargony. |
-
-Recommendation: **Relationships** for the page title;
-**`pair_context`** stays as the schema-level
-identifier (matches the existing `source_type` enum used
-by display fields and — once 15D ships — by Rule Builder
-matchers / filters). Two-name strategy: friendly name in
-the chrome, machine-name in the data layer. Same pattern
-as `email_or_identifier` (machine) vs "Reviewee email"
-(UI).
+Alternatives considered (Pairs / Pair Notes / Pair
+Context) and rejected — Relationships reads most
+naturally for the per-pair-attribute use case
+(mentorship / COI / prior-cohort).
 
 ### Surface
 
@@ -182,47 +180,79 @@ There is no operator-write path into the `assignments`
 table. The current routes that write rows directly
 (manual CSV upload, full-matrix POST — already retired
 per 12C — etc.) are gone. The `Assignment.context` JSON
-column also retires its `pair_context_*` keys; the
+column **retires entirely** (locked 2026-05-10): the
 canonical pair context lives on the `relationships`
-table, joined at generation time.
+table, joined at generation time, and "which instrument
+does this assignment apply to" is already covered by
+`Assignment.instrument_id`. With both moves, the JSON
+column has no remaining tenants — drop the column in the
+migration rather than just clearing keys.
 
-Generation runs:
+### Generation triggering (locked 2026-05-10)
 
-- On Quick Setup completion (when the Settings CSV
-  carries per-instrument `rule_set_name` references —
-  12A-2 PR 1's chain step).
-- On the operator's explicit **Generate** click on the
-  Operations Assignments page (replaces today's Rule
-  Based card on the Setup Assignments page).
-- On any mutation that affects the candidate set —
-  roster change, Relationships change, Instrument
-  RuleSet swap — surfaces a "ready to regenerate" cue.
-  (Maybe — TBD; might keep Generate fully manual.)
+**Manual Generate after Validate.** Generation does **not**
+auto-fire from Quick Setup completion or from any
+mutation. The operator runs Generate explicitly, and
+runs it after the session validates so the engine
+operates on validated inputs.
 
-## Optional Assignments preview page (Operations)
+The Quick Setup chain (post-12C) ends after
+reviewers → reviewees → relationships → settings; it
+does **not** chain into Generate. Earlier sketches that
+suggested auto-generate-on-Quick-Setup-completion are
+superseded.
 
-Whether a separate Assignments page remains depends on
-the operator's preview / override needs. **Likely yes**,
-but reframed as an **Operations** surface:
+The flow is:
+
+```
+Quick Setup → Validate → Generate → (Activate)
+```
+
+**"Super buttons" for next-action shortcuts.** The
+Operations Assignments page (and likely Session Home)
+can offer multi-step shortcut actions that chain
+common sequences in one click — e.g. "Validate +
+Generate", "Validate + Generate + Activate", or
+"Regenerate after roster change → Validate". Treat
+these as UI sugar over the underlying explicit steps;
+each underlying action stays scoped and individually
+clickable so the operator can still pause / inspect
+between steps if they want. Sized as a standalone slice
+inside 15D, or split off as a follow-on UI polish PR.
+
+## Operations Assignments page (locked 2026-05-10)
+
+A dedicated Assignments page remains, **reframed as an
+Operations row tab** alongside Validate / Previews /
+Invitations / Responses — lifecycle-time information,
+not setup-time authoring.
+
+Surface:
 
 - Read-only preview of the current generated
   assignments table (what the engine produced from the
   4-input chain).
+- **Generate** button (replaces today's Setup-page
+  Rule Based card's Generate). Operator-driven; runs
+  the engine against the four current inputs and
+  rewrites the `assignments` table.
+- **Super buttons** (per the locked decision above) for
+  Validate + Generate / Validate + Generate +
+  Activate-style chains. Render as Primary buttons in
+  a top action row; underlying single-step actions
+  remain available for granular flows.
+- Per-instrument breakdown — N assignments per
+  instrument; surface zero-assignment instruments as
+  warnings. Mirrors the role today's status pills
+  serve, but at instrument granularity.
 - Bulk overrides:
   - **Exclude self-reviews** toggle (the 12C-1 PR 3
     bulk control, with its `sessions.self_reviews_active`
-    column).
-  - Possibly: per-row Include checkbox stays as
-    last-mile override (12C-1 model preserved).
-- **Generate** button (replaces the Setup-page Rule
-  Based card's Generate).
-- Per-instrument breakdown — N assignments per
-  instrument; surface zero-row instruments as warnings.
-
-This page lives on the **Operations** chrome row
-alongside Validate / Previews / Invitations / Responses
-— it's lifecycle-time information, not setup-time
-authoring.
+    column). Moves here from its current Setup-row
+    home as part of 15D's Setup-vs-Operations split.
+  - Per-row Include checkbox (12C-1 model preserved)
+    stays as the last-mile override on individual
+    rows.
 
 ## Workflow consequences
 
@@ -234,23 +264,60 @@ authoring.
 4. Validate, Activate, etc.
 
 **Post-15D operator setup flow:**
-1. Build rosters (Reviewers + Reviewees pages or Quick
-   Setup).
-2. **Build relationships** (new Relationships page or
-   Quick Setup) — encode per-pair constraints
-   (mentorship, COI, prior cohort, etc.) as
-   PairContextTag1-3.
-3. Define instruments + per-instrument RuleSets that
-   consume the new `pair_context.tag_N` source class
-   for generation logic.
-4. Validate, Activate. Generation runs as part of the
-   chain or via the Operations Assignments page's
-   Generate button.
+1. Build rosters + relationships + instruments
+   (Reviewers + Reviewees + Relationships + Instruments
+   pages, or Quick Setup with all four roster-style
+   slots populated).
+2. **Validate** — checks rosters, relationships,
+   instruments, per-instrument RuleSets.
+3. **Generate** (operator-driven) — runs the engine
+   against the four-input chain; populates the
+   assignments table on the Operations Assignments
+   page.
+4. **Activate**, etc.
+
+Steps 2 + 3 may be condensed via a "Validate +
+Generate" super button (per the locked Operations
+Assignments page surface). Generation is **never**
+implicit in another step — Quick Setup completion does
+not auto-Generate; mutations don't auto-regenerate.
 
 The shift: per-pair info goes from "implicit in the
 manual assignments CSV" → "explicit in a parallel
 Relationships table". Operators name their constraints
-in plain language; rules act on them.
+in plain language; rules act on them. Generation
+becomes a deliberate, validated, operator-clicked
+action — not a hidden side-effect of upload.
+
+## Quick Setup integration (locked 2026-05-10)
+
+The Quick Setup card grows back to **4 slots** with
+Relationships joining the roster-class slots:
+
+| Slot | Upload | Status |
+|---|---|---|
+| 1 | Reviewers CSV | Existing (12C unchanged) |
+| 2 | Reviewees CSV | Existing (12C unchanged) |
+| 3 | **Relationships CSV** *(new)* | Optional — a cycle works without explicit relationships |
+| 4 | Settings CSV | Existing (12C-2 — was slot 3 after manual-assignments retirement, now slot 4 again) |
+
+Relationships is treated as **entirely parallel** to
+Reviewers and Reviewees in the chain — same upload /
+preview / wipe-and-replace contract; same lifecycle gate;
+same `parse_relationship_csv` per-entity importer. The
+distinguishing trait is **optionality**: a session can
+generate assignments with only rosters + RuleSets (no
+explicit pair context), so slot 3 is leave-empty-friendly
+in a way slots 1 + 2 aren't (rosters are required for
+any non-empty session).
+
+The `quick_setup_submit_all` chain ordering becomes:
+reviewers → reviewees → relationships → settings.
+Generation does **not** fire from Quick Setup completion
+(per the locked manual-Generate-after-Validate
+decision); Quick Setup leaves the operator on Session
+Home with Validate + Generate as the next obvious
+action.
 
 ## Migration story
 
@@ -264,10 +331,13 @@ data. 15D's migration:
    the same tag values. Audit-log a
    `relationships.migrated_from_assignment_context` event
    per session with counts.
-2. **Schema.** Drop the `pair_context_*` keys from
-   `Assignment.context` JSON in a follow-on cleanup PR
-   once the backfill is observed clean. The JSON column
-   itself stays — other context keys (TBD) may use it.
+2. **Schema.** **Drop the `Assignment.context` JSON
+   column entirely** (locked 2026-05-10 — the only
+   tenants were `pair_context_*` keys, and "which
+   instrument does this apply to" is already covered by
+   `Assignment.instrument_id`). Lands as a follow-on
+   cleanup migration once the backfill is observed
+   clean.
 3. **Generation behaviour.** Sessions without
    relationships rows (greenfield, or sessions whose
    rosters never had pair context) generate the same as
@@ -278,6 +348,18 @@ data. 15D's migration:
    migration silently — operators see the same
    assignments after Generate.
 
+## Lifecycle gating (locked 2026-05-10)
+
+Relationships changes follow the **same gate as the
+rosters**: editable in `draft` / `validated`; locked
+in `ready` / `paused` / `closed`. Mid-cycle edits
+without a Generate re-run aren't honoured by the
+existing assignments table anyway, so the simpler
+matched-to-rosters gate is the right call. Operators
+who discover a COI mid-cycle Pause → edit Relationships
+→ Generate → Activate, mirroring the roster-edit
+workflow.
+
 ## Schema implications (high-level)
 
 > Detailed in the follow-on "schemas-needed-beforehand"
@@ -287,9 +369,11 @@ data. 15D's migration:
   `(session_id, reviewer_id, reviewee_id, tag_1, tag_2,
   tag_3, status, created_at, updated_at)` with unique
   constraint on `(session_id, reviewer_id, reviewee_id)`.
-- **`Assignment.context.pair_context_*` retires**
-  (lifted to the new table). The JSON column itself
-  stays as a generic per-row context bag.
+- **`Assignment.context` JSON column retires entirely.**
+  `pair_context_*` keys lift to the new
+  `relationships` table; "which instrument does this
+  apply to" is already on `Assignment.instrument_id`.
+  No remaining tenants — drop the column.
 - **Rule schema** adds a `pair_context.tag_N` source in
   the matcher / filter / quota grammar (validated
   against `RuleSetSchema` in `app/schemas/rules.py`).
@@ -328,42 +412,26 @@ data. 15D's migration:
 
 ## Open questions
 
-- **Page name.** Recommend Relationships; alternatives
-  Pairs / Pair Notes / Pair Context. Settle on PR scoping.
-- **Keep or retire the Operations Assignments preview
-  page entirely.** A pure-derived assignments table has
-  no operator-typed input, so the page is just a
-  read-only confirmation surface. Worth keeping for the
-  exclude-self-reviews bulk toggle + Generate trigger,
-  but the operator could equally trigger Generate from
-  Session Home and skip the preview. Settle when 15D's
-  PR sequence is sized.
-- **Generation triggering.** Today the operator clicks
-  Generate explicitly. Post-15D — should the system
-  auto-regenerate on relevant mutations (roster /
-  Relationships / RuleSet change), or stay manual?
-  Auto-regenerate is cleaner conceptually; manual is
-  safer (operator confirms before assignments shift).
-  Likely manual with a "ready to regenerate" cue.
-- **What other context keys (besides `pair_context_*`)
-  should the `Assignment.context` JSON column hold
-  going forward**, if any? If none, drop the column
-  entirely instead of just clearing the keys.
-- **Quick Setup integration.** Add a new Relationships
-  slot to the Quick Setup card (slot 3 in the new
-  numbering: Reviewers / Reviewees / Relationships /
-  Settings = 4 slots again)? Or leave Relationships
-  off Quick Setup and require it via the dedicated
-  page? Probably yes — symmetry with Reviewers /
-  Reviewees argues for inclusion. Slot order: 1
-  Reviewers, 2 Reviewees, 3 Relationships, 4 Settings.
-- **Lifecycle gating on Relationships changes.** Same
-  as rosters (editable in `draft` / `validated`)? Or
-  more permissive (editable in `ready` so operators
-  can patch a discovered COI mid-cycle)? Probably
-  match rosters for simplicity; mid-cycle pair-context
-  edits without a Generate re-run are not honoured by
-  the existing assignments anyway.
+_None — all five settled 2026-05-10:_
+
+- _**Page name** — Relationships (chrome); `pair_context`
+  (schema)._
+- _**Operations Assignments page** — kept and reframed as
+  Operations row, with Generate + super buttons + bulk
+  overrides._
+- _**Generation triggering** — manual after Validate.
+  Quick Setup does not auto-Generate; mutations don't
+  auto-regenerate. Super buttons available for
+  multi-step shortcuts._
+- _**`Assignment.context` JSON column** — drop entirely
+  (no remaining tenants once `pair_context_*` lifts to
+  the new table; `instrument_id` is already its own
+  column)._
+- _**Quick Setup integration** — Relationships joins as
+  slot 3, parallel to Reviewers + Reviewees. Optional
+  (cycle works without it)._
+- _**Lifecycle gating on Relationships** — match
+  rosters (editable in `draft` / `validated`)._
 
 ## Related context
 
