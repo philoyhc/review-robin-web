@@ -1,6 +1,6 @@
-"""Extract Data downloads — Segment 12A-1 + 12A-3.
+"""Extract Data downloads — Segment 12A-1 + 12A-3 + 12B.
 
-Five GET routes, one per Extract Data card row:
+Six GET routes, one per Extract Data card row:
 
 - Settings (12A-1 PR 1) — 3-column key/value/data-type CSV.
 - Reviewers / Reviewees (12A-1 PR 2) — wide CSVs that
@@ -9,6 +9,8 @@ Five GET routes, one per Extract Data card row:
   downstream analysis (no import counterpart).
 - Relationships (12A-3 PR 1) — wide CSV that round-trips with
   the importer shipped by 15D PR 1.
+- Audit log (12B PR 1) — wide CSV of ``audit_events`` rows
+  for the session; system-emitted, no import counterpart.
 
 The Manual Assignments route from 12A-1 PR 3 retired in
 12A-3 PR 2 — assignments are derived post-15D (output, not
@@ -27,12 +29,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, User
+from app.db.models import AuditEvent, ReviewSession, User
 from app.db.session import get_db
 from app.services import audit, responses as responses_service
 from app.services.extracts import filename, stream_csv
+from app.services.extracts.audit_events_extract import serialize_audit_events
 from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
@@ -204,6 +208,48 @@ def export_responses_csv(
     # stays flat on sessions with hundreds of thousands of rows.
     return StreamingResponse(
         stream_csv(serialize_responses(db, review_session)),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name}"',
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/export/audit_log.csv")
+def export_audit_log_csv(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    # Count up front so the audit event carries the row count
+    # without materialising the streaming generator. The
+    # ``session.audit_log_extracted`` event we're about to write
+    # is NOT included in this count — the next download will
+    # capture it (the recursion is bounded and intentional).
+    body_count = db.execute(
+        select(func.count())
+        .select_from(AuditEvent)
+        .where(AuditEvent.session_id == review_session.id)
+    ).scalar_one()
+
+    audit.write_event(
+        db,
+        event_type="session.audit_log_extracted",
+        summary=(
+            f"Extracted Audit log CSV for session {review_session.code} "
+            f"({body_count} rows)"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(rows=body_count),
+    )
+
+    download_name = filename(review_session, "audit_log")
+    # ``serialize_audit_events`` streams via a ``yield_per(1000)``
+    # cursor; iterate lazily so memory stays flat on long-running
+    # sessions.
+    return StreamingResponse(
+        stream_csv(serialize_audit_events(db, review_session)),
         media_type="text/csv",
         headers={
             "Content-Disposition": f'attachment; filename="{download_name}"',
