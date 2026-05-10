@@ -408,7 +408,7 @@ Save-to-library actions on the per-session RTD card).
 Two segment plans co-author the porting / template-capture
 workflow:
 
-- **`guide/segment_12A-1_export.md`** — five CSVs off the Extract
+- **`guide/archive/segment_12A-1_export.md`** — five CSVs off the Extract
   Data card on Session Home (settings, reviewers, reviewees,
   manual assignments, responses). Fully shipped 2026-05-09 across
   PRs #713, #716, #717, #718, #721.
@@ -470,7 +470,7 @@ The five CSVs split the work three ways:
   surface and travels as JSON. Excluded from the per-session
   Settings CSV by design.
 
-**Canonical specs:** `guide/segment_12A-1_export.md` (export
+**Canonical specs:** `guide/archive/segment_12A-1_export.md` (export
 CSV shapes + inclusion rule), `guide/segment_12A-2_import.md`
 (import flows + apply semantics).
 
@@ -493,9 +493,9 @@ CSV shapes + inclusion rule), `guide/segment_12A-2_import.md`
 - `app/main.py` — Quick Setup unlock-cookie navigation
   middleware (mirrors the `qsu_` prefix in
   `app/web/routes_operator/_shared.py`).
-- `guide/segment_13D_db_prep.md` — rationale for every §9
+- `guide/archive/segment_13D_db_prep.md` — rationale for every §9
   inert table / column.
-- `guide/segment_12A-1_export.md` / `guide/segment_12A-2_import.md`
+- `guide/archive/segment_12A-1_export.md` / `guide/segment_12A-2_import.md`
   — CSV export / import contract referenced by §10.
 - `guide/unfinished_business.md` — catalog of deferred settings
   surfaces (e.g. inline-editable Manage rows #25, Inactivate UI

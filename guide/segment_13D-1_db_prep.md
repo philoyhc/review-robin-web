@@ -184,7 +184,7 @@ Mirrors the 13D test surface:
 ## Related context
 
 - **Segment 13D — DB prep, first pass** (shipped 2026-05-09;
-  `guide/segment_13D_db_prep.md`). 7 PRs, every
+  `guide/archive/segment_13D_db_prep.md`). 7 PRs, every
   migration inert. This second-pass doc mirrors that
   pattern; differences are scope (only 2 PRs) +
   downstream consumers (12C / 15D vs. 13B / 13C / 15A
