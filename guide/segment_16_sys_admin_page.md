@@ -126,7 +126,7 @@ assignment upload). A dedicated Sys Admin page:
 ## Related context
 
 - **Segment 15D — Assignments revamp**
-  (`guide/segment_15D_assignments_revamp.md`). PR 7's
+  (`guide/archive/segment_15D_assignments_revamp.md`). PR 7's
   decision to keep `parse_manual_csv` /
   `replace_assignments` as a dev-only feature
   established the route's continued existence; 16

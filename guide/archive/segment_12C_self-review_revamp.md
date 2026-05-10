@@ -850,7 +850,7 @@ split.*
   nullable columns with `server_default`) both mirror
   the shape Part 1 PR 1 lands.
 - **Segment 15D — Assignments revamp**
-  (`guide/segment_15D_assignments_revamp.md`). Replaces
+  (`guide/archive/segment_15D_assignments_revamp.md`). Replaces
   today's Setup Assignments page with an Operations
   Assignments page; introduces a new Relationships
   table; assignments table becomes always derived;
