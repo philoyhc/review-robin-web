@@ -74,26 +74,30 @@ def test_reviewees_import_lazy_seeds_display_fields(
     ]
 
 
-def test_manual_assignments_import_lazy_seeds_pair_context_display_fields(
+def test_relationships_import_lazy_seeds_pair_context_display_fields(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="seed-asgn-import")
+    """15D PR 6b: lazy-seeding fires from the relationships save now
+    (post-Assignment.context drop). Uploading a Relationships CSV
+    with populated tag slots should add the corresponding
+    ``pair_context`` display fields to every instrument."""
+
+    review_session = _make_session(client, db, code="seed-rel-import")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session.id)
 
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/manual/import",
+        f"/operator/sessions/{review_session.id}/relationships/import",
         files={
             "file": (
-                "m.csv",
+                "rel.csv",
                 (
-                    b"ReviewerEmail,RevieweeEmail,PairContext1,PairContext2\n"
+                    b"ReviewerEmail,RevieweeEmail,PairContextTag1,PairContextTag2\n"
                     b"r@example.edu,carol@example.edu,morning,roomA\n"
                 ),
                 "text/csv",
             )
         },
-        data={"confirm_replace": "true"},
         follow_redirects=False,
     )
 

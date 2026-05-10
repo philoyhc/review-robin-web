@@ -28,7 +28,11 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
-from app.services import assignments, csv_imports
+from app.services import (
+    assignments,
+    csv_imports,
+    relationships as relationships_service,
+)
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
 from app.web.deps import (
@@ -102,6 +106,13 @@ def _render_assignments_hub(
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "pair_sample": pair_sample,
             "truncated_count": truncated_count,
+            "pair_context_lookup": (
+                relationships_service.pair_context_lookup(
+                    db, review_session.id
+                )
+                if pair_sample
+                else {}
+            ),
             "self_reviews_active": review_session.self_reviews_active,
             "self_review_total": self_review_total,
             "self_review_active_count": self_review_active_count,
@@ -168,7 +179,7 @@ async def assignments_manual_import(
 
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    pairs, contexts, includes = assignments.manual_rows_to_pairs(
+    pairs, includes = assignments.manual_rows_to_pairs(
         rows, reviewers, reviewees
     )
     assignments.replace_assignments(
@@ -179,7 +190,6 @@ async def assignments_manual_import(
         mode=AssignmentMode.manual,
         correlation_id=request_correlation_id(),
         filename=file.filename,
-        contexts=contexts,
         includes=includes,
     )
     return RedirectResponse(

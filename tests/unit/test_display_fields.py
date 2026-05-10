@@ -80,43 +80,113 @@ def test_display_field_label_defensive_fallback_for_unknown_pair() -> None:
 
 
 @pytest.mark.parametrize("slot", ["1", "2", "3"])
-def test_display_field_value_pair_context_reads_assignment_context(slot: str) -> None:
+def test_display_field_value_pair_context_reads_relationship(slot: str) -> None:
+    """15D PR 6b: pair_context cells now read from the relationships
+    table via the eager lookup the route handler builds. Inactive
+    rows are skipped."""
+
+    from app.db.models import Relationship
+
     assignment = Assignment(
         session_id=0,
-        reviewer_id=0,
-        reviewee_id=0,
+        reviewer_id=1,
+        reviewee_id=10,
         instrument_id=0,
         include=True,
-        context={f"pair_context_{slot}": f"slot-{slot}-value"},
     )
+    relationship = Relationship(
+        session_id=0,
+        reviewer_id=1,
+        reviewee_id=10,
+        **{f"tag_{slot}": f"slot-{slot}-value"},
+        status="active",
+    )
+    lookup = {(1, 10): relationship}
     field = _make_field(source_type="pair_context", source_field=slot)
-    assert display_field_value(field, assignment) == f"slot-{slot}-value"
+    assert (
+        display_field_value(field, assignment, pair_context_lookup=lookup)
+        == f"slot-{slot}-value"
+    )
 
 
-def test_display_field_value_pair_context_returns_none_when_missing() -> None:
+def test_display_field_value_pair_context_returns_none_when_no_lookup() -> None:
+    """Without a lookup, pair_context cells resolve to None — the
+    safe fallback for callers that haven't been updated."""
+
     assignment = Assignment(
         session_id=0,
-        reviewer_id=0,
-        reviewee_id=0,
+        reviewer_id=1,
+        reviewee_id=10,
         instrument_id=0,
         include=True,
-        context={},
     )
     field = _make_field(source_type="pair_context", source_field="1")
     assert display_field_value(field, assignment) is None
 
 
-def test_display_field_value_pair_context_returns_none_when_empty() -> None:
+def test_display_field_value_pair_context_returns_none_when_pair_missing() -> None:
     assignment = Assignment(
         session_id=0,
-        reviewer_id=0,
-        reviewee_id=0,
+        reviewer_id=1,
+        reviewee_id=10,
         instrument_id=0,
         include=True,
-        context={"pair_context_1": ""},
     )
     field = _make_field(source_type="pair_context", source_field="1")
-    assert display_field_value(field, assignment) is None
+    assert display_field_value(field, assignment, pair_context_lookup={}) is None
+
+
+def test_display_field_value_pair_context_skips_inactive_relationship() -> None:
+    """Skip-at-lookup: ``status='inactive'`` rows hide their tag
+    values (mirrors ``app/services/rules/fields.py``)."""
+
+    from app.db.models import Relationship
+
+    assignment = Assignment(
+        session_id=0,
+        reviewer_id=1,
+        reviewee_id=10,
+        instrument_id=0,
+        include=True,
+    )
+    relationship = Relationship(
+        session_id=0,
+        reviewer_id=1,
+        reviewee_id=10,
+        tag_1="hidden",
+        status="inactive",
+    )
+    lookup = {(1, 10): relationship}
+    field = _make_field(source_type="pair_context", source_field="1")
+    assert (
+        display_field_value(field, assignment, pair_context_lookup=lookup)
+        is None
+    )
+
+
+def test_display_field_value_pair_context_returns_none_when_empty_string() -> None:
+    from app.db.models import Relationship
+
+    assignment = Assignment(
+        session_id=0,
+        reviewer_id=1,
+        reviewee_id=10,
+        instrument_id=0,
+        include=True,
+    )
+    relationship = Relationship(
+        session_id=0,
+        reviewer_id=1,
+        reviewee_id=10,
+        tag_1="",
+        status="active",
+    )
+    lookup = {(1, 10): relationship}
+    field = _make_field(source_type="pair_context", source_field="1")
+    assert (
+        display_field_value(field, assignment, pair_context_lookup=lookup)
+        is None
+    )
 
 
 @pytest.mark.parametrize(
@@ -149,7 +219,7 @@ def test_display_field_value_reviewee_reads_via_getattr(
         reviewee_id=reviewee.id,
         instrument_id=instrument.id,
         include=True,
-        context={},
+
     )
     db.add(assignment)
     db.flush()
@@ -176,7 +246,7 @@ def test_display_field_value_reviewee_returns_none_when_column_unset(
         reviewee_id=reviewee.id,
         instrument_id=instrument.id,
         include=True,
-        context={},
+
     )
     db.add(assignment)
     db.flush()
@@ -343,7 +413,12 @@ def test_seed_display_fields_from_reviewees_preserves_operator_label(
 def test_seed_display_fields_from_assignments_creates_pair_context_rows(
     db: Session,
 ) -> None:
-    from app.db.models import Reviewer
+    """15D PR 6b: pair_context display-field seeding now scans the
+    relationships table for populated tag slots, not the retired
+    ``Assignment.context`` column."""
+
+    from app.db.models import Relationship, Reviewer
+
     user = _user(db)
     session = _session(db, user, code="seed-asgn")
     instrument = ensure_default_instrument(db, session)
@@ -360,7 +435,16 @@ def test_seed_display_fields_from_assignments_creates_pair_context_rows(
             reviewee_id=reviewee.id,
             instrument_id=instrument.id,
             include=True,
-            context={"pair_context_1": "morning", "pair_context_3": "cohort"},
+        )
+    )
+    db.add(
+        Relationship(
+            session_id=session.id,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            tag_1="morning",
+            tag_3="cohort",
+            status="active",
         )
     )
     db.flush()
@@ -383,12 +467,15 @@ def test_seed_display_fields_from_assignments_creates_pair_context_rows(
     ]
 
 
-def test_seed_display_fields_from_assignments_no_op_for_full_matrix(
+def test_seed_display_fields_from_assignments_no_op_for_no_relationships(
     db: Session,
 ) -> None:
-    """Full-matrix assignments carry ``context=None``; no pair_context rows
-    should be seeded."""
+    """Sessions without any relationships rows seed no pair_context
+    display fields. (Pre-15D this scanned ``Assignment.context``;
+    post-15D PR 6b the data lives on the relationships table.)"""
+
     from app.db.models import Reviewer
+
     user = _user(db)
     session = _session(db, user, code="seed-asgn-fm")
     instrument = ensure_default_instrument(db, session)
@@ -405,7 +492,6 @@ def test_seed_display_fields_from_assignments_no_op_for_full_matrix(
             reviewee_id=reviewee.id,
             instrument_id=instrument.id,
             include=True,
-            context=None,
         )
     )
     db.flush()

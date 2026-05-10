@@ -539,7 +539,7 @@ async def _run_quick_setup_assignments(
                 if r.reviewer_email.casefold()
                 != r.reviewee_identifier.casefold()
             ]
-        pairs, contexts, includes = assignments.manual_rows_to_pairs(
+        pairs, includes = assignments.manual_rows_to_pairs(
             rows, reviewers, reviewees
         )
         assignments.replace_assignments(
@@ -550,7 +550,6 @@ async def _run_quick_setup_assignments(
             mode=AssignmentMode.manual,
             correlation_id=request_correlation_id(),
             filename=file.filename,
-            contexts=contexts,
             includes=includes,
         )
         return None

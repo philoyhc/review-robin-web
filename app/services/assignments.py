@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.db.models import (
     Assignment,
     Instrument,
+    Relationship,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -89,7 +90,16 @@ def reviewee_fields_with_data(db: Session, session_id: int) -> list[str]:
 
 
 def assignment_fields_with_data(db: Session, session_id: int) -> list[str]:
-    """CSV column names of assignment fields that hold at least one value."""
+    """CSV column names of assignment fields that hold at least one value.
+
+    Pair-context columns (``PairContextN``) reflect the post-15D
+    state — values come from the ``relationships`` table now,
+    not the retired ``Assignment.context`` JSON column. The
+    ``AssignmentContextN`` family retired entirely in 15D PR 6b
+    (operator-typed via the manual CSV only; manual CSV no longer
+    writes context after the column drop).
+    """
+
     labels: list[str] = []
     has_any = (
         db.execute(
@@ -100,24 +110,17 @@ def assignment_fields_with_data(db: Session, session_id: int) -> list[str]:
     if not has_any:
         return labels
     labels.extend(["ReviewerEmail", "RevieweeEmail", "IncludeAssignment"])
-    pair_present = {1: False, 2: False, 3: False}
-    asgn_present = {1: False, 2: False, 3: False}
-    for (ctx,) in db.execute(
-        session_scoped(Assignment.context, session_id)
-    ).all():
-        if not ctx:
-            continue
-        for slot in (1, 2, 3):
-            if ctx.get(f"pair_context_{slot}"):
-                pair_present[slot] = True
-            if ctx.get(f"assignment_context_{slot}"):
-                asgn_present[slot] = True
     for slot in (1, 2, 3):
-        if pair_present[slot]:
+        col = getattr(Relationship, f"tag_{slot}")
+        found = db.execute(
+            select(Relationship.id)
+            .where(Relationship.session_id == session_id)
+            .where(col.is_not(None))
+            .where(col != "")
+            .limit(1)
+        ).first()
+        if found is not None:
             labels.append(f"PairContext{slot}")
-    for slot in (1, 2, 3):
-        if asgn_present[slot]:
-            labels.append(f"AssignmentContext{slot}")
     return labels
 
 
@@ -334,6 +337,11 @@ def parse_manual_csv(
             )
             continue
 
+        # PairContext / AssignmentContext CSV columns retired in
+        # 15D PR 6b alongside the ``Assignment.context`` JSON drop.
+        # Pair-level tags now live on the ``relationships`` table;
+        # the manual-CSV path is dev-only and no longer carries
+        # per-row context.
         parsed.append(
             ManualAssignmentRow(
                 reviewer_id=reviewer.id,
@@ -343,12 +351,6 @@ def parse_manual_csv(
                 reviewee_identifier=reviewee.email_or_identifier,
                 reviewee_name=reviewee.name,
                 include=include,
-                pair_context_1=(raw.get("PairContext1") or "").strip() or None,
-                pair_context_2=(raw.get("PairContext2") or "").strip() or None,
-                pair_context_3=(raw.get("PairContext3") or "").strip() or None,
-                assignment_context_1=(raw.get("AssignmentContext1") or "").strip() or None,
-                assignment_context_2=(raw.get("AssignmentContext2") or "").strip() or None,
-                assignment_context_3=(raw.get("AssignmentContext3") or "").strip() or None,
             )
         )
 
@@ -359,25 +361,20 @@ def manual_rows_to_pairs(
     rows: list[ManualAssignmentRow],
     reviewers: list[Reviewer],
     reviewees: list[Reviewee],
-) -> tuple[list[tuple[Reviewer, Reviewee]], list[dict[str, Any] | None], list[bool]]:
+) -> tuple[list[tuple[Reviewer, Reviewee]], list[bool]]:
+    """Manual-CSV row dataclasses → ``(pairs, includes)`` tuple. The
+    third element used to be a ``contexts`` list; 15D PR 6b dropped
+    per-row context entirely alongside the ``Assignment.context``
+    column drop."""
+
     reviewer_by_id = {r.id: r for r in reviewers}
     reviewee_by_id = {r.id: r for r in reviewees}
     pairs: list[tuple[Reviewer, Reviewee]] = []
-    contexts: list[dict[str, Any] | None] = []
     includes: list[bool] = []
     for row in rows:
         pairs.append((reviewer_by_id[row.reviewer_id], reviewee_by_id[row.reviewee_id]))
-        ctx: dict[str, Any] = {}
-        for slot in (1, 2, 3):
-            pair_value = getattr(row, f"pair_context_{slot}")
-            if pair_value:
-                ctx[f"pair_context_{slot}"] = pair_value
-            asn_value = getattr(row, f"assignment_context_{slot}")
-            if asn_value:
-                ctx[f"assignment_context_{slot}"] = asn_value
-        contexts.append(ctx or None)
         includes.append(row.include)
-    return pairs, contexts, includes
+    return pairs, includes
 
 
 def get_or_create_default_instrument(
@@ -598,7 +595,6 @@ def replace_assignments(
     correlation_id: str,
     excluded_counts: dict[str, int] | None = None,
     filename: str | None = None,
-    contexts: list[dict[str, Any] | None] | None = None,
     includes: list[bool] | None = None,
     rule_set_revision: RuleSetRevision | None = None,
     exclude_self_reviews: bool | None = None,
@@ -613,9 +609,12 @@ def replace_assignments(
     is what the multi-instrument paginated view needs to show all the
     instrument groups.
 
-    ``contexts`` and ``includes`` are indexed by ``pairs`` (one entry
-    per pair), and the same value is replicated across every instrument
-    fan-out for that pair — pair-level metadata, not instrument-level.
+    ``includes`` is indexed by ``pairs`` (one entry per pair) and the
+    same value is replicated across every instrument fan-out for that
+    pair — pair-level metadata, not instrument-level. The legacy
+    ``contexts`` parameter retired in 15D PR 6b alongside the
+    ``Assignment.context`` column drop; per-pair tags now live on
+    the ``relationships`` table.
 
     Returns ``(replaced, new)`` as Assignment row counts (so for an
     N-instrument session, ``new == len(pairs) * N``).
@@ -625,8 +624,6 @@ def replace_assignments(
     Future RuleBased exclusions (tag mismatch, capacity caps, deny lists)
     plug in as additional keys without a schema change.
     """
-    if contexts is not None and len(contexts) != len(pairs):
-        raise ValueError("contexts length must match pairs length")
     if includes is not None and len(includes) != len(pairs):
         raise ValueError("includes length must match pairs length")
 
@@ -664,7 +661,6 @@ def replace_assignments(
             pair_include = review_session.self_reviews_active
         else:
             pair_include = True
-        pair_context = contexts[index] if contexts is not None else None
         for instrument in instruments:
             db.add(
                 Assignment(
@@ -673,7 +669,6 @@ def replace_assignments(
                     reviewee_id=reviewee.id,
                     instrument_id=instrument.id,
                     include=pair_include,
-                    context=pair_context,
                     created_by_mode=mode.value,
                 )
             )

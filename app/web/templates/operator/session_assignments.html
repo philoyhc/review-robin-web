@@ -126,14 +126,14 @@
     {% set has_e_tag_1 = pair_sample | selectattr("reviewee.tag_1") | list | length > 0 %}
     {% set has_e_tag_2 = pair_sample | selectattr("reviewee.tag_2") | list | length > 0 %}
     {% set has_e_tag_3 = pair_sample | selectattr("reviewee.tag_3") | list | length > 0 %}
-    {% set ctx = namespace(p1=false, p2=false, p3=false, a1=false, a2=false, a3=false) %}
-    {% for asgn in pair_sample if asgn.context %}
-      {% if asgn.context.get("pair_context_1") %}{% set ctx.p1 = true %}{% endif %}
-      {% if asgn.context.get("pair_context_2") %}{% set ctx.p2 = true %}{% endif %}
-      {% if asgn.context.get("pair_context_3") %}{% set ctx.p3 = true %}{% endif %}
-      {% if asgn.context.get("assignment_context_1") %}{% set ctx.a1 = true %}{% endif %}
-      {% if asgn.context.get("assignment_context_2") %}{% set ctx.a2 = true %}{% endif %}
-      {% if asgn.context.get("assignment_context_3") %}{% set ctx.a3 = true %}{% endif %}
+    {% set ctx = namespace(p1=false, p2=false, p3=false) %}
+    {% for asgn in pair_sample %}
+      {% set rel = pair_context_lookup.get((asgn.reviewer_id, asgn.reviewee_id)) %}
+      {% if rel and rel.status == "active" %}
+        {% if rel.tag_1 %}{% set ctx.p1 = true %}{% endif %}
+        {% if rel.tag_2 %}{% set ctx.p2 = true %}{% endif %}
+        {% if rel.tag_3 %}{% set ctx.p3 = true %}{% endif %}
+      {% endif %}
     {% endfor %}
     <div class="card">
       <h2>Current pairs</h2>
@@ -159,11 +159,6 @@
             ("p1", "Ctx1", ctx.p1),
             ("p2", "Ctx2", ctx.p2),
             ("p3", "Ctx3", ctx.p3),
-          ]),
-          ("Assignment", [
-            ("a1", "Ctx1", ctx.a1),
-            ("a2", "Ctx2", ctx.a2),
-            ("a3", "Ctx3", ctx.a3),
           ]),
         ] %}
         {% for group_label, items in toggle_groups %}
@@ -194,12 +189,11 @@
           <th class="assignment-col col-p1">Pair1</th>
           <th class="assignment-col col-p2">Pair2</th>
           <th class="assignment-col col-p3">Pair3</th>
-          <th class="assignment-col col-a1">Assign1</th>
-          <th class="assignment-col col-a2">Assign2</th>
-          <th class="assignment-col col-a3">Assign3</th>
           <th>Include</th>
         </tr>
         {% for assignment in pair_sample %}
+          {% set rel = pair_context_lookup.get((assignment.reviewer_id, assignment.reviewee_id)) %}
+          {% set rel_active = rel and rel.status == "active" %}
           <tr>
             <td>
               {{ assignment.reviewer.name }} &middot;
@@ -215,12 +209,9 @@
             <td class="assignment-col col-et1">{{ assignment.reviewee.tag_1 or "" }}</td>
             <td class="assignment-col col-et2">{{ assignment.reviewee.tag_2 or "" }}</td>
             <td class="assignment-col col-et3">{{ assignment.reviewee.tag_3 or "" }}</td>
-            <td class="assignment-col col-p1">{{ assignment.context.get("pair_context_1", "") if assignment.context else "" }}</td>
-            <td class="assignment-col col-p2">{{ assignment.context.get("pair_context_2", "") if assignment.context else "" }}</td>
-            <td class="assignment-col col-p3">{{ assignment.context.get("pair_context_3", "") if assignment.context else "" }}</td>
-            <td class="assignment-col col-a1">{{ assignment.context.get("assignment_context_1", "") if assignment.context else "" }}</td>
-            <td class="assignment-col col-a2">{{ assignment.context.get("assignment_context_2", "") if assignment.context else "" }}</td>
-            <td class="assignment-col col-a3">{{ assignment.context.get("assignment_context_3", "") if assignment.context else "" }}</td>
+            <td class="assignment-col col-p1">{{ rel.tag_1 or "" if rel_active else "" }}</td>
+            <td class="assignment-col col-p2">{{ rel.tag_2 or "" if rel_active else "" }}</td>
+            <td class="assignment-col col-p3">{{ rel.tag_3 or "" if rel_active else "" }}</td>
             <td>{{ "yes" if assignment.include else "no" }}</td>
           </tr>
         {% endfor %}
@@ -230,7 +221,7 @@
       {% endif %}
     </div>
     <style>
-      {% for slot in ["rt1", "rt2", "rt3", "et1", "et2", "et3", "p1", "p2", "p3", "a1", "a2", "a3"] -%}
+      {% for slot in ["rt1", "rt2", "rt3", "et1", "et2", "et3", "p1", "p2", "p3"] -%}
         #assignments-table.col-hidden-{{ slot }} .col-{{ slot }}{% if not loop.last %},{% endif %}
       {% endfor %} {
         display: none;

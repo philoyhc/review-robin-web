@@ -11,6 +11,12 @@ class AssignmentMode(str, Enum):
 
 
 class ManualAssignmentRow(BaseModel):
+    """Manual-CSV import row. 15D PR 6b retired the per-row
+    ``pair_context_*`` / ``assignment_context_*`` slots alongside the
+    ``Assignment.context`` JSON column drop. Per-pair tags now live
+    on the ``relationships`` table; assignment-level context retired
+    entirely (no remaining tenants)."""
+
     reviewer_id: int
     reviewee_id: int
     reviewer_email: str
@@ -18,9 +24,3 @@ class ManualAssignmentRow(BaseModel):
     reviewee_identifier: str
     reviewee_name: str
     include: bool = True
-    pair_context_1: str | None = None
-    pair_context_2: str | None = None
-    pair_context_3: str | None = None
-    assignment_context_1: str | None = None
-    assignment_context_2: str | None = None
-    assignment_context_3: str | None = None

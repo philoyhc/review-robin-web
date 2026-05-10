@@ -244,7 +244,6 @@ def create_instrument(
                     reviewee_id=source.reviewee_id,
                     instrument_id=instrument.id,
                     include=source.include,
-                    context=source.context,
                     created_by_mode=source.created_by_mode,
                 )
             )

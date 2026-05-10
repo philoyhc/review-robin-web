@@ -28,6 +28,7 @@ from app.db.models import (
     Assignment,
     Instrument,
     InstrumentDisplayField,
+    Relationship,
     Reviewee,
     ReviewSession,
     User,
@@ -112,16 +113,39 @@ def display_field_label(field: InstrumentDisplayField) -> str:
 
 
 def display_field_value(
-    field: InstrumentDisplayField, assignment: Assignment
+    field: InstrumentDisplayField,
+    assignment: Assignment,
+    *,
+    pair_context_lookup: dict[tuple[int, int], Relationship] | None = None,
 ) -> str | None:
     """Resolve a display field's cell value for an assignment row.
 
     Returns ``None`` when the source is absent, the value is empty / falsy,
     or the (source_type, source_field) pair is not recognised.
+
+    ``pair_context_lookup`` is a
+    ``(reviewer_id, reviewee_id) -> Relationship`` map the caller
+    pre-loads to avoid N+1 queries when rendering many rows. Passing
+    ``None`` makes pair_context cells resolve to ``None`` (the safe
+    fallback for callers that don't yet pass the lookup); production
+    callers should always pass it. Inactive ``Relationship`` rows
+    are skipped (their tag values stay hidden — same skip-at-lookup
+    semantic as ``app/services/rules/fields.py``).
     """
     if field.source_type == "pair_context":
-        ctx = assignment.context or {}
-        value = ctx.get(f"pair_context_{field.source_field}")
+        if pair_context_lookup is None:
+            return None
+        relationship = pair_context_lookup.get(
+            (assignment.reviewer_id, assignment.reviewee_id)
+        )
+        if relationship is None:
+            return None
+        if getattr(relationship, "status", None) != "active":
+            return None
+        attribute = f"tag_{field.source_field}"
+        value = getattr(relationship, attribute, None)
+        if isinstance(value, str) and value.strip() == "":
+            return None
         return value or None
     if field.source_type == "reviewee":
         if field.source_field not in {
@@ -508,26 +532,27 @@ def seed_display_fields_from_reviewees(
 def seed_display_fields_from_assignments(
     db: Session, review_session: ReviewSession
 ) -> int:
-    """Create pair_context display fields for any populated assignment slots.
+    """Create pair_context display fields for any populated relationship slots.
 
-    Inspects the session's assignments for non-empty ``pair_context_N``
-    values; for each instrument in the session, idempotently adds an
-    ``InstrumentDisplayField`` row for each populated slot. Returns the
-    total number of new display-field rows created.
+    Inspects the session's ``relationships`` table for non-empty
+    ``tag_N`` values (post-15D PR 6b — pre-15D the data lived on
+    ``Assignment.context.pair_context_N``); for each instrument in
+    the session, idempotently adds an ``InstrumentDisplayField`` row
+    for each populated slot. Returns the total number of new
+    display-field rows created.
     """
     pair_present = {1: False, 2: False, 3: False}
-    for (ctx,) in db.execute(
-        select(Assignment.context).where(
-            Assignment.session_id == review_session.id
-        )
-    ).all():
-        if not ctx:
-            continue
-        for slot in (1, 2, 3):
-            if ctx.get(f"pair_context_{slot}"):
-                pair_present[slot] = True
-        if all(pair_present.values()):
-            break
+    for slot in (1, 2, 3):
+        col = getattr(Relationship, f"tag_{slot}")
+        found = db.execute(
+            select(Relationship.id)
+            .where(Relationship.session_id == review_session.id)
+            .where(col.is_not(None))
+            .where(col != "")
+            .limit(1)
+        ).first()
+        if found is not None:
+            pair_present[slot] = True
 
     sources = [
         ("pair_context", str(slot))
@@ -574,21 +599,16 @@ def _populated_display_sources_for_session(
         if found is not None:
             populated.add(("reviewee", f"tag_{slot}"))
 
-    pair_present = {1: False, 2: False, 3: False}
-    for (ctx,) in db.execute(
-        select(Assignment.context).where(
-            Assignment.session_id == review_session.id
-        )
-    ).all():
-        if not ctx:
-            continue
-        for slot in (1, 2, 3):
-            if ctx.get(f"pair_context_{slot}"):
-                pair_present[slot] = True
-        if all(pair_present.values()):
-            break
-    for slot, present in pair_present.items():
-        if present:
+    for slot in (1, 2, 3):
+        col = getattr(Relationship, f"tag_{slot}")
+        found = db.execute(
+            select(Relationship.id)
+            .where(Relationship.session_id == review_session.id)
+            .where(col.is_not(None))
+            .where(col != "")
+            .limit(1)
+        ).first()
+        if found is not None:
             populated.add(("pair_context", str(slot)))
 
     return populated
