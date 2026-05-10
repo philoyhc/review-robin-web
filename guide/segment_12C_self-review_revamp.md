@@ -1,16 +1,16 @@
 # Segment 12C — Self-review revamp + Quick Setup upload semantics + chrome reorder
 
 **Status:** Planning. **Holistic-sequence revision
-2026-05-10**: locked sequence is **13D-1 → 12C → 15D
+2026-05-10**: locked sequence is **13E → 12C → 15D
 → 12A-3**. Under the new sequence, 12C-2 + 12C-3 are
 **deferred / folded into 15D** (15D fast-tracked); 12C
 ships **only Sub-segment 12C-1** (5 PRs, simplified —
-schema lifted to 13D-1 PR 1). See "Forward-looking — 15D
+schema lifted to 13E PR 1). See "Forward-looking — 15D
 alignment" below for the detailed map.
 
 **Sub-segment 12C-1 (Part 1) — sized 2026-05-09;
-ready to start once 13D-1 PR 1 ships.** Schema
-(`sessions.self_reviews_active`) lifted to 13D-1 PR 1;
+ready to start once 13E PR 1 ships.** Schema
+(`sessions.self_reviews_active`) lifted to 13E PR 1;
 12C-1 PR 1 is now generation-path wiring only.
 Audit-event-name question settled 2026-05-10 (compact
 form).
@@ -56,7 +56,7 @@ questions; expect them to land as separate PR sequences.
 
 ## Forward-looking — 15D alignment (revised 2026-05-10)
 
-Under the **locked sequence 13D-1 → 12C → 15D → 12A-3**,
+Under the **locked sequence 13E → 12C → 15D → 12A-3**,
 15D is fast-tracked and most of 12C's previously-planned
 "interim" work is folded into 15D. Net effect: 12C ships
 the self-review revamp (Sub-segment 12C-1, 5 PRs) and
@@ -69,7 +69,7 @@ Per-PR map of what 12C ships vs. what 15D absorbs:
 
 | 12C-1 piece | Status under the new sequence |
 |---|---|
-| `sessions.self_reviews_active` schema | **Lifted to 13D-1 PR 1.** 12C-1 PR 1 is now generation-path wiring only. |
+| `sessions.self_reviews_active` schema | **Lifted to 13E PR 1.** 12C-1 PR 1 is now generation-path wiring only. |
 | Generation-path wiring for the self-review default (12C-1 PR 1) | **Ships from 12C.** Inherited unchanged by 15D. |
 | Rule Builder `exclude_self_reviews` checkbox (12C-1 PR 2) | **Ships from 12C.** Inherited unchanged by 15D. |
 | Bulk Include toggle on Setup Assignments page (12C-1 PR 3) | **Ships from 12C.** Lands on today's Setup Assignments page; 15D moves the toggle (route + audit event + flip logic carry over verbatim) to the Operations Assignments page. The Setup-page placement is brief but the mechanism is durable. |
@@ -90,7 +90,7 @@ Per-PR map of what 12C ships vs. what 15D absorbs:
 with 15D):
 
 - The new `relationships` table + per-entity importer
-  (importer ships in 12A-3, table in 13D-1) +
+  (importer ships in 12A-3, table in 13E) +
   Relationships Setup page.
 - Drop `Assignment.context` JSON column.
 - Rule grammar additions (`pair_context.tag_N` matchers
@@ -351,7 +351,7 @@ parallel-shippable. PR 4 depends on PRs 1 + 2 + 3 shipping
 can be removed). PR 5 is independent dead-code cleanup.
 
 1. **PR 1 — Generation-path wiring.** *Schema lifted to
-   13D-1 PR 1 under the 2026-05-10 holistic-sequence
+   13E PR 1 under the 2026-05-10 holistic-sequence
    revision.* Wires `generate_full_matrix`, the
    rule-based engine, and the manual-CSV save path to
    consult `sessions.self_reviews_active` when creating
@@ -359,7 +359,7 @@ can be removed). PR 5 is independent dead-code cleanup.
    `include = sessions.self_reviews_active`). No UI yet
    — the column is universally `TRUE` on existing
    sessions, so behaviour is unchanged. Depends on
-   13D-1 PR 1 having shipped. Tests: each generation
+   13E PR 1 having shipped. Tests: each generation
    path picks up the column when it's `FALSE`;
    existing-session default behaviour preserved when
    it's `TRUE`.
@@ -419,7 +419,7 @@ can be removed). PR 5 is independent dead-code cleanup.
 
 > **DEFERRED under the holistic-sequence revision
 > 2026-05-10.** Under the locked sequence
-> 13D-1 → 12C → 15D → 12A-3, this sub-segment's work
+> 13E → 12C → 15D → 12A-3, this sub-segment's work
 > would land + be replaced within a single segment
 > cycle (15D restructures Quick Setup anyway, and
 > retires manual assignments entirely). Keeping the

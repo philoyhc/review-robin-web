@@ -2,7 +2,7 @@
 
 > **Superseded 2026-05-10 — absorbed into 12A-3** (see
 > `guide/segment_12A-3_export_import_updates.md`). Under
-> the locked sequence 13D-1 → 12C → 15D → 12A-3, the
+> the locked sequence 13E → 12C → 15D → 12A-3, the
 > Settings importer ships as 12A-3 PR 1 alongside the
 > Relationships per-entity export + import. This 12A-2
 > plan is **kept as historical reference** for the
