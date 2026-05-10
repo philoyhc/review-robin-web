@@ -148,6 +148,11 @@ def test_surface_renders_pair_context_and_default_fields(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
+    """15D PR 6b: pair_context now lives on the relationships table.
+    Upload the Relationships CSV separately to populate the per-pair
+    tag the reviewer surface renders. Assignment-level context
+    retired entirely."""
+
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -158,18 +163,17 @@ def test_surface_renders_pair_context_and_default_fields(
         activate=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/assignments/manual/import",
+        f"/operator/sessions/{review_session.id}/relationships/import",
         files={
             "file": (
-                "m.csv",
+                "rel.csv",
                 (
-                    b"ReviewerEmail,RevieweeEmail,PairContext1,AssignmentContext1\n"
-                    b"rae@example.edu,carol@example.edu,morning,panel-1\n"
+                    b"ReviewerEmail,RevieweeEmail,PairContextTag1\n"
+                    b"rae@example.edu,carol@example.edu,morning\n"
                 ),
                 "text/csv",
             )
         },
-        data={"confirm_replace": "true"},
         follow_redirects=False,
     )
     _activate(operator, db, review_session)
@@ -182,7 +186,6 @@ def test_surface_renders_pair_context_and_default_fields(
     assert "Pair context 1" in response.text
     assert "morning" in response.text
     assert "P1:" not in response.text  # 10B-1 moved pair context out of identity cell
-    assert "panel-1" not in response.text  # assignment_context hidden
     assert "Rating" in response.text
     assert "Comments" in response.text
 

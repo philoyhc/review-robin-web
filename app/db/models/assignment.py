@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -42,7 +42,9 @@ class Assignment(Base):
         ForeignKey("instruments.id"), index=True, nullable=False
     )
     include: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    context: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    # ``context: JSON`` retired in 15D PR 6b. ``pair_context_*`` keys
+    # lifted to the ``relationships`` table; ``assignment_context_*``
+    # keys retired entirely (operator-typed via the manual CSV only).
     created_by_mode: Mapped[str] = mapped_column(String(32), default="manual", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

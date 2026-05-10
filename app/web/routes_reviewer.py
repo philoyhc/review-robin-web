@@ -25,6 +25,7 @@ from app.db.models import (
 from app.db.session import get_db
 from app.services import instruments as instruments_service
 from app.services import invitations as invitations_service
+from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
@@ -275,6 +276,9 @@ def _surface_context(
             response_rows[(r.assignment_id, r.response_field_id)] = r
 
     instruments = _instruments_for_session(db, review_session.id)
+    pair_context_lookup = relationships_service.pair_context_lookup(
+        db, review_session.id
+    )
 
     rows_by_instrument: dict[int, list[dict]] = {}
     any_accepting = False
@@ -323,7 +327,9 @@ def _surface_context(
                     "field": display_field,
                     "label": instruments_service.display_field_label(display_field),
                     "value": instruments_service.display_field_value(
-                        display_field, assignment
+                        display_field,
+                        assignment,
+                        pair_context_lookup=pair_context_lookup,
                     ),
                     "is_profile_link": (
                         display_field.source_type == "reviewee"
@@ -648,6 +654,9 @@ def build_preview_context(
             assignments_stmt.order_by(Assignment.id).limit(3)
         ).scalars()
     )
+    pair_context_lookup = relationships_service.pair_context_lookup(
+        db, review_session.id
+    )
 
     rows_by_instrument: dict[int, list[dict]] = {}
     for assignment in real_assignments:
@@ -667,7 +676,11 @@ def build_preview_context(
             {
                 "field": df,
                 "label": instruments_service.display_field_label(df),
-                "value": instruments_service.display_field_value(df, assignment),
+                "value": instruments_service.display_field_value(
+                    df,
+                    assignment,
+                    pair_context_lookup=pair_context_lookup,
+                ),
                 "is_profile_link": (
                     df.source_type == "reviewee"
                     and df.source_field == "profile_link"

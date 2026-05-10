@@ -54,14 +54,34 @@ def _operator_creates_session_with_pair(
         },
         follow_redirects=False,
     )
+    # 15D PR 6b: pair_context lives on the relationships table now.
+    # Upload via the per-entity Relationships CSV; the manual
+    # assignments CSV's PairContext columns are silently ignored
+    # post-15D.
+    operator_client.post(
+        f"/operator/sessions/{review_session.id}/relationships/import",
+        files={
+            "file": (
+                "rel.csv",
+                (
+                    f"ReviewerEmail,RevieweeEmail,"
+                    f"PairContextTag1,PairContextTag2,PairContextTag3\n"
+                    f"{reviewer_email},{reviewee_ident},"
+                    f"morning,roomA,cohortX\n"
+                ).encode(),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
     operator_client.post(
         f"/operator/sessions/{review_session.id}/assignments/manual/import",
         files={
             "file": (
                 "m.csv",
                 (
-                    f"ReviewerEmail,RevieweeEmail,PairContext1,PairContext2,PairContext3\n"
-                    f"{reviewer_email},{reviewee_ident},morning,roomA,cohortX\n"
+                    f"ReviewerEmail,RevieweeEmail\n"
+                    f"{reviewer_email},{reviewee_ident}\n"
                 ).encode(),
                 "text/csv",
             )

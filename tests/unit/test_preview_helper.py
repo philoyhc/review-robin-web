@@ -72,15 +72,27 @@ def _add_real_assignment(
             __import__("app").db.models.Instrument.session_id == session.id
         )
     ).scalar_one()
+    from app.db.models import Relationship
+
     assignment = Assignment(
         session_id=session.id,
         reviewer_id=reviewer.id,
         reviewee_id=reviewee.id,
         instrument_id=instrument.id,
         include=True,
-        context={"pair_context_1": "real-context"},
     )
     db.add(assignment)
+    # Pair-context tag now lives on the relationships table
+    # (15D PR 6b dropped Assignment.context).
+    db.add(
+        Relationship(
+            session_id=session.id,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            tag_1="real-context",
+            status="active",
+        )
+    )
     db.flush()
     return assignment
 

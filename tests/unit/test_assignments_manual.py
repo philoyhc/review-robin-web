@@ -147,47 +147,17 @@ def test_unparseable_include_blocks(db: Session) -> None:
     assert any("not a recognised true/false" in i.message for i in result.issues)
 
 
-def test_assignment_context_columns_carried(db: Session) -> None:
-    user = _user(db)
-    session = _session(db, user)
-    alice = _reviewer(db, session.id, "Alice", "alice@example.edu")
-    carol = _reviewee(db, session.id, "Carol", "carol@example.edu")
+def test_pair_and_assignment_context_csv_columns_silently_ignored(
+    db: Session,
+) -> None:
+    """15D PR 6b: ``Assignment.context`` retired alongside the
+    per-row ``pair_context_*`` / ``assignment_context_*`` slots on
+    ``ManualAssignmentRow``. The manual-CSV parser still accepts
+    rows with these columns (no validation error) but drops the
+    values silently. Pair-context lives on the relationships table
+    now (uploaded separately); assignment_context retired entirely
+    (operator-typed via the manual CSV only, no consumer)."""
 
-    csv = (
-        b"ReviewerEmail,RevieweeEmail,AssignmentContext1,AssignmentContext2\n"
-        b"alice@example.edu,carol@example.edu,morning,room-A\n"
-    )
-    result = parse_manual_csv(csv, [alice], [carol])
-
-    assert result.issues == []
-    row = result.rows[0]
-    assert row.assignment_context_1 == "morning"
-    assert row.assignment_context_2 == "room-A"
-    assert row.assignment_context_3 is None
-    assert row.pair_context_1 is None
-
-
-def test_pair_context_columns_carried(db: Session) -> None:
-    user = _user(db)
-    session = _session(db, user)
-    alice = _reviewer(db, session.id, "Alice", "alice@example.edu")
-    carol = _reviewee(db, session.id, "Carol", "carol@example.edu")
-
-    csv = (
-        b"ReviewerEmail,RevieweeEmail,PairContext1,PairContext2,PairContext3\n"
-        b"alice@example.edu,carol@example.edu,morning,room-A,note\n"
-    )
-    result = parse_manual_csv(csv, [alice], [carol])
-
-    assert result.issues == []
-    row = result.rows[0]
-    assert row.pair_context_1 == "morning"
-    assert row.pair_context_2 == "room-A"
-    assert row.pair_context_3 == "note"
-    assert row.assignment_context_1 is None
-
-
-def test_pair_and_assignment_context_columns_independent(db: Session) -> None:
     user = _user(db)
     session = _session(db, user)
     alice = _reviewer(db, session.id, "Alice", "alice@example.edu")
@@ -201,8 +171,12 @@ def test_pair_and_assignment_context_columns_independent(db: Session) -> None:
 
     assert result.issues == []
     row = result.rows[0]
-    assert row.pair_context_1 == "room-A"
-    assert row.assignment_context_1 == "panel-1"
+    # Row parsed cleanly with the basic fields; the dropped slots
+    # no longer exist on the Pydantic schema.
+    assert row.reviewer_email == "alice@example.edu"
+    assert row.reviewee_identifier == "carol@example.edu"
+    assert not hasattr(row, "pair_context_1")
+    assert not hasattr(row, "assignment_context_1")
 
 
 def test_missing_required_column_blocks(db: Session) -> None:

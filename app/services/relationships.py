@@ -27,7 +27,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
-    Assignment,
     Relationship,
     Reviewee,
     Reviewer,
@@ -292,6 +291,16 @@ def save_relationships(
     )
 
     db.commit()
+
+    # Lazy-seed pair_context display fields for any populated tag
+    # slots — see guide/unfinished_business item #14. Pre-15D this
+    # fired off the manual-CSV save path through Assignment.context;
+    # post-PR-6b the data lives on the relationships table itself,
+    # so the seeding hook moves to the relationships save.
+    from app.services.instruments import seed_display_fields_from_assignments
+
+    if seed_display_fields_from_assignments(db, session):
+        db.commit()
     return replaced, len(rows)
 
 
@@ -355,132 +364,7 @@ def delete_all_relationships(
     return deleted
 
 
-def backfill_from_assignment_context(
-    db: Session,
-    *,
-    review_session: ReviewSession,
-    actor_user_id: int,
-    correlation_id: str,
-) -> dict[str, int]:
-    """Lift ``Assignment.context.pair_context_*`` values for one session
-    into ``relationships`` rows.
-
-    Mirrors the Alembic data migration (`segment_15d_pr5_*`); the
-    service form gives admin tooling a re-runnable handle and a
-    testable surface. **Idempotent** — pairs that already have a
-    ``relationships`` row in the session are skipped (the unique
-    constraint ``uq_relationships_session_reviewer_reviewee`` would
-    block them anyway, but the explicit skip keeps the audit count
-    honest and avoids an integrity-error round-trip).
-
-    Returns a counts dict ``{"migrated", "skipped", "scanned"}``:
-    - ``scanned`` — distinct ``(reviewer_id, reviewee_id)`` pairs
-      with a non-empty ``pair_context_*`` cell across the session's
-      assignments.
-    - ``migrated`` — newly inserted ``relationships`` rows.
-    - ``skipped`` — pairs whose row already existed.
-
-    Audit event ``relationships.migrated_from_assignment_context``
-    fires once per session with these counts. PR 6b retires the
-    function alongside the ``Assignment.context`` column drop.
-    """
-
-    sid = review_session.id
-    assignments = list(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == sid)
-        ).scalars()
-    )
-
-    pair_context_by_pair: dict[tuple[int, int], dict[str, str | None]] = {}
-    for assignment in assignments:
-        ctx = assignment.context or {}
-        tag_1 = _coerce_tag(ctx.get("pair_context_1"))
-        tag_2 = _coerce_tag(ctx.get("pair_context_2"))
-        tag_3 = _coerce_tag(ctx.get("pair_context_3"))
-        if tag_1 is None and tag_2 is None and tag_3 is None:
-            continue
-        key = (assignment.reviewer_id, assignment.reviewee_id)
-        existing = pair_context_by_pair.get(key)
-        if existing is None:
-            pair_context_by_pair[key] = {
-                "tag_1": tag_1,
-                "tag_2": tag_2,
-                "tag_3": tag_3,
-            }
-        else:
-            # Multiple instrument-fanout rows for the same pair — keep
-            # the first non-null value per slot. ``replace_assignments``
-            # writes the same context dict to every fanout row today,
-            # but data from earlier code paths might disagree; this
-            # dedupe is the safe call.
-            for slot, value in (
-                ("tag_1", tag_1),
-                ("tag_2", tag_2),
-                ("tag_3", tag_3),
-            ):
-                if existing[slot] is None and value is not None:
-                    existing[slot] = value
-
-    existing_pairs = {
-        (row.reviewer_id, row.reviewee_id)
-        for row in list_for_session(db, sid)
-    }
-
-    migrated = 0
-    skipped = 0
-    for (reviewer_id, reviewee_id), tags in pair_context_by_pair.items():
-        if (reviewer_id, reviewee_id) in existing_pairs:
-            skipped += 1
-            continue
-        db.add(
-            Relationship(
-                session_id=sid,
-                reviewer_id=reviewer_id,
-                reviewee_id=reviewee_id,
-                tag_1=tags["tag_1"],
-                tag_2=tags["tag_2"],
-                tag_3=tags["tag_3"],
-                status="active",
-            )
-        )
-        migrated += 1
-    db.flush()
-
-    counts = {
-        "scanned": len(pair_context_by_pair),
-        "migrated": migrated,
-        "skipped": skipped,
-    }
-    audit.write_event(
-        db,
-        event_type="relationships.migrated_from_assignment_context",
-        summary=(
-            f"Migrated {migrated} relationships from assignment "
-            f"context (skipped {skipped})"
-        ),
-        actor_user_id=actor_user_id,
-        session=review_session,
-        payload=audit.counts(**counts),
-        correlation_id=correlation_id,
-    )
-    db.commit()
-    return counts
-
-
-def _coerce_tag(value: object | None) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        return None
-    stripped = value.strip()
-    if not stripped:
-        return None
-    return stripped
-
-
 __all__ = [
-    "backfill_from_assignment_context",
     "delete_all_relationships",
     "existing_count",
     "list_for_session",
