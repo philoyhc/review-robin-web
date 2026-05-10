@@ -8,22 +8,36 @@ fate, Quick Setup integration, lifecycle gating); schema
 prep absorbed into 13E (ships the new `relationships`
 table inert); deferred 12C work folded in (Quick Setup
 slot 3 retire-and-restore, chrome restructure, Operations
-Assignments page move). Sized as **8 PRs** (locked
-2026-05-10).
+Assignments page move). Sized as **9 PRs** (locked
+2026-05-10; PR 6 split into 6a + 6b under the post-12C
+codebase-check revision).
 
-**Codebase-check revision 2026-05-10**: PR 6 expanded
-to absorb the now-deferred 12C-1 PR 3 + PR 4 work
-(bulk Include toggle + ad-hoc-toggle drop + validation
-copy refresh — they ship on the Operations Assignments
-page from the start, no Setup-page intermediate). PR 6's
-`Assignment.context` drop confirmed to retire the
-`assignment_context_*` keys alongside the
-`pair_context_*` lift (codebase scan confirmed both
-families are operator-typed via the manual CSV only;
-no rule-engine or non-display consumer). PR 7 keeps the
-manual-CSV `parse_manual_csv` / `replace_assignments`
-route as a **dev-only feature** (no operator UI; route
-+ handler stay accessible).
+**Codebase-check revisions (post-12C ship):** PR 6 split
+into **6a (UI restructure: Operations Assignments page +
+chrome move + bulk Include toggle + ad-hoc-toggle drop)**
+and **6b (data-layer drop: rewrite `pair_context_*` readers
+to use `relationships` + drop `Assignment.context`
+column)**. PR 6 absorbed the deferred 12C-1 PR 3 + PR 4
+work (bulk Include toggle + ad-hoc-toggle drop on the
+Rule Based card). PR 6's `Assignment.context` drop
+confirmed to retire the `assignment_context_*` keys
+alongside the `pair_context_*` lift (codebase scan
+confirmed both families are operator-typed via the manual
+CSV only; no rule-engine or non-display consumer).
+PR 7 keeps the manual-CSV `parse_manual_csv` /
+`replace_assignments` route as a **dev-only feature**
+(no operator UI; route + handler stay accessible;
+docstring-only flag — no runtime gate). **No
+`assignments.self_reviews_present` validation row exists**
+— the self-review copy that PR 6a refreshes lives in
+`session_assignments.html:25-32` (self-review pill
+markup) and `_rule_based_card.html:60-66, 152`
+("Exclude self-review" checkbox + copy on the Rule Based
+card). **Engine signature** for PR 4: `engine.evaluate()`
+gains an eager `pair_context_lookup: dict[tuple[int,int],
+Relationship] | None = None` param built once by the route
+handler before evaluate runs (keeps engine.evaluate pure;
+single bulk fetch; no N+1).
 
 > **Schema prep handled by 13E** — see
 > `guide/segment_13E_db_prep.md`. The
@@ -429,7 +443,7 @@ workflow.
   config; the per-pair Relationships table travels in
   its own per-entity CSV like rosters.
 
-## PR sequence (8 PRs, locked 2026-05-10)
+## PR sequence (9 PRs — locked 2026-05-10; PR 6 split into 6a + 6b post-12C codebase-check)
 
 Depends on **13E** (`sessions.self_reviews_active`
 column + `relationships` table) and **12C-1** (the
@@ -497,13 +511,24 @@ parallel-ship within the dependency graph.
 
 ### PR 4 — Generation-path consumption of relationships
 
-- `app/services/rules/engine.py` joins
-  `relationships` on `(session_id, reviewer_id,
-  reviewee_id)` per pair when evaluating
-  `pair_context.tag_N` matchers / filters / quotas.
+- `app/services/rules/engine.py` `evaluate()` gains
+  an eager `pair_context_lookup: dict[tuple[int,int],
+  Relationship] | None = None` param (locked
+  post-12C codebase-check). The route handler
+  (`rule_based_generate` in
+  `app/web/routes_operator/_rule_builder.py`) builds
+  the dict via a single query before calling
+  `evaluate()`; engine stays pure (no DB session in
+  evaluate's surface).
+- `app/services/rules/fields.py` `FIELD_MAP` gains
+  `pair_context.tag_1` / `.tag_2` / `.tag_3` entries
+  whose resolver consults the lookup dict (rather
+  than `getattr` on Reviewer/Reviewee). The
+  `ALLOWED_PREDICATE_FIELDS` frozenset in
+  `app/schemas/rules.py:109-120` extends to match.
 - Inactive relationships rows (`status = "inactive"`)
   are filtered out of the candidate set before rule
-  evaluation.
+  evaluation (or skipped at lookup time).
 - Tests: rule using `pair_context.tag_1 == "Mentor"`
   matches the right pairs; inactive rows skipped;
   pair without a `relationships` row gets empty tag
@@ -527,13 +552,13 @@ parallel-ship within the dependency graph.
   pair-context values produces the expected
   `relationships` rows; running twice is a no-op.
 
-### PR 6 — Operations Assignments page + chrome restructure + drop `Assignment.context`
+### PR 6a — Operations Assignments page + chrome restructure + bulk toggle + ad-hoc-toggle drop
 
-Absorbs the deferred 12C-1 PR 3 + PR 4 work
-(Bulk Include toggle + ad-hoc-toggle drop) per the
-2026-05-10 codebase-check revision — the toggle
-lands on this page from the start instead of
-relocating from a brief Setup-page intermediate.
+UI/UX-shaped half of the original PR 6. Absorbs the
+deferred 12C-1 PR 3 + PR 4 work (Bulk Include toggle +
+ad-hoc-toggle drop) so the toggle lands on this page from
+the start instead of relocating from a brief Setup-page
+intermediate.
 
 - Move Assignments from the Setup row to the
   Operations row. Chrome nav after this PR:
@@ -566,41 +591,77 @@ relocating from a brief Setup-page intermediate.
   from the (formerly Setup-page) Rule Based card**
   surface as it's reconstructed under the
   Operations page (absorbed from the deferred
-  12C-1 PR 4).
-- **Refresh validation copy** for the
-  `assignments.self_reviews_present` row + any
-  related banner copy to point at the new bulk
-  toggle (absorbed from 12C-1 PR 4).
-- **Drop the `Assignment.context` JSON column.**
-  Destructive Alembic migration; depends on PR 5
-  having shipped (backfill of `pair_context_*` to
-  `relationships` complete). **The
-  `assignment_context_*` keys retire alongside**
-  per the 2026-05-10 codebase-check decision —
-  they were operator-typed via the manual CSV only,
-  and 15D's "manual upload retires from operator
-  surfaces" leaves no operator workflow that
-  produces them. The future "friendly labels for
-  assignment_context" plan (noted in
-  `app/db/models/session_field_label.py:53` as
-  "deferred") is permanently retired by this drop.
-  No backfill — the column drops empty post-PR 5.
-- Status pills on every session-scoped page
-  reflect the new chrome layout.
+  12C-1 PR 4). Touches `_rule_based_card.html:60-66`
+  + the JS sync block at line 152.
+- **Refresh self-review pill copy** in the
+  Operations Assignments page surface (replaces the
+  current `session_assignments.html:25-32` pill
+  markup) to point at the new bulk toggle as the
+  way to deactivate. *No
+  `assignments.self_reviews_present` validation row
+  exists in `app/services/validation.py` — the
+  copy-refresh work is the pill markup itself plus
+  any banner copy adjacent to the bulk toggle.*
+- Status pills on every session-scoped page reflect
+  the new chrome layout.
 - **Open consideration:** the Operations Assignments
   page may make sense to combine with the Validate
   page surface (one "what-just-happened? next
   action?" Operations stop). Decide during PR
   scoping; no schema impact either way.
 - Tests: chrome reorder integration tests; bulk
-  toggle works post-relocation; drop migration
-  round-trips on SQLite + Postgres; display fields
-  + assignments preview template correctly drop
-  references to `assignment_context_*` /
-  `pair_context_*` (latter now read from
-  `relationships`); assert no remaining production
-  code path writes to `Assignment.context` after
-  the drop.
+  toggle works on the new page; ad-hoc-toggle gone
+  from Rule Based card; self-review pill counts
+  render with the new copy.
+
+### PR 6b — Drop `Assignment.context` (data layer)
+
+Data-layer-shaped half of the original PR 6. Independent
+of PR 6a and parallel-shippable so long as PR 5
+(backfill) has shipped first. Carving from PR 6a keeps
+the destructive migration on its own reviewable surface.
+
+- **Rewrite the three `pair_context_*` readers** in
+  `app/services/instruments/_display_fields.py:171-173`
+  (`get_field_value`),
+  `_display_fields.py:257-265`
+  (`seed_display_fields_from_assignments`), and
+  `app/services/assignments.py:305-309`
+  (`_should_use_context_value`) to read from the
+  `relationships` table joined on
+  `(session_id, reviewer_id, reviewee_id)` instead of
+  reading `assignment.context["pair_context_N"]`.
+  Display-field source enum already supports
+  `pair_context` (no change there) — only the value
+  resolver moves.
+- **Drop the `Assignment.context` JSON column.**
+  Destructive Alembic migration; depends on PR 5
+  having shipped (backfill of `pair_context_*` to
+  `relationships` complete) and on the reader
+  rewrites above (otherwise the readers crash on the
+  missing column). **The `assignment_context_*` keys
+  retire alongside** — they were operator-typed via
+  the manual CSV only, and 15D's "manual upload
+  retires from operator surfaces" leaves no operator
+  workflow that produces them. The future "friendly
+  labels for assignment_context" plan (noted in
+  `app/db/models/session_field_label.py:53` as
+  "deferred") is permanently retired by this drop.
+  No backfill — the column drops empty post-PR 5.
+- `parse_manual_csv` (the dev-only path PR 7
+  preserves) stops writing `pair_context_*` /
+  `assignment_context_*` keys into the now-removed
+  JSON column; manual-CSV rows lose their per-row
+  context entirely (acceptable: dev-only path, not
+  exposed to operators, used for test fixtures +
+  admin tooling that don't depend on the keys).
+- Tests: drop migration round-trips on SQLite +
+  Postgres; display-field rendering and lazy-seed
+  paths produce identical output reading from
+  `relationships` as they did from
+  `Assignment.context`; assert no remaining
+  production code path writes to `Assignment.context`
+  after the drop.
 
 ### PR 7 — Quick Setup slot restructure
 
@@ -618,12 +679,16 @@ relocating from a brief Setup-page intermediate.
   `replace_assignments` route + handler stays as a
   **dev-only feature** — no operator UI surfaces
   it; tests + admin tooling can still hit the
-  endpoint. Documented in code (route docstring +
-  handler) as "dev-only — not exposed to
-  operators". The Quick Setup template branch +
-  view-shape adapter slot for slot 3 manual
-  upload + dropdown are removed; the route's
-  template form is retired.
+  endpoint. **Docstring-only flag** (locked
+  post-12C codebase-check): no runtime gate / 404
+  for non-dev environments; the route docstring +
+  handler comments label it as "dev-only — not
+  exposed to operators", matching Segment 16's
+  framing of dev-only-but-discoverable surfaces.
+  The Quick Setup template branch + view-shape
+  adapter slot for slot 3 manual upload + dropdown
+  are removed; the route's template form is
+  retired.
 - Drops the legacy `rule="full_matrix"` /
   `rule="rule_based"` payload variants in
   `_quick_setup.py` (those handler branches retire
