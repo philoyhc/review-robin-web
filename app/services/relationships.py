@@ -302,7 +302,54 @@ def _relationship_to_orm(
     )
 
 
+def delete_all_relationships(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str,
+) -> int:
+    """Wipe every relationships row for the session. Returns the
+    deleted row count. Mirrors ``csv_imports.delete_all_reviewers``
+    in shape: invalidates a validated session before the wipe,
+    emits ``relationships.deleted_all``, commits."""
+
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=review_session,
+        user=user,
+        reason="relationships_deleted_all",
+        correlation_id=correlation_id,
+    )
+
+    existing_rows = list(
+        db.execute(
+            select(Relationship).where(
+                Relationship.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    deleted = len(existing_rows)
+    for row in existing_rows:
+        db.delete(row)
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type="relationships.deleted_all",
+        summary=f"Deleted {deleted} relationships",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(deleted=deleted),
+        correlation_id=correlation_id,
+    )
+
+    db.commit()
+    return deleted
+
+
 __all__ = [
+    "delete_all_relationships",
     "existing_count",
     "list_for_session",
     "pair_context_lookup",

@@ -27,6 +27,13 @@
       <span class="pill pill-warning">none</span>
     {% endif %}
     &middot;
+    Relationships:
+    {% if status_pills.relationship_count %}
+      <span class="pill pill-info">{{ status_pills.relationship_count }}</span>
+    {% else %}
+      <span class="pill pill-empty">none</span>
+    {% endif %}
+    &middot;
     Assignments:
     {% if status_pills.assignment_count %}
       <span class="pill pill-info">{{ "{:,}".format(status_pills.assignment_count) }}</span>

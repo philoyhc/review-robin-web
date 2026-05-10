@@ -427,6 +427,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "relationships.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "reviewers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "reviewees.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    "relationships.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "operator_email_settings.updated": EventSchema(frozenset({"changes"})),
     "operator_email_settings.cleared": EventSchema(frozenset()),
     "email_template.updated": EventSchema(_IDENTITY | {"changes", "context"}),

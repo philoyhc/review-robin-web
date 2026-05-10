@@ -108,6 +108,7 @@ def test_build_setup_rows_returns_expected_shape(
     assert list(by_label.keys()) == [
         "Reviewers",
         "Reviewees",
+        "Relationships",
         "Assignments",
         "Instruments",
         "Email Invites",
