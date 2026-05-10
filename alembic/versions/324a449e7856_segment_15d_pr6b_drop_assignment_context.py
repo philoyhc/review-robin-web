@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from typing import Sequence, Union
 
+import sqlalchemy as sa
 from alembic import op
 
 
@@ -34,11 +35,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Re-creating an empty JSON column is technically possible, but
-    # the data the column held is gone — the column comes back blank
-    # and 15D's rule engine reads pair_context from ``relationships``
-    # anyway. We mark the migration one-way.
-    raise RuntimeError(
-        "downgrade not supported — Assignment.context column drop is "
-        "one-way (data already lifted to relationships in PR 5)."
-    )
+    # Round-trip-friendly downgrade: re-create the JSON column as
+    # nullable. The data the column held is gone (PR 5 lifted
+    # ``pair_context_*`` to the relationships table; the
+    # ``assignment_context_*`` keys retired entirely), so the
+    # column comes back empty. The CI round-trip gate
+    # (``alembic downgrade base`` then ``upgrade head``) needs the
+    # downgrade to succeed even though the data lift is one-way.
+    with op.batch_alter_table("assignments") as batch:
+        batch.add_column(sa.Column("context", sa.JSON(), nullable=True))
