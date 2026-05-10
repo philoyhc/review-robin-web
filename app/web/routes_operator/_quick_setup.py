@@ -35,6 +35,7 @@ from app.services import (
     assignments,
     csv_imports,
     relationships as relationships_service,
+    session_config_io,
     sessions,
 )
 from app.services import session_lifecycle as lifecycle
@@ -591,3 +592,116 @@ async def quick_setup_submit_all(
         url=f"{home_url}{last_fragment}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+# --------------------------------------------------------------------------- #
+# Segment 12A-3 PR 3 — Settings importer route
+# --------------------------------------------------------------------------- #
+
+
+@router.post(
+    "/sessions/{session_id}/import-config",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def import_session_config(
+    file: UploadFile = File(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Apply a Settings CSV to ``review_session``.
+
+    Lifecycle gate: ``status in {"draft", "validated"}``;
+    importing into a session with reviewer responses is blocked
+    via the gate (responses only exist in ``ready``).
+
+    Reachable only via Quick Setup slot 4 (graduated in
+    12A-3 PR 4) — there is no standalone Manage page. The same
+    success / error redirect shape the other Quick Setup slots
+    use applies: ``?config_imported=ok`` flash on success,
+    ``?quick_setup_error=settings&quick_setup_reason=...`` on
+    failure (lifecycle / parse / apply)."""
+
+    home_url = f"/operator/sessions/{review_session.id}"
+    fragment = "#quick-setup-settings"
+
+    def error_redirect(reason: str) -> RedirectResponse:
+        return RedirectResponse(
+            url=(
+                f"{home_url}?quick_setup_error=settings"
+                f"&quick_setup_reason={reason}{fragment}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    if not lifecycle.is_editable(review_session):
+        return error_redirect("lifecycle")
+
+    content = await file.read()
+    if not content:
+        return error_redirect("parse")
+
+    rows, parse_error = _read_settings_csv(content)
+    if parse_error is not None:
+        return error_redirect("parse")
+
+    result = session_config_io.apply_session_config(
+        db,
+        review_session,
+        rows,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    if not result.ok:
+        return error_redirect("parse")
+
+    return RedirectResponse(
+        url=f"{home_url}?config_imported=ok{fragment}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+def _read_settings_csv(
+    content: bytes,
+) -> tuple[list[session_config_io.Row], str | None]:
+    """Parse the 3-column ``field,value,data_type`` CSV bytes
+    into a list of ``Row`` records.
+
+    Returns ``(rows, error_token)`` — ``error_token`` is ``None``
+    on success, a token like ``"decode"`` / ``"header"`` /
+    ``"shape"`` on failure. The route maps every error token to
+    ``quick_setup_reason=parse``; the granularity is here only
+    for future log surfacing."""
+
+    import csv as _csv
+    import io as _io
+
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return [], "decode"
+
+    reader = _csv.reader(_io.StringIO(text))
+    iterator = iter(reader)
+    try:
+        header = next(iterator)
+    except StopIteration:
+        return [], "header"
+    if [c.strip() for c in header] != list(session_config_io.HEADER):
+        return [], "header"
+
+    rows: list[session_config_io.Row] = []
+    for raw in iterator:
+        if not raw:
+            continue
+        if len(raw) < 3:
+            return [], "shape"
+        rows.append(
+            session_config_io.Row(
+                field=raw[0],
+                value=raw[1],
+                data_type=raw[2],
+            )
+        )
+    return rows, None
