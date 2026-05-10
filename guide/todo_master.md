@@ -185,6 +185,23 @@ Splits the umbrella "Segment 12A — Session settings import + export" into the 
 
 Out of scope (deferred): zip bundle (mixed porting + analysis use case earns its own UX pass) and the Manual Assignments tile (retired in 12A-3 PR 2 — assignments are derived post-15D). The import side originally planned as 12A-2 was absorbed into 12A-3 and shipped 2026-05-10; plan archived at `guide/archive/segment_12A-2_import.md` as historical reference.
 
+### Implementation sequence — `13E → 12C → 15D → 12A-3` (locked block, fully shipped 2026-05-10)
+
+The four entries below are the operator-facing block locked
+2026-05-10: self-review revamp + assignments revamp + matching
+export / import updates as one coherent direction.
+
+> **`13E → 12C → 15D → 12A-3`** is **fully shipped** as of
+> 2026-05-10. 13E (schema prep), 12C-1 (self-review revamp),
+> 15D (assignments revamp + Relationships page + chrome
+> restructure), and 12A-3 (export / import updates for the
+> post-15D shape) all merged. The locked block is closed.
+
+12A-2 was absorbed into 12A-3; 12C-2 + 12C-3 were absorbed
+into 15D. The Post-Segment 15 cleanup PRs (#760 → #769) walked
+the freshly-shipped pages with the operator and applied
+single-concern polish on top.
+
 ### Segment 13E — DB prep for the 12C / 15D block — done 2026-05-10 (PRs #743, #744)
 
 Two inert schema migrations following the 13D playbook (additive, nullable / DEFAULT-shaped, no-backfill). Pre-positions the schema for 12C-1 (bulk Include toggle) and 15D (Relationships + per-pair attributes). Plan: `guide/archive/segment_13E_db_prep.md`.
@@ -215,21 +232,6 @@ The locked-sequence centrepiece. **Pair Context becomes Setup-primary** (new Rel
 - **PR 7b** (#757) — dev-only docstring labels on the manual-CSV path. The route still exists (test fixtures need it) but is no longer reachable from the operator UI.
 - **PR 7c** (#758) — re-introduce a Quick Setup Relationships slot at position 3. File-upload only; the chain is now Reviewers → Reviewees → Relationships → Settings.
 
-### Segment 12A-3 — Export / import updates for 15D — done 2026-05-10 (PRs #779, #780, #782, #783)
-
-Last leg of the locked sequence `13E → 12C → 15D → 12A-3`. Brings the export / import surface into alignment with the post-15D session model: ships the Relationships per-entity export, retires the Assignments-CSV tile (assignments are derived post-15D, output not input), ships the Settings CSV importer (absorbed from 12A-2), and graduates Quick Setup slot 4 (Settings) to live. After this lands, an operator can round-trip a session end-to-end via the four porting CSVs (Reviewers · Reviewees · Relationships · Session settings) on a fresh session. Plan: `guide/archive/segment_12A-3_export_import_updates.md`.
-
-- **#779** — PR 1 (Relationships export + Extract Data tile): `serialize_relationships()` extract service, `/export/relationships.csv` route, `session.relationships_extracted` audit event, new "Relationships" tile in the Extract Data card. The matching importer side (`parse_relationship_csv`, Manage page upload form, audit event) was already shipped by 15D PR 1.
-- **#780** — PR 2 (Assignments-CSV retirement sweep): drops the Extract Data tile, `/export/assignments.csv` route, `assignments_extract.py` service, `session.assignments_extracted` registration, and the assignment-mode-aware count display end-to-end. Reorders the row list to lock in the target left/right column layout (Reviewers · Settings · Reviewees · Responses · Relationships · Zip-all). **Keeps** the seeded-RuleSet audit-log fallback in `session_config_io.py` — load-bearing for Settings CSV's `rule_set_name` capture pre-15B.
-- **#782** — PR 3 (Settings importer + route): `apply_session_config(db, session, rows) -> ApplyResult` in `session_config_io.py` — the inverse of `serialize_session_config`. Two-phase parse + apply (validate every row first, then wipe-and-replace in a single transaction). `POST /operator/sessions/{id}/import-config` route with the lifecycle gate (`status in {"draft", "validated"}`). `session.settings_imported` audit event. Round-trip is byte-stable on the export's own output. Pre-15B `Instrument.rule_set_id` stays NULL; cross-row validation catches typo references.
-- **#783** — PR 4 (Quick Setup Settings slot graduation): flips slot 4's `is_wired=True` and points it at PR 3's route. Submit-all chain on Session Home runs reviewers → reviewees → relationships → settings; the Create New Session POST handler dispatches the same per-slot pipeline when the operator stages uploads on the new-session form. `_run_quick_setup_settings` helper extracted so per-slot route, submit-all, and create-session share one pipeline.
-
-#779 also folded in two round-trip stability fixes: `_datetime` formatter normalises naive readbacks to UTC (SQLite drops tzinfo, Postgres preserves it); the importer's RTD `data_type` validation accepts both the documented lowercase tokens and the model's capitalized values that today's export emits.
-
-Bonus: **#781** — Grey out the Reviewers / Reviewees / Relationships / Responses Download buttons in the Extract Data card when the corresponding count is 0 (rendered between PR 2 and PR 3 as a small follow-on polish).
-
----
-
 ### Post-Segment 15 clean up — done 2026-05-10 (PRs #760 → #769)
 
 Small UI / behaviour polish on top of the freshly-shipped 15D. Each PR was a single-concern change driven by walking the new pages with the operator. Bundled here rather than carved into a new sub-segment because none of them needed planning beyond the one-sentence brief that triggered them.
@@ -245,6 +247,19 @@ Small UI / behaviour polish on top of the freshly-shipped 15D. Each PR was a sin
 - **#768** — bookkeeping: archive shipped 13E / 12C-1 / 15D plans into `guide/archive/`; Done entries land in this file.
 - **#769** — Reviewers / Reviewees / Relationships / Assignments preview tables: trailing `status` (or `Include`) cell renders as a `pill-info` (active / yes) or `pill-empty` (inactive / no) span so the column reads as a sparkline of state.
 
+### Segment 12A-3 — Export / import updates for 15D — done 2026-05-10 (PRs #779, #780, #782, #783)
+
+Last leg of the locked sequence `13E → 12C → 15D → 12A-3`. Brings the export / import surface into alignment with the post-15D session model: ships the Relationships per-entity export, retires the Assignments-CSV tile (assignments are derived post-15D, output not input), ships the Settings CSV importer (absorbed from 12A-2), and graduates Quick Setup slot 4 (Settings) to live. After this lands, an operator can round-trip a session end-to-end via the four porting CSVs (Reviewers · Reviewees · Relationships · Session settings) on a fresh session. Plan: `guide/archive/segment_12A-3_export_import_updates.md`.
+
+- **#779** — PR 1 (Relationships export + Extract Data tile): `serialize_relationships()` extract service, `/export/relationships.csv` route, `session.relationships_extracted` audit event, new "Relationships" tile in the Extract Data card. The matching importer side (`parse_relationship_csv`, Manage page upload form, audit event) was already shipped by 15D PR 1.
+- **#780** — PR 2 (Assignments-CSV retirement sweep): drops the Extract Data tile, `/export/assignments.csv` route, `assignments_extract.py` service, `session.assignments_extracted` registration, and the assignment-mode-aware count display end-to-end. Reorders the row list to lock in the target left/right column layout (Reviewers · Settings · Reviewees · Responses · Relationships · Zip-all). **Keeps** the seeded-RuleSet audit-log fallback in `session_config_io.py` — load-bearing for Settings CSV's `rule_set_name` capture pre-15B.
+- **#782** — PR 3 (Settings importer + route): `apply_session_config(db, session, rows) -> ApplyResult` in `session_config_io.py` — the inverse of `serialize_session_config`. Two-phase parse + apply (validate every row first, then wipe-and-replace in a single transaction). `POST /operator/sessions/{id}/import-config` route with the lifecycle gate (`status in {"draft", "validated"}`). `session.settings_imported` audit event. Round-trip is byte-stable on the export's own output. Pre-15B `Instrument.rule_set_id` stays NULL; cross-row validation catches typo references.
+- **#783** — PR 4 (Quick Setup Settings slot graduation): flips slot 4's `is_wired=True` and points it at PR 3's route. Submit-all chain on Session Home runs reviewers → reviewees → relationships → settings; the Create New Session POST handler dispatches the same per-slot pipeline when the operator stages uploads on the new-session form. `_run_quick_setup_settings` helper extracted so per-slot route, submit-all, and create-session share one pipeline.
+
+#779 also folded in two round-trip stability fixes: `_datetime` formatter normalises naive readbacks to UTC (SQLite drops tzinfo, Postgres preserves it); the importer's RTD `data_type` validation accepts both the documented lowercase tokens and the model's capitalized values that today's export emits.
+
+Bonus: **#781** — Grey out the Reviewers / Reviewees / Relationships / Responses Download buttons in the Extract Data card when the corresponding count is 0 (rendered between PR 2 and PR 3 as a small follow-on polish).
+
 ---
 
 ## Upcoming
@@ -256,21 +271,12 @@ pinned to each segment. The catalog itself lives in
 
 ### Implementation sequence
 
-**Locked-sequence status (locked 2026-05-10):**
-
-> **`13E → 12C → 15D → 12A-3`** is **fully
-> shipped** as of 2026-05-10. 13E (schema prep), 12C-1
-> (self-review revamp), 15D (assignments revamp +
-> Relationships page + chrome restructure), and
-> 12A-3 (export / import updates for the post-15D
-> shape) all merged. The locked block is closed.
-
-The next sensible item is **12B** (audit retention).
-Everything else in this list (13B, 13C, 14, 14-1, 15,
-15A, 15B, 15C, 15E, 16) ships around the closed
-locked-sequence block per its own plan; no ordering
-constraints beyond shared schema conflicts (none
-detected).
+The locked block `13E → 12C → 15D → 12A-3` shipped 2026-05-10
+(see Done above for the four entries). The next sensible item
+is **12B** (audit retention). Everything else in this list
+(13B, 13C, 14, 14-1, 15, 15A, 15B, 15C, 15E, 16) ships per its
+own plan; no ordering constraints beyond shared schema
+conflicts (none detected).
 
 #### Numbered queue
 
