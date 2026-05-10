@@ -275,6 +275,8 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
     # row; the FullMatrix Generate button is rendered inline on the page.
     assert "Reviewers:" in empty.text
     assert ">Generate</button>" in empty.text
+    # The chrome strip no longer reports an Assignments slot.
+    assert "Assignments:" not in empty.text
 
     client.post(
         f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
@@ -283,8 +285,10 @@ def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session)
     )
 
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
-    assert 'pill-info">1</span>' in populated.text
-    assert "rule_based" in populated.text
+    # Populated state surfaces via the Current pairs / Self-reviews
+    # cards on the page itself rather than a chrome-strip slot.
+    assert "Current pairs" in populated.text
+    assert 'id="self-reviews-toggle"' in populated.text
 
 
 def test_non_operator_gets_403_on_assignments_hub_and_post(
