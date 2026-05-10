@@ -8,7 +8,7 @@ fate, Quick Setup integration, lifecycle gating); schema
 prep absorbed into 13E (ships the new `relationships`
 table inert); deferred 12C work folded in (Quick Setup
 slot 3 retire-and-restore, chrome restructure, Operations
-Assignments page move). Sized as **9 PRs** (locked
+Assignments page move). Sized as **8 PRs** (locked
 2026-05-10; PR 6 split into 6a + 6b under the post-12C
 codebase-check revision).
 
@@ -443,7 +443,7 @@ workflow.
   config; the per-pair Relationships table travels in
   its own per-entity CSV like rosters.
 
-## PR sequence (9 PRs — locked 2026-05-10; PR 6 split into 6a + 6b post-12C codebase-check)
+## PR sequence (8 PRs — locked 2026-05-10; PR 6 split into 6a + 6b post-12C codebase-check; PR 8 carved out into 15E 2026-05-10)
 
 Depends on **13E** (`sessions.self_reviews_active`
 column + `relationships` table) and **12C-1** (the
@@ -702,24 +702,19 @@ the destructive migration on its own reviewable surface.
 - Coordinates with 12A-3 PR 3 (Settings slot
   graduation).
 
-### PR 8 — Super buttons (Validate + Generate, etc.)
+### PR 8 — Super buttons (Validate + Generate, etc.) — *carved out into Segment 15E*
 
-- Multi-step shortcut actions on the Operations
-  Assignments page (and possibly Session Home):
-  - "Validate + Generate" — runs Validate; if no
-    errors, runs Generate; surfaces a single
-    success / failure banner.
-  - "Validate + Generate + Activate" — same chain
-    + Activate; for the operator who's confident
-    in their setup.
-- Underlying single-step actions (Validate,
-  Generate, Activate) remain available so the
-  operator can still pause / inspect between
-  steps.
-- UI sugar — no new audit events (each underlying
-  step emits its own event), no new schema.
-- May be split off as a follow-on UI polish PR if
-  PR 6 + 7 leave too little room.
+**Carved out 2026-05-10** into
+``guide/segment_15E_next_action_revamp.md``. The "super buttons"
+work outgrew the Operations-Assignments-page framing the 15D plan
+sketched — its natural home is the Next Action card on Session
+Home, which already plays the role of "what's the operator's next
+move?" per lifecycle state. 15E owns the multi-step shortcuts
+(Validate + Generate / Validate + Generate + Activate) end-to-end
+across that surface.
+
+15D ships eight PRs net (PR 1 → PR 7c). The Next Action revamp
+ships from 15E once 15D lands.
 
 ## Open questions
 
