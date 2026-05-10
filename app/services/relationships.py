@@ -212,6 +212,51 @@ def existing_count(db: Session, session_id: int) -> int:
     return len(db.execute(stmt).all())
 
 
+def fields_with_data(db: Session, session_id: int) -> list[str]:
+    """CSV column names of relationship fields that hold at least one value.
+
+    Mirrors ``assignments.reviewer_fields_with_data`` /
+    ``reviewee_fields_with_data`` in shape: ``ReviewerEmail`` and
+    ``RevieweeEmail`` always render when any rows exist (they're
+    required); each ``PairContextTag{N}`` is included only if a
+    non-empty value lives in that slot; ``Status`` is included when
+    any row is ``inactive``.
+    """
+
+    labels: list[str] = []
+    has_any = (
+        db.execute(
+            select(Relationship.id)
+            .where(Relationship.session_id == session_id)
+            .limit(1)
+        ).first()
+        is not None
+    )
+    if not has_any:
+        return labels
+    labels.extend(["ReviewerEmail", "RevieweeEmail"])
+    for slot in (1, 2, 3):
+        col = getattr(Relationship, f"tag_{slot}")
+        found = db.execute(
+            select(Relationship.id)
+            .where(Relationship.session_id == session_id)
+            .where(col.is_not(None))
+            .where(col != "")
+            .limit(1)
+        ).first()
+        if found is not None:
+            labels.append(f"PairContextTag{slot}")
+    inactive_found = db.execute(
+        select(Relationship.id)
+        .where(Relationship.session_id == session_id)
+        .where(Relationship.status == "inactive")
+        .limit(1)
+    ).first()
+    if inactive_found is not None:
+        labels.append("Status")
+    return labels
+
+
 def list_for_session(
     db: Session, session_id: int
 ) -> list[Relationship]:
@@ -367,6 +412,7 @@ def delete_all_relationships(
 __all__ = [
     "delete_all_relationships",
     "existing_count",
+    "fields_with_data",
     "list_for_session",
     "pair_context_lookup",
     "parse_relationship_csv",

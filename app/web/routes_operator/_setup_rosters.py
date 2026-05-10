@@ -429,6 +429,9 @@ def _render_relationships_page(
             "reviewer_by_id": reviewer_by_id,
             "reviewee_by_id": reviewee_by_id,
             "existing_count": len(rows),
+            "fields_with_data": relationships_service.fields_with_data(
+                db, review_session.id
+            ),
             "issues": issues,
             "missing_confirm": missing_confirm,
             "filename": filename,
