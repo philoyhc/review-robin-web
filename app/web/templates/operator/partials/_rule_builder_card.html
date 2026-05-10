@@ -176,11 +176,6 @@
         <input type="hidden" name="seed" value="">
       {% endif %}
 
-      {# ``exclude_self_reviews`` is intentionally not exposed in
-         this card — the same affordance lives on the main
-         Assignments page. The current value still travels with each
-         RuleSet revision, just not through this UI. #}
-
       <h3 style="margin-top: 20px;">Rules</h3>
       <div id="rule-based-editor-rule-list">
         {% for rule in builder.editable_rules %}
@@ -266,6 +261,21 @@
         <button type="button" class="btn secondary" id="rule-based-editor-add-quota">+ QUOTA rule</button>
         <button type="button" class="btn secondary" id="rule-based-editor-add-composite">+ COMPOSITE rule</button>
       </div>
+
+      <p style="margin-top: 20px;">
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 id="rule-based-editor-exclude-self"
+                 name="exclude_self_reviews"
+                 value="true"
+                 {% if builder.exclude_self_reviews %}checked{% endif %}>
+          Exclude self-review pairs (reviewer reviews themselves)
+        </label>
+        <span class="form-help" style="display: block; margin-top: 4px;">
+          Controls what this RuleSet generates. Self-review pairs
+          can still be deactivated per row on the Assignments page.
+        </span>
+      </p>
 
       <div class="btn-pair" id="rule-builder-action-row" style="margin-top: 24px; display: flex; gap: 8px; flex-wrap: wrap;">
         {% if builder.can_copy %}
