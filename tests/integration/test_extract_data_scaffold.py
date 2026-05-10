@@ -80,14 +80,13 @@ def _activate(
     db.refresh(review_session)
 
 
-def test_build_extract_data_context_returns_five_rows_plus_bundle(
+def test_build_extract_data_context_returns_six_rows_plus_bundle(
     client: TestClient, db: Session
 ) -> None:
-    """The view-shape adapter returns the five per-entity rows in
-    the canonical 2-col grid order — left-right, up-down — matching
-    the Quick Setup card's grid: Reviewers / Assignments (top row),
-    Reviewees / Responses (middle row), Session settings / Zip all
-    (bottom row, with Zip all sourced from ``context.bundle``)."""
+    """The view-shape adapter returns the six per-entity rows in
+    DOM order. 12A-3 PR 1 inserts the Relationships row after
+    Reviewees in the existing order; PR 2 reorders + retires
+    Assignments to land the final left/right column layout."""
 
     review_session = _make_session(client, db, code="ed-shape")
     context = views.build_extract_data_context(db, review_session)
@@ -96,15 +95,17 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
         "reviewers",
         "assignments",
         "reviewees",
+        "relationships",
         "responses",
         "settings",
     ]
     assert context.bundle.key == "bundle"
     assert context.bundle.label == "Zip all"
     # 12A-1 PRs 1 / 2 / 4 flipped Settings / Reviewers / Reviewees
-    # / Responses live. Assignments stays inert on this freshly-
-    # created session because ``assignment_mode`` is unset; only
-    # the zip bundle row is permanently inert until its own PR.
+    # / Responses live; 12A-3 PR 1 added the Relationships row
+    # live. Assignments stays inert on this freshly-created session
+    # because ``assignment_mode`` is unset; only the zip bundle
+    # row is permanently inert until its own PR.
     by_key = {r.key: r for r in context.rows}
     assert by_key["settings"].is_wired is True
     assert by_key["settings"].download_url == (
@@ -117,6 +118,10 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
     assert by_key["reviewees"].is_wired is True
     assert by_key["reviewees"].download_url == (
         f"/operator/sessions/{review_session.id}/export/reviewees.csv"
+    )
+    assert by_key["relationships"].is_wired is True
+    assert by_key["relationships"].download_url == (
+        f"/operator/sessions/{review_session.id}/export/relationships.csv"
     )
     assert by_key["responses"].is_wired is True
     assert by_key["responses"].download_url == (
@@ -198,6 +203,7 @@ def test_extract_data_dom_carries_wire_target_attributes(
         "settings",
         "reviewers",
         "reviewees",
+        "relationships",
         "assignments",
         "responses",
         "bundle",
@@ -224,6 +230,7 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     # Entity rows render their count after the title.
     assert "Reviewers <span" in body
     assert "Reviewees <span" in body
+    assert "Relationships <span" in body
     assert "Assignments <span" in body
     assert "Responses <span" in body
     # Settings + Zip all keep title-only treatment.
@@ -235,6 +242,7 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     by_key = {r.key: r for r in context.rows}
     assert by_key["reviewers"].show_count is True
     assert by_key["reviewees"].show_count is True
+    assert by_key["relationships"].show_count is True
     assert by_key["assignments"].show_count is True
     assert by_key["responses"].show_count is True
     assert by_key["settings"].show_count is False
@@ -290,11 +298,12 @@ def test_extract_data_card_renders_when_session_is_activated(
 
     # Card rendered without a ``.disabled`` modifier.
     assert 'class="card" id="extract-data"' in body
-    # Five rows still present with their counts surfaced.
+    # Six rows still present with their counts surfaced.
     for key in (
         "settings",
         "reviewers",
         "reviewees",
+        "relationships",
         "assignments",
         "responses",
     ):

@@ -33,6 +33,7 @@ from app.services.extracts.assignments_extract import (
     ManualOnlyError,
     serialize_assignments,
 )
+from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
@@ -131,6 +132,37 @@ def export_reviewees_csv(
     )
 
     download_name = filename(review_session, "reviewees")
+    return StreamingResponse(
+        stream_csv(rows),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name}"',
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/export/relationships.csv")
+def export_relationships_csv(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    rows = list(serialize_relationships(db, review_session))
+    body_count = max(0, len(rows) - 1)
+
+    audit.write_event(
+        db,
+        event_type="session.relationships_extracted",
+        summary=(
+            f"Extracted Relationships CSV for session {review_session.code} "
+            f"({body_count} relationships)"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(rows=body_count),
+    )
+
+    download_name = filename(review_session, "relationships")
     return StreamingResponse(
         stream_csv(rows),
         media_type="text/csv",

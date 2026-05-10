@@ -1,11 +1,12 @@
 """Integration tests for ``GET
-/operator/sessions/{id}/export/{reviewers,reviewees}.csv`` —
-Segment 12A-1 PR 2.
+/operator/sessions/{id}/export/{reviewers,reviewees,relationships}.csv``
+— Segment 12A-1 PR 2 + Segment 12A-3 PR 1.
 
 Covers route surface (auth, response shape, filename + audit
 emission). Per-row content shape is unit-tested in
 ``tests/unit/test_reviewers_extract.py`` /
-``tests/unit/test_reviewees_extract.py``.
+``tests/unit/test_reviewees_extract.py`` /
+``tests/unit/test_relationships_extract.py``.
 """
 
 from __future__ import annotations
@@ -198,6 +199,79 @@ def test_reviewees_route_emits_audit_event(
     assert detail["counts"]["rows"] == 2
 
 
+def _seed_relationships(
+    client: TestClient, review_session: ReviewSession
+) -> None:
+    client.post(
+        f"/operator/sessions/{review_session.id}/relationships/import",
+        files={
+            "file": (
+                "p.csv",
+                (
+                    "ReviewerEmail,RevieweeEmail,PairContextTag1\n"
+                    "alex@example.edu,carol@example.edu,advisor\n"
+                    "bob@example.edu,dan@example.edu,\n"
+                ).encode("utf-8"),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Relationships route
+# --------------------------------------------------------------------------- #
+
+
+def test_relationships_route_streams_csv_with_canonical_filename(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="p-fname")
+    _seed_roster(client, review_session)
+    _seed_relationships(client, review_session)
+
+    response = client.get(
+        f"/operator/sessions/{review_session.id}/export/relationships.csv"
+    )
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="p-fname_relationships.csv"'
+    )
+    rows = list(csv.reader(io.StringIO(response.text)))
+    assert rows[0] == [
+        "ReviewerEmail",
+        "RevieweeEmail",
+        "PairContextTag1",
+        "PairContextTag2",
+        "PairContextTag3",
+        "Status",
+    ]
+
+
+def test_relationships_route_emits_audit_event(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="p-audit")
+    _seed_roster(client, review_session)
+    _seed_relationships(client, review_session)
+    response = client.get(
+        f"/operator/sessions/{review_session.id}/export/relationships.csv"
+    )
+    assert response.status_code == 200
+    response.read()
+
+    db.expire_all()
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.relationships_extracted",
+            AuditEvent.session_id == review_session.id,
+        )
+    ).scalar_one()
+    detail = cast(dict, event.detail)
+    assert detail["counts"]["rows"] == 2
+
+
 def test_routes_reject_non_operator(
     db: Session,
     alice: object,
@@ -208,7 +282,7 @@ def test_routes_reject_non_operator(
     review_session = _make_session(alice_client, db, code="permgate")
 
     bob_client = make_client(bob)  # type: ignore[operator]
-    for kind in ("reviewers", "reviewees"):
+    for kind in ("reviewers", "reviewees", "relationships"):
         response = bob_client.get(
             f"/operator/sessions/{review_session.id}/export/{kind}.csv"
         )

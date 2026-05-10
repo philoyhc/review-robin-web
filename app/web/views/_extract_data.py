@@ -23,6 +23,7 @@ from app.db.models import Instrument, ReviewSession
 from app.services import (
     assignments,
     csv_imports,
+    relationships as relationships_service,
     responses as responses_service,
 )
 
@@ -56,11 +57,17 @@ class ExtractDataRow:
 
     @property
     def show_count(self) -> bool:
-        """True for the four entity rows whose count is operator-
+        """True for the per-entity rows whose count is operator-
         meaningful inline alongside the title (Reviewers / Reviewees /
-        Assignments / Responses). Session settings + the zip-bundle row
-        keep the title-only treatment."""
-        return self.key in ("reviewers", "reviewees", "assignments", "responses")
+        Relationships / Assignments / Responses). Session settings +
+        the zip-bundle row keep the title-only treatment."""
+        return self.key in (
+            "reviewers",
+            "reviewees",
+            "relationships",
+            "assignments",
+            "responses",
+        )
 
 
 @dataclass(frozen=True)
@@ -77,6 +84,7 @@ def build_extract_data_context(
 
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
+    relationship_count = relationships_service.existing_count(db, sid)
     assignment_count = assignments.existing_count(db, sid)
     response_count = responses_service.session_response_count(db, sid)
     # 12A-1 PR 3 — assignments CSV is manual-mode only. Per
@@ -141,6 +149,20 @@ def build_extract_data_context(
             coming_in=None,
         ),
         ExtractDataRow(
+            key="relationships",
+            label="Relationships",
+            filename=f"{code}_relationships.csv",
+            count=relationship_count,
+            count_summary=_extract_summary(
+                "relationship", relationship_count
+            ),
+            is_wired=True,
+            download_url=(
+                f"/operator/sessions/{sid}/export/relationships.csv"
+            ),
+            coming_in=None,
+        ),
+        ExtractDataRow(
             key="responses",
             label="Responses",
             filename=f"{code}_responses.csv",
@@ -167,7 +189,7 @@ def build_extract_data_context(
         label="Zip all",
         filename=f"session-{code}-export.zip",
         count=sum(r.count for r in rows),
-        count_summary="zip of all five CSVs above",
+        count_summary="zip of all six CSVs above",
         is_wired=False,
         download_url=None,
         coming_in="Wired in Segment 12A PR 6",
