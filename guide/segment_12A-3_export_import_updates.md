@@ -1,7 +1,7 @@
 # Segment 12A-3 — Export / import updates for 15D
 
 **Status:** Planning. Sized 2026-05-10. **Last in the
-locked sequence 13D-2 → 12C → 15D → 12A-3.** Subsumes the
+locked sequence 13D-1 → 12C → 15D → 12A-3.** Subsumes the
 previously-planned 12A-2 (Settings CSV import) — see
 "Relationship to 12A-2" below.
 
@@ -32,7 +32,7 @@ post-15D world:
   analytical export from the Operations Assignments
   page.
 - **No new schema.** All schema for this round lands
-  in 13D-2 + 15D; 12A-3 is pure CSV-format / importer /
+  in 13D-1 + 15D; 12A-3 is pure CSV-format / importer /
   route work.
 
 ## Relationship to 12A-2
@@ -103,7 +103,7 @@ Mirrors the per-entity flows for reviewers + reviewees
   the session's reviewers; resolves `RevieweeEmail`
   against the session's reviewees; rejects rows that
   reference unknown identifiers. Uniqueness enforced
-  by the 13D-2 PR 2 unique constraint.
+  by the 13D-1 PR 2 unique constraint.
 
 - **Manage page:** new `/operator/sessions/{id}/relationships`
   upload form mirrors today's reviewer / reviewee
@@ -218,7 +218,7 @@ Exact 12A-2 PR 1 scope, absorbed:
 
 ## Out of scope
 
-- **Schema changes.** All in 13D-2 (`sessions.self_reviews_active`,
+- **Schema changes.** All in 13D-1 (`sessions.self_reviews_active`,
   `relationships` table) or 15D (drop
   `Assignment.context`).
 - **Generation-path consumption of relationships.**
@@ -274,8 +274,8 @@ Exact 12A-2 PR 1 scope, absorbed:
   but absorbed into this segment;
   `guide/segment_12A-2_import.md`) — the contract
   this segment's PR 1 ships.
-- **Segment 13D-2** (DB prep wave 2;
-  `guide/segment_13D-2_db_prep_wave_2.md`) — the
+- **Segment 13D-1** (DB prep, second pass;
+  `guide/segment_13D-1_db_prep.md`) — the
   `relationships` table this segment's PR 2 reads
   / writes.
 - **Segment 12C** (self-review revamp;

@@ -194,21 +194,51 @@ are 1-3 lines for at-a-glance sequencing + the catalog items
 pinned to each segment. The catalog itself lives in
 `unfinished_business.md`.
 
-**Locked operator-facing sequence (2026-05-10):**
-**13D-2 → 12C → 15D → 12A-3.** This block ships the
-self-review revamp + assignments revamp + matching
-export/import updates as one coherent direction; 12A-2
-(Settings CSV import) is absorbed into 12A-3, and 12C-2 +
-12C-3 are absorbed into 15D. See per-segment plans for the
-detailed PR-by-PR breakdown.
+### Implementation sequence
 
-1. **13D-2 — DB prep, wave 2** *(first in the locked
+**Next main bit of work — locked 2026-05-10:**
+
+> **`13D-1 → 12C → 15D → 12A-3`** (positions 1–4
+> below). This block ships the self-review revamp +
+> assignments revamp + matching export/import updates
+> as one coherent direction. **All four segments take
+> priority over the rest of Upcoming** (12B audit
+> retention; 13B sort; 13C enhanced instruments; 14
+> production hardening; 14-1 email infra; 15 / 15A /
+> 15B / 15C polish + libraries).
+
+- **13D-1** ships the schema prep inert (the
+  `sessions.self_reviews_active` column +
+  `relationships` table).
+- **12C** wires the self-review work against
+  the new column (Sub-segment 12C-1 only — 12C-2
+  + 12C-3 deferred / absorbed into 15D).
+- **15D** adds the Relationships page +
+  per-instrument rule grammar + restructures Quick
+  Setup + chrome + drops `Assignment.context`.
+  Absorbs deferred 12C-2 + 12C-3 work.
+- **12A-3** ships the matching CSV export/import
+  (absorbs 12A-2's Settings importer + adds
+  Relationships per-entity flow + adjusts assignments
+  CSV to download-only).
+
+**12B (audit retention)** is the *next* item after
+this block clears. Other Upcoming items (13B / 13C /
+14 / 14-1 / 15 / 15A / 15B / 15C) ship around or after
+the locked block per their own plans; no schema
+conflicts detected with the locked block.
+
+12A-2 (Settings CSV import) and 12C-2 + 12C-3 sit in
+the Upcoming list as historical-reference entries —
+their work is folded into the locked block.
+
+1. **13D-1 — DB prep, second pass** *(first in the locked
    sequence)*. Two inert schema migrations:
    `sessions.self_reviews_active` (for 12C-1's bulk Include
    toggle) + new `relationships` table (for 15D's
    Relationships page). Mirrors the 13D pattern (additive,
    nullable / DEFAULT-shaped, no-backfill).
-   **Plan:** `guide/segment_13D-2_db_prep_wave_2.md`.
+   **Plan:** `guide/segment_13D-1_db_prep.md`.
 
 2. **12C — Self-review revamp** *(second in the locked
    sequence)*. Sub-segment 12C-1 only (5 PRs) — generation-
@@ -241,7 +271,7 @@ enhanced instruments, 14 production hardening, 14-1 email
 infra, 15 operator polish, 15A friendly labels, 15B
 per-instrument assignments, 15C operator libraries) ships
 around this sequence per its own plan; no ordering
-constraints with the 13D-2/12C/15D/12A-3 block beyond
+constraints with the 13D-1/12C/15D/12A-3 block beyond
 shared schema conflicts (none detected).
 
 5. **12A-2 — Session settings import.** *(Absorbed into
@@ -355,10 +385,10 @@ shared schema conflicts (none detected).
 
 ### Sequencing notes
 
-- **13D-2 → 12C → 15D → 12A-3** is the locked
+- **13D-1 → 12C → 15D → 12A-3** is the locked
   operator-facing block (locked 2026-05-10): self-review
   revamp + assignments revamp + matching export/import
-  updates as one coherent direction. 13D-2 ships the
+  updates as one coherent direction. 13D-1 ships the
   schema prep inert; 12C wires generation against the
   new column; 15D adds Relationships + restructures
   Quick Setup + chrome + drops `Assignment.context`;

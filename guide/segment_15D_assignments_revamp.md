@@ -2,21 +2,21 @@
 
 **Status:** Planning. **Holistic-sequence revision
 2026-05-10** — fast-tracked into the locked sequence
-**13D-2 → 12C → 15D → 12A-3**. All design open questions
+**13D-1 → 12C → 15D → 12A-3**. All design open questions
 settled (page name, generation triggering, JSON-column
 fate, Quick Setup integration, lifecycle gating); schema
-prep absorbed into 13D-2 (ships the new `relationships`
+prep absorbed into 13D-1 (ships the new `relationships`
 table inert); deferred 12C work folded in (Quick Setup
 slot 3 retire-and-restore, chrome restructure, Operations
 Assignments page move). Sized as **8 PRs** (locked
 2026-05-10).
 
-> **Schema prep handled by 13D-2** — see
-> `guide/segment_13D-2_db_prep_wave_2.md`. The
-> `relationships` table is created inert in 13D-2 PR 2;
+> **Schema prep handled by 13D-1** — see
+> `guide/segment_13D-1_db_prep.md`. The
+> `relationships` table is created inert in 13D-1 PR 2;
 > 15D wires it. The follow-on "schemas-needed-beforehand"
 > doc previously contemplated for this segment **becomes
-> the 13D-2 plan**; the "revised 13C that prepares for
+> the 13D-1 plan**; the "revised 13C that prepares for
 > 15D" follow-on stays open as a separate concern (13C
 > proper is still planning).
 
@@ -417,7 +417,7 @@ workflow.
 
 ## PR sequence (8 PRs, locked 2026-05-10)
 
-Depends on **13D-2** (`sessions.self_reviews_active`
+Depends on **13D-1** (`sessions.self_reviews_active`
 column + `relationships` table) and **12C-1** (the
 self-review revamp's generation-path wiring + Rule
 Builder checkbox + bulk Include toggle landing page +
@@ -432,7 +432,7 @@ parallel-ship within the dependency graph.
 ### PR 1 — Relationships service + per-entity importer
 
 - New `app/services/relationships.py` with CRUD on the
-  `relationships` table (created in 13D-2 PR 2).
+  `relationships` table (created in 13D-1 PR 2).
 - `parse_relationship_csv` importer (mirrors
   `parse_reviewer_csv` / `parse_reviewee_csv`).
 - Resolves `ReviewerEmail` against
@@ -440,7 +440,7 @@ parallel-ship within the dependency graph.
   against `reviewees.email_or_identifier`. Rejects rows
   with unknown identifiers.
 - Wipe-and-replace per-row upsert pattern; unique
-  constraint enforced by 13D-2's
+  constraint enforced by 13D-1's
   `uq_relationships_session_reviewer_reviewee`.
 - Audit event `relationships.imported` registered in
   `EVENT_SCHEMAS`.
