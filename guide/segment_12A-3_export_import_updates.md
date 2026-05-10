@@ -258,7 +258,7 @@ Exact 12A-2 PR 1 scope, absorbed:
 - `spec/settings_inventory.md` — §10 (CSV coverage)
   rewrites to reflect the post-15D Relationships
   per-entity flow + assignments download-only state.
-- `guide/segment_12A-1_export.md` — appendix update
+- `guide/archive/segment_12A-1_export.md` — appendix update
   noting the new Relationships extract; same
   per-entity export pattern.
 - `guide/segment_12A-2_import.md` — kept as
@@ -268,7 +268,7 @@ Exact 12A-2 PR 1 scope, absorbed:
 ## Related context
 
 - **Segment 12A-1** (export, shipped 2026-05-09;
-  `guide/segment_12A-1_export.md`) — the per-entity
+  `guide/archive/segment_12A-1_export.md`) — the per-entity
   CSV pattern this segment extends.
 - **Segment 12A-2** (Settings CSV import, planned
   but absorbed into this segment;

@@ -402,7 +402,7 @@ module reads or writes it yet, per 13D PR 2).
   (constraint is per-session — same name across different
   sessions remains legal).
 - Doc updates: `spec/settings_inventory.md` §9 note on the
-  `name` row, `guide/segment_12A-1_export.md` caveat collapsed
+  `name` row, `guide/archive/segment_12A-1_export.md` caveat collapsed
   to "enforced at the schema level",
   `guide/segment_15B_per_instrument_assignments.md` Slice 2
   note that per-instrument selection relies on the constraint

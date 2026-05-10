@@ -15,7 +15,7 @@ The import counterpart to **Segment 12A-1** (export, fully
 shipped 2026-05-09 across 5 PRs: settings (#713), seeded-RuleSet
 audit fallback (#716), rosters (#717), manual assignments
 (#718), responses (#721) — see
-`guide/segment_12A-1_export.md`). Consumes the 3-column
+`guide/archive/segment_12A-1_export.md`). Consumes the 3-column
 `field,value,data_type` Settings CSV the export half produces
 and rehydrates a fresh-named session into the same shape, so an
 operator can hand a CSV to a colleague (or commit it to a repo
@@ -723,7 +723,7 @@ the same way they use slots 1-3.
 - **Settings export + per-entity CSV exports** (reviewers /
   reviewees / manual assignments). All shipped as Segment
   12A-1 (PRs #713, #716, #717, #718) — see
-  `guide/segment_12A-1_export.md`.
+  `guide/archive/segment_12A-1_export.md`.
 - **Responses extract.** Shipped as Segment 12A-1 PR 4 (#721,
   2026-05-09). Independent downstream-analysis use case — not
   part of the round-trip / porting contract this segment
@@ -789,7 +789,7 @@ the same way they use slots 1-3.
     "Segment 12" once PR 2 lands. (The Upcoming entry +
     plan-doc pointer were retitled by the rename PR that
     accompanied this doc.)
-- `guide/segment_12A-1_export.md` — once 12A-2 PR 1 lands,
+- `guide/archive/segment_12A-1_export.md` — once 12A-2 PR 1 lands,
   collapse the "Out of scope — Configuration import"
   reference into a one-line "Companion segment 12A-2 ships
   the import side; round-trip pinned in
