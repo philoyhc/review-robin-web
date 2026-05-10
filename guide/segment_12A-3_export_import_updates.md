@@ -7,10 +7,13 @@ previously-planned 12A-2 (Settings CSV import) — see
 "Relationship to 12A-2" below.
 
 This segment evolves the export / import system to match
-15D's post-revamp shape. The targeted Extract Data card
-becomes a **session-portability bundle** (everything an
-operator needs to fully set up a fresh session from scratch)
-plus a separate **analysis** download:
+15D's post-revamp shape. **Export refresh lands first**
+(PRs 1 + 2), then the importer-side work (PRs 3 + 4) lights
+up Settings round-trip through Quick Setup. The targeted
+Extract Data card becomes a **session-portability bundle**
+(everything an operator needs to fully set up a fresh
+session from scratch) plus a separate **analysis**
+download:
 
 ```
 Setup (round-trip):  Reviewers · Reviewees · Relationships · Session settings
@@ -31,11 +34,12 @@ Bring the export / import surface into alignment with the
 post-15D world:
 
 - **Round-trip the new Relationships table.** Add a
-  per-entity export + Extract Data tile + Manage-page
-  upload form for the `relationships` table that 15D
-  wired. The underlying `parse_relationship_csv` importer
-  service + `relationships.imported` audit event were
-  already shipped by 15D — this segment builds the
+  per-entity export + Extract Data tile for the
+  `relationships` table that 15D wired. The underlying
+  `parse_relationship_csv` importer service +
+  `relationships.imported` audit event + per-entity
+  Manage page upload form were already shipped by 15D —
+  this segment builds the
   export route + UI surfaces on top of the existing
   service.
 - **Ship the Settings CSV importer** (the 12A-2 work,
@@ -185,7 +189,7 @@ no porting use case (assignments are output, not input)
 and no analytical use case the live preview on
 Operations Assignments doesn't already serve.
 
-12A-3 PR 4 retires the surface end-to-end:
+12A-3 PR 2 retires the surface end-to-end:
 
 - Drop the **Extract Data tile** (`key="assignments"`
   row in `app/web/views/_extract_data.py`).
@@ -198,52 +202,118 @@ Operations Assignments doesn't already serve.
   registration in `EVENT_SCHEMAS`.
 - Drop the related tests
   (`tests/.../test_assignments_extract.py`).
+- Drop the assignment-mode-aware count display +
+  tile-suppression logic.
 
-The assignment-mode-aware count display + tile-suppression
-logic from 12A-1 PR 1a (the seeded-RuleSet audit-log
-fallback for pre-15B sessions) retires with the tile.
+**Keep** the seeded-RuleSet audit-log fallback in
+`app/services/session_config_io.py` (added in 12A-1 PR 1a).
+That fallback is load-bearing for the **Settings CSV**
+export's `instruments[N].rule_set_name` capture —
+`Instrument.rule_set_id` is universally NULL pre-15B, so
+the audit-log fallback is the only way to round-trip
+which RuleSet was used. It retires properly when 15B
+wires `Instrument.rule_set_id` for real, not in 12A-3.
 
-## PR sequence (4 PRs, locked 2026-05-10)
+## PR sequence (4 PRs, re-sequenced 2026-05-10)
 
-PRs 1 + 2 are independent; PR 3 depends on PR 1
+**Export refresh first, then importer work.** The
+export-side PRs (1 + 2) bring Extract Data into
+alignment with the post-15D session model — adding
+Relationships and retiring Assignments — before the
+importer-side PRs (3 + 4) light up Settings round-trip
+through Quick Setup.
+
+PRs 1 + 2 + 3 are independent; PR 4 depends on PR 3
 (Settings importer must exist before its slot can
-graduate to live); PR 4 is independent dead-code
-cleanup.
+graduate to live).
 
-### PR 1 — Settings importer + route
+### PR 1 — Relationships export + Extract Data tile
+
+Net-additive — gives operators the new capability
+immediately.
+
+- `serialize_relationships(session)` extract service in
+  `app/services/extracts/relationships_extract.py` +
+  `session.relationships_extracted` audit event in
+  `EVENT_SCHEMAS`.
+- `GET /operator/sessions/{id}/export/relationships.csv`
+  route in `_extracts.py`.
+- New "Relationships" tile in the Extract Data card
+  (between Reviewees and Responses) via
+  `app/web/views/_extract_data.py`.
+- Sweep `session_config_io.py` for any orphan code that
+  references the dropped `Assignment.context.pair_context_*`
+  shape (15D dropped the column; this is a confirmation
+  pass, not new work).
+- Tests: round-trip (export → import via 15D's already-
+  shipped `parse_relationship_csv` → export byte-stable);
+  export route auth + filename + audit emission with row
+  count; Extract Data card tile renders + downloads.
+
+### PR 2 — Assignments-CSV retirement sweep
+
+Cleanup pass.
+
+- Drop the Extract Data tile (`key="assignments"` row
+  in `_extract_data.py`).
+- Drop the `/export/assignments.csv` route in
+  `_extracts.py`.
+- Drop `app/services/extracts/assignments_extract.py`.
+- Drop `session.assignments_extracted` from
+  `EVENT_SCHEMAS`.
+- Drop the assignment-mode-aware count display +
+  tile-suppression logic.
+- Drop related test files
+  (`tests/.../test_assignments_extract.py`).
+- **Keep** the seeded-RuleSet audit-log fallback in
+  `session_config_io.py` — it's load-bearing for
+  Settings CSV export's `rule_set_name` capture
+  (see "Assignments CSV: dropped from Extract Data"
+  above).
+- Update `README.md` — Extract Data blurb shifts from
+  "five live CSV downloads (Settings, Reviewers,
+  Reviewees, Manual Assignments, Responses)" to
+  "five live CSV downloads (Settings, Reviewers,
+  Reviewees, Relationships, Responses)".
+- Update `spec/settings_inventory.md` §10 — flip the
+  Relationships row from "Pending 12A-3" to "✅ All";
+  retire the assignments-CSV row from the coverage
+  table.
+
+After PR 1 + PR 2, the Extract Data card reads:
+Reviewers · Reviewees · Relationships · Responses ·
+Session settings (+ inert Zip all). The full 4-CSV
+porting bundle is downloadable.
+
+### PR 3 — Settings importer + route
 
 Exact 12A-2 PR 1 scope, absorbed:
 
 - `apply_session_config(db, session, rows) ->
   ApplyResult` in `app/services/session_config_io.py`.
-- `POST /operator/sessions/{id}/import-config` route.
+- `POST /operator/sessions/{id}/import-config` route
+  with the lifecycle gate (`status in {"draft",
+  "validated"}`); invalidates `validated → draft` via
+  `lifecycle.invalidate_if_validated`.
 - `session.settings_imported` audit event in
-  `EVENT_SCHEMAS`.
+  `EVENT_SCHEMAS` per 11K's strict-mode gate.
 - Settings importer's wipe-and-replace step explicitly
   wipes the assignments table before instruments
   (folded from 12C-2 PR 2).
+- **No standalone Manage page.** The importer is
+  reachable only via Quick Setup slot 4 (graduated in
+  PR 4) — Settings is structurally different from
+  rosters and isn't naturally browseable.
 - Round-trip integration test:
   `serialize_session_config(A) → file →
   apply_session_config(B) → serialize_session_config(B)
   matches A` (modulo the `name` / `code` fallback
   rule).
 
-### PR 2 — Relationships export + Extract Data tile
-
-- `serialize_relationships(session)` extract service +
-  `session.relationships_extracted` audit event.
-- `/export/relationships.csv` route in `_extracts.py`.
-- New "Relationships" tile in the Extract Data card
-  (between Reviewees and Responses).
-- Tests: round-trip (export → import via 15D's
-  service → export byte-stable); export route auth +
-  filename + audit emission with row count;
-  Extract Data card tile renders + downloads.
-
-### PR 3 — Quick Setup Settings slot graduation
+### PR 4 — Quick Setup Settings slot graduation
 
 - Settings slot (slot 4 in 15D's layout) graduates to
-  live, pointing at PR 1's import-config route.
+  live, pointing at PR 3's import-config route.
 - View-shape adapter `views.build_quick_setup_context`
   flips slot 4's `is_wired=True`.
 - Tests: Quick Setup card renders 4 live slots in both
@@ -252,24 +322,6 @@ Exact 12A-2 PR 1 scope, absorbed:
   settings; per-slot error banners surface in the right
   slot. (Relationships slot is already live from 15D —
   this PR just adds the Settings slot to the chain.)
-
-### PR 4 — Assignments-CSV retirement sweep
-
-- Drop the Extract Data tile (`key="assignments"`).
-- Drop the `/export/assignments.csv` route.
-- Drop `app/services/extracts/assignments_extract.py`.
-- Drop `session.assignments_extracted` from
-  `EVENT_SCHEMAS`.
-- Drop the assignment-mode-aware count display + the
-  seeded-RuleSet audit-log fallback (12A-1 PR 1a).
-- Drop the related test files.
-- Update `spec/settings_inventory.md` §10 — remove the
-  assignments-CSV row from the coverage table.
-- Update `README.md` — Extract Data blurb shifts from
-  "five live CSV downloads (Settings, Reviewers,
-  Reviewees, Manual Assignments, Responses)" to
-  "five live CSV downloads (Settings, Reviewers,
-  Reviewees, Relationships, Responses)".
 
 ## Out of scope
 
@@ -290,17 +342,22 @@ Exact 12A-2 PR 1 scope, absorbed:
 
 ## Test impact
 
-- Round-trip integration tests for both Settings CSV
-  (PR 1) and Relationships CSV (PR 2). Pin the
-  contract that the export and import halves stay in
-  lockstep on each format.
-- Quick Setup chain tests (PR 3) — 4 live slots,
-  submit-all chain ordering, per-slot error
-  surfacing.
-- Assignments-CSV removal sweep (PR 4) — confirm no
+- Relationships CSV round-trip integration test
+  (PR 1) — export → import via 15D's already-shipped
+  `parse_relationship_csv` → export byte-stable.
+- Assignments-CSV removal sweep (PR 2) — confirm no
   route responds, no extract service exists, no
   audit-event registration remains, Extract Data card
-  renders 5 tiles in the new order.
+  renders 5 tiles in the new order (Reviewers ·
+  Reviewees · Relationships · Responses · Session
+  settings).
+- Settings CSV round-trip integration test (PR 3) —
+  pin the contract that the export and import halves
+  stay in lockstep on the 3-column `field,value,
+  data_type` shape.
+- Quick Setup chain tests (PR 4) — 4 live slots,
+  submit-all chain ordering, per-slot error
+  surfacing.
 
 ## Doc impact
 
@@ -315,9 +372,11 @@ Exact 12A-2 PR 1 scope, absorbed:
   rewrites to reflect the post-12A-3 4-CSV porting
   bundle + 1 analysis download. The pending
   Relationships row (added in the post-15D refresh)
-  flips from "Pending 12A-3" to "✅ All". The
-  assignments-CSV row retires.
-- `README.md` — Extract Data blurb updated per PR 4.
+  flips from "Pending 12A-3" to "✅ All" in PR 1; the
+  assignments-CSV row retires in PR 2.
+- `README.md` — Extract Data blurb updated in PR 2
+  (when the Assignments tile retires and Relationships
+  is in place).
 - `guide/archive/segment_12A-1_export.md` — appendix
   update noting the new Relationships extract +
   retired Assignments extract; same per-entity export
