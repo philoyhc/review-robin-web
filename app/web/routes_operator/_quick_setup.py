@@ -33,7 +33,12 @@ from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
 from app.schemas.sessions import SessionCreate
-from app.services import assignments, csv_imports, sessions
+from app.services import (
+    assignments,
+    csv_imports,
+    relationships as relationships_service,
+    sessions,
+)
 from app.services import session_lifecycle as lifecycle
 from app.services.rules import engine, library
 from app.web.deps import (
@@ -593,6 +598,9 @@ async def _run_quick_setup_assignments(
         reviewees=reviewees,
         override_exclude_self_reviews=exclude_self,
         revision_seed=revision.id,
+        pair_context_lookup=relationships_service.pair_context_lookup(
+            db, review_session.id
+        ),
     )
     assignments.replace_assignments(
         db,

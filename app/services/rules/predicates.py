@@ -51,6 +51,9 @@ def _resolve_operand(
         "reviewee.tag1",
         "reviewee.tag2",
         "reviewee.tag3",
+        "pair_context.tag1",
+        "pair_context.tag2",
+        "pair_context.tag3",
     }:
         return get_field_value(
             operand, reviewer=reviewer, reviewee=reviewee

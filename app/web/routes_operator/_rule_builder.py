@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
-from app.services import assignments
+from app.services import assignments, relationships as relationships_service
 from app.services.rules import engine, library
 from app.web import breadcrumbs, views
 from app.web.deps import (
@@ -665,12 +665,16 @@ def rule_based_generate(
     override_exclude_self = exclude_self_review == "true"
     reviewers = assignments.list_reviewers(db, review_session.id)
     reviewees = assignments.list_reviewees(db, review_session.id)
+    pair_context_lookup = relationships_service.pair_context_lookup(
+        db, review_session.id
+    )
     result = engine.evaluate(
         rule_set_schema,
         reviewers=reviewers,
         reviewees=reviewees,
         override_exclude_self_reviews=override_exclude_self,
         revision_seed=revision.id,
+        pair_context_lookup=pair_context_lookup,
     )
 
     assignments.replace_assignments(

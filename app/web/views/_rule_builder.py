@@ -141,10 +141,15 @@ def build_rule_based_card_context(
     options: list[RuleBasedSelectorOption] = []
     selected_option_id: int | None = None
     if user is not None:
+        from app.services import relationships as relationships_service
+
         # Load populations once so each option's engine.evaluate call
         # iterates the same in-memory lists rather than re-querying.
         reviewers = assignments_service.list_reviewers(db, review_session.id)
         reviewees = assignments_service.list_reviewees(db, review_session.id)
+        pair_context_lookup = relationships_service.pair_context_lookup(
+            db, review_session.id
+        )
 
         rule_sets = library.list_visible_rule_sets(db, user=user)
         for rs in rule_sets:
@@ -175,6 +180,7 @@ def build_rule_based_card_context(
                         reviewers=reviewers,
                         reviewees=reviewees,
                         revision_seed=revision.id,
+                        pair_context_lookup=pair_context_lookup,
                     )
                     eligible_pair_count = len(result.pairs)
                 except Exception:

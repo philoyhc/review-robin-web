@@ -26,7 +26,7 @@ seeding rule.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import TYPE_CHECKING, Iterable
 
 from app.schemas.rules import (
     Combinator,
@@ -37,8 +37,15 @@ from app.schemas.rules import (
     QuotaRule,
     RuleSetSchema,
 )
+from app.services.rules.fields import (
+    reset_pair_context_lookup,
+    set_pair_context_lookup,
+)
 from app.services.rules.predicates import evaluate_predicate
 from app.services.rules.quotas import apply_quota
+
+if TYPE_CHECKING:
+    from app.db.models import Relationship
 
 
 # ---------------------------------------------------------------------------
@@ -89,9 +96,44 @@ def evaluate(
     reviewees: Iterable[object],
     override_exclude_self_reviews: bool | None = None,
     revision_seed: int = 0,
+    pair_context_lookup: dict[tuple[int, int], "Relationship"] | None = None,
 ) -> EvaluationResult:
-    """Run ``rule_set`` against the populations and return the result."""
+    """Run ``rule_set`` against the populations and return the result.
 
+    ``pair_context_lookup`` (Segment 15D PR 4) carries the per-pair
+    metadata the rule engine consumes via ``pair_context.tag_N``
+    predicates. The lookup is keyed on
+    ``(reviewer_id, reviewee_id)`` and points at ``Relationship``
+    rows (see ``app.services.relationships``). The route handler
+    builds the dict via a single query before calling ``evaluate``;
+    the engine binds it to a ``ContextVar`` for the duration of
+    this run so the predicate-evaluation code path stays free of
+    extra plumbing. ``None`` (the default) means no relationships
+    are visible — every ``pair_context.tag_N`` predicate evaluates
+    as if no row exists for the pair.
+    """
+
+    token = set_pair_context_lookup(pair_context_lookup)
+    try:
+        return _evaluate_inner(
+            rule_set,
+            reviewers=reviewers,
+            reviewees=reviewees,
+            override_exclude_self_reviews=override_exclude_self_reviews,
+            revision_seed=revision_seed,
+        )
+    finally:
+        reset_pair_context_lookup(token)
+
+
+def _evaluate_inner(
+    rule_set: RuleSetSchema,
+    *,
+    reviewers: Iterable[object],
+    reviewees: Iterable[object],
+    override_exclude_self_reviews: bool | None,
+    revision_seed: int,
+) -> EvaluationResult:
     reviewers_list = list(reviewers)
     reviewees_list = list(reviewees)
 
