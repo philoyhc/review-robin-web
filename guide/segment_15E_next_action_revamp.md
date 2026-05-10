@@ -129,7 +129,7 @@ its own.
 ## Related context
 
 - **Segment 15D — Assignments revamp**
-  (`guide/segment_15D_assignments_revamp.md`). Original "super
+  (`guide/archive/segment_15D_assignments_revamp.md`). Original "super
   buttons" framing in PR 8; carved out into 15E for proper
   surface scoping.
 - **Session Home spec** (`spec/session_home.md`) — the canonical

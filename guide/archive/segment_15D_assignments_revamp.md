@@ -40,7 +40,7 @@ handler before evaluate runs (keeps engine.evaluate pure;
 single bulk fetch; no N+1).
 
 > **Schema prep handled by 13E** — see
-> `guide/segment_13E_db_prep.md`. The
+> `guide/archive/segment_13E_db_prep.md`. The
 > `relationships` table is created inert in 13E PR 2;
 > 15D wires it. The follow-on "schemas-needed-beforehand"
 > doc previously contemplated for this segment **becomes

@@ -185,6 +185,36 @@ Splits the umbrella "Segment 12A — Session settings import + export" into the 
 
 Out of scope (deferred): zip bundle (mixed porting + analysis use case earns its own UX pass) and the import side (12A-2 — `guide/segment_12A-2_import.md`).
 
+### Segment 13E — DB prep for the 12C / 15D block — done 2026-05-10 (PRs #743, #744)
+
+Two inert schema migrations following the 13D playbook (additive, nullable / DEFAULT-shaped, no-backfill). Pre-positions the schema for 12C-1 (bulk Include toggle) and 15D (Relationships + per-pair attributes). Plan: `guide/archive/segment_13E_db_prep.md`.
+
+- **PR 1** (#743) — `sessions.self_reviews_active` Boolean column, default `FALSE`. Lands inert; 12C-1 PR 1 is the first reader / writer.
+- **PR 2** (#744) — new `relationships` table with `(session_id, reviewer_id, reviewee_id)` unique constraint, three `tag_N` slots, and `status` enum (`active` / `inactive`). Lands inert; 15D PR 1 is the first writer.
+
+### Segment 12C-1 — Self-review revamp — done 2026-05-10 (PRs #745, #746, #747)
+
+Three PRs wiring self-review behaviour against the 13E PR 1 column. The originally-planned 12C-2 + 12C-3 sub-segments were deferred under the holistic-sequence revision and absorbed into 15D. Plan: `guide/archive/segment_12C_self-review_revamp.md`.
+
+- **PR 1** (#745) — `replace_assignments` consults `sessions.self_reviews_active` for self-review pairs when no explicit `includes` mapping is supplied. New `set_self_reviews_active` writer + `self_review_include_breakdown` reader.
+- **PR 2** (#746) — Rule Builder card surfaces the `exclude_self_reviews` checkbox so it's editable per RuleSet rather than only at generate time.
+- **PR 3** (#747) — full-matrix dead-code cleanup. Retires the standalone Full Matrix card / route — the seeded `Full Matrix` RuleSet covers the same case from inside the Rule Based Assignment card.
+
+### Segment 15D — Assignments revamp — done 2026-05-10 (PRs #749 → #758)
+
+The locked-sequence centrepiece. **Pair Context becomes Setup-primary** (new Relationships table + Setup page); **Assignments table becomes always-derived** (manual authoring retired); chrome restructure (Assignments moves from Setup to Operations); Quick Setup gets a Relationships slot; Rule Builder consumes `pair_context.tag_N`. Sized as 8 PRs (with PR 6 split into 6a / 6b and PR 7 split into 7a / 7b / 7c under post-12C codebase-check revisions; PR 8 carved out into Segment 15E). Plan: `guide/archive/segment_15D_assignments_revamp.md`.
+
+- **PR 1** (#749) — `relationships` service + per-entity importer. New `app/services/relationships.py` with `parse_relationship_csv`, `save_relationships`, `delete_all_relationships`, `existing_count`, `list_for_session`, `pair_context_lookup`. Mirrors the reviewer / reviewee importer shape.
+- **PR 2** (#750) — Relationships Setup page (`/operator/sessions/{id}/relationships`) + chrome integration. Slots into the Setup tab row between Reviewees and Instruments. Per-tag column-toggle UI mirrors the reviewer / reviewee preview-table shape.
+- **PR 3** (#751) — `pair_context.tag_N` rule grammar + UI surface. New field-source class in `app/services/rules/fields.py`; Rule Builder picker exposes the three tags; predicates evaluate against the bound `pair_context_lookup`.
+- **PR 4** (#752) — engine consumes `pair_context` via eager lookup. ContextVar-scoped `_pair_context_lookup` dict pre-built once per `engine.evaluate` call so the predicate evaluator dodges N×M re-queries.
+- **PR 5** (#753) — Alembic data migration backfilling existing `Assignment.context.pair_context_*` JSON values into `relationships` rows. Lazy-seeding hook moves to `save_relationships`.
+- **PR 6a** (#754) — Operations Assignments page + chrome restructure. Manual upload card retired; new bulk Include toggle for self-reviews; chrome row label moves from Setup to Operations.
+- **PR 6b** (#755) — drop `Assignment.context` JSON column. Round-trip-friendly downgrade re-creates the column nullable. Pair-context readers rewritten to consult `relationships` directly.
+- **PR 7a** (#756) — retire the legacy Quick Setup Assignments slot. Slot 3 (Rule-or-CSV) drops; the card collapses to one column awaiting PR 7c.
+- **PR 7b** (#757) — dev-only docstring labels on the manual-CSV path. The route still exists (test fixtures need it) but is no longer reachable from the operator UI.
+- **PR 7c** (#758) — re-introduce a Quick Setup Relationships slot at position 3. File-upload only; the chain is now Reviewers → Reviewees → Relationships → Settings.
+
 ---
 
 ## Upcoming
@@ -196,72 +226,28 @@ pinned to each segment. The catalog itself lives in
 
 ### Implementation sequence
 
-**Next main bit of work — locked 2026-05-10:**
+**Locked-sequence status (locked 2026-05-10):**
 
-> **`13E → 12C → 15D → 12A-3`** (positions 1–4
-> below). This block ships the self-review revamp +
-> assignments revamp + matching export/import updates
-> as one coherent direction. **All four segments take
-> priority over the rest of Upcoming** (12B audit
-> retention; 13B sort; 13C enhanced instruments; 14
-> production hardening; 14-1 email infra; 15 / 15A /
-> 15B / 15C polish + libraries).
+> **`13E → 12C → 15D → 12A-3`** is **3-of-4
+> shipped** as of 2026-05-10. 13E (schema prep), 12C-1
+> (self-review revamp), and 15D (assignments revamp +
+> Relationships page + chrome restructure) all merged.
+> **12A-3** (export / import updates for 15D) is the
+> only remaining locked-sequence item.
 
-- **13E** ships the schema prep inert (the
-  `sessions.self_reviews_active` column +
-  `relationships` table).
-- **12C** wires the self-review work against
-  the new column (Sub-segment 12C-1 only — 12C-2
-  + 12C-3 deferred / absorbed into 15D).
-- **15D** adds the Relationships page +
-  per-instrument rule grammar + restructures Quick
-  Setup + chrome + drops `Assignment.context`.
-  Absorbs deferred 12C-2 + 12C-3 work.
-- **12A-3** ships the matching CSV export/import
-  (absorbs 12A-2's Settings importer + adds
-  Relationships per-entity flow + adjusts assignments
-  CSV to download-only).
+**12B (audit retention)** is the next item after the
+block clears. Other Upcoming items (13B / 13C / 14 /
+14-1 / 15 / 15A / 15B / 15C) ship around or after the
+locked block per their own plans; no schema conflicts
+detected.
 
-**12B (audit retention)** is the *next* item after
-this block clears. Other Upcoming items (13B / 13C /
-14 / 14-1 / 15 / 15A / 15B / 15C) ship around or after
-the locked block per their own plans; no schema
-conflicts detected with the locked block.
+12A-2 (Settings CSV import) and 12C-2 + 12C-3 are
+historical-reference entries — their work is folded
+into 12A-3 / 15D respectively.
 
-12A-2 (Settings CSV import) and 12C-2 + 12C-3 sit in
-the Upcoming list as historical-reference entries —
-their work is folded into the locked block.
-
-1. **13E — DB prep for the 12C / 15D block** *(first in the locked
-   sequence)*. Two inert schema migrations:
-   `sessions.self_reviews_active` (for 12C-1's bulk Include
-   toggle) + new `relationships` table (for 15D's
-   Relationships page). Mirrors the 13D pattern (additive,
-   nullable / DEFAULT-shaped, no-backfill).
-   **Plan:** `guide/segment_13E_db_prep.md`.
-
-2. **12C — Self-review revamp** *(second in the locked
-   sequence)*. Sub-segment 12C-1 only (5 PRs) — generation-
-   path wiring + Rule Builder `exclude_self_reviews`
-   checkbox + bulk Include toggle on Setup Assignments page
-   + drop ad-hoc toggle on Rule Based card + full-matrix
-   dead-code cleanup. 12C-2 + 12C-3 deferred under the
-   holistic-sequence revision (folded into 15D + 12A-3).
-   **Plan:** `guide/segment_12C_self-review_revamp.md`.
-
-3. **15D — Assignments revamp** *(third in the locked
-   sequence; fast-tracked)*. New Relationships table
-   (per-pair attributes); Assignments table becomes
-   always-derived; manual assignment-row authoring retires;
-   chrome restructure (Assignments moves from Setup to
-   Operations); Quick Setup gets a Relationships slot;
-   Rule Builder consumes `pair_context.tag_N`. Sized as
-   8 PRs. Absorbs deferred 12C-2 + 12C-3 work.
-   **Plan:** `guide/segment_15D_assignments_revamp.md`.
-
-4. **12A-3 — Export / import updates for 15D** *(last in
-   the locked sequence)*. Absorbs 12A-2 (Settings CSV
-   import) + adds Relationships per-entity export +
+1. **12A-3 — Export / import updates for 15D** *(only
+   remaining locked-sequence item)*. Absorbs 12A-2 (Settings
+   CSV import) + adds Relationships per-entity export +
    import + adjusts assignments CSV around 15D's
    download-only model. Sized as 4 PRs.
    **Plan:** `guide/segment_12A-3_export_import_updates.md`.
@@ -271,18 +257,24 @@ their work is folded into the locked block.
   Next Action card on Session Home to drive Validate →
   Generate → Activate as one-click "super button"
   chains, with single-step actions retained for granular
-  flows. Stub-state plan; sizing happens once 15D lands.
+  flows. Stub-state plan.
   **Plan:** `guide/segment_15E_next_action_revamp.md`.
+
+- **16 — Sys admin page** *(stub created 2026-05-10)*.
+  Home for operator-internal / dev-only surfaces that
+  exist today but lack a dedicated chrome surface, plus a
+  few that retire from operator-facing routes under the
+  13E / 12C / 15D / 12A-3 block and will land here.
+  **Plan:** `guide/segment_16_sys_admin_page.md`.
 
 Other upcoming work (12B audit retention, 13B sort, 13C
 enhanced instruments, 14 production hardening, 14-1 email
 infra, 15 operator polish, 15A friendly labels, 15B
 per-instrument assignments, 15C operator libraries) ships
-around this sequence per its own plan; no ordering
-constraints with the 13E/12C/15D/12A-3 block beyond
-shared schema conflicts (none detected).
+around 12A-3 per its own plan; no ordering constraints
+beyond shared schema conflicts (none detected).
 
-5. **12A-2 — Session settings import.** *(Absorbed into
+2. **12A-2 — Session settings import.** *(Absorbed into
    12A-3 under the 2026-05-10 holistic-sequence revision;
    plan kept as historical reference for the contract /
    inclusion model.)*
@@ -295,14 +287,14 @@ shared schema conflicts (none detected).
    canonical detail shape pinned by 11K.
    **Plan:** `guide/segment_12A-2_import.md`.
 
-6. **12B — Audit retention.**
+3. **12B — Audit retention.**
    `audit_events` export + retention / purge tooling. Reads
    against the canonical detail shape pinned by 11K (shipped
    2026-05-07). Folded out of the original Segment 12 plan when
    Extract Data moved into 12A.
    **Plan:** `guide/segment_12B_audit_retention.md`.
 
-7. **13B — Reviewer surface sort.**
+4. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
    default + reviewer live override. Sized as 3 PRs (schema +
    read path → operator UI tri-state Sort column → reviewer-
@@ -311,7 +303,7 @@ shared schema conflicts (none detected).
    **Plan:** `guide/segment_13B_sort_by_reviewee.md`.
    **Functional spec:** `spec/sort_by_reviewee.md`.
 
-8. **13C — Enhanced instruments.**
+5. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
    instrument" action-row button. Sized as 5 PRs. Action row
@@ -323,12 +315,12 @@ shared schema conflicts (none detected).
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/enhanced_instruments.md`.
 
-9. **14 — Production hardening.**
+6. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-10. **14-1 — Email infrastructure (send activation + backends).**
+7. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. The schema columns Part A
    writes to landed with **Segment 11C Part 2** (PR #541,
    2026-05-07) and are ready for the dispatch helper.
@@ -345,7 +337,7 @@ shared schema conflicts (none detected).
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-11. **15 — Operator polish + documentation.**
+8. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -353,7 +345,7 @@ shared schema conflicts (none detected).
    Catalog #23, #25, #33, #35, #36, §2.2.
    **Plan:** `guide/segment_15_operator_polish_and_documentation.md`.
 
-12. **15A — Pervasive friendly labels.**
+9. **15A — Pervasive friendly labels.**
    Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
    `PairContext1-3` (and optional `AssignmentContext1-3`) flowing
    through every header / picker / tooltip via a session-level
@@ -365,7 +357,7 @@ shared schema conflicts (none detected).
    re-introducing hardcoded literals.
    **Plan:** `guide/segment_15A_friendly_labels.md`.
 
-13. **15C — Operator RTD / RuleSet libraries.**
+10. **15C — Operator RTD / RuleSet libraries.**
    Symmetric two-tier model for both RTDs and RuleSets:
    operator master library (cross-session, reusable) +
    per-session copy (portable, independently editable). Explicit
@@ -377,7 +369,7 @@ shared schema conflicts (none detected).
    `instruments.rule_set_id` to point at.
    **Plan:** `guide/segment_15C_operator_libraries.md`.
 
-14. **15B — Per-instrument assignments.**
+11. **15B — Per-instrument assignments.**
    Each `Instrument` carries its own assignment set (e.g. the
    Manager survey collects different reviewer → reviewee pairings
    than the Peer survey within one session). Schema already
@@ -396,13 +388,15 @@ shared schema conflicts (none detected).
 - **13E → 12C → 15D → 12A-3** is the locked
   operator-facing block (locked 2026-05-10): self-review
   revamp + assignments revamp + matching export/import
-  updates as one coherent direction. 13E ships the
-  schema prep inert; 12C wires generation against the
-  new column; 15D adds Relationships + restructures
-  Quick Setup + chrome + drops `Assignment.context`;
-  12A-3 ships the matching CSV export/import. 12A-2 is
-  absorbed into 12A-3; 12C-2 + 12C-3 are absorbed into
-  15D.
+  updates as one coherent direction. **13E, 12C-1, and
+  15D shipped 2026-05-10** (see Done above). 13E shipped
+  the schema prep inert; 12C-1 wired generation against
+  the new column; 15D added Relationships + restructured
+  Quick Setup + chrome + dropped `Assignment.context`.
+  **12A-3 (CSV export/import for the new shape) is
+  the only locked-sequence item still pending.** 12A-2
+  is absorbed into 12A-3; 12C-2 + 12C-3 were absorbed
+  into 15D.
 - **11C Part 2 → 14-1 Part A** is the email pipeline: 11C Part 2
   landed the schema (Migration `c4f6a8b0d2e5`, 2026-05-07); 14-1
   Part A is the first writer.

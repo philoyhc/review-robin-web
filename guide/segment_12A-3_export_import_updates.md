@@ -283,16 +283,16 @@ Exact 12A-2 PR 1 scope, absorbed:
   `guide/segment_12A-2_import.md`) — the contract
   this segment's PR 1 ships.
 - **Segment 13E** (DB prep for the 12C / 15D block;
-  `guide/segment_13E_db_prep.md`) — the
+  `guide/archive/segment_13E_db_prep.md`) — the
   `relationships` table this segment's PR 2 reads
   / writes.
 - **Segment 12C** (self-review revamp;
-  `guide/segment_12C_self-review_revamp.md`) — 12C-2
+  `guide/archive/segment_12C_self-review_revamp.md`) — 12C-2
   PR 2's "Settings importer wipes assignments
   explicitly" lock is folded into this segment's
   PR 1.
 - **Segment 15D** (assignments revamp;
-  `guide/segment_15D_assignments_revamp.md`) — wires
+  `guide/archive/segment_15D_assignments_revamp.md`) — wires
   the Relationships table that this segment's PR 2
   exports / imports; defines the post-15D Quick Setup
   layout that this segment's PR 3 graduates.

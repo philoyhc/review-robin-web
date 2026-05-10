@@ -194,12 +194,12 @@ Mirrors the 13D test surface:
   PRs here) + downstream consumers (12C / 15D vs.
   13D's 13B / 13C / 15A / 15B / 15C).
 - **Segment 12C — Self-review revamp**
-  (`guide/segment_12C_self-review_revamp.md`). 12C-1 PR 1
+  (`guide/archive/segment_12C_self-review_revamp.md`). 12C-1 PR 1
   consumes `sessions.self_reviews_active` (this segment's
   PR 1) for generation-path wiring; 12C-1 PR 3 writes it
   via the bulk Include toggle.
 - **Segment 15D — Assignments revamp**
-  (`guide/segment_15D_assignments_revamp.md`). 15D's
+  (`guide/archive/segment_15D_assignments_revamp.md`). 15D's
   Relationships page + per-entity importer + generation
   consumption all read / write the `relationships`
   table (this segment's PR 2).
