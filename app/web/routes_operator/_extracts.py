@@ -1,14 +1,18 @@
-"""Extract Data downloads — Segment 12A-1.
+"""Extract Data downloads — Segment 12A-1 + 12A-3.
 
 Five GET routes, one per Extract Data card row:
 
-- Settings (PR 1) — 3-column key/value/data-type CSV.
-- Reviewers / Reviewees (PR 2) — wide CSVs that round-trip
-  with the existing per-entity importers.
-- Manual Assignments (PR 3) — manual-mode only; rule-based and
-  full-matrix sessions return 404.
-- Responses (PR 4) — wide row-per-observation CSV for
+- Settings (12A-1 PR 1) — 3-column key/value/data-type CSV.
+- Reviewers / Reviewees (12A-1 PR 2) — wide CSVs that
+  round-trip with the existing per-entity importers.
+- Responses (12A-1 PR 4) — wide row-per-observation CSV for
   downstream analysis (no import counterpart).
+- Relationships (12A-3 PR 1) — wide CSV that round-trips with
+  the importer shipped by 15D PR 1.
+
+The Manual Assignments route from 12A-1 PR 3 retired in
+12A-3 PR 2 — assignments are derived post-15D (output, not
+input), so the download has no place in a porting bundle.
 
 All routes live here so the route file mirrors the Extract Data
 card on Session Home.
@@ -21,7 +25,7 @@ card is active; lock disables setup mutations only, not reads.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -29,10 +33,6 @@ from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import audit, responses as responses_service
 from app.services.extracts import filename, stream_csv
-from app.services.extracts.assignments_extract import (
-    ManualOnlyError,
-    serialize_assignments,
-)
 from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
@@ -163,47 +163,6 @@ def export_relationships_csv(
     )
 
     download_name = filename(review_session, "relationships")
-    return StreamingResponse(
-        stream_csv(rows),
-        media_type="text/csv",
-        headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
-        },
-    )
-
-
-@router.get("/sessions/{session_id}/export/assignments.csv")
-def export_assignments_csv(
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> StreamingResponse:
-    try:
-        rows = list(serialize_assignments(db, review_session))
-    except ManualOnlyError as exc:
-        # Per Scenario A "snapshot the inputs, never the outputs":
-        # rule-based / full-matrix sessions don't export rows.
-        # The card row renders disabled with an explanatory note.
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-    body_count = max(0, len(rows) - 1)
-
-    audit.write_event(
-        db,
-        event_type="session.assignments_extracted",
-        summary=(
-            f"Extracted Assignments CSV for session {review_session.code} "
-            f"({body_count} rows)"
-        ),
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.counts(rows=body_count),
-    )
-
-    download_name = filename(review_session, "assignments")
     return StreamingResponse(
         stream_csv(rows),
         media_type="text/csv",

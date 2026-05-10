@@ -660,12 +660,15 @@ def test_delete_session_post_still_rejected_when_ready(
 def test_extract_data_card_renders_scaffold_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """Segment 11H PR B (with post-Part-1 polish) — the Extract Data
-    card on Session Home renders the five per-entity rows + a "Zip all"
-    cell in a 2-col grid (Reviewers / Reviewees / Assignments /
-    Responses / Session settings / Zip all, left-right then up-down).
-    Every Download button is inert (``aria-disabled="true"``) until
-    12A wires the routes."""
+    """The Extract Data card on Session Home renders five per-entity
+    rows + a "Zip all" cell in a 2-col grid:
+
+        Reviewers       |  Session settings
+        Reviewees       |  Responses
+        Relationships   |  Zip all  (greyed out)
+
+    Post-12A-3 PR 2: every row except the zip bundle is wired
+    live."""
 
     review_session = _make_session(client, db, code="extract-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
@@ -681,21 +684,19 @@ def test_extract_data_card_renders_scaffold_in_draft(
         "settings",
         "reviewers",
         "reviewees",
-        "assignments",
+        "relationships",
         "responses",
         "bundle",
     ):
         assert f'id="extract-data-{key}"' in body
-    # Cell labels — bundle is "Zip all" (was "Download all" pre-polish).
+    # Assignments tile retired in 12A-3 PR 2.
+    assert 'id="extract-data-assignments"' not in body
+    # Cell labels — bundle is "Zip all".
     assert "Zip all" in body
-    # Wiring tooltips name the segment / PR that lights each row up.
-    # 12A-1 PRs 1 / 2 / 3 / 4 are all live; only the zip bundle
-    # row's tooltip remains. Assignments carries a mode-specific
-    # note instead of the old "Wired in" copy when the session is
-    # rule-based / full-matrix / unset.
+    # Wiring tooltips: 12A-1 + 12A-3 PR 1 lit every per-entity
+    # row live; only the zip bundle row's tooltip remains.
     assert "Wired in Segment 12A PR 1" not in body  # settings — live
     assert "Wired in Segment 12A PR 3" not in body  # reviewers/reviewees — live
-    assert "Wired in Segment 12A PR 4" not in body  # assignments — mode-specific note
     assert "Wired in Segment 12A PR 5" not in body  # responses — live
     assert "Wired in Segment 12A PR 6" in body  # bundle
 

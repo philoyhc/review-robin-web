@@ -453,14 +453,16 @@ The five CSVs split the work three ways:
    configuration field the operator typed. Round-trip target for
    12A-2.
 2. **Per-entity CSVs** (`{code}_reviewers.csv`,
-   `{code}_reviewees.csv`, `{code}_assignments.csv`) — round-trip
-   with the existing per-entity importers. Manual assignments
-   only emitted on `assignment_mode == "manual"` sessions
-   (legacy / dev-only post-15D); rule-based rows are derived
-   from the RuleSet (captured in the Settings CSV via the
-   per-instrument `rule_set_name` field). 12A-3 adds a parallel
-   per-entity `{code}_relationships.csv` for the new
-   `relationships` table.
+   `{code}_reviewees.csv`, `{code}_relationships.csv`) —
+   round-trip with the existing per-entity importers. The
+   relationships CSV ships in 12A-3 PR 1 alongside its
+   importer (already shipped in 15D). The legacy
+   `{code}_assignments.csv` retired in 12A-3 PR 2 —
+   assignments are derived (rule-based engine + roster +
+   relationships), not an input to a new session, so the
+   download has no place in a porting bundle. The RuleSet
+   selection itself travels in the Settings CSV via the
+   per-instrument `rule_set_name` field.
 3. **Responses CSV** (`{code}_responses.csv`) — wide
    row-per-observation shape for downstream analysis.
    **Independent of the porting workflow** — no import
@@ -475,15 +477,13 @@ The five CSVs split the work three ways:
 | §3 | Email-template overrides | ✅ All | All 12 string keys + `responses_received_enabled` → Settings CSV. None / `""` / key-absent collapse to empty cell on export; importer treats empty as "use the default". |
 | §4 | Per-instrument | Partial | All operator-typed columns → Settings CSV, including the inert `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`). `deadline_closed_at` is machine-derived (excluded). Pre-15B, `rule_set_id` is universally NULL — 12A-1 PR 1a falls back to the latest `assignments.generated` audit row's `refs.rule_set_id` for **seeded** RuleSets only. |
 | §4.5 | Per-session RTDs | Partial | Operator-defined (`is_seeded=False`) rows → Settings CSV. Seeded RTDs are excluded — they auto-regenerate from `SEED_RESPONSE_TYPE_DEFINITIONS` on session create. `library_origin_id` is provenance-only (excluded). |
-| §5 | Reviewers / Reviewees | ✅ All | Each in its own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` audit-event paths). |
-| §5 | Relationships (per-pair, post-15D) | Pending 12A-3 | Will travel as its own `{code}_relationships.csv` per-entity CSV with a parallel importer (12A-3 PR 2 + PR 3). Not part of the 12A-1 export track that shipped 2026-05-09. |
+| §5 | Reviewers / Reviewees / Relationships | ✅ All | Each in its own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` / `relationships.imported` audit-event paths). Relationships shipped in 12A-3 PR 1 (importer was already shipped in 15D PR 1). |
 | §6 | Operator-library RuleSets (`operator_rule_sets`) | ❌ | Workspace-scoped (per-operator across sessions), not per-session. Portability is deferred to its own segment; travels as JSON, not CSV. |
 | §7 | Browser-local UI state | ❌ | Cosmetic per-browser preferences; carry over via the operator's own browser, not via export. |
 | §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |
 | §9 | `session_field_labels` (inert, 15A target) | ✅ All | All listed columns → Settings CSV. Serialises empty rows today; pinning the key shape now means future-equipped sessions round-trip without an export-shape change once 15A lights up. |
 | §9 | `session_rule_sets` (inert, 15B / 15C target) | Partial | Non-seeded rows → Settings CSV. Seeded copies are excluded — they auto-materialise from `app/services/rules/seeds.py` via `materialise_seed_rule_sets` on session create. `library_origin_id` is provenance-only (excluded). |
 | §9 | `operator_response_type_definitions` (inert, 15C target) | ❌ | Workspace-scoped, parallel to §6. |
-| n/a | Assignments | Conditional | `{code}_assignments.csv` only when `assignment_mode == "manual"`. Rule-based rows are derived from the RuleSet + roster; the RuleSet itself travels in the Settings CSV via `instruments[N].rule_set_name`. |
 | n/a | Responses (reviewer-typed) | ✅ (analytics only) | `{code}_responses.csv` — wide row-per-observation shape for downstream analysis. **No import counterpart**, no round-trip. |
 | n/a | Audit events (`audit_events`) | ❌ | System-emitted; out of inventory scope per the top-of-doc exclusion. |
 

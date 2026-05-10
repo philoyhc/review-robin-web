@@ -80,32 +80,30 @@ def _activate(
     db.refresh(review_session)
 
 
-def test_build_extract_data_context_returns_six_rows_plus_bundle(
+def test_build_extract_data_context_returns_five_rows_plus_bundle(
     client: TestClient, db: Session
 ) -> None:
-    """The view-shape adapter returns the six per-entity rows in
-    DOM order. 12A-3 PR 1 inserts the Relationships row after
-    Reviewees in the existing order; PR 2 reorders + retires
-    Assignments to land the final left/right column layout."""
+    """The view-shape adapter returns the five per-entity rows in
+    the post-12A-3-PR-2 DOM order. The ``extract-data-grid`` CSS
+    wraps row-major in a 2-column grid, so this list lays out as:
+
+        Reviewers       |  Session settings
+        Reviewees       |  Responses
+        Relationships   |  Zip all  (inert)
+    """
 
     review_session = _make_session(client, db, code="ed-shape")
     context = views.build_extract_data_context(db, review_session)
 
     assert [row.key for row in context.rows] == [
         "reviewers",
-        "assignments",
-        "reviewees",
-        "relationships",
-        "responses",
         "settings",
+        "reviewees",
+        "responses",
+        "relationships",
     ]
     assert context.bundle.key == "bundle"
     assert context.bundle.label == "Zip all"
-    # 12A-1 PRs 1 / 2 / 4 flipped Settings / Reviewers / Reviewees
-    # / Responses live; 12A-3 PR 1 added the Relationships row
-    # live. Assignments stays inert on this freshly-created session
-    # because ``assignment_mode`` is unset; only the zip bundle
-    # row is permanently inert until its own PR.
     by_key = {r.key: r for r in context.rows}
     assert by_key["settings"].is_wired is True
     assert by_key["settings"].download_url == (
@@ -127,12 +125,9 @@ def test_build_extract_data_context_returns_six_rows_plus_bundle(
     assert by_key["responses"].download_url == (
         f"/operator/sessions/{review_session.id}/export/responses.csv"
     )
-    # Assignments is inert here only because the session has no
-    # ``assignment_mode`` yet (PR 3's manual-only gate); the live
-    # branch is exercised in
-    # ``test_extracts_assignments_route.py``.
-    assert by_key["assignments"].is_wired is False
+    # Bundle row stays inert until its own PR.
     assert context.bundle.is_wired is False
+    assert "assignments" not in by_key
 
 
 def test_extract_data_filenames_carry_session_code(
@@ -150,6 +145,7 @@ def test_extract_data_filenames_carry_session_code(
     # its own PR graduates it.
     assert by_key["reviewers"].filename == "abc123_reviewers.csv"
     assert by_key["reviewees"].filename == "abc123_reviewees.csv"
+    assert by_key["relationships"].filename == "abc123_relationships.csv"
     assert by_key["responses"].filename == "abc123_responses.csv"
     assert context.bundle.filename == "session-abc123-export.zip"
 
@@ -204,23 +200,25 @@ def test_extract_data_dom_carries_wire_target_attributes(
         "reviewers",
         "reviewees",
         "relationships",
-        "assignments",
         "responses",
         "bundle",
     ):
         assert f'data-wire-target="extract-data-{key}"' in body
+    # Assignments tile retired in 12A-3 PR 2.
+    assert 'data-wire-target="extract-data-assignments"' not in body
 
 
 def test_extract_data_card_renders_counts_for_entity_rows_only(
     client: TestClient, db: Session
 ) -> None:
-    """Per the post-Part-1 polish, the four entity rows
-    (Reviewers / Reviewees / Assignments / Responses) surface their
-    raw count inline next to the title (e.g. ``Reviewers (1)``).
-    Session settings and the zip-bundle row keep the title-only
-    treatment — counts there are either redundant (instrument count
-    isn't a useful "Session settings" signal) or already implied
-    (zip aggregates everything above)."""
+    """Per the post-Part-1 polish, the per-entity rows
+    (Reviewers / Reviewees / Relationships / Responses) surface
+    their raw count inline next to the title (e.g.
+    ``Reviewers (1)``). Session settings and the zip-bundle row
+    keep the title-only treatment — counts there are either
+    redundant (instrument count isn't a useful "Session settings"
+    signal) or already implied (zip aggregates everything
+    above)."""
 
     review_session = _seed_pair(
         client, db, code="ed-counts", reviewer_email="r@example.edu"
@@ -231,7 +229,6 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     assert "Reviewers <span" in body
     assert "Reviewees <span" in body
     assert "Relationships <span" in body
-    assert "Assignments <span" in body
     assert "Responses <span" in body
     # Settings + Zip all keep title-only treatment.
     assert "Session settings <span" not in body
@@ -243,7 +240,6 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     assert by_key["reviewers"].show_count is True
     assert by_key["reviewees"].show_count is True
     assert by_key["relationships"].show_count is True
-    assert by_key["assignments"].show_count is True
     assert by_key["responses"].show_count is True
     assert by_key["settings"].show_count is False
     assert context.bundle.show_count is False
@@ -254,28 +250,21 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
 ) -> None:
     """While inert, every Download button renders as an anchor
     without an ``href`` and with ``aria-disabled="true"`` (anchors
-    don't honour native ``disabled``). 12A wires each row by
-    flipping the anchor to a real ``href``.
-
-    12A-1 PR 1 flipped the Settings row live; PR 2 / PR 3 / the
-    bundle PR adjust this count as each subsequent row goes live.
-    """
+    don't honour native ``disabled``). 12A wired each row by
+    flipping the anchor to a real ``href``; only the zip bundle
+    row stays inert post-12A-3 PR 2."""
 
     review_session = _make_session(client, db, code="ed-anchors")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    # Inert rows render as aria-disabled anchors.
+    # Inert rows render as aria-disabled anchors. Only the zip
+    # bundle row stays inert today.
     download_count = body.count(
         '<a class="btn secondary"\n'
         '       role="button"\n'
         '       aria-disabled="true"'
     )
-    # On a freshly-created session (no assignments generated
-    # yet), Assignments stays inert via the manual-only gate +
-    # the zip bundle row is inert until its own PR. Everything
-    # else (Settings, Reviewers, Reviewees, Responses) is live,
-    # so two aria-disabled anchors total.
-    assert download_count == 2
+    assert download_count == 1
 
 
 def test_extract_data_card_renders_when_session_is_activated(
@@ -298,13 +287,12 @@ def test_extract_data_card_renders_when_session_is_activated(
 
     # Card rendered without a ``.disabled`` modifier.
     assert 'class="card" id="extract-data"' in body
-    # Six rows still present with their counts surfaced.
+    # Five rows still present with their counts surfaced.
     for key in (
         "settings",
         "reviewers",
         "reviewees",
         "relationships",
-        "assignments",
         "responses",
     ):
         assert f'id="extract-data-{key}"' in body

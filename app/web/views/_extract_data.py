@@ -1,15 +1,17 @@
 """Extract Data card on Session Home — five per-entity rows
-(Reviewers / Reviewees / Assignments / Responses / Session settings)
-plus a Zip-all bundle footer.
+(Reviewers / Reviewees / Relationships / Session settings /
+Responses) plus a Zip-all bundle footer.
 
 Slice 2 of the §12.B ladder (``guide/major_refactor.md``).
 
 Read-only by nature: Segment 11H shipped every row inert; Segment
 12A's PRs flip ``is_wired`` and supply ``download_url`` per row.
-The card stays interactive in every lifecycle state (no lock-card
-wrap).
-
-Source range in pre-PR-2 ``_legacy.py``: lines 1272-1414.
+12A-3 PR 1 added the Relationships row; PR 2 retired the
+Assignments row (assignments are derived post-15D — output, not
+input — so the download has no place in a porting bundle) and
+reordered the row list to the target left/right column layout.
+The card stays interactive in every lifecycle state (no
+lock-card wrap).
 """
 
 from __future__ import annotations
@@ -21,7 +23,6 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession
 from app.services import (
-    assignments,
     csv_imports,
     relationships as relationships_service,
     responses as responses_service,
@@ -30,22 +31,18 @@ from app.services import (
 
 @dataclass(frozen=True)
 class ExtractDataRow:
-    """One row inside the Extract Data card on Session Home.
-
-    12A's PRs flip ``is_wired`` and supply ``download_url`` per row;
-    11H ships every row inert.
-    """
+    """One row inside the Extract Data card on Session Home."""
 
     key: str
-    """Stable identifier — ``settings`` / ``reviewers`` / ``reviewees``
-    / ``assignments`` / ``responses`` / ``bundle``. DOM id is
-    ``#extract-data-{key}``."""
+    """Stable identifier — ``reviewers`` / ``reviewees`` /
+    ``relationships`` / ``settings`` / ``responses`` / ``bundle``.
+    DOM id is ``#extract-data-{key}``."""
 
     label: str
 
     filename: str
     """Final filename the download will carry, e.g.
-    ``session-CS101-reviewers.csv``. Surfaced to the operator as a
+    ``CS101_reviewers.csv``. Surfaced to the operator as a
     secondary line so they know what to expect."""
 
     count: int
@@ -58,14 +55,13 @@ class ExtractDataRow:
     @property
     def show_count(self) -> bool:
         """True for the per-entity rows whose count is operator-
-        meaningful inline alongside the title (Reviewers / Reviewees /
-        Relationships / Assignments / Responses). Session settings +
+        meaningful inline alongside the title (Reviewers /
+        Reviewees / Relationships / Responses). Session settings +
         the zip-bundle row keep the title-only treatment."""
         return self.key in (
             "reviewers",
             "reviewees",
             "relationships",
-            "assignments",
             "responses",
         )
 
@@ -85,26 +81,7 @@ def build_extract_data_context(
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     relationship_count = relationships_service.existing_count(db, sid)
-    assignment_count = assignments.existing_count(db, sid)
     response_count = responses_service.session_response_count(db, sid)
-    # 12A-1 PR 3 — assignments CSV is manual-mode only. Per
-    # Scenario A "snapshot the inputs, never the outputs",
-    # rule-based sessions don't export rows; the destination
-    # operator re-runs Generate against the same RuleSet pick.
-    assignment_mode = (review_session.assignment_mode or "").strip()
-    assignments_is_manual = assignment_mode == "manual"
-    if assignments_is_manual:
-        assignments_coming_in: str | None = None
-    elif assignment_mode == "rule_based":
-        assignments_coming_in = (
-            "Assignments derived from a RuleSet — re-run "
-            "Generate on the destination session against the "
-            "same RuleSet selection. Manual export only."
-        )
-    else:
-        assignments_coming_in = (
-            "No assignments generated yet — manual export only."
-        )
     instrument_count = len(
         list(
             db.execute(
@@ -113,6 +90,16 @@ def build_extract_data_context(
         )
     )
 
+    # Row order = DOM order. The ``extract-data-grid`` CSS wraps
+    # row-major in a 2-column grid, so this list lays out as:
+    #
+    #   Reviewers       |  Session settings
+    #   Reviewees       |  Responses
+    #   Relationships   |  Zip all  (inert)
+    #
+    # Left column = per-entity rosters (operator-uploaded porting
+    # inputs). Right column = session-level outputs (settings,
+    # downstream-analysis, future bundle).
     rows = [
         ExtractDataRow(
             key="reviewers",
@@ -125,18 +112,14 @@ def build_extract_data_context(
             coming_in=None,
         ),
         ExtractDataRow(
-            key="assignments",
-            label="Assignments",
-            filename=f"{code}_assignments.csv",
-            count=assignment_count,
-            count_summary=_extract_summary("assignment", assignment_count),
-            is_wired=assignments_is_manual,
-            download_url=(
-                f"/operator/sessions/{sid}/export/assignments.csv"
-                if assignments_is_manual
-                else None
-            ),
-            coming_in=assignments_coming_in,
+            key="settings",
+            label="Session settings",
+            filename=f"{code}_settings.csv",
+            count=instrument_count,
+            count_summary=_extract_summary("instrument", instrument_count),
+            is_wired=True,
+            download_url=f"/operator/sessions/{sid}/export/settings.csv",
+            coming_in=None,
         ),
         ExtractDataRow(
             key="reviewees",
@@ -146,6 +129,16 @@ def build_extract_data_context(
             count_summary=_extract_summary("reviewee", reviewee_count),
             is_wired=True,
             download_url=f"/operator/sessions/{sid}/export/reviewees.csv",
+            coming_in=None,
+        ),
+        ExtractDataRow(
+            key="responses",
+            label="Responses",
+            filename=f"{code}_responses.csv",
+            count=response_count,
+            count_summary=_extract_summary("response", response_count),
+            is_wired=True,
+            download_url=f"/operator/sessions/{sid}/export/responses.csv",
             coming_in=None,
         ),
         ExtractDataRow(
@@ -162,26 +155,6 @@ def build_extract_data_context(
             ),
             coming_in=None,
         ),
-        ExtractDataRow(
-            key="responses",
-            label="Responses",
-            filename=f"{code}_responses.csv",
-            count=response_count,
-            count_summary=_extract_summary("response", response_count),
-            is_wired=True,
-            download_url=f"/operator/sessions/{sid}/export/responses.csv",
-            coming_in=None,
-        ),
-        ExtractDataRow(
-            key="settings",
-            label="Session settings",
-            filename=f"{code}_settings.csv",
-            count=instrument_count,
-            count_summary=_extract_summary("instrument", instrument_count),
-            is_wired=True,
-            download_url=f"/operator/sessions/{sid}/export/settings.csv",
-            coming_in=None,
-        ),
     ]
 
     bundle = ExtractDataRow(
@@ -189,7 +162,7 @@ def build_extract_data_context(
         label="Zip all",
         filename=f"session-{code}-export.zip",
         count=sum(r.count for r in rows),
-        count_summary="zip of all six CSVs above",
+        count_summary="zip of all five CSVs above",
         is_wired=False,
         download_url=None,
         coming_in="Wired in Segment 12A PR 6",
