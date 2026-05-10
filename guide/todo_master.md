@@ -194,7 +194,60 @@ are 1-3 lines for at-a-glance sequencing + the catalog items
 pinned to each segment. The catalog itself lives in
 `unfinished_business.md`.
 
-1. **12A-2 — Session settings import.**
+**Locked operator-facing sequence (2026-05-10):**
+**13D-2 → 12C → 15D → 12A-3.** This block ships the
+self-review revamp + assignments revamp + matching
+export/import updates as one coherent direction; 12A-2
+(Settings CSV import) is absorbed into 12A-3, and 12C-2 +
+12C-3 are absorbed into 15D. See per-segment plans for the
+detailed PR-by-PR breakdown.
+
+1. **13D-2 — DB prep, wave 2** *(first in the locked
+   sequence)*. Two inert schema migrations:
+   `sessions.self_reviews_active` (for 12C-1's bulk Include
+   toggle) + new `relationships` table (for 15D's
+   Relationships page). Mirrors the 13D pattern (additive,
+   nullable / DEFAULT-shaped, no-backfill).
+   **Plan:** `guide/segment_13D-2_db_prep_wave_2.md`.
+
+2. **12C — Self-review revamp** *(second in the locked
+   sequence)*. Sub-segment 12C-1 only (5 PRs) — generation-
+   path wiring + Rule Builder `exclude_self_reviews`
+   checkbox + bulk Include toggle on Setup Assignments page
+   + drop ad-hoc toggle on Rule Based card + full-matrix
+   dead-code cleanup. 12C-2 + 12C-3 deferred under the
+   holistic-sequence revision (folded into 15D + 12A-3).
+   **Plan:** `guide/segment_12C_self-review_revamp.md`.
+
+3. **15D — Assignments revamp** *(third in the locked
+   sequence; fast-tracked)*. New Relationships table
+   (per-pair attributes); Assignments table becomes
+   always-derived; manual assignment-row authoring retires;
+   chrome restructure (Assignments moves from Setup to
+   Operations); Quick Setup gets a Relationships slot;
+   Rule Builder consumes `pair_context.tag_N`. Sized as
+   8 PRs. Absorbs deferred 12C-2 + 12C-3 work.
+   **Plan:** `guide/segment_15D_assignments_revamp.md`.
+
+4. **12A-3 — Export / import updates for 15D** *(last in
+   the locked sequence)*. Absorbs 12A-2 (Settings CSV
+   import) + adds Relationships per-entity export +
+   import + adjusts assignments CSV around 15D's
+   download-only model. Sized as 4 PRs.
+   **Plan:** `guide/segment_12A-3_export_import_updates.md`.
+
+Other upcoming work (12B audit retention, 13B sort, 13C
+enhanced instruments, 14 production hardening, 14-1 email
+infra, 15 operator polish, 15A friendly labels, 15B
+per-instrument assignments, 15C operator libraries) ships
+around this sequence per its own plan; no ordering
+constraints with the 13D-2/12C/15D/12A-3 block beyond
+shared schema conflicts (none detected).
+
+5. **12A-2 — Session settings import.** *(Absorbed into
+   12A-3 under the 2026-05-10 holistic-sequence revision;
+   plan kept as historical reference for the contract /
+   inclusion model.)*
    The import counterpart to 12A-1 (export, shipped 2026-05-09).
    Consumes the 3-column Settings CSV the export half emits and
    rehydrates a fresh-named session into the same shape. Two
@@ -204,14 +257,14 @@ pinned to each segment. The catalog itself lives in
    canonical detail shape pinned by 11K.
    **Plan:** `guide/segment_12A-2_import.md`.
 
-2. **12B — Audit retention.**
+6. **12B — Audit retention.**
    `audit_events` export + retention / purge tooling. Reads
    against the canonical detail shape pinned by 11K (shipped
    2026-05-07). Folded out of the original Segment 12 plan when
    Extract Data moved into 12A.
    **Plan:** `guide/segment_12B_audit_retention.md`.
 
-3. **13B — Reviewer surface sort.**
+7. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
    default + reviewer live override. Sized as 3 PRs (schema +
    read path → operator UI tri-state Sort column → reviewer-
@@ -220,7 +273,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13B_sort_by_reviewee.md`.
    **Functional spec:** `spec/sort_by_reviewee.md`.
 
-4. **13C — Enhanced instruments.**
+8. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
    instrument" action-row button. Sized as 5 PRs. Action row
@@ -232,12 +285,12 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/enhanced_instruments.md`.
 
-5. **14 — Production hardening.**
+9. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-6. **14-1 — Email infrastructure (send activation + backends).**
+10. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. The schema columns Part A
    writes to landed with **Segment 11C Part 2** (PR #541,
    2026-05-07) and are ready for the dispatch helper.
@@ -254,7 +307,7 @@ pinned to each segment. The catalog itself lives in
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-7. **15 — Operator polish + documentation.**
+11. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -262,7 +315,7 @@ pinned to each segment. The catalog itself lives in
    Catalog #23, #25, #33, #35, #36, §2.2.
    **Plan:** `guide/segment_15_operator_polish_and_documentation.md`.
 
-8. **15A — Pervasive friendly labels.**
+12. **15A — Pervasive friendly labels.**
    Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
    `PairContext1-3` (and optional `AssignmentContext1-3`) flowing
    through every header / picker / tooltip via a session-level
@@ -274,7 +327,7 @@ pinned to each segment. The catalog itself lives in
    re-introducing hardcoded literals.
    **Plan:** `guide/segment_15A_friendly_labels.md`.
 
-9. **15C — Operator RTD / RuleSet libraries.**
+13. **15C — Operator RTD / RuleSet libraries.**
    Symmetric two-tier model for both RTDs and RuleSets:
    operator master library (cross-session, reusable) +
    per-session copy (portable, independently editable). Explicit
@@ -286,7 +339,7 @@ pinned to each segment. The catalog itself lives in
    `instruments.rule_set_id` to point at.
    **Plan:** `guide/segment_15C_operator_libraries.md`.
 
-10. **15B — Per-instrument assignments.**
+14. **15B — Per-instrument assignments.**
    Each `Instrument` carries its own assignment set (e.g. the
    Manager survey collects different reviewer → reviewee pairings
    than the Peer survey within one session). Schema already
@@ -302,6 +355,16 @@ pinned to each segment. The catalog itself lives in
 
 ### Sequencing notes
 
+- **13D-2 → 12C → 15D → 12A-3** is the locked
+  operator-facing block (locked 2026-05-10): self-review
+  revamp + assignments revamp + matching export/import
+  updates as one coherent direction. 13D-2 ships the
+  schema prep inert; 12C wires generation against the
+  new column; 15D adds Relationships + restructures
+  Quick Setup + chrome + drops `Assignment.context`;
+  12A-3 ships the matching CSV export/import. 12A-2 is
+  absorbed into 12A-3; 12C-2 + 12C-3 are absorbed into
+  15D.
 - **11C Part 2 → 14-1 Part A** is the email pipeline: 11C Part 2
   landed the schema (Migration `c4f6a8b0d2e5`, 2026-05-07); 14-1
   Part A is the first writer.
