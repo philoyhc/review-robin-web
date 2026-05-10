@@ -79,7 +79,7 @@ surfaced to co-operators via `session_operators` (out of scope for
 | `description` | `String(2000)` | Free-text. |
 | `status` | `String(32)` | `draft` / `validated` / `ready` / `closed`. **Not directly editable** — driven by the lifecycle-transition actions (Validate / Activate / Pause / Close). Listed here because it's the ground truth that gates every other operator action. |
 | `deadline` | `DateTime(timezone=True)` | Optional; rendered ISO 8601 with date+time. |
-| `assignment_mode` | `String(32)` | `manual` / `rule_based`. **Not directly editable** — set by whichever assignment-generation path the operator runs (Manual CSV upload sets `manual`; the rule-based engine sets `rule_based`). Surfaced as a passive count on Quick Setup slot 3. |
+| `assignment_mode` | `String(32)` | `manual` / `rule_based`. **Not directly editable** — set by whichever assignment-generation path the operator runs. Post-15D, the rule-based engine is the only operator-facing path (sets `rule_based`); the legacy Manual CSV upload (sets `manual`) survives as a dev-diagnostic surface only. |
 | `help_contact` | `String(320)` | Free-text contact info shown to reviewers. |
 | `email_template_overrides` | `JSON` | Free-form JSON with the recognised keys named in §3 below. |
 | `created_by_user_id` | `Integer` (FK) | Identity. Not user-editable. |
@@ -178,17 +178,19 @@ RTD is referenced by any response field).
 
 ---
 
-## 5. Per-reviewer / per-reviewee data
+## 5. Per-reviewer / per-reviewee / per-pair data
 
-Stored on `reviewers` and `reviewees` tables. Owned by the session.
-Tags are operator-determined; status is a mix of operator action
-(soft-delete via Inactivate, deferred to Segment 15) and system
-state.
+Stored on `reviewers`, `reviewees`, and `relationships` tables.
+Owned by the session. Tags are operator-determined; status is a
+mix of operator action (soft-delete via Inactivate, deferred to
+Segment 15) and system state.
 
-**Surface:** Setup Pages — `/operator/sessions/{id}/reviewers` and
-`/operator/sessions/{id}/reviewees`. Bulk-populated via Quick Setup
-or per-entity CSV; managed inline (Manage rows are read-only today;
-inline edit deferred to Segment 15 per `unfinished_business.md` #25).
+**Surface:** Setup Pages — `/operator/sessions/{id}/reviewers`,
+`/operator/sessions/{id}/reviewees`, and
+`/operator/sessions/{id}/relationships`. Bulk-populated via Quick
+Setup or per-entity CSV; managed inline (Manage rows are
+read-only today; inline edit deferred to Segment 15 per
+`unfinished_business.md` #25).
 
 ### Reviewer
 
@@ -209,8 +211,25 @@ inline edit deferred to Segment 15 per `unfinished_business.md` #25).
 | `status` | `String(32)` | `active` / `inactive`. |
 | `tag_1`, `tag_2`, `tag_3` | `String(255)` | Same shape as reviewer tags. |
 
-**Canonical spec:** `spec/setup_pages.md` (Reviewers / Reviewees
-preview tables, column toggles, per-page column orders).
+### Relationship (per-pair, post-15D)
+
+Per-pair attributes table — one row per `(session_id, reviewer_id,
+reviewee_id)` triple. Replaces the legacy
+`Assignment.context.pair_context_*` JSON as the home for
+pair-context tags, lifted out of `assignments` so per-pair
+attributes exist independently of whether the rule engine has
+materialised an assignment for the pair (Segment 13E PR 2 + 15D).
+
+| Field | Type | Notes |
+|---|---|---|
+| `reviewer_id` | `Integer` (FK → `reviewers.id` ON DELETE CASCADE) | Identity. |
+| `reviewee_id` | `Integer` (FK → `reviewees.id` ON DELETE CASCADE) | Identity. Unique with `reviewer_id` per session via `uq_relationships_session_reviewer_reviewee`. |
+| `tag_1`, `tag_2`, `tag_3` | `String(255)` | Free-form pair-context labels. Consumed by the rule-based engine via the eager `pair_context_lookup` dict (15D PR 4). Surfaced as the third Ctx-toggle group on the Assignments preview table. |
+| `status` | `String(32)` | `active` / `inactive`. Defaults to `active`. |
+
+**Canonical spec:** `spec/setup_pages.md` (Reviewers / Reviewees /
+Relationships preview tables, column toggles, per-page column
+orders).
 
 ---
 
@@ -272,7 +291,8 @@ preference stored?" finds the answer quickly.
 |---|---|---|
 | `rrw-reviewer-tag-visibility` | Setup > Reviewers preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
 | `rrw-reviewee-tag-visibility` | Setup > Reviewees preview table | Per-column toggle state (Photo / Tag1 / Tag2 / Tag3). |
-| `rrw-assignment-col-visibility` | Setup > Assignments preview table | Per-column toggle state (Pair{n} / Assign{n} pair-/assignment-context columns). |
+| `rrw-relationship-tag-visibility` | Setup > Relationships preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
+| `rrw-assignment-col-visibility` | Operations > Assignments preview table | Per-column toggle state — three groups of three (Reviewer Tag{n} / Reviewee Tag{n} / Relationship Ctx{n}). The legacy assignment-context group retired in 15D. |
 
 ### `sessionStorage` (per browser tab; cleared on tab close)
 
@@ -412,8 +432,13 @@ workflow:
   Data card on Session Home (settings, reviewers, reviewees,
   manual assignments, responses). Fully shipped 2026-05-09 across
   PRs #713, #716, #717, #718, #721.
-- **`guide/segment_12A-2_import.md`** — Settings CSV importer +
-  Quick Setup slot 4 graduation. Planned, 2 PRs.
+- **`guide/segment_12A-3_export_import_updates.md`** — Settings
+  CSV importer (absorbed from 12A-2) + Relationships per-entity
+  export + import (parallel to rosters) + manual-assignments CSV
+  adjustments around 15D's "always derived" model. Planned, 4
+  PRs. (The earlier `guide/segment_12A-2_import.md` is kept as a
+  historical-reference document for the Settings importer
+  contract — the implementation lands as 12A-3 PR 1.)
 
 > **Inclusion rule** (paraphrased from 12A-1): *if the operator
 > were setting up an equivalent new session from scratch, would
@@ -430,9 +455,12 @@ The five CSVs split the work three ways:
 2. **Per-entity CSVs** (`{code}_reviewers.csv`,
    `{code}_reviewees.csv`, `{code}_assignments.csv`) — round-trip
    with the existing per-entity importers. Manual assignments
-   only emitted on `assignment_mode == "manual"` sessions;
-   rule-based rows are derived from the RuleSet (captured in the
-   Settings CSV via the per-instrument `rule_set_name` field).
+   only emitted on `assignment_mode == "manual"` sessions
+   (legacy / dev-only post-15D); rule-based rows are derived
+   from the RuleSet (captured in the Settings CSV via the
+   per-instrument `rule_set_name` field). 12A-3 adds a parallel
+   per-entity `{code}_relationships.csv` for the new
+   `relationships` table.
 3. **Responses CSV** (`{code}_responses.csv`) — wide
    row-per-observation shape for downstream analysis.
    **Independent of the porting workflow** — no import
@@ -448,6 +476,7 @@ The five CSVs split the work three ways:
 | §4 | Per-instrument | Partial | All operator-typed columns → Settings CSV, including the inert `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`). `deadline_closed_at` is machine-derived (excluded). Pre-15B, `rule_set_id` is universally NULL — 12A-1 PR 1a falls back to the latest `assignments.generated` audit row's `refs.rule_set_id` for **seeded** RuleSets only. |
 | §4.5 | Per-session RTDs | Partial | Operator-defined (`is_seeded=False`) rows → Settings CSV. Seeded RTDs are excluded — they auto-regenerate from `SEED_RESPONSE_TYPE_DEFINITIONS` on session create. `library_origin_id` is provenance-only (excluded). |
 | §5 | Reviewers / Reviewees | ✅ All | Each in its own per-entity CSV; round-trips with the existing importers (`reviewers.imported` / `reviewees.imported` audit-event paths). |
+| §5 | Relationships (per-pair, post-15D) | Pending 12A-3 | Will travel as its own `{code}_relationships.csv` per-entity CSV with a parallel importer (12A-3 PR 2 + PR 3). Not part of the 12A-1 export track that shipped 2026-05-09. |
 | §6 | Operator-library RuleSets (`operator_rule_sets`) | ❌ | Workspace-scoped (per-operator across sessions), not per-session. Portability is deferred to its own segment; travels as JSON, not CSV. |
 | §7 | Browser-local UI state | ❌ | Cosmetic per-browser preferences; carry over via the operator's own browser, not via export. |
 | §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |
@@ -471,8 +500,12 @@ The five CSVs split the work three ways:
   Settings CSV by design.
 
 **Canonical specs:** `guide/archive/segment_12A-1_export.md` (export
-CSV shapes + inclusion rule), `guide/segment_12A-2_import.md`
-(import flows + apply semantics).
+CSV shapes + inclusion rule),
+`guide/segment_12A-3_export_import_updates.md` (Settings
+importer + Relationships export + import + post-15D
+assignments-CSV adjustments). The earlier
+`guide/segment_12A-2_import.md` is kept as historical reference
+for the Settings importer contract.
 
 ---
 
@@ -495,8 +528,10 @@ CSV shapes + inclusion rule), `guide/segment_12A-2_import.md`
   `app/web/routes_operator/_shared.py`).
 - `guide/archive/segment_13D_db_prep.md` — rationale for every §9
   inert table / column.
-- `guide/archive/segment_12A-1_export.md` / `guide/segment_12A-2_import.md`
+- `guide/archive/segment_12A-1_export.md` / `guide/segment_12A-3_export_import_updates.md`
   — CSV export / import contract referenced by §10.
+  (`guide/segment_12A-2_import.md` is the superseded importer
+  plan, kept as historical reference.)
 - `guide/unfinished_business.md` — catalog of deferred settings
   surfaces (e.g. inline-editable Manage rows #25, Inactivate UI
   #36).
