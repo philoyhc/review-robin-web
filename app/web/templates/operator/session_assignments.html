@@ -11,16 +11,6 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  <div class="card">
-    <p style="margin: 0;">
-      Assignments are derived: rosters + relationships + the selected
-      RuleSet feed the engine; Generate writes the table. The bulk
-      toggle below activates or deactivates self-review pairs without
-      regenerating; per-row Include checkboxes are the last-mile
-      override.
-    </p>
-  </div>
-
   {% if is_ready %}
     <div class="card lock">
       <p style="margin: 0 0 12px 0;">
@@ -62,61 +52,61 @@
   {% include "operator/partials/validation_results.html" %}
 
   {% if not is_ready %}
-    <div class="card">
+    <div class="bottom-grid">
       {% include "operator/partials/_rule_based_card.html" %}
-    </div>
-  {% endif %}
 
-  {% if assignment_count %}
-    <section class="card" id="self-reviews-toggle">
-      <h2>Self-reviews</h2>
-      {% set zero_self_reviews = self_review_total == 0 %}
-      {% set state_label = "ON" if self_reviews_active else "OFF" %}
-      {% set state_pill_class = "pill-info" if self_reviews_active else "pill-empty" %}
-      <p style="margin: 0 0 12px 0;">
-        State:
-        <span class="pill {{ state_pill_class }}"
-              id="self-reviews-state-pill">{{ state_label }}</span>
-        {% if zero_self_reviews %}
-          <span class="muted">(no self-review pairs in the assignments table)</span>
-        {% else %}
-          <span class="pill pill-count"
-                id="self-reviews-active-count">{{ self_review_active_count }} active</span>
-          <span class="pill pill-count"
-                id="self-reviews-deactivated-count">{{ self_review_deactivated_count }} deactivated</span>
-        {% endif %}
-      </p>
-      <p class="form-help">
-        Bulk toggle for self-review pairs the engine produced. ON =
-        every self-review row's Include flag flips to true. OFF =
-        every self-review row's Include flag flips to false. The
-        per-row Include checkbox can still override individually
-        post-flip.
-      </p>
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/assignments/self-reviews/active"
-            style="display: inline;">
-        {% if self_reviews_active %}
-          <input type="hidden" name="active" value="false">
-          <button class="btn alert"
-                  type="submit"
-                  id="self-reviews-toggle-button"
-                  {% if zero_self_reviews %}disabled aria-disabled="true"
-                    title="No self-review pairs in the assignments table — generate first."{% endif %}>
-            Turn OFF self-reviews
-          </button>
-        {% else %}
-          <input type="hidden" name="active" value="true">
-          <button class="btn primary"
-                  type="submit"
-                  id="self-reviews-toggle-button"
-                  {% if zero_self_reviews %}disabled aria-disabled="true"
-                    title="No self-review pairs in the assignments table — generate first."{% endif %}>
-            Turn ON self-reviews
-          </button>
-        {% endif %}
-      </form>
-    </section>
+      {% if assignment_count %}
+        <section class="card" id="self-reviews-toggle">
+          <h2>Self-reviews</h2>
+          {% set zero_self_reviews = self_review_total == 0 %}
+          {% set state_label = "ON" if self_reviews_active else "OFF" %}
+          {% set state_pill_class = "pill-info" if self_reviews_active else "pill-empty" %}
+          <p style="margin: 0 0 12px 0;">
+            State:
+            <span class="pill {{ state_pill_class }}"
+                  id="self-reviews-state-pill">{{ state_label }}</span>
+            {% if zero_self_reviews %}
+              <span class="muted">(no self-review pairs in the assignments table)</span>
+            {% else %}
+              <span class="pill pill-count"
+                    id="self-reviews-active-count">{{ self_review_active_count }} active</span>
+              <span class="pill pill-count"
+                    id="self-reviews-deactivated-count">{{ self_review_deactivated_count }} deactivated</span>
+            {% endif %}
+          </p>
+          <p class="form-help">
+            Bulk toggle for self-review pairs the engine produced. ON =
+            every self-review row's Include flag flips to true. OFF =
+            every self-review row's Include flag flips to false. The
+            per-row Include checkbox can still override individually
+            post-flip.
+          </p>
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/assignments/self-reviews/active"
+                style="display: inline;">
+            {% if self_reviews_active %}
+              <input type="hidden" name="active" value="false">
+              <button class="btn alert"
+                      type="submit"
+                      id="self-reviews-toggle-button"
+                      {% if zero_self_reviews %}disabled aria-disabled="true"
+                        title="No self-review pairs in the assignments table — generate first."{% endif %}>
+                Turn OFF self-reviews
+              </button>
+            {% else %}
+              <input type="hidden" name="active" value="true">
+              <button class="btn primary"
+                      type="submit"
+                      id="self-reviews-toggle-button"
+                      {% if zero_self_reviews %}disabled aria-disabled="true"
+                        title="No self-review pairs in the assignments table — generate first."{% endif %}>
+                Turn ON self-reviews
+              </button>
+            {% endif %}
+          </form>
+        </section>
+      {% endif %}
+    </div>
   {% endif %}
 
   {% if pair_sample %}
@@ -136,7 +126,7 @@
       {% endif %}
     {% endfor %}
     <div class="card">
-      <h2>Current pairs</h2>
+      <h2>Assignment pairs</h2>
       {% if truncated_count %}
         <p class="form-help">
           Showing first {{ pair_sample | length }} of {{ "{:,}".format(assignment_count) }} unique pairs.
@@ -155,7 +145,7 @@
             ("et2", "Tag2", has_e_tag_2),
             ("et3", "Tag3", has_e_tag_3),
           ]),
-          ("Pair", [
+          ("Relationship", [
             ("p1", "Ctx1", ctx.p1),
             ("p2", "Ctx2", ctx.p2),
             ("p3", "Ctx3", ctx.p3),
