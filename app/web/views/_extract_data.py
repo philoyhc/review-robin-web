@@ -81,9 +81,8 @@ def build_extract_data_context(
     response_count = responses_service.session_response_count(db, sid)
     # 12A-1 PR 3 — assignments CSV is manual-mode only. Per
     # Scenario A "snapshot the inputs, never the outputs",
-    # rule-based / full-matrix sessions don't export rows; the
-    # destination operator re-runs the same generation path
-    # (RuleSet pick + Generate, or Full Matrix).
+    # rule-based sessions don't export rows; the destination
+    # operator re-runs Generate against the same RuleSet pick.
     assignment_mode = (review_session.assignment_mode or "").strip()
     assignments_is_manual = assignment_mode == "manual"
     if assignments_is_manual:
@@ -93,12 +92,6 @@ def build_extract_data_context(
             "Assignments derived from a RuleSet — re-run "
             "Generate on the destination session against the "
             "same RuleSet selection. Manual export only."
-        )
-    elif assignment_mode == "full_matrix":
-        assignments_coming_in = (
-            "Assignments derived from Full Matrix — re-run the "
-            "Full Matrix action on the destination session. "
-            "Manual export only."
         )
     else:
         assignments_coming_in = (

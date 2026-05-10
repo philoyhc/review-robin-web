@@ -15,6 +15,7 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
+from ._full_matrix import full_matrix_seed_id
 from app.services import session_lifecycle as lifecycle
 
 
@@ -60,10 +61,10 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
     )
 
 
-def _generate_full_matrix(client: TestClient, session_id: int) -> None:
+def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> None:
     response = client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -74,7 +75,7 @@ def _build_ready_session(
 ) -> ReviewSession:
     session = _create_session(client, db, code=code)
     _populate_rosters(client, session.id)
-    _generate_full_matrix(client, session.id)
+    _generate_full_matrix(client, db, session.id)
     client.get(f"/operator/sessions/{session.id}?validated=1")
     response = client.post(
         f"/operator/sessions/{session.id}/activate",
@@ -238,8 +239,11 @@ def test_each_mutating_endpoint_returns_409_while_ready(
         ),
         (f"/operator/sessions/{sid}/reviewees/delete-all", {"confirm": "true"}, {}),
         (
-            f"/operator/sessions/{sid}/assignments/full-matrix",
-            {"confirm_replace": "true"},
+            f"/operator/sessions/{sid}/assignments/rule-based/generate",
+            {
+                "rule_set_id": full_matrix_seed_id(db),
+                "confirm_replace": "true",
+            },
             {},
         ),
         (
@@ -307,7 +311,7 @@ def test_reviewer_save_403_when_session_draft(
     operator = make_client(alice)
     session = _create_session(operator, db, code="draft-rev")
     _populate_rosters(operator, session.id)
-    _generate_full_matrix(operator, session.id)
+    _generate_full_matrix(operator, db, session.id)
     # explicitly NOT activated
 
     rae = AuthenticatedUser(

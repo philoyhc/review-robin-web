@@ -1,5 +1,5 @@
-"""Assignments hub: index page + manual import + full-matrix
-generate + delete-all. Slice 4 of the major refactor.
+"""Assignments hub: index page + manual import + delete-all. Slice 4
+of the major refactor.
 
 Note: The Rule Builder routes (``/assignments/rule-based-editor/...``
 and ``/assignments/rule-based/generate``) live with the Rule Builder
@@ -127,53 +127,6 @@ def _render_assignments_hub(
             ),
         },
         status_code=status_code,
-    )
-
-
-@router.post(
-    "/sessions/{session_id}/assignments/full-matrix",
-    response_class=HTMLResponse,
-    response_model=None,
-)
-def assignments_full_matrix(
-    request: Request,
-    exclude_self_review: str | None = Form(default=None),
-    confirm_replace: str | None = Form(default=None),
-    acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse | RedirectResponse:
-    _require_editable(review_session)
-    exclude_self = exclude_self_review == "true"
-    reviewers = assignments.list_reviewers(db, review_session.id)
-    reviewees = assignments.list_reviewees(db, review_session.id)
-    pairs, excluded_counts = assignments.generate_full_matrix(
-        reviewers, reviewees, exclude_self_review=exclude_self
-    )
-    existing = assignments.existing_count(db, review_session.id)
-    needs_confirm = existing > 0 and confirm_replace != "true"
-
-    if needs_confirm:
-        return _render_assignments_hub(
-            request, db, review_session, user,
-            missing_confirm=True,
-        )
-
-    if existing > 0:
-        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    assignments.replace_assignments(
-        db,
-        review_session=review_session,
-        user=user,
-        pairs=pairs,
-        mode=AssignmentMode.full_matrix,
-        correlation_id=request_correlation_id(),
-        excluded_counts=excluded_counts,
-    )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
-        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

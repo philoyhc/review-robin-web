@@ -170,9 +170,10 @@ def test_assignments_hub_inlines_method_forms(
         f'action="/operator/sessions/{review_session.id}/assignments/manual/import"'
         in body
     )
-    # Segment 13A PR 8 retired the standalone Full Matrix card —
-    # full-matrix behaviour ships via the seeded "Full Matrix"
-    # RuleSet inside the Rule Based card.
+    # Segment 13A PR 8 retired the standalone Full Matrix card; 12C-1
+    # PR 3 deleted the underlying ``/assignments/full-matrix`` route.
+    # Full-matrix behaviour ships via the seeded "Full Matrix" RuleSet
+    # inside the Rule Based card.
     assert (
         f'action="/operator/sessions/{review_session.id}/assignments/full-matrix"'
         not in body

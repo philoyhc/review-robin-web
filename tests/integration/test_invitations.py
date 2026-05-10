@@ -14,6 +14,7 @@ from app.db.models import (
     Invitation,
     ReviewSession,
 )
+from ._full_matrix import full_matrix_seed_id
 
 
 # --------------------------------------------------------------------------- #
@@ -33,7 +34,7 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
     ).scalar_one()
 
 
-def _populate(client: TestClient, session_id: int, *, reviewer_email: str) -> None:
+def _populate(client: TestClient, db: Session, session_id: int, *, reviewer_email: str) -> None:
     client.post(
         f"/operator/sessions/{session_id}/reviewers/import",
         files={
@@ -57,8 +58,8 @@ def _populate(client: TestClient, session_id: int, *, reviewer_email: str) -> No
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
@@ -80,7 +81,7 @@ def _ready_session(
     reviewer_email: str = "rae@example.edu",
 ) -> ReviewSession:
     session = _create_session(client, db, code)
-    _populate(client, session.id, reviewer_email=reviewer_email)
+    _populate(client, db, session.id, reviewer_email=reviewer_email)
     _activate(client, session.id)
     db.refresh(session)
     return session
@@ -125,7 +126,7 @@ def test_generate_409_while_session_draft(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, "draft-1")
-    _populate(client, session.id, reviewer_email="rae@example.edu")
+    _populate(client, db, session.id, reviewer_email="rae@example.edu")
     response = client.post(
         f"/operator/sessions/{session.id}/invitations/generate",
         follow_redirects=False,
@@ -784,8 +785,8 @@ def _ready_session_with_two_reviewers(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session.id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
     _activate(client, session.id)

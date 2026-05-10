@@ -233,7 +233,7 @@ def test_rtd_locked_when_session_ready(
 ) -> None:
     review_session = _make_session(client, db, code="rtd-ready-lock")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
     _validate(client, db, review_session.id)
     _activate(client, db, review_session.id)
     db.refresh(review_session)

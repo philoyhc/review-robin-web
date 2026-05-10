@@ -32,6 +32,7 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
+from ._full_matrix import full_matrix_seed_id
 from app.services import instruments as instruments_service
 
 
@@ -74,8 +75,8 @@ def _setup_two_instrument_session(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
     [first] = list(

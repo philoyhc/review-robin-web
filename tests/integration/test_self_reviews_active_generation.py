@@ -1,19 +1,14 @@
 """Integration coverage for Segment 12C-1 PR 1 — generation paths
 honour ``sessions.self_reviews_active``.
 
-Two end-to-end routes exercise the wire-up in
-``replace_assignments``:
+Exercises the wire-up via
+``POST /assignments/rule-based/generate`` against the seeded
+Full Matrix RuleSet, with the card-level
+``exclude_self_review=false`` override so self-review pairs do
+reach ``replace_assignments``.
 
-- ``POST /assignments/full-matrix`` (the standalone full-matrix
-  route — slated for removal in 12C-1 PR 3, but still live and
-  still going through ``replace_assignments`` until then).
-- ``POST /assignments/rule-based/generate`` against the seeded
-  Full Matrix RuleSet, with the card-level
-  ``exclude_self_review=false`` override so self-review pairs do
-  reach ``replace_assignments``.
-
-In each case we seed a session whose population includes an
-email-matching reviewer / reviewee pair, flip the session-level
+We seed a session whose population includes an email-matching
+reviewer / reviewee pair, flip the session-level
 ``self_reviews_active`` flag to ``False``, run the generation,
 and assert that the self-review row landed with ``include=False``
 while the non-self-review rows landed with ``include=True``.
@@ -29,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Assignment, Reviewee, Reviewer, ReviewSession, RuleSet
 from app.services import assignments as assignments_service
+from ._full_matrix import full_matrix_seed_id
 
 
 def _make_session(
@@ -102,7 +98,7 @@ def _includes_by_pair(
     }
 
 
-def test_full_matrix_route_self_review_inactive_when_flag_off(
+def test_full_matrix_seed_route_self_review_inactive_when_flag_off(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(
@@ -111,8 +107,11 @@ def test_full_matrix_route_self_review_inactive_when_flag_off(
     _seed_population_with_self_review(client, review_session)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "false"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={
+            "rule_set_id": full_matrix_seed_id(db),
+            "exclude_self_review": "false",
+        },
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -125,7 +124,7 @@ def test_full_matrix_route_self_review_inactive_when_flag_off(
     assert by_pair[("bob@example.edu", "carol@example.edu")] is True
 
 
-def test_full_matrix_route_self_review_active_when_flag_on(
+def test_full_matrix_seed_route_self_review_active_when_flag_on(
     client: TestClient, db: Session
 ) -> None:
     """Default ``self_reviews_active=True`` preserves pre-12C behaviour:
@@ -137,8 +136,11 @@ def test_full_matrix_route_self_review_active_when_flag_on(
     _seed_population_with_self_review(client, review_session)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "false"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={
+            "rule_set_id": full_matrix_seed_id(db),
+            "exclude_self_review": "false",
+        },
         follow_redirects=False,
     )
     assert response.status_code == 303

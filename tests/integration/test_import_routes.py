@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import AuditEvent, Reviewer, ReviewSession
+from ._full_matrix import full_matrix_seed_id
 
 
 def _make_session(client: TestClient, db: Session, code: str = "spring-2026") -> ReviewSession:
@@ -366,8 +367,8 @@ def test_reviewer_replace_cascades_assignments(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
     assignments_before = list(
@@ -449,8 +450,8 @@ def test_reviewee_replace_cascades_assignments(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
     assignments_before = list(
@@ -539,8 +540,8 @@ def test_reviewer_import_form_warns_about_cascade(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
 

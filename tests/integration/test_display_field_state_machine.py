@@ -67,7 +67,7 @@ def test_state_machine_locked_when_session_ready(
     card locked and greys out the Edit button."""
     review_session = _make_session(client, db, code="state-ready")
     _populate_rosters(client, review_session.id)
-    _generate_full_matrix(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
     _activate(client, db, review_session.id)
     db.refresh(review_session)
     assert review_session.status == "ready"

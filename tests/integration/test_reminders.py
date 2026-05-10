@@ -16,6 +16,7 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from ._full_matrix import full_matrix_seed_id
 
 
 # --------------------------------------------------------------------------- #
@@ -35,7 +36,7 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
     ).scalar_one()
 
 
-def _populate(client: TestClient, session_id: int, *, reviewers: list[str]) -> None:
+def _populate(client: TestClient, db: Session, session_id: int, *, reviewers: list[str]) -> None:
     csv = b"ReviewerName,ReviewerEmail\n" + b"".join(
         f"R{i},{email}\n".encode() for i, email in enumerate(reviewers)
     )
@@ -56,8 +57,8 @@ def _populate(client: TestClient, session_id: int, *, reviewers: list[str]) -> N
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
@@ -80,7 +81,7 @@ def _ready_session(
     reviewers: list[str],
 ) -> ReviewSession:
     session = _create_session(client, db, code)
-    _populate(client, session.id, reviewers=reviewers)
+    _populate(client, db, session.id, reviewers=reviewers)
     _activate(client, session.id)
     db.refresh(session)
     return session
@@ -331,7 +332,7 @@ def test_reminder_actions_409_while_session_draft(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, "draft-rem")
-    _populate(client, session.id, reviewers=["rae@example.edu"])
+    _populate(client, db, session.id, reviewers=["rae@example.edu"])
     # Cannot generate invitations on a draft session, so we fabricate one
     # directly to simulate stale state and exercise the gating.
     reviewer = db.execute(

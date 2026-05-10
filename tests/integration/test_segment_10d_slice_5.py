@@ -20,6 +20,7 @@ from app.db.models import (
     InstrumentResponseField,
     ReviewSession,
 )
+from ._full_matrix import full_matrix_seed_id
 
 
 # --------------------------------------------------------------------------- #
@@ -41,7 +42,7 @@ def _create_session(
     ).scalar_one()
 
 
-def _populate_rosters(client: TestClient, session_id: int) -> None:
+def _populate_rosters(client: TestClient, db: Session, session_id: int) -> None:
     client.post(
         f"/operator/sessions/{session_id}/reviewers/import",
         files={
@@ -65,8 +66,8 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
@@ -75,7 +76,7 @@ def _validated_session(
     client: TestClient, db: Session, code: str
 ) -> ReviewSession:
     session = _create_session(client, db, code=code)
-    _populate_rosters(client, session.id)
+    _populate_rosters(client, db, session.id)
     response = client.get(f"/operator/sessions/{session.id}?validated=1")
     assert response.status_code == 200
     db.refresh(session)
@@ -238,8 +239,8 @@ def test_add_instrument_clones_existing_full_matrix_assignments(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session.id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
     pre_assignments = (
@@ -444,7 +445,7 @@ def test_delete_instrument_invalidates_validated_session(
         follow_redirects=False,
     )
     # Walk back to validated after the add (which dropped us to draft).
-    _populate_rosters(client, session.id)
+    _populate_rosters(client, db, session.id)
     response = client.get(f"/operator/sessions/{session.id}?validated=1")
     assert response.status_code == 200
     db.refresh(session)
@@ -510,7 +511,7 @@ def test_delete_instrument_returns_409_when_session_ready(
         follow_redirects=False,
     )
     # Re-validate + activate after the add.
-    _populate_rosters(client, session.id)
+    _populate_rosters(client, db, session.id)
     client.get(f"/operator/sessions/{session.id}?validated=1")
     response = client.post(
         f"/operator/sessions/{session.id}/activate",

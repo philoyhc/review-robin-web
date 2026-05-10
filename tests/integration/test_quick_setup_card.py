@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import ReviewSession
+from ._full_matrix import full_matrix_seed_id
 
 
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
@@ -66,8 +67,8 @@ def _activate(
     client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
     client.get(f"/operator/sessions/{review_session.id}?validated=1")
@@ -389,7 +390,7 @@ def test_assignments_rule_mode_golden_path(
     review_session = _seed_pair(client, db, code="qs-a-rule")
     response = client.post(
         f"/operator/sessions/{review_session.id}/quick-setup/assignments",
-        data={"rule": "full_matrix"},
+        data={"rule_set_id": full_matrix_seed_id(db)},
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -430,13 +431,13 @@ def test_assignments_rule_mode_replace_requires_confirm(
     # First generate so the slot is populated.
     client.post(
         f"/operator/sessions/{review_session.id}/quick-setup/assignments",
-        data={"rule": "full_matrix"},
+        data={"rule_set_id": full_matrix_seed_id(db)},
         follow_redirects=False,
     )
     # Re-submit without ``confirm_replace`` → needs_confirm.
     response = client.post(
         f"/operator/sessions/{review_session.id}/quick-setup/assignments",
-        data={"rule": "full_matrix"},
+        data={"rule_set_id": full_matrix_seed_id(db)},
         follow_redirects=False,
     )
     location = response.headers["location"]
@@ -450,7 +451,7 @@ def test_assignments_rule_mode_replace_requires_confirm(
     # Re-submit with confirm → applies, no error.
     response = client.post(
         f"/operator/sessions/{review_session.id}/quick-setup/assignments",
-        data={"rule": "full_matrix", "confirm_replace": "true"},
+        data={"rule_set_id": full_matrix_seed_id(db), "confirm_replace": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -514,7 +515,7 @@ def test_assignments_submit_on_ready_routes_to_lifecycle_banner(
 
     response = operator.post(
         f"/operator/sessions/{review_session.id}/quick-setup/assignments",
-        data={"rule": "full_matrix", "confirm_replace": "true"},
+        data={"rule_set_id": full_matrix_seed_id(db), "confirm_replace": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -692,12 +693,10 @@ def test_submit_all_runs_assignments_rule_when_only_rule_supplied(
 
     response = client.post(
         f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
-        data={"rule": "full_matrix"},
+        data={"rule_set_id": full_matrix_seed_id(db)},
         follow_redirects=False,
     )
-    # No files present; the legacy ``rule="full_matrix"`` path is
-    # only honoured by the per-slot route. submit-all expects
-    # ``rule_set_id`` directly.
+    # No files present; submit-all expects ``rule_set_id`` directly.
     assert response.status_code == 303
     # Server-side, the empty post is a no-op redirect.
     assert response.headers["location"].startswith(

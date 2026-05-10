@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Instrument, ReviewSession
+from ._full_matrix import full_matrix_seed_id
 
 
 def _create_session(
@@ -22,7 +23,7 @@ def _create_session(
     ).scalar_one()
 
 
-def _populate(client: TestClient, session_id: int) -> None:
+def _populate(client: TestClient, db: Session, session_id: int) -> None:
     client.post(
         f"/operator/sessions/{session_id}/reviewers/import",
         files={
@@ -46,8 +47,8 @@ def _populate(client: TestClient, session_id: int) -> None:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
@@ -61,7 +62,7 @@ def _validated_session(
     client: TestClient, db: Session, code: str = "v1"
 ) -> ReviewSession:
     session = _create_session(client, db, code=code)
-    _populate(client, session.id)
+    _populate(client, db, session.id)
     _validate(client, session.id)
     db.refresh(session)
     assert session.status == "validated"
@@ -77,7 +78,7 @@ def test_validated_query_flips_draft_to_validated_when_no_errors(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="t1-ok")
-    _populate(client, session.id)
+    _populate(client, db, session.id)
 
     client.get(f"/operator/sessions/{session.id}?validated=1")
 
@@ -120,7 +121,7 @@ def test_validate_deep_dive_does_not_flip_status(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="t1-readonly")
-    _populate(client, session.id)
+    _populate(client, db, session.id)
 
     response = client.get(f"/operator/sessions/{session.id}/validate")
     assert response.status_code == 200
@@ -136,7 +137,7 @@ def test_validate_deep_dive_does_not_flip_status(
 
 def test_activate_rejects_from_draft(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="t2-draft")
-    _populate(client, session.id)
+    _populate(client, db, session.id)
     # Skip validation step
 
     response = client.post(
@@ -262,8 +263,8 @@ def test_assignments_generate_invalidates_validated(
     session = _validated_session(client, db, code="inv-ag")
 
     client.post(
-        f"/operator/sessions/{session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "", "confirm_replace": "true"},
+        f"/operator/sessions/{session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "", "confirm_replace": "true"},
         follow_redirects=False,
     )
 
@@ -396,7 +397,7 @@ def test_session_validated_audit_event(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="audit-v")
-    _populate(client, session.id)
+    _populate(client, db, session.id)
 
     client.get(f"/operator/sessions/{session.id}?validated=1")
 

@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Instrument, ReviewSession
+from ._full_matrix import full_matrix_seed_id
 
 
 def _create_session(
@@ -31,7 +32,7 @@ def _create_session(
     ).scalar_one()
 
 
-def _populate_rosters(client: TestClient, session_id: int) -> None:
+def _populate_rosters(client: TestClient, db: Session, session_id: int) -> None:
     client.post(
         f"/operator/sessions/{session_id}/reviewers/import",
         files={
@@ -55,8 +56,8 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
@@ -203,7 +204,7 @@ def test_bulk_visibility_does_not_invalidate_validated_session(
     and ``app/services/session_lifecycle.py::set_responses_visible_when_closed``.
     """
     session = _create_session(client, db, code="bv-validated")
-    _populate_rosters(client, session.id)
+    _populate_rosters(client, db, session.id)
     response = client.get(f"/operator/sessions/{session.id}?validated=1")
     assert response.status_code == 200
     db.refresh(session)

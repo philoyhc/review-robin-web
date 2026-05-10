@@ -258,7 +258,7 @@ def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
     operator = make_client(alice)
     review_session = _make_session(operator, db, code="bulk-render")
     _populate_rosters(operator, review_session.id)
-    _generate_full_matrix(operator, review_session.id)
+    _generate_full_matrix(operator, db, review_session.id)
 
     instrument = _instrument(db, review_session.id)
     _seed_pair_context_display_fields(db, instrument)

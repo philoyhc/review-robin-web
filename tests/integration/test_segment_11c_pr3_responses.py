@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession
+from ._full_matrix import full_matrix_seed_id
 
 
 def _strip_datalist(body: str) -> str:
@@ -44,6 +45,7 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
 
 def _populate(
     client: TestClient,
+    db: Session,
     session_id: int,
     *,
     reviewer_emails: list[str],
@@ -66,8 +68,8 @@ def _populate(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/assignments/full-matrix",
-        data={"exclude_self_review": ""},
+        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
         follow_redirects=False,
     )
 
@@ -93,6 +95,7 @@ def _ready_session(
     session = _create_session(client, db, code)
     _populate(
         client,
+        db,
         session.id,
         reviewer_emails=reviewer_emails,
         reviewee_emails=reviewee_emails,

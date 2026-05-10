@@ -15,6 +15,7 @@ from app.db.models import (
     ReviewSession,
     SessionOperator,
 )
+from ._full_matrix import full_matrix_seed_id
 
 
 def _make_session(
@@ -56,8 +57,8 @@ def _seed_with_assignments(client: TestClient, db: Session, code: str) -> Review
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/full-matrix",
-        data={"exclude_self_review": "true"},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
     return review_session
@@ -231,7 +232,7 @@ def test_delete_all_assignments_clears_mode(
 ) -> None:
     review_session = _seed_with_assignments(client, db, code="a-del")
     db.refresh(review_session)
-    assert review_session.assignment_mode == "full_matrix"
+    assert review_session.assignment_mode == "rule_based"
 
     response = client.post(
         f"/operator/sessions/{review_session.id}/assignments/delete-all",
