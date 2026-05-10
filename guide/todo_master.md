@@ -174,7 +174,7 @@ Pre-positions every additive, nullable, no-backfill schema change downstream fea
 
 ### Segment 12A-1 — Session export (settings + per-entity CSVs + responses) — done 2026-05-09 (PRs #713, #716, #717, #718, #721)
 
-Splits the umbrella "Segment 12A — Session settings import + export" into the export half (this segment) and the import half (12A-2, see Upcoming below). Ships **five CSV downloads** off the Extract Data card on Session Home — four serving the session-porting use case (Settings + Reviewers / Reviewees + Manual Assignments) plus the seeded-RuleSet audit-log fallback for pre-15B rule-based sessions, and a fifth (Responses) serving the independent **downstream-analysis** use case (Excel pivots, pandas groupby, BI tools). Plan: `guide/archive/segment_12A-1_export.md`.
+Splits the umbrella "Segment 12A — Session settings import + export" into the export half (this segment) and the import half (12A-2 → 12A-3, both shipped 2026-05-10 — see the 12A-3 entry below). Ships **five CSV downloads** off the Extract Data card on Session Home — four serving the session-porting use case (Settings + Reviewers / Reviewees + Manual Assignments) plus the seeded-RuleSet audit-log fallback for pre-15B rule-based sessions, and a fifth (Responses) serving the independent **downstream-analysis** use case (Excel pivots, pandas groupby, BI tools). Plan: `guide/archive/segment_12A-1_export.md`.
 
 - **PR 1** (#713) — Settings export + shared `extracts/` plumbing. New `app/services/session_config_io.py` with `serialize_session_config`; new `app/services/extracts/__init__.py` with `stream_csv` + `filename({code}_{kind}.csv)` helper; new `GET /operator/sessions/{id}/export/settings.csv` route in a new `_extracts.py` slice; `session.settings_extracted` audit event registered in `EVENT_SCHEMAS`. Settings row on the Extract Data card flips live. Tests: 14 unit + 6 integration.
 - **PR 1a** (#716) — Capture seeded-RuleSet selection from the audit log. Pre-15B fallback in `_audit_log_rule_set_name` that fills `instruments[N].rule_set_name` cells from the latest `assignments.generated` audit row when the referenced `operator_rule_sets` row is a seed (`is_seed=True`). Memoised once per export so multi-instrument sessions hit the audit table once. Personal-library RuleSets intentionally out of scope (empty cell; destination operator picks on re-Generate). Post-15B precedence: populated `Instrument.rule_set_id` wins over the audit-log fallback. Tests: 6 new unit cases.
@@ -183,7 +183,7 @@ Splits the umbrella "Segment 12A — Session settings import + export" into the 
 - **PR 4** (#721) — Responses extract (downstream-analysis use case). New `serialize_responses` that yields a 19-column wide CSV per `Response` row — denormalised reviewer + reviewee identity / tags, instrument context, field context, response-type name, value, and lifecycle (saved / submitted / version) so the file is readable in isolation. Streams through a `yield_per(1000)` cursor; route counts up front via `responses.session_response_count` so the audit event carries the row count without materialising the generator. `session.responses_extracted` audit event. Card row flips live with `{code}_responses.csv` filename. Empty-cell vs no-row semantics: null `Response.value` → empty `Value` cell with row preserved; missing-`Response` → no row. Tests: 9 unit + 5 integration.
 - **PR 4a** — Add `SelfReview` column to the responses extract. Inserts a derived `TRUE` / `FALSE` cell between `Value` and `SavedAt` (HEADER goes 19 → 20 cols), computed via the canonical `is_self_review(reviewer, reviewee)` helper in `app/services/assignments.py` — case-insensitive `reviewer.email` vs `reviewee.email_or_identifier`, `FALSE` for non-email reviewee identifiers. Uppercase `TRUE` / `FALSE` (Excel idiom) — deliberate divergence from the lowercase booleans the assignments / settings CSVs use, since the responses CSV is analyst-tool-facing rather than round-trip-import-facing. Renames `_is_self_review` → `is_self_review` to expose the helper across module boundaries (3 internal call sites updated in lockstep). Tests: 4 new unit cases (TRUE / FALSE / case-insensitive / non-email identifier) + 1 integration assertion bump. No route, audit, or card changes.
 
-Out of scope (deferred): zip bundle (mixed porting + analysis use case earns its own UX pass) and the import side (12A-2 — `guide/segment_12A-2_import.md`).
+Out of scope (deferred): zip bundle (mixed porting + analysis use case earns its own UX pass) and the Manual Assignments tile (retired in 12A-3 PR 2 — assignments are derived post-15D). The import side originally planned as 12A-2 was absorbed into 12A-3 and shipped 2026-05-10; plan archived at `guide/archive/segment_12A-2_import.md` as historical reference.
 
 ### Segment 13E — DB prep for the 12C / 15D block — done 2026-05-10 (PRs #743, #744)
 
@@ -433,11 +433,15 @@ they pinned:
   Part A is the first writer.
 - **11K → 12B** is the audit pipeline: 11K pinned the `detail`
   shape (shipped 2026-05-07); 12B's export reads against it.
-- **12A, 13A, 13B, 13C** are independent of the email + audit
-  pipelines and can interleave at any time. The three 13-family
-  segments are also independent of each other; 13C PR 3
-  (rule-engine fanout for group-scoped instruments) lands more
-  naturally after 13A's RuleSet machinery exists, but 13C
-  PRs 1 / 2 / 4 / 5 don't depend on 13A.
+- **12A is fully shipped** as of 2026-05-10 (12A-1 export +
+  12A-3 export-refresh + Settings importer + Quick Setup
+  slot 4 graduation; 12A-2 was absorbed into 12A-3). The
+  remaining schedule items — **13B, 13C, 14, 14-1, 15, 15A,
+  15B, 15C, 15E, 16** — are independent of the email +
+  audit pipelines and can interleave at any time. The three
+  13-family segments are also independent of each other;
+  13C PR 3 (rule-engine fanout for group-scoped instruments)
+  lands more naturally after 13A's RuleSet machinery exists,
+  but 13C PRs 1 / 2 / 4 / 5 don't depend on 13A.
 - **Within 14-1**, Parts B-E are sequential enhancements on top
   of Part A; Parts F-H are independent backend swaps.
