@@ -67,8 +67,10 @@ chrome:
   right (Post-Segment 15 clean up, 2026-05-10). One bottom-right
   Submit button (next to Lock / Unlock) runs every slot whose
   file is attached. Unlock state resets when the operator
-  navigates away (per-route middleware in `app/main.py`).
-  Settings slot stays inert pending Segment 12A-3.
+  navigates away (per-route middleware in `app/main.py`). The
+  Settings slot graduated to live in Segment 12A-3 PR 4 and
+  posts to `/operator/sessions/{id}/import-config`, applying
+  the 3-column Settings CSV via `apply_session_config`.
 - **Extract Data card** on Session Home ships **five live CSV
   downloads** in a 2-column layout — left column for
   per-entity rosters (Reviewers / Reviewees / Relationships),

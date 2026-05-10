@@ -233,10 +233,10 @@ def build_quick_setup_context(
             label="Session settings",
             count=0,
             mode="file_upload",
-            is_wired=False,
-            wire_url=None,
-            coming_in="Wired in Segment 12A PR 6",
-            error_message=None,
+            is_wired=True,
+            wire_url=f"/operator/sessions/{sid}/import-config",
+            coming_in=None,
+            error_message=_error_for("settings"),
             cancel_url=cancel_url_for("settings"),
         ),
     ]
@@ -373,9 +373,9 @@ def build_new_session_quick_setup_context(
             label="Session settings",
             count=0,
             mode="file_upload",
-            is_wired=False,
+            is_wired=is_wired,
             wire_url=None,
-            coming_in="Wired in Segment 12A PR 6",
+            coming_in=None if is_wired else "Wired in Segment 12A-3 PR 4",
         ),
     ]
 
