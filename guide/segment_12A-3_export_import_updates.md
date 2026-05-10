@@ -13,7 +13,22 @@ up Settings round-trip through Quick Setup. The targeted
 Extract Data card becomes a **session-portability bundle**
 (everything an operator needs to fully set up a fresh
 session from scratch) plus a separate **analysis**
-download:
+download.
+
+**Target layout** (Extract Data card, 2-column grid;
+locked in PR 2):
+
+```
+Reviewers           |  Session settings
+Reviewees           |  Responses
+Relationships       |  Zip all  (greyed out — deferred)
+```
+
+Left column = per-entity rosters (operator-uploaded
+porting inputs). Right column = session-level outputs
+(settings, downstream-analysis, future bundle).
+
+Mapped to the porting-vs-analysis split:
 
 ```
 Setup (round-trip):  Reviewers · Reviewees · Relationships · Session settings
@@ -160,9 +175,12 @@ half + UI tile:
   routes).
 
 - **Extract Data tile:** new "Relationships" row in
-  `app/web/views/_extract_data.py` between Reviewees
-  and Responses. Conditionally suppresses count display
-  if 0 (mirrors the existing rosters' display rule).
+  `app/web/views/_extract_data.py`. PR 1 inserts the
+  row after Reviewees in the current DOM order;
+  PR 2 finalises the row order to the target left/right
+  column layout when Assignments retires. Count display
+  conditionally suppresses if 0 (mirrors the existing
+  rosters' display rule).
 
 ### Quick Setup integration (Settings + Relationships slots)
 
@@ -252,7 +270,7 @@ immediately.
 
 ### PR 2 — Assignments-CSV retirement sweep
 
-Cleanup pass.
+Cleanup pass + final layout lock.
 
 - Drop the Extract Data tile (`key="assignments"` row
   in `_extract_data.py`).
@@ -270,6 +288,19 @@ Cleanup pass.
   Settings CSV export's `rule_set_name` capture
   (see "Assignments CSV: dropped from Extract Data"
   above).
+- **Reorder** the row list in `_extract_data.py` to
+  the target layout (left/right columns; the
+  `extract-data-grid` CSS already wraps row-major in
+  a 2-column grid):
+
+  ```
+  Reviewers           |  Session settings
+  Reviewees           |  Responses
+  Relationships       |  Zip all  (inert)
+  ```
+
+  DOM order: Reviewers, Session settings, Reviewees,
+  Responses, Relationships, Zip all.
 - Update `README.md` — Extract Data blurb shifts from
   "five live CSV downloads (Settings, Reviewers,
   Reviewees, Manual Assignments, Responses)" to
@@ -280,10 +311,11 @@ Cleanup pass.
   retire the assignments-CSV row from the coverage
   table.
 
-After PR 1 + PR 2, the Extract Data card reads:
-Reviewers · Reviewees · Relationships · Responses ·
-Session settings (+ inert Zip all). The full 4-CSV
-porting bundle is downloadable.
+After PR 1 + PR 2, the Extract Data card matches the
+target layout above. The full 4-CSV porting bundle is
+downloadable from the left column; the analysis-only
+Responses CSV + future bundle live in the right
+column.
 
 ### PR 3 — Settings importer + route
 
