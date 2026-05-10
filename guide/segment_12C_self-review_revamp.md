@@ -1,81 +1,96 @@
 # Segment 12C — Self-review revamp + Quick Setup upload semantics + chrome reorder
 
-**Status:** Planning. **Sub-segment 12C-1 (Part 1) — sized
-2026-05-09; ready to start; audit-event-name question
-settled 2026-05-10 (compact form).** **Sub-segment 12C-2
-(Part 2) — fully locked 2026-05-10; sized as 3 PRs.**
-Drastic option locked: manual assignments removed from
-Quick Setup entirely; manual-CSV shape locked at Option A
-(session-wide wipe; operator covers all instruments);
-Settings upload explicitly wipes instruments + assignments.
-**Sub-segment 12C-3 (Part 3) — locked 2026-05-10; ready
-to start.** **Compatibility revision 2026-05-10**: doc
-adjusted to be compatible with + pre-position for 15D
-(Assignments revamp); see new "Forward-looking — 15D
-alignment" section below.
+**Status:** Planning. **Holistic-sequence revision
+2026-05-10**: locked sequence is **13D-2 → 12C → 15D
+→ 12A-3**. Under the new sequence, 12C-2 + 12C-3 are
+**deferred / folded into 15D** (15D fast-tracked); 12C
+ships **only Sub-segment 12C-1** (5 PRs, simplified —
+schema lifted to 13D-2 PR 1). See "Forward-looking — 15D
+alignment" below for the detailed map.
 
-This doc covers **three related concerns** that all touch
-the Assignments / Instruments cluster of the operator chrome:
+**Sub-segment 12C-1 (Part 1) — sized 2026-05-09;
+ready to start once 13D-2 PR 1 ships.** Schema
+(`sessions.self_reviews_active`) lifted to 13D-2 PR 1;
+12C-1 PR 1 is now generation-path wiring only.
+Audit-event-name question settled 2026-05-10 (compact
+form).
+
+**Sub-segment 12C-2 (Part 2) — DEFERRED 2026-05-10.**
+The Quick Setup slot 3 retirement and Assignments-page
+manual upload work is folded into 15D, where the
+Quick Setup card is restructured anyway and manual
+assignments retire entirely. See "Part 2 — DEFERRED"
+section below for what was previously planned and how
+15D absorbs it. The "Settings importer wipes
+assignments explicitly" lock (was 12C-2 PR 2) is folded
+into **12A-3 PR 1**.
+
+**Sub-segment 12C-3 (Part 3) — DEFERRED 2026-05-10.**
+The Setup-row chrome reorder (Instruments before
+Assignments) is folded into 15D, which restructures
+the chrome anyway (Assignments leaves the Setup row
+entirely, becomes an Operations-row tab). See "Part 3
+— DEFERRED" section below.
+
+This doc covers **the self-review revamp** (Part 1, the
+single sub-segment that ships from 12C). Parts 2 + 3 are
+deferred / folded into 15D under the holistic-sequence
+revision (2026-05-10) — kept here as historical record
++ "what was planned, where it went" pointers:
 
 - **Part 1 — Two-layer self-review model (Sub-segment
   12C-1).** Replace today's scattered ad-hoc
   `exclude_self_review` toggles with a clean
   RuleSet-as-generator + Include-as-activator split.
+  **Ships from 12C.**
 - **Part 2 — Quick Setup upload semantics (Sub-segment
-  12C-2).** Lock the wipe-and-replace contract for every
-  Quick Setup slot; retire the assignments slot
-  (manual = post-creation override on the Assignments
-  page); pin the manual-CSV shape at session-wide wipe
-  with operator-covers-all-instruments.
+  12C-2).** *Deferred — folded into 15D + 12A-3.*
 - **Part 3 — Chrome reorder: Instruments before
-  Assignments (Sub-segment 12C-3).** Small UI move —
-  swap the Instruments and Assignments tabs in the
-  chrome's Setup nav row, and apply the same swap to the
-  status pills + the Session Home Setup card so the
-  "what's still left to set up?" reading order matches.
+  Assignments (Sub-segment 12C-3).** *Deferred — 15D
+  restructures the chrome anyway.*
 
 The two parts share the same surfaces but answer different
 questions; expect them to land as separate PR sequences.
 
 ---
 
-## Forward-looking — 15D alignment
+## Forward-looking — 15D alignment (revised 2026-05-10)
 
-Segment 15D
-(`guide/segment_15D_assignments_revamp.md`, sketched
-2026-05-10) revamps Assignments around per-pair
-attributes — a new **Relationships** table + always-derived
-Assignments table + an Operations Assignments page that
-replaces today's Setup Assignments page. 12C ships
-**before** 15D and is structured to (a) not block 15D, and
-(b) deliver work that 15D inherits unchanged where
-possible.
+Under the **locked sequence 13D-2 → 12C → 15D → 12A-3**,
+15D is fast-tracked and most of 12C's previously-planned
+"interim" work is folded into 15D. Net effect: 12C ships
+the self-review revamp (Sub-segment 12C-1, 5 PRs) and
+nothing else. 12C-2 + 12C-3 are explicitly deferred —
+their would-be intermediate states would be replaced by
+15D's restructure within a single segment cycle, so the
+intermediate work isn't worth the churn.
 
-The per-PR map:
+Per-PR map of what 12C ships vs. what 15D absorbs:
 
-| 12C piece | Post-15D fate |
+| 12C-1 piece | Status under the new sequence |
 |---|---|
-| `sessions.self_reviews_active` schema (12C-1 PR 1) | **Inherited unchanged** — 15D's Operations Assignments page reads the same column. |
-| Generation-path wiring for the self-review default (12C-1 PR 1) | **Inherited unchanged** — generation paths still consult the column. |
-| Rule Builder `exclude_self_reviews` checkbox (12C-1 PR 2) | **Inherited unchanged** — 15D doesn't touch the Rule Builder for this. |
-| Bulk Include toggle on Setup Assignments page (12C-1 PR 3) | **Moves with the page.** 15D relocates the toggle to the Operations Assignments page; the route, audit event (`assignments.self_reviews_active_set`), and column-flip logic carry over verbatim. The Setup-page placement is a transient home; the underlying mechanism is durable. |
-| Drop ad-hoc toggles (12C-1 PR 4) | **Inherited unchanged** — toggles stay dropped. |
-| Full-matrix dead-code cleanup (12C-1 PR 5) | **Inherited unchanged** — `AssignmentMode.full_matrix` stays retired. |
-| Quick Setup slot 3 retirement (12C-2 PR 1) | **Transient.** 15D re-introduces a slot 3 — but with different content (Relationships, not Assignments). 12C-2 PR 1's slot-3 retirement reduces Quick Setup to 3 slots in the interim; 15D re-grows it to 4 with Relationships in the new slot 3 and Settings in slot 4. The retirement work is not wasted — 15D's Relationships slot is a fresh build. |
-| Settings importer wipes assignments + instruments (12C-2 PR 2) | **Pre-positioning win.** Aligns directly with 15D's "assignments are always derived" model. The wipe semantics carry over. |
-| Manual upload via Assignments page (12C-2 PR 3) | **Removed by 15D.** Option A's session-wide-wipe semantics ship in 12C as a cleaner intermediate state; 15D retires the upload entirely (manual rows give way to the Relationships table). Worth landing for the interim operator experience between 12C and 15D. |
-| Chrome reorder (12C-3) | **Partly transient.** 15D moves Assignments off the Setup row into Operations entirely. 12C-3's Setup-row swap is an interim UX improvement; the Operations-row tab order is set independently in 15D. |
+| `sessions.self_reviews_active` schema | **Lifted to 13D-2 PR 1.** 12C-1 PR 1 is now generation-path wiring only. |
+| Generation-path wiring for the self-review default (12C-1 PR 1) | **Ships from 12C.** Inherited unchanged by 15D. |
+| Rule Builder `exclude_self_reviews` checkbox (12C-1 PR 2) | **Ships from 12C.** Inherited unchanged by 15D. |
+| Bulk Include toggle on Setup Assignments page (12C-1 PR 3) | **Ships from 12C.** Lands on today's Setup Assignments page; 15D moves the toggle (route + audit event + flip logic carry over verbatim) to the Operations Assignments page. The Setup-page placement is brief but the mechanism is durable. |
+| Drop ad-hoc toggle on Assignments page Rule Based card + validation copy refresh (12C-1 PR 4) | **Ships from 12C, scoped narrower.** The Quick Setup slot 3 form-field drop (originally also in this PR) is folded into 15D's slot-3 retirement. |
+| Full-matrix dead-code cleanup (12C-1 PR 5) | **Ships from 12C.** Inherited unchanged by 15D. |
 
-The interim work — Quick Setup slot 3 retirement, manual
-upload via Assignments page, Setup-row chrome reorder —
-is justified on its own. Operators get cleaner UX between
-12C ship and 15D ship, even if 15D ultimately supersedes
-those surfaces. None of it blocks 15D.
+| 12C-2 piece | Where it goes |
+|---|---|
+| Quick Setup slot 3 retirement (was 12C-2 PR 1) | **Folded into 15D.** 15D restructures the Quick Setup card anyway (re-introduces slot 3 with Relationships content); doing slot retirement separately would mean Quick Setup goes 4 → 3 → 4 across two segments. Skip the intermediate hop. |
+| Settings importer wipes assignments + instruments (was 12C-2 PR 2) | **Folded into 12A-3 PR 1.** The Settings importer doesn't exist until 12A-3 (which absorbs 12A-2's Settings-importer work), so adding the wipe step there is the natural home. |
+| Manual upload via Assignments page Option A (was 12C-2 PR 3) | **Removed by 15D.** 15D retires manual upload entirely (Assignments table becomes always derived; manual rows give way to the Relationships table). No interim Option A behaviour ships from 12C. |
+
+| 12C-3 piece | Where it goes |
+|---|---|
+| Setup-row chrome reorder (Instruments before Assignments) | **Folded into 15D.** 15D moves Assignments off the Setup row entirely; the Setup-row swap is moot post-15D. The status pills + Setup card row-list reorders also fold into 15D's restructure. |
 
 **Specifically not pre-positioned by 12C** (lands fresh
 with 15D):
 
-- The new `relationships` table + per-entity importer +
+- The new `relationships` table + per-entity importer
+  (importer ships in 12A-3, table in 13D-2) +
   Relationships Setup page.
 - Drop `Assignment.context` JSON column.
 - Rule grammar additions (`pair_context.tag_N` matchers
@@ -83,9 +98,6 @@ with 15D):
 - Operations Assignments page (replaces Setup
   Assignments).
 - "Super buttons" multi-step shortcut actions.
-
-These are 15D's net-new scope and aren't candidates for
-12C pre-positioning without scope creep.
 
 ---
 
@@ -338,17 +350,19 @@ parallel-shippable. PR 4 depends on PRs 1 + 2 + 3 shipping
 (the new edit surfaces have to exist before the old ones
 can be removed). PR 5 is independent dead-code cleanup.
 
-1. **PR 1 — Schema + generation-path wiring.** Alembic
-   migration adds `sessions.self_reviews_active BOOLEAN
-   NOT NULL DEFAULT TRUE`. Wires `generate_full_matrix`,
-   the rule-based engine, and the manual-CSV save path
-   to consult the column when creating self-review rows
-   (new self-review rows get `include = sessions.self_reviews_active`).
-   No UI yet — the column is universally `TRUE` on
-   existing sessions, so behaviour is unchanged. Tests:
-   migration round-trips; each generation path picks up
-   the column when it's `FALSE`; existing-session
-   default is `TRUE`.
+1. **PR 1 — Generation-path wiring.** *Schema lifted to
+   13D-2 PR 1 under the 2026-05-10 holistic-sequence
+   revision.* Wires `generate_full_matrix`, the
+   rule-based engine, and the manual-CSV save path to
+   consult `sessions.self_reviews_active` when creating
+   self-review rows (new self-review rows get
+   `include = sessions.self_reviews_active`). No UI yet
+   — the column is universally `TRUE` on existing
+   sessions, so behaviour is unchanged. Depends on
+   13D-2 PR 1 having shipped. Tests: each generation
+   path picks up the column when it's `FALSE`;
+   existing-session default behaviour preserved when
+   it's `TRUE`.
 2. **PR 2 — Rule Builder surfaces
    `exclude_self_reviews`.** Adds the labelled checkbox
    between the rule-list editor and the Save / Cancel
@@ -373,17 +387,19 @@ can be removed). PR 5 is independent dead-code cleanup.
    Assignments page when 15D ships (the page itself
    relocates). Route + audit event + column-flip logic
    carry over verbatim.*
-4. **PR 4 — Drop ad-hoc toggles + validation copy
-   refresh.** Removes the `exclude_self_review` form
-   field from Quick Setup slot 3 (template +
-   handler-side fallback) and from the Assignments
-   page Rule Based card. Refreshes the
+4. **PR 4 — Drop ad-hoc toggle on Assignments Rule
+   Based card + validation copy refresh.** Removes the
+   `exclude_self_review` form field from the
+   Assignments page Rule Based card. Refreshes the
    `assignments.self_reviews_present` validation row
    message + any related banner copy to point at the
-   new bulk toggle. Tests: previously-failing form-field
-   assertions are deleted; validation row still fires +
-   reads cleanly; integration smoke that the
-   end-to-end Quick Setup chain still works.
+   new bulk toggle. *Quick Setup slot 3's
+   `exclude_self_review` form field stays in place
+   here — it goes with the rest of slot 3 when 15D
+   retires the slot entirely; doing it twice would be
+   churn.* Tests: previously-failing form-field
+   assertions on the Rule Based card are deleted;
+   validation row still fires + reads cleanly.
 5. **PR 5 — Full-matrix dead-code cleanup.** Removes
    the standalone
    `POST /assignments/full-matrix` route, the
@@ -399,7 +415,42 @@ can be removed). PR 5 is independent dead-code cleanup.
 
 ---
 
-## Part 2 — Quick Setup upload semantics (Sub-segment 12C-2)
+## Part 2 — Quick Setup upload semantics (Sub-segment 12C-2 — DEFERRED 2026-05-10)
+
+> **DEFERRED under the holistic-sequence revision
+> 2026-05-10.** Under the locked sequence
+> 13D-2 → 12C → 15D → 12A-3, this sub-segment's work
+> would land + be replaced within a single segment
+> cycle (15D restructures Quick Setup anyway, and
+> retires manual assignments entirely). Keeping the
+> intermediate state isn't worth the churn. Where the
+> three would-be PRs land instead:
+>
+> - **PR 1 (Quick Setup slot 3 retirement)** → folded
+>   into 15D, which restructures the Quick Setup card
+>   from 4 → 3 → 4 slots in one shot (slot 3 retires
+>   AND comes back as Relationships in the same
+>   segment).
+> - **PR 2 (Settings importer wipes assignments
+>   explicitly)** → folded into 12A-3 PR 1, which
+>   builds the Settings importer in the first place
+>   (this PR was always a tightening of 12A-2's
+>   importer; with 12A-2 absorbed into 12A-3, the
+>   tightening lives there too).
+> - **PR 3 (Manual upload via Assignments page,
+>   Option A)** → not shipped at all. 15D removes the
+>   manual upload entirely; landing Option A in 12C
+>   would be wasted work.
+>
+> The locked Decisions + Workflow consequences +
+> Replace-not-merge contract + Manual-upload-Option-A
+> spec below are kept as **historical reference** —
+> they describe the contract 12A-3 PR 1 implements (for
+> the wipe-assignments step) and the no-manual-upload
+> world 15D ships into. The PR sequence at the bottom
+> of this Part is what was previously planned to ship
+> from 12C; under the new sequence, none of those
+> three PRs ship from 12C.
 
 ### Decisions locked 2026-05-10
 
@@ -604,7 +655,19 @@ PR 1 below depends on 12A-2 PR 1 having shipped.
 
 ---
 
-## Part 3 — Chrome reorder: Instruments before Assignments (Sub-segment 12C-3)
+## Part 3 — Chrome reorder: Instruments before Assignments (Sub-segment 12C-3 — DEFERRED 2026-05-10)
+
+> **DEFERRED under the holistic-sequence revision
+> 2026-05-10.** 15D moves Assignments off the Setup
+> row entirely (it becomes an Operations-row tab), so
+> the Setup-row Instruments-before-Assignments swap is
+> moot post-15D. The status pills + Setup card row-list
+> reorders also fold into 15D's broader restructure.
+>
+> The locked decision + targeted moves below are kept
+> as historical reference — they describe the chrome
+> shape that 15D rebuilds anyway. Under the new
+> sequence, no PR ships from this Part.
 
 ### Decision locked 2026-05-10
 

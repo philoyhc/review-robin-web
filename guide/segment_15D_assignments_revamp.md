@@ -1,19 +1,24 @@
 # Segment 15D — Assignments revamp: Pair Context as Setup primary, Assignments goes derived
 
-**Status:** Planning. Initial sketch 2026-05-10. **All open
-questions settled 2026-05-10** — page name, generation
-triggering, JSON-column fate, Quick Setup integration, and
-lifecycle gating all locked. Ready to size into PRs once
-the two follow-on docs land. Builds on 12C's lock that
-manual assignments retire from Quick Setup; takes the next
-step and retires the manual assignments *table input*
-entirely.
+**Status:** Planning. **Holistic-sequence revision
+2026-05-10** — fast-tracked into the locked sequence
+**13D-2 → 12C → 15D → 12A-3**. All design open questions
+settled (page name, generation triggering, JSON-column
+fate, Quick Setup integration, lifecycle gating); schema
+prep absorbed into 13D-2 (ships the new `relationships`
+table inert); deferred 12C work folded in (Quick Setup
+slot 3 retire-and-restore, chrome restructure, Operations
+Assignments page move). Sized as **8 PRs** (locked
+2026-05-10).
 
-> **Two follow-on docs to write next** (per the planning
-> conversation): (a) the schemas this segment needs
-> beforehand, distilled out of this plan; (b) a revised 13C
-> that maximally prepares for 15D without removing the
-> current Assignments page.
+> **Schema prep handled by 13D-2** — see
+> `guide/segment_13D-2_db_prep_wave_2.md`. The
+> `relationships` table is created inert in 13D-2 PR 2;
+> 15D wires it. The follow-on "schemas-needed-beforehand"
+> doc previously contemplated for this segment **becomes
+> the 13D-2 plan**; the "revised 13C that prepares for
+> 15D" follow-on stays open as a separate concern (13C
+> proper is still planning).
 
 ## Why this matters
 
@@ -409,6 +414,174 @@ workflow.
   Settings CSV (12A-1 / 12A-2) covers session-level
   config; the per-pair Relationships table travels in
   its own per-entity CSV like rosters.
+
+## PR sequence (8 PRs, locked 2026-05-10)
+
+Depends on **13D-2** (`sessions.self_reviews_active`
+column + `relationships` table) and **12C-1** (the
+self-review revamp's generation-path wiring + Rule
+Builder checkbox + bulk Include toggle landing page +
+ad-hoc-toggle drops + full-matrix cleanup) having
+shipped. Coordinates with **12A-3** for the
+Relationships per-entity export + import + Quick Setup
+slot 3 graduation.
+
+PRs are sequenced for dependency safety; some can
+parallel-ship within the dependency graph.
+
+### PR 1 — Relationships service + per-entity importer
+
+- New `app/services/relationships.py` with CRUD on the
+  `relationships` table (created in 13D-2 PR 2).
+- `parse_relationship_csv` importer (mirrors
+  `parse_reviewer_csv` / `parse_reviewee_csv`).
+- Resolves `ReviewerEmail` against
+  `reviewers.email`; resolves `RevieweeEmail`
+  against `reviewees.email_or_identifier`. Rejects rows
+  with unknown identifiers.
+- Wipe-and-replace per-row upsert pattern; unique
+  constraint enforced by 13D-2's
+  `uq_relationships_session_reviewer_reviewee`.
+- Audit event `relationships.imported` registered in
+  `EVENT_SCHEMAS`.
+- *Note:* the per-entity export route + the
+  `/relationships` Manage page upload form ship in
+  **12A-3 PR 2** alongside the Relationships extract;
+  this PR is the service-layer foundation.
+
+### PR 2 — Relationships Setup page + chrome integration
+
+- New page `/operator/sessions/{id}/relationships`
+  with upload / preview / status pill, mirroring the
+  Reviewers + Reviewees Setup pages.
+- Chrome nav: insert Relationships tab into the Setup
+  row between Reviewees and Instruments. Setup row
+  reads:
+  `Reviewers · Reviewees · Relationships ·
+  Instruments · Email Template`.
+- Status pill on every session-scoped page surfaces
+  the Relationships count.
+- View-shape adapter slot in `views/_setup.py`
+  (Setup card on Session Home gains a Relationships
+  row).
+- *No chrome moves for Assignments yet* — that's
+  PR 6's job.
+
+### PR 3 — Rule grammar additions (`pair_context.tag_N`)
+
+- Extend `app/schemas/rules.py` `RuleSetSchema` to
+  accept `pair_context.tag_1` / `.tag_2` / `.tag_3`
+  as source values in MATCH / FILTER / QUOTA /
+  COMPOSITE rules.
+- Rule Builder UI: add `Pair context` source class
+  to the source-picker dropdown; render with
+  `tag_N` slot selector.
+- Engine reads pair_context tags from the
+  `relationships` table at generation time
+  (joined on `(session_id, reviewer_id, reviewee_id)`).
+- Independent of PR 2; can ship in parallel.
+
+### PR 4 — Generation-path consumption of relationships
+
+- `app/services/rules/engine.py` joins
+  `relationships` on `(session_id, reviewer_id,
+  reviewee_id)` per pair when evaluating
+  `pair_context.tag_N` matchers / filters / quotas.
+- Inactive relationships rows (`status = "inactive"`)
+  are filtered out of the candidate set before rule
+  evaluation.
+- Tests: rule using `pair_context.tag_1 == "Mentor"`
+  matches the right pairs; inactive rows skipped;
+  pair without a `relationships` row gets empty tag
+  values (no false matches).
+
+### PR 5 — Backfill `Assignment.context.pair_context_*` into `relationships`
+
+- One-time data migration that scans every
+  `Assignment` row with a non-empty
+  `context.pair_context_*` value and inserts a
+  `relationships` row per distinct
+  `(session_id, reviewer_id, reviewee_id)` carrying
+  the same tag values.
+- Audit event
+  `relationships.migrated_from_assignment_context`
+  per session with counts.
+- Idempotent: re-running the migration skips
+  already-existing relationships rows (unique
+  constraint).
+- Tests: backfill on a session with mixed
+  pair-context values produces the expected
+  `relationships` rows; running twice is a no-op.
+
+### PR 6 — Operations Assignments page + chrome restructure + drop `Assignment.context`
+
+- Move Assignments from the Setup row to the
+  Operations row. Chrome nav after this PR:
+  - Setup: Reviewers · Reviewees · Relationships ·
+    Instruments · Email Template
+  - Operations: Validate · Previews · Assignments
+    · Invitations · Responses
+- New Operations Assignments page surface:
+  - Read-only preview of the current generated
+    assignments table.
+  - **Generate** button (replaces today's Setup-page
+    Rule Based card's Generate).
+  - **Bulk Include toggle for self-reviews** (moved
+    from 12C-1 PR 3's Setup-page home). Route +
+    audit event + flip logic carry over verbatim.
+  - Per-instrument breakdown with zero-assignment
+    warnings.
+  - Per-row Include checkbox stays as last-mile
+    override.
+- **Drop the `Assignment.context` JSON column.**
+  Destructive Alembic migration; depends on PR 5
+  having shipped (backfill complete).
+- Status pills on every session-scoped page
+  reflect the new chrome layout.
+- Tests: chrome reorder integration tests; bulk
+  toggle still works post-relocation; drop migration
+  round-trips on SQLite + Postgres.
+
+### PR 7 — Quick Setup slot restructure
+
+- Quick Setup card grows back to **4 slots**:
+  - Slot 1: Reviewers (existing)
+  - Slot 2: Reviewees (existing)
+  - Slot 3: Relationships (NEW — uses PR 1's
+    importer)
+  - Slot 4: Settings (was slot 3 in 12C-2 PR 1's
+    deferred state; here flipped to live alongside
+    12A-3 PR 1's Settings importer)
+- Drops the legacy slot-3 dropdown + manual upload
+  + handler-side branches in `_quick_setup.py`
+  (incl. `rule="full_matrix"` /
+  `rule="rule_based"` payload variants and the
+  `session_rule_set_id` form-data field).
+- `quick_setup_submit_all` chain: reviewers →
+  reviewees → relationships → settings. **No
+  auto-Generate** (per the locked manual-Generate-
+  after-Validate decision).
+- Coordinates with 12A-3 PR 3 (Settings slot
+  graduation).
+
+### PR 8 — Super buttons (Validate + Generate, etc.)
+
+- Multi-step shortcut actions on the Operations
+  Assignments page (and possibly Session Home):
+  - "Validate + Generate" — runs Validate; if no
+    errors, runs Generate; surfaces a single
+    success / failure banner.
+  - "Validate + Generate + Activate" — same chain
+    + Activate; for the operator who's confident
+    in their setup.
+- Underlying single-step actions (Validate,
+  Generate, Activate) remain available so the
+  operator can still pause / inspect between
+  steps.
+- UI sugar — no new audit events (each underlying
+  step emits its own event), no new schema.
+- May be split off as a follow-on UI polish PR if
+  PR 6 + 7 leave too little room.
 
 ## Open questions
 

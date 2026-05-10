@@ -1,5 +1,16 @@
 # Segment 12A-2 — Session settings import
 
+> **Superseded 2026-05-10 — absorbed into 12A-3** (see
+> `guide/segment_12A-3_export_import_updates.md`). Under
+> the locked sequence 13D-2 → 12C → 15D → 12A-3, the
+> Settings importer ships as 12A-3 PR 1 alongside the
+> Relationships per-entity export + import. This 12A-2
+> plan is **kept as historical reference** for the
+> contract / inclusion model / fallback rules / wipe-and-
+> replace idempotency model — those carry over verbatim
+> to 12A-3 PR 1's implementation. Read 12A-2 for the
+> contract; read 12A-3 for the PR-by-PR delivery.
+
 The import counterpart to **Segment 12A-1** (export, fully
 shipped 2026-05-09 across 5 PRs: settings (#713), seeded-RuleSet
 audit fallback (#716), rosters (#717), manual assignments
