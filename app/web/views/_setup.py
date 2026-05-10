@@ -44,7 +44,6 @@ def build_setup_rows(
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     relationship_count = relationships_service.existing_count(db, sid)
-    assignment_count = assignments.existing_count(db, sid)
     instruments = list(
         db.execute(
             select(Instrument).where(Instrument.session_id == sid)
@@ -81,11 +80,6 @@ def build_setup_rows(
             label="Relationships",
             value=f"Number of relationships: {relationship_count}",
             manage_url=f"/operator/sessions/{sid}/relationships",
-        ),
-        SetupRow(
-            label="Assignments",
-            value=f"Number of assignments: {assignment_count}",
-            manage_url=f"/operator/sessions/{sid}/assignments",
         ),
         SetupRow(
             label="Instruments",

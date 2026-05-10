@@ -1,14 +1,15 @@
-{# Rule Based Assignment card — Segment 13A PR 4 (seeds-only live).
+{# Rule Based Assignment card — Segment 13A PR 4 (seeds-only live);
+   15D PR 6a relocates the card to the Operations Assignments page
+   and drops the per-Generate ad-hoc Exclude self-review checkbox in
+   favour of the bulk Include toggle on the same page. The
+   self-review behaviour now flows from the RuleSet's stored
+   ``exclude_self_reviews`` flag (edited in the Rule Builder per
+   12C-1 PR 2) for the generation half + the bulk toggle for the
+   activation half.
 
    Renders the final-shape Advanced-mode card: RuleSet selector,
-   persisted Exclude self-review checkbox, cascade-replace
-   confirmation checkbox (when assignments exist), Edit ruleset
-   link, and Generate button.
-
-   PR 4 flipped ``is_wired=True``: the selector lists seeds (PR 5
-   adds Personal RuleSets), Generate POSTs to the live route, and
-   the Edit ruleset link goes to the editor stub. The DOM contract
-   here is stable from PR 0 onward.
+   cascade-replace confirmation checkbox (when assignments exist),
+   Edit ruleset link, and Generate button.
 
    Reads ``rule_based_card`` from the template context (a
    ``RuleBasedCardContext`` from
@@ -54,17 +55,6 @@
               id="rule-based-eligible-count">{{ rule_based_card.selected_eligible_pair_count }}</span>
       </p>
 
-      <p>
-        <label style="font-weight: normal;">
-          <input type="checkbox"
-                 name="exclude_self_review"
-                 value="true"
-                 {% if rule_based_card.selected_exclude_self_reviews %}checked{% endif %}>
-          Exclude self-review (when a reviewer's email matches a
-          reviewee's identifier)
-        </label>
-      </p>
-
       {% if rule_based_card.needs_confirm_replace %}
         <p>
           <label style="font-weight: normal;">
@@ -86,11 +76,14 @@
       </div>
     </form>
 
-    {# Inline progressive enhancement: keep the description line and
-       the Exclude self-review checkbox in sync with the selected
-       RuleSet without a page reload. The form still works without
-       JS — the page reload after Generate re-renders the selected
-       option's defaults. #}
+    {# Inline progressive enhancement: keep the description line +
+       eligible-pair count in sync with the selected RuleSet without
+       a page reload. The form still works without JS — the page
+       reload after Generate re-renders the selected option's
+       defaults. The ad-hoc Exclude self-review checkbox + its JS
+       sync retired in 15D PR 6a; self-review behaviour flows from
+       the RuleSet's stored flag (Rule Builder, 12C-1 PR 2) +
+       the bulk Include toggle on the Operations Assignments page. #}
     <script>
       (function () {
         var selector = document.getElementById("rule-based-ruleset");
@@ -98,9 +91,6 @@
         var description = document.getElementById("rule-based-description");
         var eligibleCount = document.getElementById("rule-based-eligible-count");
         var editLink = document.getElementById("rule-based-edit");
-        var checkbox = document.querySelector(
-          '#rule-based-assignment input[name="exclude_self_review"]'
-        );
         selector.addEventListener("change", function () {
           var option = selector.options[selector.selectedIndex];
           if (description) {
@@ -108,9 +98,6 @@
           }
           if (eligibleCount) {
             eligibleCount.textContent = option.dataset.eligiblePairs || "0";
-          }
-          if (checkbox) {
-            checkbox.checked = option.dataset.excludeSelfReviews === "true";
           }
           if (editLink && option.value) {
             // Replace the trailing /<id> on the editor URL so the
@@ -143,15 +130,6 @@
     </p>
     <p class="form-help" id="rule-based-description">
       Reviewer and reviewee share tag1.
-    </p>
-    <p>
-      <label style="font-weight: normal;">
-        <input type="checkbox" name="exclude_self_review" value="true"
-               checked disabled aria-disabled="true"
-               title="{{ rule_based_card.coming_in }}">
-        Exclude self-review (when a reviewer's email matches a
-        reviewee's identifier)
-      </label>
     </p>
     <div class="btn-pair" style="margin-top: 20px;">
       <button class="btn secondary" type="button" disabled

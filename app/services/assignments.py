@@ -437,6 +437,92 @@ def count_self_reviews_in_assignments(
     return sum(1 for _, reviewer, reviewee in rows if is_self_review(reviewer, reviewee))
 
 
+def self_review_include_breakdown(
+    db: Session, session_id: int
+) -> tuple[int, int]:
+    """Return ``(active, deactivated)`` for self-review rows in the
+    session's assignments table. Powers the bulk Include toggle's
+    state pill / counts on the Operations Assignments page (15D PR
+    6a). ``active`` = self-review rows with ``include=True``;
+    ``deactivated`` = self-review rows with ``include=False``."""
+
+    rows = db.execute(
+        select(Assignment, Reviewer, Reviewee)
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Assignment.session_id == session_id)
+    ).all()
+    active = 0
+    deactivated = 0
+    for assignment, reviewer, reviewee in rows:
+        if not is_self_review(reviewer, reviewee):
+            continue
+        if assignment.include:
+            active += 1
+        else:
+            deactivated += 1
+    return active, deactivated
+
+
+def set_self_reviews_active(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    active: bool,
+    correlation_id: str,
+) -> int:
+    """Bulk-flip every self-review assignment row's ``include`` flag
+    to ``active`` and persist the operator's intent on
+    ``sessions.self_reviews_active``. Returns the count of rows
+    flipped (i.e. rows whose previous ``include`` differed from
+    ``active``).
+
+    Single transaction: writes ``sessions.self_reviews_active`` +
+    UPDATEs every self-review row in one go. Per-row Include
+    checkboxes still work post-flip (mixed state — toggle ON, row
+    explicitly OFF — is supported; the audit's ``counts.flipped``
+    captures the row count this call moved).
+
+    Audit event ``assignments.self_reviews_active_set`` registered
+    in ``EVENT_SCHEMAS``. Detail carries ``counts.flipped`` +
+    ``context.active`` (the resulting boolean).
+    """
+
+    review_session.self_reviews_active = active
+
+    rows = db.execute(
+        select(Assignment, Reviewer, Reviewee)
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Assignment.session_id == review_session.id)
+    ).all()
+    flipped = 0
+    for assignment, reviewer, reviewee in rows:
+        if not is_self_review(reviewer, reviewee):
+            continue
+        if assignment.include != active:
+            assignment.include = active
+            flipped += 1
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type="assignments.self_reviews_active_set",
+        summary=(
+            f"Self-reviews bulk-set to {'active' if active else 'inactive'} "
+            f"({flipped} row{'s' if flipped != 1 else ''} flipped)"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(flipped=flipped),
+        context={"active": active},
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return flipped
+
+
 def generate_full_matrix(
     reviewers: Iterable[Reviewer],
     reviewees: Iterable[Reviewee],

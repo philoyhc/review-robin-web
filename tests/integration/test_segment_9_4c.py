@@ -158,27 +158,23 @@ def test_reviewers_import_validation_errors_render_on_manage_page(
 def test_assignments_hub_inlines_method_forms(
     client: TestClient, db: Session
 ) -> None:
+    """15D PR 6a relocates Assignments to the Operations row and drops
+    the operator-facing manual upload card. Rule Based card stays."""
+
     review_session = _seed_pair(client, db, code="a-reshape")
 
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
 
-    # The Manual upload form lives inline on the hub.
-    assert 'id="upload-csv"' in body
-    assert (
-        f'action="/operator/sessions/{review_session.id}/assignments/manual/import"'
-        in body
-    )
-    # Segment 13A PR 8 retired the standalone Full Matrix card; 12C-1
-    # PR 3 deleted the underlying ``/assignments/full-matrix`` route.
-    # Full-matrix behaviour ships via the seeded "Full Matrix" RuleSet
-    # inside the Rule Based card.
+    # Operator-facing manual upload card retired in 15D PR 6a.
+    assert 'id="upload-csv"' not in body
+    # The legacy full-matrix route URL is gone too (12C-1 PR 3).
     assert (
         f'action="/operator/sessions/{review_session.id}/assignments/full-matrix"'
         not in body
     )
-    # Rule Based card (Segment 13A PR 4 onward) — selector + Generate.
+    # Rule Based card stays — it's the Generate path post-15D.
     assert "Rule Based Assignment" in body
     assert 'id="rule-based-assignment"' in body
 

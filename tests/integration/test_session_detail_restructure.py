@@ -109,7 +109,6 @@ def test_build_setup_rows_returns_expected_shape(
         "Reviewers",
         "Reviewees",
         "Relationships",
-        "Assignments",
         "Instruments",
         "Email Invites",
     ]
@@ -120,7 +119,6 @@ def test_build_setup_rows_returns_expected_shape(
     assert by_label["Instruments"].manage_url.endswith("/instruments")
     assert by_label["Email Invites"].manage_disabled is False
     assert by_label["Email Invites"].manage_url.endswith("/setupinvite")
-    assert by_label["Assignments"].value == "Number of assignments: 1"
 
 
 def test_session_detail_renders_session_layout(
