@@ -349,9 +349,8 @@ def test_quick_setup_card_lives_in_right_column_under_session_details(
 def test_quick_setup_top_grid_layout(
     client: TestClient, db: Session
 ) -> None:
-    """Post-15D PR 7a the card collapses to a single column —
-    Reviewers, Reviewees, Session settings stacked. The legacy
-    Assignments slot (which lived in the second column) retired."""
+    """Two-column card layout: Reviewers + Reviewees on the left,
+    Relationships + Session settings on the right."""
 
     review_session = _make_session(client, db, code="qs-grid")
     body = client.get(f"/operator/sessions/{review_session.id}").text
@@ -360,13 +359,27 @@ def test_quick_setup_top_grid_layout(
     config_pos = body.find('id="quick-setup-settings"')
     reviewers_pos = body.find('id="quick-setup-reviewers"')
     reviewees_pos = body.find('id="quick-setup-reviewees"')
+    relationships_pos = body.find('id="quick-setup-relationships"')
 
-    assert -1 not in (grid_start, config_pos, reviewers_pos, reviewees_pos)
+    assert -1 not in (
+        grid_start,
+        config_pos,
+        reviewers_pos,
+        reviewees_pos,
+        relationships_pos,
+    )
     assert '<hr class="quick-setup-divider">' not in body
 
-    # Order: Reviewers → Reviewees → Settings.
-    assert grid_start < reviewers_pos < reviewees_pos < config_pos
+    # Document order: left column (Reviewers, Reviewees) precedes
+    # right column (Relationships, Settings).
+    assert (
+        grid_start
+        < reviewers_pos
+        < reviewees_pos
+        < relationships_pos
+        < config_pos
+    )
     # Assignments slot is gone.
     assert 'id="quick-setup-assignments"' not in body
-    # Single column wrapper.
-    assert body.count('class="quick-setup-top-grid-col"') == 1
+    # Two column wrappers — left + right.
+    assert body.count('class="quick-setup-top-grid-col"') == 2
