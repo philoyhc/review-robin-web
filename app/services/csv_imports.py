@@ -10,7 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, Reviewer, ReviewSession, User
-from app.schemas.imports import ReviewerImportRow, RevieweeImportRow
+from app.schemas.imports import (
+    RelationshipImportRow,
+    ReviewerImportRow,
+    RevieweeImportRow,
+)
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, session_lifecycle as lifecycle
 
@@ -22,7 +26,11 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 @dataclass
 class ParseResult:
-    rows: list[ReviewerImportRow] | list[RevieweeImportRow]
+    rows: (
+        list[ReviewerImportRow]
+        | list[RevieweeImportRow]
+        | list[RelationshipImportRow]
+    )
     issues: list[ValidationIssue]
 
     @property
