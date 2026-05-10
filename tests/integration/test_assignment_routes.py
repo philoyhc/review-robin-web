@@ -238,25 +238,25 @@ def test_assignments_hub_no_longer_renders_standalone_full_matrix_card(
     client: TestClient, db: Session
 ) -> None:
     """Segment 13A PR 8 retired the standalone Full Matrix card; 12C-1
-    PR 3 deleted the underlying ``/assignments/full-matrix`` route.
-    Full-matrix behaviour ships via the seeded Full Matrix RuleSet
-    inside the Rule Based card."""
+    PR 3 deleted the underlying ``/assignments/full-matrix`` route;
+    15D PR 6a moved the page to the Operations row and dropped the
+    operator-facing manual upload card. Rule Based card remains."""
 
     review_session = _make_session(client, db)
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
 
-    # The card heading + the legacy route URL are both gone from the
-    # markup.
+    # The legacy Full Matrix card heading + URL are both gone.
     assert "<h2>Full Matrix Assignment</h2>" not in body
     assert (
         f'action="/operator/sessions/{review_session.id}'
         '/assignments/full-matrix"'
         not in body
     )
-    # Manual upload + Rule Based remain.
-    assert 'id="upload-csv"' in body
+    # Operator-facing manual upload card retired in 15D PR 6a.
+    assert 'id="upload-csv"' not in body
+    # Rule Based card stays — it IS the Generate path post-15D.
     assert 'id="rule-based-assignment"' in body
 
 

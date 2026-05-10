@@ -13,33 +13,18 @@
 
   <div class="card">
     <p style="margin: 0;">
-      Fields with data:
-      {% for label in fields_with_data %}
-        <span class="pill pill-count">{{ label }}</span>
-      {% else %}
-        <span class="muted">—</span>
-      {% endfor %}
-      {% if assignment_count %}
-        &nbsp;&middot;&nbsp;
-        Self-review:
-        {% if self_review_found == 0 %}
-          <span class="pill pill-count">0 found</span>
-        {% elif self_review_included == 0 %}
-          <span class="pill pill-count">{{ self_review_excluded }} excluded</span>
-        {% elif self_review_excluded == 0 %}
-          <span class="pill pill-count">{{ self_review_included }} included</span>
-        {% else %}
-          <span class="pill pill-count">{{ self_review_included }} included</span>
-          <span class="pill pill-count">{{ self_review_excluded }} excluded</span>
-        {% endif %}
-      {% endif %}
+      Assignments are derived: rosters + relationships + the selected
+      RuleSet feed the engine; Generate writes the table. The bulk
+      toggle below activates or deactivates self-review pairs without
+      regenerating; per-row Include checkboxes are the last-mile
+      override.
     </p>
   </div>
 
   {% if is_ready %}
     <div class="card lock">
       <p style="margin: 0 0 12px 0;">
-        The assignments cannot be modified while the session is ongoing.
+        Assignments cannot be modified while the session is ongoing.
         Revert the session to draft if you wish to modify anything.
       </p>
       <form method="post" action="/operator/sessions/{{ session.id }}/revert">
@@ -74,84 +59,64 @@
     </div>
   {% endif %}
 
-  {% if is_blocked %}
-    <div class="banner banner-error banner-scroll-target" id="upload-blocked-banner">
-      <p style="margin: 0;">
-        Upload blocked. The CSV has errors that must be resolved before it can be saved.
-      </p>
-    </div>
-  {% endif %}
-
   {% include "operator/partials/validation_results.html" %}
 
   {% if not is_ready %}
-  <div class="bottom-grid">
-    <div class="bottom-left">
-    {% include "operator/partials/_rule_based_card.html" %}
-    </div>{# /bottom-left (left column — Rule Based) #}
+    <div class="card">
+      {% include "operator/partials/_rule_based_card.html" %}
+    </div>
+  {% endif %}
 
-    <div class="bottom-left">
-    <section class="card" id="upload-csv">
-      <h2>Upload Manual Assignment</h2>
-      <p class="form-help">
-        CSV file in UTF-8, max 5000 rows. One row per assignment. Required
-        columns: <code>ReviewerEmail</code>, <code>RevieweeEmail</code>.
-        Optional columns: <code>IncludeAssignment</code>,
-        <code>PairContext1/2/3</code>, <code>AssignmentContext1/2/3</code>.
-        Other columns are ignored.
+  {% if assignment_count %}
+    <section class="card" id="self-reviews-toggle">
+      <h2>Self-reviews</h2>
+      {% set zero_self_reviews = self_review_total == 0 %}
+      {% set state_label = "ON" if self_reviews_active else "OFF" %}
+      {% set state_pill_class = "pill-info" if self_reviews_active else "pill-empty" %}
+      <p style="margin: 0 0 12px 0;">
+        State:
+        <span class="pill {{ state_pill_class }}"
+              id="self-reviews-state-pill">{{ state_label }}</span>
+        {% if zero_self_reviews %}
+          <span class="muted">(no self-review pairs in the assignments table)</span>
+        {% else %}
+          <span class="pill pill-count"
+                id="self-reviews-active-count">{{ self_review_active_count }} active</span>
+          <span class="pill pill-count"
+                id="self-reviews-deactivated-count">{{ self_review_deactivated_count }} deactivated</span>
+        {% endif %}
       </p>
-      {% if reviewer_count == 0 or reviewee_count == 0 %}
-        <p class="form-help">Import reviewers and reviewees first.</p>
-      {% else %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/assignments/manual/import"
-              enctype="multipart/form-data">
-          <input type="file" id="manual-file" name="file" accept=".csv,text/csv"
-                 aria-label="CSV file" required>
-
-          <p style="margin-top: 12px;">
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="exclude_self_review" value="true" checked>
-              Exclude self-review (when a reviewer's email matches a reviewee's identifier)
-            </label>
-          </p>
-
-          {% if assignment_count and assignment_count > 0 %}
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm_replace" value="true" required>
-                Yes, replace the existing
-                <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>.
-              </label>
-            </p>
-          {% endif %}
-
-          <div style="margin-top: 20px;">
-            <button class="btn secondary" type="submit">Upload</button>
-          </div>
-        </form>
-      {% endif %}
+      <p class="form-help">
+        Bulk toggle for self-review pairs the engine produced. ON =
+        every self-review row's Include flag flips to true. OFF =
+        every self-review row's Include flag flips to false. The
+        per-row Include checkbox can still override individually
+        post-flip.
+      </p>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/assignments/self-reviews/active"
+            style="display: inline;">
+        {% if self_reviews_active %}
+          <input type="hidden" name="active" value="false">
+          <button class="btn alert"
+                  type="submit"
+                  id="self-reviews-toggle-button"
+                  {% if zero_self_reviews %}disabled aria-disabled="true"
+                    title="No self-review pairs in the assignments table — generate first."{% endif %}>
+            Turn OFF self-reviews
+          </button>
+        {% else %}
+          <input type="hidden" name="active" value="true">
+          <button class="btn primary"
+                  type="submit"
+                  id="self-reviews-toggle-button"
+                  {% if zero_self_reviews %}disabled aria-disabled="true"
+                    title="No self-review pairs in the assignments table — generate first."{% endif %}>
+            Turn ON self-reviews
+          </button>
+        {% endif %}
+      </form>
     </section>
-
-    {% if assignment_count %}
-      <div class="card danger-zone">
-        <h2>Danger Zone</h2>
-        <form method="post" action="/operator/sessions/{{ session.id }}/assignments/delete-all">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required>
-              Yes, delete the existing
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>.
-            </label>
-          </p>
-          <p>
-            <button class="btn destructive" type="submit">Delete all assignments</button>
-          </p>
-        </form>
-      </div>
-    {% endif %}
-    </div>{# /bottom-left (right column — Upload Manual + Danger Zone) #}
-  </div>
   {% endif %}
 
   {% if pair_sample %}

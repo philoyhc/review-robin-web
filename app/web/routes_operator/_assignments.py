@@ -79,17 +79,14 @@ def _render_assignments_hub(
         assignments.list_pairs(db, review_session.id) if assignment_count else []
     )
     truncated_count = max(0, assignment_count - len(pair_sample))
-    self_review_found = 0
-    self_review_included = 0
-    if assignment_count:
-        reviewers = assignments.list_reviewers(db, review_session.id)
-        reviewees = assignments.list_reviewees(db, review_session.id)
-        self_review_found = assignments.count_self_review_candidates(
-            reviewers, reviewees
-        )
-        self_review_included = assignments.count_self_reviews_in_assignments(
-            db, review_session.id
-        )
+    self_review_active_count, self_review_deactivated_count = (
+        assignments.self_review_include_breakdown(db, review_session.id)
+        if assignment_count
+        else (0, 0)
+    )
+    self_review_total = (
+        self_review_active_count + self_review_deactivated_count
+    )
     status_code = (
         status.HTTP_400_BAD_REQUEST if (missing_confirm or is_blocked) else status.HTTP_200_OK
     )
@@ -105,9 +102,10 @@ def _render_assignments_hub(
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "pair_sample": pair_sample,
             "truncated_count": truncated_count,
-            "self_review_found": self_review_found,
-            "self_review_included": self_review_included,
-            "self_review_excluded": self_review_found - self_review_included,
+            "self_reviews_active": review_session.self_reviews_active,
+            "self_review_total": self_review_total,
+            "self_review_active_count": self_review_active_count,
+            "self_review_deactivated_count": self_review_deactivated_count,
             "issues": issues,
             "missing_confirm": missing_confirm,
             "is_blocked": is_blocked,
@@ -209,6 +207,39 @@ def assignments_delete_all(
         db,
         review_session=review_session,
         user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/assignments",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/self-reviews/active",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def assignments_self_reviews_active(
+    active: str = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Bulk Include toggle for self-reviews on the Operations
+    Assignments page (15D PR 6a). Single transaction: persist the
+    operator's intent on ``sessions.self_reviews_active`` + UPDATE
+    every self-review row's ``include`` to match. Audit event
+    ``assignments.self_reviews_active_set`` records the flipped row
+    count + the resulting boolean."""
+
+    _require_editable(review_session)
+    is_active = active == "true"
+    assignments.set_self_reviews_active(
+        db,
+        review_session=review_session,
+        user=user,
+        active=is_active,
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
