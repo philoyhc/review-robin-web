@@ -10,12 +10,16 @@
 
    The submit-all endpoint dispatches per slot whose file is
    attached: Reviewers / Reviewees go through the per-entity CSV
-   pipeline; Assignments runs manual-CSV (file present) or the new
-   rule-based engine (file absent + a ``rule_set_id`` from the
-   populated dropdown). The per-slot routes (``/quick-setup/{kind}``)
-   stay alive as backend-only entry points — no UI references after
-   this PR — so the existing test fixtures keep working without a
-   wholesale rewrite.
+   pipeline. The per-slot routes (``/quick-setup/{kind}``) stay
+   alive as backend-only entry points — no UI references after
+   this PR.
+
+   15D PR 7a retired the legacy "Assignments (manual CSV or
+   RuleSet pick)" slot. Generation moved off Quick Setup
+   completely; it's now an explicit operator action on the
+   Operations Assignments page. PR 7c re-introduces a slot 3
+   carrying Relationships in the same file-upload mode as the
+   roster slots.
 
    The card-level replacement-confirmation checkbox at the top of
    the body still mirrors into the form's hidden ``confirm_replace``
@@ -40,11 +44,7 @@
          data-wire-target="quick-setup-{{ slot.key }}">
   <h3 class="quick-setup-slot-heading">
     {{ slot.label }}
-    {% if slot.mode == "rule_or_csv" %}
-      <span class="quick-setup-slot-action">Generate by rule</span>
-    {% else %}
-      <span class="quick-setup-slot-action">Upload a CSV</span>
-    {% endif %}
+    <span class="quick-setup-slot-action">Upload a CSV</span>
   </h3>
   {# Error banner — populated when this slot's last submit was
      rejected. Cancel returns to a clean URL with the slot fragment. #}
@@ -58,74 +58,9 @@
       </div>
     {% endif %}
   </div>
-  {% if slot.mode == "rule_or_csv" %}
-    {# Slot 3 — Assignments. Rule selector + CSV upload alternative.
-       Both inputs are associated with the outer ``submit-all`` form
-       via the HTML ``form="..."`` attribute. #}
-    {% if slot.is_wired %}
-      <select id="quick-setup-assignments-rule"
-              name="rule_set_id"
-              form="{{ form_id }}"
-              aria-label="Generate by rule"
-              style="width: 100%;">
-        {# Default is the no-op sentinel — the operator may not want
-           Quick Setup to generate assignments at all. Server-side
-           treats an empty / non-numeric value as "skip the slot". #}
-        <option value="" selected>— —</option>
-        {% for option in slot.rule_set_options %}
-          <option value="{{ option.id }}">{{ option.label }}{% if option.is_seed %} (seeded){% endif %}</option>
-        {% endfor %}
-      </select>
-      <p class="form-help" style="margin: var(--space-2) 0 var(--space-1) 0;">
-        or upload a CSV
-      </p>
-      <div class="quick-setup-slot-controls">
-        <input type="file"
-               name="assignments_file"
-               accept=".csv"
-               form="{{ form_id }}"
-               data-quick-setup-file>
-      </div>
-      <p style="margin: var(--space-2) 0 0 0;">
-        <label style="font-weight: normal;">
-          <input type="checkbox"
-                 name="exclude_self_review"
-                 value="true"
-                 form="{{ form_id }}">
-          Exclude self-review
-        </label>
-      </p>
-    {% else %}
-      <select disabled
-              aria-disabled="true"
-              style="width: 100%;"
-              {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
-        <option>Full Matrix</option>
-      </select>
-      <p class="form-help" style="margin: var(--space-2) 0 var(--space-1) 0;">
-        or upload a CSV
-      </p>
-      <div class="quick-setup-slot-controls">
-        <input type="file"
-               accept=".csv"
-               disabled
-               aria-disabled="true"
-               {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
-      </div>
-      <p style="margin: var(--space-2) 0 0 0;">
-        <label style="font-weight: normal;">
-          <input type="checkbox"
-                 name="exclude_self_review"
-                 disabled
-                 aria-disabled="true"
-                 {% if slot.coming_in %}title="{{ slot.coming_in }}"{% endif %}>
-          Exclude self-review
-        </label>
-      </p>
-    {% endif %}
-  {% elif slot.is_wired %}
-    {# Slots 1, 2 (file upload) — live wiring. Submit lives at the
-       bottom of the card, not per-slot. #}
+  {% if slot.is_wired %}
+    {# Live slot — file upload. Submit lives at the bottom of the
+       card, not per-slot. #}
     <div class="quick-setup-slot-controls">
       <input type="file"
              name="{{ slot.key }}_file"
@@ -134,9 +69,8 @@
              data-quick-setup-file>
     </div>
   {% else %}
-    {# Inert slot (slot 4 — Settings, until Segment 12A PR 6 wires
-       it). Same shape as the live slot but the file input is
-       disabled. #}
+    {# Inert slot (Settings, until Segment 12A PR 6 wires it). Same
+       shape as the live slot but the file input is disabled. #}
     <div class="quick-setup-slot-controls">
       <input type="file"
              accept=".csv"
@@ -184,12 +118,7 @@
     <p class="form-help">{{ quick_setup.description }}</p>
     <div class="quick-setup-top-grid">
       <div class="quick-setup-top-grid-col">
-        {% for slot in quick_setup.slots if slot.key in ("reviewers", "reviewees", "settings") %}
-          {{ quick_setup_slot(slot, submit_all_form_id) }}
-        {% endfor %}
-      </div>
-      <div class="quick-setup-top-grid-col">
-        {% for slot in quick_setup.slots if slot.key == "assignments" %}
+        {% for slot in quick_setup.slots %}
           {{ quick_setup_slot(slot, submit_all_form_id) }}
         {% endfor %}
       </div>
@@ -206,8 +135,8 @@
       <p class="form-help quick-setup-confirm-replace">
         <label style="font-weight: normal;">
           <input type="checkbox" id="quick-setup-confirm-replace-toggle">
-          Yes, replace existing reviewers, reviewees, assignments or
-          settings, according to what is uploaded.
+          Yes, replace existing reviewers, reviewees or settings,
+          according to what is uploaded.
         </label>
       </p>
     {% endif %}

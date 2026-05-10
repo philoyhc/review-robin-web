@@ -82,14 +82,13 @@ def _activate(
     db.refresh(review_session)
 
 
-def test_build_quick_setup_context_returns_four_slots(
+def test_build_quick_setup_context_returns_three_slots(
     client: TestClient, db: Session
 ) -> None:
-    """The view-shape adapter returns the four slots in the
-    canonical order — Reviewers, Reviewees, Assignments, Session
-    settings. After Segment 11J PR A, Reviewers and Reviewees are
-    wired live; Assignments and Settings remain inert pending
-    Segment 11J PR B / Segment 12A PR 6."""
+    """15D PR 7a retired the legacy Assignments slot from Quick Setup
+    — generation no longer runs from this card. The slot list
+    shrinks to Reviewers, Reviewees, Session settings. PR 7c
+    re-introduces a Relationships slot at position 3."""
 
     review_session = _make_session(client, db, code="qs-shape")
     context = views.build_quick_setup_context(db, review_session)
@@ -97,11 +96,9 @@ def test_build_quick_setup_context_returns_four_slots(
     assert [slot.key for slot in context.slots] == [
         "reviewers",
         "reviewees",
-        "assignments",
         "settings",
     ]
     by_key = {slot.key: slot for slot in context.slots}
-    # PR A + PR B — Reviewers, Reviewees, and Assignments are live.
     assert by_key["reviewers"].is_wired is True
     assert by_key["reviewers"].wire_url == (
         f"/operator/sessions/{review_session.id}/quick-setup/reviewers"
@@ -111,11 +108,6 @@ def test_build_quick_setup_context_returns_four_slots(
     assert by_key["reviewees"].wire_url == (
         f"/operator/sessions/{review_session.id}/quick-setup/reviewees"
     )
-    assert by_key["assignments"].is_wired is True
-    assert by_key["assignments"].wire_url == (
-        f"/operator/sessions/{review_session.id}/quick-setup/assignments"
-    )
-    assert by_key["assignments"].coming_in is None
     # Settings remains inert pending Segment 12A PR 6.
     assert by_key["settings"].is_wired is False
     assert by_key["settings"].coming_in == "Wired in Segment 12A PR 6"
@@ -134,7 +126,6 @@ def test_quick_setup_count_reflects_population(
     by_key = {slot.key: slot for slot in empty_ctx.slots}
     assert by_key["reviewers"].count == 0
     assert by_key["reviewees"].count == 0
-    assert by_key["assignments"].count == 0
 
     populated = _seed_pair(
         client, db, code="qs-populated", reviewer_email="r@example.edu"
@@ -142,7 +133,6 @@ def test_quick_setup_count_reflects_population(
     populated_ctx = views.build_quick_setup_context(db, populated)
     populated_by_key = {slot.key: slot for slot in populated_ctx.slots}
     assert populated_by_key["reviewers"].count == 1
-    assert populated_by_key["assignments"].count >= 1
 
 
 def test_quick_setup_disables_when_session_is_activated(
@@ -196,12 +186,13 @@ def test_quick_setup_unavailable_when_responses_exist_even_on_draft(
     assert context.show_lock_toggle is False
 
 
-def test_quick_setup_slot_assignments_uses_rule_or_csv_mode(
+def test_quick_setup_slot_modes_all_file_upload(
     client: TestClient, db: Session
 ) -> None:
-    """Slot 3 carries ``mode == "rule_or_csv"`` so the partial
-    renders the rule selector + CSV upload toggle. Slots 1, 2,
-    and 4 use the simpler ``"file_upload"`` shape."""
+    """Post-15D PR 7a every slot is plain ``file_upload`` — the
+    legacy ``rule_or_csv`` mode retired with the Assignments slot.
+    PR 7c re-introduces a Relationships slot in the same
+    file-upload mode."""
 
     review_session = _make_session(client, db, code="qs-modes")
     context = views.build_quick_setup_context(db, review_session)
@@ -209,7 +200,6 @@ def test_quick_setup_slot_assignments_uses_rule_or_csv_mode(
 
     assert by_key["reviewers"].mode == "file_upload"
     assert by_key["reviewees"].mode == "file_upload"
-    assert by_key["assignments"].mode == "rule_or_csv"
     assert by_key["settings"].mode == "file_upload"
 
 
@@ -224,8 +214,10 @@ def test_quick_setup_dom_carries_wire_target_attributes(
     review_session = _make_session(client, db, code="qs-wire-targets")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    for key in ("reviewers", "reviewees", "assignments", "settings"):
+    for key in ("reviewers", "reviewees", "settings"):
         assert f'data-wire-target="quick-setup-{key}"' in body
+    # Assignments slot retired in 15D PR 7a.
+    assert 'data-wire-target="quick-setup-assignments"' not in body
 
 
 def test_quick_setup_card_level_replacement_checkbox_renders(
@@ -241,46 +233,14 @@ def test_quick_setup_card_level_replacement_checkbox_renders(
 
     assert 'id="quick-setup-confirm-replace-toggle"' in body
     assert (
-        "Yes, replace existing reviewers, reviewees,"
+        "Yes, replace existing reviewers, reviewees"
         in body
     )
-    # No per-slot ``banner-warning`` confirm-banners anymore — the
-    # global checkbox is the single confirmation surface.
-    for key in ("reviewers", "reviewees", "assignments", "settings"):
-        assert f"quick-setup-{key}-confirm-banner" not in body
     # Error-banner containers per slot stay (parse / lifecycle / etc.).
-    for key in ("reviewers", "reviewees", "assignments", "settings"):
+    for key in ("reviewers", "reviewees", "settings"):
         assert f'id="quick-setup-{key}-error-banner"' in body
-
-
-def test_quick_setup_assignments_slot_has_exclude_self_review_checkbox(
-    client: TestClient, db: Session
-) -> None:
-    """The Assignments slot now carries an inert
-    ``exclude_self_review`` checkbox alongside the rule selector
-    and CSV upload. The checkbox is ``disabled`` until 11J PR B
-    wires the slot."""
-
-    review_session = _make_session(client, db, code="qs-exclude")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
-
-    assert 'name="exclude_self_review"' in body
-    assert "Exclude self-review" in body
-
-
-def test_quick_setup_assignments_slot_drops_segment_13_caption(
-    client: TestClient, db: Session
-) -> None:
-    """The "More rules ship with Segment 13" caption is removed
-    from the Assignments slot — the rule menu's expansion is
-    Segment 13's concern, but the caption was a forward-looking
-    note that got noisy on Home."""
-
-    review_session = _make_session(client, db, code="qs-no-caption")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
-
-    assert "Segment 13" not in body
-    assert "More rules ship" not in body
+    # Retired slot's banner container is gone.
+    assert 'id="quick-setup-assignments-error-banner"' not in body
 
 
 def test_quick_setup_locks_by_default_in_draft(
@@ -383,11 +343,9 @@ def test_quick_setup_card_lives_in_right_column_under_session_details(
 def test_quick_setup_top_grid_layout(
     client: TestClient, db: Session
 ) -> None:
-    """The Quick Setup card body is a single ``.quick-setup-top-grid``
-    2-column grid: Reviewers, Reviewees, and Session settings stacked
-    in the left column; Assignments alone in the right column. The
-    horizontal divider that previously separated Settings from the
-    other slots has been retired."""
+    """Post-15D PR 7a the card collapses to a single column —
+    Reviewers, Reviewees, Session settings stacked. The legacy
+    Assignments slot (which lived in the second column) retired."""
 
     review_session = _make_session(client, db, code="qs-grid")
     body = client.get(f"/operator/sessions/{review_session.id}").text
@@ -396,24 +354,13 @@ def test_quick_setup_top_grid_layout(
     config_pos = body.find('id="quick-setup-settings"')
     reviewers_pos = body.find('id="quick-setup-reviewers"')
     reviewees_pos = body.find('id="quick-setup-reviewees"')
-    assignments_pos = body.find('id="quick-setup-assignments"')
 
-    assert -1 not in (
-        grid_start,
-        config_pos,
-        reviewers_pos,
-        reviewees_pos,
-        assignments_pos,
-    )
+    assert -1 not in (grid_start, config_pos, reviewers_pos, reviewees_pos)
     assert '<hr class="quick-setup-divider">' not in body
 
-    # Left column order: Reviewers → Reviewees → Settings.
+    # Order: Reviewers → Reviewees → Settings.
     assert grid_start < reviewers_pos < reviewees_pos < config_pos
-    # Assignments in the right column comes after the left column's
-    # last slot in document order (the right column wrapper opens
-    # after the left column closes).
-    assert config_pos < assignments_pos
-
-    # Two ``.quick-setup-top-grid-col`` wrappers — left column holds
-    # Reviewers + Reviewees + Settings; right column holds Assignments.
-    assert body.count('class="quick-setup-top-grid-col"') == 2
+    # Assignments slot is gone.
+    assert 'id="quick-setup-assignments"' not in body
+    # Single column wrapper.
+    assert body.count('class="quick-setup-top-grid-col"') == 1

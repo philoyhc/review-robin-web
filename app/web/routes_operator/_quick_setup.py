@@ -26,21 +26,13 @@ from fastapi import (
     status,
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
-from pydantic import TypeAdapter
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.schemas.assignments import AssignmentMode
 from app.schemas.sessions import SessionCreate
-from app.services import (
-    assignments,
-    csv_imports,
-    relationships as relationships_service,
-    sessions,
-)
+from app.services import csv_imports, sessions
 from app.services import session_lifecycle as lifecycle
-from app.services.rules import engine, library
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -64,9 +56,6 @@ async def create_session(
     help_contact: str | None = Form(default=None),
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
-    assignments_file: UploadFile | None = File(default=None),
-    rule_set_id: str | None = Form(default=None),
-    exclude_self_review: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -148,31 +137,6 @@ async def create_session(
         if reason is not None:
             return quick_setup_error_redirect("reviewees", reason)
         last_fragment = "#quick-setup-reviewees"
-
-    has_assignments_file = (
-        assignments_file is not None and assignments_file.filename
-    )
-    parsed_rule_set_id: int | None = None
-    if rule_set_id is not None and rule_set_id.strip():
-        candidate = rule_set_id.strip()
-        if candidate.lstrip("-").isdigit():
-            parsed = int(candidate)
-            if parsed > 0:
-                parsed_rule_set_id = parsed
-    if has_assignments_file or parsed_rule_set_id is not None:
-        reason = await _run_quick_setup_assignments(
-            file=assignments_file,
-            rule_set_id=parsed_rule_set_id,
-            exclude_self_review=exclude_self_review,
-            confirm_replace="true",
-            acknowledge_response_loss=None,
-            review_session=review_session,
-            user=user,
-            db=db,
-        )
-        if reason is not None:
-            return quick_setup_error_redirect("assignments", reason)
-        last_fragment = "#quick-setup-assignments"
 
     return RedirectResponse(
         url=f"{home_url}{last_fragment}",
@@ -426,196 +390,6 @@ async def _run_quick_setup_import(
 
 
 @router.post(
-    "/sessions/{session_id}/quick-setup/assignments",
-    response_class=HTMLResponse,
-    response_model=None,
-)
-async def quick_setup_assignments_submit(
-    file: UploadFile | None = File(default=None),
-    rule_set_id: int | None = Form(default=None),
-    exclude_self_review: str | None = Form(default=None),
-    confirm_replace: str | None = Form(default=None),
-    acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    """Quick Setup card slot 3 (Assignments) handler.
-
-    Auto-detects mode from the form payload: when ``file`` is
-    attached and non-empty, the route runs the manual-CSV pipeline;
-    otherwise it routes the selected RuleSet through the new rule-
-    based engine (``app.services.rules.engine.evaluate``).
-
-    ``rule_set_id`` is the canonical input from the populated
-    "Generate by rule" dropdown.
-
-    Lifecycle / parse / confirm-required failures 303 → Home with
-    ``?quick_setup_error=assignments&quick_setup_reason=...``; the
-    GET render places the corresponding ``.banner.banner-error``
-    inside the slot. Success 303s back to Home with no flag — the
-    slot's count + active-rule indicator updates in place.
-    """
-
-    home_url = f"/operator/sessions/{review_session.id}"
-    fragment = "#quick-setup-assignments"
-
-    error_reason = await _run_quick_setup_assignments(
-        file=file,
-        rule_set_id=rule_set_id,
-        exclude_self_review=exclude_self_review,
-        confirm_replace=confirm_replace,
-        acknowledge_response_loss=acknowledge_response_loss,
-        review_session=review_session,
-        user=user,
-        db=db,
-    )
-    if error_reason is not None:
-        return RedirectResponse(
-            url=(
-                f"{home_url}?quick_setup_error=assignments"
-                f"&quick_setup_reason={error_reason}{fragment}"
-            ),
-            status_code=status.HTTP_303_SEE_OTHER,
-        )
-    return RedirectResponse(
-        url=f"{home_url}{fragment}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-async def _run_quick_setup_assignments(
-    *,
-    file: UploadFile | None,
-    rule_set_id: int | None,
-    exclude_self_review: str | None,
-    confirm_replace: str | None,
-    acknowledge_response_loss: str | None,
-    review_session: ReviewSession,
-    user: User,
-    db: Session,
-) -> str | None:
-    """Reusable assignments-slot pipeline shared by the per-slot
-    route and the consolidated ``submit-all`` handler. Returns the
-    ``quick_setup_reason`` token on failure, ``None`` on success."""
-
-    if not lifecycle.is_editable(review_session):
-        return "lifecycle"
-
-    file_content = b""
-    if file is not None and file.filename:
-        file_content = await file.read()
-
-    use_csv_mode = bool(file_content)
-    existing = assignments.existing_count(db, review_session.id)
-    if existing > 0 and confirm_replace != "true":
-        return "needs_confirm"
-    if existing > 0:
-        try:
-            _require_response_loss_ack(
-                db, review_session, acknowledge_response_loss
-            )
-        except HTTPException:
-            return "needs_confirm"
-
-    exclude_self = exclude_self_review == "true"
-    reviewers = assignments.list_reviewers(db, review_session.id)
-    reviewees = assignments.list_reviewees(db, review_session.id)
-
-    if use_csv_mode:
-        assert file is not None  # narrowed by ``use_csv_mode`` guard
-        result = assignments.parse_manual_csv(
-            file_content, reviewers, reviewees
-        )
-        if result.is_blocked or any(
-            issue.severity == "error" for issue in result.issues
-        ):
-            return "parse"
-        rows = result.rows
-        if exclude_self:
-            rows = [
-                r
-                for r in rows
-                if r.reviewer_email.casefold()
-                != r.reviewee_identifier.casefold()
-            ]
-        pairs, includes = assignments.manual_rows_to_pairs(
-            rows, reviewers, reviewees
-        )
-        assignments.replace_assignments(
-            db,
-            review_session=review_session,
-            user=user,
-            pairs=pairs,
-            mode=AssignmentMode.manual,
-            correlation_id=request_correlation_id(),
-            filename=file.filename,
-            includes=includes,
-        )
-        return None
-
-    # Rule mode. Route through the same library + engine pair that
-    # drives the Rule Based card on the Assignments page — one
-    # engine path, one audit shape, regardless of which surface
-    # initiated the generation.
-
-    from app.schemas.rules import (
-        Combinator,
-        Rule,
-        RuleSetOptions,
-        RuleSetSchema,
-    )
-
-    resolved_id = rule_set_id
-    if resolved_id is None:
-        return "parse"
-
-    loaded = library.load_rule_set(db, resolved_id)
-    if loaded is None:
-        return "parse"
-    rule_set_row, revision = loaded
-
-    rule_adapter = TypeAdapter(Rule)
-    rule_set_schema = RuleSetSchema(
-        id=rule_set_row.id,
-        name=rule_set_row.name,
-        description=rule_set_row.description or "",
-        scope=rule_set_row.scope,  # type: ignore[arg-type]
-        combinator=Combinator(revision.combinator),
-        rules=[
-            rule_adapter.validate_python(payload)
-            for payload in revision.rules_json
-        ],
-        options=RuleSetOptions(
-            excludeSelfReviews=revision.exclude_self_reviews,
-            seed=revision.seed,
-        ),
-    )
-    result = engine.evaluate(
-        rule_set_schema,
-        reviewers=reviewers,
-        reviewees=reviewees,
-        override_exclude_self_reviews=exclude_self,
-        revision_seed=revision.id,
-        pair_context_lookup=relationships_service.pair_context_lookup(
-            db, review_session.id
-        ),
-    )
-    assignments.replace_assignments(
-        db,
-        review_session=review_session,
-        user=user,
-        pairs=result.pairs,
-        mode=AssignmentMode.rule_based,
-        correlation_id=request_correlation_id(),
-        excluded_counts=result.excluded_counts,
-        rule_set_revision=revision,
-        exclude_self_reviews=exclude_self,
-    )
-    return None
-
-
-@router.post(
     "/sessions/{session_id}/quick-setup/submit-all",
     response_class=HTMLResponse,
     response_model=None,
@@ -624,9 +398,6 @@ async def quick_setup_submit_all(
     request: Request,
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
-    assignments_file: UploadFile | None = File(default=None),
-    rule_set_id: str | None = Form(default=None),
-    exclude_self_review: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
@@ -638,10 +409,11 @@ async def quick_setup_submit_all(
     Replaces the per-slot Submit buttons (one per slot) with a
     single bottom Submit on the card. For each slot whose file is
     attached, dispatches to the same internal pipeline the per-slot
-    route uses (kept alive as backend-only entry points). The
-    Assignments slot also runs when no file is attached but a
-    ``rule_set_id`` is supplied — the rule-based path through
-    ``engine.evaluate``.
+    route uses (kept alive as backend-only entry points).
+
+    Post-15D PR 7a the Assignments slot retired entirely;
+    generation is no longer driven from Quick Setup. PR 7c
+    re-introduces a Relationships slot in the same chain.
 
     Per the locked decision, the Submit button itself is gated
     client-side on file presence; this server-side handler is the
@@ -701,35 +473,6 @@ async def quick_setup_submit_all(
         if reason is not None:
             return error_redirect("reviewees", reason)
         last_fragment = "#quick-setup-reviewees"
-
-    has_assignments_file = (
-        assignments_file is not None and assignments_file.filename
-    )
-    # ``rule_set_id`` arrives as a string because the dropdown's
-    # default option is the empty-value sentinel ("— —") that means
-    # "skip the assignments slot". Coerce to int when we have a
-    # positive integer literal; treat anything else as no rule.
-    parsed_rule_set_id: int | None = None
-    if rule_set_id is not None and rule_set_id.strip():
-        candidate = rule_set_id.strip()
-        if candidate.lstrip("-").isdigit():
-            parsed = int(candidate)
-            if parsed > 0:
-                parsed_rule_set_id = parsed
-    if has_assignments_file or parsed_rule_set_id is not None:
-        reason = await _run_quick_setup_assignments(
-            file=assignments_file,
-            rule_set_id=parsed_rule_set_id,
-            exclude_self_review=exclude_self_review,
-            confirm_replace=confirm_replace,
-            acknowledge_response_loss=acknowledge_response_loss,
-            review_session=review_session,
-            user=user,
-            db=db,
-        )
-        if reason is not None:
-            return error_redirect("assignments", reason)
-        last_fragment = "#quick-setup-assignments"
 
     return RedirectResponse(
         url=f"{home_url}{last_fragment}",
