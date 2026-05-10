@@ -2,15 +2,14 @@
 
 **Status:** Planning. **Sub-segment 12C-1 (Part 1) — sized
 2026-05-09; ready to start; audit-event-name question
-settled 2026-05-10 (compact form).** Sub-segment 12C-2
-(Part 2) — slot-3 dropdown removal locked 2026-05-10;
-**trending toward a more drastic simplification (remove
-manual assignments from Quick Setup entirely; rule-based
-becomes the default, manual is a post-creation override on
-the Assignments page)** — pros / cons captured 2026-05-10.
-Manual-CSV shape in a per-instrument world (Options A / B
-/ C / D) still open. **Sub-segment 12C-3 (Part 3) —
-locked 2026-05-10; ready to start.**
+settled 2026-05-10 (compact form).** **Sub-segment 12C-2
+(Part 2) — fully locked 2026-05-10; sized as 3 PRs.**
+Drastic option locked: manual assignments removed from
+Quick Setup entirely; manual-CSV shape locked at Option A
+(session-wide wipe; operator covers all instruments);
+Settings upload explicitly wipes instruments + assignments.
+**Sub-segment 12C-3 (Part 3) — locked 2026-05-10; ready
+to start.**
 
 This doc covers **three related concerns** that all touch
 the Assignments / Instruments cluster of the operator chrome:
@@ -20,10 +19,11 @@ the Assignments / Instruments cluster of the operator chrome:
   `exclude_self_review` toggles with a clean
   RuleSet-as-generator + Include-as-activator split.
 - **Part 2 — Quick Setup upload semantics (Sub-segment
-  12C-2 — TBD).** Pin the wipe-and-replace contract for
-  every Quick Setup slot, and resolve the priority order
-  between slot 3 (assignments) and slot 4 (settings) when
-  they disagree on RuleSet selection.
+  12C-2).** Lock the wipe-and-replace contract for every
+  Quick Setup slot; retire the assignments slot
+  (manual = post-creation override on the Assignments
+  page); pin the manual-CSV shape at session-wide wipe
+  with operator-covers-all-instruments.
 - **Part 3 — Chrome reorder: Instruments before
   Assignments (Sub-segment 12C-3).** Small UI move —
   swap the Instruments and Assignments tabs in the
@@ -344,284 +344,194 @@ can be removed). PR 5 is independent dead-code cleanup.
 
 ## Part 2 — Quick Setup upload semantics (Sub-segment 12C-2)
 
-### Trending toward (2026-05-10): remove manual assignments from Quick Setup entirely
+### Decisions locked 2026-05-10
 
-Beyond the slot-3-dropdown removal locked below, consider a
-more **drastic** simplification — remove the slot-3 manual
-CSV upload from Quick Setup too. Quick Setup's Assignments
-slot goes away entirely; manual assignments live exclusively
-on the Assignments page (today's Manage path).
+Three locks settle Part 2's scope:
 
-**Direction.** Operators should assign by rules in the
-default flow — it's the correct approach for larger sets of
-reviewers and reviewees, and the per-instrument 15B model
-already centres on RuleSets. Manual is then a *special
-override* surfaced on the Assignments page, not a peer of
-rule-based on the Quick Setup card.
+1. **Manual assignments removed from Quick Setup
+   entirely** (the previously "trending YES" drastic
+   option). Slot 3 retires; manual assignments live
+   exclusively on the Assignments page. The Quick Setup
+   card slims from 4 slots to 3 (Reviewers, Reviewees,
+   Settings). Subsumes the earlier slot-3-dropdown-only
+   removal — the entire slot goes, dropdown and file
+   upload alike.
+2. **Quick Setup uploads = strict wipe-and-replace.**
+   Every upload wipes its target tables and replaces
+   with the uploaded content; no merge mode. Reviewers
+   upload wipes the reviewers list; reviewees upload
+   wipes the reviewees list; **Settings upload wipes
+   instruments + assignments before re-creating from
+   the Settings CSV.** The Settings → assignments wipe
+   is explicit (assignments cascade-delete via FK from
+   instruments today; the Settings importer's
+   wipe-and-replace step covers it deliberately).
+3. **Manual assignments CSV shape locked at Option A
+   (session-wide wipe).** The CSV's `Instrument` column
+   makes it per-instrument-aware on the **row** level,
+   but the import is session-wide-wipe at the **file**
+   level. For a multi-instrument session, the manual CSV
+   must include rows for every instrument the operator
+   wants populated; instruments not represented in the
+   CSV end up with no assignments. Acceptable trade-off
+   since manual is being discouraged in favour of
+   rule-based per-instrument.
 
-**Pros:**
+These three locks together collapse the previously open
+slot-3 × slot-4 conflict matrix entirely. Slot 3 is gone,
+so cross-slot disagreement at upload time can't happen.
+The only remaining question — manual upload via the
+Assignments page colliding with an existing
+per-instrument `rule_set_id` — moves to the Assignments
+page itself, where it's a one-surface decision.
 
-- Quick Setup card slims from 4 slots to 3 (Reviewers,
-  Reviewees, Settings). One fewer decision at
-  session-creation time.
-- The slot-3 × slot-4 conflict matrix disappears
-  entirely — no manual CSV in Quick Setup means no
-  conflict between manual rows and the Settings CSV's
-  per-instrument `rule_set_name` references. The
-  resolver / banner-warning machinery sketched in
-  Part 2's PR sequence isn't needed.
-- The manual-CSV shape question (Options A / B / C / D
-  below) moves off the Quick Setup chain entirely. The
-  Assignments page becomes the only place a manual CSV
-  is uploaded; its scope semantics still need pinning,
-  but the answer is scoped to one upload path with no
-  Settings-CSV cross-reference.
-- Encourages the right pattern. Rule-based is the
-  scale-friendly default; manual becomes a deliberate
-  post-creation override rather than a same-card
-  shortcut.
-- Symmetric with the rule-based path under the
-  dropdown-removal lock — rule-based without a Settings
-  CSV already requires post-creation Generate on the
-  Assignments page; manual now joins the same
-  "post-creation decision" surface.
-- Settings CSV (slot 4) becomes the only
-  assignment-related Quick Setup input. Per-instrument
-  `rule_set_name` references travel via Settings CSV;
-  one source of truth.
+### Workflow consequences
 
-**Cons:**
+**Rule-based-first default.** Operators set up sessions
+with rosters + Settings (incl. per-instrument
+`rule_set_name` references); generation kicks off
+automatically via 12A-2 PR 1's chain step. Operators who
+want rule-based without writing a Settings CSV go to the
+Assignments page Rule Based card after session creation
+(today's path). Either way, the workflow centres on the
+RuleSet model.
 
-- Operator with a pre-built manual CSV (e.g. exported
-  from another tool, or hand-curated for a small
-  cohort) loses the one-click "create + populate"
-  workflow. The new flow is two clicks: Create New
-  Session → Quick Setup → click Create; then go to
-  Assignments page → upload manual CSV.
-- Partial round-trip break with 12A-1 / 12A-2. An
-  operator who exported settings + manual assignments
-  from session A can't re-upload both via Quick Setup
-  on session B. Must Quick Setup the settings, then
-  separately upload manual assignments via the
-  Assignments page. *Counter:* 12A-1's per-entity files
-  already round-trip with the existing per-entity
-  import flows — Manage pages for rosters; Assignments
-  page for manual. Quick Setup's manual slot was a
-  convenience-bundling, not the canonical round-trip
-  surface.
-- Slightly more friction for very small sessions where
-  rule-based feels overkill (e.g. "10 students, each
-  reviews 3 others I picked manually"). The two-step
-  workflow is acceptable — small cohorts aren't the
-  optimisation target.
+**Manual = post-creation override.** Operators who need
+manual assignments — small cohorts, hand-curated pairings,
+imports from external tools — go to the Assignments page
+after session creation and upload a manual CSV. The CSV
+covers every instrument they want populated.
 
-**Recommendation: trending YES.** The simplifications are
-material (Part 2 collapses to a single Quick-Setup move +
-a much narrower CSV-shape decision); the cons are
-minor-friction trade-offs the operator can accept.
+**Round-trip with 12A-1 / 12A-2.** An operator porting a
+session uses Quick Setup for rosters + Settings (which
+includes per-instrument `rule_set_name`). If the source
+session was rule-based per-instrument, the destination
+session regenerates assignments from the same RuleSets
+on Generate. If the source had any manual instruments,
+the operator uploads the manual assignments CSV via the
+Assignments page after Quick Setup completes. Quick
+Setup is no longer the canonical round-trip surface for
+manual assignments; the per-entity importer on the
+Assignments page is.
 
-**If the drastic option lands**, Part 2's PR sequence
-collapses to:
+### Replace-not-merge contract (locked)
 
-1. **Remove the slot-3 dropdown *and* the slot-3 manual
-   CSV upload** from Quick Setup. Quick Setup card slims
-   to 3 slots (Reviewers, Reviewees, Settings). The
-   `quick_setup_submit_all` chain drops the assignments
-   dispatch step (slot 3 retires); chain ends after
-   slot 4's Settings CSV apply, so generation kicks off
-   via the Settings CSV's per-instrument
-   `rule_set_name` references (post-12A-2 PR 1) or via
-   the operator's post-creation Generate / manual
-   upload on the Assignments page.
-2. **Pin the Assignments-page manual upload's scope
-   semantics** (Options A / B / C / D below — the
-   question is now scoped to one upload path, no
-   cross-reference). Option D's Settings-CSV
-   `instruments[N].mode` column may no longer be
-   necessary if the conflict is resolved per-page
-   rather than cross-slot; reconsider on resolution.
-3. **UX cue on the Assignments page** when an operator
-   uploads a manual CSV that covers an instrument
-   whose `rule_set_id` is already set — banner-warning
-   that flipping the instrument to manual mode will
-   override the RuleSet selection. (Replaces the
-   slot-3 × slot-4 cue from the original sketch.)
-
-If the drastic option is rejected, Part 2 keeps the
-existing slot-3-dropdown-only removal and the conflict
-matrix below.
-
-### Decision locked 2026-05-09: remove the RuleSet dropdown from Quick Setup slot 3
-
-Slot 3 today supports two modes — a manual assignments file
-upload **or** a session-level RuleSet pick from a dropdown.
-**Drop the dropdown.** Slot 3 becomes manual-CSV-only.
-
-**Why.** The dropdown picks one RuleSet for the whole
-session. This worked when `assignment_mode` was session-level
-(every instrument used the same generation path). In the 15B
-direction, RuleSet selection becomes per-instrument
-(`Instrument.rule_set_id`); a session-level dropdown can't
-cleanly express that. The Settings CSV (slot 4) already
-carries per-instrument `rule_set_name` references, so
-dropping the dropdown leaves a single, per-instrument-scoped
-path for encoding rule-based selection.
-
-**Workflow consequence.** Operators who want rule-based
-assignments via Quick Setup encode it in the Settings CSV
-(slot 4). Operators who want a quick rule-based run without
-writing a Settings CSV go to the Assignments page Rule Based
-card after session creation (today's path). The dropdown's
-"set up + assign in one click" shortcut retires; mixed-mode
-sessions (some instruments manual, some rule-based) become
-expressible in a single Quick Setup submission via the
-manual CSV (slot 3) + per-instrument `rule_set_name` rows
-(slot 4).
-
-**Removal scope:** the dropdown UI on the Quick Setup card
-template, the slot-3 handler-side dropdown branch in
-`_quick_setup.py` (incl. the legacy `rule="full_matrix"` /
-`rule="rule_based"` payload variants), the
-`session_rule_set_id` form-data field, and the matching
-view-shape adapter slot in `views/_quick_setup.py`. The
-`generate_full_matrix` / rule-based engine entrypoints stay
-— the Assignments page still calls them.
-
-This is the **first move in Part 2.**
-
-### Open question — shape of the manual assignments CSV in a per-instrument world
-
-Once the dropdown is gone, slot 3 is the only manual path
-and slot 4 is the only RuleSet path — both per-instrument-aware
-in the 15B model. The remaining shape question: when an
-operator uploads a manual CSV that covers only some
-instruments, what happens to existing assignments for the
-other instruments?
-
-The CSV's column shape is already per-instrument-aware (12A-1
-PR 3 export — `ReviewerEmail,RevieweeEmail,IncludeAssignment,Instrument`).
-The unsettled question is the **import-time scope**.
-
-| Option | Wipe scope | Pros | Cons |
-|---|---|---|---|
-| **A — Session-wide wipe** (today's shape, formalized) | Wipes all `Assignment` rows on the session, then writes the CSV's rows. Instruments not named in the CSV end up with zero rows. | Predictable; matches the wipe-and-replace contract for slots 1 + 2. | Surprising in mixed-mode setups — uploading manual rows for Instrument #1 silently empties Instruments #2 + #3, even if the operator intended to leave them on their RuleSets. |
-| **B — Per-instrument-scoped wipe** | Wipes only those instruments named in the CSV's `Instrument` column. Instruments not named are left untouched. | Cleanest per-instrument model. Operator can update one instrument's assignments without affecting others. | "Wipe" semantics are now scoped — more subtle than slots 1/2's session-wide wipe. Documentation has to spell it out. |
-| **C — Session-wide wipe with explicit scope directive** | Header-row metadata declares the CSV's scope. E.g. `# scope: session` (wipe all) vs `# scope: instruments=1,2` (wipe only those). | Explicit; the operator's intent is in the file. | Adds CSV-format complexity. No precedent in the other CSVs. |
-| **D — Two-pass with per-instrument mode in Settings CSV** | Add `instruments[N].mode` (`manual` / `rule_based`) to the Settings CSV; manual CSV is per-instrument-scoped (Option B); on Quick Setup the importer cross-references the two — manual CSV must only cover instruments whose Settings-CSV mode is `manual`, otherwise raise a conflict. | Fully explicit per-instrument model; mixed mode coexists cleanly in one Quick Setup submission. | Requires a Settings-CSV format addition (12A-1 / 12A-2 coordination); requires an extra Settings-CSV column (`instruments[N].mode`). |
-
-**Recommendation pending.** Option B is the smallest move
-and preserves the current CSV format; Option D is the
-long-term clean answer but requires Settings-CSV additions.
-Option A is what we have today; Option C is a hybrid that
-shifts complexity into the file.
-
-Settle this before the Part 2 PR sequence is sized — the
-chosen shape drives:
-
-- Slot 3 importer's scope behaviour.
-- Slot 3 vs slot 4 conflict resolution (when the manual CSV
-  covers an instrument that the Settings CSV also points
-  at via `rule_set_name`).
-- Whether the Settings CSV gets a new
-  `instruments[N].mode` column (Option D only) — would
-  coordinate with 12A-1's export shape and 12A-2's import
-  side.
-
-### Replace-not-merge contract (post-dropdown-removal)
-
-Quick Setup is the all-at-once retemplating surface. **Every
-slot is wipe-and-replace**: an upload replaces whatever was
-previously in that slot's table. There is no "merge with
-existing" mode. Operators who want partial updates use the
-Manage pages instead.
-
-| Slot | Upload | Replaces |
+| Slot | Upload | Replaces (incl. cascades) |
 |---|---|---|
-| 1 | Reviewers CSV | All `reviewers` rows on the session |
-| 2 | Reviewees CSV | All `reviewees` rows on the session |
-| 3 | Manual assignments CSV (file only — dropdown retired) | All `assignments` rows on the session — **scope TBD pending the open shape question above (Option A vs B vs C vs D)** |
-| 4 | Settings CSV (12A-2 target) | All instruments + display fields + response fields + per-session RTDs + per-session RuleSets + field-label overrides + email-template overrides |
+| 1 | Reviewers CSV | All `reviewers` rows on the session. Cascade: any `Assignment` rows referencing wiped reviewers are also removed (FK). |
+| 2 | Reviewees CSV | All `reviewees` rows on the session. Cascade: any `Assignment` rows referencing wiped reviewees are also removed (FK). |
+| 3 | Settings CSV (12A-2 target — was slot 4 before the slot-3 retirement) | All instruments + display fields + response fields + per-session RTDs + per-session RuleSets + field-label overrides + email-template overrides. **Explicit cascade:** the importer wipes the assignments table before replacing instruments, so any `Assignment` rows tied to about-to-be-deleted instruments are gone before the FK cascade would fire. Round-trip clean. |
 
-This already matches today's behaviour for slots 1-2 (11J's
-Quick Setup chain wipes-and-replaces) and the 12A-2 plan for
-slot 4 (the importer is wipe-and-replace for everything it
-owns; see "Idempotency model" in
-`guide/segment_12A-2_import.md`). Slot 3's exact scope
-follows from the open question.
+The chain order in `quick_setup_submit_all` becomes:
+reviewers → reviewees → settings (was: reviewers →
+reviewees → assignments). Generation no longer fires
+during Quick Setup at all; if the Settings CSV's
+per-instrument `rule_set_name` references are present,
+12A-2 PR 1's chain consults them and runs Generate as
+part of the Settings apply (or surfaces a "ready to
+Generate" cue on Session Home so the operator clicks
+once). If neither, Session Home's
+`assignments.no_mode` validation row warns until the
+operator either runs Generate or uploads manual
+assignments.
 
-### Conflict resolution — slot 3 vs slot 4 (deferred)
+### Manual upload via the Assignments page (Option A — locked)
 
-Pending the manual-CSV-shape decision above. The original
-"Option A vs Option B priority order between slot-3
-dropdown vs slot 4" question is **superseded** by the
-per-instrument framing — the slot-3 dropdown is gone, and
-per-instrument disagreement is the only remaining conflict
-shape:
+The Assignments page is the only place a manual CSV is
+uploaded. Shape:
 
-> *"Manual CSV (slot 3) has rows for Instrument #1.
-> Settings CSV (slot 4) says
-> `instruments[1].rule_set_name = 'Cross-cohort fanout'`.
-> Which wins?"*
+- **Required columns** (matches 12A-1 PR 3 export):
+  `ReviewerEmail`, `RevieweeEmail`, `IncludeAssignment`,
+  `Instrument`. The `Instrument` column is required even
+  on single-instrument sessions, for symmetry with the
+  multi-instrument case and round-trip with the export.
+- **Wipe scope:** session-wide. Upload wipes every
+  `Assignment` row on the session, then writes the CSV's
+  rows.
+- **Coverage requirement:** in a multi-instrument session,
+  the operator must include rows for every instrument
+  they want populated. Instruments not represented in the
+  CSV end up with zero assignments (and surface in the
+  validation report as "no assignments for Instrument
+  #N"). The importer doesn't block uploads with omitted
+  instruments — operators may legitimately want some
+  instruments empty — but the validation row makes the
+  state visible.
+- **Per-instrument mode flip:** when the manual CSV
+  covers an instrument whose `Instrument.rule_set_id`
+  is currently set (post-15B), the upload flips that
+  instrument to manual mode for the assignment rows
+  themselves but **preserves** `rule_set_id` as
+  metadata so a future Generate re-run on that
+  instrument can swap back to rule-based. Banner-warning
+  on the Assignments page during the upload submit
+  confirms the flip ("uploading manual rows for
+  Instrument #1 will override its current
+  `rule_set_name='Cross-cohort fanout'` selection;
+  Generate on Instrument #1 to switch back").
 
-The shape decision drives the answer:
-
-- **Option B / D** — manual CSV wins for any instrument it
-  names (more specific). Settings CSV's `rule_set_name`
-  for that instrument is preserved as metadata so a
-  future Generate re-run could use it (post-15B's
-  per-instrument FK). Other instruments stay on the
-  Settings CSV's `rule_set_name` selection.
-- **Option A** — manual CSV is session-wide-wipe; Settings
-  CSV's per-instrument `rule_set_name` references are
-  written into `instruments.rule_set_id` for future
-  Generate, but the assignment rows themselves come from
-  slot 3 only. Operator who wants to mix manual +
-  rule-based in one Quick Setup submission can't — they
-  pick one or use the Assignments page after.
-- **Option C** — same as A or B depending on the header
-  directive.
+The discouragement of manual assignments is intentional:
+operators *can* manage manual assignments per-instrument
+through the Assignments page, but rule-based via the
+Settings CSV is the scale-friendly path and the default
+for new sessions.
 
 ### Validation impact
 
-Whichever shape wins, the validation rule needs to agree.
 Today's `assignments.no_mode` warning fires when no
-`assignment_mode` is set; in the per-instrument world,
-the predicate likely shifts to "no assignments rows
-present across any instrument" or similar. **No new
-validation row needed** — confirm the rule reads against
-the resolved state once the shape lands. (Note:
-`assignment_mode` itself is a session-level field today;
-15B's per-instrument direction makes it derived /
-retired; that retirement is out of scope here.)
+`assignment_mode` is set. In the per-instrument world,
+the predicate shifts to "any instrument has zero
+assignments". **No new validation row needed** — the
+existing row's predicate generalises naturally to the
+per-instrument question. `assignment_mode` itself is a
+session-level field today; 15B's per-instrument
+direction makes it derived / retired — that retirement
+is out of scope here.
 
-### PR sequence (Part 2 — TBD)
+### PR sequence (3 PRs, locked 2026-05-10)
 
-> Likely shape, pending the manual-CSV-shape decision:
->
-> 1. **Remove the RuleSet dropdown from Quick Setup slot
->    3** (the locked decision above). Pure UI removal +
->    handler-side cleanup; no schema changes; mode-aware
->    payload variants retired. Tests: dropdown
->    disappears from both Create New Session + Session
->    Home contexts; existing manual-CSV upload path
->    still works; rule-based assignments now require
->    either Settings CSV (slot 4) or post-creation
->    Generate.
-> 2. **Pin the manual-CSV shape** (Option A / B / C / D
->    — TBD). Migrates the slot 3 importer to the chosen
->    scope semantics; if Option D, coordinates with
->    12A-1 / 12A-2 to add `instruments[N].mode` to the
->    Settings CSV.
-> 3. **Wire the slot 4 importer to the resolved
->    contract.** Coordinates with 12A-2 PR 1 — the
->    importer's apply step consults the resolver when
->    slot 3 + slot 4 disagree on a per-instrument basis.
-> 4. **UX cue on conflict.** When the operator's slot 3
->    + slot 4 inputs disagree, surface a banner-warning
->    during the Quick Setup submit confirmation that
->    names the resolution ("manual rows for Instrument
->    #1 will override its `rule_set_name` reference").
->    Same pattern as 11J's slot-scoped warnings.
+Coordinates with 12A-2 PR 1 (Settings CSV importer);
+PR 1 below depends on 12A-2 PR 1 having shipped.
+
+1. **PR 1 — Retire Quick Setup slot 3.** Removes the
+   manual CSV upload field, the RuleSet dropdown, the
+   slot-3 handler-side branch in `_quick_setup.py`
+   (incl. legacy `rule="full_matrix"` /
+   `rule="rule_based"` payload variants), the
+   `session_rule_set_id` form-data field, and the
+   matching view-shape adapter slot in
+   `views/_quick_setup.py`. Renumbers Settings to
+   slot 3. The `quick_setup_submit_all` chain drops
+   the assignments dispatch step; chain ends after
+   Settings apply. Tests: Quick Setup card renders 3
+   slots in both Create New Session + Session Home
+   contexts; submit-all chain runs reviewers →
+   reviewees → settings without the assignments
+   step; existing tests that uploaded manual CSV via
+   slot 3 are migrated to upload via the Assignments
+   page after Quick Setup completes.
+2. **PR 2 — Settings importer wipes assignments
+   explicitly.** 12A-2 PR 1 wires the Settings
+   importer's wipe-and-replace; this PR adds the
+   explicit assignments-table wipe step before the
+   instruments wipe so the cascade ordering is
+   deterministic and the operator's mental model
+   ("Settings upload wipes instruments + assignments")
+   matches the implementation. Tests: round-trip
+   integration test (assignments wipe is observable
+   via audit count on the Settings importer).
+3. **PR 3 — Assignments-page manual upload: lock
+   Option A + per-instrument mode-flip cue.** Pins
+   the importer at Option A (session-wide wipe; cover
+   all instruments); ensures the `Instrument` column
+   is required; surfaces the banner-warning when the
+   upload covers an instrument with a non-NULL
+   `rule_set_id`. Tests: upload covers all
+   instruments → all populated; upload omits an
+   instrument → that instrument has zero assignments;
+   upload covering an instrument with `rule_set_id`
+   set surfaces the banner-warning + preserves
+   `rule_set_id` post-upload.
 
 ---
 
@@ -780,34 +690,18 @@ reads cleanly with the boolean in detail._
 
 ### Part 2 (Sub-segment 12C-2)
 
-- **Lock or reject the drastic option** — remove manual
-  assignments from Quick Setup entirely (see "Trending
-  toward" at the top of Part 2). Recommendation:
-  **trending YES**. If accepted, the conflict matrix
-  collapses and the manual-CSV-shape question (next
-  item) is scoped to a single upload path. If
-  rejected, Part 2 keeps the slot-3-dropdown-only
-  removal + the conflict matrix.
-- **Manual assignments CSV shape in a per-instrument
-  world** — Option A (session-wide wipe), B
-  (per-instrument-scoped wipe), C (explicit scope
-  directive in the file), or D (per-instrument mode in
-  the Settings CSV). Settle before the Part 2 PR
-  sequence is sized; the answer drives the slot 3
-  importer (or the Assignments-page importer if the
-  drastic option lands), and — if Option D survives —
-  whether the Settings CSV gets a new
-  `instruments[N].mode` column. Note: if the drastic
-  option lands, Option D's cross-slot rationale is
-  weakened; reconsider then.
-- Should a manual-CSV upload that conflicts with an
-  existing per-instrument `rule_set_id` be **rejected
-  at upload time** with an error banner ("manual rows
-  for Instrument #1 conflict with its `rule_set_name`
-  reference — pick one") rather than resolved silently
-  with a warning? Trades operator friction against
-  silent surprise; depends on how often the conflict
-  naturally arises in practice. Applies whether the
-  upload lives on Quick Setup slot 3 or on the
-  Assignments page — the question is which side wins,
-  not which slot the file came in through.
+_None — all Part 2 questions settled 2026-05-10:_
+
+- _Drastic option locked: manual assignments removed
+  from Quick Setup entirely._
+- _Manual-CSV shape locked at Option A (session-wide
+  wipe; operator covers all instruments). Options B / C /
+  D considered and rejected — A's coverage requirement
+  is the simplest model and is acceptable because manual
+  is being discouraged in favour of rule-based
+  per-instrument._
+- _Per-instrument mode-flip on manual upload: surfaces
+  as a banner-warning during the Assignments-page
+  submit confirmation (preserves `rule_set_id` as
+  metadata; doesn't reject the upload). Settles the
+  "reject vs warn" question — warn._
