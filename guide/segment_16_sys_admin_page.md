@@ -75,6 +75,32 @@ the engine output, restoring a known-good assignments
 table) hit the Sys Admin page deliberately rather
 than stumbling into it via Quick Setup.
 
+### 3. Audit log download
+
+**Today.** `GET /operator/sessions/{id}/export/audit_log.csv`
+route shipped in **Segment 12B PR 1** (2026-05-10) at
+`app/web/routes_operator/_extracts.py`. 8-column wide CSV
+(`EventType` / `Severity` / `Summary` / `ActorEmail` /
+`CorrelationId` / `CreatedAt` / `DetailJson`) with the
+canonical Segment 11K detail envelope JSON-encoded in
+the trailing column. Backed by
+`app.services.extracts.audit_events_extract.serialize_audit_events`,
+streamed via `yield_per(1000)`. `session.audit_log_extracted`
+audit event registered in `EVENT_SCHEMAS`. The route is
+live and reachable directly — but **there is no operator-
+facing UI surface today** (the Extract Data card tile was
+deliberately omitted in favour of relocating the surface to
+Sys Admin per industry best practice; see "Why a separate
+sys admin page" below).
+
+**Under Segment 16.** The Sys Admin page gets a Download
+audit log button (or tile) wiring the existing route.
+Per industry best practice (GitHub, Stripe, Slack, Notion,
+Atlassian) audit data sits behind an admin / diagnostics
+doorway rather than alongside everyday data exports —
+Sys Admin is that doorway. No new service code needed; the
+move is pure chrome placement.
+
 ## Why a separate sys admin page
 
 Today's chrome reads as "operator-facing setup +
@@ -104,9 +130,12 @@ assignment upload). A dedicated Sys Admin page:
     `session_outbox.html` template).
   - **Manual assignment upload** (dev-only form;
     reuses `parse_manual_csv` / `replace_assignments`).
-  - Future: audit-log inspection (12B), one-off
-    SMTP test send, anything else dev / support
-    scope picks up over time.
+  - **Audit log download** (download button wiring
+    the existing 12B PR 1 route; reuses
+    `serialize_audit_events` + the `/export/audit_log.csv`
+    route).
+  - Future: one-off SMTP test send, anything else
+    dev / support scope picks up over time.
 
 ## Out of scope
 
@@ -134,8 +163,10 @@ assignment upload). A dedicated Sys Admin page:
   retires.
 - **Segment 12B — Audit retention**
   (`guide/segment_12B_audit_retention.md`). The
-  `audit_events` export + retention / purge tooling
-  is a natural future tenant of the Sys Admin page.
+  `audit_events` export shipped 2026-05-10 (PR #788)
+  with the route live but no operator-facing UI
+  surface; Segment 16 wires the existing route under
+  the Sys Admin chrome (see Anchor item §3).
 - **Outbox today.**
   `app/web/routes_operator/_operations.py:510-527`
   (route + handler);

@@ -80,22 +80,25 @@ def _activate(
     db.refresh(review_session)
 
 
-def test_build_extract_data_context_returns_six_rows_plus_bundle(
+def test_build_extract_data_context_returns_five_rows_plus_bundle(
     client: TestClient, db: Session
 ) -> None:
-    """The view-shape adapter returns the six per-entity rows in
-    the post-12B-PR-1 DOM order. The ``extract-data-grid`` CSS
+    """The view-shape adapter returns the five per-entity rows in
+    the post-12A-3-PR-2 DOM order. The ``extract-data-grid`` CSS
     wraps row-major in a 2-column grid, so this list lays out as:
 
         Reviewers       |  Session settings
         Reviewees       |  Responses
-        Relationships   |  Audit log
-                        |  Zip all  (inert)
+        Relationships   |  Zip all  (inert)
 
-    On a freshly-created draft, per-entity rows are inert
-    (nothing to download) except Audit log (the
-    ``session.created`` event already exists) and Settings
-    (session metadata always exists)."""
+    On a freshly-created draft (no rosters yet), the per-entity
+    rows are inert — there's nothing to download. Settings stays
+    always-live (session metadata always exists).
+
+    Audit log download is deliberately *not* surfaced here —
+    it lives at the audit-log route but relocates to the Sys
+    Admin page (Segment 16) per industry best practice for
+    audit-data surfaces."""
 
     review_session = _make_session(client, db, code="ed-shape")
     context = views.build_extract_data_context(db, review_session)
@@ -106,7 +109,6 @@ def test_build_extract_data_context_returns_six_rows_plus_bundle(
         "reviewees",
         "responses",
         "relationships",
-        "audit_log",
     ]
     assert context.bundle.key == "bundle"
     assert context.bundle.label == "Zip all"
@@ -116,12 +118,6 @@ def test_build_extract_data_context_returns_six_rows_plus_bundle(
     assert by_key["settings"].download_url == (
         f"/operator/sessions/{review_session.id}/export/settings.csv"
     )
-    # Audit log lights up after the ``session.created`` event fires
-    # during the test's session-create POST.
-    assert by_key["audit_log"].is_wired is True
-    assert by_key["audit_log"].download_url == (
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
-    )
     # Roster + responses rows are inert on an empty session (count=0).
     for key in ("reviewers", "reviewees", "relationships", "responses"):
         assert by_key[key].is_wired is False, key
@@ -129,7 +125,9 @@ def test_build_extract_data_context_returns_six_rows_plus_bundle(
         assert by_key[key].coming_in is not None, key
     # Bundle row stays inert until its own PR.
     assert context.bundle.is_wired is False
+    # Retired / never-surfaced keys absent.
     assert "assignments" not in by_key
+    assert "audit_log" not in by_key
 
 
 def test_per_entity_rows_go_live_when_populated(
@@ -174,7 +172,6 @@ def test_extract_data_filenames_carry_session_code(
     assert by_key["reviewees"].filename == "abc123_reviewees.csv"
     assert by_key["relationships"].filename == "abc123_relationships.csv"
     assert by_key["responses"].filename == "abc123_responses.csv"
-    assert by_key["audit_log"].filename == "abc123_audit_log.csv"
     assert context.bundle.filename == "session-abc123-export.zip"
 
 
@@ -229,12 +226,14 @@ def test_extract_data_dom_carries_wire_target_attributes(
         "reviewees",
         "relationships",
         "responses",
-        "audit_log",
         "bundle",
     ):
         assert f'data-wire-target="extract-data-{key}"' in body
     # Assignments tile retired in 12A-3 PR 2.
     assert 'data-wire-target="extract-data-assignments"' not in body
+    # Audit log lives at its own route but is not surfaced on
+    # Extract Data — it'll move to the Sys Admin page (Segment 16).
+    assert 'data-wire-target="extract-data-audit_log"' not in body
 
 
 def test_extract_data_card_renders_counts_for_entity_rows_only(
@@ -259,7 +258,6 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     assert "Reviewees <span" in body
     assert "Relationships <span" in body
     assert "Responses <span" in body
-    assert "Audit log <span" in body
     # Settings + Zip all keep title-only treatment.
     assert "Session settings <span" not in body
     assert "Zip all <span" not in body
@@ -271,7 +269,6 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     assert by_key["reviewees"].show_count is True
     assert by_key["relationships"].show_count is True
     assert by_key["responses"].show_count is True
-    assert by_key["audit_log"].show_count is True
     assert by_key["settings"].show_count is False
     assert context.bundle.show_count is False
 
@@ -282,11 +279,9 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
     """While inert, every Download button renders as an anchor
     without an ``href`` and with ``aria-disabled="true"`` (anchors
     don't honour native ``disabled``). On a freshly-created draft
-    the four empty per-entity rows (Reviewers / Reviewees /
-    Relationships / Responses) are inert; Settings + Audit log
-    (the latter has the ``session.created`` event) are live. So
-    5 inert anchors total — the four empty per-entity rows + the
-    zip bundle."""
+    every per-entity row is inert (nothing to download yet); only
+    Settings stays live. So 5 inert anchors total — the four
+    empty per-entity rows + the zip bundle."""
 
     review_session = _make_session(client, db, code="ed-anchors")
     body = client.get(f"/operator/sessions/{review_session.id}").text
@@ -320,13 +315,12 @@ def test_extract_data_card_renders_when_session_is_activated(
 
     # Card rendered without a ``.disabled`` modifier.
     assert 'class="card" id="extract-data"' in body
-    # Six rows still present with their counts surfaced.
+    # Five rows still present with their counts surfaced.
     for key in (
         "settings",
         "reviewers",
         "reviewees",
         "relationships",
         "responses",
-        "audit_log",
     ):
         assert f'id="extract-data-{key}"' in body

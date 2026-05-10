@@ -71,21 +71,22 @@ chrome:
   Settings slot graduated to live in Segment 12A-3 PR 4 and
   posts to `/operator/sessions/{id}/import-config`, applying
   the 3-column Settings CSV via `apply_session_config`.
-- **Extract Data card** on Session Home ships **six live CSV
+- **Extract Data card** on Session Home ships **five live CSV
   downloads** in a 2-column layout — left column for
   per-entity rosters (Reviewers / Reviewees / Relationships),
   right column for session-level outputs (Session settings /
-  Responses / **Audit log**), with the inert Zip-all row in
-  the bottom-right slot. Settings + Reviewers / Reviewees /
-  Responses landed in Segment 12A-1 (2026-05-09);
-  Relationships landed in Segment 12A-3 PR 1; the legacy
-  Manual Assignments tile retired in 12A-3 PR 2 (assignments
-  are derived post-15D — output, not input — and have no
-  place in a porting bundle); the Audit log tile landed in
-  Segment 12B PR 1, serving the per-session `audit_events`
-  rows as a wide CSV with the canonical Segment 11K detail
-  envelope JSON-encoded in the trailing column. The matching
-  Settings importer ships in 12A-3 PR 3.
+  Responses), with the inert Zip-all row in the bottom-right
+  slot. Settings + Reviewers / Reviewees / Responses landed
+  in Segment 12A-1 (2026-05-09); Relationships landed in
+  Segment 12A-3 PR 1; the legacy Manual Assignments tile
+  retired in 12A-3 PR 2 (assignments are derived post-15D —
+  output, not input — and have no place in a porting bundle).
+  The matching Settings importer ships in 12A-3 PR 3.
+  Audit-events download (Segment 12B PR 1) ships the route
+  live but **without an Extract Data tile** — per industry
+  best practice audit data sits behind an admin / diagnostics
+  doorway rather than alongside everyday data exports, so the
+  tile relocates to the Sys Admin page when Segment 16 ships.
 - **Operations pages.** Validate · **Assignments** · Previews ·
   Invitations · Responses (Assignments moved into the Operations
   row in 15D PR 6a). Validate is the find-and-fix surface
