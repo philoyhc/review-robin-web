@@ -90,7 +90,10 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
         Reviewers       |  Session settings
         Reviewees       |  Responses
         Relationships   |  Zip all  (inert)
-    """
+
+    On a freshly-created draft (no rosters yet), the per-entity
+    rows are inert — there's nothing to download. Settings stays
+    always-live (session metadata always exists)."""
 
     review_session = _make_session(client, db, code="ed-shape")
     context = views.build_extract_data_context(db, review_session)
@@ -105,29 +108,44 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
     assert context.bundle.key == "bundle"
     assert context.bundle.label == "Zip all"
     by_key = {r.key: r for r in context.rows}
+    # Settings always live — session metadata always exists.
     assert by_key["settings"].is_wired is True
     assert by_key["settings"].download_url == (
         f"/operator/sessions/{review_session.id}/export/settings.csv"
     )
+    # Per-entity rows are inert on an empty session (count=0).
+    for key in ("reviewers", "reviewees", "relationships", "responses"):
+        assert by_key[key].is_wired is False, key
+        assert by_key[key].download_url is None, key
+        assert by_key[key].coming_in is not None, key
+    # Bundle row stays inert until its own PR.
+    assert context.bundle.is_wired is False
+    assert "assignments" not in by_key
+
+
+def test_per_entity_rows_go_live_when_populated(
+    client: TestClient, db: Session
+) -> None:
+    """Once the operator uploads any rosters / generates any
+    rule-based assignments / etc., the corresponding per-entity
+    row's button flips from grey to live."""
+
+    review_session = _seed_pair(
+        client, db, code="ed-live", reviewer_email="r@example.edu"
+    )
+    context = views.build_extract_data_context(db, review_session)
+    by_key = {r.key: r for r in context.rows}
+
+    # Reviewers + reviewees seeded by ``_seed_pair`` → both live.
     assert by_key["reviewers"].is_wired is True
     assert by_key["reviewers"].download_url == (
         f"/operator/sessions/{review_session.id}/export/reviewers.csv"
     )
     assert by_key["reviewees"].is_wired is True
-    assert by_key["reviewees"].download_url == (
-        f"/operator/sessions/{review_session.id}/export/reviewees.csv"
-    )
-    assert by_key["relationships"].is_wired is True
-    assert by_key["relationships"].download_url == (
-        f"/operator/sessions/{review_session.id}/export/relationships.csv"
-    )
-    assert by_key["responses"].is_wired is True
-    assert by_key["responses"].download_url == (
-        f"/operator/sessions/{review_session.id}/export/responses.csv"
-    )
-    # Bundle row stays inert until its own PR.
-    assert context.bundle.is_wired is False
-    assert "assignments" not in by_key
+    # Relationships not seeded → still inert.
+    assert by_key["relationships"].is_wired is False
+    # No responses on a not-yet-activated session → still inert.
+    assert by_key["responses"].is_wired is False
 
 
 def test_extract_data_filenames_carry_session_code(
@@ -250,21 +268,21 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
 ) -> None:
     """While inert, every Download button renders as an anchor
     without an ``href`` and with ``aria-disabled="true"`` (anchors
-    don't honour native ``disabled``). 12A wired each row by
-    flipping the anchor to a real ``href``; only the zip bundle
-    row stays inert post-12A-3 PR 2."""
+    don't honour native ``disabled``). On a freshly-created draft
+    every per-entity row is inert (nothing to download yet); only
+    Settings stays live. So 5 inert anchors total — the four
+    empty per-entity rows + the zip bundle."""
 
     review_session = _make_session(client, db, code="ed-anchors")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    # Inert rows render as aria-disabled anchors. Only the zip
-    # bundle row stays inert today.
+    # Inert rows render as aria-disabled anchors.
     download_count = body.count(
         '<a class="btn secondary"\n'
         '       role="button"\n'
         '       aria-disabled="true"'
     )
-    assert download_count == 1
+    assert download_count == 5
 
 
 def test_extract_data_card_renders_when_session_is_activated(

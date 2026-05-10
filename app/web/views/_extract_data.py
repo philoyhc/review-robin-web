@@ -100,16 +100,18 @@ def build_extract_data_context(
     # Left column = per-entity rosters (operator-uploaded porting
     # inputs). Right column = session-level outputs (settings,
     # downstream-analysis, future bundle).
+    # Per-entity rows (Reviewers / Reviewees / Relationships /
+    # Responses) grey out when the count is 0 — there's nothing
+    # to download. Settings stays always-live: session metadata
+    # always exists even on a freshly-created draft.
     rows = [
-        ExtractDataRow(
+        _entity_row(
             key="reviewers",
             label="Reviewers",
-            filename=f"{code}_reviewers.csv",
+            noun="reviewer",
             count=reviewer_count,
-            count_summary=_extract_summary("reviewer", reviewer_count),
-            is_wired=True,
-            download_url=f"/operator/sessions/{sid}/export/reviewers.csv",
-            coming_in=None,
+            sid=sid,
+            code=code,
         ),
         ExtractDataRow(
             key="settings",
@@ -121,39 +123,29 @@ def build_extract_data_context(
             download_url=f"/operator/sessions/{sid}/export/settings.csv",
             coming_in=None,
         ),
-        ExtractDataRow(
+        _entity_row(
             key="reviewees",
             label="Reviewees",
-            filename=f"{code}_reviewees.csv",
+            noun="reviewee",
             count=reviewee_count,
-            count_summary=_extract_summary("reviewee", reviewee_count),
-            is_wired=True,
-            download_url=f"/operator/sessions/{sid}/export/reviewees.csv",
-            coming_in=None,
+            sid=sid,
+            code=code,
         ),
-        ExtractDataRow(
+        _entity_row(
             key="responses",
             label="Responses",
-            filename=f"{code}_responses.csv",
+            noun="response",
             count=response_count,
-            count_summary=_extract_summary("response", response_count),
-            is_wired=True,
-            download_url=f"/operator/sessions/{sid}/export/responses.csv",
-            coming_in=None,
+            sid=sid,
+            code=code,
         ),
-        ExtractDataRow(
+        _entity_row(
             key="relationships",
             label="Relationships",
-            filename=f"{code}_relationships.csv",
+            noun="relationship",
             count=relationship_count,
-            count_summary=_extract_summary(
-                "relationship", relationship_count
-            ),
-            is_wired=True,
-            download_url=(
-                f"/operator/sessions/{sid}/export/relationships.csv"
-            ),
-            coming_in=None,
+            sid=sid,
+            code=code,
         ),
     ]
 
@@ -169,6 +161,36 @@ def build_extract_data_context(
     )
 
     return ExtractDataContext(rows=rows, bundle=bundle)
+
+
+def _entity_row(
+    *,
+    key: str,
+    label: str,
+    noun: str,
+    count: int,
+    sid: int,
+    code: str,
+) -> ExtractDataRow:
+    """Per-entity Extract Data row that greys out when ``count``
+    is 0 — there's nothing to download yet. Once the operator
+    populates the entity, the row goes live."""
+
+    has_data = count > 0
+    return ExtractDataRow(
+        key=key,
+        label=label,
+        filename=f"{code}_{key}.csv",
+        count=count,
+        count_summary=_extract_summary(noun, count),
+        is_wired=has_data,
+        download_url=(
+            f"/operator/sessions/{sid}/export/{key}.csv"
+            if has_data
+            else None
+        ),
+        coming_in=None if has_data else f"No {noun}s to download yet",
+    )
 
 
 def _extract_summary(noun: str, count: int) -> str:
