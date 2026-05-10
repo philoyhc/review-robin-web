@@ -198,7 +198,7 @@ pinned to each segment. The catalog itself lives in
 
 **Next main bit of work — locked 2026-05-10:**
 
-> **`13D-1 → 12C → 15D → 12A-3`** (positions 1–4
+> **`13E → 12C → 15D → 12A-3`** (positions 1–4
 > below). This block ships the self-review revamp +
 > assignments revamp + matching export/import updates
 > as one coherent direction. **All four segments take
@@ -207,7 +207,7 @@ pinned to each segment. The catalog itself lives in
 > production hardening; 14-1 email infra; 15 / 15A /
 > 15B / 15C polish + libraries).
 
-- **13D-1** ships the schema prep inert (the
+- **13E** ships the schema prep inert (the
   `sessions.self_reviews_active` column +
   `relationships` table).
 - **12C** wires the self-review work against
@@ -232,13 +232,13 @@ conflicts detected with the locked block.
 the Upcoming list as historical-reference entries —
 their work is folded into the locked block.
 
-1. **13D-1 — DB prep, second pass** *(first in the locked
+1. **13E — DB prep for the 12C / 15D block** *(first in the locked
    sequence)*. Two inert schema migrations:
    `sessions.self_reviews_active` (for 12C-1's bulk Include
    toggle) + new `relationships` table (for 15D's
    Relationships page). Mirrors the 13D pattern (additive,
    nullable / DEFAULT-shaped, no-backfill).
-   **Plan:** `guide/segment_13D-1_db_prep.md`.
+   **Plan:** `guide/segment_13E_db_prep.md`.
 
 2. **12C — Self-review revamp** *(second in the locked
    sequence)*. Sub-segment 12C-1 only (5 PRs) — generation-
@@ -271,7 +271,7 @@ enhanced instruments, 14 production hardening, 14-1 email
 infra, 15 operator polish, 15A friendly labels, 15B
 per-instrument assignments, 15C operator libraries) ships
 around this sequence per its own plan; no ordering
-constraints with the 13D-1/12C/15D/12A-3 block beyond
+constraints with the 13E/12C/15D/12A-3 block beyond
 shared schema conflicts (none detected).
 
 5. **12A-2 — Session settings import.** *(Absorbed into
@@ -385,10 +385,10 @@ shared schema conflicts (none detected).
 
 ### Sequencing notes
 
-- **13D-1 → 12C → 15D → 12A-3** is the locked
+- **13E → 12C → 15D → 12A-3** is the locked
   operator-facing block (locked 2026-05-10): self-review
   revamp + assignments revamp + matching export/import
-  updates as one coherent direction. 13D-1 ships the
+  updates as one coherent direction. 13E ships the
   schema prep inert; 12C wires generation against the
   new column; 15D adds Relationships + restructures
   Quick Setup + chrome + drops `Assignment.context`;
