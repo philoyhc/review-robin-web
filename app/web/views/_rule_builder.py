@@ -323,12 +323,12 @@ _COMPOSITE_PREFIXES: dict[str, str] = {
 
 
 # Segment 13A PR 5b — Picker option lists for the editor surface.
-# Field picker: tag1/2/3 on each side only, per the locked editor
-# concept (segment plan §"Editor concept" — "No operand picker for
-# non-tag fields"). The schema's full ALLOWED_PREDICATE_FIELDS
-# includes email; the editor's picker omits it because operator-
-# authored rules don't reach for email comparisons (the engine's
-# excludeSelfReviews desugar handles that case implicitly).
+# Field picker: tag1/2/3 on each side, plus the new ``pair_context``
+# family from Segment 15D PR 3 (per-pair attributes — see
+# ``guide/segment_15D_assignments_revamp.md``). Email is intentionally
+# omitted: operator-authored rules don't reach for email comparisons
+# (the engine's excludeSelfReviews desugar handles that case
+# implicitly).
 _FIELD_PICKER_VALUES: list[str] = [
     "reviewer.tag1",
     "reviewer.tag2",
@@ -336,6 +336,9 @@ _FIELD_PICKER_VALUES: list[str] = [
     "reviewee.tag1",
     "reviewee.tag2",
     "reviewee.tag3",
+    "pair_context.tag1",
+    "pair_context.tag2",
+    "pair_context.tag3",
 ]
 
 # Operator picker labels match the locked sentence-form vocabulary
