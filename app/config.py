@@ -1,5 +1,7 @@
+from typing import Annotated
+
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -28,8 +30,14 @@ class Settings(BaseSettings):
     # ``users.is_operator`` / ``users.is_sys_admin`` columns are
     # authoritative — removing an email here does NOT auto-revoke.
     # Revocation goes through the 16A PR 6 workspace UI.
-    operator_emails: list[str] = []
-    sys_admin_emails: list[str] = []
+    #
+    # ``NoDecode`` suppresses pydantic-settings's default
+    # JSON-decode pass for complex-typed env vars — without it,
+    # ``OPERATOR_EMAILS=alice@example.edu`` would fail because
+    # the raw value isn't JSON. The ``_split_email_list``
+    # validator below handles comma-separated parsing instead.
+    operator_emails: Annotated[list[str], NoDecode] = []
+    sys_admin_emails: Annotated[list[str], NoDecode] = []
 
     # Optional contact line surfaced on the Request-access landing
     # page (16A PR 1). When set, the page renders a ``mailto:`` link;
