@@ -243,5 +243,5 @@ These are notes for whoever picks this up; the spec above is the contract.
 - **`spec/reviewer-surface.md`** — review surface table. The header-click override lands here when implemented.
 - **`spec/quick_setup_card_spec.md`** — adjacent operator-card design pattern (single source of truth for an operator-side feature spec).
 - **`guide/segment_13B_sort_by_reviewee.md`** — the implementation plan that picks this up.
-- **`guide/unfinished_business.md`** — catalog stub pointing here.
+- **`guide/archive/unfinished_business.md`** — catalog stub pointing here.
 - **`docs/status.md`** "What's deliberately not yet there" — entry pointing here, target Segment 13.

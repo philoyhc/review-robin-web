@@ -62,7 +62,7 @@ Instrument automatically closes upon session deadline.
 > spec is now authoritative for button styling and replaces this
 > hierarchy with a muted Primary / Secondary / Destructive
 > vocabulary. The migration to those new styles is tracked as
-> `unfinished_business.md` #21. Until that ships, the table below
+> `guide/archive/unfinished_business.md` #21. Until that ships, the table below
 > still describes what's in the templates today.
 
 The app uses six canonical button styles. Each is described by

@@ -190,7 +190,7 @@ Segment 15) and system state.
 `/operator/sessions/{id}/relationships`. Bulk-populated via Quick
 Setup or per-entity CSV; managed inline (Manage rows are
 read-only today; inline edit deferred to Segment 15 per
-`unfinished_business.md` #25).
+`guide/archive/unfinished_business.md` #25).
 
 ### Reviewer
 
@@ -198,7 +198,7 @@ read-only today; inline edit deferred to Segment 15 per
 |---|---|---|
 | `name` | `String(255)` | |
 | `email` | `String(320)` | Identity used for invitation matching. |
-| `status` | `String(32)` | `active` / `inactive`. Inactivate UI deferred to Segment 15 (`unfinished_business.md` #36). |
+| `status` | `String(32)` | `active` / `inactive`. Inactivate UI deferred to Segment 15 (`guide/archive/unfinished_business.md` #36). |
 | `tag_1`, `tag_2`, `tag_3` | `String(255)` | Free-form labels. Used by rule-based assignment matching and surfaced on the reviewer surface when the corresponding column toggle is enabled. |
 
 ### Reviewee
@@ -533,6 +533,6 @@ for the Settings importer contract.
   — CSV export / import contract referenced by §10.
   (`guide/segment_12A-2_import.md` is the superseded importer
   plan, kept as historical reference.)
-- `guide/unfinished_business.md` — catalog of deferred settings
+- `guide/archive/unfinished_business.md` — catalog of deferred settings
   surfaces (e.g. inline-editable Manage rows #25, Inactivate UI
   #36).

@@ -747,7 +747,7 @@ re-architecting; see "Designed-for-extensibility" below.
   the right-half status panel and the per-row submitted-timestamp in
   the status column.
 - **AG Grid replacement of the reviewer-surface `<table>`** (catalog
-  `unfinished_business.md` #33 — Segment 15).
+  `guide/archive/unfinished_business.md` #33 — Segment 15).
 
 ---
 
