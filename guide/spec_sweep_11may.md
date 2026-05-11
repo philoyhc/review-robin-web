@@ -550,9 +550,10 @@ operations_pages, etc.).
 
 If three Tier-1 specs land, in priority order:
 
-1. **`spec/lifecycle.md`** — cross-cutting load-bearer; every
-   per-page spec currently re-states bits of it. Single
-   authoritative source pays off everywhere.
+1. **`spec/lifecycle.md`** — ✅ **Shipped 2026-05-11.**
+   Cross-cutting load-bearer; every per-page spec currently
+   re-states bits of it. Single authoritative source pays off
+   everywhere.
 2. **`spec/csv_contracts.md`** — round-trip stability is now a
    real contract (post-12A-3) but lives only as test assertions.
    Documenting the contract surfaces the guarantee.
