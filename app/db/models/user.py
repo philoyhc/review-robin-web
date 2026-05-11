@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, LargeBinary, String
+from sqlalchemy import Boolean, Integer, LargeBinary, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -34,6 +34,19 @@ class User(Base, TimestampMixin):
     smtp_encryption: Mapped[str | None] = mapped_column(String(16))
     smtp_transport: Mapped[str | None] = mapped_column(
         String(16), default="smtp", server_default="smtp"
+    )
+
+    # Workspace-level sys-admin flag (Segment 16A). Read by
+    # ``require_sys_admin`` to gate the Sys Admin chrome + the
+    # admin-only mutating surfaces (Manual assignment upload,
+    # future SMTP test-send). Lit up by Segment 16A PR 1; until
+    # then this column sits inert. Bootstrap source on
+    # first-sign-in is the ``SYS_ADMIN_EMAILS`` env var
+    # (still owned by ``app/config.py``); the persisted column
+    # is the live source of truth after that — removing an
+    # email from the env var does NOT auto-demote.
+    is_sys_admin: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false"), nullable=False
     )
 
     review_sessions: Mapped[list[ReviewSession]] = relationship(
