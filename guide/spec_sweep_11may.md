@@ -35,7 +35,10 @@ proposal is closed.
 | (bonus) Tier 1/2/3 coverage-gap section | #806 | merged |
 | (bonus) Four-file rename | #812 | merged (assumptions → domain_assumptions, enhanced_instruments → group_scoped_instruments, operations_renew → operations_pages, all_buttons → operator_button_audit) |
 | (bonus) Sweep-doc status refresh | #813 | merged |
-| (bonus) Tail cleanup (this PR) | — | three drift pockets (`pair_context.tag_N` literal in 3 specs, `domain_assumptions.md` mis-described as "UI vocabulary" in 4 cross-refs) |
+| (bonus) Tail cleanup | #815 | merged — three drift pockets (`pair_context.tag_N` literal in 3 specs, `domain_assumptions.md` mis-described as "UI vocabulary" in 4 cross-refs) |
+| (Tier 1 follow-on) `spec/lifecycle.md` | #816 | merged — new spec; not part of the original F/C/S sweep |
+| (Tier 1 follow-on) `spec/csv_contracts.md` | #817 | merged — new spec |
+| (Tier 1 follow-on) `spec/validate_page.md` | #818 | merged — new spec |
 
 The C1/C2/C4 stack had to be redone after PRs above merged out
 of order during the day. Final landing order from `git log`:
@@ -223,10 +226,11 @@ pair-context home-for-X line to name `relationships.tag_N`.
 **Status:** ✅ Merged via PR #814 (the consolidated C2+C1 redo that replaced the original #810/#811 stack).
 **File:** `spec/domain_assumptions.md` (192 LOC pre-PR; 65 LOC after).
 
-**Status:** UI section has a "Superseded (2026-05-03)" banner.
-Migration to `visual_style_general.md` + `visual_style_rrw.md` +
-`ui_elements.md` has been "pending" for 8 days. The Domain section
-(15 LOC) is still load-bearing; the UI section (135 LOC) is
+**Original framing (preserved for context):** UI section carried a
+"Superseded (2026-05-03)" banner. Migration to
+`visual_style_general.md` + `visual_style_rrw.md` +
+`ui_elements.md` had been "pending" for 8 days. The Domain section
+(15 LOC) was still load-bearing; the UI section (135 LOC) was
 duplicative.
 
 **Recommendation:**
@@ -243,11 +247,14 @@ duplicative.
 ## C2. Trim `ui_elements.md` Parts 2–3
 
 **Status:** ✅ Merged via PR #814 (the consolidated C2+C1 redo).
-**File:** `spec/ui_elements.md` (662 LOC pre-PR; 578 LOC after).
+**File:** `spec/ui_elements.md` (662 LOC pre-PR; 623 LOC after,
+reflecting both the Parts 2–3 archive AND the new §5a Banner
+behaviour conventions sub-section that C1 added in the same PR).
 
-**Status:** Part 2 (Drift catalogue) and Part 3 (Restyle bundle
-PR split) framed the seven-PR migration; the migration shipped.
-Both parts are historical.
+**Original framing (preserved for context):** Part 2 (Drift
+catalogue) and Part 3 (Restyle bundle PR split) framed the
+seven-PR migration; the migration shipped. Both parts were
+historical.
 
 **Recommendation:**
 - Keep Part 1 (Element catalogue) — still the canonical reference.
@@ -415,8 +422,8 @@ group_scoped_instruments, operations_renew → operations_pages,
 all_buttons → operator_button_audit); PR #813 added an in-flight
 status refresh to this doc.
 
-**This PR (tail cleanup)** mops up three small drift pockets
-that emerged during the sweep's own landings:
+**Tail cleanup (PR #815, merged)** mopped up three small drift
+pockets that emerged during the sweep's own landings:
 
 1. **`pair_context.tag_N`** (the abstract pattern) lingered in
    3 specs after F3's codex fix only touched
@@ -429,21 +436,33 @@ that emerged during the sweep's own landings:
    in 4 cross-refs in `visual_style_rrw.md`, `instruments.md`
    (×2), `spec/README.md`. Post-C1 the file is Domain-only;
    button-modifier mechanics live in `ui_elements.md` §6.
-3. **Sweep-doc status refresh** — every F/C/S item now marked
-   merged; the status-snapshot table replaces the stale
+3. **Sweep-doc status refresh** — every F/C/S item marked
+   merged; the status-snapshot table replaced the stale
    "Open / draft" table.
+
+**Tier 1 follow-on (PRs #816 / #817 / #818, all merged)** wrote
+the first three Tier-1 coverage-gap specs from the "Spec coverage
+gaps" section below: `lifecycle.md`, `csv_contracts.md`,
+`validate_page.md`. These are new specs (not drift / consolidation
+items in the F / C / S sense), tracked here for completeness.
 
 ## Headline numbers
 
-- **22 spec files / 9,713 LOC** today.
-- **Drift fixes (F1–F8):** affect ~600 LOC across 8 files; net
+- **At sweep open (2026-05-11 morning):** 22 spec files / 9,713 LOC.
+- **At sweep close (2026-05-11 evening):** 25 spec files / 10,224
+  LOC. The C-tranche removed `functional_spec.md` from active
+  `spec/` (1,138 LOC archived) and trimmed `domain_assumptions.md`
+  + `ui_elements.md`; the Tier-1 follow-on added three new specs
+  (`lifecycle.md` / `csv_contracts.md` / `validate_page.md`,
+  ~1,060 LOC together).
+- **Drift fixes (F1–F8):** rewrote ~600 LOC across 8 files; net
   delta near zero (rewrites, not deletions).
-- **Consolidation savings if all C-recommendations land:**
-  ~1,200 LOC removed (domain_assumptions.md UI section, ui_elements.md
-  Parts 2-3, functional_spec.md option (b) trim).
-- **Post-sweep target:** ~8,500 LOC across 20 files (down from
-  9,713 / 22) if C1 + C2 + C3(b) all land; 13% smaller, with the
-  remaining content factually correct against the codebase.
+- **Consolidation savings (C1 + C2 + C3):** ~1,500 LOC removed
+  from active `spec/` once archive moves are netted against the
+  trims.
+- **Net headline:** active `spec/` is **factually correct against
+  the codebase** and grew slightly (+511 LOC) because three Tier-1
+  coverage gaps got filled in the same window.
 
 ---
 
@@ -456,41 +475,40 @@ file** (today the contract for them is implicit in the code
 and scattered across other specs). Captured here so they
 don't get lost; sequencing is up to the user.
 
-**Reviewed 2026-05-11 evening.** The Tier 1 / 2 / 3 list below
-is unchanged in scope since it landed in PR #806 — none of the
-12 items have specs written for them yet, and no new
-subsystems landed in the meantime. Cross-refs throughout this
-section name the post-rename file paths (operator_button_audit,
-operations_pages, etc.).
+**Reviewed 2026-05-11 (late evening).** The Tier 1 / 2 / 3 list
+below is unchanged in scope since it landed in PR #806. **Three
+of the 12 items have shipped specs** (Tier 1 #1 Validate,
+#2 Lifecycle, #3 CSV contracts — see the per-entry status
+notes). The remaining 9 items have no specs yet and no new
+subsystems have landed in the meantime. Cross-refs throughout
+this section name the post-rename file paths
+(`operator_button_audit`, `operations_pages`, etc.).
 
 ### Tier 1 — sizeable shipped subsystems with no dedicated spec
 
-1. **Validate page (`session_validate.html`).** Segment 11G
-   shipped a substantial subsystem — a `ValidationRule` registry
-   with `key` / `severity` / `why` / `fix_url` /
-   `fix_page_label`, the find-and-fix surface (setup-coverage
-   grid + severity chip strip + per-issue "Fix on X ↗"
-   deep-links + activate-warns detour banner), and the
-   orchestrator. **No dedicated spec.** Bits scattered in
-   `architecture.md` and `operator_button_audit.md` §11.
-   **Suggested file:** `spec/validate_page.md`.
+1. **Validate page (`session_validate.html`).** ✅ **Shipped
+   2026-05-11 (PR #818).** Segment 11G's substantial subsystem
+   — a `ValidationRule` registry with `key` / `source` /
+   `severity` / `why` / `fix_url` / `fix_page_label` / `check`,
+   the find-and-fix surface (setup-coverage grid + severity chip
+   strip + per-issue "Fix on X ↗" deep-links + activate-warns
+   detour banner), and the orchestrator. **File:**
+   `spec/validate_page.md`.
 
-2. **Lifecycle state machine + invalidation hooks.**
-   Cross-cutting load-bearing logic: the `draft → validated →
-   ready → closed` state machine, `invalidate_if_validated()`,
-   the `_require_editable` gate, the per-page lock card pattern.
-   Currently scattered across `architecture.md` (one paragraph),
-   `session_lifecycle.py` docstring, and every per-page spec's
-   "lifecycle gating" sub-section. Worth a single doc.
-   **Suggested file:** `spec/lifecycle.md`.
+2. **Lifecycle state machine + invalidation hooks.** ✅
+   **Shipped 2026-05-11 (PR #816).** Cross-cutting load-bearing
+   logic: the `draft → validated → ready` state machine,
+   `invalidate_if_validated()`, the `_require_editable` gate, the
+   per-page lock card pattern. Previously scattered across
+   `architecture.md` (one paragraph), `session_lifecycle.py`
+   docstring, and every per-page spec's "lifecycle gating"
+   sub-section. **File:** `spec/lifecycle.md`.
 
-3. **CSV import + export contracts.** Per-entity column shapes,
-   header normalization, encoding, validation rules, two-phase
-   parse-then-apply, round-trip stability rules (the post-12A-3
-   byte-stability guarantee). `docs/imports.md` covers importer
-   implementation but isn't a contract; `settings_inventory.md`
-   §10 has a coverage table but not column-level shapes.
-   **Suggested file:** `spec/csv_contracts.md`.
+3. **CSV import + export contracts.** ✅ **Shipped 2026-05-11
+   (PR #817).** Per-entity column shapes, header normalization,
+   encoding, validation rules, two-phase parse-then-apply,
+   round-trip stability rules (the post-12A-3 byte-stability
+   guarantee). **File:** `spec/csv_contracts.md`.
 
 4. **Email Template editor (`session_setupinvite.html`).**
    Three-tab editor (Invitation / Reminder / Responses-received),
@@ -546,24 +564,32 @@ operations_pages, etc.).
     surface. No spec needed unless promoted (Segment 16 Sys Admin
     is the likely promotion path).
 
-### Recommended sequencing
+### Recommended sequencing — Tier 1 priority block ✅ done
 
-If three Tier-1 specs land, in priority order:
+The first three Tier-1 specs shipped 2026-05-11 in priority order:
 
-1. **`spec/lifecycle.md`** — cross-cutting load-bearer; every
-   per-page spec currently re-states bits of it. Single
-   authoritative source pays off everywhere.
-2. **`spec/csv_contracts.md`** — round-trip stability is now a
-   real contract (post-12A-3) but lives only as test assertions.
-   Documenting the contract surfaces the guarantee.
-3. **`spec/validate_page.md`** — ✅ **Shipped 2026-05-11.**
-   Substantial unspecced subsystem; Segment 14 (production
-   hardening) will need this anyway to document the readiness
-   gate for pilot. Captures the `ValidationRule` registry,
-   the 10 currently-registered rules, the find-and-fix
-   surface, and the deep-link anchor contract Setup pages
-   must honour.
+1. **`spec/lifecycle.md`** (PR #816) — cross-cutting
+   load-bearer; every per-page spec previously re-stated bits
+   of it. Single authoritative source for the
+   `draft ↔ validated ↔ ready` state machine, the
+   `invalidate_if_validated` hook, and the lock-card pattern.
+2. **`spec/csv_contracts.md`** (PR #817) — round-trip stability
+   is now a real contract (post-12A-3) but used to live only as
+   test assertions; the spec documents the guarantee. Five
+   extracts + four importers + envelope rules + seven
+   round-trip stability guarantees.
+3. **`spec/validate_page.md`** (PR #818) — substantial
+   unspecced subsystem; captures the `ValidationRule` registry,
+   the 10 currently-registered rules, the find-and-fix surface,
+   and the deep-link anchor contract Setup pages must honour.
 
-Permissions (#5) is a close fourth; Email Template editor (#4)
-is the smallest Tier-1 spec and could ride along with any of
-the others.
+**Remaining Tier 1 candidates** (still unwritten):
+
+- **#4 Email Template editor** — smallest Tier-1 spec; could
+  ride along with another. **File suggestion:**
+  `spec/email_template_editor.md`.
+- **#5 Permissions / authorization** — the `SessionOperator`
+  table + `require_session_operator` dependency + 403 semantics.
+  **File suggestion:** `spec/permissions.md`.
+
+Tier 2 + 3 remain as flagged.
