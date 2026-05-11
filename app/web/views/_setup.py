@@ -1,7 +1,7 @@
 """Session-setup card view-shapes — the Setup overview rows on
 session detail and the canonical session-level status pills row.
 
-Slice 5 of the §12.B ladder (``guide/major_refactor.md``).
+Slice 5 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
 Owns ``SetupRow`` / ``build_setup_rows`` (the four rows on the
 Session setup card on session detail) plus ``SessionStatusPills`` /

@@ -2,7 +2,7 @@
 (Reviewers / Reviewees / Relationships / Session settings /
 Responses) plus a Zip-all bundle footer.
 
-Slice 2 of the §12.B ladder (``guide/major_refactor.md``).
+Slice 2 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
 Read-only by nature: Segment 11H shipped every row inert; Segment
 12A's PRs flip ``is_wired`` and supply ``download_url`` per row.

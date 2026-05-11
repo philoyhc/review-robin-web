@@ -3,7 +3,7 @@ update description / update short_label) plus the default-
 instrument seeding helpers and the session-level bulk
 accepting / visibility toggles.
 
-Slice 4 of the §12.A ladder (``guide/major_refactor.md``) — the
+Slice 4 of the §12.A ladder (``guide/archive/major_refactor.md``) — the
 final slice; with this file in place, ``_legacy.py`` is gone and
 the instruments service package is fully sliced.
 

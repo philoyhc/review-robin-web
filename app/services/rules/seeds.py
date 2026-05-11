@@ -14,7 +14,7 @@ or an existing seed changes shape, that's a *new* migration
 appended to the chain; the existing migration's output is
 historically frozen by the rows it already wrote.
 
-Pinned guide: ``guide/rules_table.md`` lays out each canonical
+Pinned guide: ``guide/archive/rules_table.md`` lays out each canonical
 case in one row. The literals here are the byte-equivalent
 RuleSetSchema realisation.
 """

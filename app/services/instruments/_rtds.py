@@ -1,7 +1,7 @@
 """Response Type Definitions (RTDs) — the per-session catalog of types
 referenced by ``InstrumentResponseField.response_type_id``.
 
-Slice 1 of the §12.A ladder (``guide/major_refactor.md``).
+Slice 1 of the §12.A ladder (``guide/archive/major_refactor.md``).
 
 Owns the ten seeded RTDs and the operator-defined add / edit /
 delete flow on the Response Type Definitions card. Saves emit

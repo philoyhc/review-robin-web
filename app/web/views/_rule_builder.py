@@ -1,7 +1,7 @@
 """Rule Builder + Rule Based card view-shapes (Segment 13A) —
 the largest slice in the §12.B ladder.
 
-Slice 10 of the §12.B ladder (``guide/major_refactor.md``) — the
+Slice 10 of the §12.B ladder (``guide/archive/major_refactor.md``) — the
 final slice; with this file in place, ``_legacy.py`` is gone and
 the views package is fully sliced.
 

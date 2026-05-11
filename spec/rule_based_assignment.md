@@ -196,17 +196,50 @@ Each Save updates `updatedAt` and writes a new revision. The library shows the c
 
 ### 5.4 Seeded RuleSets
 
-The system ships with the following seeds. Each is intended to be useful as-is and also as a starting point for duplication.
+The system ships with five seeds. Each is intended to be useful as-is and also as a starting point for duplication. Seed names are illustrative; the final set is chosen with the product owner before release. The point is that the library is non-empty on first use, so a user can pick a working RuleSet without authoring one from scratch.
 
-| Seed name | Combinator | Behaviour |
-|---|---|---|
-| **Full Matrix** | `ALL_OF`, no rules, exclude self | Equivalent to Simple mode's default. Included for completeness. |
-| **Intra-group peer review** | `ALL_OF`, exclude self | Reviewer and reviewee share `tag1`. The canonical small-group case. |
-| **Cross-group peer review** | `ALL_OF`, exclude self | Reviewer and reviewee have *different* `tag1`. Useful for fresh-perspective rounds. |
-| **Same group, different role** | `ALL_OF`, exclude self | Same `tag1`, different `tag2`. Pair within the team but never with someone of the same role. |
-| **Three reviewers per reviewee** | `ALL_OF`, exclude self | Full candidate pool, then a `PER_REVIEWEE` quota of `min=3, max=3`, random with a fixed seed. |
+`Full Matrix` is the degenerate empty-rules case (combinator `ALL_OF`, zero rules, `excludeSelfReviews=true`); it's installed as a fifth seed for parity with Simple mode but is not laid out in the table below because there's no rule expression to show.
 
-Seed names are illustrative; the final set is chosen with the product owner before release. The point is that the library is non-empty on first use, so a user can pick a working RuleSet without authoring one from scratch.
+| # | Name | Combinator | excludeSelfReviews | Rules |
+|---|---|---|---|---|
+| 1 | **Intra-group peer review** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 same_as reviewee.tag1)` |
+| 2 | **Cross-group peer review** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 different_from reviewee.tag1)` |
+| 3 | **Same group, different role** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 same_as reviewee.tag1)` &nbsp;∧&nbsp; `MATCH(reviewer.tag2 different_from reviewee.tag2)` |
+| 4 | **Three reviewers per reviewee** | `ALL_OF` | `true` | `QUOTA(scope=PER_REVIEWEE, min=3, max=3, selection=RANDOM(seed=42))` |
+
+#### 5.4.1 Reading the cells
+
+- **Combinator** is the top-level merge for the rule list.
+  - `ALL_OF` (AND) intersects the per-rule allowed sets — every rule must include the pair.
+  - `ANY_OF` (OR) unions them — at least one rule must include the pair.
+  - `PIPELINE` applies rules in declaration order, last-writer-wins.
+  - The combinator only matters when the rule list has length ≥ 2; a single-rule RuleSet behaves identically under any combinator.
+- **`excludeSelfReviews=true`** is the canonical filter desugared before the rule list runs. It drops pairs where `reviewer.email` matches `reviewee.email_or_identifier` (case-insensitive). All four canonical cases above set it to `true` because a pair like (Alice, Alice) is never a useful review obligation.
+- **Rules** column conventions:
+  - `MATCH(field op operand)` — a `MATCH` rule whose `predicate.field`, `predicate.operator`, and `predicate.operand` are as shown.
+  - `FILTER(...)` — same shape, but the rule removes matching pairs instead of keeping them. None of the four canonical cases use `FILTER` directly; the self-review filter is implicit via `excludeSelfReviews`.
+  - `QUOTA(...)` — a `QUOTA` rule. `scope` is `PER_REVIEWER` or `PER_REVIEWEE`; `selection` is either `RANDOM(seed=N)` or `ROUND_ROBIN`; `min` / `max` are inclusive bounds. The seed pins determinism — two evaluations against the same RuleSet revision produce identical pair sets.
+  - `COMPOSITE(op, [child, child, …])` — a Composite rule whose children are themselves rules. `op` is `AND` / `OR` / `NOT`; children are evaluated and merged under that operator. Composites nest recursively (a child can be another Composite). Not exercised by the canonical seeds — operators reach for it via the editor when they need OR-combinations or grouped negations.
+  - **`∧`** is `ALL_OF` glue between siblings at the top level (case 3).
+- Predicate operands prefixed `reviewer.` / `reviewee.` are field references on the *opposite* side, not literals — this is what makes `same_as` / `different_from` cross-side comparisons.
+
+#### 5.4.2 Primitives exercised by the seeds
+
+The four rule-bearing seeds together exercise the engine primitives that operators hit most often. The canonical seed library is intentionally narrow — each seed covers a single common workflow and stays out of combinator-flexing territory.
+
+| Primitive | Exercised by |
+|---|---|
+| `MATCH` rule kind | 1, 2, 3 |
+| `QUOTA` rule kind, `RANDOM` selection | 4 |
+| `ALL_OF` combinator | 1, 2, 3, 4 |
+| Cross-side operators (`same_as`, `different_from`) | 1, 2, 3 |
+| `excludeSelfReviews` desugar | all four |
+
+Engine primitives **not** exercised by the seeds — `ANY_OF`, `PIPELINE`, `COMPOSITE` (with `AND` / `OR` / `NOT`), `FILTER`, literal-equality `equals`, `in` / `not_in`, `matches` / `not_matches`, `is_empty` / `is_not_empty`, `case_sensitive=true`, and `ROUND_ROBIN` selection — are still covered by the engine unit tests in `tests/unit/test_rules_engine.py` and remain available to operator-built RuleSets through the editor.
+
+The seed installer (Segment 13A PR 3, plus the Lead-led drop in a follow-up) writes the four rule expressions above into `rule_set_revisions.rules_json` verbatim; see `app/services/rules/seeds.py` for the typed Python sources.
+
+Seeded RuleSets are read-only. A user who wants to modify one duplicates it; the duplicate becomes a Personal RuleSet that can be edited freely.
 
 ---
 
@@ -313,7 +346,7 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
    - Seeded → `[ Copy ]`
    - Saved Personal → `[ Copy ] [ Save ] [ Cancel ] [ Delete ]`
    - Copy draft / blank draft → `[ Save ] [ Cancel ]`
-   - Button taxonomy: Copy, Save, and Cancel render `btn secondary` (Secondary); Delete renders `btn destructive` (Destructive). See `guide/all_buttons.md` Section 16 for the canonical row.
+   - Button taxonomy: Copy, Save, and Cancel render `btn secondary` (Secondary); Delete renders `btn destructive` (Destructive). See `spec/all_buttons.md` Section 16 for the canonical row.
    - Blank draft's `Save` is `disabled` client-side until the rule list grows past zero rows; the server-side gate is the source of truth and rejects a zero-rule submit with `?error=empty_rules`.
 
 #### 7.2.2 Available rulesets card (right)

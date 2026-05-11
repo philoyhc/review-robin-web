@@ -1,7 +1,7 @@
 """Instruments service package.
 
 Was a single 2,469-line module until the §12.A ladder
-(``guide/major_refactor.md``) carved it into feature-area
+(``guide/archive/major_refactor.md``) carved it into feature-area
 sub-modules. The public surface is preserved here as an explicit
 re-export wall so external callers — both
 ``from app.services import instruments`` and

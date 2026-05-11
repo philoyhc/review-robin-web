@@ -2,7 +2,7 @@
 Segment 11J wiring) — the bulk-populate card on Session Home and
 the new-session preview variant.
 
-Slice 7 of the §12.B ladder (``guide/major_refactor.md``).
+Slice 7 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
 Owns the ``QuickSetupSlot`` / ``QuickSetupContext`` dataclasses,
 the per-slot error-message renderer, and the two context builders:

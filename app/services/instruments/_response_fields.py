@@ -2,7 +2,7 @@
 reviewer fills in (Rating / Comments and any operator-added rows
 hooked up to a Response Type Definition).
 
-Slice 3 of the §12.A ladder (``guide/major_refactor.md``).
+Slice 3 of the §12.A ladder (``guide/archive/major_refactor.md``).
 
 Owns the field-key vocabulary, the row-level CRUD
 (add / update / delete / move), the consolidated bulk-save handler
