@@ -218,7 +218,7 @@ Both parts are historical.
 
 **Saving:** ~250–300 LOC removed.
 
-## C3. Decide `functional_spec.md`'s role
+## C3. Decide `functional_spec.md`'s role — **decided: retire to archive (2026-05-11)**
 
 **File:** `spec/functional_spec.md` (1,138 LOC — largest spec).
 
@@ -246,6 +246,12 @@ CSV export as a divergence; CSV export shipped 2026-05-10).
 **Recommended: (b).** The original framing-intent material (§1–3,
 §20, §23) is still useful as a "what is this thing for?" anchor;
 the rest has aged out. ~800 LOC removed.
+
+**Decision (2026-05-11):** option (c). The doc has been moved
+to `guide/archive/functional_spec.md` with a retirement banner.
+Per-page specs in `spec/` now cover every surface the original
+doc anticipated; `docs/status.md` carries the URL-by-URL
+ship-state. ~1,138 LOC removed from active `spec/`.
 
 ## C4. Drop dead cross-refs to `unfinished_business.md`
 

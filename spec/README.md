@@ -11,7 +11,6 @@ deliberately as part of a feature change, never silently).
 | File | Covers |
 |---|---|
 | `architecture.md` | Domain entities, layering, conceptual hierarchy, pair-vs-assignment context. |
-| `functional_spec.md` | Technology-neutral functional specification — what the system must do regardless of implementation. |
 | `audience_and_identity_model.md` | Conceptual map of who uses Review Robin — audiences (operator, reviewer, plus forward-looking reviewee and sysadmin), auth posture, customization boundaries. The "highest-ranking" doc on identity / audience decisions; visual-style choices follow from it. |
 | `visual_style_general.md` | Portable visual design system — palette, typography, spacing, components, patterns. Authoritative for the general visual vocabulary used across all surfaces. |
 | `visual_style_rrw.md` | Review-Robin instantiation of the general spec — accent assignments, lifecycle colors, two-row session chrome, status strip, warning surfaces, non-session operator chrome, reviewer-facing chrome. Reads downstream of `visual_style_general.md` and `audience_and_identity_model.md`. |
