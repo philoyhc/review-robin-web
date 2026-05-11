@@ -8,23 +8,75 @@ tests should match. When the code drifts from a spec, the spec is
 the canonical source — fix the code (or update the spec
 deliberately as part of a feature change, never silently).
 
+Files are grouped by concern below. Within each group, the file
+listed first is the natural entry-point.
+
+## Conceptual / domain layer
+
+The "what is this thing?" layer. Read these first when onboarding.
+
 | File | Covers |
 |---|---|
-| `architecture.md` | Domain entities, layering, conceptual hierarchy, pair-vs-assignment context. |
-| `audience_and_identity_model.md` | Conceptual map of who uses Review Robin — audiences (operator, reviewer, plus forward-looking reviewee and sysadmin), auth posture, customization boundaries. The "highest-ranking" doc on identity / audience decisions; visual-style choices follow from it. |
-| `visual_style_general.md` | Portable visual design system — palette, typography, spacing, components, patterns. Authoritative for the general visual vocabulary used across all surfaces. |
-| `visual_style_rrw.md` | Review-Robin instantiation of the general spec — accent assignments, lifecycle colors, two-row session chrome, status strip, warning surfaces, non-session operator chrome, reviewer-facing chrome. Reads downstream of `visual_style_general.md` and `audience_and_identity_model.md`. |
-| `operator_ui_concept.md` | Operator-facing page surface — page taxonomy (Overview, Control Panel, Setup Pages, Preview Pages, Operations Pages), navigation principles, per-page contracts. Reads upstream of `visual_style_rrw.md`. |
-| `preview_hub.md` | Functional spec for the Reviewer Experience Preview hub — read-only Operations Page rendering invitation email, response form, reminder email, and responses-received email for an operator-selected reviewer. |
-| `quick_setup_card_spec.md` | Functional spec for the Quick Setup card on Session Home — three-slot CSV upload (Reviewers, Reviewees, Assignments-or-rule) with shared confirm + cascade + lifecycle-lock semantics. |
-| `setup_pages.md` | UI spec for the per-session Setup Pages (Reviewers / Reviewees / Assignments / Instruments / Settings). Covers the shared body shape, the visibility-toggle pattern shared across the three preview tables, and per-page column orders. |
-| `group_scoped_instruments.md` | Forward-looking spec for **group-scoped instruments** — a second instrument flavour where one response covers a group of reviewees rather than one. `Instrument.group_kind` set at creation (not toggleable); duplicate-and-stamp on `Assignment.context` so `Response`'s schema doesn't change. Implementation likely lands alongside or after Segment 13A. |
-| `instruments.md` | Locked spec for the per-session **Instruments** operator page (`/operator/sessions/{id}/instruments`) — page layout, header card, per-instrument card structure, response-fields builder. Moved 2026-05-07 from `guide/` since the page has shipped and the file is now a contract, not a forward-looking plan. |
-| `sort_by_reviewee.md` | Forward-looking functional spec for **Segment 13B** — reviewer-surface sort UX (operator default sort + reviewer live override) on Manage pages. Display Fields only on the operator side; reviewer side gets clickable column headers with live-only persistence. |
+| `audience_and_identity_model.md` | Who uses Review Robin — operator / reviewer audiences, plus forward-looking reviewee and sysadmin. Auth posture and customization boundaries. The "highest-ranking" doc on identity / audience decisions; visual-style choices follow from it. |
+| `architecture.md` | Domain entities, three-layer split (routes → services → models), conceptual hierarchy, pair-level context (post-15D `relationships` table), audit-event detail schema (canonical envelopes, strict-mode gate). |
+
+## Per-page operator contracts
+
+The actual operator pages. `operator_ui_concept.md` is the
+taxonomy + navigation index; the per-page specs below it are the
+detailed contracts.
+
+| File | Covers |
+|---|---|
+| `operator_ui_concept.md` | Operator-facing page surface — page taxonomy (Overview, Control Panel, Setup Pages, Preview Pages, Operations Pages), navigation principles, per-page contracts. |
+| `sessions_overview.md` | Sessions lobby (`/operator/sessions`) — table, Create new, Danger Zone bulk delete. |
+| `session_home.md` | Session Home / Control Panel — Next Action card, Extract Data card, Quick Setup card, Session Details, Danger Zone. |
+| `setup_pages.md` | Setup Pages (Reviewers / Reviewees / Relationships) — shared body shape, visibility-toggle pattern, per-page column orders. |
+| `instruments.md` | Locked spec for the per-session Instruments page — per-instrument card, response-fields builder, RTD card. |
+| `quick_setup_card_spec.md` | Quick Setup card on Session Home — four-slot CSV upload (Reviewers / Reviewees / Relationships / Settings) with shared confirm + cascade + lifecycle-lock semantics. |
+| `preview_hub.md` | Reviewer Experience Preview hub — read-only Operations Page rendering invitation email, response form, reminder email, and responses-received email for an operator-selected reviewer. |
+| `operations_pages.md` | Operations pages — Invitations + Responses (reviewer-centric + reviewee-centric monitoring surfaces). |
+| `rule_based_assignment.md` | Rule-based assignment engine + Rule Builder page + Rule Based card on the Operations Assignments page. |
+
+## Reviewer-facing
+
+| File | Covers |
+|---|---|
 | `reviewer-surface.md` | Reviewer-facing app — multi-instrument-aware response surface (`/reviewer/sessions/{id}/{position}`), dashboard (`/reviewer`), and invitation landing (`/reviewer/invite/{token}`). |
-| `domain_assumptions.md` | UI vocabulary — six canonical button styles, typography knob, layout defaults, load-bearing assumptions. |
-| `settings_inventory.md` | Single-stop reference for every operator- and per-session setting Review Robin Web persists — operator SMTP config, session metadata, email-template overrides, instrument settings, reviewer / reviewee tags, RuleSets, and the browser-local UI-state primitives (cookies / localStorage / URL params). Names where each setting lives, the UI surface that edits it, and the canonical per-page spec. |
-| `operator_button_audit.md` | Operator-surface button audit — every button (and button-styled anchor) across the operator templates, organised by page and card with continuous numbering and per-button canonical-style labels (per `spec/ui_elements.md` §6). Moved 2026-05-10 from `guide/` since it documents the as-shipped surface, not a forward-looking plan. |
+
+## Visual / UI vocabulary
+
+Reading order: `visual_style_general.md` (portable design system)
+→ `visual_style_rrw.md` (RRW instantiation) → `ui_elements.md`
+(element catalogue mapping primitives to CSS classes) →
+`operator_button_audit.md` (per-page button audit).
+
+| File | Covers |
+|---|---|
+| `visual_style_general.md` | Portable visual design system — palette, typography, spacing, components, patterns. Authoritative for the general visual vocabulary used across all surfaces. |
+| `visual_style_rrw.md` | Review-Robin instantiation of the general spec — accent assignments, lifecycle colors, two-row session chrome, status strip, warning surfaces, non-session operator chrome, reviewer-facing chrome. |
+| `ui_elements.md` | Element catalogue — canonical name + canonical visual treatment + current implementation per element family (chrome, cards, tables, buttons, forms, banners, badges, layout primitives). |
+| `operator_button_audit.md` | Operator-surface button audit — every button (and button-styled anchor) across the operator templates, organised by page and card with per-button canonical-style labels. |
+| `domain_assumptions.md` | Load-bearing domain assumptions. The UI-vocabulary sections that used to live here were superseded 2026-05-03 and retired 2026-05-11; today the file is mostly the Domain section + a cross-ref index. |
+
+## Reference indexes
+
+| File | Covers |
+|---|---|
+| `settings_inventory.md` | Single-stop reference for every operator- and per-session setting Review Robin Web persists — operator SMTP config, session metadata, email-template overrides, instrument settings, reviewer / reviewee tags, RuleSets, and the browser-local UI-state primitives (cookies / localStorage / URL params). |
+| `email_infra_options.md` | Email backend architecture — pluggable-sender scaffolding, Options A (SMTP) / B (Microsoft Graph) / C (Azure Communication Services) / D (third-party transactional), `email_outbox` schema. |
+
+## Forward-looking segment specs
+
+Specs for shipped-segment-pending features. These describe the
+target contract; the code doesn't match them yet.
+
+| File | Covers |
+|---|---|
+| `sort_by_reviewee.md` | **Segment 13B** — reviewer-surface sort UX (operator default sort + reviewer live override). Display Fields only on the operator side; reviewer side gets clickable column headers with live-only persistence. |
+| `group_scoped_instruments.md` | **Segment 13C** — group-scoped instruments (one shared response covers a whole group of reviewees). Plan needs revision post-15D since it originally stamped per-instrument flavour onto the now-dropped `Assignment.context` JSON column. |
+
+---
 
 Sibling folders:
 
