@@ -36,6 +36,7 @@ detailed contracts.
 | `instruments.md` | Locked spec for the per-session Instruments page — per-instrument card, response-fields builder, RTD card. |
 | `quick_setup_card_spec.md` | Quick Setup card on Session Home — four-slot CSV upload (Reviewers / Reviewees / Relationships / Settings) with shared confirm + cascade + lifecycle-lock semantics. |
 | `preview_hub.md` | Reviewer Experience Preview hub — read-only Operations Page rendering invitation email, response form, reminder email, and responses-received email for an operator-selected reviewer. |
+| `validate_page.md` | Validate page (Operations row) — `ValidationRule` registry + find-and-fix surface: setup-coverage grid, severity chip strip, per-issue "Fix on X ↗" deep-links + "Why this check?" disclosure, activate-warns detour banner. |
 | `operations_pages.md` | Operations pages — Invitations + Responses (reviewer-centric + reviewee-centric monitoring surfaces). |
 | `rule_based_assignment.md` | Rule-based assignment engine + Rule Builder page + Rule Based card on the Operations Assignments page. |
 
