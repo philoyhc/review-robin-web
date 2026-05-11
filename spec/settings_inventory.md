@@ -534,6 +534,8 @@ for the Settings importer contract.
   — CSV export / import contract referenced by §10.
   (`guide/segment_12A-2_import.md` is the superseded importer
   plan, kept as historical reference.)
-- `guide/archive/unfinished_business.md` — catalog of deferred settings
-  surfaces (e.g. inline-editable Manage rows #25, Inactivate UI
-  #36).
+- `guide/segment_15F_enhanced_setup_pages.md` — inline-editable
+  Manage rows + Inactivate / Reactivate UI for Reviewers /
+  Reviewees / Relationships (covers the two deferred-settings
+  surfaces that were previously catalogued as items #25 + #36 in
+  the retired `guide/archive/unfinished_business.md`).
