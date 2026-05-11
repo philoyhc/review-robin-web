@@ -86,6 +86,20 @@ def require_operator(user: User = Depends(get_or_create_user)) -> User:
     raise OperatorAllowlistDenied()
 
 
+def require_sys_admin(user: User = Depends(get_or_create_user)) -> User:
+    """16A PR 2 access gate for the Sys Admin chrome and its
+    sub-surfaces. Returns the user on hit; raises 403
+    ``sys_admin required`` on miss. Layers on top of (and is
+    strictly tighter than) ``require_operator``.
+    """
+    if user.is_sys_admin:
+        return user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="sys_admin required",
+    )
+
+
 def require_session_operator(
     session_id: int,
     user: User = Depends(get_or_create_user),

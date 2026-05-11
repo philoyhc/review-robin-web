@@ -22,7 +22,14 @@
 {% set _ops_pages = ["Validate", "Assignments", "Previews", "Invitations", "Responses"] %}
 {% set _setup_active = current_page in _setup_pages %}
 {% set _ops_active = current_page in _ops_pages %}
-<div class="session-nav-grid">
+{# 16A PR 2: third "Sys Admin" row renders only when the
+   current user is a sys-admin. The grid carries `has-admin`
+   to switch on the third-row CSS (third grid row + span-3
+   home anchor); non-admin users see the prior 2-row chrome
+   unchanged. #}
+{% set _show_admin = user is defined and user is not none and user.is_sys_admin %}
+{% set _admin_active = current_page == "Sys Admin" %}
+<div class="session-nav-grid{% if _show_admin %} has-admin{% endif %}">
   <a class="session-home-anchor{% if current_page == 'Home' %} active{% endif %}"
      href="/operator/sessions/{{ session.id }}"
      title="{{ session.name }}">
@@ -56,4 +63,12 @@
     <a class="nav-tab{% if current_page == 'Responses' %} active{% endif %}"
        href="/operator/sessions/{{ session.id }}/responses">Responses</a>
   </div>
+
+  {% if _show_admin %}
+    <div class="row-label admin-row{% if _admin_active %} active-group{% endif %}">Sys Admin</div>
+    <div class="tab-strip tab-strip-admin">
+      <a class="nav-tab{% if _admin_active %} active{% endif %}"
+         href="/operator/sessions/{{ session.id }}/sys-admin">Sys Admin</a>
+    </div>
+  {% endif %}
 </div>
