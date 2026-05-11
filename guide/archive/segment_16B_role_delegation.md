@@ -1,19 +1,22 @@
 # Segment 16B — User role management + role delegation among operators
 
-> **Carved out of the original Segment 16 (2026-05-11).** The
+> **Archived 2026-05-11.** PR 1 + PR 2 shipped 2026-05-11 (PRs
+> **#853 / #854 / #855**); PR 3 (per-session role granularity)
+> retired from the roadmap — the binary owner-or-not model is
+> the deliberate final shape and revisits only on pilot
+> feedback. The plan stays here as historical context for the
+> shipped surface.
+>
 > Sys Admin page itself + the sys-admin authorization gate live
-> in **16A** (`guide/segment_16A_sys_admin_page.md`); the
-> in-app audit viewer lives in **16C**
+> in **16A** (`guide/archive/segment_16A_sys_admin_page.md`);
+> the in-app audit viewer lives in **16C**
 > (`guide/segment_16C_richer_audit_views.md`).
 
-**Status:** PR 1 + PR 2 shipped 2026-05-11 (collapsed into a
-single delivery slice — PRs **#853 / #854 / #855**); PR 3
-(richer per-session role granularity) still post-MVP.
-**Sizing:** 2 MVP PRs (shipped as one) + 1 post-MVP PR.
-**Depends on:** **16A PR 1 + PR 6** (the operator-allowlist
-gate + the admit/revoke surface that populates the eligible
-pool). 16A PR 1 lights up `users.is_operator`; 16B picks the
-admit-pool query off it.
+**Sizing:** 2 MVP PRs (shipped as one); PR 3 retired.
+**Depends on:** **16A PR 1 + PR 6** (shipped — the
+operator-allowlist gate + the admit/revoke surface that
+populates the eligible pool). 16A PR 1 lit up
+`users.is_operator`; 16B picks the admit-pool query off it.
 
 ## What shipped (2026-05-11)
 
@@ -68,6 +71,25 @@ admit-pool query off it.
   ship-as-is rule is: any owner can be removed *unless*
   they're the last remaining owner. Cleaner invariant, no
   awkward "(creator)" badge to maintain.
+- **Actor-owner check lives at the route layer, not the
+  service.** PR 1's original wording required
+  `session_owners.add_owner` / `remove_owner` to enforce
+  "actor is an owner on the session" inside the service.
+  What shipped: the service only validates target state;
+  actor authority is gated entirely at the route via
+  `require_sys_admin_or_session_operator`. This is the
+  deliberate final shape — the relaxed gate intentionally
+  lets sys-admins act without owning the session (they
+  self-add first via the same form). Service-level
+  enforcement was dropped to keep the gate decision in one
+  place. Read the per-PR pre-condition bullets below in
+  that light: they're historical scope, not the shipped
+  invariant.
+- **PR 3 (per-session role granularity) retired from the
+  roadmap.** Binary `"owner"` is the deliberate final shape.
+  The PR 3 section below is historical only — `viewer` /
+  `deputy` / role-picker UI / `require_session_role` split
+  will not ship without explicit pilot-feedback demand.
 
 ---
 

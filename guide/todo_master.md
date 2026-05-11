@@ -263,7 +263,7 @@ Bonus: **#781** — Grey out the Reviewers / Reviewees / Relationships / Respons
 
 ### Segment 16B PR 2 — Per-session owner management — done 2026-05-11 (PRs #853, #854, #855)
 
-Per-session owner management ships on the Session Edit page (`/operator/sessions/{id}/edit`), with the operator allowlist + sys-admin chrome from Segment 16A already in place. The original 16B plan had PR 1 (service) and PR 2 (UI) as separate slices; they landed as a single PR (#853) since the service surface is small and the UI is a thin wrapper. PR 3 (per-session role granularity beyond binary owner) stays post-MVP. Plan: `guide/segment_16B_role_delegation.md`.
+Per-session owner management ships on the Session Edit page (`/operator/sessions/{id}/edit`), with the operator allowlist + sys-admin chrome from Segment 16A already in place. The original 16B plan had PR 1 (service) and PR 2 (UI) as separate slices; they landed as a single PR (#853) since the service surface is small and the UI is a thin wrapper. PR 3 (per-session role granularity beyond binary owner) was retired from the roadmap 2026-05-11 — binary owner-or-not is the deliberate final shape. Plan archived: `guide/archive/segment_16B_role_delegation.md`.
 
 - **#853** — Owners section on the Session Edit page. New `app/services/session_owners.py` with `list_owners` / `workspace_operator_candidates` / `add_owner` / `remove_owner` + `OwnerOperationError` (codes: `last_owner`, `not_in_workspace`, `already_owner`, `not_owner`). New audit events `session.owner_added` / `session.owner_removed` registered in `EVENT_SCHEMAS` (snapshot + refs envelope, `refs.target_user_id` for the target). New routes `POST /sessions/{id}/owners/add` (form takes `target_email`, case-insensitive email lookup) and `POST /sessions/{id}/owners/{user_id}/remove`. `GET /edit` + `POST /edit` + the two owner routes share `require_sys_admin_or_session_operator` — a relaxed gate that lets a sys-admin reach the edit page of a session they don't own (they self-add as owner via the Add-owner form, then act on the session via the normal `require_session_operator` path). Sessions Diagnostics row's "Operators" placeholder retires; "Details" link to `/edit` replaces it. **Scope deltas from the plan:** surface placement moved from Session Home to the Edit page (closer to other session-identity edits); the picker submits `target_email` rather than `target_user_id` so the form is robust to typos / unlisted entries.
 - **#854** — Race fix on last-owner remove. Codex review flagged a TOCTOU between count + delete (two concurrent removes could both read `count == 2`, both pass the guard, each delete one row → zero owners). Replaced with `SELECT ... FOR UPDATE` over the session's `session_operators` rows, then count + locate + delete from the locked snapshot. Postgres enforces row-level locking; SQLite ignores `FOR UPDATE` silently (fine for the in-process test suite).
@@ -273,7 +273,7 @@ Per-session owner management ships on the Session Edit page (`/operator/sessions
 
 ### Segment 16A — Sys Admin page + workspace user/role management — done 2026-05-10 → 2026-05-11 (PRs #834 → #852)
 
-All six planned PRs shipped (PRs #834 / #841 / #844 / #845 / #851 / #852), plus a handful of follow-on reshape + polish PRs (#835 / #836 / #837 / #838 / #839 / #840 / #842 / #843 / #846 / #847 / #848 / #849 / #850). The "Option C strict-allowlist" access model locks in: `users.is_operator` + `users.is_sys_admin` Boolean columns (13F PR 2 + PR 4) gate the operator surface; `OPERATOR_EMAILS` + `SYS_ADMIN_EMAILS` env vars seed both at user-create time. The Sys Admin chrome lives at workspace level under `/operator/sys-admin/*` and surfaces Sessions Diagnostics + Accounts Management tabs. Plan: `guide/segment_16A_sys_admin_page.md`.
+All six planned PRs shipped (PRs #834 / #841 / #844 / #845 / #851 / #852), plus a handful of follow-on reshape + polish PRs (#835 / #836 / #837 / #838 / #839 / #840 / #842 / #843 / #846 / #847 / #848 / #849 / #850). The "Option C strict-allowlist" access model locks in: `users.is_operator` + `users.is_sys_admin` Boolean columns (13F PR 2 + PR 4) gate the operator surface; `OPERATOR_EMAILS` + `SYS_ADMIN_EMAILS` env vars seed both at user-create time. The Sys Admin chrome lives at workspace level under `/operator/sys-admin/*` and surfaces Sessions Diagnostics + Accounts Management tabs. Plan archived: `guide/archive/segment_16A_sys_admin_page.md`.
 
 - **#834 — PR 1a (Operator-allowlist gate)** Foundation: `operator_emails` / `sys_admin_emails` / `operator_contact_email` in `app/config.py`; `get_or_create_user` reads both at user-create time and sets `users.is_operator` / `users.is_sys_admin` accordingly; `require_operator` dependency redirects denied users to `/request-access` via `OperatorAllowlistDenied`; new `request_access.html` renders the contact + mailto + sign-out chrome.
 - **#835 — PR 1b (apply the gate)** Applies `require_operator` to the operator router so every `/operator/*` route except `/request-access` is gated.
@@ -327,7 +327,7 @@ absorbing the audit-log download route 12B left UI-less,
 retiring the dev-only manual assignment upload, and standing
 up the operator-allowlist gate + workspace Accounts
 Management surface. The remaining schedule items —
-13B, 13C, 13F, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16B PR 3, 16C, 17, 18A, 18B, 18C, 19, 20 — ship per
+13B, 13C, 13F, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16C, 17, 18A, 18B, 18C, 19, 20 — ship per
 their own plan; no ordering constraints beyond shared schema
 conflicts (none detected).
 
@@ -470,16 +470,6 @@ conflicts (none detected).
   trip a CSV to fix one name or toggle one status.
   **Plan:** `guide/segment_15F_enhanced_setup_pages.md`.
 
-- **16B PR 3 (post-MVP) — Per-session role granularity**
-  *(PR 1 + PR 2 of 16B shipped 2026-05-11 as PRs #853 / #854 / #855
-  — see Done above)*. Widens
-  `SESSION_OPERATOR_ROLES` beyond the locked `("owner",
-  "manager")` and splits `require_session_operator` into
-  per-role gates (`require_setup_edit` /
-  `require_lifecycle_transition`). Deferred until pilot
-  feedback confirms binary owner-or-not is insufficient.
-  **Plan:** `guide/segment_16B_role_delegation.md` § PR 3.
-
 - **16C — Richer audit views** *(stub created 2026-05-11)*.
   In-app audit log viewer beyond today's CSV download —
   per-session table with filters + search + entity drill-in;
@@ -585,7 +575,7 @@ they pinned:
   12A-3 export-refresh + Settings importer + Quick Setup
   slot 4 graduation; 12A-2 was absorbed into 12A-3). The
   remaining schedule items — **13B, 13C, 13F, 14A, 14B, 14C, 15A,
-  15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 18A, 18B, 18C, 19, 20** — are independent of the email +
+  15B, 15C, 15E, 15F, 16C, 17, 18A, 18B, 18C, 19, 20** — are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;
   13C PR 3 (rule-engine fanout for group-scoped instruments)
