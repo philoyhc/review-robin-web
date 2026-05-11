@@ -68,78 +68,66 @@ run through the workflow end-to-end without prior context.
 These were originally tracked elsewhere but belong with the polish /
 documentation pass:
 
-- **Real SMTP email backend** — `docs/status.md` "What's deliberately
-  not yet there." The dev outbox stays the only mail sink until this
-  segment lights up the production path.
-- **Queue-based batch invitation sending** — decided 2026-05-03 from
-  Segment 11 Tier 2 §2.3; tracked at
-  `guide/archive/unfinished_business.md` #34. Out-of-request send only
-  becomes load-bearing when real SMTP lands, so it bundles with
-  the SMTP work above. Depends on #6 (decouple `invitations.py`
-  from `Request`) shipping first — currently scheduled in
-  Segment 11 Tier 3.
-- **Inline-editable rows for reviewers / reviewees / assignments
-  Manage pages** — officially deferred from Segment 11 (originally
-  10E §2.5); tracked at `guide/archive/unfinished_business.md` #25. Needs a
-  design pass before code; the polish segment is the right home.
-- **Sessions-list Delete button fix** — officially deferred from
-  Segment 11 Tier 1 (2026-05-03); tracked at
-  `guide/archive/unfinished_business.md` #23. Small fix (`<a>` → POST form
-  with confirm); bundles naturally with whatever other
-  `/operator/sessions` UI work this segment touches.
-- **Further refinement of the reviewer surface** — catch-all for
-  reviewer-surface polish beyond the Segment 11 Tier 1 batch
-  (PRs #319 → #324). Tracked at `guide/archive/unfinished_business.md`
-  #32. Known sub-item: multi-instrument preview (the
-  `build_preview_context` extension explicitly deferred from
-  Segment 11). Pilot-feedback-driven polish lands here too.
-- **AG Grid replacement of the reviewer-surface table** — second
-  half of workplan §11 / archived Segment 8 plan that never
-  landed. Decided 2026-05-03 from Segment 11 Tier 2 §2.1; tracked
-  at `guide/archive/unfinished_business.md` #33. Naturally bundles with
-  vanilla-JS autosave (Segment 11 Tier 4 #2.2) and absorbs the
-  multi-instrument preview sub-item of #32 if AG Grid grouping
-  handles it natively.
+- **Inline-editable rows for reviewers / reviewees Manage
+  pages** — officially deferred from Segment 11 (originally
+  10E §2.5); tracked at
+  `guide/archive/unfinished_business.md` #25. Needs a design
+  pass before code; the polish segment is the right home.
+- **Sessions-list Delete button fix** — officially deferred
+  from Segment 11 Tier 1 (2026-05-03); tracked at
+  `guide/archive/unfinished_business.md` #23. Small fix
+  (`<a>` → POST form with confirm); bundles naturally with
+  whatever other `/operator/sessions` UI work this segment
+  touches.
+- **Further refinement of the reviewer surface** — catch-all
+  for reviewer-surface polish beyond the Segment 11 Tier 1
+  batch (PRs #319 → #324). Tracked at
+  `guide/archive/unfinished_business.md` #32. Pilot-feedback-
+  driven polish lands here too.
+- **AG Grid replacement of the reviewer-surface table** —
+  second half of workplan §11 / archived Segment 8 plan that
+  never landed. Decided 2026-05-03 from Segment 11 Tier 2
+  §2.1; tracked at
+  `guide/archive/unfinished_business.md` #33. Naturally
+  bundles with vanilla-JS autosave (Segment 11 Tier 4 §2.2).
 - **Technical-support contact (global)** — distinct from the
-  operational help contact tracked at `#24` (which lives on
-  `ReviewSession`). Address a reviewer reaches when something
-  looks broken (auth fail, 500, invalid link). Filed 2026-05-03
-  from the Segment 11 Tier 2 §24 reframe; tracked at
-  `guide/archive/unfinished_business.md` #35. Small `[chrome]` item:
-  new env var + footer + error-page surfaces.
+  operational help contact (which lives on `ReviewSession`).
+  Address a reviewer reaches when something looks broken
+  (auth fail, 500, invalid link). Filed 2026-05-03 from the
+  Segment 11 Tier 2 §24 reframe; tracked at
+  `guide/archive/unfinished_business.md` #35. Small `[chrome]`
+  item: new env var + footer + error-page surfaces.
 - **Operator Inactivate UI for reviewer / reviewee rows** —
   per-row Inactivate / Reactivate button on the Reviewers and
-  Reviewees Manage pages. Schema already supports it; affordance
-  is missing. Deferred 2026-05-03 from Segment 11 Tier 3 §2.4;
-  tracked at `guide/archive/unfinished_business.md` #36.
-- **Local Postgres docker-compose for dev** — officially deferred
-  from Segment 11 (originally 10E §2.7); tracked at
-  `guide/archive/unfinished_business.md` #26. The developer-setup-guide
-  work item above is the natural place for the Postgres-vs-SQLite
-  local-dev story to settle.
-- **Session Home → Next Action card, Activated state — split on
-  invitation-send progress.** Today the Activated branch always
-  renders Manage invitations (Primary) + Monitor responses
-  (Secondary) above the horizontal rule, regardless of whether any
-  invitation emails have actually gone out. Replace it with two
-  sub-states (the content from the horizontal rule down — Pause
-  Session — stays unchanged in both):
-  - **Activated, no invitations sent yet.** Body keeps the existing
-    "Session is currently activated. Reviewers can access forms and
-    save responses. Don't forget to generate and send out emails to
-    notify the reviewers." copy. Single button: **Generate and
-    send** (Primary). One-click flow that generates invitations and
-    dispatches the pending batch — replaces the current two-hop
-    detour through Manage invitations.
-  - **Activated, invitations sent.** Body reads "Session is
-    currently activated. Reviewers can access forms and save
-    responses. Email invitations have been generated and sent."
-    Buttons: **Manage invitations** (Secondary) + **Monitor
-    responses** (Secondary). Both demoted to Secondary because
-    the Primary "do something now" affordance has already fired.
+  Reviewees Manage pages. Schema already supports it; the
+  affordance is missing. Deferred 2026-05-03 from Segment 11
+  Tier 3 §2.4; tracked at
+  `guide/archive/unfinished_business.md` #36.
 
-  Cross-ref: flagged in `guide/all_buttons.md` "Drift /
-  inconsistencies" §3.
+## Tracked elsewhere — not in scope here
+
+The earlier version of this stub listed four extra items that
+have since found dedicated homes:
+
+- **Real SMTP email backend** + **queue-based batch
+  invitation sending** (catalog #34) — both land in
+  **Segment 14-1** (`guide/segment_14-1_email_infra.md`):
+  SMTP send activation is **Part A**, the bulk-send queue +
+  background worker is **Part C**.
+- **Local Postgres docker-compose for dev** (catalog #26) —
+  tracked under **Segment 14** (production hardening) per
+  `guide/todo_master.md`. The developer-setup-guide work
+  item above (Work items §8) still references the Postgres-
+  vs-SQLite story, but the docker-compose deliverable
+  itself sits with 14.
+- **Session Home → Next Action card Activated-state split**
+  (Generate-and-send Primary vs. Manage / Monitor Secondary
+  pair, depending on whether invitations have actually been
+  sent) — absorbed into **Segment 15E** (Next Action revamp
+  + multi-step shortcuts;
+  `guide/segment_15E_next_action_revamp.md`). 15E covers the
+  Next Action card UX across every lifecycle state including
+  Activated.
 
 ---
 

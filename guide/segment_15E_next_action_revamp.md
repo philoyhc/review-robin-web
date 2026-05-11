@@ -51,11 +51,21 @@ home + per-state surface plan.
 | `draft` (populated, not validated) | Validate Setup | **Validate + Generate** (then re-render in `validated`) |
 | `validated` (no warnings) | Activate Session | **Validate + Generate + Activate** (chain from any earlier state too) |
 | `validated` (with warnings) | Activate (via `/validate?activate=1` detour) | **Acknowledge warnings + Activate** (single-click acknowledge + post) |
-| `ready` | Manage invitations / Monitor / Pause | (no chain — operator's already past the progression) |
+| `ready`, no invitations sent | Manage invitations (Primary) + Monitor responses (Secondary) | **Generate and send** (Primary) — one-click flow that generates invitations and dispatches the pending batch, replacing the current two-hop detour through Manage invitations |
+| `ready`, invitations sent | Manage invitations (Primary) + Monitor responses (Secondary) | Manage invitations (Secondary) + Monitor responses (Secondary) — both demoted, no Primary; the "do something now" affordance has already fired |
 
 Single-step Secondary buttons stay (See validation details, See
 previews, Revert to draft, etc.) so operators retain the granular
 flow.
+
+The two-row treatment for `ready` absorbs the **Activated-state
+split** originally listed in Segment 15's polish stub: today the
+Activated branch always renders Manage invitations + Monitor
+responses regardless of whether any invitation emails have
+actually gone out, and the post-15E behaviour splits on
+invitation-send progress. The horizontal-rule content (Pause
+Session) stays unchanged across both sub-states. Cross-ref:
+`guide/all_buttons.md` "Drift / inconsistencies" §3.
 
 ### Operations Assignments page (optional)
 
