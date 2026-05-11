@@ -62,13 +62,14 @@ Rendered inside `.session-nav-card` on every session-scoped page.
 | 1 | Session-home anchor | Session Home | `<a>` | `session-home-anchor` (active variant when on Home) | Chrome nav | Tall left-column anchor, two-row chrome |
 | 2 | Setup tab row | Reviewers | `<a>` | `nav-tab` (`.active` when current page) | Chrome nav | |
 | 3 | Setup tab row | Reviewees | `<a>` | `nav-tab` | Chrome nav | |
-| 4 | Setup tab row | Assignments | `<a>` | `nav-tab` | Chrome nav | |
+| 4 | Setup tab row | Relationships | `<a>` | `nav-tab` | Chrome nav | Replaced Assignments in 15D PR 6a |
 | 5 | Setup tab row | Instruments | `<a>` | `nav-tab` | Chrome nav | |
 | 6 | Setup tab row | Email Template | `<a>` | `nav-tab` | Chrome nav | |
 | 7 | Operations tab row | Validate | `<a>` | `nav-tab` | Chrome nav | |
-| 8 | Operations tab row | Previews | `<a>` | `nav-tab` | Chrome nav | |
-| 9 | Operations tab row | Invitations | `<a>` | `nav-tab` | Chrome nav | |
-| 10 | Operations tab row | Responses | `<a>` | `nav-tab` | Chrome nav | |
+| 8 | Operations tab row | Assignments | `<a>` | `nav-tab` | Chrome nav | Moved Setup → Operations in 15D PR 6a |
+| 9 | Operations tab row | Previews | `<a>` | `nav-tab` | Chrome nav | |
+| 10 | Operations tab row | Invitations | `<a>` | `nav-tab` | Chrome nav | |
+| 11 | Operations tab row | Responses | `<a>` | `nav-tab` | Chrome nav | |
 
 ---
 
@@ -153,12 +154,15 @@ Source: `partials/_quick_setup_card.html`. Also rendered inert on
 
 ### 5e — Extract Data card (left column, middle; partial)
 
-Source: `partials/_extract_data_card.html`. All buttons inert today
-(scaffold pending Segment 12A).
+Source: `partials/_extract_data_card.html`. Five live tiles
+(Reviewers / Settings / Reviewees / Responses / Relationships)
+plus an inert zip-all footer. See `spec/session_home.md` §2 for
+the tile table.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 33 | Extract Data (per row) | Download | `<a>` | `btn secondary` (with `disabled aria-disabled="true"` until Segment 12A wires the route) | Secondary (Disabled) | One per entity row + a final bundle row |
+| 33 | Extract Data (per row, live) | Download | `<a>` | `btn secondary` | Secondary | Wired routes per tile: `/export/{reviewers,reviewees,relationships,responses,settings}.csv`. Greys out (`btn secondary disabled`) when the underlying count is 0 (per 12A-3 polish #781). Settings tile is always clickable. |
+| 34 | Extract Data (zip-all footer) | Download all | `<a>` | `btn secondary disabled` | Secondary (Disabled) | Inert — zip bundle is a future segment. |
 
 ---
 
@@ -188,19 +192,25 @@ Source: `app/web/templates/operator/session_reviewees.html`.
 
 ---
 
-## Section 8 — Assignments Setup (`/operator/sessions/{id}/assignments`)
+## Section 8 — Relationships Setup (`/operator/sessions/{id}/relationships`)
 
-Source: `app/web/templates/operator/session_assignments.html` +
-the included `_rule_based_card.html` partial.
+Source: `app/web/templates/operator/session_relationships.html`.
+Per-pair context table (15D PR 2) — mirrors the Reviewers /
+Reviewees Setup shape (Upload + Danger Zone + preview table).
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 42 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
-| 43 | Rule Based Assignment (live) | Generate | `<button type="submit">` | `btn secondary` | Secondary | Posts `/assignments/rule-based/generate` |
-| 44 | Rule Based Assignment (live) | Edit ruleset | `<a>` | `btn secondary` | Secondary | Opens the Rule Builder |
-| 45 | Rule Based Assignment (placeholder branch) | Generate | `<button type="button">` | `btn secondary disabled` | Secondary (Disabled) | Inert when no live ruleset selected |
-| 46 | Upload Manual Assignment | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/assignments/manual/import` |
-| 47 | Danger Zone | Delete all assignments | `<button type="submit">` | `btn destructive` | Destructive | Posts `/assignments/delete-all` |
+| 43 | Upload Relationships | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/import`. CSV columns: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`. |
+| 44 | Upload Relationships | Edit Relationships | `<a>` | `btn secondary disabled` | Secondary (Disabled) | "Inline editing — coming soon" tooltip (Segment 15F). |
+| 45 | Danger Zone | Delete all relationships | `<button type="submit">` | `btn destructive` | Destructive | Posts `/relationships/delete-all`. |
+
+**Retired:** Pre-15D this section described the Setup-row
+Assignments page (Rule Based Assignment card + Upload Manual
+Assignment card + Delete-all assignments). That page moved to
+the Operations row in 15D PR 6a; the manual-upload affordance
+retired with the move (dev-diagnostic only post-15D); the
+buttons live in **Section 11.5 — Assignments Operations** below.
 
 ---
 
@@ -266,6 +276,31 @@ Source: `app/web/templates/operator/session_validate.html`.
 | 69 | Activate banner (warnings present) | Acknowledge and activate | `<button type="submit">` | `btn danger-solid` | Primary (filled) — recovery-as-confirm | Posts `/activate` with `acknowledge_warnings=true` |
 | 70 | Activate banner (errors present) | Cancel | `<a>` | `btn alert` | Outline-amber | Errors block activation; this just dismisses the banner |
 | 71 | Severity filter chip strip | All / Errors / Warnings / Info | `<a>` | `severity-chip` (with `.active` state) | Filter chip (custom — not in §6) | One per severity level; not part of the canonical button family |
+
+---
+
+## Section 11.5 — Assignments Operations (`/operator/sessions/{id}/assignments`)
+
+Source: `app/web/templates/operator/session_assignments.html` +
+the included `_rule_based_card.html` partial. Page moved from
+Setup row to Operations row in 15D PR 6a. Pair-level context
+now lives on the Relationships Setup page (Section 8); this
+page is the materialised-derivative surface where the operator
+runs the rule engine to generate the `(reviewer, reviewee,
+instrument)` assignment matrix.
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 71a | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | Activated-state lock; same shape as the Setup-row lock cards. |
+| 71b | Rule Based Assignment (live) | Generate | `<button type="submit">` | `btn secondary` | Secondary | Posts `/assignments/rule-based/generate`. |
+| 71c | Rule Based Assignment (live) | Edit ruleset | `<a>` | `btn secondary` | Secondary | Opens the Rule Builder. |
+| 71d | Rule Based Assignment (placeholder branch) | Generate | `<button type="button">` | `btn secondary disabled` | Secondary (Disabled) | Inert when no live ruleset is selected. |
+| 71e | Self-reviews card | Include self-reviews / Exclude self-reviews | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `sessions.self_reviews_active` (12C-1 PR 1); right-flushed in the half-width Self-reviews card per post-15 cleanup polish. |
+| 71f | Danger Zone | Delete all assignments | `<button type="submit">` | `btn destructive` | Destructive | Posts `/assignments/delete-all`. |
+
+Button numbers in this section are bracketed (`71a` etc.) to
+avoid a wholesale renumber of every subsequent section. A future
+re-audit can flatten them into the canonical sequence.
 
 ---
 
