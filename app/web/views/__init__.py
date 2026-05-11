@@ -131,14 +131,20 @@ from ._rule_builder import (
     build_rule_builder_context,
 )
 
-# Audit log viewer (Segment 16C PR 1 + PR 2).
+# Audit log viewer (Segment 16C PR 1 + PR 2 + PR 3).
 from ._audit_log import (
+    AuditDetailChangeRow,
+    AuditDetailKVRow,
+    AuditDetailRender,
+    AuditDetailSection,
+    AuditDetailSetChanges,
     AuditLogFilterFormContext,
     AuditLogRowsContext,
     AuditLogTableRow,
     build_audit_log_filter_form,
     build_audit_log_rows,
     filters_querystring,
+    format_audit_detail,
     parse_audit_log_filters,
 )
 
@@ -201,12 +207,18 @@ __all__ = [
     "instrument_heading",
     "invitations_search_options",
     "merge_tags_for_template",
+    "AuditDetailChangeRow",
+    "AuditDetailKVRow",
+    "AuditDetailRender",
+    "AuditDetailSection",
+    "AuditDetailSetChanges",
     "AuditLogFilterFormContext",
     "AuditLogRowsContext",
     "AuditLogTableRow",
     "build_audit_log_filter_form",
     "build_audit_log_rows",
     "filters_querystring",
+    "format_audit_detail",
     "parse_audit_log_filters",
     "page_button_label",
     "placeholder_for_field",
