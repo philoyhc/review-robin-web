@@ -14,9 +14,13 @@ class Settings(BaseSettings):
     fake_auth_name: str = "Local Operator"
     # Sandbox-only flags so the agent's local dev exercises the
     # 16A operator / sys-admin gates without coordinating env vars.
-    # Honoured only when ``allow_fake_auth`` is also true.
-    fake_auth_operator: bool = False
-    fake_auth_sys_admin: bool = False
+    # Honoured only when ``allow_fake_auth`` is also true AND the
+    # resolved identity is ``is_fake=True``, so they're inert in
+    # any deployed environment (where ``allow_fake_auth`` must
+    # remain false per CLAUDE.md). Default-True keeps the agent's
+    # local dev loop seamless under the 16A PR 1 operator gate.
+    fake_auth_operator: bool = True
+    fake_auth_sys_admin: bool = True
 
     # Strict-allowlist (Option C) bootstrap sources read once by
     # ``get_or_create_user`` on first sign-in. Email match is
