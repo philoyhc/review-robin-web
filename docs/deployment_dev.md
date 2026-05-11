@@ -196,6 +196,63 @@ To verify after a deploy:
 Application code consumes Easy Auth headers; do not enable `ALLOW_FAKE_AUTH`
 in App Service configuration. See `docs/authentication.md` for details.
 
+## Operator / sys-admin allowlist bootstrap (Segment 16A)
+
+Under the Option C strict-allowlist posture (16A PR 1), every
+operator route gates on `users.is_operator OR users.is_sys_admin`.
+A signed-in user with neither flag set is redirected to
+`/request-access`. The persisted flags are seeded from two App
+Service config env vars on first sign-in:
+
+```
+OPERATOR_EMAILS=alice@example.edu,bob@example.edu
+SYS_ADMIN_EMAILS=alice@example.edu
+```
+
+Comma-separated, case-insensitive. Sys-admin implies operator at
+the read-path predicate, so an email in `SYS_ADMIN_EMAILS` alone
+also passes the operator gate.
+
+### First-sign-in only — the bootstrap doesn't re-apply
+
+Once a `users` row exists for an email, the env vars are inert
+for that row. Editing `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` and
+restarting the app does **not** promote (or demote) anyone who's
+already signed in once. The persisted columns are the
+authoritative source of truth after first sign-in; revocation
+goes through the in-app workspace user-list UI (16A PR 6, not
+yet shipped).
+
+If you change the env vars and need an existing principal to pick
+up the new flags before PR 6 ships, you have two manual escape
+hatches:
+
+1. **Wipe the row.** Connect to the database as `rrw_app` and
+   `DELETE FROM users WHERE email = '<email>'`. The next sign-in
+   recreates the row and runs the bootstrap. **⚠ Any
+   `session_operators` rows attached to this user cascade-delete**
+   — the user loses session access until re-added.
+2. **Flip the column directly.** Connect to the database and
+   `UPDATE users SET is_sys_admin = true WHERE email = '<email>'`
+   (or `is_operator`). Cheaper than a wipe; preserves
+   session_operators rows; no audit-event trail (which the 16A
+   PR 6 in-app path will emit).
+
+### Local-dev mirror
+
+The same gotcha applies to the local SQLite DB
+(`review_robin_web.db`). If you signed in via fake auth before
+landing 16A's `FAKE_AUTH_OPERATOR=True` default
+(or before adding an email to `OPERATOR_EMAILS` in your `.env`),
+your row sits with `is_operator=False` and you'll keep getting
+bounced to `/request-access`. Easiest local fix is to delete the
+SQLite file and re-run `alembic upgrade head`:
+
+```powershell
+Remove-Item review_robin_web.db
+alembic upgrade head
+```
+
 ## Known issues
 
 - The workflow currently installs from `requirements.txt` rather than
