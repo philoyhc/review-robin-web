@@ -271,6 +271,34 @@ Per-session owner management ships on the Session Edit page (`/operator/sessions
 
 ---
 
+### Segment 16A — Sys Admin page + workspace user/role management — done 2026-05-10 → 2026-05-11 (PRs #834 → #852)
+
+All six planned PRs shipped (PRs #834 / #841 / #844 / #845 / #851 / #852), plus a handful of follow-on reshape + polish PRs (#835 / #836 / #837 / #838 / #839 / #840 / #842 / #843 / #846 / #847 / #848 / #849 / #850). The "Option C strict-allowlist" access model locks in: `users.is_operator` + `users.is_sys_admin` Boolean columns (13F PR 2 + PR 4) gate the operator surface; `OPERATOR_EMAILS` + `SYS_ADMIN_EMAILS` env vars seed both at user-create time. The Sys Admin chrome lives at workspace level under `/operator/sys-admin/*` and surfaces Sessions Diagnostics + Accounts Management tabs. Plan: `guide/segment_16A_sys_admin_page.md`.
+
+- **#834 — PR 1a (Operator-allowlist gate)** Foundation: `operator_emails` / `sys_admin_emails` / `operator_contact_email` in `app/config.py`; `get_or_create_user` reads both at user-create time and sets `users.is_operator` / `users.is_sys_admin` accordingly; `require_operator` dependency redirects denied users to `/request-access` via `OperatorAllowlistDenied`; new `request_access.html` renders the contact + mailto + sign-out chrome.
+- **#835 — PR 1b (apply the gate)** Applies `require_operator` to the operator router so every `/operator/*` route except `/request-access` is gated.
+- **#836 — PR 1c (fake-auth defaults)** Defaults `FAKE_AUTH_OPERATOR` + `FAKE_AUTH_SYS_ADMIN` to `True` for the local dev loop so the sandbox doesn't blackhole every test request behind the gate.
+- **#837 / #838 / #839 / #840 — env / docs polish** `.env.example` seeds `OPERATOR_EMAILS` + `SYS_ADMIN_EMAILS`; pydantic list-parse fix for the comma-separated env-var form; `docs/deployment_dev.md` records the first-deploy allowlist bootstrap gotcha + the pre-existing-row backfill story.
+- **#841 — PR 2 (Sys-admin gate + chrome scaffold)** `require_sys_admin` dependency + workspace-level `/operator/sys-admin` route + "Admin" link in the chrome user-card (visible only when `is_sys_admin`, self-suppresses on `/sys-admin` paths, carries `?return_to=`).
+- **#842 — PR 2b (reshape to workspace-level)** Original PR 2 attempted a per-session sys-admin chrome variant; reverted to workspace-level only so the Admin doorway lands on a workspace dashboard rather than threading into per-session chrome.
+- **#843 — plan: chrome + session-table picker** Plan-only PR; documents the Sessions Diagnostics + Accounts Management tab structure.
+- **#844 — PR 3 (Sessions Diagnostics tab + Outbox per-row links)** Workspace Sessions Diagnostics page at `/operator/sys-admin/sessions` lists every session in the workspace. Per-row links to Outbox + audit log. `sys_admin_top_nav.html` partial. Root `/operator/sys-admin` 303-redirects to `/sessions`. **Scope delta from plan:** per-session Outbox route was retired entirely (not relaxed). Old bookmark URLs 404.
+- **#845 — PR 4 (Sessions Diagnostics columns + audit log + relax)** Audit log per-row link wired to the existing `/export/audit_log.csv` route. New `require_sys_admin_or_session_operator` dependency (`app/web/deps.py`) gates the audit-log CSV route so a sys-admin who isn't a session operator can still pull the log. Sessions Diagnostics column set landed.
+- **#846 → #847 — Outbox UX iteration** PR #846 first surfaced the Outbox inline on the Admin Sessions Diagnostics page with an inline Status pill; PR #847 then split it onto a child page under Sessions Diagnostics (`/operator/sys-admin/sessions/{id}/outbox`) for a cleaner two-level hierarchy.
+- **#848 — Status pill lifecycle color** Sessions Diagnostics Status pill picks up the same lifecycle-tinted variants the per-session chrome status row uses.
+- **#849 / #850 — Sessions lobby Status column** New Status column on the operator Sessions lobby table; spec sync in `spec/sessions_overview.md`.
+- **#851 — PR 5 (Retire manual-assignment upload)** `parse_manual_csv` / `manual_rows_to_pairs` / `ManualAssignmentRow` / `AssignmentMode.manual` enum variant all removed. `AssignmentMode` enum kept with `rule_based` as the only value. Cleanest possible deletion sweep — the dev-diagnostic-only manual upload path bowed out once 15D's rule-based engine became the only operator-facing assignment path.
+- **#852 — PR 6 (Accounts Management tab + workspace user toggles)** New `app/services/users.py` (259 LOC) ships `list_workspace_users`, `admit`, `revoke`, `promote`, `demote` (+ bonus `invite`). Per-row POST routes on `/operator/sys-admin/users` with per-toggle `confirm` checkbox guard on promote/demote (400 if missing) and a last-admin 409 guard. Four canonical audit events (`workspace.operator_admitted`, `workspace.operator_revoked`, `sys_admin.role_promoted`, `sys_admin.role_demoted`) registered in `EVENT_SCHEMAS`. Workspace user list with per-row toggles ships the workspace-level admit/revoke/promote/demote affordances that 16B PR 2's per-session Owners picker assumes.
+
+**Scope deltas worth flagging:**
+
+- Outbox per-session route retired entirely (PR 3) rather than relaxed; old bookmark URLs 404. Documented in-flight reshape.
+- `sys_admin.outbox_viewed` audit event not emitted — plan called it optional ("lean skip").
+- PR 6 adds an "Invite by email" form + `users.invite` service — bonus over the strict plan, sensible companion to admit/revoke.
+- **Undocumented:** the actor-owner check in `session_owners.add_owner` / `remove_owner` (16B PR 2) lives at the route layer (`require_sys_admin_or_session_operator`), not in the service. Defensible (the relaxed gate intentionally lets sys-admins act without owning the session), but worth recording — file under "16B PR 2 scope deltas" if pilot feedback wants service-level enforcement instead.
+
+---
+
 ### Segment 12B — Audit-events export — done 2026-05-10 (PRs #788, #789)
 
 Smallest possible slice — adds a per-session `audit_events` CSV download. The original Segment 12 framing (response-data export + retention) was already covered by 12A-1 / 12A-3, so 12B reduced to a single PR for the audit log. Plan archived: `guide/archive/segment_12B_audit_retention.md`.
@@ -292,14 +320,16 @@ that originated there before the catalog retired.
 
 The locked block `13E → 12C → 15D → 12A-3` shipped 2026-05-10
 (see Done above for the four entries) and 12B (audit-events
-export) followed the same day. The remaining schedule items
-— 13B, 13C, 13F, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 18A, 18B, 18C, 19, 20 — ship per
+export) followed the same day. **Segments 16A** (Sys Admin
+page + workspace user/role management) and **16B PR 1 + PR 2**
+(per-session owner management) shipped 2026-05-10 → 2026-05-11,
+absorbing the audit-log download route 12B left UI-less,
+retiring the dev-only manual assignment upload, and standing
+up the operator-allowlist gate + workspace Accounts
+Management surface. The remaining schedule items —
+13B, 13C, 13F, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16B PR 3, 16C, 17, 18A, 18B, 18C, 19, 20 — ship per
 their own plan; no ordering constraints beyond shared schema
-conflicts (none detected). **Segment 16A** (Sys Admin page) is
-a natural near-term pick since it absorbs the audit-log
-download route that 12B left UI-less, alongside Outbox and
-the dev-only manual assignment upload — and unlocks 16B
-(role delegation) + 16C (richer audit views).
+conflicts (none detected).
 
 #### Numbered queue
 
@@ -439,19 +469,6 @@ the dev-only manual assignment upload — and unlocks 16B
   single-row affordance so operators don't have to round-
   trip a CSV to fix one name or toggle one status.
   **Plan:** `guide/segment_15F_enhanced_setup_pages.md`.
-
-- **16A — Sys Admin page + workspace user/role management**
-  *(stub created 2026-05-10; carved from original Segment 16
-  on 2026-05-11; resized to six PRs on 2026-05-11 after the
-  strict-allowlist access-model decision)*. Six-PR ladder:
-  PR 1 operator-allowlist gate + "Request access" landing
-  page (reads 13F PR 2's `users.is_operator`); PR 2 sys-admin
-  chrome scaffold; PRs 3-5 anchor items (Outbox relocation,
-  audit log download tile, manual assignment upload); PR 6
-  workspace user list with per-row Admit/Revoke +
-  Promote/Demote toggles. Workspace surface absorbed from
-  what was 16B PR 3.
-  **Plan:** `guide/segment_16A_sys_admin_page.md`.
 
 - **16B PR 3 (post-MVP) — Per-session role granularity**
   *(PR 1 + PR 2 of 16B shipped 2026-05-11 as PRs #853 / #854 / #855
