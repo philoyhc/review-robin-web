@@ -556,9 +556,13 @@ If three Tier-1 specs land, in priority order:
 2. **`spec/csv_contracts.md`** — round-trip stability is now a
    real contract (post-12A-3) but lives only as test assertions.
    Documenting the contract surfaces the guarantee.
-3. **`spec/validate_page.md`** — substantial unspecced
-   subsystem; Segment 14 (production hardening) will need this
-   anyway to document the readiness gate for pilot.
+3. **`spec/validate_page.md`** — ✅ **Shipped 2026-05-11.**
+   Substantial unspecced subsystem; Segment 14 (production
+   hardening) will need this anyway to document the readiness
+   gate for pilot. Captures the `ValidationRule` registry,
+   the 10 currently-registered rules, the find-and-fix
+   surface, and the deep-link anchor contract Setup pages
+   must honour.
 
 Permissions (#5) is a close fourth; Email Template editor (#4)
 is the smallest Tier-1 spec and could ride along with any of
