@@ -283,7 +283,7 @@ that originated there before the catalog retired.
 The locked block `13E → 12C → 15D → 12A-3` shipped 2026-05-10
 (see Done above for the four entries) and 12B (audit-events
 export) followed the same day. The remaining schedule items
-— 13B, 13C, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 18A, 18B, 18C, 19, 20 — ship per
+— 13B, 13C, 13F, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 18A, 18B, 18C, 19, 20 — ship per
 their own plan; no ordering constraints beyond shared schema
 conflicts (none detected). **Segment 16A** (Sys Admin page) is
 a natural near-term pick since it absorbs the audit-log
@@ -393,6 +393,19 @@ the dev-only manual assignment upload — and unlocks 16B
     **Plan:** `guide/segment_15B_per_instrument_assignments.md`.
 
 #### Stubs
+
+- **13F — More DB prep (14C / 16B / 18B / 18C ride-along)**
+  *(stub created 2026-05-11)*. Mirrors the 13D / 13E
+  inert-migrations pattern for the **next** batch of
+  schema needs identified during the Segment 16 PR-ladder
+  sizing pass. New table `session_tags` (18B), JSON
+  column `sessions.reminder_settings` (14C), columns
+  `sessions.retention_exception` + `retention_overrides`
+  (18C), column `session_operators.role` (16B PR 4
+  post-MVP). ~4 PRs, all additive nullable, no backfill.
+  Each migration sits inert until its owning feature
+  segment lights it up.
+  **Plan:** `guide/segment_13F_more_db_prep.md`.
 
 - **15E — Next Action revamp + multi-step shortcuts**
   *(carved out of 15D PR 8, 2026-05-10)*. Promotes the
@@ -533,7 +546,7 @@ they pinned:
 - **12A is fully shipped** as of 2026-05-10 (12A-1 export +
   12A-3 export-refresh + Settings importer + Quick Setup
   slot 4 graduation; 12A-2 was absorbed into 12A-3). The
-  remaining schedule items — **13B, 13C, 14A, 14B, 14C, 15A,
+  remaining schedule items — **13B, 13C, 13F, 14A, 14B, 14C, 15A,
   15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 18A, 18B, 18C, 19, 20** — are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;

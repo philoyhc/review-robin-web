@@ -174,11 +174,11 @@ role granularity beyond the current binary model.
 
 **If it lands, ships:**
 
-- Schema: new `SessionOperator.role` column (`String(32)`,
-  default `"operator"`). Initial enum values:
-  `operator` / `viewer` / `deputy`. Alembic migration adds
-  the column with a default backfill of `"operator"` for
-  every existing row.
+- Schema: `session_operators.role` column **pre-positioned
+  by Segment 13F PR 4** (`String(32)`, `server_default`
+  `"operator"`). Initial enum values: `operator` / `viewer` /
+  `deputy`, gated at the service layer via the
+  `SESSION_OPERATOR_ROLES` value-set constant.
 - Per-role permission predicates:
   - `viewer` — read-only access to every operator page;
     no setup mutations, no lifecycle transitions, no

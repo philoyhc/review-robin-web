@@ -41,7 +41,9 @@ should reminders go out automatically".
 
 Likely shape:
 
-- New per-session columns (or a JSON blob) capturing:
+- The `sessions.reminder_settings` JSON column **pre-positioned
+  by Segment 13F PR 2** carries the cadence configuration. Keys
+  the column accepts (locked at this segment's scoping time):
   - Auto-reminders enabled (default: off).
   - Cadence — e.g. "every 3 days" / "1 week + 3 days + 1 day
     before deadline" / cron-like expression. Pick the simplest
