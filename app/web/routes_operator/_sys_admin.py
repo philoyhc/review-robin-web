@@ -10,30 +10,37 @@ link.
 — at ``GET /operator/sys-admin/sessions`` rendering the
 workspace sessions table.
 
-**Outbox reshape (this slice).** Per-session Outbox lives on a
-child page at
-``GET /operator/sys-admin/sessions/{session_id}/outbox`` with a
-"← Back to Sessions Diagnostics" affordance and the Admin
-chrome's Sessions Diagnostics tab still highlighted. The
-earlier inline ``?outbox_session_id=`` rendering on the
-sessions page is gone — a child page sits cleaner than an
-inline expanding region. The pre-16A per-session
-``/operator/sessions/{id}/outbox`` route stays retired
-(bookmarks 404 there).
+**Outbox reshape.** Per-session Outbox lives on a child page at
+``GET /operator/sys-admin/sessions/{session_id}/outbox``.
+
+**PR 6 (this slice).** Lights up the second tab — Accounts
+Management — at ``GET /operator/sys-admin/users`` with per-row
+Admit / Revoke / Promote / Demote toggles and a sibling "Invite
+by email" form. Backed by ``app.services.users``.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    status,
+)
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import invitations, sessions
+from app.services import invitations, sessions, users as users_service
 from app.web.deps import require_sys_admin
 from app.web.return_to import resolve_return_to
 from app.web.routes_operator._shared import _templates
@@ -106,3 +113,137 @@ def sys_admin_session_outbox(
             ),
         },
     )
+
+
+# ---- Accounts Management (PR 6) ------------------------------------------
+
+
+@router.get("/sys-admin/users", response_class=HTMLResponse)
+def sys_admin_users(
+    request: Request,
+    invite_error: str | None = Query(default=None),
+    toggle_error: str | None = Query(default=None),
+    user: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    return _templates.TemplateResponse(
+        request,
+        "operator/sys_admin_users.html",
+        {
+            "user": user,
+            "rows": users_service.list_workspace_users(db),
+            "invite_error": invite_error,
+            "toggle_error": toggle_error,
+        },
+    )
+
+
+def _load_target(db: Session, user_id: int) -> User:
+    target = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return target
+
+
+def _users_redirect(error_code: str | None = None) -> RedirectResponse:
+    url = "/operator/sys-admin/users"
+    if error_code:
+        url = f"{url}?toggle_error={quote(error_code, safe='')}"
+    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+
+
+def _handle_toggle(
+    action: Callable[..., Any], /, **kwargs: Any
+) -> RedirectResponse:
+    try:
+        action(**kwargs)
+    except users_service.UserOperationError as exc:
+        if exc.code == "self_action":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+            ) from exc
+        if exc.code == "last_admin":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail=exc.message
+            ) from exc
+        raise
+    return _users_redirect()
+
+
+@router.post("/sys-admin/users/{user_id}/admit")
+def admit_user(
+    user_id: int,
+    actor: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    return _handle_toggle(
+        users_service.admit, db=db, actor=actor, target=_load_target(db, user_id)
+    )
+
+
+@router.post("/sys-admin/users/{user_id}/revoke")
+def revoke_user(
+    user_id: int,
+    actor: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    return _handle_toggle(
+        users_service.revoke, db=db, actor=actor, target=_load_target(db, user_id)
+    )
+
+
+def _require_confirm(confirm: str | None) -> None:
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required for high-risk role changes",
+        )
+
+
+@router.post("/sys-admin/users/{user_id}/promote")
+def promote_user(
+    user_id: int,
+    confirm: str | None = Form(default=None),
+    actor: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_confirm(confirm)
+    return _handle_toggle(
+        users_service.promote, db=db, actor=actor, target=_load_target(db, user_id)
+    )
+
+
+@router.post("/sys-admin/users/{user_id}/demote")
+def demote_user(
+    user_id: int,
+    confirm: str | None = Form(default=None),
+    actor: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_confirm(confirm)
+    return _handle_toggle(
+        users_service.demote, db=db, actor=actor, target=_load_target(db, user_id)
+    )
+
+
+@router.post("/sys-admin/users/invite")
+def invite_user(
+    email: str = Form(...),
+    invite_as_sys_admin: str | None = Form(default=None),
+    actor: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    try:
+        users_service.invite(
+            db,
+            actor=actor,
+            email=email,
+            is_operator=True,
+            is_sys_admin=invite_as_sys_admin == "true",
+        )
+    except users_service.UserOperationError as exc:
+        url = f"/operator/sys-admin/users?invite_error={quote(exc.code, safe='')}"
+        return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+    return _users_redirect()

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Accounts Management — Admin{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="/operator/sys-admin/sessions">&larr; Back to Sessions Diagnostics</a>
+
+  <h1>Admin</h1>
+
+  {% with current_admin_page = "Accounts" %}
+    {% include "operator/partials/sys_admin_top_nav.html" %}
+  {% endwith %}
+
+  {% if invite_error %}
+    <div class="card banner-scroll-target" role="alert">
+      <p>
+        {% if invite_error == "duplicate" %}
+          That email already has a user row. Use the row's toggles
+          to change their roles.
+        {% elif invite_error == "invalid_email" %}
+          That doesn't look like a valid email address.
+        {% else %}
+          Couldn't add that user. Try again.
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+
+  {% if toggle_error %}
+    <div class="card banner-scroll-target" role="alert">
+      <p>Couldn't apply that change ({{ toggle_error }}).</p>
+    </div>
+  {% endif %}
+
+  {# Invite by email — pre-seeds a users row before the invitee
+     signs in via Entra. ``get_or_create_user`` matches by email
+     on first sign-in. #}
+  <div class="card">
+    <h2 style="margin-top: 0;">Invite by email</h2>
+    <p class="muted">
+      Pre-seed a user row before the invitee first signs in. When
+      they sign in via Entra (matched by email), they bypass
+      <code>/request-access</code> and land on the operator lobby
+      directly.
+    </p>
+    <form method="post" action="/operator/sys-admin/users/invite">
+      <p>
+        <label>
+          Email
+          <input type="email" name="email" required
+                 placeholder="alice@example.edu">
+        </label>
+      </p>
+      <p>
+        <label>
+          <input type="checkbox" name="invite_as_sys_admin" value="true">
+          Also invite as sys-admin
+        </label>
+      </p>
+      <p>
+        <button class="btn" type="submit">Invite</button>
+      </p>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top: 0;">Workspace users</h2>
+    {% if rows %}
+      <table>
+        <tr>
+          <th>Email</th>
+          <th>Name</th>
+          <th>First sign-in</th>
+          <th>Operator</th>
+          <th>Sys-admin</th>
+          <th>Sessions</th>
+          <th class="col-shrink">Actions</th>
+        </tr>
+        {% for row in rows %}
+          {% set is_self = row.id == user.id %}
+          <tr>
+            <td><code>{{ row.email }}</code></td>
+            <td>{{ row.display_name or "—" }}</td>
+            <td>{{ row.created_at.strftime("%Y-%m-%d") }}</td>
+            <td>
+              {% if row.is_operator %}
+                <span class="pill pill-info">yes</span>
+              {% else %}
+                <span class="pill pill-empty">no</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if row.is_sys_admin %}
+                <span class="pill pill-info">yes</span>
+              {% else %}
+                <span class="pill pill-empty">no</span>
+              {% endif %}
+            </td>
+            <td>{{ row.session_operator_count }}</td>
+            <td class="col-shrink">
+              {% if is_self %}
+                <span class="muted" title="You can't change your own roles">(self)</span>
+              {% else %}
+                {# Operator toggle — one-click. #}
+                {% if row.is_operator %}
+                  <form method="post" style="display:inline"
+                        action="/operator/sys-admin/users/{{ row.id }}/revoke">
+                    <button class="chrome-link" type="submit">Revoke</button>
+                  </form>
+                {% else %}
+                  <form method="post" style="display:inline"
+                        action="/operator/sys-admin/users/{{ row.id }}/admit">
+                    <button class="chrome-link" type="submit">Admit</button>
+                  </form>
+                {% endif %}
+                {# Sys-admin toggle — explicit confirmation. #}
+                {% if row.is_sys_admin %}
+                  <form method="post" style="display:inline"
+                        action="/operator/sys-admin/users/{{ row.id }}/demote">
+                    <label class="muted" style="font-size:0.85em">
+                      <input type="checkbox" name="confirm" value="true" required>
+                      confirm demote
+                    </label>
+                    <button class="chrome-link" type="submit">Demote</button>
+                  </form>
+                {% else %}
+                  <form method="post" style="display:inline"
+                        action="/operator/sys-admin/users/{{ row.id }}/promote">
+                    <label class="muted" style="font-size:0.85em">
+                      <input type="checkbox" name="confirm" value="true" required>
+                      confirm promote
+                    </label>
+                    <button class="chrome-link" type="submit">Promote</button>
+                  </form>
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="muted">No users in this workspace yet.</p>
+    {% endif %}
+  </div>
+{% endblock %}

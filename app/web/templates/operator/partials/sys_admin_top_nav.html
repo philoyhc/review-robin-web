@@ -1,13 +1,13 @@
-{# Sys Admin chrome — Segment 16A PR 3.
+{# Sys Admin chrome — Segment 16A PR 3 + PR 6.
 
    One-row tab strip across the workspace Admin surfaces.
    Modelled on (but lighter than) the per-session
    ``session_top_nav.html``. Two tabs:
 
-   - Sessions Diagnostics — the workspace sessions table with
+   - Sessions Diagnostics — workspace sessions table with
      per-row Outbox + Audit log affordances (PRs 3 + 4).
-   - Accounts Management — workspace user list (lands in
-     PR 6); rendered as a disabled placeholder until then.
+   - Accounts Management — workspace user list with Admit /
+     Revoke / Promote / Demote toggles + Invite by email (PR 6).
 
    Required context:
      - current_admin_page: one of "Sessions" / "Accounts".
@@ -15,7 +15,6 @@
 <div class="tab-strip tab-strip-page sys-admin-nav">
   <a class="nav-tab{% if current_admin_page == 'Sessions' %} active{% endif %}"
      href="/operator/sys-admin/sessions">Sessions Diagnostics</a>
-  <span class="nav-tab disabled"
-        aria-disabled="true"
-        title="Coming in 16A PR 6">Accounts Management</span>
+  <a class="nav-tab{% if current_admin_page == 'Accounts' %} active{% endif %}"
+     href="/operator/sys-admin/users">Accounts Management</a>
 </div>
