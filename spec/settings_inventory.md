@@ -214,11 +214,12 @@ read-only today; inline edit deferred to Segment 15F per
 ### Relationship (per-pair, post-15D)
 
 Per-pair attributes table — one row per `(session_id, reviewer_id,
-reviewee_id)` triple. Replaces the legacy
-`Assignment.context.pair_context_*` JSON as the home for
-pair-context tags, lifted out of `assignments` so per-pair
-attributes exist independently of whether the rule engine has
-materialised an assignment for the pair (Segment 13E PR 2 + 15D).
+reviewee_id)` triple. The home for pair-context tags, lifted out
+of `assignments` so per-pair attributes exist independently of
+whether the rule engine has materialised an assignment for the
+pair (Segment 13E PR 2 + 15D). The legacy
+`Assignment.context.pair_context_*` JSON column it replaced was
+dropped in 15D PR 6b.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -367,7 +368,7 @@ override.
 | Field | Type | Notes |
 |---|---|---|
 | `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
-| `source_type` | `String(32)` | `reviewer` / `reviewee` / `pair_context`. Widening to `assignment_context` is gated on 15B Slice 7 (deferred). |
+| `source_type` | `String(32)` | `reviewer` / `reviewee` / `pair_context`. (The legacy `assignment_context` source class retired with `Assignment.context` in 15D PR 6b; not a widening target.) |
 | `source_field` | `String(64)` | e.g. `tag_1` / `tag_2` / `tag_3` for the tag sources; `1` / `2` / `3` for `pair_context`. |
 | `label` | `String(255)` | The override label. |
 
