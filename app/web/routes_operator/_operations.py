@@ -33,6 +33,7 @@ from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
     require_session_operator,
+    require_sys_admin_or_session_operator,
 )
 from app.web.routes_operator._shared import _templates
 
@@ -510,7 +511,9 @@ def invitations_send_one(
 @router.get("/sessions/{session_id}/outbox", response_class=HTMLResponse)
 def outbox_index(
     request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(
+        require_sys_admin_or_session_operator
+    ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:

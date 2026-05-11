@@ -38,9 +38,13 @@
         becomes stale). Reminders reuse the most-recent invitation URL
         so the reviewer's existing link keeps working.
       </p>
+      {# "View outbox" button retired in 16A PR 3 — Outbox is reached
+         from the workspace Admin chrome (top-bar Admin link →
+         Sessions Diagnostics tab → per-row link) so it sits behind
+         the sys-admin gate rather than in operator-facing chrome.
+         Existing per-session /operator/sessions/{id}/outbox URL
+         stays reachable via direct navigation / bookmarks. #}
       <div class="card-action-row">
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/outbox">View outbox</a>
         <form method="post"
               action="/operator/sessions/{{ session.id }}/invitations/generate">
           <button class="btn secondary"

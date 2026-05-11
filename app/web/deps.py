@@ -116,6 +116,28 @@ def require_session_operator(
     return review_session
 
 
+def require_sys_admin_or_session_operator(
+    session_id: int,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> ReviewSession:
+    """16A PR 3 relaxation. Used on the per-session diagnostic
+    routes (Outbox, audit-log CSV) so a sys-admin reaching them from
+    the workspace Admin chrome doesn't also need to be a
+    ``session_operators`` member. Sys-admins bypass the membership
+    check; everyone else falls through to the standard
+    ``require_session_operator`` path.
+    """
+    if user.is_sys_admin:
+        review_session = db.execute(
+            select(ReviewSession).where(ReviewSession.id == session_id)
+        ).scalar_one_or_none()
+        if review_session is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        return review_session
+    return require_session_operator(session_id=session_id, user=user, db=db)
+
+
 def require_reviewer_in_session(
     session_id: int,
     user: User = Depends(get_or_create_user),

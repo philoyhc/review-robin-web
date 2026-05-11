@@ -502,6 +502,11 @@
       .tab-strip-page .nav-tab.active::after {
         background: var(--neutral-marker, #9ca3af);
       }
+      /* 16A PR 3: Sys Admin chrome (one-row tab strip across the
+         Admin surfaces). Inherits ``tab-strip tab-strip-page``
+         styling; the extra margin separates it from the page H1
+         and gives the page body breathing room. */
+      .sys-admin-nav { margin-bottom: var(--space-4); }
       .row-label.setup-row { grid-column: 2; grid-row: 1; }
       .row-label.ops-row   { grid-column: 2; grid-row: 2; }
       /* Setup row gets a bottom border to separate from Ops row. */
@@ -1843,7 +1848,7 @@
             {% if request.url.path != "/operator/settings" %}
               <a class="chrome-link" href="/operator/settings?return_to={{ request.url.path | urlencode }}">Settings</a>
             {% endif %}
-            {% if user.is_sys_admin and request.url.path != "/operator/sys-admin" %}
+            {% if user.is_sys_admin and not request.url.path.startswith("/operator/sys-admin") %}
               <a class="chrome-link" href="/operator/sys-admin?return_to={{ request.url.path | urlencode }}">Admin</a>
             {% endif %}
             {% if request.url.path not in ("/about", "/me/debug") %}
