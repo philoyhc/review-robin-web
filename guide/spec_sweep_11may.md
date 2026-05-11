@@ -11,10 +11,41 @@ Findings sorted by:
 - **C1–C5** — consolidation / compression
 - **S1–S5** — style-only touch-ups
 
+## Status snapshot (2026-05-11 evening)
+
+**Merged to `main`:** C3 (PR #797), F7 (PR #805), Tier 1-3
+coverage-gap section addition (PR #806), Tranche 2 S1-S5 sweep
+(PR #807), four-file rename PR #812.
+
+**Open / draft PRs** (10 across both tranches):
+
+| Item | PR | Stacking |
+|---|---|---|
+| F1 — architecture pair-level context | #803 | on main |
+| F2 — architecture "Practical implications today" | #798 | on main |
+| F3 — operator_ui_concept tab taxonomy | #799 | on main |
+| F4 — setup_pages Relationships section | #804 | on main |
+| F5 — quick_setup_card slot inventory | #800 | on main |
+| F6 — session_home Extract Data card | #801 | on main |
+| F8 — settings_inventory Assignment.context ghosts | #802 | on main |
+| C5 — spec/README regroup | #808 | on main |
+| C4 — unfinished_business cross-refs | #809 | on main |
+| C2 — ui_elements Parts 2-3 archive | #810 | on #809 |
+| C1 — domain_assumptions UI section retire | #811 (merged into #810 base) | on #810 |
+
+The four-file rename PR (#812) was independent of the sweep and
+has already merged; cross-refs throughout this doc + the F7 +
+S-fix landings reference the new names.
+
+The C1 ↔ C2 ↔ C4 stack must merge in order: #809 → #810 → #811.
+The other open PRs (F1–F8 minus F7, plus C5) are independent
+against main.
+
 ---
 
 ## F1. `architecture.md` — Pair-level vs assignment-level context
 
+**Status:** PR #803 open (draft, awaiting merge).
 **Lines:** ~202–247.
 
 **Stale:** Describes the dropped `Assignment.context` JSON column
@@ -39,6 +70,7 @@ retired entirely; pair-context now lives on the first-class
 
 ## F2. `architecture.md` — "Practical implications today"
 
+**Status:** PR #798 open (draft, awaiting merge).
 **Lines:** ~85–113.
 
 **Stale:** Anchored to "end-of-Segment-10C" (2026-05-01); 10+ days
@@ -52,6 +84,7 @@ into 15B or moot post-15D.
 
 ## F3. `operator_ui_concept.md` — Setup / Operations tab taxonomy
 
+**Status:** PR #799 open (draft, awaiting merge).
 **Lines:** ~73–112 (per-page tables); ~144–159 (chrome / status row).
 
 **Stale:** Setup row listed as 5 tabs (Reviewers / Reviewees /
@@ -76,6 +109,7 @@ counted entity).
 
 ## F4. `setup_pages.md` — Assignments + missing Relationships
 
+**Status:** PR #804 open (draft, awaiting merge).
 **Lines:** ~148–201 (Assignments page); no Relationships section.
 
 **Stale:** §148–171 describes a Setup-row Assignments page with
@@ -100,6 +134,7 @@ counted entity).
 
 ## F5. `quick_setup_card_spec.md` — slot inventory
 
+**Status:** PR #800 open (draft, awaiting merge).
 **Lines:** ~23–47 (Slots), 121–132 (Create-session variant).
 
 **Stale:** Slots described as Reviewers / Reviewees / Assignments
@@ -121,6 +156,7 @@ the Settings slot from inert-tooltip to wired.
 
 ## F6. `session_home.md` — Extract Data card
 
+**Status:** PR #801 open (draft, awaiting merge).
 **Lines:** ~174–195.
 
 **Stale:** Card described as scaffolded with five inert download
@@ -143,6 +179,7 @@ scope" para (12A is shipped, not pending).
 
 ## F7. `operator_button_audit.md` — missing Relationships, stale Assignments
 
+**Status:** ✅ **Merged 2026-05-11 (PR #805).**
 **Lines:** ~191–207 (Section 8 Assignments Setup).
 
 **Stale + gap:**
@@ -166,6 +203,7 @@ scope" para (12A is shipped, not pending).
 
 ## F8. `settings_inventory.md` — `Assignment.context` ghosts
 
+**Status:** PR #802 open (draft, awaiting merge).
 **Lines:**
 - ~218 references "`Assignment.context.pair_context_*` JSON as the
   home for" something.
@@ -181,7 +219,8 @@ pair-context home-for-X line to name `relationships.tag_N`.
 
 ## C1. Retire `domain_assumptions.md` UI section
 
-**File:** `spec/domain_assumptions.md` (192 LOC).
+**Status:** PR #811 open (stacked on PR #810, awaiting merge to main).
+**File:** `spec/domain_assumptions.md` (192 LOC pre-PR; 65 LOC after).
 
 **Status:** UI section has a "Superseded (2026-05-03)" banner.
 Migration to `visual_style_general.md` + `visual_style_rrw.md` +
@@ -202,7 +241,8 @@ duplicative.
 
 ## C2. Trim `ui_elements.md` Parts 2–3
 
-**File:** `spec/ui_elements.md` (659 LOC).
+**Status:** PR #810 open (stacked on PR #809, awaiting merge to main).
+**File:** `spec/ui_elements.md` (662 LOC pre-PR; 578 LOC after).
 
 **Status:** Part 2 (Drift catalogue) and Part 3 (Restyle bundle
 PR split) framed the seven-PR migration; the migration shipped.
@@ -255,6 +295,7 @@ ship-state. ~1,138 LOC removed from active `spec/`.
 
 ## C4. Drop dead cross-refs to `unfinished_business.md`
 
+**Status:** PR #809 open (draft, awaiting merge to main).
 **Files:** `architecture.md`, `ui_elements.md`, `settings_inventory.md`,
 and others.
 
@@ -276,6 +317,7 @@ About 8 occurrences across spec/.
 
 ## C5. Consolidate visual-style cross-refs in `spec/README.md`
 
+**Status:** PR #808 open (draft, awaiting merge to main).
 **File:** `spec/README.md` (35 LOC).
 
 **Status:** README table lists 22 files but doesn't signal the
@@ -290,6 +332,14 @@ hierarchy among visual-style docs. A new contributor opening
 of each group.
 
 ---
+
+> **S1–S5 status: ✅ Merged 2026-05-11 (PR #807, Tranche 2 single-sweep PR).**
+> S1 and S3 were both skipped at landing time — S1 because the
+> `51 → 62` drift only ever appeared in the dated
+> `guide/codebase_assessment_09may.md` snapshot (correctly
+> preserved as-is); S3 because the "inert pending Segment 12A
+> PR 6" copy is overwritten by F5 (PR #800) and F6 (PR #801)
+> which both rewrite the surrounding sections.
 
 ## S1. Audit-event count: 51 → 62
 
@@ -342,24 +392,28 @@ or a sibling table). Flag for the 13C plan revision per
 
 ## Suggested execution order
 
-Group into three landing tranches:
+Grouped into three landing tranches; all three are in flight.
 
 **Tranche 1 — F-fixes (drift, mostly mechanical):** F2, F3, F5,
-F6, F8, then F1 + F4 + F7 (heavier rewrites). Each can ship as a
-separate small PR. ~8 PRs.
+F6, F8, then F1 + F4 + F7 (heavier rewrites). 8 PRs.
+**Status:** 1 of 8 merged (F7 #805). F1–F6, F8 open as drafts
+(#798, #799, #800, #801, #802, #803, #804).
 
 **Tranche 2 — S-fixes (style touch-ups):** S1–S5. Single sweep
-PR, ~50-line diff. **Landed 2026-05-11** (PR pending).
+PR. ✅ **Merged 2026-05-11 (PR #807).** S1 + S3 skipped per the
+banner above each section.
 
-**Tranche 3 — C-consolidation (judgment calls; ask user first):**
-- C3 is the biggest call — does `functional_spec.md` survive in
-  any form?
-- C1 (retire domain_assumptions.md UI) is the next biggest reshape.
-- C2, C4, C5 are smaller polish.
+**Tranche 3 — C-consolidation:** C3 (decided + shipped as
+retirement to archive, PR #797), C5 (#808, open), C4 (#809,
+open), C2 (#810, stacked on #809), C1 (#811, merged into the
+#810 base — awaiting #810/#809 to reach main).
 
-Recommend **completing Tranche 1 + 2 before touching any
-C-consolidation** — fix what's wrong before reshaping what's
-present.
+**Outside the F/C/S framing:** PR #806 added the Tier 1/2/3
+coverage-gap section to this doc; PR #812 renamed four spec
+files to more informative names (assumptions →
+domain_assumptions, enhanced_instruments →
+group_scoped_instruments, operations_renew → operations_pages,
+all_buttons → operator_button_audit). Both merged.
 
 ## Headline numbers
 
@@ -383,6 +437,13 @@ parallel exercise — mapping every shipped surface against
 file** (today the contract for them is implicit in the code
 and scattered across other specs). Captured here so they
 don't get lost; sequencing is up to the user.
+
+**Reviewed 2026-05-11 evening.** The Tier 1 / 2 / 3 list below
+is unchanged in scope since it landed in PR #806 — none of the
+12 items have specs written for them yet, and no new
+subsystems landed in the meantime. Cross-refs throughout this
+section name the post-rename file paths (operator_button_audit,
+operations_pages, etc.).
 
 ### Tier 1 — sizeable shipped subsystems with no dedicated spec
 
