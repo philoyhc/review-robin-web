@@ -15,7 +15,7 @@
   <div class="card">
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
       <h2 style="margin-top: 0;">Audit log — {{ audit_session.name }}</h2>
-      <a class="btn secondary" href="{{ csv_download_url }}">Download CSV</a>
+      <a class="btn secondary" href="{{ filter_form.download_csv_url }}">Download CSV</a>
     </div>
     <p class="muted">
       Append-only record of every mutating action on this
@@ -23,6 +23,59 @@
       is rendered raw as JSON in this view; per-row pretty-print
       lands in 16C PR 3.
     </p>
+
+    <form method="get" action="{{ viewer_base_url }}" style="margin-top: 16px;">
+      <div class="page-grid">
+        <div>
+          <label for="filter-event-type">Event type</label>
+          <select id="filter-event-type" name="event_type" multiple size="6"
+                  style="width: 100%; min-height: 140px;">
+            {% for value, selected in filter_form.event_type_options %}
+              <option value="{{ value }}"{% if selected %} selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+          </select>
+          <small class="muted">Ctrl/Cmd-click to select multiple.</small>
+        </div>
+        <div>
+          <label>Severity</label>
+          {% for value, selected in filter_form.severity_options %}
+            <label class="filter-checkbox">
+              <input type="checkbox" name="severity" value="{{ value }}"{% if selected %} checked{% endif %}>
+              <span class="pill pill-{{ value }}">{{ value }}</span>
+            </label>
+          {% endfor %}
+
+          <label for="filter-actor" style="margin-top: 12px; display: block;">Actor email</label>
+          <input type="text"
+                 id="filter-actor"
+                 name="actor"
+                 list="audit-actor-options"
+                 value="{{ filter_form.actor_email_value }}"
+                 autocomplete="off"
+                 placeholder="any actor"
+                 style="width: 100%;">
+          <datalist id="audit-actor-options">
+            {% for email in filter_form.actor_options %}
+              <option value="{{ email }}"></option>
+            {% endfor %}
+          </datalist>
+
+          <label for="filter-from" style="margin-top: 12px;">From</label>
+          <input type="date" id="filter-from" name="from"
+                 value="{{ filter_form.created_from_value }}">
+
+          <label for="filter-to" style="margin-top: 8px;">To</label>
+          <input type="date" id="filter-to" name="to"
+                 value="{{ filter_form.created_to_value }}">
+        </div>
+      </div>
+      <div class="btn-pair" style="margin-top: 16px;">
+        <button class="btn" type="submit">Apply filters</button>
+        {% if filter_form.is_active %}
+          <a class="btn secondary" href="{{ filter_form.cleared_url }}">Clear filters</a>
+        {% endif %}
+      </div>
+    </form>
 
     {% if audit_log.rows %}
       <table>
@@ -56,7 +109,7 @@
       {% if audit_log.next_cursor %}
         <p style="margin-top: 16px;">
           <a class="chrome-link"
-             href="/operator/sys-admin/sessions/{{ audit_session.id }}/audit-log?cursor={{ audit_log.next_cursor }}">
+             href="{{ viewer_base_url }}?cursor={{ audit_log.next_cursor }}{% if filters_querystring %}&{{ filters_querystring }}{% endif %}">
             Older events &rarr;
           </a>
         </p>
@@ -64,6 +117,7 @@
     {% else %}
       <p class="muted">
         No audit events for this session
+        {% if filter_form.is_active %} match the current filter{% endif %}
         {% if request.query_params.get('cursor') %} older than the requested cursor{% endif %}.
       </p>
     {% endif %}

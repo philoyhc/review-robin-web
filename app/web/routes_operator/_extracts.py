@@ -27,7 +27,7 @@ card is active; lock disables setup mutations only, not reads.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -35,6 +35,7 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, ReviewSession, User
 from app.db.session import get_db
 from app.services import audit, responses as responses_service
+from app.web import views as audit_views
 from app.services.extracts import filename, stream_csv
 from app.services.extracts.audit_events_extract import serialize_audit_events
 from app.services.extracts.relationships_extract import serialize_relationships
@@ -222,6 +223,11 @@ def export_responses_csv(
 @router.get("/sessions/{session_id}/export/audit_log.csv")
 def export_audit_log_csv(
     session_id: int,
+    event_type: list[str] | None = Query(default=None),
+    severity: list[str] | None = Query(default=None),
+    actor: str | None = Query(default=None),
+    from_: str | None = Query(default=None, alias="from"),
+    to: str | None = Query(default=None),
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
@@ -238,27 +244,68 @@ def export_audit_log_csv(
     ).scalar_one_or_none()
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    # Filter set shared with the in-app viewer (16C PR 2). The
+    # Download CSV button on the viewer carries the page's query
+    # string over so the spreadsheet honours the active filter
+    # strip. Direct hits to the route URL with no filter params
+    # produce the full unfiltered CSV (the pre-PR-2 shape).
+    try:
+        filters = audit_views.parse_audit_log_filters(
+            event_types=event_type,
+            severities=severity,
+            actor=actor,
+            from_=from_,
+            to=to,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"audit log filter parsing failed: {exc}",
+        ) from exc
     # Count up front so the audit event carries the row count
     # without materialising the streaming generator. The
     # ``session.audit_log_extracted`` event we're about to write
     # is NOT included in this count — the next download will
     # capture it (the recursion is bounded and intentional).
-    body_count = db.execute(
+    count_stmt = (
         select(func.count())
         .select_from(AuditEvent)
         .where(AuditEvent.session_id == review_session.id)
-    ).scalar_one()
+    )
+    # _apply_filters needs the LEFT-JOIN on users.email when
+    # actor filtering is active. For the count we want the same
+    # WHERE clauses without the join overhead when actor filter
+    # is empty — split the cases to stay cheap.
+    if filters.actor_email:
+        from app.db.models import User as _User
 
+        count_stmt = (
+            select(func.count())
+            .select_from(AuditEvent)
+            .outerjoin(_User, _User.id == AuditEvent.actor_user_id)
+            .where(AuditEvent.session_id == review_session.id)
+        )
+        count_stmt = audit._apply_filters(count_stmt, filters, _User)
+    else:
+        # No actor filter → no join needed. Just augment WHERE.
+        from app.db.models import User as _User
+
+        count_stmt = audit._apply_filters(count_stmt, filters, _User)
+    body_count = db.execute(count_stmt).scalar_one()
+
+    audit_event_payload = audit.counts(rows=body_count)
     audit.write_event(
         db,
         event_type="session.audit_log_extracted",
         summary=(
             f"Extracted Audit log CSV for session {review_session.code} "
-            f"({body_count} rows)"
+            f"({body_count} rows"
+            f"{', filtered' if filters.is_active else ''})"
         ),
         actor_user_id=user.id,
         session=review_session,
-        payload=audit.counts(rows=body_count),
+        payload=audit_event_payload,
+        context=filters.as_audit_context() or None,
     )
 
     download_name = filename(review_session, "audit_log")
@@ -266,7 +313,7 @@ def export_audit_log_csv(
     # cursor; iterate lazily so memory stays flat on long-running
     # sessions.
     return StreamingResponse(
-        stream_csv(serialize_audit_events(db, review_session)),
+        stream_csv(serialize_audit_events(db, review_session, filters=filters)),
         media_type="text/csv",
         headers={
             "Content-Disposition": f'attachment; filename="{download_name}"',

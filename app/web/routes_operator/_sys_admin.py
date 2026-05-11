@@ -127,26 +127,57 @@ def sys_admin_session_audit_log(
     request: Request,
     session_id: int,
     cursor: int | None = Query(default=None, ge=1),
+    event_type: list[str] | None = Query(default=None),
+    severity: list[str] | None = Query(default=None),
+    actor: str | None = Query(default=None),
+    from_: str | None = Query(default=None, alias="from"),
+    to: str | None = Query(default=None),
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> Response:
-    """Per-session audit log child page (Segment 16C PR 1).
+    """Per-session audit log child page (Segment 16C PR 1 + PR 2).
 
     Sibling of the Outbox child page — same chrome, same back-link
     convention. Newer-first table with keyset pagination on
     ``id DESC``; the previous page's last ``id`` arrives as
     ``?cursor=<id>`` and the next page asks for ``id < cursor``.
+
+    PR 2 adds a filter strip: ``?event_type=`` (multi),
+    ``?severity=`` (multi), ``?actor=`` (single), ``?from=`` /
+    ``?to=`` (ISO date). Filter state composes with the cursor;
+    the Download CSV button carries the same query string so the
+    spreadsheet honours the filter set.
     """
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.id == session_id)
     ).scalar_one_or_none()
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    try:
+        filters = views.parse_audit_log_filters(
+            event_types=event_type,
+            severities=severity,
+            actor=actor,
+            from_=from_,
+            to=to,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"audit log filter parsing failed: {exc}",
+        ) from exc
     rows = audit.list_events_for_session(
         db,
         review_session,
         cursor=cursor,
         limit=_AUDIT_LOG_PAGE_SIZE,
+        filters=filters,
+    )
+    base_url = (
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+    )
+    csv_base_url = (
+        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
     )
     return _templates.TemplateResponse(
         request,
@@ -157,10 +188,16 @@ def sys_admin_session_audit_log(
             "audit_log": views.build_audit_log_rows(
                 rows, limit=_AUDIT_LOG_PAGE_SIZE
             ),
-            "csv_download_url": (
-                f"/operator/sessions/{review_session.id}"
-                "/export/audit_log.csv"
+            "filter_form": views.build_audit_log_filter_form(
+                filters,
+                distinct_actor_emails=audit.list_distinct_actor_emails(
+                    db, review_session
+                ),
+                base_url=base_url,
+                csv_base_url=csv_base_url,
             ),
+            "filters_querystring": views.filters_querystring(filters),
+            "viewer_base_url": base_url,
         },
     )
 
