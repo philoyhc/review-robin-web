@@ -95,7 +95,7 @@ class EmailTransport(Protocol):
 
 The `EmailMessage` shape is transport-agnostic — no DB types in
 the contract, no `ReviewSession` / `Reviewer`. The future send
-dispatcher (Segment 14-1 Part A) builds a message from outbox +
+dispatcher (Segment 14B Part A) builds a message from outbox +
 session + reviewer rows and hands the transport a flat object.
 
 A `health_check() -> HealthResult` method is a reasonable future
@@ -190,7 +190,7 @@ Today's `email_outbox` table is the audit log. Its current shape
 **Segment 11C Part 2 (truncated)** lands the audit-log columns
 the production send path will write at send time, as inert
 schema scaffolding — no wiring, no service-layer reads. The
-columns are populated by **Segment 14-1 Part A** when the
+columns are populated by **Segment 14B Part A** when the
 dispatch helper goes live:
 
 - `error_message` (Text, nullable) — captured on failure so the
@@ -212,7 +212,7 @@ dispatch helper goes live:
 - `correlation_id` (String 128, nullable, indexed) — the app's
   deterministic identifier for "this send to this recipient at
   this intent." Mechanism for idempotent retry; populated by
-  14-1's enqueue path.
+  14B's enqueue path.
 
 Records are written *before* the send is attempted (status
 `queued`), updated *after* with the outcome. This pattern means
@@ -328,7 +328,7 @@ none required today; operator-level credentials are sufficient.
   Fernet key.
 
 **Implementation work to add.** None for the basic path.
-**Segment 14-1 Part A** wires the existing transport into the
+**Segment 14B Part A** wires the existing transport into the
 Manage Invitations send path against the audit-log columns
 **Segment 11C Part 2** scaffolds.
 
@@ -576,23 +576,23 @@ to all. ✅ = shipped, ◻ = pending.
    `backend` / `backend_message_id` / `delivered_at` /
    `payload_hash` / `correlation_id`) and the widened status /
    kind value-sets land in **Segment 11C Part 2** as inert
-   schema scaffolding. **Segment 14-1 Part A** is the first call
+   schema scaffolding. **Segment 14B Part A** is the first call
    site that writes to them.
 4. ◻ **A `correlation_id` strategy** for idempotent sends
-   across invitation, reminder, and other kinds — Segment 14-1
+   across invitation, reminder, and other kinds — Segment 14B
    Part B.
 5. ◻ **A bulk-send queue / worker pattern** for operator-
-   triggered batch operations — Segment 14-1 Part C.
+   triggered batch operations — Segment 14B Part C.
 6. ◻ **Per-deployment from-identity configuration** as a
    complement to the per-operator settings already in place —
-   Segment 14-1 Part D.
+   Segment 14B Part D.
 7. ✅ **Secrets management** via App Service settings, with Key
    Vault references for credentials and tokens
    (`SMTP_ENCRYPTION_KEY` env var; per-operator passwords
    encrypted at rest).
 8. ◻ **An operator-visible diagnostic surface** — the existing
    Outbox concept, generalised to read from the audit log
-   regardless of backend — Segment 14-1 Part E.
+   regardless of backend — Segment 14B Part E.
 
 With these in place, adding any one of Options B–D is a scoped
 piece of work: implement one `EmailTransport` class, add its
@@ -625,29 +625,29 @@ A reasonable sequence:
    doesn't have to ship Alembic churn alongside its logic
    changes.
 4. ◻ **Manage Invitations send activation (SMTP)** — Segment
-   14-1 Part A. First call site for the existing
+   14B Part A. First call site for the existing
    `transport_for` factory; first writer of Step 3's columns.
    Per-row Send + bulk Send + Send-test-to-me + dispatch helper
    + chrome pill + audit events + responses-received submit-
    time enqueue.
 5. ◻ **`correlation_id` strategy + idempotent retry** — Segment
-   14-1 Part B.
-6. ◻ **Bulk-send queue + background worker** — Segment 14-1
+   14B Part B.
+6. ◻ **Bulk-send queue + background worker** — Segment 14B
    Part C.
-7. ◻ **Per-deployment from-identity defaults** — Segment 14-1
+7. ◻ **Per-deployment from-identity defaults** — Segment 14B
    Part D.
-8. ◻ **Generalised Outbox diagnostic surface** — Segment 14-1
+8. ◻ **Generalised Outbox diagnostic surface** — Segment 14B
    Part E.
 9. ◻ **Add Option C (ACS)** as the first non-SMTP backend (no
    IT cooperation needed, can be done unilaterally) — Segment
-   14-1 Part G. Use it for early production deployments and
+   14B Part G. Use it for early production deployments and
    testing.
 10. ◻ **Add Option B (Graph)** when an institutional deployment
-    is ready to pursue it — Segment 14-1 Part F. The IT
+    is ready to pursue it — Segment 14B Part F. The IT
     conversation runs in parallel with the code work.
 11. ◻ **Add Option D (third-party)** if a specific deployment
     requires it or as a fallback for institutions where
-    neither ACS nor Graph fits — Segment 14-1 Part H.
+    neither ACS nor Graph fits — Segment 14B Part H.
 
 Steps 9–11 are independent; do them in whatever order
 deployments demand.

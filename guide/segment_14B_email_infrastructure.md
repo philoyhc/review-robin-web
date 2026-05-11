@@ -1,6 +1,13 @@
-# Segment 14-1 — Email infrastructure (send activation + backends)
+# Segment 14B — Email infrastructure (send activation + backends)
 
-Stub. The home for **all email *wiring* work** absorbed from the
+> **Carved out of the original Segment 14 family (2026-05-11).**
+> Renamed from `segment_14-1_email_infra.md`. Production
+> hardening proper lives in **14A**
+> (`guide/segment_14A_production_hardening.md`); reminder
+> cadence + auto-scheduled reminders live in **14C**
+> (`guide/segment_14C_reminders_workflow.md`).
+
+The home for **all email *wiring* work** absorbed from the
 formerly-broader Segment 11C Part 2. Per
 `spec/email_infra_options.md`, the app's invitation, reminder,
 and notification paths depend on a single internal interface
@@ -35,8 +42,8 @@ work starts.
   `responses_received_enabled` toggle) — Segment 11E.
 - ✅ Consolidated Manage Invitations + Responses pages with the
   list-with-bulk-actions pattern — Segment 11C Part 1.
-- ◻ **Outbox audit-log column scaffolding** — Segment 11C Part 2
-  (truncated). Not yet shipped. Hard prerequisite for **Part A
+- ✅ **Outbox audit-log column scaffolding** — Segment 11C Part 2
+  (PR #541, 2026-05-07). Hard prerequisite for **Part A
   specifically** because Part A is the first call site that
   populates `error_message` / `correlation_id` / etc. Parts B+
   build on Part A.
@@ -67,7 +74,7 @@ Re-cutting along the schema / wiring / backend axis:
   an operator-visible diagnostic surface — none of which is
   "consolidating Operations pages".
 
-The truncated 11C ships fast (one migration + model edit). 14-1
+The truncated 11C ships fast (one migration + model edit). 14B
 ships at its own pace, gated on deployment demand for each
 backend.
 
@@ -77,7 +84,7 @@ backend.
 
 **Goal.** Light up the existing per-operator SMTP path. Outbox
 rows with `kind` ∈ {`invitation`, `reminder`, `responses_received`}
-that 14-1 enqueues actually go out via the operator's configured
+that 14B enqueues actually go out via the operator's configured
 `SmtpEmailTransport`; failures land in the new
 `error_message` column.
 
@@ -135,7 +142,8 @@ PR A1 + A2 can fold if the bulk handler stays small;
 keeping them split protects rollback if bulk semantics need
 reshuffling.
 
-**Hard dependency:** Segment 11C Part 2 (the schema columns).
+**Hard dependency:** Segment 11C Part 2 (the schema columns) —
+✅ shipped.
 
 ### Part B — `correlation_id` strategy + idempotent retry
 
@@ -296,6 +304,11 @@ party".
 - **Per-cohort body customization.** Stays at session level via
   the editor's overrides; per-cohort would be a future
   enhancement on the editor side.
+- **Auto-scheduled reminder cadence.** When and how often to
+  enqueue reminders for incomplete reviewers (cron / time-of-day
+  / per-reviewer dedup) lives in **14C**. 14B's Part A enqueues
+  the `kind="reminder"` rows on operator-triggered Send today;
+  14C is the scheduler that fires them automatically.
 
 ## Doc impact
 

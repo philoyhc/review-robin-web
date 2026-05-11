@@ -46,7 +46,7 @@ back-link returns the operator to wherever they came from
 | `smtp_password_encrypted` | `LargeBinary` | Fernet ciphertext keyed off the deployer's `SMTP_ENCRYPTION_KEY` env var. **Plaintext is never persisted.** |
 | `smtp_from_display_name` | `String(255)` | Friendly name used in the `From:` header. |
 | `smtp_encryption` | `String(16)` | `none` / `starttls` / `tls`. |
-| `smtp_transport` | `String(16)` | `smtp` (default; only value supported today). Reserved for the Segment 14-1 backend swaps (Microsoft Graph, ACS). |
+| `smtp_transport` | `String(16)` | `smtp` (default; only value supported today). Reserved for the Segment 14B backend swaps (Microsoft Graph, ACS). |
 
 **Send-as-me identity model.** The operator who initiates a send in
 Manage Invitations sends from their own SMTP credentials. There is

@@ -294,7 +294,7 @@ Dev-diagnostic page; **not an Operations row tab**. Reachable via the "View outb
 - **Empty state** — "No outbox rows yet for this session."
 - **Chrome.** The page extends `base.html` with the standard session top nav; no Operations tab highlights as active (mirroring how Edit Session sub-pages render with no tab active).
 
-Real SMTP / production email is deferred to **Segment 14-1** (email send activation + backends); the outbox table itself stays useful for debugging in any environment, and the columns the dispatch helper writes to landed with **Segment 11C Part 2** (PR #541, 2026-05-07).
+Real SMTP / production email is deferred to **Segment 14B** (email send activation + backends); the outbox table itself stays useful for debugging in any environment, and the columns the dispatch helper writes to landed with **Segment 11C Part 2** (PR #541, 2026-05-07).
 
 ### `/about` — About
 

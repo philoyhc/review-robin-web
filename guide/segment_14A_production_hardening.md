@@ -1,17 +1,34 @@
-# Segment 14 Plan — Production Hardening
+# Segment 14A — Production Hardening
 
-**Project:** Review Robin Web  
-**Repository:** <https://github.com/philoyhc/review-robin-web>  
-**Segment:** 14 of the low-intensity workplan  
-**Purpose:** Make the application safer, more observable, more supportable, and more credible for a real internal pilot
+**Project:** Review Robin Web
+**Repository:** <https://github.com/philoyhc/review-robin-web>
+**Purpose:** Make the application safer, more observable, more
+supportable, and more credible for a real internal pilot
+
+> **Carved out of the original Segment 14 (2026-05-11).** The
+> original `segment_14_production_hardening_plan.md` bundled
+> three concerns: production hardening, email infrastructure,
+> and reminders workflow. The split landed in three sibling
+> plans:
+>
+> - **14A** (this file) — production hardening proper.
+> - **14B** — `guide/segment_14B_email_infrastructure.md` (absorbs
+>   the former `segment_14-1_email_infra.md`).
+> - **14C** — `guide/segment_14C_reminders_workflow.md` (auto /
+>   scheduled reminder cadence on top of 14B's transport).
+>
+> Inherited-debt items from earlier segments (4A / 5A) that
+> describe Postgres-specific optimisations + secret management
+> + VNet integration + CI hardening live in **this file** since
+> they're load-bearing for production credibility.
 
 ---
 
 ## 1. Segment goal
 
-Segment 14 hardens the application after the core functional loop exists.
+Segment 14A hardens the application after the core functional loop exists.
 
-By this point, the app should already support session setup, imports, assignments, reviewer responses, invitations, monitoring, export, and retention. Segment 14 improves operational readiness.
+By this point, the app should already support session setup, imports, assignments, reviewer responses, invitations, monitoring, export, and retention. Segment 14A improves operational readiness.
 
 This is not about adding new Review Robin features. It is about making the existing system more reliable and supportable.
 
@@ -19,7 +36,7 @@ This is not about adding new Review Robin features. It is about making the exist
 
 ## 2. Success criteria
 
-Segment 14 is complete when:
+Segment 14A is complete when:
 
 1. Production/staging deployment path is defined.
 2. App settings are documented and separated by environment.
@@ -48,6 +65,11 @@ Do not include:
 - full penetration test;
 - full WCAG audit, unless this is moving into institutional production.
 
+Email infrastructure (transport activation, backend swaps,
+correlation_id, bulk-send worker, generalised Outbox) lives in
+**14B**, not here. Reminder cadence + auto-scheduled reminders
+live in **14C**, not here.
+
 ---
 
 ## 3.1 Inherited from Segment 4A
@@ -68,7 +90,8 @@ The following Postgres-specific optimizations were deferred here:
   `pytest` against SQLite. Add a parallel job that spins up a Postgres
   service container (GitHub Actions `services:` block) and runs the test
   suite against it, so dialect drift is caught in CI rather than on
-  deploy.
+  deploy. *(Largely shipped — the `ci-postgres` workflow runs the full
+  pytest suite against `postgres:16`; remaining hardening lives here.)*
 - **Review and add Postgres-specific indexes.** GIN indexes on `JSONB`
   columns where queried; partial indexes for frequently-filtered subsets;
   expression indexes if any.
@@ -97,11 +120,6 @@ were deferred here:
   database behind a private endpoint, integrate the App Service into the
   VNet, and remove "Allow Azure services" plus the developer-IP firewall
   rules.
-- **Full Postgres pytest matrix in CI.** Segment 5A added a migration-only
-  Postgres smoke job (`alembic upgrade head` + round-trip) but kept the
-  full pytest suite on SQLite. Add a parallel job that runs the entire
-  test suite against a Postgres service container so dialect drift in
-  application queries (not just schema) is caught in CI.
 - **Migration-on-deploy safety controls.** Segment 5A's migrate-on-deploy
   step fails the workflow if migration fails, but does not gate
   destructive migrations. Add: a manual-approval gate for staging/production
@@ -123,23 +141,17 @@ This segment may be too broad for one PR. Prefer several smaller PRs.
 Suggested branches:
 
 ```text
-segment-13-logging-monitoring
-segment-13-deployment-hardening
-segment-13-permission-review
-segment-13-runbooks-docs
-segment-13-accessibility-pass
-```
-
-If using one branch:
-
-```bash
-git checkout -b segment-13-production-hardening
+segment-14A-logging-monitoring
+segment-14A-deployment-hardening
+segment-14A-permission-review
+segment-14A-runbooks-docs
+segment-14A-accessibility-pass
 ```
 
 Suggested umbrella PR title:
 
 ```text
-Segment 14: Production hardening pass
+Segment 14A: Production hardening pass
 ```
 
 ---
@@ -173,7 +185,7 @@ Document required environment variables:
 - app environment;
 - database URL;
 - fake-auth setting;
-- email mode;
+- email mode (cross-reference 14B);
 - storage settings;
 - Easy Auth assumptions;
 - logging level;
@@ -189,7 +201,7 @@ Add structured logs for:
 
 - session activation;
 - import failures;
-- invitation send failures;
+- invitation send failures (cross-reference 14B);
 - reviewer save errors;
 - export generation failures;
 - permission denials;
@@ -476,7 +488,7 @@ Acceptance criteria:
 ## 11. Completion note template
 
 ```markdown
-## Segment 14 completion note
+## Segment 14A completion note
 
 Completed:
 - deployment hardening
@@ -517,5 +529,4 @@ Deferred:
 - [ ] Troubleshooting guide exists.
 - [ ] Known limitations are documented.
 
-After Segment 14, the application is ready for a cautious internal pilot, subject to institutional policy and data-classification approval.
-
+After Segment 14A (in conjunction with 14B + 14C), the application is ready for a cautious internal pilot, subject to institutional policy and data-classification approval.

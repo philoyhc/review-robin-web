@@ -256,4 +256,4 @@ it's deferred to a later segment:
 | Cleaning up unfinished business     | Segment 11 |
 | CSV / Excel exports                 | Segment 12 |
 | Rule-based assignment builder       | Segment 13 |
-| Production hardening (`JSONB`, native `UUID`, structured logging, monitoring, runbooks) | Segment 14 |
+| Production hardening (`JSONB`, native `UUID`, structured logging, monitoring, runbooks) | Segment 14A |

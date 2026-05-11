@@ -26,7 +26,7 @@ Public access is enabled with a firewall allow-list:
   networks that block outbound 5432 will need to use Azure Cloud Shell
   / Cloud CLI instead — that's the verified working path today.
 
-VNet integration and private endpoints are deferred to Segment 14 (production hardening).
+VNet integration and private endpoints are deferred to Segment 14A (production hardening).
 
 ## App startup
 

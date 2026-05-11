@@ -76,16 +76,16 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
 
 - **Segment 11D follow-on — Reviewer surface, multi-instrument rewrite** — done 2026-05-05. The five planned PRs **#428 (α) → #430 (β) → #431 (γ) → #432 (δ) → #433 (ε)** landed in dependency order, then a polish stream **#434 → #448** swept the missing-required UX, the per-instrument intro grid + tinted help cards, the auto-seed-assignments-on-instrument-add behaviour, the missing-required Cancel-back-to-source-page link, the numeric-field journey (`type="number"` with `min`/`max` + `step="any"` + hidden spinners + `title` constraint hint + JS `setCustomValidity` step-grid popup with `1e-6` tolerance + server-side `validate_value` backstop in `responses.py`), and the per-instrument constraint summary line above each table (List rows omitted). Save / Submit flash banners retired in #441; missing-required moved to its own full-width 2-column `.rs-missing-card` and Submit became a hard gate (acknowledge-and-submit-anyway retired) in #436. New helpers: `views.placeholder_for_field`, `views.constraint_summary_for_field`. Plan: `guide/archive/segment_11D_v2_sweep_non_session.md` "Follow-on". Catalog `guide/archive/unfinished_business.md` #32 partial (general "further refinement" remains a Segment 15 catch-all).
 
-- **Segment 11E — Operator-editable email template editor + SMTP scaffolding** — done 2026-05-07. Six PRs landed against the plan (PR 3 collapsed into PR 1 — the renderer wiring landed there; PR 7 absorbed into Segment 14-1) plus one polish PR:
+- **Segment 11E — Operator-editable email template editor + SMTP scaffolding** — done 2026-05-07. Six PRs landed against the plan (PR 3 collapsed into PR 1 — the renderer wiring landed there; PR 7 absorbed into Segment 14B) plus one polish PR:
   - **PR 1 (#461)** — schema + service-layer renderer. `sessions.help_contact` (String 320, nullable) and `sessions.email_template_overrides` (JSON, nullable) columns; new `app/services/email_templates.py` rendering `string.Template.safe_substitute` over the canonical five-tag merge field set (`$reviewer_name` / `$session_name` / `$deadline` / `$help_contact` / `$invite_url`); `_email_body` / `_reminder_body` retire in favour of the new `render_invitation` / `render_reminder`. Help-contact also surfaces on the reviewer surface as a small "Questions? Contact X" line.
   - **PR 2-A (#462)** — placeholder cards on `/setupinvite`, framing the editor surface ahead of the actual editor.
   - **PR 4 (#463)** — operator Settings page at `/operator/settings`. Per-operator SMTP credentials (seven new columns on `users`); password encrypted at rest via `cryptography.fernet` keyed off the `SMTP_ENCRYPTION_KEY` env var; new `app/services/operator_settings.py` + `app/services/_secrets.py`; user-menu Settings link in the chrome.
-  - **PR 5 (#464)** — `EmailTransport` Protocol + `EmailMessage` / `SendResult` dataclasses + concrete `SmtpEmailTransport` (`smtplib`, STARTTLS / implicit-SSL) + typed-stub `GraphEmailTransport` placeholder + `transport_for(settings)` factory. Nothing in the app calls this yet; first call site is **Segment 14-1 Part A**.
+  - **PR 5 (#464)** — `EmailTransport` Protocol + `EmailMessage` / `SendResult` dataclasses + concrete `SmtpEmailTransport` (`smtplib`, STARTTLS / implicit-SSL) + typed-stub `GraphEmailTransport` placeholder + `transport_for(settings)` factory. Nothing in the app calls this yet; first call site is **Segment 14B Part A**.
   - **PR 2 (#465)** — actual editor UI on `/setupinvite`. Two-card `.bottom-grid` layout: composer left, merge tags + Save / Cancel right. Per-template selection via `?template=` query. Per-field "Reset to default" forms; `email_template.updated` / `email_template.reset` audit events.
   - **#468** polish — Email Template + Settings button consistency: tabs out of card / normal-sized / flushed left, Save / Cancel at bottom-right of their card, no flash banners (Save disables until dirty), Settings page picks up `?return_to=` plumbing matching the About-page convention.
   - **PR 6 (#532)** — responses-received template editor (third tab). Adds the responses-received subject / body / cc / bcc keys to `email_template_overrides` plus a per-session `responses_received_enabled` bool flag (default `True`) the editor surfaces as a "Send this confirmation when a reviewer submits." checkbox. New `email_templates.render_responses_received(session, reviewer)` helper (drops `$invite_url`, adds `$submitted_at` resolved via `_latest_submitted_at` against the reviewer's responses) + `responses_received_enabled(session)` reader + `set_responses_received_enabled(session, enabled)` writer. Editor's right-card merge-tag list goes per-template via new `views.merge_tags_for_template(template)` helper. `views.EMAIL_PREVIEW_TABS` flips `is_shipped=True` on the responses_received entry — lights up the previously deferred Preview hub artifact card without needing a new registry seam.
-  - Spec at `spec/email_infra_options.md` for the broader transport landscape (Options A–D: SMTP, Microsoft Graph application permission, Azure Communication Services, third-party transactional). The Graph stub will become Option B once the institution's IT conversation lands; the wiring lives in **Segment 14-1**.
-  - Plan: `guide/archive/segment_11E_email_template_editor.md`. Catalog `guide/archive/unfinished_business.md` #24 (closed by this segment). The submit-time send wiring (formerly planned as 11E PR 7) absorbed into **Segment 14-1 Part A** so all email *sending* lives on one segment regardless of which transport backend lights up.
+  - Spec at `spec/email_infra_options.md` for the broader transport landscape (Options A–D: SMTP, Microsoft Graph application permission, Azure Communication Services, third-party transactional). The Graph stub will become Option B once the institution's IT conversation lands; the wiring lives in **Segment 14B**.
+  - Plan: `guide/archive/segment_11E_email_template_editor.md`. Catalog `guide/archive/unfinished_business.md` #24 (closed by this segment). The submit-time send wiring (formerly planned as 11E PR 7) absorbed into **Segment 14B Part A** so all email *sending* lives on one segment regardless of which transport backend lights up.
 
 - **Segment 11K — Audit-event `detail` schema convention** — done 2026-05-07. PRs **#544 (PR 1) → #545 (PR 2) → #546 (PR 3) → #547 (PR 4) → #548 (PR 5) → #549 (PR 6) → #550 (PR 7) → this PR (PR 8)**. Pins the canonical envelope schema for `AuditEvent.detail` and migrates every emitter in the codebase to it.
   - **PR 1 (#544)** — spec section in `spec/architecture.md` ("Audit-event detail schema") + typed envelope helpers (`audit.changes` / `.snapshot` / `.counts` / `.set_changes`) + new `write_event` kwargs (`session=` / `payload=` / `reason=` / `refs=` / `context=`) + session-lifecycle family migrated as proof.
@@ -95,7 +95,7 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - **PR 8 (this PR)** — Pydantic write-validation gate. New `app/services/audit.py::EVENT_SCHEMAS` registry pins the allowed envelopes/slots per event_type; `validate_detail` runs in `write_event` after composition. `settings.audit_strict_mode` gates strict (raise) vs lenient (warn-and-write). `tests/conftest.py` flips strict on so CI catches drift. New `tests/unit/test_audit_detail_schema.py` covers the gate.
   - Closes catalog `guide/archive/unfinished_business.md` #5. Plan: `guide/archive/segment_11K_audit_event_detail_schema.md`. Spec: `spec/architecture.md` "Audit-event detail schema".
 
-- **Segment 11C Part 2 — Outbox audit-log scaffolding** — done 2026-05-07. **PR #541** (PR F). Migration `c4f6a8b0d2e5` adds the seven nullable audit-log columns to `email_outbox` (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`, `correlation_id`) + an index on `correlation_id` (the dispatch helper's idempotent-retry lookup key). `app/db/models/email_outbox.py` gains matching `Mapped[X | None]` declarations and the canonical value-set constants `EMAIL_OUTBOX_STATUSES = (queued, sending, sent, failed)` / `EMAIL_OUTBOX_KINDS = (invitation, reminder, responses_received)` so any future widening is a deliberate edit. Pure additive — all columns nullable, no defaults, no backfill, no service-layer reads or writes; today's enqueue paths continue to write only the existing columns. New tests at `tests/integration/test_email_outbox_schema.py`. The columns sit inert until **Segment 14-1 Part A** lights up the dispatch helper against this stable schema. Plan: `guide/archive/segment_11C_operations_consolidation.md` "Part 2".
+- **Segment 11C Part 2 — Outbox audit-log scaffolding** — done 2026-05-07. **PR #541** (PR F). Migration `c4f6a8b0d2e5` adds the seven nullable audit-log columns to `email_outbox` (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`, `correlation_id`) + an index on `correlation_id` (the dispatch helper's idempotent-retry lookup key). `app/db/models/email_outbox.py` gains matching `Mapped[X | None]` declarations and the canonical value-set constants `EMAIL_OUTBOX_STATUSES = (queued, sending, sent, failed)` / `EMAIL_OUTBOX_KINDS = (invitation, reminder, responses_received)` so any future widening is a deliberate edit. Pure additive — all columns nullable, no defaults, no backfill, no service-layer reads or writes; today's enqueue paths continue to write only the existing columns. New tests at `tests/integration/test_email_outbox_schema.py`. The columns sit inert until **Segment 14B Part A** lights up the dispatch helper against this stable schema. Plan: `guide/archive/segment_11C_operations_consolidation.md` "Part 2".
 
 - **Segment 11C Part 1 — Operations consolidation** — done 2026-05-06. PRs **#490 → #491 → #492 → #493**.
   - **#490** — chrome restored Outbox as a tab (later removed in #493).
@@ -283,7 +283,7 @@ that originated there before the catalog retired.
 The locked block `13E → 12C → 15D → 12A-3` shipped 2026-05-10
 (see Done above for the four entries) and 12B (audit-events
 export) followed the same day. The remaining schedule items
-— 13B, 13C, 14, 14-1, 15A, 15B, 15C, 15E, 15F, 16, 17, 20 — ship per
+— 13B, 13C, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16, 17, 20 — ship per
 their own plan; no ordering constraints beyond shared schema
 conflicts (none detected). **Segment 16** (Sys Admin page) is
 a natural near-term pick since it absorbs the audit-log
@@ -317,15 +317,16 @@ the dev-only manual assignment upload.
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/group_scoped_instruments.md`.
 
-3. **14 — Production hardening.**
+3. **14A — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
-   **Plan:** `guide/segment_14_production_hardening_plan.md`.
+   **Plan:** `guide/segment_14A_production_hardening.md`.
 
-4. **14-1 — Email infrastructure (send activation + backends).**
-   All email *wiring* lives here. The schema columns Part A
-   writes to landed with **Segment 11C Part 2** (PR #541,
-   2026-05-07) and are ready for the dispatch helper.
+4. **14B — Email infrastructure (send activation + backends).**
+   *(Renamed from 14-1 on 2026-05-11 as part of the 14 → 14A /
+   14B / 14C split.)* All email *wiring* lives here. The schema
+   columns Part A writes to landed with **Segment 11C Part 2**
+   (PR #541, 2026-05-07) and are ready for the dispatch helper.
    - **Parts A → E** (sequential): SMTP send activation →
      `correlation_id` strategy → bulk-send queue + worker →
      per-deployment from-identity defaults → generalised
@@ -336,10 +337,18 @@ the dev-only manual assignment upload.
      demand dictates.
 
    Catalog #34 (queue-based batch invitation sending — Part C).
-   **Plan:** `guide/segment_14-1_email_infra.md`.
+   **Plan:** `guide/segment_14B_email_infrastructure.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-5. **15A — Pervasive friendly labels.**
+5. **14C — Reminders workflow.**
+   Scheduled, policy-driven reminder dispatch sitting on top
+   of 14B's transport. Per-session cadence settings + a
+   background scheduler + post-MVP cohort slicing + reminder
+   analytics. Stub-state plan; hard-deps on 14B Parts A / B
+   (and reuses 14B Part C's worker scaffold if available).
+   **Plan:** `guide/segment_14C_reminders_workflow.md`.
+
+6. **15A — Pervasive friendly labels.**
    Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
    `PairContext1-3` flowing through every header / picker /
    tooltip via a session-level resolver, not just per-instrument
@@ -352,7 +361,7 @@ the dev-only manual assignment upload.
    slot retired with `Assignment.context` in 15D PR 6b.)
    **Plan:** `guide/segment_15A_friendly_labels.md`.
 
-6. **15C — Operator RTD / RuleSet libraries.**
+7. **15C — Operator RTD / RuleSet libraries.**
    Symmetric two-tier model for both RTDs and RuleSets:
    operator master library (cross-session, reusable) +
    per-session copy (portable, independently editable). Explicit
@@ -364,7 +373,7 @@ the dev-only manual assignment upload.
    `instruments.rule_set_id` to point at.
    **Plan:** `guide/segment_15C_operator_libraries.md`.
 
-7. **15B — Per-instrument assignments.**
+8. **15B — Per-instrument assignments.**
     Each `Instrument` carries its own assignment set (e.g. the
     Manager survey collects different reviewer → reviewee
     pairings than the Peer survey within one session). Schema
@@ -422,7 +431,7 @@ the dev-only manual assignment upload.
   from the original Segment 15, 2026-05-10)*. The
   documentation pass + technical-support contact item
   the original Segment 15 stub bundled. Runs after
-  Segment 14 (production hardening) so the system is
+  Segment 14A (production hardening) so the system is
   operationally credible before the documentation is
   written for it. Workplan §18 items 1–10 (Start Here
   page through Known limitations page).
@@ -459,20 +468,22 @@ they pinned:
   retirement, Settings importer, Quick Setup slot 4
   graduation). 12A-2 was absorbed into 12A-3; 12C-2 +
   12C-3 were absorbed into 15D.
-- **11C Part 2 → 14-1 Part A** is the email pipeline: 11C Part 2
-  landed the schema (Migration `c4f6a8b0d2e5`, 2026-05-07); 14-1
+- **11C Part 2 → 14B Part A** is the email pipeline: 11C Part 2
+  landed the schema (Migration `c4f6a8b0d2e5`, 2026-05-07); 14B
   Part A is the first writer.
 - **11K → 12B** is the audit pipeline: 11K pinned the `detail`
   shape (shipped 2026-05-07); 12B's export reads against it.
 - **12A is fully shipped** as of 2026-05-10 (12A-1 export +
   12A-3 export-refresh + Settings importer + Quick Setup
   slot 4 graduation; 12A-2 was absorbed into 12A-3). The
-  remaining schedule items — **13B, 13C, 14, 14-1, 15A,
+  remaining schedule items — **13B, 13C, 14A, 14B, 14C, 15A,
   15B, 15C, 15E, 15F, 16, 17, 20** — are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;
   13C PR 3 (rule-engine fanout for group-scoped instruments)
   lands more naturally after 13A's RuleSet machinery exists,
   but 13C PRs 1 / 2 / 4 / 5 don't depend on 13A.
-- **Within 14-1**, Parts B-E are sequential enhancements on top
-  of Part A; Parts F-H are independent backend swaps.
+- **Within 14B**, Parts B-E are sequential enhancements on top
+  of Part A; Parts F-H are independent backend swaps. **14C
+  reminders workflow** layers on top of 14B Parts A / B / C and
+  ships on its own pace.

@@ -233,7 +233,7 @@ accountability; embarrassing security hygiene.
 **Ship Segment 16 with Option C (env allowlist) + the
 four defence-in-depth layers. Plan migration to Option
 A (Entra app role) when operator scale or org policy
-demands it — likely Segment 14 (production hardening).**
+demands it — likely Segment 14A (production hardening).**
 
 Reasoning: today's operator population is small (a
 handful, all known to the deployer); Option C covers it
