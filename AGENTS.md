@@ -23,7 +23,7 @@ other AI coding agent working in this repository.
 - Do not introduce a full frontend framework unless explicitly requested.
 - When working on a page, migrate any inline-styled buttons on it
   to the canonical `.btn` modifier classes defined in
-  `spec/assumptions.md` (Primary / Primary Outline / Alert / Alert
+  `spec/domain_assumptions.md` (Primary / Primary Outline / Alert / Alert
   Outline / Danger / Danger Outline). Ask first if a button
   doesn't cleanly fit one of those six named styles — don't invent
   a new one without confirmation.
@@ -119,7 +119,7 @@ reject it.
 ### Templating conventions
 
 - Templates extend `app/web/templates/base.html`. The base owns inline CSS for the entire app (no separate stylesheet, no JS build step beyond targeted progressive-enhancement scripts inline in templates). When adding new visual primitives, add a class to `base.html` rather than inline styles on individual templates.
-- The six canonical button styles (Primary, Primary Outline, Alert, Alert Outline, Danger, Danger Outline) and the `.page-grid` / `.bottom-grid` layout patterns are documented in `spec/assumptions.md` and `spec/operator_ui_concept.md` — refer to those names when editing UI.
+- The six canonical button styles (Primary, Primary Outline, Alert, Alert Outline, Danger, Danger Outline) and the `.page-grid` / `.bottom-grid` layout patterns are documented in `spec/domain_assumptions.md` and `spec/operator_ui_concept.md` — refer to those names when editing UI.
 - Operator pages render breadcrumbs via `app/web/breadcrumbs.py` helpers (`operator_root`, `operator_session_child`). Don't hand-roll breadcrumb HTML — call these.
 
 ### Database
@@ -176,7 +176,7 @@ reject it.
 
 - **`docs/status.md`** — current implementation state and segment history. Authoritative.
 - **`spec/operator_ui_concept.md`** — operator-page surface and cross-page conventions (chrome, setup nav, lock card, layout patterns).
-- **`spec/assumptions.md`** — UI vocabulary (button styles, typography knob, layout defaults).
+- **`spec/domain_assumptions.md`** — UI vocabulary (button styles, typography knob, layout defaults).
 - **`spec/architecture.md`** — domain entities, layering, conceptual hierarchy.
 - **`spec/session_home.md`** / **`spec/sessions_overview.md`** — per-page specs for Session Home and the sessions lobby.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home (consolidated Submit, slot layout, lock-on-nav).

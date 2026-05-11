@@ -696,7 +696,7 @@ was deferred.
 Two banner-polish PRs followed on top:
 [#258](https://github.com/philoyhc/review-robin-web/pull/258)
 adds a Cancel button to the new error banners and writes the
-convention into ``spec/assumptions.md``.
+convention into ``spec/domain_assumptions.md``.
 [#259](https://github.com/philoyhc/review-robin-web/pull/259)
 extends the convention with auto-scroll-to-banner on display
 and Cancel-returns-to-source-row.
@@ -858,7 +858,7 @@ as Gap 2, but reached indirectly.
 ## Cross-cutting conventions reused
 
 - **Six button styles** from
-  [`spec/assumptions.md`](../spec/assumptions.md). Save = Primary,
+  [`spec/domain_assumptions.md`](../spec/domain_assumptions.md). Save = Primary,
   Cancel = Alert Outline, Edit = Alert, Add new instrument =
   Alert, Delete this instrument = Danger.
 - **Yellow lock card** from [`spec/operator_map.md`](../spec/operator_map.md)
@@ -898,7 +898,7 @@ as Gap 2, but reached indirectly.
   this segment implements.
 - [`spec/operator_map.md`](../spec/operator_map.md) — page chrome
   conventions.
-- [`spec/assumptions.md`](../spec/assumptions.md) — button styles.
+- [`spec/domain_assumptions.md`](../spec/domain_assumptions.md) — button styles.
 - [`spec/architecture.md`](../spec/architecture.md) "Pair-level vs
   assignment-level context" + "Lazy display-field seeding" — the
   data-side rules the rebuild relies on.

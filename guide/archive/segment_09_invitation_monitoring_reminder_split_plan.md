@@ -8,7 +8,7 @@
 - **9.5** — decisions pre-locked inside `guide/segment_09_4B.md`'s "Deferred to Segment 9.5" section; standalone segment plan not yet drafted.
 
 ## Why split Segment 9
-Based on the current codebase, `assumptions.md`, and the resolved decisions in `seg9stuff`, Segment 9 is too broad for a single PR-sized delivery. It mixes lifecycle controls, reviewer-access gating, invitations/email plumbing, monitoring, reminders, operator-UI restructuring, and a richer setup-readiness lifecycle.
+Based on the current codebase, `domain_assumptions.md`, and the resolved decisions in `seg9stuff`, Segment 9 is too broad for a single PR-sized delivery. It mixes lifecycle controls, reviewer-access gating, invitations/email plumbing, monitoring, reminders, operator-UI restructuring, and a richer setup-readiness lifecycle.
 
 This superseding plan breaks Segment 9 into smaller deliverables that can each ship safely with focused tests. 9.1–9.3 are the lifecycle/invitation/monitoring foundation; 9.4 reshapes the operator UI on top of that foundation; 9.5 enriches the lifecycle that 9.1 introduced.
 

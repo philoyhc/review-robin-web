@@ -105,7 +105,7 @@ Surfaces for running a session and intervening when needed — validating setup,
 | Invitations | `session_invitations.html` | `/sessions/{id}/invitations` |
 | Responses | `session_responses.html` | `/sessions/{id}/responses` |
 
-The row pairs are deliberate: pre-flight (Validate, Preview), monitoring (Invitations, Responses). See `spec/operations_renew.md` for the Invitations + Responses consolidation rationale and per-page contracts.
+The row pairs are deliberate: pre-flight (Validate, Preview), monitoring (Invitations, Responses). See `spec/operations_pages.md` for the Invitations + Responses consolidation rationale and per-page contracts.
 
 **Naming:** "Invitations" + "Responses" rather than "Reviewers" + "Reviewees" — those nouns are claimed by the Setup tabs (configuring the rosters); the Operations tabs are about working with them mid-session. Distinct nouns for distinct activities.
 
@@ -262,13 +262,13 @@ The retired standalone `/operator/sessions/{id}/preview` (singular) — the pred
 
 ### `/operator/sessions/{id}/invitations` — Invitations (reviewer-centric)
 
-Operations row tab. **Detailed spec: `spec/operations_renew.md` "Invitations page".** Reviewer-centric working surface — sending invitations, sending reminders, monitoring per-reviewer progress. Consolidates what was previously split between the standalone Manage Invitations page and the (now-retired) Monitoring page.
+Operations row tab. **Detailed spec: `spec/operations_pages.md` "Invitations page".** Reviewer-centric working surface — sending invitations, sending reminders, monitoring per-reviewer progress. Consolidates what was previously split between the standalone Manage Invitations page and the (now-retired) Monitoring page.
 
 Pattern: a list-with-bulk-actions table of reviewers, with status filtering, selection, bulk send/remind actions, and per-row drill-in into a reviewer's full engagement history. All POST actions require `ready` (409 otherwise).
 
 ### `/operator/sessions/{id}/responses` — Responses (reviewee-centric)
 
-Operations row tab. **Detailed spec: `spec/operations_renew.md` "Responses page".** Reviewee-centric coverage view — surfaces under-served reviewees that the reviewer-centric Invitations view doesn't make visible.
+Operations row tab. **Detailed spec: `spec/operations_pages.md` "Responses page".** Reviewee-centric coverage view — surfaces under-served reviewees that the reviewer-centric Invitations view doesn't make visible.
 
 Pattern: list-with-bulk-actions table of reviewees, with per-reviewee coverage status (`Complete` / `Adequate` / `At risk` / `No responses`), bulk reminder dispatch to non-responding reviewers for selected reviewees, and per-row drill-in into per-reviewer response status for that reviewee.
 
@@ -276,7 +276,7 @@ The reminder send-path is **shared** with the Invitations page; only the selecti
 
 ### `/operator/sessions/{id}/monitoring` — *retired*
 
-The previous standalone Monitoring page has been consolidated into the new Invitations page (reviewer-centric) and Responses page (reviewee-centric) per `spec/operations_renew.md`. The URL redirects to `/operator/sessions/{id}/invitations` to preserve bookmarks.
+The previous standalone Monitoring page has been consolidated into the new Invitations page (reviewer-centric) and Responses page (reviewee-centric) per `spec/operations_pages.md`. The URL redirects to `/operator/sessions/{id}/invitations` to preserve bookmarks.
 
 ### `/operator/sessions/{id}/outbox` — Email outbox
 
@@ -299,7 +299,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 
 - **Central Control and Operations Panel** — a cross-session operator surface that aggregates run-state across all of an operator's sessions. Conceivable but ROI unclear, and P1 ("one session at a time") is stronger when the whole app respects it. Not on any segment plan.
 - **Adjacent capabilities likely to land sooner:** shared operator permissions on a session, session duplication (sans response data), shared setup data between sessions (e.g. reusable reviewer rosters or instrument templates), session tagging / grouping. These compose with the Overview surface — none would force a redesign of the Setup / Control / Operations groupings.
-- **Two-row chrome → single row.** With the Operations row at four tabs after the Invitations + Responses consolidation (and the Outbox de-tabbed) per `spec/operations_renew.md`, the two-row layout is unlikely to collapse. Recorded for completeness; not on any roadmap.
+- **Two-row chrome → single row.** With the Operations row at four tabs after the Invitations + Responses consolidation (and the Outbox de-tabbed) per `spec/operations_pages.md`, the two-row layout is unlikely to collapse. Recorded for completeness; not on any roadmap.
 - **Cross-session System Admin** — when added, sits at Operator's Overview level (or above), not inside a session. Implies its own chrome (different from the per-session two-row nav). Not a per-session Operations Page.
 
 ## Cross-references
@@ -311,7 +311,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including the Next Action card and lifecycle display-label mapping.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home.
 - **`spec/preview_hub.md`** — Preview hub on the Operations row.
-- **`spec/operations_renew.md`** — Invitations + Responses functional spec; consolidates the Manage Invitations + Monitoring pages into a reviewer-centric Invitations page and adds a reviewee-centric Responses page.
+- **`spec/operations_pages.md`** — Invitations + Responses functional spec; consolidates the Manage Invitations + Monitoring pages into a reviewer-centric Invitations page and adds a reviewee-centric Responses page.
 - **`spec/reviewer-surface.md`** — reviewer-facing surface contracts (separate audience).
 - **`spec/ui_elements.md`** — implementation catalogue mapping the canonical primitives to CSS classes and templates.
 - **`spec/instruments.md`** — locked spec for the Instruments page.

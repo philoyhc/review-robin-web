@@ -8,7 +8,7 @@ Instantiates the general visual style spec (`spec/visual_style_general.md`) for 
 Read alongside:
 
 - `spec/visual_style_general.md` — the design system this document instantiates. Components and visual vocabulary defined there (palette, typography, spacing, button shapes, card shapes, badge shapes, etc.) apply uniformly across all surfaces.
-- `spec/assumptions.md` — the app-level UI vocabulary this document builds on: the six canonical `.btn` modifier classes (Primary / Primary Outline / Alert / Alert Outline / Danger / Danger Outline), the inline error / warning banner convention (mandatory `.btn.alert` Cancel, `banner-scroll-target` auto-scroll, `#source-row` Cancel-return fragment), the typography knob, and the `.page-grid` / `.bottom-grid` layout primitives. When this doc names a button or banner pattern, the mechanics live there.
+- `spec/domain_assumptions.md` — the app-level UI vocabulary this document builds on: the six canonical `.btn` modifier classes (Primary / Primary Outline / Alert / Alert Outline / Danger / Danger Outline), the inline error / warning banner convention (mandatory `.btn.alert` Cancel, `banner-scroll-target` auto-scroll, `#source-row` Cancel-return fragment), the typography knob, and the `.page-grid` / `.bottom-grid` layout primitives. When this doc names a button or banner pattern, the mechanics live there.
 - `spec/audience_and_identity_model.md` — audience definitions, auth posture, and customization boundaries that this document's chrome decisions implement.
 
 The visual vocabulary defined in `visual_style_general.md` applies uniformly across all surfaces. What differs by surface is the *chrome* — the framing and navigation patterns that surround page content.

@@ -185,7 +185,7 @@ In:
   currently)" → "Reviewers (47 currently)"), the file input
   clears, the submit button greys out until the next file is
   chosen.
-- **Error / confirmation banners follow the assumptions.md Cancel
+- **Error / confirmation banners follow the domain_assumptions.md Cancel
   convention.** When a slot needs a banner — parse / validation
   error, cascade-preview confirmation, or `ready`-state lifecycle
   rejection — it renders inside the destination slot using the
@@ -443,7 +443,7 @@ unchanged.
   validation error from the importer, (b) cascade-preview
   confirmation before a populated-slot replacement, (c)
   lifecycle-rejection when an unlocked submit hits `ready`. All
-  follow `spec/assumptions.md` §"Inline error / warning banners":
+  follow `spec/domain_assumptions.md` §"Inline error / warning banners":
   - Use `.banner.banner-error` for errors and lifecycle-
     rejections; `.banner.banner-warning` for cascade-preview
     confirmations.

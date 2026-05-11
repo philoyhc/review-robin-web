@@ -34,15 +34,15 @@ Cross-references:
   type scale, spacing, component shapes, app-specific accent
   assignments). This catalogue instantiates that spec against the
   current codebase.
-- **`spec/assumptions.md`** — current "as-built" UI vocabulary
+- **`spec/domain_assumptions.md`** — current "as-built" UI vocabulary
   (`.btn` family, layout primitives, banner conventions). Sections
   marked superseded there are pointers into this doc.
 - **`spec/operator_ui_concept.md`** — page-level chrome and per-page
   layout contracts that consume these primitives.
 - **`spec/reviewer-surface.md`** — reviewer-surface page contracts.
 
-When this doc disagrees with `assumptions.md`, this doc wins for
-canonical naming; `assumptions.md` remains accurate for what's in
+When this doc disagrees with `domain_assumptions.md`, this doc wins for
+canonical naming; `domain_assumptions.md` remains accurate for what's in
 the templates today until the migration ships.
 
 ---
@@ -125,7 +125,7 @@ Each element entry follows the same shape:
 > **Setup nav (`.setup-nav`)** — equal-width 140px button row at the
 > top of session-scoped pages.
 > *Current:* `.setup-nav` rules in `base.html`. Documented in
-> `assumptions.md`. Audit found no template currently using
+> `domain_assumptions.md`. Audit found no template currently using
 > `.setup-nav` — it appears to have been superseded by the
 > `.session-nav-card` two-row chrome.
 > *Canonical:* obsolete; remove the class once we confirm no
@@ -284,7 +284,7 @@ Each element entry follows the same shape:
 >   Could-not-delete inline errors.
 > All four reuse a single `.banner` base (padding, radius,
 > border-width, scroll-target hooks). Cancel button (per
-> `assumptions.md` "Inline error / warning banners") stays.
+> `domain_assumptions.md` "Inline error / warning banners") stays.
 > *Migration delta:* introduce four-variant `.banner` family;
 > retire `.warning-banner` / `.danger-banner` standalones; sweep
 > every inline-styled banner-card across operator and reviewer
@@ -438,7 +438,7 @@ vocabulary as follows.
 > field-builder details/summary)** — `<details>` shells for inline
 > label edits with tick/cross affordances. Used on the
 > Instruments page.
-> *Current:* defined in `base.html` and `assumptions.md`. Works.
+> *Current:* defined in `base.html` and `domain_assumptions.md`. Works.
 > *Canonical:* keep; verify the toggled-in inputs pick up the
 > standard input treatment after PR F.
 > *Migration delta:* none structurally.

@@ -193,7 +193,7 @@ README:
 
 - **[`spec/`](spec/)** — surface specifications and design intent
   ([`spec/README.md`](spec/README.md)). Includes `architecture.md`,
-  `assumptions.md`, `operator_ui_concept.md`,
+  `domain_assumptions.md`, `operator_ui_concept.md`,
   `session_home.md`, `sessions_overview.md`, `reviewer-surface.md`,
   `quick_setup_card_spec.md`, `setup_pages.md`,
   `rule_based_assignment.md`, `email_infra_options.md`.
