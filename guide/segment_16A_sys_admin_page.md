@@ -21,14 +21,105 @@ and `users.is_operator` columns the gates read. PR 4 shipped
 
 ## Goal
 
-A single dedicated **Sys Admin page** (or section)
-gathering surfaces that are useful for diagnostics /
-support / dev workflows but **shouldn't sit on the
-operator-facing chrome alongside the everyday Setup +
-Operations tabs**. The internal capabilities for the
-three anchor items already exist as code paths — Segment
-16A wires them under one chrome roof and gates access
-behind a new `sys_admin` user role.
+Two cohesive halves that together establish the workspace's
+access foundation and put every sys-admin-scoped surface
+behind one chrome roof:
+
+1. **Access foundation.** Lock down who can use the app at
+   all under the **Option C strict-allowlist** posture
+   (`users.is_operator` / `users.is_sys_admin`, both shipped
+   inert in 13F PRs 1 + 2). A signed-in user not in the
+   workspace's operator allowlist hits a "Request access"
+   landing page instead of operator routes. The sys-admin
+   chrome layers on top.
+2. **Sys-admin surfaces.** Three pre-existing dev-diagnostic
+   capabilities (Outbox / Audit log / Manual assignment
+   upload) move under one chrome roof; one new workspace
+   surface (user list with Admit/Revoke + Promote/Demote
+   toggles) makes the access foundation self-administering.
+
+## Functional targets
+
+These are the contracts each surface must deliver once
+the segment lands. They're independent of how the PRs slice
+the work; the PR ladder below explicitly references these
+target identifiers (`F1`–`F12`).
+
+### Access foundation
+
+- **F1. Operator gate.** Every operator route gates on
+  `is_operator OR is_sys_admin` (the `require_operator`
+  dependency). A signed-in user with neither flag is
+  redirected to `/request-access` rather than 403-ing — the
+  redirect is the deliberate UX choice (gentler for
+  misrouted-but-legitimate arrivals).
+- **F2. Sys-admin gate.** Every Sys Admin route gates on
+  `is_sys_admin` (the `require_sys_admin` dependency).
+  Non-admins see no chrome tab and get 403 on direct URLs.
+- **F3. Bootstrap from env vars on first sign-in.**
+  `get_or_create_user` reads `OPERATOR_EMAILS` and
+  `SYS_ADMIN_EMAILS` once, at user-row creation time, and
+  sets the respective flags. After that the env vars are
+  inert — removing an email from either env var does **not**
+  auto-revoke; revocation goes through F6 / F7's UI.
+- **F4. Sys-admin implies operator.** A user with
+  `is_sys_admin=True AND is_operator=False` still passes
+  `require_operator`. The two flags are independent at the
+  column level (per 13F PR 2's value-set test); the
+  implication is enforced at the predicate.
+- **F5. Request-access landing page.** A signed-in user
+  who isn't an operator lands on a clean page (no chrome
+  navigation that they can't follow). The page surfaces
+  their email, a configurable contact line
+  (`OPERATOR_CONTACT_EMAIL` env var → `mailto:`; generic
+  copy if unset), and a Sign-out affordance.
+
+### Workspace user-role management
+
+- **F6. Admit / Revoke (operator status).** A sys-admin can
+  flip `is_operator` for any user via a one-click toggle on
+  the workspace user list. Revoking an operator with active
+  `session_operators` rows locks them out of those sessions
+  but preserves the rows (audit trail intact; re-admit
+  restores access naturally without re-adding to sessions).
+- **F7. Promote / Demote (sys-admin status).** A sys-admin
+  can flip `is_sys_admin` for any user via a confirmed
+  toggle ("I'm promoting <email> to sys-admin" /
+  symmetric). The last-admin-demote guard refuses to leave
+  the workspace without a sys-admin (incl. blocking
+  self-demote when sole admin).
+- **F8. Auditable workspace toggles.** Every flag flip
+  writes a canonical 11K-envelope audit event:
+  `workspace.operator_admitted` / `.operator_revoked` /
+  `sys_admin.role_promoted` / `.role_demoted`. Each carries
+  the actor + target user via the `refs` slot.
+- **F9. Workspace user list visibility.** A sys-admin can
+  see every `users` row in one table — email, display name,
+  first sign-in, `is_operator`, `is_sys_admin`, count of
+  sessions the user operates on. Keyset pagination on
+  `id DESC` for scale.
+
+### Operational surfaces
+
+- **F10. Outbox under Sys Admin.** The existing
+  `GET /operator/sessions/{id}/outbox` surface relocates
+  into the Sys Admin chrome. The "View outbox" button on
+  Manage Invitations retires; the canonical home is the
+  Sys Admin page.
+- **F11. Audit log CSV under Sys Admin.** The existing
+  `GET /operator/sessions/{id}/export/audit_log.csv` route
+  (shipped in 12B PR 1, parked behind the Sys Admin
+  doorway in 12B PR 2) gets a Download tile on the
+  Sys Admin page. No service code changes — pure chrome
+  placement.
+- **F12. Manual assignment upload under Sys Admin.** The
+  existing `POST /operator/sessions/{id}/assignments/manual/upload`
+  route gets a Sys Admin form with an explicit "I'm
+  overriding the rule engine" confirmation checkbox + a
+  new `sys_admin.manual_assignments_uploaded` audit event
+  (`counts` envelope). The dev-only operator path
+  (15D PR 6a) stays alive; Sys Admin is the operator-
+  reachable home for legitimate bypass cases.
 
 ## Anchor items (capabilities already exist)
 
@@ -42,17 +133,10 @@ Manage Invitations page (`session_invitations.html:43`).
 Backed by `invitations.list_outbox_for_session(...)` in
 the invitations service.
 
-**Under Segment 16A.** The page **moves under the Sys
-Admin chrome** rather than being a per-session
-diagnostic surface tucked behind a per-page button.
-Everything functional already exists — the move is a
-chrome / placement change. The chrome partial
-(`session_top_nav.html`) currently calls out the
-Outbox page as "reachable from a View outbox button on
-Invitations and is not a chrome tab — it's a
-dev-diagnostic surface, not part of the Operations row
-taxonomy"; Segment 16A makes that taxonomy explicit by
-giving the dev-diagnostic surface its own chrome row.
+**Under Segment 16A.** Satisfies **F10** — relocation to the
+Sys Admin chrome; the "View outbox" button on Manage
+Invitations retires. Pure chrome / placement change; service +
+template unchanged.
 
 ### 2. Manual assignment upload
 
@@ -73,15 +157,14 @@ handler **stay as a dev-only feature** per the
 route + handler accessible for tests + admin
 tooling).
 
-**Under Segment 16A.** The dev-only manual upload
-gets a discoverable home on the Sys Admin page —
-explicitly labelled as dev-only with the operator-
-facing alternative (Relationships table → Generate)
-called out alongside. Operators who *need* to bypass
-the rules engine (one-off custom pairings, debugging
-the engine output, restoring a known-good assignments
-table) hit the Sys Admin page deliberately rather
-than stumbling into it via Quick Setup.
+**Under Segment 16A.** Satisfies **F12** — the dev-only
+manual upload gets a discoverable home on the Sys Admin
+page, gated behind an explicit "I'm overriding the rule
+engine" confirmation checkbox + a new
+`sys_admin.manual_assignments_uploaded` audit event. The
+operator-facing alternative (Relationships table →
+Generate) stays the everyday path; Sys Admin is the
+deliberate-bypass route.
 
 ### 3. Audit log download
 
@@ -101,13 +184,12 @@ deliberately omitted in favour of relocating the surface to
 Sys Admin per industry best practice; see "Why a separate
 sys admin page" below).
 
-**Under Segment 16A.** The Sys Admin page gets a Download
-audit log button (or tile) wiring the existing route.
-Per industry best practice (GitHub, Stripe, Slack, Notion,
-Atlassian) audit data sits behind an admin / diagnostics
-doorway rather than alongside everyday data exports —
-Sys Admin is that doorway. No new service code needed; the
-move is pure chrome placement.
+**Under Segment 16A.** Satisfies **F11** — a Download tile
+on the Sys Admin page wiring the existing route. Per
+industry best practice (GitHub / Stripe / Slack / Notion /
+Atlassian), audit data sits behind an admin / diagnostics
+doorway rather than alongside everyday data exports. No
+new service code; pure chrome placement.
 
 A richer **in-app** audit log viewer (filter, search,
 drill-in) lives in **16C** — out of scope here.
@@ -132,6 +214,10 @@ assignment upload). A dedicated Sys Admin page:
 ## PR ladder
 
 ### PR 1 — Operator-allowlist gate + bootstrap reads (~300 LOC)
+
+**Functional targets:** F1 + F3 + F4 + F5 (operator gate +
+bootstrap + sys-admin-implies-operator predicate + Request-
+access landing page).
 
 **Why first.** This is the foundational access gate for the
 whole app under the Option C posture. Once it lands, only
@@ -198,6 +284,9 @@ unset.
 
 ### PR 2 — Sys-admin gate + chrome scaffold (~250 LOC)
 
+**Functional targets:** F2 (sys-admin gate + chrome tab
+visibility).
+
 **Why second.** Layers on PR 1's operator-gate foundation
 with the higher-privilege sys-admin gate. The Sys Admin
 chrome appears only for sys-admins.
@@ -240,6 +329,9 @@ workspace-level too.
 
 ### PR 3 — Outbox moves under Sys Admin (~150 LOC)
 
+**Functional target:** F10 (Outbox under Sys Admin chrome;
+Manage Invitations button retires).
+
 **Ships.**
 
 - The existing `/operator/sessions/{id}/outbox` route +
@@ -265,6 +357,9 @@ workspace-level too.
 
 ### PR 4 — Audit log download tile (~80 LOC)
 
+**Functional target:** F11 (Audit log CSV download
+reachable from a Sys Admin tile; no service code change).
+
 **Ships.**
 
 - New "Download audit log" tile / button on the Sys Admin
@@ -286,6 +381,10 @@ workspace-level too.
   drift).
 
 ### PR 5 — Manual assignment upload (~250 LOC + 1 audit event)
+
+**Functional target:** F12 (Sys Admin manual-upload form
+with confirmation checkbox + new
+`sys_admin.manual_assignments_uploaded` audit event).
 
 **Why this slot.** Highest-risk mutating action ("I can wipe
 pairings"); landing it after the chrome + read-only
@@ -328,6 +427,10 @@ checkbox, audit envelope, etc.).
   event type.
 
 ### PR 6 — Workspace user list + admit/revoke + promote/demote (~400 LOC + 4 audit events)
+
+**Functional targets:** F6 + F7 + F8 + F9 (Admit / Revoke
+operator status; Promote / Demote sys-admin status; auditable
+workspace toggles; workspace user list visibility).
 
 **Why last.** First workspace-level (rather than per-session)
 Sys Admin surface, so it's the biggest UX swing in 16A.
