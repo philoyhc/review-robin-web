@@ -45,7 +45,11 @@ from app.services.session_config_io import (
     HEADER,
     serialize_session_config,
 )
-from app.web.deps import get_or_create_user, require_session_operator
+from app.web.deps import (
+    get_or_create_user,
+    require_session_operator,
+    require_sys_admin_or_session_operator,
+)
 
 router = APIRouter()
 
@@ -217,7 +221,9 @@ def export_responses_csv(
 
 @router.get("/sessions/{session_id}/export/audit_log.csv")
 def export_audit_log_csv(
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(
+        require_sys_admin_or_session_operator
+    ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:

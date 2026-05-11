@@ -105,12 +105,72 @@ def test_sessions_diagnostics_renders_for_sys_admin(
     assert "Sessions Diagnostics" in response.text
     # Sessions table row.
     assert review_session.name in response.text
-    # Per-row outbox link.
+    # Per-row actions — Outbox (live), Audit log (live), Operators (placeholder).
     assert (
-        f'href="/operator/sessions/{review_session.id}/outbox"'
+        f'href="/operator/sessions/{review_session.id}/outbox">Outbox</a>'
         in response.text
     )
-    assert ">View outbox</a>" in response.text
+    assert (
+        f'href="/operator/sessions/{review_session.id}/export/audit_log.csv">Audit log</a>'
+        in response.text
+    )
+    # Operators is a placeholder (no href), titled "Coming in 16B".
+    assert "Coming in 16B" in response.text
+
+
+def test_sessions_diagnostics_columns_present(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """All eight columns render: Name, Code, Deadline, Created by,
+    Created, Last Modified, Status, Actions."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    _make_session(client, db, code="diag-cols")
+
+    response = client.get("/operator/sys-admin/sessions")
+    assert response.status_code == 200
+    for header in (
+        "Session Name",
+        "Session Code",
+        "Deadline",
+        "Created by",
+        "Created",
+        "Last Modified",
+        "Status",
+        "Actions",
+    ):
+        assert f"<th>{header}</th>" in response.text or (
+            f'<th class="col-shrink">{header}</th>' in response.text
+        )
+
+
+def test_sessions_diagnostics_lists_every_workspace_session(
+    db: Session,
+    client: TestClient,
+    make_client,
+    alice,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A sys-admin sees every session in the workspace, including
+    ones they didn't create. Alice (creator) and Bob (creator) each
+    spin up a session; both rows render for an admin viewer."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    alice_session = _make_session(client, db, code="all-a")
+
+    # ``make_client(bob)`` mutates the global TestClient identity
+    # override; create the bob client first to seed his session, then
+    # swap back to alice to verify the workspace view.
+    bob_client = make_client(bob)
+    bob_session = _make_session(bob_client, db, code="all-b")
+
+    alice_client = make_client(alice)
+    response = alice_client.get("/operator/sys-admin/sessions")
+    assert response.status_code == 200
+    assert alice_session.name in response.text
+    assert bob_session.code in response.text  # also check Bob's row
+    assert f'href="/operator/sessions/{bob_session.id}/outbox">Outbox</a>' in response.text
 
 
 def test_sessions_diagnostics_403s_for_plain_operator(
