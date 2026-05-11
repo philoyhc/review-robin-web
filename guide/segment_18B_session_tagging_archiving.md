@@ -79,11 +79,9 @@ filterable chips on the lobby.
 
 Likely shape:
 
-- New table `session_tags` (or a JSON column on
-  `ReviewSession` — pick at scoping time; a table makes
-  per-tag indexing + delete-cascade easier).
-  - Table shape: `id` PK / `session_id` FK / `tag VARCHAR`
-    / `UNIQUE (session_id, tag)`.
+- The `session_tags` table — **pre-positioned by Segment
+  13F PR 1** (`id` PK / `session_id` FK ON DELETE CASCADE /
+  `tag VARCHAR(64)` / `UNIQUE (session_id, tag)` / `created_at`).
 - Operator-facing Add / Remove tag affordance on Session
   Home or the Sessions lobby (decide at scoping).
 - Sessions lobby gains a filter strip showing every tag the
@@ -157,10 +155,9 @@ When parts ship:
   18B archives from `closed` directly or from `expired` (if
   Segment 9.3 lands first) depends on which lifecycle work
   ships before 18B. Default assumption: `closed → archived`.
-- **Tag table vs JSON column.** Table makes per-tag indexing
-  easier (lobby filter performance); JSON column is simpler
-  but harder to query. Lean table for the row count we
-  expect to grow with operator usage.
+- **Tag table vs JSON column.** ✅ Locked 2026-05-11 — table.
+  `session_tags` is **pre-positioned by Segment 13F PR 1**
+  (additive, nullable, no backfill; awaits 18B Part 2 light-up).
 - **Should archived sessions stay editable?** Probably no —
   archived sessions should be read-only (export still
   works; setup / response paths return 409 like `ready`-state
