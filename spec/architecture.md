@@ -164,7 +164,7 @@ actions require `session.status == "ready"` (409 otherwise) so the
 emailed link never points at a draft session.
 
 `/reviewer/invite/{token}` requires Easy Auth sign-in (no magic-link
-anonymous access — that's deferred to Segment 16). The route looks up
+anonymous access — that's deferred to Segment 16A). The route looks up
 the invitation by token hash, refuses with **403** + a dedicated page
 if the signed-in user's email doesn't match the invitation's reviewer
 email, and otherwise stamps `opened_at` once and 303s to

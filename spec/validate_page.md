@@ -333,7 +333,7 @@ references would otherwise dangle).
   reviewer surface's per-field constraints (`min` / `max` /
   `step`, `setCustomValidity`); not part of the Validate page.
 - **Cross-session validation** — rules consider one session at a
-  time. A future "system admin" surface (Segment 16) might add
+  time. A future "system admin" surface (Segment 16A) might add
   cross-session checks.
 - **Validation-time fixes** — the page only reports. Operators
   fix issues on the Setup pages the deep-links target; the

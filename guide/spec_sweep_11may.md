@@ -102,7 +102,7 @@ open. Nothing from the original F / C / S proposal remains.
 | 9 | Edit Session page (`session_edit.html`) | Small surface; could live as a sub-section in `session_home.md` if needed. |
 | 10 | New session page (`session_new.html`) | Quick Setup Create-Session variant already covered in `quick_setup_card_spec.md`; the form itself is small. |
 | 11 | Drill-in pages (`session_invitations_reviewer_detail.html`, `session_responses_reviewee_detail.html`) | Today's templates are explicit "scaffolds" in `operations_pages.md`; per-assignment / per-response detail is deferred until pilot feedback. |
-| 12 | Outbox (`session_outbox.html`) | Explicitly excluded from the operator-page taxonomy (`operator_ui_concept.md` §114) as a dev-diagnostic surface. No spec needed unless promoted into Segment 16 Sys Admin. |
+| 12 | Outbox (`session_outbox.html`) | Explicitly excluded from the operator-page taxonomy (`operator_ui_concept.md` §114) as a dev-diagnostic surface. No spec needed unless promoted into Segment 16A Sys Admin. |
 
 See the **"Spec coverage gaps"** section near the end of this
 doc for the full per-item write-up.
@@ -237,7 +237,7 @@ pending Segment 12A wiring.
   when their underlying count is 0** (#781 polish).
 - Settings always live (configuration always has rows).
 - Audit-events tile **never shipped** to Extract Data — relocates
-  to Sys Admin in Segment 16.
+  to Sys Admin in Segment 16A.
 - Zip-all footer is the only remaining inert button.
 
 **Fix:** Rewrite the tile list, audit affordance, and "Out of
@@ -623,7 +623,7 @@ this section name the post-rename file paths
 
 12. **Outbox.** Explicitly excluded from the operator-page
     taxonomy in `operator_ui_concept.md` §114 as a dev-diagnostic
-    surface. No spec needed unless promoted (Segment 16 Sys Admin
+    surface. No spec needed unless promoted (Segment 16A Sys Admin
     is the likely promotion path).
 
 ### Recommended sequencing — Tier 1 priority block ✅ done
