@@ -372,3 +372,115 @@ present.
 - **Post-sweep target:** ~8,500 LOC across 20 files (down from
   9,713 / 22) if C1 + C2 + C3(b) all land; 13% smaller, with the
   remaining content factually correct against the codebase.
+
+---
+
+## Spec coverage gaps — new specs to consider writing
+
+The sweep above corrects drift and proposes consolidation. A
+parallel exercise — mapping every shipped surface against
+`spec/` — surfaced shipped subsystems with **no dedicated spec
+file** (today the contract for them is implicit in the code
+and scattered across other specs). Captured here so they
+don't get lost; sequencing is up to the user.
+
+### Tier 1 — sizeable shipped subsystems with no dedicated spec
+
+1. **Validate page (`session_validate.html`).** Segment 11G
+   shipped a substantial subsystem — a `ValidationRule` registry
+   with `key` / `severity` / `why` / `fix_url` /
+   `fix_page_label`, the find-and-fix surface (setup-coverage
+   grid + severity chip strip + per-issue "Fix on X ↗"
+   deep-links + activate-warns detour banner), and the
+   orchestrator. **No dedicated spec.** Bits scattered in
+   `architecture.md` and `all_buttons.md` §11.
+   **Suggested file:** `spec/validate_page.md`.
+
+2. **Lifecycle state machine + invalidation hooks.**
+   Cross-cutting load-bearing logic: the `draft → validated →
+   ready → closed` state machine, `invalidate_if_validated()`,
+   the `_require_editable` gate, the per-page lock card pattern.
+   Currently scattered across `architecture.md` (one paragraph),
+   `session_lifecycle.py` docstring, and every per-page spec's
+   "lifecycle gating" sub-section. Worth a single doc.
+   **Suggested file:** `spec/lifecycle.md`.
+
+3. **CSV import + export contracts.** Per-entity column shapes,
+   header normalization, encoding, validation rules, two-phase
+   parse-then-apply, round-trip stability rules (the post-12A-3
+   byte-stability guarantee). `docs/imports.md` covers importer
+   implementation but isn't a contract; `settings_inventory.md`
+   §10 has a coverage table but not column-level shapes.
+   **Suggested file:** `spec/csv_contracts.md`.
+
+4. **Email Template editor (`session_setupinvite.html`).**
+   Three-tab editor (Invitation / Reminder / Responses-received),
+   per-template merge-tag set, per-field "Reset to default",
+   "Send when reviewer submits?" toggle, encrypted credential
+   plumbing. Only partial coverage in `operator_ui_concept.md`
+   §Email Template + `all_buttons.md` §10.
+   **Suggested file:** `spec/email_template_editor.md`.
+
+5. **Permissions / authorization.** `SessionOperator` table,
+   `require_session_operator` dependency, operator-only vs
+   reviewer-only route gates, 403 semantics. Auth posture is in
+   `audience_and_identity_model.md`; authorization (who-can-do-
+   what per route) is not anywhere.
+   **Suggested file:** `spec/permissions.md`.
+
+### Tier 2 — flagged elsewhere but partial / incomplete
+
+6. **Relationships Setup page.** Already addressed in sweep F4
+   (PR #804 adds a section in `setup_pages.md`).
+
+7. **Operations Assignments page.** Already partially addressed
+   in sweep F4 / F7 (cross-refs in `setup_pages.md` +
+   `all_buttons.md` §11.5). Could still warrant its own spec or
+   a dedicated section in `operations_renew.md` covering the
+   post-15D Rule Based card + Self-reviews toggle + "Assignment
+   pairs" preview.
+
+8. **Operator Settings page (`/operator/settings`).** Encrypted
+   SMTP credential storage flow, `?return_to=` plumbing. Partial
+   coverage in `settings_inventory.md` SMTP rows + `all_buttons.md`
+   §15. Worth a small standalone spec or a dedicated section in
+   `email_infra_options.md`.
+
+### Tier 3 — smaller surfaces, probably OK as-is
+
+9. **Edit Session page (`session_edit.html`).** Field-level
+   lifecycle restrictions. Sub-page of Home; small surface;
+   could live as a sub-section in `session_home.md`.
+
+10. **New session page (`session_new.html`).** Code generation,
+    deadline validation, Quick Setup Create-Session variant. The
+    Quick Setup part is in `quick_setup_card_spec.md`; the form
+    itself isn't formally specced but is small.
+
+11. **Drill-in pages** (`session_invitations_reviewer_detail.html`,
+    `session_responses_reviewee_detail.html`). `operations_renew.md`
+    calls them "scaffolds"; per-assignment / per-response detail
+    is deferred. Probably fine until pilot feedback.
+
+12. **Outbox.** Explicitly excluded from the operator-page
+    taxonomy in `operator_ui_concept.md` §114 as a dev-diagnostic
+    surface. No spec needed unless promoted (Segment 16 Sys Admin
+    is the likely promotion path).
+
+### Recommended sequencing
+
+If three Tier-1 specs land, in priority order:
+
+1. **`spec/lifecycle.md`** — cross-cutting load-bearer; every
+   per-page spec currently re-states bits of it. Single
+   authoritative source pays off everywhere.
+2. **`spec/csv_contracts.md`** — round-trip stability is now a
+   real contract (post-12A-3) but lives only as test assertions.
+   Documenting the contract surfaces the guarantee.
+3. **`spec/validate_page.md`** — substantial unspecced
+   subsystem; Segment 14 (production hardening) will need this
+   anyway to document the readiness gate for pilot.
+
+Permissions (#5) is a close fourth; Email Template editor (#4)
+is the smallest Tier-1 spec and could ride along with any of
+the others.
