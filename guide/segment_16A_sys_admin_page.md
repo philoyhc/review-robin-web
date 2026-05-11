@@ -297,48 +297,57 @@ unset.
 
 ### PR 2 — Sys-admin gate + chrome scaffold (~250 LOC)
 
-**Functional targets:** F2 (sys-admin gate + chrome tab
+**Functional targets:** F2 (sys-admin gate + Admin entry-point
 visibility).
 
 **Why second.** Layers on PR 1's operator-gate foundation
-with the higher-privilege sys-admin gate. The Sys Admin
-chrome appears only for sys-admins.
+with the higher-privilege sys-admin gate. The Admin link
+appears only for sys-admins.
 
-**Ships.**
+**Shipped (PR 2a / #841 + PR 2b reshape):**
 
 - `app/web/deps.py` gains `require_sys_admin = Depends(…)`
   returning the `User` on hit; 403s with `"sys_admin
-  required"` detail on miss. Plus a non-failing
-  `current_user_is_sys_admin(request)` helper for chrome
-  rendering.
-- Middleware (or a per-request adapter in `_shared.py`)
-  populates `request.state.is_sys_admin` so the chrome
-  partial can render the Sys Admin tab conditionally.
-- New empty-shell route `/operator/sessions/{id}/sys-admin`
-  in a new `routes_operator/_sys_admin.py` slice. Renders
-  the two-row session chrome + a "Sys Admin" H1 + an empty
-  body that PRs 3-6 fill. Breadcrumbs via
-  `breadcrumbs.operator_session_child(label="Sys Admin")`.
-- Chrome partial `session_top_nav.html` gains the Sys
-  Admin tab — rendered only when `is_sys_admin` is true.
+  required"` detail on miss.
+- New workspace-level route `GET /operator/sys-admin` in a
+  new `routes_operator/_sys_admin.py` slice. Renders an
+  "Admin" H1 + a `← Back to {return_to_label}` affordance
+  resolved from `?return_to=` (mirrors Settings / About);
+  body is empty pending PRs 3-6.
+- Base top-bar chrome (`base.html`) gains an "Admin" link
+  between Settings and About, conditional on
+  `user.is_sys_admin`. Carries `?return_to=<current_path>`
+  per the Settings / About pattern; self-suppresses on
+  `/operator/sys-admin`.
+- **NOT shipped (reshape removed):** the per-session
+  `/operator/sessions/{id}/sys-admin` URL and the third
+  `Sys Admin` row on the session top-nav originally proposed
+  in PR 2a — reverted in PR 2b once the workspace-level
+  shape was locked.
 
 **Tests.**
 
-- 403 for non-admin GET `/sys-admin`.
-- 200 for admin GET `/sys-admin`.
-- Chrome partial renders / suppresses the Sys Admin tab
-  conditional on the flag (one test of each).
+- 403 for non-admin GET `/operator/sys-admin`.
+- 200 for admin GET `/operator/sys-admin`.
+- Top-bar Admin link renders / suppresses on `is_sys_admin`
+  flag, plus self-hides on the Admin page itself.
+- Back link resolves from `?return_to=` and falls back to
+  the sessions lobby when unset.
 - `require_sys_admin` returns the `User` on hit;
   signals 403 on miss.
 
-**Open question for scoping.** Per-session URL
-(`/operator/sessions/{id}/sys-admin`) vs workspace-level
-(`/operator/sys-admin`). PRs 3-5 are session-scoped; PR 6
-(workspace user list) is workspace-scoped. Lean
-**per-session for PRs 3-5 + workspace-level for PR 6** —
-two URLs, same chrome partial. Revisit once 16C PR 5
-(cross-session audit search) takes a serious look at
-workspace-level too.
+**Locked 2026-05-11 (PR 2b reshape):** workspace-level URL
+`/operator/sys-admin`, reached from an "Admin" link in the
+base top-bar chrome (between Settings and About), conditional
+on `user.is_sys_admin`. Per-session content (Outbox, audit-
+log download) is surfaced via a session picker on the page
+itself rather than separate URLs. Sys-admin is conceptually a
+workspace concern (env vars, user allowlist, cross-session
+diagnostics); a per-session chrome tab implied "sys-admin
+scoped to this session", which is wrong. The original
+per-session shell (PR 2a) was retired in PR 2b; PR 6's
+workspace user list lands as a tile (or `/operator/sys-admin/users`
+child) on the same workspace landing.
 
 ### PR 3 — Outbox moves under Sys Admin (~150 LOC)
 
