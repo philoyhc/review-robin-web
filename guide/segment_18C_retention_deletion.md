@@ -101,7 +101,7 @@ Likely shape:
   `counts` envelope summarising rows purged per category.
 - Manual override: an operator can opt their session **out**
   of the auto-purge via the `sessions.retention_exception`
-  Boolean column **pre-positioned by Segment 13F PR 3** (e.g.
+  Boolean column **pre-positioned by Segment 13F PR 5** (e.g.
   for a session under legal hold).
 
 ### Part 3 — Per-session retention policy (post-MVP)
@@ -113,7 +113,7 @@ after 30 days; the deployment default is 90").
 Likely shape (deferred — confirm need with pilot feedback):
 
 - The `sessions.retention_overrides` JSON column
-  **pre-positioned by Segment 13F PR 3** carries the
+  **pre-positioned by Segment 13F PR 5** carries the
   per-session override (`response_days` / `audit_days` /
   `archived_days` keys; NULL = "use deployment default").
 - Settings-page editor surface.

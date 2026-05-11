@@ -395,14 +395,18 @@ the dev-only manual assignment upload — and unlocks 16B
 #### Stubs
 
 - **13F — More DB prep (14C / 16A / 16B / 18B / 18C
-  ride-along)** *(in flight — PR 4 shipped 2026-05-11;
-  PRs 1-3 deferred)*. Mirrors the 13D / 13E inert-migrations
-  pattern for the **next** batch of schema needs identified
-  during the Segment 16 PR-ladder sizing pass. **Front-loaded
-  PR 4** (`users.is_sys_admin` Boolean + model-only
+  ride-along)** *(in flight — PR 1 shipped 2026-05-11;
+  PR 2 pending; PRs 3-5 deferred until consumer
+  segments)*. Mirrors the 13D / 13E inert-migrations pattern
+  for the **next** batch of schema needs identified during the
+  Segment 16 PR-ladder sizing pass. Reordered 2026-05-11 so
+  the 16-series work leads: **PR 1 (shipped)** —
+  `users.is_sys_admin` Boolean + model-only
   `session_operators.role` value-set lock and Python-default
-  fix) because 16A is the imminent consumer. PRs 1-3
-  (`session_tags`, `sessions.reminder_settings`,
+  fix; **PR 2 (pending, next to ship)** — `users.is_operator`
+  Boolean for Option C strict-allowlist access (16A PR 1
+  reads it). PRs 3-5 (`session_tags`,
+  `sessions.reminder_settings`,
   `sessions.retention_exception` + `retention_overrides`) ride
   with their consumer segments (18B / 14C / 18C) when those
   segments are picked up.
@@ -431,7 +435,7 @@ the dev-only manual assignment upload — and unlocks 16B
   on 2026-05-11; resized to six PRs on 2026-05-11 after the
   strict-allowlist access-model decision)*. Six-PR ladder:
   PR 1 operator-allowlist gate + "Request access" landing
-  page (reads 13F PR 5's `users.is_operator`); PR 2 sys-admin
+  page (reads 13F PR 2's `users.is_operator`); PR 2 sys-admin
   chrome scaffold; PRs 3-5 anchor items (Outbox relocation,
   audit log download tile, manual assignment upload); PR 6
   workspace user list with per-row Admit/Revoke +

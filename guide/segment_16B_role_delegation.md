@@ -37,7 +37,7 @@ Today's gap:
   reads it; but every row is inserted today via the
   `create_session` service (the creator becomes the
   inaugural owner with `role="owner"` per the
-  Segment 13F PR 4 default fix) with no follow-on add /
+  Segment 13F PR 1 default fix) with no follow-on add /
   remove affordance. Adding a second owner to an existing
   session is a DB-edit operation.
 
@@ -171,7 +171,7 @@ role granularity beyond the current binary model.
   (`String(32)`, NOT NULL, model default `"owner"` post-13F
   PR 4). The value-set constant
   `SESSION_OPERATOR_ROLES = ("owner", "manager")` was locked
-  in 13F PR 4; this slice widens it (e.g. to add `"viewer"`)
+  in 13F PR 1; this slice widens it (e.g. to add `"viewer"`)
   via a deliberate Python edit, no migration.
 - Per-role permission predicates:
   - `viewer` — read-only access to every operator page;
@@ -204,7 +204,7 @@ pilot feedback may or may not surface.
   picker is meaningfully empty until a sys-admin admits
   more operators beyond the bootstrap set; revoke is the
   inverse affordance.
-- **13F PR 4** (shipped) — `session_operators.role`
+- **13F PR 1** (shipped) — `session_operators.role`
   value-set lock + `"owner"` default. PR 1's `add_owner`
   writes `role="owner"`; the locked value-set keeps the
   service-layer write-path honest.
