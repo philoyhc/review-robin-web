@@ -64,13 +64,13 @@ Two-column body below the chrome and status strip.
 Stack of cards, top to bottom:
 
 1. **Next Action card** (top).
-2. **Extract Data card** (middle). *(scaffolded in Segment 11H PR B; wired in Segment 12A PRs 3-6)*
+2. **Extract Data card** (middle). *(scaffolded in Segment 11H PR B; wired across 12A-1 + 12A-3 + 12B, 2026-05-09 → 2026-05-10)*
 3. **Danger Zone card** (bottom).
 
 ### Right column — metadata and bulk-setup
 
 1. **Session Details card** (top).
-2. **Quick Setup card** (bottom). *(scaffolded in Segment 11H PR A; wired in Segment 11J)*
+2. **Quick Setup card** (bottom). *(scaffolded in Segment 11H PR A; wired in Segment 11J + slot 4 graduation in 12A-3 PR 4)*
 
 The mobile-collapse DOM order — Next Action → Extract Data → Danger Zone → Session Details → Quick Setup — falls out of the source order. Quick Setup sits in the right column rather than the working column so its destructive setup-bulk actions don't compete with the lifecycle-advancing Next Action card for attention; Danger Zone sits at the bottom of the left column so the operator's destructive cleanup actions sit at the natural end of the working column rather than under the right column's read-mostly metadata.
 
@@ -174,24 +174,50 @@ Notes:
 ### 2. Extract Data card (left column, middle)
 
 Lets the operator pull response data out of the session for
-downstream use. The Extract Data card scaffold (Segment 11H PR B)
-renders five per-entity download rows (Session settings,
-Reviewers, Reviewees, Assignments, Responses) plus a
-"Download all" zip-bundle footer with all buttons inert
-(`aria-disabled="true"`); Segment 12A PRs 3-6 wire the routes.
+downstream use. Five live per-entity download tiles plus a
+single zip-bundle footer:
+
+| Tile | DOM order | Wired by |
+|---|---|---|
+| Reviewers | left col, top | 12A-1 PR 2 (#717) |
+| Settings  | right col, top | 12A-1 PR 1 (#713) |
+| Reviewees | left col, middle | 12A-1 PR 2 (#717) |
+| Responses | right col, middle | 12A-1 PR 4 (#721) |
+| Relationships | left col, bottom | 12A-3 PR 1 (#779) |
+| Download all (zip) | footer | Inert — future bundle |
+
+The post-15D + post-12A-3 layout settled in 12A-3 PR 2 (#780)
+which also retired the Assignments tile end-to-end (route +
+service + audit event) since assignments are a materialised
+derivative post-15D and the operator's preferred round-trip is
+Settings ↔ Relationships ↔ Reviewers / Reviewees.
+
+**Grey-out when empty.** The Reviewers / Reviewees /
+Relationships / Responses tiles grey out their Download button
+when the underlying count is `0` (post-12A-3 polish #781). The
+Settings tile is always clickable — a session always has
+settings to extract.
+
+**No audit-log tile in Extract Data.** Segment 12B shipped the
+audit-events CSV route (`GET /export/audit_log.csv`) live but
+deliberately **without** an Extract Data tile — industry best
+practice (GitHub / Stripe / Slack / Notion / Atlassian) parks
+audit data behind an admin / diagnostics doorway. The operator-
+facing surface relocates to the Sys Admin page when Segment 16
+ships; the route + service + 13 tests stay live in the meantime.
 
 **No lifecycle gate.** The card renders identically in every
 session state. Extraction is read-only and useful at every
 state — `draft` (sanity-check the configured artefacts),
 `validated`, `ready` (mid-flight responses snapshot), `closed`
-(final dataset). Once 12A wires the routes, every Download
-button stays clickable across the lifecycle.
+(final dataset).
 
-**Out of scope for this card** (deferred to Segment 12A): the
-actual route plumbing per entity, the `?format=` selector, the
-zip-bundle stream, and the audit emitters per download. The
-card's filenames follow `session-{code}-{kind}.csv` so the
-operator can identify the file downstream.
+**Filenames** follow `{code}_{kind}.csv` (e.g.
+`CS101_reviewers.csv`) via `app/services/extracts/__init__.py::filename`.
+
+**Out of scope for this card.** The zip-all bundle stream remains
+inert. Excel-format export was never an MVP item. The audit-log
+tile relocates to Sys Admin in Segment 16.
 
 ### 3. Danger Zone card (left column, bottom)
 
@@ -254,26 +280,24 @@ when relevant.
 ### 5. Quick Setup card (right column, bottom)
 
 The Quick Setup card on Session Home renders the real four-slot
-shape: Reviewers / Reviewees / Assignments are wired (Segment
-11J); Session settings stays inert pending Segment 12A PR 6.
+shape, all wired: Reviewers / Reviewees (Segment 11J),
+Relationships (Segment 15D PR 7c), Settings (Segment 12A-3 PR 4).
 The functional spec is `spec/quick_setup_card_spec.md`.
 
-Layout: a 2-column top grid carrying the three setup slots
-(Reviewers + Reviewees stacked in the left column, Assignments
-in the right column), then a horizontal divider, then the
-full-width Session settings slot. A Lock / Unlock button sits
-in a footer at the bottom-right and renders in every
-editable-conceivable state on Session Home (`draft` /
-`validated` / `ready`); the card defaults to locked so the
-operator must explicitly Unlock before any setup change. Lock
-state lives in a per-session `HttpOnly` cookie scoped to
-`/operator/sessions/{id}` (`qsu_{session_id}=1` when
-unlocked).
+Layout: a 2-column grid (post-15D cleanup polish #768) — Reviewers
++ Reviewees stack in the left column; Relationships + Settings
+stack in the right column. A Lock / Unlock button sits in a footer
+at the bottom-right and renders in every editable-conceivable
+state on Session Home (`draft` / `validated` / `ready`); the card
+defaults to locked so the operator must explicitly Unlock before
+any setup change. Lock state lives in a per-session `HttpOnly`
+cookie scoped to `/operator/sessions/{id}` (`qsu_{session_id}=1`
+when unlocked).
 
 State-conditional copy only — the card frame is constant:
 
-- **Draft / Validated:** "Bulk-populate reviewers, reviewees, and
-  assignments from files or rules in one place."
+- **Draft / Validated:** "Bulk-populate reviewers, reviewees,
+  relationships, and settings from CSV files in one place."
 - **Ready / Activated:** "Setup edits are paused while the
   session is Activated. Pause the session to re-enable bulk
   setup." The Lock / Unlock button stays visible — unlocking
@@ -286,8 +310,10 @@ State-conditional copy only — the card frame is constant:
 
 ## Placeholder cards
 
-Extract Data on Home renders via the shared placeholder Jinja
-macro and a single canonical CSS class:
+The shared placeholder pattern is no longer used on Session Home —
+both Quick Setup and Extract Data have graduated. The pattern
+remains documented here for any future placeholder card on any
+page.
 
 - **Macro:** `app/web/templates/operator/partials/_placeholder_card.html`,
   exporting `placeholder_card(id, title, description,
@@ -306,26 +332,25 @@ work.
 Cards that have graduated out of the placeholder pattern:
 
 - **Quick Setup** graduated in Segment 11H — now ships as a full
-  four-slot card via the dedicated `_quick_setup_card.html`
-  partial, with Reviewers / Reviewees / Assignments wired live in
-  Segment 11J and Session settings still inert pending Segment
-  12A PR 6.
+  four-slot card (`_quick_setup_card.html`) with every slot wired
+  (Reviewers / Reviewees in 11J, Relationships in 15D PR 7c,
+  Settings in 12A-3 PR 4).
+- **Extract Data** graduated across the 12A landings — now ships
+  five live tiles plus an inert zip-all bundle footer
+  (`_extract_data_card.html`). See §2 above for the tile table.
 - **Rule Based Assignment** (on the Assignments page, not Home)
   graduated across Segments 13A → 13A-1 — now ships as a wired
   card via `_rule_based_card.html` with a live RuleSet dropdown
   and a Generate submit. See `spec/rule_based_assignment.md`.
 
-Extract Data graduates the same way when Segment 12A PRs 3-6 wire
-its rows.
-
 ## Lifecycle behavior summary
 
 | State (enum / display) | Next Action card | Quick Setup | Extract Data | Danger Zone Delete Session |
 |---|---|---|---|---|
-| `draft` / Draft, rosters empty | "Session not fully set up…" — no buttons | Live (slots 1-3 wired; default-locked) | Greyed (placeholder, until Segment 12A) | Active |
-| `draft` / Draft, rosters populated | Primary: Validate Setup | Live (slots 1-3 wired; default-locked) | Greyed (placeholder, until Segment 12A) | Active |
-| `validated` / Validated | Primary: Activate Session (or See validation details on errors) | Live (slots 1-3 wired; default-locked) | Greyed (placeholder, until Segment 12A) | Active |
-| `ready` / Activated | Two sections: Manage invitations (Primary) + Monitor responses; `<hr>`; Pause Session (Primary, with confirm) | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Active (placeholder, button still disabled until Segment 12) | Visible-but-disabled |
+| `draft` / Draft, rosters empty | "Session not fully set up…" — no buttons | Live (all four slots wired; default-locked) | Live (5 tiles; empty-count tiles grey their Download button) | Active |
+| `draft` / Draft, rosters populated | Primary: Validate Setup | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
+| `validated` / Validated | Primary: Activate Session (or See validation details on errors) | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
+| `ready` / Activated | Two sections: Manage invitations (Primary) + Monitor responses; `<hr>`; Pause Session (Primary, with confirm) | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (5 tiles; identical rendering across lifecycle) | Visible-but-disabled |
 
 Reserved states (Expired, Archived) not yet in scope. When
 introduced, this table extends with their treatment.
