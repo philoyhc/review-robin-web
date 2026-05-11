@@ -128,7 +128,7 @@ upcoming pipeline), down from a mixed working set on May 9.
 | 13 | Reminder sending | ⚠️ outbox-only until **14B Part A** | — |
 | 14 | CSV and Excel export | ✅ **CSV shipped** (12A-1 + 12A-3); Excel never an MVP item | **upgraded ❌→✅** |
 | 15 | Basic audit log | ✅ (62 event types, canonical envelope, strict-mode gate); CSV export route shipped 12B, surfaced via Segment 16A; richer in-app views are **Segment 16C** | extended (export route shipped) |
-| 16 | Basic retention/deletion workflow | ❌ Segment 12B as originally scoped (purge tooling) not started; the audit-log export piece shipped under the same number | partial |
+| 16 | Basic retention/deletion workflow | ❌ Segment 12B as originally scoped (purge tooling) not started — now owned by **Segment 18C**; the audit-log export piece shipped under the same number | partial |
 
 **Score: 11/16 fully present (was 10), 4 functionally-present-but-dev-only,
 1 not yet implemented.** CSV export crossed the line; retention
@@ -142,7 +142,7 @@ purge tooling and the four ⚠️ items remain.
 | Rule-based assignment builder | ✅ 13A + 13A-1 + 13A-2 (uniqueness DDL) | + 13A-2 |
 | Pair-level context | ✅ **new** — first-class `relationships` table + Setup page; rule engine consumes via eager lookup | **new shipped 15D** |
 | Assignment preview and dry-run counts | ✅ | — |
-| Session cloning | ❌ not planned | — |
+| Session cloning | ⚠️ stub plan — **Segment 18A** | progressed |
 | Richer invitation templates | ✅ | — |
 | Targeted reminders by completion state | ⚠️ "incomplete" cohort yes; richer slicing not planned | — |
 | Controlled post-activation correction workflows | ✅ | — |
@@ -150,7 +150,7 @@ purge tooling and the four ⚠️ items remain.
 | Long-format / wide-format export | ✅ wide-format CSV shipped per entity; long-format Responses extract via `yield_per(1000)` | **shipped 12A-1** |
 | Settings import (round-trip) | ✅ **new** — two-phase `apply_session_config` parses then wipes-and-replaces; byte-stable round-trip on its own output | **new shipped 12A-3** |
 | Role delegation among multiple operators | ⚠️ table exists; no UI — owned by **Segment 16B** | — |
-| Advanced retention policies | ❌ deferred (no current plan owner) | — |
+| Advanced retention policies | ⚠️ stub plan — **Segment 18C** (per-deployment policy + selective purge) | progressed |
 | Administrative dashboards | ⚠️ Sys Admin page planned under **Segment 16A** (stub exists, audit-log download is its first anchor item) | **new plan** |
 
 ### §23 End-to-end acceptance criteria
@@ -257,9 +257,10 @@ in Segment 16A.
 2. **Retention / purge tooling deferred.** Segment 12B was
    re-scoped during the sprint: the audit-log export shipped (one
    route + service + tile), but the retention/purge piece the
-   original 12B plan owned **has no current plan file**. Functional
-   spec §12.2 / §12.4 still go unanswered. Likely a Segment 14
-   or Segment 16A ride-along but unclaimed today.
+   original 12B plan owned moved to **Segment 18C** (stub created
+   2026-05-11; per-session selective purge + per-deployment
+   retention policy). Functional spec §12.2 / §12.4 are now owned
+   but not yet implemented.
 
 3. **Inline-edit still deferred.** Same shape as May 9 — typo fix
    for one reviewer's name requires a fresh CSV. **Segment 15F**
@@ -353,6 +354,10 @@ Recalibrating with that ratio and the 12 remaining plans:
 | 16B — Role delegation | ~120 | ~600 | ~700 | 0 |
 | 16C — Richer audit views | ~160 | ~900 | ~1,000 | 0 |
 | 17 — AG Grid replacement | 130 | ~1,800 | ~600 | 0 |
+| 18A — Session cloning | ~150 | ~700 | ~900 | 0 |
+| 18B — Session tagging + archiving | ~150 | ~600 | ~800 | 0-1 |
+| 18C — Retention / deletion workflow | ~190 | ~900 | ~1,000 | 0-1 |
+| 19 — Spec documentation | ~170 | n/a (docs) | n/a | 0 |
 | 20 — Operator polish + docs | 94 | ~500 (code) + heavy docs | ~400 | 0 |
 | **Total remaining** | **3,015** | **~15,300** | **~17,100** | **0-2** |
 
