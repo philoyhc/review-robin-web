@@ -260,6 +260,13 @@ Last leg of the locked sequence `13E → 12C → 15D → 12A-3`. Brings the expo
 
 Bonus: **#781** — Grey out the Reviewers / Reviewees / Relationships / Responses Download buttons in the Extract Data card when the corresponding count is 0 (rendered between PR 2 and PR 3 as a small follow-on polish).
 
+### Segment 12B — Audit-events export — done 2026-05-10 (PRs #788, #789)
+
+Smallest possible slice — adds a per-session `audit_events` CSV download. The original Segment 12 framing (response-data export + retention) was already covered by 12A-1 / 12A-3, so 12B reduced to a single PR for the audit log. Plan archived: `guide/archive/segment_12B_audit_retention.md`.
+
+- **#788** — PR 1 (Audit-events extract + Extract Data tile): new `app/services/extracts/audit_events_extract.py` with `serialize_audit_events()` (8-column wide CSV: `EventType,Severity,Summary,ActorEmail,CorrelationId,CreatedAt,DetailJson`, JSON-encoded detail envelope via `json.dumps(..., sort_keys=True)`, LEFT JOIN against `users` for ActorEmail, streamed via `yield_per(1000)`); `session.audit_log_extracted` registered in `EVENT_SCHEMAS`; `GET /operator/sessions/{id}/export/audit_log.csv` route in `_extracts.py`; new "Audit log" tile in `_extract_data.py` between Relationships and the inert Zip-all bundle. Naive-datetime readbacks normalised to UTC so the cell shape is dialect-stable.
+- **#789** — Move audit log out of Extract Data → flag for Sys Admin. Per industry best practice (GitHub, Stripe, Slack, Notion, Atlassian) audit data sits behind an admin / diagnostics doorway rather than alongside everyday data exports. The route + service + audit event + tests stay live; the Extract Data tile retires so the surface relocates cleanly to the Sys Admin page when Segment 16 ships. Segment 16 stub upgraded audit log download from "Future" to a planned **Anchor item §3** alongside Outbox and Manual assignment upload.
+
 ---
 
 ## Upcoming
@@ -272,22 +279,18 @@ pinned to each segment. The catalog itself lives in
 ### Implementation sequence
 
 The locked block `13E → 12C → 15D → 12A-3` shipped 2026-05-10
-(see Done above for the four entries). The next sensible item
-is **12B** (audit retention). Everything else in this list
-(13B, 13C, 14, 14-1, 15, 15A, 15B, 15C, 15E, 16) ships per its
-own plan; no ordering constraints beyond shared schema
-conflicts (none detected).
+(see Done above for the four entries) and 12B (audit-events
+export) followed the same day. The remaining schedule items
+— 13B, 13C, 14, 14-1, 15, 15A, 15B, 15C, 15E, 16 — ship per
+their own plan; no ordering constraints beyond shared schema
+conflicts (none detected). **Segment 16** (Sys Admin page) is
+a natural near-term pick since it absorbs the audit-log
+download route that 12B left UI-less, alongside Outbox and
+the dev-only manual assignment upload.
 
 #### Numbered queue
 
-1. **12B — Audit retention.**
-   `audit_events` export + retention / purge tooling. Reads
-   against the canonical `detail` shape pinned by 11K (shipped
-   2026-05-07). Folded out of the original Segment 12 plan when
-   Extract Data moved into 12A.
-   **Plan:** `guide/segment_12B_audit_retention.md`.
-
-2. **13B — Reviewer surface sort.**
+1. **13B — Reviewer surface sort.**
    Sort-by-reviewee column on the reviewer surface — operator
    default + reviewer live override. Sized as 3 PRs (schema +
    read path → operator UI tri-state Sort column → reviewer-
@@ -296,7 +299,7 @@ conflicts (none detected).
    **Plan:** `guide/segment_13B_sort_by_reviewee.md`.
    **Functional spec:** `spec/sort_by_reviewee.md`.
 
-3. **13C — Enhanced instruments.**
+2. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
    instrument" action-row button. Sized as 5 PRs. Action row
@@ -312,12 +315,12 @@ conflicts (none detected).
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/enhanced_instruments.md`.
 
-4. **14 — Production hardening.**
+3. **14 — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14_production_hardening_plan.md`.
 
-5. **14-1 — Email infrastructure (send activation + backends).**
+4. **14-1 — Email infrastructure (send activation + backends).**
    All email *wiring* lives here. The schema columns Part A
    writes to landed with **Segment 11C Part 2** (PR #541,
    2026-05-07) and are ready for the dispatch helper.
@@ -334,7 +337,7 @@ conflicts (none detected).
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-6. **15 — Operator polish + documentation.**
+5. **15 — Operator polish + documentation.**
    Inline-edit Manage rows, Inactivate UI, sessions-list per-
    row Delete, AG Grid integration, tech-support contact, the
    "make the system understandable to a new operator" pass
@@ -342,7 +345,7 @@ conflicts (none detected).
    Catalog #23, #25, #33, #35, #36, §2.2.
    **Plan:** `guide/segment_15_operator_polish_and_documentation.md`.
 
-7. **15A — Pervasive friendly labels.**
+6. **15A — Pervasive friendly labels.**
    Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
    `PairContext1-3` flowing through every header / picker /
    tooltip via a session-level resolver, not just per-instrument
@@ -355,7 +358,7 @@ conflicts (none detected).
    slot retired with `Assignment.context` in 15D PR 6b.)
    **Plan:** `guide/segment_15A_friendly_labels.md`.
 
-8. **15C — Operator RTD / RuleSet libraries.**
+7. **15C — Operator RTD / RuleSet libraries.**
    Symmetric two-tier model for both RTDs and RuleSets:
    operator master library (cross-session, reusable) +
    per-session copy (portable, independently editable). Explicit
@@ -367,7 +370,7 @@ conflicts (none detected).
    `instruments.rule_set_id` to point at.
    **Plan:** `guide/segment_15C_operator_libraries.md`.
 
-9. **15B — Per-instrument assignments.**
+8. **15B — Per-instrument assignments.**
     Each `Instrument` carries its own assignment set (e.g. the
     Manager survey collects different reviewer → reviewee
     pairings than the Peer survey within one session). Schema
