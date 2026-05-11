@@ -47,11 +47,13 @@
             <td>
               <span class="pill pill-count">{{ s.updated_at.isoformat() }}</span>
             </td>
-            <td>{{ s.status | lifecycle_label }}</td>
+            <td>
+              <span class="pill pill-info">{{ s.status | lifecycle_label }}</span>
+            </td>
             <td class="col-shrink">
               <span class="muted" title="Coming in 16B">Operators</span>
               <a class="chrome-link"
-                 href="/operator/sessions/{{ s.id }}/outbox">Outbox</a>
+                 href="/operator/sys-admin/sessions?outbox_session_id={{ s.id }}#outbox">Outbox</a>
               <a class="chrome-link"
                  href="/operator/sessions/{{ s.id }}/export/audit_log.csv">Audit log</a>
             </td>
@@ -61,5 +63,9 @@
     </div>
   {% else %}
     <p class="muted">No sessions in this workspace yet.</p>
+  {% endif %}
+
+  {% if outbox_session %}
+    {% include "operator/partials/_sys_admin_outbox.html" %}
   {% endif %}
 {% endblock %}

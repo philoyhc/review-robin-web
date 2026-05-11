@@ -33,7 +33,6 @@ from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
     require_session_operator,
-    require_sys_admin_or_session_operator,
 )
 from app.web.routes_operator._shared import _templates
 
@@ -508,29 +507,11 @@ def invitations_send_one(
     )
 
 
-@router.get("/sessions/{session_id}/outbox", response_class=HTMLResponse)
-def outbox_index(
-    request: Request,
-    review_session: ReviewSession = Depends(
-        require_sys_admin_or_session_operator
-    ),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    rows = invitations.list_outbox_for_session(db, review_session.id)
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_outbox.html",
-        {
-            "user": user,
-            "session": review_session,
-            "status_pills": views.session_status_pills(db, review_session),
-            "rows": rows,
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Outbox"
-            ),
-        },
-    )
+# Per-session ``GET /sessions/{id}/outbox`` route retired 2026-05-11
+# in favour of the inline outbox section on
+# ``/operator/sys-admin/sessions`` (Sessions Diagnostics tab).
+# Bookmarked URLs lose the route; users land on a 404. The Admin
+# chrome is now the only canonical entry point.
 
 
 # --------------------------------------------------------------------------- #

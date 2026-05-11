@@ -357,27 +357,17 @@ def test_revert_then_reactivate_keeps_existing_invitations_idempotent(
     assert rows[0].token_hash == initial_hash
 
 
-def test_outbox_view_renders_invitation_url(
+def test_manage_invitations_no_longer_links_to_outbox(
     client: TestClient, db: Session
 ) -> None:
-    session = _ready_session(client, db, code="outbox-view")
-    client.post(f"/operator/sessions/{session.id}/invitations/generate")
-    invitation = db.execute(
-        select(Invitation).where(Invitation.session_id == session.id)
-    ).scalar_one()
-    client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
-    )
-
-    response = client.get(f"/operator/sessions/{session.id}/outbox")
-    assert response.status_code == 200
-    assert "/reviewer/invite/" in response.text
-    assert "rae@example.edu" in response.text
-    # Post-16A PR 3: the "View outbox" button on Manage Invitations
-    # retires — Outbox is reached via the workspace Admin chrome
-    # (top-bar Admin link → Sessions Diagnostics tab → per-row
-    # outbox link). The existing per-session URL stays reachable
-    # directly (asserted above on the GET that 200s).
+    """The "View outbox" button on Manage Invitations retired in
+    16A PR 3 and the per-session ``/operator/sessions/{id}/outbox``
+    route retired in the inline-outbox reshape. Both verifications
+    landed here so future refactors don't accidentally bring either
+    back. Outbox content rendering itself is exercised by
+    ``test_sys_admin_outbox_inline.py``.
+    """
+    session = _ready_session(client, db, code="outbox-retired")
     invitations_body = client.get(
         f"/operator/sessions/{session.id}/invitations"
     ).text
@@ -385,13 +375,9 @@ def test_outbox_view_renders_invitation_url(
         f'href="/operator/sessions/{session.id}/outbox">View outbox</a>'
         not in invitations_body
     )
-    # And no Outbox tab in the session chrome either (the Admin
-    # row link points at the per-session URL but isn't the same
-    # ``>Outbox</a>`` tail).
-    assert (
-        f'href="/operator/sessions/{session.id}/outbox">Outbox</a>'
-        not in response.text
-    )
+    # The per-session route is gone — direct access 404s.
+    response = client.get(f"/operator/sessions/{session.id}/outbox")
+    assert response.status_code == 404
 
 
 def test_audit_events_written_for_lifecycle(
