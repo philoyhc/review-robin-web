@@ -1,61 +1,56 @@
-"""Sys Admin chrome — Segment 16A PR 2.
+"""Sys Admin chrome — Segment 16A PR 2 (workspace-level reshape).
 
-Empty-shell route for the per-session Sys Admin landing. The body
-is intentionally bare; PRs 3-6 fill it in:
+Empty-shell workspace-level landing at ``GET /operator/sys-admin``.
+The body is intentionally bare; PRs 3-6 fill it:
 
-- PR 3 — Outbox card lifts the existing
-  ``GET /operator/sessions/{id}/outbox`` content under this chrome.
-- PR 4 — Audit log download tile wires the existing
-  ``GET /operator/sessions/{id}/export/audit_log.csv`` route.
+- PR 3 — Outbox tile (per-session content surfaced via a
+  session picker on this page).
+- PR 4 — Audit log CSV download (per-session via the same
+  picker, wired to the existing
+  ``GET /operator/sessions/{id}/export/audit_log.csv`` route).
 - PR 5 — Pure-removal PR (manual-assignment path retires); no
-  surface change here.
-- PR 6 — Sibling workspace-scoped Sys Admin URL plus the user-
-  list / Admit / Revoke / Promote / Demote toggles.
+  new surface here.
+- PR 6 — Workspace user list (Admit / Revoke / Promote /
+  Demote) as a sibling section on this same page or a
+  ``/operator/sys-admin/users`` child — decided at PR 6 time.
 
-The route gates on ``require_sys_admin`` (full 403 on miss) and
-``require_session_operator`` (so the per-session membership check
-continues to compose). The outer ``require_operator`` on the
-parent operator ``APIRouter`` (PR 1b) is redundant for sys-admins
-but harmless — sys-admin implies operator at the predicate level
-(F4).
+The route gates on ``require_sys_admin`` (full 403 on miss).
+The outer ``require_operator`` on the parent operator
+``APIRouter`` (PR 1b) is redundant for sys-admins but harmless
+— sys-admin implies operator at the predicate level (F4).
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, User
+from app.db.models import User
 from app.db.session import get_db
-from app.web import breadcrumbs, views
-from app.web.deps import require_session_operator, require_sys_admin
+from app.web.deps import require_sys_admin
+from app.web.return_to import resolve_return_to
 from app.web.routes_operator._shared import _templates
 
 
 router = APIRouter()
 
 
-@router.get(
-    "/sessions/{session_id}/sys-admin",
-    response_class=HTMLResponse,
-)
-def session_sys_admin(
+@router.get("/sys-admin", response_class=HTMLResponse)
+def sys_admin_landing(
     request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
+    return_to: str | None = Query(default=None),
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> Response:
+    target = resolve_return_to(return_to, db)
     return _templates.TemplateResponse(
         request,
-        "operator/session_sys_admin.html",
+        "operator/sys_admin.html",
         {
-            "session": review_session,
             "user": user,
-            "current_page": "Sys Admin",
-            "status_pills": views.session_status_pills(db, review_session),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Sys Admin"
-            ),
+            "return_to_raw": return_to,
+            "return_to_url": target.url,
+            "return_to_label": target.label,
         },
     )

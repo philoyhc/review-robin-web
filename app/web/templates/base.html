@@ -471,14 +471,12 @@
          colour in the Home anchor. */
       .row-label.active-group,
       .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row,
-      .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row,
-      .session-nav-grid:has(.tab-strip-admin .nav-tab:hover) .row-label.admin-row {
+      .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row {
         color: #111827;
       }
       .row-label.active-group::after,
       .session-nav-grid:has(.tab-strip-setup .nav-tab:hover) .row-label.setup-row::after,
-      .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row::after,
-      .session-nav-grid:has(.tab-strip-admin .nav-tab:hover) .row-label.admin-row::after {
+      .session-nav-grid:has(.tab-strip-ops .nav-tab:hover) .row-label.ops-row::after {
         border-left-color: #111827;
       }
       /* Tab strip rows — group tint sits on the strip itself.
@@ -489,7 +487,6 @@
       }
       .tab-strip-setup { background: #f3f4f6; grid-column: 3; grid-row: 1; }
       .tab-strip-ops   { background: #f0fdf4; grid-column: 3; grid-row: 2; }
-      .tab-strip-admin { background: #fef2f2; grid-column: 3; grid-row: 3; }
       /* Page-internal nav-tab strip — same `.nav-tab` children as the
          chrome but framed for page body usage: light grey row tint
          (matches the Setup-row tint from `.tab-strip-setup`), thin
@@ -507,17 +504,8 @@
       }
       .row-label.setup-row { grid-column: 2; grid-row: 1; }
       .row-label.ops-row   { grid-column: 2; grid-row: 2; }
-      .row-label.admin-row { grid-column: 2; grid-row: 3; }
       /* Setup row gets a bottom border to separate from Ops row. */
       .session-nav-grid > .row-setup { border-bottom: 1px solid #d1d5db; }
-      /* 16A PR 2: when the chrome carries the Sys Admin row,
-         expand the explicit grid to three rows and stretch the
-         home anchor to span all three. The ops row also picks up
-         a bottom border to separate it from the admin row. */
-      .session-nav-grid.has-admin { grid-template-rows: auto auto auto; }
-      .session-nav-grid.has-admin .session-home-anchor { grid-row: 1 / span 3; }
-      .session-nav-grid.has-admin > .ops-row,
-      .session-nav-grid.has-admin > .tab-strip-ops { border-bottom: 1px solid #d1d5db; }
       /* Phase tabs — same shape across both rows. */
       .nav-tab {
         flex: 1 1 0;
@@ -1854,6 +1842,9 @@
             <div>Signed in as {{ user.display_name or user.email }}</div>
             {% if request.url.path != "/operator/settings" %}
               <a class="chrome-link" href="/operator/settings?return_to={{ request.url.path | urlencode }}">Settings</a>
+            {% endif %}
+            {% if user.is_sys_admin and request.url.path != "/operator/sys-admin" %}
+              <a class="chrome-link" href="/operator/sys-admin?return_to={{ request.url.path | urlencode }}">Admin</a>
             {% endif %}
             {% if request.url.path not in ("/about", "/me/debug") %}
               <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
