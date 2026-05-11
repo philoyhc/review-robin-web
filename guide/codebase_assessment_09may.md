@@ -26,7 +26,7 @@ surface with client-side dirty tracking, save drafts and submit. Every
 mutating service writes a canonical-shape `audit_events` row
 (51 registered event types, strict-mode validated). Email is staged in
 a dev outbox table — no real SMTP / Graph / ACS dispatch yet; that is
-deliberately deferred to **Segment 14-1**. Export, retention, and
+deliberately deferred to **Segment 14B**. Export, retention, and
 production hardening are also pending.
 
 ## 2. By the numbers (LOC + counts)
@@ -94,12 +94,12 @@ code). 1,007 tests passing.
 | 5  | Manual assignment upload/edit | ⚠️ CSV-replace yes; per-row edit deferred |
 | 6  | Full-matrix assignment generation | ✅ (also reachable as a seeded RuleSet) |
 | 7  | Basic readiness validation | ✅ (`ValidationRule` registry, find-and-fix Validate page) |
-| 8  | Email invitations with individualized links | ⚠️ staged to dev outbox; real send pending Seg 14-1 |
+| 8  | Email invitations with individualized links | ⚠️ staged to dev outbox; real send pending Seg 14B |
 | 9  | Microsoft sign-in or unique-link access | ✅ Easy Auth + `/reviewer/invite/{token}` landing |
 | 10 | Reviewer tabular response surface | ✅ multi-instrument; client-side page nav; numeric step-grid validation |
 | 11 | Save and submit | ✅ |
 | 12 | Operator progress dashboard | ✅ Manage Invitations + Responses pages |
-| 13 | Reminder sending | ⚠️ enqueues to outbox; real send pending Seg 14-1 |
+| 13 | Reminder sending | ⚠️ enqueues to outbox; real send pending Seg 14B |
 | 14 | CSV and Excel export | ❌ Segment 12A scaffolded only |
 | 15 | Basic audit log | ✅ canonical envelope, strict-mode gate, 51 event types |
 | 16 | Basic retention/deletion workflow | ❌ Segment 12B not started |
@@ -116,7 +116,7 @@ The four ⚠️ items split two ways:
   `email_outbox.status="queued"`. The transport plumbing landed in
   Segment 11E (`EmailTransport` / `SmtpEmailTransport` /
   `GraphEmailTransport` stub) and is wired to a `transport_for(...)`
-  factory; the call site activation lives in Segment 14-1 Part A.
+  factory; the call site activation lives in Segment 14B Part A.
 
 ### §22 Expanded release items
 
@@ -232,7 +232,7 @@ operator-facing audit-history surface isn't built.
    in `email_outbox` with `status="queued"`. The `EmailTransport`
    protocol + `SmtpEmailTransport` + typed `GraphEmailTransport` stub
    shipped in Segment 11E, but no caller invokes them. **Until Segment
-   14-1 Part A lands, this system cannot run a real review cycle**
+   14B Part A lands, this system cannot run a real review cycle**
    without an out-of-band manual mail-merge step. Functional spec §1
    says "reviewers receive individualized invitations" — today they do,
    if and only if someone reads the outbox table out and pastes the
@@ -273,7 +273,7 @@ operator-facing audit-history surface isn't built.
    Cohesive but big; another slice-by-sub-feature would not be
    unreasonable.
 
-7. **Production hardening pending.** Segment 14 covers Key Vault
+7. **Production hardening pending.** Segment 14A covers Key Vault
    (today: SMTP encryption key as App Service config setting), VNet
    integration (today: public Postgres with firewall allow-list),
    soft-delete (today: hard-delete on
@@ -335,7 +335,7 @@ Estimating from the seven remaining planned segments:
 | 13B — sort by reviewee | 226 | ~600 | ~500 | 1 |
 | 13C — enhanced instruments | 187 | ~1,200 | ~900 | 1 |
 | 14 — production hardening | 521 | ~1,500 | ~500 | 0 |
-| 14-1 — email infrastructure | 314 | ~1,800 | ~1,200 | 1 |
+| 14B — email infrastructure | 314 | ~1,800 | ~1,200 | 1 |
 | 15 — operator polish + docs | 150 (stub) | ~3,000 | ~1,500 | 1 |
 | **Total remaining** | | **~11,300** | **~6,900** | **6** |
 
@@ -369,5 +369,5 @@ A disciplined, well-tested, well-documented FastAPI monolith at
 acceptance criteria fully met** and the remaining six tractably
 sequenced under five known segment plans. The two blockers between
 "runs locally" and "runs a real pilot" are **email send activation
-(14-1)** and **data export (12A)**; everything else is polish or
+(14B)** and **data export (12A)**; everything else is polish or
 production hardening.

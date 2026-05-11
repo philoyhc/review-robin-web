@@ -32,7 +32,7 @@ pair-context via an eager lookup so the predicate path stays
 single-pass. Quick Setup on Session Home and Create-New-Session is
 fully wired across all four slots (Reviewers → Reviewees →
 Relationships → Settings). Email is still staged to a dev outbox;
-real send activation remains the Segment 14-1 boundary.
+real send activation remains the Segment 14B boundary.
 
 ## 2. By the numbers (LOC + counts)
 
@@ -120,12 +120,12 @@ upcoming pipeline), down from a mixed working set on May 9.
 | 5  | Manual assignment upload/edit | ⚠️ manual-CSV path is **dev-only** post-15D; rule-based + relationships is the operator path | shifted (was "per-row edit deferred") |
 | 6  | Full-matrix assignment generation | ✅ (reachable as a seeded RuleSet) | — |
 | 7  | Basic readiness validation | ✅ | — |
-| 8  | Email invitations with individualized links | ⚠️ outbox-only until **14-1 Part A** | — |
+| 8  | Email invitations with individualized links | ⚠️ outbox-only until **14B Part A** | — |
 | 9  | Microsoft sign-in or unique-link access | ✅ | — |
 | 10 | Reviewer tabular response surface | ✅ multi-instrument, page-aware | — |
 | 11 | Save and submit | ✅ | — |
 | 12 | Operator progress dashboard | ✅ | — |
-| 13 | Reminder sending | ⚠️ outbox-only until **14-1 Part A** | — |
+| 13 | Reminder sending | ⚠️ outbox-only until **14B Part A** | — |
 | 14 | CSV and Excel export | ✅ **CSV shipped** (12A-1 + 12A-3); Excel never an MVP item | **upgraded ❌→✅** |
 | 15 | Basic audit log | ✅ (62 event types, canonical envelope, strict-mode gate); CSV export route shipped 12B, surfaced via Segment 16 | extended (export route shipped) |
 | 16 | Basic retention/deletion workflow | ❌ Segment 12B as originally scoped (purge tooling) not started; the audit-log export piece shipped under the same number | partial |
@@ -250,7 +250,7 @@ in Segment 16.
 
 1. **Email is still not actually sent.** Unchanged from May 9.
    Acceptance criteria #8 (invitations) and #13 (reminders) still
-   stop at `email_outbox.status="queued"`. Segment 14-1 Part A
+   stop at `email_outbox.status="queued"`. Segment 14B Part A
    remains the activation boundary. **This is now the single
    largest gap between "demo-able" and "pilot-able."**
 
@@ -295,7 +295,7 @@ in Segment 16.
    **Recommended near-term pick** given how many tiles park
    behind it.
 
-7. **Production hardening unchanged.** Segment 14 still owns Key
+7. **Production hardening unchanged.** Segment 14A still owns Key
    Vault, VNet, soft-delete, full Postgres pytest. 521-LOC plan,
    not started.
 
@@ -341,8 +341,8 @@ Recalibrating with that ratio and the 12 remaining plans:
 | 13B — sort by reviewee | 226 | ~500 | ~900 | 0 (col landed inert in 13D) |
 | 13C — enhanced instruments | 187 | ~1,000 | ~1,800 | 0 (col landed inert in 13D) |
 | 14 — production hardening | 521 | ~1,500 | ~600 | 0-1 |
-| 14-1 — email infra (Parts A → E) | 314 | ~1,800 | ~2,000 | 0 (cols landed in 11C Part 2) |
-| 14-1 — email infra (Parts F → H, optional backends) | — | ~1,800 (if all three) | ~1,500 | 0 |
+| 14B — email infra (Parts A → E) | 314 | ~1,800 | ~2,000 | 0 (cols landed in 11C Part 2) |
+| 14B — email infra (Parts F → H, optional backends) | — | ~1,800 (if all three) | ~1,500 | 0 |
 | 15A — friendly labels | 207 | ~700 | ~1,000 | 0 (table landed in 13D) |
 | 15B — per-instrument assignments | 391 | ~1,400 | ~2,000 | 0 (FK landed in 13D) |
 | 15C — operator libraries | 289 | ~1,500 | ~2,200 | 0 (tables landed in 13D) |
@@ -369,7 +369,7 @@ Recalibrating with that ratio and the 12 remaining plans:
 The biggest single growth area now is the **Segment 15 family**
 (15A + 15B + 15C + 15E + 15F = ~5,400 code, ~8,100 tests on the
 revised estimates) — operator polish work that runs broad rather
-than deep. Segment 14-1 (with all three backend options) is the
+than deep. Segment 14B (with all three backend options) is the
 second-largest at ~3,600 code if every backend ships.
 
 These estimates carry roughly **±20% uncertainty** (down from
@@ -408,5 +408,5 @@ tests (1.53 × ratio)**, with **11 of 16 MVP acceptance criteria
 fully met (+1)** and the remaining five tractably sequenced under
 **12 active segment plans**. The single blocker between "runs
 locally with full export" and "runs a real pilot" is now
-**email send activation (Segment 14-1 Part A)**; everything else
+**email send activation (Segment 14B Part A)**; everything else
 is polish, hardening, or operator-affordance breadth.

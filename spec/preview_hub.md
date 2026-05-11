@@ -2,7 +2,7 @@
 
 A read-only Operations Page that renders, for an operator-selected reviewer, every reviewer-facing artifact the session generates: invitation email, response form, reminder email, responses-received email, and any future reviewer-facing artifacts. The operator uses this surface to eyeball the reviewer experience before activating the session and sending real communications.
 
-> **Implementation status — Segment 11F shipped fully (5/5 PRs, 2026-05-07).** Page chrome + reviewer picker (PR A), tabbed email region with all three tabs (Invitation, Reminder, Responses-received) wired to real render adapters (PRs B / D / E), and the reviewer-surface iframe card with the standalone `/preview` retired as a 308 redirect (PR C) are all in production. Send-test affordances per artifact moved to **Segment 14-1 Part A** (the wider email send-activation segment) since they need the same dispatch helper. The plan at `guide/archive/segment_11F_previews_page.md` carries the segment-by-segment view.
+> **Implementation status — Segment 11F shipped fully (5/5 PRs, 2026-05-07).** Page chrome + reviewer picker (PR A), tabbed email region with all three tabs (Invitation, Reminder, Responses-received) wired to real render adapters (PRs B / D / E), and the reviewer-surface iframe card with the standalone `/preview` retired as a 308 redirect (PR C) are all in production. Send-test affordances per artifact moved to **Segment 14B Part A** (the wider email send-activation segment) since they need the same dispatch helper. The plan at `guide/archive/segment_11F_previews_page.md` carries the segment-by-segment view.
 
 ### Rationale and placement
 

@@ -70,7 +70,7 @@ migration instead.
 Segment 4 keeps every column type cross-dialect so the same migration runs
 on both:
 
-| Need              | Used in Segment 4              | Postgres-specific upgrade in Segment 14 |
+| Need              | Used in Segment 4              | Postgres-specific upgrade in Segment 14A |
 |-------------------|-------------------------------|-----------------------------------------|
 | JSON blob         | `sqlalchemy.JSON`             | `JSONB`                                  |
 | UUID column       | `String(36)` (where used)     | native `UUID`                            |

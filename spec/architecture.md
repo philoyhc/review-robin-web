@@ -172,7 +172,7 @@ email, and otherwise stamps `opened_at` once and 303s to
 
 The `email_outbox` table (Segment 9.2) is the dev-mode replacement
 for SMTP. Rows synchronously flip `queued → sent` when the operator
-clicks Send. Real SMTP / production email is deferred to Segment 14-1;
+clicks Send. Real SMTP / production email is deferred to Segment 14B;
 the outbox table itself stays useful for debugging in any environment.
 
 ### Monitoring + reminders (Segment 9.3)
