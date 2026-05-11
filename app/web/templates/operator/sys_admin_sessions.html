@@ -17,20 +17,43 @@
       <table>
         <tr>
           <th>Session Name</th>
-          <th>Code</th>
-          <th>Status</th>
+          <th>Session Code</th>
+          <th>Deadline</th>
+          <th>Created by</th>
           <th>Created</th>
+          <th>Last Modified</th>
+          <th>Status</th>
           <th class="col-shrink">Actions</th>
         </tr>
         {% for s in sessions %}
           <tr>
-            <td>{{ s.name }}</td>
+            <td>
+              <a href="/operator/sessions/{{ s.id }}">{{ s.name }}</a>
+            </td>
             <td><code>{{ s.code }}</code></td>
+            <td>
+              {% if s.deadline %}
+                <span class="pill pill-info">{{ s.deadline.isoformat() }}</span>
+              {% else %}
+                <span class="muted">No deadline</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="pill pill-count">{{ s.created_by_user.display_name or s.created_by_user.email }}</span>
+            </td>
+            <td>
+              <span class="pill pill-count">{{ s.created_at.isoformat() }}</span>
+            </td>
+            <td>
+              <span class="pill pill-count">{{ s.updated_at.isoformat() }}</span>
+            </td>
             <td>{{ s.status | lifecycle_label }}</td>
-            <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
             <td class="col-shrink">
+              <span class="muted" title="Coming in 16B">Operators</span>
               <a class="chrome-link"
-                 href="/operator/sessions/{{ s.id }}/outbox">View outbox</a>
+                 href="/operator/sessions/{{ s.id }}/outbox">Outbox</a>
+              <a class="chrome-link"
+                 href="/operator/sessions/{{ s.id }}/export/audit_log.csv">Audit log</a>
             </td>
           </tr>
         {% endfor %}
