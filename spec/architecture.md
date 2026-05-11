@@ -35,12 +35,12 @@ perspective:
   `Default`, operator-editable `description`); the operator's
   `Add an instrument` and `Delete this instrument` buttons are
   wired (Segment 10D Slice 5, 2026-05-02) with mutual-exclusion +
-  single-instrument-floor gates. Three remaining multi-instrument
-  items (FullMatrix per-instrument target picker; Manual CSV
-  `Instrument` column; reviewer dashboard per-instrument grouping)
-  are tracked at `guide/archive/unfinished_business.md` #27 / #28 / #29
-  (the original Segment 13 plan is archived as
-  `guide/archive/segment_13_multi_instrument_sessions_superseded.md`).
+  single-instrument-floor gates. Per-instrument assignment sets
+  + reviewer-dashboard per-instrument grouping are the remaining
+  multi-instrument items — tracked at `docs/status.md` "What's
+  deliberately not yet there" (Segment 15B). The original Segment
+  13 plan is archived as
+  `guide/archive/segment_13_multi_instrument_sessions_superseded.md`.
 - **Assignments** are `(session, reviewer, reviewee, instrument)`
   rows. They link the assignment matrix (the pair) to the response
   form (the instrument). The same `(reviewer, reviewee)` pair may
@@ -79,13 +79,15 @@ columns. The same `(reviewer, reviewee)` pair may appear in zero,
 one, or many instruments depending on how generation ran. The
 reviewer-surface render path loops by instrument and the operator
 UI for creating / deleting instruments shipped in Segment 10D
-Slice 5 (2026-05-02). The remaining multi-instrument items are
-tracked at `guide/archive/unfinished_business.md` #27 / #28 / #29.
+Slice 5 (2026-05-02). Per-instrument assignment sets are the
+last remaining multi-instrument item (Segment 15B).
 
 ### Practical implications today
 
-As of end-of-Segment-10C the operator-controlled instrument layer
-is in place:
+The operator-controlled instrument layer + Setup-page surface
+have shipped end-to-end. For URL-by-URL ship-state and the
+authoritative "what works today" list, read **`docs/status.md`**
+("Capabilities today" + "What's deliberately not yet there").
 
 - Session creation auto-seeds one instrument (system handle
   `Default`) with two response fields (`rating` integer 1–5
@@ -95,9 +97,9 @@ is in place:
 - `/operator/sessions/{id}/instruments` is the single consolidated
   page for everything per-instrument: All Instrument Status card +
   one card per instrument (description, acceptance + visibility
-  toggles, response-fields builder, display-fields placeholder,
-  live preview). See `spec/instruments.md` for the per-section
-  contract and `docs/status.md` for the URL table + audit events.
+  toggles, response-fields builder, display-fields card, live
+  preview). See `spec/instruments.md` for the per-section
+  contract.
 - The reviewer surface renders one tabular artifact per instrument
   in DOM order, with section heading from `Instrument.description`
   (fallback to handle) and a per-field help block above each table.
@@ -107,10 +109,10 @@ is in place:
   in Segment 10D Slice 5).
 
 Items still deliberately deferred (see `docs/status.md` "What's
-deliberately not yet there"): FullMatrix per-instrument target
-picker, Manual CSV `Instrument` column, and reviewer-dashboard
-per-instrument grouping (`guide/archive/unfinished_business.md` #27 / #28 / #29);
-response-field type changes after creation (data migration concern).
+deliberately not yet there" for the canonical list): per-instrument
+assignment sets (Segment 15B), reviewer-dashboard per-instrument
+grouping, and response-field type changes after creation (data
+migration concern).
 
 ### Session lifecycle (Segment 9.1)
 
