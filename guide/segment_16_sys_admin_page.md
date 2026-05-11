@@ -144,6 +144,156 @@ assignment upload). A dedicated Sys Admin page:
 - Operator-facing UX changes to the rule-based
   workflow — those live in 15D and 12A-3.
 
+## Security / access — proposal (decide before PR scoping)
+
+The Sys Admin surfaces sit above the everyday operator
+permission set (every authenticated operator is already
+trusted with their own session's data via
+`require_session_operator`). The question is **which
+authenticated operators get the additional "I can break
+things deliberately" power** that Manual assignment
+upload, audit log download, and future SMTP test-send
+imply.
+
+### Threat model
+
+- *Accidental damage* — wrong click on Manual assignment
+  upload silently wipes a live session's pairings via
+  `replace_assignments`.
+- *Deliberate misuse* — operator overrides the rule
+  engine on a colleague's session, or pulls another
+  session's audit log they shouldn't see.
+- *Information leak* — audit log download surfaces
+  correlation IDs / actor emails / lifecycle history;
+  Outbox surfaces queued email bodies (incl. invite
+  tokens pre-send).
+
+Risk per surface:
+
+| Surface | Risk | Mitigation lean |
+|---|---|---|
+| Outbox (read-only) | Low | Authz gate is plenty |
+| Audit log download | Low–medium | Authz gate + per-download audit event (already emitted as `session.audit_log_extracted` by 12B PR 1) |
+| Manual assignment upload | **High** (writes, bypasses rules) | Authz gate + confirmation + audit |
+| Future SMTP test-send | Medium | Authz gate + audit |
+
+### Defence in depth (any chosen option below should layer all four)
+
+1. **Authentication** — Entra Easy Auth (already
+   enforced; nothing new).
+2. **Authorization** — `require_sys_admin` FastAPI
+   dependency that 403s non-admins.
+3. **UI gating** — Sys Admin chrome tab / link only
+   renders when authorized; no leaked navigation for
+   non-admins (avoids the "what's that I can't click"
+   discoverability problem).
+4. **Audit + confirmation** — every mutating Sys Admin
+   action writes an `audit_event` with `actor_user_id`;
+   destructive actions (manual upload) need an explicit
+   "I'm overriding the rule engine" checkbox before
+   submit.
+
+### Authorization options
+
+**A. Entra app role (`RR_SysAdmin`).** Define an app
+role in the Entra app registration; assign it to
+specific users in the directory. Easy Auth surfaces the
+`roles` claim on `X-MS-CLIENT-PRINCIPAL`;
+`require_sys_admin` checks for `RR_SysAdmin ∈ roles`.
+*Pros:* standard pattern, scales, no new app code beyond
+the dependency, role assignment lives in the directory
+where it belongs. *Cons:* one-time Entra app-role
+registration + per-user assignment; local dev needs
+`ALLOW_FAKE_AUTH` to inject a synthetic role
+(`FAKE_AUTH_SYS_ADMIN=true`).
+
+**B. Per-user `users.is_sys_admin` boolean.** New
+column, default False, manageable via a (yet-to-build)
+Sys Admin promotion UI + bootstrapped from a
+`SYS_ADMIN_EMAILS` env var on user-create. *Pros:*
+self-contained, no Entra coordination, can grow into a
+richer per-user permission story. *Cons:* adds a second
+source of truth alongside Entra; bootstrap needs care;
+manageable only via env or UI we haven't built.
+
+**C. Env-allowlist (`SYS_ADMIN_EMAILS=alice@…,bob@…`).**
+`require_sys_admin` checks `current_user.email in
+settings.sys_admin_emails`. *Pros:* simplest possible —
+no schema, no Entra coordination; deployment-time
+toggle. *Cons:* redeploy to add / remove; doesn't scale
+past ~5 admins; no audit trail of who's an admin (the
+env var is the trail).
+
+**D. Shared secret / "magic URL".** Single token in
+env, operator must supply it. *Reject* — no per-user
+accountability; embarrassing security hygiene.
+
+### Recommendation (not yet decided)
+
+**Ship Segment 16 with Option C (env allowlist) + the
+four defence-in-depth layers. Plan migration to Option
+A (Entra app role) when operator scale or org policy
+demands it — likely Segment 14 (production hardening).**
+
+Reasoning: today's operator population is small (a
+handful, all known to the deployer); Option C covers it
+with one env var + ~10 lines of code. Option A is the
+right long-term home but pulls in Entra app-registration
+coordination that's more work than Segment 16 itself.
+Option B (per-user flag) is the tempting middle path
+but overlaps with Entra without replacing it — better
+to skip the half-measure and migrate C → A directly.
+
+### Concrete shape if Option C is chosen
+
+- `app/config.py` gains `sys_admin_emails: list[str]`
+  (parsed from comma-separated env var).
+- `app/web/deps.py` gains `require_sys_admin = Depends(…)`.
+  Returns the `User` on hit; 403s with `"sys_admin
+  required"` detail on miss.
+- Sys Admin routes declare `_user: User =
+  Depends(require_sys_admin)` instead of
+  `get_or_create_user`.
+- Chrome partial renders the Sys Admin tab conditionally
+  on a `request.state.is_sys_admin` flag set by
+  middleware (or computed in the view layer).
+- `ALLOW_FAKE_AUTH=true` honours a new
+  `FAKE_AUTH_SYS_ADMIN=true` toggle so local dev can
+  exercise the gate.
+- Audit-event registrations on the mutating Sys Admin
+  surfaces:
+  - `sys_admin.manual_assignments_uploaded` (`counts`
+    envelope).
+  - `session.audit_log_extracted` — already shipped by
+    12B PR 1; consider keeping the event_type name even
+    after the surface moves under Sys Admin chrome (the
+    *event* is a session-scoped extract; the *route* is
+    sys-admin-scoped).
+  - `sys_admin.outbox_viewed` — optional, read-only;
+    skip if it spams the log.
+- Tests: per-route 403 for non-admin, 200 for admin,
+  audit emission on mutating actions, chrome rendering
+  conditional on the flag.
+
+### Open questions / decisions deferred
+
+- Option A vs C for the MVP? — C recommended; A is the
+  next-step upgrade.
+- Sys Admin chrome **per-session** (lives at
+  `/operator/sessions/{id}/sys-admin`, scoped to that
+  session) or **workspace-level** (lives at
+  `/operator/sys-admin`, spans all sessions)? The three
+  anchor surfaces are all per-session today; a
+  workspace-level chrome would need adapter work
+  per-surface (Outbox + Manual upload + Audit log all
+  take a session in their existing routes).
+- Destructive-action confirmation shape — single
+  checkbox (matches the existing Quick Setup
+  replace-confirmation pattern) or two-step "type the
+  session code" (GitHub-repo-delete style)?
+- Should `sys_admin.outbox_viewed` exist, or is read-only
+  view too low-signal to audit?
+
 ## Working notes / open questions
 
 - _(placeholder)_
