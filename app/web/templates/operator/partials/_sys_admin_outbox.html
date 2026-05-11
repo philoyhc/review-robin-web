@@ -1,0 +1,39 @@
+{# Outbox content rendered inline beneath the Sessions Diagnostics
+   table when ``?outbox_session_id=N`` is set on the Admin URL.
+   Used by ``sys_admin_sessions.html`` only.
+
+   Required context:
+     - outbox_session: ReviewSession (the picked session)
+     - outbox_rows: iterable of EmailOutbox rows for that session
+#}
+<div id="outbox" class="card">
+  <h2 style="margin-top: 0;">Outbox — {{ outbox_session.name }}</h2>
+  <p class="muted">
+    Dev-mode email outbox. No real SMTP backend is wired up;
+    rows are flipped <code>queued → sent</code> synchronously when
+    an operator clicks <em>Send</em>. The rendered body includes
+    the raw invitation URL so you can copy it into a real client.
+  </p>
+
+  {% if outbox_rows %}
+    {% for row in outbox_rows %}
+      <div class="card">
+        <p>
+          <strong>{{ row.kind }}</strong>
+          &middot; to <code>{{ row.to_email }}</code>
+          &middot;
+          {% if row.status == "sent" %}
+            <span class="pill pill-count">sent</span>
+            {% if row.sent_at %} at {{ row.sent_at.strftime("%Y-%m-%d %H:%M") }}{% endif %}
+          {% else %}
+            <span class="pill pill-empty">{{ row.status }}</span>
+          {% endif %}
+        </p>
+        <p><strong>Subject:</strong> {{ row.subject }}</p>
+        <pre class="code-block">{{ row.body }}</pre>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="muted">No outbox rows yet for this session.</p>
+  {% endif %}
+</div>

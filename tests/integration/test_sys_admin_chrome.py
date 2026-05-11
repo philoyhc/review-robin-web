@@ -105,9 +105,10 @@ def test_sessions_diagnostics_renders_for_sys_admin(
     assert "Sessions Diagnostics" in response.text
     # Sessions table row.
     assert review_session.name in response.text
-    # Per-row actions — Outbox (live), Audit log (live), Operators (placeholder).
+    # Per-row actions — Outbox now points at the same Admin URL
+    # with ``?outbox_session_id=N#outbox`` (renders inline below).
     assert (
-        f'href="/operator/sessions/{review_session.id}/outbox">Outbox</a>'
+        f'href="/operator/sys-admin/sessions?outbox_session_id={review_session.id}#outbox">Outbox</a>'
         in response.text
     )
     assert (
@@ -116,6 +117,11 @@ def test_sessions_diagnostics_renders_for_sys_admin(
     )
     # Operators is a placeholder (no href), titled "Coming in 16B".
     assert "Coming in 16B" in response.text
+    # Status renders as a pill (matches Deadline / Created / etc.).
+    assert (
+        '<span class="pill pill-info">' in response.text
+        and "Draft" in response.text  # default new-session status label
+    )
 
 
 def test_sessions_diagnostics_columns_present(
@@ -170,7 +176,10 @@ def test_sessions_diagnostics_lists_every_workspace_session(
     assert response.status_code == 200
     assert alice_session.name in response.text
     assert bob_session.code in response.text  # also check Bob's row
-    assert f'href="/operator/sessions/{bob_session.id}/outbox">Outbox</a>' in response.text
+    assert (
+        f'href="/operator/sys-admin/sessions?outbox_session_id={bob_session.id}#outbox">Outbox</a>'
+        in response.text
+    )
 
 
 def test_sessions_diagnostics_403s_for_plain_operator(

@@ -10,13 +10,12 @@
                      "Assignments" / "Instruments" / "Email Template" /
                      "Validate" / "Previews" / "Invitations" /
                      "Responses".
-                     The Outbox page (`session_outbox.html`) is reachable
-                     from a "View outbox" button on Invitations and is
-                     not a chrome tab — it's a dev-diagnostic surface,
-                     not part of the Operations row taxonomy.
-                     Sub-pages of Home (Edit, Validate detail) and
-                     Preview Pages pass the parent's name (or "Home"
-                     for Home sub-pages).
+                     The Outbox view retired from this chrome in 16A
+                     and now lives inline on the Admin Sessions
+                     Diagnostics page (top-bar Admin link). Sub-pages
+                     of Home (Edit, Validate detail) and Preview Pages
+                     pass the parent's name (or "Home" for Home
+                     sub-pages).
 #}
 {% set _setup_pages = ["Reviewers", "Reviewees", "Relationships", "Instruments", "Email Template"] %}
 {% set _ops_pages = ["Validate", "Assignments", "Previews", "Invitations", "Responses"] %}
