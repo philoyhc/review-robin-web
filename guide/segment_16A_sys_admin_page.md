@@ -8,19 +8,25 @@
 > audit views (now **16C**,
 > `guide/segment_16C_richer_audit_views.md`).
 
-**Status:** Planning — stub created 2026-05-10, split
-2026-05-11, sized into a six-PR ladder 2026-05-11 (revised
-from a four-PR ladder after the 2026-05-11 access-model
-discussion locked the strict-allowlist Option C posture and
-absorbed the workspace user-role-management surface from 16B).
+**Status:** PR 1 + PR 2 + PR 2b shipped 2026-05-11
+(operator-allowlist gate + Sys Admin workspace-level
+landing). PRs 3-6 remain.
 **PR 5 reshaped 2026-05-11** from "wire manual upload under
 Sys Admin" to "retire the manual-upload path entirely" once
 it became clear the dev-only escape hatch has no live consumer.
-**Sizing:** 6 PRs (each small + reviewable; PRs 2-6 land
-sequentially on PR 1 and can ship one per day).
+**PR 2 reshaped 2026-05-11 (2b)** from per-session
+`/operator/sessions/{id}/sys-admin` URL + third chrome row
+to workspace-level `/operator/sys-admin` URL + top-bar
+"Admin" link.
+**PRs 3-4 reshaped 2026-05-11** to centre on a workspace
+sessions-table-as-picker pattern under a new one-row Admin
+chrome with two tabs (Sessions Diagnostics + Accounts
+Management). See "Sys Admin chrome and navigation" below.
+**Sizing:** 6 PRs (each small + reviewable; PRs 3-6 land
+sequentially on the shipped PR 1/2 base).
 **Depends on:** **13F PRs 1 + 2** for the `users.is_sys_admin`
 and `users.is_operator` columns the gates read — both shipped
-2026-05-11; 16A is unblocked.
+2026-05-11.
 
 ## Goal
 
@@ -339,68 +345,149 @@ appears only for sys-admins.
 **Locked 2026-05-11 (PR 2b reshape):** workspace-level URL
 `/operator/sys-admin`, reached from an "Admin" link in the
 base top-bar chrome (between Settings and About), conditional
-on `user.is_sys_admin`. Per-session content (Outbox, audit-
-log download) is surfaced via a session picker on the page
-itself rather than separate URLs. Sys-admin is conceptually a
+on `user.is_sys_admin`. Sys-admin is conceptually a
 workspace concern (env vars, user allowlist, cross-session
 diagnostics); a per-session chrome tab implied "sys-admin
 scoped to this session", which is wrong. The original
-per-session shell (PR 2a) was retired in PR 2b; PR 6's
-workspace user list lands as a tile (or `/operator/sys-admin/users`
-child) on the same workspace landing.
+per-session shell (PR 2a) was retired in PR 2b.
 
-### PR 3 — Outbox moves under Sys Admin (~150 LOC)
+## Sys Admin chrome and navigation
 
-**Functional target:** F10 (Outbox under Sys Admin chrome;
-Manage Invitations button retires).
+**Locked 2026-05-11.** The Admin page carries a single-row
+tab chrome modelled on (but lighter than) the per-session
+top nav. Two tabs for now, room to grow:
+
+1. **Sessions Diagnostics** (`/operator/sys-admin/sessions`).
+   The default tab. Renders a workspace sessions table
+   patterned on the operator lobby (`/operator/sessions`):
+   one row per session, columns for session name / code /
+   status / created-at / counts, plus per-row affordances:
+   - **View outbox** → existing per-session
+     `/operator/sessions/{id}/outbox` page (PR 3).
+   - **Download audit log** → existing per-session CSV route
+     `/operator/sessions/{id}/export/audit_log.csv` (PR 4).
+   No per-session-picker / placeholder dance — the table
+   row IS the picker.
+2. **Accounts Management** (`/operator/sys-admin/users`).
+   Workspace user list (Admit / Revoke / Promote / Demote).
+   Lands in PR 6.
+
+Picking the table-as-picker shape (over a `<select>`
+dropdown + tile region) avoids the empty-state UX entirely:
+operator sees every actionable cell at once, scans for the
+session they want, clicks the right button. Closed sessions
+remain visible — admin diagnostics need historical reach.
+
+**Permissions on the table:** the sys-admin sees every
+session in the workspace, including ones they're not on
+`session_operators` for. Read-only diagnostic content
+bypasses per-session membership. The existing per-session
+Outbox / audit-log routes already gate on
+`require_session_operator` today, which under PR 1b's
+broader operator-allowlist gate already passes for any
+sys-admin (sys-admin implies operator); a small relaxation
+is needed so a sys-admin who isn't on `session_operators`
+for that session can still hit those two routes. Tracked as
+PR 3's housekeeping.
+
+**Chrome shape.** The chrome lives in a new
+`app/web/templates/operator/partials/sys_admin_top_nav.html`
+partial — one row, two tabs, matching the `tab-strip`
+styling already in `base.html`. The Admin page templates
+include this partial above their content. The base top-bar
+"Admin" link continues to point at the canonical
+`/operator/sys-admin` URL; that root redirects to the
+default tab (`/operator/sys-admin/sessions`) once any tab
+content ships. Until PR 3 lands, `/operator/sys-admin`
+stays an empty shell.
+
+**Why not "select a session, then tiles":** picker UX adds
+a no-session empty state, requires placeholder copy in every
+tile, and forces a navigation roundtrip per session change.
+The table row collapses picker + action into one click.
+
+### PR 3 — Outbox moves under Sys Admin (~200 LOC, +40 for chrome)
+
+**Functional target:** F10 (Outbox reachable from the
+Sys Admin chrome; Manage Invitations button retires).
 
 **Ships.**
 
+- New `sys_admin_top_nav.html` partial (the one-row tab
+  chrome described above). Single tab for now —
+  "Sessions Diagnostics" — pre-wired for "Accounts
+  Management" to slot in at PR 6 without a chrome refactor.
+- New route `GET /operator/sys-admin/sessions` rendering the
+  workspace sessions table. Columns: name, code, status,
+  created-at, reviewer / reviewee / response counts (use the
+  existing operator-lobby view-builder where it composes).
+  Each row carries a "View outbox" link to the existing
+  per-session `/operator/sessions/{id}/outbox` page.
 - The existing `/operator/sessions/{id}/outbox` route +
   `session_outbox.html` template + `invitations.list_outbox_for_session`
-  service all stay. **Pure chrome relocation.**
-- New Outbox card / section on the Sys Admin page, rendering
-  the same table (probably via a partial extracted from
-  `session_outbox.html`).
+  service stay. **No template duplication** — the existing
+  per-session page is reached from both the operator chrome
+  (still present for now) and the Admin table.
+- `/operator/sys-admin` (root) redirects (303) to
+  `/operator/sys-admin/sessions`.
 - The "View outbox" button on Manage Invitations
-  (`session_invitations.html:43`) retires — the Sys Admin
-  page is the new canonical home. Existing direct URL stays
+  (`session_invitations.html:43`) retires — the canonical
+  home is the Admin page. Existing direct URL stays
   reachable for bookmarks.
+- Relax `require_session_operator` on the Outbox route so a
+  sys-admin who isn't a member of `session_operators` for
+  that session can still view it (the Admin entry assumes
+  this). Cleanest: compose `require_sys_admin OR
+  require_session_operator` at the route boundary; or split
+  into two route handlers. Decide at scoping.
 - Optional: emit `sys_admin.outbox_viewed` audit event on
   page hit. Lean **skip** — read-only views shouldn't spam
   the log.
 
 **Tests.**
 
-- Sys Admin page renders the Outbox section for admin
-  users; absent for non-admin (covered by PR 1's 403).
-- The "View outbox" button is no longer present on the
+- Sys-admin GET `/operator/sys-admin/sessions` → 200 with
+  the workspace's sessions in the table.
+- Plain-operator GET → 403.
+- Each row's outbox link points at the per-session URL.
+- The "View outbox" button no longer renders on the
   Manage Invitations page.
+- Sys-admin who isn't on `session_operators` for session N
+  can still GET `/operator/sessions/N/outbox` (200).
 
-### PR 4 — Audit log download tile (~80 LOC)
+### PR 4 — Audit log download column (~60 LOC)
 
 **Functional target:** F11 (Audit log CSV download
-reachable from a Sys Admin tile; no service code change).
+reachable from the Sessions Diagnostics table; no service
+code change).
 
 **Ships.**
 
-- New "Download audit log" tile / button on the Sys Admin
-  page wiring the existing
+- New "Download audit log" column / button on the
+  workspace sessions table from PR 3 — one button per row,
+  wiring the existing
   `GET /operator/sessions/{id}/export/audit_log.csv` route
   (shipped in 12B PR 1).
 - The route + `serialize_audit_events` service +
   `session.audit_log_extracted` audit event — already
   shipped, unchanged. **Pure chrome placement.**
-- The earlier 12B PR 2 already retired the Extract Data
-  tile in anticipation of this PR; nothing to undo there.
+- Same `require_sys_admin OR require_session_operator`
+  relaxation as PR 3's outbox route, so a sys-admin can
+  download the audit log for any session in the workspace.
+- The earlier 12B PR 2 already retired the per-session
+  Extract Data tile in anticipation of this PR; nothing to
+  undo there.
 
 **Tests.**
 
-- Sys Admin page renders the Audit log tile for admin
-  users.
+- Sessions Diagnostics table renders an Audit log column
+  for sys-admins; each row's button hits the per-session
+  CSV route and the file streams cleanly.
 - Download still emits `session.audit_log_extracted`
   (regression covered by 12B's existing tests; assert no
   drift).
+- Sys-admin who isn't on `session_operators` for session N
+  can still GET the CSV (200).
 
 ### PR 5 — Retire the manual-assignment upload path (~150 LOC removed + ~12 tests removed)
 
@@ -479,16 +566,21 @@ Python is essentially nil. Confirm at scoping.
 operator status; Promote / Demote sys-admin status; auditable
 workspace toggles; workspace user list visibility).
 
-**Why last.** First workspace-level (rather than per-session)
-Sys Admin surface, so it's the biggest UX swing in 16A.
-Lands after PRs 1-5 so the per-session chrome + gates are
-proven before introducing a sibling workspace URL.
+**Why last.** Largest UX swing in 16A — full per-row toggle
+matrix + last-admin-demote guard + four new audit events. Lands
+after PRs 1-5 so the chrome + diagnostics tabs are proven before
+introducing a second Admin tab.
 
 **Ships.**
 
-- New workspace-level route `/operator/sys-admin/users`
-  behind `Depends(require_sys_admin)`. Renders the full
+- New route `GET /operator/sys-admin/users` behind
+  `Depends(require_sys_admin)`. Becomes the second tab
+  ("Accounts Management") in the Admin chrome alongside
+  "Sessions Diagnostics" from PR 3. Renders the full
   workspace user table.
+- `sys_admin_top_nav.html` (the chrome partial introduced in
+  PR 3) gains the Accounts Management tab — the chrome was
+  pre-wired for it.
 - New read service `users.list_workspace_users(db) ->
   list[WorkspaceUserRow]` returning per-row email / display
   name / first sign-in / `is_operator` / `is_sys_admin` /
@@ -522,10 +614,10 @@ proven before introducing a sibling workspace URL.
   - `sys_admin.role_promoted` — `refs.target_user_id`,
     `changes.is_sys_admin: [False, True]`.
   - `sys_admin.role_demoted` — symmetric.
-- Chrome partial picks up a "Sys Admin · Users" sub-link or
-  sibling chrome row pointing at the workspace URL. Locks
-  the "per-session vs workspace-level chrome" question
-  raised in PR 2's open questions.
+- Top-bar Admin link from PR 2b continues to point at
+  `/operator/sys-admin` (which redirects to the default tab);
+  Accounts Management is reached via the Admin chrome tab,
+  no separate top-bar entry needed.
 
 **Tests.**
 
