@@ -283,7 +283,7 @@ that originated there before the catalog retired.
 The locked block `13E → 12C → 15D → 12A-3` shipped 2026-05-10
 (see Done above for the four entries) and 12B (audit-events
 export) followed the same day. The remaining schedule items
-— 13B, 13C, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 20 — ship per
+— 13B, 13C, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 18A, 18B, 18C, 19, 20 — ship per
 their own plan; no ordering constraints beyond shared schema
 conflicts (none detected). **Segment 16A** (Sys Admin page) is
 a natural near-term pick since it absorbs the audit-log
@@ -446,6 +446,44 @@ the dev-only manual assignment upload — and unlocks 16B
   large-table ergonomics.
   **Plan:** `guide/segment_17_ag_grid_replacement.md`.
 
+- **18A — Session cloning** *(stub created 2026-05-11)*.
+  One-click clone of an existing session's setup
+  (reviewers / reviewees / relationships / instruments /
+  RTDs / RuleSets / email-template overrides / settings)
+  into a new session, without carrying responses, audit
+  history, or runtime state. Closes the §22 acceptance
+  criterion "Session cloning". Lands more cleanly after
+  15C (library auto-copy precedent) and 15B (per-instrument
+  RuleSet pointers).
+  **Plan:** `guide/segment_18A_session_cloning.md`.
+
+- **18B — Session tagging and archiving** *(stub created
+  2026-05-11)*. Free-form per-session tags surfaced as
+  filterable chips on the Sessions lobby + the
+  `closed → archived` lifecycle transition that lights up
+  the reserved `archived` state from `spec/lifecycle.md`.
+  Independent of 18A / 18C.
+  **Plan:** `guide/segment_18B_session_tagging_archiving.md`.
+
+- **18C — Retention / deletion workflow** *(stub created
+  2026-05-11)*. Per-session selective purge (responses /
+  audit log / rosters) + per-deployment retention policy
+  enforced by a scheduled job. Closes the §21 #16
+  acceptance criterion "Basic retention/deletion workflow"
+  + the §22 row "Advanced retention policies". Reuses
+  14B Part C's worker scaffold if available; sys-admin
+  surface gated by 16A.
+  **Plan:** `guide/segment_18C_retention_deletion.md`.
+
+- **19 — Spec documentation** *(stub created 2026-05-11)*.
+  Periodic spec-hygiene sweeps on `spec/` — initial
+  coverage-gap closure for Tier-1 specs flagged in
+  `guide/spec_sweep_11may.md` (Email Template editor,
+  Permissions), plus a recurring cadence template.
+  Distinct from Segment 20 which produces operator- +
+  developer-facing prose in `docs/`.
+  **Plan:** `guide/segment_19_spec_documentation.md`.
+
 - **20 — Operator polish + documentation** *(renumbered
   from the original Segment 15, 2026-05-10)*. The
   documentation pass + technical-support contact item
@@ -496,7 +534,7 @@ they pinned:
   12A-3 export-refresh + Settings importer + Quick Setup
   slot 4 graduation; 12A-2 was absorbed into 12A-3). The
   remaining schedule items — **13B, 13C, 14A, 14B, 14C, 15A,
-  15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 20** — are independent of the email +
+  15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 18A, 18B, 18C, 19, 20** — are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;
   13C PR 3 (rule-engine fanout for group-scoped instruments)
