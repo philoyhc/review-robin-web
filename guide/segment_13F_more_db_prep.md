@@ -1,8 +1,12 @@
 # Segment 13F — More DB prep (14C / 16A / 16B / 18B / 18C ride-along)
 
-**Status:** Planning — stub created 2026-05-11; revised
-2026-05-11 to fold in the 16-series admin / owner-role
-requirements after a codebase audit.
+**Status:** In flight — **PR 4 shipped 2026-05-11**
+(migration `779b90e4b397`); PRs 1-3 deferred until their
+consumer segments (18B / 14C / 18C) are picked up, per the
+"piecemeal, front-load PR 4" sequencing decision.
+Stub created 2026-05-11; revised 2026-05-11 to fold in the
+16-series admin / owner-role requirements after a codebase
+audit.
 Mirrors the **Segment 13D** (and 13E) inert-migrations pattern:
 pre-position the additive, nullable, no-backfill schema changes
 the rest of the active workplan needs, so the downstream feature
@@ -37,14 +41,15 @@ how **13D** pre-positioned six migrations for 15A / 15B / 15C /
 ## Final layout (proposed)
 
 ```
-session_tags                              # PR 1: 18B per-session free-form tags
-sessions.reminder_settings                # PR 2: 14C reminder cadence (JSON)
-sessions.retention_exception              # PR 3: 18C per-session opt-out (Bool)
-sessions.retention_overrides              # PR 3: 18C per-session policy (JSON, post-MVP)
-users.is_sys_admin                        # PR 4: 16A sys-admin gate persisted source
-                                          #       + lock session_operators.role
-                                          #         value-set + default to "owner"
-                                          #         (model-only, no migration)
+session_tags                              # PR 1: 18B per-session free-form tags (pending)
+sessions.reminder_settings                # PR 2: 14C reminder cadence (JSON, pending)
+sessions.retention_exception              # PR 3: 18C per-session opt-out (Bool, pending)
+sessions.retention_overrides              # PR 3: 18C per-session policy (JSON, post-MVP, pending)
+users.is_sys_admin                        # PR 4: ✅ shipped — 16A sys-admin gate
+                                          #       persisted source + lock
+                                          #       session_operators.role value-set
+                                          #       + flip Python-default to "owner"
+                                          #       (migration 779b90e4b397)
 ```
 
 Five migrations + one model-only correction across four PRs.
@@ -186,7 +191,20 @@ vars).
 back as `NULL` for both columns; mutating one doesn't affect the
 other. Inert audit: zero service / web references at PR close.
 
-### PR 4 — `users.is_sys_admin` Boolean + lock `session_operators.role` value-set + default fix (16A / 16B ride-along)
+### PR 4 — `users.is_sys_admin` Boolean + lock `session_operators.role` value-set + default fix (16A / 16B ride-along) — ✅ **shipped 2026-05-11**
+
+**Outcome.** Migration `779b90e4b397` adds `users.is_sys_admin`
+(Boolean, NOT NULL, `server_default false`). `SessionOperator`
+gains the `SESSION_OPERATOR_ROLES = ("owner", "manager")`
+module-level constant; the Python-default flips from
+`"operator"` to `"owner"`. 5 new tests
+(`tests/integration/test_users_is_sys_admin_schema.py`) round-
+trip the column on both dialects and pin the value-set + the
+new default. Inert audit at PR close: zero hits for
+`is_sys_admin` / `SESSION_OPERATOR_ROLES` in `app/services/` +
+`app/web/` — light-up lives in 16A PR 1 (column read) +
+16B PR 1 (role write-path validation).
+
 
 **Why this PR is structured this way.** The codebase audit
 above showed `session_operators.role` already exists, so this
