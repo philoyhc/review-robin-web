@@ -1,11 +1,10 @@
-"""Coverage for the 16A inline-Outbox reshape on the Admin Sessions
-Diagnostics page.
+"""Coverage for the 16A child-page Outbox under the Admin chrome.
 
-Replaces the retired per-session ``/operator/sessions/{id}/outbox``
-route + ``session_outbox.html`` template. Outbox content now
-renders inline on ``/operator/sys-admin/sessions`` when the URL
-carries ``?outbox_session_id=N`` — the per-row Outbox link sets
-this and ``#outbox`` to scroll to the section.
+Reshape of the inline-Outbox experiment: per-session Outbox now
+lives at ``/operator/sys-admin/sessions/{session_id}/outbox`` as
+a child of the Sessions Diagnostics tab. The pre-16A per-session
+``/operator/sessions/{id}/outbox`` route stays retired
+(bookmarks 404 there).
 """
 from __future__ import annotations
 
@@ -32,14 +31,9 @@ def _make_session(
     ).scalar_one()
 
 
-def _ready_session_with_outbox(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
-    """Seed a session, populate rosters, validate / activate, then
-    generate invitations so the email_outbox table has rows."""
-    review_session = _make_session(client, db, code=code)
+def _seed_invite_targets(client: TestClient, session_id: int) -> None:
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{session_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -50,7 +44,7 @@ def _ready_session_with_outbox(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{session_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -60,24 +54,31 @@ def _ready_session_with_outbox(
         },
         follow_redirects=False,
     )
-    return review_session
 
 
-def test_outbox_section_hidden_when_no_session_id(
+def test_outbox_child_page_renders_back_link_and_chrome(
     db: Session,
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
-    _make_session(client, db, code="ob-hidden")
-    response = client.get("/operator/sys-admin/sessions")
+    review_session = _make_session(client, db, code="ob-child")
+
+    response = client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/outbox"
+    )
     assert response.status_code == 200
-    # No Outbox section rendered.
-    assert 'id="outbox"' not in response.text
-    assert "Outbox —" not in response.text
+    # Back-link points at the Sessions Diagnostics list.
+    assert 'href="/operator/sys-admin/sessions"' in response.text
+    assert "Back to Sessions Diagnostics" in response.text
+    # Admin chrome present; Sessions Diagnostics tab active.
+    assert "Sessions Diagnostics" in response.text
+    assert "Accounts Management" in response.text
+    # Outbox content rendered via the partial.
+    assert f"Outbox — {review_session.name}" in response.text
 
 
-def test_outbox_section_renders_when_session_id_set(
+def test_outbox_child_page_empty_state(
     db: Session,
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -85,33 +86,26 @@ def test_outbox_section_renders_when_session_id_set(
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="ob-empty")
     response = client.get(
-        f"/operator/sys-admin/sessions?outbox_session_id={review_session.id}"
+        f"/operator/sys-admin/sessions/{review_session.id}/outbox"
     )
     assert response.status_code == 200
-    # Outbox anchor + header rendered, even when no rows yet.
-    assert 'id="outbox"' in response.text
-    assert f"Outbox — {review_session.name}" in response.text
     assert "No outbox rows yet for this session." in response.text
 
 
-def test_outbox_section_lists_seeded_rows(
+def test_outbox_child_page_lists_seeded_rows(
     db: Session,
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """End-to-end: seed an invitation that populates email_outbox,
-    then verify the inline section shows the recipient + body."""
+    then verify the child page shows the recipient + body."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
-    review_session = _ready_session_with_outbox(client, db, code="ob-rows")
-
-    # Make sure the session is in a state where invitations can generate.
-    # Activate the session (Validate → Activate flow). Use the same
-    # form pattern existing invitation tests rely on.
+    review_session = _make_session(client, db, code="ob-rows")
+    _seed_invite_targets(client, review_session.id)
     client.post(
         f"/operator/sessions/{review_session.id}/invitations/generate",
         follow_redirects=False,
     )
-    # Confirm an Invitation row exists so we know outbox should too.
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == review_session.id)
     ).scalar_one_or_none()
@@ -122,48 +116,62 @@ def test_outbox_section_lists_seeded_rows(
         )
 
     response = client.get(
-        f"/operator/sys-admin/sessions?outbox_session_id={review_session.id}"
+        f"/operator/sys-admin/sessions/{review_session.id}/outbox"
     )
     assert response.status_code == 200
-    assert 'id="outbox"' in response.text
     assert "rae@example.edu" in response.text
     assert "/reviewer/invite/" in response.text
 
 
-def test_outbox_section_404s_on_missing_session_id(
+def test_outbox_child_page_404s_on_missing_session(
     db: Session,
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
-    response = client.get(
-        "/operator/sys-admin/sessions?outbox_session_id=99999"
-    )
+    response = client.get("/operator/sys-admin/sessions/99999/outbox")
     assert response.status_code == 404
 
 
-def test_outbox_section_403s_for_plain_operator(
+def test_outbox_child_page_403s_for_plain_operator(
     db: Session,
     client: TestClient,
 ) -> None:
-    """Alice is a plain operator; the route 403s regardless of
-    ?outbox_session_id."""
-    review_session = _make_session(client, db, code="ob-403")
+    review_session = _make_session(client, db, code="ob-child-403")
     response = client.get(
-        f"/operator/sys-admin/sessions?outbox_session_id={review_session.id}",
+        f"/operator/sys-admin/sessions/{review_session.id}/outbox",
         follow_redirects=False,
     )
     assert response.status_code == 403
 
 
-def test_per_session_outbox_route_retired(
+def test_per_session_outbox_route_remains_retired(
     db: Session,
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The per-session URL is gone. Sys-admins, operators — everyone
-    gets a 404."""
+    """The original per-session ``/operator/sessions/{id}/outbox``
+    URL is still gone — no second life via the child-page reshape."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
-    review_session = _make_session(client, db, code="ob-retired")
+    review_session = _make_session(client, db, code="ob-still-404")
     response = client.get(f"/operator/sessions/{review_session.id}/outbox")
     assert response.status_code == 404
+
+
+def test_sessions_table_per_row_outbox_link_points_at_child(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    review_session = _make_session(client, db, code="ob-link")
+    response = client.get("/operator/sys-admin/sessions")
+    assert response.status_code == 200
+    # Per-row Outbox link → child page URL.
+    assert (
+        f'href="/operator/sys-admin/sessions/{review_session.id}/outbox">Outbox</a>'
+        in response.text
+    )
+    # No inline anchor / no inline query param.
+    assert "?outbox_session_id=" not in response.text
+    assert 'id="outbox"' not in response.text

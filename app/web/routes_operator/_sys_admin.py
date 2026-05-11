@@ -4,19 +4,22 @@ Workspace-level Admin surfaces.
 
 **PR 2 / 2b (#841 / #842).** Landed the empty-shell route at
 ``GET /operator/sys-admin`` reached via the top-bar "Admin"
-link. Body was an empty shell.
+link.
 
-**PR 3 + PR 4.** The shell becomes a 303 redirect to the
-default tab. First tab — Sessions Diagnostics — lives at
-``GET /operator/sys-admin/sessions`` and renders the workspace
-sessions table with per-row Outbox + Audit log actions.
+**PR 3 + PR 4.** Filled in the first tab — Sessions Diagnostics
+— at ``GET /operator/sys-admin/sessions`` rendering the
+workspace sessions table.
 
-**This slice (Outbox inline reshape).** Clicking the per-row
-Outbox link no longer navigates to a separate per-session
-page; the click sets ``?outbox_session_id=N`` on the Admin URL
-and the outbox content renders below the table on the same
-page (`#outbox` anchor for scroll). The per-session
-``/operator/sessions/{id}/outbox`` route is retired.
+**Outbox reshape (this slice).** Per-session Outbox lives on a
+child page at
+``GET /operator/sys-admin/sessions/{session_id}/outbox`` with a
+"← Back to Sessions Diagnostics" affordance and the Admin
+chrome's Sessions Diagnostics tab still highlighted. The
+earlier inline ``?outbox_session_id=`` rendering on the
+sessions page is gone — a child page sits cleaner than an
+inline expanding region. The pre-16A per-session
+``/operator/sessions/{id}/outbox`` route stays retired
+(bookmarks 404 there).
 """
 
 from __future__ import annotations
@@ -57,24 +60,10 @@ def sys_admin_root(
 def sys_admin_sessions(
     request: Request,
     return_to: str | None = Query(default=None),
-    outbox_session_id: int | None = Query(default=None),
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> Response:
     target = resolve_return_to(return_to, db)
-
-    outbox_session: ReviewSession | None = None
-    outbox_rows: list[object] = []
-    if outbox_session_id is not None:
-        outbox_session = db.execute(
-            select(ReviewSession).where(ReviewSession.id == outbox_session_id)
-        ).scalar_one_or_none()
-        if outbox_session is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-        outbox_rows = invitations.list_outbox_for_session(
-            db, outbox_session.id
-        )
-
     return _templates.TemplateResponse(
         request,
         "operator/sys_admin_sessions.html",
@@ -84,7 +73,36 @@ def sys_admin_sessions(
             "return_to_raw": return_to,
             "return_to_url": target.url,
             "return_to_label": target.label,
-            "outbox_session": outbox_session,
-            "outbox_rows": outbox_rows,
+        },
+    )
+
+
+@router.get(
+    "/sys-admin/sessions/{session_id}/outbox",
+    response_class=HTMLResponse,
+)
+def sys_admin_session_outbox(
+    request: Request,
+    session_id: int,
+    user: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Child page under Sessions Diagnostics. The back-link points
+    at /operator/sys-admin/sessions; the Admin chrome's
+    Sessions Diagnostics tab stays highlighted."""
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none()
+    if review_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return _templates.TemplateResponse(
+        request,
+        "operator/sys_admin_session_outbox.html",
+        {
+            "user": user,
+            "outbox_session": review_session,
+            "outbox_rows": invitations.list_outbox_for_session(
+                db, review_session.id
+            ),
         },
     )
