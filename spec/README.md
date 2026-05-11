@@ -19,6 +19,7 @@ The "what is this thing?" layer. Read these first when onboarding.
 |---|---|
 | `audience_and_identity_model.md` | Who uses Review Robin — operator / reviewer audiences, plus forward-looking reviewee and sysadmin. Auth posture and customization boundaries. The "highest-ranking" doc on identity / audience decisions; visual-style choices follow from it. |
 | `architecture.md` | Domain entities, three-layer split (routes → services → models), conceptual hierarchy, pair-level context (post-15D `relationships` table), audit-event detail schema (canonical envelopes, strict-mode gate). |
+| `lifecycle.md` | Session state machine (`draft` ↔ `validated` ↔ `ready`, plus reserved `expired` / `archived`), transition services, `_require_editable` + `_require_response_loss_ack` route gates, `invalidate_if_validated` service-layer hook, per-instrument open/close + visibility-when-closed + lazy deadline-close, UI lock-card pattern, and the audit events emitted at each transition. |
 
 ## Per-page operator contracts
 
@@ -65,6 +66,7 @@ Reading order: `visual_style_general.md` (portable design system)
 | File | Covers |
 |---|---|
 | `settings_inventory.md` | Single-stop reference for every operator- and per-session setting Review Robin Web persists — operator SMTP config, session metadata, email-template overrides, instrument settings, reviewer / reviewee tags, RuleSets, and the browser-local UI-state primitives (cookies / localStorage / URL params). |
+| `csv_contracts.md` | Column shapes + parsing rules for the five extracts (Reviewers / Reviewees / Relationships / Responses / Settings / audit events) and the four importers (Reviewers / Reviewees / Relationships / Settings). Round-trip stability rules, two-phase parse + apply contract for Settings, shared parsing primitives. |
 | `email_infra_options.md` | Email backend architecture — pluggable-sender scaffolding, Options A (SMTP) / B (Microsoft Graph) / C (Azure Communication Services) / D (third-party transactional), `email_outbox` schema. |
 
 ## Forward-looking segment specs
