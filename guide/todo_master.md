@@ -395,21 +395,21 @@ the dev-only manual assignment upload — and unlocks 16B
 #### Stubs
 
 - **13F — More DB prep (14C / 16A / 16B / 18B / 18C
-  ride-along)** *(in flight — PR 1 shipped 2026-05-11;
-  PR 2 pending; PRs 3-5 deferred until consumer
-  segments)*. Mirrors the 13D / 13E inert-migrations pattern
-  for the **next** batch of schema needs identified during the
-  Segment 16 PR-ladder sizing pass. Reordered 2026-05-11 so
-  the 16-series work leads: **PR 1 (shipped)** —
-  `users.is_sys_admin` Boolean + model-only
-  `session_operators.role` value-set lock and Python-default
-  fix; **PR 2 (pending, next to ship)** — `users.is_operator`
+  ride-along)** *(in flight — **PRs 1 + 2 shipped 2026-05-11**;
+  PRs 3-5 deferred until consumer segments)*. Mirrors the
+  13D / 13E inert-migrations pattern for the **next** batch
+  of schema needs identified during the Segment 16 PR-ladder
+  sizing pass. Reordered 2026-05-11 so the 16-series work
+  leads: **PR 1 (shipped)** — `users.is_sys_admin` Boolean
+  + model-only `session_operators.role` value-set lock and
+  Python-default fix; **PR 2 (shipped)** — `users.is_operator`
   Boolean for Option C strict-allowlist access (16A PR 1
   reads it). PRs 3-5 (`session_tags`,
   `sessions.reminder_settings`,
-  `sessions.retention_exception` + `retention_overrides`) ride
-  with their consumer segments (18B / 14C / 18C) when those
-  segments are picked up.
+  `sessions.retention_exception` + `retention_overrides`)
+  ride with their consumer segments (18B / 14C / 18C) when
+  those segments are picked up. **The 16-series schema
+  scaffolding is now complete — Segment 16A is unblocked.**
   **Plan:** `guide/segment_13F_more_db_prep.md`.
 
 - **15E — Next Action revamp + multi-step shortcuts**
