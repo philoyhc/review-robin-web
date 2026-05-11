@@ -22,18 +22,27 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
-from app.services import assignments, csv_imports, responses, sessions, validation
+from app.services import (
+    assignments,
+    csv_imports,
+    responses,
+    session_owners,
+    sessions,
+    validation,
+)
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
     require_session_operator,
+    require_sys_admin_or_session_operator,
 )
 from app.web.routes_operator._shared import (
     _lifecycle_error_response,
@@ -146,7 +155,10 @@ def session_detail(
 @router.get("/sessions/{session_id}/edit", response_class=HTMLResponse)
 def session_edit_form(
     request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
+    owners_error: str | None = Query(default=None),
+    review_session: ReviewSession = Depends(
+        require_sys_admin_or_session_operator
+    ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -157,6 +169,11 @@ def session_edit_form(
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
+            "owners": session_owners.list_owners(db, review_session),
+            "owner_candidates": session_owners.workspace_operator_candidates(
+                db, review_session
+            ),
+            "owners_error": owners_error,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Edit details"
             ),
@@ -172,7 +189,9 @@ def session_edit_submit(
     deadline: str | None = Form(default=None),
     help_contact: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(
+        require_sys_admin_or_session_operator
+    ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -315,5 +334,102 @@ def session_revert_to_draft(
         target = f"{target}/{return_to}"
     return RedirectResponse(
         url=target,
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+# --- Per-session owner management (Segment 16B PR 2) ----------------------
+
+
+def _owners_redirect_url(session_id: int, error_code: str | None = None) -> str:
+    base = f"/operator/sessions/{session_id}/edit#owners"
+    if error_code:
+        # Anchor stays at the end; the query param sits before the #.
+        from urllib.parse import quote
+
+        return (
+            f"/operator/sessions/{session_id}/edit"
+            f"?owners_error={quote(error_code, safe='')}#owners"
+        )
+    return base
+
+
+@router.post("/sessions/{session_id}/owners/add")
+def session_owners_add(
+    target_email: str = Form(...),
+    review_session: ReviewSession = Depends(
+        require_sys_admin_or_session_operator
+    ),
+    actor: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    from sqlalchemy import func as sa_func
+
+    target = db.execute(
+        select(User).where(
+            sa_func.lower(User.email) == target_email.strip().lower()
+        )
+    ).scalar_one_or_none()
+    if target is None:
+        return RedirectResponse(
+            url=_owners_redirect_url(review_session.id, "not_in_workspace"),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    try:
+        session_owners.add_owner(
+            db,
+            review_session=review_session,
+            actor=actor,
+            target=target,
+            correlation_id=request_correlation_id(),
+        )
+    except session_owners.OwnerOperationError as exc:
+        return RedirectResponse(
+            url=_owners_redirect_url(review_session.id, exc.code),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    return RedirectResponse(
+        url=_owners_redirect_url(review_session.id),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/owners/{user_id}/remove")
+def session_owners_remove(
+    user_id: int,
+    review_session: ReviewSession = Depends(
+        require_sys_admin_or_session_operator
+    ),
+    actor: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    target = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    try:
+        session_owners.remove_owner(
+            db,
+            review_session=review_session,
+            actor=actor,
+            target=target,
+            correlation_id=request_correlation_id(),
+        )
+    except session_owners.OwnerOperationError as exc:
+        # last_owner / not_owner both fall through here.
+        status_code = (
+            status.HTTP_409_CONFLICT
+            if exc.code == "last_owner"
+            else status.HTTP_303_SEE_OTHER
+        )
+        if status_code == status.HTTP_409_CONFLICT:
+            raise HTTPException(status_code=status_code, detail=exc.message) from exc
+        return RedirectResponse(
+            url=_owners_redirect_url(review_session.id, exc.code),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    return RedirectResponse(
+        url=_owners_redirect_url(review_session.id),
         status_code=status.HTTP_303_SEE_OTHER,
     )

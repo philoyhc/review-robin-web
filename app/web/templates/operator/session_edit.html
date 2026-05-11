@@ -50,4 +50,87 @@
       </div>
     </form>
   </div>
+
+  {# Owners management — Segment 16B PR 2. Reachable from this
+     page for owners (normal route) and for sys-admins on
+     non-member sessions (relaxed gate). #}
+  <div class="card" id="owners">
+    <h2 style="margin-top: 0;">Owners</h2>
+    <p class="muted">
+      Workspace operators with full edit access on this session.
+      Add another owner from the workspace operator allowlist; the
+      session always retains at least one owner (the last
+      remaining owner can't be removed).
+    </p>
+
+    {% if owners_error %}
+      <div class="card banner-scroll-target" role="alert">
+        <p>
+          {% if owners_error == "already_owner" %}
+            That user is already an owner of this session.
+          {% elif owners_error == "not_in_workspace" %}
+            That user isn't on the workspace operator allowlist.
+            Admit them via <code>Admin → Accounts Management</code>
+            first.
+          {% elif owners_error == "not_owner" %}
+            That user isn't an owner of this session anymore.
+          {% else %}
+            Couldn't apply that change ({{ owners_error }}).
+          {% endif %}
+        </p>
+      </div>
+    {% endif %}
+
+    <table>
+      <tr>
+        <th>Email</th>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Joined</th>
+        <th class="col-shrink">Action</th>
+      </tr>
+      {% for owner in owners %}
+        <tr>
+          <td><code>{{ owner.email }}</code></td>
+          <td>{{ owner.display_name or "—" }}</td>
+          <td>{{ owner.role }}</td>
+          <td>{{ owner.joined_at.strftime("%Y-%m-%d") }}</td>
+          <td class="col-shrink">
+            <form method="post"
+                  style="display:inline"
+                  action="/operator/sessions/{{ session.id }}/owners/{{ owner.user_id }}/remove">
+              <button class="chrome-link" type="submit">Remove</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+
+    {% if owner_candidates %}
+      <h3>Add owner</h3>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/owners/add">
+        <label>
+          Pick or search a workspace operator:
+          <input type="email"
+                 name="target_email"
+                 list="owner-candidates"
+                 autocomplete="off"
+                 required
+                 placeholder="email">
+        </label>
+        <datalist id="owner-candidates">
+          {% for candidate in owner_candidates %}
+            <option value="{{ candidate.email }}">{{ candidate.display_name or candidate.email }}</option>
+          {% endfor %}
+        </datalist>
+        <button class="btn" type="submit">Add owner</button>
+      </form>
+    {% else %}
+      <p class="muted">
+        No more workspace operators available to add. Admit a new
+        user via <code>Admin → Accounts Management</code> first.
+      </p>
+    {% endif %}
+  </div>
 {% endblock %}
