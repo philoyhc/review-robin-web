@@ -78,13 +78,17 @@ The five surfaces where the operator does the work needed to make the session ru
 |---|---|---|
 | Reviewers | `session_reviewers.html` | `/sessions/{id}/reviewers` |
 | Reviewees | `session_reviewees.html` | `/sessions/{id}/reviewees` |
-| Assignments | `session_assignments.html` | `/sessions/{id}/assignments` |
+| Relationships | `session_relationships.html` | `/sessions/{id}/relationships` |
 | Instruments | `instruments_index.html` | `/sessions/{id}/instruments` |
 | Email Template | `session_setupinvite.html` | `/sessions/{id}/setupinvite` |
 
 The URL slug `setupinvite` predates the Setup Page / Operations Page split; the settled name for the page is **Email Template**. The page houses the email-template editor (shipped in Segment 11E): per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send confirmation when a reviewer submits?" toggle. The run-time invitation management lives in the Operations Page below.
 
-The Reviewers / Reviewees / Assignments pages share a common body shape (chrome → status strip → "Fields with data" pill row → optional lifecycle lock card → upload-and-Danger-Zone grid → preview table with visibility toggles). The full UI contract for these pages — including the per-page preview-table column order and the shared visibility-toggle pattern — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
+**Relationships** carries pair-level context — the `relationships` table seeded in Segment 13E PR 2 and lit up by the Setup page in Segment 15D PR 2. Reviewer × reviewee rows carry three `tag_N` slots consumed by the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names (15D PR 3 / PR 4) plus an `active` / `inactive` status. The page mirrors Reviewers / Reviewees — CSV upload, "Fields with data" pill row, preview table, Danger Zone.
+
+The Reviewers / Reviewees / Relationships pages share a common body shape (chrome → status strip → "Fields with data" pill row → optional lifecycle lock card → upload-and-Danger-Zone grid → preview table with visibility toggles). The full UI contract for these pages — including the per-page preview-table column order and the shared visibility-toggle pattern — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
+
+**Assignments retired from Setup row in Segment 15D PR 6a.** Pre-15D the page was a Setup-row primitive carrying both pair-level context (`PairContext1/2/3` / `AssignmentContext1/2/3` JSON columns) and the rule-based generation card. Post-15D pair-level context lives on the first-class `relationships` table (its own Setup page above); the Operations Assignments page is now a materialised derivative — see §5 below.
 
 ### 4. Preview Pages
 
@@ -96,16 +100,19 @@ The grouping name stays plural because additional Preview surfaces are anticipat
 
 ### 5. Per Session Operations Pages
 
-Surfaces for running a session and intervening when needed — validating setup, previewing reviewer-facing artifacts, engaging reviewers, tracking reviewee coverage. Five tabs in the chrome's Operations row:
+Surfaces for running a session and intervening when needed — validating setup, generating / previewing the materialised reviewer-facing artifacts, engaging reviewers, tracking reviewee coverage. Five tabs in the chrome's Operations row:
 
 | Page | Template | URL |
 |---|---|---|
 | Validate | `session_validate.html` | `/sessions/{id}/validate` |
+| Assignments | `session_assignments.html` | `/sessions/{id}/assignments` |
 | Previews | `session_previews.html` | `/sessions/{id}/previews` |
 | Invitations | `session_invitations.html` | `/sessions/{id}/invitations` |
 | Responses | `session_responses.html` | `/sessions/{id}/responses` |
 
-The row pairs are deliberate: pre-flight (Validate, Preview), monitoring (Invitations, Responses). See `spec/operations_pages.md` for the Invitations + Responses consolidation rationale and per-page contracts.
+Assignments moved Setup → Operations in Segment 15D PR 6a: pair-level context is configured on the Relationships Setup page above, and the Assignments page reframes as the place to **generate** the reviewer × reviewee × instrument materialisation via the Rule Based card (operator picks a RuleSet, hits Generate) plus a bulk Include-self-reviews toggle and the resulting "Assignment pairs" preview. The pre-15D Setup-row manual-CSV upload affordance retired with the move; the legacy manual-import route survives as a dev-diagnostic surface only.
+
+The row pairs are deliberate: pre-flight (Validate, Assignments, Previews), monitoring (Invitations, Responses). See `spec/operations_pages.md` for the Invitations + Responses consolidation rationale and per-page contracts; `spec/rule_based_assignment.md` §7.1 covers the Rule Based card.
 
 **Naming:** "Invitations" + "Responses" rather than "Reviewers" + "Reviewees" — those nouns are claimed by the Setup tabs (configuring the rosters); the Operations tabs are about working with them mid-session. Distinct nouns for distinct activities.
 
@@ -146,9 +153,9 @@ The chrome that implements P1–P4. Visual implementation details (colors, tints
 A double-height **Home** anchor on the left, two rows of phase tabs to its right:
 
 ```
-┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Assignments][Instruments][Email Template]
+┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Relationships][Instruments][Email Template]
 │  Home  │
-└────────┴─ OPERATIONS ▶ [Validate][Preview][Invitations][Responses]
+└────────┴─ OPERATIONS ▶ [Validate][Assignments][Previews][Invitations][Responses]
 ```
 
 - **Home** is double-height to span both rows, signalling that it's one level up from the phase tabs rather than a peer of any of them. It carries the session's identity, so the chrome itself answers *"which session am I in?"* The session's lifecycle state surfaces in the status row below the chrome, not inside the Home anchor.
@@ -156,7 +163,7 @@ A double-height **Home** anchor on the left, two rows of phase tabs to its right
 - **Same tab shape across rows.** The labels and rows do the grouping work; tabs themselves don't need to differ in shape.
 - **Active tab** uses an underline marker. The marker uses one tone per row (lighter than the row's full accent) so the marker says *"you are here"* without competing with the label.
 
-Below the chrome, a **status row** renders the at-a-glance session status, identical on every session-scoped page: lifecycle pill first, then the five Setup-entity counts, then two operations indicators (Invitations, Responses). Composition and visual treatment are in `visual_style_rrw.md`.
+Below the chrome, a **status row** renders the at-a-glance session status, identical on every session-scoped page: lifecycle pill first, then the Setup-entity counts (Reviewers / Reviewees / Relationships / Instruments / Email Template), then two operations indicators (Invitations, Responses). Composition and visual treatment are in `visual_style_rrw.md`.
 
 ### Behaviour
 
@@ -213,22 +220,22 @@ Same four fields as create, pre-filled. Action row: **Save changes** (Primary) s
 
 The route returns **HTTP 409** when the session is `ready` — operators must Pause back to Draft first via the Next Action card on Home.
 
-### Setup pages (Reviewers / Reviewees / Assignments) — shared shape
+### Setup pages (Reviewers / Reviewees / Relationships) — shared shape
 
 All three setup-roster pages share an identical chrome shape:
 
 1. Session top nav.
-2. Yellow lock card when `ready` (with `return_to=reviewers` / `reviewees` / `assignments` so the operator returns here after reverting).
+2. Yellow lock card when `ready` (with `return_to=reviewers` / `reviewees` / `relationships` so the operator returns here after reverting).
 3. **Info card** with the page heading and:
-   - `Number of {reviewers / reviewees / assignments}: {pill}`.
-   - `Fields with data: {pill, pill, …}` listing the actual CSV column names for fields with at least one non-empty value (e.g. `ReviewerName`, `RevieweeEmail`, `PhotoLink`, `RevieweeTag1..3`, `PairContext1..3`, `AssignmentContext1..3`, `IncludeAssignment`).
+   - `Number of {reviewers / reviewees / pairwise relationships}: {pill}`.
+   - `Fields with data: {pill, pill, …}` listing the actual CSV column names for fields with at least one non-empty value (e.g. `ReviewerName`, `RevieweeEmail`, `PhotoLink`, `RevieweeTag1..3`, `PairContextTag1..3`, `Status`).
 4. **Upload CSV** card — anchored at `#upload-csv`, hosts the import form. Hidden when the lock card is shown.
 5. Browseable data-preview table of the saved rows (always visible, even while locked).
 6. **Danger Zone** card with the **Delete all** confirm-checkbox form. Hidden when the lock card is shown.
 
-The **Edit Reviewers / Reviewees / Assignments** affordance for inline-editable rows is not yet implemented; today these pages expose only the bulk Upload-CSV / Delete-all flow.
+The **Edit Reviewers / Reviewees / Relationships** affordance for inline-editable rows is not yet implemented (Segment 15F); today these pages expose only the bulk Upload-CSV / Delete-all flow.
 
-The Assignments page additionally carries a wired **Rule Based Assignment** card (top-left of the action grid). It exposes a RuleSet dropdown listing every visible RuleSet — seeded RuleSets first, then caller-owned Personal RuleSets — plus a Generate button and an inline link to the Rule Builder page (`/operator/sessions/{id}/assignments/rule-based-editor`). Shipped in Segment 13A and revamped in Segment 13A-1; see `spec/rule_based_assignment.md` for the engine and Rule Builder UI contract.
+The Operations Assignments page (§5 above) carries the wired **Rule Based Assignment** card. It exposes a RuleSet dropdown listing every visible RuleSet — seeded RuleSets first, then caller-owned Personal RuleSets — plus a Generate button and an inline link to the Rule Builder page (`/operator/sessions/{id}/assignments/rule-based-editor`). Shipped in Segment 13A, revamped in Segment 13A-1, and moved with the page to the Operations row in Segment 15D PR 6a; see `spec/rule_based_assignment.md` for the engine and Rule Builder UI contract.
 
 ### `/operator/sessions/{id}/instruments` — Instruments
 
