@@ -48,3 +48,23 @@ def me_debug(
             "return_to_label": return_to.label,
         },
     )
+
+
+@router.get("/request-access", response_class=HTMLResponse)
+def request_access(
+    request: Request,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> HTMLResponse:
+    """Landing page for an Easy Auth-admitted user who isn't on the
+    operator allowlist (16A PR 1, F5). The ``require_operator``
+    dependency redirects here via the ``OperatorAllowlistDenied``
+    exception handler in ``app/main.py``.
+    """
+    return _templates.TemplateResponse(
+        request,
+        "request_access.html",
+        {
+            "user": user,
+            "contact_email": settings.operator_contact_email,
+        },
+    )
