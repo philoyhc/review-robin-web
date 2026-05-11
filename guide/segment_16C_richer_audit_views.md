@@ -7,11 +7,15 @@
 > (`guide/archive/segment_16B_role_delegation.md` — shipped).
 
 **Status:** Planning — stub created 2026-05-11, sized into
-a six-PR ladder 2026-05-11 (PRs 1-3 MVP; PRs 4-6 post-MVP).
+a six-PR ladder; refreshed 2026-05-11 against the as-shipped
+16A surface (workspace-level `/operator/sys-admin/*` chrome,
+Sessions Diagnostics row's per-row Audit log link currently
+hits the CSV directly, Outbox now lives as a child page at
+`/operator/sys-admin/sessions/{id}/outbox` per PR #847).
 **Sizing:** 3 MVP PRs + 3 post-MVP PRs.
-**Depends on:** **16A PR 1** (the sys-admin gate + chrome
-scaffold). Otherwise independent — can stack with 16A
-PRs 2-4 in parallel.
+**Depends on:** **16A** (shipped) — the Sys Admin chrome,
+the workspace Sessions Diagnostics surface, and the
+`require_sys_admin` dependency in `app/web/deps.py`.
 
 ## Goal
 
@@ -28,11 +32,16 @@ Today's audit surface:
 - ✅ 62 distinct event types registered under the canonical
   envelope (Segment 11K).
 - ✅ Strict-mode test gate catches any drift.
-- ✅ CSV download route shipped (12B PR 1) — 8 columns, JSON
-  detail envelope in the trailing column.
-- ◻ **No in-app viewer.** Operators can download the CSV and
-  spreadsheet-search it, but the app itself doesn't surface
-  the audit log on any page.
+- ✅ CSV download route shipped (12B PR 1) at
+  `GET /operator/sessions/{id}/export/audit_log.csv` — 8
+  columns, JSON detail envelope in the trailing column.
+- ✅ Sys Admin chrome + Sessions Diagnostics workspace table
+  shipped (16A PRs 1-6). Each row currently exposes
+  three actions: **Details** (→ `/edit`), **Outbox** (→
+  child page), **Audit log** (→ direct CSV download).
+- ◻ **No in-app viewer.** Operators / sys-admins can
+  download the CSV and spreadsheet-search it, but the app
+  itself doesn't surface the audit log on any page.
 
 16C lives behind the Sys Admin gate from 16A — audit data is
 sensitive (correlation IDs, actor emails, lifecycle history)
@@ -46,17 +55,42 @@ MVP shipped in PRs 1-3 (per-session diagnostic-grade table
 + filters + envelope pretty-printer). PRs 4-6 are post-MVP
 polish + workspace-level breadth.
 
-### PR 1 — Per-session audit log table (~300 LOC)
+### PR 1 — Per-session audit log child page (~350 LOC)
 
-**Why first.** The minimum-viable surface. Once this is up,
-operators (well, sys-admins) can answer "what happened on
-this session, in order?" without leaving the app.
+**Why first.** The minimum-viable in-app surface. Mirrors
+the Outbox child-page pattern (16A PR #847) — Sessions
+Diagnostics row's existing "Audit log" link migrates from
+"direct CSV download" to "open the viewer page; download
+button lives inside."
+
+**Surface migration.**
+
+- Sessions Diagnostics row's `Audit log` link
+  (`sys_admin_sessions.html:59`) flips from
+  `/operator/sessions/{id}/export/audit_log.csv` to the new
+  child page `/operator/sys-admin/sessions/{id}/audit-log`.
+- **CSV download lives only inside the child page** as a
+  `Download CSV` button in the page header / action row.
+  One entrypoint per Diagnostics row, deeper actions
+  inside — same convention as Outbox.
+- CSV route (`GET /operator/sessions/{id}/export/audit_log.csv`)
+  stays at its current URL so existing bookmarks /
+  programmatic consumers don't break. Its gate tightens
+  from `require_sys_admin_or_session_operator` to
+  `require_sys_admin` since session operators no longer
+  have any UI affordance pointing at it (the operator-
+  facing surface retired with 12B PR 2 → 16A PR 4).
+  Bookmarked URLs that relied on the relaxed gate will
+  now 403; reachable on a fresh request via the Diagnostics
+  → child-page → Download CSV path.
 
 **Ships.**
 
-- New route `/operator/sessions/{id}/sys-admin/audit-log`
-  behind `require_sys_admin`. Slotted into the new
-  `routes_operator/_sys_admin.py` slice (16A PR 1).
+- New route
+  `GET /operator/sys-admin/sessions/{session_id}/audit-log`
+  in `app/web/routes_operator/_sys_admin.py` (the same
+  slice that owns the Outbox child page). Gated on
+  `require_sys_admin`.
 - Read service `audit.list_events_for_session(db, session,
   *, cursor=None, limit=50)` returning the 8-column
   projection the CSV exporter already shapes
@@ -70,22 +104,31 @@ this session, in order?" without leaving the app.
   PR (PR 3 pretty-prints).
 - Keyset pagination on `id DESC` (newer first). Default
   page size 50. `?cursor=<id>` URL param.
-- Template `operator/session_sys_admin_audit_log.html`.
-  Table markup matches the v2 sweep conventions; severity
-  cell uses the same chip styling as the Validate page
-  (`spec/visual_style_rrw.md` "severity strip").
-- **No filters yet.** "Filtered CSV" download not in this
-  PR either — operators who need a CSV today already have
-  the Extract Data path (well, the Sys Admin tile post-16A
-  PR 3).
+- Template `operator/sys_admin_session_audit_log.html`
+  matching the Outbox child-page chrome (`sys_admin_top_nav`
+  partial + breadcrumb + section heading). Action row at
+  the top: `Download CSV` (Primary Outline) +
+  `← Back to Sessions Diagnostics` (chrome-link).
+- Severity cell uses the same chip styling as the Validate
+  page (`spec/visual_style_rrw.md` "severity strip").
+- **No filters yet** — PR 2.
 
 **Tests.**
 
-- 403 for non-admin.
+- Diagnostics row's `Audit log` link points at the new
+  child page, not the CSV.
+- 403 for non-admin on the child page.
+- 403 for non-admin on the CSV route (was 200 for session
+  operators pre-PR; the relaxed-gate test in
+  `test_outbox_sys_admin_relax.py` needs updating /
+  retiring).
 - Renders the 8 columns + keyset pagination for a session
   with seeded events.
 - Pagination round-trip: page 1's last-cursor links to
   page 2; page 2's first row is older than page 1's last.
+- `Download CSV` button on the child page hits the same
+  route as before, emits the same
+  `session.audit_log_extracted` audit event.
 
 ### PR 2 — Filter strip + filtered CSV download (~250 LOC)
 
@@ -101,11 +144,14 @@ this session, in order?" without leaving the app.
   so bookmarks + back/forward stay deterministic.
 - `audit.list_events_for_session` grows an `AuditFilters`
   parameter; filters compose with the keyset cursor.
-- New "Download filtered CSV" button reuses the existing
-  `serialize_audit_events` + emits the same
-  `session.audit_log_extracted` audit event. The filter
-  state rides along as detail-envelope `context` slots so
-  the audit row records what the operator queried for.
+- `Download CSV` button on the child page becomes filter-
+  aware: it points at the existing CSV route with the same
+  query string carried over, so the downloaded CSV honours
+  the filter strip. `serialize_audit_events` grows the same
+  `AuditFilters` parameter (or accepts a pre-filtered query
+  builder — decide at scoping).
+- `session.audit_log_extracted` detail-envelope grows a
+  `context` slot recording what the operator queried for.
 - Filter strip lives in a half-width left card; the audit
   table sits below it (or right of it on wide screens
   via `.bottom-grid`). Lock the layout at scoping time.
@@ -155,9 +201,10 @@ this session, in order?" without leaving the app.
 **Ships.**
 
 - The envelope's `refs` slot already carries cross-entity
-  int PKs (e.g. `refs.reviewer_id`, `refs.instrument_id`).
-  Per-row anchors render alongside the detail rendering —
-  "View reviewer" / "View instrument" / "View RuleSet"
+  int PKs (e.g. `refs.reviewer_id`, `refs.instrument_id`,
+  `refs.target_user_id` from 16B PR 2). Per-row anchors
+  render alongside the detail rendering — "View reviewer"
+  / "View instrument" / "View RuleSet" / "View user"
   deep-linking into the relevant operator-page surface.
 - Deleted entities render as a disabled `(deleted)` suffix
   rather than a broken link. The viewer checks for row
@@ -178,7 +225,12 @@ the drill-in is worth the additional surface.**
 - New workspace-level route `/operator/sys-admin/audit-log`
   (no session id). Same chrome, same table, same filter
   strip — but scoped to every session the sys-admin can
-  see.
+  see, plus workspace-scoped events
+  (`workspace.operator_admitted` / `.operator_revoked` /
+  `sys_admin.role_promoted` / `.role_demoted` from 16A
+  PR 6) which have no `session_id`.
+- Sys Admin top nav grows a third tab ("Audit log")
+  alongside Sessions Diagnostics + Accounts Management.
 - Filter strip gains a session-code dropdown / typeahead.
 - Default date range "last 7 days" to keep the query
   bounded; operators can widen explicitly.
@@ -217,8 +269,10 @@ the prose summariser is worth the maintenance burden.**
 
 ## Hard dependencies
 
-- **16A Part 1** (the Sys Admin chrome) for Parts 1 / 2 / 3.
-- **No** dependency for Part 4 (it lives on Session Home,
+- **16A** (shipped) — Sys Admin chrome, the workspace
+  Sessions Diagnostics surface, `require_sys_admin`
+  dependency.
+- **No** dependency for PR 6 (it lives on Session Home,
   operator-visible).
 
 ## Out of scope
@@ -238,20 +292,32 @@ the prose summariser is worth the maintenance burden.**
 
 ## Doc impact
 
-When parts ship:
+When PRs ship:
 
-- `docs/status.md` timeline entry per Part.
+- `docs/status.md` timeline entry per PR.
 - `guide/todo_master.md` updated.
 - `spec/architecture.md` "Audit-event detail schema" picks up
-  a "Rendering" subsection covering Part 1's pretty-printer.
-- New `spec/sys_admin_page.md` (or similar) section absorbing
-  the Sys Admin chrome's audit-log tab contract.
+  a "Rendering" subsection covering PR 3's pretty-printer.
+- `spec/sessions_overview.md` or a new
+  `spec/sys_admin_page.md` — Sessions Diagnostics row's
+  per-row action set (Details / Outbox / Audit log) gains
+  a note that Audit log opens the child viewer (post-PR 1).
 
 ## Working notes
 
 - _(placeholder for decisions during PR scoping)_
-- Per-session vs workspace-level: ship Part 1 first; revisit
-  Part 2 after operator feedback.
+- **Surface placement.** Per-session viewer reachable from
+  the Sessions Diagnostics row's existing `Audit log`
+  link, which migrates from direct-CSV to the new child
+  page. CSV download lives only inside the child page
+  (decided 2026-05-11, matches Outbox precedent).
+- **CSV route gate.** Tightens from
+  `require_sys_admin_or_session_operator` to
+  `require_sys_admin` once the operator-facing entry
+  point retires. Bookmarked URLs that relied on the
+  relaxed gate will 403.
+- Per-session vs workspace-level: ship PR 1 first; revisit
+  PR 5 after operator feedback.
 - Pagination: keyset on `id DESC` is the obvious call;
   confirm during scoping.
 - Detail-JSON renderer: per-payload-shape pretty-printing vs
@@ -261,3 +327,4 @@ When parts ship:
 - Severity colours: reuse the `severity` chip strip styling
   from the Validate page (`spec/validate_page.md`) for
   consistency.
+
