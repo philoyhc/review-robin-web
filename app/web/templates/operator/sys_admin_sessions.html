@@ -51,7 +51,8 @@
               <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
             </td>
             <td class="col-shrink">
-              <span class="muted" title="Coming in 16B">Operators</span>
+              <a class="chrome-link"
+                 href="/operator/sessions/{{ s.id }}/edit">Details</a>
               <a class="chrome-link"
                  href="/operator/sys-admin/sessions/{{ s.id }}/outbox">Outbox</a>
               <a class="chrome-link"

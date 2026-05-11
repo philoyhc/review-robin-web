@@ -115,8 +115,12 @@ def test_sessions_diagnostics_renders_for_sys_admin(
         f'href="/operator/sessions/{review_session.id}/export/audit_log.csv">Audit log</a>'
         in response.text
     )
-    # Operators is a placeholder (no href), titled "Coming in 16B".
-    assert "Coming in 16B" in response.text
+    # Details action — replaced the earlier "Operators" placeholder
+    # when 16B's session owner-management surface landed.
+    assert (
+        f'href="/operator/sessions/{review_session.id}/edit">Details</a>'
+        in response.text
+    )
     # Status renders as a lifecycle-coloured pill matching the
     # session_setup_status_row partial used on session-home pages.
     assert (
