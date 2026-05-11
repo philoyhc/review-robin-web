@@ -283,7 +283,7 @@ that originated there before the catalog retired.
 The locked block `13E → 12C → 15D → 12A-3` shipped 2026-05-10
 (see Done above for the four entries) and 12B (audit-events
 export) followed the same day. The remaining schedule items
-— 13B, 13C, 14, 14-1, 15, 15A, 15B, 15C, 15E, 16 — ship per
+— 13B, 13C, 14, 14-1, 15A, 15B, 15C, 15E, 15F, 16, 17, 20 — ship per
 their own plan; no ordering constraints beyond shared schema
 conflicts (none detected). **Segment 16** (Sys Admin page) is
 a natural near-term pick since it absorbs the audit-log
@@ -339,15 +339,7 @@ the dev-only manual assignment upload.
    **Plan:** `guide/segment_14-1_email_infra.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-5. **15 — Operator polish + documentation.**
-   Inline-edit Manage rows, Inactivate UI, sessions-list per-
-   row Delete, AG Grid integration, tech-support contact, the
-   "make the system understandable to a new operator" pass
-   before broader pilot. Runs after 14.
-   Catalog #23, #25, #33, #35, #36, §2.2.
-   **Plan:** `guide/segment_15_operator_polish_and_documentation.md`.
-
-6. **15A — Pervasive friendly labels.**
+5. **15A — Pervasive friendly labels.**
    Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
    `PairContext1-3` flowing through every header / picker /
    tooltip via a session-level resolver, not just per-instrument
@@ -360,7 +352,7 @@ the dev-only manual assignment upload.
    slot retired with `Assignment.context` in 15D PR 6b.)
    **Plan:** `guide/segment_15A_friendly_labels.md`.
 
-7. **15C — Operator RTD / RuleSet libraries.**
+6. **15C — Operator RTD / RuleSet libraries.**
    Symmetric two-tier model for both RTDs and RuleSets:
    operator master library (cross-session, reusable) +
    per-session copy (portable, independently editable). Explicit
@@ -372,7 +364,7 @@ the dev-only manual assignment upload.
    `instruments.rule_set_id` to point at.
    **Plan:** `guide/segment_15C_operator_libraries.md`.
 
-8. **15B — Per-instrument assignments.**
+7. **15B — Per-instrument assignments.**
     Each `Instrument` carries its own assignment set (e.g. the
     Manager survey collects different reviewer → reviewee
     pairings than the Peer survey within one session). Schema
@@ -401,12 +393,40 @@ the dev-only manual assignment upload.
   locked block is closed.
   **Plan:** `guide/segment_15E_next_action_revamp.md`.
 
+- **15F — Enhanced Setup pages** *(carved out of the
+  original Segment 15, 2026-05-10)*. Per-row inline edit +
+  Inactivate / Reactivate affordances on the Reviewers /
+  Reviewees / Relationships Manage pages. Today's only
+  per-row edit path is CSV bulk-replace; 15F adds the
+  single-row affordance so operators don't have to round-
+  trip a CSV to fix one name or toggle one status.
+  **Plan:** `guide/segment_15F_enhanced_setup_pages.md`.
+
 - **16 — Sys admin page** *(stub created 2026-05-10)*.
   Home for operator-internal / dev-only surfaces that
   exist today but lack a dedicated chrome surface, plus a
   few that retired from operator-facing routes under the
   13E / 12C / 15D / 12A-3 block and will land here.
   **Plan:** `guide/segment_16_sys_admin_page.md`.
+
+- **17 — AG Grid replacement of the reviewer-surface table**
+  *(carved out of the original Segment 15, 2026-05-10)*.
+  Replaces the plain HTML `<input>` / `<textarea>` /
+  `<select>` reviewer-surface table with an AG Grid
+  instance backed by the existing render adapter +
+  `POST /save` endpoint. Unlocks cell-level autosave +
+  large-table ergonomics.
+  **Plan:** `guide/segment_17_ag_grid_replacement.md`.
+
+- **20 — Operator polish + documentation** *(renumbered
+  from the original Segment 15, 2026-05-10)*. The
+  documentation pass + technical-support contact item
+  the original Segment 15 stub bundled. Runs after
+  Segment 14 (production hardening) so the system is
+  operationally credible before the documentation is
+  written for it. Workplan §18 items 1–10 (Start Here
+  page through Known limitations page).
+  **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
 #### Historical-reference entries
 
@@ -447,8 +467,8 @@ they pinned:
 - **12A is fully shipped** as of 2026-05-10 (12A-1 export +
   12A-3 export-refresh + Settings importer + Quick Setup
   slot 4 graduation; 12A-2 was absorbed into 12A-3). The
-  remaining schedule items — **13B, 13C, 14, 14-1, 15, 15A,
-  15B, 15C, 15E, 16** — are independent of the email +
+  remaining schedule items — **13B, 13C, 14, 14-1, 15A,
+  15B, 15C, 15E, 15F, 16, 17, 20** — are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;
   13C PR 3 (rule-engine fanout for group-scoped instruments)
