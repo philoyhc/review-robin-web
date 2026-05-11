@@ -13,11 +13,14 @@
 from a four-PR ladder after the 2026-05-11 access-model
 discussion locked the strict-allowlist Option C posture and
 absorbed the workspace user-role-management surface from 16B).
+**PR 5 reshaped 2026-05-11** from "wire manual upload under
+Sys Admin" to "retire the manual-upload path entirely" once
+it became clear the dev-only escape hatch has no live consumer.
 **Sizing:** 6 PRs (each small + reviewable; PRs 2-6 land
 sequentially on PR 1 and can ship one per day).
 **Depends on:** **13F PRs 1 + 2** for the `users.is_sys_admin`
-and `users.is_operator` columns the gates read. PR 4 shipped
-2026-05-11; PR 5 pending.
+and `users.is_operator` columns the gates read — both shipped
+2026-05-11; 16A is unblocked.
 
 ## Goal
 
@@ -112,14 +115,23 @@ target identifiers (`F1`–`F12`).
   doorway in 12B PR 2) gets a Download tile on the
   Sys Admin page. No service code changes — pure chrome
   placement.
-- **F12. Manual assignment upload under Sys Admin.** The
-  existing `POST /operator/sessions/{id}/assignments/manual/upload`
-  route gets a Sys Admin form with an explicit "I'm
-  overriding the rule engine" confirmation checkbox + a
-  new `sys_admin.manual_assignments_uploaded` audit event
-  (`counts` envelope). The dev-only operator path
-  (15D PR 6a) stays alive; Sys Admin is the operator-
-  reachable home for legitimate bypass cases.
+- **F12. Manual assignment upload path retired.** The
+  dev-only `POST /operator/sessions/{id}/assignments/manual/upload`
+  route + `assignments.parse_manual_csv` /
+  `manual_rows_to_pairs` services + `ManualAssignmentRow`
+  schema + `AssignmentMode.manual` enum value + 12+
+  associated tests all go away. The rule engine
+  (`AssignmentMode.rule_based`) + the Relationships table
+  cover every realistic operator need; the manual path
+  hasn't carried operator-facing UI since 15D PR 6a and
+  the "dev-only escape hatch" framing from that decision
+  no longer justifies the plumbing.
+  `assignments.replace_assignments` keeps its `mode`
+  parameter but its `manual` branch is removed. **Reversal
+  of the 15D PR 7b decision** ("keep manual-CSV as a
+  dev-only escape hatch") — 2026-05-11 codebase audit
+  confirmed the path has no live consumer beyond its own
+  tests.
 
 ## Anchor items (capabilities already exist)
 
@@ -157,14 +169,15 @@ handler **stay as a dev-only feature** per the
 route + handler accessible for tests + admin
 tooling).
 
-**Under Segment 16A.** Satisfies **F12** — the dev-only
-manual upload gets a discoverable home on the Sys Admin
-page, gated behind an explicit "I'm overriding the rule
-engine" confirmation checkbox + a new
-`sys_admin.manual_assignments_uploaded` audit event. The
-operator-facing alternative (Relationships table →
-Generate) stays the everyday path; Sys Admin is the
-deliberate-bypass route.
+**Under Segment 16A.** Satisfies **F12** — the manual
+upload path is **retired entirely** rather than relocated.
+Route + service helpers + schema + the `manual` enum
+variant all go; the 12+ tests that exercised the path
+retire with it. The rule engine + Relationships table
+cover every realistic operator need; the dev-only framing
+from 15D PR 7b ("escape hatch for tests + admin tooling")
+no longer justifies the plumbing — the only live consumer
+was the test surface that the retirement also removes.
 
 ### 3. Audit log download
 
@@ -380,51 +393,76 @@ reachable from a Sys Admin tile; no service code change).
   (regression covered by 12B's existing tests; assert no
   drift).
 
-### PR 5 — Manual assignment upload (~250 LOC + 1 audit event)
+### PR 5 — Retire the manual-assignment upload path (~150 LOC removed + ~12 tests removed)
 
-**Functional target:** F12 (Sys Admin manual-upload form
-with confirmation checkbox + new
-`sys_admin.manual_assignments_uploaded` audit event).
+**Functional target:** F12 (manual upload path retired
+entirely; rule engine + Relationships table are the only
+remaining write-paths into `assignments`).
 
-**Why this slot.** Highest-risk mutating action ("I can wipe
-pairings"); landing it after the chrome + read-only
-relocations lets the gate behaviour stabilise first. Before
-PR 6 because PR 6 is workspace-scoped and benefits from
-PR 5's per-session-mutating-action precedent (confirmation
-checkbox, audit envelope, etc.).
+**Why this slot.** Reversal of the 15D PR 7b decision —
+the "dev-only escape hatch" was kept on the bet that some
+real bypass need would surface; nine days of pilot
+preparation later, no such need has appeared. Better to
+shed the plumbing than to wire it under a chrome roof that
+makes it more visible than it deserves.
 
-**Ships.**
+**Why this PR shape works.** It's a pure-removal PR — no
+new code, no new tests, just deletion. Lands after PRs 1-4
+so the gate + relocations are proven (we're not removing
+plumbing that 16A's other PRs still depend on).
 
-- New Manual upload card / form on the Sys Admin page.
-  Wires the existing
+**Ships (all removals).**
+
+- `app/web/routes_operator/_assignments.py` — remove the
   `POST /operator/sessions/{id}/assignments/manual/upload`
-  route (`_assignments.py:199`) + `parse_manual_csv` /
-  `replace_assignments` service. The route stays
-  dev-only-discoverable (no operator-facing chrome
-  surfaces it post-15D) — Sys Admin is the new operator-
-  reachable home for the legitimate "I need to bypass the
-  rules engine" case.
-- **Explicit confirmation checkbox** ("I'm overriding the
-  rule engine; this replaces every assignment for this
-  session.") required before submit. Matches the existing
-  Quick Setup `confirm_replace=true` gate pattern.
-- New audit event `sys_admin.manual_assignments_uploaded`
-  (`counts` envelope: rows parsed / accepted / rejected).
-  Registered in `EVENT_SCHEMAS` per the canonical 11K
-  shape.
-- Help text alongside the form pointing operators at the
-  Relationships table + Rule Builder as the everyday
-  operator path; Sys Admin upload is the explicit "I need
-  to bypass" escape.
+  route handler. Confirm no other surface POSTs to this
+  URL (codebase audit: no live operator surface routes
+  through it post-15D).
+- `app/services/assignments.py` — remove
+  `parse_manual_csv` and `manual_rows_to_pairs`.
+  `replace_assignments` keeps its `mode` parameter for
+  audit-event payload shape, but the `mode ==
+  AssignmentMode.manual` branch goes; rule-based remains
+  the only consumer.
+- `app/schemas/assignments.py` — remove the
+  `ManualAssignmentRow` shape; remove the
+  `AssignmentMode.manual` enum variant. The enum keeps
+  `rule_based` as its only value (worth retaining as an
+  enum for future expansion — e.g. when 13C
+  group-scoped instruments adds a flavour — rather than
+  flattening it to a string).
+- `tests/unit/test_assignments_manual.py` — retire
+  entirely.
+- `tests/unit/test_replace_assignments_self_reviews_active.py`
+  — drop the single `AssignmentMode.manual` reference if
+  it covers the manual branch; preserve the rule-based
+  coverage that's the substance of the file.
+- Anywhere else the codebase audit at PR-open surfaces
+  (`grep -rn "parse_manual_csv\|manual_rows_to_pairs\|ManualAssignmentRow\|AssignmentMode.manual"`).
 
-**Tests.**
+**No new audit event.** F12's earlier "Sys Admin
+manual-upload audit event" goes away with the removal.
 
-- 403 for non-admin POST.
-- Happy path: valid CSV, replace_assignments called, audit
-  event emitted with correct envelope.
-- Missing-confirmation checkbox → 400.
-- `EVENT_SCHEMAS` strict-mode gate passes for the new
-  event type.
+**Tests (after removal).**
+
+- The test suite shrinks by the manual-path tests; no new
+  positive tests are needed (we're removing dead code,
+  not changing live behaviour).
+- Regression check: existing rule-based assignment tests
+  (e.g. `test_replace_assignments_*` minus the manual
+  branch) still pass — `replace_assignments(... mode=
+  AssignmentMode.rule_based ...)` behaviour is unchanged.
+- `EVENT_SCHEMAS` strict-mode gate passes (no new
+  registrations; no removals from the existing event set).
+- The `ci-postgres` job's full pytest run is the final
+  safety net.
+
+**Open question for scoping.** Whether to keep the
+`AssignmentMode` enum at all if `rule_based` is the only
+value. Lean keep — the enum's audit-event use site reads
+more clearly as `mode=AssignmentMode.rule_based` than as
+`mode="rule_based"`, and the cost of one-value enums in
+Python is essentially nil. Confirm at scoping.
 
 ### PR 6 — Workspace user list + admit/revoke + promote/demote (~400 LOC + 4 audit events)
 
@@ -571,7 +609,7 @@ Risk per surface:
 | Operator-facing surfaces (per-session) | Low–medium | `require_operator` gate (PR 1) on top of per-session `require_session_operator` |
 | Outbox (read-only) | Low | `require_sys_admin` gate |
 | Audit log download | Low–medium | `require_sys_admin` gate + per-download audit event (already emitted as `session.audit_log_extracted` by 12B PR 1) |
-| Manual assignment upload | **High** (writes, bypasses rules) | `require_sys_admin` gate + confirmation + audit |
+| ~~Manual assignment upload~~ | ~~High~~ | ~~Not applicable~~ — **path retired in PR 5** (F12). No Sys Admin surface; no audit event needed since there's nothing to audit. |
 | Workspace user toggles (PR 6) | **High** (grants / revokes access) | `require_sys_admin` gate + confirmation on promote / demote + last-admin-demote guard + audit |
 | Future SMTP test-send | Medium | `require_sys_admin` gate + audit |
 
@@ -616,8 +654,6 @@ var).
 
 ### Audit-event registrations
 
-- `sys_admin.manual_assignments_uploaded` (PR 5; `counts`
-  envelope).
 - `session.audit_log_extracted` — already shipped by
   12B PR 1; the event_type name stays the same after the
   surface moves under Sys Admin chrome (the *event* is a
@@ -629,14 +665,21 @@ var).
 - `sys_admin.outbox_viewed` — optional, read-only; skip if
   it spams the log.
 
+PR 5 (manual-assignment retire) is a removal — no new
+audit events. The earlier draft's
+`sys_admin.manual_assignments_uploaded` event goes away
+with the path itself.
+
 ### Open questions for scoping
 
-- Destructive-action confirmation shape — single checkbox
-  (matches the existing Quick Setup replace-confirmation
-  pattern) or two-step "type the session code"
-  (GitHub-repo-delete style)? Lean single checkbox for PR 5;
-  consider escalating to type-the-email for PR 6's Revoke /
-  Demote.
+- Destructive-action confirmation shape on PR 6's
+  workspace toggles — single checkbox (matches the existing
+  Quick Setup replace-confirmation pattern) or two-step
+  "type the user's email" (GitHub-repo-delete style)?
+  Lean single checkbox for the toggles; consider escalating
+  to type-the-email if pilot feedback surfaces accidental
+  revocations. (PR 5's confirmation question is moot since
+  the path is being retired, not surfaced.)
 - Should `sys_admin.outbox_viewed` exist, or is read-only
   view too low-signal to audit?
 - "Request access" page contact copy — generic vs
