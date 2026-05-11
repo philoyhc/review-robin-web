@@ -373,17 +373,21 @@ def test_outbox_view_renders_invitation_url(
     assert response.status_code == 200
     assert "/reviewer/invite/" in response.text
     assert "rae@example.edu" in response.text
-    # Outbox is a dev-diagnostic surface, not a chrome tab — the only
-    # entry point is the "View outbox" button on Manage Invitations.
+    # Post-16A PR 3: the "View outbox" button on Manage Invitations
+    # retires — Outbox is reached via the workspace Admin chrome
+    # (top-bar Admin link → Sessions Diagnostics tab → per-row
+    # outbox link). The existing per-session URL stays reachable
+    # directly (asserted above on the GET that 200s).
     invitations_body = client.get(
         f"/operator/sessions/{session.id}/invitations"
     ).text
     assert (
         f'href="/operator/sessions/{session.id}/outbox">View outbox</a>'
-        in invitations_body
+        not in invitations_body
     )
-    # And no Outbox tab in the chrome (here on the Outbox page itself,
-    # to confirm the nav doesn't list it anywhere).
+    # And no Outbox tab in the session chrome either (the Admin
+    # row link points at the per-session URL but isn't the same
+    # ``>Outbox</a>`` tail).
     assert (
         f'href="/operator/sessions/{session.id}/outbox">Outbox</a>'
         not in response.text

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Sessions Diagnostics — Admin{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="{{ return_to_url }}">&larr; Back to {{ return_to_label }}</a>
+
+  <h1>Admin</h1>
+
+  {% with current_admin_page = "Sessions" %}
+    {% include "operator/partials/sys_admin_top_nav.html" %}
+  {% endwith %}
+
+  {% if sessions %}
+    <div class="card">
+      <table>
+        <tr>
+          <th>Session Name</th>
+          <th>Code</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th class="col-shrink">Actions</th>
+        </tr>
+        {% for s in sessions %}
+          <tr>
+            <td>{{ s.name }}</td>
+            <td><code>{{ s.code }}</code></td>
+            <td>{{ s.status | lifecycle_label }}</td>
+            <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
+            <td class="col-shrink">
+              <a class="chrome-link"
+                 href="/operator/sessions/{{ s.id }}/outbox">View outbox</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No sessions in this workspace yet.</p>
+  {% endif %}
+{% endblock %}

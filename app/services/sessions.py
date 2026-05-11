@@ -72,6 +72,16 @@ def list_for_user(db: Session, user: User) -> list[ReviewSession]:
     return list(db.execute(stmt).scalars())
 
 
+def list_all(db: Session) -> list[ReviewSession]:
+    """Workspace-wide session list, no per-user filter. Used by the
+    Sys Admin Sessions Diagnostics table (16A PR 3); callers must
+    gate on ``require_sys_admin`` before invoking — this helper
+    does not enforce access control.
+    """
+    stmt = select(ReviewSession).order_by(ReviewSession.created_at.desc())
+    return list(db.execute(stmt).scalars())
+
+
 def get_for_user(db: Session, user: User, session_id: int) -> ReviewSession | None:
     stmt = (
         select(ReviewSession)
