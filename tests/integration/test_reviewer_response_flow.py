@@ -451,21 +451,17 @@ def test_surface_filters_out_excluded_assignments(
         reviewee_ident="carol@example.edu",
         activate=False,
     )
-    operator.post(
-        f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        files={
-            "file": (
-                "m.csv",
-                (
-                    b"ReviewerEmail,RevieweeEmail,IncludeAssignment\n"
-                    b"rae@example.edu,carol@example.edu,false\n"
-                ),
-                "text/csv",
-            )
-        },
-        data={"confirm_replace": "true"},
-        follow_redirects=False,
-    )
+    # _operator_creates_session_with_pair already generated assignments
+    # via the rule engine; flip the one (rae, carol) row to include=False
+    # directly. The retired manual-CSV path used to do this via an
+    # explicit "IncludeAssignment=false" row in the upload; rule-based
+    # has no equivalent CSV column today, so the DB-level flip is the
+    # most precise replacement for the test's intent.
+    rae_carol_assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).scalar_one()
+    rae_carol_assignment.include = False
+    db.commit()
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)

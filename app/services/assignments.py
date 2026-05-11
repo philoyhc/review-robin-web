@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import csv
-import io
 from collections.abc import Iterable
-from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -19,18 +16,11 @@ from app.db.models import (
     RuleSetRevision,
     User,
 )
-from app.schemas.assignments import AssignmentMode, ManualAssignmentRow
-from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit, csv_imports, session_lifecycle as lifecycle
+from app.schemas.assignments import AssignmentMode
+from app.services import audit, session_lifecycle as lifecycle
 from app.services._queries import session_scoped
 
 PAIR_PREVIEW_LIMIT = 200
-
-MANUAL_CSV_MAX_BYTES = 1 * 1024 * 1024
-MANUAL_CSV_MAX_ROWS = 5000
-
-_TRUTHY = {"true", "yes", "1"}
-_FALSY = {"false", "no", "0"}
 
 
 def reviewer_fields_with_data(db: Session, session_id: int) -> list[str]:
@@ -138,258 +128,8 @@ def display_source_presence(db: Session, session_id: int) -> dict[str, bool]:
     return {key: True for key in fields}
 
 
-@dataclass
-class ManualParseResult:
-    rows: list[ManualAssignmentRow]
-    issues: list[ValidationIssue]
-
-    @property
-    def is_blocked(self) -> bool:
-        return any(i.is_blocking for i in self.issues)
-
-
-def _parse_include(value: str) -> tuple[bool | None, str | None]:
-    """Returns (parsed, error_message). Empty string defaults to True."""
-    stripped = value.strip()
-    if not stripped:
-        return True, None
-    lowered = stripped.lower()
-    if lowered in _TRUTHY:
-        return True, None
-    if lowered in _FALSY:
-        return False, None
-    return None, f"IncludeAssignment '{stripped}' is not a recognised true/false value"
-
-
 def _is_active(row: Reviewer | Reviewee) -> bool:
     return (row.status or "active") == "active"
-
-
-def parse_manual_csv(
-    content: bytes,
-    reviewers: list[Reviewer],
-    reviewees: list[Reviewee],
-) -> ManualParseResult:
-    """Parse a manual-assignments CSV. **Dev-only** post-15D —
-    no operator UI surfaces this path; the function exists for
-    test fixtures and admin tooling that need to drop pre-canned
-    pair tuples into the assignments table without going through
-    the rule engine.
-
-    Per-15D the canonical workflow is rosters + relationships +
-    RuleSet → Generate (Operations Assignments page). The
-    underlying ``replace_assignments`` write path stays accessible
-    so this dev-only entry point keeps working; the
-    ``PairContextN`` / ``AssignmentContextN`` columns the CSV
-    historically carried are silently ignored after the
-    ``Assignment.context`` column drop in 15D PR 6b.
-    """
-
-    source = "assignments"
-    issues: list[ValidationIssue] = []
-
-    text, decode_issue = csv_imports.decode_csv(
-        content, source, max_bytes=MANUAL_CSV_MAX_BYTES
-    )
-    if decode_issue is not None:
-        return ManualParseResult(rows=[], issues=[decode_issue])
-    assert text is not None
-
-    reader = csv.DictReader(io.StringIO(text))
-    fieldnames = list(reader.fieldnames or [])
-    if not fieldnames:
-        return ManualParseResult(
-            rows=[],
-            issues=[
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    message="CSV has no header row",
-                )
-            ],
-        )
-
-    for required in ("ReviewerEmail", "RevieweeEmail"):
-        if required not in fieldnames:
-            issues.append(
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    field=required,
-                    message=f"Missing required column: {required}",
-                )
-            )
-    if issues:
-        return ManualParseResult(rows=[], issues=issues)
-
-    raw_rows = list(reader)
-    if len(raw_rows) > MANUAL_CSV_MAX_ROWS:
-        return ManualParseResult(
-            rows=[],
-            issues=[
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    message=f"Too many rows (max {MANUAL_CSV_MAX_ROWS})",
-                )
-            ],
-        )
-
-    reviewer_by_email = {
-        r.email.casefold(): r for r in reviewers if _is_active(r)
-    }
-    reviewee_by_ident = {
-        r.email_or_identifier.casefold(): r for r in reviewees if _is_active(r)
-    }
-    inactive_reviewer_emails = {
-        r.email.casefold() for r in reviewers if not _is_active(r)
-    }
-    inactive_reviewee_idents = {
-        r.email_or_identifier.casefold() for r in reviewees if not _is_active(r)
-    }
-
-    parsed: list[ManualAssignmentRow] = []
-    seen_pairs: dict[tuple[int, int], int] = {}
-
-    for index, raw in enumerate(raw_rows, start=1):
-        reviewer_email = (raw.get("ReviewerEmail") or "").strip()
-        reviewee_identifier = (raw.get("RevieweeEmail") or "").strip()
-
-        if not reviewer_email:
-            issues.append(
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    row_number=index,
-                    field="ReviewerEmail",
-                    message="ReviewerEmail is required",
-                )
-            )
-            continue
-        if not reviewee_identifier:
-            issues.append(
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    row_number=index,
-                    field="RevieweeEmail",
-                    message="RevieweeEmail is required",
-                )
-            )
-            continue
-
-        reviewer = reviewer_by_email.get(reviewer_email.casefold())
-        if reviewer is None:
-            if reviewer_email.casefold() in inactive_reviewer_emails:
-                message = (
-                    f"Inactive reviewer: '{reviewer_email}' is in this "
-                    f"session's reviewer roster but is not active"
-                )
-            else:
-                message = (
-                    f"Unknown reviewer: '{reviewer_email}' is not in this "
-                    f"session's reviewer roster"
-                )
-            issues.append(
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    row_number=index,
-                    field="ReviewerEmail",
-                    message=message,
-                )
-            )
-            continue
-        reviewee = reviewee_by_ident.get(reviewee_identifier.casefold())
-        if reviewee is None:
-            if reviewee_identifier.casefold() in inactive_reviewee_idents:
-                message = (
-                    f"Inactive reviewee: '{reviewee_identifier}' is in this "
-                    f"session's reviewee roster but is not active"
-                )
-            else:
-                message = (
-                    f"Unknown reviewee: '{reviewee_identifier}' is not in "
-                    f"this session's reviewee roster"
-                )
-            issues.append(
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    row_number=index,
-                    field="RevieweeEmail",
-                    message=message,
-                )
-            )
-            continue
-
-        pair_key = (reviewer.id, reviewee.id)
-        if pair_key in seen_pairs:
-            issues.append(
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    row_number=index,
-                    message=(
-                        f"Duplicate assignment: '{reviewer_email}' -> "
-                        f"'{reviewee_identifier}' (also on row {seen_pairs[pair_key]})"
-                    ),
-                )
-            )
-            continue
-        seen_pairs[pair_key] = index
-
-        include, include_err = _parse_include(raw.get("IncludeAssignment") or "")
-        if include is None:
-            issues.append(
-                ValidationIssue(
-                    severity=Severity.error,
-                    source=source,
-                    row_number=index,
-                    field="IncludeAssignment",
-                    message=include_err or "",
-                )
-            )
-            continue
-
-        # PairContext / AssignmentContext CSV columns retired in
-        # 15D PR 6b alongside the ``Assignment.context`` JSON drop.
-        # Pair-level tags now live on the ``relationships`` table;
-        # the manual-CSV path is dev-only and no longer carries
-        # per-row context.
-        parsed.append(
-            ManualAssignmentRow(
-                reviewer_id=reviewer.id,
-                reviewee_id=reviewee.id,
-                reviewer_email=reviewer.email,
-                reviewer_name=reviewer.name,
-                reviewee_identifier=reviewee.email_or_identifier,
-                reviewee_name=reviewee.name,
-                include=include,
-            )
-        )
-
-    return ManualParseResult(rows=parsed, issues=issues)
-
-
-def manual_rows_to_pairs(
-    rows: list[ManualAssignmentRow],
-    reviewers: list[Reviewer],
-    reviewees: list[Reviewee],
-) -> tuple[list[tuple[Reviewer, Reviewee]], list[bool]]:
-    """Manual-CSV row dataclasses → ``(pairs, includes)`` tuple. The
-    third element used to be a ``contexts`` list; 15D PR 6b dropped
-    per-row context entirely alongside the ``Assignment.context``
-    column drop."""
-
-    reviewer_by_id = {r.id: r for r in reviewers}
-    reviewee_by_id = {r.id: r for r in reviewees}
-    pairs: list[tuple[Reviewer, Reviewee]] = []
-    includes: list[bool] = []
-    for row in rows:
-        pairs.append((reviewer_by_id[row.reviewer_id], reviewee_by_id[row.reviewee_id]))
-        includes.append(row.include)
-    return pairs, includes
 
 
 def get_or_create_default_instrument(
@@ -646,11 +386,7 @@ def replace_assignments(
         db,
         review_session=review_session,
         user=user,
-        reason=(
-            "assignments_imported"
-            if mode == AssignmentMode.manual
-            else "assignments_generated"
-        ),
+        reason="assignments_generated",
         correlation_id=correlation_id,
     )
 
