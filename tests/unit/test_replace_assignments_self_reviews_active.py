@@ -128,9 +128,10 @@ def test_self_review_row_active_when_session_flag_on(db: Session) -> None:
 
 
 def test_explicit_includes_win_over_session_flag(db: Session) -> None:
-    """The manual-CSV save path passes an explicit ``includes`` list;
-    operator-typed values must beat the session-level default even
-    when the pair is a self-review and the session flag is off."""
+    """The rule-based engine passes an explicit ``includes`` list
+    derived from per-pair ``relationships`` rows; those operator-
+    chosen values must beat the session-level default even when the
+    pair is a self-review and the session flag is off."""
 
     user, review_session, alice_r, _bob_r, alice_e, carol_e = _seed(
         db, self_reviews_active=False
@@ -142,8 +143,8 @@ def test_explicit_includes_win_over_session_flag(db: Session) -> None:
         review_session=review_session,
         user=user,
         pairs=pairs,
-        mode=AssignmentMode.manual,
-        correlation_id="corr-manual",
+        mode=AssignmentMode.rule_based,
+        correlation_id="corr-includes",
         includes=[True, False],
     )
 

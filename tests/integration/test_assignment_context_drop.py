@@ -43,25 +43,6 @@ def test_assignments_table_lacks_context_column(db: Session) -> None:
     )
 
 
-def test_manual_csv_pair_context_columns_dropped_silently(db: Session) -> None:
-    """The Pydantic ``ManualAssignmentRow`` schema retires the
-    per-row ``pair_context_*`` / ``assignment_context_*`` slots.
-    The parser still accepts CSVs that include these columns but
-    drops the values silently — no validation error, no
-    persistence."""
-
-    from app.schemas.imports import ReviewerImportRow  # noqa: F401
-    from app.schemas.assignments import ManualAssignmentRow
-
-    fields = ManualAssignmentRow.model_fields.keys()
-    assert "pair_context_1" not in fields
-    assert "pair_context_2" not in fields
-    assert "pair_context_3" not in fields
-    assert "assignment_context_1" not in fields
-    assert "assignment_context_2" not in fields
-    assert "assignment_context_3" not in fields
-
-
 def test_replace_assignments_signature_drops_contexts_param() -> None:
     """``replace_assignments`` no longer accepts ``contexts``. The
     parameter retired alongside the column drop."""

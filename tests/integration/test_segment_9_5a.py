@@ -271,22 +271,6 @@ def test_assignments_generate_invalidates_validated(
     _assert_invalidated(db, session, expected_reason="assignments_generated")
 
 
-def test_assignments_manual_import_invalidates_validated(
-    client: TestClient, db: Session
-) -> None:
-    session = _validated_session(client, db, code="inv-am")
-
-    csv = b"ReviewerEmail,RevieweeEmail\nrae@example.edu,carol@example.edu\n"
-    client.post(
-        f"/operator/sessions/{session.id}/assignments/manual/import",
-        files={"file": ("m.csv", csv, "text/csv")},
-        data={"confirm_replace": "true"},
-        follow_redirects=False,
-    )
-
-    _assert_invalidated(db, session, expected_reason="assignments_imported")
-
-
 def test_assignments_delete_all_invalidates_validated(
     client: TestClient, db: Session
 ) -> None:

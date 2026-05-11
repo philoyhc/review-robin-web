@@ -338,117 +338,6 @@ def test_assignments_hub_truncates_large_pair_list(
     assert "and 17 more" in body
 
 
-def test_manual_save_persists_with_include(
-    client: TestClient, db: Session
-) -> None:
-    """15D PR 6b retired the per-row ``context`` JSON column on
-    Assignment. The manual-CSV path still saves rows + Include flag;
-    the AssignmentContext1/2/3 CSV columns are silently ignored
-    (no longer have a destination)."""
-
-    review_session = _make_session(client, db, code="m-save")
-    _seed_roster(
-        client,
-        review_session.id,
-        reviewer_emails=["alice@example.edu", "bob@example.edu"],
-        reviewee_idents=["carol@example.edu"],
-    )
-
-    csv_body = (
-        b"ReviewerEmail,RevieweeEmail,IncludeAssignment,"
-        b"AssignmentContext1,AssignmentContext2\n"
-        b"alice@example.edu,carol@example.edu,true,morning,room-A\n"
-        b"bob@example.edu,carol@example.edu,false,,\n"
-    )
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        files={"file": ("manual.csv", csv_body, "text/csv")},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 303
-    rows = list(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).scalars()
-    )
-    assert len(rows) == 2
-    by_reviewer = {r.reviewer.email: r for r in rows}
-    assert by_reviewer["alice@example.edu"].include is True
-    assert by_reviewer["bob@example.edu"].include is False
-    assert all(r.created_by_mode == "manual" for r in rows)
-
-    db.refresh(review_session)
-    assert review_session.assignment_mode == "manual"
-
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "assignments.generated")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
-    assert event.detail["context"]["mode"] == "manual"
-    assert event.detail["counts"]["new"] == 2
-    assert event.detail["context"]["filename"] == "manual.csv"
-
-
-def test_manual_import_blocks_unknown_reviewer(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="m-bad")
-    _seed_roster(
-        client,
-        review_session.id,
-        reviewer_emails=["alice@example.edu"],
-        reviewee_idents=["carol@example.edu"],
-    )
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        files={
-            "file": (
-                "manual.csv",
-                b"ReviewerEmail,RevieweeEmail\nghost@example.edu,carol@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 400
-    assert "Unknown reviewer" in response.text
-    assert (
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).first()
-        is None
-    )
-
-
-def test_non_operator_gets_403_on_manual_import(
-    db: Session,
-    alice: AuthenticatedUser,
-    bob: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    alice_client = make_client(alice)
-    review_session = _make_session(alice_client, db, code="m-403")
-
-    bob_client = make_client(bob)
-    response = bob_client.post(
-        f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        files={
-            "file": (
-                "manual.csv",
-                b"ReviewerEmail,RevieweeEmail\nfoo@example.edu,bar@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    assert response.status_code == 403
-
-
 def test_hub_renders_current_pairs_card_when_assignments_exist(
     client: TestClient, db: Session
 ) -> None:
@@ -512,13 +401,12 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
         files={"file": ("rel.csv", rel_csv.encode(), "text/csv")},
         follow_redirects=False,
     )
-    asgn_csv = (
-        "ReviewerEmail,RevieweeEmail,IncludeAssignment\n"
-        "alice@example.edu,carol@example.edu,yes\n"
-    )
+    # Generate assignments via the rule engine (Full Matrix); the
+    # 1×1 roster yields exactly the one alice→carol pair the rest
+    # of the test asserts on.
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        files={"file": ("a.csv", asgn_csv.encode(), "text/csv")},
+        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
+        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
         follow_redirects=False,
     )
 
@@ -559,81 +447,3 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     assert 'data-col-toggle="rt1"\n                       disabled' not in body
 
 
-def test_manual_setup_page_shows_saved_pair_after_import(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="m-names")
-    reviewer_csv = (
-        "ReviewerName,ReviewerEmail\n"
-        "Alice Example,alice@example.edu\n"
-    )
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
-        files={"file": ("r.csv", reviewer_csv.encode(), "text/csv")},
-        follow_redirects=False,
-    )
-    reviewee_csv = (
-        "RevieweeName,RevieweeEmail\n"
-        "Carol Example,carol@example.edu\n"
-    )
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
-        files={"file": ("e.csv", reviewee_csv.encode(), "text/csv")},
-        follow_redirects=False,
-    )
-
-    save = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        files={
-            "file": (
-                "manual.csv",
-                b"ReviewerEmail,RevieweeEmail\nalice@example.edu,carol@example.edu\n",
-                "text/csv",
-            )
-        },
-        follow_redirects=False,
-    )
-    assert save.status_code == 303
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
-    ).text
-    assert "Alice Example" in body
-    assert "Carol Example" in body
-
-
-def test_manual_save_silently_ignores_pair_and_assignment_context_columns(
-    client: TestClient, db: Session
-) -> None:
-    """15D PR 6b: ``Assignment.context`` retired. The
-    ``PairContext1/2/3`` and ``AssignmentContext1/2/3`` CSV columns
-    on a manual upload are silently ignored — pair_context lives on
-    the relationships table now (uploaded separately), and
-    assignment_context retired entirely."""
-
-    review_session = _make_session(client, db, code="m-context")
-    _seed_roster(
-        client,
-        review_session.id,
-        reviewer_emails=["alice@example.edu"],
-        reviewee_idents=["carol@example.edu"],
-    )
-
-    csv_body = (
-        b"ReviewerEmail,RevieweeEmail,PairContext1,AssignmentContext1\n"
-        b"alice@example.edu,carol@example.edu,room-A,panel-1\n"
-    )
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/manual/import",
-        files={"file": ("manual.csv", csv_body, "text/csv")},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 303
-    assignment = db.execute(
-        select(Assignment).where(Assignment.session_id == review_session.id)
-    ).scalar_one()
-    # The Assignment row exists; the extra CSV columns are dropped
-    # silently. ``context`` no longer exists on the Assignment model.
-    assert not hasattr(assignment, "context")

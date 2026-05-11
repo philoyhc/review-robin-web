@@ -14,12 +14,10 @@ from __future__ import annotations
 from fastapi import (
     APIRouter,
     Depends,
-    File,
     Form,
     HTTPException,
     Query,
     Request,
-    UploadFile,
     status,
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -27,7 +25,6 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.schemas.assignments import AssignmentMode
 from app.services import (
     assignments,
     csv_imports,
@@ -139,77 +136,13 @@ def _render_assignments_hub(
     )
 
 
-@router.post(
-    "/sessions/{session_id}/assignments/manual/import",
-    response_class=HTMLResponse,
-    response_model=None,
-)
-async def assignments_manual_import(
-    request: Request,
-    file: UploadFile = File(...),
-    exclude_self_review: str | None = Form(default=None),
-    confirm_replace: str | None = Form(default=None),
-    acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse | RedirectResponse:
-    """Manual-assignments CSV import. **Dev-only** post-15D — no
-    operator UI surfaces this route. The Operations Assignments page
-    (15D PR 6a) dropped its upload card; the Quick Setup card's
-    legacy slot 3 retired in 15D PR 7a. The route stays accessible
-    for test fixtures and admin tooling that need to drop pre-canned
-    pair tuples into the assignments table without going through the
-    rule engine. ``parse_manual_csv`` carries the same dev-only
-    framing in its docstring.
-
-    Mirrors Segment 16's "dev-only-but-discoverable" stance —
-    documentation flags the path; no runtime gate / 404 for non-dev
-    environments.
-    """
-
-    _require_editable(review_session)
-    content = await file.read()
-    reviewers = assignments.list_reviewers(db, review_session.id)
-    reviewees = assignments.list_reviewees(db, review_session.id)
-    result = assignments.parse_manual_csv(content, reviewers, reviewees)
-    existing = assignments.existing_count(db, review_session.id)
-    needs_confirm = existing > 0 and confirm_replace != "true"
-
-    if result.is_blocked or needs_confirm:
-        return _render_assignments_hub(
-            request, db, review_session, user,
-            issues=result.issues,
-            missing_confirm=needs_confirm and not result.is_blocked,
-            is_blocked=result.is_blocked,
-        )
-
-    rows = result.rows
-    if exclude_self_review == "true":
-        rows = [
-            r for r in rows
-            if r.reviewer_email.casefold() != r.reviewee_identifier.casefold()
-        ]
-
-    if existing > 0:
-        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    pairs, includes = assignments.manual_rows_to_pairs(
-        rows, reviewers, reviewees
-    )
-    assignments.replace_assignments(
-        db,
-        review_session=review_session,
-        user=user,
-        pairs=pairs,
-        mode=AssignmentMode.manual,
-        correlation_id=request_correlation_id(),
-        filename=file.filename,
-        includes=includes,
-    )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+# Manual-CSV assignment upload route retired 2026-05-11 (16A PR 5).
+# The dev-only escape hatch kept on the bet that some real bypass
+# need would surface; nine days of pilot prep later no such need
+# appeared. The rule-based engine + Relationships table cover every
+# realistic operator scenario. Tests previously seeding assignments
+# via this route now use the rule-based generate endpoint with the
+# Full Matrix seed RuleSet.
 
 
 @router.post("/sessions/{session_id}/assignments/delete-all")

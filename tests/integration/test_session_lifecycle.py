@@ -246,17 +246,6 @@ def test_each_mutating_endpoint_returns_409_while_ready(
             },
             {},
         ),
-        (
-            f"/operator/sessions/{sid}/assignments/manual/import",
-            {"confirm_replace": "true"},
-            {
-                "file": (
-                    "m.csv",
-                    b"ReviewerEmail,RevieweeEmail\nrae@example.edu,carol@example.edu\n",
-                    "text/csv",
-                )
-            },
-        ),
         (f"/operator/sessions/{sid}/assignments/delete-all", {"confirm": "true"}, {}),
     ]
     for url, data, files in targets:
