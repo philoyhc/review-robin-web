@@ -105,10 +105,10 @@ def test_sessions_diagnostics_renders_for_sys_admin(
     assert "Sessions Diagnostics" in response.text
     # Sessions table row.
     assert review_session.name in response.text
-    # Per-row actions — Outbox now points at the same Admin URL
-    # with ``?outbox_session_id=N#outbox`` (renders inline below).
+    # Per-row Outbox link points at the child page under the
+    # Sessions Diagnostics tab.
     assert (
-        f'href="/operator/sys-admin/sessions?outbox_session_id={review_session.id}#outbox">Outbox</a>'
+        f'href="/operator/sys-admin/sessions/{review_session.id}/outbox">Outbox</a>'
         in response.text
     )
     assert (
@@ -177,7 +177,7 @@ def test_sessions_diagnostics_lists_every_workspace_session(
     assert alice_session.name in response.text
     assert bob_session.code in response.text  # also check Bob's row
     assert (
-        f'href="/operator/sys-admin/sessions?outbox_session_id={bob_session.id}#outbox">Outbox</a>'
+        f'href="/operator/sys-admin/sessions/{bob_session.id}/outbox">Outbox</a>'
         in response.text
     )
 

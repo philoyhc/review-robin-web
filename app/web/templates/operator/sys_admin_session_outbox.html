@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Outbox — {{ outbox_session.name }} — Admin{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="/operator/sys-admin/sessions">&larr; Back to Sessions Diagnostics</a>
+
+  <h1>Admin</h1>
+
+  {% with current_admin_page = "Sessions" %}
+    {% include "operator/partials/sys_admin_top_nav.html" %}
+  {% endwith %}
+
+  {% include "operator/partials/_sys_admin_outbox.html" %}
+{% endblock %}
