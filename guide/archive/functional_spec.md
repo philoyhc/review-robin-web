@@ -1,6 +1,42 @@
 # Review Robin Web Application — Technology-Neutral Functional Specification
 
-> ## ⚠ Pre-implementation forward-looking spec
+> ## 📦 Retired to archive 2026-05-11
+>
+> This document was a **pre-implementation forward-looking spec**
+> drafted before any segment shipped. By 2026-05-11 the per-page
+> spec set in `spec/` covered every surface this doc anticipated,
+> and `docs/status.md` carried the URL-by-URL ship-state. The
+> doc had aged out of usefulness as a contract — its acceptance
+> criteria, MVP list, and divergence notes all referred to a
+> world that had already shipped (or been deliberately rescoped
+> via segment plans).
+>
+> Retired here for historical / archaeological reference only.
+> **For the canonical functional contract today, read:**
+>
+> - **`docs/status.md`** — ship-state per URL and per audit event.
+> - **`spec/operator_ui_concept.md`** — operator page taxonomy
+>   + per-page contracts.
+> - **`spec/reviewer-surface.md`** — reviewer-facing app.
+> - **`spec/architecture.md`** — domain model, layering,
+>   audit-event detail schema.
+> - **`spec/session_home.md`**, **`spec/setup_pages.md`**,
+>   **`spec/instruments.md`**, **`spec/operations_renew.md`**,
+>   **`spec/quick_setup_card_spec.md`**,
+>   **`spec/rule_based_assignment.md`**,
+>   **`spec/preview_hub.md`**, **`spec/sessions_overview.md`**,
+>   **`spec/settings_inventory.md`** — per-page / per-subsystem
+>   contracts.
+> - **`spec/email_infra_options.md`** — email backend architecture.
+> - **`spec/audience_and_identity_model.md`** — auth posture
+>   + audience model.
+>
+> The original "destination not map" warning, preserved for
+> context, follows below.
+
+---
+
+> ## ⚠ Pre-implementation forward-looking spec (original header)
 >
 > This document was drafted **before any segment shipped** and
 > describes the long-range functional model the system is being

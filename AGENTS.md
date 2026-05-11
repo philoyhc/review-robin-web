@@ -178,7 +178,6 @@ reject it.
 - **`spec/operator_ui_concept.md`** — operator-page surface and cross-page conventions (chrome, setup nav, lock card, layout patterns).
 - **`spec/assumptions.md`** — UI vocabulary (button styles, typography knob, layout defaults).
 - **`spec/architecture.md`** — domain entities, layering, conceptual hierarchy.
-- **`spec/functional_spec.md`** — technology-neutral functional spec.
 - **`spec/session_home.md`** / **`spec/sessions_overview.md`** — per-page specs for Session Home and the sessions lobby.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home (consolidated Submit, slot layout, lock-on-nav).
 - **`spec/setup_pages.md`** — Setup Pages (Reviewers / Reviewees / Assignments / Instruments / Settings) — shared body shape, preview-table column orders, the visibility-toggle pattern.

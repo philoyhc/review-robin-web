@@ -308,7 +308,6 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/visual_style_general.md`** — portable design system.
 - **`spec/visual_style_rrw.md`** — Review-Robin chrome instantiation, including all visual specifics elided here.
 - **`spec/architecture.md`** — domain entities and layering. Reads upstream of this file.
-- **`spec/functional_spec.md`** — technology-neutral functional spec.
 - **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including the Next Action card and lifecycle display-label mapping.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home.
 - **`spec/preview_hub.md`** — Preview hub on the Operations row.
