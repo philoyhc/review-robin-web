@@ -7,16 +7,26 @@ surfaces reachable from the chrome's Setup row:
 |---|---|---|
 | Reviewers | `/operator/sessions/{id}/reviewers` | `session_reviewers.html` |
 | Reviewees | `/operator/sessions/{id}/reviewees` | `session_reviewees.html` |
-| Assignments | `/operator/sessions/{id}/assignments` | `session_assignments.html` |
-| Instruments | `/operator/sessions/{id}/instruments` | `session_instruments.html` |
-| Settings | `/operator/sessions/{id}/edit` | `session_edit.html` |
+| Relationships | `/operator/sessions/{id}/relationships` | `session_relationships.html` |
+| Instruments | `/operator/sessions/{id}/instruments` | `instruments_index.html` |
+| Email Template | `/operator/sessions/{id}/setupinvite` | `session_setupinvite.html` |
 
 Each Setup Page follows the same shell (chrome + Setup row +
 status strip + a body of cards). The Reviewers, Reviewees, and
-Assignments pages additionally render a **preview table** of the
+Relationships pages additionally render a **preview table** of the
 session's current rows that all share a common visibility-toggle
 pattern; this spec covers that shared pattern alongside the
 per-page idiosyncrasies.
+
+**Assignments retired from Setup row in Segment 15D PR 6a.** The
+page moved to the Operations row and is no longer a per-entity
+Setup primitive — pair-level context (formerly the
+`PairContext1/2/3` / `AssignmentContext1/2/3` JSON columns) lives
+on the first-class `relationships` table now, and the Operations
+Assignments page is the materialised-derivative surface where the
+operator runs the rule engine. See `spec/operator_ui_concept.md`
+§5 and `spec/rule_based_assignment.md` §7.1 for the post-15D
+Operations Assignments page contract.
 
 For the cross-page chrome contract (two-row navigation, status
 strip, lock cards, principles P1–P4), see
@@ -35,25 +45,25 @@ Every Setup Page renders, top-to-bottom:
    pills per entity.
 3. **"Fields with data" pill row** — badge per CSV column that has
    at least one populated value (`reviewer_fields_with_data` /
-   `reviewee_fields_with_data` / `assignment_fields_with_data` in
-   `app/services/assignments.py`). Drives operator awareness of
+   `reviewee_fields_with_data` in `app/services/assignments.py`;
+   `relationships.fields_with_data` in
+   `app/services/relationships.py`). Drives operator awareness of
    which optional fields the latest import populated.
 4. **Lifecycle gate cards** (when the session is Activated): a
    `card lock` carrying "The {entity} cannot be modified while the
    session is ongoing. Revert the session to draft if you wish to
    modify anything." with an inline Revert form.
-5. **Body grid** — Upload + Danger Zone cards (and on the
-   Assignments page, the Rule Based card too). Hidden when the
+5. **Body grid** — Upload + Danger Zone cards. Hidden when the
    session is Activated; only the lock card and the preview table
    render in that state.
-6. **Preview table card** — Reviewers / Reviewees / Assignments
-   only. Always renders when the entity is non-empty, regardless
-   of lifecycle state.
+6. **Preview table card** — Reviewers / Reviewees / Relationships.
+   Always renders when the entity is non-empty, regardless of
+   lifecycle state.
 
 ## Preview tables (shared toggle pattern)
 
-The Reviewers, Reviewees, and Assignments preview tables share a
-**visibility-toggle row** that lets the operator hide optional
+The Reviewers, Reviewees, and Relationships preview tables share
+a **visibility-toggle row** that lets the operator hide optional
 columns. The pattern:
 
 - Optional tag / context columns always render in the DOM (so
@@ -74,7 +84,7 @@ columns. The pattern:
   per-page key:
   - Reviewers preview: `rrw-reviewer-tag-visibility`.
   - Reviewees preview: `rrw-reviewee-tag-visibility`.
-  - Assignments preview: `rrw-assignment-col-visibility`.
+  - Relationships preview: `rrw-relationship-tag-visibility`.
 - Stored choice wins over the data-driven default for live
   toggles. Stored "hide" keeps a populated column hidden;
   stored "show" reveals an explicitly-toggled-on column on next
@@ -86,9 +96,9 @@ columns. The pattern:
 
 The pattern is intentionally not extracted into a Jinja macro —
 each page's column shape differs enough (Reviewers has 3 toggles,
-Reviewees has 3, Assignments has 12 grouped) that the inline JS
-+ scoped `<style>` block per template is more legible than a
-macro with a sprawling parameter list.
+Reviewees has 3, Relationships has 3) that the inline JS +
+scoped `<style>` block per template is more legible than a macro
+with a sprawling parameter list.
 
 ## Reviewers page (`session_reviewers.html`)
 
@@ -145,71 +155,80 @@ the current preview rows. Position 3 sits between the identity
 columns and the toggleable tag columns so the canonical column
 order is consistent across reviewers / reviewees.
 
-## Assignments page (`session_assignments.html`)
+## Relationships page (`session_relationships.html`)
+
+The home for **pair-level context** — the `relationships` table
+seeded in Segment 13E PR 2 and lit up by this Setup page in
+Segment 15D PR 2. One row per `(reviewer, reviewee)` pair within
+a session, carrying three `tag_N` slots consumed by the rule
+engine via the `pair_context.tag_N` predicate grammar (15D PR 3
+/ PR 4) plus a per-row `active` / `inactive` status.
 
 ### Body grid (when not Activated)
 
-Two columns:
+Same two-column shape as Reviewers / Reviewees — Upload card on
+the left, Danger Zone on the right. CSV header copy lists
+`ReviewerEmail`, `RevieweeEmail` required; `PairContextTag1..3`,
+`Status` (`active` / `inactive`) optional. Defaults to `active`
+when `Status` is omitted. POSTs to
+`/operator/sessions/{id}/relationships/import` via
+`save_relationships(...)`.
 
-- **Left:** `Rule Based Assignment` card (`partials/_rule_based_card.html`).
-  RuleSet dropdown + "Generate" submit, plus an inline link to
-  the Rule Builder page. The card stays at its natural height —
-  no alignment with the right column's bottom.
-- **Right:**
-  - `Upload Manual Assignment` card (top). Required CSV columns
-    `ReviewerEmail`, `RevieweeEmail`; optional `IncludeAssignment`,
-    `PairContext1/2/3`, `AssignmentContext1/2/3`. Carries an
-    `Exclude self-review` checkbox (default `checked`) and a
-    confirm-replace checkbox when the session already has
-    assignments.
-  - `Danger Zone` card (just below Upload), only rendered when at
-    least one assignment exists.
+### Stats card
 
-The `.bottom-grid` wrapper uses `align-items: start`, so the right
-column doesn't stretch to match the (typically taller) Rule Based
-card.
+Single-line counts card above the body grid:
 
-### Preview table — "Current pairs"
+> Number of pairwise relationships: **{pill}** · Fields with data:
+> {pill, pill, …}
 
-15 columns total, in canonical left-to-right order:
+Mirrors the Reviewers / Reviewees stats card shape (Segment 15
+post-cleanup polish #762 unified the three pages on this
+treatment). Fields-with-data labels come from
+`relationships.fields_with_data(...)` in `app/services/relationships.py`.
 
-| # | Column | Toggle slot | Header label |
+### Preview table
+
+| # | Column | Toggle? | Notes |
 |---|---|---|---|
-| 1 | Reviewer (`name · email`) | — | `Reviewer` |
-| 2 | Reviewer Tag1 | `rt1` | `Tag1` |
-| 3 | Reviewer Tag2 | `rt2` | `Tag2` |
-| 4 | Reviewer Tag3 | `rt3` | `Tag3` |
-| 5 | Reviewee (`name · email`) | — | `Reviewee` |
-| 6 | Reviewee Tag1 | `et1` | `Tag1` |
-| 7 | Reviewee Tag2 | `et2` | `Tag2` |
-| 8 | Reviewee Tag3 | `et3` | `Tag3` |
-| 9 | Pair context 1 | `p1` | `Pair1` |
-| 10 | Pair context 2 | `p2` | `Pair2` |
-| 11 | Pair context 3 | `p3` | `Pair3` |
-| 12 | Assignment context 1 | `a1` | `Assign1` |
-| 13 | Assignment context 2 | `a2` | `Assign2` |
-| 14 | Assignment context 3 | `a3` | `Assign3` |
-| 15 | Include | — | `Include` (renders `yes` / `no`) |
+| 1 | Reviewer | — | `<a href=…>name</a> · <code>email</code>` |
+| 2 | Reviewee | — | `<a href=…>name</a> · <code>email_or_identifier</code>` |
+| 3 | Tag1 | ✓ | `data-tag-toggle="1"` / `class="tag-col tag-col-1"` |
+| 4 | Tag2 | ✓ | `data-tag-toggle="2"` / `class="tag-col tag-col-2"` |
+| 5 | Tag3 | ✓ | `data-tag-toggle="3"` / `class="tag-col tag-col-3"` |
+| 6 | Status | — | `<span class="pill pill-info\|pill-empty">active\|inactive</span>` per the canonical pill treatment (post-15 cleanup polish #768) |
 
-The Reviewer and Reviewee identity cells render the name and email
-on the same line separated by a middle dot (`Alice · alice@example.edu`),
-with the email wrapped in `<code>`. The 12 toggleable columns
-(Reviewer Tag1..3, Reviewee Tag1..3, Pair1..3, Assign1..3) are
-grouped into four right-flushed clusters in the toggle row, each
-prefixed with a muted group label (`Reviewer:`, `Reviewee:`,
-`Pair:`, `Assignment:`).
+Toggle row sits right-flushed above the table (`Tag1`, `Tag2`,
+`Tag3` checkboxes); same default-state and persistence rules as
+Reviewers / Reviewees per the shared section above.
+
+The Status column is *not* toggleable — every relationship has a
+status by design, and the pill treatment makes the value visually
+distinct without needing an explicit hide affordance.
+
+### Round-trip with the Relationships extract
+
+The CSV column shape here is the inverse of
+`app/services/extracts/relationships_extract.py` (8-column wide
+CSV: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`,
+`Status` — same six columns the importer accepts). Round-trip is
+byte-stable on the export's own output. The Extract Data card on
+Session Home carries the corresponding Download button.
 
 ## Out of scope for these pages
 
 - **Per-record inline editing.** Setup pages today are import +
-  preview only; per-record editing is deferred. The Edit buttons
-  on Reviewers / Reviewees pages render disabled with a
-  "Inline editing — coming soon" tooltip.
+  preview only; per-record editing is deferred to Segment 15F
+  (bundled with per-row Inactivate / Reactivate affordances).
+  The Edit buttons on Reviewers / Reviewees / Relationships
+  pages render disabled with an "Inline editing — coming soon"
+  tooltip.
 - **Cross-entity validation.** Surfaced via the dedicated Validate
   page; not rendered inline on these pages.
 - **Sort or filter on preview tables.** Reviewer-side sort is
   Segment 13B's concern (see `spec/sort_by_reviewee.md`); operator
   preview rows render in primary-key order today.
+- **Assignments generation.** Moved to the Operations row in
+  Segment 15D PR 6a — see `spec/operator_ui_concept.md` §5.
 
 ## Implementation pointers
 
@@ -218,9 +237,10 @@ prefixed with a muted group label (`Reviewer:`, `Reviewee:`,
   own `STORAGE_KEY` and CSS class names so they don't collide.
 - Per-entity row counts and "fields with data" pill labels come
   from the helpers in `app/services/assignments.py`
-  (`reviewer_fields_with_data`, `reviewee_fields_with_data`,
-  `assignment_fields_with_data`) — keep them in sync with any
-  new optional column added to the model + CSV importer.
+  (`reviewer_fields_with_data`, `reviewee_fields_with_data`) and
+  `app/services/relationships.py`
+  (`fields_with_data`) — keep them in sync with any new optional
+  column added to the model + CSV importer.
 - Lifecycle gating is the existing pattern: a `card lock` at the
   top of the body when `is_ready`, and the Upload + Danger Zone
   cards conditionally rendered behind `{% if not is_ready %}`. The
