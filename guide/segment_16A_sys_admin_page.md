@@ -9,12 +9,15 @@
 > `guide/segment_16C_richer_audit_views.md`).
 
 **Status:** Planning — stub created 2026-05-10, split
-2026-05-11, sized into a four-PR ladder 2026-05-11.
-**Sizing:** 4 PRs (each small + reviewable; PRs 2-4 land
+2026-05-11, sized into a six-PR ladder 2026-05-11 (revised
+from a four-PR ladder after the 2026-05-11 access-model
+discussion locked the strict-allowlist Option C posture and
+absorbed the workspace user-role-management surface from 16B).
+**Sizing:** 6 PRs (each small + reviewable; PRs 2-6 land
 sequentially on PR 1 and can ship one per day).
-**Depends on:** none. Lands cleanly any time after the
-2026-05-10 locked block (`13E → 12C → 15D → 12A-3`)
-shipped.
+**Depends on:** **13F PRs 4 + 5** for the `users.is_sys_admin`
+and `users.is_operator` columns the gates read. PR 4 shipped
+2026-05-11; PR 5 pending.
 
 ## Goal
 
@@ -128,18 +131,79 @@ assignment upload). A dedicated Sys Admin page:
 
 ## PR ladder
 
-### PR 1 — Sys-admin gate + chrome scaffold (~250 LOC)
+### PR 1 — Operator-allowlist gate + bootstrap reads (~300 LOC)
 
-**Why first.** Bedrock. Every other PR in 16A (and the
-whole of 16C) sits behind this gate; nothing else can land
-until the chrome + dependency exist.
+**Why first.** This is the foundational access gate for the
+whole app under the Option C posture. Once it lands, only
+admitted operators can hit operator routes — every other
+16A PR (and every operator surface in the wider app) sits
+behind it.
 
 **Ships.**
 
-- `app/config.py` gains `sys_admin_emails: list[str]`
-  (parsed from a comma-separated `SYS_ADMIN_EMAILS` env
-  var) — see "Security / access" below for the Option C
-  rationale.
+- `app/config.py` gains:
+  - `operator_emails: list[str]` parsed from a new
+    `OPERATOR_EMAILS` env var (first-sign-in bootstrap source
+    for `is_operator`).
+  - `sys_admin_emails: list[str]` parsed from the existing
+    `SYS_ADMIN_EMAILS` env var (first-sign-in bootstrap source
+    for `is_sys_admin`; the column shipped inert in 13F PR 4).
+- `app/web/deps.py::get_or_create_user` reads both env vars on
+  user-create. On first sign-in, sets `is_operator=True` if
+  the email is in `OPERATOR_EMAILS`; sets `is_sys_admin=True`
+  if the email is in `SYS_ADMIN_EMAILS`. Both flags persist
+  after that — removing an email from either env var does
+  **not** auto-revoke (revocation is via 16A PR 6 UI).
+- New `app/web/deps.py::require_operator = Depends(…)` —
+  passes if `current_user.is_operator OR current_user.is_sys_admin`
+  (sys-admin implies operator); otherwise returns a redirect
+  to the new "Request access" landing page rather than a raw
+  403 (gentler UX for the misrouted-but-legitimate
+  arrival).
+- New "Request access" landing page at `/request-access` —
+  unauthenticated routes already 401; this page is for the
+  "signed in via Easy Auth but not on the operator allowlist"
+  case. Shows the operator's email, a configurable contact
+  message (env var `OPERATOR_CONTACT_EMAIL` or copy in the
+  template), and a Sign-out affordance.
+- Every existing operator route picks up
+  `Depends(require_operator)`. The change is mechanical —
+  `_shared.py` exports the dependency, every slice imports
+  it. `require_session_operator` continues to compose on top
+  (operator AND session-operator-member).
+- `ALLOW_FAKE_AUTH=true` honours two new toggles
+  (`FAKE_AUTH_OPERATOR=true` / `FAKE_AUTH_SYS_ADMIN=true`)
+  so the agent's sandbox + local dev exercise the gates
+  without env-var coordination.
+
+**Tests.**
+
+- Non-operator signs in → redirect to `/request-access`.
+- Email in `OPERATOR_EMAILS` → first sign-in flips
+  `is_operator=True`; persists across sessions.
+- Email in `SYS_ADMIN_EMAILS` → first sign-in flips both
+  `is_sys_admin=True` and (implicitly) operator access via
+  the OR check.
+- Operator `is_operator=False` after revocation → redirected
+  even if previously admitted.
+- Sys-admin retains operator access even when `is_operator=False`
+  (the OR gate is the load-bearing predicate).
+- `FAKE_AUTH_OPERATOR=true` injection in dev mode.
+
+**Open question for scoping.** The "Request access" page
+copy — generic ("Contact your administrator") vs deployment-
+configurable. Lean configurable via `OPERATOR_CONTACT_EMAIL`
+env var; render a `mailto:` link if set, generic copy if
+unset.
+
+### PR 2 — Sys-admin gate + chrome scaffold (~250 LOC)
+
+**Why second.** Layers on PR 1's operator-gate foundation
+with the higher-privilege sys-admin gate. The Sys Admin
+chrome appears only for sys-admins.
+
+**Ships.**
+
 - `app/web/deps.py` gains `require_sys_admin = Depends(…)`
   returning the `User` on hit; 403s with `"sys_admin
   required"` detail on miss. Plus a non-failing
@@ -151,13 +215,10 @@ until the chrome + dependency exist.
 - New empty-shell route `/operator/sessions/{id}/sys-admin`
   in a new `routes_operator/_sys_admin.py` slice. Renders
   the two-row session chrome + a "Sys Admin" H1 + an empty
-  body that PRs 2-4 fill. Breadcrumbs via
+  body that PRs 3-6 fill. Breadcrumbs via
   `breadcrumbs.operator_session_child(label="Sys Admin")`.
 - Chrome partial `session_top_nav.html` gains the Sys
   Admin tab — rendered only when `is_sys_admin` is true.
-- `ALLOW_FAKE_AUTH=true` honours a new
-  `FAKE_AUTH_SYS_ADMIN=true` toggle so the agent's
-  sandbox + local dev can exercise the gate.
 
 **Tests.**
 
@@ -167,16 +228,17 @@ until the chrome + dependency exist.
   conditional on the flag (one test of each).
 - `require_sys_admin` returns the `User` on hit;
   signals 403 on miss.
-- `FAKE_AUTH_SYS_ADMIN=true` injection in dev mode.
 
 **Open question for scoping.** Per-session URL
 (`/operator/sessions/{id}/sys-admin`) vs workspace-level
-(`/operator/sys-admin`). The three anchor surfaces are all
-session-scoped today; lean per-session. Revisit once 16C
-PR 5 (cross-session audit search) takes a serious look at
-workspace-level.
+(`/operator/sys-admin`). PRs 3-5 are session-scoped; PR 6
+(workspace user list) is workspace-scoped. Lean
+**per-session for PRs 3-5 + workspace-level for PR 6** —
+two URLs, same chrome partial. Revisit once 16C PR 5
+(cross-session audit search) takes a serious look at
+workspace-level too.
 
-### PR 2 — Outbox moves under Sys Admin (~150 LOC)
+### PR 3 — Outbox moves under Sys Admin (~150 LOC)
 
 **Ships.**
 
@@ -201,7 +263,7 @@ workspace-level.
 - The "View outbox" button is no longer present on the
   Manage Invitations page.
 
-### PR 3 — Audit log download tile (~80 LOC)
+### PR 4 — Audit log download tile (~80 LOC)
 
 **Ships.**
 
@@ -223,12 +285,14 @@ workspace-level.
   (regression covered by 12B's existing tests; assert no
   drift).
 
-### PR 4 — Manual assignment upload (~250 LOC + 1 audit event)
+### PR 5 — Manual assignment upload (~250 LOC + 1 audit event)
 
-**Why last.** It's the only mutating Sys Admin surface in
-16A and the highest-risk action ("I can wipe pairings");
-landing it last lets the chrome + read-only surfaces stabilise
-first.
+**Why this slot.** Highest-risk mutating action ("I can wipe
+pairings"); landing it after the chrome + read-only
+relocations lets the gate behaviour stabilise first. Before
+PR 6 because PR 6 is workspace-scoped and benefits from
+PR 5's per-session-mutating-action precedent (confirmation
+checkbox, audit envelope, etc.).
 
 **Ships.**
 
@@ -263,30 +327,121 @@ first.
 - `EVENT_SCHEMAS` strict-mode gate passes for the new
   event type.
 
+### PR 6 — Workspace user list + admit/revoke + promote/demote (~400 LOC + 4 audit events)
+
+**Why last.** First workspace-level (rather than per-session)
+Sys Admin surface, so it's the biggest UX swing in 16A.
+Lands after PRs 1-5 so the per-session chrome + gates are
+proven before introducing a sibling workspace URL.
+
+**Ships.**
+
+- New workspace-level route `/operator/sys-admin/users`
+  behind `Depends(require_sys_admin)`. Renders the full
+  workspace user table.
+- New read service `users.list_workspace_users(db) ->
+  list[WorkspaceUserRow]` returning per-row email / display
+  name / first sign-in / `is_operator` / `is_sys_admin` /
+  count of session-operator rows. Pagination keyset on
+  `users.id DESC`; default page size 50.
+- View adapter `views.build_workspace_user_rows(rows) ->
+  WorkspaceUserListContext`.
+- Per-row toggle forms (one per flag column):
+  - `POST /operator/sys-admin/users/{user_id}/admit` →
+    `is_operator=True`.
+  - `POST /operator/sys-admin/users/{user_id}/revoke` →
+    `is_operator=False`.
+  - `POST /operator/sys-admin/users/{user_id}/promote` →
+    `is_sys_admin=True`.
+  - `POST /operator/sys-admin/users/{user_id}/demote` →
+    `is_sys_admin=False`.
+- **Guards.** Last-admin-demote guard refuses if the target
+  is the only sys-admin (incl. self-demote-when-sole-admin).
+  Revoking operator status from yourself is allowed but
+  immediately drops you off the Sys Admin chrome on the next
+  request (since `require_operator` no longer passes).
+- **Confirmation.** Promote / Demote need an explicit
+  checkbox ("I'm promoting <email> to sys-admin" /
+  symmetric); Admit / Revoke don't (one-click toggles match
+  Entra's typical access-grant pattern).
+- New audit events, registered in `EVENT_SCHEMAS` per the
+  canonical 11K envelope:
+  - `workspace.operator_admitted` — `refs.target_user_id`,
+    `changes.is_operator: [False, True]`.
+  - `workspace.operator_revoked` — symmetric.
+  - `sys_admin.role_promoted` — `refs.target_user_id`,
+    `changes.is_sys_admin: [False, True]`.
+  - `sys_admin.role_demoted` — symmetric.
+- Chrome partial picks up a "Sys Admin · Users" sub-link or
+  sibling chrome row pointing at the workspace URL. Locks
+  the "per-session vs workspace-level chrome" question
+  raised in PR 2's open questions.
+
+**Tests.**
+
+- Non-admin GET `/operator/sys-admin/users` → 403.
+- Admin GET → renders the table with the seeded fixture
+  users.
+- Admit a user → flag flips + audit event emitted with
+  correct envelope.
+- Revoke a user → flag flips back + audit event emitted.
+- Revoke an operator who's currently on N sessions → flag
+  flips; their `session_operators` rows stay in place; on
+  re-admit, they regain access without re-adding to
+  sessions.
+- Promote → flag flips + audit event.
+- Demote → flag flips + audit event.
+- Last-admin-demote guard → 409.
+- Missing confirmation checkbox on promote → 400.
+- `EVENT_SCHEMAS` strict-mode gate passes for the four new
+  event types.
+
+**Open questions for scoping.**
+
+- Pagination shape for very large workspaces — keyset on
+  `id DESC` is fine to start; add a filter strip
+  (email-substring search) if pilot operators ask.
+- Whether to surface the bootstrap source of each flag
+  ("admitted via env var" vs "admitted by Alice on 2026-…").
+  The audit log carries the actor; the workspace table can
+  cross-reference via a small "Source" column. Defer to a
+  follow-on if it expands PR 6 materially.
+
 ## Out of scope
 
 - New service code for outbox or manual upload —
   both already exist.
 - Operator-facing UX changes to the rule-based
   workflow — those live in 15D and 12A-3.
-- **User-role management UI** — promoting other
-  operators to sys-admin, managing per-session
-  `SessionOperator` rows, role delegation among
-  multiple operators. Lives in **16B**.
+- **Per-session operator membership UI** (per-session
+  Owners card on Session Home, owner add/remove from the
+  admitted pool). Lives in **16B**. 16A admits people to
+  the workspace; 16B is how owners on a specific session
+  pick from the admitted pool.
 - **In-app audit viewer beyond the CSV download** —
   richer filters / search / drill-in / per-session
   timeline. Lives in **16C**.
 
-## Security / access — proposal (decide before PR scoping)
+## Security / access — locked posture (2026-05-11)
 
-The Sys Admin surfaces sit above the everyday operator
-permission set (every authenticated operator is already
-trusted with their own session's data via
-`require_session_operator`). The question is **which
-authenticated operators get the additional "I can break
-things deliberately" power** that Manual assignment
-upload, audit log download, and future SMTP test-send
-imply.
+Two gates, both backed by persisted Boolean flags on `users`:
+
+- **`is_operator`** (the workspace allowlist; 13F PR 5).
+  Required to hit any operator route. Bootstrapped from a
+  new `OPERATOR_EMAILS` env var on first-sign-in; managed
+  in-app via PR 6.
+- **`is_sys_admin`** (the elevated tier; 13F PR 4 — shipped).
+  Required to hit Sys Admin routes (PR 2's chrome + PRs 3-6's
+  surfaces). Bootstrapped from the existing `SYS_ADMIN_EMAILS`
+  env var on first-sign-in; managed in-app via PR 6.
+  **Sys-admin implies operator** — the read-path predicate
+  is `is_operator OR is_sys_admin`.
+
+This is **Option C from the original sketch** (strict
+allowlist) — locked 2026-05-11 because the app is a citizen
+project with no tech-support promise to broader user
+populations. Stricter than open or tenant-restricted; the
+explicit admit step is the load-bearing safety control.
 
 ### Threat model
 
@@ -300,137 +455,90 @@ imply.
   correlation IDs / actor emails / lifecycle history;
   Outbox surfaces queued email bodies (incl. invite
   tokens pre-send).
+- *Unwanted access* — anyone Easy Auth admits getting
+  unfettered operator rights. **Mitigated by Option C:**
+  Easy Auth admits → app rejects with "Request access"
+  page → sys-admin reviews → flips `is_operator=True` via
+  PR 6.
 
 Risk per surface:
 
-| Surface | Risk | Mitigation lean |
+| Surface | Risk | Mitigation |
 |---|---|---|
-| Outbox (read-only) | Low | Authz gate is plenty |
-| Audit log download | Low–medium | Authz gate + per-download audit event (already emitted as `session.audit_log_extracted` by 12B PR 1) |
-| Manual assignment upload | **High** (writes, bypasses rules) | Authz gate + confirmation + audit |
-| Future SMTP test-send | Medium | Authz gate + audit |
+| Operator-facing surfaces (per-session) | Low–medium | `require_operator` gate (PR 1) on top of per-session `require_session_operator` |
+| Outbox (read-only) | Low | `require_sys_admin` gate |
+| Audit log download | Low–medium | `require_sys_admin` gate + per-download audit event (already emitted as `session.audit_log_extracted` by 12B PR 1) |
+| Manual assignment upload | **High** (writes, bypasses rules) | `require_sys_admin` gate + confirmation + audit |
+| Workspace user toggles (PR 6) | **High** (grants / revokes access) | `require_sys_admin` gate + confirmation on promote / demote + last-admin-demote guard + audit |
+| Future SMTP test-send | Medium | `require_sys_admin` gate + audit |
 
-### Defence in depth (any chosen option below should layer all four)
+### Defence in depth
 
 1. **Authentication** — Entra Easy Auth (already
    enforced; nothing new).
-2. **Authorization** — `require_sys_admin` FastAPI
-   dependency that 403s non-admins.
-3. **UI gating** — Sys Admin chrome tab / link only
-   renders when authorized; no leaked navigation for
-   non-admins (avoids the "what's that I can't click"
-   discoverability problem).
-4. **Audit + confirmation** — every mutating Sys Admin
+2. **Authorization (operator)** — `require_operator`
+   dependency (PR 1). 403-or-redirect to "Request access"
+   landing page on miss.
+3. **Authorization (sys-admin)** — `require_sys_admin`
+   dependency (PR 2). 403s on miss; layers on top of
+   `require_operator` (sys-admin implies operator).
+4. **UI gating** — Sys Admin chrome tab renders only when
+   `is_sys_admin`; the workspace user list link renders
+   only when `is_sys_admin`; non-admins never see
+   navigation they can't use.
+5. **Audit + confirmation** — every mutating Sys Admin
    action writes an `audit_event` with `actor_user_id`;
-   destructive actions (manual upload) need an explicit
-   "I'm overriding the rule engine" checkbox before
-   submit.
+   high-risk actions (Manual upload; Promote / Demote)
+   need an explicit confirmation checkbox before submit.
 
-### Authorization options
+### Bootstrap UX
 
-**A. Entra app role (`RR_SysAdmin`).** Define an app
-role in the Entra app registration; assign it to
-specific users in the directory. Easy Auth surfaces the
-`roles` claim on `X-MS-CLIENT-PRINCIPAL`;
-`require_sys_admin` checks for `RR_SysAdmin ∈ roles`.
-*Pros:* standard pattern, scales, no new app code beyond
-the dependency, role assignment lives in the directory
-where it belongs. *Cons:* one-time Entra app-role
-registration + per-user assignment; local dev needs
-`ALLOW_FAKE_AUTH` to inject a synthetic role
-(`FAKE_AUTH_SYS_ADMIN=true`).
+First-time deployment puts both env vars in App Service
+config:
 
-**B. Per-user `users.is_sys_admin` boolean.** New
-column, default False, manageable via a (yet-to-build)
-Sys Admin promotion UI + bootstrapped from a
-`SYS_ADMIN_EMAILS` env var on user-create. *Pros:*
-self-contained, no Entra coordination, can grow into a
-richer per-user permission story. *Cons:* adds a second
-source of truth alongside Entra; bootstrap needs care;
-manageable only via env or UI we haven't built.
+```
+OPERATOR_EMAILS=alice@example.edu,bob@example.edu,carol@example.edu
+SYS_ADMIN_EMAILS=alice@example.edu
+```
 
-**C. Env-allowlist (`SYS_ADMIN_EMAILS=alice@…,bob@…`).**
-`require_sys_admin` checks `current_user.email in
-settings.sys_admin_emails`. *Pros:* simplest possible —
-no schema, no Entra coordination; deployment-time
-toggle. *Cons:* redeploy to add / remove; doesn't scale
-past ~5 admins; no audit trail of who's an admin (the
-env var is the trail).
+On each principal's first sign-in, `get_or_create_user`
+flips the matching flags. After that, the persisted columns
+are authoritative — removing an email from the env var does
+**not** auto-revoke; revocation goes through PR 6's UI.
 
-**D. Shared secret / "magic URL".** Single token in
-env, operator must supply it. *Reject* — no per-user
-accountability; embarrassing security hygiene.
+A signed-in person who isn't on either env var lands on the
+"Request access" page; the page tells them which sys-admin
+to contact (configurable via `OPERATOR_CONTACT_EMAIL` env
+var).
 
-### Recommendation (not yet decided)
+### Audit-event registrations
 
-**Ship Segment 16A with Option C (env allowlist) + the
-four defence-in-depth layers. Plan migration to Option
-A (Entra app role) when operator scale or org policy
-demands it — likely Segment 14A (production hardening).**
+- `sys_admin.manual_assignments_uploaded` (PR 5; `counts`
+  envelope).
+- `session.audit_log_extracted` — already shipped by
+  12B PR 1; the event_type name stays the same after the
+  surface moves under Sys Admin chrome (the *event* is a
+  session-scoped extract; the *route* is sys-admin-scoped).
+- `workspace.operator_admitted` / `.operator_revoked` (PR 6;
+  `changes` envelope on `is_operator`).
+- `sys_admin.role_promoted` / `.role_demoted` (PR 6;
+  `changes` envelope on `is_sys_admin`).
+- `sys_admin.outbox_viewed` — optional, read-only; skip if
+  it spams the log.
 
-Reasoning: today's operator population is small (a
-handful, all known to the deployer); Option C covers it
-with one env var + ~10 lines of code. Option A is the
-right long-term home but pulls in Entra app-registration
-coordination that's more work than Segment 16A itself.
-Option B (per-user flag) is the tempting middle path
-but overlaps with Entra without replacing it — better
-to skip the half-measure and migrate C → A directly.
+### Open questions for scoping
 
-If Option B is later chosen as the persistent home for
-sys-admin flags, it naturally cohabits with **16B**'s
-per-operator role table — revisit the option at
-that time rather than now.
-
-### Concrete shape if Option C is chosen
-
-- `app/config.py` gains `sys_admin_emails: list[str]`
-  (parsed from comma-separated env var).
-- `app/web/deps.py` gains `require_sys_admin = Depends(…)`.
-  Returns the `User` on hit; 403s with `"sys_admin
-  required"` detail on miss.
-- Sys Admin routes declare `_user: User =
-  Depends(require_sys_admin)` instead of
-  `get_or_create_user`.
-- Chrome partial renders the Sys Admin tab conditionally
-  on a `request.state.is_sys_admin` flag set by
-  middleware (or computed in the view layer).
-- `ALLOW_FAKE_AUTH=true` honours a new
-  `FAKE_AUTH_SYS_ADMIN=true` toggle so local dev can
-  exercise the gate.
-- Audit-event registrations on the mutating Sys Admin
-  surfaces:
-  - `sys_admin.manual_assignments_uploaded` (`counts`
-    envelope).
-  - `session.audit_log_extracted` — already shipped by
-    12B PR 1; consider keeping the event_type name even
-    after the surface moves under Sys Admin chrome (the
-    *event* is a session-scoped extract; the *route* is
-    sys-admin-scoped).
-  - `sys_admin.outbox_viewed` — optional, read-only;
-    skip if it spams the log.
-- Tests: per-route 403 for non-admin, 200 for admin,
-  audit emission on mutating actions, chrome rendering
-  conditional on the flag.
-
-### Open questions / decisions deferred
-
-- Option A vs C for the MVP? — C recommended; A is the
-  next-step upgrade.
-- Sys Admin chrome **per-session** (lives at
-  `/operator/sessions/{id}/sys-admin`, scoped to that
-  session) or **workspace-level** (lives at
-  `/operator/sys-admin`, spans all sessions)? The three
-  anchor surfaces are all per-session today; a
-  workspace-level chrome would need adapter work
-  per-surface (Outbox + Manual upload + Audit log all
-  take a session in their existing routes).
-- Destructive-action confirmation shape — single
-  checkbox (matches the existing Quick Setup
-  replace-confirmation pattern) or two-step "type the
-  session code" (GitHub-repo-delete style)?
+- Destructive-action confirmation shape — single checkbox
+  (matches the existing Quick Setup replace-confirmation
+  pattern) or two-step "type the session code"
+  (GitHub-repo-delete style)? Lean single checkbox for PR 5;
+  consider escalating to type-the-email for PR 6's Revoke /
+  Demote.
 - Should `sys_admin.outbox_viewed` exist, or is read-only
   view too low-signal to audit?
+- "Request access" page contact copy — generic vs
+  deployment-configurable. Lean configurable via
+  `OPERATOR_CONTACT_EMAIL` env var.
 
 ## Working notes / open questions
 

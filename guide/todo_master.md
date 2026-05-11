@@ -426,21 +426,29 @@ the dev-only manual assignment upload — and unlocks 16B
   trip a CSV to fix one name or toggle one status.
   **Plan:** `guide/segment_15F_enhanced_setup_pages.md`.
 
-- **16A — Sys Admin page + admin user role** *(stub created
-  2026-05-10; carved from original Segment 16 on 2026-05-11)*.
-  Home for operator-internal / dev-only surfaces that
-  exist today but lack a dedicated chrome surface, plus a
-  few that retired from operator-facing routes under the
-  13E / 12C / 15D / 12A-3 block and will land here. Gates
-  access behind a new sys-admin role (Option C env-allowlist
-  recommended for MVP).
+- **16A — Sys Admin page + workspace user/role management**
+  *(stub created 2026-05-10; carved from original Segment 16
+  on 2026-05-11; resized to six PRs on 2026-05-11 after the
+  strict-allowlist access-model decision)*. Six-PR ladder:
+  PR 1 operator-allowlist gate + "Request access" landing
+  page (reads 13F PR 5's `users.is_operator`); PR 2 sys-admin
+  chrome scaffold; PRs 3-5 anchor items (Outbox relocation,
+  audit log download tile, manual assignment upload); PR 6
+  workspace user list with per-row Admit/Revoke +
+  Promote/Demote toggles. Workspace surface absorbed from
+  what was 16B PR 3.
   **Plan:** `guide/segment_16A_sys_admin_page.md`.
 
-- **16B — Role delegation among operators** *(stub created
-  2026-05-11)*. Per-session `SessionOperator` membership UI
-  + (conditional on 16A's auth choice) sys-admin promotion
-  UI. Closes the §22 acceptance criterion "Role delegation
-  among multiple operators".
+- **16B — Per-session owner delegation** *(stub created
+  2026-05-11; resized 2026-05-11 to drop the workspace
+  promote/demote PR — that lives in 16A PR 6 now)*. Two MVP
+  PRs: service helpers (`permissions.add_owner` /
+  `remove_owner` + `session.owner_added` / `.owner_removed`
+  audit events) and the Session-Home Session-owners card
+  with a typeahead picker over the admitted-operator pool
+  (`users WHERE is_operator OR is_sys_admin`). Plus one
+  post-MVP PR for richer per-session role granularity
+  (`"manager"` and beyond).
   **Plan:** `guide/segment_16B_role_delegation.md`.
 
 - **16C — Richer audit views** *(stub created 2026-05-11)*.
