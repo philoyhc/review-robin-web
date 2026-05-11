@@ -3,6 +3,40 @@
 {% block title %}Audit log — {{ audit_session.name }} — Admin{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
 
+{% block extra_head %}
+  <style>
+    /* Audit-log table — constrain column widths so the JSON
+       detail cell wraps rather than horizontally bloating the
+       table. PR 3 will replace the raw JSON with a per-shape
+       pretty-printer + per-row expander; until then, this is
+       the cheap fix. */
+    body.ui-v2 .audit-log-table {
+      table-layout: fixed;
+      width: 100%;
+    }
+    body.ui-v2 .audit-log-table th,
+    body.ui-v2 .audit-log-table td {
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+    body.ui-v2 .audit-log-table .col-event { width: 14%; }
+    body.ui-v2 .audit-log-table .col-severity { width: 7%; }
+    body.ui-v2 .audit-log-table .col-summary { width: 22%; }
+    body.ui-v2 .audit-log-table .col-actor { width: 14%; }
+    body.ui-v2 .audit-log-table .col-correlation { width: 11%; }
+    body.ui-v2 .audit-log-table .col-when { width: 12%; }
+    body.ui-v2 .audit-log-table .col-detail { width: 20%; }
+    body.ui-v2 .audit-log-table .col-detail code {
+      display: inline-block;
+      max-width: 100%;
+      font-size: 0.85em;
+    }
+    body.ui-v2 .audit-log-table .col-correlation code {
+      font-size: 0.85em;
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
   <a class="back-link" href="/operator/sys-admin/sessions">&larr; Back to Sessions Diagnostics</a>
 
@@ -78,27 +112,27 @@
     </form>
 
     {% if audit_log.rows %}
-      <table>
+      <table class="audit-log-table">
         <tr>
-          <th>Event</th>
-          <th>Severity</th>
-          <th>Summary</th>
-          <th>Actor</th>
-          <th>Correlation</th>
-          <th>When</th>
-          <th>Detail</th>
+          <th class="col-event">Event</th>
+          <th class="col-severity">Severity</th>
+          <th class="col-summary">Summary</th>
+          <th class="col-actor">Actor</th>
+          <th class="col-correlation">Correlation</th>
+          <th class="col-when">When</th>
+          <th class="col-detail">Detail</th>
         </tr>
         {% for row in audit_log.rows %}
           <tr>
-            <td><code>{{ row.event_type }}</code></td>
-            <td>
+            <td class="col-event"><code>{{ row.event_type }}</code></td>
+            <td class="col-severity">
               <span class="pill pill-{{ row.severity }}">{{ row.severity }}</span>
             </td>
-            <td>{{ row.summary }}</td>
-            <td>{{ row.actor_email or "—" }}</td>
-            <td>{% if row.correlation_id %}<code>{{ row.correlation_id }}</code>{% else %}—{% endif %}</td>
-            <td>{{ row.created_at_iso }}</td>
-            <td>
+            <td class="col-summary">{{ row.summary }}</td>
+            <td class="col-actor">{{ row.actor_email or "—" }}</td>
+            <td class="col-correlation">{% if row.correlation_id %}<code>{{ row.correlation_id }}</code>{% else %}—{% endif %}</td>
+            <td class="col-when">{{ row.created_at_iso }}</td>
+            <td class="col-detail">
               {% if row.detail_json %}
                 <code>{{ row.detail_json }}</code>
               {% else %}—{% endif %}

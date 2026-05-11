@@ -1831,6 +1831,7 @@
         border-radius: 1px;
       }
     </style>
+    {% block extra_head %}{% endblock %}
   </head>
   <body class="{% block body_class %}{% endblock %}">
     {# Operator top bar is the default; reviewer templates override
