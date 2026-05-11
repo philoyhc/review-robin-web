@@ -37,7 +37,7 @@ The card contains four live slots: Reviewers, Reviewees, Relationships, Settings
 **Slot 3 — Relationships** (right column, top).
 - File upload accepting a Relationships CSV (`ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`).
 - Passive indicator: "Relationships (87 currently)" or "Relationships (none yet)".
-- The CSV's `tag_N` slots flow through to the rule engine via the `pair_context.tag_N` grammar; `status` defaults to `active` when omitted.
+- The CSV's `tag_N` slots flow through to the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names; `status` defaults to `active` when omitted.
 
 **Slot 4 — Settings** (right column, bottom).
 - File upload accepting a session-settings CSV (the inverse shape of `serialize_session_config`'s wide CSV output — see `app/services/session_config_io.py`).

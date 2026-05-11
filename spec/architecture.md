@@ -221,8 +221,9 @@ carries:
   (`display_field_value(field, assignment)`) reads off the
   relationship row matching the assignment's `(reviewer_id,
   reviewee_id)` pair.
-- **Rule engine.** The `pair_context.tag_N` predicate grammar
-  (Segment 15D PR 3) reads via an eager
+- **Rule engine.** The `pair_context.tag1` / `pair_context.tag2`
+  / `pair_context.tag3` predicate field names (Segment 15D PR 3)
+  read via an eager
   `relationships.pair_context_lookup(db, session_id) -> dict`
   pre-built once per `engine.evaluate` call (15D PR 4). This
   dodges N×M re-queries — the dict is `{(reviewer_id,

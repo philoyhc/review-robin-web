@@ -57,7 +57,7 @@ Reading order: `visual_style_general.md` (portable design system)
 | `visual_style_rrw.md` | Review-Robin instantiation of the general spec — accent assignments, lifecycle colors, two-row session chrome, status strip, warning surfaces, non-session operator chrome, reviewer-facing chrome. |
 | `ui_elements.md` | Element catalogue — canonical name + canonical visual treatment + current implementation per element family (chrome, cards, tables, buttons, forms, banners, badges, layout primitives). |
 | `operator_button_audit.md` | Operator-surface button audit — every button (and button-styled anchor) across the operator templates, organised by page and card with per-button canonical-style labels. |
-| `domain_assumptions.md` | Load-bearing domain assumptions. The UI-vocabulary sections that used to live here were superseded 2026-05-03 and retired 2026-05-11; today the file is mostly the Domain section + a cross-ref index. |
+| `domain_assumptions.md` | Load-bearing **domain** (Session + Instrument) assumptions. The UI-vocabulary sections that used to live here were superseded 2026-05-03 and retired 2026-05-11 (UI-mechanics now in `ui_elements.md` §6 + §5a + §10; legacy content preserved at `guide/archive/assumptions_ui_legacy.md`). |
 
 ## Reference indexes
 
