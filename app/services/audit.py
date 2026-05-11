@@ -24,6 +24,7 @@ from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, ValidationError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -509,3 +510,73 @@ def _audit_strict_mode() -> bool:
     catches drift before deploy. Production stays lenient.
     """
     return bool(settings.audit_strict_mode)
+
+
+# --------------------------------------------------------------------------- #
+# Reader — Segment 16C PR 1 (per-session in-app audit log viewer)
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True)
+class AuditLogRow:
+    """One row of the in-app audit log table.
+
+    Mirrors the CSV exporter's 8-column projection
+    (``app/services/extracts/audit_events_extract.py``) plus the
+    primary key so the viewer can cursor on ``id DESC`` (newer
+    first).
+    """
+
+    id: int
+    event_type: str
+    severity: str
+    summary: str
+    actor_email: str | None
+    correlation_id: str | None
+    created_at: datetime
+    detail: dict[str, Any] | None
+
+
+def list_events_for_session(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    cursor: int | None = None,
+    limit: int = 50,
+) -> list[AuditLogRow]:
+    """Read up to ``limit`` ``audit_events`` rows for this session,
+    newest first, with keyset pagination on ``id DESC``.
+
+    The CSV exporter (``serialize_audit_events``) walks the table
+    chronologically (``created_at ASC, id ASC``) because spreadsheet
+    readers want oldest-first. The in-app viewer flips the order —
+    the operator's first question is usually "what changed last?"
+    Pagination cursors are the last visible row's ``id``; the next
+    page asks for ``id < cursor``.
+
+    The reader reuses the CSV exporter's LEFT-JOIN-``users``
+    plumbing to surface the actor's email alongside each row.
+    """
+    from app.db.models import User as _User
+
+    stmt = (
+        select(AuditEvent, _User.email)
+        .outerjoin(_User, _User.id == AuditEvent.actor_user_id)
+        .where(AuditEvent.session_id == review_session.id)
+    )
+    if cursor is not None:
+        stmt = stmt.where(AuditEvent.id < cursor)
+    stmt = stmt.order_by(AuditEvent.id.desc()).limit(limit)
+    return [
+        AuditLogRow(
+            id=event.id,
+            event_type=event.event_type,
+            severity=event.severity,
+            summary=event.summary or "",
+            actor_email=actor_email,
+            correlation_id=event.correlation_id,
+            created_at=event.created_at,
+            detail=event.detail,
+        )
+        for event, actor_email in db.execute(stmt).all()
+    ]
