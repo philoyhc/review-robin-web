@@ -541,8 +541,8 @@ inputs to be fixed.
 - **Multi-instrument support** — `Add new instrument` ships
   **disabled** in the first rebuild slice (with the same
   "Multi-instrument support is still in progress" tooltip the
-  current `main` carries) and gets enabled in a follow-up. Per
-  `guide/archive/unfinished_business.md` item #18.
+  current `main` carries) and gets enabled in a follow-up.
+  (Shipped in Segment 10D Slice 5, 2026-05-02.)
 - **Display Fields persistence** — the table was stripped in
   #206. The rebuild slice that wires this is the first that
   consumes `InstrumentDisplayField` rows again from the operator

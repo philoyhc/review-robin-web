@@ -61,9 +61,10 @@ Instrument automatically closes upon session deadline.
 > `spec/visual_style_general.md` retires. The general visual-style
 > spec is now authoritative for button styling and replaces this
 > hierarchy with a muted Primary / Secondary / Destructive
-> vocabulary. The migration to those new styles is tracked as
-> `guide/archive/unfinished_business.md` #21. Until that ships, the table below
-> still describes what's in the templates today.
+> vocabulary. The migration to those new styles shipped across
+> the seven-PR restyle bundle catalogued in `spec/ui_elements.md`
+> Part 3. The table below still describes the (still-active)
+> templates that haven't been migrated yet.
 
 The app uses six canonical button styles. Each is described by
 **affordance × treatment** (`primary`/`alert`/`danger` × `solid`/`outline`):

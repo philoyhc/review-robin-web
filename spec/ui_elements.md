@@ -13,8 +13,9 @@
 > together show every primitive in this catalogue in working form.
 > When porting a page to v2, mirror that template's class usage.
 
-This document expands `guide/archive/unfinished_business.md` #21 from a buttons-only
-restyle into a full operator-surface settling pass covering navigation
+This document expands the original buttons-only restyle item
+(retired with `guide/archive/unfinished_business.md` 2026-05-10)
+into a full operator-surface settling pass covering navigation
 chrome, cards, tables, buttons, forms, banners, badges, and layout
 primitives. It is split into:
 
@@ -598,8 +599,10 @@ cards in `instruments_index.html`. Out of scope for the restyle
 
 ## Part 3 — Restyle bundle PR split
 
-Expanded scope of `guide/archive/unfinished_business.md` #21. The seven PRs land
-in order **A → B → C → D → E → F → G**. The pilot drove all seven
+Historical record of the seven-PR restyle ladder (the expanded
+scope of the original buttons-only restyle item, now retired
+with `guide/archive/unfinished_business.md`). The PRs land in
+order **A → B → C → D → E → F → G**. The pilot drove all seven
 through `/operator/sessions/{id}/reviewers1` — the foundation +
 canonical primitives are in place under `body.ui-v2`. The remaining
 work is a per-template **sweep**: replicate the `/reviewers1` recipe
