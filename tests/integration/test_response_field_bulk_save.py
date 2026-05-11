@@ -5,7 +5,7 @@ interleave check that confirms the operator's bulk save renders
 correctly on the reviewer's review surface.
 
 Carved out of test_display_field_routes.py per
-guide/major_refactor.md §12.D.
+guide/archive/major_refactor.md §12.D.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 """Cross-service query helpers.
 
 Tiny shared primitives that don't fit any one service module's
-domain. Per ``guide/major_refactor.md`` §12.C.3: introduces a
+domain. Per ``guide/archive/major_refactor.md`` §12.C.3: introduces a
 single audit point for the most-repeated where-clause pattern in
 the service layer (~38 callsites across 8 files as of 2026-05-09);
 saves ~3 lines per callsite, and gives the codebase one place to

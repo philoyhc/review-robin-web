@@ -85,14 +85,14 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    naming) in `_shared.py`. New operator routes belong in their
    feature-area sub-module. Slices import only from `_shared.py`
    and from outside the package — no slice-to-slice imports. See
-   `guide/major_refactor.md` for the full split rationale and
+   `guide/archive/major_refactor.md` for the full split rationale and
    slice boundaries.
-2. **Service modules** (`app/services/*.py`) hold all business logic — querying, mutation, validation, lifecycle transitions, audit-event emission. Routes import these; templates do not. The largest service, `app/services/instruments/`, is split by concern into a package — `_state.py` (cross-slice plumbing including `_instrument_label`), `_rtds.py` (Response Type Definitions), `_display_fields.py`, `_response_fields.py` (incl. `bulk_save_fields`), `_instrument_crud.py` — with `__init__.py` re-exporting the public surface so callers continue to write `from app.services import instruments` unchanged. See `guide/major_refactor.md` §12.A.
+2. **Service modules** (`app/services/*.py`) hold all business logic — querying, mutation, validation, lifecycle transitions, audit-event emission. Routes import these; templates do not. The largest service, `app/services/instruments/`, is split by concern into a package — `_state.py` (cross-slice plumbing including `_instrument_label`), `_rtds.py` (Response Type Definitions), `_display_fields.py`, `_response_fields.py` (incl. `bulk_save_fields`), `_instrument_crud.py` — with `__init__.py` re-exporting the public surface so callers continue to write `from app.services import instruments` unchanged. See `guide/archive/major_refactor.md` §12.A.
 3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative classes using `Mapped[]` / `mapped_column`. **Do not import `sqlalchemy.dialects.postgresql` here** — Postgres-specific column types are deferred to Segment 14.
 
 A small but important fourth seam:
 
-- **`app/web/views/`** holds **view-shape adapters** that translate domain objects into the dataclasses / row tuples templates iterate over (e.g. `build_setup_rows` for the session-detail Session Setup card). Keep services business-logic-only and templates markup-only — anything in between (e.g. computing a status label string from instrument state) belongs here. The package is split by page / entity into sibling sub-modules (`_setup.py`, `_instruments.py`, `_validate.py`, `_quick_setup.py`, `_extract_data.py`, `_invitations.py`, `_responses.py`, `_filters.py`, `_previews.py`, `_rule_builder.py`); `__init__.py` re-exports the public surface so callers continue to write `from app.web import views` unchanged. See `guide/major_refactor.md` §12.B.
+- **`app/web/views/`** holds **view-shape adapters** that translate domain objects into the dataclasses / row tuples templates iterate over (e.g. `build_setup_rows` for the session-detail Session Setup card). Keep services business-logic-only and templates markup-only — anything in between (e.g. computing a status label string from instrument state) belongs here. The package is split by page / entity into sibling sub-modules (`_setup.py`, `_instruments.py`, `_validate.py`, `_quick_setup.py`, `_extract_data.py`, `_invitations.py`, `_responses.py`, `_filters.py`, `_previews.py`, `_rule_builder.py`); `__init__.py` re-exports the public surface so callers continue to write `from app.web import views` unchanged. See `guide/archive/major_refactor.md` §12.B.
 
 ### Audit events
 

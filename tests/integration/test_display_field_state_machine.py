@@ -4,7 +4,7 @@ lock-card override on a ready session, the saved-state pill, and
 the RTD-card / per-instrument-card mutual-exclusion gates.
 
 Carved out of test_display_field_routes.py per
-guide/major_refactor.md §12.D.
+guide/archive/major_refactor.md §12.D.
 """
 
 from __future__ import annotations

@@ -5,7 +5,7 @@ and the GET /instruments page prunes rows whose underlying data
 source is no longer populated.
 
 Carved out of test_display_field_routes.py per
-guide/major_refactor.md §12.D.
+guide/archive/major_refactor.md §12.D.
 """
 
 from __future__ import annotations

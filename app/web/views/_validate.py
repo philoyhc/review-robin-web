@@ -2,7 +2,7 @@
 read-only deep-dive into setup readiness at
 ``/operator/sessions/{id}/validate``.
 
-Slice 8 of the §12.B ladder (``guide/major_refactor.md``).
+Slice 8 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
 Owns the ``SetupCoverageRow`` / ``SeverityChip`` /
 ``IssueSourceGroup`` / ``ValidateContext`` dataclasses, the

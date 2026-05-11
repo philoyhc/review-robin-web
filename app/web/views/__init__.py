@@ -1,7 +1,7 @@
 """View-shape adapter package.
 
 Was a single 3,483-line module until the §12.B ladder
-(``guide/major_refactor.md``) carved it into per-page / per-entity
+(``guide/archive/major_refactor.md``) carved it into per-page / per-entity
 sub-modules. The public surface is preserved here as an explicit
 re-export wall so external callers — both
 ``from app.web import views`` and

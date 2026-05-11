@@ -25,6 +25,7 @@ deliberately as part of a feature change, never silently).
 | `reviewer-surface.md` | Reviewer-facing app — multi-instrument-aware response surface (`/reviewer/sessions/{id}/{position}`), dashboard (`/reviewer`), and invitation landing (`/reviewer/invite/{token}`). |
 | `assumptions.md` | UI vocabulary — six canonical button styles, typography knob, layout defaults, load-bearing assumptions. |
 | `settings_inventory.md` | Single-stop reference for every operator- and per-session setting Review Robin Web persists — operator SMTP config, session metadata, email-template overrides, instrument settings, reviewer / reviewee tags, RuleSets, and the browser-local UI-state primitives (cookies / localStorage / URL params). Names where each setting lives, the UI surface that edits it, and the canonical per-page spec. |
+| `all_buttons.md` | Operator-surface button audit — every button (and button-styled anchor) across the operator templates, organised by page and card with continuous numbering and per-button canonical-style labels (per `spec/ui_elements.md` §6). Moved 2026-05-10 from `guide/` since it documents the as-shipped surface, not a forward-looking plan. |
 
 Sibling folders:
 

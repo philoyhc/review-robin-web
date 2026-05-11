@@ -3,7 +3,7 @@ Fields table — RevieweeName / RevieweeEmail can't be deleted,
 hidden, or moved out of their fixed top-of-table positions.
 
 Carved out of test_display_field_routes.py per
-guide/major_refactor.md §12.D.
+guide/archive/major_refactor.md §12.D.
 """
 
 from __future__ import annotations

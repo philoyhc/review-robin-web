@@ -3,7 +3,7 @@ Manage Responses (Segment 11C Part 1's list-with-bulk-actions
 filter strip pattern per ``spec/operations_renew.md``
 "Filtering").
 
-Slice 4 of the §12.B ladder (``guide/major_refactor.md``).
+Slice 4 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
 Owns the status-options registries (``INVITATIONS_STATUS_OPTIONS``
 / ``RESPONSES_STATUS_OPTIONS``), the per-page filter applicators

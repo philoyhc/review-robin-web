@@ -5,7 +5,7 @@ sub-module (so custom Jinja globals / filters register exactly once),
 the lifecycle / edit-lock guards called from multiple slices, and the
 Quick Setup cookie naming primitive.
 
-Per ``guide/major_refactor.md`` §3.0, slice modules import from this
+Per ``guide/archive/major_refactor.md`` §3.0, slice modules import from this
 file but ``_shared`` itself imports nothing from the package — that
 invariant rules out import cycles regardless of how the slice graph
 evolves.

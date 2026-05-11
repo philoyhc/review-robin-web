@@ -1,7 +1,7 @@
 """Shared helpers for the display-field / response-field /
 RTD-card integration test files.
 
-Per ``guide/major_refactor.md`` §12.D the original
+Per ``guide/archive/major_refactor.md`` §12.D the original
 ``test_display_field_routes.py`` (2,167 LOC, 53 tests) split into
 six per-surface files. The seven helper functions below were
 shared by ~30 of those tests; this module avoids duplicating them

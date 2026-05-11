@@ -2,7 +2,7 @@
 context, three-tab email previews, the merge-tag editor strip, and
 the reviewer-surface preview card rendered as an iframe srcdoc.
 
-Slice 9 of the §12.B ladder (``guide/major_refactor.md``).
+Slice 9 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
 Owns:
 

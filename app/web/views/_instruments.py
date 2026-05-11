@@ -3,7 +3,7 @@
 surface heading + page-button helpers and the per-field render
 hints (placeholder / constraint summary).
 
-Slice 6 of the §12.B ladder (``guide/major_refactor.md``).
+Slice 6 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
 Owns the ``InstrumentHeading`` / ``PageButton`` dataclasses, the
 ``page_button_label`` / ``instrument_heading`` builders that drive

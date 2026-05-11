@@ -53,7 +53,7 @@ Manage Invitations sends from their own SMTP credentials. There is
 no shared mailbox.
 
 **Canonical spec:** `spec/email_infra_options.md` for the wider
-email-infra story; `guide/all_buttons.md` Section 15 + 15-supplement
+email-infra story; `spec/all_buttons.md` Section 15 + 15-supplement
 for the form's button taxonomy.
 
 ---

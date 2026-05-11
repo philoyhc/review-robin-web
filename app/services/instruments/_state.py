@@ -5,7 +5,7 @@ have been saved by the operator" lookup that drives the status pill
 on the operator's Instruments page sub-cards. Read by ``views.py``
 and by every slice in this package, hence its top-level home.
 
-Per ``guide/major_refactor.md`` §12.A, the slice modules
+Per ``guide/archive/major_refactor.md`` §12.A, the slice modules
 (``_rtds.py``, ``_display_fields.py``, ``_response_fields.py``,
 ``_instrument_crud.py``) import from this module but never the
 other way round — same import-graph invariant the

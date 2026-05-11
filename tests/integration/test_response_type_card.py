@@ -6,7 +6,7 @@ locked), draft-template rendering for the no-JS add flow, and
 cascade-delete preview / would-empty-instrument hard-block paths.
 
 Carved out of test_display_field_routes.py per
-guide/major_refactor.md §12.D.
+guide/archive/major_refactor.md §12.D.
 """
 
 from __future__ import annotations

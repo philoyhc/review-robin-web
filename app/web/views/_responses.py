@@ -1,7 +1,7 @@
 """Responses page row builder — Segment 11C Part 1's reviewee-
 centric coverage view at ``/operator/sessions/{id}/responses``.
 
-Slice 1 of the §12.B ladder (``guide/major_refactor.md``).
+Slice 1 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
 Owns the ``ResponsesRow`` dataclass and the ``build_responses_rows``
 adapter that translates ``monitoring.per_reviewee_coverage(...)``

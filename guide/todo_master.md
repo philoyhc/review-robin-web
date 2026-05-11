@@ -153,7 +153,7 @@ Three large monoliths split into per-concern packages with re-export
 walls (callers stay byte-identical), plus a hygiene bundle and a
 test-file split. Pattern across all three ladders: package
 conversion + `_legacy.py` shrinks slice-by-slice, `git mv` finale
-preserves blame. Plan + slice-by-slice ranges: `guide/major_refactor.md`.
+preserves blame. Plan + slice-by-slice ranges: `guide/archive/major_refactor.md`.
 
 - **`app/web/routes_operator.py`** (4,423 LOC, 79 routes) → `app/web/routes_operator/` with 10 feature-area sub-modules + `_shared.py`. PRs **#651 → #659** (1 package-conversion + 10 slice PRs). 2026-05-08.
 - **`app/services/instruments.py`** (2,469 LOC, ~50 public functions, 5 concerns) → `app/services/instruments/` with `_state.py` / `_rtds.py` / `_display_fields.py` / `_response_fields.py` / `_instrument_crud.py`. PRs **#663 → #667** (§12.A). 2026-05-09.

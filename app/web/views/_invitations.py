@@ -2,7 +2,7 @@
 consolidated reviewer-centric view at
 ``/operator/sessions/{id}/invitations``.
 
-Slice 3 of the §12.B ladder (``guide/major_refactor.md``).
+Slice 3 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
 Owns the ``InvitationsRow`` dataclass and ``build_invitations_rows``
 adapter that joins per-reviewer progress (from

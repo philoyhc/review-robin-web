@@ -2,7 +2,7 @@
 shown to reviewers (Name / Email / tag_1..3 / profile_link, plus
 pair_context_1..3 from assignment imports).
 
-Slice 2 of the §12.A ladder (``guide/major_refactor.md``).
+Slice 2 of the §12.A ladder (``guide/archive/major_refactor.md``).
 
 Owns the catalog of valid sources, the locked-row gates (Name +
 Email always sit at positions 1 / 2 on every instrument, never
