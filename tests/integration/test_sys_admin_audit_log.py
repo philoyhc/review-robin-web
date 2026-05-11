@@ -256,3 +256,389 @@ def test_diagnostics_row_audit_log_link_points_at_child_page(
         f"/operator/sessions/{review_session.id}/export/audit_log.csv"
         not in response.text
     )
+
+
+# --- Filter strip (Segment 16C PR 2) ---------------------------------------
+
+
+def _seed_mixed_events(db, review_session, *, n_info=3, n_warn=2) -> None:
+    """Drop a few events of mixed severity onto the session so
+    filter-narrowing has something to bite on."""
+    from app.services import audit
+
+    for i in range(n_info):
+        audit.write_event(
+            db,
+            event_type="session.activated",
+            summary=f"info {i}",
+            session=review_session,
+            payload=audit.counts(i=i),
+        )
+    for i in range(n_warn):
+        audit.write_event(
+            db,
+            event_type="session.invalidated",
+            summary=f"warn {i}",
+            session=review_session,
+            severity="warning",
+            reason="setup_mutation",
+        )
+
+
+def test_audit_log_filter_strip_renders(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The filter form renders with event-type multiselect,
+    severity checkboxes, actor typeahead, and date inputs."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-render")
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert 'name="event_type"' in body
+    assert 'name="severity"' in body
+    assert 'name="actor"' in body
+    assert 'name="from"' in body
+    assert 'name="to"' in body
+    # No "Clear filters" link when no filter is active.
+    assert "Clear filters" not in body
+
+
+def test_audit_log_filter_by_event_type_narrows_table(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-event-type")
+    _seed_mixed_events(db, review_session)
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        "?event_type=session.activated"
+    )
+    assert response.status_code == 200
+    body = response.text
+    # Event-type column wraps in <code>; the filter form's
+    # <option> elements also embed the event-type strings, so
+    # assert against the table-row shape rather than substring.
+    assert "<code>session.activated</code>" in body
+    assert "<code>session.invalidated</code>" not in body
+    assert "<code>session.created</code>" not in body
+    # Filter strip persists state — option marked selected.
+    assert 'value="session.activated" selected' in body
+    # "Clear filters" link shows up when a filter is active.
+    assert "Clear filters" in body
+
+
+def test_audit_log_filter_by_severity_narrows_table(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-severity")
+    _seed_mixed_events(db, review_session)
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        "?severity=warning"
+    )
+    assert response.status_code == 200
+    body = response.text
+    # Only warn rows should be present.
+    assert "warn 0" in body
+    assert "info 0" not in body
+    # Severity checkbox marked checked.
+    assert 'value="warning" checked' in body
+
+
+def test_audit_log_filter_by_actor_narrows_table(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Filtering by an actor email that exists yields rows; an
+    unknown actor yields an empty table."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-actor")
+    bob_client = make_client(bob)
+    # Alice is the session creator → on session.created rows.
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        "?actor=alice@example.edu"
+    )
+    assert response.status_code == 200
+    assert "session.created" in response.text
+
+    # Unknown actor → empty.
+    empty = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        "?actor=ghost@example.edu"
+    )
+    assert empty.status_code == 200
+    assert "match the current filter" in empty.text
+
+
+def test_audit_log_combined_filters_and_together(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``event_type=session.activated&severity=warning`` returns no
+    rows because activated rows are info."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-combined")
+    _seed_mixed_events(db, review_session)
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        "?event_type=session.activated&severity=warning"
+    )
+    assert response.status_code == 200
+    assert "info 0" not in response.text
+    assert "warn 0" not in response.text
+
+
+def test_audit_log_download_button_carries_filter_query_string(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Download CSV button rewrites to include the current
+    filter state so the spreadsheet honours the same filters."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-csv-link")
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        "?event_type=session.activated&severity=info"
+    )
+    assert response.status_code == 200
+    body = response.text
+    # The Download CSV anchor should embed both filter slots.
+    assert (
+        f'href="/operator/sessions/{review_session.id}/export/audit_log.csv'
+        "?event_type=session.activated&amp;severity=info" in body
+    )
+
+
+def test_audit_log_csv_route_honours_filters(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CSV download narrows rows when filter params land on the
+    route."""
+    import csv
+    import io
+
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-csv-rows")
+    _seed_mixed_events(db, review_session)
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        "?event_type=session.activated"
+    )
+    assert response.status_code == 200
+    rows = list(csv.reader(io.StringIO(response.text)))
+    # Header + only the activated rows.
+    event_types = [r[0] for r in rows[1:]]
+    assert event_types and all(et == "session.activated" for et in event_types)
+
+
+def test_audit_log_csv_emits_context_slot_on_filtered_extract(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``session.audit_log_extracted`` carries the filter set
+    in its ``context`` slot when filters are active. Unfiltered
+    extracts emit no ``context``."""
+    from app.db.models import AuditEvent
+    from sqlalchemy import select
+
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-csv-audit")
+    bob_client = make_client(bob)
+    # Filtered hit.
+    bob_client.get(
+        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        "?event_type=session.activated&severity=info"
+    )
+
+    db.expire_all()
+    events = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "session.audit_log_extracted")
+            .where(AuditEvent.session_id == review_session.id)
+            .order_by(AuditEvent.id)
+        )
+        .scalars()
+        .all()
+    )
+    assert events, "filtered extract should emit an audit event"
+    last_detail = events[-1].detail
+    assert "context" in last_detail, last_detail
+    assert last_detail["context"]["event_types"] == "session.activated"
+    assert last_detail["context"]["severities"] == "info"
+
+
+def test_audit_log_csv_no_context_on_unfiltered_extract(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unfiltered CSV extract emits the canonical audit event
+    without a ``context`` slot."""
+    from app.db.models import AuditEvent
+    from sqlalchemy import select
+
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-csv-noctx")
+    bob_client = make_client(bob)
+    bob_client.get(
+        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+    )
+    db.expire_all()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "session.audit_log_extracted")
+            .where(AuditEvent.session_id == review_session.id)
+        )
+        .scalars()
+        .one()
+    )
+    assert "context" not in event.detail
+
+
+def test_audit_log_filter_url_param_round_trip(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """URL params round-trip into rendered filter state — selected
+    options + value attributes match the submitted query string."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-rt")
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        "?event_type=session.activated"
+        "&severity=info&severity=warning"
+        "&actor=alice@example.edu"
+        "&from=2026-01-01&to=2026-12-31"
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert 'value="session.activated" selected' in body
+    assert 'value="info" checked' in body
+    assert 'value="warning" checked' in body
+    assert 'id="filter-actor"' in body
+    assert 'value="alice@example.edu"' in body
+    assert 'value="2026-01-01"' in body
+    assert 'value="2026-12-31"' in body
+
+
+def test_audit_log_filter_invalid_date_422s(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A malformed ``?from=`` bookmark returns 422 rather than
+    silently ignoring — surfaces the typo to the operator."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-bad-date")
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        "?from=2026-13-99"
+    )
+    assert response.status_code == 422
+
+
+def test_audit_log_filter_unknown_event_type_silently_dropped(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unknown event-type tokens silently drop — the operator
+    can't filter on types that don't exist, and propagating a
+    400 here would be a UX papercut on a stale bookmark."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-unknown-et")
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        "?event_type=does.not.exist"
+    )
+    assert response.status_code == 200
+    # No "Clear filters" since the filter parsed empty.
+    assert "Clear filters" not in response.text
+
+
+def test_audit_log_pagination_carries_filter_state(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Older events → anchor preserves the filter query string so
+    subsequent pages stay narrowed."""
+    from app.services import audit
+
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="filter-page-state")
+    for i in range(55):
+        audit.write_event(
+            db,
+            event_type="session.activated",
+            summary=f"page {i}",
+            session=review_session,
+            payload=audit.counts(i=i),
+        )
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        "?event_type=session.activated"
+    )
+    assert response.status_code == 200
+    body = response.text
+    # The pagination anchor carries both the cursor and the
+    # event-type filter forward.
+    assert "?cursor=" in body
+    assert "event_type=session.activated" in body
+

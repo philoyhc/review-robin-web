@@ -449,7 +449,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 12A-3 PR 3 — Settings importer.
     "session.settings_imported": EventSchema(_IDENTITY | {"counts"}),
     # Segment 12B PR 1 — Audit-events export.
-    "session.audit_log_extracted": EventSchema(_IDENTITY | {"counts"}),
+    "session.audit_log_extracted": EventSchema(_IDENTITY | {"counts", "context"}),
     # Segment 16A PR 6 — workspace user-role management.
     # Workspace-scoped (no session identity); the actor is on the
     # audit row's ``actor_user_id`` slot, the target user goes
@@ -514,6 +514,7 @@ def _audit_strict_mode() -> bool:
 
 # --------------------------------------------------------------------------- #
 # Reader — Segment 16C PR 1 (per-session in-app audit log viewer)
+#          + PR 2 (filter strip + filtered CSV download)
 # --------------------------------------------------------------------------- #
 
 
@@ -537,12 +538,104 @@ class AuditLogRow:
     detail: dict[str, Any] | None
 
 
+@dataclass(frozen=True)
+class AuditFilters:
+    """Filter set for the per-session audit log viewer (16C PR 2).
+
+    Each slot is independent; empty / unset slots are no-ops.
+    Multiple slots compose with AND. Empty-list semantics:
+    ``event_types=[]`` and ``severities=[]`` both mean "no filter on
+    this dimension" (matches the URL-param contract where an absent
+    param leaves the dimension wide open). To match nothing, drop
+    the dimension from the URL entirely — the viewer doesn't model
+    "select zero options" because that's never useful.
+    """
+
+    event_types: tuple[str, ...] = ()
+    severities: tuple[str, ...] = ()
+    actor_email: str | None = None
+    created_from: date | None = None
+    created_to: date | None = None
+
+    @property
+    def is_active(self) -> bool:
+        return bool(
+            self.event_types
+            or self.severities
+            or self.actor_email
+            or self.created_from
+            or self.created_to
+        )
+
+    def as_audit_context(self) -> dict[str, str | int | bool]:
+        """Serialise the active filter for the
+        ``session.audit_log_extracted`` audit event's ``context``
+        slot.
+
+        Canonical ``context`` values are scalars only
+        (``dict[str, str | int | bool]``) per the Segment 11K
+        envelope spec. Multi-value slots (event_types,
+        severities) flatten to comma-joined strings so they fit
+        the scalar contract; round-trip back to lists at read
+        time via ``.split(",")``. Inactive slots collapse out so
+        the audit row stays compact.
+        """
+        out: dict[str, str | int | bool] = {}
+        if self.event_types:
+            out["event_types"] = ",".join(self.event_types)
+        if self.severities:
+            out["severities"] = ",".join(self.severities)
+        if self.actor_email:
+            out["actor_email"] = self.actor_email
+        if self.created_from:
+            out["created_from"] = self.created_from.isoformat()
+        if self.created_to:
+            out["created_to"] = self.created_to.isoformat()
+        return out
+
+
+def _apply_filters(stmt: Any, filters: AuditFilters | None, user_table: Any) -> Any:
+    """Compose ``filters`` into ``stmt`` (a SELECT against
+    ``AuditEvent`` + ``users.email`` via LEFT JOIN). Returns the
+    augmented statement."""
+    if filters is None or not filters.is_active:
+        return stmt
+    if filters.event_types:
+        stmt = stmt.where(AuditEvent.event_type.in_(filters.event_types))
+    if filters.severities:
+        stmt = stmt.where(AuditEvent.severity.in_(filters.severities))
+    if filters.actor_email:
+        # Case-insensitive exact match — operators pick from a
+        # typeahead populated with this session's distinct actor
+        # emails, so substring search isn't useful here.
+        from sqlalchemy import func as _func
+
+        stmt = stmt.where(
+            _func.lower(user_table.email) == filters.actor_email.lower()
+        )
+    if filters.created_from:
+        from datetime import datetime as _dt, time as _time, timezone as _tz
+
+        start = _dt.combine(filters.created_from, _time.min, tzinfo=_tz.utc)
+        stmt = stmt.where(AuditEvent.created_at >= start)
+    if filters.created_to:
+        # Inclusive upper bound: include the whole "to" day.
+        from datetime import datetime as _dt, time as _time, timedelta as _td, timezone as _tz
+
+        end = _dt.combine(
+            filters.created_to, _time.min, tzinfo=_tz.utc
+        ) + _td(days=1)
+        stmt = stmt.where(AuditEvent.created_at < end)
+    return stmt
+
+
 def list_events_for_session(
     db: Session,
     review_session: ReviewSession,
     *,
     cursor: int | None = None,
     limit: int = 50,
+    filters: AuditFilters | None = None,
 ) -> list[AuditLogRow]:
     """Read up to ``limit`` ``audit_events`` rows for this session,
     newest first, with keyset pagination on ``id DESC``.
@@ -564,6 +657,7 @@ def list_events_for_session(
         .outerjoin(_User, _User.id == AuditEvent.actor_user_id)
         .where(AuditEvent.session_id == review_session.id)
     )
+    stmt = _apply_filters(stmt, filters, _User)
     if cursor is not None:
         stmt = stmt.where(AuditEvent.id < cursor)
     stmt = stmt.order_by(AuditEvent.id.desc()).limit(limit)
@@ -580,3 +674,25 @@ def list_events_for_session(
         )
         for event, actor_email in db.execute(stmt).all()
     ]
+
+
+def list_distinct_actor_emails(
+    db: Session, review_session: ReviewSession
+) -> list[str]:
+    """Distinct actor emails on this session's audit events, sorted.
+
+    Drives the actor-email typeahead `<datalist>` on the filter
+    strip. System-emitted events (no actor) collapse out of the
+    result; the operator can't usefully filter on "no actor"
+    anyway."""
+    from app.db.models import User as _User
+
+    stmt = (
+        select(_User.email)
+        .join(AuditEvent, AuditEvent.actor_user_id == _User.id)
+        .where(AuditEvent.session_id == review_session.id)
+        .where(_User.email.is_not(None))
+        .distinct()
+        .order_by(_User.email)
+    )
+    return [row[0] for row in db.execute(stmt).all()]

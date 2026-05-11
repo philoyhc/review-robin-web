@@ -24,11 +24,15 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession, User
+
+if TYPE_CHECKING:
+    from app.services.audit import AuditFilters
 
 __all__ = ["HEADER", "serialize_audit_events"]
 
@@ -45,7 +49,10 @@ HEADER: tuple[str, ...] = (
 
 
 def serialize_audit_events(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    filters: "AuditFilters | None" = None,
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for ``review_session``'s audit events.
 
@@ -61,7 +68,13 @@ def serialize_audit_events(
     ``json.dumps(detail, sort_keys=True)`` for stable
     byte-identical re-exports; ``None`` collapses to empty
     cell.
+
+    Optional ``filters`` (Segment 16C PR 2) narrow the row set
+    to match the in-app viewer's filter strip. Composes with
+    the same predicate set the viewer uses; an unset filter is
+    a no-op.
     """
+    from app.services.audit import _apply_filters
 
     yield HEADER
 
@@ -69,7 +82,10 @@ def serialize_audit_events(
         select(AuditEvent, User.email)
         .outerjoin(User, User.id == AuditEvent.actor_user_id)
         .where(AuditEvent.session_id == review_session.id)
-        .order_by(AuditEvent.created_at, AuditEvent.id)
+    )
+    stmt = _apply_filters(stmt, filters, User)
+    stmt = (
+        stmt.order_by(AuditEvent.created_at, AuditEvent.id)
         .execution_options(yield_per=1000)
     )
     for event, actor_email in db.execute(stmt):
