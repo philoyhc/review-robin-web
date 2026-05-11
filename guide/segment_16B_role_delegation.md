@@ -6,16 +6,70 @@
 > in-app audit viewer lives in **16C**
 > (`guide/segment_16C_richer_audit_views.md`).
 
-**Status:** Planning — stub created 2026-05-11; sized into
-a four-PR ladder; revised 2026-05-11 to drop the
-workspace-level sys-admin promotion PR (absorbed into 16A
-PR 6) and tighten PR 2's add-owner UX to a typeahead picker
-over the admitted-operator pool.
-**Sizing:** 2 MVP PRs + 1 post-MVP PR.
+**Status:** PR 1 + PR 2 shipped 2026-05-11 (collapsed into a
+single delivery slice — PRs **#853 / #854 / #855**); PR 3
+(richer per-session role granularity) still post-MVP.
+**Sizing:** 2 MVP PRs (shipped as one) + 1 post-MVP PR.
 **Depends on:** **16A PR 1 + PR 6** (the operator-allowlist
 gate + the admit/revoke surface that populates the eligible
 pool). 16A PR 1 lights up `users.is_operator`; 16B picks the
 admit-pool query off it.
+
+## What shipped (2026-05-11)
+
+- **PR #853** — single combined slice covering both the
+  service surface and the UI. New `app/services/session_owners.py`
+  with `list_owners` / `workspace_operator_candidates` /
+  `add_owner` / `remove_owner` + `OwnerOperationError`
+  (codes: `last_owner`, `not_in_workspace`, `already_owner`,
+  `not_owner`). Two audit events registered:
+  `session.owner_added` / `session.owner_removed` (snapshot
+  + refs envelope, `refs.target_user_id` for the target).
+  Two new routes: `POST /sessions/{id}/owners/add` (form
+  takes `target_email`; case-insensitive email lookup) and
+  `POST /sessions/{id}/owners/{user_id}/remove`. The edit
+  page + the two owner routes share
+  `require_sys_admin_or_session_operator` — a relaxed gate
+  that lets a sys-admin reach the edit page of a session
+  they don't own (they self-add as owner via the form, then
+  act via the normal `require_session_operator` path).
+  Sessions Diagnostics row's "Operators" placeholder
+  retires; "Details" link to `/edit` replaces it.
+- **PR #854** — race fix on last-owner remove. Codex review
+  flagged a TOCTOU between count + delete; replaced with
+  `SELECT ... FOR UPDATE` over the session's
+  `session_operators` rows, then count + locate + delete
+  from the locked snapshot.
+- **PR #855** — chrome polish: `(sys admin)` suffix on the
+  top-right "Signed in as ..." label so sys-admins can tell
+  at a glance they're running with elevated workspace
+  privileges. Applied to both operator chrome (`base.html`)
+  and the reviewer top bar.
+
+**Scope deltas from the original plan:**
+
+- **PR 1 + PR 2 collapsed into one slice.** The service
+  surface is small and the UI is a thin wrapper; landing
+  them separately would have been ceremony.
+- **Surface placement moved from Session Home to the Edit
+  page** (`/operator/sessions/{id}/edit#owners`). The edit
+  page is where session-identity edits already concentrate,
+  and the Diagnostics "Details" link wants a single landing
+  page that doubles as the sys-admin self-add surface.
+- **Picker submits `target_email`, not `target_user_id`.**
+  The HTML5 `<datalist>` typeahead is a presentation layer
+  only; submitting the email keeps the form robust to typos
+  / unlisted entries and lets the backend normalise the
+  lookup. The `not_in_workspace` error code covers both "no
+  such user" and "user isn't on the allowlist".
+- **Session-creator immunity replaced with the simpler
+  last-owner guard.** The original plan special-cased the
+  creator row (couldn't be removed while sole owner). The
+  ship-as-is rule is: any owner can be removed *unless*
+  they're the last remaining owner. Cleaner invariant, no
+  awkward "(creator)" badge to maintain.
+
+---
 
 ## Goal
 

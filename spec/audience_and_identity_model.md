@@ -66,11 +66,44 @@ live audience with its own auth and identity assumptions.
 Not in scope for current work. Recorded so the design doesn't
 foreclose this direction.
 
-### 4. System administrator (forward-looking, placeholder)
+### 4. System administrator
 
-Future cross-session admin role: managing operator permissions,
-system-wide settings, multi-tenant configuration. Empty today;
-flagged as a slot for when the work surfaces.
+Cross-session admin role with two surfaces:
+
+1. **Workspace allowlist** — admit / revoke `users.is_operator`,
+   promote / demote `users.is_sys_admin` via the Sys Admin →
+   Accounts Management page (Segment 16A PR 6).
+2. **Per-session diagnostics + self-add** — Sessions
+   Diagnostics page lists every session in the workspace;
+   the "Details" action lands on the session's Edit page,
+   gated by `require_sys_admin_or_session_operator` so a
+   sys-admin can reach a session they don't own. Adding
+   themselves via the Owners card (Segment 16B PR 2) is the
+   typical first step before acting on a session through
+   the normal operator-permission path.
+
+Surfaced in the chrome top-right user card via a
+`(sys admin)` suffix on the "Signed in as ..." label so
+elevated state is visible at a glance.
+
+Multi-tenancy + system-wide settings remain forward-looking.
+
+### 4b. Per-session owner delegation
+
+The session creator becomes the inaugural `session_operators`
+row with `role="owner"` at session-create time. Additional
+owners are added / removed by current owners via the Owners
+card on `/operator/sessions/{id}/edit` (Segment 16B PR 2);
+the Add-owner picker offers any workspace operator
+(`users WHERE (is_operator OR is_sys_admin) AND NOT EXISTS
+(SELECT 1 FROM session_operators ...)`). The service-layer
+last-owner guard refuses to leave a session with zero
+owners, and the audit log carries `session.owner_added` /
+`session.owner_removed` events for every transition.
+
+Per-session role granularity beyond `"owner"` (e.g.
+`"viewer"` / `"deputy"`) is deferred to Segment 16B PR 3
+pending pilot feedback.
 
 ## Identity model: Reviewer-as-form-respondent (Model A, middle position)
 
