@@ -47,6 +47,68 @@ F3 → C5 → C2+C1 (#814) → C4 → tail cleanup.
 
 ---
 
+## What's done vs what remains
+
+### ✅ Done
+
+The **original sweep** (drift + consolidation + style touch-ups)
+is fully closed:
+
+- **Drift fixes (F1–F8):** all 8 items merged across PRs #803 /
+  #798 / #799 / #804 / #800 / #801 / #805 / #802.
+- **Consolidation (C1–C5):** all 5 items merged. C3 retired
+  `functional_spec.md` to archive (#797); C1+C2 reshaped
+  `domain_assumptions.md` + `ui_elements.md` (#814); C4 cleaned
+  `unfinished_business` cross-refs (#809); C5 regrouped
+  `spec/README.md` by concern (#808).
+- **Style touch-ups (S1–S5):** all 5 items merged in the single
+  Tranche 2 sweep PR (#807). S1 + S3 skipped at landing time
+  (rationale in banner above the S-section).
+- **Bonus housekeeping:** Tier list addition (#806), four-file
+  rename (#812), sweep-doc status refresh (#813), tail cleanup
+  for sweep-introduced drift (#815).
+
+The **Tier-1 priority block** of the parallel "spec coverage
+gaps" exercise is also done (3 of 5 Tier-1 items shipped):
+
+- **`spec/lifecycle.md`** (PR #816).
+- **`spec/csv_contracts.md`** (PR #817).
+- **`spec/validate_page.md`** (PR #818).
+
+### ⏳ Remaining
+
+Only the lower-priority half of the coverage-gaps list is still
+open. Nothing from the original F / C / S proposal remains.
+
+**Tier 1 (2 of 5 remaining):**
+
+| # | Item | Suggested file |
+|---|---|---|
+| 4 | Email Template editor (`session_setupinvite.html`) — three-tab editor, per-template merge tags, "Reset to default", responses-received toggle, encrypted credential plumbing. | `spec/email_template_editor.md` |
+| 5 | Permissions / authorization — `SessionOperator` table, `require_session_operator` dependency, operator-only vs reviewer-only route gates, 403 semantics. | `spec/permissions.md` |
+
+**Tier 2 (3 of 3 remaining, all partial):**
+
+| # | Item | Partial coverage today |
+|---|---|---|
+| 6 | Relationships Setup page | Section in `setup_pages.md` (added by F4 #804) — could grow into a standalone deep-dive if pilot feedback drives it. |
+| 7 | Operations Assignments page | Cross-refs in `setup_pages.md` + `operator_button_audit.md` §11.5 (F4 / F7). Could warrant a dedicated section in `operations_pages.md`. |
+| 8 | Operator Settings page (`/operator/settings`) | `settings_inventory.md` SMTP rows + `operator_button_audit.md` §15. Worth a standalone spec or a dedicated section in `email_infra_options.md`. |
+
+**Tier 3 (4 of 4 remaining, deliberately deferred):**
+
+| # | Item | Why deferred |
+|---|---|---|
+| 9 | Edit Session page (`session_edit.html`) | Small surface; could live as a sub-section in `session_home.md` if needed. |
+| 10 | New session page (`session_new.html`) | Quick Setup Create-Session variant already covered in `quick_setup_card_spec.md`; the form itself is small. |
+| 11 | Drill-in pages (`session_invitations_reviewer_detail.html`, `session_responses_reviewee_detail.html`) | Today's templates are explicit "scaffolds" in `operations_pages.md`; per-assignment / per-response detail is deferred until pilot feedback. |
+| 12 | Outbox (`session_outbox.html`) | Explicitly excluded from the operator-page taxonomy (`operator_ui_concept.md` §114) as a dev-diagnostic surface. No spec needed unless promoted into Segment 16 Sys Admin. |
+
+See the **"Spec coverage gaps"** section near the end of this
+doc for the full per-item write-up.
+
+---
+
 ## F1. `architecture.md` — Pair-level vs assignment-level context
 
 **Status:** ✅ Merged (PR #803).
