@@ -449,6 +449,15 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.settings_imported": EventSchema(_IDENTITY | {"counts"}),
     # Segment 12B PR 1 — Audit-events export.
     "session.audit_log_extracted": EventSchema(_IDENTITY | {"counts"}),
+    # Segment 16A PR 6 — workspace user-role management.
+    # Workspace-scoped (no session identity); the actor is on the
+    # audit row's ``actor_user_id`` slot, the target user goes
+    # through ``refs.target_user_id``.
+    "workspace.user_invited": EventSchema(frozenset({"snapshot", "refs"})),
+    "workspace.operator_admitted": EventSchema(frozenset({"changes", "refs"})),
+    "workspace.operator_revoked": EventSchema(frozenset({"changes", "refs"})),
+    "sys_admin.role_promoted": EventSchema(frozenset({"changes", "refs"})),
+    "sys_admin.role_demoted": EventSchema(frozenset({"changes", "refs"})),
 }
 
 

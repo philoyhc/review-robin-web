@@ -231,19 +231,20 @@ def test_sessions_diagnostics_back_link_falls_back_to_lobby(
     assert "Back to Sessions" in response.text
 
 
-def test_sessions_diagnostics_renders_accounts_tab_as_disabled(
+def test_sessions_diagnostics_renders_live_accounts_tab(
     db: Session,
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """16A PR 6 lit up the Accounts Management tab as a live link
+    to /operator/sys-admin/users. Until PR 6 the tab rendered as a
+    disabled placeholder; this assertion guards against regressing
+    it back to the placeholder."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     response = client.get("/operator/sys-admin/sessions")
     assert response.status_code == 200
-    # Accounts Management tab present but disabled.
     assert "Accounts Management" in response.text
-    assert 'aria-disabled="true"' in response.text
-    # No live link to the future PR 6 URL.
-    assert 'href="/operator/sys-admin/users"' not in response.text
+    assert 'href="/operator/sys-admin/users"' in response.text
 
 
 # --- Top-bar Admin link visibility ----------------------------------------
