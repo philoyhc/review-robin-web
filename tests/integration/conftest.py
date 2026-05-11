@@ -11,10 +11,32 @@ from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.auth.identity import AuthenticatedUser, get_current_user
+from app.config import settings
 from app.db.session import get_db
 from app.main import app
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+# The Segment 16A PR 1 operator-allowlist gate is mounted on the
+# parent operator router (``app/web/routes_operator/__init__.py``),
+# so every route under ``/operator/*`` redirects unallowlisted
+# identities to ``/request-access``. The fixtures below seed
+# ``alice`` / ``bob`` via the ``OPERATOR_EMAILS`` env-var bootstrap
+# so first-sign-in flips ``is_operator=True`` on user-row creation
+# — preserving the pre-16A test contract that ``client(alice)``
+# can reach operator routes.
+#
+# Tests that explicitly exercise the gate (e.g.
+# ``test_operator_allowlist_gate.py``) carry their own
+# ``_reset_allowlists`` autouse fixture that clears these,
+# overriding the conftest-level seeding for that file only.
+_TEST_OPERATOR_EMAILS = ("alice@example.edu", "bob@example.edu")
+
+
+@pytest.fixture(autouse=True)
+def _seed_test_operator_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "operator_emails", list(_TEST_OPERATOR_EMAILS))
 
 
 @pytest.fixture

@@ -114,15 +114,18 @@ def test_preview_route_returns_308_to_previews_hub(
     )
 
 
-def test_preview_route_403s_for_non_operator(
+def test_preview_route_redirects_non_operator_to_request_access(
     db: Session,
     alice: AuthenticatedUser,
     reviewer_user: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """The redirect goes through ``require_session_operator`` so a
-    non-operator still bounces with a 403 rather than getting a free
-    redirect into the operator hub."""
+    """Under the Segment 16A PR 1 operator-allowlist gate, a
+    signed-in user who isn't on the workspace allowlist gets bounced
+    to ``/request-access`` from the operator-router level — well
+    before the per-session ``require_session_operator`` check fires.
+    Either way the non-operator never sees the redirect into the
+    operator hub."""
     operator = make_client(alice)
     review_session = _make_session(operator, db, code="prev-308-403")
     _populate_rosters(operator, review_session.id)
@@ -133,7 +136,8 @@ def test_preview_route_403s_for_non_operator(
         f"/operator/sessions/{review_session.id}/preview",
         follow_redirects=False,
     )
-    assert response.status_code == 403
+    assert response.status_code == 303
+    assert response.headers["location"] == "/request-access"
 
 
 def test_preview_iframe_does_not_observe_deadline_side_effect(
