@@ -229,7 +229,7 @@ in Segment 16A.
 8. **Decisions still written down at the point of decision.**
    Three new ones since May 9: (a) audit log surface belongs
    behind a Sys Admin doorway, not in Extract Data — recorded
-   into `guide/segment_16A_sys_admin_page.md` Anchor item §3 with
+   into `guide/archive/segment_16A_sys_admin_page.md` Anchor item §3 with
    industry-best-practice citations. (b) Settings import is
    wipe-and-replace with two-phase parse, not row-level merge —
    recorded as the `ApplyResult` contract docstring. (c) Manual

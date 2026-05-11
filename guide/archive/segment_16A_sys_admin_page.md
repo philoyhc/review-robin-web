@@ -1,16 +1,26 @@
 # Segment 16A — Sys Admin page + admin user role
 
-> **Carved out of the original Segment 16 (2026-05-11).** The
-> original `segment_16_sys_admin_page.md` bundled three concerns:
-> the Sys Admin page itself (this file), user-role management /
-> delegation among operators (now **16B**,
-> `guide/segment_16B_role_delegation.md`), and richer in-app
-> audit views (now **16C**,
+> **Archived 2026-05-11.** All six planned PRs shipped (#834
+> PR 1 / #841 PR 2 / #844 PR 3 / #845 PR 4 / #851 PR 5 / #852
+> PR 6) plus follow-on reshape + polish PRs (#835 / #836 /
+> #837 / #838 / #839 / #840 / #842 / #843 / #846 / #847 /
+> #848 / #849 / #850). The plan stays here as historical
+> context; see `guide/todo_master.md` § "Segment 16A — done"
+> for the as-shipped summary and `docs/status.md` for the
+> 2026-05-10 → 2026-05-11 timeline rows.
+>
+> Carved out of the original Segment 16 (2026-05-11). The
+> original `segment_16_sys_admin_page.md` bundled three
+> concerns: the Sys Admin page itself (this file), user-role
+> management / delegation among operators (**16B**,
+> `guide/archive/segment_16B_role_delegation.md`), and
+> richer in-app audit views (**16C**,
 > `guide/segment_16C_richer_audit_views.md`).
 
-**Status:** PR 1 + PR 2 + PR 2b shipped 2026-05-11
-(operator-allowlist gate + Sys Admin workspace-level
-landing). PRs 3-6 remain.
+**Status:** Shipped 2026-05-10 → 2026-05-11. All six PRs in
+plus follow-ons. Two intentional scope deltas from the plan
+documented inline below (Outbox bookmark URL story, optional
+`sys_admin.outbox_viewed` event skipped).
 **PR 5 reshaped 2026-05-11** from "wire manual upload under
 Sys Admin" to "retire the manual-upload path entirely" once
 it became clear the dev-only escape hatch has no live consumer.
@@ -811,7 +821,7 @@ with the path itself.
   surface; Segment 16A wires the existing route under
   the Sys Admin chrome (see Anchor item §3).
 - **Segment 16B — Role delegation**
-  (`guide/segment_16B_role_delegation.md`). The
+  (`guide/archive/segment_16B_role_delegation.md`). The
   user-facing surface for promoting other operators
   to sys-admin / managing per-session
   `SessionOperator` rows.

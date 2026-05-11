@@ -2,9 +2,9 @@
 
 > **Carved out of the original Segment 16 (2026-05-11).** The
 > Sys Admin page + sys-admin role gate live in **16A**
-> (`guide/segment_16A_sys_admin_page.md`); user-role management
-> + role delegation live in **16B**
-> (`guide/segment_16B_role_delegation.md`).
+> (`guide/archive/segment_16A_sys_admin_page.md` — shipped);
+> user-role management + role delegation live in **16B**
+> (`guide/archive/segment_16B_role_delegation.md` — shipped).
 
 **Status:** Planning — stub created 2026-05-11, sized into
 a six-PR ladder 2026-05-11 (PRs 1-3 MVP; PRs 4-6 post-MVP).
