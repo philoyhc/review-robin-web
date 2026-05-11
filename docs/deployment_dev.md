@@ -238,6 +238,64 @@ hatches:
    session_operators rows; no audit-event trail (which the 16A
    PR 6 in-app path will emit).
 
+### First 16A deploy: backfill pre-existing user rows
+
+The 16A PR 1 columns shipped inert in 13F PRs 1 + 2 with
+`server_default=false`, so every `users` row that existed
+**before** the 16A rollout carries `is_operator=False` and
+`is_sys_admin=False`. The env-var bootstrap doesn't re-apply to
+existing rows (per the rule above), so a workspace owner who
+signed in to the dev slot before 16A will get bounced to
+`/request-access` on their first post-16A sign-in even though
+their email is in `SYS_ADMIN_EMAILS`.
+
+One-time backfill for that pre-existing-account case, in this
+order:
+
+1. **Set App Service config first.**
+   - `OPERATOR_EMAILS=<comma-separated emails>`
+   - `SYS_ADMIN_EMAILS=<comma-separated emails>`
+   - Restart the app. Future *new* sign-ins from these emails
+     bootstrap automatically; the env-vars-first ordering means
+     anyone signing in for the first time hits the bootstrap path
+     immediately.
+
+2. **Deploy the 16A PRs** (push to `main`; the GitHub Actions
+   workflow runs `migrate` then `deploy`). Wait for both jobs to
+   finish.
+
+3. **Backfill the pre-existing rows.** From Azure Cloud Shell:
+
+   ```bash
+   psql "host=<server>.postgres.database.azure.com port=5432 \
+     dbname=rrw user=rrw_app sslmode=require"
+   ```
+
+   Sanity-check the current state:
+
+   ```sql
+   SELECT email, is_operator, is_sys_admin
+   FROM users
+   WHERE email = ANY('{philoyhc@gmail.com}'::text[]);
+   ```
+
+   For each row that's there with both flags `false`, run:
+
+   ```sql
+   UPDATE users
+   SET is_operator = true, is_sys_admin = true
+   WHERE email = 'philoyhc@gmail.com';
+   ```
+
+   If the row doesn't exist yet, the env-var bootstrap will fire
+   on first sign-in — no UPDATE needed.
+
+4. **Sign in.** The gate now passes via `is_sys_admin`.
+
+Prefer `UPDATE` over `DELETE` for this step: a delete cascades to
+the user's `session_operators` rows and orphans them from any
+sessions they own. The UPDATE leaves session membership intact.
+
 ### Local-dev mirror
 
 The same gotcha applies to the local SQLite DB
