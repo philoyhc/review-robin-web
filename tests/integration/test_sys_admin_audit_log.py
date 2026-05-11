@@ -642,3 +642,179 @@ def test_audit_log_pagination_carries_filter_state(
     assert "?cursor=" in body
     assert "event_type=session.activated" in body
 
+
+# --- Detail-JSON pretty-printer (Segment 16C PR 3) -------------------------
+
+
+def test_format_audit_detail_changes_envelope() -> None:
+    from app.web.views import format_audit_detail
+
+    render = format_audit_detail(
+        "session.updated",
+        {
+            "session_id": 17,
+            "session_code": "CS101",
+            "changes": {"name": ["Spring", "Spring v2"]},
+        },
+    )
+    assert not render.is_empty
+    [section] = render.sections
+    assert section.kind == "changes"
+    assert section.label == "Changes"
+    [change] = section.change_rows
+    assert change.label == "name"
+    assert change.before == "Spring"
+    assert change.after == "Spring v2"
+
+
+def test_format_audit_detail_snapshot_envelope() -> None:
+    from app.web.views import format_audit_detail
+
+    render = format_audit_detail(
+        "session.created",
+        {
+            "session_id": 17,
+            "session_code": "CS101",
+            "snapshot": {"name": "Final Review", "code": "CS101"},
+        },
+    )
+    [section] = render.sections
+    assert section.kind == "snapshot"
+    assert section.label == "Snapshot"
+    rows = {kv.label: kv.value for kv in section.kv_rows}
+    assert rows == {"name": "Final Review", "code": "CS101"}
+
+
+def test_format_audit_detail_counts_envelope() -> None:
+    from app.web.views import format_audit_detail
+
+    render = format_audit_detail(
+        "assignments.generated",
+        {
+            "session_id": 17,
+            "session_code": "CS101",
+            "counts": {"assignments": 104, "pairs": 13},
+        },
+    )
+    [section] = render.sections
+    assert section.kind == "counts"
+    rows = {kv.label: kv.value for kv in section.kv_rows}
+    assert rows == {"assignments": "104", "pairs": "13"}
+
+
+def test_format_audit_detail_set_changes_envelope() -> None:
+    from app.web.views import format_audit_detail
+
+    render = format_audit_detail(
+        "instrument.display_fields_saved",
+        {
+            "session_id": 17,
+            "session_code": "CS101",
+            "set_changes": {
+                "added": [{"field": "rating"}],
+                "removed": [],
+                "updated": [{"field": "comments"}],
+            },
+            "refs": {"instrument_id": 7},
+        },
+    )
+    payload = render.sections[0]
+    assert payload.kind == "set_changes"
+    assert payload.set_changes is not None
+    assert payload.set_changes.added == ['{"field":"rating"}']
+    assert payload.set_changes.removed == []
+    assert payload.set_changes.updated == ['{"field":"comments"}']
+    # Refs renders as its own section after the payload.
+    refs = render.sections[1]
+    assert refs.kind == "refs"
+    [kv] = refs.kv_rows
+    assert kv.label == "instrument_id"
+    assert kv.value == "7"
+
+
+def test_format_audit_detail_reason_orthogonal_slot() -> None:
+    from app.web.views import format_audit_detail
+
+    render = format_audit_detail(
+        "session.invalidated",
+        {
+            "session_id": 17,
+            "session_code": "CS101",
+            "reason": "setup_mutation",
+        },
+    )
+    [section] = render.sections
+    assert section.kind == "reason"
+    assert section.text == "setup_mutation"
+
+
+def test_format_audit_detail_context_orthogonal_slot() -> None:
+    from app.web.views import format_audit_detail
+
+    render = format_audit_detail(
+        "session.audit_log_extracted",
+        {
+            "session_id": 17,
+            "session_code": "CS101",
+            "counts": {"rows": 12},
+            "context": {"event_types": "session.activated"},
+        },
+    )
+    kinds = [s.kind for s in render.sections]
+    assert "counts" in kinds
+    assert "context" in kinds
+
+
+def test_format_audit_detail_legacy_pre11k_falls_through_to_fallback() -> None:
+    """Legacy rows from before the canonical envelope landed
+    (Segment 11K, 2026-05-07) don't carry any recognised key.
+    They should render under a generic "Detail" section rather
+    than crashing or rendering blank."""
+    from app.web.views import format_audit_detail
+
+    render = format_audit_detail(
+        "legacy.thing",
+        {"some_legacy_key": "value", "instrument_id_inlined": 7},
+    )
+    [section] = render.sections
+    assert section.kind == "fallback"
+    # Unrecognised top-level keys fall under "Other".
+    assert section.label == "Other"
+    labels = {kv.label for kv in section.kv_rows}
+    assert labels == {"some_legacy_key", "instrument_id_inlined"}
+
+
+def test_format_audit_detail_empty_returns_empty_render() -> None:
+    from app.web.views import format_audit_detail
+
+    render = format_audit_detail("some.event", None)
+    assert render.is_empty
+    assert render.sections == ()
+    assert render.raw_json == ""
+
+
+def test_audit_log_page_renders_expander_with_structured_detail(
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The page renders a <details> expander per row, with the
+    pretty-printed sections inside."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
+    review_session = _make_session(client, db, code="audit-detail-render")
+    bob_client = make_client(bob)
+    response = bob_client.get(
+        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+    )
+    assert response.status_code == 200
+    body = response.text
+    # Each row owns a "Show detail" expander.
+    assert ">Show detail<" in body
+    # And a nested "Raw JSON" expander.
+    assert ">Raw JSON<" in body
+    # session.created emits a snapshot envelope; the section
+    # heading should be present.
+    assert "Snapshot" in body
+

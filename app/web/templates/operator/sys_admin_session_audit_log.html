@@ -34,6 +34,48 @@
     body.ui-v2 .audit-log-table .col-correlation code {
       font-size: 0.85em;
     }
+
+    /* Per-row detail expander (Segment 16C PR 3). Each section
+       carries a small label + a <dl> (snapshot / counts / refs /
+       context / fallback / changes) or pill rows (set_changes) or
+       free text (reason). Raw JSON sits inside a nested
+       <details> so it's available without dominating the view. */
+    body.ui-v2 .audit-detail summary {
+      cursor: pointer;
+      color: var(--color-link, #1d4ed8);
+      font-size: 0.9em;
+    }
+    body.ui-v2 .audit-detail[open] summary {
+      margin-bottom: var(--space-2, 8px);
+    }
+    body.ui-v2 .audit-detail-section {
+      margin-top: var(--space-2, 8px);
+      font-size: 0.85em;
+    }
+    body.ui-v2 .audit-detail-section dl {
+      margin: 4px 0 0;
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: 2px 8px;
+    }
+    body.ui-v2 .audit-detail-section dt {
+      font-weight: 600;
+      color: var(--color-muted, #475569);
+    }
+    body.ui-v2 .audit-detail-section dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+    body.ui-v2 .audit-detail-section p {
+      margin: 4px 0;
+    }
+    body.ui-v2 .audit-detail-raw {
+      margin-top: var(--space-2, 8px);
+      font-size: 0.8em;
+    }
+    body.ui-v2 .audit-detail-raw code {
+      overflow-wrap: anywhere;
+    }
   </style>
 {% endblock %}
 
@@ -133,9 +175,66 @@
             <td class="col-correlation">{% if row.correlation_id %}<code>{{ row.correlation_id }}</code>{% else %}—{% endif %}</td>
             <td class="col-when">{{ row.created_at_iso }}</td>
             <td class="col-detail">
-              {% if row.detail_json %}
-                <code>{{ row.detail_json }}</code>
-              {% else %}—{% endif %}
+              {% if row.detail.is_empty %}
+                —
+              {% else %}
+                <details class="audit-detail">
+                  <summary>Show detail</summary>
+                  {% for section in row.detail.sections %}
+                    <div class="audit-detail-section">
+                      <strong>{{ section.label }}</strong>
+                      {% if section.kind == "changes" %}
+                        <dl>
+                          {% for change in section.change_rows %}
+                            <dt>{{ change.label }}</dt>
+                            <dd>
+                              <code>{{ change.before }}</code>
+                              &rarr;
+                              <code>{{ change.after }}</code>
+                            </dd>
+                          {% endfor %}
+                        </dl>
+                      {% elif section.kind == "reason" %}
+                        <p>{{ section.text }}</p>
+                      {% elif section.kind == "set_changes" and section.set_changes %}
+                        {% if section.set_changes.added %}
+                          <p><em>Added:</em>
+                            {% for item in section.set_changes.added %}
+                              <code class="pill pill-info">{{ item }}</code>
+                            {% endfor %}
+                          </p>
+                        {% endif %}
+                        {% if section.set_changes.removed %}
+                          <p><em>Removed:</em>
+                            {% for item in section.set_changes.removed %}
+                              <code class="pill pill-warning">{{ item }}</code>
+                            {% endfor %}
+                          </p>
+                        {% endif %}
+                        {% if section.set_changes.updated %}
+                          <p><em>Updated:</em>
+                            {% for item in section.set_changes.updated %}
+                              <code class="pill pill-info">{{ item }}</code>
+                            {% endfor %}
+                          </p>
+                        {% endif %}
+                      {% else %}
+                        {# snapshot / counts / refs / context / fallback #}
+                        <dl>
+                          {% for kv in section.kv_rows %}
+                            <dt>{{ kv.label }}</dt>
+                            <dd><code>{{ kv.value }}</code></dd>
+                          {% endfor %}
+                        </dl>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                  <details class="audit-detail-raw">
+                    <summary>Raw JSON</summary>
+                    <code>{{ row.detail_json }}</code>
+                  </details>
+                </details>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}

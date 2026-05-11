@@ -38,12 +38,18 @@ from urllib.parse import urlencode
 from app.services.audit import AuditFilters, AuditLogRow
 
 __all__ = [
+    "AuditDetailChangeRow",
+    "AuditDetailKVRow",
+    "AuditDetailRender",
+    "AuditDetailSection",
+    "AuditDetailSetChanges",
     "AuditLogFilterFormContext",
     "AuditLogRowsContext",
     "AuditLogTableRow",
     "build_audit_log_filter_form",
     "build_audit_log_rows",
     "filters_querystring",
+    "format_audit_detail",
     "parse_audit_log_filters",
 ]
 
@@ -57,7 +63,10 @@ class AuditLogTableRow:
 
     Mirrors the CSV exporter's 8-column projection. Strings are
     pre-formatted (datetime → ISO 8601 UTC, missing actor → "")
-    so the template stays markup-only.
+    so the template stays markup-only. ``detail`` is the
+    structured pretty-printer render (Segment 16C PR 3);
+    ``detail_json`` stays available as the always-on raw payload
+    fallback inside the expander.
     """
 
     id: int
@@ -68,6 +77,7 @@ class AuditLogTableRow:
     correlation_id: str
     created_at_iso: str
     detail_json: str
+    detail: AuditDetailRender
 
 
 @dataclass(frozen=True)
@@ -93,6 +103,7 @@ def build_audit_log_rows(
             correlation_id=row.correlation_id or "",
             created_at_iso=_isoformat_utc(row.created_at),
             detail_json=_json_or_empty(row.detail),
+            detail=format_audit_detail(row.event_type, row.detail),
         )
         for row in rows
     ]
@@ -244,6 +255,204 @@ def filters_querystring(filters: AuditFilters) -> str:
     """Public alias so route layers can build pagination URLs that
     carry the filter state forward."""
     return _filters_querystring(filters)
+
+
+# ---------------------------------------------------------------------------
+# Detail-JSON pretty-printer (Segment 16C PR 3)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AuditDetailKVRow:
+    """One key/value row for the snapshot / counts / refs / context
+    payload renderers."""
+
+    label: str
+    value: str
+
+
+@dataclass(frozen=True)
+class AuditDetailChangeRow:
+    """A single field-level change in the ``changes`` envelope."""
+
+    label: str
+    before: str
+    after: str
+
+
+@dataclass(frozen=True)
+class AuditDetailSetChanges:
+    """Pre-formatted lists for the ``set_changes`` envelope."""
+
+    added: list[str]
+    removed: list[str]
+    updated: list[str]
+
+
+@dataclass(frozen=True)
+class AuditDetailSection:
+    """One labelled section of a rendered audit-event detail.
+
+    The template branches on ``kind`` to choose the right markup.
+    Empty payload slots collapse out before rendering — every
+    section in ``AuditDetailRender.sections`` has content.
+    """
+
+    kind: str
+    """One of: ``"changes"`` / ``"snapshot"`` / ``"counts"`` /
+    ``"set_changes"`` / ``"reason"`` / ``"refs"`` / ``"context"`` /
+    ``"fallback"``."""
+
+    label: str
+    kv_rows: tuple[AuditDetailKVRow, ...] = ()
+    change_rows: tuple[AuditDetailChangeRow, ...] = ()
+    set_changes: AuditDetailSetChanges | None = None
+    text: str = ""
+
+
+@dataclass(frozen=True)
+class AuditDetailRender:
+    sections: tuple[AuditDetailSection, ...]
+    raw_json: str
+    is_empty: bool
+
+
+_PAYLOAD_KEYS: tuple[str, ...] = ("changes", "snapshot", "counts", "set_changes")
+_ORTHOGONAL_KEYS: tuple[str, ...] = ("reason", "refs", "context")
+_IDENTITY_KEYS: tuple[str, ...] = ("session_id", "session_code")
+
+
+def format_audit_detail(
+    event_type: str,
+    detail: dict[str, object] | None,
+) -> AuditDetailRender:
+    """Translate one canonical envelope into structured sections
+    the template can iterate over.
+
+    Recognises the four canonical payload envelopes
+    (``changes`` / ``snapshot`` / ``counts`` / ``set_changes``) plus
+    the three orthogonal slots (``reason`` / ``refs`` / ``context``).
+    Identity slots (``session_id`` / ``session_code``) drop out —
+    they're already first-class columns on the row.
+
+    Unknown / non-canonical detail (legacy rows from pre-11K era,
+    or new envelopes added without renderer support) falls through
+    to a sorted-keys ``<dl>`` so the operator can still inspect
+    the payload.
+    """
+    import json
+
+    if not detail:
+        return AuditDetailRender(sections=(), raw_json="", is_empty=True)
+
+    raw_json = json.dumps(detail, separators=(",", ":"), sort_keys=True)
+    sections: list[AuditDetailSection] = []
+
+    payload_rendered = False
+    if isinstance(detail.get("changes"), dict):
+        sections.append(_render_changes(detail["changes"]))
+        payload_rendered = True
+    if isinstance(detail.get("snapshot"), dict):
+        sections.append(_render_kv("snapshot", "Snapshot", detail["snapshot"]))
+        payload_rendered = True
+    if isinstance(detail.get("counts"), dict):
+        sections.append(_render_kv("counts", "Counts", detail["counts"]))
+        payload_rendered = True
+    if isinstance(detail.get("set_changes"), dict):
+        sections.append(_render_set_changes(detail["set_changes"]))
+        payload_rendered = True
+
+    if isinstance(detail.get("reason"), str):
+        sections.append(
+            AuditDetailSection(
+                kind="reason", label="Reason", text=detail["reason"]
+            )
+        )
+    if isinstance(detail.get("refs"), dict):
+        sections.append(_render_kv("refs", "Refs", detail["refs"]))
+    if isinstance(detail.get("context"), dict):
+        sections.append(_render_kv("context", "Context", detail["context"]))
+
+    # Fallback: any keys the renderer didn't recognise (legacy
+    # pre-11K shapes, or unrecognised additions) — render them all
+    # as a single "Other" section so the operator can still see
+    # the payload.
+    recognised = set(_PAYLOAD_KEYS) | set(_ORTHOGONAL_KEYS) | set(_IDENTITY_KEYS)
+    unknown = {k: v for k, v in detail.items() if k not in recognised}
+    if unknown:
+        sections.append(_render_kv("fallback", "Other", unknown))
+    # Legacy detail with no recognised envelope and no identity
+    # slots — render the whole thing as fallback so the operator
+    # isn't left with an empty expander.
+    if not payload_rendered and not sections:
+        sections.append(_render_kv("fallback", "Detail", detail))
+
+    return AuditDetailRender(
+        sections=tuple(sections),
+        raw_json=raw_json,
+        is_empty=False,
+    )
+
+
+def _render_changes(changes: dict) -> AuditDetailSection:
+    rows = tuple(
+        AuditDetailChangeRow(
+            label=field,
+            before=_format_scalar(pair[0] if len(pair) > 0 else None),
+            after=_format_scalar(pair[1] if len(pair) > 1 else None),
+        )
+        for field, pair in sorted(changes.items())
+        if isinstance(pair, list)
+    )
+    return AuditDetailSection(
+        kind="changes",
+        label="Changes",
+        change_rows=rows,
+    )
+
+
+def _render_kv(kind: str, label: str, data: dict) -> AuditDetailSection:
+    rows = tuple(
+        AuditDetailKVRow(label=k, value=_format_scalar(v))
+        for k, v in sorted(data.items(), key=lambda kv: str(kv[0]))
+    )
+    return AuditDetailSection(kind=kind, label=label, kv_rows=rows)
+
+
+def _render_set_changes(data: dict) -> AuditDetailSection:
+    import json
+
+    def _fmt_items(items: object) -> list[str]:
+        if not isinstance(items, list):
+            return []
+        return [
+            json.dumps(item, separators=(",", ":"), sort_keys=True)
+            if not isinstance(item, str)
+            else item
+            for item in items
+        ]
+
+    return AuditDetailSection(
+        kind="set_changes",
+        label="Set changes",
+        set_changes=AuditDetailSetChanges(
+            added=_fmt_items(data.get("added", [])),
+            removed=_fmt_items(data.get("removed", [])),
+            updated=_fmt_items(data.get("updated", [])),
+        ),
+    )
+
+
+def _format_scalar(value: object) -> str:
+    if value is None:
+        return "—"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float, str)):
+        return str(value)
+    import json
+
+    return json.dumps(value, separators=(",", ":"), sort_keys=True)
 
 
 def _isoformat_utc(value: object) -> str:
