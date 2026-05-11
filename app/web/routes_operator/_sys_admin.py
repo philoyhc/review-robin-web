@@ -40,7 +40,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import invitations, sessions, users as users_service
+from app.services import audit, invitations, sessions, users as users_service
+from app.web import views
 from app.web.deps import require_sys_admin
 from app.web.return_to import resolve_return_to
 from app.web.routes_operator._shared import _templates
@@ -110,6 +111,55 @@ def sys_admin_session_outbox(
             "outbox_session": review_session,
             "outbox_rows": invitations.list_outbox_for_session(
                 db, review_session.id
+            ),
+        },
+    )
+
+
+_AUDIT_LOG_PAGE_SIZE = 50
+
+
+@router.get(
+    "/sys-admin/sessions/{session_id}/audit-log",
+    response_class=HTMLResponse,
+)
+def sys_admin_session_audit_log(
+    request: Request,
+    session_id: int,
+    cursor: int | None = Query(default=None, ge=1),
+    user: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Per-session audit log child page (Segment 16C PR 1).
+
+    Sibling of the Outbox child page — same chrome, same back-link
+    convention. Newer-first table with keyset pagination on
+    ``id DESC``; the previous page's last ``id`` arrives as
+    ``?cursor=<id>`` and the next page asks for ``id < cursor``.
+    """
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none()
+    if review_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    rows = audit.list_events_for_session(
+        db,
+        review_session,
+        cursor=cursor,
+        limit=_AUDIT_LOG_PAGE_SIZE,
+    )
+    return _templates.TemplateResponse(
+        request,
+        "operator/sys_admin_session_audit_log.html",
+        {
+            "user": user,
+            "audit_session": review_session,
+            "audit_log": views.build_audit_log_rows(
+                rows, limit=_AUDIT_LOG_PAGE_SIZE
+            ),
+            "csv_download_url": (
+                f"/operator/sessions/{review_session.id}"
+                "/export/audit_log.csv"
             ),
         },
     )

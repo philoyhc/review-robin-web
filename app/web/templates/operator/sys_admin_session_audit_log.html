@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Audit log — {{ audit_session.name }} — Admin{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="/operator/sys-admin/sessions">&larr; Back to Sessions Diagnostics</a>
+
+  <h1>Admin</h1>
+
+  {% with current_admin_page = "Sessions" %}
+    {% include "operator/partials/sys_admin_top_nav.html" %}
+  {% endwith %}
+
+  <div class="card">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+      <h2 style="margin-top: 0;">Audit log — {{ audit_session.name }}</h2>
+      <a class="btn secondary" href="{{ csv_download_url }}">Download CSV</a>
+    </div>
+    <p class="muted">
+      Append-only record of every mutating action on this
+      session. Newer events first. The canonical detail envelope
+      is rendered raw as JSON in this view; per-row pretty-print
+      lands in 16C PR 3.
+    </p>
+
+    {% if audit_log.rows %}
+      <table>
+        <tr>
+          <th>Event</th>
+          <th>Severity</th>
+          <th>Summary</th>
+          <th>Actor</th>
+          <th>Correlation</th>
+          <th>When</th>
+          <th>Detail</th>
+        </tr>
+        {% for row in audit_log.rows %}
+          <tr>
+            <td><code>{{ row.event_type }}</code></td>
+            <td>
+              <span class="pill pill-{{ row.severity }}">{{ row.severity }}</span>
+            </td>
+            <td>{{ row.summary }}</td>
+            <td>{{ row.actor_email or "—" }}</td>
+            <td>{% if row.correlation_id %}<code>{{ row.correlation_id }}</code>{% else %}—{% endif %}</td>
+            <td>{{ row.created_at_iso }}</td>
+            <td>
+              {% if row.detail_json %}
+                <code>{{ row.detail_json }}</code>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      {% if audit_log.next_cursor %}
+        <p style="margin-top: 16px;">
+          <a class="chrome-link"
+             href="/operator/sys-admin/sessions/{{ audit_session.id }}/audit-log?cursor={{ audit_log.next_cursor }}">
+            Older events &rarr;
+          </a>
+        </p>
+      {% endif %}
+    {% else %}
+      <p class="muted">
+        No audit events for this session
+        {% if request.query_params.get('cursor') %} older than the requested cursor{% endif %}.
+      </p>
+    {% endif %}
+  </div>
+{% endblock %}

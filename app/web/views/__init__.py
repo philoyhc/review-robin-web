@@ -131,6 +131,13 @@ from ._rule_builder import (
     build_rule_builder_context,
 )
 
+# Audit log viewer (Segment 16C PR 1).
+from ._audit_log import (
+    AuditLogRowsContext,
+    AuditLogTableRow,
+    build_audit_log_rows,
+)
+
 __all__ = [
     # Module-level constants.
     "EMAIL_PREVIEW_TABS",
@@ -190,6 +197,9 @@ __all__ = [
     "instrument_heading",
     "invitations_search_options",
     "merge_tags_for_template",
+    "AuditLogRowsContext",
+    "AuditLogTableRow",
+    "build_audit_log_rows",
     "page_button_label",
     "placeholder_for_field",
     "resolve_email_preview_tab",

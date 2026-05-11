@@ -1,6 +1,7 @@
 """Integration tests for ``GET
 /operator/sessions/{id}/export/audit_log.csv`` —
-Segment 12B PR 1.
+Segment 12B PR 1 (gate tightened to ``require_sys_admin`` in
+Segment 16C PR 1).
 
 Covers route surface (auth, response shape, filename + audit
 emission). Per-row content shape is unit-tested in
@@ -13,10 +14,12 @@ import csv
 import io
 from typing import cast
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
 
 
@@ -32,6 +35,15 @@ def _make_session(
     return db.execute(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
+
+
+@pytest.fixture(autouse=True)
+def _seed_alice_as_sys_admin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The audit-log CSV route gates on ``require_sys_admin`` since
+    16C PR 1. Seeding alice as a sys-admin keeps the existing
+    ``client``-fixture-based tests working — her first sign-in (via
+    ``_make_session`` POST) lights up ``is_sys_admin``."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
 
 
 def test_audit_log_route_streams_csv_with_canonical_filename(
@@ -103,17 +115,25 @@ def test_audit_log_route_returns_session_events(
     assert "session.created" in event_types
 
 
-def test_audit_log_route_rejects_non_operator(
+def test_audit_log_route_rejects_non_sys_admin(
     db: Session,
     alice: object,
     bob: object,
     make_client: object,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Bob is a plain operator (not a sys-admin) — even though he's
+    on the workspace operator allowlist he can't reach the CSV
+    route since 16C PR 1's gate tightening."""
+    # Override the autouse fixture: alice still needs to create
+    # the session (operator-only path), bob then hits the gate.
+    monkeypatch.setattr(settings, "sys_admin_emails", [])
     alice_client = make_client(alice)  # type: ignore[operator]
     review_session = _make_session(alice_client, db, code="al-perm")
 
     bob_client = make_client(bob)  # type: ignore[operator]
     response = bob_client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        f"/operator/sessions/{review_session.id}/export/audit_log.csv",
+        follow_redirects=False,
     )
-    assert response.status_code in (403, 404)
+    assert response.status_code == 403

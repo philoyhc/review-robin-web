@@ -27,7 +27,7 @@ card is active; lock disables setup mutations only, not reads.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -48,7 +48,7 @@ from app.services.session_config_io import (
 from app.web.deps import (
     get_or_create_user,
     require_session_operator,
-    require_sys_admin_or_session_operator,
+    require_sys_admin,
 )
 
 router = APIRouter()
@@ -221,12 +221,23 @@ def export_responses_csv(
 
 @router.get("/sessions/{session_id}/export/audit_log.csv")
 def export_audit_log_csv(
-    review_session: ReviewSession = Depends(
-        require_sys_admin_or_session_operator
-    ),
-    user: User = Depends(get_or_create_user),
+    session_id: int,
+    user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
+    # Gate tightened from the relaxed
+    # ``require_sys_admin_or_session_operator`` to plain
+    # ``require_sys_admin`` (Segment 16C PR 1) — the
+    # operator-facing entry point retired with 12B PR 2 →
+    # 16A PR 4, and now the Sessions Diagnostics row's "Audit
+    # log" link lands on the sys-admin-only child page. The
+    # CSV route stays at its current URL so existing
+    # programmatic consumers keep working, just gated tighter.
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none()
+    if review_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     # Count up front so the audit event carries the row count
     # without materialising the streaming generator. The
     # ``session.audit_log_extracted`` event we're about to write

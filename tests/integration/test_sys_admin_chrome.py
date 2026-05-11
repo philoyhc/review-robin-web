@@ -112,7 +112,7 @@ def test_sessions_diagnostics_renders_for_sys_admin(
         in response.text
     )
     assert (
-        f'href="/operator/sessions/{review_session.id}/export/audit_log.csv">Audit log</a>'
+        f'href="/operator/sys-admin/sessions/{review_session.id}/audit-log">Audit log</a>'
         in response.text
     )
     # Details action — replaced the earlier "Operators" placeholder
