@@ -34,16 +34,18 @@ Cross-references:
   type scale, spacing, component shapes, app-specific accent
   assignments). This catalogue instantiates that spec against the
   current codebase.
-- **`spec/assumptions.md`** — current "as-built" UI vocabulary
-  (`.btn` family, layout primitives, banner conventions). Sections
-  marked superseded there are pointers into this doc.
+- **`spec/assumptions.md`** — load-bearing domain assumptions
+  (the UI-vocabulary sections that used to live there were
+  archived 2026-05-11; the banner-behaviour content moved into
+  this file at §5a).
 - **`spec/operator_ui_concept.md`** — page-level chrome and per-page
   layout contracts that consume these primitives.
 - **`spec/reviewer-surface.md`** — reviewer-surface page contracts.
 
-When this doc disagrees with `assumptions.md`, this doc wins for
-canonical naming; `assumptions.md` remains accurate for what's in
-the templates today until the migration ships.
+When this doc and `visual_style_general.md` disagree on a
+visual treatment, `visual_style_general.md` wins; this doc is
+the implementation catalogue mapping those treatments to CSS
+classes.
 
 ---
 
@@ -283,13 +285,55 @@ Each element entry follows the same shape:
 > - `.banner.banner-error` (`accent-red`) — Could-not-save /
 >   Could-not-delete inline errors.
 > All four reuse a single `.banner` base (padding, radius,
-> border-width, scroll-target hooks). Cancel button (per
-> `assumptions.md` "Inline error / warning banners") stays.
+> border-width, scroll-target hooks). Cancel button per the
+> "Banner behaviour conventions" sub-section below.
 > *Migration delta:* introduce four-variant `.banner` family;
 > retire `.warning-banner` / `.danger-banner` standalones; sweep
 > every inline-styled banner-card across operator and reviewer
 > surfaces.
 > *PR:* C (cards & banners).
+
+#### 5a. Banner behaviour conventions
+
+Operator-page mutating routes (Save / Add / Delete) commonly
+reject a payload with a redirect-back-with-banner pattern: the
+route 303s to the GET page with a query-string flag, and the
+GET template renders an inline banner card describing what
+went wrong. Three conventions govern every banner the surface
+renders. (Moved here from `spec/assumptions.md` 2026-05-11.)
+
+**Cancel button.** Every such banner — both red error banners
+("Could not save…", "Could not delete…") and amber confirmation
+banners ("Cascade preview…") — must carry a **Cancel button**
+(`.btn.alert`) right-aligned at the bottom of the card. The
+Cancel button links back to the page **without** the
+query-string flag, so the operator has a one-click way to
+dismiss the banner and return to the table state. For
+confirmation-style banners (e.g. cascade-preview before a
+destructive action), Cancel sits next to the confirm button
+(usually `.btn.danger-solid`). For pure error banners (no
+confirm path — the operator must fix the underlying issue),
+Cancel is the only button.
+
+**Auto-scroll on display.** Every banner card carries the
+`banner-scroll-target` class plus a unique anchor id (e.g.
+`id="rf-save-error-banner"`). A small page-wide script in
+`base.html` scrolls the first `.banner-scroll-target` on the
+page smoothly into view on `DOMContentLoaded`, overriding any
+natural URL fragment-jump that would otherwise scroll past the
+banner. Without this the operator can land on a long page with
+the banner offscreen — common when the redirect URL fragment
+preserves the source row's anchor for the Cancel-return path.
+
+**Cancel-return anchor.** The Cancel button's `href` includes
+a fragment pointing back at the **source row** (the table row
+or card the operator was working on when the banner fired),
+e.g. `#instrument-{iid}` or `#rtd-row-{id}`. When the operator
+clicks Cancel, the browser navigates to a clean URL (no banner
+flag) and the natural fragment-jump returns them to where they
+were before the banner pulled them up. The auto-scroll script
+doesn't fire on the dismissed page because no
+`banner-scroll-target` exists there.
 
 ### 6. Buttons
 
