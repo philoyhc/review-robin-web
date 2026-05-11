@@ -38,7 +38,7 @@ perspective:
   single-instrument-floor gates. Three remaining multi-instrument
   items (FullMatrix per-instrument target picker; Manual CSV
   `Instrument` column; reviewer dashboard per-instrument grouping)
-  are tracked at `guide/unfinished_business.md` #27 / #28 / #29
+  are tracked at `guide/archive/unfinished_business.md` #27 / #28 / #29
   (the original Segment 13 plan is archived as
   `guide/archive/segment_13_multi_instrument_sessions_superseded.md`).
 - **Assignments** are `(session, reviewer, reviewee, instrument)`
@@ -80,7 +80,7 @@ one, or many instruments depending on how generation ran. The
 reviewer-surface render path loops by instrument and the operator
 UI for creating / deleting instruments shipped in Segment 10D
 Slice 5 (2026-05-02). The remaining multi-instrument items are
-tracked at `guide/unfinished_business.md` #27 / #28 / #29.
+tracked at `guide/archive/unfinished_business.md` #27 / #28 / #29.
 
 ### Practical implications today
 
@@ -109,7 +109,7 @@ is in place:
 Items still deliberately deferred (see `docs/status.md` "What's
 deliberately not yet there"): FullMatrix per-instrument target
 picker, Manual CSV `Instrument` column, and reviewer-dashboard
-per-instrument grouping (`unfinished_business.md` #27 / #28 / #29);
+per-instrument grouping (`guide/archive/unfinished_business.md` #27 / #28 / #29);
 response-field type changes after creation (data migration concern).
 
 ### Session lifecycle (Segment 9.1)

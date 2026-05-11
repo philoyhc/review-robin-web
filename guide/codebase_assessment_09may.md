@@ -122,7 +122,7 @@ The four ⚠️ items split two ways:
 
 | Item | State |
 |---|---|
-| Multi-instrument sessions | ✅ schema + reviewer surface; gaps tracked at `unfinished_business.md` #27/#28/#29 |
+| Multi-instrument sessions | ✅ schema + reviewer surface; gaps tracked at `guide/archive/unfinished_business.md` #27/#28/#29 |
 | Rule-based assignment builder | ✅ Segment 13A + 13A-1 (engine, RuleSet schema, editor) |
 | Assignment preview and dry-run counts | ✅ live preview pane in Rule Builder |
 | Session cloning | ❌ not planned |
@@ -222,7 +222,7 @@ operator-facing audit-history surface isn't built.
     exempt from invalidation; Display Fields seed from import data,
     not column-name defaults), it lands in either a docs file
     (`docs/authentication.md`), a code comment with a spec
-    cross-reference, or `unfinished_business.md` with a "decided"
+    cross-reference, or `guide/archive/unfinished_business.md` with a "decided"
     annotation. Decision archaeology is cheap.
 
 ## 5. Weaknesses and gaps
@@ -256,7 +256,7 @@ operator-facing audit-history surface isn't built.
 4. **Inline-edit is officially deferred.** Roster + assignment
    surfaces support **CSV replace** and **delete-all + re-upload**
    only. A typo fix for one reviewer's name today requires a fresh
-   CSV. Per `unfinished_business.md` #25, inline-row edit is a
+   CSV. Per `guide/archive/unfinished_business.md` #25, inline-row edit is a
    Segment 15 concern bundled with AG Grid (#33).
 
 5. **`views.py` is 3,483 lines.** Single largest file in the codebase
@@ -284,7 +284,7 @@ operator-facing audit-history surface isn't built.
    HTML `<input>` / `<textarea>` / `<select>` per cell with form-based
    save. Works; doesn't autosave. Larger reviewer cohorts on dense
    matrices may want better in-cell typing UX before pilot scale.
-   Tracked at `unfinished_business.md` #33 / Segment 15.
+   Tracked at `guide/archive/unfinished_business.md` #33 / Segment 15.
 
 9. **`guide/archive/` weighs 22k LOC.** ~3 × the active guide volume.
    Segment plans are deliberately thorough (each one runs ~500-1500

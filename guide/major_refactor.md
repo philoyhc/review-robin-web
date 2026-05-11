@@ -441,7 +441,7 @@ Each slice PR follows the same shape:
   live references are `spec/instruments.md:10` (Instruments slice
   → PR 10) and `spec/sessions_overview.md:203` (Sessions lobby
   slice → PR 1).
-- [ ] `guide/unfinished_business.md` references to
+- [ ] `guide/archive/unfinished_business.md` references to
   `routes_operator.py:<line>` (15+ callouts at lines 101, 308, 460,
   685, 794, 942, 1004, 1193, 1543, 1559, 1666, etc.) — update only
   when the unfinished item is actually being worked on, not as

@@ -252,7 +252,7 @@ it's deferred to a later segment:
 | Assignment generation               | Segment 7  |
 | Reviewer tabular response surface   | Segment 8  |
 | Email invitations + reminders       | Segment 9  |
-| Multi-instrument sessions           | Shipped in Segment 10D Slice 5; remainder at `guide/unfinished_business.md` #27 / #28 / #29 |
+| Multi-instrument sessions           | Shipped in Segment 10D Slice 5; remainder at `guide/archive/unfinished_business.md` #27 / #28 / #29 |
 | Cleaning up unfinished business     | Segment 11 |
 | CSV / Excel exports                 | Segment 12 |
 | Rule-based assignment builder       | Segment 13 |

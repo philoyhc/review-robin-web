@@ -73,30 +73,30 @@ documentation pass:
   segment lights up the production path.
 - **Queue-based batch invitation sending** — decided 2026-05-03 from
   Segment 11 Tier 2 §2.3; tracked at
-  `guide/unfinished_business.md` #34. Out-of-request send only
+  `guide/archive/unfinished_business.md` #34. Out-of-request send only
   becomes load-bearing when real SMTP lands, so it bundles with
   the SMTP work above. Depends on #6 (decouple `invitations.py`
   from `Request`) shipping first — currently scheduled in
   Segment 11 Tier 3.
 - **Inline-editable rows for reviewers / reviewees / assignments
   Manage pages** — officially deferred from Segment 11 (originally
-  10E §2.5); tracked at `guide/unfinished_business.md` #25. Needs a
+  10E §2.5); tracked at `guide/archive/unfinished_business.md` #25. Needs a
   design pass before code; the polish segment is the right home.
 - **Sessions-list Delete button fix** — officially deferred from
   Segment 11 Tier 1 (2026-05-03); tracked at
-  `guide/unfinished_business.md` #23. Small fix (`<a>` → POST form
+  `guide/archive/unfinished_business.md` #23. Small fix (`<a>` → POST form
   with confirm); bundles naturally with whatever other
   `/operator/sessions` UI work this segment touches.
 - **Further refinement of the reviewer surface** — catch-all for
   reviewer-surface polish beyond the Segment 11 Tier 1 batch
-  (PRs #319 → #324). Tracked at `guide/unfinished_business.md`
+  (PRs #319 → #324). Tracked at `guide/archive/unfinished_business.md`
   #32. Known sub-item: multi-instrument preview (the
   `build_preview_context` extension explicitly deferred from
   Segment 11). Pilot-feedback-driven polish lands here too.
 - **AG Grid replacement of the reviewer-surface table** — second
   half of workplan §11 / archived Segment 8 plan that never
   landed. Decided 2026-05-03 from Segment 11 Tier 2 §2.1; tracked
-  at `guide/unfinished_business.md` #33. Naturally bundles with
+  at `guide/archive/unfinished_business.md` #33. Naturally bundles with
   vanilla-JS autosave (Segment 11 Tier 4 #2.2) and absorbs the
   multi-instrument preview sub-item of #32 if AG Grid grouping
   handles it natively.
@@ -105,16 +105,16 @@ documentation pass:
   `ReviewSession`). Address a reviewer reaches when something
   looks broken (auth fail, 500, invalid link). Filed 2026-05-03
   from the Segment 11 Tier 2 §24 reframe; tracked at
-  `guide/unfinished_business.md` #35. Small `[chrome]` item:
+  `guide/archive/unfinished_business.md` #35. Small `[chrome]` item:
   new env var + footer + error-page surfaces.
 - **Operator Inactivate UI for reviewer / reviewee rows** —
   per-row Inactivate / Reactivate button on the Reviewers and
   Reviewees Manage pages. Schema already supports it; affordance
   is missing. Deferred 2026-05-03 from Segment 11 Tier 3 §2.4;
-  tracked at `guide/unfinished_business.md` #36.
+  tracked at `guide/archive/unfinished_business.md` #36.
 - **Local Postgres docker-compose for dev** — officially deferred
   from Segment 11 (originally 10E §2.7); tracked at
-  `guide/unfinished_business.md` #26. The developer-setup-guide
+  `guide/archive/unfinished_business.md` #26. The developer-setup-guide
   work item above is the natural place for the Postgres-vs-SQLite
   local-dev story to settle.
 - **Session Home → Next Action card, Activated state — split on

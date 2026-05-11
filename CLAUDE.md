@@ -185,7 +185,7 @@ reject it.
 - **`spec/rule_based_assignment.md`** — Advanced-mode assignment engine + UI (§7.1 covers the Rule Based card on the Assignments page; §7.2 covers the Rule Builder page).
 - **`spec/settings_inventory.md`** — Single-stop index of every operator- / per-session setting Review Robin Web persists, plus the browser-local UI-state primitives (cookies / localStorage / URL params).
 - **`guide/segment_*.md`** — segment-by-segment plans (current and upcoming). The latest one names the current segment's contract. Older / shipped segment plans live in `guide/archive/`.
-- **`guide/todo_master.md`** — Done / Upcoming roadmap. Read for the sequence; `guide/unfinished_business.md` is the per-item catalog.
+- **`guide/todo_master.md`** — Done / Upcoming roadmap. Read for the sequence. (The earlier `unfinished_business.md` catalog retired 2026-05-10 once all open items shipped or got absorbed into named segments; lives at `guide/archive/unfinished_business.md` for historical reference.)
 - **`docs/authentication.md`** / **`docs/database.md`** / **`docs/imports.md`** — deeper dives on those subsystems.
 - **`docs/local_setup.md`** / **`docs/deployment_dev.md`** — developer setup and dev-deploy notes.
 

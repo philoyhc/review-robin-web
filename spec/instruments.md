@@ -542,7 +542,7 @@ inputs to be fixed.
   **disabled** in the first rebuild slice (with the same
   "Multi-instrument support is still in progress" tooltip the
   current `main` carries) and gets enabled in a follow-up. Per
-  `unfinished_business.md` item #18.
+  `guide/archive/unfinished_business.md` item #18.
 - **Display Fields persistence** — the table was stripped in
   #206. The rebuild slice that wires this is the first that
   consumes `InstrumentDisplayField` rows again from the operator
