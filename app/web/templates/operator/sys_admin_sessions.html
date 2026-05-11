@@ -48,7 +48,7 @@
               <span class="pill pill-count">{{ s.updated_at.isoformat() }}</span>
             </td>
             <td>
-              <span class="pill pill-info">{{ s.status | lifecycle_label }}</span>
+              <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
             </td>
             <td class="col-shrink">
               <span class="muted" title="Coming in 16B">Operators</span>
