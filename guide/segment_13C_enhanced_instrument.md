@@ -6,7 +6,7 @@ operator card on `/operator/sessions/{id}/instruments`:
 1. **Group-scoped instruments** — a second instrument flavour
    where one reviewer answer covers a group of reviewees rather
    than one. Layered on top of the canonical functional spec at
-   [`spec/enhanced_instruments.md`](../spec/enhanced_instruments.md).
+   [`spec/group_scoped_instruments.md`](../spec/group_scoped_instruments.md).
 2. **Duplicate instrument** — a small button on each instrument
    card that creates a new instrument with the same description
    / display fields / response fields / response-fields-help /
@@ -182,6 +182,6 @@ When 13C kicks off:
 - Update `guide/todo_master.md` to move 13C from Upcoming to
   in-progress; move to Done when PR 5 lands.
 - Migrate this file to `guide/archive/` when PR 5 merges.
-- `spec/enhanced_instruments.md` ticks off when each
+- `spec/group_scoped_instruments.md` ticks off when each
   Open question / Out-of-scope item from its design spec
   resolves.

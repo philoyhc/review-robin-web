@@ -123,7 +123,7 @@ In:
     placeholder so 11J's wiring PRs can locate the slot
     without a CSS-selector contract.
   - Replacement-confirmation banner placeholder per
-    `spec/assumptions.md` — empty `<div class="banner
+    `spec/domain_assumptions.md` — empty `<div class="banner
     banner-warning banner-scroll-target"
     id="quick-setup-{key}-banner" hidden>` so 11J's PRs
     populate it without re-rolling the markup. (The `hidden`
@@ -267,7 +267,7 @@ The seams 11H pins down — final, will not move:
 - DOM IDs: `quick-setup-{key}` per slot,
   `quick-setup-{key}-banner` per dormant banner. URL
   fragments and Cancel-return anchors per
-  `spec/assumptions.md` resolve against these.
+  `spec/domain_assumptions.md` resolve against these.
 - View adapter: `views.build_quick_setup_context(session)`.
   Returns a dataclass that holds the four slots + the
   card-level `lock_state`. 11J's PRs extend the adapter

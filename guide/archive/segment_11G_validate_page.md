@@ -53,7 +53,7 @@ rule-registry refactor PR B introduces.
    prominent confirmation banner ("This session has 2
    warnings. Acknowledge and activate, or cancel to address
    them first.") with `.btn.alert` Cancel + `.btn.danger-solid`
-   Acknowledge per `spec/assumptions.md`. Removes the
+   Acknowledge per `spec/domain_assumptions.md`. Removes the
    `acknowledge_warnings` checkbox from the Next Action card
    itself.
 
@@ -315,7 +315,7 @@ PR D moves the acknowledgment to Validate:
    `validated` lifecycle; otherwise redirect to the page
    without the param). At the top of the body, above the
    readiness summary, an inline confirmation banner per
-   `spec/assumptions.md`:
+   `spec/domain_assumptions.md`:
    ```
    ┌──────────────────────────────────────────────────────┐
    │ ⚠ Acknowledge warnings to activate                   │
@@ -538,7 +538,7 @@ are visible.
   Pydantic v1/v2 surprises here — already on Pydantic 2.
 - **Banner Cancel-return.** PR D's banner uses the standard
   `?` (clean URL) Cancel-return pattern from
-  `spec/assumptions.md`; the banner has a unique
+  `spec/domain_assumptions.md`; the banner has a unique
   `id="activate-confirm-banner"` so the
   `banner-scroll-target` script in `base.html` brings it
   into view.

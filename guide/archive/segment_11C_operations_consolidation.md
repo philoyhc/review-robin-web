@@ -1,7 +1,7 @@
 # Segment 11C — Operations consolidation (Invitations + Responses) + outbox audit-log scaffolding
 
 Stub. Implementation plan for consolidating the running-session
-Operations work per `spec/operations_renew.md`. Sibling to
+Operations work per `spec/operations_pages.md`. Sibling to
 Segment 11B (Session Home rebuild); both pull forward the
 operator-facing work originally bucketed in Segment 11A's #21
 sweep.
@@ -39,7 +39,7 @@ PR is convenient to land. **14-1 hard-depends on Part 2's
 schema** (the wiring there populates these columns) but not on
 the order of any other 11C work.
 
-The functional spec is **`spec/operations_renew.md`** for Part 1;
+The functional spec is **`spec/operations_pages.md`** for Part 1;
 **`spec/email_infra_options.md`** is the spec for the broader
 transport landscape Part 2's columns prepare for. The page
 taxonomy + per-page contract summaries are in

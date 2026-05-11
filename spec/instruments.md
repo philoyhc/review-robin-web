@@ -75,7 +75,7 @@ tab when active) is owned by the shared
 `session_top_nav.html` partial and styled via the `.nav-tab`
 classes in `spec/visual_style_rrw.md` "Operator session chrome
 > Navigation chrome (two-row layout)" — *not* the canonical
-button modifiers from `spec/assumptions.md`.
+button modifiers from `spec/domain_assumptions.md`.
 
 ## Per-instrument card
 
@@ -247,7 +247,7 @@ two half-width cards:
   `Delete this instrument` button, flushed right.
 
 Five buttons across the row, using the canonical `.btn` modifier
-classes from `spec/assumptions.md`:
+classes from `spec/domain_assumptions.md`:
 
 | Button | Style | Behaviour |
 |---|---|---|

@@ -4,7 +4,7 @@ Tracks UI restyling progress across two passes:
 
 - **v1 restructure (complete 2026-04 → 2026-05)** — the
   original two-column layout + six canonical `.btn` modifiers
-  from `spec/assumptions.md` pass.
+  from `spec/domain_assumptions.md` pass.
 - **v2 sweep onto `body.ui-v2` (effectively complete
   2026-05-10)** — applies the canonical primitives in
   `spec/visual_style_general.md` + `spec/visual_style_rrw.md`
@@ -128,7 +128,7 @@ including:
 
 Historical record. Every page below was carried through the
 original UI pass that introduced `.page-grid` / `.bottom-grid`
-and the six `.btn` modifiers from `spec/assumptions.md`. This
+and the six `.btn` modifiers from `spec/domain_assumptions.md`. This
 section is preserved as a baseline; the v2 sweep above is the
 active work.
 
@@ -186,7 +186,7 @@ the template itself in Segment 11C Part 1 — `/monitoring` now
    naturally splits into two parallel groupings; otherwise stays
    single-column on purpose.
 2. **Buttons.** Every button uses one of the six canonical
-   `.btn` modifiers from `spec/assumptions.md` — no inline
+   `.btn` modifiers from `spec/domain_assumptions.md` — no inline
    `style="background: …; border-color: …"` overrides.
 3. **Copy.** Heading + instruction copy reviewed; capitalisation
    matches surrounding pages.

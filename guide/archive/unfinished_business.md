@@ -821,7 +821,7 @@ than spinning a new catalog item per cleanup.
 
 1. **Restyle the six canonical button modifiers.** The buttons
    defined in
-   [`spec/assumptions.md`](../spec/assumptions.md) (Primary,
+   [`spec/domain_assumptions.md`](../spec/domain_assumptions.md) (Primary,
    Primary Outline, Alert, Alert Outline, Danger, Danger
    Outline) now read as jarringly contrastive against the
    chrome — saturated solid fills, hard borders, full-strength
@@ -837,7 +837,7 @@ than spinning a new catalog item per cleanup.
      `.nav-tab:hover` direction).
    - Smaller / less prominent in default state, with the
      accent only fully visible on hover or active.
-   - Update `spec/assumptions.md` with the new visuals once the
+   - Update `spec/domain_assumptions.md` with the new visuals once the
      restyle settles on the dev slot.
 
 (Other UI-consistency items will be appended below as they
@@ -845,7 +845,7 @@ surface.)
 
 **Where.** `app/web/templates/base.html` (`.btn` / `.btn.secondary` /
 `.btn.danger` / `.btn.danger-solid` / `.btn.alert` /
-`.btn.alert-solid` rules) plus `spec/assumptions.md`. Visual
+`.btn.alert-solid` rules) plus `spec/domain_assumptions.md`. Visual
 review touches every page that uses these buttons (i.e. all of
 them).
 
@@ -853,7 +853,7 @@ them).
 
 - First PR — button restyle. Iterate on dev slot until the
   new visual reads well across the chrome'd pages.
-- Second PR — update `spec/assumptions.md` with the settled
+- Second PR — update `spec/domain_assumptions.md` with the settled
   values + rationale.
 - Subsequent PRs — fold in any other UI inconsistencies that
   surface as the chrome rolls into more pages or as #22 lands.

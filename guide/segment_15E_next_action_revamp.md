@@ -65,7 +65,7 @@ responses regardless of whether any invitation emails have
 actually gone out, and the post-15E behaviour splits on
 invitation-send progress. The horizontal-rule content (Pause
 Session) stays unchanged across both sub-states. Cross-ref:
-`spec/all_buttons.md` "Drift / inconsistencies" §3.
+`spec/operator_button_audit.md` "Drift / inconsistencies" §3.
 
 ### Operations Assignments page (optional)
 

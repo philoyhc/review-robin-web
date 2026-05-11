@@ -346,7 +346,7 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
    - Seeded → `[ Copy ]`
    - Saved Personal → `[ Copy ] [ Save ] [ Cancel ] [ Delete ]`
    - Copy draft / blank draft → `[ Save ] [ Cancel ]`
-   - Button taxonomy: Copy, Save, and Cancel render `btn secondary` (Secondary); Delete renders `btn destructive` (Destructive). See `spec/all_buttons.md` Section 16 for the canonical row.
+   - Button taxonomy: Copy, Save, and Cancel render `btn secondary` (Secondary); Delete renders `btn destructive` (Destructive). See `spec/operator_button_audit.md` Section 16 for the canonical row.
    - Blank draft's `Save` is `disabled` client-side until the rule list grows past zero rows; the server-side gate is the source of truth and rejects a zero-rule submit with `?error=empty_rules`.
 
 #### 7.2.2 Available rulesets card (right)

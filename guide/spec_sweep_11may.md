@@ -92,7 +92,7 @@ counted entity).
 **Fix:**
 - Move the Assignments section to a new spec file
   (`spec/assignments_operations.md`) or merge into
-  `operations_renew.md`, since the page is now Operations not Setup.
+  `operations_pages.md`, since the page is now Operations not Setup.
 - Add a Relationships Setup section (mirrors Reviewers / Reviewees:
   stats card, single-line counts pill, preview table, upload card,
   Danger Zone).
@@ -141,7 +141,7 @@ pending Segment 12A wiring.
 **Fix:** Rewrite the tile list, audit affordance, and "Out of
 scope" para (12A is shipped, not pending).
 
-## F7. `all_buttons.md` — missing Relationships, stale Assignments
+## F7. `operator_button_audit.md` — missing Relationships, stale Assignments
 
 **Lines:** ~191–207 (Section 8 Assignments Setup).
 
@@ -179,9 +179,9 @@ pair-context home-for-X line to name `relationships.tag_N`.
 
 ---
 
-## C1. Retire `assumptions.md` UI section
+## C1. Retire `domain_assumptions.md` UI section
 
-**File:** `spec/assumptions.md` (192 LOC).
+**File:** `spec/domain_assumptions.md` (192 LOC).
 
 **Status:** UI section has a "Superseded (2026-05-03)" banner.
 Migration to `visual_style_general.md` + `visual_style_rrw.md` +
@@ -194,7 +194,7 @@ duplicative.
   `ui_elements.md` (closest fit — banner is an element family).
 - Drop the Button styles section + the Layout primitives table
   (both replicated in `ui_elements.md` and `visual_style_*`).
-- Shrink `assumptions.md` to ~50 LOC: Domain section + a
+- Shrink `domain_assumptions.md` to ~50 LOC: Domain section + a
   cross-reference index. Or absorb the surviving Domain content
   into `architecture.md` and retire the file entirely.
 
@@ -281,8 +281,8 @@ About 8 occurrences across spec/.
 **Status:** README table lists 22 files but doesn't signal the
 hierarchy among visual-style docs. A new contributor opening
 `spec/` doesn't know whether to look at `visual_style_general.md`,
-`visual_style_rrw.md`, `ui_elements.md`, `assumptions.md`, or
-`all_buttons.md` first.
+`visual_style_rrw.md`, `ui_elements.md`, `domain_assumptions.md`, or
+`operator_button_audit.md` first.
 
 **Recommendation:** Group the README table by concern (e.g.
 "Conceptual map" / "Per-page contracts" / "Visual system" /
@@ -330,9 +330,9 @@ dropped column.
 
 **Sweep:** `grep -rn "Assignment\.context\|assignment_context\|AssignmentContext" spec/`.
 Confirmed surfaces (already covered): `architecture.md`,
-`enhanced_instruments.md`, `instruments.md`,
+`group_scoped_instruments.md`, `instruments.md`,
 `operator_ui_concept.md`, `settings_inventory.md`, `setup_pages.md`.
-`enhanced_instruments.md` is forward-looking (13C) and still drafts
+`group_scoped_instruments.md` is forward-looking (13C) and still drafts
 against `Assignment.context` — needs a substantial rewrite to
 target post-15D primitives (probably a new column on `assignments`
 or a sibling table). Flag for the 13C plan revision per
@@ -354,7 +354,7 @@ PR, ~50-line diff. **Landed 2026-05-11** (PR pending).
 **Tranche 3 — C-consolidation (judgment calls; ask user first):**
 - C3 is the biggest call — does `functional_spec.md` survive in
   any form?
-- C1 (retire assumptions.md UI) is the next biggest reshape.
+- C1 (retire domain_assumptions.md UI) is the next biggest reshape.
 - C2, C4, C5 are smaller polish.
 
 Recommend **completing Tranche 1 + 2 before touching any
@@ -367,7 +367,7 @@ present.
 - **Drift fixes (F1–F8):** affect ~600 LOC across 8 files; net
   delta near zero (rewrites, not deletions).
 - **Consolidation savings if all C-recommendations land:**
-  ~1,200 LOC removed (assumptions.md UI section, ui_elements.md
+  ~1,200 LOC removed (domain_assumptions.md UI section, ui_elements.md
   Parts 2-3, functional_spec.md option (b) trim).
 - **Post-sweep target:** ~8,500 LOC across 20 files (down from
   9,713 / 22) if C1 + C2 + C3(b) all land; 13% smaller, with the
@@ -393,7 +393,7 @@ don't get lost; sequencing is up to the user.
    grid + severity chip strip + per-issue "Fix on X ↗"
    deep-links + activate-warns detour banner), and the
    orchestrator. **No dedicated spec.** Bits scattered in
-   `architecture.md` and `all_buttons.md` §11.
+   `architecture.md` and `operator_button_audit.md` §11.
    **Suggested file:** `spec/validate_page.md`.
 
 2. **Lifecycle state machine + invalidation hooks.**
@@ -418,7 +418,7 @@ don't get lost; sequencing is up to the user.
    per-template merge-tag set, per-field "Reset to default",
    "Send when reviewer submits?" toggle, encrypted credential
    plumbing. Only partial coverage in `operator_ui_concept.md`
-   §Email Template + `all_buttons.md` §10.
+   §Email Template + `operator_button_audit.md` §10.
    **Suggested file:** `spec/email_template_editor.md`.
 
 5. **Permissions / authorization.** `SessionOperator` table,
@@ -435,14 +435,14 @@ don't get lost; sequencing is up to the user.
 
 7. **Operations Assignments page.** Already partially addressed
    in sweep F4 / F7 (cross-refs in `setup_pages.md` +
-   `all_buttons.md` §11.5). Could still warrant its own spec or
-   a dedicated section in `operations_renew.md` covering the
+   `operator_button_audit.md` §11.5). Could still warrant its own spec or
+   a dedicated section in `operations_pages.md` covering the
    post-15D Rule Based card + Self-reviews toggle + "Assignment
    pairs" preview.
 
 8. **Operator Settings page (`/operator/settings`).** Encrypted
    SMTP credential storage flow, `?return_to=` plumbing. Partial
-   coverage in `settings_inventory.md` SMTP rows + `all_buttons.md`
+   coverage in `settings_inventory.md` SMTP rows + `operator_button_audit.md`
    §15. Worth a small standalone spec or a dedicated section in
    `email_infra_options.md`.
 
@@ -458,7 +458,7 @@ don't get lost; sequencing is up to the user.
     itself isn't formally specced but is small.
 
 11. **Drill-in pages** (`session_invitations_reviewer_detail.html`,
-    `session_responses_reviewee_detail.html`). `operations_renew.md`
+    `session_responses_reviewee_detail.html`). `operations_pages.md`
     calls them "scaffolds"; per-assignment / per-response detail
     is deferred. Probably fine until pilot feedback.
 

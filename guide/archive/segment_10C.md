@@ -131,7 +131,7 @@ Mobile (≤800px) collapses every grid to one column, drops
 
 ### 3.1 Six button styles
 
-Documented in `spec/assumptions.md`. All `<a>` and `<button>` actions
+Documented in `spec/domain_assumptions.md`. All `<a>` and `<button>` actions
 in operator pages should use one of:
 
 | Class | Use |
@@ -325,7 +325,7 @@ alert variants override.
 
 ## 6. Cross-references
 
-- `spec/assumptions.md` — six button styles, typography knob.
+- `spec/domain_assumptions.md` — six button styles, typography knob.
 - `spec/operator_map.md` — page layout conventions, `.page-grid`
   / `.bottom-grid` placement classes.
 - `guide/ui_checklist.md` — page-by-page restructure checklist.

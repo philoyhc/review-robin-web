@@ -21,7 +21,7 @@
 > - **`spec/architecture.md`** — domain model, layering,
 >   audit-event detail schema.
 > - **`spec/session_home.md`**, **`spec/setup_pages.md`**,
->   **`spec/instruments.md`**, **`spec/operations_renew.md`**,
+>   **`spec/instruments.md`**, **`spec/operations_pages.md`**,
 >   **`spec/quick_setup_card_spec.md`**,
 >   **`spec/rule_based_assignment.md`**,
 >   **`spec/preview_hub.md`**, **`spec/sessions_overview.md`**,
