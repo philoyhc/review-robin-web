@@ -199,27 +199,56 @@ stamps every successful reminder. There is no throttle. Bulk reminders
 emit a single `reminders.sent` audit event with `detail.count` and the
 list of invitation/reviewer ids.
 
-### Pair-level vs assignment-level context
+### Pair-level context
 
-Manual CSV imports may carry two kinds of per-pair context, both
-stored in `Assignment.context` JSON:
+Per-pair context (three `tag_N` slots — e.g. "morning interview",
+"room A", "panel-1") lives on the first-class **`relationships`**
+table — one row per `(session_id, reviewer_id, reviewee_id)`
+triple, seeded in **Segment 13E PR 2** and lit up by the
+Relationships Setup page in **Segment 15D PR 2**. Each row
+carries:
 
-- **`pair_context_1/2/3`** is informational metadata (e.g. "morning
-  interview", "room A"). Displayed alongside the reviewee in the
-  reviewer surface. Never read by assignment-generation logic.
-- **`assignment_context_1/2/3`** is logic-engaging context (e.g.
-  "panel-1", a category code). Read by RuleBased rules in Segment
-  12. Hidden from reviewers; deliberately excluded from the Segment
-  10B `InstrumentDisplayField` picker so the reviewer-facing /
-  logic-engaging distinction is preserved. (Pair contexts go in the
-  picker; assignment contexts do not.)
+- `tag_1`, `tag_2`, `tag_3` — free-form per-pair labels.
+- `status` — `active` / `inactive`. Defaults to `active`.
 
-CSV columns are `PairContext1/2/3` and `AssignmentContext1/2/3`.
+**Two consumers, one source:**
+
+- **Reviewer surface.** Displayed alongside the reviewee via
+  `InstrumentDisplayField` rows of `source_type='pair_context'`
+  and `source_field='1'|'2'|'3'`. Render-time lookup
+  (`display_field_value(field, assignment)`) reads off the
+  relationship row matching the assignment's `(reviewer_id,
+  reviewee_id)` pair.
+- **Rule engine.** The `pair_context.tag_N` predicate grammar
+  (Segment 15D PR 3) reads via an eager
+  `relationships.pair_context_lookup(db, session_id) -> dict`
+  pre-built once per `engine.evaluate` call (15D PR 4). This
+  dodges N×M re-queries — the dict is `{(reviewer_id,
+  reviewee_id): Relationship}` and the predicate evaluator runs
+  single-pass.
+
+CSV columns on the Relationships extract / importer are
+`ReviewerEmail`, `RevieweeEmail`, `PairContextTag1`,
+`PairContextTag2`, `PairContextTag3`, `Status` (round-trip via
+`app/services/extracts/relationships_extract.py` ↔
+`app/services/relationships.py`).
+
+#### Legacy pre-15D shape (retired)
+
+Pre-15D, pair-level context lived on an `Assignment.context`
+JSON column carrying both `pair_context_1/2/3` (informational,
+shown to reviewers) and `assignment_context_1/2/3` (logic-
+engaging, hidden from reviewers). The column was dropped in
+**15D PR 6b**; the `assignment_context_*` family retired
+entirely (it had no production data and never landed an
+operator UI). Migration `e43454fceb1c` (15D PR 5) backfilled
+existing JSON `pair_context_*` values into `relationships`
+rows before the column drop.
 
 #### Lazy display-field seeding (2026-05-01, item #14)
 
-`InstrumentDisplayField` rows are seeded **lazily** from import data,
-never unconditionally on session creation. This avoids the
+`InstrumentDisplayField` rows are seeded **lazily** from import
+data, never unconditionally on session creation. This avoids the
 data-loss-by-illusion shape where reviewers saw three blank
 `Pair Context` columns on full-matrix sessions because the legacy
 default seed assumed manual mode would always populate them.
@@ -229,20 +258,23 @@ default seed assumed manual mode would always populate them.
 - After a successful reviewees CSV import, `save_reviewees` calls
   `seed_display_fields_from_reviewees`, which adds a row for any
   reviewee column (`profile_link`, `tag_1/2/3`) with at least one
-  populated value across the imported set. Idempotent — re-importing
-  reviewees does not duplicate rows.
-- After a successful manual-assignment CSV import,
-  `replace_assignments` calls `seed_display_fields_from_assignments`,
-  which adds a `pair_context_N` row for any slot with at least one
-  populated value. Full-matrix mode (no contexts) is a no-op.
-- Reviewee Name and Email are not display fields; they're rendered
-  by the hardcoded reviewee-identity column in `review_surface.html`.
-  The Display Fields card on the Instruments page surfaces only the
-  configurable extras.
+  populated value across the imported set. Idempotent —
+  re-importing reviewees does not duplicate rows.
+- After a successful relationships CSV import,
+  `save_relationships` calls `seed_display_fields_from_assignments`
+  (the legacy-named helper now reads from `relationships.tag_N`
+  per the 15D rewrite), which adds a `pair_context_N` row for any
+  slot with at least one populated value across the session's
+  relationships. Sessions without populated pair-context slots
+  are a no-op.
+- Reviewee Name and Email are not display fields; they're
+  rendered by the hardcoded reviewee-identity column in
+  `review_surface.html`. The Display Fields card on the
+  Instruments page surfaces only the configurable extras.
 
-The `dfedd22a38da` migration cleans up legacy unconditional seeds —
-for every existing instrument, drops `pair_context_N` rows whose
-slot is unpopulated across the session's assignments. Rows whose
+The `dfedd22a38da` migration (2026-05-01) cleans up legacy
+unconditional seeds — for every existing instrument, drops
+`pair_context_N` rows whose slot is unpopulated. Rows whose
 slot has data (including operator-typed labels) are preserved.
 
 ## Audit-event detail schema
