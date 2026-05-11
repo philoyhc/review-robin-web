@@ -117,10 +117,11 @@ def test_sessions_diagnostics_renders_for_sys_admin(
     )
     # Operators is a placeholder (no href), titled "Coming in 16B".
     assert "Coming in 16B" in response.text
-    # Status renders as a pill (matches Deadline / Created / etc.).
+    # Status renders as a lifecycle-coloured pill matching the
+    # session_setup_status_row partial used on session-home pages.
     assert (
-        '<span class="pill pill-info">' in response.text
-        and "Draft" in response.text  # default new-session status label
+        '<span class="pill pill-lifecycle-draft">Draft</span>'
+        in response.text
     )
 
 
