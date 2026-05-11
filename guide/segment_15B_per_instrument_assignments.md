@@ -48,6 +48,24 @@ and the feature.
 
 ---
 
+## Catalog items absorbed
+
+Three items from the now-retired `guide/archive/unfinished_business.md`
+catalog land under this segment's umbrella:
+
+- **#27 — FullMatrix per-instrument target picker.** Moot in the
+  literal sense post-15D: FullMatrix is now a seeded RuleSet, so
+  "pick which instrument FullMatrix targets" reduces to "pick
+  which instrument this RuleSet applies to" — covered by Slice 2
+  (per-instrument `rule_set_id` selection). Catalog wording
+  archived; functional scope absorbed.
+- **#28 — Manual CSV `Instrument` column.** Slice 3.
+- **#29 — Reviewer dashboard per-instrument grouping.** Slice 7
+  (new). The reviewer surface already groups by instrument; the
+  dashboard (`/reviewer`) does not — see slice.
+
+---
+
 ## Migration & invariants (locked 2026-05-09)
 
 Three properties this segment must preserve. They're already
@@ -271,7 +289,44 @@ instruments where the reviewer has no assignments. Confirm via a
 manual smoke test on the dev slot — there's no template change
 needed, but the empty-state copy may want polish.
 
-### Slice 7 (deferred — only on real use case) — `AssignmentContext1-3`
+### Slice 7 — Reviewer dashboard per-instrument grouping (1 PR, ~150 LOC)
+
+**Why.** Absorbs catalog item #29 from the retired
+`guide/archive/unfinished_business.md`. The reviewer dashboard
+(`/reviewer`) currently shows one row per session with a single
+per-session pill (`not started` / `in progress` / `submitted`).
+On a 2-instrument session a reviewer who's submitted instrument 1
+but not started instrument 2 sees `in progress` with no
+breakdown — they have to open the surface to learn which
+instrument is which. The surface itself already groups by
+instrument (the multi-instrument rewrite, Segment 11D follow-on,
+shipped this); the dashboard never picked up the same shape.
+
+**Change.**
+
+- `app/web/templates/reviewer/dashboard.html` — per-session row
+  expands to a stacked sub-row per instrument (when N > 1),
+  honouring invariant #3. Each sub-row carries the instrument's
+  short label + its own progress pill. Single-instrument
+  sessions stay byte-identical to today.
+- `app/web/routes_reviewer.py::dashboard` — per-row context
+  builder reads existing per-instrument state (the
+  `responses_service.reviewer_session_state(...)` helper added
+  in Segment 11 already projects this; extend or wrap with a
+  new `reviewer_instrument_state(...)` helper).
+- New view-adapter shape in `app/web/views/_dashboard.py` (or
+  wherever the dashboard adapter lives post-refactor).
+
+**No new audit events; no service mutations.** Pure read-path
+adapter + template change.
+
+**Hard dependency.** None — uses the per-instrument projection
+that already exists; lands cleanly even before Slices 1-6 wire
+per-instrument *write-path* divergence, since the dashboard
+projects existing state regardless of how that state was
+authored.
+
+### Slice 8 (deferred — only on real use case) — `AssignmentContext1-3`
 
 **Out of 13D scope by design.** 13D's DB-prep segment explicitly
 *does not* pre-position columns for AssignmentContext (see
@@ -362,6 +417,9 @@ plus rules?" sniff test before authoring the slice.
   delete). No migration in this segment.
 - Possibly touched in Slice 6: `app/web/views/_validate.py`,
   `app/web/templates/operator/session_validate.html`.
+- Slice 7: `app/web/templates/reviewer/dashboard.html`,
+  `app/web/routes_reviewer.py` (the `dashboard` handler), the
+  reviewer-side view adapter that builds per-session row context.
 
 ---
 
@@ -386,6 +444,11 @@ plus rules?" sniff test before authoring the slice.
     sessions.
   - Slice 6: new `assignments.reviewer_missing_for_instrument`
     `ValidationRule` covered in `test_session_validate_page.py`.
+  - Slice 7: `test_reviewer_dashboard.py` (or extend the
+    existing dashboard tests) — single-instrument session
+    renders a single row + pill (byte-identical to pre-15B);
+    multi-instrument session renders one sub-row per
+    instrument with per-instrument progress pills.
 - Manual smoke on the dev slot for Slice 4-6 (per-instrument tabs
   render, divergent assignments persist correctly, reviewer
   surface honours the per-instrument scope).
