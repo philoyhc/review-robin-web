@@ -24,6 +24,7 @@
             <th>Created by</th>
             <th>Created</th>
             <th>Last Modified</th>
+            <th>Status</th>
             <th class="col-shrink"></th>
           </tr>
           {% for s in sessions %}
@@ -47,6 +48,9 @@
               </td>
               <td>
                 <span class="pill pill-count">{{ s.updated_at.isoformat() }}</span>
+              </td>
+              <td>
+                <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
               </td>
               <td class="col-shrink">
                 <input type="checkbox"
