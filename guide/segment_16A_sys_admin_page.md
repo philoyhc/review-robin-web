@@ -8,17 +8,13 @@
 > audit views (now **16C**,
 > `guide/segment_16C_richer_audit_views.md`).
 
-**Status:** Planning — stub created 2026-05-10, split 2026-05-11.
-Captures the home for operator-internal / dev-only surfaces that
-exist today but lack a dedicated chrome surface, plus a few that
-retired from operator-facing routes under the 13E → 12C → 15D →
-12A-3 block and will land here.
-
-> **Working notes scratchpad** at the bottom — capture
-> decisions, scope tweaks, and open questions as they
-> come up. Once the shape settles, lift the durable
-> parts into a proper "Goal / Scope / PR sequence / Out
-> of scope" structure.
+**Status:** Planning — stub created 2026-05-10, split
+2026-05-11, sized into a four-PR ladder 2026-05-11.
+**Sizing:** 4 PRs (each small + reviewable; PRs 2-4 land
+sequentially on PR 1 and can ship one per day).
+**Depends on:** none. Lands cleanly any time after the
+2026-05-10 locked block (`13E → 12C → 15D → 12A-3`)
+shipped.
 
 ## Goal
 
@@ -130,24 +126,142 @@ assignment upload). A dedicated Sys Admin page:
   support / admin scope rather than everyday
   operator scope.
 
-## Likely surface
+## PR ladder
 
-> Sketchy — settle during PR scoping.
+### PR 1 — Sys-admin gate + chrome scaffold (~250 LOC)
 
-- Chrome row (or sub-section under the existing
-  Operations row, or a separate `/operator/sessions/{id}/sys-admin`
-  page).
-- Sections:
-  - **Outbox** (read-only diagnostic; reuses
-    `session_outbox.html` template).
-  - **Manual assignment upload** (dev-only form;
-    reuses `parse_manual_csv` / `replace_assignments`).
-  - **Audit log download** (download button wiring
-    the existing 12B PR 1 route; reuses
-    `serialize_audit_events` + the `/export/audit_log.csv`
-    route).
-  - Future: one-off SMTP test send, anything else
-    dev / support scope picks up over time.
+**Why first.** Bedrock. Every other PR in 16A (and the
+whole of 16C) sits behind this gate; nothing else can land
+until the chrome + dependency exist.
+
+**Ships.**
+
+- `app/config.py` gains `sys_admin_emails: list[str]`
+  (parsed from a comma-separated `SYS_ADMIN_EMAILS` env
+  var) — see "Security / access" below for the Option C
+  rationale.
+- `app/web/deps.py` gains `require_sys_admin = Depends(…)`
+  returning the `User` on hit; 403s with `"sys_admin
+  required"` detail on miss. Plus a non-failing
+  `current_user_is_sys_admin(request)` helper for chrome
+  rendering.
+- Middleware (or a per-request adapter in `_shared.py`)
+  populates `request.state.is_sys_admin` so the chrome
+  partial can render the Sys Admin tab conditionally.
+- New empty-shell route `/operator/sessions/{id}/sys-admin`
+  in a new `routes_operator/_sys_admin.py` slice. Renders
+  the two-row session chrome + a "Sys Admin" H1 + an empty
+  body that PRs 2-4 fill. Breadcrumbs via
+  `breadcrumbs.operator_session_child(label="Sys Admin")`.
+- Chrome partial `session_top_nav.html` gains the Sys
+  Admin tab — rendered only when `is_sys_admin` is true.
+- `ALLOW_FAKE_AUTH=true` honours a new
+  `FAKE_AUTH_SYS_ADMIN=true` toggle so the agent's
+  sandbox + local dev can exercise the gate.
+
+**Tests.**
+
+- 403 for non-admin GET `/sys-admin`.
+- 200 for admin GET `/sys-admin`.
+- Chrome partial renders / suppresses the Sys Admin tab
+  conditional on the flag (one test of each).
+- `require_sys_admin` returns the `User` on hit;
+  signals 403 on miss.
+- `FAKE_AUTH_SYS_ADMIN=true` injection in dev mode.
+
+**Open question for scoping.** Per-session URL
+(`/operator/sessions/{id}/sys-admin`) vs workspace-level
+(`/operator/sys-admin`). The three anchor surfaces are all
+session-scoped today; lean per-session. Revisit once 16C
+PR 5 (cross-session audit search) takes a serious look at
+workspace-level.
+
+### PR 2 — Outbox moves under Sys Admin (~150 LOC)
+
+**Ships.**
+
+- The existing `/operator/sessions/{id}/outbox` route +
+  `session_outbox.html` template + `invitations.list_outbox_for_session`
+  service all stay. **Pure chrome relocation.**
+- New Outbox card / section on the Sys Admin page, rendering
+  the same table (probably via a partial extracted from
+  `session_outbox.html`).
+- The "View outbox" button on Manage Invitations
+  (`session_invitations.html:43`) retires — the Sys Admin
+  page is the new canonical home. Existing direct URL stays
+  reachable for bookmarks.
+- Optional: emit `sys_admin.outbox_viewed` audit event on
+  page hit. Lean **skip** — read-only views shouldn't spam
+  the log.
+
+**Tests.**
+
+- Sys Admin page renders the Outbox section for admin
+  users; absent for non-admin (covered by PR 1's 403).
+- The "View outbox" button is no longer present on the
+  Manage Invitations page.
+
+### PR 3 — Audit log download tile (~80 LOC)
+
+**Ships.**
+
+- New "Download audit log" tile / button on the Sys Admin
+  page wiring the existing
+  `GET /operator/sessions/{id}/export/audit_log.csv` route
+  (shipped in 12B PR 1).
+- The route + `serialize_audit_events` service +
+  `session.audit_log_extracted` audit event — already
+  shipped, unchanged. **Pure chrome placement.**
+- The earlier 12B PR 2 already retired the Extract Data
+  tile in anticipation of this PR; nothing to undo there.
+
+**Tests.**
+
+- Sys Admin page renders the Audit log tile for admin
+  users.
+- Download still emits `session.audit_log_extracted`
+  (regression covered by 12B's existing tests; assert no
+  drift).
+
+### PR 4 — Manual assignment upload (~250 LOC + 1 audit event)
+
+**Why last.** It's the only mutating Sys Admin surface in
+16A and the highest-risk action ("I can wipe pairings");
+landing it last lets the chrome + read-only surfaces stabilise
+first.
+
+**Ships.**
+
+- New Manual upload card / form on the Sys Admin page.
+  Wires the existing
+  `POST /operator/sessions/{id}/assignments/manual/upload`
+  route (`_assignments.py:199`) + `parse_manual_csv` /
+  `replace_assignments` service. The route stays
+  dev-only-discoverable (no operator-facing chrome
+  surfaces it post-15D) — Sys Admin is the new operator-
+  reachable home for the legitimate "I need to bypass the
+  rules engine" case.
+- **Explicit confirmation checkbox** ("I'm overriding the
+  rule engine; this replaces every assignment for this
+  session.") required before submit. Matches the existing
+  Quick Setup `confirm_replace=true` gate pattern.
+- New audit event `sys_admin.manual_assignments_uploaded`
+  (`counts` envelope: rows parsed / accepted / rejected).
+  Registered in `EVENT_SCHEMAS` per the canonical 11K
+  shape.
+- Help text alongside the form pointing operators at the
+  Relationships table + Rule Builder as the everyday
+  operator path; Sys Admin upload is the explicit "I need
+  to bypass" escape.
+
+**Tests.**
+
+- 403 for non-admin POST.
+- Happy path: valid CSV, replace_assignments called, audit
+  event emitted with correct envelope.
+- Missing-confirmation checkbox → 400.
+- `EVENT_SCHEMAS` strict-mode gate passes for the new
+  event type.
 
 ## Out of scope
 

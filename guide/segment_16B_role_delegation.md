@@ -6,8 +6,13 @@
 > in-app audit viewer lives in **16C**
 > (`guide/segment_16C_richer_audit_views.md`).
 
-**Stub. Sketch-level scope only.** Detailed PR breakdowns get
-drafted when this segment is picked up.
+**Status:** Planning — stub created 2026-05-11, sized into
+a four-PR ladder 2026-05-11 (PRs 1-2 MVP; PR 3 conditional;
+PR 4 post-MVP).
+**Sizing:** 2 MVP PRs + 1 conditional PR + 1 post-MVP PR.
+**Depends on:** **none for PRs 1-2.** PR 3 hard-deps on 16A
+adopting Option A or B; under Option C (env-allowlist —
+the current 16A recommendation), PR 3 is skipped entirely.
 
 ## Goal
 
@@ -34,79 +39,167 @@ among multiple operators"** (§22 Expanded release items) is
 the canonical scope ask — `guide/codebase_assessment_11may.md`
 marks it ⚠️ "table exists; no UI".
 
-## Scope (sketch)
+## PR ladder
 
-### Part 1 — Per-session operator membership UI
+### PR 1 — Operator-membership service helpers + audit registration (~250 LOC)
 
-**Goal.** A small operator-facing surface for "who else can
-operate this session?"
+**Why first.** Service layer before UI keeps the contract
+testable in isolation. PR 2's UI is then a thin wrapper.
 
-Likely shape:
+**Ships.**
 
-- New card / section on Session Home (or under Session Details
-  / a new "Access" sub-page — decide at scoping time): list of
-  current operators with Add / Remove affordances.
-- Add operator flow: type an email; if the email matches an
-  existing `users` row, insert a `SessionOperator` row; if it
-  doesn't, decide between (a) reject with "user must sign in
-  first" or (b) write an `invited_email`-shaped pending row.
-  Lean (a) for MVP — simpler, no new column.
-- Remove operator flow: per-row Remove button with confirm.
-  The session creator cannot be removed (or, if removable,
-  another operator must exist; lock at scoping time).
-- Audit emitters: `session.operator_added` /
-  `session.operator_removed` using the canonical envelope
-  (`refs` for the affected user; `reason` for the actor's
-  motive if captured).
-- Lifecycle gate: editing operator membership does **not**
-  invalidate `validated` — it's an access-control change, not
-  a setup mutation. Sessions in any lifecycle state can have
-  their operator list edited.
+- New service helpers in `app/services/permissions.py`:
+  - `add_operator(db, session, target_user, *, actor, correlation_id) -> SessionOperator`
+    — inserts a `SessionOperator` row; pre-conditions:
+    `actor` must already be an operator on the session;
+    `target_user` must not already be an operator;
+    `target_user` must exist in `users` (i.e. has signed
+    in before).
+  - `remove_operator(db, session, target_user, *, actor, correlation_id) -> None`
+    — deletes the row; pre-conditions: `actor` is an
+    operator; `target_user` is an operator; the operator
+    being removed is not the session creator (the creator
+    row stays load-bearing); the operator list will still
+    have ≥1 row after removal.
+  - Both helpers emit canonical audit events on success.
+- Audit-event registrations in
+  `app.services.audit.EVENT_SCHEMAS`:
+  - `session.operator_added` — `refs.target_user_id`,
+    `actor_user_id` from the session var, `reason="added"`
+    optional context slot.
+  - `session.operator_removed` — symmetric to above.
+- **No lifecycle gate.** Editing the operator list is an
+  access-control change, not a setup mutation —
+  `invalidate_if_validated` does not fire. Sessions in any
+  lifecycle state can have their operator list edited.
 
-### Part 2 — Sys-admin promotion UI
+**Tests.**
 
-**Goal.** If 16A ships with Option B (per-user
-`users.is_sys_admin` boolean) or Option A (Entra app role
-+ in-app mirror table), expose a workspace-level UI for
-flipping the flag.
+- Happy path: add / remove operator, audit event emitted
+  with correct envelope.
+- Pre-condition violations:
+  - Adding a user who isn't an operator-actor → 403-shaped
+    error.
+  - Adding a user who isn't in `users` → 400 ("user must
+    sign in first").
+  - Removing the session creator → 409.
+  - Removing the last operator → 409.
+- `EVENT_SCHEMAS` strict-mode gate passes for both new
+  event types.
 
-If 16A ships with Option C (env-allowlist) instead, Part 2 is
-**out of scope** — the env var is the UI, and 16B Part 1 is
-the only meaningful work here. Revisit Part 2 when 16A
-migrates from C → A or C → B.
+### PR 2 — Operator-membership UI on Session Home (~350 LOC)
 
-Likely shape (only relevant under 16A Option A or B):
+**Ships.**
 
-- New section on the Sys Admin page (lives behind the
-  sys-admin gate itself) — list of every `users` row with the
-  per-user role flag; per-row Promote / Demote toggle.
+- New "Session operators" card on Session Home (probably
+  in the right column near Session Details — decide at
+  scoping). Lists current operators with email + a
+  per-row "Remove" button.
+- Add operator form: email input + Add button. On submit,
+  hits the PR 1 helper. Hard-reject if the email doesn't
+  match a `users` row, with copy: "<email> hasn't signed
+  in yet. Ask them to sign in to the app, then add them
+  here." (Simpler than a pending-invitation flow; no new
+  column.)
+- Remove operator: per-row form with single-click confirm
+  (no two-step type-the-email). Disabled (or hidden) for
+  the session creator's row.
+- New routes in `routes_operator/_session_home.py` (or a
+  new slice — decide during scoping):
+  - `POST /operator/sessions/{id}/operators` → add.
+  - `POST /operator/sessions/{id}/operators/{user_id}/remove`
+    → remove.
+- View adapter `views.build_session_operators_card(session)
+  -> SessionOperatorsContext`.
+- Surfaces a small "you're operator on N sessions" hint
+  on the Sessions lobby header if N > 1 — **defer to a
+  follow-on** if it expands PR 2's scope materially.
+
+**Tests.**
+
+- Renders the operators card for an operator-user; absent
+  for non-operator (covered by existing
+  `require_session_operator` gate).
+- Add by email → 303 + new row visible on re-render +
+  audit event emitted.
+- Add unknown email → 400 with helpful copy.
+- Remove → row gone + audit event emitted.
+- Session creator's Remove button absent / disabled.
+
+### PR 3 — Sys-admin promotion UI (~250 LOC) — **conditional**
+
+**Conditional on 16A's auth choice.** Today 16A
+recommends **Option C (env-allowlist)**; under Option C, the
+env var is the UI and PR 3 is **out of scope** entirely.
+
+PR 3 lands **only if** 16A migrates to:
+- **Option A** (Entra app role with an in-app mirror table
+  for promotion / demotion), or
+- **Option B** (per-user `users.is_sys_admin` boolean).
+
+Until then, this section is a placeholder.
+
+**If Option A or B is chosen, ships:**
+
+- New "Sys-admin roster" section on the Sys Admin page
+  (behind the existing sys-admin gate from 16A PR 1).
+  Lists every `users` row with the per-user flag; per-row
+  Promote / Demote toggle.
+- New routes in `routes_operator/_sys_admin.py`:
+  - `POST /operator/sys-admin/users/{user_id}/promote`.
+  - `POST /operator/sys-admin/users/{user_id}/demote`.
+- Confirmation: explicit "I'm promoting <email> to
+  sys-admin" / "I'm demoting <email>" checkbox before
+  submit (matches 16A PR 4's "I'm overriding the rule
+  engine" pattern).
+- **Last-admin demotion guard.** Refuses to demote the
+  last sys-admin (and refuses self-demotion if you're the
+  only sys-admin).
 - Audit emitters: `sys_admin.role_promoted` /
-  `sys_admin.role_demoted` (`changes` envelope with the actor +
-  target).
-- Confirmation: explicit "I'm promoting <email> to sys-admin"
-  checkbox before submit (matches 16A's "I'm overriding the
-  rule engine" pattern).
-- Guard: a sys-admin cannot demote themselves if they're the
-  last sys-admin (avoid lockout).
+  `sys_admin.role_demoted` — `changes` envelope on the
+  flag column, `refs.target_user_id`.
 
-### Part 3 — Role delegation polish (post-MVP)
+**Tests.**
 
-**Goal.** Beyond add / remove, give operators a way to assign
-narrower per-session roles (read-only viewer? deputy operator
-who can edit setup but not activate?).
+- 403 for non-admin.
+- Promote / demote → flag flips + audit event emitted.
+- Last-admin-demote → 409 with helpful copy.
+- Confirmation checkbox required.
 
-Likely shape (deferred — confirm need before scoping):
+### PR 4 (post-MVP) — Per-session role granularity (~400 LOC)
 
-- New column or join table for per-session role
-  (`role ∈ {operator, viewer, deputy}` or similar). The
-  current `SessionOperator` table is binary — exists or not.
-- Per-role permission checks layered on top of
-  `require_session_operator` (currently a binary gate).
-- Audit-event payload widening to include the role granted.
+**Defer until pilot feedback confirms binary
+operator-or-not is insufficient.** Adds richer per-session
+role granularity beyond the current binary model.
 
-Likely deferred. The binary "you're an operator on this
-session" model is probably sufficient for the first pilot;
-revisit when richer delegation is a real ask.
+**If it lands, ships:**
+
+- Schema: new `SessionOperator.role` column (`String(32)`,
+  default `"operator"`). Initial enum values:
+  `operator` / `viewer` / `deputy`. Alembic migration adds
+  the column with a default backfill of `"operator"` for
+  every existing row.
+- Per-role permission predicates:
+  - `viewer` — read-only access to every operator page;
+    no setup mutations, no lifecycle transitions, no
+    Sys Admin chrome.
+  - `deputy` — full operator access **except** Activate /
+    Pause / Delete-session transitions. The session
+    creator + other `operator`-role users retain those.
+- PR 2's add / remove UI gains a role-picker
+  `<select>` next to the email input.
+- Audit-event payload (PR 1 emitters) widens to include
+  the role granted / current.
+- The existing `require_session_operator` dependency
+  splits into `require_session_role(role: str)` /
+  `require_setup_edit` / `require_lifecycle_transition` —
+  a non-trivial route audit across the operator surface
+  to slot the right gate per route.
+
+**Likely deferred indefinitely.** The binary model is
+sufficient for most realistic operator populations; richer
+delegation is mostly a "compliance / governance" ask that
+pilot feedback may or may not surface.
 
 ## Hard dependencies
 
