@@ -183,14 +183,14 @@ RTD is referenced by any response field).
 Stored on `reviewers`, `reviewees`, and `relationships` tables.
 Owned by the session. Tags are operator-determined; status is a
 mix of operator action (soft-delete via Inactivate, deferred to
-Segment 15) and system state.
+Segment 15F) and system state.
 
 **Surface:** Setup Pages — `/operator/sessions/{id}/reviewers`,
 `/operator/sessions/{id}/reviewees`, and
 `/operator/sessions/{id}/relationships`. Bulk-populated via Quick
 Setup or per-entity CSV; managed inline (Manage rows are
-read-only today; inline edit deferred to Segment 15 per
-`guide/archive/unfinished_business.md` #25).
+read-only today; inline edit deferred to Segment 15F per
+`guide/segment_15F_enhanced_setup_pages.md`).
 
 ### Reviewer
 
@@ -198,7 +198,7 @@ read-only today; inline edit deferred to Segment 15 per
 |---|---|---|
 | `name` | `String(255)` | |
 | `email` | `String(320)` | Identity used for invitation matching. |
-| `status` | `String(32)` | `active` / `inactive`. Inactivate UI deferred to Segment 15 (`guide/archive/unfinished_business.md` #36). |
+| `status` | `String(32)` | `active` / `inactive`. Inactivate UI deferred to Segment 15F (`guide/segment_15F_enhanced_setup_pages.md`). |
 | `tag_1`, `tag_2`, `tag_3` | `String(255)` | Free-form labels. Used by rule-based assignment matching and surfaced on the reviewer surface when the corresponding column toggle is enabled. |
 
 ### Reviewee

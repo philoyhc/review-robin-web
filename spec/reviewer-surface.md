@@ -746,8 +746,9 @@ re-architecting; see "Designed-for-extensibility" below.
   Today the post-submit signal is the per-page `submitted` pill in
   the right-half status panel and the per-row submitted-timestamp in
   the status column.
-- **AG Grid replacement of the reviewer-surface `<table>`** (catalog
-  `guide/archive/unfinished_business.md` #33 — Segment 15).
+- **AG Grid replacement of the reviewer-surface `<table>`** —
+  Segment 17 (stub plan at
+  `guide/segment_17_ag_grid_replacement.md`).
 
 ---
 

@@ -170,7 +170,7 @@ email, and otherwise stamps `opened_at` once and 303s to
 
 The `email_outbox` table (Segment 9.2) is the dev-mode replacement
 for SMTP. Rows synchronously flip `queued → sent` when the operator
-clicks Send. Real SMTP / production email is deferred to Segment 15;
+clicks Send. Real SMTP / production email is deferred to Segment 14-1;
 the outbox table itself stays useful for debugging in any environment.
 
 ### Monitoring + reminders (Segment 9.3)
@@ -256,9 +256,11 @@ smell that reads as the event trying to do two things at once.
 The convention is enforced by the typed helpers in
 `app/services/audit.py` (`audit.changes(...)` /
 `audit.snapshot(...)` / `audit.counts(...)` /
-`audit.set_changes(...)`); a future Pydantic
-write-validation gate (Segment 11K PR 8) will catch drift back
-into the old idiosyncratic shapes.
+`audit.set_changes(...)`). The Pydantic write-validation gate
+shipped in Segment 11K PR 8 catches drift back into the old
+idiosyncratic shapes — strict mode (flipped on in tests) raises
+`AuditDetailValidationError` on any registered-but-malformed
+event.
 
 ### Identity slots (top-level, almost always present)
 
