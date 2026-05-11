@@ -19,6 +19,7 @@ The "what is this thing?" layer. Read these first when onboarding.
 |---|---|
 | `audience_and_identity_model.md` | Who uses Review Robin — operator / reviewer audiences, plus forward-looking reviewee and sysadmin. Auth posture and customization boundaries. The "highest-ranking" doc on identity / audience decisions; visual-style choices follow from it. |
 | `architecture.md` | Domain entities, three-layer split (routes → services → models), conceptual hierarchy, pair-level context (post-15D `relationships` table), audit-event detail schema (canonical envelopes, strict-mode gate). |
+| `lifecycle.md` | Session state machine (`draft` ↔ `validated` ↔ `ready`, plus reserved `expired` / `archived`), transition services, `_require_editable` + `_require_response_loss_ack` route gates, `invalidate_if_validated` service-layer hook, per-instrument open/close + visibility-when-closed + lazy deadline-close, UI lock-card pattern, and the audit events emitted at each transition. |
 
 ## Per-page operator contracts
 
