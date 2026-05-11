@@ -129,7 +129,7 @@ instrument.order, field.order)`.
 ### 2.5 Audit events — `extracts/audit_events_extract.py`
 
 Shipped 12B PR 1. No operator-facing tile (relocates to Sys Admin
-under Segment 16); the route `GET /export/audit_log.csv` is
+under Segment 16A); the route `GET /export/audit_log.csv` is
 live.
 
 | # | Column | Source | Notes |
@@ -322,7 +322,7 @@ shares. Public surface:
 | Extract Data — Relationships tile | Out | `serialize_relationships` | same |
 | Extract Data — Responses tile | Out | `serialize_responses` | same |
 | Extract Data — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
-| `GET /export/audit_log.csv` (no UI tile) | Out | `serialize_audit_events` | Sys Admin (`spec/segment_16_sys_admin_page.md` — pending) |
+| `GET /export/audit_log.csv` (no UI tile) | Out | `serialize_audit_events` | Sys Admin (`guide/segment_16A_sys_admin_page.md` — pending) |
 | Reviewers Setup page — Upload CSV | In | `parse_reviewer_csv` + `save_reviewers` | `spec/setup_pages.md` |
 | Reviewees Setup page — Upload CSV | In | `parse_reviewee_csv` + `save_reviewees` | same |
 | Relationships Setup page — Upload CSV | In | `parse_relationship_csv` + `save_relationships` | same |

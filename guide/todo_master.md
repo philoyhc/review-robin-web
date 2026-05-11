@@ -266,7 +266,7 @@ Bonus: **#781** — Grey out the Reviewers / Reviewees / Relationships / Respons
 Smallest possible slice — adds a per-session `audit_events` CSV download. The original Segment 12 framing (response-data export + retention) was already covered by 12A-1 / 12A-3, so 12B reduced to a single PR for the audit log. Plan archived: `guide/archive/segment_12B_audit_retention.md`.
 
 - **#788** — PR 1 (Audit-events extract + Extract Data tile): new `app/services/extracts/audit_events_extract.py` with `serialize_audit_events()` (8-column wide CSV: `EventType,Severity,Summary,ActorEmail,CorrelationId,CreatedAt,DetailJson`, JSON-encoded detail envelope via `json.dumps(..., sort_keys=True)`, LEFT JOIN against `users` for ActorEmail, streamed via `yield_per(1000)`); `session.audit_log_extracted` registered in `EVENT_SCHEMAS`; `GET /operator/sessions/{id}/export/audit_log.csv` route in `_extracts.py`; new "Audit log" tile in `_extract_data.py` between Relationships and the inert Zip-all bundle. Naive-datetime readbacks normalised to UTC so the cell shape is dialect-stable.
-- **#789** — Move audit log out of Extract Data → flag for Sys Admin. Per industry best practice (GitHub, Stripe, Slack, Notion, Atlassian) audit data sits behind an admin / diagnostics doorway rather than alongside everyday data exports. The route + service + audit event + tests stay live; the Extract Data tile retires so the surface relocates cleanly to the Sys Admin page when Segment 16 ships. Segment 16 stub upgraded audit log download from "Future" to a planned **Anchor item §3** alongside Outbox and Manual assignment upload.
+- **#789** — Move audit log out of Extract Data → flag for Sys Admin. Per industry best practice (GitHub, Stripe, Slack, Notion, Atlassian) audit data sits behind an admin / diagnostics doorway rather than alongside everyday data exports. The route + service + audit event + tests stay live; the Extract Data tile retires so the surface relocates cleanly to the Sys Admin page when Segment 16A ships. Segment 16A stub upgraded audit log download from "Future" to a planned **Anchor item §3** alongside Outbox and Manual assignment upload.
 
 ---
 
@@ -283,12 +283,13 @@ that originated there before the catalog retired.
 The locked block `13E → 12C → 15D → 12A-3` shipped 2026-05-10
 (see Done above for the four entries) and 12B (audit-events
 export) followed the same day. The remaining schedule items
-— 13B, 13C, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16, 17, 20 — ship per
+— 13B, 13C, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 20 — ship per
 their own plan; no ordering constraints beyond shared schema
-conflicts (none detected). **Segment 16** (Sys Admin page) is
+conflicts (none detected). **Segment 16A** (Sys Admin page) is
 a natural near-term pick since it absorbs the audit-log
 download route that 12B left UI-less, alongside Outbox and
-the dev-only manual assignment upload.
+the dev-only manual assignment upload — and unlocks 16B
+(role delegation) + 16C (richer audit views).
 
 #### Numbered queue
 
@@ -411,12 +412,30 @@ the dev-only manual assignment upload.
   trip a CSV to fix one name or toggle one status.
   **Plan:** `guide/segment_15F_enhanced_setup_pages.md`.
 
-- **16 — Sys admin page** *(stub created 2026-05-10)*.
+- **16A — Sys Admin page + admin user role** *(stub created
+  2026-05-10; carved from original Segment 16 on 2026-05-11)*.
   Home for operator-internal / dev-only surfaces that
   exist today but lack a dedicated chrome surface, plus a
   few that retired from operator-facing routes under the
-  13E / 12C / 15D / 12A-3 block and will land here.
-  **Plan:** `guide/segment_16_sys_admin_page.md`.
+  13E / 12C / 15D / 12A-3 block and will land here. Gates
+  access behind a new sys-admin role (Option C env-allowlist
+  recommended for MVP).
+  **Plan:** `guide/segment_16A_sys_admin_page.md`.
+
+- **16B — Role delegation among operators** *(stub created
+  2026-05-11)*. Per-session `SessionOperator` membership UI
+  + (conditional on 16A's auth choice) sys-admin promotion
+  UI. Closes the §22 acceptance criterion "Role delegation
+  among multiple operators".
+  **Plan:** `guide/segment_16B_role_delegation.md`.
+
+- **16C — Richer audit views** *(stub created 2026-05-11)*.
+  In-app audit log viewer beyond today's CSV download —
+  per-session table with filters + search + entity drill-in;
+  workspace-level cross-session view; post-MVP per-session
+  timeline / activity stream. Sits behind 16A's sys-admin
+  gate.
+  **Plan:** `guide/segment_16C_richer_audit_views.md`.
 
 - **17 — AG Grid replacement of the reviewer-surface table**
   *(carved out of the original Segment 15, 2026-05-10)*.
@@ -477,7 +496,7 @@ they pinned:
   12A-3 export-refresh + Settings importer + Quick Setup
   slot 4 graduation; 12A-2 was absorbed into 12A-3). The
   remaining schedule items — **13B, 13C, 14A, 14B, 14C, 15A,
-  15B, 15C, 15E, 15F, 16, 17, 20** — are independent of the email +
+  15B, 15C, 15E, 15F, 16A, 16B, 16C, 17, 20** — are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;
   13C PR 3 (rule-engine fanout for group-scoped instruments)

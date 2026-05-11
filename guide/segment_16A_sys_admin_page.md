@@ -1,10 +1,18 @@
-# Segment 16 — Sys admin page
+# Segment 16A — Sys Admin page + admin user role
 
-**Status:** Planning — stub created 2026-05-10. Captures
-the home for operator-internal / dev-only surfaces that
-exist today but lack a dedicated chrome surface, plus a
-few that retire from operator-facing routes under the
-13E → 12C → 15D → 12A-3 block and will land here.
+> **Carved out of the original Segment 16 (2026-05-11).** The
+> original `segment_16_sys_admin_page.md` bundled three concerns:
+> the Sys Admin page itself (this file), user-role management /
+> delegation among operators (now **16B**,
+> `guide/segment_16B_role_delegation.md`), and richer in-app
+> audit views (now **16C**,
+> `guide/segment_16C_richer_audit_views.md`).
+
+**Status:** Planning — stub created 2026-05-10, split 2026-05-11.
+Captures the home for operator-internal / dev-only surfaces that
+exist today but lack a dedicated chrome surface, plus a few that
+retired from operator-facing routes under the 13E → 12C → 15D →
+12A-3 block and will land here.
 
 > **Working notes scratchpad** at the bottom — capture
 > decisions, scope tweaks, and open questions as they
@@ -19,8 +27,9 @@ gathering surfaces that are useful for diagnostics /
 support / dev workflows but **shouldn't sit on the
 operator-facing chrome alongside the everyday Setup +
 Operations tabs**. The internal capabilities for the
-two anchor items already exist as code paths — Segment
-16 wires them under one chrome roof.
+three anchor items already exist as code paths — Segment
+16A wires them under one chrome roof and gates access
+behind a new `sys_admin` user role.
 
 ## Anchor items (capabilities already exist)
 
@@ -34,7 +43,7 @@ Manage Invitations page (`session_invitations.html:43`).
 Backed by `invitations.list_outbox_for_session(...)` in
 the invitations service.
 
-**Under Segment 16.** The page **moves under the Sys
+**Under Segment 16A.** The page **moves under the Sys
 Admin chrome** rather than being a per-session
 diagnostic surface tucked behind a per-page button.
 Everything functional already exists — the move is a
@@ -43,7 +52,7 @@ chrome / placement change. The chrome partial
 Outbox page as "reachable from a View outbox button on
 Invitations and is not a chrome tab — it's a
 dev-diagnostic surface, not part of the Operations row
-taxonomy"; Segment 16 makes that taxonomy explicit by
+taxonomy"; Segment 16A makes that taxonomy explicit by
 giving the dev-diagnostic surface its own chrome row.
 
 ### 2. Manual assignment upload
@@ -65,7 +74,7 @@ handler **stay as a dev-only feature** per the
 route + handler accessible for tests + admin
 tooling).
 
-**Under Segment 16.** The dev-only manual upload
+**Under Segment 16A.** The dev-only manual upload
 gets a discoverable home on the Sys Admin page —
 explicitly labelled as dev-only with the operator-
 facing alternative (Relationships table → Generate)
@@ -93,13 +102,16 @@ deliberately omitted in favour of relocating the surface to
 Sys Admin per industry best practice; see "Why a separate
 sys admin page" below).
 
-**Under Segment 16.** The Sys Admin page gets a Download
+**Under Segment 16A.** The Sys Admin page gets a Download
 audit log button (or tile) wiring the existing route.
 Per industry best practice (GitHub, Stripe, Slack, Notion,
 Atlassian) audit data sits behind an admin / diagnostics
 doorway rather than alongside everyday data exports —
 Sys Admin is that doorway. No new service code needed; the
 move is pure chrome placement.
+
+A richer **in-app** audit log viewer (filter, search,
+drill-in) lives in **16C** — out of scope here.
 
 ## Why a separate sys admin page
 
@@ -143,6 +155,13 @@ assignment upload). A dedicated Sys Admin page:
   both already exist.
 - Operator-facing UX changes to the rule-based
   workflow — those live in 15D and 12A-3.
+- **User-role management UI** — promoting other
+  operators to sys-admin, managing per-session
+  `SessionOperator` rows, role delegation among
+  multiple operators. Lives in **16B**.
+- **In-app audit viewer beyond the CSV download** —
+  richer filters / search / drill-in / per-session
+  timeline. Lives in **16C**.
 
 ## Security / access — proposal (decide before PR scoping)
 
@@ -230,7 +249,7 @@ accountability; embarrassing security hygiene.
 
 ### Recommendation (not yet decided)
 
-**Ship Segment 16 with Option C (env allowlist) + the
+**Ship Segment 16A with Option C (env allowlist) + the
 four defence-in-depth layers. Plan migration to Option
 A (Entra app role) when operator scale or org policy
 demands it — likely Segment 14A (production hardening).**
@@ -239,10 +258,15 @@ Reasoning: today's operator population is small (a
 handful, all known to the deployer); Option C covers it
 with one env var + ~10 lines of code. Option A is the
 right long-term home but pulls in Entra app-registration
-coordination that's more work than Segment 16 itself.
+coordination that's more work than Segment 16A itself.
 Option B (per-user flag) is the tempting middle path
 but overlaps with Entra without replacing it — better
 to skip the half-measure and migrate C → A directly.
+
+If Option B is later chosen as the persistent home for
+sys-admin flags, it naturally cohabits with **16B**'s
+per-operator role table — revisit the option at
+that time rather than now.
 
 ### Concrete shape if Option C is chosen
 
@@ -297,7 +321,7 @@ to skip the half-measure and migrate C → A directly.
 ## Working notes / open questions
 
 - _(placeholder)_
-- Should Segment 16 also absorb today's
+- Should Segment 16A also absorb today's
   `/operator/sessions/{id}/edit` or similar?
 - Should the Sys Admin chrome row sit per-session or
   per-deployment (operator-global)?
@@ -308,15 +332,23 @@ to skip the half-measure and migrate C → A directly.
   (`guide/archive/segment_15D_assignments_revamp.md`). PR 7's
   decision to keep `parse_manual_csv` /
   `replace_assignments` as a dev-only feature
-  established the route's continued existence; 16
+  established the route's continued existence; 16A
   picks up where the operator-facing surface
   retires.
 - **Segment 12B — Audit retention**
-  (`guide/segment_12B_audit_retention.md`). The
+  (`guide/archive/segment_12B_audit_retention.md`). The
   `audit_events` export shipped 2026-05-10 (PR #788)
   with the route live but no operator-facing UI
-  surface; Segment 16 wires the existing route under
+  surface; Segment 16A wires the existing route under
   the Sys Admin chrome (see Anchor item §3).
+- **Segment 16B — Role delegation**
+  (`guide/segment_16B_role_delegation.md`). The
+  user-facing surface for promoting other operators
+  to sys-admin / managing per-session
+  `SessionOperator` rows.
+- **Segment 16C — Richer audit views**
+  (`guide/segment_16C_richer_audit_views.md`). The
+  in-app audit log viewer (beyond CSV download).
 - **Outbox today.**
   `app/web/routes_operator/_operations.py:510-527`
   (route + handler);

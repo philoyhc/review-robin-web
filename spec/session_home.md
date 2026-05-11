@@ -203,7 +203,7 @@ audit-events CSV route (`GET /export/audit_log.csv`) live but
 deliberately **without** an Extract Data tile — industry best
 practice (GitHub / Stripe / Slack / Notion / Atlassian) parks
 audit data behind an admin / diagnostics doorway. The operator-
-facing surface relocates to the Sys Admin page when Segment 16
+facing surface relocates to the Sys Admin page when Segment 16A
 ships; the route + service + 13 tests stay live in the meantime.
 
 **No lifecycle gate.** The card renders identically in every
@@ -217,7 +217,7 @@ state — `draft` (sanity-check the configured artefacts),
 
 **Out of scope for this card.** The zip-all bundle stream remains
 inert. Excel-format export was never an MVP item. The audit-log
-tile relocates to Sys Admin in Segment 16.
+tile relocates to Sys Admin in Segment 16A.
 
 ### 3. Danger Zone card (left column, bottom)
 

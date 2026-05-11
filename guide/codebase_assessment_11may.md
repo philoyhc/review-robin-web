@@ -127,7 +127,7 @@ upcoming pipeline), down from a mixed working set on May 9.
 | 12 | Operator progress dashboard | ✅ | — |
 | 13 | Reminder sending | ⚠️ outbox-only until **14B Part A** | — |
 | 14 | CSV and Excel export | ✅ **CSV shipped** (12A-1 + 12A-3); Excel never an MVP item | **upgraded ❌→✅** |
-| 15 | Basic audit log | ✅ (62 event types, canonical envelope, strict-mode gate); CSV export route shipped 12B, surfaced via Segment 16 | extended (export route shipped) |
+| 15 | Basic audit log | ✅ (62 event types, canonical envelope, strict-mode gate); CSV export route shipped 12B, surfaced via Segment 16A; richer in-app views are **Segment 16C** | extended (export route shipped) |
 | 16 | Basic retention/deletion workflow | ❌ Segment 12B as originally scoped (purge tooling) not started; the audit-log export piece shipped under the same number | partial |
 
 **Score: 11/16 fully present (was 10), 4 functionally-present-but-dev-only,
@@ -146,12 +146,12 @@ purge tooling and the four ⚠️ items remain.
 | Richer invitation templates | ✅ | — |
 | Targeted reminders by completion state | ⚠️ "incomplete" cohort yes; richer slicing not planned | — |
 | Controlled post-activation correction workflows | ✅ | — |
-| Richer audit views | ⚠️ canonical schema + CSV export shipped; **operator-facing surface relocates to Segment 16 Sys Admin** | progressed |
+| Richer audit views | ⚠️ canonical schema + CSV export shipped; CSV download relocates to **16A** Sys Admin; richer in-app viewer is **Segment 16C** | progressed |
 | Long-format / wide-format export | ✅ wide-format CSV shipped per entity; long-format Responses extract via `yield_per(1000)` | **shipped 12A-1** |
 | Settings import (round-trip) | ✅ **new** — two-phase `apply_session_config` parses then wipes-and-replaces; byte-stable round-trip on its own output | **new shipped 12A-3** |
-| Role delegation among multiple operators | ⚠️ table exists; no UI | — |
+| Role delegation among multiple operators | ⚠️ table exists; no UI — owned by **Segment 16B** | — |
 | Advanced retention policies | ❌ deferred (no current plan owner) | — |
-| Administrative dashboards | ⚠️ Sys Admin page planned under **Segment 16** (stub exists, audit-log download is its first anchor item) | **new plan** |
+| Administrative dashboards | ⚠️ Sys Admin page planned under **Segment 16A** (stub exists, audit-log download is its first anchor item) | **new plan** |
 
 ### §23 End-to-end acceptance criteria
 
@@ -161,7 +161,7 @@ the five Extract Data tiles + the audit-log route. **Item 15 (delete
 or retain per policy)** still depends on retention/purge tooling
 not yet scoped to a plan. Item 16 (review audit records) now has a
 streaming CSV path — the operator-facing tile relocates to Sys Admin
-in Segment 16.
+in Segment 16A.
 
 ## 4. Strengths
 
@@ -229,7 +229,7 @@ in Segment 16.
 8. **Decisions still written down at the point of decision.**
    Three new ones since May 9: (a) audit log surface belongs
    behind a Sys Admin doorway, not in Extract Data — recorded
-   into `guide/segment_16_sys_admin_page.md` Anchor item §3 with
+   into `guide/segment_16A_sys_admin_page.md` Anchor item §3 with
    industry-best-practice citations. (b) Settings import is
    wipe-and-replace with two-phase parse, not row-level merge —
    recorded as the `ApplyResult` contract docstring. (c) Manual
@@ -259,7 +259,7 @@ in Segment 16.
    route + service + tile), but the retention/purge piece the
    original 12B plan owned **has no current plan file**. Functional
    spec §12.2 / §12.4 still go unanswered. Likely a Segment 14
-   or Segment 16 ride-along but unclaimed today.
+   or Segment 16A ride-along but unclaimed today.
 
 3. **Inline-edit still deferred.** Same shape as May 9 — typo fix
    for one reviewer's name requires a fresh CSV. **Segment 15F**
@@ -276,7 +276,7 @@ in Segment 16.
    intermediate state — the schema supports manual mode, the test
    helpers still exercise it, but operators can't reach it through
    the UI. Worth either deleting the path entirely or repromoting
-   it as a documented escape hatch (Segment 16 Sys Admin candidate?).
+   it as a documented escape hatch (Segment 16A Sys Admin candidate?).
 
 5. **`_instruments.py` is now ~1,330 LOC.** The largest slice file
    post-refactor crossed the 1,200 line mark on May 9 and is
@@ -286,7 +286,8 @@ in Segment 16.
    unreasonable. Not on any current plan.
 
 6. **Sys Admin page is a long-known gap with no owner cadence.**
-   Segment 16 exists as a 337-LOC stub with concrete anchor items
+   Segment 16A (carved from the original Segment 16 on 2026-05-11)
+   exists as a ~330-LOC stub with concrete anchor items
    (audit-log download, Outbox diagnostic surface, dev-only manual
    assignment escape hatch, security-model proposal with four
    authorization options sketched, Option C env-allowlist
@@ -348,7 +349,9 @@ Recalibrating with that ratio and the 12 remaining plans:
 | 15C — operator libraries | 289 | ~1,500 | ~2,200 | 0 (tables landed in 13D) |
 | 15E — Next Action revamp | 160 | ~600 | ~900 | 0 |
 | 15F — Enhanced Setup pages | 159 | ~1,200 | ~2,000 | 0 |
-| 16 — Sys Admin page | 337 | ~1,000 | ~1,200 | 0-1 |
+| 16A — Sys Admin page + admin role | ~330 | ~800 | ~900 | 0-1 |
+| 16B — Role delegation | ~120 | ~600 | ~700 | 0 |
+| 16C — Richer audit views | ~160 | ~900 | ~1,000 | 0 |
 | 17 — AG Grid replacement | 130 | ~1,800 | ~600 | 0 |
 | 20 — Operator polish + docs | 94 | ~500 (code) + heavy docs | ~400 | 0 |
 | **Total remaining** | **3,015** | **~15,300** | **~17,100** | **0-2** |
@@ -390,7 +393,7 @@ What changed between the May 9 baseline and this assessment:
   table + Setup page + Quick Setup slot replaced the dropped
   `Assignment.context` JSON column.
 - **Audit-events export shipped.** 62 event types covered; export
-  route lives, surfaced via Segment 16 Sys Admin when that lands.
+  route lives, surfaced via Segment 16A Sys Admin when that lands.
 - **Segment 15 split.** The umbrella stub broke into 15F (per-row
   affordances) / 17 (AG Grid) / 20 (operator polish + docs); the
   150-LOC stub became three focused plans summing to ~380 LOC.
