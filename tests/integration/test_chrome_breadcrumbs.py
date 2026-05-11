@@ -39,7 +39,24 @@ def test_operator_chrome_renders_app_identity_user_card_and_signout(
     # back-link.
     assert 'class="chrome-link" href="/about?return_to=' in body
     assert "Signed in as Alice Example" in body
+    # No "(sys admin)" suffix for regular operators.
+    assert "(sys admin)" not in body
     assert 'href="/.auth/logout"' in body
+
+
+def test_chrome_user_card_marks_sys_admins_with_suffix(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    """Operators with ``is_sys_admin`` get a ``(sys admin)`` suffix
+    on their "Signed in as ..." label so they can tell at a glance
+    that they're running with elevated workspace privileges."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    response = client.get("/operator/sessions")
+    assert response.status_code == 200
+    assert "Signed in as Alice Example (sys admin)" in response.text
 
 
 def test_reviewer_chrome_renders_lighter_top_bar_with_no_breadcrumb(

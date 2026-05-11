@@ -1844,7 +1844,7 @@
         </div>
         {% if user %}
           <div class="chrome-user">
-            <div>Signed in as {{ user.display_name or user.email }}</div>
+            <div>Signed in as {{ user.display_name or user.email }}{% if user.is_sys_admin %} (sys admin){% endif %}</div>
             {% if request.url.path != "/operator/settings" %}
               <a class="chrome-link" href="/operator/settings?return_to={{ request.url.path | urlencode }}">Settings</a>
             {% endif %}
