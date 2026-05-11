@@ -31,7 +31,7 @@ A two-section page, single column:
 ┌─ <h1>Sessions</h1>          [ Create new session ] ┐  ← header strip
 │                                                     │
 │ ┌─ sessions table card (full width) ─────────────┐  │
-│ │ Name | Code | Deadline | Created by | … |  ☐  │  │
+│ │ Name | Code | Deadline | Created by | … | Status |  ☐  │  │
 │ │ …                                              │  │
 │ └────────────────────────────────────────────────┘  │
 │                                                     │
@@ -87,7 +87,8 @@ ordered by `created_at DESC` (most recent first).
 | 4 | **Created by** | `session.created_by_user.display_name` (falls back to `.email`) | `<span class="pill pill-count">{name}</span>`. |
 | 5 | **Created** | `session.created_at` | `<span class="pill pill-count">{iso}</span>`. ISO 8601 with date and time. |
 | 6 | **Last Modified** | `session.updated_at` | `<span class="pill pill-count">{iso}</span>`. ISO 8601 with date and time. |
-| 7 | *(unlabelled)* | `session.id` | Bulk-action select-row checkbox. |
+| 7 | **Status** | `session.status` | `<span class="pill pill-lifecycle-{status}">{label}</span>` — same lifecycle-tinted variants the session-home `session_setup_status_row.html` and the 16A Admin Sessions Diagnostics table use (draft / validated / ready / closed each carry distinct tints from `base.html`). The label is the human-readable form produced by the `lifecycle_label` Jinja filter. |
+| 8 | *(unlabelled)* | `session.id` | Bulk-action select-row checkbox. |
 
 The trailing column has `class="col-shrink"` (auto-narrow CSS).
 
