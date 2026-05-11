@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Review Robin Web — Request access{% endblock %}
+
+{% block body_class %}ui-v2{% endblock %}
+
+{# Suppress the default operator chrome (Settings / About links the
+   user can't follow). Keep a minimal top-bar with identity + Sign
+   out so the page is reachable to leave from. #}
+{% block top_bar %}
+  <div class="chrome">
+    <div class="chrome-left">
+      <span class="chrome-app-identity">Review Robin Web App (version {{ app_version }})</span>
+    </div>
+    <div class="chrome-user">
+      <div>Signed in as {{ user.name or user.email }}</div>
+      <a class="signout" href="/.auth/logout">Sign out</a>
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <h1>Request access</h1>
+
+  <div class="card">
+    <p>
+      You're signed in as <strong>{{ user.email or "(no email on record)" }}</strong>,
+      but this email isn't on the workspace operator allowlist yet.
+    </p>
+
+    {% if contact_email %}
+      <p>
+        To request access, please contact
+        <a href="mailto:{{ contact_email }}?subject=Review%20Robin%20Web%20access%20request">{{ contact_email }}</a>
+        and ask a workspace administrator to admit you.
+      </p>
+    {% else %}
+      <p>
+        To request access, please contact a workspace administrator and ask
+        them to admit you.
+      </p>
+    {% endif %}
+
+    <p class="muted">
+      Once an administrator admits you, refresh this page or sign in again to
+      continue.
+    </p>
+  </div>
+
+  <p>
+    <a class="btn secondary" href="/.auth/logout">Sign out</a>
+  </p>
+{% endblock %}

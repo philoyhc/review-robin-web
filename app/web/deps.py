@@ -7,9 +7,29 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser, get_current_user
+from app.config import settings as default_settings
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import permissions, sessions
+
+
+class OperatorAllowlistDenied(Exception):
+    """Raised by ``require_operator`` when a signed-in user is not on
+    the workspace's operator / sys-admin allowlist (the Option C
+    strict-allowlist gate; 16A PR 1).
+
+    The exception handler registered in ``app/main.py`` converts this
+    into a 303 redirect to ``/request-access`` — the deliberate UX
+    choice over a raw 403 (gentler for the misrouted-but-legitimate
+    arrival).
+    """
+
+
+def _email_in(allowlist: list[str], email: str | None) -> bool:
+    if not email:
+        return False
+    target = email.casefold()
+    return any(item.casefold() == target for item in allowlist)
 
 
 def get_or_create_user(
@@ -28,15 +48,42 @@ def get_or_create_user(
     if user is not None:
         return user
 
+    # Option C strict-allowlist bootstrap on first sign-in. Env vars
+    # seed the persisted columns once; after that the columns are
+    # authoritative. Removing an email from the env var does NOT
+    # auto-revoke — revocation goes through 16A PR 6's workspace UI.
+    # See ``guide/segment_16A_sys_admin_page.md`` F3.
+    cfg = default_settings
+    is_operator = _email_in(cfg.operator_emails, current_user.email)
+    is_sys_admin = _email_in(cfg.sys_admin_emails, current_user.email)
+    if cfg.allow_fake_auth and current_user.is_fake:
+        if cfg.fake_auth_operator:
+            is_operator = True
+        if cfg.fake_auth_sys_admin:
+            is_sys_admin = True
+
     user = User(
         email=current_user.email,
         display_name=current_user.name,
         external_principal_id=current_user.principal_id,
+        is_operator=is_operator,
+        is_sys_admin=is_sys_admin,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
+
+
+def require_operator(user: User = Depends(get_or_create_user)) -> User:
+    """16A PR 1 access gate. Passes when the user is on the workspace
+    operator allowlist, OR is a sys-admin (sys-admin implies operator
+    per F4). Anyone else is bounced to ``/request-access`` via the
+    ``OperatorAllowlistDenied`` exception handler in ``app/main.py``.
+    """
+    if user.is_operator or user.is_sys_admin:
+        return user
+    raise OperatorAllowlistDenied()
 
 
 def require_session_operator(

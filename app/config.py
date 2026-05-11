@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +12,32 @@ class Settings(BaseSettings):
     fake_auth_principal_id: str = "local-dev"
     fake_auth_email: str = "operator@example.edu"
     fake_auth_name: str = "Local Operator"
+    # Sandbox-only flags so the agent's local dev exercises the
+    # 16A operator / sys-admin gates without coordinating env vars.
+    # Honoured only when ``allow_fake_auth`` is also true.
+    fake_auth_operator: bool = False
+    fake_auth_sys_admin: bool = False
+
+    # Strict-allowlist (Option C) bootstrap sources read once by
+    # ``get_or_create_user`` on first sign-in. Email match is
+    # case-insensitive. After first sign-in, the persisted
+    # ``users.is_operator`` / ``users.is_sys_admin`` columns are
+    # authoritative — removing an email here does NOT auto-revoke.
+    # Revocation goes through the 16A PR 6 workspace UI.
+    operator_emails: list[str] = []
+    sys_admin_emails: list[str] = []
+
+    # Optional contact line surfaced on the Request-access landing
+    # page (16A PR 1). When set, the page renders a ``mailto:`` link;
+    # when unset, falls back to generic copy.
+    operator_contact_email: str | None = None
+
+    @field_validator("operator_emails", "sys_admin_emails", mode="before")
+    @classmethod
+    def _split_email_list(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
     database_url: str = "sqlite:///./review_robin_web.db"
 

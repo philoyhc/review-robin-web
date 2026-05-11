@@ -2,7 +2,9 @@ import re
 
 from fastapi import FastAPI
 from starlette.requests import Request
+from starlette.responses import RedirectResponse
 
+from app.web.deps import OperatorAllowlistDenied
 from app.web.routes_about import router as about_router
 from app.web.routes_auth import router as auth_router
 from app.web.routes_health import router as health_router
@@ -35,6 +37,12 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(operator_router)
     app.include_router(reviewer_router)
+
+    @app.exception_handler(OperatorAllowlistDenied)
+    async def _operator_allowlist_denied(
+        request: Request, exc: OperatorAllowlistDenied
+    ) -> RedirectResponse:
+        return RedirectResponse(url="/request-access", status_code=303)
 
     @app.middleware("http")
     async def reset_quick_setup_unlock_on_navigation(
