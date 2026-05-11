@@ -29,7 +29,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionOperator, User
@@ -95,16 +95,6 @@ def workspace_operator_candidates(
     return [u for u in candidates if u.id not in member_ids]
 
 
-def _count_owners(db: Session, session_id: int) -> int:
-    return int(
-        db.execute(
-            select(func.count(SessionOperator.id)).where(
-                SessionOperator.session_id == session_id
-            )
-        ).scalar_one()
-    )
-
-
 def add_owner(
     db: Session,
     *,
@@ -165,18 +155,28 @@ def remove_owner(
     target: User,
     correlation_id: str | None = None,
 ) -> None:
-    row = db.execute(
-        select(SessionOperator).where(
-            SessionOperator.session_id == review_session.id,
-            SessionOperator.user_id == target.id,
-        )
-    ).scalar_one_or_none()
-    if row is None:
+    # SELECT FOR UPDATE serialises concurrent removes through the
+    # last-owner guard: two simultaneous POSTs both reading
+    # ``count == 2`` would otherwise both pass the check and each
+    # delete one row, leaving the session with zero owners. Locking
+    # the full owner set before counting + deleting makes the
+    # invariant atomic on Postgres (the deployed dialect); SQLite
+    # ignores ``FOR UPDATE`` silently — fine for tests, no
+    # concurrency to race in-process.
+    locked_rows = db.execute(
+        select(SessionOperator)
+        .where(SessionOperator.session_id == review_session.id)
+        .with_for_update()
+    ).scalars().all()
+    target_row = next(
+        (r for r in locked_rows if r.user_id == target.id), None
+    )
+    if target_row is None:
         raise OwnerOperationError(
             code="not_owner",
             message=f"{target.email} is not an owner of this session.",
         )
-    if _count_owners(db, review_session.id) <= 1:
+    if len(locked_rows) <= 1:
         raise OwnerOperationError(
             code="last_owner",
             message=(
@@ -184,7 +184,7 @@ def remove_owner(
                 "second owner before removing this one."
             ),
         )
-    db.delete(row)
+    db.delete(target_row)
     db.flush()
     audit.write_event(
         db,
@@ -193,7 +193,7 @@ def remove_owner(
         actor_user_id=actor.id,
         session=review_session,
         payload=audit.snapshot(
-            {"user_id": target.id, "email": target.email, "role": row.role}
+            {"user_id": target.id, "email": target.email, "role": target_row.role}
         ),
         refs={"target_user_id": target.id},
         correlation_id=correlation_id,
