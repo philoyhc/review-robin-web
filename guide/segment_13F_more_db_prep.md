@@ -1,12 +1,11 @@
 # Segment 13F — More DB prep (14C / 16A / 16B / 18B / 18C ride-along)
 
-**Status:** In flight — **PR 1 shipped 2026-05-11**
-(migration `779b90e4b397`); **PR 2 pending** (the operator
-allowlist column, scoped 2026-05-11 after the 16-series
-access-model decision); PRs 3-5 deferred until their consumer
-segments (18B / 14C / 18C) are picked up, per the
-"piecemeal, front-load the 16-series work" sequencing
-decision.
+**Status:** In flight — **PRs 1 + 2 shipped 2026-05-11**
+(migrations `779b90e4b397` + `8003c2be99d8`); PRs 3-5
+deferred until their consumer segments (18B / 14C / 18C) are
+picked up, per the "piecemeal, front-load the 16-series work"
+sequencing decision. The 16-series schema scaffolding is now
+complete — Segment 16A is unblocked to start its PR ladder.
 Stub created 2026-05-11; revised 2026-05-11 to fold in the
 16-series admin / owner-role requirements after a codebase
 audit; revised again 2026-05-11 to add the operator-allowlist
@@ -53,9 +52,10 @@ users.is_sys_admin                        # PR 1: ✅ shipped — 16A sys-admin 
                                           #       session_operators.role value-set
                                           #       + flip Python-default to "owner"
                                           #       (migration 779b90e4b397)
-users.is_operator                         # PR 2: pending — 16A workspace allowlist
+users.is_operator                         # PR 2: ✅ shipped — 16A workspace allowlist
                                           #       under Option C access model
                                           #       (strict admit-by-sys-admin)
+                                          #       (migration 8003c2be99d8)
 session_tags                              # PR 3: 18B per-session free-form tags (pending)
 sessions.reminder_settings                # PR 4: 14C reminder cadence (JSON, pending)
 sessions.retention_exception              # PR 5: 18C per-session opt-out (Bool, pending)
@@ -250,7 +250,16 @@ helper, not in a DB CHECK.
   app/services/ app/web/` returns zero hits at PR close (light-up
   happens in 16A PR 2 / 16B PR 1).
 
-### PR 2 — `users.is_operator` Boolean (16A ride-along, Option C access model)
+### PR 2 — `users.is_operator` Boolean (16A ride-along, Option C access model) — ✅ **shipped 2026-05-11**
+
+**Outcome.** Migration `8003c2be99d8` adds `users.is_operator`
+(Boolean, NOT NULL, `server_default false`). 4 new tests
+(`tests/integration/test_users_is_operator_schema.py`)
+round-trip the column on both dialects and pin the two flags'
+independence at the column level. Inert audit at PR close:
+zero hits for `is_operator` in `app/services/` + `app/web/` —
+light-up happens in 16A PR 1 (`require_operator` dependency +
+`OPERATOR_EMAILS` env-var bootstrap read in `get_or_create_user`).
 
 **Why this PR exists.** The 2026-05-11 access-model discussion
 locked the workspace access posture as **Option C — strict
@@ -387,10 +396,10 @@ migration history.
 - **PR 1** — ✅ shipped 2026-05-11 (migration `779b90e4b397`).
   Unblocks 16A PR 2 (sys-admin gate read) + 16B PR 1 (owner
   role write-path).
-- **PR 2** — pending; next 13F PR to ship. Unblocks 16A PR 1
-  (operator-allowlist gate read) + 16A PR 6 (workspace
-  admit/revoke surface) + 16B PR 1 + 2 (admitted-pool
-  query).
+- **PR 2** — ✅ shipped 2026-05-11 (migration `8003c2be99d8`).
+  Unblocks 16A PR 1 (operator-allowlist gate read) + 16A PR 6
+  (workspace admit/revoke surface) + 16B PR 1 + 2
+  (admitted-pool query).
 - **PR 3** — defer until 18B (session tagging + archiving)
   is picked up.
 - **PR 4** — defer until 14C (reminders workflow) is picked

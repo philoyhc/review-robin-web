@@ -49,6 +49,20 @@ class User(Base, TimestampMixin):
         Boolean, default=False, server_default=text("false"), nullable=False
     )
 
+    # Workspace-level operator allowlist (Segment 16A, Option C
+    # strict-allowlist access posture). Read by
+    # ``require_operator`` (16A PR 1) — the gate on every
+    # operator route. Predicate: ``is_operator OR is_sys_admin``
+    # (sys-admin implies operator). Lit up by Segment 16A PR 1;
+    # until then this column sits inert. Bootstrap source on
+    # first-sign-in is the ``OPERATOR_EMAILS`` env var; the
+    # persisted column is the live source of truth after that —
+    # removing an email from the env var does NOT auto-revoke.
+    # Revocation goes through 16A PR 6's workspace UI.
+    is_operator: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false"), nullable=False
+    )
+
     review_sessions: Mapped[list[ReviewSession]] = relationship(
         back_populates="created_by_user",
         cascade="all, delete-orphan",
