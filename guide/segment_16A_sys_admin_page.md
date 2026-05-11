@@ -15,7 +15,7 @@ discussion locked the strict-allowlist Option C posture and
 absorbed the workspace user-role-management surface from 16B).
 **Sizing:** 6 PRs (each small + reviewable; PRs 2-6 land
 sequentially on PR 1 and can ship one per day).
-**Depends on:** **13F PRs 4 + 5** for the `users.is_sys_admin`
+**Depends on:** **13F PRs 1 + 2** for the `users.is_sys_admin`
 and `users.is_operator` columns the gates read. PR 4 shipped
 2026-05-11; PR 5 pending.
 
@@ -147,7 +147,7 @@ behind it.
     for `is_operator`).
   - `sys_admin_emails: list[str]` parsed from the existing
     `SYS_ADMIN_EMAILS` env var (first-sign-in bootstrap source
-    for `is_sys_admin`; the column shipped inert in 13F PR 4).
+    for `is_sys_admin`; the column shipped inert in 13F PR 1).
 - `app/web/deps.py::get_or_create_user` reads both env vars on
   user-create. On first sign-in, sets `is_operator=True` if
   the email is in `OPERATOR_EMAILS`; sets `is_sys_admin=True`
@@ -426,11 +426,11 @@ proven before introducing a sibling workspace URL.
 
 Two gates, both backed by persisted Boolean flags on `users`:
 
-- **`is_operator`** (the workspace allowlist; 13F PR 5).
+- **`is_operator`** (the workspace allowlist; 13F PR 2).
   Required to hit any operator route. Bootstrapped from a
   new `OPERATOR_EMAILS` env var on first-sign-in; managed
   in-app via PR 6.
-- **`is_sys_admin`** (the elevated tier; 13F PR 4 — shipped).
+- **`is_sys_admin`** (the elevated tier; 13F PR 1 — shipped).
   Required to hit Sys Admin routes (PR 2's chrome + PRs 3-6's
   surfaces). Bootstrapped from the existing `SYS_ADMIN_EMAILS`
   env var on first-sign-in; managed in-app via PR 6.

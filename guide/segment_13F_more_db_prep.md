@@ -1,21 +1,25 @@
 # Segment 13F — More DB prep (14C / 16A / 16B / 18B / 18C ride-along)
 
-**Status:** In flight — **PR 4 shipped 2026-05-11**
-(migration `779b90e4b397`); **PR 5 pending** (the operator
-allowlist column, added 2026-05-11 after the 16-series
-access-model decision); PRs 1-3 deferred until their consumer
+**Status:** In flight — **PR 1 shipped 2026-05-11**
+(migration `779b90e4b397`); **PR 2 pending** (the operator
+allowlist column, scoped 2026-05-11 after the 16-series
+access-model decision); PRs 3-5 deferred until their consumer
 segments (18B / 14C / 18C) are picked up, per the
-"piecemeal, front-load PR 4" sequencing decision.
+"piecemeal, front-load the 16-series work" sequencing
+decision.
 Stub created 2026-05-11; revised 2026-05-11 to fold in the
 16-series admin / owner-role requirements after a codebase
-audit; revised again 2026-05-11 to add PR 5 once the strict
-allowlist (Option C) became the locked access-model choice.
+audit; revised again 2026-05-11 to add the operator-allowlist
+column once Option C became the locked access posture;
+revised again 2026-05-11 to reorder PRs so the 16-series work
+comes first (PR 1 + PR 2) and the consumer-deferred work
+follows (PRs 3-5).
 Mirrors the **Segment 13D** (and 13E) inert-migrations pattern:
 pre-position the additive, nullable, no-backfill schema changes
 the rest of the active workplan needs, so the downstream feature
 segments are pure service / UI / template work.
 
-**Sizing:** ~4 PRs (one per migration; PR-sized).
+**Sizing:** ~5 PRs (one per migration; PR-sized).
 **Depends on:** none. Lands cleanly after 13D / 13E.
 **Unblocks:** 14C (reminder cadence), 16A (Sys Admin auth via
 persisted flag instead of env-allowlist), 16B (per-session
@@ -44,22 +48,22 @@ how **13D** pre-positioned six migrations for 15A / 15B / 15C /
 ## Final layout (proposed)
 
 ```
-session_tags                              # PR 1: 18B per-session free-form tags (pending)
-sessions.reminder_settings                # PR 2: 14C reminder cadence (JSON, pending)
-sessions.retention_exception              # PR 3: 18C per-session opt-out (Bool, pending)
-sessions.retention_overrides              # PR 3: 18C per-session policy (JSON, post-MVP, pending)
-users.is_sys_admin                        # PR 4: ✅ shipped — 16A sys-admin gate
+users.is_sys_admin                        # PR 1: ✅ shipped — 16A sys-admin gate
                                           #       persisted source + lock
                                           #       session_operators.role value-set
                                           #       + flip Python-default to "owner"
                                           #       (migration 779b90e4b397)
-users.is_operator                         # PR 5: pending — 16A workspace allowlist
+users.is_operator                         # PR 2: pending — 16A workspace allowlist
                                           #       under Option C access model
                                           #       (strict admit-by-sys-admin)
+session_tags                              # PR 3: 18B per-session free-form tags (pending)
+sessions.reminder_settings                # PR 4: 14C reminder cadence (JSON, pending)
+sessions.retention_exception              # PR 5: 18C per-session opt-out (Bool, pending)
+sessions.retention_overrides              # PR 5: 18C per-session policy (JSON, post-MVP, pending)
 ```
 
 Five migrations + one model-only correction across four PRs.
-Every column nullable (PR 4's `is_sys_admin` has a SQL-level
+Every column nullable (PR 1's `is_sys_admin` has a SQL-level
 `false` server-default so existing rows backfill safely); every
 new table starts empty; no service or web code reads or writes
 the new shape until its owning feature segment lights it up.
@@ -74,8 +78,9 @@ Before locking the 16-series schema asks, a codebase pass turned
 up two findings worth recording:
 
 1. **`session_operators.role` already exists** — `String(32)`,
-   NOT NULL, Python-default `"operator"`. The original 13F PR 4
-   ("add `session_operators.role`") was based on a stale read.
+   NOT NULL, Python-default `"operator"`. An earlier draft of
+   13F proposed *adding* this column for a future 16B
+   post-MVP slice; that draft was based on a stale read.
    The column has been on the model since the original
    `SessionOperator` definition; `sessions.py` already writes
    `role="owner"` for the session creator at create-time. The
@@ -83,7 +88,7 @@ up two findings worth recording:
    migration needed** to support owners / managers; the column
    is already there. The Python-default of `"operator"` is
    dead code (every write specifies `"owner"`) and gets fixed
-   to `"owner"` in PR 4 alongside the value-set lock.
+   to `"owner"` in PR 1 alongside the value-set lock.
 
 2. **`sessions.created_by_user_id`** already exists as the
    immutable creator FK. No code path updates it post-create —
@@ -92,7 +97,7 @@ up two findings worth recording:
 
 These findings collapse the 16-series schema ask to **one**
 new column (`users.is_sys_admin`) plus the model-only
-correction on `session_operators.role`. Both ride in PR 4.
+correction on `session_operators.role`. Both ride in PR 1.
 
 ---
 
@@ -109,7 +114,7 @@ needs identified for the remaining workplan:
 | **18C** — Retention / deletion workflow Part 3 (post-MVP) | New `sessions.retention_overrides` JSON column | Required by 18C Part 3 if it lands. Per-session retention-policy overrides (`response_days` / `audit_days` / `archived_days` keys). NULL means "use deployment default". |
 | **16A** — Sys Admin page + admin user role | New `users.is_sys_admin` Boolean column (server-default `false`) | Required by 16A PR 2 (sys-admin gate). Persisted per-user flag bootstrapped from the existing `SYS_ADMIN_EMAILS` env var on first-sign-in but extensible in-app afterwards via 16A PR 6. |
 | **16A** — Workspace operator allowlist (Option C access model) | New `users.is_operator` Boolean column (server-default `false`) | Required by 16A PR 1 (operator-allowlist gate). Locked 2026-05-11: the app is a citizen project with no tech-support promise, so the access model is strict (Option C) — only operators a sys-admin explicitly admits can use operator routes. Bootstrap source on first-sign-in is a new `OPERATOR_EMAILS` env var; persisted column is authoritative thereafter. Sys-admin implies operator (read-path checks `is_operator OR is_sys_admin`). |
-| **16B** — Role delegation (owner / manager) | **No schema change.** `session_operators.role` already exists (`String(32)`, NOT NULL). Today's only written value is `"owner"`. PR 4 locks the value-set constant (`SESSION_OPERATOR_ROLES = ("owner", "manager")`) and fixes the dead Python-default from `"operator"` to `"owner"`. | The column lands inert (already written). The value-set lock + default fix ride in PR 4 since they're cohesive with the `users.is_sys_admin` admin-role plumbing. |
+| **16B** — Role delegation (owner / manager) | **No schema change.** `session_operators.role` already exists (`String(32)`, NOT NULL). Today's only written value is `"owner"`. PR 1 locks the value-set constant (`SESSION_OPERATOR_ROLES = ("owner", "manager")`) and fixes the dead Python-default from `"operator"` to `"owner"`. | The column lands inert (already written). The value-set lock + default fix ride in PR 1 since they're cohesive with the `users.is_sys_admin` admin-role plumbing. |
 | **13D leftovers** | — | All shipped 2026-05-09; nothing rolls over. |
 | **15A / 15B / 15C** | none | All schema already shipped in 13D PRs 1 / 2 / 3 / 4. |
 | **15E / 15F** | none | UI / service-only segments; no new tables or columns. |
@@ -125,80 +130,13 @@ needs identified for the remaining workplan:
 
 ## PRs
 
-### PR 1 — New table `session_tags` (18B ride-along)
+PRs land in two waves: the **16-series wave** (PR 1 + PR 2)
+pre-positions the admin / allowlist plumbing for Segment 16A;
+the **consumer-deferred wave** (PRs 3-5) pre-positions the
+remaining tables and columns when their consumer segments
+(18B / 14C / 18C) are ready to be picked up.
 
-**Why first.** Smallest blast radius (new empty table; no
-existing rows to interact with). Pure additive. Lets PR 4's
-`session_operators.role` land later without table-name clashes
-in the sweep.
-
-**Scope.** SQL + model only. New table:
-
-```python
-# app/db/models/session_tag.py (new)
-class SessionTag(Base):
-    __tablename__ = "session_tags"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    session_id: Mapped[int] = mapped_column(
-        ForeignKey("sessions.id", ondelete="CASCADE"), index=True, nullable=False
-    )
-    tag: Mapped[str] = mapped_column(String(64), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
-    )
-
-    __table_args__ = (
-        UniqueConstraint("session_id", "tag", name="uq_session_tag_session_tag"),
-    )
-```
-
-**Tests.** Migration round-trip on SQLite + `ci-postgres`.
-`(session_id, tag)` uniqueness pinned. Cascade-on-session-delete
-pinned. Inert audit: zero service / web references at PR close.
-
-### PR 2 — New column `sessions.reminder_settings` JSON (14C ride-along)
-
-**Scope.** One nullable JSON column on `sessions`. The JSON
-shape gets locked in 14C Part 1; this PR just opens the slot.
-
-```python
-# app/db/models/review_session.py
-reminder_settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-```
-
-Why JSON over flat columns: the cadence vocabulary (named policy
-enum / cron-ish expression / etc.) is still in scoping (14C
-"Working notes"). JSON keeps the migration flat — when 14C Part
-1 locks the shape, no new migration is needed; the JSON keys
-acquire meaning.
-
-**Tests.** Migration round-trip on both dialects. Round-trips a
-fixture JSON blob (the actual shape lives in 14C tests). Inert
-audit: zero service / web references at PR close.
-
-### PR 3 — Two columns on `sessions`: `retention_exception` + `retention_overrides` (18C ride-along)
-
-**Scope.** Two nullable columns on `sessions`, landed together
-because they're tightly coupled (one is the "opt out entirely"
-flag; the other is the "override the deployment defaults" JSON):
-
-```python
-# app/db/models/review_session.py
-retention_exception: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-retention_overrides: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-```
-
-`retention_exception=NULL` and `=False` both mean "no exception"
-(18C Part 2 will normalise read-path). `retention_overrides=NULL`
-means "use the deployment retention defaults" (18C Part 2's env
-vars).
-
-**Tests.** Migration round-trip on both dialects. Default reads
-back as `NULL` for both columns; mutating one doesn't affect the
-other. Inert audit: zero service / web references at PR close.
-
-### PR 4 — `users.is_sys_admin` Boolean + lock `session_operators.role` value-set + default fix (16A / 16B ride-along) — ✅ **shipped 2026-05-11**
+### PR 1 — `users.is_sys_admin` Boolean + lock `session_operators.role` value-set + default fix (16A / 16B ride-along) — ✅ **shipped 2026-05-11**
 
 **Outcome.** Migration `779b90e4b397` adds `users.is_sys_admin`
 (Boolean, NOT NULL, `server_default false`). `SessionOperator`
@@ -209,9 +147,8 @@ module-level constant; the Python-default flips from
 trip the column on both dialects and pin the value-set + the
 new default. Inert audit at PR close: zero hits for
 `is_sys_admin` / `SESSION_OPERATOR_ROLES` in `app/services/` +
-`app/web/` — light-up lives in 16A PR 1 (column read) +
+`app/web/` — light-up lives in 16A PR 2 (column read) +
 16B PR 1 (role write-path validation).
-
 
 **Why this PR is structured this way.** The codebase audit
 above showed `session_operators.role` already exists, so this
@@ -241,7 +178,7 @@ env var, kept as a bootstrap mechanism rather than the live
 source). After first sign-in, the persisted column is the
 source of truth — removing an email from the env var does
 **not** auto-demote that operator. Promotion / demotion of
-later operators happens via 16B PR 3's UI.
+later operators happens via 16A PR 6's UI.
 
 This is what makes the admin list "extensible without
 redeployment": the env var seeds, the DB column persists, the
@@ -295,7 +232,7 @@ The two concerns are already cleanly separated in the existing
 schema. Adding owners = `INSERT` a `session_operators` row.
 Removing an owner = `DELETE`. Demoting the creator from owner
 status is allowed at the service layer **only if ≥1 other
-owner exists** — invariant lives in 16B PR 2's `remove_operator`
+owner exists** — invariant lives in 16B PR 1's `remove_owner`
 helper, not in a DB CHECK.
 
 **Tests.**
@@ -311,9 +248,9 @@ helper, not in a DB CHECK.
   `app.db.models.session_operator`; unit test pins membership.
 - Inert audit: `grep -rn "is_sys_admin\|SESSION_OPERATOR_ROLES"
   app/services/ app/web/` returns zero hits at PR close (light-up
-  happens in 16A PR 1 / 16B PR 1).
+  happens in 16A PR 2 / 16B PR 1).
 
-### PR 5 — `users.is_operator` Boolean (16A ride-along, Option C access model)
+### PR 2 — `users.is_operator` Boolean (16A ride-along, Option C access model)
 
 **Why this PR exists.** The 2026-05-11 access-model discussion
 locked the workspace access posture as **Option C — strict
@@ -324,11 +261,10 @@ stricter user list is probably necessary") rather than
 Option A (open) or Option B (tenant-restricted via Easy Auth).
 
 The persisted source of truth for the allowlist is one
-column on `users`, mirroring PR 4's `is_sys_admin` shape.
+column on `users`, mirroring PR 1's `is_sys_admin` shape.
 
-**Scope.** One nullable-no-actually-NOT-NULL Boolean column on
-`users` with a SQL-level server-default so existing rows
-backfill safely:
+**Scope.** One NOT NULL Boolean column on `users` with a
+SQL-level server-default so existing rows backfill safely:
 
 ```python
 # app/db/models/user.py
@@ -340,7 +276,7 @@ is_operator: Mapped[bool] = mapped_column(
 **Bootstrap source.** On user-create / first-sign-in
 (`deps.get_or_create_user`), 16A PR 1 sets `is_operator=True`
 if the principal's email is in a new `OPERATOR_EMAILS` env var
-(parallels the `SYS_ADMIN_EMAILS` pattern from PR 4). The
+(parallels the `SYS_ADMIN_EMAILS` pattern from PR 1). The
 persisted column is authoritative after first sign-in —
 removing an email from the env var does **not** auto-revoke;
 revocation happens via 16A PR 6's workspace UI.
@@ -364,19 +300,106 @@ for transparency.
   returns zero hits at PR close (light-up happens in
   16A PR 1).
 
-**Why a separate PR from PR 4.** Could have ridden as Part C of
-PR 4 in principle. Kept separate because (a) PR 4 already
-shipped, (b) the access-model decision came after PR 4 landed,
+**Why a separate PR from PR 1.** Could have ridden as Part C of
+PR 1 in principle. Kept separate because (a) PR 1 already
+shipped, (b) the access-model decision came after PR 1 landed,
 (c) one migration per PR is the 13D / 13E precedent.
+
+### PR 3 — New table `session_tags` (18B ride-along)
+
+**Scope.** SQL + model only. New table:
+
+```python
+# app/db/models/session_tag.py (new)
+class SessionTag(Base):
+    __tablename__ = "session_tags"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("sessions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    tag: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint("session_id", "tag", name="uq_session_tag_session_tag"),
+    )
+```
+
+**Tests.** Migration round-trip on SQLite + `ci-postgres`.
+`(session_id, tag)` uniqueness pinned. Cascade-on-session-delete
+pinned. Inert audit: zero service / web references at PR close.
+
+### PR 4 — New column `sessions.reminder_settings` JSON (14C ride-along)
+
+**Scope.** One nullable JSON column on `sessions`. The JSON
+shape gets locked in 14C Part 1; this PR just opens the slot.
+
+```python
+# app/db/models/review_session.py
+reminder_settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+```
+
+Why JSON over flat columns: the cadence vocabulary (named policy
+enum / cron-ish expression / etc.) is still in scoping (14C
+"Working notes"). JSON keeps the migration flat — when 14C Part
+1 locks the shape, no new migration is needed; the JSON keys
+acquire meaning.
+
+**Tests.** Migration round-trip on both dialects. Round-trips a
+fixture JSON blob (the actual shape lives in 14C tests). Inert
+audit: zero service / web references at PR close.
+
+### PR 5 — Two columns on `sessions`: `retention_exception` + `retention_overrides` (18C ride-along)
+
+**Scope.** Two nullable columns on `sessions`, landed together
+because they're tightly coupled (one is the "opt out entirely"
+flag; the other is the "override the deployment defaults" JSON):
+
+```python
+# app/db/models/review_session.py
+retention_exception: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+retention_overrides: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+```
+
+`retention_exception=NULL` and `=False` both mean "no exception"
+(18C Part 2 will normalise read-path). `retention_overrides=NULL`
+means "use the deployment retention defaults" (18C Part 2's env
+vars).
+
+**Tests.** Migration round-trip on both dialects. Default reads
+back as `NULL` for both columns; mutating one doesn't affect the
+other. Inert audit: zero service / web references at PR close.
 
 ---
 
 ## Sequencing
 
-PR 1 → PR 2 → PR 3 → PR 4 → PR 5. Each PR is independent and
-self-contained; no inter-PR ordering constraints beyond
-landing them in numeric order for tidy migration history. Any
-PR can ship in isolation if the others slip.
+**16-series wave first** (PR 1 → PR 2), then the
+**consumer-deferred wave** (PRs 3-5 ride with their owning
+feature segments when those are picked up). Each PR is
+independent and self-contained; no inter-PR ordering
+constraints beyond landing them in numeric order for tidy
+migration history.
+
+- **PR 1** — ✅ shipped 2026-05-11 (migration `779b90e4b397`).
+  Unblocks 16A PR 2 (sys-admin gate read) + 16B PR 1 (owner
+  role write-path).
+- **PR 2** — pending; next 13F PR to ship. Unblocks 16A PR 1
+  (operator-allowlist gate read) + 16A PR 6 (workspace
+  admit/revoke surface) + 16B PR 1 + 2 (admitted-pool
+  query).
+- **PR 3** — defer until 18B (session tagging + archiving)
+  is picked up.
+- **PR 4** — defer until 14C (reminders workflow) is picked
+  up. Specifically Part 1 (per-session cadence settings)
+  is the consumer.
+- **PR 5** — defer until 18C (retention / deletion workflow)
+  is picked up. Specifically Part 2 (per-deployment retention
+  policy) is the first consumer; Part 3 (per-session policy
+  overrides) is the second.
 
 The schema-only PRs are deliberately small (~50-100 LOC each
 including the migration, model edit, and the round-trip test).
@@ -387,7 +410,7 @@ A reviewer can model the whole contract in one sitting per PR.
 ## Risks + open questions
 
 - **Migration safety.** Every change is additive + nullable; no
-  backfill except PR 4's server-default. SQLite + Postgres
+  backfill except PR 1's server-default. SQLite + Postgres
   parity is exercised by the existing `ci-postgres` job.
 - **JSON shape commitments.** PR 2's `reminder_settings` and
   PR 3's `retention_overrides` are JSON; the actual key schema
@@ -395,14 +418,14 @@ A reviewer can model the whole contract in one sitting per PR.
   then, the columns are inert containers. Worth a short note
   in each PR description naming where the shape will be
   pinned.
-- **`session_operators.role` Python-default flip.** PR 4
+- **`session_operators.role` Python-default flip.** PR 1
   changes the model's `default="operator"` to
   `default="owner"`. This affects ORM `SessionOperator(...)`
   constructions that don't pass `role` explicitly. **Today's
   only such call site is `sessions.py:30-36` which already
   writes `"owner"` explicitly** — so behaviour is unchanged
   for existing code. Future call sites added in 16B PR 1's
-  `permissions.add_operator` will continue to pass an
+  `permissions.add_owner` will continue to pass an
   explicit role; the default is the safety net, not the
   load-bearing path.
 - **`users.is_sys_admin` / `users.is_operator` bootstrap
@@ -436,15 +459,15 @@ A reviewer can model the whole contract in one sitting per PR.
 
 ## Critical files
 
-- New: `app/db/models/session_tag.py`, four Alembic migrations
-  (PRs 1 / 2 / 3 add migrations; PR 4 adds one migration for
-  `users.is_sys_admin` plus a model-only edit on
-  `session_operator.py`; PR 5 adds one migration for
-  `users.is_operator`).
-- Touched: `app/db/models/review_session.py` (PR 2 + PR 3),
-  `app/db/models/user.py` (PR 4 Part A + PR 5),
-  `app/db/models/session_operator.py` (PR 4 Part B —
-  Python-default fix + `SESSION_OPERATOR_ROLES` constant).
+- New: `app/db/models/session_tag.py` (PR 3), four Alembic
+  migrations (PR 1 adds one migration for `users.is_sys_admin`
+  plus a model-only edit on `session_operator.py`; PR 2 adds
+  one migration for `users.is_operator`; PRs 3 / 4 / 5 each
+  add one migration for the table or column they introduce).
+- Touched: `app/db/models/user.py` (PR 1 Part A + PR 2),
+  `app/db/models/session_operator.py` (PR 1 Part B —
+  Python-default fix + `SESSION_OPERATOR_ROLES` constant),
+  `app/db/models/review_session.py` (PR 4 + PR 5).
 - Inert audit at every PR-close: `grep -rn "reminder_settings\|retention_exception\|retention_overrides\|session_tags\|is_sys_admin\|is_operator\|SESSION_OPERATOR_ROLES" app/services/ app/web/` should return nothing until the owning feature segment lights up.
 
 ---

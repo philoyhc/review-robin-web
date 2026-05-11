@@ -3,16 +3,20 @@
 Adds the workspace-level sys-admin Boolean flag to ``users``.
 
 Lands inert — no service module reads or writes the column until
-Segment 16A PR 1's ``require_sys_admin`` dependency lights it
-up. Persisted source of truth for the sys-admin list; the
-existing ``SYS_ADMIN_EMAILS`` env var becomes a one-shot
-bootstrap on first-sign-in (16A PR 1 wires that read). After
-bootstrap, the column is authoritative — removing an email from
-the env var does NOT auto-demote that operator.
+Segment 16A lights it up. Persisted source of truth for the
+sys-admin list; the existing ``SYS_ADMIN_EMAILS`` env var
+becomes a one-shot bootstrap on first-sign-in (16A PR 1 wires
+that read in ``get_or_create_user``). The ``require_sys_admin``
+dependency lands in 16A PR 2. After bootstrap, the column is
+authoritative — removing an email from the env var does NOT
+auto-demote that operator.
 
-See ``guide/segment_13F_more_db_prep.md`` PR 4 for the schema
-rationale and ``guide/segment_16A_sys_admin_page.md`` PR 1 for
-the light-up.
+See ``guide/segment_13F_more_db_prep.md`` PR 1 for the schema
+rationale and ``guide/segment_16A_sys_admin_page.md`` PRs 1-2
+for the light-up. Note: 13F's PR ladder was reordered 2026-05-11
+so the 16-series work landed first; this migration's filename
+preserves the original draft's "pr4" suffix as a historical
+artifact, but the PR is now numbered 1.
 
 Revision ID: 779b90e4b397
 Revises: d92f4a710e88

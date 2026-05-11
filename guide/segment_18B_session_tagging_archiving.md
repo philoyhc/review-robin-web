@@ -80,7 +80,7 @@ filterable chips on the lobby.
 Likely shape:
 
 - The `session_tags` table — **pre-positioned by Segment
-  13F PR 1** (`id` PK / `session_id` FK ON DELETE CASCADE /
+  13F PR 3** (`id` PK / `session_id` FK ON DELETE CASCADE /
   `tag VARCHAR(64)` / `UNIQUE (session_id, tag)` / `created_at`).
 - Operator-facing Add / Remove tag affordance on Session
   Home or the Sessions lobby (decide at scoping).
@@ -156,7 +156,7 @@ When parts ship:
   Segment 9.3 lands first) depends on which lifecycle work
   ships before 18B. Default assumption: `closed → archived`.
 - **Tag table vs JSON column.** ✅ Locked 2026-05-11 — table.
-  `session_tags` is **pre-positioned by Segment 13F PR 1**
+  `session_tags` is **pre-positioned by Segment 13F PR 3**
   (additive, nullable, no backfill; awaits 18B Part 2 light-up).
 - **Should archived sessions stay editable?** Probably no —
   archived sessions should be read-only (export still

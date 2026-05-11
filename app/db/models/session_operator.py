@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from app.db.models.user import User
 
 
-# Locked value-set for ``SessionOperator.role`` (Segment 13F PR 4).
+# Locked value-set for ``SessionOperator.role`` (Segment 13F PR 1).
 # Today only ``"owner"`` is written by any code path
 # (``sessions.create_session`` inserts the creator as owner at
 # create-time). ``"manager"`` is reserved for the future

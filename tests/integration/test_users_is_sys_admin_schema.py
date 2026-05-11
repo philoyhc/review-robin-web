@@ -1,13 +1,14 @@
-"""Schema-level coverage for the Segment 13F PR 4 ``users.is_sys_admin`` column.
+"""Schema-level coverage for the Segment 13F PR 1 ``users.is_sys_admin`` column.
 
 Round-trips the new column and pins the canonical
 ``SESSION_OPERATOR_ROLES`` value-set. Both changes are inert
 today — no service module reads ``is_sys_admin`` and no code
 path writes a ``role`` other than ``"owner"``.
 
-The column sits inert until Segment 16A PR 1 wires
-``require_sys_admin``; the value-set constant sits inert until
-Segment 16B PR 1 starts policing role writes.
+The column sits inert until Segment 16A PRs 1-2 wire the
+bootstrap read + the ``require_sys_admin`` dependency; the
+value-set constant sits inert until Segment 16B PR 1 starts
+policing role writes.
 """
 from __future__ import annotations
 
@@ -59,7 +60,7 @@ def test_users_is_sys_admin_flip_persists(db: Session) -> None:
 
 def test_session_operator_role_default_is_owner(db: Session) -> None:
     """The Python-side default flipped from "operator" to "owner"
-    in Segment 13F PR 4 to match the only value any code actually
+    in Segment 13F PR 1 to match the only value any code actually
     writes (``sessions.create_session`` writes the creator as
     ``role="owner"`` at create-time)."""
 
