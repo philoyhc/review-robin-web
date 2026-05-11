@@ -174,11 +174,12 @@ role granularity beyond the current binary model.
 
 **If it lands, ships:**
 
-- Schema: `session_operators.role` column **pre-positioned
-  by Segment 13F PR 4** (`String(32)`, `server_default`
-  `"operator"`). Initial enum values: `operator` / `viewer` /
-  `deputy`, gated at the service layer via the
-  `SESSION_OPERATOR_ROLES` value-set constant.
+- Schema: `session_operators.role` column already exists
+  (`String(32)`, NOT NULL, model default `"owner"` post-13F
+  PR 4). The value-set constant
+  `SESSION_OPERATOR_ROLES = ("owner", "manager")` was locked
+  in 13F PR 4; this slice widens it (e.g. to add `"viewer"`)
+  via a deliberate Python edit, no migration.
 - Per-role permission predicates:
   - `viewer` — read-only access to every operator page;
     no setup mutations, no lifecycle transitions, no

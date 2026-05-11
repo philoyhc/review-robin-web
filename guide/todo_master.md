@@ -394,17 +394,23 @@ the dev-only manual assignment upload — and unlocks 16B
 
 #### Stubs
 
-- **13F — More DB prep (14C / 16B / 18B / 18C ride-along)**
-  *(stub created 2026-05-11)*. Mirrors the 13D / 13E
-  inert-migrations pattern for the **next** batch of
-  schema needs identified during the Segment 16 PR-ladder
-  sizing pass. New table `session_tags` (18B), JSON
-  column `sessions.reminder_settings` (14C), columns
+- **13F — More DB prep (14C / 16A / 16B / 18B / 18C
+  ride-along)** *(stub created 2026-05-11; revised
+  2026-05-11 after 16-series codebase audit)*. Mirrors the
+  13D / 13E inert-migrations pattern for the **next** batch
+  of schema needs identified during the Segment 16 PR-ladder
+  sizing pass. New table `session_tags` (18B), JSON column
+  `sessions.reminder_settings` (14C), columns
   `sessions.retention_exception` + `retention_overrides`
-  (18C), column `session_operators.role` (16B PR 4
-  post-MVP). ~4 PRs, all additive nullable, no backfill.
-  Each migration sits inert until its owning feature
-  segment lights it up.
+  (18C), and new `users.is_sys_admin` Boolean (16A — the
+  persisted-list source that makes the sys-admin list
+  extensible without redeployment, replacing the original
+  Option C env-allowlist recommendation) + a model-only
+  `session_operators.role` value-set lock and Python-default
+  fix (16B owners / managers). ~4 PRs, all additive
+  nullable with `server_default false` on the new Boolean.
+  Each migration sits inert until its owning feature segment
+  lights it up.
   **Plan:** `guide/segment_13F_more_db_prep.md`.
 
 - **15E — Next Action revamp + multi-step shortcuts**
