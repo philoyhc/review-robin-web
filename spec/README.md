@@ -64,6 +64,7 @@ Reading order: `visual_style_general.md` (portable design system)
 | File | Covers |
 |---|---|
 | `settings_inventory.md` | Single-stop reference for every operator- and per-session setting Review Robin Web persists — operator SMTP config, session metadata, email-template overrides, instrument settings, reviewer / reviewee tags, RuleSets, and the browser-local UI-state primitives (cookies / localStorage / URL params). |
+| `csv_contracts.md` | Column shapes + parsing rules for the five extracts (Reviewers / Reviewees / Relationships / Responses / Settings / audit events) and the four importers (Reviewers / Reviewees / Relationships / Settings). Round-trip stability rules, two-phase parse + apply contract for Settings, shared parsing primitives. |
 | `email_infra_options.md` | Email backend architecture — pluggable-sender scaffolding, Options A (SMTP) / B (Microsoft Graph) / C (Azure Communication Services) / D (third-party transactional), `email_outbox` schema. |
 
 ## Forward-looking segment specs

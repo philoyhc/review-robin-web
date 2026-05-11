@@ -553,9 +553,10 @@ If three Tier-1 specs land, in priority order:
 1. **`spec/lifecycle.md`** — cross-cutting load-bearer; every
    per-page spec currently re-states bits of it. Single
    authoritative source pays off everywhere.
-2. **`spec/csv_contracts.md`** — round-trip stability is now a
-   real contract (post-12A-3) but lives only as test assertions.
-   Documenting the contract surfaces the guarantee.
+2. **`spec/csv_contracts.md`** — ✅ **Shipped 2026-05-11.**
+   Round-trip stability is now a real contract (post-12A-3) but
+   used to live only as test assertions. The spec documents the
+   guarantee.
 3. **`spec/validate_page.md`** — substantial unspecced
    subsystem; Segment 14 (production hardening) will need this
    anyway to document the readiness gate for pilot.
