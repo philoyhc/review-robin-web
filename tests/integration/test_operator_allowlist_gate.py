@@ -326,6 +326,40 @@ def test_fake_auth_toggle_is_inert_when_user_is_not_fake(
     assert response.status_code == 303
 
 
+# --- Gate is mounted on the operator router (PR 1b) ------------------------
+
+
+def test_operator_lobby_redirects_unallowlisted_user(
+    db: Session,
+) -> None:
+    """Regression cover for PR 1b: the ``require_operator`` dependency
+    is mounted on the parent operator ``APIRouter`` so every route
+    under ``/operator/*`` gates uniformly. A signed-in but not-
+    allowlisted user hitting the lobby (the lightest-weight operator
+    route) gets bounced to ``/request-access`` — not 200, not 403."""
+    intruder = AuthenticatedUser(
+        principal_id="intruder-oid",
+        email="intruder@example.edu",
+        name="Intruder",
+        provider="aad",
+    )
+    client = _make_client(db, intruder)
+    response = client.get("/operator/sessions")
+    assert response.status_code == 303
+    assert response.headers["location"] == "/request-access"
+
+
+def test_operator_lobby_reachable_for_allowlisted_user(
+    db: Session,
+    auth_alice: AuthenticatedUser,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "operator_emails", ["alice@example.edu"])
+    client = _make_client(db, auth_alice)
+    response = client.get("/operator/sessions")
+    assert response.status_code == 200
+
+
 # --- /request-access landing page (F5) -------------------------------------
 
 
