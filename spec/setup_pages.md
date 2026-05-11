@@ -161,8 +161,9 @@ The home for **pair-level context** — the `relationships` table
 seeded in Segment 13E PR 2 and lit up by this Setup page in
 Segment 15D PR 2. One row per `(reviewer, reviewee)` pair within
 a session, carrying three `tag_N` slots consumed by the rule
-engine via the `pair_context.tag_N` predicate grammar (15D PR 3
-/ PR 4) plus a per-row `active` / `inactive` status.
+engine via the `pair_context.tag1` / `pair_context.tag2` /
+`pair_context.tag3` predicate field names (15D PR 3 / PR 4)
+plus a per-row `active` / `inactive` status.
 
 ### Body grid (when not Activated)
 
