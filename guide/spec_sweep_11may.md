@@ -349,7 +349,7 @@ F6, F8, then F1 + F4 + F7 (heavier rewrites). Each can ship as a
 separate small PR. ~8 PRs.
 
 **Tranche 2 — S-fixes (style touch-ups):** S1–S5. Single sweep
-PR, ~50-line diff.
+PR, ~50-line diff. **Landed 2026-05-11** (PR pending).
 
 **Tranche 3 — C-consolidation (judgment calls; ask user first):**
 - C3 is the biggest call — does `functional_spec.md` survive in

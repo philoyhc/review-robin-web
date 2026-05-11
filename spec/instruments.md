@@ -177,7 +177,7 @@ Title: `Display Fields`. Columns:
 
 | Column | Behaviour |
 |---|---|
-| **Source** | System name. Read-only `<code>`. Eligible rows, in default order: `RevieweeName`, `RevieweeEmail`, then any reviewee data column with at least one populated value (`PhotoLink`, `RevieweeTag1/2/3`), then any pair-context slot with at least one populated value across the session's assignments (`PairContext1/2/3`). `AssignmentContext1/2/3` is deliberately **excluded** — it's logic-engaging and hidden from reviewers (see `spec/architecture.md` "Pair-level vs assignment-level context"). |
+| **Source** | System name. Read-only `<code>`. Eligible rows, in default order: `RevieweeName`, `RevieweeEmail`, then any reviewee data column with at least one populated value (`PhotoLink`, `RevieweeTag1/2/3`), then any pair-context slot with at least one populated value across the session's relationships (`PairContextTag1/2/3`, per the post-15D `relationships` table — see `spec/architecture.md` "Pair-level context"). |
 | **Friendly Label** | Operator-editable text. Save persists to the underlying database. |
 | **Include** | Checkbox. `RevieweeName` and `RevieweeEmail` are mandatory-checked and the checkbox is locked (operator cannot uncheck). All other rows are operator-toggleable. |
 | **Order** | Integer (1-based) plus the `▲` / `▼` arrow controls described above. The arrows are suppressed for the `RevieweeName` and `RevieweeEmail` rows — they're locked at positions 1 and 2 respectively. Initial seed: `RevieweeName=1`, `RevieweeEmail=2`, then the present rows in the order `PhotoLink`, `RevieweeTag1/2/3`, `PairContext1/2/3` (skipping any that have no data). |
