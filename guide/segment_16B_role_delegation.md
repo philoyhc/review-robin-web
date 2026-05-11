@@ -6,33 +6,40 @@
 > in-app audit viewer lives in **16C**
 > (`guide/segment_16C_richer_audit_views.md`).
 
-**Status:** Planning — stub created 2026-05-11, sized into
-a four-PR ladder 2026-05-11 (PRs 1-2 MVP; PR 3 conditional;
-PR 4 post-MVP).
-**Sizing:** 2 MVP PRs + 1 conditional PR + 1 post-MVP PR.
-**Depends on:** **none for PRs 1-2.** PR 3 hard-deps on 16A
-adopting Option A or B; under Option C (env-allowlist —
-the current 16A recommendation), PR 3 is skipped entirely.
+**Status:** Planning — stub created 2026-05-11; sized into
+a four-PR ladder; revised 2026-05-11 to drop the
+workspace-level sys-admin promotion PR (absorbed into 16A
+PR 6) and tighten PR 2's add-owner UX to a typeahead picker
+over the admitted-operator pool.
+**Sizing:** 2 MVP PRs + 1 post-MVP PR.
+**Depends on:** **16A PR 1 + PR 6** (the operator-allowlist
+gate + the admit/revoke surface that populates the eligible
+pool). 16A PR 1 lights up `users.is_operator`; 16B picks the
+admit-pool query off it.
 
 ## Goal
 
-Give operators a UI to **delegate** session access to other
-operators and to **promote / demote** the sys-admin role
-(once 16A lands and the role exists).
+Give a session's current owners a UI to **add another owner**
+to the session (from the workspace-admitted operator pool)
+and to remove owners they no longer need.
 
-Today's gaps:
+**Scope split with 16A.** 16A owns the workspace-level
+admit / revoke / promote / demote toggles — who's
+in the operator pool at all, who's a sys-admin. 16B owns
+the per-session "from the admitted pool, who can edit
+*this* session" affordance.
+
+Today's gap:
 
 - **`SessionOperator` table exists, no UI to manage it.**
   `app/db/models/session_operator.py` defines per-session
   operator membership; `app.services.permissions.require_session_operator`
   reads it; but every row is inserted today via the
-  `create_session` service (the creator becomes operator)
-  with no follow-on add / remove affordance. Adding a second
-  operator to an existing session is a DB-edit operation.
-- **No sys-admin promotion UI.** Whatever 16A chooses for the
-  sys-admin role (Entra app role / per-user flag / env
-  allowlist), promoting someone today is a deployment / Entra-
-  side operation, not an in-app one.
+  `create_session` service (the creator becomes the
+  inaugural owner with `role="owner"` per the
+  Segment 13F PR 4 default fix) with no follow-on add /
+  remove affordance. Adding a second owner to an existing
+  session is a DB-edit operation.
 
 The functional-spec acceptance criterion **"Role delegation
 among multiple operators"** (§22 Expanded release items) is
@@ -49,124 +56,110 @@ testable in isolation. PR 2's UI is then a thin wrapper.
 **Ships.**
 
 - New service helpers in `app/services/permissions.py`:
-  - `add_operator(db, session, target_user, *, actor, correlation_id) -> SessionOperator`
-    — inserts a `SessionOperator` row; pre-conditions:
-    `actor` must already be an operator on the session;
-    `target_user` must not already be an operator;
-    `target_user` must exist in `users` (i.e. has signed
-    in before).
-  - `remove_operator(db, session, target_user, *, actor, correlation_id) -> None`
-    — deletes the row; pre-conditions: `actor` is an
-    operator; `target_user` is an operator; the operator
-    being removed is not the session creator (the creator
-    row stays load-bearing); the operator list will still
-    have ≥1 row after removal.
+  - `add_owner(db, session, target_user, *, actor, correlation_id) -> SessionOperator`
+    — inserts a `SessionOperator` row with `role="owner"`;
+    pre-conditions:
+    - `actor` is an owner on the session (i.e. exists in
+      `session_operators` with `role="owner"`);
+    - `target_user` is in the admitted-operator pool
+      (`is_operator OR is_sys_admin`);
+    - `target_user` is not already a `session_operators`
+      member on this session.
+  - `remove_owner(db, session, target_user, *, actor, correlation_id) -> None`
+    — deletes the row; pre-conditions:
+    - `actor` is an owner on the session;
+    - `target_user` is currently a `session_operators`
+      member on this session;
+    - removing the row leaves ≥1 owner on the session;
+    - `target_user.id != session.created_by_user_id` (the
+      creator's owner row is non-removable while they're
+      the sole owner — they can be demoted only if another
+      owner exists).
   - Both helpers emit canonical audit events on success.
 - Audit-event registrations in
   `app.services.audit.EVENT_SCHEMAS`:
-  - `session.operator_added` — `refs.target_user_id`,
-    `actor_user_id` from the session var, `reason="added"`
-    optional context slot.
-  - `session.operator_removed` — symmetric to above.
-- **No lifecycle gate.** Editing the operator list is an
+  - `session.owner_added` — `refs.target_user_id`;
+    `actor_user_id` from the session var.
+  - `session.owner_removed` — symmetric to above.
+- **No lifecycle gate.** Editing the owner list is an
   access-control change, not a setup mutation —
   `invalidate_if_validated` does not fire. Sessions in any
-  lifecycle state can have their operator list edited.
+  lifecycle state can have their owner list edited.
 
 **Tests.**
 
-- Happy path: add / remove operator, audit event emitted
-  with correct envelope.
+- Happy path: add / remove owner, audit event emitted with
+  correct envelope.
 - Pre-condition violations:
-  - Adding a user who isn't an operator-actor → 403-shaped
+  - Actor isn't an owner on the session → 403-shaped
     error.
-  - Adding a user who isn't in `users` → 400 ("user must
-    sign in first").
-  - Removing the session creator → 409.
-  - Removing the last operator → 409.
+  - `target_user` not in the admitted-operator pool → 409
+    ("not an admitted operator").
+  - `target_user` already an owner → 409.
+  - Remove the session creator while sole owner → 409.
+  - Remove the last owner → 409.
+- Sys-admin who isn't `is_operator=True` is still in the
+  eligible pool (regression on the `is_operator OR
+  is_sys_admin` predicate).
 - `EVENT_SCHEMAS` strict-mode gate passes for both new
   event types.
 
-### PR 2 — Operator-membership UI on Session Home (~350 LOC)
+### PR 2 — Owners card on Session Home (~400 LOC)
 
 **Ships.**
 
-- New "Session operators" card on Session Home (probably
-  in the right column near Session Details — decide at
-  scoping). Lists current operators with email + a
-  per-row "Remove" button.
-- Add operator form: email input + Add button. On submit,
-  hits the PR 1 helper. Hard-reject if the email doesn't
-  match a `users` row, with copy: "<email> hasn't signed
-  in yet. Ask them to sign in to the app, then add them
-  here." (Simpler than a pending-invitation flow; no new
-  column.)
-- Remove operator: per-row form with single-click confirm
-  (no two-step type-the-email). Disabled (or hidden) for
-  the session creator's row.
-- New routes in `routes_operator/_session_home.py` (or a
-  new slice — decide during scoping):
-  - `POST /operator/sessions/{id}/operators` → add.
-  - `POST /operator/sessions/{id}/operators/{user_id}/remove`
+- New "Session owners" card on Session Home (in the right
+  column near Session Details — decide exact slot at
+  scoping). Lists current owners with display name + email
+  + per-row "Remove" button. The session creator row
+  carries a "(creator)" badge sourced from
+  `sessions.created_by_user_id`.
+- Add-owner form: typeahead `<input list>` + `<datalist>`
+  populated server-side from the **admitted-operator pool
+  minus current session operators** — i.e. the set of
+  `users` rows where `(is_operator OR is_sys_admin) AND
+  NOT EXISTS (SELECT 1 FROM session_operators ...)`. The
+  picker is the safest write affordance under Option C:
+  it forecloses both "they haven't signed in" and "they
+  aren't admitted" failure modes by simply not offering
+  unviable choices.
+- Per-row Remove: single-click confirm (no two-step
+  type-the-email). Absent for the session creator's row.
+  Service-layer guard refuses if removal would leave zero
+  owners.
+- New routes:
+  - `POST /operator/sessions/{id}/owners` → add.
+  - `POST /operator/sessions/{id}/owners/{user_id}/remove`
     → remove.
-- View adapter `views.build_session_operators_card(session)
-  -> SessionOperatorsContext`.
-- Surfaces a small "you're operator on N sessions" hint
-  on the Sessions lobby header if N > 1 — **defer to a
-  follow-on** if it expands PR 2's scope materially.
+- View adapter `views.build_session_owners_card(session,
+  user) -> SessionOwnersContext` returns both the current
+  owners list and the eligible-pool dropdown options.
+- **Race-condition handling.** If the picked user is no
+  longer admitted by the time the POST lands (a sys-admin
+  revoked them between page render and form submit), the
+  PR 1 service-layer pre-condition fails — return 409 with
+  copy: "<email> is no longer an admitted operator. Ask
+  the sys-admin to re-admit, or pick a different
+  colleague."
 
 **Tests.**
 
-- Renders the operators card for an operator-user; absent
-  for non-operator (covered by existing
-  `require_session_operator` gate).
-- Add by email → 303 + new row visible on re-render +
-  audit event emitted.
-- Add unknown email → 400 with helpful copy.
+- Renders the owners card for an operator-user; absent for
+  non-operator (covered by existing `require_session_operator`
+  gate).
+- Picker pool excludes users already on the session.
+- Picker pool excludes non-admitted users
+  (`is_operator=False AND is_sys_admin=False`).
+- Picker pool **includes** sys-admins even with
+  `is_operator=False` (since sys-admin implies operator).
+- Pick + Add → 303 + new row visible on re-render + audit
+  event emitted.
+- Revoke race → 409 with helpful copy.
 - Remove → row gone + audit event emitted.
-- Session creator's Remove button absent / disabled.
+- Session creator's Remove button absent.
+- Remove-last-owner → 409.
 
-### PR 3 — Sys-admin promotion UI (~250 LOC) — **conditional**
-
-**Conditional on 16A's auth choice.** Today 16A
-recommends **Option C (env-allowlist)**; under Option C, the
-env var is the UI and PR 3 is **out of scope** entirely.
-
-PR 3 lands **only if** 16A migrates to:
-- **Option A** (Entra app role with an in-app mirror table
-  for promotion / demotion), or
-- **Option B** (per-user `users.is_sys_admin` boolean).
-
-Until then, this section is a placeholder.
-
-**If Option A or B is chosen, ships:**
-
-- New "Sys-admin roster" section on the Sys Admin page
-  (behind the existing sys-admin gate from 16A PR 1).
-  Lists every `users` row with the per-user flag; per-row
-  Promote / Demote toggle.
-- New routes in `routes_operator/_sys_admin.py`:
-  - `POST /operator/sys-admin/users/{user_id}/promote`.
-  - `POST /operator/sys-admin/users/{user_id}/demote`.
-- Confirmation: explicit "I'm promoting <email> to
-  sys-admin" / "I'm demoting <email>" checkbox before
-  submit (matches 16A PR 4's "I'm overriding the rule
-  engine" pattern).
-- **Last-admin demotion guard.** Refuses to demote the
-  last sys-admin (and refuses self-demotion if you're the
-  only sys-admin).
-- Audit emitters: `sys_admin.role_promoted` /
-  `sys_admin.role_demoted` — `changes` envelope on the
-  flag column, `refs.target_user_id`.
-
-**Tests.**
-
-- 403 for non-admin.
-- Promote / demote → flag flips + audit event emitted.
-- Last-admin-demote → 409 with helpful copy.
-- Confirmation checkbox required.
-
-### PR 4 (post-MVP) — Per-session role granularity (~400 LOC)
+### PR 3 (post-MVP) — Per-session role granularity (~400 LOC)
 
 **Defer until pilot feedback confirms binary
 operator-or-not is insufficient.** Adds richer per-session
@@ -204,43 +197,59 @@ pilot feedback may or may not surface.
 
 ## Hard dependencies
 
-- **16A** for Part 2 (and for the sys-admin gate on Part 1's
-  emitters if some are sys-admin-only). Part 1 itself can ship
-  independently — `SessionOperator` rows are operator-visible
-  per-session, not sys-admin-scoped.
+- **16A PR 1** — the operator-allowlist gate. PR 2's picker
+  queries `users WHERE is_operator OR is_sys_admin`; without
+  that gate the pool isn't a meaningful set.
+- **16A PR 6** — the workspace admit / revoke UI. PR 2's
+  picker is meaningfully empty until a sys-admin admits
+  more operators beyond the bootstrap set; revoke is the
+  inverse affordance.
+- **13F PR 4** (shipped) — `session_operators.role`
+  value-set lock + `"owner"` default. PR 1's `add_owner`
+  writes `role="owner"`; the locked value-set keeps the
+  service-layer write-path honest.
 
 ## Out of scope
 
-- The Sys Admin page itself — that's 16A.
-- The in-app audit viewer for "who added whom as an operator
-  when" — that's 16C (the operator-added / removed events
-  emitted in Part 1 are read by 16C's surface).
-- **Reviewee-as-user** flows — reviewees aren't `users` rows
-  today and don't get operator permissions. Out of scope for
-  this segment.
+- **Workspace admit / revoke / promote / demote** — that's
+  16A PR 6. 16B is per-session only.
+- **Sys Admin page chrome** — 16A PR 2.
+- **The in-app audit viewer** for "who added whom as an
+  owner when" — that's 16C (the `session.owner_added` /
+  `.owner_removed` events emitted in PR 1 are read by 16C's
+  surface).
+- **Reviewee-as-user** flows — reviewees aren't `users`
+  rows today and don't get operator permissions. Out of
+  scope for this segment.
 
 ## Doc impact
 
-When parts ship:
+When PRs ship:
 
-- `docs/status.md` timeline entry per Part.
+- `docs/status.md` timeline entry per PR.
 - `guide/todo_master.md` updated.
 - `spec/architecture.md` — identity / permissions section
-  picks up the per-session operator membership UI.
-- `spec/settings_inventory.md` — `SessionOperator` row gains a
-  cross-reference to the new UI.
-- `spec/audience_and_identity_model.md` — operator audience
-  picks up the "operators are added / removed by other
-  operators" affordance.
+  picks up the per-session owner-membership UI + the
+  picker-from-admitted-pool pattern.
+- `spec/settings_inventory.md` — `SessionOperator` row
+  gains a cross-reference to the new UI.
+- `spec/audience_and_identity_model.md` — operator
+  audience picks up the "owners add other owners from the
+  admitted pool" affordance.
+- `spec/session_home.md` — Session Home gains the Session
+  owners card.
 
 ## Working notes
 
 - _(placeholder for decisions during PR scoping)_
-- Per-session operator card: lives on Session Home or as its
-  own sub-page (e.g. `/operator/sessions/{id}/access`)? Lean
-  Session Home for discoverability.
-- Email-based Add: hard-reject vs pending-invitation flow.
-  Lean hard-reject for MVP.
-- Should Part 1 surface a "you've been added to N sessions"
-  banner on the operator's lobby? Probably not in this
-  segment; nice-to-have.
+- Session owners card: confirmed on Session Home (right
+  column near Session Details). Sub-page
+  (`/operator/sessions/{id}/access`) deferred unless the
+  card outgrows the slot.
+- Picker affordance: typeahead `<input list>` + `<datalist>`
+  is the lightest-touch fit; revisit if N admitted operators
+  exceeds a comfortable dropdown size (~50).
+- Should the lobby surface a "you've been added to N
+  sessions" hint when an admitted operator gets pulled onto
+  a new one? Probably not in PR 2's scope; nice-to-have for
+  pilot polish.

@@ -1,12 +1,15 @@
 # Segment 13F — More DB prep (14C / 16A / 16B / 18B / 18C ride-along)
 
 **Status:** In flight — **PR 4 shipped 2026-05-11**
-(migration `779b90e4b397`); PRs 1-3 deferred until their
-consumer segments (18B / 14C / 18C) are picked up, per the
+(migration `779b90e4b397`); **PR 5 pending** (the operator
+allowlist column, added 2026-05-11 after the 16-series
+access-model decision); PRs 1-3 deferred until their consumer
+segments (18B / 14C / 18C) are picked up, per the
 "piecemeal, front-load PR 4" sequencing decision.
 Stub created 2026-05-11; revised 2026-05-11 to fold in the
 16-series admin / owner-role requirements after a codebase
-audit.
+audit; revised again 2026-05-11 to add PR 5 once the strict
+allowlist (Option C) became the locked access-model choice.
 Mirrors the **Segment 13D** (and 13E) inert-migrations pattern:
 pre-position the additive, nullable, no-backfill schema changes
 the rest of the active workplan needs, so the downstream feature
@@ -50,6 +53,9 @@ users.is_sys_admin                        # PR 4: ✅ shipped — 16A sys-admin 
                                           #       session_operators.role value-set
                                           #       + flip Python-default to "owner"
                                           #       (migration 779b90e4b397)
+users.is_operator                         # PR 5: pending — 16A workspace allowlist
+                                          #       under Option C access model
+                                          #       (strict admit-by-sys-admin)
 ```
 
 Five migrations + one model-only correction across four PRs.
@@ -101,7 +107,8 @@ needs identified for the remaining workplan:
 | **18B** — Session tagging | New table `session_tags` | Required by 18B Part 2. The plan flags "Tag table vs JSON column" as an open scoping question; we lock the answer here (table — easier per-tag indexing + delete-cascade). |
 | **18C** — Retention / deletion workflow Part 2 | New `sessions.retention_exception` Boolean (default `False`, nullable) | Required by 18C Part 2 (per-session opt-out of auto-purge — e.g. legal hold). Minimal cost, large policy value. |
 | **18C** — Retention / deletion workflow Part 3 (post-MVP) | New `sessions.retention_overrides` JSON column | Required by 18C Part 3 if it lands. Per-session retention-policy overrides (`response_days` / `audit_days` / `archived_days` keys). NULL means "use deployment default". |
-| **16A** — Sys Admin page + admin user role | New `users.is_sys_admin` Boolean column (server-default `false`) | Required by 16A PR 1. Replaces the original Option C env-allowlist recommendation with Option B (persisted per-user flag), bootstrapped from the existing `SYS_ADMIN_EMAILS` env var on first-sign-in but extensible in-app afterwards. The persisted flag is what makes 16B PR 3 (promote / demote UI) viable as MVP scope rather than post-MVP. |
+| **16A** — Sys Admin page + admin user role | New `users.is_sys_admin` Boolean column (server-default `false`) | Required by 16A PR 2 (sys-admin gate). Persisted per-user flag bootstrapped from the existing `SYS_ADMIN_EMAILS` env var on first-sign-in but extensible in-app afterwards via 16A PR 6. |
+| **16A** — Workspace operator allowlist (Option C access model) | New `users.is_operator` Boolean column (server-default `false`) | Required by 16A PR 1 (operator-allowlist gate). Locked 2026-05-11: the app is a citizen project with no tech-support promise, so the access model is strict (Option C) — only operators a sys-admin explicitly admits can use operator routes. Bootstrap source on first-sign-in is a new `OPERATOR_EMAILS` env var; persisted column is authoritative thereafter. Sys-admin implies operator (read-path checks `is_operator OR is_sys_admin`). |
 | **16B** — Role delegation (owner / manager) | **No schema change.** `session_operators.role` already exists (`String(32)`, NOT NULL). Today's only written value is `"owner"`. PR 4 locks the value-set constant (`SESSION_OPERATOR_ROLES = ("owner", "manager")`) and fixes the dead Python-default from `"operator"` to `"owner"`. | The column lands inert (already written). The value-set lock + default fix ride in PR 4 since they're cohesive with the `users.is_sys_admin` admin-role plumbing. |
 | **13D leftovers** | — | All shipped 2026-05-09; nothing rolls over. |
 | **15A / 15B / 15C** | none | All schema already shipped in 13D PRs 1 / 2 / 3 / 4. |
@@ -306,11 +313,67 @@ helper, not in a DB CHECK.
   app/services/ app/web/` returns zero hits at PR close (light-up
   happens in 16A PR 1 / 16B PR 1).
 
+### PR 5 — `users.is_operator` Boolean (16A ride-along, Option C access model)
+
+**Why this PR exists.** The 2026-05-11 access-model discussion
+locked the workspace access posture as **Option C — strict
+allowlist**: only operators a sys-admin explicitly admits can
+use operator routes. This is the citizen-project posture
+("can't really promise much in terms of technical support, a
+stricter user list is probably necessary") rather than
+Option A (open) or Option B (tenant-restricted via Easy Auth).
+
+The persisted source of truth for the allowlist is one
+column on `users`, mirroring PR 4's `is_sys_admin` shape.
+
+**Scope.** One nullable-no-actually-NOT-NULL Boolean column on
+`users` with a SQL-level server-default so existing rows
+backfill safely:
+
+```python
+# app/db/models/user.py
+is_operator: Mapped[bool] = mapped_column(
+    Boolean, default=False, server_default=text("false"), nullable=False
+)
+```
+
+**Bootstrap source.** On user-create / first-sign-in
+(`deps.get_or_create_user`), 16A PR 1 sets `is_operator=True`
+if the principal's email is in a new `OPERATOR_EMAILS` env var
+(parallels the `SYS_ADMIN_EMAILS` pattern from PR 4). The
+persisted column is authoritative after first sign-in —
+removing an email from the env var does **not** auto-revoke;
+revocation happens via 16A PR 6's workspace UI.
+
+**Read-path semantics (light-up in 16A PR 1).** Operator routes
+gate on `is_operator OR is_sys_admin` — sys-admin implies
+operator, so promoting someone to sys-admin (`is_sys_admin=True`)
+auto-grants operator access without also having to flip
+`is_operator`. The workspace UI shows both flags independently
+for transparency.
+
+**Tests.**
+
+- Migration round-trip on SQLite + `ci-postgres`. Existing
+  `users` rows backfill to `is_operator=False`.
+- NOT NULL holds after backfill on both dialects.
+- New `users` rows default to `is_operator=False` (Python
+  default) when not specified explicitly.
+- Toggle: `True → False → True` round-trips persist correctly.
+- Inert audit: `grep -rn "is_operator" app/services/ app/web/`
+  returns zero hits at PR close (light-up happens in
+  16A PR 1).
+
+**Why a separate PR from PR 4.** Could have ridden as Part C of
+PR 4 in principle. Kept separate because (a) PR 4 already
+shipped, (b) the access-model decision came after PR 4 landed,
+(c) one migration per PR is the 13D / 13E precedent.
+
 ---
 
 ## Sequencing
 
-PR 1 → PR 2 → PR 3 → PR 4. Each PR is independent and
+PR 1 → PR 2 → PR 3 → PR 4 → PR 5. Each PR is independent and
 self-contained; no inter-PR ordering constraints beyond
 landing them in numeric order for tidy migration history. Any
 PR can ship in isolation if the others slip.
@@ -342,12 +405,20 @@ A reviewer can model the whole contract in one sitting per PR.
   `permissions.add_operator` will continue to pass an
   explicit role; the default is the safety net, not the
   load-bearing path.
-- **`users.is_sys_admin` bootstrap semantics.** First-sign-in
-  reads `SYS_ADMIN_EMAILS`; subsequent sign-ins do not. Worth
-  a one-line note in the 16A PR 1 description so operators
-  who get added to the env var after first sign-in know they
-  also need a promotion via 16B PR 3's UI (or a one-off
-  manual DB poke for the bootstrap operator).
+- **`users.is_sys_admin` / `users.is_operator` bootstrap
+  semantics.** First-sign-in reads `SYS_ADMIN_EMAILS` /
+  `OPERATOR_EMAILS`; subsequent sign-ins do not. Worth a
+  one-line note in the 16A PR 1 description so operators who
+  get added to either env var after first sign-in know they
+  also need a UI-side admit / promote via 16A PR 6 (or a
+  one-off manual DB poke for the bootstrap operator). Same
+  pattern, two flags — the read path lives in one place
+  (`get_or_create_user`).
+- **Sys-admin implies operator.** Read-path gate is
+  `is_operator OR is_sys_admin`. Demoting someone from
+  sys-admin does **not** flip `is_operator` (the two flags
+  are independent for transparency); revoking operator status
+  is a separate UI action.
 - **`session_tags` cascade-on-delete.** PR 1's
   `ON DELETE CASCADE` matches the pattern every other
   per-session join table uses (`session_operators`,
@@ -365,15 +436,16 @@ A reviewer can model the whole contract in one sitting per PR.
 
 ## Critical files
 
-- New: `app/db/models/session_tag.py`, three Alembic migrations
+- New: `app/db/models/session_tag.py`, four Alembic migrations
   (PRs 1 / 2 / 3 add migrations; PR 4 adds one migration for
-  `users.is_sys_admin` and a model-only edit on
-  `session_operator.py`).
+  `users.is_sys_admin` plus a model-only edit on
+  `session_operator.py`; PR 5 adds one migration for
+  `users.is_operator`).
 - Touched: `app/db/models/review_session.py` (PR 2 + PR 3),
-  `app/db/models/user.py` (PR 4 Part A),
+  `app/db/models/user.py` (PR 4 Part A + PR 5),
   `app/db/models/session_operator.py` (PR 4 Part B —
   Python-default fix + `SESSION_OPERATOR_ROLES` constant).
-- Inert audit at every PR-close: `grep -rn "reminder_settings\|retention_exception\|retention_overrides\|session_tags\|is_sys_admin\|SESSION_OPERATOR_ROLES" app/services/ app/web/` should return nothing until the owning feature segment lights up.
+- Inert audit at every PR-close: `grep -rn "reminder_settings\|retention_exception\|retention_overrides\|session_tags\|is_sys_admin\|is_operator\|SESSION_OPERATOR_ROLES" app/services/ app/web/` should return nothing until the owning feature segment lights up.
 
 ---
 
