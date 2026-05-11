@@ -261,6 +261,16 @@ Last leg of the locked sequence `13E → 12C → 15D → 12A-3`. Brings the expo
 
 Bonus: **#781** — Grey out the Reviewers / Reviewees / Relationships / Responses Download buttons in the Extract Data card when the corresponding count is 0 (rendered between PR 2 and PR 3 as a small follow-on polish).
 
+### Segment 16B PR 2 — Per-session owner management — done 2026-05-11 (PRs #853, #854, #855)
+
+Per-session owner management ships on the Session Edit page (`/operator/sessions/{id}/edit`), with the operator allowlist + sys-admin chrome from Segment 16A already in place. The original 16B plan had PR 1 (service) and PR 2 (UI) as separate slices; they landed as a single PR (#853) since the service surface is small and the UI is a thin wrapper. PR 3 (per-session role granularity beyond binary owner) stays post-MVP. Plan: `guide/segment_16B_role_delegation.md`.
+
+- **#853** — Owners section on the Session Edit page. New `app/services/session_owners.py` with `list_owners` / `workspace_operator_candidates` / `add_owner` / `remove_owner` + `OwnerOperationError` (codes: `last_owner`, `not_in_workspace`, `already_owner`, `not_owner`). New audit events `session.owner_added` / `session.owner_removed` registered in `EVENT_SCHEMAS` (snapshot + refs envelope, `refs.target_user_id` for the target). New routes `POST /sessions/{id}/owners/add` (form takes `target_email`, case-insensitive email lookup) and `POST /sessions/{id}/owners/{user_id}/remove`. `GET /edit` + `POST /edit` + the two owner routes share `require_sys_admin_or_session_operator` — a relaxed gate that lets a sys-admin reach the edit page of a session they don't own (they self-add as owner via the Add-owner form, then act on the session via the normal `require_session_operator` path). Sessions Diagnostics row's "Operators" placeholder retires; "Details" link to `/edit` replaces it. **Scope deltas from the plan:** surface placement moved from Session Home to the Edit page (closer to other session-identity edits); the picker submits `target_email` rather than `target_user_id` so the form is robust to typos / unlisted entries.
+- **#854** — Race fix on last-owner remove. Codex review flagged a TOCTOU between count + delete (two concurrent removes could both read `count == 2`, both pass the guard, each delete one row → zero owners). Replaced with `SELECT ... FOR UPDATE` over the session's `session_operators` rows, then count + locate + delete from the locked snapshot. Postgres enforces row-level locking; SQLite ignores `FOR UPDATE` silently (fine for the in-process test suite).
+- **#855** — Chrome polish: `(sys admin)` suffix on the top-right "Signed in as ..." label for users with `is_sys_admin` so they can tell at a glance that they're running with elevated workspace privileges; applied to both `base.html` (operator chrome) and `reviewer/_top_bar.html`. `request_access.html` skipped (its `AuthenticatedUser` shape has no `is_sys_admin`, and a user awaiting workspace admission can't be a sys-admin anyway).
+
+---
+
 ### Segment 12B — Audit-events export — done 2026-05-10 (PRs #788, #789)
 
 Smallest possible slice — adds a per-session `audit_events` CSV download. The original Segment 12 framing (response-data export + retention) was already covered by 12A-1 / 12A-3, so 12B reduced to a single PR for the audit log. Plan archived: `guide/archive/segment_12B_audit_retention.md`.
@@ -443,17 +453,15 @@ the dev-only manual assignment upload — and unlocks 16B
   what was 16B PR 3.
   **Plan:** `guide/segment_16A_sys_admin_page.md`.
 
-- **16B — Per-session owner delegation** *(stub created
-  2026-05-11; resized 2026-05-11 to drop the workspace
-  promote/demote PR — that lives in 16A PR 6 now)*. Two MVP
-  PRs: service helpers (`permissions.add_owner` /
-  `remove_owner` + `session.owner_added` / `.owner_removed`
-  audit events) and the Session-Home Session-owners card
-  with a typeahead picker over the admitted-operator pool
-  (`users WHERE is_operator OR is_sys_admin`). Plus one
-  post-MVP PR for richer per-session role granularity
-  (`"manager"` and beyond).
-  **Plan:** `guide/segment_16B_role_delegation.md`.
+- **16B PR 3 (post-MVP) — Per-session role granularity**
+  *(PR 1 + PR 2 of 16B shipped 2026-05-11 as PRs #853 / #854 / #855
+  — see Done above)*. Widens
+  `SESSION_OPERATOR_ROLES` beyond the locked `("owner",
+  "manager")` and splits `require_session_operator` into
+  per-role gates (`require_setup_edit` /
+  `require_lifecycle_transition`). Deferred until pilot
+  feedback confirms binary owner-or-not is insufficient.
+  **Plan:** `guide/segment_16B_role_delegation.md` § PR 3.
 
 - **16C — Richer audit views** *(stub created 2026-05-11)*.
   In-app audit log viewer beyond today's CSV download —

@@ -61,8 +61,9 @@ for the form's button taxonomy.
 ## 2. Per-session settings (session metadata)
 
 Stored on the `sessions` table. Owned by the creating operator;
-surfaced to co-operators via `session_operators` (out of scope for
-"settings" — that table records permissions, not settings).
+co-owners are surfaced + managed via the `session_operators`
+table (per-session permission rows, not settings — see the
+Owners section on the Edit page, Segment 16B PR 2).
 
 **Surface:**
 
@@ -71,6 +72,11 @@ surfaced to co-operators via `session_operators` (out of scope for
 - **Read:** Session Home > Session Details card (`session_detail.html`).
 - **Edit:** `/operator/sessions/{id}/edit` (Edit Session sub-page,
   reached via the Edit Secondary in the Session Details card).
+  Also hosts the **Owners** card (Segment 16B PR 2) — current
+  co-owners + Add-owner typeahead picker over the workspace
+  operator allowlist. Gated by
+  `require_sys_admin_or_session_operator` so a sys-admin can
+  reach a session they don't own + self-add as owner.
 
 | Field | Type | Notes |
 |---|---|---|

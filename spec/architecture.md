@@ -465,6 +465,7 @@ canonical "no payload" marker.
 | `assignments.generated` | `counts` + `context` | `{"session_id": 17, "session_code": "CS101", "counts": {"assignments": 104, "pairs": 13, "instruments": 8, "replaced": 0}, "context": {"mode": "full_matrix"}}` |
 | `responses.saved` | `refs` + `counts` | `{"session_id": 17, "session_code": "CS101", "refs": {"reviewer_id": 42}, "counts": {"saved": 5, "validation_errors": 0}}` |
 | `instrument.display_fields_saved` | `set_changes` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "set_changes": {"added": [], "removed": [], "updated": [...]}}` |
+| `session.owner_added` | `snapshot` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"target_user_id": 42}, "snapshot": {"user_id": 42, "email": "bob@example.edu", "role": "owner"}}` |
 
 ### Cutover
 

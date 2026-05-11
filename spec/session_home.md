@@ -271,6 +271,14 @@ identity lives.
   sub-page. Keeps Home's right column read-only-feeling and
   avoids a mid-card form that competes with the action work in
   the left column.
+- The Edit sub-page also hosts the **Owners** card (Segment
+  16B PR 2) — current co-owners + an Add-owner typeahead
+  picker over the workspace operator allowlist. The card
+  doesn't render on Session Home itself: per-session
+  permission management is rare enough that surfacing it on
+  Home would steal real estate from the next-action work,
+  and the Edit sub-page is already the canonical landing
+  page for session-identity changes.
 
 The previously-rendered duplicate `Status:` pill on this card
 was retired in PR #375; lifecycle state is shown in the chrome
