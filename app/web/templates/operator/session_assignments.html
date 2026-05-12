@@ -180,6 +180,7 @@
           <th class="assignment-col col-p2">Pair2</th>
           <th class="assignment-col col-p3">Pair3</th>
           <th>Include</th>
+          <th>Instrument</th>
         </tr>
         {% for assignment in pair_sample %}
           {% set rel = pair_context_lookup.get((assignment.reviewer_id, assignment.reviewee_id)) %}
@@ -204,6 +205,9 @@
             <td class="assignment-col col-p3">{{ rel.tag_3 or "" if rel_active else "" }}</td>
             <td>
               <span class="pill {{ 'pill-info' if assignment.include else 'pill-empty' }}">{{ "yes" if assignment.include else "no" }}</span>
+            </td>
+            <td>
+              {{ assignment.instrument.short_label or assignment.instrument.name }}
             </td>
           </tr>
         {% endfor %}
