@@ -44,11 +44,13 @@
       <code>/request-access</code> and land on the operator lobby
       directly.
     </p>
-    <form method="post" action="/operator/sys-admin/users/invite">
+    <form method="post"
+          action="/operator/sys-admin/users/invite"
+          id="invite-form">
       <p>
         <label>
           Email
-          <input type="email" name="email" required
+          <input type="email" name="email" id="invite-email" required
                  placeholder="alice@example.edu">
         </label>
       </p>
@@ -58,10 +60,36 @@
           Also invite as sys-admin
         </label>
       </p>
-      <p>
-        <button class="btn" type="submit">Invite</button>
-      </p>
+      <div class="btn-pair">
+        <button class="btn secondary" type="submit"
+                data-invite-submit
+                disabled>Invite</button>
+        <button class="btn secondary" type="reset"
+                data-invite-cancel
+                disabled>Cancel</button>
+      </div>
     </form>
+    <script>
+      (function () {
+        var form = document.getElementById("invite-form");
+        if (!form) return;
+        var email = document.getElementById("invite-email");
+        var submit = form.querySelector("[data-invite-submit]");
+        var cancel = form.querySelector("[data-invite-cancel]");
+        function refresh() {
+          var hasText = (email.value || "").trim().length > 0;
+          submit.disabled = !hasText;
+          cancel.disabled = !hasText;
+        }
+        email.addEventListener("input", refresh);
+        // Re-disable after the reset button clears the field.
+        form.addEventListener("reset", function () {
+          // ``reset`` fires before the form clears; defer to next tick.
+          setTimeout(refresh, 0);
+        });
+        refresh();
+      })();
+    </script>
   </div>
 
   <div class="card">
@@ -102,38 +130,45 @@
               {% if is_self %}
                 <span class="muted" title="You can't change your own roles">(self)</span>
               {% else %}
-                {# Operator toggle — one-click. #}
-                {% if row.is_operator %}
-                  <form method="post" style="display:inline"
-                        action="/operator/sys-admin/users/{{ row.id }}/revoke">
-                    <button class="chrome-link" type="submit">Revoke</button>
+                <div class="user-row-actions"
+                     style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                  {# Admit ⇆ Revoke toggle (Secondary). Label flips
+                     based on current is_operator state. #}
+                  {% if row.is_operator %}
+                    <form method="post" style="margin:0"
+                          action="/operator/sys-admin/users/{{ row.id }}/revoke">
+                      <button class="btn secondary" type="submit">Revoke</button>
+                    </form>
+                  {% else %}
+                    <form method="post" style="margin:0"
+                          action="/operator/sys-admin/users/{{ row.id }}/admit">
+                      <button class="btn secondary" type="submit">Admit</button>
+                    </form>
+                  {% endif %}
+                  {# Promote ⇆ Demote toggle (Secondary). Safety
+                     checkbox retired — the row already telegraphs
+                     the current state through the Sys-admin pill,
+                     and the service-level ``last_admin`` guard
+                     catches the only structurally dangerous case. #}
+                  {% if row.is_sys_admin %}
+                    <form method="post" style="margin:0"
+                          action="/operator/sys-admin/users/{{ row.id }}/demote">
+                      <button class="btn secondary" type="submit">Demote</button>
+                    </form>
+                  {% else %}
+                    <form method="post" style="margin:0"
+                          action="/operator/sys-admin/users/{{ row.id }}/promote">
+                      <button class="btn secondary" type="submit">Promote</button>
+                    </form>
+                  {% endif %}
+                  {# Delete user row — hard delete with service-level
+                     guards (last_admin, owns_sessions). Destructive
+                     style. #}
+                  <form method="post" style="margin:0"
+                        action="/operator/sys-admin/users/{{ row.id }}/remove">
+                    <button class="btn destructive" type="submit">Delete</button>
                   </form>
-                {% else %}
-                  <form method="post" style="display:inline"
-                        action="/operator/sys-admin/users/{{ row.id }}/admit">
-                    <button class="chrome-link" type="submit">Admit</button>
-                  </form>
-                {% endif %}
-                {# Sys-admin toggle — explicit confirmation. #}
-                {% if row.is_sys_admin %}
-                  <form method="post" style="display:inline"
-                        action="/operator/sys-admin/users/{{ row.id }}/demote">
-                    <label class="muted" style="font-size:0.85em">
-                      <input type="checkbox" name="confirm" value="true" required>
-                      confirm demote
-                    </label>
-                    <button class="chrome-link" type="submit">Demote</button>
-                  </form>
-                {% else %}
-                  <form method="post" style="display:inline"
-                        action="/operator/sys-admin/users/{{ row.id }}/promote">
-                    <label class="muted" style="font-size:0.85em">
-                      <input type="checkbox" name="confirm" value="true" required>
-                      confirm promote
-                    </label>
-                    <button class="chrome-link" type="submit">Promote</button>
-                  </form>
-                {% endif %}
+                </div>
               {% endif %}
             </td>
           </tr>
