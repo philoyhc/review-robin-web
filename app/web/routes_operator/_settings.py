@@ -10,12 +10,15 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import User
+from app.db.models import OperatorResponseTypeDefinition, RuleSet, User
 from app.db.session import get_db
+from app.services import instruments as instruments_service
 from app.services import operator_settings
 from app.services._secrets import MissingEncryptionKey
+from app.services.rules import library as rules_library
 from app.web import breadcrumbs
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.return_to import resolve_return_to
@@ -56,6 +59,29 @@ def operator_settings_form(
     db.refresh(user)
     has_password = user.smtp_password_encrypted is not None
     target = resolve_return_to(return_to, db)
+
+    # 15C Slice 5: operator-library management. List the operator's
+    # library entries on both tiers + per-row session-copy counts so
+    # the operator can see who's using each entry before deleting.
+    library_rtds = instruments_service.list_operator_rtds(
+        db, owner_user=user
+    )
+    library_rule_sets = rules_library.list_personal_rule_sets(
+        db, owner_user=user
+    )
+    rtd_session_copy_counts = {
+        rtd.id: instruments_service.count_rtd_session_copies(
+            db, operator_rtd=rtd
+        )
+        for rtd in library_rtds
+    }
+    rule_set_session_copy_counts = {
+        rs.id: rules_library.count_rule_set_session_copies(
+            db, rule_set=rs
+        )
+        for rs in library_rule_sets
+    }
+
     return _templates.TemplateResponse(
         request,
         "operator/operator_settings.html",
@@ -67,6 +93,10 @@ def operator_settings_form(
             "return_to_url": target.url,
             "return_to_label": target.label,
             "breadcrumbs": breadcrumbs.operator_root(),
+            "library_rtds": library_rtds,
+            "library_rule_sets": library_rule_sets,
+            "rtd_session_copy_counts": rtd_session_copy_counts,
+            "rule_set_session_copy_counts": rule_set_session_copy_counts,
         },
     )
 
@@ -134,5 +164,73 @@ def operator_settings_clear(
     )
     return RedirectResponse(
         url=_settings_redirect_url(return_to),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/settings/library/rtd/{rtd_id}/delete")
+def operator_settings_delete_library_rtd(
+    rtd_id: int,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Hard-delete a library RTD from the operator's tier. Refuses
+    (404) if the RTD isn't owned by the actor. Session copies
+    survive — their ``library_origin_id`` clears to NULL via the
+    SQL ``SET NULL`` cascade per 15C invariant #3."""
+    target = db.execute(
+        select(OperatorResponseTypeDefinition).where(
+            OperatorResponseTypeDefinition.id == rtd_id,
+            OperatorResponseTypeDefinition.owner_user_id == user.id,
+        )
+    ).scalar_one_or_none()
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Library Response Type not found",
+        )
+    instruments_service.delete_operator_rtd(
+        db,
+        operator_rtd=target,
+        actor=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url="/operator/settings",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/settings/library/rule-set/{rule_set_id}/delete")
+def operator_settings_delete_library_rule_set(
+    rule_set_id: int,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Soft-delete a library RuleSet from the operator's tier.
+    Refuses (404) on cross-operator id, seeded rows, or already-
+    soft-deleted rows. Session copies survive (provenance pointer
+    clears via SET NULL per 13D PR 2)."""
+    target = db.execute(
+        select(RuleSet).where(
+            RuleSet.id == rule_set_id,
+            RuleSet.owner_user_id == user.id,
+            RuleSet.is_seed.is_(False),
+            RuleSet.deleted_at.is_(None),
+        )
+    ).scalar_one_or_none()
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Library RuleSet not found",
+        )
+    rules_library.soft_delete_rule_set(
+        db,
+        rule_set=target,
+        actor=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url="/operator/settings",
         status_code=status.HTTP_303_SEE_OTHER,
     )

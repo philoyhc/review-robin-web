@@ -457,6 +457,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "operator_rtd.created": EventSchema(
         frozenset({"snapshot", "refs", "context"})
     ),
+    "operator_rtd.deleted": EventSchema(
+        frozenset({"snapshot", "refs", "context"})
+    ),
     "response_type_definitions.saved_to_library": EventSchema(
         _IDENTITY | {"snapshot", "refs", "context"}
     ),

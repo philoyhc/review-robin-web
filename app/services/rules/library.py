@@ -21,10 +21,10 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.db.models import RuleSet, RuleSetRevision, User
+from app.db.models import RuleSet, RuleSetRevision, SessionRuleSet, User
 from app.services import audit
 
 
@@ -81,6 +81,25 @@ def list_personal_rule_sets(
         .order_by(RuleSet.id)
     )
     return list(db.execute(stmt).scalars())
+
+
+def count_rule_set_session_copies(
+    db: Session, *, rule_set: RuleSet
+) -> int:
+    """Count the number of session-tier ``session_rule_sets`` rows
+    that point at this library RuleSet via ``library_origin_id``.
+
+    Surfaces on the operator-Settings library list (Slice 5) as the
+    "Sessions using N" column. The SQL ``SET NULL`` on
+    ``session_rule_sets.library_origin_id`` (13D PR 2) handles the
+    pointer hygiene when the library row is later soft-deleted."""
+    return int(
+        db.execute(
+            select(func.count(SessionRuleSet.id)).where(
+                SessionRuleSet.library_origin_id == rule_set.id
+            )
+        ).scalar_one()
+    )
 
 
 def load_rule_set(

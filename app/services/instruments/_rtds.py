@@ -876,3 +876,58 @@ def add_rtd_from_library(
     )
     db.commit()
     return session_rtd
+
+
+def count_rtd_session_copies(
+    db: Session, *, operator_rtd: OperatorResponseTypeDefinition
+) -> int:
+    """Count the number of session-tier ``response_type_definitions``
+    rows that point at this library RTD via ``library_origin_id``.
+
+    Surfaces on the operator-Settings library list (Slice 5) as the
+    "Sessions using N" column — invariant #3 transparency without a
+    cascade. Delete is purely the library-side action; the SQL
+    ``SET NULL`` on ``response_type_definitions.library_origin_id``
+    handles any session rows."""
+    return int(
+        db.execute(
+            select(func.count(ResponseTypeDefinition.id)).where(
+                ResponseTypeDefinition.library_origin_id == operator_rtd.id
+            )
+        ).scalar_one()
+    )
+
+
+def delete_operator_rtd(
+    db: Session,
+    *,
+    operator_rtd: OperatorResponseTypeDefinition,
+    actor: User,
+    correlation_id: str | None = None,
+) -> None:
+    """Hard-delete a library RTD from the operator's tier. Session
+    copies survive (their ``library_origin_id`` clears to NULL via
+    the ``SET NULL`` cascade — invariant #3 of 15C). Emits the
+    ``operator_rtd.deleted`` audit event."""
+    captured = {
+        "id": operator_rtd.id,
+        "response_type": operator_rtd.response_type,
+        "data_type": operator_rtd.data_type,
+    }
+    db.delete(operator_rtd)
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type="operator_rtd.deleted",
+        summary=(
+            f"Deleted library Response Type {captured['response_type']!r}"
+        ),
+        actor_user_id=actor.id,
+        session=None,
+        payload=audit.snapshot(captured),
+        refs={"operator_rtd_id": captured["id"]},
+        context={"via": "operator_settings"},
+        correlation_id=correlation_id,
+    )
+    db.commit()
