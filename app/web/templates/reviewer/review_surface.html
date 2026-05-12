@@ -4,6 +4,30 @@
 
 {% block body_class %}ui-v2{% if not preview_mode %} reviewer{% endif %}{% endblock %}
 
+{% block extra_head %}
+  <style>
+    /* Segment 13B PR 3 — live reviewer-side sort. Clickable
+       headers show a small priority badge when sorted. */
+    body.ui-v2 th.rs-sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    body.ui-v2 th.rs-sortable:hover {
+      background: var(--bg-muted, #f1f5f9);
+    }
+    body.ui-v2 .rs-sort-badge {
+      display: inline;
+      font-size: 0.85em;
+      color: var(--color-muted, #475569);
+      font-variant-numeric: tabular-nums;
+    }
+    body.ui-v2 .rs-sort-badge-active {
+      color: var(--color-text, #0f172a);
+      font-weight: 600;
+    }
+  </style>
+{% endblock %}
+
 {# Reviewer chrome only on the actual reviewer surface; the operator
    preview reuses this template and keeps the operator chrome (with
    its breadcrumb back to the session). #}
@@ -182,30 +206,45 @@
           </p>
         {% endif %}
         <div class="table-scroll">
-          <table>
+          <table data-rs-sortable-table="{{ group.instrument.id }}">
+            <thead>
             <tr>
-              <th class="rs-reviewee">Reviewee</th>
+              <th class="rs-reviewee rs-sortable"
+                  data-sort-key="reviewee.name"
+                  onclick="rsSortHeaderClick(event, this)">
+                Reviewee
+                <span class="rs-sort-badge"></span>
+              </th>
               {% for header in group.display_fields %}
-                <th{% if header.is_profile_link %} class="rs-narrow"{% endif %}>{{ header.label }}</th>
+                <th{% if header.is_profile_link %} class="rs-narrow rs-sortable"{% else %} class="rs-sortable"{% endif %}
+                    data-sort-key="display:{{ header.field.id }}"
+                    onclick="rsSortHeaderClick(event, this)">{{ header.label }}<span class="rs-sort-badge"></span></th>
               {% endfor %}
               {% set first_row = group.rows[0] %}
               {% for cell in first_row.cells %}
                 {% set max_len = (cell.field.validation or {}).get('max_length', 0) or 0 %}
-                {% set col_class = '' %}
-                {% if cell.field.data_type in ('Integer', 'Decimal') %}{% set col_class = 'rs-narrow' %}
-                {% elif cell.field.data_type == 'String' and max_len > 100 %}{% set col_class = 'rs-textlong' %}{% endif %}
-                <th{% if col_class %} class="{{ col_class }}"{% endif %}>{{ cell.field.label }}{% if cell.field.required %} *{% endif %}</th>
+                {% set col_class = 'rs-sortable' %}
+                {% if cell.field.data_type in ('Integer', 'Decimal') %}{% set col_class = 'rs-narrow rs-sortable' %}
+                {% elif cell.field.data_type == 'String' and max_len > 100 %}{% set col_class = 'rs-textlong rs-sortable' %}{% endif %}
+                <th class="{{ col_class }}"
+                    data-sort-key="response:{{ cell.field.id }}"
+                    data-sort-type="{{ cell.field.data_type }}"
+                    onclick="rsSortHeaderClick(event, this)">{{ cell.field.label }}{% if cell.field.required %} *{% endif %}<span class="rs-sort-badge"></span></th>
               {% endfor %}
               {% if group.show_status_col %}<th class="rs-narrow"></th>{% endif %}
             </tr>
+            </thead>
+            <tbody class="rs-rows">
             {% for row in group.rows %}
               <tr>
-                <td class="rs-reviewee">
+                <td class="rs-reviewee"
+                    data-sort-value="{{ row.assignment.reviewee.name }}">
                   <strong>{{ row.assignment.reviewee.name }}</strong><br>
                   <code>{{ row.assignment.reviewee.email_or_identifier }}</code>
                 </td>
                 {% for cell in row.display_cells %}
-                  <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}>
+                  <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}
+                      data-sort-value="{{ cell.value or '' }}">
                     {% if cell.is_profile_link %}
                       {% if cell.value %}<a href="{{ cell.value }}">View</a>{% endif %}
                     {% else %}
@@ -220,7 +259,8 @@
                   {% set col_class = '' %}
                   {% if data_type in ('Integer', 'Decimal') %}{% set col_class = 'rs-narrow' %}
                   {% elif data_type == 'String' and max_len > 100 %}{% set col_class = 'rs-textlong' %}{% endif %}
-                  <td{% if col_class %} class="{{ col_class }}"{% endif %}>
+                  <td{% if col_class %} class="{{ col_class }}"{% endif %}
+                      data-sort-value="{{ cell.value or '' }}">
                     {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
                     {% set disabled_attr = "" if row.accepting else "disabled" %}
                     {# Render is driven by the RTD's ``data_type`` —
@@ -317,6 +357,7 @@
                 {% endif %}
               </tr>
             {% endfor %}
+            </tbody>
           </table>
         </div>
         </div>{# /.rs-instrument-group #}
@@ -586,4 +627,189 @@
     </script>
   {% endif %}
 
+  {# Segment 13B PR 3 — live reviewer-side sort. Plain click cycles
+     the column's direction (unsorted → asc → desc → unsorted) and
+     promotes that column to the only key in the cascade. Shift-click
+     adds the column to the cascade (or promotes/demotes within it).
+     State lives in JS memory per ``<table data-rs-sortable-table>``;
+     refresh returns to the operator default. No persistence,
+     no audit event. #}
+  <script>
+    var _RS_SORT_MAX_KEYS = 3;
+    // State map: tableId -> [{key, dir}, ...] in cascade order.
+    var _rsSortState = {};
+
+    function rsSortHeaderClick(event, th) {
+      var table = th.closest('table[data-rs-sortable-table]');
+      if (!table) return;
+      var tableId = table.getAttribute('data-rs-sortable-table');
+      var key = th.getAttribute('data-sort-key');
+      if (!key) return;
+      var state = _rsSortState[tableId] || [];
+      var existingIdx = -1;
+      for (var i = 0; i < state.length; i++) {
+        if (state[i].key === key) { existingIdx = i; break; }
+      }
+      if (event.shiftKey) {
+        // Shift-click: add to cascade (or cycle within it).
+        if (existingIdx === -1) {
+          if (state.length >= _RS_SORT_MAX_KEYS) {
+            // Cap at 3 keys; silently ignore the click.
+            return;
+          }
+          state.push({ key: key, dir: 'asc' });
+        } else {
+          var entry = state[existingIdx];
+          if (entry.dir === 'asc') {
+            entry.dir = 'desc';
+          } else {
+            // desc → drop from cascade.
+            state.splice(existingIdx, 1);
+          }
+        }
+      } else {
+        // Plain click: cycle this column's direction; the cascade
+        // collapses to just this column (or unsets entirely).
+        if (existingIdx !== -1 && state.length === 1) {
+          var entry = state[existingIdx];
+          if (entry.dir === 'asc') {
+            state = [{ key: key, dir: 'desc' }];
+          } else {
+            state = [];  // desc → unsorted
+          }
+        } else {
+          state = [{ key: key, dir: 'asc' }];
+        }
+      }
+      _rsSortState[tableId] = state;
+      _rsRefreshSortBadges(table, state);
+      _rsApplySort(table, state);
+    }
+
+    function _rsRefreshSortBadges(table, state) {
+      var keyToPriority = {};
+      var keyToDir = {};
+      for (var i = 0; i < state.length; i++) {
+        keyToPriority[state[i].key] = i + 1;
+        keyToDir[state[i].key] = state[i].dir;
+      }
+      var headers = table.querySelectorAll('th.rs-sortable');
+      for (var j = 0; j < headers.length; j++) {
+        var th = headers[j];
+        var key = th.getAttribute('data-sort-key');
+        var badge = th.querySelector('.rs-sort-badge');
+        if (!badge) continue;
+        if (keyToPriority[key]) {
+          badge.textContent =
+            ' ' + keyToPriority[key]
+            + (keyToDir[key] === 'asc' ? '↑' : '↓');
+          badge.classList.add('rs-sort-badge-active');
+        } else {
+          badge.textContent = '';
+          badge.classList.remove('rs-sort-badge-active');
+        }
+      }
+    }
+
+    function _rsApplySort(table, state) {
+      var tbody = table.querySelector('tbody.rs-rows');
+      if (!tbody) return;
+      var headers = table.querySelectorAll(
+        'thead th.rs-sortable, thead th[data-sort-key]'
+      );
+      var keyToColIndex = {};
+      // Column index by counting *all* th cells in the head row
+      // (including any leading non-sortable ones) — keep parity
+      // with td position in each row.
+      var headRow = table.querySelector('thead tr');
+      var allHeads = headRow ? headRow.children : [];
+      for (var i = 0; i < allHeads.length; i++) {
+        var k = allHeads[i].getAttribute('data-sort-key');
+        if (k) keyToColIndex[k] = i;
+      }
+      var keyToType = {};
+      for (var t = 0; t < headers.length; t++) {
+        var hk = headers[t].getAttribute('data-sort-key');
+        var hType = headers[t].getAttribute('data-sort-type') || '';
+        if (hk) keyToType[hk] = hType;
+      }
+      var rows = Array.prototype.slice.call(tbody.children);
+      // Stamp the server-render insertion order ONCE per row so
+      // ``state.length === 0`` (unsorted) restores the operator
+      // default — not the most-recently-sorted order. Re-stamping
+      // on every call would clobber it.
+      rows.forEach(function (r, idx) {
+        if (r.dataset.rsOriginalIndex === undefined) {
+          r.dataset.rsOriginalIndex = String(idx);
+        }
+      });
+      if (state.length === 0) {
+        // Restore original insertion order.
+        rows.sort(function (a, b) {
+          return (
+            parseInt(a.dataset.rsOriginalIndex, 10) -
+            parseInt(b.dataset.rsOriginalIndex, 10)
+          );
+        });
+      } else {
+        rows.sort(function (a, b) {
+          for (var s = 0; s < state.length; s++) {
+            var entry = state[s];
+            var col = keyToColIndex[entry.key];
+            if (col === undefined) continue;
+            var av = _rsCellValue(a.children[col]);
+            var bv = _rsCellValue(b.children[col]);
+            // Null-last regardless of direction. Operators sort to
+            // surface rows with data; "no data" never bubbles up.
+            // Handled before the dir flip so the asymmetry survives.
+            if (av === null && bv === null) continue;
+            if (av === null) return 1;
+            if (bv === null) return -1;
+            var cmp = _rsCompareValues(av, bv, keyToType[entry.key] || '');
+            if (cmp !== 0) {
+              return entry.dir === 'desc' ? -cmp : cmp;
+            }
+          }
+          return (
+            parseInt(a.dataset.rsOriginalIndex, 10) -
+            parseInt(b.dataset.rsOriginalIndex, 10)
+          );
+        });
+      }
+      rows.forEach(function (r) { tbody.appendChild(r); });
+    }
+
+    function _rsCellValue(td) {
+      if (!td) return null;
+      // Prefer the persisted server value attribute. Inputs that
+      // were edited but not saved keep their last-saved value as
+      // the sort key — operators sort by what's committed, not by
+      // mid-edit text.
+      var raw = td.getAttribute('data-sort-value');
+      if (raw === null) {
+        // Fall back to the cell's text content (e.g. for the
+        // status column or cells without an explicit sort value).
+        raw = (td.textContent || '').trim();
+      }
+      if (raw === '' || raw === null) return null;
+      return raw;
+    }
+
+    function _rsCompareValues(a, b, type) {
+      // Caller has already filtered out null pairs. Direction
+      // flip happens at the caller; this function returns an
+      // ascending comparison.
+      if (type === 'Integer' || type === 'Decimal') {
+        var an = parseFloat(a);
+        var bn = parseFloat(b);
+        if (!isNaN(an) && !isNaN(bn)) {
+          return an < bn ? -1 : an > bn ? 1 : 0;
+        }
+      }
+      // Locale-aware string compare. ``undefined`` locale uses the
+      // browser default; ``{ numeric: true }`` makes ``Item 2``
+      // sort before ``Item 10`` for mixed alphanumeric strings.
+      return a.localeCompare(b, undefined, { numeric: true });
+    }
+  </script>
 {% endblock %}

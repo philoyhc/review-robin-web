@@ -364,11 +364,13 @@ def test_surface_applies_column_classes_by_response_type(
 
     # Default seeded fields: 1-to-5int Rating (numeric → rs-narrow) +
     # Long_text Comments (textarea → rs-textlong).
-    assert 'class="rs-narrow">Rating' in body
-    assert 'class="rs-textlong">Comments' in body
-    # Per-cell <td> classes match.
-    assert '<td class="rs-narrow">' in body
-    assert '<td class="rs-textlong">' in body
+    assert '>Rating' in body
+    assert '>Comments' in body
+    # Per-cell <td> classes match (the 13B PR 3 sort scaffolding
+    # appends a ``data-sort-value`` attribute on each td, so the
+    # class no longer sits right before the closing ``>``).
+    assert '<td class="rs-narrow"' in body
+    assert '<td class="rs-textlong"' in body
 
 
 def test_surface_dedupes_reviewee_name_and_email_display_fields(
@@ -392,8 +394,12 @@ def test_surface_dedupes_reviewee_name_and_email_display_fields(
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
 
-    # Reviewee column header is present (always rendered).
-    assert 'class="rs-reviewee">Reviewee</th>' in body
+    # Reviewee column header is present (always rendered). The
+    # PR 3 sort scaffolding wraps the label between the tag's
+    # opening ``>`` and a trailing ``<span class="rs-sort-badge">``;
+    # match by ``data-sort-key="reviewee.name"`` instead so the
+    # assertion stays stable across cosmetic markup changes.
+    assert 'data-sort-key="reviewee.name"' in body
     # The seeded name + email Display Fields no longer render as <th>.
     assert ">Name</th>" not in body
     assert ">Email</th>" not in body
