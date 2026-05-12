@@ -160,11 +160,12 @@
           </div>
         </div>
       </div>
-      <div class="btn-pair" style="margin-top: 16px;">
-        <button class="btn" type="submit">Apply filters</button>
+      <div class="btn-pair"
+           style="margin-top: 16px; margin-bottom: 24px; justify-content: flex-end;">
         {% if filter_form.is_active %}
           <a class="btn secondary" href="{{ filter_form.cleared_url }}">Clear filters</a>
         {% endif %}
+        <button class="btn secondary" type="submit">Apply filters</button>
       </div>
     </form>
 
