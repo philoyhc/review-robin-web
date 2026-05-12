@@ -67,7 +67,7 @@ from app.services.instruments._rtds import (
     SEEDED_RESPONSE_TYPE_DEFINITIONS,
     validation_block_for_rtd,
 )
-from app.services.rules.seeds import SEEDS as _SEEDED_RULE_SETS
+from app.services.rules.seeds import SEEDED_RULE_SETS as _SEEDED_RULE_SETS
 
 _SEEDED_RTD_NAMES: frozenset[str] = frozenset(
     spec["response_type"] for spec in SEEDED_RESPONSE_TYPE_DEFINITIONS

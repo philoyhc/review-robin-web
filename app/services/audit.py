@@ -428,6 +428,13 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 13A PR 6 — in-place Save / Rename / Delete.
     "rule_set.updated": EventSchema(frozenset({"changes", "refs", "context"})),
     "rule_set.deleted": EventSchema(frozenset({"snapshot", "refs", "context"})),
+    # Segment 15C Slice 1 — workspace-seed materialisation into the
+    # per-session ``session_rule_sets`` table at session-create time.
+    # Fired once per ``create_session`` call that actually inserted
+    # rows; ``counts.materialised`` carries the number of rows added.
+    "session_rule_sets.materialised_from_seed": EventSchema(
+        _IDENTITY | {"counts", "context"}
+    ),
     # PR 7 — settings
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "reviewees.imported": EventSchema(_IDENTITY | {"counts", "context"}),
