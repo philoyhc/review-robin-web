@@ -7,6 +7,7 @@ from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 from app.schemas.sessions import SessionCreate
 from app.services import audit, session_lifecycle as lifecycle
 from app.services.instruments import ensure_default_instrument
+from app.services.rules.seeds import materialise_seed_rule_sets
 
 
 def create_session(
@@ -41,6 +42,12 @@ def create_session(
     # rename / extend / replace them.
     ensure_default_instrument(db, review_session)
 
+    # 15C Slice 1: copy workspace-shipped seed RuleSets into the
+    # session's ``session_rule_sets`` pool. The 15B per-instrument
+    # picker (and the Rule Builder, post-15C Slice 4) read from
+    # this pool.
+    seed_rows = materialise_seed_rule_sets(db, review_session)
+
     audit.write_event(
         db,
         event_type="session.created",
@@ -56,6 +63,21 @@ def create_session(
         ),
         correlation_id=correlation_id,
     )
+    if seed_rows:
+        audit.write_event(
+            db,
+            event_type="session_rule_sets.materialised_from_seed",
+            summary=(
+                f"Materialised {len(seed_rows)} seeded RuleSet(s) "
+                f"into session {review_session.code}"
+            ),
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.counts(
+                materialised=len(seed_rows),
+            ),
+            correlation_id=correlation_id,
+        )
 
     db.commit()
     db.refresh(review_session)

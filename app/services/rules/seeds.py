@@ -1,28 +1,32 @@
-"""Seeded RuleSets — Segment 13A PR 3.
+"""Seeded RuleSets — Segment 13A PR 3, formalised in 15C Slice 1.
 
-The six canonical seeds the spec names in §5.4 and the plan
-expands in PR 3. Definitions live as Pydantic
-``RuleSetSchema`` instances so they can be validated at import
-time and round-tripped through the engine before reaching the
-DB.
+The five canonical seeds the spec names in §5.4. Definitions
+live as Pydantic ``RuleSetSchema`` instances so they can be
+validated at import time and round-tripped through the engine
+before reaching the DB.
 
-The Alembic data migration that installs these into ``rule_sets``
-+ ``rule_set_revisions`` imports from this module — keeping
-the seed text close to the engine code rather than scattering
-JSON literals through migration files. If a future seed lands
-or an existing seed changes shape, that's a *new* migration
-appended to the chain; the existing migration's output is
-historically frozen by the rows it already wrote.
+15C Slice 1 reframed these as the source of truth for
+workspace-shipped seeds: they materialise into
+``session_rule_sets`` (the per-session copy table) on session
+create via :func:`materialise_seed_rule_sets`, mirroring
+``ensure_default_response_type_definitions``. The historical
+``rule_sets`` data migration (``9a7c2e1b4f60``) still imports
+the legacy alias ``SEEDS`` from this module; the canonical
+name is now ``SEEDED_RULE_SETS``.
 
-Pinned guide: ``guide/archive/rules_table.md`` lays out each canonical
-case in one row. The literals here are the byte-equivalent
-RuleSetSchema realisation.
+Pinned guide: ``guide/archive/rules_table.md`` lays out each
+canonical case in one row. The literals here are the byte-
+equivalent ``RuleSetSchema`` realisation.
 """
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Any, Final
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import ReviewSession, SessionRuleSet
 from app.schemas.rules import (
     Combinator,
     MatchRule,
@@ -147,14 +151,76 @@ SEED_THREE_REVIEWERS_PER_REVIEWEE: Final[RuleSetSchema] = RuleSetSchema(
 )
 
 
-# Order matters: drives ``seed_order`` on the inserted rows and the
-# library selector's order in the editor (alphabetical-by-name within
-# the seed group, but the install order pins the tie-breaker for any
-# future seeds that share a starting letter).
-SEEDS: Final[list[RuleSetSchema]] = [
+# Order matters: drives the order seeds appear in the picker
+# (per-session ``session_rule_sets.id`` ascending, which mirrors
+# this list's order at materialise-time).
+SEEDED_RULE_SETS: Final[list[RuleSetSchema]] = [
     SEED_FULL_MATRIX,
     SEED_INTRA_GROUP,
     SEED_CROSS_GROUP,
     SEED_SAME_GROUP_DIFFERENT_ROLE,
     SEED_THREE_REVIEWERS_PER_REVIEWEE,
 ]
+
+# Backwards-compat alias for the historical ``9a7c2e1b4f60`` Alembic
+# data migration. Do not introduce new readers of this name —
+# everything else uses ``SEEDED_RULE_SETS``.
+SEEDS: Final[list[RuleSetSchema]] = SEEDED_RULE_SETS
+
+
+def _rules_json_payload(schema: RuleSetSchema) -> list[dict[str, Any]]:
+    """Serialise a ``RuleSetSchema``'s rule list to the JSON shape
+    ``session_rule_sets.rules_json`` expects — same shape as
+    ``rule_set_revisions.rules_json`` on the library side."""
+    return [rule.model_dump(mode="json", by_alias=True) for rule in schema.rules]
+
+
+def materialise_seed_rule_sets(
+    db: Session, review_session: ReviewSession
+) -> dict[str, SessionRuleSet]:
+    """Idempotently materialise every workspace-shipped seed into
+    ``session_rule_sets`` for the given session. Returns a dict keyed
+    by ``name`` covering every seeded row currently in the DB for the
+    session.
+
+    Re-running on a session that already has the seeds is a no-op —
+    pre-existing rows (matched by ``(session_id, name)``) are left
+    untouched, including any operator edits to their snapshot.
+    Mirrors :func:`app.services.instruments._rtds.ensure_default_response_type_definitions`.
+
+    The audit emitter ``session_rule_sets.materialised_from_seed``
+    is **not** fired from here; callers that want the event (e.g.
+    ``sessions.create_session``) call :func:`audit.write_event`
+    explicitly with the returned dict to compute the new-row count.
+    """
+    existing = {
+        row.name: row
+        for row in db.execute(
+            select(SessionRuleSet).where(
+                SessionRuleSet.session_id == review_session.id
+            )
+        ).scalars()
+    }
+
+    added = False
+    for schema in SEEDED_RULE_SETS:
+        if schema.name in existing:
+            continue
+        row = SessionRuleSet(
+            session_id=review_session.id,
+            name=schema.name,
+            description=schema.description or "",
+            combinator=schema.combinator.value,
+            exclude_self_reviews=schema.options.excludeSelfReviews,
+            seed=schema.options.seed,
+            rules_json=_rules_json_payload(schema),
+            library_origin_id=None,
+        )
+        db.add(row)
+        existing[schema.name] = row
+        added = True
+
+    if added:
+        db.flush()
+
+    return existing

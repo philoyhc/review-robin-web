@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import RuleSet, RuleSetRevision
 from app.schemas.rules import Rule
-from app.services.rules.seeds import SEEDS
+from app.services.rules.seeds import SEEDED_RULE_SETS
 
 
 def test_migration_installs_five_seeds(db: Session) -> None:
@@ -27,7 +27,7 @@ def test_migration_installs_five_seeds(db: Session) -> None:
         select(RuleSet).where(RuleSet.is_seed.is_(True)).order_by(RuleSet.id)
     ).scalars().all()
     assert len(rows) == 5
-    assert [row.name for row in rows] == [seed.name for seed in SEEDS]
+    assert [row.name for row in rows] == [seed.name for seed in SEEDED_RULE_SETS]
 
 
 def test_each_seed_has_exactly_one_revision_pointed_at(db: Session) -> None:
@@ -60,7 +60,7 @@ def test_seed_rules_json_round_trips_through_pydantic(db: Session) -> None:
     schema validators without drift. If a future seed addition
     breaks this, the failing test names the offending seed."""
 
-    for seed in SEEDS:
+    for seed in SEEDED_RULE_SETS:
         row = db.execute(
             select(RuleSet).where(RuleSet.name == seed.name)
         ).scalar_one()

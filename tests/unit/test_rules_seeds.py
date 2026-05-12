@@ -24,7 +24,7 @@ from app.services.rules.seeds import (
     SEED_INTRA_GROUP,
     SEED_SAME_GROUP_DIFFERENT_ROLE,
     SEED_THREE_REVIEWERS_PER_REVIEWEE,
-    SEEDS,
+    SEEDED_RULE_SETS,
 )
 
 
@@ -217,7 +217,7 @@ def test_full_matrix_seed_matches_generate_full_matrix() -> None:
 
 
 def test_seeds_list_has_five_unique_names_in_install_order() -> None:
-    names = [seed.name for seed in SEEDS]
+    names = [seed.name for seed in SEEDED_RULE_SETS]
     assert names == [
         "Full Matrix",
         "Intra-group peer review",
@@ -229,7 +229,7 @@ def test_seeds_list_has_five_unique_names_in_install_order() -> None:
 
 
 def test_every_seed_is_marked_as_seed_scope() -> None:
-    for seed in SEEDS:
+    for seed in SEEDED_RULE_SETS:
         assert seed.scope.value == "seed"
         assert seed.metadata.isSeed is True
         assert seed.options.excludeSelfReviews is False
