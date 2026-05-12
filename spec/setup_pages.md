@@ -66,16 +66,18 @@ Every Setup Page renders, top-to-bottom:
    `card lock` carrying "The {entity} cannot be modified while the
    session is ongoing. Revert the session to draft if you wish to
    modify anything." with an inline Revert form.
-6. **Body grid** — Upload + Danger Zone cards. Hidden when the
-   session is Activated; only the lock card and the preview table
-   render in that state.
-7. **Preview table card** — Reviewers / Reviewees / Relationships.
+6. **Preview table card** — Reviewers / Reviewees / Relationships.
    Always renders when the entity is non-empty, regardless of
    lifecycle state. Column headers render the resolved friendly
    label via `operator/partials/_field_label_header.html`; when
    an override is set, the canonical name appears as
    `.field-label-canonical` muted subtext below the friendly
    label and the sort `↕` button.
+7. **Body grid** — Upload + Danger Zone cards. Hidden when the
+   session is Activated. Placed **after** the preview table so
+   the operator's eye lands on the data they're managing first;
+   the upload-CSV + delete-all destructive actions sit below the
+   table as a deliberate de-prioritised cluster.
 
 ## Preview tables (shared toggle pattern)
 
@@ -156,9 +158,12 @@ applies (the column data is still present in the DOM).
 
 ## Reviewers page (`session_reviewers.html`)
 
-### Body grid (when not Activated)
+### Body grid (after the preview table, when not Activated)
 
-Two-column `bottom-grid`:
+Two-column `bottom-grid` placed **below** the preview table so
+the operator's eye lands on the data first; the upload + delete-
+all destructive actions cluster as a deliberate de-prioritised
+section beneath:
 
 - **Left:** `Upload Reviewers` card. Required CSV columns
   `ReviewerName`, `ReviewerEmail`; optional `ReviewerTag1..3`. POSTs

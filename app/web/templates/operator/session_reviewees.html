@@ -58,69 +58,6 @@
     </div>
   {% endif %}
 
-  {% if not is_ready %}
-  <div class="bottom-grid">
-    <section class="card" id="upload-csv">
-      <h2>Upload Reviewees</h2>
-      <p class="form-help">
-        CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
-        <code>RevieweeName</code>, <code>RevieweeEmail</code>. Optional columns:
-        <code>PhotoLink</code>, <code>RevieweeTag1</code>,
-        <code>RevieweeTag2</code>, <code>RevieweeTag3</code>.
-        Other columns are ignored.
-      </p>
-
-      {% include "operator/partials/validation_results.html" %}
-
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/reviewees/import"
-            enctype="multipart/form-data">
-        <input type="file" id="file" name="file" accept=".csv,text/csv"
-               aria-label="CSV file" required>
-
-        {% if existing_count and existing_count > 0 %}
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm_replace" value="true" required>
-              Yes, replace the existing
-              <span class="pill pill-empty">{{ existing_count }} reviewee{% if existing_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
-              and delete the
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}.
-            </label>
-          </p>
-        {% endif %}
-
-        <div class="btn-pair" style="margin-top: 20px;">
-          <button class="btn secondary" type="submit">Upload</button>
-          <a class="btn secondary disabled"
-             aria-disabled="true"
-             title="Inline editing — coming soon">Edit Reviewees</a>
-        </div>
-      </form>
-    </section>
-
-    {% if reviewees %}
-      <div class="card danger-zone">
-        <h2>Danger Zone</h2>
-        <form method="post" action="/operator/sessions/{{ session.id }}/reviewees/delete-all">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required>
-              Yes, delete the existing
-              <span class="pill pill-empty">{{ reviewees | length }} reviewee{% if reviewees | length != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
-              and
-              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}.
-            </label>
-          </p>
-          <p>
-            <button class="btn destructive" type="submit">Delete all reviewees</button>
-          </p>
-        </form>
-      </div>
-    {% endif %}
-  </div>
-  {% endif %}
-
   {% if reviewees %}
     {% set has_photo = reviewees | selectattr("profile_link") | list | length > 0 %}
     {% set has_tag_1 = reviewees | selectattr("tag_1") | list | length > 0 %}
@@ -245,5 +182,68 @@
         }
       })();
     </script>
+  {% endif %}
+
+  {% if not is_ready %}
+  <div class="bottom-grid">
+    <section class="card" id="upload-csv">
+      <h2>Upload Reviewees</h2>
+      <p class="form-help">
+        CSV file in UTF-8, max {{ 5000 }} rows. Required columns:
+        <code>RevieweeName</code>, <code>RevieweeEmail</code>. Optional columns:
+        <code>PhotoLink</code>, <code>RevieweeTag1</code>,
+        <code>RevieweeTag2</code>, <code>RevieweeTag3</code>.
+        Other columns are ignored.
+      </p>
+
+      {% include "operator/partials/validation_results.html" %}
+
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/reviewees/import"
+            enctype="multipart/form-data">
+        <input type="file" id="file" name="file" accept=".csv,text/csv"
+               aria-label="CSV file" required>
+
+        {% if existing_count and existing_count > 0 %}
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm_replace" value="true" required>
+              Yes, replace the existing
+              <span class="pill pill-empty">{{ existing_count }} reviewee{% if existing_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+              and delete the
+              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}.
+            </label>
+          </p>
+        {% endif %}
+
+        <div class="btn-pair" style="margin-top: 20px;">
+          <button class="btn secondary" type="submit">Upload</button>
+          <a class="btn secondary disabled"
+             aria-disabled="true"
+             title="Inline editing — coming soon">Edit Reviewees</a>
+        </div>
+      </form>
+    </section>
+
+    {% if reviewees %}
+      <div class="card danger-zone">
+        <h2>Danger Zone</h2>
+        <form method="post" action="/operator/sessions/{{ session.id }}/reviewees/delete-all">
+          <p>
+            <label style="font-weight: normal;">
+              <input type="checkbox" name="confirm" value="true" required>
+              Yes, delete the existing
+              <span class="pill pill-empty">{{ reviewees | length }} reviewee{% if reviewees | length != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+              and
+              <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}.
+            </label>
+          </p>
+          <p>
+            <button class="btn destructive" type="submit">Delete all reviewees</button>
+          </p>
+        </form>
+      </div>
+    {% endif %}
+  </div>
   {% endif %}
 {% endblock %}
