@@ -99,16 +99,19 @@ header, `(source_type, source_field)` for the value lookup);
   block + pair-context block).
 - **Email Previews** tag / pair-context columns + the
   reviewer-surface preview reuse.
-- **Per-instrument Display Field cell headers** — the
-  per-instrument `InstrumentDisplayField.label` override stays
-  the highest-priority source; the session-wide friendly label
-  becomes the next-highest fallback before the canonical
-  default.
-- **Instrument editor's Display Field label input** — the input
-  placeholder shows the resolved friendly label so the operator
-  doesn't need to retype it. Leaving the input empty stores
-  `label=""`, so subsequent session-wide rename changes
-  propagate to that Display Field automatically.
+- **Instrument editor's Display Fields table.** Today the
+  table has a `Source` column (canonical name) and an editable
+  `Friendly Label` column. **15A retires the per-instrument
+  editable input but preserves both columns**: `Source` keeps
+  its current cell, and `Friendly Label` becomes a read-only
+  cell that auto-populates from `field_labels.resolve(...)`.
+  The single source of truth for a Display Field's friendly
+  label becomes the session-wide setting managed on the
+  Reviewers / Reviewees / Relationships pages.
+- **Per-instrument Display Field cell headers** (reviewer-
+  surface preview + Email Previews reuse) follow the same
+  resolver chain — they read the session-wide friendly label
+  directly. No per-instrument override layer.
 - **Reviewer surface** review page column headers (tag /
   pair-context / identity rows in the reviewee-context block).
 
@@ -116,9 +119,12 @@ header, `(source_type, source_field)` for the value lookup);
 
 - Rule Builder operand pickers + `_render_*_sentence` helpers
   in `app/web/views/_rule_builder.py`.
-- Display Field source picker on the Instruments edit page (the
-  operator is picking *which underlying field*; after adding,
-  the per-instrument `label` lets them override).
+- Display Field source picker on the Instruments edit page —
+  the operator is picking *which underlying field* to add as a
+  column; the picker shows canonical names. The per-instrument
+  override capability is retired in 15A (see Instrument editor
+  bullet above), so the picker just controls
+  `(source_type, source_field)`.
 - CSV-import column-name docs, header validation, and
   parse-error copy. Importers want the machine name
   (`RevieweeTag1`).
@@ -143,11 +149,15 @@ header, `(source_type, source_field)` for the value lookup);
   is set, the cell stays single-line with the canonical-as-it-
   is-today rendering (`Tag 1`). This keeps operators oriented
   to the canonical name while picking up their own rename.
-- **Per-instrument Display Field cells (Instruments edit
-  page).** The label input box shows the resolved friendly
-  label as the placeholder. The visible cell header in the
-  preview / reviewer surface follows the chain: per-instrument
-  override → session friendly → canonical default.
+- **Instrument editor's Display Fields table.** Two columns:
+  `Source` shows the canonical name (e.g. `RevieweeTag1`,
+  `RevieweeName`), `Friendly Label` shows
+  `field_labels.resolve(source_type, source_field)` as a
+  read-only cell. No input box, no per-instrument override.
+  Operators who want to rename navigate to the Reviewers /
+  Reviewees / Relationships page and edit there; the change is
+  picked up on next render of every Instrument that uses the
+  field.
 - **Reviewer surface.** Friendly label only, single-line. No
   canonical suffix. When no friendly is set, falls back to the
   built-in default (e.g. `Tag 1`, `Name`, `Email`); reviewers
@@ -189,17 +199,20 @@ def clear(
 materialised per request via the existing per-request session
 scope in `app/web/deps.py`.
 
-The **per-instrument override** stays above the resolver. Full
-chain on a per-instrument Display Field cell header:
+**Single resolver chain** for every display-layer callsite:
 
-1. `InstrumentDisplayField.label` (per-instrument override)
-2. `field_labels.resolve(...)` (session-wide friendly)
-3. Built-in default in `_DEFAULT_LABELS`
-4. `f"{source_type}:{source_field}"` (last-resort fallback)
+1. `field_labels.resolve(...)` (session-wide friendly)
+2. Built-in default in `_DEFAULT_LABELS`
+3. `f"{source_type}:{source_field}"` (last-resort fallback)
 
-Surfaces without a per-instrument override (Setup-page tables,
-Assignments tag columns, Email Previews, reviewer-surface
-preview) collapse the chain to 2 → 3 → 4.
+Per-instrument override removed from the chain. The
+`InstrumentDisplayField.label` column stays in the schema
+(no destructive migration) but Slice 2 stops reading it; the
+cell header on every surface (operator preview tables,
+Instrument editor's read-only Friendly Label column, reviewer
+surface, Email Previews) reads from the session-wide resolver
+only. A follow-on cleanup segment can drop the dead column
+once the pilot confirms no surprises.
 
 **`_DEFAULT_LABELS` widens** to cover the new reviewee
 identity slots (`name = "Name"`, `email_or_identifier = "Email"`,
@@ -240,9 +253,11 @@ the source of truth for what each cell looks like.
 Key callsites:
 
 - `app/services/instruments/_display_fields.py::display_field_label`
-  — delegate to `field_labels.resolve` per the chain above. The
-  per-instrument `InstrumentDisplayField.label` override stays
-  highest-priority; the resolver is the fallback when blank.
+  — delegate to `field_labels.resolve` per the (3-step) chain
+  above. Stops reading
+  `InstrumentDisplayField.label` even when non-empty; the
+  column is preserved in the schema as dead data pending a
+  follow-on cleanup segment.
 - Setup-page table headers — `session_reviewers.html`,
   `session_reviewees.html` (currently literal `"Tag 1"` /
   `"Tag 2"` / `"Tag 3"` for tags, and unstyled column headers
@@ -255,11 +270,14 @@ Key callsites:
   view adapter as the operator tables; the adapter renders
   two-line for operator surfaces and friendly-only for the
   reviewer surface based on a `surface=` parameter.
-- Instrument editor's Display Field label input — populate the
-  HTML `placeholder` attribute with `field_labels.resolve(...)`
-  so the operator sees the session friendly label without
-  typing it. Leave the actual `value=""` so the resolver
-  fallback continues to apply.
+- Instrument editor's Display Fields table — convert the
+  editable `Friendly Label` cell to a read-only cell rendering
+  `field_labels.resolve(...)`. Drop the form input, drop the
+  Save handler for the `label` column on the
+  Display-Fields-table POST, and stop emitting
+  `instrument.display_field_updated` audit events whose only
+  change is the `label` field. Keep the `Source` column
+  rendering as today.
 
 New view-adapter helper (likely in `app/web/views/_filters.py`
 or a new sibling) carries the `(friendly, canonical)` pair and
@@ -412,16 +430,24 @@ on import, never affects round-trip. Out of scope for 15A.
   in Segment 13B PR 5 (`"Sort by Reviewer Tag1"` etc.) follow
   in a polish PR after Slice 3 to keep Slice 2's blast radius
   small.
-- **`InstrumentDisplayField.label` semantics.** Today's
-  per-instrument override stays the highest-priority source.
-  The Instrument-editor input populates from
-  `field_labels.resolve(...)` via the HTML `placeholder`
-  attribute; the actual `value` stays whatever the operator
-  saved last (empty → resolver fallback applies; non-empty →
-  per-instrument override). Audit emitters for
-  `instrument.display_field_updated` continue to fire on
-  `label` edits — those are per-instrument, separate from the
-  session-wide labels.
+- **`InstrumentDisplayField.label` retired as a render
+  source.** Slice 2 stops reading the column even when
+  non-empty; the resolver chain collapses to session friendly
+  → built-in default → fallback. The column stays in the
+  schema as dead data — no destructive migration, no
+  backward-compat shim. Existing rows that carry an override
+  silently lose effect on the next render. Acceptable because
+  there's no production-pilot data yet; the Instrument editor
+  no longer exposes the input so the override path is
+  unreachable post-15A. A follow-on cleanup segment can drop
+  the column once the pilot confirms no surprises.
+- **Audit-emitter retirement.**
+  `instrument.display_field_updated` no longer fires for
+  changes to `label` (the change-set will be empty for a
+  label-only edit because the column isn't editable
+  anymore). Other Display-Field mutations (`source_type`,
+  `source_field`, `visible`, `order`) keep their existing
+  audit emissions.
 
 ---
 
@@ -444,12 +470,17 @@ on import, never affects round-trip. Out of scope for 15A.
   pair-context / identity column —
   `session_assignments.html`, `session_reviewers.html`,
   `session_reviewees.html`, `session_relationships.html`,
-  Email Previews, reviewer-surface preview, Instrument editor's
-  Display Field label input. **Not touched:**
+  Email Previews, reviewer-surface preview. The Instrument
+  editor's `Display Fields` table is touched separately
+  (`instruments_index.html` + the Display Fields service
+  module): the `Friendly Label` column flips from an editable
+  input to a read-only resolver-backed cell, and the POST
+  handler stops accepting the `label` field. **Not touched:**
   `app/web/views/_rule_builder.py`,
   `session_rule_builder.html`, Display Field source picker on
   Instruments edit, CSV-import error copy, audit-event
-  payloads.
+  payloads (other than the `instrument.display_field_updated`
+  label-only edit path which becomes unreachable).
 - **Touched (Slice 3):**
   `app/web/templates/operator/session_reviewers.html`
   (3-cell editor row above the table),
@@ -467,9 +498,10 @@ on import, never affects round-trip. Out of scope for 15A.
 - `ruff check .` green.
 - New tests:
   - `tests/unit/test_field_labels_resolver.py` — chain
-    semantics (per-instrument override > session friendly >
-    built-in default > fallback), `_DEFAULT_LABELS` coverage
-    for all 12 slots.
+    semantics (session friendly > built-in default > fallback)
+    and `_DEFAULT_LABELS` coverage for all 12 slots. Includes
+    a pin that an existing non-empty
+    `InstrumentDisplayField.label` is no longer consulted.
   - `tests/integration/test_field_labels_routes.py` — set /
     clear / re-set per page, lifecycle invalidation,
     Save / Edit lock gating, audit emitters.
