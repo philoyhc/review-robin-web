@@ -418,12 +418,16 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     # The 13B Part 2 PR 8 sort scaffolding adds ``rrw-sortable``
     # class + sort badge span inside each header, so match by
     # substring rather than the exact tag.
+    # 15A Slice 2 — friendly-label resolver renders the
+    # canonical defaults when no session override is set:
+    # reviewer/reviewee tag columns get ``Tag 1`` / ``Tag 2`` /
+    # ``Tag 3``; pair_context columns get ``Pair context 1`` etc.
     assert 'class="assignment-col col-rt1 rrw-sortable"' in body
-    assert "Tag1" in body
+    assert "Tag 1" in body
     assert 'class="assignment-col col-et2 rrw-sortable"' in body
-    assert "Tag2" in body
+    assert "Tag 2" in body
     assert 'class="assignment-col col-p1 rrw-sortable"' in body
-    assert "Pair1" in body
+    assert "Pair context 1" in body
     assert "col-a3" not in body
     # Identity / Include / Instrument headers — match by
     # ``data-sort-key`` since the PR 8 sort scaffolding wraps

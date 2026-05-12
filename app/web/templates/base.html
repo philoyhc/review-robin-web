@@ -1871,6 +1871,18 @@
         color: var(--color-text, #0f172a);
         font-weight: 600;
       }
+      /* Segment 15A Slice 2 — two-line `Friendly / canonical`
+         header cell for operator-facing tag/pair-context column
+         headers. The canonical name renders below the friendly
+         label as muted subtext only when a session-wide override
+         is in effect; otherwise the cell is single-line. */
+      body.ui-v2 .field-label-canonical {
+        display: block;
+        font-size: 0.75em;
+        font-weight: 400;
+        color: var(--text-muted, #64748b);
+        margin-top: 1px;
+      }
     </style>
     {% block extra_head %}{% endblock %}
   </head>

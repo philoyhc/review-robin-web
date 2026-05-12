@@ -34,6 +34,8 @@ with it.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -140,6 +142,55 @@ def all_labels(session: ReviewSession) -> dict[tuple[str, str], str]:
         (row.source_type, row.source_field): row.label
         for row in session.field_labels
     }
+
+
+def canonical_default(source_type: str, source_field: str) -> str:
+    """Return the built-in default label for a slot (e.g. ``"Tag 1"``).
+
+    Skips the session override layer — useful when an operator-
+    facing surface wants to show the canonical name alongside the
+    friendly override (the two-line ``Friendly / canonical``
+    header render).
+    """
+    return _builtin_default(source_type, source_field)
+
+
+@dataclass(frozen=True)
+class LabelPair:
+    """Render-ready pair of friendly + canonical labels for a slot.
+
+    Operator-facing display surfaces use both: the friendly label
+    on top in the normal header weight, the canonical name as a
+    muted subtext when ``has_override`` is true. Reviewer-facing
+    surfaces only need ``friendly`` and ignore the rest.
+    """
+
+    friendly: str
+    canonical: str
+    has_override: bool
+
+
+def resolve_pair(
+    session: ReviewSession, source_type: str, source_field: str
+) -> LabelPair:
+    """Resolve ``friendly`` + ``canonical`` + ``has_override`` for a slot.
+
+    Single point for operator-facing surfaces that want to show
+    the friendly rename alongside the canonical orientation
+    string. Reviewer-facing surfaces should keep calling
+    :func:`resolve` — they don't render the canonical orientation.
+    """
+    overrides = all_labels(session)
+    canonical = _builtin_default(source_type, source_field)
+    if (source_type, source_field) in overrides:
+        return LabelPair(
+            friendly=overrides[(source_type, source_field)],
+            canonical=canonical,
+            has_override=True,
+        )
+    return LabelPair(
+        friendly=canonical, canonical=canonical, has_override=False
+    )
 
 
 def upsert(

@@ -296,7 +296,12 @@
                 <tbody>
                   {% for df in sorted_display_fields %}
                     {% set is_locked_row = is_locked_display_source(df.source_type, df.source_field) %}
-                    {% set inferred_label = display_field_label(df) %}
+                    {# Segment 15A Slice 2 — Friendly Label column flips
+                       to read-only. The label flows from the session-
+                       wide resolver (set per session on the Reviewers /
+                       Reviewees / Relationships Setup pages); the
+                       per-instrument override capability is retired. #}
+                    {% set inferred_label = display_field_label(df, session=session) %}
                     {% set first_movable_index = (sorted_display_fields | rejectattr('source_field', 'in', ['name', 'email_or_identifier']) | list | length) %}
                     {# Display-only abbreviation: ``email_or_identifier`` →
                        ``email``. The DB column / source_field stays
@@ -305,15 +310,15 @@
                     <tr data-source="{{ df.source_type }}.{{ df.source_field }}">
                       <td><code>{{ df.source_type }}.{{ source_label_field }}</code></td>
                       <td>
+                        {{ inferred_label }}
                         {% if is_editing %}
-                          <input form="dfsave-{{ instrument.id }}" type="text" name="label"
-                                 value="{{ df.label }}" placeholder="{{ inferred_label }}"
-                                 style="width: 100%;">
+                          {# Hidden bookkeeping inputs for the bulk-save
+                             form so the row's order / kind / id ride along
+                             on Save. The visible ``name="label"`` input
+                             was dropped in 15A Slice 2. #}
                           <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="display">
                           <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="{{ df.id }}">
                           <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ loop.index0 }}">
-                        {% else %}
-                          {{ inferred_label }}
                         {% endif %}
                       </td>
                       <td>

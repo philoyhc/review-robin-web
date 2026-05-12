@@ -1,0 +1,21 @@
+{#-
+  Segment 15A Slice 2 — operator-facing tag / pair-context column
+  header. Renders the friendly label (top, normal weight) plus
+  the canonical name (below, .muted subtext) when a session-wide
+  override is in effect.
+
+  Usage:
+
+      {% from "operator/partials/_field_label_header.html"
+         import field_label_header %}
+      {{ field_label_header(session, "reviewee", "tag_1") }}
+
+  Returns just the label markup — callers wrap it inside their
+  own ``<th>`` so column attributes / sort buttons stay
+  template-local.
+-#}
+{% macro field_label_header(session, source_type, source_field) -%}
+  {%- set lp = field_label_pair(session, source_type, source_field) -%}
+  {{ lp.friendly }}
+  {%- if lp.has_override %}<span class="field-label-canonical">{{ lp.canonical }}</span>{% endif -%}
+{%- endmacro %}

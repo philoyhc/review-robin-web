@@ -102,10 +102,38 @@ class DisplaySourceError(ValueError):
     """Raised when a (source_type, source_field) pair is unknown or already on the instrument."""
 
 
-def display_field_label(field: InstrumentDisplayField) -> str:
-    """Return the operator-typed label, else the inferred default for the source pair."""
-    if field.label and field.label.strip():
-        return field.label.strip()
+def display_field_label(
+    field: InstrumentDisplayField,
+    session: ReviewSession | None = None,
+) -> str:
+    """Return the friendly label for a display-field cell header.
+
+    Segment 15A Slice 2 collapsed the chain to three steps:
+
+    1. ``field_labels.resolve(...)`` — session-wide override
+    2. Built-in default in ``_DEFAULT_LABELS``
+       (mirrored locally as ``_DEFAULT_DISPLAY_LABELS`` for the
+       no-session fallback path below)
+    3. ``f"{source_type}:{source_field}"`` last-resort fallback
+
+    The per-instrument ``InstrumentDisplayField.label`` override
+    was retired — the column stays in the schema as dead data
+    pending a follow-on cleanup segment, but is no longer
+    consulted.
+
+    ``session`` is optional for backward compat: callers that
+    haven't been migrated yet still get a usable label via the
+    built-in default. New callers (operator template globals,
+    reviewer-surface view-build) should always pass ``session``
+    so session-wide overrides flow through.
+    """
+    if session is not None:
+        # Local import to avoid a circular at module load.
+        from app.services import field_labels
+
+        return field_labels.resolve(
+            session, field.source_type, field.source_field
+        )
     inferred = _DEFAULT_DISPLAY_LABELS.get((field.source_type, field.source_field))
     if inferred is not None:
         return inferred

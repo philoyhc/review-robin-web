@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import ReviewSession
+from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import lifecycle_display, session_lifecycle as lifecycle
 
@@ -45,6 +46,13 @@ _templates.env.globals["display_field_label"] = (
 _templates.env.globals["is_locked_display_source"] = (
     instruments_service.is_locked_display_source
 )
+# Friendly-label resolver globals — Segment 15A Slice 2.
+# ``field_label`` returns just the resolved string (friendly →
+# canonical default → fallback). ``field_label_pair`` returns the
+# ``LabelPair(friendly, canonical, has_override)`` used by the
+# two-line operator-surface header render.
+_templates.env.globals["field_label"] = field_labels_service.resolve
+_templates.env.globals["field_label_pair"] = field_labels_service.resolve_pair
 _templates.env.filters["lifecycle_label"] = (
     lifecycle_display.lifecycle_display_label
 )

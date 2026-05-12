@@ -188,7 +188,12 @@ def bulk_save_fields(
         field = existing_display.get(row.get("id"))
         if field is None:
             continue
-        new_label = (row.get("label") or "").strip()
+        # ``row.get("label")`` retired in Segment 15A Slice 2.
+        # The per-instrument label override is no longer in the
+        # resolver chain, so the bulk-save POST no longer accepts
+        # a value for this field. Any stray ``label`` value in
+        # the payload is silently ignored; ``field.label`` is
+        # preserved as dead data.
         new_visible = bool(row.get("visible", field.visible))
         # Locked rows (RevieweeName, RevieweeEmail) are forced
         # ``visible=True`` on save regardless of submitted state. The
@@ -198,12 +203,9 @@ def bulk_save_fields(
         if is_locked_display_source(field.source_type, field.source_field):
             new_visible = True
         per_row_changes: dict[str, list[Any]] = {}
-        if field.label != new_label:
-            per_row_changes["label"] = [field.label, new_label]
         if field.visible != new_visible:
             per_row_changes["visible"] = [field.visible, new_visible]
         old_order = field.order
-        field.label = new_label
         field.visible = new_visible
         new_display_order.append(field)
         display_updated.append(
