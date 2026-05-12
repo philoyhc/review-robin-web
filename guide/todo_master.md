@@ -507,14 +507,21 @@ conflicts (none detected).
   trip a CSV to fix one name or toggle one status.
   **Plan:** `guide/segment_15F_enhanced_setup_pages.md`.
 
-- **17 — AG Grid replacement of the reviewer-surface table**
-  *(carved out of the original Segment 15, 2026-05-10)*.
-  Replaces the plain HTML `<input>` / `<textarea>` /
+- **17A — AG Grid replacement of the reviewer-surface table**
+  *(carved out of the original Segment 15, 2026-05-10;
+  renamed from 17 → 17A on 2026-05-12 when 17B was carved
+  off)*. Replaces the plain HTML `<input>` / `<textarea>` /
   `<select>` reviewer-surface table with an AG Grid
   instance backed by the existing render adapter +
   `POST /save` endpoint. Unlocks cell-level autosave +
   large-table ergonomics.
-  **Plan:** `guide/segment_17_ag_grid_replacement.md`.
+  **Plan:** `guide/segment_17A_ag_grid_replacement.md`.
+
+- **17B — Reviewer surface refinements** *(stub created
+  2026-05-12)*. Polish pass on the reviewer surface — to
+  v2, buttons order, status card location, row height can
+  be decreased slightly.
+  **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
 - **18A — Session cloning** *(stub created 2026-05-11)*.
   One-click clone of an existing session's setup
