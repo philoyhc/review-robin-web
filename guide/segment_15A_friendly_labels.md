@@ -12,6 +12,67 @@ need to duplicate.
 
 ---
 
+## Codebase audit (2026-05-12)
+
+Confirmations and corrections from a read-through against the
+current `main`:
+
+- **No Save / Edit lock card on Reviewers / Reviewees /
+  Relationships pages.** The Instruments-page Edit/Save state
+  machine doesn't exist on these three. They carry only a
+  `<div class="card lock">` that renders when
+  `is_ready` and links to revert-to-draft. The "Edit X" links
+  in their right-column CSV upload card are disabled
+  placeholders (`title="Inline editing — coming soon"`).
+  Slice 3 gates its editor on `is_ready` directly; no new lock
+  card.
+- **`InstrumentDisplayField.label` is round-tripped via Settings
+  CSV today** at `session_config_io.py:357` (emit) and `:967`
+  (apply). Slice 1 retires both: drop the `.label` row from
+  `_display_field_rows` and silently ignore `.label` keys in
+  the apply phase (tolerated on legacy import, dropped). This
+  keeps the Settings CSV minimal and aligned with the
+  resolver-only model.
+- **Response Fields also has a `Friendly Label` column** on the
+  Instruments page (`instruments_index.html:445`). This is the
+  operator-typed *question text* (e.g. "How clearly do they
+  explain ideas?") — per-instrument, not a session-wide
+  rename. **15A does not touch this column**; it stays
+  editable and continues to round-trip via Settings CSV
+  (`instruments[N].response_fields[M].label`).
+- **Two write paths for Display Field labels** in the current
+  codebase: the bulk-save form at `/sessions/{id}/
+  instruments/{instrument_id}/fields/save` (line 282 of the
+  template) and the per-row endpoint
+  `/display-fields/{df_id}/edit` (`_instruments.py:458`). Both
+  call `instruments.update_display_field(..., label=...)`.
+  Slice 2 drops `label` from both POST handlers; the
+  underlying `update_display_field(label=...)` parameter stays
+  for backward source compatibility but defaults to "" and
+  becomes a no-op once the template stops sending it.
+- **Reviewer-surface column headers resolve at view-build
+  time**, not in the template. `review_surface.html:199` reads
+  `header.label` where `header` is built by a view adapter in
+  `app/web/views/`. Slice 2 must thread the resolver through
+  the view-build step so the label flows in before the
+  template renders.
+- **Reviewer-tag labels are operator-surface-only.**
+  `_VALID_DF_SOURCE_TYPES = {"reviewee", "pair_context"}` —
+  `reviewer.*` is **never** a Display Field source. The
+  Reviewers-page editor's three slots
+  (`reviewer.tag_1` / `.tag_2` / `.tag_3`) only feed operator
+  preview tables (Reviewers Setup, Assignments reviewer-tag
+  block) and Email Previews; they never appear on the
+  reviewer surface or inside an Instrument editor. Slice 2's
+  reviewer-surface sweep only touches reviewee / pair_context
+  labels.
+- **`_DEFAULT_DISPLAY_LABELS` covers reviewee + pair_context
+  only.** Slice 1's `_DEFAULT_LABELS` (its successor in
+  `field_labels.py`) widens to the full 12-slot set including
+  reviewer tags.
+
+---
+
 ## Goal
 
 Let operators rename a fixed set of session fields **once per
@@ -69,13 +130,22 @@ Still to land in 15A:
   `session_field_label.set` / `.cleared` audit emitters +
   validator widening in `session_config_io.py` to accept the
   new reviewee source-fields (`name`, `email_or_identifier`,
-  `profile_link`).
+  `profile_link`) + retire the
+  `instruments[N].display_fields[M].label` Settings-CSV
+  round-trip (the per-instrument override goes away — see
+  "Display-Field label retirement" below).
 - **Slice 2** — Sweep hardcoded literals out of every
-  display-layer surface; route per-instrument Display Field
-  labels through the resolver chain.
+  display-layer surface; flip the Instrument editor's
+  `Friendly Label` column to read-only; thread the resolver
+  through the reviewer-surface view-build step (not just the
+  template).
 - **Slice 3** — Per-page inline label editors above the
-  Reviewers / Reviewees / Relationships tables, gated by the
-  existing Save / Edit lock card.
+  Reviewers / Reviewees / Relationships tables. Gated by
+  session lifecycle (`is_ready`) — the same control the page's
+  existing `.card.lock` already uses to message "revert to
+  draft to modify". There is **no** Save/Edit lock card on
+  these pages today (the Instruments-page pattern doesn't
+  apply); the friendly-label editor doesn't need one.
 
 ---
 
@@ -244,6 +314,24 @@ named parse error. This is the gate that keeps the
 session_field_labels table aligned with the 12-slot intent —
 the DB doesn't enforce it, the import does.
 
+### Display-Field label retirement in Settings CSV
+
+The `instruments[N].display_fields[M].label` row currently
+emitted by `_display_field_rows` (`session_config_io.py:357`)
+goes away in this slice. Two-part retirement:
+
+- **Stop emitting** — `_display_field_rows` no longer appends
+  the `.label` row. Existing exports without that row continue
+  to import cleanly; new exports are simply shorter.
+- **Tolerated on apply** — `_parse_rows` continues to recognise
+  `instruments[N].display_fields[M].label` as a known key (so
+  legacy Settings CSVs import without errors) but the apply
+  phase silently drops the value. The model column stays in
+  the schema as dead data; the resolver chain doesn't read it.
+
+Response Fields' `.label` round-trip stays unchanged — it's
+the per-instrument question text and is not a 15A concern.
+
 ### Slice 2 — Display-layer sweep (1 PR, ~20-25 callsites)
 
 Touch only the display surfaces listed in the "In scope"
@@ -269,15 +357,28 @@ Key callsites:
 - Email Previews + reviewer-surface preview — share the same
   view adapter as the operator tables; the adapter renders
   two-line for operator surfaces and friendly-only for the
-  reviewer surface based on a `surface=` parameter.
+  reviewer surface based on a `surface=` parameter. The
+  reviewer surface resolves headers at **view-build time**
+  (`review_surface.html:199` reads `header.label`, where
+  `header` is built in `app/web/views/`) — the resolver call
+  threads through the view-builder, not the template.
 - Instrument editor's Display Fields table — convert the
   editable `Friendly Label` cell to a read-only cell rendering
-  `field_labels.resolve(...)`. Drop the form input, drop the
-  Save handler for the `label` column on the
-  Display-Fields-table POST, and stop emitting
-  `instrument.display_field_updated` audit events whose only
-  change is the `label` field. Keep the `Source` column
-  rendering as today.
+  `field_labels.resolve(...)`. Drop the form input from
+  `instruments_index.html` (line ~309). Two POST endpoints
+  feed this column today and both stop accepting `label`:
+  - `POST /sessions/{id}/instruments/{instrument_id}/fields/save`
+    (bulk save) — drop the `label` field from the form-row
+    payload.
+  - `POST /sessions/{id}/instruments/{instrument_id}/display-fields/{df_id}/edit`
+    (`_instruments.py:458`) — drop the `label` parameter.
+  The `instruments.update_display_field(..., label="")`
+  parameter stays for source compatibility but defaults to
+  empty so `instrument.display_field_updated` audit events
+  with a label-only change become unreachable from the UI.
+  Keep the `Source` column rendering as today. **Response
+  Fields' `Friendly Label` column stays editable** — it's
+  per-instrument question text, not a session-wide rename.
 
 New view-adapter helper (likely in `app/web/views/_filters.py`
 or a new sibling) carries the `(friendly, canonical)` pair and
@@ -320,12 +421,23 @@ one POST (3 or 6 fields depending on page). Empty input → clear
 the override (delete the row) and re-display the default
 placeholder. Non-empty input → upsert.
 
-**Lock-card gating.** The editor is gated by the same Save /
-Edit lock card the page already carries for the table. While
-locked, the inputs render `disabled` and the Save button is
-hidden; while unlocked, the inputs are editable alongside the
-table. Visually the editor block sits in its own card-section
-inside the page's existing card frame.
+**Lifecycle gating.** These three pages don't carry a
+Save / Edit lock card today (that pattern lives on
+Instruments). 15A doesn't add one. Instead the editor is
+gated directly on `is_ready`:
+
+- `is_ready == True` (session active or closed) — inputs
+  render `disabled`, no Save button. The page's existing
+  `<div class="card lock">` already messages
+  "revert to draft to modify"; the editor block sits inside
+  the same scope and matches that locked state.
+- `is_ready == False` (draft / validated) — inputs editable,
+  Save button visible.
+
+Visually the editor block sits in a card-section above the
+table inside the page's existing card frame. The Reviewees
+two-row layout (identity row + tags row) shares one form +
+one Save button.
 
 **Lifecycle gate.** Editing labels invalidates `validated` via
 `lifecycle.invalidate_if_validated`. Same hook every other
@@ -457,28 +569,37 @@ on import, never affects round-trip. Out of scope for 15A.
 - **Touched (Slice 1):**
   `app/services/instruments/_display_fields.py` (move
   `_DEFAULT_DISPLAY_LABELS` → `_DEFAULT_LABELS` in
-  `field_labels.py` and re-export; delegate
-  `display_field_label`), `app/services/audit.py`
+  `field_labels.py` and widen with reviewer-tag slots;
+  delegate `display_field_label`), `app/services/audit.py`
   (`EVENT_SCHEMAS` registrations for `session_field_label.set`
   / `.cleared`), `app/services/session_config_io.py`
-  (`_VALID_FL_SOURCE_FIELDS` map; `_parse_rows`
-  source-field validation), `app/db/models/session_field_label.py`
-  (clear the `assignment_context` docstring note).
+  (`_VALID_FL_SOURCE_FIELDS` map + `_parse_rows`
+  source-field validation; **retire
+  `instruments[N].display_fields[M].label` emit in
+  `_display_field_rows` + tolerate-and-drop on apply**),
+  `app/db/models/session_field_label.py` (clear the
+  `assignment_context` docstring note).
 - **Touched (Slice 2 — display layer only):**
   `app/web/views/_*.py` (column-header view adapter taking a
-  `surface=` mode), and the templates that name a tag /
-  pair-context / identity column —
+  `surface=` mode; reviewer-surface view-builder threads the
+  resolver into `group.display_fields` so the template's
+  `header.label` flows correctly), and the templates that name
+  a tag / pair-context / identity column —
   `session_assignments.html`, `session_reviewers.html`,
   `session_reviewees.html`, `session_relationships.html`,
-  Email Previews, reviewer-surface preview. The Instrument
-  editor's `Display Fields` table is touched separately
-  (`instruments_index.html` + the Display Fields service
-  module): the `Friendly Label` column flips from an editable
-  input to a read-only resolver-backed cell, and the POST
-  handler stops accepting the `label` field. **Not touched:**
+  Email Previews, `reviewer/review_surface.html`. The
+  Instrument editor's `Display Fields` table is touched
+  separately (`instruments_index.html` lines ~287-318 +
+  `app/web/routes_operator/_instruments.py` — both the
+  bulk-save endpoint and `instrument_edit_display_field`): the
+  `Friendly Label` column flips from an editable input to a
+  read-only resolver-backed cell, and both POST handlers stop
+  accepting `label`. **Not touched:**
   `app/web/views/_rule_builder.py`,
   `session_rule_builder.html`, Display Field source picker on
-  Instruments edit, CSV-import error copy, audit-event
+  Instruments edit, the **Response Fields** `Friendly Label`
+  column on `instruments_index.html` (per-instrument question
+  text — stays editable), CSV-import error copy, audit-event
   payloads (other than the `instrument.display_field_updated`
   label-only edit path which becomes unreachable).
 - **Touched (Slice 3):**
@@ -487,8 +608,11 @@ on import, never affects round-trip. Out of scope for 15A.
   `session_reviewees.html` (two stacked rows above the table,
   six inputs total: identity row + tags row),
   `session_relationships.html` (3-cell editor row above the
-  table), plus the routes that back these pages (POST handler
-  for the label form, gated by the existing Save / Edit lock).
+  table), plus the routes that back these pages
+  (`app/web/routes_operator/_setup_rosters.py` — new
+  per-page POST handler for the label form, gated on
+  `is_ready`). No new Save / Edit lock card on these
+  pages — they don't have one today and 15A doesn't add one.
 
 ---
 
@@ -504,7 +628,13 @@ on import, never affects round-trip. Out of scope for 15A.
     `InstrumentDisplayField.label` is no longer consulted.
   - `tests/integration/test_field_labels_routes.py` — set /
     clear / re-set per page, lifecycle invalidation,
-    Save / Edit lock gating, audit emitters.
+    `is_ready` gating (inputs disabled when ready; editable
+    when draft/validated), audit emitters.
+  - `tests/integration/test_settings_csv_drops_df_label.py` —
+    pin that `_display_field_rows` no longer emits the `.label`
+    row, and that an import containing legacy
+    `instruments[N].display_fields[M].label` rows succeeds
+    without writing the value.
   - `tests/integration/test_settings_csv_field_labels_roundtrip.py`
     — round-trip via Settings CSV for the new reviewee
     identity slots (Name / Email / Photo). Should round-trip
