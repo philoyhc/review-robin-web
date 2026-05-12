@@ -1,440 +1,435 @@
 # Segment 15B — Per-instrument assignments
 
-**Status:** Plan stub (2026-05-09).
-**Sizing:** ~1 segment-sized chunk (5-7 PRs).
-**Depends on:** none strictly required, but **15A first** is
-recommended so the per-instrument assignment UI can consume the
-session-level friendly-label resolver without re-introducing
-hardcoded literals.
+**Status:** Plan revised 2026-05-12. Previous draft (2026-05-09)
+assumed `Assignment.context` was live, `AssignmentContext1-3`
+was a future-possible slot, and manual-CSV assignment upload
+was still a surface to extend. All three premises retired
+during 15D / Segment 16 work:
+
+- `Assignment.context` dropped in **15D PR 6b** (pair-context
+  migrated to `relationships.tag_*`; assignment-context never
+  shipped).
+- `AssignmentContext1-3` is no longer a thing — not a deferred
+  slice, not a future possibility. Logic-bearing per-assignment
+  metadata, if it ever surfaces, is a brand-new design problem
+  outside this segment.
+- Manual-CSV assignment upload retired **2026-05-11** as a dev-
+  only escape hatch. Per-instrument manual upload is therefore
+  also moot — there is no manual-upload surface to extend.
+
+This revision rewrites the segment around the surviving core:
+**each instrument card carries its own assignment-rule selection
+affordance.** The Assignments page becomes a per-instrument
+preview / monitoring surface rather than the place rules are
+applied. The Operations tab order swaps so Assignments sits
+to the left of Validate (operators preview the materialised
+pairs before validating them).
+
+**Sizing:** ~5 PRs.
+**Depends on:** 15A shipped (friendly-label resolver — already
+done). No other hard dependency.
+**Doesn't depend on 15C.** 15C splits RuleSets into a two-tier
+operator-library / per-session-copy model; that ships
+independently. 15B reads / writes `instruments.rule_set_id`
+which points at `session_rule_sets` regardless of whether
+the row arrived via library-copy (post-15C) or via the seeded-
+RuleSet auto-materialisation that exists today.
 
 ---
 
 ## Goal
 
-Let each `Instrument` have its own assignment set, so that (for
-example) "the Manager survey" can collect different reviewer →
-reviewee pairings than "the Peer survey" within the same session.
-Today, every instrument shares the session's single assignment list.
+Let each `Instrument` carry its own RuleSet selection, so that
+(for example) "the Manager survey" can materialise different
+reviewer → reviewee pairings than "the Peer survey" in the same
+session. Today every instrument shares the session's single
+rule choice via the Assignments-page Rule Based card.
+
+The operator's mental model lands as:
+
+> "Each instrument owns its own assignment rule. I choose the
+> rule on the instrument card. The Assignments page is where I
+> *check* what the rules produced — not where I configure them."
 
 ---
 
-## Why now
+## Schema audit (2026-05-12)
 
-The schema **already supports** per-instrument assignments. From
-`app/db/models/assignment.py:22-43`:
+Verified ahead of the revision: **nothing schema-side is
+missing.** No additions need to ride 13F.
 
-```
-__table_args__ = (UniqueConstraint(
-    "session_id", "reviewer_id", "reviewee_id", "instrument_id",
-    name="uq_assignment_unique",
-),)
-```
+| What 15B needs | Status |
+|---|---|
+| `Assignment.instrument_id` non-null FK + `(session_id, reviewer_id, reviewee_id, instrument_id)` unique constraint | ✅ already on the model (`app/db/models/assignment.py:19-61`). |
+| `instruments.rule_set_id` nullable FK → `session_rule_sets`, `ON DELETE SET NULL` | ✅ pre-positioned by 13D PR 4 (`app/db/models/instrument.py:68-84`). |
+| `session_rule_sets` table | ✅ pre-positioned by 13D PR 2 (`app/db/models/session_rule_set.py`). |
+| `Assignment.context` JSON dropped | ✅ retired in 15D PR 6b. |
 
-`Assignment` carries `instrument_id` as a non-null FK, and the
-unique constraint includes it — so the same `(reviewer, reviewee)`
-pair coexists across instruments by design. The reviewer surface
-already iterates Assignment rows per instrument
-(Segment 11D follow-on shipped this multi-instrument render).
+Per-instrument `Assignment` rows already exist in every multi-
+instrument session — `replace_assignments` writes one row per
+`(reviewer, reviewee, instrument)` triple today. Pre-15B rows
+are byte-identical across instruments because the service
+fans out the same pair list per instrument; 15B's only job is
+to let those per-instrument rows *diverge* when the operator
+picks different rules for different instruments.
 
-What blocks per-instrument assignments today is the **service
-layer**, not the schema:
-`app/services/assignments.py::replace_assignments` (around line
-574-583) takes a single `pairs` list and **fans out across every
-instrument in the session** with the same `context` and `include`
-replicated identically per fan-out. That uniform fan-out is a
-policy choice that made sense when every session had one
-instrument; it's now the only thing standing between the schema
-and the feature.
-
----
-
-## Catalog items absorbed
-
-Three items from the now-retired `guide/archive/unfinished_business.md`
-catalog land under this segment's umbrella:
-
-- **#27 — FullMatrix per-instrument target picker.** Moot in the
-  literal sense post-15D: FullMatrix is now a seeded RuleSet, so
-  "pick which instrument FullMatrix targets" reduces to "pick
-  which instrument this RuleSet applies to" — covered by Slice 2
-  (per-instrument `rule_set_id` selection). Catalog wording
-  archived; functional scope absorbed.
-- **#28 — Manual CSV `Instrument` column.** Slice 3.
-- **#29 — Reviewer dashboard per-instrument grouping.** Slice 7
-  (new). The reviewer surface already groups by instrument; the
-  dashboard (`/reviewer`) does not — see slice.
+**Settings CSV shape is already in place.** The session-config
+serialiser at `app/services/session_config_io.py:340` emits
+`instruments[N].rule_set_name` rows per instrument; the parser
+at `app/services/session_config_io.py:1057-1058` routes the
+value onto a per-instrument spec attribute. The only gap is
+the apply phase, which hardcodes `rule_set_id=None` at
+`app/services/session_config_io.py:1605` with an explicit
+`# 15B target; pre-15B left NULL` comment. Slice 2 lights up
+that apply path so per-instrument rule selection round-trips
+through Settings CSV end-to-end.
 
 ---
 
-## Migration & invariants (locked 2026-05-09)
+## Migration & invariants
 
-Three properties this segment must preserve. They're already
-implicit in today's behaviour; calling them out explicitly here
-so reviewers can hold each slice against them.
+Three invariants this segment must preserve.
 
-1. **Schema migration is a no-op — pre-15B data already looks
-   like 15B data.** Sessions today have N Assignment rows per
-   `(reviewer, reviewee)` pair (one per instrument, identical
-   except for `instrument_id`), because `Assignment.instrument_id`
-   + the `(session_id, reviewer_id, reviewee_id, instrument_id)`
-   unique constraint are already present. Pre-15B sessions
-   simply have "instrument #1 has these assignments and
-   instrument #2 has the same assignments" — and stay that way
-   until an operator divergent-edits one of them. No backfill,
-   no Alembic migration in 15B itself (the only schema move is
-   `instruments.rule_set_id`, pre-positioned by Segment 13D PR 4 — pointer targets `session_rule_sets`, the per-session copy table introduced by 13D PR 2 / 15C).
+1. **Schema migration is a no-op.** Pre-15B data already looks
+   like 15B data: N `Assignment` rows per `(reviewer, reviewee)`
+   pair (one per instrument), and `instruments.rule_set_id`
+   already exists as a nullable column. No Alembic migration
+   ships in 15B. (Confirmed against `app/db/models/`.)
 
-2. **Default instrument #1 always exists and always has
-   assignments.** `services.instruments.ensure_default_instrument`
-   (called from `replace_assignments`) already guarantees every
-   session has at least one instrument; `replace_assignments`
-   already writes Assignment rows for every instrument in the
-   session. The single-instrument flow continues to behave like
-   the old model — instrument #1 is the survivor of the
-   one-session-one-assignment-list world, and any single-
-   instrument session looks byte-identical to its pre-15B self.
+2. **Default instrument #1 always exists.**
+   `services.instruments.ensure_default_instrument` (called from
+   `replace_assignments`) already guarantees every session has
+   at least one instrument. The single-instrument flow stays
+   byte-identical: instrument #1 carries the single
+   `rule_set_id` choice; the Assignments page renders without
+   any per-instrument grouping chrome.
 
-3. **Multi-instrument UX only activates when N > 1.** When a
-   session has exactly one instrument, the Assignments page,
-   the Quick Setup Assignments slot, and every other
-   assignment-related surface render exactly as they do today —
-   no tab strip, no "All Instruments" view, no per-instrument
-   repetition. The per-instrument selector / tabs / cards only
-   render when `len(instruments) > 1`. Operators who never add
-   a second instrument should not see any new chrome.
+3. **Multi-instrument chrome only mounts when N > 1.** When
+   `len(instruments) == 1`, the Assignments page and the
+   Validate page render exactly as they do today — no per-
+   instrument tabs, no breakdown rows, no "All Instruments"
+   affordance. Operators who never add a second instrument
+   should not see any new chrome.
 
-### Rider — possible Instruments-page UI rethink (deferred)
-
-A side-effect of this segment is that operators who do exercise
-multi-instrument sessions will accumulate more instruments per
-session than the current Instruments page anticipates. The
-existing layout stacks per-instrument cards downward
-indefinitely; that becomes unwieldy past ~3-4 instruments.
-
-**Possible future direction:** convert the per-instrument cards
-into a tab strip (one tab per instrument, one card visible at a
-time), mirroring the Assignments-page tabs Slice 4 introduces.
-Same data, less scroll.
-
-**Out of scope here.** The Instruments-page rebuild belongs in a
-follow-on UI segment, not in 15B's already-substantial slice
-ladder. Surface it once 15B has shipped and operator feedback
-confirms the scroll burden is real.
+4. **No Quick Setup affordance.** The Quick Setup card's
+   Assignments slot retired in 15D PR 7a; this segment does
+   **not** reintroduce it. Generate lives on the per-
+   instrument card (Slice 2); bulk-edit of per-instrument
+   rules happens via the existing Settings CSV (Quick Setup
+   Settings slot — already in place, end-to-end after Slice 2
+   lights up the apply path).
 
 ---
 
 ## Approach
 
-### Slice 1 — Service-layer scope (1 PR, ~200 LOC)
+### Slice 1 — Service-layer per-instrument scope (1 PR, ~200 LOC)
 
-Replace the single fan-out in `replace_assignments` with a
-per-instrument scope. Two API options:
+`replace_assignments` (`app/services/assignments.py:343-477`)
+today loads every instrument in the session and fans out the
+same `pairs` list per instrument. Replace that with explicit
+per-instrument scope:
 
-- **A (recommended).** Add an `instrument_id` parameter; default
-  `None` keeps current behaviour (apply to every instrument).
-  Callers that want per-instrument behaviour pass an explicit id
-  and call once per instrument.
-- **B.** Replace the `pairs` parameter with
-  `pairs_by_instrument: dict[int, list[…]]`; backfill an
-  "all instruments" key for the existing call site.
+- Add `instrument_id: int | None = None` parameter.
+- `instrument_id=None` keeps current behaviour — replace
+  assignments across every instrument. Retained for the
+  legacy callers that survive Slice 3 (today's Assignments-
+  page Rule Based card, removed in Slice 3) and as a safety
+  net during the transition; no live operator surface calls
+  this path after Slice 3 ships.
+- `instrument_id=<id>` replaces only that instrument's
+  assignments. The Instrument-card Generate button (Slice 2)
+  is the only operator-facing caller post-15B.
 
-Recommend A — smaller blast radius, every existing call site stays
-behaviour-compatible without touching the parameter shape.
+Also touched:
+- `assignments.existing_count` /
+  `assignments.delete_session_assignments` gain optional
+  `instrument_id` filters.
+- `monitoring.per_reviewer_coverage` — already iterates
+  Assignment rows; confirm the instrument-scope flows through
+  the pivot.
+- Audit envelope already carries `instrument_id` in the
+  `assignments.replaced` payload (per 11K's canonical schema);
+  the field starts carrying real per-instrument variation.
 
-Also touch:
-- `assignments.existing_count`,
-  `assignments.delete_session_assignments`,
-  `csv_imports.parse_manual_csv` — gain optional `instrument_id`
-  filters.
-- `monitoring.per_reviewer_coverage` — already iterates Assignment
-  rows; just confirm the instrument-scope is honoured in the
-  pivot.
+No callers change shape — `instrument_id=None` is the
+backwards-compatible default for the existing two call sites
+(the legacy Assignments-page Rule Based card and the Quick
+Setup card).
 
-Audit envelope stays unchanged; the existing `instrument_id` field
-inside `assignments.replaced` payload (already part of 11K's
-canonical schema for this event family) starts carrying
-real per-instrument variation.
+### Slice 2 — Per-instrument rule picker on the Instrument card (1 PR, ~400 LOC)
 
-### Slice 2 — Persist the per-instrument RuleSet selection (1 PR, ~150 LOC)
+**The centerpiece.** Each instrument card on
+`/operator/sessions/{id}/instruments` grows a small block
+above the Display / Response fields that owns the rule
+selection for *that instrument*:
 
-**Today (post-15C).** RuleSets live in two tiers: the operator
-library (`operator_rule_sets`, post-13D PR 0 rename — visible
-across all of an operator's sessions) and per-session copies
-(`session_rule_sets` —
-auto-copied from the operator library on session create + the
-operator's "Add from library" / "Save to library" actions; see
-`segment_15C_operator_libraries.md`). Per-instrument application
-of a `session_rule_sets` row is the missing link this slice
-delivers.
+```
+┌─ Manager survey ───────────────────────────────────────┐
+│ short label: ms                                        │
+│                                                        │
+│  Assignment rule                                       │
+│  ┌──────────────────────────────┐ [Edit rule]          │
+│  │ Full Matrix          ▾       │ [Generate]           │
+│  └──────────────────────────────┘                      │
+│  Current assignments: 42 pairs (last generated 11:02). │
+│                                                        │
+│  ─ Display fields ─                                    │
+│  …                                                     │
+│  ─ Response fields ─                                   │
+│  …                                                     │
+└────────────────────────────────────────────────────────┘
+```
 
-**Goal.** Make the selection persistent and per-instrument: each
-instrument records the per-session RuleSet copy currently in
-effect for it.
+- **Rule picker** — `<select>` listing every
+  `session_rule_sets` row visible in this session (seeded
+  RuleSets first, then the operator's personal copies, matching
+  the order used by today's Assignments-page Rule Based card).
+  Writes through to `instruments.rule_set_id` on submit.
+- **Edit rule** — link to the existing Rule Builder page,
+  threaded with the instrument's current
+  `rule_set_id`. (`/operator/sessions/{id}/assignments/rule-based-editor?rule_set_id={...}&instrument_id={...}`.)
+- **Generate** — calls `replace_assignments(instrument_id=...)`
+  per Slice 1. Replaces only that instrument's
+  `Assignment` rows. Audit envelope carries the per-instrument
+  `instrument_id` field.
+- **Status line** — "Current assignments: N pairs (last
+  generated HH:MM)" or "No assignments generated yet" when the
+  row count is zero. Reads from `assignments.existing_count`
+  (Slice 1 helper).
 
-**Schema dependency.** `instruments.rule_set_id` (nullable FK to
-`session_rule_sets`, `ON DELETE SET NULL`) is pre-positioned by
-**Segment 13D PR 4**; the `session_rule_sets` table itself by
-**13D PR 2** (see `segment_13D_db_prep.md` for the FK-direction
-rationale and the library / per-session-copy split). The
-`uq_session_rule_set_session_name` constraint added by
-**Segment 13A-2** guarantees name-based references into the
-table are unambiguous — relevant for 12A-1's settings-CSV
-serialisation (`instruments[N].rule_set_name` resolves by name)
-and for the picker label rendering this slice consumes. This
-slice is pure service / route work — no migration in 15B.
+**`instruments.rule_set_id` resolution semantics.** The column
+is the single source of truth per instrument. NULL = "no rule
+picked yet" — the initial state for every existing instrument
+post-13D PR 4. Picking a rule writes the row id; "Reset" (a
+new affordance — small link inside the rule block) sets it
+back to NULL and deletes that instrument's `Assignment` rows.
 
-**Service-layer change.** `replace_assignments` (touched in Slice
-1) accepts `instrument_id` and writes the chosen
-`session_rule_sets.id` onto that instrument row alongside the new
-Assignment rows. The Rule Builder POST handlers
-(`app/web/routes_operator/_rule_builder.py`) thread the
-`instrument_id` from the URL through into the persistence call.
-The picker reads from `session_rule_sets` (the session's local
-copies), not from `operator_rule_sets` (the library) — operators "Add from
-library" via the dedicated action introduced in 15C, then choose
-from the session's local pool here.
-
-**Resolution semantics.** No "session default + per-instrument
-override" inheritance — the column is the single source of
-truth per instrument. NULL = "no RuleSet currently applied to
-this instrument" (initial state for every existing instrument
-post-13D PR 4; also the state after a reset-assignments action).
-A future **session-level default** (e.g. a
-`sessions.default_session_rule_set_id` column to seed new
-instruments from) is left out of this segment; revisit if
-operator feedback asks for it. Most teams will set the same
-session-level RuleSet on every instrument, which works fine
-without inheritance.
+**No session-level default.** If 80% of operators want the
+same rule on every instrument, the Settings CSV is the
+release valve: they edit a single `instruments[N].rule_set_name`
+value per row and re-apply through the existing Quick Setup
+Settings slot — Slice 2's apply-path light-up makes that work
+end-to-end without any new UI. A session-level
+`default_rule_set_id` column is **not** introduced (avoids
+inheritance ambiguity; revisit only if operator feedback asks).
 
 **FK behaviour wired through to the UX:**
 
-- **Delete instrument** (existing 10D action): the instrument's
-  pointer dies with the row; the session's RuleSet copy is
-  untouched. No UX warning needed beyond what 10D already shows.
-- **Delete a session's RuleSet copy** (operator removes it from
-  the session, a 15C affordance): SQL `SET NULL` on every
-  `instruments.rule_set_id` pointing at it. **UX gate to add in
-  this slice:** the delete-confirm dialog grows a line listing
-  every instrument in the session that currently applies the
-  RuleSet ("Removing will clear this rule from N instrument(s):
-  [list]. Their next assignment generation will require choosing
-  a new rule.").
-- **Delete from the operator library** (13A action, surfaced via
-  15C's library-management UI): does **not** touch any instrument
-  pointer. Instrument pointers target session copies, which
-  survive library deletes via the `library_origin_id SET NULL`
-  cascade introduced in 13D PR 2.
-- **Reset an instrument's assignments** (a new 15B affordance):
-  `UPDATE instruments SET rule_set_id = NULL WHERE id = ?` plus
-  the existing assignment-row delete. Session-RuleSet copy
-  untouched.
+- **Delete instrument** (existing): the row's pointer dies
+  with it. Session RuleSet copy untouched.
+- **Delete a session RuleSet copy** (post-15C affordance):
+  SQL `SET NULL` clears every `instruments.rule_set_id`
+  pointing at it. **UX note for 15C:** the delete-confirm
+  dialog lists every instrument that currently applies it
+  ("Removing will clear this rule from N instrument(s): …").
+- **Delete from the operator library** (15C affordance): does
+  **not** touch any instrument pointer — instrument pointers
+  target session copies, which survive library deletes via the
+  `library_origin_id SET NULL` cascade (13D PR 2).
 
-### Slice 3 — Manual-assignment CSV column (1 PR, ~100 LOC)
+**Settings CSV apply path lights up in the same slice.** The
+serialiser already emits `instruments[N].rule_set_name`; the
+parser already lifts it onto a per-instrument spec. The
+remaining work is at `session_config_io.py:1605`:
 
-`parse_manual_csv` today reads `(ReviewerEmail, RevieweeEmail,
-PairContext1, PairContext2, PairContext3)`. Add an optional
-`Instrument` column (matched against `Instrument.short_label` first,
-then `Instrument.name`). Empty value → "all instruments" (current
-behaviour, preserves backwards compatibility for existing files).
+1. Resolve `spec.rule_set_name` → `session_rule_sets.id` via
+   the `(session_id, name)` unique index added by 13A-2.
+2. Pass that id into the `Instrument(...)` construction.
+3. Unknown names → `_ParseError` with a clear message
+   ("rule set 'foo' not found in this session — add it to
+   the session's RuleSet pool first") raised at apply time,
+   same shape as the existing `_VALID_GROUP_KINDS` validation.
+4. Empty / NULL value → leave `rule_set_id=None` (the
+   "no rule picked yet" state).
 
-Validation: unknown instrument label → row-level
-`ValidationIssue` from the existing CSV-import error pipeline,
-same shape as unknown-reviewer / unknown-reviewee errors.
+This makes Settings CSV the bulk-edit channel for per-
+instrument rules: operators who want to set every instrument's
+rule in one shot do it via the existing Quick Setup Settings
+slot, not via per-card clicks. The per-card picker (this
+slice's UI work) is for incremental adjustment.
 
-### Slice 4 — Assignments page UI (2 PRs, ~600 LOC total)
+### Slice 3 — Assignments page → preview-only + tab reorder (1 PR, ~350 LOC)
 
-**Honours invariant #3** (multi-instrument UX only activates when
-N > 1). When `len(instruments) == 1`, this slice is a no-op
-visually — the page renders exactly as it does today. The tab
-strip, the "All Instruments" affordance, and the per-instrument
-chrome only mount when a second instrument exists.
+Two paired changes that ship together.
 
-When N > 1, the Assignments page becomes per-instrument in two
-PR sub-slices:
+**(a) Strip rule-application affordances from the Assignments
+page.** The page becomes purely a preview / monitoring surface:
 
-- **4a — Per-instrument tabs / cards.** A tab strip per instrument
-  (consume `Instrument.short_label` via `views.page_button_label`)
-  + an "All Instruments" tab showing the union (read-only) when
-  multiple instruments diverge.
-- **4b — Per-instrument Rule Based card + Manual upload.** Each
-  per-instrument tab gets its own Rule Based card (the picker
-  writes through to `instruments.rule_set_id` per Slice 2) and
-  its own manual CSV upload.
-- **4c — Per-instrument Assignment-pairs table sort** *(carved
-  from Segment 13B Part 2 PR F)*. Each per-instrument tab's pairs
-  table opts into the shared rrw-sort primitive
-  (`spec/sort_by_reviewee.md`). Cookie name shape:
+- **Remove the Rule Based card.** Rule selection now lives on
+  the Instrument cards (Slice 2). The Assignments page no
+  longer carries a RuleSet picker, no Generate button, no
+  "what-rule-is-this-session-using" question. The legacy
+  manual-CSV upload was retired in 2026-05-11 and stays gone.
+- **Keep the self-reviews Include toggle** — it's still the
+  one bulk operation that makes sense here (it's a property
+  of the rendered pair set, not the rule).
+- **Per-instrument grouping** when `len(instruments) > 1`:
+  the existing pairs preview table grows a tab strip (one tab
+  per instrument, plus an "All instruments" tab that shows
+  the union, read-only). Each tab renders the rule-set
+  currently in effect for that instrument as a small read-only
+  header ("Rule: Full Matrix · 42 pairs · Edit on Instruments
+  page"). The "Edit on Instruments page" link deep-links to
+  the matching instrument card.
+- **Single-instrument case** — the page renders byte-identical
+  to today minus the Rule Based card: just the self-reviews
+  toggle + the pairs preview table. No tabs, no breakdown.
+- **Per-instrument sort.** Folds in the carved-from-13B-Part-2-PR-F
+  per-instrument table sort: cookie name shape
   `rrw-sort-assignments-{session_id}-{instrument_id}` (one
-  cookie per instrument tab — same cascade scope as the rest of
-  the operator-table family but disambiguated by
-  `instrument_id`). Sortable columns mirror the existing
-  Operations Assignments table (Reviewer / Reviewer Tag* /
-  Reviewee / Reviewee Tag* / Pair Tag* / Include / Instrument).
-  All wiring exists in `app/web/views/_sort.py` already; this
-  slice just annotates the template + threads
-  `decode_cookie_sort_spec` + `apply_cookie_sort` through the
-  per-instrument render path. Tests follow the
+  cookie per instrument tab). Wiring via the rrw-sort primitive
+  shipped 2026-05-12; this slice just annotates the template +
+  threads `decode_cookie_sort_spec` / `apply_cookie_sort`
+  through the per-instrument render path. Tests follow the
   `test_assignments_sort.py` shape.
 
-Operators who don't care about per-instrument differences keep an
-"apply to all" affordance — a button at the top of the All
-Instruments tab that copies the current tab's selection to every
-other instrument in one click.
+**(b) Swap Assignments and Validate in the Operations tab
+strip.** Today: `Validate → Assignments → Previews → Invitations
+→ Responses`. New: `Assignments → Validate → Previews →
+Invitations → Responses`. The reasoning is that the operator's
+flow becomes:
 
-### Slice 5 — Quick Setup card (1 PR, ~100 LOC)
+1. Set rules on the Instruments page.
+2. Look at the Assignments page to confirm the materialised
+   pairs are sensible (preview, no edit).
+3. Run Validate to surface any issues.
 
-`/operator/sessions/{id}` Quick Setup Assignments slot grows the
-same instrument selector as a `<select>` in front of the file
-input + Generate button. Default = "All instruments" (current
-behaviour). Audit/lifecycle wiring is already in place from
-Segment 11J.
+Validate sitting *after* Assignments matches that flow — the
+old order made more sense when Assignments was where the
+operator did the work; now it's where they review the work.
 
-### Slice 6 — Validation + reviewer-surface confirmation (1 PR, ~100 LOC)
+Touched: `app/web/templates/operator/partials/session_top_nav.html`
+(the `_ops_pages` array + the rendered order). Test surface:
+`test_session_top_nav.py` (the existing chrome test pins tab
+order; the swap is one assertion edit).
 
-`validate_session_setup` already checks "every reviewer has ≥1
-assignment". That generalises naturally — no schema change, but
-the per-instrument breakdown should surface in the Validate page
-(e.g. "Alice is missing assignments for the Peer survey"). Add a
-new `ValidationRule` keyed
-`assignments.reviewer_missing_for_instrument`.
+### Slice 4 — Validation per-instrument (1 PR, ~120 LOC)
 
-The reviewer surface is already multi-instrument-aware (Segment
-11D follow-on shipped this); it'll naturally show empty pages for
-instruments where the reviewer has no assignments. Confirm via a
-manual smoke test on the dev slot — there's no template change
-needed, but the empty-state copy may want polish.
+`validate_session_setup` currently checks "every reviewer has
+≥1 assignment". Generalise to per-instrument:
 
-### Slice 7 — Reviewer dashboard per-instrument grouping (1 PR, ~150 LOC)
+- New `ValidationRule` keyed
+  `assignments.reviewer_missing_for_instrument` —
+  surfaces "Alice is missing assignments for the Peer survey"
+  when N > 1.
+- Single-instrument case falls back to the existing
+  `assignments.reviewer_missing` rule — same message text,
+  no per-instrument breakdown.
+- Existing "instrument has no assignments at all" surfacing
+  also lights up per-instrument (when N > 1) as
+  `assignments.instrument_empty`.
 
-**Why.** Absorbs catalog item #29 from the retired
-`guide/archive/unfinished_business.md`. The reviewer dashboard
-(`/reviewer`) currently shows one row per session with a single
-per-session pill (`not started` / `in progress` / `submitted`).
-On a 2-instrument session a reviewer who's submitted instrument 1
-but not started instrument 2 sees `in progress` with no
-breakdown — they have to open the surface to learn which
-instrument is which. The surface itself already groups by
-instrument (the multi-instrument rewrite, Segment 11D follow-on,
-shipped this); the dashboard never picked up the same shape.
+No schema change. No reviewer-surface template change —
+that surface is already multi-instrument-aware from the
+Segment 11D follow-on.
 
-**Change.**
+### Slice 5 — Reviewer dashboard per-instrument grouping (1 PR, ~150 LOC)
 
-- `app/web/templates/reviewer/dashboard.html` — per-session row
-  expands to a stacked sub-row per instrument (when N > 1),
-  honouring invariant #3. Each sub-row carries the instrument's
-  short label + its own progress pill. Single-instrument
-  sessions stay byte-identical to today.
-- `app/web/routes_reviewer.py::dashboard` — per-row context
-  builder reads existing per-instrument state (the
-  `responses_service.reviewer_session_state(...)` helper added
-  in Segment 11 already projects this; extend or wrap with a
-  new `reviewer_instrument_state(...)` helper).
-- New view-adapter shape in `app/web/views/_dashboard.py` (or
-  wherever the dashboard adapter lives post-refactor).
+The reviewer dashboard (`/reviewer`) today shows one row per
+session with a single per-session pill. On a 2-instrument
+session a reviewer who's submitted instrument 1 but not
+started instrument 2 sees `in progress` with no breakdown —
+they have to open the surface to learn which instrument is
+which.
 
-**No new audit events; no service mutations.** Pure read-path
+- `app/web/templates/reviewer/dashboard.html` — per-session
+  row expands to a stacked sub-row per instrument when
+  `N > 1`. Each sub-row carries the instrument's short label
+  + its own progress pill.
+- Single-instrument sessions stay byte-identical (invariant #3).
+- `app/web/routes_reviewer.py::dashboard` — context builder
+  reads per-instrument state via the existing
+  `responses_service.reviewer_session_state(...)` projection.
+- New view-adapter shape (extension of the existing
+  dashboard adapter).
+
+No new audit events; no service mutations. Pure read-path
 adapter + template change.
 
-**Hard dependency.** None — uses the per-instrument projection
-that already exists; lands cleanly even before Slices 1-6 wire
-per-instrument *write-path* divergence, since the dashboard
-projects existing state regardless of how that state was
-authored.
-
-### Slice 8 (deferred — only on real use case) — `AssignmentContext1-3`
-
-**Out of 13D scope by design.** 13D's DB-prep segment explicitly
-*does not* pre-position columns for AssignmentContext (see
-`segment_13D_db_prep.md` scope-sweep table); this slice owns the
-schema + service + UI work end-to-end if it ever lands.
-
-**Semantics (locked 2026-05-09).** AssignmentContext is logic-
-bearing per-assignment information (e.g. "this assignment is for
-Award X category") that drives downstream filtering, reporting,
-or rule evaluation. Distinct from `PairContext1-3` which is
-display-only info about a (reviewer, reviewee) pairing (e.g.
-"she was your student in NN1101"). The two have categorically
-different infrastructure needs — labels for PairContext (handled
-in 15A); rule-engine integration for AssignmentContext.
-
-**Why deferred.** Most use cases for logic-bearing per-assignment
-fields are derivable from existing reviewer + reviewee tags
-evaluated through the rule engine. This slice should only land
-when a real use case surfaces that **cannot** be expressed via
-tags + rules.
-
-**If it lands, it needs (in one PR-sized slice):**
-
-1. **Schema.** Add `assignment_context_1 / _2 / _3 VARCHAR(255)`
-   columns on `Assignment` (mirrors the tag pattern, plays well
-   with CSV) **or** reserve well-known keys
-   `assignment_context_1/2/3` inside the existing
-   `Assignment.context` JSON dict (cheaper but harder to type and
-   to import / export). Recommendation at write time: named
-   columns.
-2. **Rule-engine integration.** New predicate operands so RuleSets
-   can filter / quota / order on AssignmentContext values. Touches
-   `app/services/rules/engine.py` + the Rule Builder UI.
-3. **CSV import column.** Manual-assignment CSV grows
-   `AssignmentContext1` / `2` / `3` columns alongside the existing
-   `PairContext1-3`.
-4. **Friendly labelling.** Once the columns exist, plumb them into
-   the 15A resolver (add `assignment_context` to the `source_type`
-   enum). The Settings editor subsection picks them up
-   automatically.
-
-**Triggering criterion.** Surface a concrete operator request
-that fails the "can this be expressed via reviewer + reviewee tags
-plus rules?" sniff test before authoring the slice.
+**Hard dependency: none.** Uses the existing per-instrument
+projection. Could ship before any other slice in principle,
+but ordered last because it's the smallest surface and easiest
+to bump if something else slips.
 
 ---
 
 ## Risks + open questions
 
-- **Existing data migration.** Sessions with multiple instruments
-  today have N copies of every Assignment (one per instrument)
-  with identical context / include. After Slice 1, those copies
-  remain identical until an operator divergent-edits them — no
-  migration needed, but the audit log will show "no-op" assignment
-  replays from the first divergent edit. Acceptable.
-- **Seeded RuleSets, post-15C.** Workspace seeds (Full Matrix
-  etc.) move out of `operator_rule_sets` to a code constant in
-  15C (mirroring how `SEEDED_RESPONSE_TYPE_DEFINITIONS` already
-  works), and are materialised into `session_rule_sets` directly
-  on session create — same mechanism as auto-copy from the
-  operator library. The instrument's pointer therefore always
-  targets a `session_rule_sets` row, regardless of whether the
-  origin is a seed, a library entry, or an inline-authored rule.
-  No special-casing in this slice's persistence code.
-- **Email invitations.** Reviewer-scoped, not instrument-scoped.
-  No change needed — reviewers receive one invitation per session
-  regardless of how their assignments break down by instrument.
-- **CSV export.** When Segment 12A export ships, the manual-CSV
-  shape gains the `Instrument` column for sessions where it's
-  populated. Pin that in the 12A spec when this segment lands.
+- **Existing data carries forward without divergence.** Pre-
+  15B multi-instrument sessions have identical `Assignment`
+  rows across instruments. After Slice 2 lands, those rows
+  stay identical until the operator picks different rules per
+  instrument. The audit log will show "no-op" assignment
+  replays the first time an operator re-Generates on a single
+  instrument without having changed its rule. Acceptable.
+
+- **Seeded RuleSets, pre- and post-15C.** Today seeded
+  RuleSets (Full Matrix, etc.) live in `operator_rule_sets`
+  with copies materialised into `session_rule_sets` on session
+  create. 15C may move the seeds into a code constant; the
+  `instruments.rule_set_id` pointer always targets a
+  `session_rule_sets` row regardless. No special-casing in
+  this segment.
+
+- **Email invitations.** Reviewer-scoped, not instrument-
+  scoped. No change — reviewers receive one invitation per
+  session regardless of how their assignments break down per
+  instrument.
+
+- **CSV export.** When the Extract Data flow exports
+  assignments, per-instrument rows already export
+  individually (one row per `Assignment`). No 12A change
+  needed.
+
+- **Empty Rule pool case.** If a session has no
+  `session_rule_sets` rows at all (e.g. a fresh deployment
+  before seeds materialise, or a session whose seed copies
+  were all deleted), the per-instrument rule picker shows an
+  empty `<select>` + a deep link to the Rule Builder ("Create
+  a rule to assign"). Cover in Slice 2 tests.
 
 ---
 
 ## Critical files
 
-- Touched: `app/services/assignments.py`,
-  `app/services/csv_imports.py`,
-  `app/services/rules/library.py`,
-  `app/services/rules/engine.py`,
-  `app/services/validation.py`,
-  `app/web/routes_operator/_assignments.py`,
-  `app/web/routes_operator/_rule_builder.py`,
-  `app/web/routes_operator/_quick_setup.py`,
-  `app/web/views/_rule_builder.py` + `_quick_setup.py`,
-  `app/web/templates/operator/session_assignments.html`.
-- Schema dependency only: `instruments.rule_set_id` is
-  pre-positioned by Segment 13D PR 2 (`SET NULL` on RuleSet
-  delete). No migration in this segment.
-- Possibly touched in Slice 6: `app/web/views/_validate.py`,
-  `app/web/templates/operator/session_validate.html`.
-- Slice 7: `app/web/templates/reviewer/dashboard.html`,
-  `app/web/routes_reviewer.py` (the `dashboard` handler), the
-  reviewer-side view adapter that builds per-session row context.
+- **Service layer.**
+  `app/services/assignments.py` (Slice 1 — `replace_assignments`
+  parameter + helpers),
+  `app/services/session_config_io.py` (Slice 2 — apply-path
+  light-up at line 1605, `rule_set_name` → `rule_set_id`
+  resolution),
+  `app/services/validation.py` (Slice 4),
+  `app/services/instruments/_instrument_crud.py` (Slice 2 —
+  rule-picker write-through).
+- **Routes.**
+  `app/web/routes_operator/_assignments.py` (Slice 3 — strip
+  Rule Based card; preview-only render),
+  `app/web/routes_operator/_instruments.py` (Slice 2 — rule
+  picker / Generate POST handlers),
+  `app/web/routes_operator/_rule_builder.py` (Slice 2 —
+  thread `instrument_id` through Rule Builder URL),
+  `app/web/routes_reviewer.py` (Slice 5 — dashboard handler).
+- **View adapters.**
+  `app/web/views/_assignments.py` (or wherever the
+  Assignments-page adapter lives),
+  `app/web/views/_instruments.py` (Slice 2 — per-card rule-
+  picker context),
+  `app/web/views/_validate.py` (Slice 4),
+  `app/web/views/_dashboard.py` (Slice 5).
+- **Templates.**
+  `app/web/templates/operator/session_assignments.html`
+  (Slice 3 — preview-only reshape),
+  `app/web/templates/operator/instruments_index.html`
+  (Slice 2 — per-card rule block),
+  `app/web/templates/operator/partials/session_top_nav.html`
+  (Slice 3 — tab order swap),
+  `app/web/templates/operator/session_validate.html`
+  (Slice 4),
+  `app/web/templates/reviewer/dashboard.html` (Slice 5).
+- **Schema dependency only:** `instruments.rule_set_id`
+  pre-positioned by 13D PR 4; `session_rule_sets` table by
+  13D PR 2. **No migration in 15B itself.**
 
 ---
 
@@ -443,27 +438,73 @@ plus rules?" sniff test before authoring the slice.
 - `pytest -q` green on SQLite + `ci-postgres` after each slice.
 - `ruff check .` green.
 - New tests per slice:
-  - Slice 1: `test_assignments_service.py` regression tests for the
-    `instrument_id=None` (apply to all) vs. per-instrument paths;
-    audit-event payload assertions.
-  - Slice 2: `test_instrument_rule_set_persistence.py` — choosing
-    a RuleSet writes `instruments.rule_set_id`; Reset clears it
-    back to NULL; deleting the RuleSet clears every pointer to it
-    via SQL `SET NULL` (the schema-level cascade is covered by
-    13D PR 2's schema test, but the route-level UX warning copy
-    also lands here).
-  - Slice 3: `test_manual_csv_per_instrument_column.py` — happy
-    path + unknown-instrument error.
-  - Slice 4 / 5: existing assignment-page integration tests
-    parameterised over single-instrument vs. multi-instrument
-    sessions.
-  - Slice 6: new `assignments.reviewer_missing_for_instrument`
-    `ValidationRule` covered in `test_session_validate_page.py`.
-  - Slice 7: `test_reviewer_dashboard.py` (or extend the
-    existing dashboard tests) — single-instrument session
-    renders a single row + pill (byte-identical to pre-15B);
-    multi-instrument session renders one sub-row per
-    instrument with per-instrument progress pills.
-- Manual smoke on the dev slot for Slice 4-6 (per-instrument tabs
-  render, divergent assignments persist correctly, reviewer
-  surface honours the per-instrument scope).
+  - **Slice 1** — `test_assignments_service.py` regression
+    tests for `instrument_id=None` (apply to all) vs.
+    per-instrument paths; audit-event payload assertions.
+  - **Slice 2** — `test_instrument_rule_set_picker.py` —
+    selecting a rule writes `instruments.rule_set_id`;
+    Generate writes per-instrument `Assignment` rows; Reset
+    clears both. Empty-pool case renders the "Create a rule"
+    deep link. Plus `test_session_config_io_rule_set.py` —
+    Settings CSV apply path resolves `rule_set_name` →
+    `rule_set_id` (happy path + unknown-name error +
+    empty-value clears).
+  - **Slice 3** — `test_assignments_page_preview_only.py` —
+    Rule Based card gone, preview table renders, tabs mount
+    when N > 1, single-instrument case stays
+    byte-identical. `test_session_top_nav.py` — Assignments
+    tab sits left of Validate.
+  - **Slice 4** — `assignments.reviewer_missing_for_instrument`
+    ValidationRule covered in `test_session_validate_page.py`.
+  - **Slice 5** — `test_reviewer_dashboard_per_instrument.py`
+    — single-instrument session renders one row + pill
+    (byte-identical to pre-15B); multi-instrument session
+    renders one sub-row per instrument.
+- Manual smoke on the dev slot for Slices 2 / 3 —
+  per-instrument rule selection persists (via per-card picker
+  *and* via Settings CSV round-trip), Assignments-page tabs
+  render correctly, reviewer surface honours the per-
+  instrument scope.
+
+---
+
+## Spec / doc impact
+
+When this segment kicks off, the following spec / doc surfaces
+need updates to match the revised mental model:
+
+- **`spec/operator_ui_concept.md`** — §5 currently says the
+  Operations Assignments page carries the wired Rule Based
+  card and that operators "pick a RuleSet, hit Generate"
+  there. That stops being true after Slice 3 — the page is
+  preview-only; the picker lives on Instrument cards. Tab-
+  order diagram (the `OPERATIONS ▶ [Validate][Assignments]
+  …` strip) updates to match Slice 3's swap.
+- **`spec/rule_based_assignment.md`** — §7.1 (the "Rule Based
+  card on the Assignments page") gets re-homed to "Rule Based
+  block on the Instrument card". The Rule Builder UI itself
+  (§7.2) doesn't change shape; just gains an `instrument_id`
+  context param so its "back to assignments" link returns to
+  the right Instrument card.
+- **`spec/instruments.md`** — Section C ("Action row" /
+  per-card layout) grows a new sub-section above Display
+  Fields covering the per-instrument rule block (picker +
+  Edit + Generate + status line).
+- **`spec/operations_pages.md`** — Assignments-page contract
+  flips from "place to generate assignments" to "place to
+  preview the materialised pairs"; per-instrument tab strip
+  spec lands here.
+- **`spec/operator_button_audit.md`** — Section covering the
+  Assignments page loses the Rule Based card's buttons;
+  Instruments-page section gains the per-card rule block
+  buttons (Generate, Edit rule, Reset).
+- **`spec/settings_inventory.md`** — flip the
+  `instruments.rule_set_id` row from "Inert until 15B Slice 2
+  wires per-instrument selection" to wired; the Settings-CSV
+  coverage line (currently flagged "resolved to
+  `rule_set_name`") gains a note that the apply path is now
+  live end-to-end.
+- **`docs/status.md`** — chronological entry per slice ship.
+- **`guide/todo_master.md`** — 15B moves from Upcoming to
+  in-progress, then to Done when Slice 5 lands.
+- Archive this file to `guide/archive/` when Slice 5 merges.
