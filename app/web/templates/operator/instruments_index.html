@@ -315,10 +315,16 @@
                           {# Hidden bookkeeping inputs for the bulk-save
                              form so the row's order / kind / id ride along
                              on Save. The visible ``name="label"`` input
-                             was dropped in 15A Slice 2. #}
+                             was dropped in 15A Slice 2; we keep an empty
+                             hidden ``label`` so the parallel arrays
+                             (``kind`` / ``id`` / ``order`` / ``label``)
+                             on the POST stay aligned with the response-
+                             field rows. The bulk-save service silently
+                             drops display-row ``label`` values. #}
                           <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="display">
                           <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="{{ df.id }}">
                           <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ loop.index0 }}">
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="label" value="">
                         {% endif %}
                       </td>
                       <td>
