@@ -82,11 +82,16 @@ def _upload_relationships(
     assert response.status_code == 303, response.text
 
 
-def _intra_seed_id(db: Session) -> int:
+def _intra_seed_id(db: Session, session_id: int) -> int:
+    """Post-15C-Slice-4b seeded RuleSets live in ``session_rule_sets``
+    (the per-session copy table); the workspace seed materialises on
+    session-create via 15C Slice 1."""
+    from app.db.models import SessionRuleSet
+
     return db.execute(
-        select(RuleSet.id).where(
-            RuleSet.is_seed.is_(True),
-            RuleSet.name == "Intra-group peer review",
+        select(SessionRuleSet.id).where(
+            SessionRuleSet.session_id == session_id,
+            SessionRuleSet.name == "Intra-group peer review",
         )
     ).scalar_one()
 
@@ -99,13 +104,16 @@ def _save_pair_context_match_rule(
     name: str,
     tag_value: str,
 ) -> int:
-    """Save-As a Personal RuleSet with one MATCH rule on
-    ``pair_context.tag1 == tag_value``."""
+    """Save-As a SessionRuleSet with one MATCH rule on
+    ``pair_context.tag1 == tag_value``, then promote it to the
+    operator library so the legacy ``/rule-based/generate`` endpoint
+    (which still resolves rule ids against the library tier) can
+    find it. Returns the **library** RuleSet id."""
 
     response = client.post(
         f"/operator/sessions/{session_id}/assignments/rule-based-editor/save",
         data={
-            "source_rule_set_id": str(_intra_seed_id(db)),
+            "source_rule_set_id": str(_intra_seed_id(db, session_id)),
             "name": name,
             "combinator": "ALL_OF",
             "rules_json": json.dumps([
@@ -125,10 +133,25 @@ def _save_pair_context_match_rule(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    saved = db.execute(
+    from app.db.models import SessionRuleSet
+
+    session_rule_set_id = db.execute(
+        select(SessionRuleSet.id).where(
+            SessionRuleSet.session_id == session_id,
+            SessionRuleSet.name == name,
+        )
+    ).scalar_one()
+    # Promote to operator library so /rule-based/generate finds it.
+    promote_response = client.post(
+        f"/operator/sessions/{session_id}/assignments/rule-based-editor/save-to-library",
+        data={"rule_set_id": session_rule_set_id},
+        follow_redirects=False,
+    )
+    assert promote_response.status_code == 303, promote_response.text
+    library_row = db.execute(
         select(RuleSet).where(RuleSet.name == name)
     ).scalar_one()
-    return saved.id
+    return library_row.id
 
 
 def _pair_emails(db: Session, session_id: int) -> set[tuple[str, str]]:
@@ -251,10 +274,12 @@ def test_filter_rule_drops_only_matching_pairs(
         ),
     )
 
+    from app.db.models import SessionRuleSet
+
     response = client.post(
         f"/operator/sessions/{review_session.id}/assignments/rule-based-editor/save",
         data={
-            "source_rule_set_id": str(_intra_seed_id(db)),
+            "source_rule_set_id": str(_intra_seed_id(db, review_session.id)),
             "name": "filter-coi",
             "combinator": "ALL_OF",
             "rules_json": json.dumps([
@@ -274,6 +299,20 @@ def test_filter_rule_drops_only_matching_pairs(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
+    # Promote the session-tier row to the library so /rule-based/generate
+    # (still library-tier) can resolve it.
+    session_rule_set_id = db.execute(
+        select(SessionRuleSet.id).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "filter-coi",
+        )
+    ).scalar_one()
+    promote_response = client.post(
+        f"/operator/sessions/{review_session.id}/assignments/rule-based-editor/save-to-library",
+        data={"rule_set_id": session_rule_set_id},
+        follow_redirects=False,
+    )
+    assert promote_response.status_code == 303, promote_response.text
     rule_set_id = db.execute(
         select(RuleSet.id).where(RuleSet.name == "filter-coi")
     ).scalar_one()

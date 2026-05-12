@@ -164,20 +164,25 @@ def test_rule_based_card_dropdown_lists_seeds_before_personal(
     """The Rule Based card on the Assignments page renders seeds
     first (in install order) followed by caller-owned Personal
     RuleSets — same canonical ordering as the new Rule Builder
-    dropdown. Pre-fix, ``list_visible_rule_sets`` ordered by
-    ``scope ASC`` which placed Personal before Seeds alphabetically.
+    dropdown.
+
+    Post-15C-Slice-4b the Rule Builder Save writes to
+    ``session_rule_sets`` (the per-session tier), but the
+    Assignments-page Rule Based card still reads from
+    ``operator_rule_sets`` (the library tier). To make the
+    operator-authored rule visible on this surface, the test
+    explicitly Save-to-library's the session row.
     """
 
-    from app.db.models import RuleSet
+    from app.db.models import SessionRuleSet
 
     review_session = _make_session(client, db, code="rb-order")
 
-    # Seed a Personal RuleSet via the new Save-As flow (Save with no
-    # rule_set_id, source = first seed).
+    # Save-As a session-tier RuleSet from the Intra-group seed.
     intra_id = db.execute(
-        select(RuleSet.id).where(
-            RuleSet.is_seed.is_(True),
-            RuleSet.name == "Intra-group peer review",
+        select(SessionRuleSet.id).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Intra-group peer review",
         )
     ).scalar_one()
     save_response = client.post(
@@ -192,6 +197,22 @@ def test_rule_based_card_dropdown_lists_seeds_before_personal(
         follow_redirects=False,
     )
     assert save_response.status_code == 303, save_response.text
+
+    # Promote the session row to the operator library so the
+    # Assignments-page card (library-tier picker) surfaces it.
+    new_session_rule_set_id = db.execute(
+        select(SessionRuleSet.id).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Personal Aaa",
+        )
+    ).scalar_one()
+    save_lib_response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based-editor/save-to-library",
+        data={"rule_set_id": new_session_rule_set_id},
+        follow_redirects=False,
+    )
+    assert save_lib_response.status_code == 303, save_lib_response.text
 
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"

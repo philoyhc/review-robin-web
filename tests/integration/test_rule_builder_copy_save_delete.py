@@ -26,7 +26,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import RuleSet, RuleSetRevision, ReviewSession
+from app.db.models import (
+    ResponseTypeDefinition,  # noqa: F401  (imported for sibling tests)
+    ReviewSession,
+    RuleSet,  # noqa: F401  (still exercised by legacy-tier assertions)
+    RuleSetRevision,  # noqa: F401  (kept for symmetry; some tests inspect)
+    SessionRuleSet,
+)
 
 
 def _make_session(
@@ -43,10 +49,14 @@ def _make_session(
     ).scalar_one()
 
 
-def _seed_id(db: Session, name: str) -> int:
+def _seed_id(db: Session, *, session_id: int, name: str) -> int:
+    """Resolve a seeded SessionRuleSet's id by name. Post-15C-Slice-4b
+    the workspace seeds materialise into ``session_rule_sets`` at
+    session-create time, so seed lookup runs against that table."""
     return db.execute(
-        select(RuleSet.id).where(
-            RuleSet.is_seed.is_(True), RuleSet.name == name
+        select(SessionRuleSet.id).where(
+            SessionRuleSet.session_id == session_id,
+            SessionRuleSet.name == name,
         )
     ).scalar_one()
 
@@ -96,11 +106,17 @@ def test_copy_from_seed_303s_to_draft_with_source_id(
     until Save)."""
 
     review_session = _make_session(client, db, code="rb-copy-1")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
-    pre_count = db.execute(
-        select(RuleSet).where(RuleSet.is_seed.is_(False))
-    ).scalars().all()
+    pre_count = len(
+        list(
+            db.execute(
+                select(SessionRuleSet).where(
+                    SessionRuleSet.session_id == review_session.id
+                )
+            ).scalars()
+        )
+    )
 
     response = client.post(
         _builder_url(review_session.id, "copy"),
@@ -114,11 +130,17 @@ def test_copy_from_seed_303s_to_draft_with_source_id(
         in (response.headers.get("location") or "")
     )
 
-    post_count = db.execute(
-        select(RuleSet).where(RuleSet.is_seed.is_(False))
-    ).scalars().all()
-    assert len(post_count) == len(pre_count), (
-        "Copy must not persist a Personal RuleSet — Save creates it."
+    post_count = len(
+        list(
+            db.execute(
+                select(SessionRuleSet).where(
+                    SessionRuleSet.session_id == review_session.id
+                )
+            ).scalars()
+        )
+    )
+    assert post_count == pre_count, (
+        "Copy must not persist a SessionRuleSet — Save creates it."
     )
 
 
@@ -129,7 +151,7 @@ def test_draft_from_renders_editable_form_with_auto_name(
     pre-populated with the source's rules + auto-generated name."""
 
     review_session = _make_session(client, db, code="rb-copy-2")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
     body = client.get(
         _builder_url(review_session.id) + f"?draft_from={intra_id}"
@@ -163,7 +185,7 @@ def test_save_from_draft_creates_personal_rule_set(
     a new Personal RuleSet (Save-As semantics)."""
 
     review_session = _make_session(client, db, code="rb-save-1")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
     response = client.post(
         _builder_url(review_session.id, "save"),
@@ -181,25 +203,24 @@ def test_save_from_draft_creates_personal_rule_set(
     assert "rule_set_id=" in location and "saved=1" in location
 
     saved = db.execute(
-        select(RuleSet).where(
-            RuleSet.name == "Copy of Intra-group peer review",
-            RuleSet.is_seed.is_(False),
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Copy of Intra-group peer review",
         )
     ).scalar_one()
-    assert saved.deleted_at is None
+    assert saved.library_origin_id is None
 
 
-def test_save_in_place_appends_revision(
+def test_save_in_place_overwrites_snapshot(
     client: TestClient, db: Session
 ) -> None:
-    """Save with a ``rule_set_id`` mutates the existing Personal
-    RuleSet by appending a new revision (PR 6 semantics).
-
-    Uses the legacy /rule-based/copy route to seed a saved Personal
-    so the assertion exercises only the new /save handler."""
+    """Save with a ``rule_set_id`` mutates the existing SessionRuleSet
+    in place — overwriting the snapshot. Unlike the library tier
+    there is no revisions table; the prior tree is not preserved.
+    Operators who want history use Save-to-library."""
 
     review_session = _make_session(client, db, code="rb-save-2")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     _make_personal_via_save(
         client,
         review_session.id,
@@ -207,30 +228,48 @@ def test_save_in_place_appends_revision(
         name="Saveable",
     )
     personal = db.execute(
-        select(RuleSet).where(RuleSet.name == "Saveable")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Saveable",
+        )
     ).scalar_one()
-    initial_revision_no = personal.current_revision.revision_no
+    initial_rules = list(personal.rules_json or [])
 
+    new_rules = [
+        {
+            "id": "x",
+            "kind": "MATCH",
+            "enabled": True,
+            "predicate": {
+                "field": "reviewer.tag1",
+                "operator": "same_as",
+                "operand": "reviewee.tag1",
+            },
+        }
+    ]
     response = client.post(
         _builder_url(review_session.id, "save"),
         data={
             "rule_set_id": personal.id,
             "name": "Saveable",
             "combinator": "ALL_OF",
-            "rules_json": json.dumps([]),
+            "rules_json": json.dumps(new_rules),
         },
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
 
     db.refresh(personal)
-    assert personal.current_revision.revision_no == initial_revision_no + 1
-    revisions = db.execute(
-        select(RuleSetRevision).where(
-            RuleSetRevision.rule_set_id == personal.id
-        )
-    ).scalars().all()
-    assert len(revisions) >= 2
+    # Pydantic round-trip adds defaults (e.g. case_sensitive=False) +
+    # reorders keys, so compare on the load-bearing fields rather
+    # than the literal payload.
+    assert len(personal.rules_json) == 1
+    saved_rule = personal.rules_json[0]
+    assert saved_rule["id"] == "x"
+    assert saved_rule["kind"] == "MATCH"
+    assert saved_rule["predicate"]["field"] == "reviewer.tag1"
+    assert saved_rule["predicate"]["operand"] == "reviewee.tag1"
+    assert personal.rules_json != initial_rules
 
 
 def test_save_in_place_inline_rename(
@@ -240,7 +279,7 @@ def test_save_in_place_inline_rename(
     submitting Save commits the rename alongside the revision."""
 
     review_session = _make_session(client, db, code="rb-rename")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     _make_personal_via_save(
         client,
         review_session.id,
@@ -248,7 +287,10 @@ def test_save_in_place_inline_rename(
         name="Old name",
     )
     personal = db.execute(
-        select(RuleSet).where(RuleSet.name == "Old name")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Old name",
+        )
     ).scalar_one()
 
     client.post(
@@ -270,7 +312,7 @@ def test_save_with_empty_name_redirects_with_error(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="rb-noname")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
     response = client.post(
         _builder_url(review_session.id, "save"),
@@ -299,7 +341,7 @@ def test_copy_collision_auto_suffixes_when_default_name(
     (locked decision #5)."""
 
     review_session = _make_session(client, db, code="rb-suffix")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
     # First Save: ``Copy of Intra-group peer review`` succeeds.
     client.post(
@@ -331,9 +373,9 @@ def test_copy_collision_auto_suffixes_when_default_name(
     assert "saved=1" in (response.headers.get("location") or "")
 
     suffixed = db.execute(
-        select(RuleSet).where(
-            RuleSet.name == "Copy of Intra-group peer review (2)",
-            RuleSet.is_seed.is_(False),
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Copy of Intra-group peer review (2)",
         )
     ).scalar_one_or_none()
     assert suffixed is not None
@@ -346,7 +388,7 @@ def test_save_collision_on_edited_name_returns_error(
     instead of a silent auto-suffix."""
 
     review_session = _make_session(client, db, code="rb-collide")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     _make_personal_via_save(
         client,
         review_session.id,
@@ -377,11 +419,11 @@ def test_save_collision_on_edited_name_returns_error(
 # ---------------------------------------------------------------------------
 
 
-def test_delete_soft_deletes_and_redirects_to_first_seed(
+def test_delete_hard_deletes_and_redirects_to_first_seed(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="rb-delete")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     _make_personal_via_save(
         client,
         review_session.id,
@@ -389,8 +431,12 @@ def test_delete_soft_deletes_and_redirects_to_first_seed(
         name="ToDelete",
     )
     personal = db.execute(
-        select(RuleSet).where(RuleSet.name == "ToDelete")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "ToDelete",
+        )
     ).scalar_one()
+    personal_id = personal.id
 
     response = client.post(
         _builder_url(review_session.id, "delete"),
@@ -404,15 +450,22 @@ def test_delete_soft_deletes_and_redirects_to_first_seed(
         review_session.id
     )
 
-    db.refresh(personal)
-    assert personal.deleted_at is not None
+    # SessionRuleSet hard-deletes (no soft-delete column on the
+    # session tier; past audit refs survive via refs.session_rule_set_id).
+    db.expire_all()
+    assert (
+        db.execute(
+            select(SessionRuleSet).where(SessionRuleSet.id == personal_id)
+        ).scalar_one_or_none()
+        is None
+    )
 
 
 def test_delete_without_confirm_redirects_with_error(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="rb-del-noconf")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     _make_personal_via_save(
         client,
         review_session.id,
@@ -420,8 +473,12 @@ def test_delete_without_confirm_redirects_with_error(
         name="PR2 keep",
     )
     personal = db.execute(
-        select(RuleSet).where(RuleSet.name == "PR2 keep")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "PR2 keep",
+        )
     ).scalar_one()
+    personal_id = personal.id
 
     response = client.post(
         _builder_url(review_session.id, "delete"),
@@ -433,23 +490,32 @@ def test_delete_without_confirm_redirects_with_error(
         response.headers.get("location") or ""
     )
 
-    db.refresh(personal)
-    assert personal.deleted_at is None
+    assert (
+        db.execute(
+            select(SessionRuleSet).where(SessionRuleSet.id == personal_id)
+        ).scalar_one_or_none()
+        is not None
+    )
 
 
-def test_delete_seed_returns_400(client: TestClient, db: Session) -> None:
-    """Seeded RuleSets can't be deleted — they're workspace-wide
-    read-only."""
+def test_delete_seed_session_copy_succeeds(
+    client: TestClient, db: Session
+) -> None:
+    """Pre-15C-Slice-4b seeded RuleSets were workspace-shipped and
+    read-only. Post-flip the session-tier materialisation creates an
+    editable copy that the operator can delete locally without
+    affecting other sessions (the workspace seed in
+    ``SEEDED_RULE_SETS`` stays untouched as a code constant)."""
 
     review_session = _make_session(client, db, code="rb-del-seed")
-    full_matrix_id = _seed_id(db, "Full Matrix")
+    full_matrix_id = _seed_id(db, session_id=review_session.id, name="Full Matrix")
 
     response = client.post(
         _builder_url(review_session.id, "delete"),
         data={"rule_set_id": full_matrix_id, "confirm": "true"},
         follow_redirects=False,
     )
-    assert response.status_code == 400
+    assert response.status_code == 303
 
 
 # ---------------------------------------------------------------------------
@@ -466,7 +532,7 @@ def test_get_after_cancel_renders_saved_state(
     name unchanged from its persisted value."""
 
     review_session = _make_session(client, db, code="rb-cancel")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     _make_personal_via_save(
         client,
         review_session.id,
@@ -474,7 +540,10 @@ def test_get_after_cancel_renders_saved_state(
         name="Cancel me",
     )
     personal = db.execute(
-        select(RuleSet).where(RuleSet.name == "Cancel me")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Cancel me",
+        )
     ).scalar_one()
 
     body = client.get(
@@ -490,34 +559,27 @@ def test_get_after_cancel_renders_saved_state(
 # ---------------------------------------------------------------------------
 
 
-def test_copy_other_users_personal_returns_403(
+def test_copy_from_other_users_session_returns_403(
     db: Session,
     alice,  # noqa: ANN001 — fixture
     bob,  # noqa: ANN001 — fixture
     make_client,  # noqa: ANN001 — fixture
 ) -> None:
+    """The session-permission gate (require_session_operator) still
+    fires when a non-operator attempts the Copy POST. Post-15C-Slice-4b
+    the picker is session-scoped so the cross-owner Personal-RuleSet
+    case is gone — the test now just pins the session gate."""
     alice_client = make_client(alice)
     review_session = _make_session(alice_client, db, code="rb-priv-copy")
-    intra_id = _seed_id(db, "Intra-group peer review")
-
-    _make_personal_via_save(
-        alice_client,
-        review_session.id,
-        source_id=intra_id,
-        name="Alice private 2",
-    )
-    alice_rs = db.execute(
-        select(RuleSet).where(RuleSet.name == "Alice private 2")
-    ).scalar_one()
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
     bob_client = make_client(bob)
     response = bob_client.post(
         _builder_url(review_session.id, "copy"),
-        data={"from_rule_set_id": alice_rs.id},
+        data={"from_rule_set_id": intra_id},
         follow_redirects=False,
     )
-    # Bob isn't an operator on Alice's session — the session-permission
-    # gate fires before the ownership check.
+    # Bob isn't an operator on Alice's session.
     assert response.status_code == 403
 
 
@@ -534,7 +596,7 @@ def test_draft_from_seeds_default_description_to_user_created_ruleset(
     not the seed's own description."""
 
     review_session = _make_session(client, db, code="rb-desc-default")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
     body = client.get(
         _builder_url(review_session.id) + f"?draft_from={intra_id}"
@@ -587,7 +649,10 @@ def test_save_persists_description_for_blank_draft(
     )
 
     saved = db.execute(
-        select(RuleSet).where(RuleSet.name == "DescTest")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "DescTest",
+        )
     ).scalar_one()
     assert saved.description == "Pairs same-team reviewers"
 
@@ -599,7 +664,7 @@ def test_save_in_place_updates_description(
     submitting Save persists the new value."""
 
     review_session = _make_session(client, db, code="rb-desc-update")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     _make_personal_via_save(
         client,
         review_session.id,
@@ -607,7 +672,10 @@ def test_save_in_place_updates_description(
         name="DescUpdate",
     )
     personal = db.execute(
-        select(RuleSet).where(RuleSet.name == "DescUpdate")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "DescUpdate",
+        )
     ).scalar_one()
 
     client.post(
@@ -652,7 +720,7 @@ def test_available_rulesets_card_marks_active_row(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="rb-avail-active")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
     body = client.get(
         _builder_url(review_session.id) + f"?rule_set_id={intra_id}"
@@ -671,7 +739,7 @@ def test_available_rulesets_card_shows_personal_after_save(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="rb-avail-personal")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     rules = [
         {
             "id": "y",

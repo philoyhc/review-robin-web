@@ -28,7 +28,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, RuleSet, RuleSetRevision
+from app.db.models import ReviewSession, SessionRuleSet
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = (
@@ -51,10 +51,11 @@ def _make_session(
     ).scalar_one()
 
 
-def _seed_id(db: Session, name: str) -> int:
+def _seed_id(db: Session, *, session_id: int, name: str) -> int:
     return db.execute(
-        select(RuleSet.id).where(
-            RuleSet.is_seed.is_(True), RuleSet.name == name
+        select(SessionRuleSet.id).where(
+            SessionRuleSet.session_id == session_id,
+            SessionRuleSet.name == name,
         )
     ).scalar_one()
 
@@ -74,8 +75,9 @@ def _make_personal(
     source_id: int,
     name: str,
     exclude_self_reviews: bool = True,
-) -> RuleSet:
-    """Save-As a Personal RuleSet with the given exclude flag."""
+) -> None:
+    """Save-As a SessionRuleSet with the given exclude flag. Caller
+    looks the row up by name afterwards."""
 
     data: dict[str, str] = {
         "source_rule_set_id": str(source_id),
@@ -100,7 +102,7 @@ def test_checkbox_renders_in_editor_form(
     """Loading a Personal RuleSet renders the visible checkbox."""
 
     review_session = _make_session(client, db, code="rb-esr-render")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     _make_personal(
         client,
         review_session.id,
@@ -109,7 +111,10 @@ def test_checkbox_renders_in_editor_form(
         exclude_self_reviews=True,
     )
     saved = db.execute(
-        select(RuleSet).where(RuleSet.name == "Render-test")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Render-test",
+        )
     ).scalar_one()
 
     response = client.get(
@@ -126,7 +131,7 @@ def test_checkbox_checked_when_saved_value_true(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="rb-esr-checked")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     _make_personal(
         client,
         review_session.id,
@@ -135,7 +140,10 @@ def test_checkbox_checked_when_saved_value_true(
         exclude_self_reviews=True,
     )
     saved = db.execute(
-        select(RuleSet).where(RuleSet.name == "Checked-true")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Checked-true",
+        )
     ).scalar_one()
 
     response = client.get(
@@ -157,7 +165,7 @@ def test_checkbox_unchecked_when_saved_value_false(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="rb-esr-unchecked")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
     _make_personal(
         client,
         review_session.id,
@@ -166,7 +174,10 @@ def test_checkbox_unchecked_when_saved_value_false(
         exclude_self_reviews=False,
     )
     saved = db.execute(
-        select(RuleSet).where(RuleSet.name == "Checked-false")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Checked-false",
+        )
     ).scalar_one()
 
     response = client.get(
@@ -185,7 +196,7 @@ def test_save_with_checkbox_checked_persists_true(
     on the new revision."""
 
     review_session = _make_session(client, db, code="rb-esr-save-true")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
     response = client.post(
         _builder_url(review_session.id, "save"),
@@ -201,10 +212,12 @@ def test_save_with_checkbox_checked_persists_true(
     assert response.status_code == 303, response.text
 
     saved = db.execute(
-        select(RuleSet).where(RuleSet.name == "Save-true")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Save-true",
+        )
     ).scalar_one()
-    revision = saved.current_revision
-    assert revision.exclude_self_reviews is True
+    assert saved.exclude_self_reviews is True
 
 
 def test_save_without_checkbox_persists_false(
@@ -213,7 +226,7 @@ def test_save_without_checkbox_persists_false(
     """Omitting the form field (unchecked checkbox) saves ``False``."""
 
     review_session = _make_session(client, db, code="rb-esr-save-false")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
     response = client.post(
         _builder_url(review_session.id, "save"),
@@ -228,10 +241,12 @@ def test_save_without_checkbox_persists_false(
     assert response.status_code == 303, response.text
 
     saved = db.execute(
-        select(RuleSet).where(RuleSet.name == "Save-false")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Save-false",
+        )
     ).scalar_one()
-    revision = saved.current_revision
-    assert revision.exclude_self_reviews is False
+    assert saved.exclude_self_reviews is False
 
 
 def test_round_trip_save_then_get(
@@ -240,7 +255,7 @@ def test_round_trip_save_then_get(
     """Save with the flag, reload the page, the checkbox is pre-checked."""
 
     review_session = _make_session(client, db, code="rb-esr-roundtrip")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(db, session_id=review_session.id, name="Intra-group peer review")
 
     client.post(
         _builder_url(review_session.id, "save"),
@@ -254,7 +269,10 @@ def test_round_trip_save_then_get(
         follow_redirects=False,
     )
     saved = db.execute(
-        select(RuleSet).where(RuleSet.name == "Roundtrip")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Roundtrip",
+        )
     ).scalar_one()
 
     response = client.get(
@@ -264,14 +282,9 @@ def test_round_trip_save_then_get(
     after_id = html.split('id="rule-based-editor-exclude-self"', 1)[1][:300]
     assert "checked" in after_id
 
-    # And the underlying revision actually carries the flag.
+    # And the underlying SessionRuleSet row actually carries the flag.
     db.refresh(saved)
-    revision = db.execute(
-        select(RuleSetRevision).where(
-            RuleSetRevision.id == saved.current_revision_id
-        )
-    ).scalar_one()
-    assert revision.exclude_self_reviews is True
+    assert saved.exclude_self_reviews is True
 
 
 def test_intentionally_not_exposed_comment_removed() -> None:
