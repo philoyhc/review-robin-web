@@ -446,6 +446,11 @@ def relationships_delete_all(
     )
 
 
+_RELATIONSHIP_SORT_KEYS = {
+    "reviewer", "reviewee", "tag_1", "tag_2", "tag_3", "status",
+}
+
+
 def _render_relationships_page(
     *,
     request: Request,
@@ -462,6 +467,29 @@ def _render_relationships_page(
     reviewees = assignments.list_reviewees(db, review_session.id)
     reviewer_by_id = {r.id: r for r in reviewers}
     reviewee_by_id = {r.id: r for r in reviewees}
+    # Segment 13B Part 2 PR 7 — cookie-backed personal sort.
+    # ``reviewer`` / ``reviewee`` resolve via the lookup maps so
+    # sort matches the rendered identity (email) rather than the
+    # raw FK id; tags + status resolve directly on the row.
+    def _relationship_sort_value(row, key: str):
+        if key == "reviewer":
+            reviewer = reviewer_by_id.get(row.reviewer_id)
+            return reviewer.email if reviewer else None
+        if key == "reviewee":
+            reviewee = reviewee_by_id.get(row.reviewee_id)
+            return reviewee.email_or_identifier if reviewee else None
+        return getattr(row, key, None)
+
+    sort_spec = views.decode_cookie_sort_spec(
+        cookies=dict(request.cookies),
+        cookie_name=f"rrw-sort-relationships-{review_session.id}",
+        valid_keys=_RELATIONSHIP_SORT_KEYS,
+    )
+    rows = views.apply_cookie_sort(
+        rows,
+        sort_spec,
+        value_resolver=_relationship_sort_value,
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_relationships.html",

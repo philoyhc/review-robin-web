@@ -224,3 +224,146 @@ def test_reviewees_cookie_drives_ssr_initial_order(
         f"/operator/sessions/{review_session.id}/reviewees"
     ).text
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
+
+
+# --- Relationships ---------------------------------------------------------
+
+
+def _populate_relationships(
+    client: TestClient, session_id: int
+) -> None:
+    """Three reviewers paired with one reviewee via the
+    Relationships CSV. Insertion order is Bravo / Alpha / Charlie
+    so a name sort actually reshuffles."""
+    client.post(
+        f"/operator/sessions/{session_id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                (
+                    b"ReviewerName,ReviewerEmail\n"
+                    b"B Rev,bravo@example.edu\n"
+                    b"A Rev,alpha@example.edu\n"
+                    b"C Rev,charlie@example.edu\n"
+                ),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session_id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nM,m@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session_id}/relationships/import",
+        files={
+            "file": (
+                "rel.csv",
+                (
+                    b"ReviewerEmail,RevieweeEmail\n"
+                    b"bravo@example.edu,m@example.edu\n"
+                    b"alpha@example.edu,m@example.edu\n"
+                    b"charlie@example.edu,m@example.edu\n"
+                ),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+
+def test_relationships_table_renders_sort_scaffolding(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-scaff")
+    _populate_relationships(client, review_session.id)
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships"
+    ).text
+    assert (
+        f'data-rrw-sortable="rrw-sort-relationships-{review_session.id}"'
+        in body
+    )
+    assert '<tbody class="rrw-rows">' in body
+    assert 'class="rrw-sortable" data-sort-key="reviewer"' in body
+    assert 'class="rrw-sortable" data-sort-key="reviewee"' in body
+    assert 'data-sort-value="alpha@example.edu"' in body
+
+
+def test_relationships_cookie_sort_by_reviewer_asc(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-by-rev")
+    _populate_relationships(client, review_session.id)
+
+    cookie_name = f"rrw-sort-relationships-{review_session.id}"
+    client.cookies.set(
+        cookie_name,
+        json.dumps([{"key": "reviewer", "dir": "asc"}]),
+        path=f"/operator/sessions/{review_session.id}",
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships"
+    ).text
+    # Reviewer column sorts on email — alphabetical: alpha,
+    # bravo, charlie.
+    assert (
+        body.find("alpha@example.edu")
+        < body.find("bravo@example.edu")
+        < body.find("charlie@example.edu")
+    )
+
+
+def test_relationships_cookie_sort_desc(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-desc")
+    _populate_relationships(client, review_session.id)
+
+    cookie_name = f"rrw-sort-relationships-{review_session.id}"
+    client.cookies.set(
+        cookie_name,
+        json.dumps([{"key": "reviewer", "dir": "desc"}]),
+        path=f"/operator/sessions/{review_session.id}",
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships"
+    ).text
+    assert (
+        body.find("charlie@example.edu")
+        < body.find("bravo@example.edu")
+        < body.find("alpha@example.edu")
+    )
+
+
+def test_relationships_stale_cookie_key_dropped(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-stale")
+    _populate_relationships(client, review_session.id)
+
+    cookie_name = f"rrw-sort-relationships-{review_session.id}"
+    client.cookies.set(
+        cookie_name,
+        json.dumps([
+            {"key": "not_a_column", "dir": "asc"},
+            {"key": "reviewer", "dir": "asc"},
+        ]),
+        path=f"/operator/sessions/{review_session.id}",
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships"
+    ).text
+    assert (
+        body.find("alpha@example.edu")
+        < body.find("bravo@example.edu")
+        < body.find("charlie@example.edu")
+    )
