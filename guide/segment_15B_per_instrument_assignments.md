@@ -180,7 +180,7 @@ Also touched:
   Assignment rows; confirm the instrument-scope flows through
   the pivot.
 - Audit envelope already carries `instrument_id` in the
-  `assignments.replaced` payload (per 11K's canonical schema);
+  `assignments.generated` payload (per 11K's canonical schema);
   the field starts carrying real per-instrument variation.
 
 No callers change shape — `instrument_id=None` is the
@@ -279,7 +279,7 @@ the operator's explicit next action on the Assignments page
 The audit envelope on Save carries an `instrument.rule_pinned`
 event with `before` / `after` `rule_set_id` values (uses the
 canonical `audit.changes(...)` envelope). The
-`assignments.replaced` event continues to fire **only** from
+`assignments.generated` event continues to fire **only** from
 the explicit generation surfaces in Slices 3 / 4.
 
 **`instruments.rule_set_id` resolution semantics.** The column
@@ -372,7 +372,7 @@ primary surface for it.
   for *Manager survey*, 30 pairs for *Peer survey* (72 total).").
   Same surface the existing flash-message pipeline uses; copy
   reads the same per-instrument count from the
-  `assignments.replaced` audit-event payload that Slice 1's
+  `assignments.generated` audit-event payload that Slice 1's
   service emits.
 - **Keep the self-reviews Include toggle** — it's still the
   one bulk operation that makes sense here (it's a property
@@ -394,7 +394,7 @@ primary surface for it.
     immediately, even before Generate runs.
   - **Generated:** the actual `Assignment` row count for this
     instrument plus the timestamp of the last
-    `assignments.replaced` event ("42 pairs · last generated
+    `assignments.generated` event ("42 pairs · last generated
     11:02 today"), or "Not generated yet" when zero rows
     exist or the staleness fingerprint diverges from the
     pinned-rules fingerprint.
@@ -460,7 +460,7 @@ when:
   fingerprint — `(instrument_id, rule_set_id,
   rule_set_revision_id)` tuples — and shows the button when
   the fingerprint diverges from the audit log's last
-  `assignments.replaced` event).
+  `assignments.generated` event).
 
 Clicking the button is equivalent to clicking Generate on the
 Assignments page — same service call
@@ -473,10 +473,14 @@ shows a *supporting* link ("Pin rules on the Instruments
 page") in place of the primary button — the operator has to
 go pin something before generation is meaningful.
 
-Touched: `app/web/views/_session_home.py` (or wherever the
-Next Action resolver lives — see `spec/session_home.md`),
-`app/web/templates/operator/session_home.html` (or the
-Next Action card partial). No new service code — Slice 1's
+Touched: `app/web/routes_operator/_session_home.py` (the
+Next Action resolver lives inline in the route — flags
+like `is_draft / is_validated / is_ready / is_setup_empty`
+are computed at lines ~97-135 and the template branches on
+them at `session_detail.html:136-168`; Slice 4 extracts a
+view adapter or modifies the route directly),
+`app/web/templates/operator/session_detail.html` (Next
+Action card branch). No new service code — Slice 1's
 `replace_assignments` is the call site.
 
 ### Slice 5 — Validation per-instrument (1 PR, ~120 LOC)
@@ -596,8 +600,8 @@ to bump if something else slips.
   picker context),
   `app/web/views/_validate.py` (Slice 5),
   `app/web/views/_dashboard.py` (Slice 6),
-  `app/web/views/_session_home.py` (Slice 4 — Next Action
-  resolver).
+  `app/web/routes_operator/_session_home.py` (Slice 4 —
+  Next Action resolver, currently inline in the route).
 - **Templates.**
   `app/web/templates/operator/session_assignments.html`
   (Slice 3 — preview + page-level Generate reshape),
@@ -628,7 +632,7 @@ to bump if something else slips.
     picker `<select>` disabled when card is locked, enabled
     in edit mode; Save persists `instruments.rule_set_id`
     only — does **not** touch the `Assignment` rows or fire
-    `assignments.replaced` (the test pins this absence). The
+    `assignments.generated` (the test pins this absence). The
     audit envelope on Save fires `instrument.rule_pinned`
     with `before` / `after` `rule_set_id`. Cancel reverts the
     picker cleanly. Eligibility line refreshes on picker
@@ -640,7 +644,7 @@ to bump if something else slips.
   - **Slice 3** — `test_assignments_page_generate.py` —
     page-level Generate button fans out across instruments
     with rules pinned, skips NULL ones, fires
-    `assignments.replaced` per instrument; disabled state
+    `assignments.generated` per instrument; disabled state
     when no rules pinned; post-Generate banner reports the
     per-instrument materialised count. Plus
     `test_assignments_page_preview.py` — Rule Based card's
