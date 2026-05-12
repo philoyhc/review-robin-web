@@ -1,12 +1,10 @@
 # Segment 16C — Richer audit views
 
 > **Archived 2026-05-11.** PRs 1-3 (the MVP) shipped 2026-05-11
-> as PRs **#860 / #861 / #863**. PRs 4 + 5 carved out into
-> `guide/deferred_until_pilot_feedback.md` — same scope, awaiting
-> a real operator ask before they justify the build cost. PR 6
-> (Recent activity card on Session Home + per-event prose
-> summariser) stays in this archive as documented post-MVP
-> scope; lift into a fresh segment if anyone asks for it.
+> as PRs **#860 / #861 / #863**. PRs 4 + 5 + 6 (all post-MVP)
+> carved out into `guide/deferred_until_pilot_feedback.md` —
+> same scope, awaiting a real operator ask before they justify
+> the build cost.
 >
 > Carved out of the original Segment 16 (2026-05-11). The
 > Sys Admin page + sys-admin role gate live in **16A**
@@ -41,20 +39,17 @@
 
 ## What didn't ship (deferred)
 
-- **PRs 4 + 5** moved to
+- **PRs 4 + 5 + 6** all moved to
   `guide/deferred_until_pilot_feedback.md` — entity drill-in
   (deep-link `refs.*_id` to the relevant operator page) +
   cross-session workspace audit search (new top-nav tab,
-  no-session viewer). Both are well-scoped post-MVP slices
-  whose value depends on operator behaviour we haven't seen
-  yet.
-- **PR 6 (Recent activity card on Session Home)** stays in
-  this archive as documented post-MVP scope. Lift into a
-  fresh segment plan if pilot feedback wants the prose
-  summariser.
+  no-session viewer) + Session Home Recent activity card
+  (per-event prose summariser). All three are well-scoped
+  post-MVP slices whose value depends on operator behaviour
+  we haven't seen yet.
 
 **Sizing (historical):** 3 MVP PRs (shipped) + 3 post-MVP
-(2 deferred + 1 stays-in-archive).
+(all deferred).
 **Depends on:** **16A** (shipped) — the Sys Admin chrome,
 the workspace Sessions Diagnostics surface, and the
 `require_sys_admin` dependency in `app/web/deps.py`.
@@ -290,6 +285,9 @@ the drill-in is worth the additional surface.**
 confirms cross-session search is a real need.**
 
 ### PR 6 (post-MVP) — Timeline / activity-stream on Session Home (~250 LOC)
+
+> **Carved out 2026-05-11 to** `guide/deferred_until_pilot_feedback.md`.
+> Section retained here for historical context.
 
 **Ships.**
 

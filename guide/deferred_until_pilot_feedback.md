@@ -108,3 +108,52 @@ PR 2 filter strip. The new route lives in
 tab lands in `sys_admin_top_nav.html`.
 
 ---
+
+## 16C PR 6 — Timeline / activity-stream on Session Home (~250 LOC)
+
+> Carved from `guide/archive/segment_16C_richer_audit_views.md`
+> 2026-05-11. Originally retained in the archive as documented
+> post-MVP scope; moved here for consistency with the other
+> deferred 16C items.
+
+**Ships.**
+
+- New "Recent activity" card on Session Home rendering
+  the most recent N (default 10) audit events for the
+  session, summarised as one-line prose
+  (e.g. `"Alice activated the session"` /
+  `"Bob uploaded 47 reviewers"`).
+- Per-event summariser `views.summarise_audit_event(event)
+  -> str` mapping event_type + envelope → human-readable
+  prose. Backed by a per-event-type dispatch dict;
+  unknown / new event_types fall through to a generic
+  `"<event_type> by <actor>"` formatter.
+- Operator-visible — **not** gated to sys-admin. The
+  timeline summarises operator-visible state changes
+  (activation, deadline shifts, roster uploads) that
+  every operator on the session should see.
+- Deep-link from each summary line to the corresponding
+  row in the PR 1 viewer (sys-admin-gated; non-sys-admin
+  operators see the prose but the deep-link is absent or
+  disabled).
+
+**Why deferred.** The maintenance burden lives in the
+per-event-type dispatch dict — every new emitter (or
+renamed event type) has to land a summariser branch, or it
+quietly degrades to the generic `"<event_type> by <actor>"`
+formatter. Worth paying when operators are asking "what
+happened lately on this session?" but not before — PR 1's
+sys-admin-gated viewer already answers the same question
+for power users.
+
+**Lift trigger.** Operator says "I want to see recent
+activity at a glance on the session home page" or
+"reviewers are asking what changed and I have to dig into
+the audit log every time."
+
+**Wire-up.** New `views.summarise_audit_event` view
+adapter; new partial for the Recent activity card; injected
+into the Session Home context builder. Reuses
+`audit.list_events_for_session` from 16C PR 1.
+
+---
