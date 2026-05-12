@@ -333,9 +333,12 @@ def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
     body = reviewer_client.get(
         f"/reviewer/sessions/{review_session.id}"
     ).text
-    assert "<th>P1</th>" in body
-    assert "<th>Pair context 2</th>" not in body
-    assert "<th>Pair context 3</th>" in body
+    # PR 3 sort scaffolding wraps display-field headers with a
+    # trailing badge span — match by substring inside ``<th>...``
+    # rather than the exact tag content.
+    assert ">P1<" in body
+    assert ">Pair context 2<" not in body
+    assert ">Pair context 3<" in body
 
     saved_event = db.execute(
         select(AuditEvent).where(

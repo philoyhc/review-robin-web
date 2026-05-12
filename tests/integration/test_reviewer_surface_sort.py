@@ -226,6 +226,98 @@ def test_empty_sort_spec_renders_insertion_order(
     assert all(name in body for name in ("Alpha", "Bravo", "Charlie"))
 
 
+def test_reviewer_surface_renders_sortable_header_scaffolding(
+    db: Session,
+    client: TestClient,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """Live sort (PR 3) is JS-driven; the server's job is to
+    render the right scaffolding — sortable class on each th,
+    a per-header data-sort-key, a sort badge span, and the
+    sortable-table marker on the <table> element."""
+    review_session = _setup_session_with_three_reviewees(
+        client, db, code="rss-scaffold", reviewer_email=rae.email
+    )
+    _activate(client, db, review_session)
+    rae_client = make_client(rae)
+    response = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}"
+    )
+    assert response.status_code == 200
+    body = response.text
+    # Table element carries the per-instrument sortable marker.
+    assert 'data-rs-sortable-table=' in body
+    # The Reviewee identity header is clickable.
+    assert 'class="rs-reviewee rs-sortable"' in body
+    assert 'data-sort-key="reviewee.name"' in body
+    # Per-header sort badge span.
+    assert '<span class="rs-sort-badge">' in body
+    # The click handler is wired.
+    assert 'onclick="rsSortHeaderClick(' in body
+    # Each <td> carries a data-sort-value mirroring the row's
+    # persisted display value (the JS reads this rather than
+    # peeking into editable inputs).
+    assert 'data-sort-value=' in body
+    # tbody.rs-rows wraps the data rows.
+    assert '<tbody class="rs-rows">' in body
+
+
+def test_reviewer_surface_response_field_headers_carry_sort_type(
+    db: Session,
+    client: TestClient,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """Response-field headers carry ``data-sort-type`` so the JS
+    can apply numeric compare to Integer / Decimal columns."""
+    review_session = _setup_session_with_three_reviewees(
+        client, db, code="rss-rtype", reviewer_email=rae.email
+    )
+    _activate(client, db, review_session)
+    rae_client = make_client(rae)
+    response = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}"
+    )
+    assert response.status_code == 200
+    body = response.text
+    # The default instrument has a String response field; the
+    # response header should carry data-sort-type="String".
+    assert 'data-sort-type="String"' in body
+
+
+def test_reviewer_surface_no_override_preserves_operator_sort(
+    db: Session,
+    client: TestClient,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """Server-side render unchanged when no live override is in
+    play — regression for PR 2's persistence contract. Setting
+    the operator sort to desc-by-Reviewee renders rows in that
+    order on first page load (the JS-driven override only kicks
+    in after a header click)."""
+    review_session = _setup_session_with_three_reviewees(
+        client, db, code="rss-noop-live", reviewer_email=rae.email
+    )
+    name_field = _reviewee_name_display_field(db, review_session)
+    instrument = name_field.instrument
+    instrument.sort_display_fields = [
+        {"display_field_id": name_field.id, "dir": "desc"}
+    ]
+    db.commit()
+    _activate(client, db, review_session)
+    rae_client = make_client(rae)
+    response = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}"
+    )
+    assert response.status_code == 200
+    body = response.text
+    # Operator-desc order: Charlie, Bravo, Alpha. (Reviewee
+    # rendering shows the name on each row.)
+    assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
+
+
 def test_stale_display_field_id_skipped_silently(
     db: Session,
     client: TestClient,
