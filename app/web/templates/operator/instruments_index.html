@@ -991,13 +991,16 @@
       {# Slice 4d: also lock the Add card while a per-instrument
          card is being edited (mutual exclusion). #}
       {% set add_disabled = (editing_rtd_id is not none) or is_some_instrument_editing %}
-      {# 15C Slice 3: Add from library — only shown when the operator
-         has library RTDs not already in this session. Sits left of the
-         Add a Response Type card so the two creation paths are side
-         by side. #}
-      {% if library_rtds_available %}
-        <div style="margin-top: 16px; display: flex; gap: 16px; align-items: stretch;"
-             id="rtd-add-row">
+      {# 15C Slice 3 (alignment fix): the Add from library card +
+         Add a new Response Type card share one flex row so they sit
+         side by side. When the library-not-in-session pool is empty
+         the left card doesn't render and the right card flows alone
+         to the right edge (justify-content: flex-end on the outer
+         row preserves the pre-15C layout for operators who haven't
+         saved anything to their library yet). #}
+      <div style="margin-top: 16px; display: flex; gap: 16px; align-items: stretch; justify-content: flex-end;"
+           id="rtd-add-row">
+        {% if library_rtds_available %}
           <div class="card card-half" style="margin-bottom: 0; flex: 1;">
             <h2 style="margin-top: 0;">Add from library</h2>
             <p class="form-help">
@@ -1025,12 +1028,10 @@
                       title="Save or cancel the row in progress before adding another."{% endif %}>Add</button>
             </form>
           </div>
-        </div>
-      {% endif %}
-      <div style="margin-top: 16px; display: flex; justify-content: flex-end;"
-           id="rtd-add-card">
-        <div class="card card-half" style="margin-bottom: 0;">
-          <h2 style="margin-top: 0;">Add a Response Type</h2>
+        {% endif %}
+        <div class="card card-half" style="margin-bottom: 0; flex: 1;"
+             id="rtd-add-card">
+          <h2 style="margin-top: 0;">Add a new Response Type</h2>
           <p class="form-help">
             Click <strong>Add</strong> to start a new row in the table
             above after choosing a name and selecting the data type.
