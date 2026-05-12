@@ -82,9 +82,7 @@
           cancel.disabled = !hasText;
         }
         email.addEventListener("input", refresh);
-        // Re-disable after the reset button clears the field.
         form.addEventListener("reset", function () {
-          // ``reset`` fires before the form clears; defer to next tick.
           setTimeout(refresh, 0);
         });
         refresh();
@@ -95,19 +93,78 @@
   <div class="card">
     <h2 style="margin-top: 0;">Workspace users</h2>
     {% if rows %}
-      <table>
+      {# Bulk-action toolbar — single-row selection drives the
+         button enablement. Each form holds a hidden ``user_id``
+         input that the inline JS rewrites whenever the operator
+         flips a row checkbox. The "Admit / Revoke" and "Promote /
+         Demote" pairs share one form each — the JS swaps the
+         action URL based on the selected user's current state. #}
+      <div id="user-actions"
+           class="user-actions-toolbar"
+           style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end; margin-bottom:12px;">
+        <span class="muted">Operator:</span>
+        <form method="post" action="" data-action-form="operator-toggle"
+              style="margin:0">
+          <input type="hidden" name="user_id" value="">
+          <button class="btn secondary" type="submit"
+                  data-action-btn="operator-toggle"
+                  data-label-admit="Admit"
+                  data-label-revoke="Revoke"
+                  disabled>Admit</button>
+        </form>
+        <form method="post" action="" data-action-form="remove-sessions"
+              style="margin:0">
+          <input type="hidden" name="user_id" value="">
+          <button class="btn secondary" type="submit"
+                  data-action-btn="remove-sessions"
+                  disabled>Remove from all sessions</button>
+        </form>
+        <span class="muted">Sys Admin:</span>
+        <form method="post" action="" data-action-form="sys-admin-toggle"
+              style="margin:0">
+          <input type="hidden" name="user_id" value="">
+          <button class="btn secondary" type="submit"
+                  data-action-btn="sys-admin-toggle"
+                  data-label-promote="Promote"
+                  data-label-demote="Demote"
+                  disabled>Promote</button>
+        </form>
+        <span class="muted" aria-hidden="true">|</span>
+        <form method="post" action="" data-action-form="delete"
+              style="margin:0">
+          <input type="hidden" name="user_id" value="">
+          <button class="btn destructive" type="submit"
+                  data-action-btn="delete"
+                  disabled>Delete</button>
+        </form>
+      </div>
+      <table id="users-table">
         <tr>
+          <th class="col-shrink"></th>
           <th>Email</th>
           <th>Name</th>
           <th>First sign-in</th>
           <th>Operator</th>
           <th>Sys-admin</th>
           <th>Sessions</th>
-          <th class="col-shrink">Actions</th>
         </tr>
         {% for row in rows %}
           {% set is_self = row.id == user.id %}
-          <tr>
+          <tr data-user-id="{{ row.id }}"
+              data-is-self="{{ 'true' if is_self else 'false' }}"
+              data-is-operator="{{ 'true' if row.is_operator else 'false' }}"
+              data-is-sys-admin="{{ 'true' if row.is_sys_admin else 'false' }}"
+              data-session-count="{{ row.session_operator_count }}"
+              data-sole-owner-count="{{ row.sole_owner_count }}">
+            <td class="col-shrink">
+              {% if is_self %}
+                <span class="muted" title="You can't act on your own row">(self)</span>
+              {% else %}
+                <input type="checkbox"
+                       class="user-row-select"
+                       aria-label="Select {{ row.email }}">
+              {% endif %}
+            </td>
             <td><code>{{ row.email }}</code></td>
             <td>{{ row.display_name or "—" }}</td>
             <td>{{ row.created_at.strftime("%Y-%m-%d") }}</td>
@@ -126,54 +183,195 @@
               {% endif %}
             </td>
             <td>{{ row.session_operator_count }}</td>
-            <td class="col-shrink">
-              {% if is_self %}
-                <span class="muted" title="You can't change your own roles">(self)</span>
-              {% else %}
-                <div class="user-row-actions"
-                     style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-                  {# Admit ⇆ Revoke toggle (Secondary). Label flips
-                     based on current is_operator state. #}
-                  {% if row.is_operator %}
-                    <form method="post" style="margin:0"
-                          action="/operator/sys-admin/users/{{ row.id }}/revoke">
-                      <button class="btn secondary" type="submit">Revoke</button>
-                    </form>
-                  {% else %}
-                    <form method="post" style="margin:0"
-                          action="/operator/sys-admin/users/{{ row.id }}/admit">
-                      <button class="btn secondary" type="submit">Admit</button>
-                    </form>
-                  {% endif %}
-                  {# Promote ⇆ Demote toggle (Secondary). Safety
-                     checkbox retired — the row already telegraphs
-                     the current state through the Sys-admin pill,
-                     and the service-level ``last_admin`` guard
-                     catches the only structurally dangerous case. #}
-                  {% if row.is_sys_admin %}
-                    <form method="post" style="margin:0"
-                          action="/operator/sys-admin/users/{{ row.id }}/demote">
-                      <button class="btn secondary" type="submit">Demote</button>
-                    </form>
-                  {% else %}
-                    <form method="post" style="margin:0"
-                          action="/operator/sys-admin/users/{{ row.id }}/promote">
-                      <button class="btn secondary" type="submit">Promote</button>
-                    </form>
-                  {% endif %}
-                  {# Delete user row — hard delete with service-level
-                     guards (last_admin, owns_sessions). Destructive
-                     style. #}
-                  <form method="post" style="margin:0"
-                        action="/operator/sys-admin/users/{{ row.id }}/remove">
-                    <button class="btn destructive" type="submit">Delete</button>
-                  </form>
-                </div>
-              {% endif %}
-            </td>
           </tr>
         {% endfor %}
       </table>
+      <script>
+        (function () {
+          var table = document.getElementById("users-table");
+          var toolbar = document.getElementById("user-actions");
+          if (!table || !toolbar) return;
+
+          // Total sys-admin count drives the last-admin demote
+          // guard on the client side. Service-level guard is the
+          // structural safety net.
+          var sysAdminCount = 0;
+          table.querySelectorAll("tr[data-user-id]").forEach(function (tr) {
+            if (tr.getAttribute("data-is-sys-admin") === "true") {
+              sysAdminCount += 1;
+            }
+          });
+
+          var actionUrls = {
+            "operator-toggle": {
+              "admit": "/operator/sys-admin/users/{id}/admit",
+              "revoke": "/operator/sys-admin/users/{id}/revoke",
+            },
+            "remove-sessions":
+              "/operator/sys-admin/users/{id}/remove-from-all-sessions",
+            "sys-admin-toggle": {
+              "promote": "/operator/sys-admin/users/{id}/promote",
+              "demote": "/operator/sys-admin/users/{id}/demote",
+            },
+            "delete": "/operator/sys-admin/users/{id}/remove",
+          };
+
+          var checkboxes = table.querySelectorAll(".user-row-select");
+
+          function selectedRow() {
+            for (var i = 0; i < checkboxes.length; i++) {
+              if (checkboxes[i].checked) {
+                return checkboxes[i].closest("tr[data-user-id]");
+              }
+            }
+            return null;
+          }
+
+          function setOtherCheckboxesDisabled(disabled) {
+            checkboxes.forEach(function (cb) {
+              if (!cb.checked) {
+                cb.disabled = disabled;
+              }
+            });
+          }
+
+          function setupButton(name, action, label) {
+            var btn = toolbar.querySelector(
+              '[data-action-btn="' + name + '"]'
+            );
+            var form = toolbar.querySelector(
+              '[data-action-form="' + name + '"]'
+            );
+            if (!btn || !form) return;
+            btn.disabled = action === null;
+            if (label) btn.textContent = label;
+            if (action) {
+              form.setAttribute("action", action);
+              var hidden = form.querySelector('input[name="user_id"]');
+              if (hidden && form._currentUserId) {
+                hidden.value = form._currentUserId;
+              }
+            } else {
+              form.setAttribute("action", "");
+              var hidden2 = form.querySelector('input[name="user_id"]');
+              if (hidden2) hidden2.value = "";
+            }
+          }
+
+          function refresh() {
+            var row = selectedRow();
+            setOtherCheckboxesDisabled(row !== null);
+
+            if (!row) {
+              setupButton("operator-toggle", null, "Admit");
+              setupButton("remove-sessions", null, null);
+              setupButton("sys-admin-toggle", null, "Promote");
+              setupButton("delete", null, null);
+              return;
+            }
+            var userId = row.getAttribute("data-user-id");
+            var isOperator = row.getAttribute("data-is-operator") === "true";
+            var isSysAdmin = row.getAttribute("data-is-sys-admin") === "true";
+            var sessionCount = parseInt(
+              row.getAttribute("data-session-count") || "0", 10);
+            var soleOwnerCount = parseInt(
+              row.getAttribute("data-sole-owner-count") || "0", 10);
+
+            // Stash the user id on each form so setupButton can
+            // populate the hidden input alongside the action URL.
+            toolbar.querySelectorAll("form[data-action-form]").forEach(
+              function (f) { f._currentUserId = userId; }
+            );
+
+            // Operator toggle: Admit when not operator, Revoke
+            // when operator. Revoke gated on sessionCount == 0
+            // (the operator must clear sessions first).
+            if (isOperator) {
+              var op = toolbar.querySelector(
+                '[data-action-btn="operator-toggle"]'
+              );
+              var revokeLabel = op.getAttribute("data-label-revoke");
+              var revokeUrl = actionUrls["operator-toggle"]["revoke"]
+                .replace("{id}", userId);
+              setupButton(
+                "operator-toggle",
+                sessionCount === 0 ? revokeUrl : null,
+                revokeLabel
+              );
+            } else {
+              var admitLabel = toolbar.querySelector(
+                '[data-action-btn="operator-toggle"]'
+              ).getAttribute("data-label-admit");
+              setupButton(
+                "operator-toggle",
+                actionUrls["operator-toggle"]["admit"].replace("{id}", userId),
+                admitLabel
+              );
+            }
+
+            // Remove from all sessions: only when user has
+            // sessions AND is not the sole owner of any.
+            var canRemoveSessions =
+              sessionCount > 0 && soleOwnerCount === 0;
+            setupButton(
+              "remove-sessions",
+              canRemoveSessions
+                ? actionUrls["remove-sessions"].replace("{id}", userId)
+                : null,
+              null
+            );
+
+            // Sys-admin toggle: Promote when not sys-admin,
+            // Demote when sys-admin. Demote gated on
+            // not-last-sys-admin.
+            var sysBtn = toolbar.querySelector(
+              '[data-action-btn="sys-admin-toggle"]'
+            );
+            if (isSysAdmin) {
+              var demoteLabel = sysBtn.getAttribute("data-label-demote");
+              var canDemote = sysAdminCount > 1;
+              setupButton(
+                "sys-admin-toggle",
+                canDemote
+                  ? actionUrls["sys-admin-toggle"]["demote"]
+                      .replace("{id}", userId)
+                  : null,
+                demoteLabel
+              );
+            } else {
+              var promoteLabel = sysBtn.getAttribute("data-label-promote");
+              setupButton(
+                "sys-admin-toggle",
+                actionUrls["sys-admin-toggle"]["promote"]
+                  .replace("{id}", userId),
+                promoteLabel
+              );
+            }
+
+            // Delete: only when user has zero sessions.
+            setupButton(
+              "delete",
+              sessionCount === 0
+                ? actionUrls["delete"].replace("{id}", userId)
+                : null,
+              null
+            );
+          }
+
+          checkboxes.forEach(function (cb) {
+            cb.addEventListener("change", function () {
+              if (cb.checked) {
+                // Single-selection: uncheck any other row.
+                checkboxes.forEach(function (other) {
+                  if (other !== cb) other.checked = false;
+                });
+              }
+              refresh();
+            });
+          });
+          refresh();
+        })();
+      </script>
     {% else %}
       <p class="muted">No users in this workspace yet.</p>
     {% endif %}
