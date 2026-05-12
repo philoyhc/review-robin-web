@@ -966,22 +966,24 @@ def _build_available_rulesets(
     rows: list[SessionRuleSet], *, active_id: int | None
 ) -> list[AvailableRuleSetEntry]:
     """Shape the SessionRuleSet list for the sibling "Available
-    rulesets" card. Same id-ascending order as the dropdown
-    (workspace seeds first via 15C Slice 1, then library copies /
-    operator-authored entries). Post-Slice-4b every row is
-    editable so the ``is_seed`` / ``is_personal`` flags on the
-    entry are vestigial — left in place for template-side
-    compatibility but every row is rendered as Personal."""
+    rulesets" card.
 
+    ``is_seed`` mirrors the row's ``is_seeded`` flag (the seeded
+    materialisations from ``SEEDED_RULE_SETS`` ride the spec-lock).
+    ``is_personal`` is its complement — operator-authored rows
+    (``is_seeded=False``) display the PERSONAL pill so the operator
+    can tell at a glance which entries they own + can edit / delete.
+    """
     entries: list[AvailableRuleSetEntry] = []
     for rs in rows:
+        seeded = bool(rs.is_seeded)
         entries.append(
             AvailableRuleSetEntry(
                 id=rs.id,
                 name=rs.name,
                 description=rs.description or "",
-                is_seed=False,
-                is_personal=True,
+                is_seed=seeded,
+                is_personal=not seeded,
                 is_active=(active_id == rs.id),
             )
         )
