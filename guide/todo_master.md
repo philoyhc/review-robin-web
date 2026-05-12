@@ -409,8 +409,8 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13F (PRs 3-5), 15B, 13C, 14A, 14B, 14C, 15E, 15F, 17A,
-17B, 18A, 18B, 18C, 19, 20**. No global ordering
+**13C, 13F (PRs 3-5), 14A, 14B, 14C, 15B, 15E, 15F, 17A,
+17B, 18A, 18B, 18C, 18D, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -567,6 +567,18 @@ bottom of this file.
   surface gated by 16A.
   **Plan:** `guide/segment_18C_retention_deletion.md`.
 
+- **18D — Export and import update** *(stub created
+  2026-05-12)*. Catch-up pass on the export / import
+  surface (last touched by 12A-3, 2026-05-10) to pick up
+  15C library-tier provenance (`library_origin_id` on
+  RTDs / RuleSets), 15B per-instrument `rule_set_id`,
+  13C group-scoped instrument flavours on the Responses
+  CSV, the inert Zip-all tile, and 13F PR 5 retention
+  columns. Picks up *after* the consumer segments it
+  carries parity for; Part 1 (library provenance) +
+  Part 4 (Zip-all) are unblocked today.
+  **Plan:** `guide/segment_18D_export_and_import_update.md`.
+
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
   coverage-gap closure for Tier-1 specs flagged in
@@ -596,7 +608,7 @@ bottom of this file.
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 3-5), 14A, 15B, 15E, 15F, 17A, 17B, 18A,
-  18B, 18C, 19, 20** are independent of the email + audit
+  18B, 18C, 18D, 19, 20** are independent of the email + audit
   pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;
   13C PR 3 (rule-engine fanout for group-scoped instruments)
