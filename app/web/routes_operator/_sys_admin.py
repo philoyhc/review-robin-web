@@ -210,6 +210,7 @@ def sys_admin_users(
     request: Request,
     invite_error: str | None = Query(default=None),
     toggle_error: str | None = Query(default=None),
+    selected: int | None = Query(default=None),
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -221,6 +222,7 @@ def sys_admin_users(
             "rows": users_service.list_workspace_users(db),
             "invite_error": invite_error,
             "toggle_error": toggle_error,
+            "selected_user_id": selected,
         },
     )
 
@@ -234,15 +236,27 @@ def _load_target(db: Session, user_id: int) -> User:
     return target
 
 
-def _users_redirect(error_code: str | None = None) -> RedirectResponse:
+def _users_redirect(
+    error_code: str | None = None,
+    selected_user_id: int | None = None,
+) -> RedirectResponse:
     url = "/operator/sys-admin/users"
+    params: list[str] = []
     if error_code:
-        url = f"{url}?toggle_error={quote(error_code, safe='')}"
+        params.append(f"toggle_error={quote(error_code, safe='')}")
+    if selected_user_id is not None:
+        params.append(f"selected={selected_user_id}")
+    if params:
+        url = f"{url}?{'&'.join(params)}"
     return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 def _handle_toggle(
-    action: Callable[..., Any], /, **kwargs: Any
+    action: Callable[..., Any],
+    /,
+    *,
+    selected_user_id: int | None = None,
+    **kwargs: Any,
 ) -> RedirectResponse:
     try:
         action(**kwargs)
@@ -261,7 +275,7 @@ def _handle_toggle(
                 status_code=status.HTTP_409_CONFLICT, detail=exc.message
             ) from exc
         raise
-    return _users_redirect()
+    return _users_redirect(selected_user_id=selected_user_id)
 
 
 @router.post("/sys-admin/users/{user_id}/admit")
@@ -271,7 +285,11 @@ def admit_user(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     return _handle_toggle(
-        users_service.admit, db=db, actor=actor, target=_load_target(db, user_id)
+        users_service.admit,
+        db=db,
+        actor=actor,
+        target=_load_target(db, user_id),
+        selected_user_id=user_id,
     )
 
 
@@ -282,7 +300,11 @@ def revoke_user(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     return _handle_toggle(
-        users_service.revoke, db=db, actor=actor, target=_load_target(db, user_id)
+        users_service.revoke,
+        db=db,
+        actor=actor,
+        target=_load_target(db, user_id),
+        selected_user_id=user_id,
     )
 
 
@@ -293,7 +315,11 @@ def promote_user(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     return _handle_toggle(
-        users_service.promote, db=db, actor=actor, target=_load_target(db, user_id)
+        users_service.promote,
+        db=db,
+        actor=actor,
+        target=_load_target(db, user_id),
+        selected_user_id=user_id,
     )
 
 
@@ -304,7 +330,11 @@ def demote_user(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     return _handle_toggle(
-        users_service.demote, db=db, actor=actor, target=_load_target(db, user_id)
+        users_service.demote,
+        db=db,
+        actor=actor,
+        target=_load_target(db, user_id),
+        selected_user_id=user_id,
     )
 
 
@@ -319,6 +349,7 @@ def remove_from_all_sessions(
         db=db,
         actor=actor,
         target=_load_target(db, user_id),
+        selected_user_id=user_id,
     )
 
 
@@ -328,6 +359,8 @@ def remove_user(
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    # ``remove_user`` deletes the row outright, so there's no row
+    # to re-select on the redirect target.
     return _handle_toggle(
         users_service.remove_user,
         db=db,

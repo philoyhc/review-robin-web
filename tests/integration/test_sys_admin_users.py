@@ -89,7 +89,12 @@ def test_admit_flips_is_operator_and_emits_audit(
         f"/operator/sys-admin/users/{target.id}/admit", follow_redirects=False
     )
     assert response.status_code == 303
-    assert response.headers["location"] == "/operator/sys-admin/users"
+    # Selection persists on the redirect so the toolbar comes
+    # back ready for the next action against the same row.
+    assert (
+        response.headers["location"]
+        == f"/operator/sys-admin/users?selected={target.id}"
+    )
 
     db.refresh(target)
     assert target.is_operator is True
@@ -886,3 +891,77 @@ def test_list_workspace_users_surfaces_sole_owner_count(
     assert rows["bob@example.edu"].sole_owner_count == 1
     assert rows["carol@example.edu"].session_operator_count == 1
     assert rows["carol@example.edu"].sole_owner_count == 0
+
+
+# --- Selection persistence + toolbar layout ---------------------------------
+
+
+def test_selection_persists_via_redirect_and_renders_checked(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After a toolbar action the route redirects back with
+    ``?selected={user_id}``; the GET handler reads the param and
+    the template stamps ``checked`` on the matching row so the
+    operator can chain a second action without re-selecting.
+    """
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    target = _seed_target(db, email="bob@example.edu", is_operator=False)
+
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/admit",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert (
+        response.headers["location"]
+        == f"/operator/sys-admin/users?selected={target.id}"
+    )
+
+    # Following the redirect renders the row checkbox already
+    # checked (so the toolbar JS picks up the selection on first
+    # paint without operator interaction). The template wraps
+    # attributes across lines so the substring check normalises
+    # whitespace.
+    body = client.get(
+        f"/operator/sys-admin/users?selected={target.id}"
+    ).text
+    import re
+
+    normalised = re.sub(r"\s+", " ", body)
+    assert (
+        'aria-label="Select bob@example.edu" checked' in normalised
+    )
+
+
+def test_remove_user_redirects_without_selection(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Delete action removes the row, so there's nothing to
+    re-select. The redirect omits the ``selected`` query param."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    target = _seed_target(db, email="bob@example.edu", is_operator=True)
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/remove",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/operator/sys-admin/users"
+
+
+def test_toolbar_left_aligned(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Toolbar sits flush-left so the four buttons cluster next
+    to the row-selection checkboxes (which live in the leftmost
+    column)."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _seed_target(db, email="bob@example.edu", is_operator=True)
+    body = client.get("/operator/sys-admin/users").text
+    assert "justify-content:flex-start" in body
+    assert "justify-content:flex-end" not in body

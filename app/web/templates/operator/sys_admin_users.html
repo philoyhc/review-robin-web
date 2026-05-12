@@ -101,7 +101,8 @@
          action URL based on the selected user's current state. #}
       <div id="user-actions"
            class="user-actions-toolbar"
-           style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end; margin-bottom:12px;">
+           data-selected-user-id="{{ selected_user_id or '' }}"
+           style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-start; margin-bottom:12px;">
         <span class="muted">Operator:</span>
         <form method="post" action="" data-action-form="operator-toggle"
               style="margin:0">
@@ -162,7 +163,8 @@
               {% else %}
                 <input type="checkbox"
                        class="user-row-select"
-                       aria-label="Select {{ row.email }}">
+                       aria-label="Select {{ row.email }}"
+                       {% if selected_user_id and selected_user_id == row.id %}checked{% endif %}>
               {% endif %}
             </td>
             <td><code>{{ row.email }}</code></td>
