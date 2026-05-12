@@ -19,11 +19,11 @@ from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, User
+from app.db.models import ReviewSession, RuleSet, User
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
 from app.services import assignments, relationships as relationships_service
-from app.services.rules import engine, library
+from app.services.rules import engine, library, session_library
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -691,5 +691,122 @@ def rule_based_generate(
 
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/assignments",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Segment 15C Slice 4 — cross-tier promote / demote
+# ---------------------------------------------------------------------------
+#
+# Both routes operate on the session tier (``session_rule_sets``) for the
+# session-side of the transition, leaving the legacy library-tier Rule
+# Builder flow (Save / Copy / Delete against ``operator_rule_sets``)
+# untouched. The picker source flip itself lands in Slice 4b; until then
+# these routes are reachable only via direct POST and let downstream
+# work (the per-instrument picker on the Instruments page,
+# ``instruments.rule_set_id`` resolution in 15B) exercise the cross-tier
+# audit trail end-to-end.
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/rule-based-editor/save-to-library",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def rule_builder_save_to_library(
+    rule_set_id: int = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Promote a SessionRuleSet to the actor's operator library.
+
+    Refuses (303 with ``error=name_collision``) when the actor already
+    has a library RuleSet with the same name. Both sides emit a fresh
+    audit event: ``rule_set.created`` on the workspace tier and
+    ``session_rule_sets.saved_to_library`` on the session tier.
+    """
+    base_url = (
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based-editor"
+    )
+    row = session_library.load_session_rule_set(
+        db, rule_set_id, session_id=review_session.id
+    )
+    if row is None:
+        return RedirectResponse(
+            url=base_url, status_code=status.HTTP_303_SEE_OTHER
+        )
+    try:
+        session_library.save_to_library(
+            db,
+            session_rule_set=row,
+            actor=user,
+            correlation_id=request_correlation_id(),
+        )
+    except session_library.LibraryRuleSetNameConflictError:
+        return RedirectResponse(
+            url=f"{base_url}?rule_set_id={row.id}&error=name_collision",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    db.commit()
+    return RedirectResponse(
+        url=f"{base_url}?rule_set_id={row.id}&saved=1",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/assignments/rule-based-editor/add-from-library",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def rule_builder_add_from_library(
+    library_rule_set_id: int = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Copy a library Personal RuleSet into the session's
+    ``session_rule_sets`` pool. Refuses on cross-operator ids and on
+    name collisions in the session."""
+    base_url = (
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based-editor"
+    )
+    library_row = db.execute(
+        select(RuleSet).where(
+            RuleSet.id == library_rule_set_id,
+            RuleSet.owner_user_id == user.id,
+            RuleSet.is_seed.is_(False),
+            RuleSet.deleted_at.is_(None),
+        )
+    ).scalar_one_or_none()
+    if library_row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Library RuleSet not found",
+        )
+    try:
+        new_row = session_library.add_from_library(
+            db,
+            review_session=review_session,
+            library_rule_set=library_row,
+            actor=user,
+            correlation_id=request_correlation_id(),
+        )
+    except session_library.SessionRuleSetNameConflictError:
+        return RedirectResponse(
+            url=f"{base_url}?error=name_collision",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+    db.commit()
+    return RedirectResponse(
+        url=f"{base_url}?rule_set_id={new_row.id}&saved=1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
