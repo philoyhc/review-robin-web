@@ -258,6 +258,7 @@ def _surface_context(
     errors: list[responses_service.ValidationError] | None = None,
     bad_values: dict[tuple[int, str], str] | None = None,
     show_incomplete_marks: bool = False,
+    cookies: dict[str, str] | None = None,
 ) -> dict:
     lifecycle.observe_deadline(
         db, review_session, correlation_id=request_correlation_id()
@@ -436,9 +437,32 @@ def _surface_context(
             df.id
             for df in all_display_fields_by_instrument.get(instrument_id, [])
         }
+        # Effective sort spec for this instrument (Segment 13B
+        # Part 2 PR 5):
+        #   1. Reviewer's per-browser cookie, if present + valid.
+        #   2. Operator-default ``instrument.sort_display_fields``.
+        # Both shapes are ``[{"display_field_id": int, "dir":
+        # "asc|desc"}, ...]`` once normalised. The cookie keys
+        # arrive as opaque strings (e.g. ``"reviewee.name"``,
+        # ``"display:7"``); the helper decodes them against the
+        # instrument's display-field set + the locked Reviewee
+        # identity row.
+        cookie_spec = views.decode_cookie_sort_spec_for_reviewer_surface(
+            cookies=cookies or {},
+            session_id=review_session.id,
+            instrument_id=instrument_id,
+            display_fields=all_display_fields_by_instrument.get(
+                instrument_id, []
+            ),
+        )
+        effective_spec = (
+            cookie_spec
+            if cookie_spec is not None
+            else instrument.sort_display_fields
+        )
         group_rows = views.order_rows_by_sort_spec(
             group_rows,
-            instrument.sort_display_fields,
+            effective_spec,
             key_resolver=_reviewer_row_sort_key,
             known_display_field_ids=known_display_field_ids,
         )
@@ -973,6 +997,7 @@ def review_surface(
         reviewer=reviewer,
         review_session=review_session,
         current_position=instrument_position,
+        cookies=dict(request.cookies),
     )
     context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
     context["reviewer_review_count"] = reviewer_review_count_for_user(db, user)
@@ -1055,6 +1080,7 @@ async def reviewer_save(
             current_position=instrument_position,
             errors=result.errors,
             bad_values=bad_values,
+            cookies=dict(request.cookies),
         )
         context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
         context["reviewer_review_count"] = reviewer_review_count_for_user(
@@ -1113,6 +1139,7 @@ async def reviewer_submit(
             missing=result.missing,
             errors=result.errors,
             bad_values=bad_values,
+            cookies=dict(request.cookies),
             show_incomplete_marks=not result.errors,
         )
         context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
