@@ -747,8 +747,8 @@ re-architecting; see "Designed-for-extensibility" below.
   the right-half status panel and the per-row submitted-timestamp in
   the status column.
 - **AG Grid replacement of the reviewer-surface `<table>`** —
-  Segment 17 (stub plan at
-  `guide/segment_17_ag_grid_replacement.md`).
+  Segment 17A (stub plan at
+  `guide/segment_17A_ag_grid_replacement.md`).
 
 ---
 
