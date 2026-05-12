@@ -10,7 +10,7 @@
 > Sys Admin page itself + the sys-admin authorization gate live
 > in **16A** (`guide/archive/segment_16A_sys_admin_page.md`);
 > the in-app audit viewer lives in **16C**
-> (`guide/segment_16C_richer_audit_views.md`).
+> (`guide/archive/segment_16C_richer_audit_views.md`).
 
 **Sizing:** 2 MVP PRs (shipped as one); PR 3 retired.
 **Depends on:** **16A PR 1 + PR 6** (shipped — the
