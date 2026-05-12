@@ -1,5 +1,29 @@
 # Segment 15A — Pervasive friendly labels
 
+> **Archived 2026-05-12.** All three slices + the post-Slice-3
+> polish shipped 2026-05-12:
+>
+> - Slice 1 (#887) — resolver service + audit emitters +
+>   Settings-CSV `display_fields[*].label` retirement.
+> - Slice 2 (#888) — display-layer sweep + Instrument editor's
+>   Friendly Label column read-only.
+> - Slice 3 (#889) — per-page inline editors above Reviewers /
+>   Reviewees / Relationships tables.
+> - Polish (#890 / #891) — sort-button layout fix +
+>   Secondary-style Save / Cancel + disabled-until-edited UX.
+>
+> Slice 4 (`AssignmentContext1-3`) stayed dropped — the schema
+> home retired in 15D PR 6b. The 13B sort-button `aria-label`
+> strings still carry the literal `"Sort by Reviewer Tag1"` etc.;
+> they were intentionally out of Slice 2's sweep and remain a
+> small follow-up if accessibility surfaces the need.
+>
+> Plan stays here as historical context; the canonical
+> per-session settings inventory lives in
+> `spec/settings_inventory.md` (the `session_field_labels` table
+> + its 12 in-scope slots) and the per-PR Done entries live in
+> `guide/todo_master.md`.
+
 **Status:** Plan rewritten 2026-05-12 (full refresh).
 **Sizing:** ~3 PRs (Slice 4 dropped — see below).
 **Depends on:** none. Schema + Settings-CSV round-trip already in
