@@ -24,7 +24,12 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import assignments, csv_imports, relationships as relationships_service
+from app.services import (
+    assignments,
+    csv_imports,
+    field_labels as field_labels_service,
+    relationships as relationships_service,
+)
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
 from app.web.deps import (
@@ -513,4 +518,169 @@ def _render_relationships_page(
             ),
         },
         status_code=status_code,
+    )
+
+
+# ── Segment 15A Slice 3 — per-page friendly-label editors ──────────────
+
+
+# Allowlist of (source_field) values each editor accepts, mirroring
+# ``app.services.field_labels._VALID_SOURCE_FIELDS``. Each tuple is
+# (form_param_name, source_field) since form-param names must be
+# valid Python identifiers (the ``pair_context`` source_fields are
+# bare digits, so the form names get a ``slot_`` prefix).
+_REVIEWER_SLOTS: tuple[tuple[str, str], ...] = (
+    ("tag_1", "tag_1"),
+    ("tag_2", "tag_2"),
+    ("tag_3", "tag_3"),
+)
+_REVIEWEE_SLOTS: tuple[tuple[str, str], ...] = (
+    ("name", "name"),
+    ("email_or_identifier", "email_or_identifier"),
+    ("profile_link", "profile_link"),
+    ("tag_1", "tag_1"),
+    ("tag_2", "tag_2"),
+    ("tag_3", "tag_3"),
+)
+_PAIR_CONTEXT_SLOTS: tuple[tuple[str, str], ...] = (
+    ("slot_1", "1"),
+    ("slot_2", "2"),
+    ("slot_3", "3"),
+)
+
+
+def _save_field_labels(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    source_type: str,
+    slots: tuple[tuple[str, str], ...],
+    submitted: dict[str, str],
+    correlation_id: str | None,
+) -> None:
+    """Upsert / clear per submitted slot.
+
+    Rejected with 409 when ``is_ready`` — labels are locked
+    alongside the rest of the page's data on a live session;
+    operators revert to draft to rename.
+    """
+    if lifecycle.is_ready(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Session is {review_session.status}; revert to "
+                "draft to rename labels."
+            ),
+        )
+    for form_param, source_field in slots:
+        value = (submitted.get(form_param) or "").strip()
+        if value:
+            field_labels_service.upsert(
+                db,
+                review_session,
+                source_type=source_type,
+                source_field=source_field,
+                label=value,
+                user=user,
+                correlation_id=correlation_id,
+            )
+        else:
+            field_labels_service.clear(
+                db,
+                review_session,
+                source_type=source_type,
+                source_field=source_field,
+                user=user,
+                correlation_id=correlation_id,
+            )
+
+
+@router.post(
+    "/sessions/{session_id}/reviewers/field-labels",
+    response_class=RedirectResponse,
+)
+async def reviewers_save_field_labels(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Save the three reviewer tag labels for this session."""
+    form = await request.form()
+    submitted = {
+        param: str(form.get(param, "")) for param, _ in _REVIEWER_SLOTS
+    }
+    _save_field_labels(
+        db,
+        review_session=review_session,
+        user=user,
+        source_type="reviewer",
+        slots=_REVIEWER_SLOTS,
+        submitted=submitted,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/reviewers",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/reviewees/field-labels",
+    response_class=RedirectResponse,
+)
+async def reviewees_save_field_labels(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Save the six reviewee labels (identity + tags) for this session."""
+    form = await request.form()
+    submitted = {
+        param: str(form.get(param, "")) for param, _ in _REVIEWEE_SLOTS
+    }
+    _save_field_labels(
+        db,
+        review_session=review_session,
+        user=user,
+        source_type="reviewee",
+        slots=_REVIEWEE_SLOTS,
+        submitted=submitted,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/reviewees",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/relationships/field-labels",
+    response_class=RedirectResponse,
+)
+async def relationships_save_field_labels(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Save the three pair-context labels for this session."""
+    form = await request.form()
+    submitted = {
+        param: str(form.get(param, "")) for param, _ in _PAIR_CONTEXT_SLOTS
+    }
+    _save_field_labels(
+        db,
+        review_session=review_session,
+        user=user,
+        source_type="pair_context",
+        slots=_PAIR_CONTEXT_SLOTS,
+        submitted=submitted,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/relationships",
+        status_code=status.HTTP_303_SEE_OTHER,
     )

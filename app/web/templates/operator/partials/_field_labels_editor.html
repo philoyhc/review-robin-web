@@ -1,0 +1,54 @@
+{#-
+  Segment 15A Slice 3 — per-page friendly-label editor.
+
+  Renders a card with one or two ``.field-labels-row``s, each
+  containing one ``<input>`` per slot, plus a single Save button
+  at the bottom. Inputs render disabled (no Save button) when
+  ``is_ready`` is true — the page's existing
+  ``<div class="card lock">`` already messages "revert to draft"
+  in that state.
+
+  Usage:
+
+      {% set rows = [
+        [("tag_1", "Tag 1"), ("tag_2", "Tag 2"), ("tag_3", "Tag 3")],
+      ] %}
+      {% include "operator/partials/_field_labels_editor.html" %}
+
+  with these locals in scope:
+    - session          (the ReviewSession)
+    - is_ready         (lifecycle flag)
+    - field_labels_form_action     (POST URL)
+    - field_labels_source_type     (e.g. "reviewer")
+    - field_labels_card_title      (e.g. "Tag labels")
+    - field_labels_help            (one-line caption text)
+    - field_labels_rows            (list of lists of (form_param, source_field) tuples)
+    - field_labels_field_param_name(form_param, source_field)  — function returning the input name
+-#}
+<div class="card field-labels-editor">
+  <h2>{{ field_labels_card_title }}</h2>
+  <p class="form-help">{{ field_labels_help }}</p>
+  <form method="post" action="{{ field_labels_form_action }}">
+    {% for row in field_labels_rows %}
+      <div class="field-labels-row">
+        {% for form_param, source_field in row %}
+          {% set lp = field_label_pair(session, field_labels_source_type, source_field) %}
+          <label>
+            <span class="muted">{{ lp.canonical }}</span>
+            <input type="text"
+                   name="{{ form_param }}"
+                   value="{{ lp.friendly if lp.has_override else '' }}"
+                   placeholder="{{ lp.canonical }}"
+                   maxlength="255"
+                   {% if is_ready %}disabled aria-disabled="true"{% endif %}>
+          </label>
+        {% endfor %}
+      </div>
+    {% endfor %}
+    {% if not is_ready %}
+      <div class="field-labels-actions">
+        <button class="btn" type="submit">Save labels</button>
+      </div>
+    {% endif %}
+  </form>
+</div>
