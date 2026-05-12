@@ -348,20 +348,52 @@ primary surface for it.
   state when zero instruments have rules pinned, with a
   helpful nudge: "Pin rules on the Instruments page first"
   with a deep link.
+- **Post-Generate report.** On the redirect back to the page
+  after a successful Generate, a confirmation banner reports
+  the materialised count per instrument ("Generated 42 pairs
+  for *Manager survey*, 30 pairs for *Peer survey* (72 total).").
+  Same surface the existing flash-message pipeline uses; copy
+  reads the same per-instrument count from the
+  `assignments.replaced` audit-event payload that Slice 1's
+  service emits.
 - **Keep the self-reviews Include toggle** — it's still the
   one bulk operation that makes sense here (it's a property
   of the rendered pair set, not the rule).
 - **Per-instrument grouping** when `len(instruments) > 1`:
   the existing pairs preview table grows a tab strip (one tab
   per instrument, plus an "All instruments" tab that shows
-  the union, read-only). Each tab renders the rule pinned to
-  that instrument as a small read-only header ("Rule: Full
-  Matrix · 42 pairs · Edit on Instruments page"). The
-  "Edit on Instruments page" link deep-links to the matching
-  instrument card.
+  the union, read-only). Each tab renders a small read-only
+  status block at the top:
+
+  - **Rule:** the name of the rule pinned to this instrument
+    (or "— No rule pinned —" with a deep link to the
+    Instrument card if NULL).
+  - **Eligible pairs:** the count the rule engine would
+    produce if run *now* against the current rosters /
+    relationships (preview mode — same number the Instrument
+    card's sub-card displays, served by the same helper).
+    Recomputes on every page load; reflects roster edits
+    immediately, even before Generate runs.
+  - **Generated:** the actual `Assignment` row count for this
+    instrument plus the timestamp of the last
+    `assignments.replaced` event ("42 pairs · last generated
+    11:02 today"), or "Not generated yet" when zero rows
+    exist or the staleness fingerprint diverges from the
+    pinned-rules fingerprint.
+  - **Edit on Instruments page** link deep-linking to the
+    matching instrument card.
+
+  The eligible-vs-generated split is the operator's hint that
+  Generate is the act that commits — the eligible count
+  changes the moment a rule pin or a roster changes; the
+  generated count only changes when the operator clicks
+  Generate. When the two diverge, the page also surfaces a
+  small "Pairs may be stale" badge near the Generate button.
 - **Single-instrument case** — the page renders the
-  page-level Generate button + self-reviews toggle + pairs
-  preview table. No tabs, no breakdown.
+  page-level Generate button + the same Rule / Eligible
+  pairs / Generated status block (no tab strip, just the
+  inline block above the table) + self-reviews toggle +
+  pairs preview table.
 - **Per-instrument sort.** Folds in the carved-from-13B-Part-2-PR-F
   per-instrument table sort: cookie name shape
   `rrw-sort-assignments-{session_id}-{instrument_id}` (one
@@ -591,11 +623,15 @@ to bump if something else slips.
     page-level Generate button fans out across instruments
     with rules pinned, skips NULL ones, fires
     `assignments.replaced` per instrument; disabled state
-    when no rules pinned. Plus
+    when no rules pinned; post-Generate banner reports the
+    per-instrument materialised count. Plus
     `test_assignments_page_preview.py` — Rule Based card's
-    picker gone, preview table renders, tabs mount when
-    N > 1. `test_session_top_nav.py` — Assignments tab sits
-    left of Validate.
+    picker gone; per-instrument status block reports Rule /
+    Eligible / Generated independently; eligible count
+    refreshes after a roster edit while the generated count
+    stays put until Generate runs; "Pairs may be stale" badge
+    surfaces when the two diverge. `test_session_top_nav.py`
+    — Assignments tab sits left of Validate.
   - **Slice 4** — `test_session_home_next_action_generate.py`
     — Next Action card shows "Generate assignments" primary
     button when ≥1 instrument has a rule pinned and the
