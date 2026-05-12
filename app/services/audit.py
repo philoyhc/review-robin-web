@@ -463,6 +463,29 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "response_type_definitions.added_from_library": EventSchema(
         _IDENTITY | {"snapshot", "refs", "context"}
     ),
+    # Segment 15C Slice 4 — session-tier RuleSet mutations + the
+    # paired Save-to-library / Add-from-library transitions. The
+    # session-tier `.created` / `.updated` / `.deleted` events
+    # mirror the library-side rule_set.* family but carry
+    # session_id (per the ``_IDENTITY`` slot pair). The
+    # `saved_to_library` / `added_from_library` emitters record
+    # cross-tier transitions; `rule_set.created` on the library
+    # side stays unchanged (reused for the Save-to-library write).
+    "session_rule_set.created": EventSchema(
+        _IDENTITY | {"snapshot", "refs", "context"}
+    ),
+    "session_rule_set.updated": EventSchema(
+        _IDENTITY | {"changes", "refs", "context"}
+    ),
+    "session_rule_set.deleted": EventSchema(
+        _IDENTITY | {"snapshot", "refs"}
+    ),
+    "session_rule_sets.saved_to_library": EventSchema(
+        _IDENTITY | {"snapshot", "refs", "context"}
+    ),
+    "session_rule_sets.added_from_library": EventSchema(
+        _IDENTITY | {"snapshot", "refs", "context"}
+    ),
     # PR 7 — settings
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "reviewees.imported": EventSchema(_IDENTITY | {"counts", "context"}),
