@@ -90,91 +90,6 @@
     </form>
   </div>
 
-  {# 15C Slice 5 — operator library management. Lists the operator's
-     library entries on both tiers; each row carries a Delete button
-     and a session-copy count so the operator can see who's using the
-     entry before deleting. Delete is library-side only — session
-     copies survive via the SET NULL cascade on library_origin_id
-     (15C invariant #3). #}
-  <div class="card" id="library-rtds">
-    <h2 style="margin-top: 0;">Response Type Definitions (library)</h2>
-    <p class="muted">
-      Per-operator library of Response Type Definitions. Auto-copied
-      into every newly-created session; reach session copies via the
-      Instruments page on each session.
-    </p>
-    {% if library_rtds %}
-      <table style="width: 100%;">
-        <tr>
-          <th style="text-align: left;">Name</th>
-          <th style="text-align: left;">Data Type</th>
-          <th style="text-align: right;">Sessions using</th>
-          <th></th>
-        </tr>
-        {% for rtd in library_rtds %}
-          <tr>
-            <td><code>{{ rtd.response_type }}</code></td>
-            <td>{{ rtd.data_type }}</td>
-            <td style="text-align: right;">{{ rtd_session_copy_counts[rtd.id] }}</td>
-            <td style="text-align: right;">
-              <form method="post"
-                    action="/operator/settings/library/rtd/{{ rtd.id }}/delete"
-                    onsubmit="return confirm('Delete library Response Type {{ rtd.response_type }}? {{ rtd_session_copy_counts[rtd.id] }} session(s) hold a copy — those copies will survive.');"
-                    style="display: inline; margin: 0;">
-                <button class="btn destructive" type="submit">Delete</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </table>
-    {% else %}
-      <p class="muted">
-        No Response Type Definitions in your library yet. Add some via
-        the <em>Save to library</em> action on a session's Instruments
-        page.
-      </p>
-    {% endif %}
-  </div>
-
-  <div class="card" id="library-rule-sets">
-    <h2 style="margin-top: 0;">RuleSets (library)</h2>
-    <p class="muted">
-      Per-operator library of assignment RuleSets. Auto-copied into
-      every newly-created session; reach session copies via the Rule
-      Builder on each session.
-    </p>
-    {% if library_rule_sets %}
-      <table style="width: 100%;">
-        <tr>
-          <th style="text-align: left;">Name</th>
-          <th style="text-align: left;">Description</th>
-          <th style="text-align: right;">Sessions using</th>
-          <th></th>
-        </tr>
-        {% for rs in library_rule_sets %}
-          <tr>
-            <td><code>{{ rs.name }}</code></td>
-            <td>{{ rs.description or "—" }}</td>
-            <td style="text-align: right;">{{ rule_set_session_copy_counts[rs.id] }}</td>
-            <td style="text-align: right;">
-              <form method="post"
-                    action="/operator/settings/library/rule-set/{{ rs.id }}/delete"
-                    onsubmit="return confirm('Delete library RuleSet {{ rs.name }}? {{ rule_set_session_copy_counts[rs.id] }} session(s) hold a copy — those copies will survive.');"
-                    style="display: inline; margin: 0;">
-                <button class="btn destructive" type="submit">Delete</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </table>
-    {% else %}
-      <p class="muted">
-        No RuleSets in your library yet. Add some via the
-        <em>Save to library</em> action on a session's Rule Builder.
-      </p>
-    {% endif %}
-  </div>
-
   <div class="card danger-zone" id="danger-zone">
     <h2>Clear all settings</h2>
     <p>
@@ -189,6 +104,99 @@
         <button class="btn destructive" type="submit">Clear all settings</button>
       </div>
     </form>
+  </div>
+
+  {# 15C Slice 5 — operator library management. Lists the operator's
+     library entries on both tiers; each row carries a Delete button
+     and a session-copy count so the operator can see who's using the
+     entry before deleting. Delete is library-side only — session
+     copies survive via the SET NULL cascade on library_origin_id
+     (15C invariant #3).
+
+     Layout: half-width side-by-side at the bottom of the page, after
+     all the SMTP / danger-zone cards. #}
+  <div style="margin-top: 16px; display: flex; gap: 16px; align-items: stretch;"
+       id="library-cards-row">
+    <div class="card card-half" id="library-rtds"
+         style="margin-bottom: 0; flex: 1; min-width: 0;">
+      <h2 style="margin-top: 0;">Response Type Definitions (library)</h2>
+      <p class="muted">
+        Per-operator library of Response Type Definitions. Auto-copied
+        into every newly-created session; reach session copies via the
+        Instruments page on each session.
+      </p>
+      {% if library_rtds %}
+        <table style="width: 100%;">
+          <tr>
+            <th style="text-align: left;">Name</th>
+            <th style="text-align: left;">Data Type</th>
+            <th style="text-align: right;">Sessions using</th>
+            <th></th>
+          </tr>
+          {% for rtd in library_rtds %}
+            <tr>
+              <td><code>{{ rtd.response_type }}</code></td>
+              <td>{{ rtd.data_type }}</td>
+              <td style="text-align: right;">{{ rtd_session_copy_counts[rtd.id] }}</td>
+              <td style="text-align: right;">
+                <form method="post"
+                      action="/operator/settings/library/rtd/{{ rtd.id }}/delete"
+                      onsubmit="return confirm('Delete library Response Type {{ rtd.response_type }}? {{ rtd_session_copy_counts[rtd.id] }} session(s) hold a copy — those copies will survive.');"
+                      style="display: inline; margin: 0;">
+                  <button class="btn destructive" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <p class="muted">
+          No Response Type Definitions in your library yet. Add some via
+          the <em>Save to library</em> action on a session's Instruments
+          page.
+        </p>
+      {% endif %}
+    </div>
+
+    <div class="card card-half" id="library-rule-sets"
+         style="margin-bottom: 0; flex: 1; min-width: 0;">
+      <h2 style="margin-top: 0;">RuleSets (library)</h2>
+      <p class="muted">
+        Per-operator library of assignment RuleSets. Auto-copied into
+        every newly-created session; reach session copies via the Rule
+        Builder on each session.
+      </p>
+      {% if library_rule_sets %}
+        <table style="width: 100%;">
+          <tr>
+            <th style="text-align: left;">Name</th>
+            <th style="text-align: left;">Description</th>
+            <th style="text-align: right;">Sessions using</th>
+            <th></th>
+          </tr>
+          {% for rs in library_rule_sets %}
+            <tr>
+              <td><code>{{ rs.name }}</code></td>
+              <td>{{ rs.description or "—" }}</td>
+              <td style="text-align: right;">{{ rule_set_session_copy_counts[rs.id] }}</td>
+              <td style="text-align: right;">
+                <form method="post"
+                      action="/operator/settings/library/rule-set/{{ rs.id }}/delete"
+                      onsubmit="return confirm('Delete library RuleSet {{ rs.name }}? {{ rule_set_session_copy_counts[rs.id] }} session(s) hold a copy — those copies will survive.');"
+                      style="display: inline; margin: 0;">
+                  <button class="btn destructive" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <p class="muted">
+          No RuleSets in your library yet. Add some via the
+          <em>Save to library</em> action on a session's Rule Builder.
+        </p>
+      {% endif %}
+    </div>
   </div>
 
   <script>
