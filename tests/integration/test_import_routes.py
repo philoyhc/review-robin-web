@@ -600,10 +600,15 @@ def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
 
     body = client.get(f"/operator/sessions/{review_session.id}/reviewers").text
 
-    # New per-tag columns replace the combined "Tags" cell.
-    assert '<th class="tag-col tag-col-1">Tag1</th>' in body
-    assert '<th class="tag-col tag-col-2">Tag2</th>' in body
-    assert '<th class="tag-col tag-col-3">Tag3</th>' in body
+    # New per-tag columns replace the combined "Tags" cell. The
+    # 13B Part 2 PR 6 scaffolding adds ``rrw-sortable`` class +
+    # sort badge span inside each header, so match by substring.
+    assert 'class="tag-col tag-col-1 rrw-sortable"' in body
+    assert "Tag1" in body
+    assert 'class="tag-col tag-col-2 rrw-sortable"' in body
+    assert "Tag2" in body
+    assert 'class="tag-col tag-col-3 rrw-sortable"' in body
+    assert "Tag3" in body
     assert "<th>Tags</th>" not in body
 
     # Toggle row above the table — Tag1 / Tag2 ticked (have data),

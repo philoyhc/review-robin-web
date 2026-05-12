@@ -183,6 +183,29 @@ async def _handle_import(
     )
 
 
+_REVIEWER_SORT_KEYS = {"name", "email", "tag_1", "tag_2", "tag_3", "status"}
+_REVIEWEE_SORT_KEYS = {
+    "name",
+    "email_or_identifier",
+    "tag_1",
+    "tag_2",
+    "tag_3",
+    "status",
+}
+
+
+def _reviewer_sort_value(reviewer, key: str):
+    """Sort-key resolver for the Reviewers Setup table (Segment 13B
+    Part 2 PR 6)."""
+    return getattr(reviewer, key, None)
+
+
+def _reviewee_sort_value(reviewee, key: str):
+    """Sort-key resolver for the Reviewees Setup table (Segment 13B
+    Part 2 PR 6)."""
+    return getattr(reviewee, key, None)
+
+
 @router.get("/sessions/{session_id}/reviewers", response_class=HTMLResponse)
 def reviewers_list(
     request: Request,
@@ -191,6 +214,17 @@ def reviewers_list(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     reviewers = assignments.list_reviewers(db, review_session.id)
+    # Segment 13B Part 2 PR 6 — cookie-backed personal sort.
+    sort_spec = views.decode_cookie_sort_spec(
+        cookies=dict(request.cookies),
+        cookie_name=f"rrw-sort-reviewers-{review_session.id}",
+        valid_keys=_REVIEWER_SORT_KEYS,
+    )
+    reviewers = views.apply_cookie_sort(
+        reviewers,
+        sort_spec,
+        value_resolver=_reviewer_sort_value,
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_reviewers.html",
@@ -221,6 +255,16 @@ def reviewees_list(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     reviewees = assignments.list_reviewees(db, review_session.id)
+    sort_spec = views.decode_cookie_sort_spec(
+        cookies=dict(request.cookies),
+        cookie_name=f"rrw-sort-reviewees-{review_session.id}",
+        valid_keys=_REVIEWEE_SORT_KEYS,
+    )
+    reviewees = views.apply_cookie_sort(
+        reviewees,
+        sort_spec,
+        value_resolver=_reviewee_sort_value,
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_reviewees.html",
