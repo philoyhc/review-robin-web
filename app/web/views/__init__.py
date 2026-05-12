@@ -131,8 +131,10 @@ from ._rule_builder import (
     build_rule_builder_context,
 )
 
-# Reviewer-surface sort helper (Segment 13B PR 1 + Part 2 PR 5).
+# Sort helpers (Segment 13B PR 1 + Part 2 PR 5 + PR 6).
 from ._sort import (
+    apply_cookie_sort,
+    decode_cookie_sort_spec,
     decode_cookie_sort_spec_for_reviewer_surface,
     order_rows_by_sort_spec,
 )
@@ -225,6 +227,8 @@ __all__ = [
     "build_audit_log_rows",
     "filters_querystring",
     "format_audit_detail",
+    "apply_cookie_sort",
+    "decode_cookie_sort_spec",
     "decode_cookie_sort_spec_for_reviewer_surface",
     "order_rows_by_sort_spec",
     "parse_audit_log_filters",

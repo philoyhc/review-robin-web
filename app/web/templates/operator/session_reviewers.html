@@ -134,27 +134,38 @@
           Tag3
         </label>
       </div>
-      <table id="reviewers-table">
+      <table id="reviewers-table"
+             data-rrw-sortable="rrw-sort-reviewers-{{ session.id }}">
+        <thead>
         <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th class="tag-col tag-col-1">Tag1</th>
-          <th class="tag-col tag-col-2">Tag2</th>
-          <th class="tag-col tag-col-3">Tag3</th>
-          <th>Status</th>
+          <th class="rrw-sortable" data-sort-key="name"
+              onclick="rrwSortHeaderClick(event, this)">Name<span class="rrw-sort-badge"></span></th>
+          <th class="rrw-sortable" data-sort-key="email"
+              onclick="rrwSortHeaderClick(event, this)">Email<span class="rrw-sort-badge"></span></th>
+          <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1"
+              onclick="rrwSortHeaderClick(event, this)">Tag1<span class="rrw-sort-badge"></span></th>
+          <th class="tag-col tag-col-2 rrw-sortable" data-sort-key="tag_2"
+              onclick="rrwSortHeaderClick(event, this)">Tag2<span class="rrw-sort-badge"></span></th>
+          <th class="tag-col tag-col-3 rrw-sortable" data-sort-key="tag_3"
+              onclick="rrwSortHeaderClick(event, this)">Tag3<span class="rrw-sort-badge"></span></th>
+          <th class="rrw-sortable" data-sort-key="status"
+              onclick="rrwSortHeaderClick(event, this)">Status<span class="rrw-sort-badge"></span></th>
         </tr>
+        </thead>
+        <tbody class="rrw-rows">
         {% for reviewer in reviewers %}
           <tr id="reviewer-row-{{ reviewer.id }}">
-            <td>{{ reviewer.name }}</td>
-            <td><code>{{ reviewer.email }}</code></td>
-            <td class="tag-col tag-col-1">{{ reviewer.tag_1 or "" }}</td>
-            <td class="tag-col tag-col-2">{{ reviewer.tag_2 or "" }}</td>
-            <td class="tag-col tag-col-3">{{ reviewer.tag_3 or "" }}</td>
-            <td>
+            <td data-sort-value="{{ reviewer.name }}">{{ reviewer.name }}</td>
+            <td data-sort-value="{{ reviewer.email }}"><code>{{ reviewer.email }}</code></td>
+            <td class="tag-col tag-col-1" data-sort-value="{{ reviewer.tag_1 or '' }}">{{ reviewer.tag_1 or "" }}</td>
+            <td class="tag-col tag-col-2" data-sort-value="{{ reviewer.tag_2 or '' }}">{{ reviewer.tag_2 or "" }}</td>
+            <td class="tag-col tag-col-3" data-sort-value="{{ reviewer.tag_3 or '' }}">{{ reviewer.tag_3 or "" }}</td>
+            <td data-sort-value="{{ reviewer.status }}">
               <span class="pill {{ 'pill-info' if reviewer.status == 'active' else 'pill-empty' }}">{{ reviewer.status }}</span>
             </td>
           </tr>
         {% endfor %}
+        </tbody>
       </table>
     </div>
     <style>

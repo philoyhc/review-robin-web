@@ -35,9 +35,109 @@ from collections.abc import Callable, Iterable, Sequence
 from typing import Any, TypeVar
 
 __all__ = [
+    "apply_cookie_sort",
+    "decode_cookie_sort_spec",
     "decode_cookie_sort_spec_for_reviewer_surface",
     "order_rows_by_sort_spec",
 ]
+
+
+# Segment 13B Part 2 PR 6 — generic cookie decoder + apply helper
+# for operator-surface tables (Reviewers / Reviewees /
+# Relationships / Operations Assignments). The reviewer-surface
+# decoder above stays specialized for the display-field-id key
+# space; the helpers below take a free-form ``key`` string +
+# a per-page ``value_resolver`` so each table picks its own
+# attribute namespace.
+
+
+def decode_cookie_sort_spec(
+    *,
+    cookies: dict[str, str],
+    cookie_name: str,
+    valid_keys: set[str] | None = None,
+) -> list[tuple[str, str]]:
+    """Parse a sortable-table cookie into ``[(key, dir), ...]``
+    tuples in cascade order.
+
+    Returns ``[]`` for missing / malformed cookies — callers fall
+    back to insertion order. Validates ``dir`` ∈ ``{asc, desc}``,
+    caps at 3 entries, and silently drops keys not in
+    ``valid_keys`` (when supplied) so a stale cookie referencing
+    a deleted column is a no-op rather than a render error.
+    """
+    import json
+
+    raw = cookies.get(cookie_name)
+    if not raw:
+        return []
+    try:
+        decoded = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(decoded, list):
+        return []
+    out: list[tuple[str, str]] = []
+    for entry in decoded[:3]:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("key")
+        direction = entry.get("dir")
+        if not isinstance(key, str) or direction not in ("asc", "desc"):
+            continue
+        if valid_keys is not None and key not in valid_keys:
+            continue
+        out.append((key, direction))
+    return out
+
+
+def apply_cookie_sort(
+    rows,
+    spec: list[tuple[str, str]],
+    *,
+    value_resolver,
+):
+    """Sort ``rows`` per the cascade-ordered ``(key, dir)`` spec.
+
+    ``value_resolver(row, key) -> Any | None`` extracts the
+    sortable value for one column. Empty strings collapse to
+    ``None``; ``None`` always sorts last regardless of direction.
+
+    Stable when ties — Python's ``sorted`` is stable, and the
+    comparator's per-key short-circuit keeps the cascade
+    well-defined. Multi-key cascade walks the keys in priority
+    order; first decisive key wins.
+
+    Returns a new list (input not mutated). Empty / missing
+    ``spec`` short-circuits to ``list(rows)``.
+    """
+    materialised = list(rows)
+    if not spec:
+        return materialised
+
+    from functools import cmp_to_key
+
+    def _compare(a, b) -> int:
+        for key, direction in spec:
+            av = value_resolver(a, key)
+            bv = value_resolver(b, key)
+            if av == "":
+                av = None
+            if bv == "":
+                bv = None
+            if av is None and bv is None:
+                continue
+            if av is None:
+                return 1
+            if bv is None:
+                return -1
+            if av == bv:
+                continue
+            base = -1 if av < bv else 1
+            return -base if direction == "desc" else base
+        return 0
+
+    return sorted(materialised, key=cmp_to_key(_compare))
 
 
 # Segment 13B Part 2 PR 5 — cookie shape.

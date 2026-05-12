@@ -1,0 +1,226 @@
+"""Cookie-backed sort on Reviewers + Reviewees Setup tables —
+Segment 13B Part 2 PR 6.
+
+Pins:
+
+- Each table renders the sort scaffolding (table marker +
+  ``rrw-sortable`` class on sortable headers + per-row
+  ``data-sort-value`` cells + ``tbody.rrw-rows`` wrapper).
+- The route reads the per-(session, table) cookie and threads
+  the decoded spec through ``views.apply_cookie_sort`` so the
+  initial HTML lands sorted.
+- Malformed cookies are silently dropped (insertion order).
+- Stale keys (column the operator doesn't recognise anymore)
+  are silently dropped.
+"""
+from __future__ import annotations
+
+import json
+
+from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import ReviewSession
+
+
+def _make_session(
+    client: TestClient, db: Session, *, code: str
+) -> ReviewSession:
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Spring", "code": code},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    return db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+
+
+def _populate_reviewers(client: TestClient, session_id: int) -> None:
+    # Deliberately non-alphabetical insertion order so a sort
+    # actually reshuffles.
+    client.post(
+        f"/operator/sessions/{session_id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                (
+                    b"ReviewerName,ReviewerEmail\n"
+                    b"Bravo,bravo@example.edu\n"
+                    b"Alpha,alpha@example.edu\n"
+                    b"Charlie,charlie@example.edu\n"
+                ),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+
+def _populate_reviewees(client: TestClient, session_id: int) -> None:
+    client.post(
+        f"/operator/sessions/{session_id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                (
+                    b"RevieweeName,RevieweeEmail\n"
+                    b"Bravo,bravo@example.edu\n"
+                    b"Alpha,alpha@example.edu\n"
+                    b"Charlie,charlie@example.edu\n"
+                ),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+
+# --- Reviewers --------------------------------------------------------------
+
+
+def test_reviewers_table_renders_sort_scaffolding(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rev-scaff")
+    _populate_reviewers(client, review_session.id)
+    response = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert (
+        f'data-rrw-sortable="rrw-sort-reviewers-{review_session.id}"'
+        in body
+    )
+    assert '<tbody class="rrw-rows">' in body
+    assert 'class="rrw-sortable" data-sort-key="name"' in body
+    assert 'class="rrw-sortable" data-sort-key="email"' in body
+    assert 'class="rrw-sortable" data-sort-key="status"' in body
+    # Each <td> carries a data-sort-value mirroring the persisted
+    # row value.
+    assert 'data-sort-value="Alpha"' in body
+
+
+def test_reviewers_cookie_drives_ssr_initial_order(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rev-cookie-asc")
+    _populate_reviewers(client, review_session.id)
+
+    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    client.cookies.set(
+        cookie_name,
+        json.dumps([{"key": "name", "dir": "asc"}]),
+        path=f"/operator/sessions/{review_session.id}",
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    # Alphabetical ascending.
+    assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
+
+
+def test_reviewers_cookie_desc_order(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rev-cookie-desc")
+    _populate_reviewers(client, review_session.id)
+
+    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    client.cookies.set(
+        cookie_name,
+        json.dumps([{"key": "name", "dir": "desc"}]),
+        path=f"/operator/sessions/{review_session.id}",
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
+
+
+def test_reviewers_malformed_cookie_falls_back_to_insertion_order(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rev-cookie-bad")
+    _populate_reviewers(client, review_session.id)
+
+    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    client.cookies.set(
+        cookie_name,
+        "not-json{",
+        path=f"/operator/sessions/{review_session.id}",
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    # Insertion order: Bravo, Alpha, Charlie.
+    assert body.find("Bravo") < body.find("Alpha") < body.find("Charlie")
+
+
+def test_reviewers_stale_cookie_key_dropped(
+    db: Session, client: TestClient
+) -> None:
+    """A cookie referencing a column the route doesn't recognise
+    (e.g. an old ``tag_5``) is silently dropped — the rest of the
+    spec still applies."""
+    review_session = _make_session(client, db, code="rev-cookie-stale")
+    _populate_reviewers(client, review_session.id)
+
+    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    client.cookies.set(
+        cookie_name,
+        json.dumps([
+            {"key": "tag_5", "dir": "asc"},
+            {"key": "name", "dir": "asc"},
+        ]),
+        path=f"/operator/sessions/{review_session.id}",
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    # tag_5 drops; name asc still applies.
+    assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
+
+
+# --- Reviewees --------------------------------------------------------------
+
+
+def test_reviewees_table_renders_sort_scaffolding(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="ree-scaff")
+    _populate_reviewees(client, review_session.id)
+    response = client.get(
+        f"/operator/sessions/{review_session.id}/reviewees"
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert (
+        f'data-rrw-sortable="rrw-sort-reviewees-{review_session.id}"'
+        in body
+    )
+    assert '<tbody class="rrw-rows">' in body
+    assert 'class="rrw-sortable" data-sort-key="name"' in body
+    assert 'class="rrw-sortable" data-sort-key="email_or_identifier"' in body
+    assert 'data-sort-value="Alpha"' in body
+
+
+def test_reviewees_cookie_drives_ssr_initial_order(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="ree-cookie-asc")
+    _populate_reviewees(client, review_session.id)
+
+    cookie_name = f"rrw-sort-reviewees-{review_session.id}"
+    client.cookies.set(
+        cookie_name,
+        json.dumps([{"key": "name", "dir": "asc"}]),
+        path=f"/operator/sessions/{review_session.id}",
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewees"
+    ).text
+    assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
