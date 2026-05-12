@@ -18,7 +18,14 @@
             {% else %}
               <strong>{{ entry.name }}</strong>
             {% endif %}
-            <span class="pill {% if entry.is_seed %}pill-info{% else %}pill-count{% endif %}">{% if entry.is_seed %}seed{% else %}personal{% endif %}</span>
+            {# Pills mirror the RTD card convention: seeded rows are
+               workspace-shipped (their identity is the rule name +
+               description, no pill); operator-authored rows render
+               a "personal" pill so the operator can spot the ones
+               they own + can edit / delete. #}
+            {% if entry.is_personal %}
+              <span class="pill pill-count">personal</span>
+            {% endif %}
           </div>
           {% if entry.description %}
             <p class="form-help" style="margin: 4px 0 0 0;">{{ entry.description }}</p>
