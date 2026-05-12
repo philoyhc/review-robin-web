@@ -14,6 +14,13 @@ and apply the invariants:
   through "ask another admin".
 - ``demote`` refuses if the target is the only remaining sys-
   admin (``UserOperationError`` with code ``last_admin``).
+- ``revoke`` refuses if the target still owns sessions
+  (``still_owner``) — operator clears the session memberships
+  via ``remove_from_all_sessions`` first.
+- ``remove_from_all_sessions`` refuses if the target is the
+  sole owner of any session (``sole_owner``).
+- ``remove_user`` (hard delete) refuses if the target owns any
+  session (``owns_sessions``).
 - Other invariants (Promote-when-already-admin, etc.) are
   no-ops at the column level; the calling route forms hide the
   irrelevant button per row.
@@ -26,6 +33,7 @@ point without overriding the flags this module set.
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -45,6 +53,7 @@ class WorkspaceUserRow:
     is_sys_admin: bool
     created_at: datetime
     session_operator_count: int
+    sole_owner_count: int
 
 
 class UserOperationError(ValueError):
@@ -60,15 +69,39 @@ class UserOperationError(ValueError):
 
 
 def list_workspace_users(db: Session) -> list[WorkspaceUserRow]:
-    """Every users row + per-user session-operator count.
-    Ordered by ``id DESC`` so newly-admitted users surface at
-    the top."""
-    rows = db.execute(
-        select(User, func.count(SessionOperator.id))
-        .outerjoin(SessionOperator, SessionOperator.user_id == User.id)
-        .group_by(User.id)
-        .order_by(User.id.desc())
-    ).all()
+    """Every users row + per-user session-operator + sole-owner
+    counts. Ordered by ``id DESC`` so newly-admitted users surface
+    at the top.
+
+    ``session_operator_count`` is the total number of sessions
+    where the user appears as an operator (any role).
+    ``sole_owner_count`` is the number of those sessions that
+    list exactly one operator (i.e. the user is the only owner) —
+    drives the "Remove from all sessions" + "Delete user" gates
+    on the operator UI.
+    """
+    # One sweep over session_operators is enough to compute both
+    # per-user totals and per-session operator counts (which then
+    # back the sole-owner derivation). Operator workspaces stay
+    # small (tens of users × tens of sessions), so an in-Python
+    # aggregate is cheaper than a window-function query that
+    # SQLite has to fake.
+    op_rows = list(
+        db.execute(select(SessionOperator.session_id, SessionOperator.user_id))
+    )
+    session_total: dict[int, int] = defaultdict(int)
+    for session_id, _ in op_rows:
+        session_total[session_id] += 1
+    user_total: dict[int, int] = defaultdict(int)
+    user_sole: dict[int, int] = defaultdict(int)
+    for session_id, user_id in op_rows:
+        user_total[user_id] += 1
+        if session_total[session_id] == 1:
+            user_sole[user_id] += 1
+
+    users = (
+        db.execute(select(User).order_by(User.id.desc())).scalars().all()
+    )
     return [
         WorkspaceUserRow(
             id=user.id,
@@ -77,9 +110,10 @@ def list_workspace_users(db: Session) -> list[WorkspaceUserRow]:
             is_operator=user.is_operator,
             is_sys_admin=user.is_sys_admin,
             created_at=user.created_at,
-            session_operator_count=count,
+            session_operator_count=user_total.get(user.id, 0),
+            sole_owner_count=user_sole.get(user.id, 0),
         )
-        for user, count in rows
+        for user in users
     ]
 
 
@@ -131,7 +165,33 @@ def revoke(
     target: User,
     correlation_id: str | None = None,
 ) -> None:
+    """Flip ``is_operator`` off on a workspace user.
+
+    Refuses when the target still appears on any
+    ``session_operators`` row (``still_owner``). The operator
+    clears those memberships via ``remove_from_all_sessions``
+    first; revoking the workspace flag while sessions still
+    reference the user would leave the sessions in an
+    inconsistent state where a non-operator owns a session.
+    """
     _guard_self(actor, target)
+    owned = int(
+        db.execute(
+            select(func.count(SessionOperator.id)).where(
+                SessionOperator.user_id == target.id
+            )
+        ).scalar_one()
+    )
+    if owned > 0:
+        raise UserOperationError(
+            code="still_owner",
+            message=(
+                f"Refusing to revoke operator status from "
+                f"{target.email} while they own "
+                f"{owned} session{'s' if owned != 1 else ''}. "
+                "Use 'Remove from all sessions' first."
+            ),
+        )
     old = target.is_operator
     target.is_operator = False
     audit.write_event(
@@ -196,6 +256,85 @@ def demote(
         correlation_id=correlation_id,
     )
     db.commit()
+
+
+def remove_from_all_sessions(
+    db: Session,
+    *,
+    actor: User,
+    target: User,
+    correlation_id: str | None = None,
+) -> int:
+    """Strip the target from every session they own.
+
+    Guards:
+
+    - ``self_action`` — operators can't act on themselves.
+    - ``sole_owner`` — refuses when the target is the only
+      operator of any session (removing them would leave that
+      session orphaned). Operator transfers / co-owns those
+      sessions first.
+
+    Returns the number of ``session_operators`` rows deleted.
+    A no-op (already detached from every session) succeeds
+    silently and returns ``0`` without emitting an audit event.
+    """
+    _guard_self(actor, target)
+
+    rows = list(
+        db.execute(
+            select(SessionOperator).where(SessionOperator.user_id == target.id)
+        ).scalars()
+    )
+    if not rows:
+        return 0
+
+    # Sole-owner check: any session this user appears on whose
+    # total operator count is 1 is sole-ownership.
+    session_ids = [r.session_id for r in rows]
+    counts = dict(
+        db.execute(
+            select(
+                SessionOperator.session_id,
+                func.count(SessionOperator.id),
+            )
+            .where(SessionOperator.session_id.in_(session_ids))
+            .group_by(SessionOperator.session_id)
+        ).all()
+    )
+    sole_ids = sorted(sid for sid, c in counts.items() if c == 1)
+    if sole_ids:
+        raise UserOperationError(
+            code="sole_owner",
+            message=(
+                f"Refusing to detach {target.email}: they are the sole "
+                f"owner of {len(sole_ids)} "
+                f"session{'s' if len(sole_ids) != 1 else ''}. "
+                "Add another owner to those sessions first."
+            ),
+        )
+
+    deleted_session_ids = sorted(session_ids)
+    for row in rows:
+        db.delete(row)
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="workspace.user_detached_from_all_sessions",
+        summary=(
+            f"Removed {target.email} from {len(rows)} "
+            f"session{'s' if len(rows) != 1 else ''}"
+        ),
+        actor_user_id=actor.id,
+        payload=audit.counts(sessions_detached=len(rows)),
+        refs={"target_user_id": target.id},
+        context={
+            "session_ids": ",".join(str(sid) for sid in deleted_session_ids),
+        },
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return len(rows)
 
 
 def remove_user(

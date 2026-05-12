@@ -128,16 +128,20 @@ def test_revoke_flips_is_operator_back_and_emits_audit(
     assert event.detail["changes"] == {"is_operator": [True, False]}
 
 
-def test_revoke_preserves_session_operators(
+def test_revoke_refuses_when_user_still_owns_sessions(
     db: Session,
     client: TestClient,
     make_client,
     bob,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Revoking bob's operator status must NOT cascade-delete his
-    session_operators rows — re-admitting later restores access
-    without re-adding to sessions."""
+    """The Accounts Management refinement adds a ``still_owner``
+    guard on revoke: an operator who still appears on any
+    ``session_operators`` row can't be revoked from the workspace
+    operator flag until those sessions are cleared. The operator
+    surface gates the button via the same logic on the client
+    side; this test pins the server-side enforcement.
+    """
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
 
     bob_client = make_client(bob)
@@ -149,21 +153,45 @@ def test_revoke_preserves_session_operators(
     bob_row = db.execute(
         select(User).where(User.email == "bob@example.edu")
     ).scalar_one()
-    before_count = db.execute(
-        select(SessionOperator).where(SessionOperator.user_id == bob_row.id)
-    ).scalars().all()
-    assert len(before_count) == 1
 
-    # Alice (sys-admin) revokes Bob's operator status.
+    # Alice (sys-admin) tries to revoke; refused with 409.
     alice_client = make_client(_alice_auth_user())
-    alice_client.post(
+    response = alice_client.post(
         f"/operator/sys-admin/users/{bob_row.id}/revoke",
         follow_redirects=False,
     )
-    after_count = db.execute(
-        select(SessionOperator).where(SessionOperator.user_id == bob_row.id)
-    ).scalars().all()
-    assert len(after_count) == 1  # session_operators row preserved
+    assert response.status_code == 409
+    db.refresh(bob_row)
+    assert bob_row.is_operator is True  # unchanged
+    ops_after = (
+        db.execute(
+            select(SessionOperator).where(
+                SessionOperator.user_id == bob_row.id
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(ops_after) == 1  # session_operators row preserved
+
+
+def test_revoke_succeeds_when_user_has_no_sessions(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An operator with zero session memberships can still be
+    revoked via the per-row route (toolbar will not render this
+    state outside of the gate; the server accepts it)."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    target = _seed_target(db, email="lonely@example.edu", is_operator=True)
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/revoke",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    db.refresh(target)
+    assert target.is_operator is False
 
 
 def _alice_auth_user():
@@ -661,28 +689,46 @@ def test_remove_user_404s_on_missing_target(
 # --- Template render shape — post-15A button refinement ---------------------
 
 
-def test_user_row_renders_three_action_buttons(
+def test_workspace_users_page_renders_bulk_action_toolbar(
     db: Session,
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Per-row action cell renders three buttons on one row:
-    Admit (or Revoke) + Promote (or Demote) + Delete. Safety
-    checkbox retired."""
+    """The action surface is now a single bulk-action toolbar
+    above the table. Per-row buttons retired in favour of a
+    single-row checkbox-driven selection: one user picked at a
+    time drives whichever toolbar buttons are eligible.
+
+    Toolbar carries four action forms:
+    Operator: Admit / Revoke (one form) + Remove from all sessions,
+    Sys Admin: Promote / Demote (one form), and Delete.
+    """
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     _seed_target(db, email="bob@example.edu", is_operator=True)
     body = client.get("/operator/sys-admin/users").text
-    # Three forms wired to the three actions (Revoke since bob is
-    # already operator; Promote since bob is not sys_admin; Delete).
-    assert "/revoke" in body
-    assert "/promote" in body
-    assert "/remove" in body
-    # Each button carries the canonical Secondary / Destructive style.
-    assert 'class="btn secondary" type="submit">Revoke' in body
-    assert 'class="btn secondary" type="submit">Promote' in body
-    assert 'class="btn destructive" type="submit">Delete' in body
-    # The retired safety checkbox no longer renders.
+    # Toolbar exists.
+    assert 'id="user-actions"' in body
+    # Four action forms wired with the right markers.
+    assert 'data-action-form="operator-toggle"' in body
+    assert 'data-action-form="remove-sessions"' in body
+    assert 'data-action-form="sys-admin-toggle"' in body
+    assert 'data-action-form="delete"' in body
+    # Per-row checkbox replaces the inline button cluster.
+    assert 'class="user-row-select"' in body
+    # All toolbar buttons start ``disabled`` (no row selected yet).
+    assert 'data-action-btn="operator-toggle"' in body
+    assert 'data-action-btn="remove-sessions"' in body
+    assert 'data-action-btn="sys-admin-toggle"' in body
+    assert 'data-action-btn="delete"' in body
+    # No safety checkbox; no inline per-row Revoke/Promote/Delete buttons.
     assert 'name="confirm"' not in body
+    assert 'type="submit">Revoke<' not in body
+    assert 'type="submit">Promote<' not in body
+    # Per-row data attributes for the JS gates.
+    assert 'data-is-operator="true"' in body
+    assert 'data-is-sys-admin="false"' in body
+    assert 'data-session-count="0"' in body
+    assert 'data-sole-owner-count="0"' in body
 
 
 def test_invite_card_renders_secondary_buttons_disabled_by_default(
@@ -697,3 +743,146 @@ def test_invite_card_renders_secondary_buttons_disabled_by_default(
     assert "data-invite-cancel" in body
     assert 'disabled>Invite' in body
     assert 'disabled>Cancel' in body
+
+
+# --- Remove from all sessions (post-15A bulk-action refinement) -------------
+
+
+def test_remove_from_all_sessions_deletes_operator_rows_and_emits_audit(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.db.models import ReviewSession
+
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    target = _seed_target(db, email="bob@example.edu", is_operator=True)
+
+    # Bob shares two sessions with someone else (so he's not sole owner).
+    co_owner = _seed_target(db, email="carol@example.edu", is_operator=True)
+    for code in ("s1", "s2"):
+        rs = ReviewSession(
+            name=code, code=code, created_by_user_id=co_owner.id
+        )
+        db.add(rs)
+        db.flush()
+        db.add(SessionOperator(session_id=rs.id, user_id=target.id, role="owner"))
+        db.add(
+            SessionOperator(session_id=rs.id, user_id=co_owner.id, role="owner")
+        )
+    db.commit()
+
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/remove-from-all-sessions",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    # All of bob's session_operators rows are gone.
+    leftover = (
+        db.execute(
+            select(SessionOperator).where(
+                SessionOperator.user_id == target.id
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert leftover == []
+    # is_operator stays True (the workspace flag is independent of
+    # per-session ownership).
+    db.refresh(target)
+    assert target.is_operator is True
+    # Audit event with counts envelope.
+    event = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type
+                == "workspace.user_detached_from_all_sessions"
+            )
+        )
+        .scalars()
+        .one()
+    )
+    assert event.detail["counts"] == {"sessions_detached": 2}
+    assert event.detail["refs"] == {"target_user_id": target.id}
+
+
+def test_remove_from_all_sessions_refuses_when_sole_owner(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.db.models import ReviewSession
+
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    target = _seed_target(db, email="bob@example.edu", is_operator=True)
+    # Bob is the sole owner of a session.
+    rs = ReviewSession(
+        name="solo", code="solo", created_by_user_id=target.id
+    )
+    db.add(rs)
+    db.flush()
+    db.add(SessionOperator(session_id=rs.id, user_id=target.id, role="owner"))
+    db.commit()
+
+    response = client.post(
+        f"/operator/sys-admin/users/{target.id}/remove-from-all-sessions",
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+    # No rows touched.
+    leftover = (
+        db.execute(
+            select(SessionOperator).where(
+                SessionOperator.user_id == target.id
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(leftover) == 1
+
+
+def test_remove_from_all_sessions_refuses_self(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    client.get("/operator/sys-admin/users")
+    alice = db.execute(
+        select(User).where(User.email == "alice@example.edu")
+    ).scalar_one()
+    response = client.post(
+        f"/operator/sys-admin/users/{alice.id}/remove-from-all-sessions",
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+
+
+def test_list_workspace_users_surfaces_sole_owner_count(
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``WorkspaceUserRow.sole_owner_count`` powers the toolbar
+    Delete / Remove-from-all-sessions gates."""
+    from app.db.models import ReviewSession
+    from app.services import users as users_service
+
+    bob = _seed_target(db, email="bob@example.edu", is_operator=True)
+    carol = _seed_target(db, email="carol@example.edu", is_operator=True)
+    # Bob solo on s1, co-owner on s2.
+    s1 = ReviewSession(name="s1", code="s1", created_by_user_id=bob.id)
+    s2 = ReviewSession(name="s2", code="s2", created_by_user_id=bob.id)
+    db.add_all([s1, s2])
+    db.flush()
+    db.add(SessionOperator(session_id=s1.id, user_id=bob.id, role="owner"))
+    db.add(SessionOperator(session_id=s2.id, user_id=bob.id, role="owner"))
+    db.add(SessionOperator(session_id=s2.id, user_id=carol.id, role="owner"))
+    db.commit()
+
+    rows = {row.email: row for row in users_service.list_workspace_users(db)}
+    assert rows["bob@example.edu"].session_operator_count == 2
+    assert rows["bob@example.edu"].sole_owner_count == 1
+    assert rows["carol@example.edu"].session_operator_count == 1
+    assert rows["carol@example.edu"].sole_owner_count == 0

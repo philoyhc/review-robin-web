@@ -251,7 +251,12 @@ def _handle_toggle(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
             ) from exc
-        if exc.code in {"last_admin", "owns_sessions"}:
+        if exc.code in {
+            "last_admin",
+            "owns_sessions",
+            "still_owner",
+            "sole_owner",
+        }:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail=exc.message
             ) from exc
@@ -300,6 +305,20 @@ def demote_user(
 ) -> RedirectResponse:
     return _handle_toggle(
         users_service.demote, db=db, actor=actor, target=_load_target(db, user_id)
+    )
+
+
+@router.post("/sys-admin/users/{user_id}/remove-from-all-sessions")
+def remove_from_all_sessions(
+    user_id: int,
+    actor: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    return _handle_toggle(
+        users_service.remove_from_all_sessions,
+        db=db,
+        actor=actor,
+        target=_load_target(db, user_id),
     )
 
 
