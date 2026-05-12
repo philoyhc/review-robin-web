@@ -28,16 +28,22 @@ persistence so the sort survives reloads on the same browser.
 operator-default sort spec stored on `Instrument.sort_display_fields`,
 tri-state Sort column on the per-instrument Display Fields
 card, reviewer-side live override on the response-table column
-headers. Live-only state on the reviewer side (no persistence
-beyond the page lifecycle).
+headers.
 
-**Part 2 planned** (5 PRs, scoped 2026-05-12) lifts the
-reviewer-surface sort primitive into the operator surface
+**Part 2 shipped 2026-05-12** (5 PRs **#873 / #874 / #875 /
+#876 / #877**, plus refinement PR **#878**). Lifts the
+reviewer-surface sort primitive into a site-wide
+`base.html` script, adds cookie-backed persistence so the
+sort survives reloads on the same browser, and rolls the
+same affordance into the four operator-surface tables
 (Reviewers / Reviewees / Relationships / Operations
-Assignments) and adds cookie-backed persistence so the sort
-survives reloads on the same browser. Part 2 PR F (per-
-instrument Assignments after 15B) sits outside this plan;
-it's flagged in the 15B segment for execution there.
+Assignments). PR #878 refined the click target to a small
+`↕` button next to each column label so the sort affordance
+is discoverable on first paint.
+
+**Part 2 PR F (per-instrument Assignments after 15B) carved
+out to 15B Slice 4c** — see
+`guide/segment_15B_per_instrument_assignments.md`.
 
 Refreshed 2026-05-12 against the as-shipped 13D scaffolding.
 **Schema already in place** since Segment 13D PR 5
