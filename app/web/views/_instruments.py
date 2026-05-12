@@ -284,6 +284,13 @@ def build_instruments_context(
     rtds = instruments_service.get_session_rtds(
         db, session_id=review_session.id
     )
+    # 15C Slice 3: library RTDs the operator hasn't already pulled
+    # into this session — drives the "Add from library" picker on
+    # the RTD card. Empty list means either no library entries or
+    # every library entry is already in this session.
+    library_rtds_available = instruments_service.list_library_rtds_not_in_session(
+        db, owner_user=user, session_id=review_session.id
+    )
 
     rtd_delete_blocked = (
         {
@@ -324,6 +331,7 @@ def build_instruments_context(
         "instrument_saved_state": instrument_saved_state,
         "saved_instrument_id": saved,
         "rtds": rtds,
+        "library_rtds_available": library_rtds_available,
         "rtd_error": rtd_error,
         "rtd_error_id": rtd_id,
         "rf_save_error": rf_save_error,
