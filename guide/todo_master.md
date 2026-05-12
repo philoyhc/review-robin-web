@@ -288,6 +288,22 @@ Bonus on the path: **#870** added a diagnostic Instrument column to the Operatio
 
 ---
 
+### Segment 15C — Operator RTD / RuleSet libraries — done 2026-05-12 (PRs #908 → #913 + #911 / #912)
+
+Symmetric two-tier library / per-session-copy model for both RTDs and RuleSets. Workspace seeds materialise into every newly-created session's `session_rule_sets`; operators promote / demote entries between the per-operator library tier (`operator_rule_sets` + `operator_response_type_definitions`) and the per-session tier via paired `Save to library` / `Add from library` affordances on the RTD card and the Rule Builder. The operator Settings page grows a library-management surface listing library entries with delete + session-copy counts. Plan archived: `guide/archive/segment_15C_operator_libraries.md`.
+
+- **#908** — Slice 1 workspace-seed materialisation. Renamed `SEEDS` → `SEEDED_RULE_SETS` in `app/services/rules/seeds.py`; new `materialise_seed_rule_sets(db, review_session)` mirror of `ensure_default_response_type_definitions`. Wired into `create_session` alongside the RTD seeding. New `session_rule_sets.materialised_from_seed` audit emitter. No data migration — workspace seeds already lived only as code constants; Slice 1 formalises that and starts copying them into the per-session table.
+- **#909** — Slice 2 auto-copy operator library on session create. New `app/services/library_materialise.py::materialise_operator_libraries` copies the actor's library RTDs and Personal RuleSets into the per-session tables; idempotent, seeds-first order (so any name collision lands on the seed copy). Two new audit emitters (`response_type_definitions.materialised_from_library`, `session_rule_sets.materialised_from_library`).
+- **#910** — Slice 3 RTD card library actions. Per-row "To library" button (gated on non-seeded + not-already-linked) and "Add from library" picker card on `/operator/sessions/{id}/instruments`. Three new audit emitters (`operator_rtd.created`, `response_type_definitions.saved_to_library`, `response_type_definitions.added_from_library`) under the canonical 11K envelope. "in library" pill renders on session rows whose `library_origin_id` is set.
+- **#911** — Slice 4a session-tier RuleSet service + cross-tier routes. Additive: new `app/services/rules/session_library.py` with the full Save-As / in-place / rename / hard-delete / Save-to-library / Add-from-library surface against `session_rule_sets`. Five new audit emitters (`session_rule_set.created` / `.updated` / `.deleted` plus `session_rule_sets.saved_to_library` / `.added_from_library`). Two new routes on the Rule Builder (`/save-to-library` and `/add-from-library`) reachable via direct POST; the picker source flip itself stays in Slice 4b.
+- **#912** — Slice 4b Rule Builder picker source flip. The Rule Builder page (`/operator/sessions/{id}/assignments/rule-based-editor`) flips from `operator_rule_sets` to `session_rule_sets` end-to-end — picker dropdown, editor load, Save / Copy / Delete all retarget the session tier via the Slice 4a helpers. `_resolve_save_as_name` ports to `(session_id, name)` scope. Every row in the picker is editable / deletable; seed-banner concept retires. ~30 existing Rule Builder tests swept to the new model.
+- **#913** — Slice 5 operator-library management on the Settings page. Two new cards on `/operator/settings` listing library entries (RTDs + Personal RuleSets) with per-row Delete buttons and Sessions-using counts. Hard-delete for library RTDs (`operator_rtd.deleted` audit event) + soft-delete for library RuleSets (existing `rule_set.deleted`). Session copies survive — `library_origin_id` clears via SET NULL on hard delete; pointer survives soft delete. Add / Edit affordances deferred (authoring continues via Save-to-library from per-session pages).
+- **Slice 6 wrap-up** (this entry + plan archive). The planned `instruments.no_session_rtd_for_field` ValidationRule retired without landing: the FK on `InstrumentResponseField.response_type_id` already has `ON DELETE CASCADE`, so the orphan state the rule would defend against is unreachable in SQL. Defensive code without a realistic firing path is dead code. Audit-event registration confirmed complete across all 15C slices; no stale `is_seed` writes outside the historical Alembic migration.
+
+15C unblocks Segment 15B (per-instrument assignments): Slice 1 populates `session_rule_sets` so the per-instrument picker has a non-empty pool; Slice 4 flips the Rule Builder picker so 15B's "Edit rule" deep link lands on the session copy.
+
+---
+
 ### Segment 15A — Pervasive friendly labels — done 2026-05-12 (PRs #887 → #891)
 
 Operator-renamable display labels for 12 in-scope slots per session (3 reviewer tags + 6 reviewee identity-and-tag fields + 3 pair-context slots) flow through every display-layer surface. Underlying logic everywhere keeps assuming canonical machine names — Rule Builder, source picker, CSV-import error copy, validators, audit-event payloads all read the canonical name. Plan archived: `guide/archive/segment_15A_friendly_labels.md`.
@@ -439,19 +455,10 @@ conflicts (none detected).
 
 6. *(15A shipped 2026-05-12 — see Done above.)*
 
-7. **15C — Operator RTD / RuleSet libraries.**
-   Symmetric two-tier model for both RTDs and RuleSets:
-   operator master library (cross-session, reusable) +
-   per-session copy (portable, independently editable). Explicit
-   "Save to library" / "Add from library" actions; auto-copy
-   whole library on session create; workspace seeds bypass the
-   library. ~5-7 PRs (service + UX only — every table comes
-   from 13D PR 2 / PR 3). Sequenced **before 15B** so
-   `session_rule_sets` rows exist for 15B's
-   `instruments.rule_set_id` to point at.
-   **Plan:** `guide/segment_15C_operator_libraries.md`.
+7. *(15C shipped 2026-05-12 — see Done above.)*
 
-8. **15B — Per-instrument assignments.**
+8. **15B — Per-instrument assignments.** *(Unblocked by 15C
+    shipping 2026-05-12; ready to start.)*
     Each `Instrument` carries its own assignment set (e.g. the
     Manager survey collects different reviewer → reviewee
     pairings than the Peer survey within one session). Schema
@@ -461,12 +468,14 @@ conflicts (none detected).
     uniformly today. Post-15D the per-instrument hook is
     `instruments.rule_set_id` (the FK landed inert in 13D PR 4)
     pointing at a `session_rule_sets` row that 15C populates.
-    Slices: per-instrument service scope, persist per-instrument
-    rule-set selection, per-instrument Assignments page UI,
-    Quick Setup selector, per-instrument validation. ~5-7 PRs.
-    Recommended after 15C. (Manual-CSV `Instrument` column
-    catalog item #28 is moot post-15D; manual-row authoring
-    retired.)
+    Slices: per-instrument service scope + Settings CSV apply
+    path light-up, per-instrument rule picker on the Instrument
+    card, Assignments page reshape to preview-only + tab swap,
+    Next Action card "Generate assignments" affordance,
+    per-instrument validation, reviewer dashboard per-instrument
+    grouping. ~6 PRs. (Manual-CSV `Instrument` column catalog
+    item #28 is moot post-15D; manual-row authoring retired.
+    `AssignmentContext1-3` also retired.)
     **Plan:** `guide/segment_15B_per_instrument_assignments.md`.
 
 #### Stubs

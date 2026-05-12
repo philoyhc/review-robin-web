@@ -1,7 +1,25 @@
 # Segment 15C — Operator RTD / RuleSet libraries
 
-**Status:** Plan stub (2026-05-09); codebase-aligned 2026-05-12
-ahead of implementation kick-off.
+**Archived 2026-05-12.** All six slices shipped on 2026-05-12
+(PRs #908 → #913 + the Slice 4 split #911 / #912 and the
+Slice 6 wrap-up). The library / per-session-copy model is now
+fully wired end-to-end: workspace seeds materialise into
+`session_rule_sets` on session create; operator libraries
+auto-copy on session create; RTD + RuleSet cards on the
+session surfaces gain `Save to library` / `Add from library`
+affordances; the Rule Builder picker reads session-scoped
+rows; the operator Settings page lists library contents
+with per-row delete and session-copy counts.
+
+Slice 6 trimmed the planned `instruments.no_session_rtd_for_field`
+ValidationRule: the FK on `InstrumentResponseField.response_type_id`
+already has `ON DELETE CASCADE`, so the orphan state the rule
+would defend against is unreachable in SQL. Defensive validation
+without a realistic firing path is dead code; retired without
+landing.
+
+**Original status header:** Plan stub (2026-05-09);
+codebase-aligned 2026-05-12 ahead of implementation kick-off.
 **Sizing:** ~5-7 PRs (service + UX wiring; no schema).
 **Depends on:** **Segment 13D** (PR 0 `operator_rule_sets`
 rename, PR 2 `session_rule_sets`, PR 3
