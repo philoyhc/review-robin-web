@@ -409,61 +409,32 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 3-5), 14A, 14B, 14C, 15B, 15E, 15F, 17A,
+**13F (PRs 3-5), 15B, 13C, 14A, 14B, 14C, 15E, 15F, 17A,
 17B, 18A, 18B, 18C, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
 #### Numbered queue
 
-1. **13C — Enhanced instruments.**
-   Group-scoped instruments (per-instrument flavour where one
-   answer covers a group of reviewees) + a "Duplicate
-   instrument" action-row button. Sized as 5 PRs. Action row
-   ends up with: Edit / Save / Cancel (state-aware) + Add new
-   instrument + Add group-scoped instrument (new) + Duplicate
-   instrument (new). No `Response` schema change. **Note**
-   (post-15D): the original plan stamped per-instrument flavour
-   metadata onto the now-dropped `Assignment.context` JSON
-   column; that stash will need to relocate (likely onto the
-   `relationships` row or onto a new per-instrument column on
-   `assignments`) — flag for the 13C plan revision.
-   Independent of 13A and 13B.
-   **Plan:** `guide/segment_13C_enhanced_instrument.md`.
-   **Functional spec:** `spec/group_scoped_instruments.md`.
+1. **13F — More DB prep (14C / 16A / 16B / 18B / 18C
+   ride-along)** *(in flight — **PRs 1 + 2 shipped 2026-05-11**;
+   PRs 3-5 deferred until consumer segments)*. Mirrors the
+   13D / 13E inert-migrations pattern for the **next** batch
+   of schema needs identified during the Segment 16 PR-ladder
+   sizing pass. Reordered 2026-05-11 so the 16-series work
+   leads: **PR 1 (shipped)** — `users.is_sys_admin` Boolean
+   + model-only `session_operators.role` value-set lock and
+   Python-default fix; **PR 2 (shipped)** — `users.is_operator`
+   Boolean for Option C strict-allowlist access (16A PR 1
+   reads it). PRs 3-5 (`session_tags`,
+   `sessions.reminder_settings`,
+   `sessions.retention_exception` + `retention_overrides`)
+   ride with their consumer segments (18B / 14C / 18C) when
+   those segments are picked up. **The 16-series schema
+   scaffolding is now complete — Segment 16A is unblocked.**
+   **Plan:** `guide/segment_13F_more_db_prep.md`.
 
-2. **14A — Production hardening.**
-   Observability, security, support runbooks, real-pilot prep.
-   Catalog #26 (local Postgres docker-compose for dev).
-   **Plan:** `guide/segment_14A_production_hardening.md`.
-
-3. **14B — Email infrastructure (send activation + backends).**
-   *(Renamed from 14-1 on 2026-05-11 as part of the 14 → 14A /
-   14B / 14C split.)* All email *wiring* lives here. The schema
-   columns Part A writes to landed with **Segment 11C Part 2**
-   (PR #541, 2026-05-07) and are ready for the dispatch helper.
-   - **Parts A → E** (sequential): SMTP send activation →
-     `correlation_id` strategy → bulk-send queue + worker →
-     per-deployment from-identity defaults → generalised
-     Outbox diagnostic surface.
-   - **Parts F → H** (independent backend swaps): Option B
-     (Microsoft Graph), Option C (Azure Communication Services),
-     Option D (third-party transactional). Ship as deployment
-     demand dictates.
-
-   Catalog #34 (queue-based batch invitation sending — Part C).
-   **Plan:** `guide/segment_14B_email_infrastructure.md`.
-   **Functional spec:** `spec/email_infra_options.md`.
-
-4. **14C — Reminders workflow.**
-   Scheduled, policy-driven reminder dispatch sitting on top
-   of 14B's transport. Per-session cadence settings + a
-   background scheduler + post-MVP cohort slicing + reminder
-   analytics. Stub-state plan; hard-deps on 14B Parts A / B
-   (and reuses 14B Part C's worker scaffold if available).
-   **Plan:** `guide/segment_14C_reminders_workflow.md`.
-
-5. **15B — Per-instrument assignments.** *(Unblocked by 15C
+2. **15B — Per-instrument assignments.** *(Unblocked by 15C
     shipping 2026-05-12; ready to start.)*
     Each `Instrument` carries its own assignment set (e.g. the
     Manager survey collects different reviewer → reviewee
@@ -484,25 +455,54 @@ bottom of this file.
     `AssignmentContext1-3` also retired.)
     **Plan:** `guide/segment_15B_per_instrument_assignments.md`.
 
-#### Stubs
+3. **13C — Enhanced instruments.**
+   Group-scoped instruments (per-instrument flavour where one
+   answer covers a group of reviewees) + a "Duplicate
+   instrument" action-row button. Sized as 5 PRs. Action row
+   ends up with: Edit / Save / Cancel (state-aware) + Add new
+   instrument + Add group-scoped instrument (new) + Duplicate
+   instrument (new). No `Response` schema change. **Note**
+   (post-15D): the original plan stamped per-instrument flavour
+   metadata onto the now-dropped `Assignment.context` JSON
+   column; that stash will need to relocate (likely onto the
+   `relationships` row or onto a new per-instrument column on
+   `assignments`) — flag for the 13C plan revision.
+   Independent of 13A and 13B.
+   **Plan:** `guide/segment_13C_enhanced_instrument.md`.
+   **Functional spec:** `spec/group_scoped_instruments.md`.
 
-- **13F — More DB prep (14C / 16A / 16B / 18B / 18C
-  ride-along)** *(in flight — **PRs 1 + 2 shipped 2026-05-11**;
-  PRs 3-5 deferred until consumer segments)*. Mirrors the
-  13D / 13E inert-migrations pattern for the **next** batch
-  of schema needs identified during the Segment 16 PR-ladder
-  sizing pass. Reordered 2026-05-11 so the 16-series work
-  leads: **PR 1 (shipped)** — `users.is_sys_admin` Boolean
-  + model-only `session_operators.role` value-set lock and
-  Python-default fix; **PR 2 (shipped)** — `users.is_operator`
-  Boolean for Option C strict-allowlist access (16A PR 1
-  reads it). PRs 3-5 (`session_tags`,
-  `sessions.reminder_settings`,
-  `sessions.retention_exception` + `retention_overrides`)
-  ride with their consumer segments (18B / 14C / 18C) when
-  those segments are picked up. **The 16-series schema
-  scaffolding is now complete — Segment 16A is unblocked.**
-  **Plan:** `guide/segment_13F_more_db_prep.md`.
+4. **14A — Production hardening.**
+   Observability, security, support runbooks, real-pilot prep.
+   Catalog #26 (local Postgres docker-compose for dev).
+   **Plan:** `guide/segment_14A_production_hardening.md`.
+
+5. **14B — Email infrastructure (send activation + backends).**
+   *(Renamed from 14-1 on 2026-05-11 as part of the 14 → 14A /
+   14B / 14C split.)* All email *wiring* lives here. The schema
+   columns Part A writes to landed with **Segment 11C Part 2**
+   (PR #541, 2026-05-07) and are ready for the dispatch helper.
+   - **Parts A → E** (sequential): SMTP send activation →
+     `correlation_id` strategy → bulk-send queue + worker →
+     per-deployment from-identity defaults → generalised
+     Outbox diagnostic surface.
+   - **Parts F → H** (independent backend swaps): Option B
+     (Microsoft Graph), Option C (Azure Communication Services),
+     Option D (third-party transactional). Ship as deployment
+     demand dictates.
+
+   Catalog #34 (queue-based batch invitation sending — Part C).
+   **Plan:** `guide/segment_14B_email_infrastructure.md`.
+   **Functional spec:** `spec/email_infra_options.md`.
+
+6. **14C — Reminders workflow.**
+   Scheduled, policy-driven reminder dispatch sitting on top
+   of 14B's transport. Per-session cadence settings + a
+   background scheduler + post-MVP cohort slicing + reminder
+   analytics. Stub-state plan; hard-deps on 14B Parts A / B
+   (and reuses 14B Part C's worker scaffold if available).
+   **Plan:** `guide/segment_14C_reminders_workflow.md`.
+
+#### Stubs
 
 - **15E — Next Action revamp + multi-step shortcuts**
   *(carved out of 15D PR 8, 2026-05-10)*. Promotes the
