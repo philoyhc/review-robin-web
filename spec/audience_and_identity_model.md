@@ -71,8 +71,14 @@ foreclose this direction.
 Cross-session admin role with two surfaces:
 
 1. **Workspace allowlist** — admit / revoke `users.is_operator`,
-   promote / demote `users.is_sys_admin` via the Sys Admin →
-   Accounts Management page (Segment 16A PR 6).
+   promote / demote `users.is_sys_admin`, delete `users` rows
+   outright, and bulk-remove a user from every session they
+   appear on, all via the Sys Admin → Accounts Management page
+   (Segment 16A PR 6, reshaped 2026-05-12 to a per-row checkbox
+   + bulk toolbar). Delete + Revoke + Remove-from-all-sessions
+   carry their own server-side guards (`owns_sessions`,
+   `still_owner`, `sole_owner`); `last_admin` blocks demoting
+   or deleting the sole sys-admin in the workspace.
 2. **Per-session diagnostics + self-add** — Sessions
    Diagnostics page lists every session in the workspace;
    the "Details" action lands on the session's Edit page,
