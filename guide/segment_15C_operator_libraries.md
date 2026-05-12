@@ -1,15 +1,35 @@
 # Segment 15C — Operator RTD / RuleSet libraries
 
-**Status:** Plan stub (2026-05-09).
+**Status:** Plan stub (2026-05-09); codebase-aligned 2026-05-12
+ahead of implementation kick-off.
 **Sizing:** ~5-7 PRs (service + UX wiring; no schema).
-**Depends on:** **Segment 13D** (PR 2 `session_rule_sets`, PR 3
+**Depends on:** **Segment 13D** (PR 0 `operator_rule_sets`
+rename, PR 2 `session_rule_sets`, PR 3
 `operator_response_type_definitions` + provenance column on
-`response_type_definitions`).
-**Sequenced before:** **Segment 15B** — once 15C lands,
-`session_rule_sets` rows exist for 15B's `instruments.rule_set_id`
-to point at, and per-instrument application becomes a small
-follow-on rather than the segment that has to bootstrap the copy
-infrastructure.
+`response_type_definitions`). All three landed; verified
+2026-05-12.
+**Sequenced before:** **Segment 15B** — see
+"What 15B inherits from 15C" below. 15B is plan-locked and
+deferred to start immediately after 15C ships.
+
+---
+
+## What 15B inherits from 15C
+
+15B's per-instrument assignment work depends on two specific
+15C deliverables. Calling them out explicitly so any slice
+reorganisation here doesn't break 15B's downstream contract.
+
+| 15B needs | Delivered by |
+|---|---|
+| `session_rule_sets` non-empty in every newly-created session (so the Instrument-card picker and the Assignments-page Generate button have a pool to operate on) | **15C Slice 1** — `materialise_seed_rule_sets` at session-create time. Workspace seeds become per-session rows automatically. |
+| Rule Builder picker reads session-scoped rows (so 15B's "Edit rule" deep link from the Instrument card lands the operator on the session copy, not the library row) | **15C Slice 4** — picker source flip from `operator_rule_sets` to `session_rule_sets`; `_resolve_save_as_name` / `_name_taken_by_other` port from `(owner_user_id, name)` to `(session_id, name)`. |
+
+The remaining 15C slices (2 / 3 / 5 / 6) are 15C-internal —
+they polish the library / per-session symmetry but aren't on
+15B's critical path. 15B can ship after Slice 1 + Slice 4
+even if Slices 3 / 5 / 6 haven't landed yet (though landing
+them together is cleaner).
 
 ---
 
@@ -76,34 +96,56 @@ references between them.
 
 ## Slices
 
-### Slice 1 — Workspace-seed migration (1 PR, ~150 LOC)
+### Slice 1 — Workspace-seed materialisation (1 PR, ~150 LOC)
 
-**Why first.** Bedrock for the rest. Today `operator_rule_sets`
-(post-13D PR 0 rename) mixes operator-library Personal entries
-with workspace-shipped Seeds (`scope ∈ {seed, personal}`). The
-library / copy split makes that mix awkward — Seeds are
-vendor-shipped, never operator-edited, and shouldn't appear in
-operator-library management UIs. Move them to a code constant
-(mirroring `SEEDED_RESPONSE_TYPE_DEFINITIONS`).
+**Why first.** Bedrock for the rest. The workspace-shipped
+seed RuleSets (Full Matrix, Intra-Group, Cross-Group,
+Same-Group-Different-Role, Three-Reviewers-Per-Reviewee)
+already live as code constants in
+`app/services/rules/seeds.py` (exported as `SEEDS` — five
+`RuleSetSchema` instances). They are **not** in
+`operator_rule_sets` as DB rows today, despite that table
+carrying `scope=seed` / `is_seed=True` columns. The plumbing
+to read seeds from the library tier still routes through
+`library.list_visible_rule_sets` filtering on `is_seed=True`,
+which currently returns zero rows.
+
+This slice formalises the existing reality: seeds are code
+constants, they materialise into `session_rule_sets` (the
+per-session copy table) at session-create time, and the
+library-tier `is_seed` plumbing retires.
 
 **Change.**
 
-- New `app/services/rules/seeds.py::SEEDED_RULE_SETS` constant,
-  same shape as `SEEDED_RESPONSE_TYPE_DEFINITIONS` (list of
-  rule-tree dicts with name + description + combinator + rules).
-- New `materialise_seed_rule_sets(db, session)` mirror of
-  `ensure_default_response_type_definitions` — copies each seed
-  into `session_rule_sets` (the per-session table) on session
-  create. Idempotent.
-- One-shot data migration: every existing `operator_rule_sets`
-  row with `scope=seed` deleted (the constant is now the source of
-  truth). For sessions that already had instruments pointing at
-  a seed RuleSet — none today since `instruments.rule_set_id`
-  is brand-new from 13D PR 4 and 15B hasn't shipped — no
-  pointer fix-up needed.
-- `app/services/rules/library.py::list_visible_rule_sets`
-  loses its seed branch; it now reads only Personal RuleSets
-  from the operator library.
+- Rename `SEEDS` → `SEEDED_RULE_SETS` for symmetry with
+  `SEEDED_RESPONSE_TYPE_DEFINITIONS` (`app/services/instruments/_rtds.py:44`).
+  Same shape (a list of seed definitions); no schema impact.
+- New `materialise_seed_rule_sets(db, session)` helper —
+  mirror of `ensure_default_response_type_definitions(db, session)`
+  (`app/services/instruments/_instrument_crud.py:73`). For
+  each entry in `SEEDED_RULE_SETS`, insert a row into
+  `session_rule_sets` with `library_origin_id=None` (seeds
+  never reference the library). Idempotent (skip-on-existing
+  by `(session_id, name)`).
+- Wire the helper into `create_session`
+  (`app/services/sessions.py:42` calls
+  `ensure_default_instrument` today). The new helper slots in
+  alongside, at the same lifecycle hook.
+- **No data migration needed.** There are zero
+  `operator_rule_sets` rows with `is_seed=True` in any
+  deployment today; the column has always been read-only
+  plumbing. Slice 1 leaves the `is_seed` / `scope` columns on
+  the model (no migration churn) but retires every read of
+  them — `library.list_visible_rule_sets` flips to returning
+  only `is_seed=False` rows (Personal entries only), with the
+  workspace seeds served from the code constant via the new
+  helper.
+- `library.list_visible_rule_sets` simplifies to "Personal
+  RuleSets owned by this user" — drops the seed branch.
+
+**Audit.** New emitter
+`session_rule_sets.materialised_from_seed` registered in
+`EVENT_SCHEMAS` per the 11K canonical envelope.
 
 ### Slice 2 — Auto-copy operator library on session create (1 PR, ~200 LOC)
 
@@ -228,38 +270,68 @@ exist:
   unaffected (snapshot semantics). Operators may expect the
   edit to propagate; the "Saved to library" badge + a hover
   tooltip should communicate this clearly.
-- **Workspace-seed tier post-Slice 1.** Operators lose the
-  ability to "Save to library" a seed (it's no longer in the
-  `operator_rule_sets` table). They can still copy a session's seed
-  RuleSet into their library by name — Slice 4's "Save to
-  library" runs unchanged on a session-RuleSet copy whose
-  origin is a seed. Confirm this matches operator expectations
-  before Slice 1 ships.
+- **Workspace-seed tier post-Slice 1.** Operators cannot
+  "Save to library" a seed directly (seeds aren't library
+  rows — they're code constants). They can still copy a
+  session's seed RuleSet into their library by name — Slice
+  4's "Save to library" runs unchanged on a session-RuleSet
+  copy whose origin is a seed (the `library_origin_id`
+  stays NULL because seeds bypass the library). Confirm this
+  matches operator expectations before Slice 1 ships.
 - **Existing data migration.** Pre-15C sessions don't have
   `session_rule_sets` rows; instruments don't yet point at
-  anything. Slice 2's `materialise_operator_libraries` runs
-  on session create only, so existing sessions don't backfill.
-  Operators wanting to apply a library entry to an existing
+  anything (`instruments.rule_set_id` is brand-new from 13D
+  PR 4 and 15B hasn't shipped). Slice 1's
+  `materialise_seed_rule_sets` and Slice 2's
+  `materialise_operator_libraries` both run on session create
+  only, so existing sessions don't backfill. Operators
+  wanting to apply a library entry to an existing pre-15C
   session use the Slice 4 "Add from library" affordance.
+  For workspace seeds on an existing pre-15C session, the
+  same affordance copies a seed from the code constant into
+  the session — same Slice 4 mechanism, different source.
 
 ---
 
 ## Critical files
 
-- New: `app/services/rules/seeds.py` (Slice 1),
-  `app/services/sessions.py::materialise_operator_libraries`
+- New: `app/services/sessions.py::materialise_operator_libraries`
   helper (Slice 2), routes + templates for the four new
   affordances (Slices 3 / 4 / 5).
-- Touched: `app/services/rules/library.py`,
-  `app/services/instruments/_rtds.py`,
-  `app/services/sessions.py`,
-  `app/web/routes_operator/_rule_builder.py` +
-  `_instruments.py` + `_settings.py`,
-  `app/web/views/_rule_builder.py` + `_instruments.py` +
-  `_settings.py`,
-  templates for the RTD card + Rule Builder + operator
-  Settings.
+- Touched:
+  - `app/services/rules/seeds.py` — rename `SEEDS` →
+    `SEEDED_RULE_SETS`; add `materialise_seed_rule_sets`
+    helper (Slice 1).
+  - `app/services/rules/library.py` — drop the seed branch
+    from `list_visible_rule_sets` (Slice 1); add library
+    list helpers for the operator-Settings subsection
+    (Slice 5).
+  - `app/services/instruments/_rtds.py` — RTD library
+    helpers (Slice 3).
+  - `app/services/sessions.py` — hook
+    `materialise_seed_rule_sets` next to
+    `ensure_default_instrument` at session-create
+    (`sessions.py:42`).
+  - `app/web/routes_operator/_rule_builder.py` —
+    `_resolve_save_as_name` / `_name_taken_by_other`
+    port from `(owner_user_id, name)` on
+    `operator_rule_sets` to `(session_id, name)` on
+    `session_rule_sets` (Slice 4).
+  - `app/web/routes_operator/_instruments.py` +
+    `_settings.py` — new POST handlers (Slices 3 / 5).
+  - `app/web/views/_rule_builder.py` —
+    `_build_rule_builder_options` flips datasource
+    (Slice 4).
+  - `app/web/views/_instruments.py` + `_settings.py` —
+    new view-adapter shapes (Slices 3 / 5).
+  - Templates for the RTD card + Rule Builder + operator
+    Settings + rule-builder picker partial
+    (`_rule_builder_card.html`).
 - No schema changes — every table / column comes from 13D.
+  `operator_rule_sets.is_seed` and `.scope` columns stay on
+  the model (Slice 1 retires the reads, not the columns);
+  pruning them is a future cleanup migration outside this
+  segment.
 
 ---
 
