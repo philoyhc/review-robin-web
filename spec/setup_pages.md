@@ -49,16 +49,33 @@ Every Setup Page renders, top-to-bottom:
    `relationships.fields_with_data` in
    `app/services/relationships.py`). Drives operator awareness of
    which optional fields the latest import populated.
-4. **Lifecycle gate cards** (when the session is Activated): a
+4. **Friendly-label editor** (Segment 15A Slice 3) — inline
+   editor card via `operator/partials/_field_labels_editor.html`.
+   Reviewers + Relationships render a 3-cell row; Reviewees a
+   2-row stacked grid (identity + tags, 6 cells). Save + Cancel
+   pair in Secondary style at the bottom, both starting
+   `disabled` until the form is dirty (inline JS toggles via an
+   initial-value snapshot). Gated by `is_ready`: when the
+   session is Activated, inputs render `disabled` and the
+   Save/Cancel pair is suppressed; the page's existing `.card
+   lock` already messages "revert to draft" in that state. POST
+   handlers in
+   `app/web/routes_operator/_setup_rosters.py` upsert / clear via
+   `app/services/field_labels.py`.
+5. **Lifecycle gate cards** (when the session is Activated): a
    `card lock` carrying "The {entity} cannot be modified while the
    session is ongoing. Revert the session to draft if you wish to
    modify anything." with an inline Revert form.
-5. **Body grid** — Upload + Danger Zone cards. Hidden when the
+6. **Body grid** — Upload + Danger Zone cards. Hidden when the
    session is Activated; only the lock card and the preview table
    render in that state.
-6. **Preview table card** — Reviewers / Reviewees / Relationships.
+7. **Preview table card** — Reviewers / Reviewees / Relationships.
    Always renders when the entity is non-empty, regardless of
-   lifecycle state.
+   lifecycle state. Column headers render the resolved friendly
+   label via `operator/partials/_field_label_header.html`; when
+   an override is set, the canonical name appears as
+   `.field-label-canonical` muted subtext below the friendly
+   label and the sort `↕` button.
 
 ## Preview tables (shared toggle pattern)
 

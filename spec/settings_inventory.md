@@ -96,6 +96,66 @@ Owners section on the Edit page, Segment 16B PR 2).
 
 ---
 
+## 2.5. Per-session friendly labels (Segment 15A)
+
+Operator-renamable display labels for the 12 in-scope slots
+identified across the three Setup pages. Stored as one row per
+`(session_id, source_type, source_field)` override on the
+`session_field_labels` table (landed inert in Segment 13D PR 1;
+wired by 15A Slices 1-3, shipped 2026-05-12).
+
+**Surface:**
+
+- **Edit:** Inline editor card above the data table on
+  `/operator/sessions/{id}/reviewers` (3 reviewer-tag slots),
+  `/operator/sessions/{id}/reviewees` (6 reviewee slots —
+  identity + tags), and
+  `/operator/sessions/{id}/relationships` (3 pair-context
+  slots). Save / Cancel pair (both Secondary, both
+  disabled-until-dirty). Gated by `is_ready`: inputs render
+  disabled when the session is active/closed; the page's
+  existing `.card.lock` already messages "revert to draft to
+  modify".
+- **Read:** Friendly label flows through every operator
+  preview surface (Reviewers / Reviewees / Relationships /
+  Assignments column headers + the Assignments
+  column-toggle widget), the Instrument editor's read-only
+  Friendly Label column, the reviewer-surface preview, and
+  the reviewer surface itself.
+
+| Field | Type | Notes |
+|---|---|---|
+| `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
+| `source_type` | `String(32)` | `reviewer` / `reviewee` / `pair_context`. |
+| `source_field` | `String(64)` | `tag_1` / `tag_2` / `tag_3` for the reviewer + reviewee tag sources; `name` / `email_or_identifier` / `profile_link` for the reviewee identity sources; `1` / `2` / `3` for `pair_context`. Allowlist enforced by `app.services.field_labels._VALID_SOURCE_FIELDS` + the parallel `_VALID_FL_SOURCE_FIELDS` on Settings-CSV import. |
+| `label` | `String(255)` | The override label (stripped on upsert; empty input clears the row). |
+
+Unique on `(session_id, source_type, source_field)`. Resolver
+chain: session override → built-in default in
+`_DEFAULT_LABELS` → `f"{source_type}:{source_field}"` fallback.
+The per-instrument `InstrumentDisplayField.label` override is
+**not** in the chain (retired in 15A Slice 2; column stays in
+the schema as dead data pending a follow-on cleanup segment).
+
+**Round-trip:** Settings CSV only — `session_config_io.py`
+serialises / parses `field_labels.{source_type}.{source_field}`
+rows; per-entity CSVs (Reviewers / Reviewees / Relationships)
+stay canonical-only on their header rows so importers that key
+on `RevieweeTag1` etc. continue to work.
+
+**Logic vs display layer:** friendly labels are a
+display-layer concern only. The underlying logic (Rule Builder
+operand sentences, CSV-import header validation + error copy,
+validation error messages, audit-event payloads) keeps the
+canonical machine name. On operator-facing display surfaces
+the canonical name renders below the friendly label as `.muted`
+subtext when an override is in effect, so operators stay
+oriented to the underlying field.
+
+**Canonical spec:** `guide/archive/segment_15A_friendly_labels.md`.
+
+---
+
 ## 3. Per-session email-template overrides
 
 Stored as JSON inside `sessions.email_template_overrides`. Recognised
@@ -356,34 +416,15 @@ deployed environments. Source: `app/config.py`.
 ## 9. Pre-positioned (inert) schema for upcoming surfaces
 
 Tables / columns that landed in Segment 13D as schema-only
-scaffolding ahead of Segments 15A / 15B / 15C. **Inert today** — no
+scaffolding ahead of Segments 15B / 15C. **Inert today** — no
 service module reads or writes them and no UI surfaces them yet —
 but listed here so a developer auditing "where will this setting
 live?" finds the answer without reading the segment plans.
 
 When the wiring lands, the corresponding row should move out of
-this section into the appropriate per-feature section above (e.g.
-`session_field_labels` into a new sub-section under §2 once 15A
-ships its resolver + Settings editor).
-
-### `session_field_labels` (Segment 15A target)
-
-Per-session friendly-label overrides for tag / pair-context
-fields. One row per `(session_id, source_type, source_field)`
-override.
-
-| Field | Type | Notes |
-|---|---|---|
-| `session_id` | `Integer` (FK → `sessions.id` ON DELETE CASCADE) | Owning session. |
-| `source_type` | `String(32)` | `reviewer` / `reviewee` / `pair_context`. (The legacy `assignment_context` source class retired with `Assignment.context` in 15D PR 6b; not a widening target.) |
-| `source_field` | `String(64)` | e.g. `tag_1` / `tag_2` / `tag_3` for the tag sources; `1` / `2` / `3` for `pair_context`. |
-| `label` | `String(255)` | The override label. |
-
-Unique on `(session_id, source_type, source_field)`. Wired by
-15A Slice 1 (`app/services/field_labels.py` resolver) and Slice
-3 (Settings editor surface).
-
-**Canonical spec:** `guide/segment_15A_friendly_labels.md`.
+this section into the appropriate per-feature section above. The
+13D PR 1 `session_field_labels` table moved out under §2.5 once
+**Segment 15A shipped 2026-05-12**.
 
 ### `session_rule_sets` (Segment 15B + 15C target)
 
@@ -489,7 +530,7 @@ The five CSVs split the work three ways:
 | §6 | Operator-library RuleSets (`operator_rule_sets`) | ❌ | Workspace-scoped (per-operator across sessions), not per-session. Portability is deferred to its own segment; travels as JSON, not CSV. |
 | §7 | Browser-local UI state | ❌ | Cosmetic per-browser preferences; carry over via the operator's own browser, not via export. |
 | §8 | Deployer env config | ❌ | Deployer-set; not operator-determined. |
-| §9 | `session_field_labels` (inert, 15A target) | ✅ All | All listed columns → Settings CSV. Serialises empty rows today; pinning the key shape now means future-equipped sessions round-trip without an export-shape change once 15A lights up. |
+| §2.5 | `session_field_labels` (per-session friendly labels) | ✅ All | All listed columns → Settings CSV. 12-slot allowlist enforced by `_VALID_FL_SOURCE_FIELDS` on import. Per-entity CSVs intentionally stay canonical-only on their header rows. |
 | §9 | `session_rule_sets` (inert, 15B / 15C target) | Partial | Non-seeded rows → Settings CSV. Seeded copies are excluded — they auto-materialise from `app/services/rules/seeds.py` via `materialise_seed_rule_sets` on session create. `library_origin_id` is provenance-only (excluded). |
 | §9 | `operator_response_type_definitions` (inert, 15C target) | ❌ | Workspace-scoped, parallel to §6. |
 | n/a | Responses (reviewer-typed) | ✅ (analytics only) | `{code}_responses.csv` — wide row-per-observation shape for downstream analysis. **No import counterpart**, no round-trip. |

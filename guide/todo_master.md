@@ -288,6 +288,22 @@ Bonus on the path: **#870** added a diagnostic Instrument column to the Operatio
 
 ---
 
+### Segment 15A — Pervasive friendly labels — done 2026-05-12 (PRs #887 → #891)
+
+Operator-renamable display labels for 12 in-scope slots per session (3 reviewer tags + 6 reviewee identity-and-tag fields + 3 pair-context slots) flow through every display-layer surface. Underlying logic everywhere keeps assuming canonical machine names — Rule Builder, source picker, CSV-import error copy, validators, audit-event payloads all read the canonical name. Plan archived: `guide/archive/segment_15A_friendly_labels.md`.
+
+- **#887** — Slice 1 resolver + audit + Settings-CSV retirement. New `app/services/field_labels.py` (three-step chain: session override → built-in default → `source_type:source_field` fallback) + `upsert` / `clear` mutators with lifecycle invalidation. Canonical audit emitters `session_field_label.set` (changes envelope) + `.cleared` (snapshot envelope). `_VALID_FL_SOURCE_FIELDS` map in `session_config_io.py` enforces the 12-slot allowlist on Settings-CSV import (widened to accept the new reviewee identity slots: `name` / `email_or_identifier` / `profile_link`). `_display_field_rows` stops emitting `instruments[N].display_fields[M].label`; apply phase tolerates legacy rows but silently drops them. `ReviewSession.field_labels` relationship added with delete-orphan cascade.
+- **#888** — Slice 2 display-layer sweep. `display_field_label(field, session=None)` delegates to the resolver; the per-instrument `InstrumentDisplayField.label` override is no longer consulted. Two new Jinja globals registered in `_shared.py`: `field_label` (resolved string) + `field_label_pair` (LabelPair shape for the two-line operator render). Reviewers / Reviewees / Relationships / Assignments column headers + the Assignments column-toggle widget pick up the friendly label via the new `_field_label_header.html` macro. Instrument editor's `Friendly Label` column flips to read-only; both POST handlers (`/fields/save` bulk-save + per-row `/display-fields/{id}/edit`) drop the `label` form param.
+- **#889** — Slice 3 per-page inline editors. Three editors land above the data tables on Reviewers / Reviewees / Relationships — Reviewers + Relationships render a 3-cell row, Reviewees a 2x3 stacked grid (identity + tags). Each modified slot emits its own `session_field_label.set` (or `.cleared`) audit event. Gated by `is_ready` directly (no new Save / Edit lock card on these pages — that pattern doesn't exist here; the existing `<div class="card lock">` already messages "revert to draft").
+- **#890** — Polish: sort-button layout fix + Save/Cancel UX. The `↕` sort button was being pushed below the canonical subtext because `.field-label-canonical` is `display: block`; split the partial into `field_label_header` (friendly inline) + `field_label_canonical_subtext` (block-level span only when an override is set, called after the button so the button stays inline with the friendly label). Save flips to Secondary; a matching Cancel button joins it. Both start `disabled`; inline JS toggles them based on whether the form is dirty, and Cancel restores the snapshot and re-disables the pair without submitting.
+- **#891** — Reviewees editor help-text trim (drop "identity (Name / Email / Photo) and the three reviewee tags" — the slot inputs themselves are self-descriptive).
+
+Slice 4 (`AssignmentContext1-3`) stayed dropped — schema home retired in 15D PR 6b. Test files: `tests/integration/test_field_labels_resolver.py` (15 cases), `test_settings_csv_drops_df_label.py` (4 cases), `test_field_label_rendering.py` (5 cases), `test_field_labels_editor_routes.py` (11 cases), plus regression-pin updates in `test_display_fields.py` / `test_display_field_routes.py` / `test_display_field_state_machine.py` / `test_response_field_bulk_save.py` / `test_route_persistence.py` / `test_display_field_builder.py` / `test_assignment_routes.py`.
+
+The 13B sort-button `aria-label` strings (e.g. `"Sort by Reviewer Tag1"`) still carry the literal column name — intentionally out of Slice 2's sweep and a small follow-up if accessibility surfaces the need.
+
+---
+
 ### Segment 16C — Richer audit views (MVP) — done 2026-05-11 (PRs #860, #861, #863)
 
 Moves the audit log from "CSV download only" to a sys-admin-gated in-app viewer with filter strip + per-row pretty-printer. Reachable from the Sessions Diagnostics row's Audit log link (now points at the child page rather than the CSV directly). Plan archived: `guide/archive/segment_16C_richer_audit_views.md`. All three post-MVP PRs (4 + 5 + 6 — entity drill-in, cross-session search, Session Home Recent activity card) carved out to `guide/deferred_until_pilot_feedback.md`.
@@ -366,7 +382,7 @@ absorbing the audit-log download route 12B left UI-less,
 retiring the dev-only manual assignment upload, and standing
 up the operator-allowlist gate + workspace Accounts
 Management surface. **Segment 16C** (richer in-app audit views) MVP shipped 2026-05-11 the same day; the post-MVP polish (entity drill-in + cross-session search) carved out to `guide/deferred_until_pilot_feedback.md`. The remaining schedule items —
-13B, 13C, 13F, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 17, 18A, 18B, 18C, 19, 20 — ship per
+13B, 13C, 13F, 14A, 14B, 14C, 15B, 15C, 15E, 15F, 17, 18A, 18B, 18C, 19, 20 — ship per
 their own plan; no ordering constraints beyond shared schema
 conflicts (none detected).
 
@@ -421,18 +437,7 @@ conflicts (none detected).
    (and reuses 14B Part C's worker scaffold if available).
    **Plan:** `guide/segment_14C_reminders_workflow.md`.
 
-6. **15A — Pervasive friendly labels.**
-   Operator-renamable `ReviewerTag1-3` / `RevieweeTag1-3` /
-   `PairContext1-3` flowing through every header / picker /
-   tooltip via a session-level resolver, not just per-instrument
-   Display Field rows. New `session_field_labels` table +
-   `app/services/field_labels.py` resolver + Settings-page
-   editor. ~3-4 PRs. Lands cleanly any time after the major
-   refactor; recommended **before 15B** so 15B's per-instrument
-   UI consumes the resolver instead of re-introducing hardcoded
-   literals. (The originally-planned `AssignmentContext1-3`
-   slot retired with `Assignment.context` in 15D PR 6b.)
-   **Plan:** `guide/segment_15A_friendly_labels.md`.
+6. *(15A shipped 2026-05-12 — see Done above.)*
 
 7. **15C — Operator RTD / RuleSet libraries.**
    Symmetric two-tier model for both RTDs and RuleSets:
@@ -598,7 +603,7 @@ they pinned:
 - **12A is fully shipped** as of 2026-05-10 (12A-1 export +
   12A-3 export-refresh + Settings importer + Quick Setup
   slot 4 graduation; 12A-2 was absorbed into 12A-3). The
-  remaining schedule items — **13B, 13C, 13F, 14A, 14B, 14C, 15A,
+  remaining schedule items — **13B, 13C, 13F, 14A, 14B, 14C,
   15B, 15C, 15E, 15F, 17, 18A, 18B, 18C, 19, 20** — are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;
