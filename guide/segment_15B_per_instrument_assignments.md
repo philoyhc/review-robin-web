@@ -26,14 +26,29 @@ to the left of Validate (operators preview the materialised
 pairs before validating them).
 
 **Sizing:** ~6 PRs.
-**Depends on:** 15A shipped (friendly-label resolver — already
-done). No other hard dependency.
-**Doesn't depend on 15C.** 15C splits RuleSets into a two-tier
-operator-library / per-session-copy model; that ships
-independently. 15B reads / writes `instruments.rule_set_id`
-which points at `session_rule_sets` regardless of whether
-the row arrived via library-copy (post-15C) or via the seeded-
-RuleSet auto-materialisation that exists today.
+**Status:** **Plan locked, implementation deferred to start
+immediately after Segment 15C ships.** The 2026-05-12 codebase
+audit (this revision) confirmed that
+`instruments.rule_set_id`'s FK target (`session_rule_sets`) is
+not populated by any session-create path today. The seeded
+RuleSets that 15B's operator surface must offer (Full Matrix,
+etc.) live as code constants destined for `session_rule_sets`
+materialisation, but the materialiser lives in 15C Slice 1
+(workspace-seed migration). Without 15C, 15B has nothing to
+pick from in the per-card picker and nothing for
+`replace_assignments` to resolve. The decision to defer
+(rather than fold a minimal auto-seed precursor into 15B) is
+deliberate: 15C is the right home for that mechanism, and
+deferring lets 15B inherit the full library / per-session-
+copy contract rather than a half-version.
+**Depends on:**
+- 15A shipped (friendly-label resolver — already done).
+- **15C shipped** — specifically Slice 1
+  (`materialise_seed_rule_sets` on session create populates
+  `session_rule_sets` with the workspace seeds) and Slice 4
+  (Rule Builder picker reads from `session_rule_sets`, the
+  same pool 15B's per-card picker will consume). See
+  `guide/segment_15C_operator_libraries.md` for the contract.
 
 ---
 
@@ -56,13 +71,16 @@ The operator's mental model lands as:
 ## Schema audit (2026-05-12)
 
 Verified ahead of the revision: **nothing schema-side is
-missing.** No additions need to ride 13F.
+missing.** No additions need to ride 13F. The data-layer
+prerequisite — *populated* `session_rule_sets` rows — is a
+behaviour gap, not a schema gap, and is owned by 15C Slice 1.
 
 | What 15B needs | Status |
 |---|---|
 | `Assignment.instrument_id` non-null FK + `(session_id, reviewer_id, reviewee_id, instrument_id)` unique constraint | ✅ already on the model (`app/db/models/assignment.py:19-61`). |
 | `instruments.rule_set_id` nullable FK → `session_rule_sets`, `ON DELETE SET NULL` | ✅ pre-positioned by 13D PR 4 (`app/db/models/instrument.py:68-84`). |
 | `session_rule_sets` table | ✅ pre-positioned by 13D PR 2 (`app/db/models/session_rule_set.py`). |
+| `session_rule_sets` *populated on session create* with workspace seeds (Full Matrix, etc.) | ❌ delivered by **15C Slice 1** — `materialise_seed_rule_sets`. Without this, every newly-created session has zero rows in `session_rule_sets` and 15B's per-card picker / Assignments-page Generate button have nothing to operate on. |
 | `Assignment.context` JSON dropped | ✅ retired in 15D PR 6b. |
 
 Per-instrument `Assignment` rows already exist in every multi-
