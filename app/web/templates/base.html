@@ -1883,6 +1883,41 @@
         color: var(--text-muted, #64748b);
         margin-top: 1px;
       }
+      /* Segment 15A Slice 3 — per-page inline editor for the
+         session-wide friendly labels. Three (or six on the
+         Reviewees page) inline cells above the data table, plus
+         a single Save button at the end. The editor is locked
+         when the session is ready/closed; the page's existing
+         lock card already messages "revert to draft". */
+      body.ui-v2 .field-labels-editor h2 {
+        margin-top: 0;
+      }
+      body.ui-v2 .field-labels-editor form { margin: 0; }
+      body.ui-v2 .field-labels-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+      }
+      body.ui-v2 .field-labels-row > label {
+        flex: 1 1 200px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-weight: normal;
+      }
+      body.ui-v2 .field-labels-row > label > input {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      body.ui-v2 .field-labels-row + .field-labels-row {
+        margin-top: 12px;
+      }
+      body.ui-v2 .field-labels-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 12px;
+      }
     </style>
     {% block extra_head %}{% endblock %}
   </head>
