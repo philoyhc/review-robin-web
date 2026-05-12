@@ -261,6 +261,18 @@ Last leg of the locked sequence `13E → 12C → 15D → 12A-3`. Brings the expo
 
 Bonus: **#781** — Grey out the Reviewers / Reviewees / Relationships / Responses Download buttons in the Extract Data card when the corresponding count is 0 (rendered between PR 2 and PR 3 as a small follow-on polish).
 
+### Segment 16C — Richer audit views (MVP) — done 2026-05-11 (PRs #860, #861, #863)
+
+Moves the audit log from "CSV download only" to a sys-admin-gated in-app viewer with filter strip + per-row pretty-printer. Reachable from the Sessions Diagnostics row's Audit log link (now points at the child page rather than the CSV directly). Plan archived: `guide/archive/segment_16C_richer_audit_views.md`. Post-MVP PRs 4 + 5 carved out to `guide/deferred_until_pilot_feedback.md`; PR 6 (Recent activity card on Session Home) stays in the archived plan as documented post-MVP scope.
+
+- **#860** — PR 1 per-session audit log child page. New `audit.list_events_for_session` reader + `views.build_audit_log_rows` view adapter (8-column projection mirroring the CSV exporter, keyset pagination on `id DESC`, default page size 50). Route `GET /operator/sys-admin/sessions/{id}/audit-log` in `_sys_admin.py`, gated `require_sys_admin`. Template `sys_admin_session_audit_log.html` with the Admin top-nav + back-link chrome conventions + Download CSV button. Sessions Diagnostics row's Audit log link migrates from `/operator/sessions/{id}/export/audit_log.csv` (direct CSV download) to the new child page. CSV route gate tightens from `require_sys_admin_or_session_operator` to `require_sys_admin` since the operator-facing entry point retired with 12B PR 2 → 16A PR 4; existing relaxed-gate test in `test_outbox_sys_admin_relax.py` reshaped accordingly.
+- **#861** — PR 2 filter strip + filtered CSV download. New `AuditFilters` dataclass + shared `_apply_filters` helper composing event-type / severity / actor-email / date-range predicates onto both the viewer and the CSV serializer. URL-param state: `?event_type=` (multi), `?severity=` (multi), `?actor=`, `?from=`, `?to=`. `views.parse_audit_log_filters` + `build_audit_log_filter_form` + `filters_querystring` (stable encoding for pagination + CSV link carry-over). Filter-aware Download CSV button rewrites to embed the active filter query string. `session.audit_log_extracted` audit event grows a `context` slot recording the active filter set on filtered extracts (scalar-only values per the canonical envelope; multi-value slots flatten to comma-joined strings). Layout follow-on commit constrains the table layout (`table-layout: fixed`, per-column widths, `overflow-wrap: anywhere`) so the JSON detail column wraps rather than horizontally bloating; new `{% block extra_head %}` slot in `base.html` so per-page `<style>` rules don't have to ride inside the body.
+- **#863** — PR 3 per-row `<details>` expander + per-shape detail pretty-printer. New `views.format_audit_detail` view adapter mapping each canonical envelope into structured sections: `changes` → before/after rows, `snapshot` / `counts` / `refs` / `context` → sorted-keys `<dl>`, `set_changes` → added/removed/updated pill lists, `reason` → free text, unknown keys (legacy pre-11K detail) → "Other" fallback. Raw JSON sits in a nested `<details>` for inspection.
+
+30 new integration tests in `test_sys_admin_audit_log.py` plus 4 reshaped in `test_extracts_audit_log_route.py`.
+
+---
+
 ### Segment 16B PR 2 — Per-session owner management — done 2026-05-11 (PRs #853, #854, #855)
 
 Per-session owner management ships on the Session Edit page (`/operator/sessions/{id}/edit`), with the operator allowlist + sys-admin chrome from Segment 16A already in place. The original 16B plan had PR 1 (service) and PR 2 (UI) as separate slices; they landed as a single PR (#853) since the service surface is small and the UI is a thin wrapper. PR 3 (per-session role granularity beyond binary owner) was retired from the roadmap 2026-05-11 — binary owner-or-not is the deliberate final shape. Plan archived: `guide/archive/segment_16B_role_delegation.md`.
@@ -326,8 +338,8 @@ page + workspace user/role management) and **16B PR 1 + PR 2**
 absorbing the audit-log download route 12B left UI-less,
 retiring the dev-only manual assignment upload, and standing
 up the operator-allowlist gate + workspace Accounts
-Management surface. The remaining schedule items —
-13B, 13C, 13F, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 16C, 17, 18A, 18B, 18C, 19, 20 — ship per
+Management surface. **Segment 16C** (richer in-app audit views) MVP shipped 2026-05-11 the same day; the post-MVP polish (entity drill-in + cross-session search) carved out to `guide/deferred_until_pilot_feedback.md`. The remaining schedule items —
+13B, 13C, 13F, 14A, 14B, 14C, 15A, 15B, 15C, 15E, 15F, 17, 18A, 18B, 18C, 19, 20 — ship per
 their own plan; no ordering constraints beyond shared schema
 conflicts (none detected).
 
@@ -470,14 +482,6 @@ conflicts (none detected).
   trip a CSV to fix one name or toggle one status.
   **Plan:** `guide/segment_15F_enhanced_setup_pages.md`.
 
-- **16C — Richer audit views** *(stub created 2026-05-11)*.
-  In-app audit log viewer beyond today's CSV download —
-  per-session table with filters + search + entity drill-in;
-  workspace-level cross-session view; post-MVP per-session
-  timeline / activity stream. Sits behind 16A's sys-admin
-  gate.
-  **Plan:** `guide/segment_16C_richer_audit_views.md`.
-
 - **17 — AG Grid replacement of the reviewer-surface table**
   *(carved out of the original Segment 15, 2026-05-10)*.
   Replaces the plain HTML `<input>` / `<textarea>` /
@@ -575,7 +579,7 @@ they pinned:
   12A-3 export-refresh + Settings importer + Quick Setup
   slot 4 graduation; 12A-2 was absorbed into 12A-3). The
   remaining schedule items — **13B, 13C, 13F, 14A, 14B, 14C, 15A,
-  15B, 15C, 15E, 15F, 16C, 17, 18A, 18B, 18C, 19, 20** — are independent of the email +
+  15B, 15C, 15E, 15F, 17, 18A, 18B, 18C, 19, 20** — are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;
   13C PR 3 (rule-engine fanout for group-scoped instruments)

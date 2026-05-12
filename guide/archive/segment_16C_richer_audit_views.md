@@ -1,18 +1,60 @@
 # Segment 16C — Richer audit views
 
-> **Carved out of the original Segment 16 (2026-05-11).** The
+> **Archived 2026-05-11.** PRs 1-3 (the MVP) shipped 2026-05-11
+> as PRs **#860 / #861 / #863**. PRs 4 + 5 carved out into
+> `guide/deferred_until_pilot_feedback.md` — same scope, awaiting
+> a real operator ask before they justify the build cost. PR 6
+> (Recent activity card on Session Home + per-event prose
+> summariser) stays in this archive as documented post-MVP
+> scope; lift into a fresh segment if anyone asks for it.
+>
+> Carved out of the original Segment 16 (2026-05-11). The
 > Sys Admin page + sys-admin role gate live in **16A**
 > (`guide/archive/segment_16A_sys_admin_page.md` — shipped);
 > user-role management + role delegation live in **16B**
 > (`guide/archive/segment_16B_role_delegation.md` — shipped).
 
-**Status:** Planning — stub created 2026-05-11, sized into
-a six-PR ladder; refreshed 2026-05-11 against the as-shipped
-16A surface (workspace-level `/operator/sys-admin/*` chrome,
-Sessions Diagnostics row's per-row Audit log link currently
-hits the CSV directly, Outbox now lives as a child page at
-`/operator/sys-admin/sessions/{id}/outbox` per PR #847).
-**Sizing:** 3 MVP PRs + 3 post-MVP PRs.
+## What shipped (2026-05-11)
+
+- **PR 1 (#860)** — per-session audit log child page at
+  `/operator/sys-admin/sessions/{id}/audit-log`. Reachable
+  from the Sessions Diagnostics row's Audit log link
+  (migrated from direct-CSV). New
+  `audit.list_events_for_session` reader + view adapter +
+  template with severity pills + keyset pagination on
+  `id DESC`. CSV route gate tightened to `require_sys_admin`.
+- **PR 2 (#861)** — filter strip + filtered CSV download.
+  `AuditFilters` dataclass, shared `_apply_filters` helper,
+  URL-param state (event_type / severity / actor / from / to),
+  filter-aware Download CSV button, `session.audit_log_extracted`
+  audit event grows a `context` slot recording the filter set
+  on filtered extracts. Bonus follow-on commit constrained
+  the table layout (`table-layout: fixed`, per-column widths,
+  `overflow-wrap: anywhere`) so the JSON detail column wraps
+  rather than horizontally bloating the table.
+- **PR 3 (#863)** — per-row `<details>` expander +
+  per-shape pretty-printer. New `format_audit_detail` view
+  adapter mapping each canonical envelope into structured
+  sections (changes / snapshot / counts / set_changes /
+  reason / refs / context / fallback). Raw JSON sits in a
+  nested `<details>` for inspection.
+
+## What didn't ship (deferred)
+
+- **PRs 4 + 5** moved to
+  `guide/deferred_until_pilot_feedback.md` — entity drill-in
+  (deep-link `refs.*_id` to the relevant operator page) +
+  cross-session workspace audit search (new top-nav tab,
+  no-session viewer). Both are well-scoped post-MVP slices
+  whose value depends on operator behaviour we haven't seen
+  yet.
+- **PR 6 (Recent activity card on Session Home)** stays in
+  this archive as documented post-MVP scope. Lift into a
+  fresh segment plan if pilot feedback wants the prose
+  summariser.
+
+**Sizing (historical):** 3 MVP PRs (shipped) + 3 post-MVP
+(2 deferred + 1 stays-in-archive).
 **Depends on:** **16A** (shipped) — the Sys Admin chrome,
 the workspace Sessions Diagnostics surface, and the
 `require_sys_admin` dependency in `app/web/deps.py`.
@@ -198,6 +240,9 @@ button lives inside."
 
 ### PR 4 (post-MVP) — Entity drill-in (~200 LOC)
 
+> **Carved out 2026-05-11 to** `guide/deferred_until_pilot_feedback.md`.
+> Section retained here for historical context.
+
 **Ships.**
 
 - The envelope's `refs` slot already carries cross-entity
@@ -219,6 +264,9 @@ button lives inside."
 the drill-in is worth the additional surface.**
 
 ### PR 5 (post-MVP) — Cross-session audit search (~250 LOC)
+
+> **Carved out 2026-05-11 to** `guide/deferred_until_pilot_feedback.md`.
+> Section retained here for historical context.
 
 **Ships.**
 

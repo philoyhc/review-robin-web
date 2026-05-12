@@ -15,7 +15,7 @@
 > management / delegation among operators (**16B**,
 > `guide/archive/segment_16B_role_delegation.md`), and
 > richer in-app audit views (**16C**,
-> `guide/segment_16C_richer_audit_views.md`).
+> `guide/archive/segment_16C_richer_audit_views.md`).
 
 **Status:** Shipped 2026-05-10 → 2026-05-11. All six PRs in
 plus follow-ons. Two intentional scope deltas from the plan
@@ -826,7 +826,7 @@ with the path itself.
   to sys-admin / managing per-session
   `SessionOperator` rows.
 - **Segment 16C — Richer audit views**
-  (`guide/segment_16C_richer_audit_views.md`). The
+  (`guide/archive/segment_16C_richer_audit_views.md`). The
   in-app audit log viewer (beyond CSV download).
 - **Outbox today.**
   `app/web/routes_operator/_operations.py:510-527`
