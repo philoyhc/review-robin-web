@@ -132,11 +132,15 @@ def test_apply_tolerates_legacy_display_field_label_row(
     assert result.errors == []
     # The display field's label column is *not* updated to the
     # legacy value — apply silently drops it. ``apply`` is
-    # wipe-and-replace so re-query rather than refreshing the
-    # original instance.
+    # wipe-and-replace at the instrument level too, so re-query
+    # via the session join (the new instrument row gets a fresh
+    # primary key on Postgres; SQLite happens to reuse the
+    # deleted ``id`` but that's not portable).
     refreshed = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == instrument.id,
+        select(InstrumentDisplayField)
+        .join(Instrument)
+        .where(
+            Instrument.session_id == review_session.id,
             InstrumentDisplayField.source_type == "reviewee",
             InstrumentDisplayField.source_field == "tag_1",
         )
