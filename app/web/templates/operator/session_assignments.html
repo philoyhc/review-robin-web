@@ -170,32 +170,45 @@
              data-rrw-sortable="rrw-sort-assignments-{{ session.id }}">
         <thead>
         <tr>
-          <th class="rrw-sortable" data-sort-key="reviewer"
-              onclick="rrwSortHeaderClick(event, this)">Reviewer<span class="rrw-sort-badge"></span></th>
-          <th class="assignment-col col-rt1 rrw-sortable" data-sort-key="reviewer_tag_1"
-              onclick="rrwSortHeaderClick(event, this)">Tag1<span class="rrw-sort-badge"></span></th>
-          <th class="assignment-col col-rt2 rrw-sortable" data-sort-key="reviewer_tag_2"
-              onclick="rrwSortHeaderClick(event, this)">Tag2<span class="rrw-sort-badge"></span></th>
-          <th class="assignment-col col-rt3 rrw-sortable" data-sort-key="reviewer_tag_3"
-              onclick="rrwSortHeaderClick(event, this)">Tag3<span class="rrw-sort-badge"></span></th>
-          <th class="rrw-sortable" data-sort-key="reviewee"
-              onclick="rrwSortHeaderClick(event, this)">Reviewee<span class="rrw-sort-badge"></span></th>
-          <th class="assignment-col col-et1 rrw-sortable" data-sort-key="reviewee_tag_1"
-              onclick="rrwSortHeaderClick(event, this)">Tag1<span class="rrw-sort-badge"></span></th>
-          <th class="assignment-col col-et2 rrw-sortable" data-sort-key="reviewee_tag_2"
-              onclick="rrwSortHeaderClick(event, this)">Tag2<span class="rrw-sort-badge"></span></th>
-          <th class="assignment-col col-et3 rrw-sortable" data-sort-key="reviewee_tag_3"
-              onclick="rrwSortHeaderClick(event, this)">Tag3<span class="rrw-sort-badge"></span></th>
-          <th class="assignment-col col-p1 rrw-sortable" data-sort-key="pair_tag_1"
-              onclick="rrwSortHeaderClick(event, this)">Pair1<span class="rrw-sort-badge"></span></th>
-          <th class="assignment-col col-p2 rrw-sortable" data-sort-key="pair_tag_2"
-              onclick="rrwSortHeaderClick(event, this)">Pair2<span class="rrw-sort-badge"></span></th>
-          <th class="assignment-col col-p3 rrw-sortable" data-sort-key="pair_tag_3"
-              onclick="rrwSortHeaderClick(event, this)">Pair3<span class="rrw-sort-badge"></span></th>
-          <th class="rrw-sortable" data-sort-key="include"
-              onclick="rrwSortHeaderClick(event, this)">Include<span class="rrw-sort-badge"></span></th>
-          <th class="rrw-sortable" data-sort-key="instrument"
-              onclick="rrwSortHeaderClick(event, this)">Instrument<span class="rrw-sort-badge"></span></th>
+          <th class="rrw-sortable" data-sort-key="reviewer">Reviewer<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reviewer"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="assignment-col col-rt1 rrw-sortable" data-sort-key="reviewer_tag_1">Tag1<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reviewer Tag1"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="assignment-col col-rt2 rrw-sortable" data-sort-key="reviewer_tag_2">Tag2<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reviewer Tag2"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="assignment-col col-rt3 rrw-sortable" data-sort-key="reviewer_tag_3">Tag3<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reviewer Tag3"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="rrw-sortable" data-sort-key="reviewee">Reviewee<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reviewee"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="assignment-col col-et1 rrw-sortable" data-sort-key="reviewee_tag_1">Tag1<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reviewee Tag1"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="assignment-col col-et2 rrw-sortable" data-sort-key="reviewee_tag_2">Tag2<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reviewee Tag2"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="assignment-col col-et3 rrw-sortable" data-sort-key="reviewee_tag_3">Tag3<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Reviewee Tag3"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="assignment-col col-p1 rrw-sortable" data-sort-key="pair_tag_1">Pair1<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Pair Tag1"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="assignment-col col-p2 rrw-sortable" data-sort-key="pair_tag_2">Pair2<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Pair Tag2"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="assignment-col col-p3 rrw-sortable" data-sort-key="pair_tag_3">Pair3<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Pair Tag3"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="rrw-sortable" data-sort-key="include">Include<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Include"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="rrw-sortable" data-sort-key="instrument">Instrument<button type="button" class="rrw-sort-btn"
+              aria-label="Sort by Instrument"
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
         </tr>
         </thead>
         <tbody class="rrw-rows">

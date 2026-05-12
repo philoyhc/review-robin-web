@@ -189,16 +189,16 @@
           <table data-rrw-sortable="rrw-sort-rs-{{ session.id }}-{{ group.instrument.id }}">
             <thead>
             <tr>
-              <th class="rs-reviewee rrw-sortable"
-                  data-sort-key="reviewee.name"
-                  onclick="rrwSortHeaderClick(event, this)">
-                Reviewee
-                <span class="rrw-sort-badge"></span>
+              <th class="rs-reviewee rrw-sortable" data-sort-key="reviewee.name">
+                Reviewee<button type="button" class="rrw-sort-btn"
+                    aria-label="Sort by Reviewee"
+                    onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>
               </th>
               {% for header in group.display_fields %}
                 <th{% if header.is_profile_link %} class="rs-narrow rrw-sortable"{% else %} class="rrw-sortable"{% endif %}
-                    data-sort-key="display:{{ header.field.id }}"
-                    onclick="rrwSortHeaderClick(event, this)">{{ header.label }}<span class="rrw-sort-badge"></span></th>
+                    data-sort-key="display:{{ header.field.id }}">{{ header.label }}<button type="button" class="rrw-sort-btn"
+                    aria-label="Sort by {{ header.label }}"
+                    onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
               {% endfor %}
               {% set first_row = group.rows[0] %}
               {% for cell in first_row.cells %}
@@ -208,8 +208,9 @@
                 {% elif cell.field.data_type == 'String' and max_len > 100 %}{% set col_class = 'rs-textlong rrw-sortable' %}{% endif %}
                 <th class="{{ col_class }}"
                     data-sort-key="response:{{ cell.field.id }}"
-                    data-sort-type="{{ cell.field.data_type }}"
-                    onclick="rrwSortHeaderClick(event, this)">{{ cell.field.label }}{% if cell.field.required %} *{% endif %}<span class="rrw-sort-badge"></span></th>
+                    data-sort-type="{{ cell.field.data_type }}">{{ cell.field.label }}{% if cell.field.required %} *{% endif %}<button type="button" class="rrw-sort-btn"
+                    aria-label="Sort by {{ cell.field.label }}"
+                    onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
               {% endfor %}
               {% if group.show_status_col %}<th class="rs-narrow"></th>{% endif %}
             </tr>
