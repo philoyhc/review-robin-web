@@ -57,7 +57,17 @@
     {% if builder.editable %}
       <div style="flex: 1 1 0;">
         <p style="margin: 0;">
-          <label for="rule-builder-name-input"><strong>Name</strong></label>
+          <label for="rule-builder-name-input"
+                 style="display: inline-flex; gap: 8px; align-items: baseline;">
+            <strong>Name</strong>
+            {# In-library pill — mirrors the RTD card's pill on
+               session rows that point at an operator-library entry
+               via library_origin_id. Hidden on drafts (no DB row
+               yet) and on rows that haven't been Save-to-library'd. #}
+            {% if builder.has_library_origin and not builder.selected_is_draft and not builder.selected_is_blank %}
+              <span class="pill pill-info">in library</span>
+            {% endif %}
+          </label>
           <input type="text"
                  id="rule-builder-name-input"
                  name="name"
@@ -293,6 +303,24 @@
                   type="submit"
                   id="rule-builder-save-button"
                   {% if builder.selected_is_blank %}disabled{% endif %}>Save</button>
+        {% endif %}
+        {# Save-to-library — only visible on a saved, editable
+           SessionRuleSet whose library_origin_id is NULL. Drafts
+           (no row yet) and already-linked rows hide the button.
+           POSTs the form's existing rule_set_id hidden input to
+           the Slice 4a /save-to-library route. #}
+        {% if builder.can_save
+              and not builder.selected_is_draft
+              and not builder.selected_is_blank
+              and not builder.has_library_origin %}
+          <button class="btn secondary"
+                  type="submit"
+                  formaction="/operator/sessions/{{ session.id }}/assignments/rule-based-editor/save-to-library"
+                  formmethod="post"
+                  formnovalidate
+                  id="rule-builder-save-to-library-button"
+                  style="min-width: 6em; text-align: center;"
+                  title="Save this RuleSet to your operator library.">To library</button>
         {% endif %}
         {% if builder.can_cancel %}
           <a class="btn secondary"
