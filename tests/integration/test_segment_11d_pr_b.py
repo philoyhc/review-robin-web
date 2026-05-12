@@ -129,8 +129,8 @@ def test_session_edit_renders_two_row_chrome_with_no_active_tab(
     # neither a Setup nor an Operations tab carries the active class.
     assert "nav-tab active" not in body
     assert "session-home-anchor active" not in body
-    # H1 inside the body identifies the sub-page (the chrome doesn't).
-    assert "<h1>Edit Session</h1>" in body
+    # Sub-page heading inside the body identifies the sub-page (the chrome doesn't).
+    assert "<h2>Edit session details</h2>" in body
 
 
 def test_session_edit_renders_status_row_with_lifecycle_pill(
