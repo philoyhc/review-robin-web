@@ -734,8 +734,14 @@
         if (hk) keyToType[hk] = hType;
       }
       var rows = Array.prototype.slice.call(tbody.children);
+      // Stamp the server-render insertion order ONCE per row so
+      // ``state.length === 0`` (unsorted) restores the operator
+      // default — not the most-recently-sorted order. Re-stamping
+      // on every call would clobber it.
       rows.forEach(function (r, idx) {
-        r.dataset.rsOriginalIndex = String(idx);
+        if (r.dataset.rsOriginalIndex === undefined) {
+          r.dataset.rsOriginalIndex = String(idx);
+        }
       });
       if (state.length === 0) {
         // Restore original insertion order.
