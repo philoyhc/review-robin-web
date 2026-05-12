@@ -460,7 +460,6 @@ def instrument_add_display_field(
 )
 def instrument_edit_display_field(
     df_id: int,
-    label: str | None = Form(default=None),
     visible: str | None = Form(default=None),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
@@ -470,11 +469,17 @@ def instrument_edit_display_field(
     _require_instrument_editable(review_session)
     field = _require_display_field_in_instrument(df_id, instrument, db)
 
+    # ``label`` form parameter retired in Segment 15A Slice 2 —
+    # the per-instrument label override is no longer editable.
+    # Friendly labels resolve via ``field_labels.resolve(...)``
+    # against the session-wide ``session_field_labels`` table.
+    # This endpoint now only toggles visibility (the
+    # column-checkbox UI on the Display Fields table).
     try:
         instruments_service.update_display_field(
             db,
             field=field,
-            label=label or "",
+            label=field.label,  # preserve current value (dead data)
             visible=(visible == "true"),
             actor=user,
         )

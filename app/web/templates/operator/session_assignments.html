@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_field_label_header.html" import field_label_header %}
 
 {% block title %}Assignments — {{ session.name }}{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -134,21 +135,26 @@
       {% endif %}
       <div class="assignment-col-toggles"
            style="display: flex; justify-content: flex-end; gap: var(--space-3) var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-2);">
+        {# 15A Slice 2 — column-toggle labels resolve via
+           ``field_label(session, ...)`` so an operator who
+           renamed e.g. ``RevieweeTag1`` to "Lab section" sees
+           that name on the toggle as well as the column
+           header. #}
         {% set toggle_groups = [
           ("Reviewer", [
-            ("rt1", "Tag1", has_r_tag_1),
-            ("rt2", "Tag2", has_r_tag_2),
-            ("rt3", "Tag3", has_r_tag_3),
+            ("rt1", field_label(session, "reviewer", "tag_1"), has_r_tag_1),
+            ("rt2", field_label(session, "reviewer", "tag_2"), has_r_tag_2),
+            ("rt3", field_label(session, "reviewer", "tag_3"), has_r_tag_3),
           ]),
           ("Reviewee", [
-            ("et1", "Tag1", has_e_tag_1),
-            ("et2", "Tag2", has_e_tag_2),
-            ("et3", "Tag3", has_e_tag_3),
+            ("et1", field_label(session, "reviewee", "tag_1"), has_e_tag_1),
+            ("et2", field_label(session, "reviewee", "tag_2"), has_e_tag_2),
+            ("et3", field_label(session, "reviewee", "tag_3"), has_e_tag_3),
           ]),
           ("Relationship", [
-            ("p1", "Ctx1", ctx.p1),
-            ("p2", "Ctx2", ctx.p2),
-            ("p3", "Ctx3", ctx.p3),
+            ("p1", field_label(session, "pair_context", "1"), ctx.p1),
+            ("p2", field_label(session, "pair_context", "2"), ctx.p2),
+            ("p3", field_label(session, "pair_context", "3"), ctx.p3),
           ]),
         ] %}
         {% for group_label, items in toggle_groups %}
@@ -173,34 +179,34 @@
           <th class="rrw-sortable" data-sort-key="reviewer">Reviewer<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewer"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="assignment-col col-rt1 rrw-sortable" data-sort-key="reviewer_tag_1">Tag1<button type="button" class="rrw-sort-btn"
+          <th class="assignment-col col-rt1 rrw-sortable" data-sort-key="reviewer_tag_1">{{ field_label_header(session, "reviewer", "tag_1") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewer Tag1"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="assignment-col col-rt2 rrw-sortable" data-sort-key="reviewer_tag_2">Tag2<button type="button" class="rrw-sort-btn"
+          <th class="assignment-col col-rt2 rrw-sortable" data-sort-key="reviewer_tag_2">{{ field_label_header(session, "reviewer", "tag_2") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewer Tag2"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="assignment-col col-rt3 rrw-sortable" data-sort-key="reviewer_tag_3">Tag3<button type="button" class="rrw-sort-btn"
+          <th class="assignment-col col-rt3 rrw-sortable" data-sort-key="reviewer_tag_3">{{ field_label_header(session, "reviewer", "tag_3") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewer Tag3"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
           <th class="rrw-sortable" data-sort-key="reviewee">Reviewee<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewee"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="assignment-col col-et1 rrw-sortable" data-sort-key="reviewee_tag_1">Tag1<button type="button" class="rrw-sort-btn"
+          <th class="assignment-col col-et1 rrw-sortable" data-sort-key="reviewee_tag_1">{{ field_label_header(session, "reviewee", "tag_1") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewee Tag1"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="assignment-col col-et2 rrw-sortable" data-sort-key="reviewee_tag_2">Tag2<button type="button" class="rrw-sort-btn"
+          <th class="assignment-col col-et2 rrw-sortable" data-sort-key="reviewee_tag_2">{{ field_label_header(session, "reviewee", "tag_2") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewee Tag2"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="assignment-col col-et3 rrw-sortable" data-sort-key="reviewee_tag_3">Tag3<button type="button" class="rrw-sort-btn"
+          <th class="assignment-col col-et3 rrw-sortable" data-sort-key="reviewee_tag_3">{{ field_label_header(session, "reviewee", "tag_3") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Reviewee Tag3"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="assignment-col col-p1 rrw-sortable" data-sort-key="pair_tag_1">Pair1<button type="button" class="rrw-sort-btn"
+          <th class="assignment-col col-p1 rrw-sortable" data-sort-key="pair_tag_1">{{ field_label_header(session, "pair_context", "1") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Pair Tag1"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="assignment-col col-p2 rrw-sortable" data-sort-key="pair_tag_2">Pair2<button type="button" class="rrw-sort-btn"
+          <th class="assignment-col col-p2 rrw-sortable" data-sort-key="pair_tag_2">{{ field_label_header(session, "pair_context", "2") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Pair Tag2"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="assignment-col col-p3 rrw-sortable" data-sort-key="pair_tag_3">Pair3<button type="button" class="rrw-sort-btn"
+          <th class="assignment-col col-p3 rrw-sortable" data-sort-key="pair_tag_3">{{ field_label_header(session, "pair_context", "3") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Pair Tag3"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
           <th class="rrw-sortable" data-sort-key="include">Include<button type="button" class="rrw-sort-btn"

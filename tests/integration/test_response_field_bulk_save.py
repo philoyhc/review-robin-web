@@ -212,12 +212,14 @@ def test_response_field_help_text_and_visible_persist_via_bulk_save(
     assert comments.help_text_visible is False
 
 
-def test_friendly_label_persistence_round_trip_via_edit_route(
+def test_per_instrument_friendly_label_retired_in_15a(
     client: TestClient, db: Session
 ) -> None:
-    """The headline P0 fix: an operator-typed Friendly Label survives a
-    page reload — it persists via the existing ``/display-fields/{id}/edit``
-    route, not via the JS-only placeholder of yore (item #13)."""
+    """Segment 15A Slice 2 regression pin: the per-instrument
+    ``Friendly Label`` input on a Display Field row is retired.
+    ``POST /display-fields/{id}/edit`` no longer accepts ``label``,
+    so any stray value in the payload is silently dropped — the
+    column stays at its seed value."""
     review_session = _make_session(client, db, code="lbl-persist")
     instrument = _instrument(db, review_session.id)
     db.add(
@@ -246,7 +248,9 @@ def test_friendly_label_persistence_round_trip_via_edit_route(
     )
     assert response.status_code == 303
     db.refresh(df)
-    assert df.label == "Cohort"
+    # Per Slice 2: ``Cohort`` is silently dropped, label stays
+    # at the original empty seed.
+    assert df.label == ""
 
 
 def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
@@ -293,9 +297,9 @@ def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
         )
     ).scalar_one()
 
-    # Submit a hide on pair_two and a label override on pair_one.
-    # Order doesn't change relative to seed; the form only flips
-    # visibility + label here so we don't need to model the merged sort.
+    # Submit a hide on pair_two. ``label`` payload is retired in
+    # 15A Slice 2 — bulk-save silently drops display-field
+    # ``label`` values; the visibility flip drives the mutation.
     payload = {
         "kind": ["display", "display", "display", "response", "response"],
         "id": [
@@ -306,7 +310,7 @@ def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
             str(comments.id),
         ],
         "order": ["0", "1", "2", "3", "4"],
-        "label": ["P1", "", "", "", ""],
+        "label": ["legacy", "", "", "", ""],  # ignored for display rows
         # visible_ids: pair_one + pair_three (pair_two unchecked → hidden)
         "visible_ids": [str(pair_one.id), str(pair_three.id)],
     }
@@ -321,13 +325,16 @@ def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
     db.refresh(pair_one)
     db.refresh(pair_two)
     db.refresh(pair_three)
-    assert pair_one.label == "P1"
+    # ``legacy`` was silently dropped — display-field label retired.
+    assert pair_one.label == ""
     assert pair_one.visible is True
     assert pair_two.visible is False
     assert pair_three.visible is True
 
-    # Reviewer surface should render P1 header for pair_one, omit pair_two,
-    # show pair_three with default label.
+    # Reviewer surface renders the friendly-label-resolved header
+    # for every visible display field. pair_one + pair_three
+    # resolve to the built-in defaults (no session override set);
+    # pair_two is hidden so its column is omitted.
     _activate(operator, db, review_session.id)
     reviewer_client = make_client(reviewer_user)
     body = reviewer_client.get(
@@ -336,7 +343,7 @@ def test_bulk_fields_save_interleaves_and_renders_on_reviewer_surface(
     # PR 3 sort scaffolding wraps display-field headers with a
     # trailing badge span — match by substring inside ``<th>...``
     # rather than the exact tag content.
-    assert ">P1<" in body
+    assert ">Pair context 1<" in body
     assert ">Pair context 2<" not in body
     assert ">Pair context 3<" in body
 

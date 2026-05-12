@@ -87,11 +87,15 @@ def test_add_display_field_route_persists(
     ]
 
 
-def test_update_display_field_label_persists(
+def test_update_display_field_label_no_longer_persists(
     committed_client: TestClient, committed_engine: Engine
 ) -> None:
-    """The headline regression: the operator types a Friendly Label,
-    clicks ✓, navigates away and back — and the value sticks."""
+    """Segment 15A Slice 2 regression pin: the per-instrument
+    ``Friendly Label`` input on the Instruments page was retired;
+    the ``POST /display-fields/{id}/edit`` endpoint no longer
+    accepts the ``label`` form parameter. Any stray ``label`` in
+    the payload is silently ignored — the column stays at its
+    existing (empty) value in the schema."""
     session_id, instrument_id = _bootstrap(
         committed_client, committed_engine, code="edit-disp"
     )
@@ -119,7 +123,10 @@ def test_update_display_field_label_persists(
     with Session(committed_engine) as s:
         df = s.get(InstrumentDisplayField, df_id)
         assert df is not None
-        assert df.label == "Cohort A"
+        # Per Slice 2 retirement: the stray ``label`` field is
+        # silently ignored. The DB column stays at its original
+        # value (the empty seed from the add POST).
+        assert df.label == ""
 
 
 def test_delete_display_field_persists(
@@ -294,9 +301,13 @@ def test_add_default_response_field_persists(
     assert "rating3" in keys
 
 
-def test_bulk_save_fields_label_persists(
+def test_bulk_save_fields_response_label_persists_display_label_retired(
     committed_client: TestClient, committed_engine: Engine
 ) -> None:
+    """Segment 15A Slice 2: bulk-save still applies ``label`` to
+    Response Fields (per-instrument question text — stays
+    editable) but silently drops ``label`` for Display Fields
+    (per-instrument override retired)."""
     session_id, instrument_id = _bootstrap(
         committed_client, committed_engine, code="bulk-save"
     )
@@ -325,7 +336,7 @@ def test_bulk_save_fields_label_persists(
             "kind": ["display", "response"],
             "id": [str(df_id), str(rating_id)],
             "order": ["0", "1"],
-            "label": ["BulkLabel", ""],
+            "label": ["BulkLabel", "Renamed Rating"],
             "visible_ids": [str(df_id)],
         },
         follow_redirects=False,
@@ -335,4 +346,11 @@ def test_bulk_save_fields_label_persists(
     with Session(committed_engine) as s:
         df = s.get(InstrumentDisplayField, df_id)
         assert df is not None
-        assert df.label == "BulkLabel"
+        # Display Field label retired in 15A Slice 2 — the
+        # ``BulkLabel`` value in the payload is silently dropped.
+        assert df.label == ""
+        rating = s.get(InstrumentResponseField, rating_id)
+        assert rating is not None
+        # Response Field label is still per-instrument question
+        # text — stays editable.
+        assert rating.label == "Renamed Rating"

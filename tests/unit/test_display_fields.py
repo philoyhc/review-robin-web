@@ -48,11 +48,15 @@ def _make_field(
     )
 
 
-def test_display_field_label_returns_operator_typed_label_stripped() -> None:
+def test_display_field_label_ignores_per_instrument_override() -> None:
+    """Segment 15A Slice 2 regression pin: the per-instrument
+    ``InstrumentDisplayField.label`` is no longer in the resolver
+    chain, even when non-empty. The session-less call returns the
+    built-in default for the slot."""
     field = _make_field(
         source_type="reviewee", source_field="tag_1", label="  Cohort  "
     )
-    assert display_field_label(field) == "Cohort"
+    assert display_field_label(field) == "Tag 1"
 
 
 @pytest.mark.parametrize(

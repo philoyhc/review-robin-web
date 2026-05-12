@@ -23,6 +23,7 @@ from ._display_field_helpers import (
     _instrument,
     _make_session,
     _populate_rosters,
+    _seed_pair_context_display_fields,
 )
 
 def test_state_machine_editing_param_renders_save_cancel(
@@ -86,10 +87,17 @@ def test_saved_state_pill_flips_after_save(
     client: TestClient, db: Session
 ) -> None:
     """A fresh instrument renders the ``not saved`` pill; after the
-    operator submits a bulk save (touches a Display Fields label), the
-    pill flips to ``saved``."""
+    operator submits a bulk save with a real display-field mutation
+    (a visibility toggle on a non-locked row), the pill flips to
+    ``saved``.
+
+    Pre-15A this test exercised a label change; Slice 2 retired the
+    per-instrument label override, so the trigger is now a
+    visibility flip on an unlocked pair_context row.
+    """
     review_session = _make_session(client, db, code="saved-pill")
     instrument = _instrument(db, review_session.id)
+    _seed_pair_context_display_fields(db, instrument)
 
     fresh = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
@@ -97,28 +105,28 @@ def test_saved_state_pill_flips_after_save(
     assert "not saved</span>" in fresh
     assert ">saved</span>" not in fresh
 
-    # Submit a bulk save touching the locked Name row's label.
-    name_row = db.execute(
+    pair_one = db.execute(
         select(InstrumentDisplayField).where(
             InstrumentDisplayField.instrument_id == instrument.id,
-            InstrumentDisplayField.source_field == "name",
-        )
-    ).scalar_one()
-    email_row = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == instrument.id,
-            InstrumentDisplayField.source_field == "email_or_identifier",
+            InstrumentDisplayField.source_type == "pair_context",
+            InstrumentDisplayField.source_field == "1",
         )
     ).scalar_one()
 
+    # Bulk-save flips pair_one's visibility off (omitting its id
+    # from visible_ids). Real mutation → ``display_changed=True``
+    # → ``saved`` pill flips on.
     save = client.post(
         f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
         data={
-            "kind": ["display", "display"],
-            "id": [str(name_row.id), str(email_row.id)],
-            "order": ["0", "1"],
-            "label": ["Reviewee Name", "Reviewee Email"],
-            "visible_ids": [str(name_row.id), str(email_row.id)],
+            "kind": ["display"],
+            "id": [str(pair_one.id)],
+            "order": ["0"],
+            # ``label`` retired in 15A Slice 2; empty value silently
+            # dropped on display rows. Submitted for the route's
+            # parallel-arrays length check.
+            "label": [""],
+            "visible_ids": [],
         },
         follow_redirects=False,
     )

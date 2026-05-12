@@ -368,7 +368,7 @@ def _surface_context(
             display_cells.append(
                 {
                     "field": display_field,
-                    "label": instruments_service.display_field_label(display_field),
+                    "label": instruments_service.display_field_label(display_field, session=review_session),
                     "value": instruments_service.display_field_value(
                         display_field,
                         assignment,
@@ -479,7 +479,7 @@ def _surface_context(
         display_field_headers = [
             {
                 "field": df,
-                "label": instruments_service.display_field_label(df),
+                "label": instruments_service.display_field_label(df, session=review_session),
                 "is_profile_link": (
                     df.source_type == "reviewee"
                     and df.source_field == "profile_link"
@@ -605,6 +605,7 @@ def _make_synthetic_row(
     index: int,
     response_fields: list[InstrumentResponseField],
     display_fields: list[InstrumentDisplayField],
+    review_session: ReviewSession | None = None,
 ) -> dict:
     """Build a row dict with the same shape as ``_surface_context`` for a
     synthetic (placeholder) reviewee. Used by ``build_preview_context`` to
@@ -633,7 +634,7 @@ def _make_synthetic_row(
     display_cells = [
         {
             "field": df,
-            "label": instruments_service.display_field_label(df),
+            "label": instruments_service.display_field_label(df, session=review_session),
             "value": _SYNTHETIC_VALUES_BY_SOURCE.get(
                 (df.source_type, df.source_field)
             ),
@@ -777,7 +778,7 @@ def build_preview_context(
         display_cells = [
             {
                 "field": df,
-                "label": instruments_service.display_field_label(df),
+                "label": instruments_service.display_field_label(df, session=review_session),
                 "value": instruments_service.display_field_value(
                     df,
                     assignment,
@@ -823,6 +824,7 @@ def build_preview_context(
                     index=synthetic_offset + offset,
                     response_fields=anchor_response_fields,
                     display_fields=anchor_display_fields,
+                    review_session=review_session,
                 )
             )
 
@@ -846,7 +848,7 @@ def build_preview_context(
         display_field_headers = [
             {
                 "field": df,
-                "label": instruments_service.display_field_label(df),
+                "label": instruments_service.display_field_label(df, session=review_session),
                 "is_profile_link": (
                     df.source_type == "reviewee"
                     and df.source_field == "profile_link"

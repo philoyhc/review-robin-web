@@ -335,7 +335,9 @@ def test_bulk_save_fields_emits_display_fields_saved_with_diff(
         if (f.source_type, f.source_field) == ("pair_context", "3")
     )
 
-    # Toggle pc_two visibility off, change pc_one label, leave pc_three alone
+    # Toggle pc_two visibility off; submit a stray ``label`` on
+    # pc_one that 15A Slice 2 silently drops (display-field label
+    # retired); leave pc_three alone.
     rows = [
         {"kind": "display", "id": pc_one.id, "order": 0, "label": "P1", "visible": True},
         {"kind": "display", "id": pc_two.id, "order": 1, "label": "", "visible": False},
@@ -358,8 +360,9 @@ def test_bulk_save_fields_emits_display_fields_saved_with_diff(
         (e["source_type"], e["source_field"]): e["changes"]
         for e in set_changes["updated"]
     }
+    # 15A Slice 2: only the visibility change makes the diff; the
+    # ``label`` change on pc_one is silently dropped.
     assert updated == {
-        ("pair_context", "1"): {"label": ["", "P1"]},
         ("pair_context", "2"): {"visible": [True, False]},
     }
 

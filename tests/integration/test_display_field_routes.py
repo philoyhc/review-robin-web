@@ -116,9 +116,13 @@ def test_add_display_field_duplicate_source_redirects_with_error(
     assert len(pair_one_count) == 1
 
 
-def test_edit_display_field_updates_label_and_visibility(
+def test_edit_display_field_toggles_visibility_only(
     client: TestClient, db: Session
 ) -> None:
+    """Segment 15A Slice 2: per-row edit endpoint now only toggles
+    visibility. ``label`` form param is retired and any value is
+    silently dropped — the column stays at the existing seed
+    value."""
     review_session = _make_session(client, db, code="edit-disp")
     instrument = _instrument(db, review_session.id)
     _seed_pair_context_display_fields(db, instrument)
@@ -128,6 +132,7 @@ def test_edit_display_field_updates_label_and_visibility(
             InstrumentDisplayField.source_field == "1",
         )
     ).scalar_one()
+    original_label = pair_one.label
 
     response = client.post(
         f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
@@ -138,10 +143,11 @@ def test_edit_display_field_updates_label_and_visibility(
     assert response.status_code == 303
 
     db.refresh(pair_one)
-    assert pair_one.label == "P1"
+    # ``P1`` was silently dropped; visibility flipped.
+    assert pair_one.label == original_label
     assert pair_one.visible is True
 
-    # Now flip visible off
+    # Now flip visible off — ``label`` payload still ignored.
     response = client.post(
         f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
         f"/display-fields/{pair_one.id}/edit",
@@ -150,6 +156,7 @@ def test_edit_display_field_updates_label_and_visibility(
     )
     assert response.status_code == 303
     db.refresh(pair_one)
+    assert pair_one.label == original_label
     assert pair_one.visible is False
 
 
