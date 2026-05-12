@@ -111,11 +111,14 @@ Three invariants this segment must preserve.
    affordance. Operators who never add a second instrument
    should not see any new chrome.
 
-4. **No Quick Setup affordance.** The Quick Setup card's
-   Assignments slot retired in 15D PR 7a; this segment does
-   **not** reintroduce it. Generate lives on the per-
-   instrument card (Slice 2); bulk-edit of per-instrument
-   rules happens via the existing Settings CSV (Quick Setup
+4. **No Quick Setup affordance, no separate Generate
+   button.** The Quick Setup card's Assignments slot retired
+   in 15D PR 7a; this segment does **not** reintroduce it.
+   Generation happens implicitly as part of saving the
+   instrument-card edit (Slice 2 — picking a rule and Saving
+   triggers `replace_assignments(instrument_id=...)` in the
+   same transaction). Bulk-edit of per-instrument rules
+   happens via the existing Settings CSV (Quick Setup
    Settings slot — already in place, end-to-end after Slice 2
    lights up the apply path).
 
@@ -138,8 +141,10 @@ per-instrument scope:
   net during the transition; no live operator surface calls
   this path after Slice 3 ships.
 - `instrument_id=<id>` replaces only that instrument's
-  assignments. The Instrument-card Generate button (Slice 2)
-  is the only operator-facing caller post-15B.
+  assignments. The Instrument-card Save handler (Slice 2) is
+  the only operator-facing caller post-15B — invoked
+  implicitly when the operator saves an instrument card whose
+  rule picker changed.
 
 Also touched:
 - `assignments.existing_count` /
@@ -160,49 +165,104 @@ Setup card).
 ### Slice 2 — Per-instrument rule picker on the Instrument card (1 PR, ~400 LOC)
 
 **The centerpiece.** Each instrument card on
-`/operator/sessions/{id}/instruments` grows a small block
-above the Display / Response fields that owns the rule
-selection for *that instrument*:
+`/operator/sessions/{id}/instruments` grows a half-width
+**Assignment rule** sub-card at the bottom, sitting to the
+**left of the existing Danger Zone sub-card**. The Edit /
+Add-new-instrument action buttons relocate to a row below the
+two sub-cards.
 
 ```
-┌─ Manager survey ───────────────────────────────────────┐
-│ short label: ms                                        │
-│                                                        │
-│  Assignment rule                                       │
-│  ┌──────────────────────────────┐ [Edit rule]          │
-│  │ Full Matrix          ▾       │ [Generate]           │
-│  └──────────────────────────────┘                      │
-│  Current assignments: 42 pairs (last generated 11:02). │
-│                                                        │
-│  ─ Display fields ─                                    │
-│  …                                                     │
-│  ─ Response fields ─                                   │
-│  …                                                     │
-└────────────────────────────────────────────────────────┘
+┌─ Manager survey ──────────────────────────────────────────┐
+│ short label: ms                                           │
+│                                                           │
+│  ─ Display fields ─                                       │
+│  …                                                        │
+│  ─ Response fields ─                                      │
+│  …                                                        │
+│                                                           │
+│  ┌─ Assignment rule (½) ─────┐  ┌─ Danger zone (½) ─────┐ │
+│  │ [Full Matrix         ▾]   │  │ [Delete this          │ │
+│  │ 42 eligible pairs found.  │  │  instrument]          │ │
+│  │ [Open Rule Builder]       │  │                       │ │
+│  └───────────────────────────┘  └───────────────────────┘ │
+│                                                           │
+│  [Edit]  [Add new instrument]                             │
+└───────────────────────────────────────────────────────────┘
 ```
 
-- **Rule picker** — `<select>` listing every
+The picker sub-card contains **exactly three things**:
+
+- **Rule picker** — a `<select>` listing every
   `session_rule_sets` row visible in this session (seeded
   RuleSets first, then the operator's personal copies, matching
   the order used by today's Assignments-page Rule Based card).
-  Writes through to `instruments.rule_set_id` on submit.
-- **Edit rule** — link to the existing Rule Builder page,
-  threaded with the instrument's current
-  `rule_set_id`. (`/operator/sessions/{id}/assignments/rule-based-editor?rule_set_id={...}&instrument_id={...}`.)
-- **Generate** — calls `replace_assignments(instrument_id=...)`
-  per Slice 1. Replaces only that instrument's
-  `Assignment` rows. Audit envelope carries the per-instrument
-  `instrument_id` field.
-- **Status line** — "Current assignments: N pairs (last
-  generated HH:MM)" or "No assignments generated yet" when the
-  row count is zero. Reads from `assignments.existing_count`
-  (Slice 1 helper).
+  Top option is a "— No rule —" sentinel that maps to
+  `rule_set_id=NULL` on save.
+- **Eligibility line** — "N eligible pairs found." Shows the
+  count of pairs the currently-selected rule would produce
+  when applied against the session's current rosters. Computed
+  server-side using the same engine the Rule Builder preview
+  uses; re-evaluated whenever the picker selection changes
+  (small JS swap; same shape as the existing live-preview
+  patterns on the Instruments page). Reads "no rule selected"
+  when the sentinel option is active.
+- **Open Rule Builder** — link-styled button that opens the
+  existing Rule Builder page threaded with the instrument's
+  current `rule_set_id` and `instrument_id`
+  (`/operator/sessions/{id}/assignments/rule-based-editor?rule_set_id={...}&instrument_id={...}`).
+  The Rule Builder's "back to assignments" link returns to the
+  Instrument card, not to the Assignments page.
+
+**All three are Secondary style. No Primary button on the
+picker sub-card.** The Rule Builder button is the only button;
+the picker and eligibility line are not buttons.
+
+#### Edit-mode gating
+
+The picker is **only accessible when the instrument card is
+in edit mode**. Specifically:
+
+- **Card locked** (default state): the picker `<select>` is
+  disabled, the eligibility count is read-only, the Open Rule
+  Builder button stays available (it's a navigation
+  affordance, not a mutation). The picker shows the saved
+  `rule_set_id`'s name; if NULL, it shows "— No rule —".
+- **Card editing** (operator clicked Edit): the `<select>`
+  becomes enabled, the eligibility line refreshes when the
+  selection changes. Selection persists on **Save**, alongside
+  every other inline-edit change on the card. Cancel reverts
+  the picker to the saved value with no side effect.
+
+Using the picker is part of the card's edit affordance — there
+is no separate "save the picker" form. The existing
+Save / Cancel buttons (which appear in place of Edit when the
+card is editing) cover the picker write-through.
+
+#### Save semantics — generation happens here
+
+There is **no separate Generate button.** The bottom row of
+the card carries the existing Edit (locked) or Save / Cancel
+(editing) buttons plus Add new instrument. When the operator
+clicks **Save** while the picker selection has changed:
+
+1. `instruments.rule_set_id` is written to the new value
+   (or NULL for the sentinel).
+2. `replace_assignments(instrument_id=<this>)` runs (per
+   Slice 1) — replaces this instrument's `Assignment` rows
+   with the materialised pairs from the new rule. If the
+   selection cleared to NULL, the call deletes existing rows
+   without writing replacements.
+3. The audit envelope (`assignments.replaced`) carries this
+   instrument's `instrument_id` + the new `rule_set_id` /
+   `rule_set_revision_id` refs.
+
+If the picker selection didn't change, Save is a no-op for
+assignments — only the other card edits persist.
 
 **`instruments.rule_set_id` resolution semantics.** The column
 is the single source of truth per instrument. NULL = "no rule
-picked yet" — the initial state for every existing instrument
-post-13D PR 4. Picking a rule writes the row id; "Reset" (a
-new affordance — small link inside the rule block) sets it
+selected" — the initial state for every existing instrument
+post-13D PR 4. Selecting "— No rule —" and Saving clears it
 back to NULL and deletes that instrument's `Assignment` rows.
 
 **No session-level default.** If 80% of operators want the
@@ -405,8 +465,12 @@ to bump if something else slips.
 - **Routes.**
   `app/web/routes_operator/_assignments.py` (Slice 3 — strip
   Rule Based card; preview-only render),
-  `app/web/routes_operator/_instruments.py` (Slice 2 — rule
-  picker / Generate POST handlers),
+  `app/web/routes_operator/_instruments.py` (Slice 2 — the
+  existing Save handler grows a `rule_set_id` write-through
+  and an inline call to
+  `replace_assignments(instrument_id=...)` when the picker
+  changed; new GET endpoint returns the eligibility-count
+  fragment for the picker's live refresh),
   `app/web/routes_operator/_rule_builder.py` (Slice 2 —
   thread `instrument_id` through Rule Builder URL),
   `app/web/routes_reviewer.py` (Slice 5 — dashboard handler).
@@ -442,10 +506,15 @@ to bump if something else slips.
     tests for `instrument_id=None` (apply to all) vs.
     per-instrument paths; audit-event payload assertions.
   - **Slice 2** — `test_instrument_rule_set_picker.py` —
-    selecting a rule writes `instruments.rule_set_id`;
-    Generate writes per-instrument `Assignment` rows; Reset
-    clears both. Empty-pool case renders the "Create a rule"
-    deep link. Plus `test_session_config_io_rule_set.py` —
+    picker `<select>` disabled when card is locked, enabled
+    in edit mode; Save with a new selection writes both
+    `instruments.rule_set_id` and the materialised
+    `Assignment` rows in one transaction; Save with the
+    sentinel cleared selection writes `NULL` and deletes
+    existing rows; Cancel reverts cleanly. Eligibility line
+    refreshes on picker change. Empty-pool case renders the
+    "Create a rule" deep link via the Open Rule Builder
+    button. Plus `test_session_config_io_rule_set.py` —
     Settings CSV apply path resolves `rule_set_name` →
     `rule_set_id` (happy path + unknown-name error +
     empty-value clears).
@@ -486,18 +555,28 @@ need updates to match the revised mental model:
   (§7.2) doesn't change shape; just gains an `instrument_id`
   context param so its "back to assignments" link returns to
   the right Instrument card.
-- **`spec/instruments.md`** — Section C ("Action row" /
-  per-card layout) grows a new sub-section above Display
-  Fields covering the per-instrument rule block (picker +
-  Edit + Generate + status line).
+- **`spec/instruments.md`** — Section C (per-card layout)
+  grows a new sub-section covering the half-width
+  **Assignment rule** sub-card at the bottom of the card,
+  paired with the existing Danger Zone sub-card. The
+  sub-card carries the picker (Secondary), the
+  "N eligible pairs found" line, and the Open Rule Builder
+  button (Secondary); no Primary button on the sub-card. The
+  Edit / Save / Cancel / Add-new-instrument action row
+  relocates to a row below the two half-width sub-cards.
+  Picker is gated by the card's edit-mode lock; Save
+  persists the selection and triggers
+  `replace_assignments(instrument_id=...)` — no separate
+  Generate button.
 - **`spec/operations_pages.md`** — Assignments-page contract
   flips from "place to generate assignments" to "place to
   preview the materialised pairs"; per-instrument tab strip
   spec lands here.
 - **`spec/operator_button_audit.md`** — Section covering the
   Assignments page loses the Rule Based card's buttons;
-  Instruments-page section gains the per-card rule block
-  buttons (Generate, Edit rule, Reset).
+  Instruments-page section gains the per-card Assignment-
+  rule sub-card's single button (Open Rule Builder,
+  Secondary). No Primary button on the sub-card.
 - **`spec/settings_inventory.md`** — flip the
   `instruments.rule_set_id` row from "Inert until 15B Slice 2
   wires per-instrument selection" to wired; the Settings-CSV
