@@ -647,3 +647,166 @@ def prune_unpopulated_display_fields(
             _repack_display_orders(remaining)
             db.flush()
     return dropped
+
+
+# ---------------------------------------------------------------------------
+# Sort spec (Segment 13B PR 1)
+# ---------------------------------------------------------------------------
+
+
+# Canonical value shape per ``spec/sort_by_reviewee.md``:
+# ``[{"display_field_id": int, "dir": "asc"|"desc"}, ...]``. Up to
+# 3 entries. NULL or ``[]`` = "no operator default" (the reviewer-
+# surface render falls back to insertion order).
+_VALID_SORT_DIRS: frozenset[str] = frozenset({"asc", "desc"})
+_MAX_SORT_KEYS: int = 3
+
+
+class SortSpecError(ValueError):
+    """Service-layer rejection of an invalid sort spec.
+
+    ``code`` is a stable machine identifier the route layer can
+    translate to a banner / form error; ``message`` is the
+    human-readable explanation.
+    """
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+def set_sort_display_fields(
+    db: Session,
+    *,
+    instrument: Instrument,
+    fields: list[tuple[int, str]] | list[dict[str, Any]],
+    actor: User,
+    correlation_id: str | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]] | None]:
+    """Persist the per-instrument operator-default sort spec.
+
+    ``fields`` accepts either the canonical
+    ``[{"display_field_id": N, "dir": "asc|desc"}, ...]`` shape or
+    a list of ``(display_field_id, dir)`` tuples (convenience for
+    the route handler that just parsed form data). Normalises to
+    the canonical dict shape on the way in.
+
+    Returns ``(new_value, old_value)`` so route handlers can
+    short-circuit the audit emit on no-op saves. ``old_value`` is
+    ``None`` when the column was previously unset (NULL).
+
+    Validation (raises ``SortSpecError``):
+
+    - ``too_many``: length > 3.
+    - ``unknown_dir``: ``dir`` not in ``{"asc", "desc"}``.
+    - ``duplicate_id``: same ``display_field_id`` appears twice.
+    - ``cross_instrument``: ``display_field_id`` is not one of
+      this instrument's display fields.
+
+    Lifecycle-invalidates if the session was previously validated
+    (sort spec is a setup-shape change, not a runtime knob).
+    Emits ``instrument.sort_fields_updated`` with the canonical
+    ``changes`` envelope on diff; no emit on no-op save.
+    """
+    normalised = _normalise_sort_spec(fields)
+    # Query display-field IDs directly rather than relying on the
+    # relationship cache — callers may have added display fields
+    # earlier in the same transaction without expiring it.
+    valid_ids = set(
+        db.execute(
+            select(InstrumentDisplayField.id).where(
+                InstrumentDisplayField.instrument_id == instrument.id
+            )
+        ).scalars()
+    )
+    seen: set[int] = set()
+    for entry in normalised:
+        if entry["display_field_id"] in seen:
+            raise SortSpecError(
+                code="duplicate_id",
+                message=(
+                    f"Display field {entry['display_field_id']} appears "
+                    "more than once in the sort spec."
+                ),
+            )
+        if entry["display_field_id"] not in valid_ids:
+            raise SortSpecError(
+                code="cross_instrument",
+                message=(
+                    f"Display field {entry['display_field_id']} is not "
+                    f"on instrument {_instrument_label(instrument)}."
+                ),
+            )
+        seen.add(entry["display_field_id"])
+
+    old_value = instrument.sort_display_fields
+    if old_value == normalised:
+        # No-op save — skip lifecycle invalidation + audit emit.
+        return normalised, old_value
+
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_sort_fields_updated",
+    )
+    instrument.sort_display_fields = normalised
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type="instrument.sort_fields_updated",
+        summary=(
+            f"Updated sort spec on instrument {_instrument_label(instrument)} "
+            f"({len(normalised)} key{'s' if len(normalised) != 1 else ''})"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.changes({"sort_display_fields": [old_value, normalised]}),
+        refs={"instrument_id": instrument.id},
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return normalised, old_value
+
+
+def _normalise_sort_spec(
+    fields: list[tuple[int, str]] | list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if len(fields) > _MAX_SORT_KEYS:
+        raise SortSpecError(
+            code="too_many",
+            message=(
+                f"Sort spec has {len(fields)} entries; the maximum is "
+                f"{_MAX_SORT_KEYS}."
+            ),
+        )
+    out: list[dict[str, Any]] = []
+    for entry in fields:
+        if isinstance(entry, tuple):
+            field_id_raw, dir_raw = entry
+        else:
+            field_id_raw = entry.get("display_field_id")
+            dir_raw = entry.get("dir")
+        try:
+            field_id = int(field_id_raw)  # type: ignore[arg-type]
+        except (TypeError, ValueError) as exc:
+            raise SortSpecError(
+                code="bad_id",
+                message=(
+                    f"Sort spec entry has non-integer display_field_id "
+                    f"{field_id_raw!r}."
+                ),
+            ) from exc
+        direction = str(dir_raw or "").lower()
+        if direction not in _VALID_SORT_DIRS:
+            raise SortSpecError(
+                code="unknown_dir",
+                message=(
+                    f"Sort spec direction {dir_raw!r} is not one of "
+                    f"{sorted(_VALID_SORT_DIRS)}."
+                ),
+            )
+        out.append({"display_field_id": field_id, "dir": direction})
+    return out

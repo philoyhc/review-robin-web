@@ -43,14 +43,17 @@ class Instrument(Base, TimestampMixin):
     )
     """Operator-defined default sort spec for this instrument's
     reviewer-surface table (Segment 13B). Each entry shapes as
-    ``{"source_type": str, "source_field": str, "direction": "asc"|"desc"}``;
-    NULL = "no operator default" (the reviewer-surface render
-    falls back to its current sort policy of instrument order
-    then reviewee order).
+    ``{"display_field_id": int, "dir": "asc"|"desc"}`` per the
+    canonical functional spec at ``spec/sort_by_reviewee.md``.
+    NULL or ``[]`` = "no operator default" (the reviewer-surface
+    render falls back to its current sort policy of instrument
+    order then insertion order). Maximum 3 entries; service-layer
+    ``instruments.set_sort_display_fields`` enforces length /
+    duplicate / cross-instrument-id / direction validators.
 
-    Lands inert in 13D PR 5 — the reviewer surface keeps its
-    current sort behaviour. 13B's render-path slice consumes
-    this column."""
+    Column shipped inert in Segment 13D PR 5 (#701, 2026-05-09);
+    13B PR 1 (#TBD) lit up the reviewer-surface render-path
+    consumer + the service writer."""
     group_kind: Mapped[str | None] = mapped_column(String(32), nullable=True)
     """Group-scoping flavour for Segment 13C's group-scoped
     instruments — e.g. one shared answer covers a whole group of
