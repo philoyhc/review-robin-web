@@ -1077,17 +1077,19 @@ def build_rule_builder_context(
 
     rules = session_rule_set.rules_json or []
     has_library_origin = session_rule_set.library_origin_id is not None
-    # Post-15C-Slice-4b: every SessionRuleSet is editable. The
-    # library-tier read-only-seed posture is gone; seed-originated
-    # session copies live as normal editable rows.
-    editable = True
+    is_seeded = bool(session_rule_set.is_seeded)
+    # Seeded session copies are workspace-locked (mirror of the RTD
+    # spec-lock model). Operators customise via Copy → Save-As, which
+    # writes a fresh row with ``is_seeded=False`` that is then fully
+    # editable.
+    editable = not is_seeded
 
     return RuleBuilderContext(
         options=options,
         selected_id=session_rule_set.id,
         selected_is_blank=False,
-        selected_is_seed=False,
-        selected_is_personal=True,
+        selected_is_seed=is_seeded,
+        selected_is_personal=not is_seeded,
         selected_is_draft=False,
         editable=editable,
         name=session_rule_set.name,
@@ -1099,8 +1101,10 @@ def build_rule_builder_context(
         exclude_self_reviews=bool(session_rule_set.exclude_self_reviews),
         seed_value=session_rule_set.seed,
         rule_lines=_flatten_rule_lines(rules),
-        editable_rules=_flatten_editable_rules(rules),
-        rules_json_initial=_dump_rules_json(rules),
+        editable_rules=_flatten_editable_rules(rules) if editable else [],
+        rules_json_initial=(
+            _dump_rules_json(rules) if editable else "[]"
+        ),
         draft_source_id=None,
         draft_auto_name=False,
         previous_id=None,

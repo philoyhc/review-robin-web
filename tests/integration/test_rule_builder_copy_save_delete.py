@@ -498,14 +498,18 @@ def test_delete_without_confirm_redirects_with_error(
     )
 
 
-def test_delete_seed_session_copy_succeeds(
+def test_delete_seed_session_copy_returns_409(
     client: TestClient, db: Session
 ) -> None:
-    """Pre-15C-Slice-4b seeded RuleSets were workspace-shipped and
-    read-only. Post-flip the session-tier materialisation creates an
-    editable copy that the operator can delete locally without
-    affecting other sessions (the workspace seed in
-    ``SEEDED_RULE_SETS`` stays untouched as a code constant)."""
+    """Seeded session-tier copies are workspace-locked — the service
+    refuses Delete on ``is_seeded=True`` rows, mirroring the RTD
+    spec-lock model. Operators customise via Copy → Save-As, which
+    writes a fresh row with ``is_seeded=False`` that is fully
+    deletable.
+
+    Pre-2026-05-12 the session-tier seed copies were editable /
+    deletable; the user feedback that followed Slice 5 said the
+    RuleSet behaviour should match the RTD one, so the lock landed."""
 
     review_session = _make_session(client, db, code="rb-del-seed")
     full_matrix_id = _seed_id(db, session_id=review_session.id, name="Full Matrix")
@@ -515,7 +519,7 @@ def test_delete_seed_session_copy_succeeds(
         data={"rule_set_id": full_matrix_id, "confirm": "true"},
         follow_redirects=False,
     )
-    assert response.status_code == 303
+    assert response.status_code == 409
 
 
 # ---------------------------------------------------------------------------

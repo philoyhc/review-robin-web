@@ -215,6 +215,7 @@ def materialise_seed_rule_sets(
             seed=schema.options.seed,
             rules_json=_rules_json_payload(schema),
             library_origin_id=None,
+            is_seeded=True,
         )
         db.add(row)
         existing[schema.name] = row

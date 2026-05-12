@@ -440,13 +440,18 @@ def rule_builder_save(
     except ValidationError:
         return _redirect_back("validation")
 
-    session_library.update_session_rule_set_in_place(
-        db,
-        session_rule_set=row,
-        rule_set_schema=rule_set_schema,
-        actor=user,
-        correlation_id=request_correlation_id(),
-    )
+    try:
+        session_library.update_session_rule_set_in_place(
+            db,
+            session_rule_set=row,
+            rule_set_schema=rule_set_schema,
+            actor=user,
+            correlation_id=request_correlation_id(),
+        )
+    except session_library.SessionRuleSetLockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     db.commit()
     return RedirectResponse(
         url=f"{base_url}?rule_set_id={row.id}&saved=1",
@@ -494,12 +499,17 @@ def rule_builder_delete(
             url=base_url, status_code=status.HTTP_303_SEE_OTHER
         )
 
-    session_library.delete_session_rule_set(
-        db,
-        session_rule_set=row,
-        actor=user,
-        correlation_id=request_correlation_id(),
-    )
+    try:
+        session_library.delete_session_rule_set(
+            db,
+            session_rule_set=row,
+            actor=user,
+            correlation_id=request_correlation_id(),
+        )
+    except session_library.SessionRuleSetLockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     db.commit()
     return RedirectResponse(
         url=base_url, status_code=status.HTTP_303_SEE_OTHER
@@ -700,6 +710,10 @@ def rule_builder_save_to_library(
             actor=user,
             correlation_id=request_correlation_id(),
         )
+    except session_library.SessionRuleSetLockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     except session_library.LibraryRuleSetNameConflictError:
         return RedirectResponse(
             url=f"{base_url}?rule_set_id={row.id}&error=name_collision",
