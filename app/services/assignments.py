@@ -496,14 +496,26 @@ def list_reviewees(db: Session, session_id: int) -> list[Reviewee]:
 def list_pairs(
     db: Session, session_id: int, *, limit: int = PAIR_PREVIEW_LIMIT
 ) -> list[Assignment]:
-    """Return saved Assignment rows with reviewer + reviewee eagerly loaded.
+    """Return saved Assignment rows with reviewer + reviewee + instrument
+    eagerly loaded.
 
-    Ordered by (reviewer_id, reviewee_id) to match the FullMatrix preview.
+    Ordered by (reviewer_id, reviewee_id, instrument_id) to match the
+    FullMatrix preview shape and keep instrument rows next to each
+    other within the same pair on the diagnostic Assignment-pairs
+    table.
     """
     stmt = (
         session_scoped(Assignment, session_id)
-        .options(joinedload(Assignment.reviewer), joinedload(Assignment.reviewee))
-        .order_by(Assignment.reviewer_id, Assignment.reviewee_id)
+        .options(
+            joinedload(Assignment.reviewer),
+            joinedload(Assignment.reviewee),
+            joinedload(Assignment.instrument),
+        )
+        .order_by(
+            Assignment.reviewer_id,
+            Assignment.reviewee_id,
+            Assignment.instrument_id,
+        )
         .limit(limit)
     )
     return list(db.execute(stmt).scalars())

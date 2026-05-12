@@ -422,6 +422,8 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     assert "<th>Reviewer</th>" in body
     assert "<th>Reviewee</th>" in body
     assert "<th>Include</th>" in body
+    # Diagnostic Instrument column at the end of each row.
+    assert "<th>Instrument</th>" in body
 
     # Per-slot cells render values from rosters + relationships.
     assert ">senior</td>" in body
