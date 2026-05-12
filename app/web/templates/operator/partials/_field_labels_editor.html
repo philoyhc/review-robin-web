@@ -2,33 +2,39 @@
   Segment 15A Slice 3 — per-page friendly-label editor.
 
   Renders a card with one or two ``.field-labels-row``s, each
-  containing one ``<input>`` per slot, plus a single Save button
-  at the bottom. Inputs render disabled (no Save button) when
-  ``is_ready`` is true — the page's existing
-  ``<div class="card lock">`` already messages "revert to draft"
-  in that state.
+  containing one ``<input>`` per slot, plus a Cancel + Save pair
+  at the bottom. Both buttons render in the canonical
+  ``.btn.secondary`` style and start ``disabled``; inline JS
+  enables them when an input changes (and re-disables them after
+  Cancel discards the pending edits). Inputs render disabled (no
+  Save/Cancel buttons) when ``is_ready`` is true — the page's
+  existing ``<div class="card lock">`` already messages "revert
+  to draft" in that state.
 
   Usage:
 
-      {% set rows = [
-        [("tag_1", "Tag 1"), ("tag_2", "Tag 2"), ("tag_3", "Tag 3")],
+      {% set field_labels_rows = [
+        [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
       ] %}
       {% include "operator/partials/_field_labels_editor.html" %}
 
   with these locals in scope:
-    - session          (the ReviewSession)
-    - is_ready         (lifecycle flag)
+    - session
+    - is_ready
     - field_labels_form_action     (POST URL)
     - field_labels_source_type     (e.g. "reviewer")
     - field_labels_card_title      (e.g. "Tag labels")
-    - field_labels_help            (one-line caption text)
+    - field_labels_help            (one-line caption)
     - field_labels_rows            (list of lists of (form_param, source_field) tuples)
-    - field_labels_field_param_name(form_param, source_field)  — function returning the input name
 -#}
+{% set field_labels_form_id =
+      "field-labels-form-" ~ field_labels_source_type %}
 <div class="card field-labels-editor">
   <h2>{{ field_labels_card_title }}</h2>
   <p class="form-help">{{ field_labels_help }}</p>
-  <form method="post" action="{{ field_labels_form_action }}">
+  <form method="post"
+        action="{{ field_labels_form_action }}"
+        id="{{ field_labels_form_id }}">
     {% for row in field_labels_rows %}
       <div class="field-labels-row">
         {% for form_param, source_field in row %}
@@ -47,8 +53,51 @@
     {% endfor %}
     {% if not is_ready %}
       <div class="field-labels-actions">
-        <button class="btn" type="submit">Save labels</button>
+        <button class="btn secondary"
+                type="button"
+                data-field-labels-cancel
+                disabled>Cancel</button>
+        <button class="btn secondary"
+                type="submit"
+                data-field-labels-save
+                disabled>Save labels</button>
       </div>
     {% endif %}
   </form>
 </div>
+{% if not is_ready %}
+<script>
+  (function () {
+    var form = document.getElementById({{ field_labels_form_id | tojson }});
+    if (!form) return;
+    var saveBtn = form.querySelector('[data-field-labels-save]');
+    var cancelBtn = form.querySelector('[data-field-labels-cancel]');
+    var inputs = form.querySelectorAll('input[type="text"]');
+    // Snapshot of the initial values so Cancel can restore them
+    // and the dirty-check can detect "back to clean".
+    var initial = Array.prototype.map.call(inputs, function (i) {
+      return i.value;
+    });
+    function isDirty() {
+      for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].value !== initial[i]) return true;
+      }
+      return false;
+    }
+    function refresh() {
+      var dirty = isDirty();
+      saveBtn.disabled = !dirty;
+      cancelBtn.disabled = !dirty;
+    }
+    Array.prototype.forEach.call(inputs, function (i) {
+      i.addEventListener('input', refresh);
+    });
+    cancelBtn.addEventListener('click', function () {
+      Array.prototype.forEach.call(inputs, function (i, idx) {
+        i.value = initial[idx];
+      });
+      refresh();
+    });
+  })();
+</script>
+{% endif %}

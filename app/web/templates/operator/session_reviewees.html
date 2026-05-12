@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "operator/partials/_field_label_header.html" import field_label_header %}
+{% from "operator/partials/_field_label_header.html" import field_label_header, field_label_canonical_subtext %}
 
 {% block title %}Reviewees — {{ session.name }}{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -158,20 +158,20 @@
         <tr>
           <th class="rrw-sortable" data-sort-key="name">{{ field_label_header(session, "reviewee", "name") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Name"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "name") }}</th>
           <th class="rrw-sortable" data-sort-key="email_or_identifier">{{ field_label_header(session, "reviewee", "email_or_identifier") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Email / Identifier"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          {% if has_photo %}<th>{{ field_label_header(session, "reviewee", "profile_link") }}</th>{% endif %}
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "email_or_identifier") }}</th>
+          {% if has_photo %}<th>{{ field_label_header(session, "reviewee", "profile_link") }}{{ field_label_canonical_subtext(session, "reviewee", "profile_link") }}</th>{% endif %}
           <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1">{{ field_label_header(session, "reviewee", "tag_1") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Tag1"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_1") }}</th>
           <th class="tag-col tag-col-2 rrw-sortable" data-sort-key="tag_2">{{ field_label_header(session, "reviewee", "tag_2") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Tag2"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_2") }}</th>
           <th class="tag-col tag-col-3 rrw-sortable" data-sort-key="tag_3">{{ field_label_header(session, "reviewee", "tag_3") }}<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Tag3"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_3") }}</th>
           <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
               aria-label="Sort by Status"
               onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
