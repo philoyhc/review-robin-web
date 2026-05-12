@@ -1,30 +1,55 @@
-# Segment 13B — Sort by reviewee
+# Segment 13B — Sortable tables (reviewer surface + operator surface)
 
-Implementation plan for the reviewer-surface sort UX:
-operator-side default sort + reviewer-side live override on the
-per-instrument response table. Layers on top of the canonical
-functional spec at [`spec/sort_by_reviewee.md`](../spec/sort_by_reviewee.md);
-this plan handles sequencing, schema, audit wiring, and PR
-slicing — the spec owns the user-visible model (display-fields-
-only operator picker, click semantics, multi-key cascade,
-reviewer live-only persistence).
+Implementation plan for clickable column sort across the
+reviewer surface AND the operator setup tables. Part 1 (3 PRs,
+shipped 2026-05-12) is the reviewer-surface story laid on top
+of the canonical functional spec at
+[`spec/sort_by_reviewee.md`](../spec/sort_by_reviewee.md). Part 2
+(5 PRs, planned) lifts the same primitive into the operator
+surface — Reviewers, Reviewees, Relationships, and Operations
+Assignments — with cookie-backed per-(session, table)
+persistence so the sort survives reloads on the same browser.
 
 > **Renamed 2026-05-07** from `segment_13B_instrument_enhance.md`.
-> The "instrument-enhancements basket" framing collapsed once
-> the second item — group-scoped instruments + duplicate-
-> instrument — got its own plan at
-> `guide/segment_13C_enhanced_instrument.md`. 13B is now
-> single-purpose: sort.
+> **Scope extended 2026-05-12** from "sort by reviewee" to the
+> broader "clickable sort across every interesting tabular
+> surface" once the reviewer-surface primitive shipped and the
+> operator follow-on became the obvious next step. Section titles
+> below name the source spec where each surface is documented;
+> this plan owns the sequencing + persistence wiring.
 
 ## Status
 
-Planning — refreshed 2026-05-12 against the as-shipped 13D
-scaffolding. **Schema already in place** since Segment 13D
-PR 5 (`instruments.sort_display_fields` JSON column, NULL by
+**Part 1 shipped 2026-05-12** (3 PRs **#867 / #868 / #869**) —
+operator-default sort spec stored on `Instrument.sort_display_fields`,
+tri-state Sort column on the per-instrument Display Fields
+card, reviewer-side live override on the response-table column
+headers. Live-only state on the reviewer side (no persistence
+beyond the page lifecycle).
+
+**Part 2 planned** (5 PRs, scoped 2026-05-12) lifts the
+reviewer-surface sort primitive into the operator surface
+(Reviewers / Reviewees / Relationships / Operations
+Assignments) and adds cookie-backed persistence so the sort
+survives reloads on the same browser. Part 2 PR F (per-
+instrument Assignments after 15B) sits outside this plan;
+it's flagged in the 15B segment for execution there.
+
+Refreshed 2026-05-12 against the as-shipped 13D scaffolding.
+**Schema already in place** since Segment 13D PR 5
+(`instruments.sort_display_fields` JSON column, NULL by
 default), so PR 1 of this plan no longer needs to author the
 migration. Settings CSV import/export round-trips the column
 already (`app/services/session_config_io.py` lines 330-331 +
 1020-1021), so the porting story is also covered.
+
+**No 13F schema work needed for Part 2.** Cookie persistence
+is per-(operator browser, session, table); no DB column
+required. If pilot feedback later wants cross-browser
+persistence ("my sort followed me to my laptop"), a
+`users.ui_sort_preferences` JSON column would be its own small
+migration carved out of 13F at that time — not committed in
+this plan.
 
 Sized as **3 PRs** in dependency order:
 
@@ -303,16 +328,209 @@ validator) so the column stops being inert.
   - Server-side render unchanged when no override is in play
     (regression for PR 2's persistence contract).
 
+---
+
+## Part 2 — Operator-surface rollout + cookie persistence
+
+PRs 4-8. Lifts the reviewer-surface sort primitive (the inline
+JS in `review_surface.html` + the `<th data-sort-key>` /
+`<td data-sort-value>` annotation contract) into a reusable
+client-side module, then applies it to each operator setup /
+operations table that today renders an inert HTML table:
+
+- **Reviewers Setup page** (`/operator/sessions/{id}/reviewers`).
+- **Reviewees Setup page** (`/operator/sessions/{id}/reviewees`).
+- **Relationships Setup page** (`/operator/sessions/{id}/relationships`).
+- **Operations Assignments page**
+  (`/operator/sessions/{id}/assignments`).
+
+Audit log is **intentionally out of scope** — filtering +
+search in the in-app viewer (16C PRs 1-3) already cover the
+"find specific events" use case that sort would otherwise
+serve. Lifting sort onto the audit log surface stays a "ship
+if pilot feedback asks" item.
+
+### PR 4 — Shared client-side sort primitive (~250 LOC)
+
+**Goal.** Extract the inline JS in `review_surface.html`
+(`rsSortHeaderClick`, `_rsApplySort`, `_rsRefreshSortBadges`,
+`_rsCompareValues`) into a reusable script that any page can
+opt into without re-implementing the cycle / cascade /
+null-last / numeric-compare logic.
+
+**Ships.**
+
+- Move the JS into `app/web/templates/base.html` as a single
+  inline `<script>` (no JS build pipeline, no asset module
+  per project conventions). Naming flips from `rs*` to
+  generic `rrwSort*`.
+- Selector contract: any `<table data-rrw-sortable="{key}">`
+  with `<th class="rrw-sortable" data-sort-key="...">` headers
+  and `<td data-sort-value="...">` cells binds automatically
+  on page load.
+- Optional `data-sort-type` per header (e.g. `"Integer"`,
+  `"Decimal"`, default string) for numeric vs locale-string
+  compare.
+- Reviewer surface re-binds to the shared script — no
+  behaviour change. The `data-rs-sortable-table` attribute
+  renames to `data-rrw-sortable` (cookie keys carry the
+  surface as a prefix; see PR 5).
+- New `app/web/views/_sort.py` already houses the pure-
+  Python sort helper from PR 1; PR 4 doesn't touch it. The
+  JS lives separately (it's a presentation primitive).
+
+**Tests.**
+
+- Reviewer-surface tests already cover the JS-bound markup;
+  PR 4 should not regress them. Add one targeted test
+  asserting the renamed `data-rrw-sortable` attribute lands
+  on the per-instrument tables.
+- Snapshot the shared script's presence in `base.html` so
+  future template-only PRs don't accidentally regress the
+  primitive into per-page duplicates.
+
+### PR 5 — Cookie persistence (~200 LOC)
+
+**Ships.**
+
+- Per-(session, table) cookies — naming convention
+  `rrw-sort-{surface}-{session_id}[-{instrument_id}]`
+  (e.g. `rrw-sort-reviewers-17`,
+  `rrw-sort-reviewer-surface-17-3`).
+- Cookie scope: `Path=/operator/sessions/{id}` or
+  `/reviewer/sessions/{id}`, `SameSite=Lax`, NOT
+  `HttpOnly` (the JS reads them).
+- Cookie value: JSON-encoded `[{"key": "...", "dir":
+  "asc|desc"}, ...]` in cascade order. Same shape as the
+  operator-default `Instrument.sort_display_fields` so the
+  reviewer surface can degrade to the operator default
+  cleanly.
+- **JS:** write on every state change; read on
+  `DOMContentLoaded` (before binding so the initial
+  badges + row order are correct).
+- **SSR:** the route layer reads the cookie at render time
+  and threads the parsed spec into the template's render
+  loop, so the initial HTML lands in the cookie-saved
+  order. Avoids the "flicker" where rows briefly render in
+  default order before the JS re-sorts. Reuses PR 1's
+  `views.order_rows_by_sort_spec` helper on the server
+  side.
+- Cookie size: cap at ~256 bytes total per cookie
+  (3 keys × ~30 char key + dir = comfortably under). If
+  the operator hammers a long-key column (e.g.
+  `display:99999`), the JS truncates to 3 keys before
+  encoding.
+
+**Reviewer surface picks up persistence automatically** —
+the existing `rrwSortHeaderClick` handler from PR 4 just
+gets cookie I/O added to it.
+
+**Tests.**
+
+- Cookie I/O round-trips on the reviewer surface
+  (integration: set state → assert cookie set on response →
+  GET again → assert sort badges seeded + row order
+  matches).
+- Malformed cookie (manual tamper) is silently ignored —
+  initial render falls back to operator default.
+- Cookie scope is `/{surface}/sessions/{id}` so leaking
+  across sessions can't happen.
+
+### PR 6 — Reviewers + Reviewees Setup tables (~300 LOC)
+
+**Ships.**
+
+- Annotate both Setup page templates with the
+  `data-rrw-sortable` table marker + `rrw-sortable` th
+  classes + `data-sort-key` / `data-sort-value`
+  attributes.
+- Sortable columns: identity (name + email_or_identifier),
+  Tag1 / Tag2 / Tag3 columns when populated, Active /
+  Inactive status, any other operator-facing cells worth
+  sorting.
+- Cookie keys: `rrw-sort-reviewers-{session_id}` and
+  `rrw-sort-reviewees-{session_id}`.
+- Both Setup tables share the row shape pattern (status
+  pill column on the right, identity on the left, tags in
+  between); one PR for both since the diff is repetitive.
+
+**Tests.**
+
+- Each table renders the sort scaffolding (markers +
+  classes + data attributes).
+- Cookie round-trip: set state via cookie, hit GET, assert
+  rows render in the cookie order.
+
+### PR 7 — Relationships Setup table (~150 LOC)
+
+**Ships.**
+
+- Same treatment for the Relationships page table
+  (`/operator/sessions/{id}/relationships`).
+- Sortable columns: Reviewer identity, Reviewee identity,
+  Tag1 / Tag2 / Tag3 (when populated), status pill.
+- Cookie key: `rrw-sort-relationships-{session_id}`.
+
+**Tests.**
+
+- Scaffolding + cookie round-trip, as PR 6.
+
+### PR 8 — Operations Assignments table (~150 LOC)
+
+**Ships.**
+
+- Sort headers on the per-pair Operations Assignments
+  table at `/operator/sessions/{id}/assignments`. The
+  diagnostic Instrument column from PR #870 (2026-05-12)
+  is sortable too.
+- Sortable columns: Reviewer, Tag columns (reviewer +
+  reviewee + pair), Reviewee, Include pill, Instrument.
+- Cookie key: `rrw-sort-assignments-{session_id}`.
+- The existing per-column visibility toggle (localStorage-
+  backed `assignment-col-toggle`) keeps doing its job —
+  sort and visibility are orthogonal.
+
+**Tests.**
+
+- Scaffolding + cookie round-trip, as PR 6.
+
+### Post-MVP — PR F (per-instrument Assignments after 15B)
+
+**Defer to 15B's plan.** 15B introduces per-instrument
+assignment tables; that surface should get the sort
+facility too, but the work lives in 15B since it's coupled
+to the new surface. Flag in 15B's PR ladder.
+
+---
+
 ## Doc impact
 
-When 13B kicks off:
+**Part 1 (shipped 2026-05-12).**
 
-- Update `spec/operator_ui_concept.md` Display Fields section
-  to describe the new Sort column.
-- Update `spec/reviewer-surface.md` to describe the header-
-  click override.
-- Update `guide/todo_master.md` to move 13B from Upcoming to
-  in-progress; move to Done when PR 3 lands.
-- Migrate this file to `guide/archive/` when PR 3 merges.
-- `spec/sort_by_reviewee.md` ticks off its "Implementation
-  pointers" section.
+- `guide/todo_master.md` — Done entry for Part 1.
+- `spec/sort_by_reviewee.md` — implementation-pointers
+  section can tick off as Part 1 shipped; the
+  "Persistence: live only" line on the reviewer side
+  flips with Part 2 PR 5 (cookies are still per-browser
+  / per-device, but the JS-memory-only framing relaxes
+  once cookies are in).
+
+**Part 2 (per PR).**
+
+- Update `spec/operator_ui_concept.md` to describe the
+  sort facility on operator setup tables (new "Sortable
+  columns" subsection? — decide at PR 4 scoping).
+- Update `spec/setup_pages.md` to note sort affordance on
+  Reviewers / Reviewees / Relationships tables.
+- Update `spec/sessions_overview.md` if the lobby gets
+  the same treatment in a future slice (out of Part 2's
+  scope — flag if pilot wants it).
+- `spec/settings_inventory.md` — new browser-local UI
+  state row for the cookie family
+  `rrw-sort-{surface}-{session_id}[-{instrument_id}]`.
+- `guide/todo_master.md` — Done entry per PR; final
+  archive of this file once PR 8 ships.
+- `spec/sort_by_reviewee.md` — Part 2's cookie
+  persistence flips the reviewer-side "Persistence: live
+  only" line (cookies are still per-browser, but no
+  longer JS-memory-only).
