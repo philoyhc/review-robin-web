@@ -35,8 +35,11 @@ Still to land in 15A:
   `session_field_label.set` / `.cleared` audit emitters in
   `app.services.audit.EVENT_SCHEMAS`.
 - **Slice 2** — Sweep hardcoded `"Tag 1"` / `"Tag1"` /
-  `"Pair context N"` literals out of every operator surface
-  (templates + view adapters + Rule Builder operand sentences).
+  `"Pair context N"` literals out of every **display-layer**
+  surface (operator + reviewer column headers + previews).
+  Logic-layer surfaces (Rule Builder, source picker, CSV docs,
+  validators, audit logs) keep canonical names — see the
+  "Display vs logic" section below.
 - **Slice 3** — Per-page inline tag-label editors on Reviewers,
   Reviewees, Relationships (shape reshaped on 2026-05-12 — see
   Slice 3 below).
@@ -47,9 +50,11 @@ Still to land in 15A:
 
 Let operators rename `ReviewerTag1-3`, `RevieweeTag1-3`, and
 `PairContext1-3` **once per session**, with the friendly label
-flowing through every header, picker, tooltip, and preview that
-names those fields — not just the Display Field column where it
-lives today.
+flowing through every **display** surface that names those fields
+— column headers (operator + reviewer) and the reviewer-surface
+preview. The underlying logic continues to refer to the canonical
+machine names everywhere — no rule, validator, audit emitter,
+CSV importer, or operand sentence sees the friendly label.
 
 `AssignmentContext1-3` is **out of scope** and `assignment_context`
 is **not** a `source_type` this segment will accept. The
@@ -63,6 +68,60 @@ the same PR that lights up the resolver.
 
 ---
 
+## Display vs logic — sweep boundary
+
+Friendly labels are a **display-layer** concern only. The
+underlying logic everywhere keeps assuming the canonical
+machine names. The same separation today's per-instrument
+Display Field labels follow (operator-typed `label` for the
+column header, `(source_type, source_field)` for the value
+lookup) generalises to the session-wide rename.
+
+**In scope (display layer — friendly label flows here):**
+
+- Reviewer-surface review page tag / pair-context column
+  headers (reviewer-facing display).
+- Operator Setup-page table headers — `session_reviewers.html`,
+  `session_reviewees.html`, `session_relationships.html`.
+- Operator Assignments-page reviewer + reviewee tag column
+  headers (`session_assignments.html`).
+- Email Previews tag / pair-context columns + reviewer-surface
+  preview reuse.
+- Per-instrument Display Field cell headers — the existing
+  per-instrument `InstrumentDisplayField.label` override stays
+  the highest-priority source; the session-wide friendly label
+  becomes the next-highest fallback before the canonical
+  default.
+
+On operator-facing display surfaces, render as
+`{friendly_label} ({CanonicalName})` whenever an override is
+in effect — operators see their rename plus the canonical name
+in muted parens for orientation. On reviewer-facing surfaces,
+render the friendly label alone (reviewers don't need the
+canonical orientation).
+
+**Out of scope (logic layer — canonical names stay):**
+
+- Rule Builder operand pickers + `_render_*_sentence` helpers
+  in `app/web/views/_rule_builder.py`. Predicate operands
+  always read the canonical name.
+- Display Field source picker on the Instruments edit page.
+  The operator is picking *which underlying field* to add as a
+  column; the picker shows canonical names. After adding, the
+  per-instrument `label` lets them override the column header
+  for that instrument; if blank, the resolver fills in the
+  session-wide friendly label.
+- CSV-import column-name documentation, header validation, and
+  parse-error copy. Importers want the machine name
+  (`RevieweeTag1`) so operators uploading files know which
+  header to use.
+- Validation error messages anywhere in the codebase.
+- Audit-event payloads (`session_field_label.set` writes
+  `source_type` + `source_field` + new `label`; the resolver
+  is a render-time concern only).
+
+---
+
 ## Why now
 
 - `_DEFAULT_DISPLAY_LABELS` in
@@ -72,7 +131,7 @@ the same PR that lights up the resolver.
   the field as an `InstrumentDisplayField` and editing
   `InstrumentDisplayField.label`. That override is **per-instrument**
   and **invisible** anywhere else (Setup-page table headers, the
-  Assignments page tag columns, Rule Builder operands).
+  Assignments page tag columns).
 - Reviewer tags don't appear in `_DEFAULT_DISPLAY_LABELS` at all —
   `app/web/templates/operator/session_assignments.html:139-141`
   + the column headers a few lines below carry literal `"Tag1"` /
@@ -115,40 +174,68 @@ def upsert(db, session, *, source_type, source_field, label, user, correlation_i
 def clear(db, session, *, source_type, source_field, user, correlation_id) -> None: ...
 ```
 
-`resolve` reads operator override → built-in default
+`resolve` reads session-wide friendly label → built-in default
 (`_DEFAULT_LABELS` table moved here from `_display_fields.py`) →
 fallback (`source_type:source_field`). One per-session dict
-materialised per request via the existing per-request session scope
-in `app/web/deps.py`.
+materialised per request via the existing per-request session
+scope in `app/web/deps.py`.
+
+The per-instrument `InstrumentDisplayField.label` override stays
+**above** the resolver in the priority chain — the resolver is
+the per-instrument override's fallback when blank, not its
+replacement. So the full chain on per-instrument display is:
+
+1. `InstrumentDisplayField.label` (per-instrument override)
+2. `field_labels.resolve(...)` (session-wide friendly)
+3. Built-in default in `_DEFAULT_LABELS`
+4. `f"{source_type}:{source_field}"` (last-resort fallback)
+
+Surfaces that don't carry a per-instrument override (Setup-page
+table headers, Assignments tag columns) collapse the chain to
+2 → 3 → 4.
 
 Audit emitters: `session_field_label.set` / `.cleared`. Register in
 `app.services.audit.EVENT_SCHEMAS`.
 
-### Slice 2 — Replace hardcoded literals at every callsite (1 PR, ~50 callsites)
+### Slice 2 — Replace hardcoded literals at display-layer callsites (1 PR, ~20-25 callsites)
 
-Sweep:
+Sweep covers display-layer surfaces only. The "Display vs logic"
+section above is the source of truth for what's in / out; this
+list enumerates the in-scope callsites.
 
-- `app/services/instruments/_display_fields.py::display_field_label` —
-  delegate to `field_labels.resolve` instead of the local
-  `_DEFAULT_DISPLAY_LABELS` dict. The Display Field row's own
-  `label` override stays the highest-priority source; the resolver
-  becomes the fallback chain when that's blank.
-- Setup-page table headers for Reviewers + Reviewees (currently
-  literal `"Tag 1"` / `"Tag 2"` / `"Tag 3"`).
-- `app/web/templates/operator/session_assignments.html:184-191` —
-  reviewer + reviewee tag column headers.
-- Display Field source picker on the Instruments page — already
-  pulls from `_DEFAULT_DISPLAY_LABELS`; this slice just makes it
-  session-aware.
-- Rule Builder operand pickers + `_render_*_sentence` helpers in
-  `app/web/views/_rule_builder.py` — predicate operands that name
-  a tag.
-- Reviewee + Pair Context columns in Email Previews + the reviewer-
-  surface preview.
+- `app/services/instruments/_display_fields.py::display_field_label`
+  — delegate to `field_labels.resolve` instead of the local
+  `_DEFAULT_DISPLAY_LABELS` dict. The per-instrument
+  `InstrumentDisplayField.label` override stays the
+  highest-priority source; the resolver becomes the next fallback
+  before the canonical default.
+- Setup-page table headers — `session_reviewers.html`,
+  `session_reviewees.html` (currently literal `"Tag 1"` /
+  `"Tag 2"` / `"Tag 3"`); `session_relationships.html` for the
+  pair-context columns.
+- `app/web/templates/operator/session_assignments.html:139-141`
+  + the reviewer / reviewee tag column headers a few lines below.
+- Reviewee + Pair Context columns in Email Previews + the
+  reviewer-surface preview.
 
-Out of scope: CSV-import column-name documentation and parse-error
-copy. Those legitimately want the machine name (`RevieweeTag1`) so
-operators uploading files know which header to use.
+On operator-facing surfaces, render the table-header text as
+`{friendly_label} ({CanonicalName})` whenever the resolver
+returns an override (otherwise keep the canonical-only render).
+Reviewer-facing surfaces render the friendly label alone.
+
+A small view adapter in `app/web/views/_filters.py` (or a new
+sibling) is the right home for the `(friendly, canonical)`
+pair so templates stay shape-agnostic. The 13B sort-button
+`aria-label` strings (e.g. `"Sort by Reviewer Tag1"`) follow
+in the polish PR after Slice 3 — keeping them out of this
+sweep.
+
+Explicitly **not** swept (logic layer):
+
+- `app/web/views/_rule_builder.py` operand sentences + pickers.
+- The Display Field source picker on the Instruments edit page.
+- CSV-import header docs / parse-error copy.
+- Validation error messages and audit-event payloads.
 
 ### Slice 3 — Per-page inline editors (1 PR, ~200 LOC)
 
@@ -210,10 +297,15 @@ UI) — not a retrofit onto the labels segment.
   13D PR 1 and the CI-Postgres job has been round-tripping the
   table since.
 - **Friendly-label reach.** The sweep in Slice 2 needs to be
-  exhaustive — a single missed callsite leaves a stale `"Tag 1"`
-  string in the UI that confuses operators who renamed it. A `grep`
-  audit at the close of Slice 2 (`grep -rn '"Tag [0-9]"\|Pair
-  context [0-9]'` across `app/`) is the gate.
+  exhaustive across the *display-layer* surfaces named above —
+  a single missed callsite leaves a stale `"Tag 1"` string in
+  a column header that confuses operators who renamed it. A
+  `grep` audit at the close of Slice 2 lists every hit; the
+  reviewer triages each into "display layer (sweep)" or "logic
+  layer (intentionally canonical)" using the boundaries in the
+  "Display vs logic" section. Expect Rule Builder + the source
+  picker + CSV-import error copy + a few validation-error
+  helpers to remain canonical and that's the desired state.
 - **Reviewer-side surface — closed 2026-05-12.** Reviewers do not
   see operator tag metadata; reviewer-side templates render no
   tag column. Sweep stays operator-only.
@@ -233,12 +325,20 @@ UI) — not a retrofit onto the labels segment.
   (`EVENT_SCHEMAS` registrations for `session_field_label.set` /
   `.cleared`), `app/db/models/session_field_label.py` (clear the
   `assignment_context` docstring note now that Slice 4 is dropped).
-- Touched (Slice 2):
-  `app/web/views/_*.py` (column headers + picker labels),
-  every operator template that names a tag or pair-context column
-  (notably `session_assignments.html`, `session_reviewers.html`,
-  `session_reviewees.html`, `session_relationships.html`),
-  `app/web/views/_rule_builder.py` operand sentences.
+- Touched (Slice 2 — display layer only):
+  `app/services/instruments/_display_fields.py` (delegate
+  `display_field_label` to the resolver per the chain above),
+  `app/web/views/_*.py` (column-header view adapters; new
+  `(friendly, canonical)` pair helper for the operator
+  `Friendly (Canonical)` render), and the operator templates
+  that name a tag or pair-context column
+  (`session_assignments.html`, `session_reviewers.html`,
+  `session_reviewees.html`, `session_relationships.html`,
+  Email Previews + reviewer-surface preview).
+  **Not touched:** `app/web/views/_rule_builder.py`,
+  `app/web/templates/operator/session_rule_builder.html`, the
+  Display Field source picker on the Instruments edit page,
+  any CSV-import error copy, or any audit-event payload.
 - Touched (Slice 3):
   `app/web/templates/operator/session_reviewers.html`,
   `session_reviewees.html`, `session_relationships.html`
