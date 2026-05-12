@@ -56,17 +56,15 @@ def test_round_trip_sort_spec(db: Session) -> None:
     instrument = Instrument(
         session_id=review_session.id, name="Sorted", order=0
     )
+    # Canonical value shape per ``spec/sort_by_reviewee.md`` and
+    # the column docstring on ``Instrument.sort_display_fields``.
+    # Earlier shape variants (``source_type`` / ``source_field`` /
+    # ``direction``) drifted from a prior design pass; 13B PR 1
+    # normalised the docstring + this test fixture on the
+    # ``display_field_id`` / ``dir`` shape.
     spec = [
-        {
-            "source_type": "reviewee",
-            "source_field": "tag_1",
-            "direction": "asc",
-        },
-        {
-            "source_type": "reviewee",
-            "source_field": "name",
-            "direction": "asc",
-        },
+        {"display_field_id": 7, "dir": "asc"},
+        {"display_field_id": 12, "dir": "desc"},
     ]
     instrument.sort_display_fields = spec
     db.add(instrument)

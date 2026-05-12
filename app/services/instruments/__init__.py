@@ -59,6 +59,7 @@ from ._rtds import (
 from ._display_fields import (
     DisplaySourceError,
     LockedDisplayFieldError,
+    SortSpecError,
     add_display_field,
     delete_display_field,
     display_field_label,
@@ -68,6 +69,7 @@ from ._display_fields import (
     prune_unpopulated_display_fields,
     seed_display_fields_from_assignments,
     seed_display_fields_from_reviewees,
+    set_sort_display_fields,
     update_display_field,
 )
 
@@ -123,6 +125,7 @@ __all__ = [
     "RTDLockedError",
     "RTDPrecisionError",
     "RTDValidationError",
+    "SortSpecError",
     "_instrument_label",
     "add_default_response_field",
     "add_display_field",
@@ -150,6 +153,7 @@ __all__ = [
     "prune_unpopulated_display_fields",
     "seed_display_fields_from_assignments",
     "seed_display_fields_from_reviewees",
+    "set_sort_display_fields",
     "slugify_field_key",
     "update_display_field",
     "update_instrument_description",

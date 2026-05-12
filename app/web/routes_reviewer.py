@@ -190,6 +190,28 @@ def _instruments_for_session(db: Session, session_id: int) -> dict[int, Instrume
     return {i.id: i for i in rows}
 
 
+def _reviewer_row_sort_key(row: dict, display_field_id: int) -> object | None:
+    """Resolve one reviewer-surface row's value for a given
+    ``display_field_id`` so ``views.order_rows_by_sort_spec``
+    (Segment 13B PR 1) can sort.
+
+    Reads from ``row["sort_values"]`` — a ``{display_field_id:
+    value}`` dict pre-built by the row builder so the resolver
+    stays O(1) per (row, field). The dict covers **all** display
+    fields on the instrument (including the reviewee identity
+    columns that the reviewer template renders in a dedicated
+    identity cell rather than as separate display columns).
+
+    Empty strings collapse to None so the helper's null-last
+    sentinel takes over — operators sort to surface rows with
+    data; empty cells should never bubble to the top.
+    """
+    value = row.get("sort_values", {}).get(display_field_id)
+    if value in (None, ""):
+        return None
+    return value
+
+
 def _require_session_accepting(
     db: Session, review_session: ReviewSession, reviewer: Reviewer
 ) -> None:
@@ -267,6 +289,26 @@ def _surface_context(
         for field in db.execute(stmt).scalars():
             display_fields_by_instrument.setdefault(field.instrument_id, []).append(field)
 
+    # All display fields per instrument — including the reviewee
+    # identity columns (Name + Email) that ``display_fields_by_instrument``
+    # excludes because the template renders them in a dedicated
+    # identity cell rather than as separate columns. Segment 13B
+    # PR 1's sort needs the full set so an operator can sort by
+    # the Reviewee column.
+    all_display_fields_by_instrument: dict[
+        int, list[InstrumentDisplayField]
+    ] = {}
+    if instrument_ids:
+        stmt = (
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id.in_(instrument_ids))
+            .order_by(InstrumentDisplayField.order, InstrumentDisplayField.id)
+        )
+        for field in db.execute(stmt).scalars():
+            all_display_fields_by_instrument.setdefault(
+                field.instrument_id, []
+            ).append(field)
+
     response_rows: dict[tuple[int, int], Response] = {}
     if assignments:
         stmt = select(Response).where(
@@ -337,6 +379,22 @@ def _surface_context(
                     ),
                 }
             )
+        # Sort lookup: ``display_field_id -> resolved value`` over
+        # all display fields on this instrument (including the
+        # identity ones that ``display_cells`` excludes). Lets the
+        # Segment 13B sort spec key off any display field the
+        # operator configured, not just the ones rendered as
+        # separate columns.
+        sort_values = {
+            df.id: instruments_service.display_field_value(
+                df,
+                assignment,
+                pair_context_lookup=pair_context_lookup,
+            )
+            for df in all_display_fields_by_instrument.get(
+                assignment.instrument_id, []
+            )
+        }
         rows_by_instrument.setdefault(assignment.instrument_id, []).append(
             {
                 "assignment": assignment,
@@ -345,6 +403,7 @@ def _surface_context(
                 "missing_count": missing_count,
                 "submitted_at": latest_submitted,
                 "display_cells": display_cells,
+                "sort_values": sort_values,
                 "accepting": accepting,
                 "show_values": show_values,
             }
@@ -364,6 +423,25 @@ def _surface_context(
         instrument = instruments.get(instrument_id)
         if instrument is None:
             continue
+        # Reorder rows per the operator-default sort spec
+        # (Segment 13B PR 1). NULL / empty spec → no-op
+        # (insertion order). Display fields no longer on the
+        # instrument silently drop from the sort cascade — see
+        # ``views.order_rows_by_sort_spec`` for the render-time
+        # defense.
+        # The full set — including identity-column display fields
+        # the visible-cells filter excludes — so the operator can
+        # sort by Reviewee name.
+        known_display_field_ids = {
+            df.id
+            for df in all_display_fields_by_instrument.get(instrument_id, [])
+        }
+        group_rows = views.order_rows_by_sort_spec(
+            group_rows,
+            instrument.sort_display_fields,
+            key_resolver=_reviewer_row_sort_key,
+            known_display_field_ids=known_display_field_ids,
+        )
         fields = fields_by_instrument.get(instrument_id, [])
         help_block_items = [
             f for f in fields if f.help_text and f.help_text_visible

@@ -131,6 +131,9 @@ from ._rule_builder import (
     build_rule_builder_context,
 )
 
+# Reviewer-surface sort helper (Segment 13B PR 1).
+from ._sort import order_rows_by_sort_spec
+
 # Audit log viewer (Segment 16C PR 1 + PR 2 + PR 3).
 from ._audit_log import (
     AuditDetailChangeRow,
@@ -219,6 +222,7 @@ __all__ = [
     "build_audit_log_rows",
     "filters_querystring",
     "format_audit_detail",
+    "order_rows_by_sort_spec",
     "parse_audit_log_filters",
     "page_button_label",
     "placeholder_for_field",
