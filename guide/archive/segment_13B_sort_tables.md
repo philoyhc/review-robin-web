@@ -1,14 +1,26 @@
 # Segment 13B — Sortable tables (reviewer surface + operator surface)
 
+> **Archived 2026-05-12.** Part 1 (PRs **#867 / #868 / #869**)
+> + Part 2 (PRs **#873 → #878**, including refinement #878)
+> all shipped 2026-05-12 — 9 PRs total + the diagnostic
+> Instrument column (#870) on the path. PR F (per-instrument
+> Assignments after 15B) carved out to 15B Slice 4c. Plan
+> stays here as historical context; the canonical user-facing
+> contract lives in `spec/sort_by_reviewee.md` and the per-PR
+> Done entries live in `guide/todo_master.md`. The
+> `spec/sort_by_reviewee.md` "Implementation pointers" section
+> maps the shipped landmarks in the codebase.
+
 Implementation plan for clickable column sort across the
 reviewer surface AND the operator setup tables. Part 1 (3 PRs,
 shipped 2026-05-12) is the reviewer-surface story laid on top
 of the canonical functional spec at
-[`spec/sort_by_reviewee.md`](../spec/sort_by_reviewee.md). Part 2
-(5 PRs, planned) lifts the same primitive into the operator
-surface — Reviewers, Reviewees, Relationships, and Operations
-Assignments — with cookie-backed per-(session, table)
-persistence so the sort survives reloads on the same browser.
+[`spec/sort_by_reviewee.md`](../../spec/sort_by_reviewee.md).
+Part 2 (5 PRs + refinement, shipped 2026-05-12) lifts the same
+primitive into the operator surface — Reviewers, Reviewees,
+Relationships, and Operations Assignments — with cookie-backed
+per-(session, table) persistence so the sort survives reloads
+on the same browser.
 
 > **Renamed 2026-05-07** from `segment_13B_instrument_enhance.md`.
 > **Scope extended 2026-05-12** from "sort by reviewee" to the

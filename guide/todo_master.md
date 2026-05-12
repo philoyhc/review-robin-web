@@ -265,7 +265,7 @@ Bonus: **#781** — Grey out the Reviewers / Reviewees / Relationships / Respons
 
 Two parts. **Part 1** lit up the per-instrument operator-default sort + reviewer-side header click overrides on the reviewer surface. **Part 2** lifted the primitive into a site-wide `base.html` script, added cookie-backed persistence, rolled the same affordance into the four operator-surface tables, and refined the click target to a small `↕` button next to each label so the sort affordance is discoverable on first paint. PR F (per-instrument Assignments) carved out to 15B Slice 4c.
 
-Plan: `guide/segment_13B_sort_tables.md`. Functional spec: `spec/sort_by_reviewee.md`.
+Plan: `guide/archive/segment_13B_sort_tables.md`. Functional spec: `spec/sort_by_reviewee.md`.
 
 **Part 1** (operator-default sort + reviewer override on the reviewer surface):
 

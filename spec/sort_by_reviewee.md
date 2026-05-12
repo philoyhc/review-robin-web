@@ -22,7 +22,7 @@ on the same surface family:
   button) (`guide/segment_13C_enhanced_instrument.md`).
 
 The implementation plan for this spec lives at
-`guide/segment_13B_sort_tables.md`. The three sibling
+`guide/archive/segment_13B_sort_tables.md`. The three sibling
 segments are independent.
 
 This file is the source of truth for the design. Segment 13B
@@ -306,5 +306,5 @@ The Display Fields available to sort are scoped to the instrument's own display 
 - **`spec/operator_ui_concept.md`** — per-instrument Display Fields card layout. The Sort column lands here when implemented.
 - **`spec/reviewer-surface.md`** — review surface table. The header-click override lands here when implemented.
 - **`spec/quick_setup_card_spec.md`** — adjacent operator-card design pattern (single source of truth for an operator-side feature spec).
-- **`guide/segment_13B_sort_tables.md`** — the implementation plan that picks this up.
+- **`guide/archive/segment_13B_sort_tables.md`** — the implementation plan that picks this up.
 - **`docs/status.md`** "What's deliberately not yet there" — entry pointing here, target Segment 13.
