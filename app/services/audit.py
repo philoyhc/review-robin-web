@@ -467,6 +467,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "workspace.user_invited": EventSchema(frozenset({"snapshot", "refs"})),
     "workspace.operator_admitted": EventSchema(frozenset({"changes", "refs"})),
     "workspace.operator_revoked": EventSchema(frozenset({"changes", "refs"})),
+    "workspace.user_removed": EventSchema(frozenset({"snapshot", "refs"})),
     "sys_admin.role_promoted": EventSchema(frozenset({"changes", "refs"})),
     "sys_admin.role_demoted": EventSchema(frozenset({"changes", "refs"})),
     # Segment 16B PR 2 — per-session owner management.

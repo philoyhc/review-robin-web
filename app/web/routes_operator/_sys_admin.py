@@ -251,7 +251,7 @@ def _handle_toggle(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
             ) from exc
-        if exc.code == "last_admin":
+        if exc.code in {"last_admin", "owns_sessions"}:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail=exc.message
             ) from exc
@@ -281,22 +281,12 @@ def revoke_user(
     )
 
 
-def _require_confirm(confirm: str | None) -> None:
-    if confirm != "true":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="confirm checkbox required for high-risk role changes",
-        )
-
-
 @router.post("/sys-admin/users/{user_id}/promote")
 def promote_user(
     user_id: int,
-    confirm: str | None = Form(default=None),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_confirm(confirm)
     return _handle_toggle(
         users_service.promote, db=db, actor=actor, target=_load_target(db, user_id)
     )
@@ -305,13 +295,25 @@ def promote_user(
 @router.post("/sys-admin/users/{user_id}/demote")
 def demote_user(
     user_id: int,
-    confirm: str | None = Form(default=None),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_confirm(confirm)
     return _handle_toggle(
         users_service.demote, db=db, actor=actor, target=_load_target(db, user_id)
+    )
+
+
+@router.post("/sys-admin/users/{user_id}/remove")
+def remove_user(
+    user_id: int,
+    actor: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    return _handle_toggle(
+        users_service.remove_user,
+        db=db,
+        actor=actor,
+        target=_load_target(db, user_id),
     )
 
 

@@ -198,6 +198,75 @@ def demote(
     db.commit()
 
 
+def remove_user(
+    db: Session,
+    *,
+    actor: User,
+    target: User,
+    correlation_id: str | None = None,
+) -> None:
+    """Hard-delete a workspace ``users`` row.
+
+    Guards:
+
+    - ``self_action`` — operators can't remove themselves.
+    - ``last_admin`` — refuses to remove the only remaining
+      sys-admin in the workspace.
+    - ``owns_sessions`` — refuses when the user owns one or
+      more sessions (``session_operator_count > 0``). The
+      operator transfers or deletes those sessions first.
+
+    On success the row is hard-deleted and a
+    ``workspace.user_removed`` snapshot audit event records the
+    last-known role state and the deleted email.
+    """
+    _guard_self(actor, target)
+    if target.is_sys_admin and _sys_admin_count(db) <= 1:
+        raise UserOperationError(
+            code="last_admin",
+            message=(
+                "Refusing to remove the only sys-admin in the workspace. "
+                "Promote another user to sys-admin before removing this one."
+            ),
+        )
+    owned = int(
+        db.execute(
+            select(func.count(SessionOperator.id)).where(
+                SessionOperator.user_id == target.id
+            )
+        ).scalar_one()
+    )
+    if owned > 0:
+        raise UserOperationError(
+            code="owns_sessions",
+            message=(
+                f"Refusing to remove {target.email} while they own "
+                f"{owned} session{'s' if owned != 1 else ''}. "
+                "Transfer or delete those sessions first."
+            ),
+        )
+
+    snapshot = {
+        "email": target.email,
+        "is_operator": target.is_operator,
+        "is_sys_admin": target.is_sys_admin,
+    }
+    target_id = target.id
+    target_email = target.email
+    db.delete(target)
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="workspace.user_removed",
+        summary=f"Removed {target_email} from the workspace",
+        actor_user_id=actor.id,
+        payload=audit.snapshot(snapshot),
+        refs={"target_user_id": target_id},
+        correlation_id=correlation_id,
+    )
+    db.commit()
+
+
 def invite(
     db: Session,
     *,
