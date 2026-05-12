@@ -7,6 +7,7 @@ from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 from app.schemas.sessions import SessionCreate
 from app.services import audit, session_lifecycle as lifecycle
 from app.services.instruments import ensure_default_instrument
+from app.services.library_materialise import materialise_operator_libraries
 from app.services.rules.seeds import materialise_seed_rule_sets
 
 
@@ -48,6 +49,14 @@ def create_session(
     # this pool.
     seed_rows = materialise_seed_rule_sets(db, review_session)
 
+    # 15C Slice 2: auto-copy the operator's library (RTDs + Personal
+    # RuleSets) into the per-session tables. Seeds-first order means
+    # any (rare) name collision goes to the seed; library entries
+    # with colliding names are skipped silently.
+    library_result = materialise_operator_libraries(
+        db, review_session, owner_user=user
+    )
+
     audit.write_event(
         db,
         event_type="session.created",
@@ -75,6 +84,36 @@ def create_session(
             session=review_session,
             payload=audit.counts(
                 materialised=len(seed_rows),
+            ),
+            correlation_id=correlation_id,
+        )
+    if library_result.rtds_copied:
+        audit.write_event(
+            db,
+            event_type="response_type_definitions.materialised_from_library",
+            summary=(
+                f"Copied {library_result.rtds_copied} library RTD(s) "
+                f"into session {review_session.code}"
+            ),
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.counts(
+                materialised=library_result.rtds_copied,
+            ),
+            correlation_id=correlation_id,
+        )
+    if library_result.rule_sets_copied:
+        audit.write_event(
+            db,
+            event_type="session_rule_sets.materialised_from_library",
+            summary=(
+                f"Copied {library_result.rule_sets_copied} library "
+                f"RuleSet(s) into session {review_session.code}"
+            ),
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.counts(
+                materialised=library_result.rule_sets_copied,
             ),
             correlation_id=correlation_id,
         )

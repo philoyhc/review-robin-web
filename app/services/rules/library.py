@@ -63,6 +63,26 @@ def list_visible_rule_sets(
     return list(db.execute(stmt).scalars())
 
 
+def list_personal_rule_sets(
+    db: Session, *, owner_user: User
+) -> list[RuleSet]:
+    """``owner_user``'s Personal-scope RuleSets (no seeds, no soft-
+    deleted), in id order. Used by 15C Slice 2's
+    ``materialise_operator_libraries`` to enumerate the library
+    entries that should be copied into a newly-created session."""
+
+    stmt = (
+        select(RuleSet)
+        .where(
+            RuleSet.is_seed.is_(False),
+            RuleSet.owner_user_id == owner_user.id,
+            RuleSet.deleted_at.is_(None),
+        )
+        .order_by(RuleSet.id)
+    )
+    return list(db.execute(stmt).scalars())
+
+
 def load_rule_set(
     db: Session, rule_set_id: int
 ) -> tuple[RuleSet, RuleSetRevision] | None:

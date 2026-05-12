@@ -435,6 +435,17 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session_rule_sets.materialised_from_seed": EventSchema(
         _IDENTITY | {"counts", "context"}
     ),
+    # Segment 15C Slice 2 — auto-copy from operator libraries into the
+    # per-session tables at session-create time. Each emitter fires
+    # at most once per ``create_session`` and only when its tier
+    # actually inserted rows; ``counts.materialised`` carries the
+    # row count.
+    "session_rule_sets.materialised_from_library": EventSchema(
+        _IDENTITY | {"counts", "context"}
+    ),
+    "response_type_definitions.materialised_from_library": EventSchema(
+        _IDENTITY | {"counts", "context"}
+    ),
     # PR 7 — settings
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "reviewees.imported": EventSchema(_IDENTITY | {"counts", "context"}),

@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     Instrument,
     InstrumentResponseField,
+    OperatorResponseTypeDefinition,
     Response,
     ResponseTypeDefinition,
     ReviewSession,
@@ -645,3 +646,18 @@ def delete_response_type_definition(
     )
     db.commit()
     return dependents
+
+
+def list_operator_rtds(
+    db: Session, *, owner_user: User
+) -> list[OperatorResponseTypeDefinition]:
+    """``owner_user``'s library RTDs, in id order. Used by 15C
+    Slice 2's ``materialise_operator_libraries`` to enumerate the
+    library entries that should be copied into a newly-created
+    session's ``response_type_definitions`` rows."""
+    stmt = (
+        select(OperatorResponseTypeDefinition)
+        .where(OperatorResponseTypeDefinition.owner_user_id == owner_user.id)
+        .order_by(OperatorResponseTypeDefinition.id)
+    )
+    return list(db.execute(stmt).scalars())
