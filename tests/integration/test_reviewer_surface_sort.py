@@ -247,20 +247,20 @@ def test_reviewer_surface_renders_sortable_header_scaffolding(
     assert response.status_code == 200
     body = response.text
     # Table element carries the per-instrument sortable marker.
-    assert 'data-rs-sortable-table=' in body
+    assert 'data-rrw-sortable=' in body
     # The Reviewee identity header is clickable.
-    assert 'class="rs-reviewee rs-sortable"' in body
+    assert 'class="rs-reviewee rrw-sortable"' in body
     assert 'data-sort-key="reviewee.name"' in body
     # Per-header sort badge span.
-    assert '<span class="rs-sort-badge">' in body
+    assert '<span class="rrw-sort-badge">' in body
     # The click handler is wired.
-    assert 'onclick="rsSortHeaderClick(' in body
+    assert 'onclick="rrwSortHeaderClick(' in body
     # Each <td> carries a data-sort-value mirroring the row's
     # persisted display value (the JS reads this rather than
     # peeking into editable inputs).
     assert 'data-sort-value=' in body
-    # tbody.rs-rows wraps the data rows.
-    assert '<tbody class="rs-rows">' in body
+    # tbody.rrw-rows wraps the data rows.
+    assert '<tbody class="rrw-rows">' in body
 
 
 def test_reviewer_surface_response_field_headers_carry_sort_type(

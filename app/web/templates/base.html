@@ -1830,6 +1830,27 @@
         background-color: var(--rule-bar-color, #ddd);
         border-radius: 1px;
       }
+
+      /* Segment 13B Part 2 PR 4 — shared sort primitive.
+         Any table that opts into the sort facility uses these
+         classes; the JS is in the body-end <script> block. */
+      body.ui-v2 th.rrw-sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+      body.ui-v2 th.rrw-sortable:hover {
+        background: var(--bg-muted, #f1f5f9);
+      }
+      body.ui-v2 .rrw-sort-badge {
+        display: inline;
+        font-size: 0.85em;
+        color: var(--color-muted, #475569);
+        font-variant-numeric: tabular-nums;
+      }
+      body.ui-v2 .rrw-sort-badge-active {
+        color: var(--color-text, #0f172a);
+        font-weight: 600;
+      }
     </style>
     {% block extra_head %}{% endblock %}
   </head>
@@ -1862,6 +1883,212 @@
     {% endblock %}
 
     {% block content %}{% endblock %}
+
+    <script>
+      // Segment 13B Part 2 PR 4 — shared sort primitive.
+      //
+      // Any page can opt into clickable column sort by annotating
+      // a ``<table>`` with these markers:
+      //
+      //   <table data-rrw-sortable="{cookie-key}">
+      //     <thead>
+      //       <tr>
+      //         <th class="rrw-sortable"
+      //             data-sort-key="..."
+      //             data-sort-type="Integer"  <!-- optional -->
+      //             onclick="rrwSortHeaderClick(event, this)">
+      //           Header label
+      //           <span class="rrw-sort-badge"></span>
+      //         </th>
+      //         ...
+      //       </tr>
+      //     </thead>
+      //     <tbody class="rrw-rows">
+      //       <tr>
+      //         <td data-sort-value="...">...</td>
+      //         ...
+      //       </tr>
+      //     </tbody>
+      //   </table>
+      //
+      // Click semantics (per ``spec/sort_by_reviewee.md``):
+      //
+      //   - Plain click on an unsorted header → asc, replacing
+      //     the cascade with this single column.
+      //   - Plain click on the sole sorted column cycles asc →
+      //     desc → unsorted.
+      //   - Plain click on a sorted column (when others are
+      //     also sorted) replaces the cascade with just this
+      //     column at asc.
+      //   - Shift-click on an unsorted header appends it to the
+      //     cascade at asc (capped at ``_RRW_SORT_MAX_KEYS``).
+      //   - Shift-click on a sorted header within the cascade
+      //     cycles its direction (asc → desc → drop).
+      //
+      // The primitive is presentation-only: state lives in JS
+      // memory keyed by the table's ``data-rrw-sortable``
+      // attribute. PR 5 layers cookie persistence on top so the
+      // sort survives reloads on the same browser.
+      var _RRW_SORT_MAX_KEYS = 3;
+      var _rrwSortState = {};
+
+      function rrwSortHeaderClick(event, th) {
+        var table = th.closest('table[data-rrw-sortable]');
+        if (!table) return;
+        var tableId = table.getAttribute('data-rrw-sortable');
+        var key = th.getAttribute('data-sort-key');
+        if (!key) return;
+        var state = _rrwSortState[tableId] || [];
+        var existingIdx = -1;
+        for (var i = 0; i < state.length; i++) {
+          if (state[i].key === key) { existingIdx = i; break; }
+        }
+        if (event.shiftKey) {
+          if (existingIdx === -1) {
+            if (state.length >= _RRW_SORT_MAX_KEYS) return;
+            state.push({ key: key, dir: 'asc' });
+          } else {
+            var entry = state[existingIdx];
+            if (entry.dir === 'asc') {
+              entry.dir = 'desc';
+            } else {
+              state.splice(existingIdx, 1);
+            }
+          }
+        } else {
+          if (existingIdx !== -1 && state.length === 1) {
+            var soleEntry = state[existingIdx];
+            if (soleEntry.dir === 'asc') {
+              state = [{ key: key, dir: 'desc' }];
+            } else {
+              state = [];
+            }
+          } else {
+            state = [{ key: key, dir: 'asc' }];
+          }
+        }
+        _rrwSortState[tableId] = state;
+        _rrwRefreshSortBadges(table, state);
+        _rrwApplySort(table, state);
+      }
+
+      function _rrwRefreshSortBadges(table, state) {
+        var keyToPriority = {};
+        var keyToDir = {};
+        for (var i = 0; i < state.length; i++) {
+          keyToPriority[state[i].key] = i + 1;
+          keyToDir[state[i].key] = state[i].dir;
+        }
+        var headers = table.querySelectorAll('th.rrw-sortable');
+        for (var j = 0; j < headers.length; j++) {
+          var th = headers[j];
+          var key = th.getAttribute('data-sort-key');
+          var badge = th.querySelector('.rrw-sort-badge');
+          if (!badge) continue;
+          if (keyToPriority[key]) {
+            badge.textContent =
+              ' ' + keyToPriority[key]
+              + (keyToDir[key] === 'asc' ? '↑' : '↓');
+            badge.classList.add('rrw-sort-badge-active');
+          } else {
+            badge.textContent = '';
+            badge.classList.remove('rrw-sort-badge-active');
+          }
+        }
+      }
+
+      function _rrwApplySort(table, state) {
+        var tbody = table.querySelector('tbody.rrw-rows');
+        if (!tbody) return;
+        var headRow = table.querySelector('thead tr');
+        var allHeads = headRow ? headRow.children : [];
+        var keyToColIndex = {};
+        var keyToType = {};
+        for (var i = 0; i < allHeads.length; i++) {
+          var k = allHeads[i].getAttribute('data-sort-key');
+          if (k) {
+            keyToColIndex[k] = i;
+            keyToType[k] = allHeads[i].getAttribute('data-sort-type') || '';
+          }
+        }
+        var rows = Array.prototype.slice.call(tbody.children);
+        // Stamp the server-render insertion order ONCE per row so
+        // ``state.length === 0`` (unsorted) restores the operator
+        // default — not the most-recently-sorted order.
+        rows.forEach(function (r, idx) {
+          if (r.dataset.rrwOriginalIndex === undefined) {
+            r.dataset.rrwOriginalIndex = String(idx);
+          }
+        });
+        if (state.length === 0) {
+          rows.sort(function (a, b) {
+            return (
+              parseInt(a.dataset.rrwOriginalIndex, 10) -
+              parseInt(b.dataset.rrwOriginalIndex, 10)
+            );
+          });
+        } else {
+          rows.sort(function (a, b) {
+            for (var s = 0; s < state.length; s++) {
+              var entry = state[s];
+              var col = keyToColIndex[entry.key];
+              if (col === undefined) continue;
+              var av = _rrwCellValue(a.children[col]);
+              var bv = _rrwCellValue(b.children[col]);
+              // Null-last regardless of direction. Operators
+              // sort to surface rows with data; "no data" never
+              // bubbles up. Handled before the dir flip so the
+              // asymmetry survives.
+              if (av === null && bv === null) continue;
+              if (av === null) return 1;
+              if (bv === null) return -1;
+              var cmp = _rrwCompareValues(av, bv, keyToType[entry.key] || '');
+              if (cmp !== 0) {
+                return entry.dir === 'desc' ? -cmp : cmp;
+              }
+            }
+            return (
+              parseInt(a.dataset.rrwOriginalIndex, 10) -
+              parseInt(b.dataset.rrwOriginalIndex, 10)
+            );
+          });
+        }
+        rows.forEach(function (r) { tbody.appendChild(r); });
+      }
+
+      function _rrwCellValue(td) {
+        if (!td) return null;
+        // Prefer the persisted server value attribute. Inputs
+        // that were edited but not saved keep their last-saved
+        // value as the sort key — operators sort by what's
+        // committed, not by mid-edit text.
+        var raw = td.getAttribute('data-sort-value');
+        if (raw === null) {
+          // Fall back to the cell's text content (e.g. for
+          // cells without an explicit sort value).
+          raw = (td.textContent || '').trim();
+        }
+        if (raw === '' || raw === null) return null;
+        return raw;
+      }
+
+      function _rrwCompareValues(a, b, type) {
+        // Caller has filtered out null pairs. Direction flip
+        // happens at the caller; this function returns an
+        // ascending comparison.
+        if (type === 'Integer' || type === 'Decimal') {
+          var an = parseFloat(a);
+          var bn = parseFloat(b);
+          if (!isNaN(an) && !isNaN(bn)) {
+            return an < bn ? -1 : an > bn ? 1 : 0;
+          }
+        }
+        // Locale-aware string compare. ``{ numeric: true }``
+        // makes ``Item 2`` sort before ``Item 10`` for
+        // alphanumeric strings.
+        return a.localeCompare(b, undefined, { numeric: true });
+      }
+    </script>
 
     <script>
       // Operator-page convention: every redirect-back-with-banner card
