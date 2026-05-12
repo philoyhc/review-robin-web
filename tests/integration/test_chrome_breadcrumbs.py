@@ -42,6 +42,13 @@ def test_operator_chrome_renders_app_identity_user_card_and_signout(
     # No "(sys admin)" suffix for regular operators.
     assert "(sys admin)" not in body
     assert 'href="/.auth/logout"' in body
+    # Shared sort primitive (Segment 13B Part 2 PR 4) ships in
+    # ``base.html`` so every page can opt into clickable sort
+    # via the ``data-rrw-sortable`` annotation contract.
+    # Regression guard so future template-only PRs don't
+    # silently regress the primitive into per-page duplicates.
+    assert "function rrwSortHeaderClick" in body
+    assert "body.ui-v2 th.rrw-sortable" in body
 
 
 def test_chrome_user_card_marks_sys_admins_with_suffix(
