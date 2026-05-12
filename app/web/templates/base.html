@@ -1970,6 +1970,111 @@
         _rrwSortState[tableId] = state;
         _rrwRefreshSortBadges(table, state);
         _rrwApplySort(table, state);
+        _rrwWriteCookie(tableId, state);
+      }
+
+      // Segment 13B Part 2 PR 5 — cookie persistence.
+      //
+      // Cookie name is the table's ``data-rrw-sortable`` value.
+      // Cookie value is the JSON-encoded state ``[{"key": "...",
+      // "dir": "asc|desc"}, ...]`` in cascade order. Empty state
+      // (state.length === 0) writes an expired cookie so the
+      // initial render returns to the server-side default.
+      //
+      // Scope: ``Path=/`` so the JS can read/write it from any
+      // path under the surface. ``SameSite=Lax``. Not
+      // ``HttpOnly`` (the JS needs to read).
+      function _rrwWriteCookie(tableId, state) {
+        var path = _rrwCookiePath(tableId);
+        if (state.length === 0) {
+          document.cookie =
+            encodeURIComponent(tableId)
+            + '=; Path=' + path
+            + '; SameSite=Lax; Max-Age=0';
+          return;
+        }
+        try {
+          var encoded = encodeURIComponent(JSON.stringify(state));
+          // 1 year is plenty — operators / reviewers rarely use a
+          // single browser for more than a year on one session.
+          document.cookie =
+            encodeURIComponent(tableId)
+            + '=' + encoded
+            + '; Path=' + path
+            + '; SameSite=Lax; Max-Age=' + (60 * 60 * 24 * 365);
+        } catch (e) {
+          // Encoding failure — silently drop.
+        }
+      }
+
+      function _rrwReadCookie(tableId) {
+        var name = encodeURIComponent(tableId) + '=';
+        var parts = document.cookie ? document.cookie.split('; ') : [];
+        for (var i = 0; i < parts.length; i++) {
+          if (parts[i].indexOf(name) === 0) {
+            var raw = parts[i].slice(name.length);
+            try {
+              var decoded = JSON.parse(decodeURIComponent(raw));
+              if (!Array.isArray(decoded)) return [];
+              // Coerce shape — silently drop malformed entries
+              // rather than break the page.
+              return decoded
+                .filter(function (e) {
+                  return e
+                    && typeof e.key === 'string'
+                    && (e.dir === 'asc' || e.dir === 'desc');
+                })
+                .slice(0, _RRW_SORT_MAX_KEYS);
+            } catch (e) {
+              return [];
+            }
+          }
+        }
+        return [];
+      }
+
+      function _rrwCookiePath(tableId) {
+        // Scope per surface so a Reviewers-page sort never bleeds
+        // into a Reviewees-page request, and a session-N sort
+        // never bleeds into session-M. ``tableId`` shape is
+        // ``rrw-sort-{surface}-{session_id}[-{instrument_id}]``;
+        // the path mirrors the surface prefix.
+        //
+        // Map: ``rs`` (reviewer surface) → ``/reviewer/sessions/N``;
+        //      anything else → ``/operator/sessions/N``.
+        var match = tableId.match(/^rrw-sort-([^-]+)-(\d+)/);
+        if (!match) return '/';
+        var surface = match[1];
+        var sessionId = match[2];
+        if (surface === 'rs') {
+          return '/reviewer/sessions/' + sessionId;
+        }
+        return '/operator/sessions/' + sessionId;
+      }
+
+      // Seed every sortable table's state from its cookie on
+      // page load, before the user clicks anything. The cookie
+      // persists across reloads on the same browser; the SSR
+      // path also reads the cookie so the initial HTML already
+      // sits in the persisted order. Without this DOMContentLoaded
+      // pass the badges wouldn't reflect the cookie.
+      function _rrwHydrateFromCookies() {
+        var tables = document.querySelectorAll('table[data-rrw-sortable]');
+        for (var i = 0; i < tables.length; i++) {
+          var table = tables[i];
+          var tableId = table.getAttribute('data-rrw-sortable');
+          if (!tableId) continue;
+          var state = _rrwReadCookie(tableId);
+          if (state.length === 0) continue;
+          _rrwSortState[tableId] = state;
+          _rrwRefreshSortBadges(table, state);
+          // No need to re-apply DOM order — SSR already did.
+        }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _rrwHydrateFromCookies);
+      } else {
+        _rrwHydrateFromCookies();
       }
 
       function _rrwRefreshSortBadges(table, state) {

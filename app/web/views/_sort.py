@@ -34,7 +34,105 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any, TypeVar
 
-__all__ = ["order_rows_by_sort_spec"]
+__all__ = [
+    "decode_cookie_sort_spec_for_reviewer_surface",
+    "order_rows_by_sort_spec",
+]
+
+
+# Segment 13B Part 2 PR 5 — cookie shape.
+#
+# The client-side primitive in ``base.html`` writes
+# ``[{"key": "...", "dir": "asc|desc"}, ...]`` JSON into a cookie
+# named by the ``data-rrw-sortable`` table marker. Per-surface
+# helpers below decode the opaque ``key`` strings into the
+# per-surface natural shape so the server-side
+# ``order_rows_by_sort_spec`` helper can render the right initial
+# order without waiting for the JS to re-shuffle.
+
+# Cookie name convention:
+#   ``rrw-sort-rs-{session_id}-{instrument_id}`` for the reviewer surface.
+#   ``rrw-sort-{surface}-{session_id}`` for operator setup tables.
+_REVIEWER_COOKIE_PREFIX = "rrw-sort-rs"
+
+
+def decode_cookie_sort_spec_for_reviewer_surface(
+    *,
+    cookies: dict[str, str],
+    session_id: int,
+    instrument_id: int,
+    display_fields,
+) -> list[dict[str, object]] | None:
+    """Translate the reviewer-surface cookie into a
+    ``sort_display_fields``-shaped spec the
+    ``order_rows_by_sort_spec`` helper understands.
+
+    Returns ``None`` when no cookie exists (caller falls back to
+    the operator-default ``instrument.sort_display_fields``). An
+    empty list means "operator default is overridden but the
+    reviewer cleared the sort" — distinct from ``None`` so the
+    caller can honour the override.
+
+    Opaque keys decoded:
+
+    - ``reviewee.name`` →
+      locked Name display field's ``display_field_id``.
+    - ``reviewee.email_or_identifier`` → locked Email display
+      field's ``display_field_id``.
+    - ``display:N`` → ``int(N)``.
+    - ``response:N`` → dropped (server doesn't sort by response
+      values; the JS re-sorts client-side if any).
+
+    Malformed JSON / missing keys / unknown ``dir`` values are
+    silently filtered. Per ``spec/sort_by_reviewee.md`` and the
+    primitive's hard cap, at most 3 entries.
+    """
+    import json
+
+    cookie_name = (
+        f"{_REVIEWER_COOKIE_PREFIX}-{session_id}-{instrument_id}"
+    )
+    raw = cookies.get(cookie_name)
+    if not raw:
+        return None
+    try:
+        decoded = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(decoded, list):
+        return None
+    name_id_by_source = {
+        df.source_field: df.id
+        for df in display_fields
+        if df.source_type == "reviewee"
+    }
+    display_ids = {df.id for df in display_fields}
+    out: list[dict[str, object]] = []
+    for entry in decoded[:3]:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("key")
+        direction = entry.get("dir")
+        if direction not in ("asc", "desc"):
+            continue
+        df_id: int | None = None
+        if key == "reviewee.name":
+            df_id = name_id_by_source.get("name")
+        elif key == "reviewee.email_or_identifier":
+            df_id = name_id_by_source.get("email_or_identifier")
+        elif isinstance(key, str) and key.startswith("display:"):
+            try:
+                candidate = int(key.split(":", 1)[1])
+            except ValueError:
+                continue
+            if candidate in display_ids:
+                df_id = candidate
+        # ``response:N`` and any other opaque keys → skip (server
+        # can't sort by response values).
+        if df_id is None:
+            continue
+        out.append({"display_field_id": df_id, "dir": direction})
+    return out
 
 
 Row = TypeVar("Row")
