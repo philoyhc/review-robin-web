@@ -1,5 +1,16 @@
 # Segment 13C — Enhanced instruments
 
+> **Sequencing note (2026-05-12).** 13C now lands **after 15B
+> (Per-instrument assignments)**. The post-15D plan-revision note
+> in `guide/todo_master.md` flagged that the original 13C design
+> stashed per-instrument flavour metadata on the now-retired
+> `Assignment.context` JSON column; the relocated home for that
+> metadata depends on choices 15B makes about per-instrument
+> selection / fanout. Wait for 15B to settle that surface before
+> opening 13C PRs. The earlier sequencing (13C as #2 in the
+> Numbered queue) is superseded by this note — re-read this
+> preamble before kicking off any 13C work.
+
 Implementation plan for two additions to the per-instrument
 operator card on `/operator/sessions/{id}/instruments`:
 
