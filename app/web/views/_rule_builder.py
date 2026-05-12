@@ -36,8 +36,8 @@ from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, User
-from app.services.rules import engine, library
+from app.db.models import ReviewSession, SessionRuleSet, User
+from app.services.rules import engine, library, session_library
 
 
 
@@ -795,6 +795,11 @@ class RuleBuilderContext:
     """Rows for the sibling "Available rulesets" card. Same ordering
     as the dropdown — seeds first in install order, then caller-
     owned Personal."""
+    has_library_origin: bool = False
+    """True iff the loaded SessionRuleSet's ``library_origin_id`` is
+    set — drives the in-library badge + hides the Save-to-library
+    button. Defaulted so the blank/draft branches don't have to set
+    it explicitly."""
 
 
 _RULE_BUILDER_ERROR_MESSAGES: dict[str, str] = {
@@ -908,33 +913,37 @@ def _rule_builder_url(review_session: ReviewSession, suffix: str) -> str:
 
 
 def _build_rule_builder_options(
-    db: Session, *, user: User
-) -> tuple[list[RuleBuilderOption], list, list, dict[int, object]]:
-    """Pull the visible RuleSets once and shape them into the
-    dropdown options + the seed/personal lists used for fallback
-    selection. Returns ``(options, seeds, personal, by_id)``."""
+    db: Session, *, session_id: int
+) -> tuple[
+    list[RuleBuilderOption],
+    list[SessionRuleSet],
+    dict[int, SessionRuleSet],
+]:
+    """Pull the session's ``session_rule_sets`` rows and shape them
+    into the dropdown options + a fallback-selection list.
 
+    Returns ``(options, rows, by_id)``. Post-15C-Slice-4b every row
+    in the picker is a SessionRuleSet — workspace seeds materialise
+    into the table on session-create (Slice 1) and library copies
+    arrive via Slice 2's auto-copy or the Slice 4a Add-from-library
+    route. The library-tier ``operator_rule_sets`` table is no
+    longer the picker source.
 
-    visible = list(library.list_visible_rule_sets(db, user=user))
-    seeds = [rs for rs in visible if rs.is_seed]
-    personal = [rs for rs in visible if not rs.is_seed]
+    Within the session tier there is no read-only "seeded" distinction
+    — every row is editable / deletable. The original seed nature is
+    discoverable via the ``library_origin_id`` provenance pointer
+    (NULL for both seeded materialisations and freshly-authored
+    entries; non-NULL for library copies)."""
 
+    rows = session_library.list_visible_session_rule_sets(
+        db, session_id=session_id
+    )
     options: list[RuleBuilderOption] = []
-    for rs in seeds:
+    for row in rows:
         options.append(
             RuleBuilderOption(
-                id=rs.id,
-                label=rs.name,
-                is_seed=True,
-                is_personal=False,
-                is_blank_sentinel=False,
-            )
-        )
-    for rs in personal:
-        options.append(
-            RuleBuilderOption(
-                id=rs.id,
-                label=rs.name,
+                id=row.id,
+                label=row.name,
                 is_seed=False,
                 is_personal=True,
                 is_blank_sentinel=False,
@@ -949,34 +958,24 @@ def _build_rule_builder_options(
             is_blank_sentinel=True,
         )
     )
-    by_id = {rs.id: rs for rs in visible}
-    return options, seeds, personal, by_id
+    by_id = {row.id: row for row in rows}
+    return options, rows, by_id
 
 
 def _build_available_rulesets(
-    seeds: list, personal: list, *, active_id: int | None
+    rows: list[SessionRuleSet], *, active_id: int | None
 ) -> list[AvailableRuleSetEntry]:
-    """Shape the visible RuleSet list for the sibling
-    "Available rulesets" card. Same ordering as the dropdown:
-    seeds first in install order, then caller-owned Personal.
-    ``active_id`` is the currently-selected RuleSet id (or None
-    when the operator is on a draft / blank); the matching row
-    renders highlighted."""
+    """Shape the SessionRuleSet list for the sibling "Available
+    rulesets" card. Same id-ascending order as the dropdown
+    (workspace seeds first via 15C Slice 1, then library copies /
+    operator-authored entries). Post-Slice-4b every row is
+    editable so the ``is_seed`` / ``is_personal`` flags on the
+    entry are vestigial — left in place for template-side
+    compatibility but every row is rendered as Personal."""
 
-    rows: list[AvailableRuleSetEntry] = []
-    for rs in seeds:
-        rows.append(
-            AvailableRuleSetEntry(
-                id=rs.id,
-                name=rs.name,
-                description=rs.description or "",
-                is_seed=True,
-                is_personal=False,
-                is_active=(active_id == rs.id),
-            )
-        )
-    for rs in personal:
-        rows.append(
+    entries: list[AvailableRuleSetEntry] = []
+    for rs in rows:
+        entries.append(
             AvailableRuleSetEntry(
                 id=rs.id,
                 name=rs.name,
@@ -986,7 +985,7 @@ def _build_available_rulesets(
                 is_active=(active_id == rs.id),
             )
         )
-    return rows
+    return entries
 
 
 def build_rule_builder_context(
@@ -1017,7 +1016,9 @@ def build_rule_builder_context(
     """
 
 
-    options, seeds, _personal, by_id = _build_rule_builder_options(db, user=user)
+    options, rows, by_id = _build_rule_builder_options(
+        db, session_id=review_session.id
+    )
 
     if as_draft_from is not None:
         return _build_draft_context(
@@ -1030,8 +1031,7 @@ def build_rule_builder_context(
             error_kind=error_kind,
             saved_flash=saved_flash,
             draft_name_override=draft_name_override,
-            seeds=seeds,
-            personal=_personal,
+            rows=rows,
         )
 
     if selected_id == RULE_BUILDER_BLANK_SENTINEL_ID:
@@ -1041,13 +1041,13 @@ def build_rule_builder_context(
             error_kind=error_kind,
             saved_flash=saved_flash,
             available_rulesets=_build_available_rulesets(
-                seeds, _personal, active_id=None
+                rows, active_id=None
             ),
         )
 
     if selected_id is None or selected_id not in by_id:
-        if seeds:
-            selected_id = seeds[0].id
+        if rows:
+            selected_id = rows[0].id
         else:
             return _rule_builder_blank_draft(
                 review_session,
@@ -1055,55 +1055,52 @@ def build_rule_builder_context(
                 error_kind=error_kind,
                 saved_flash=saved_flash,
                 available_rulesets=_build_available_rulesets(
-                    seeds, _personal, active_id=None
+                    rows, active_id=None
                 ),
             )
 
-    loaded = library.load_rule_set(db, selected_id)
-    if loaded is None:
-        if seeds:
-            selected_id = seeds[0].id
-            loaded = library.load_rule_set(db, selected_id)
-        if loaded is None:
+    session_rule_set = by_id.get(selected_id)
+    if session_rule_set is None:
+        if rows:
+            session_rule_set = rows[0]
+            selected_id = session_rule_set.id
+        else:
             return _rule_builder_blank_draft(
                 review_session,
                 options,
                 error_kind=error_kind,
                 saved_flash=saved_flash,
                 available_rulesets=_build_available_rulesets(
-                    seeds, _personal, active_id=None
+                    rows, active_id=None
                 ),
             )
-    rule_set, revision = loaded
 
-    rules = revision.rules_json or []
-    is_seed = bool(rule_set.is_seed)
-    is_personal = (
-        not is_seed
-        and rule_set.owner_user_id == user.id
-        and rule_set.deleted_at is None
-    )
-    editable = is_personal
+    rules = session_rule_set.rules_json or []
+    has_library_origin = session_rule_set.library_origin_id is not None
+    # Post-15C-Slice-4b: every SessionRuleSet is editable. The
+    # library-tier read-only-seed posture is gone; seed-originated
+    # session copies live as normal editable rows.
+    editable = True
 
     return RuleBuilderContext(
         options=options,
-        selected_id=rule_set.id,
+        selected_id=session_rule_set.id,
         selected_is_blank=False,
-        selected_is_seed=is_seed,
-        selected_is_personal=is_personal,
+        selected_is_seed=False,
+        selected_is_personal=True,
         selected_is_draft=False,
         editable=editable,
-        name=rule_set.name,
-        description=rule_set.description or "",
-        combinator=revision.combinator,
+        name=session_rule_set.name,
+        description=session_rule_set.description or "",
+        combinator=session_rule_set.combinator,
         combinator_label=_COMBINATOR_LABELS.get(
-            revision.combinator, revision.combinator
+            session_rule_set.combinator, session_rule_set.combinator
         ),
-        exclude_self_reviews=bool(revision.exclude_self_reviews),
-        seed_value=revision.seed,
+        exclude_self_reviews=bool(session_rule_set.exclude_self_reviews),
+        seed_value=session_rule_set.seed,
         rule_lines=_flatten_rule_lines(rules),
-        editable_rules=_flatten_editable_rules(rules) if editable else [],
-        rules_json_initial=_dump_rules_json(rules) if editable else "[]",
+        editable_rules=_flatten_editable_rules(rules),
+        rules_json_initial=_dump_rules_json(rules),
         draft_source_id=None,
         draft_auto_name=False,
         previous_id=None,
@@ -1115,7 +1112,7 @@ def build_rule_builder_context(
         save_url=_rule_builder_url(review_session, "save"),
         delete_url=_rule_builder_url(review_session, "delete"),
         cancel_url=_rule_builder_url(review_session, "")
-        + f"?rule_set_id={rule_set.id}",
+        + f"?rule_set_id={session_rule_set.id}",
         page_url=_rule_builder_url(review_session, ""),
         error_kind=error_kind,
         error_message=_RULE_BUILDER_ERROR_MESSAGES.get(error_kind or ""),
@@ -1128,8 +1125,9 @@ def build_rule_builder_context(
         quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
         composite_op_options=list(_COMPOSITE_OP_OPTIONS),
         available_rulesets=_build_available_rulesets(
-            seeds, _personal, active_id=rule_set.id
+            rows, active_id=session_rule_set.id
         ),
+        has_library_origin=has_library_origin,
     )
 
 
@@ -1145,24 +1143,23 @@ def _build_draft_context(
     saved_flash: bool,
     draft_name_override: str | None,
     draft_description_override: str | None = None,
-    seeds: list,
-    personal: list,
+    rows: list[SessionRuleSet],
 ) -> RuleBuilderContext:
     """Render the page as an unsaved draft cloning ``source_id``'s
-    rules + combinator + seed (Copy from seed/Personal). Falls back
-    to the default selection when the source can't be resolved or
-    isn't visible to the caller — same posture as a stale
-    ``rule_set_id`` query param."""
+    rules + combinator + seed (Copy from a session RuleSet). Falls
+    back to the default selection when the source can't be resolved
+    — same posture as a stale ``rule_set_id`` query param."""
 
-
-    loaded = library.load_rule_set(db, source_id)
-    if loaded is None:
-        if seeds:
+    source = session_library.load_session_rule_set(
+        db, source_id, session_id=review_session.id
+    )
+    if source is None:
+        if rows:
             return build_rule_builder_context(
                 review_session,
                 db=db,
                 user=user,
-                selected_id=seeds[0].id,
+                selected_id=rows[0].id,
                 error_kind=error_kind,
                 saved_flash=saved_flash,
             )
@@ -1172,38 +1169,12 @@ def _build_draft_context(
             error_kind=error_kind,
             saved_flash=saved_flash,
             available_rulesets=_build_available_rulesets(
-                seeds, personal, active_id=None
-            ),
-        )
-    source_rule_set, source_revision = loaded
-    if (
-        not source_rule_set.is_seed
-        and source_rule_set.owner_user_id != user.id
-    ):
-        # Non-visible Personal RuleSet — redirect to default rather
-        # than expose its existence via 403. Matches the
-        # ``rule_set_id`` fallback posture.
-        if seeds:
-            return build_rule_builder_context(
-                review_session,
-                db=db,
-                user=user,
-                selected_id=seeds[0].id,
-                error_kind=error_kind,
-                saved_flash=saved_flash,
-            )
-        return _rule_builder_blank_draft(
-            review_session,
-            options,
-            error_kind=error_kind,
-            saved_flash=saved_flash,
-            available_rulesets=_build_available_rulesets(
-                seeds, personal, active_id=None
+                rows, active_id=None
             ),
         )
 
-    rules = source_revision.rules_json or []
-    auto_name = f"Copy of {source_rule_set.name}"
+    rules = source.rules_json or []
+    auto_name = f"Copy of {source.name}"
     rendered_name = draft_name_override or auto_name
     rendered_description = (
         draft_description_override
@@ -1218,7 +1189,7 @@ def _build_draft_context(
         options=options,
         # Drafts have no row in the DB yet; the dropdown stays on
         # the source's id so the operator can see what they cloned.
-        selected_id=source_rule_set.id,
+        selected_id=source.id,
         selected_is_blank=False,
         selected_is_seed=False,
         selected_is_personal=False,
@@ -1226,16 +1197,16 @@ def _build_draft_context(
         editable=True,
         name=rendered_name,
         description=rendered_description,
-        combinator=source_revision.combinator,
+        combinator=source.combinator,
         combinator_label=_COMBINATOR_LABELS.get(
-            source_revision.combinator, source_revision.combinator
+            source.combinator, source.combinator
         ),
-        exclude_self_reviews=bool(source_revision.exclude_self_reviews),
-        seed_value=source_revision.seed,
+        exclude_self_reviews=bool(source.exclude_self_reviews),
+        seed_value=source.seed,
         rule_lines=_flatten_rule_lines(rules),
         editable_rules=_flatten_editable_rules(rules),
         rules_json_initial=_dump_rules_json(rules),
-        draft_source_id=source_rule_set.id,
+        draft_source_id=source.id,
         draft_auto_name=(rendered_name == auto_name),
         previous_id=previous_id,
         can_save=True,
@@ -1258,7 +1229,7 @@ def _build_draft_context(
         quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
         composite_op_options=list(_COMPOSITE_OP_OPTIONS),
         available_rulesets=_build_available_rulesets(
-            seeds, personal, active_id=source_rule_set.id
+            rows, active_id=source.id
         ),
     )
 

@@ -125,19 +125,12 @@ def rule_builder_copy(
         "/assignments/rule-based-editor"
     )
 
-    loaded = library.load_rule_set(db, from_rule_set_id)
-    if loaded is None:
+    source = session_library.load_session_rule_set(
+        db, from_rule_set_id, session_id=review_session.id
+    )
+    if source is None:
         return RedirectResponse(
             url=base_url, status_code=status.HTTP_303_SEE_OTHER
-        )
-    source_rule_set, _ = loaded
-    if (
-        not source_rule_set.is_seed
-        and source_rule_set.owner_user_id != user.id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="That RuleSet is private to its owner.",
         )
 
     redirect = f"{base_url}?draft_from={from_rule_set_id}"
@@ -282,10 +275,8 @@ def rule_builder_save(
 
         final_name = _resolve_save_as_name(
             db,
-            user=user,
+            session_id=review_session.id,
             requested_name=cleaned_name,
-            # The blank-draft default is the literal "New RuleSet"
-            # — auto-suffix on collision to mirror the Copy flow.
             source_default="New RuleSet",
             auto_suffix=True,
         )
@@ -310,50 +301,47 @@ def rule_builder_save(
         except ValidationError:
             return _redirect_back("validation", blank=True)
 
-        new_rule_set = library.save_as_rule_set_from_schema(
-            db,
-            rule_set_schema=rule_set_schema,
-            owner=user,
-            new_name=final_name,
-            # No source — this is a from-scratch RuleSet.
-            source_rule_set_id=None,
-            source_revision_id=None,
-            correlation_id=request_correlation_id(),
-        )
+        try:
+            new_row = session_library.save_session_rule_set_as(
+                db,
+                review_session=review_session,
+                rule_set_schema=rule_set_schema,
+                new_name=final_name,
+                source_session_rule_set_id=None,
+                library_origin_id=None,
+                actor=user,
+                correlation_id=request_correlation_id(),
+            )
+        except session_library.SessionRuleSetNameConflictError:
+            return _redirect_back("name_collision", blank=True)
+        db.commit()
         return RedirectResponse(
-            url=f"{base_url}?rule_set_id={new_rule_set.id}&saved=1",
+            url=f"{base_url}?rule_set_id={new_row.id}&saved=1",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
     if is_draft:
-        # Save-As from a Copy draft. Source must exist + be visible.
+        # Save-As from a Copy draft. Source must exist in this session.
         if source_rule_set_id is None:
             return _redirect_back(
                 "validation", draft=True, draft_source=None
             )
-        loaded = library.load_rule_set(db, source_rule_set_id)
-        if loaded is None:
+        source = session_library.load_session_rule_set(
+            db, source_rule_set_id, session_id=review_session.id
+        )
+        if source is None:
             return RedirectResponse(
                 url=base_url, status_code=status.HTTP_303_SEE_OTHER
-            )
-        source_rule_set, source_revision = loaded
-        if (
-            not source_rule_set.is_seed
-            and source_rule_set.owner_user_id != user.id
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="That RuleSet is private to its owner.",
             )
 
         # Auto-suffix when the operator hasn't edited the literal
         # ``Copy of <source>`` default and the name collides with a
-        # caller-owned Personal RuleSet (locked decision #5).
+        # row already on the session (locked decision #5).
         final_name = _resolve_save_as_name(
             db,
-            user=user,
+            session_id=review_session.id,
             requested_name=cleaned_name,
-            source_default=f"Copy of {source_rule_set.name}",
+            source_default=f"Copy of {source.name}",
             auto_suffix=(auto_name == "true"),
         )
         if final_name is None:
@@ -385,66 +373,62 @@ def rule_builder_save(
                 draft_source=source_rule_set_id,
             )
 
-        new_rule_set = library.save_as_rule_set_from_schema(
-            db,
-            rule_set_schema=rule_set_schema,
-            owner=user,
-            new_name=final_name,
-            source_rule_set_id=source_rule_set.id,
-            source_revision_id=source_revision.id,
-            correlation_id=request_correlation_id(),
-        )
+        try:
+            new_row = session_library.save_session_rule_set_as(
+                db,
+                review_session=review_session,
+                rule_set_schema=rule_set_schema,
+                new_name=final_name,
+                source_session_rule_set_id=source.id,
+                library_origin_id=None,
+                actor=user,
+                correlation_id=request_correlation_id(),
+            )
+        except session_library.SessionRuleSetNameConflictError:
+            return _redirect_back(
+                "name_collision",
+                draft=True,
+                draft_source=source_rule_set_id,
+            )
+        db.commit()
         return RedirectResponse(
-            url=f"{base_url}?rule_set_id={new_rule_set.id}&saved=1",
+            url=f"{base_url}?rule_set_id={new_row.id}&saved=1",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    # In-place save on a saved Personal RuleSet.
-    loaded = library.load_rule_set(db, rule_set_id)
-    if loaded is None:
+    # In-place save on a saved session RuleSet.
+    row = session_library.load_session_rule_set(
+        db, rule_set_id, session_id=review_session.id
+    )
+    if row is None:
         return RedirectResponse(
             url=base_url, status_code=status.HTTP_303_SEE_OTHER
-        )
-    rule_set, _ = loaded
-    if rule_set.is_seed:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Seeded RuleSets are read-only.",
-        )
-    if rule_set.owner_user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="That RuleSet is private to its owner.",
         )
 
     # Inline rename via the name field — Save commits the edited
     # name when it's changed. Collision check excludes the row
     # being saved so re-saving with the same name no-ops cleanly.
-    if cleaned_name != rule_set.name and _name_taken_by_other(
+    if cleaned_name != row.name and session_library.name_taken_in_session(
         db,
-        user=user,
+        session_id=review_session.id,
         candidate_name=cleaned_name,
-        exclude_id=rule_set.id,
+        exclude_id=row.id,
     ):
         return _redirect_back("name_collision")
 
-    if cleaned_name != rule_set.name:
-        rule_set.name = cleaned_name
+    if cleaned_name != row.name:
+        row.name = cleaned_name
 
-    # Description is editable via the inline textarea on the card.
-    # ``None`` means the form didn't carry a description field (older
-    # client / crafted POST) — leave the existing description in
-    # place rather than blanking it.
     if description is not None:
         cleaned_description = description.strip()
-        if cleaned_description != (rule_set.description or ""):
-            rule_set.description = cleaned_description
+        if cleaned_description != (row.description or ""):
+            row.description = cleaned_description
 
     try:
         rule_set_schema = RuleSetSchema(
-            id=rule_set.id,
+            id=row.id,
             name=cleaned_name,
-            description=rule_set.description or "",
+            description=row.description or "",
             scope="personal",  # type: ignore[arg-type]
             combinator=Combinator(combinator),
             rules=parsed_rules,  # type: ignore[arg-type]
@@ -456,15 +440,16 @@ def rule_builder_save(
     except ValidationError:
         return _redirect_back("validation")
 
-    library.save_in_place(
+    session_library.update_session_rule_set_in_place(
         db,
-        rule_set=rule_set,
+        session_rule_set=row,
         rule_set_schema=rule_set_schema,
         actor=user,
         correlation_id=request_correlation_id(),
     )
+    db.commit()
     return RedirectResponse(
-        url=f"{base_url}?rule_set_id={rule_set.id}&saved=1",
+        url=f"{base_url}?rule_set_id={row.id}&saved=1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -501,29 +486,21 @@ def rule_builder_delete(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    loaded = library.load_rule_set(db, rule_set_id)
-    if loaded is None:
+    row = session_library.load_session_rule_set(
+        db, rule_set_id, session_id=review_session.id
+    )
+    if row is None:
         return RedirectResponse(
             url=base_url, status_code=status.HTTP_303_SEE_OTHER
         )
-    rule_set, _ = loaded
-    if rule_set.is_seed:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Seeded RuleSets are read-only.",
-        )
-    if rule_set.owner_user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="That RuleSet is private to its owner.",
-        )
 
-    library.soft_delete_rule_set(
+    session_library.delete_session_rule_set(
         db,
-        rule_set=rule_set,
+        session_rule_set=row,
         actor=user,
         correlation_id=request_correlation_id(),
     )
+    db.commit()
     return RedirectResponse(
         url=base_url, status_code=status.HTTP_303_SEE_OTHER
     )
@@ -532,68 +509,46 @@ def rule_builder_delete(
 def _resolve_save_as_name(
     db: Session,
     *,
-    user: User,
+    session_id: int,
     requested_name: str,
     source_default: str,
     auto_suffix: bool,
 ) -> str | None:
-    """Resolve the final name for a Save-As / Copy-then-Save flow.
+    """Resolve the final name for a Save-As / Copy-then-Save flow
+    against the session tier.
+
+    Post-15C-Slice-4b the uniqueness scope is ``(session_id, name)``
+    in ``session_rule_sets`` (vs. the pre-Slice-4 ``(owner_user_id,
+    name)`` against ``operator_rule_sets``).
 
     When ``auto_suffix`` is True and ``requested_name`` is the
-    literal source-derived default (``"Copy of <source>"``), append
-    ``" (n)"`` until a free name is found. For operator-edited names
-    return ``None`` on collision so the route surfaces a 422-style
-    redirect instead of silently changing the name.
+    literal source-derived default (``"Copy of <source>"`` or
+    ``"New RuleSet"``), append ``" (n)"`` until a free name is
+    found. For operator-edited names return ``None`` on collision
+    so the route surfaces a 422-style redirect.
     """
-
-    from app.db.models import RuleSet as RuleSetModel
-
-    if not _name_taken_by_other(
-        db, user=user, candidate_name=requested_name, exclude_id=None
+    if not session_library.name_taken_in_session(
+        db,
+        session_id=session_id,
+        candidate_name=requested_name,
+        exclude_id=None,
     ):
         return requested_name
     if not auto_suffix or requested_name != source_default:
         return None
-
     n = 2
     while True:
         candidate = f"{requested_name} ({n})"
-        existing = db.execute(
-            select(RuleSetModel.id).where(
-                RuleSetModel.owner_user_id == user.id,
-                RuleSetModel.name == candidate,
-                RuleSetModel.deleted_at.is_(None),
-            )
-        ).scalar_one_or_none()
-        if existing is None:
+        if not session_library.name_taken_in_session(
+            db,
+            session_id=session_id,
+            candidate_name=candidate,
+            exclude_id=None,
+        ):
             return candidate
         n += 1
         if n > 1000:
             return None  # defensive — give up after absurd suffix run
-
-
-def _name_taken_by_other(
-    db: Session,
-    *,
-    user: User,
-    candidate_name: str,
-    exclude_id: int | None,
-) -> bool:
-    """Check whether ``candidate_name`` is already used by a Personal
-    RuleSet owned by ``user`` (excluding the row being saved, if
-    any). Soft-deleted rows are ignored — names are recyclable after
-    delete."""
-
-    from app.db.models import RuleSet as RuleSetModel
-
-    stmt = select(RuleSetModel.id).where(
-        RuleSetModel.owner_user_id == user.id,
-        RuleSetModel.name == candidate_name,
-        RuleSetModel.deleted_at.is_(None),
-    )
-    if exclude_id is not None:
-        stmt = stmt.where(RuleSetModel.id != exclude_id)
-    return db.execute(stmt).scalar_one_or_none() is not None
 
 
 @router.post(

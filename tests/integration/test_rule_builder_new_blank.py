@@ -26,7 +26,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, RuleSet
+from app.db.models import ReviewSession, SessionRuleSet
 
 
 def _make_session(
@@ -120,11 +120,11 @@ def test_save_with_zero_rules_returns_empty_rules_error(
     # can keep editing without losing context.
     assert "new=1" in location
 
-    # No Personal RuleSet was created.
+    # No SessionRuleSet with the "New RuleSet" name was created.
     saved = db.execute(
-        select(RuleSet).where(
-            RuleSet.name == "New RuleSet",
-            RuleSet.is_seed.is_(False),
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "New RuleSet",
         )
     ).scalar_one_or_none()
     assert saved is None
@@ -169,15 +169,13 @@ def test_save_with_one_rule_creates_personal_new_ruleset(
     assert "saved=1" in location
 
     saved = db.execute(
-        select(RuleSet).where(
-            RuleSet.name == "New RuleSet",
-            RuleSet.is_seed.is_(False),
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "New RuleSet",
         )
     ).scalar_one()
-    # Provenance refs are empty — this RuleSet wasn't copied from
-    # any source, it was authored from scratch.
-    assert saved.deleted_at is None
-    assert saved.is_seed is False
+    # Authored-from-scratch entries have NULL library_origin_id.
+    assert saved.library_origin_id is None
 
 
 def test_blank_save_auto_suffixes_collision_with_default_name(
@@ -224,6 +222,9 @@ def test_blank_save_auto_suffixes_collision_with_default_name(
     assert "saved=1" in (response.headers.get("location") or "")
 
     suffixed = db.execute(
-        select(RuleSet).where(RuleSet.name == "New RuleSet (2)")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "New RuleSet (2)",
+        )
     ).scalar_one_or_none()
     assert suffixed is not None

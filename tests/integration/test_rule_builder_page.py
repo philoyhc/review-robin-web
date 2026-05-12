@@ -27,7 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import ReviewSession, RuleSet
+from app.db.models import ReviewSession, SessionRuleSet
 
 
 def _make_session(
@@ -44,10 +44,18 @@ def _make_session(
     ).scalar_one()
 
 
-def _seed_id(db: Session, name: str) -> int:
+def _seed_id(db: Session, *, session_id: int, name: str) -> int:
+    """Resolve a seeded SessionRuleSet's id by its workspace name.
+
+    Post-15C-Slice-4b the Rule Builder picker reads from
+    ``session_rule_sets`` (the per-session copy table) instead of
+    ``operator_rule_sets``. The workspace seeds materialise into
+    every session via :func:`materialise_seed_rule_sets` at
+    session-create time."""
     return db.execute(
-        select(RuleSet.id).where(
-            RuleSet.is_seed.is_(True), RuleSet.name == name
+        select(SessionRuleSet.id).where(
+            SessionRuleSet.session_id == session_id,
+            SessionRuleSet.name == name,
         )
     ).scalar_one()
 
@@ -98,12 +106,14 @@ def test_dropdown_lists_all_seeds_and_blank_sentinel(
     assert "+ New blank RuleSet" in body
 
 
-def test_first_paint_loads_first_seed_read_only(
+def test_first_paint_loads_first_seed_editable(
     client: TestClient, db: Session
 ) -> None:
-    """Default selection is the first seed (Full Matrix). The body
-    renders read-only — no form inputs inside the rule list, no
-    Copy / Save / Cancel / Delete affordance yet."""
+    """Default selection is the first session RuleSet (Full Matrix
+    materialised from the seed). Post-15C-Slice-4b every row is
+    editable — seed-originated session copies live as normal
+    editable rows with the full Save / Cancel / Delete / Copy
+    action row."""
 
     review_session = _make_session(client, db, code="rb-first")
 
@@ -113,24 +123,15 @@ def test_first_paint_loads_first_seed_read_only(
     ).text
 
     # Default selection is Full Matrix, the first seed in install
-    # order. The seeded name carries through the selected dropdown
-    # option (no separate heading row in the new layout).
+    # order. The session-tier row carries the name through the
+    # selected dropdown option.
     assert "Full Matrix" in body
     assert 'id="rule-builder-selector"' in body
-    # Seeded read-only banner is the load-bearing signal that this
-    # is not editable yet — PR 2 will branch on Personal to render
-    # an editable form instead.
-    assert 'id="rule-builder-seed-banner"' in body
-    # No form inputs inside the rendered rule list. The dropdown
-    # itself is a <select>, but the rule body must not carry any.
-    rules_marker = 'id="rule-builder-rules"'
-    if rules_marker in body:
-        rules_block_start = body.index(rules_marker)
-        rules_block = body[rules_block_start : rules_block_start + 4000]
-        for tag in ("<input", "<textarea"):
-            assert tag not in rules_block, (
-                f"rule body should be read-only but contains {tag!r}"
-            )
+    # Pre-15C-Slice-4b a read-only seed-banner rendered on this
+    # selection; post-flip every row is editable so the banner is
+    # absent and the form is mounted directly.
+    assert 'id="rule-builder-seed-banner"' not in body
+    assert 'id="rule-based-editor-form"' in body
 
 
 # ---------------------------------------------------------------------------
@@ -142,28 +143,22 @@ def test_switching_dropdown_to_another_seed_updates_body(
     client: TestClient, db: Session
 ) -> None:
     """Server-side render path: passing ``?rule_set_id=`` reloads the
-    page with the named seed in the card body. Tests run no JS, so
-    this exercises the GET handler directly."""
+    page with the named session RuleSet in the card body. Tests run
+    no JS, so this exercises the GET handler directly."""
 
     review_session = _make_session(client, db, code="rb-switch")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(
+        db, session_id=review_session.id, name="Intra-group peer review"
+    )
 
     body = client.get(
         f"/operator/sessions/{review_session.id}"
         f"/assignments/rule-based-editor?rule_set_id={intra_id}"
     ).text
 
-    # Selected option in the dropdown reflects the new selection
-    # (the layout drops the separate heading row — the dropdown's
-    # selected ``<option>`` carries the title for seeded views).
-    selector_marker = f'<option value="{intra_id}"\n                    selected'
-    assert selector_marker in body or (
-        f'value="{intra_id}"' in body and "Intra-group peer review" in body
-    )
-    # The seed body renders the canonical Match sentence for this
-    # seed: ``reviewer.tag1 same_as reviewee.tag1`` flattens to
-    # "reviewer tag1 is the same as reviewee tag1" (PR 5a renderer).
-    assert "reviewer tag1 is the same as reviewee tag1" in body
+    # Selected option in the dropdown reflects the new selection.
+    assert f'value="{intra_id}"' in body
+    assert "Intra-group peer review" in body
 
 
 def test_blank_sentinel_renders_live_empty_draft(
@@ -221,16 +216,16 @@ def test_unknown_rule_set_id_falls_back_to_first_seed(
 def test_personal_rule_sets_appear_in_dropdown_after_copy(
     client: TestClient, db: Session
 ) -> None:
-    """Personal RuleSets owned by the caller show up below the seeds
-    in the dropdown. PR 1 still renders them read-only; the editable
-    form lands in PR 2."""
+    """Operator-authored RuleSets show up in the dropdown alongside
+    the seed-originated copies. Post-15C-Slice-4b they all live in
+    ``session_rule_sets`` as editable rows."""
 
     review_session = _make_session(client, db, code="rb-personal")
-    intra_id = _seed_id(db, "Intra-group peer review")
+    intra_id = _seed_id(
+        db, session_id=review_session.id, name="Intra-group peer review"
+    )
 
-    # Persist a Personal RuleSet via the new POST /save save-as
-    # flow (the legacy /assignments/rule-based/copy was retired in
-    # Segment 13A-1 PR 4b).
+    # Persist a new RuleSet via Save-As from the Intra-group seed.
     client.post(
         f"/operator/sessions/{review_session.id}"
         "/assignments/rule-based-editor/save",
@@ -243,7 +238,10 @@ def test_personal_rule_sets_appear_in_dropdown_after_copy(
         follow_redirects=False,
     )
     personal = db.execute(
-        select(RuleSet).where(RuleSet.name == "Team review")
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Team review",
+        )
     ).scalar_one()
 
     body = client.get(
@@ -251,15 +249,11 @@ def test_personal_rule_sets_appear_in_dropdown_after_copy(
         f"/assignments/rule-based-editor?rule_set_id={personal.id}"
     ).text
 
-    # Personal RuleSet name appears in the dropdown options and as
-    # the card heading.
     assert "Team review" in body
-    # Editable form is rendered (PR 2) — the PR 5b/5c indent-stack
-    # form's marker IDs are present.
+    # Editable form is rendered — every session-tier row is editable
+    # post-Slice 4b, so this is a baseline expectation.
     assert 'id="rule-based-editor-form"' in body
     assert 'id="rule-based-editor-rules-json"' in body
-    # No seeded banner on a Personal selection.
-    assert 'id="rule-builder-seed-banner"' not in body
     # Action row carries Save / Cancel / Delete + Copy.
     assert 'id="rule-builder-save-button"' in body
     assert 'id="rule-builder-cancel-button"' in body
