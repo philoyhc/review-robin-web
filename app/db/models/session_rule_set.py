@@ -42,6 +42,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -82,6 +83,19 @@ class SessionRuleSet(Base, TimestampMixin):
     seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
     """Global RNG seed for any RANDOM-strategy quota rule whose own
     selection seed is unset."""
+    is_seeded: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+    )
+    """``True`` when the row was materialised from a workspace-
+    shipped seed in ``SEEDED_RULE_SETS`` (15C Slice 1). Seed copies
+    are spec-locked: the service layer refuses ``update`` / ``rename``
+    / ``delete`` / ``save_to_library`` calls on them, mirroring the
+    RTD spec-lock model (``response_type_definitions.is_seeded``).
+    Operators customise a seed by Copy → Save-As, which writes a
+    fresh row with ``is_seeded=False``."""
     rules_json: Mapped[list[dict[str, Any]]] = mapped_column(
         JSON, nullable=False
     )

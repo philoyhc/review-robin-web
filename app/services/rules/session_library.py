@@ -69,6 +69,15 @@ class LibraryRuleSetNameConflictError(ValueError):
     enforced at the service layer for parity with the RTD path."""
 
 
+class SessionRuleSetLockedError(Exception):
+    """Raised when an operator attempts to mutate a seeded
+    SessionRuleSet (``is_seeded=True``) — those are workspace-locked
+    the same way the ten baseline RTDs are. Operators customise via
+    Copy → Save-As, which writes a fresh row with ``is_seeded=False``.
+
+    Applies to: update-in-place, rename, delete, save-to-library."""
+
+
 # ---------------------------------------------------------------------------
 # Read path
 # ---------------------------------------------------------------------------
@@ -244,6 +253,11 @@ def update_session_rule_set_in_place(
     metadata diff plus a single ``rules_edited`` boolean when the tree
     differs.
     """
+    if session_rule_set.is_seeded:
+        raise SessionRuleSetLockedError(
+            "Seeded RuleSets are workspace-locked; Copy to a new "
+            "RuleSet to customise"
+        )
     new_rules = _rules_payload(rule_set_schema)
     new_combinator = rule_set_schema.combinator.value
     new_exclude_self_reviews = rule_set_schema.options.excludeSelfReviews
@@ -302,6 +316,11 @@ def rename_session_rule_set(
     """Rename + optionally re-describe a SessionRuleSet. Refuses on
     name collision. Audit envelope: ``session_rule_set.updated`` with
     a ``changes`` payload covering ``name`` and ``description``."""
+    if session_rule_set.is_seeded:
+        raise SessionRuleSetLockedError(
+            "Seeded RuleSets are workspace-locked; Copy to a new "
+            "RuleSet to customise"
+        )
     if new_name != session_rule_set.name and name_taken_in_session(
         db,
         session_id=session_rule_set.session_id,
@@ -357,6 +376,11 @@ def delete_session_rule_set(
     The corresponding ``instruments.rule_set_id`` pointers (if any)
     clear via the SQL-level ``ON DELETE SET NULL`` cascade per 13D
     PR 4."""
+    if session_rule_set.is_seeded:
+        raise SessionRuleSetLockedError(
+            "Seeded RuleSets are workspace-locked; they materialise "
+            "on every session and cannot be locally deleted"
+        )
     captured = {
         "id": session_rule_set.id,
         "name": session_rule_set.name,
@@ -402,7 +426,18 @@ def save_to_library(
     Idempotent: if ``library_origin_id`` is already set and points
     at a still-extant library row, returns that row without
     writing.
+
+    Refuses (``SessionRuleSetLockedError``) on seeded session
+    RuleSets — they're workspace-shipped, not personal, and don't
+    belong in any one operator's library. To customise + save,
+    operators Copy → Save-As first, then Save the resulting
+    non-seeded row to library.
     """
+    if session_rule_set.is_seeded:
+        raise SessionRuleSetLockedError(
+            "Seeded RuleSets are workspace-locked; Copy to a new "
+            "RuleSet before saving to library"
+        )
     if session_rule_set.library_origin_id is not None:
         existing = db.execute(
             select(RuleSet).where(

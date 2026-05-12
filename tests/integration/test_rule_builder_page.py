@@ -106,14 +106,14 @@ def test_dropdown_lists_all_seeds_and_blank_sentinel(
     assert "+ New blank RuleSet" in body
 
 
-def test_first_paint_loads_first_seed_editable(
+def test_first_paint_loads_first_seed_read_only(
     client: TestClient, db: Session
 ) -> None:
     """Default selection is the first session RuleSet (Full Matrix
-    materialised from the seed). Post-15C-Slice-4b every row is
-    editable — seed-originated session copies live as normal
-    editable rows with the full Save / Cancel / Delete / Copy
-    action row."""
+    materialised from the seed via 15C Slice 1). Seeded session
+    copies are workspace-locked (mirror of the RTD spec-lock
+    model) — the read-only seed banner renders instead of the
+    editable form. Operators customise via Copy → Save-As."""
 
     review_session = _make_session(client, db, code="rb-first")
 
@@ -122,16 +122,15 @@ def test_first_paint_loads_first_seed_editable(
         "/assignments/rule-based-editor"
     ).text
 
-    # Default selection is Full Matrix, the first seed in install
-    # order. The session-tier row carries the name through the
-    # selected dropdown option.
     assert "Full Matrix" in body
     assert 'id="rule-builder-selector"' in body
-    # Pre-15C-Slice-4b a read-only seed-banner rendered on this
-    # selection; post-flip every row is editable so the banner is
-    # absent and the form is mounted directly.
-    assert 'id="rule-builder-seed-banner"' not in body
-    assert 'id="rule-based-editor-form"' in body
+    # Seed-banner renders because is_seeded=True on the row;
+    # editor form does NOT mount.
+    assert 'id="rule-builder-seed-banner"' in body
+    assert 'id="rule-based-editor-form"' not in body
+    # Copy action still available so the operator can clone-then-
+    # customise.
+    assert 'id="rule-builder-copy-button"' in body
 
 
 # ---------------------------------------------------------------------------
