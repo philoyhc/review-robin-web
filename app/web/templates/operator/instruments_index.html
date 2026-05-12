@@ -3,6 +3,44 @@
 {% block title %}Instruments — {{ session.name }}{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
 
+{% block extra_head %}
+  <style>
+    /* Segment 13B PR 2 — Display Fields Sort column. The
+       per-row Sort cell hosts a tri-state click button + a
+       priority badge. */
+    body.ui-v2 .sort-cell {
+      text-align: center;
+      vertical-align: middle;
+    }
+    body.ui-v2 .sort-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 2px 6px;
+      cursor: pointer;
+      border-radius: 4px;
+      font: inherit;
+    }
+    body.ui-v2 .sort-btn:hover {
+      border-color: var(--border-muted, #cbd5e1);
+      background: var(--bg-muted, #f1f5f9);
+    }
+    body.ui-v2 .sort-badge {
+      display: inline-block;
+      min-width: 28px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--bg-muted, #f1f5f9);
+      color: var(--color-text, #0f172a);
+      font-size: 0.85em;
+      font-variant-numeric: tabular-nums;
+    }
+    body.ui-v2 .sort-badge.sort-badge-empty {
+      background: transparent;
+      color: var(--color-muted, #94a3b8);
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
   <div class="session-nav-card">
     {% with current_page = "Instruments" %}
@@ -232,6 +270,11 @@
       {# Order ▲ / ▼ buttons swap rows client-side via ``moveRow``;
          the new order rides along with the bulk-save form on Save.
          No per-row server-side move POST, so Cancel discards. #}
+      {# Per-instrument sort spec — list of
+         ``{"display_field_id": int, "dir": "asc|desc"}`` in
+         priority order (Segment 13B). Pulled here so each row's
+         Sort cell can look itself up. #}
+      {% set _sort_spec = instrument.sort_display_fields or [] %}
 
       <div class="bottom-grid field-builder">
         <div class="card" style="border: none; background: transparent; padding: 0;">
@@ -316,12 +359,75 @@
                           {% endif %}
                         </div>
                       </td>
-                      <td><span class="muted">—</span></td>
+                      {# Sort cell — Segment 13B PR 2. Tri-state
+                         click cycle (unsorted → asc → desc →
+                         unsorted) maintained client-side; the
+                         operator's spec rides along with the
+                         bulk-save form via dynamically-managed
+                         ``sort_display_field_id`` + ``sort_dir``
+                         hidden inputs.
+                         Read-only mode shows the current state
+                         as a small badge so operators see at a
+                         glance how their session sorts. #}
+                      {% set _sort_entry = (_sort_spec
+                            | selectattr('display_field_id', 'equalto', df.id)
+                            | first) %}
+                      {% set _sort_priority = (_sort_spec
+                            | map(attribute='display_field_id')
+                            | list).index(df.id) + 1
+                            if _sort_entry else 0 %}
+                      <td class="sort-cell">
+                        {% if is_editing %}
+                          <button type="button"
+                                  class="sort-btn"
+                                  data-df-id="{{ df.id }}"
+                                  data-instrument-id="{{ instrument.id }}"
+                                  data-priority="{{ _sort_priority }}"
+                                  data-dir="{{ _sort_entry.dir if _sort_entry else '' }}"
+                                  onclick="toggleSort(this)"
+                                  title="Click to cycle sort: unsorted → asc → desc → unsorted">
+                            {% if _sort_entry %}
+                              <span class="sort-badge">
+                                {{ _sort_priority }}{{ '↑' if _sort_entry.dir == 'asc' else '↓' }}
+                              </span>
+                            {% else %}
+                              <span class="sort-badge sort-badge-empty">↕</span>
+                            {% endif %}
+                          </button>
+                        {% else %}
+                          {% if _sort_entry %}
+                            <span class="sort-badge">
+                              {{ _sort_priority }}{{ '↑' if _sort_entry.dir == 'asc' else '↓' }}
+                            </span>
+                          {% else %}
+                            <span class="muted">—</span>
+                          {% endif %}
+                        {% endif %}
+                      </td>
                     </tr>
                   {% endfor %}
                 </tbody>
               </table>
             </div>
+            {# Dynamic hidden inputs for the Segment 13B sort spec.
+               Cleared + repopulated by ``toggleSort`` on every click
+               so the order encoded here matches the cascade priority. #}
+            <div id="sort-spec-inputs-{{ instrument.id }}"
+                 data-instrument-id="{{ instrument.id }}"
+                 hidden>
+              {% for entry in _sort_spec %}
+                <input form="dfsave-{{ instrument.id }}" type="hidden"
+                       name="sort_display_field_id"
+                       value="{{ entry.display_field_id }}">
+                <input form="dfsave-{{ instrument.id }}" type="hidden"
+                       name="sort_dir" value="{{ entry.dir }}">
+              {% endfor %}
+            </div>
+            {% if sort_save_error and sort_save_error_instrument_id == instrument.id %}
+              <div class="banner banner-error banner-scroll-target" role="alert" style="margin-top: 12px;">
+                {{ sort_save_error }}
+              </div>
+            {% endif %}
           </form>
         </div>
 
@@ -929,6 +1035,111 @@
   </div>
 
   <script>
+    // Segment 13B PR 2 — tri-state Sort column on the
+    // per-instrument Display Fields table. Each Sort button
+    // carries ``data-priority`` (0 = unsorted, ≥1 = position in
+    // cascade) and ``data-dir`` (asc / desc / ''). Click cycle:
+    // unsorted → asc → desc → unsorted. After mutating the
+    // button's state, rebuild the dynamic
+    // ``sort_display_field_id`` + ``sort_dir`` hidden inputs
+    // inside ``#sort-spec-inputs-{instrumentId}`` so the
+    // bulk-save POST carries the operator's new spec.
+    var _SORT_MAX_KEYS = 3;
+    function toggleSort(button) {
+      var instrumentId = button.getAttribute('data-instrument-id');
+      var card = button.closest('.card.field-builder, .card');
+      // Collect every sort button inside the same Display Fields
+      // table so we can re-derive priorities after the click.
+      var table = button.closest('table');
+      if (!table) return;
+      var buttons = Array.prototype.slice.call(
+        table.querySelectorAll('.sort-btn')
+      );
+      var current = {
+        priority: parseInt(button.getAttribute('data-priority'), 10) || 0,
+        dir: button.getAttribute('data-dir') || '',
+      };
+      if (current.priority === 0) {
+        // unsorted → asc; refuse if already at the cascade cap.
+        var activeCount = buttons.filter(function (b) {
+          return parseInt(b.getAttribute('data-priority'), 10) > 0;
+        }).length;
+        if (activeCount >= _SORT_MAX_KEYS) {
+          alert('At most ' + _SORT_MAX_KEYS + ' sort keys allowed.');
+          return;
+        }
+        button.setAttribute('data-priority', String(activeCount + 1));
+        button.setAttribute('data-dir', 'asc');
+      } else if (current.dir === 'asc') {
+        // asc → desc (same priority slot).
+        button.setAttribute('data-dir', 'desc');
+      } else {
+        // desc → unsorted (drop from cascade).
+        button.setAttribute('data-priority', '0');
+        button.setAttribute('data-dir', '');
+        // Recompact higher-priority slots so the cascade stays
+        // contiguous (1, 2, 3 with no gaps).
+        var droppedPriority = current.priority;
+        buttons.forEach(function (b) {
+          var p = parseInt(b.getAttribute('data-priority'), 10) || 0;
+          if (p > droppedPriority) {
+            b.setAttribute('data-priority', String(p - 1));
+          }
+        });
+      }
+      _refreshSortBadges(buttons);
+      _rebuildSortInputs(instrumentId, buttons);
+    }
+    function _refreshSortBadges(buttons) {
+      buttons.forEach(function (b) {
+        var priority = parseInt(b.getAttribute('data-priority'), 10) || 0;
+        var dir = b.getAttribute('data-dir') || '';
+        var badge = b.querySelector('.sort-badge');
+        if (!badge) return;
+        if (priority === 0) {
+          badge.textContent = '↕';
+          badge.classList.add('sort-badge-empty');
+        } else {
+          badge.textContent = priority + (dir === 'asc' ? '↑' : '↓');
+          badge.classList.remove('sort-badge-empty');
+        }
+      });
+    }
+    function _rebuildSortInputs(instrumentId, buttons) {
+      var slot = document.getElementById(
+        'sort-spec-inputs-' + instrumentId
+      );
+      if (!slot) return;
+      // Sort buttons by current priority (asc, skipping zeros) so
+      // the hidden inputs land in cascade order — the backend reads
+      // the parallel arrays positionally.
+      var active = buttons
+        .filter(function (b) {
+          return (parseInt(b.getAttribute('data-priority'), 10) || 0) > 0;
+        })
+        .sort(function (a, b) {
+          return (
+            parseInt(a.getAttribute('data-priority'), 10) -
+            parseInt(b.getAttribute('data-priority'), 10)
+          );
+        });
+      slot.innerHTML = '';
+      active.forEach(function (b) {
+        var idInput = document.createElement('input');
+        idInput.type = 'hidden';
+        idInput.name = 'sort_display_field_id';
+        idInput.value = b.getAttribute('data-df-id');
+        idInput.setAttribute('form', 'dfsave-' + instrumentId);
+        var dirInput = document.createElement('input');
+        dirInput.type = 'hidden';
+        dirInput.name = 'sort_dir';
+        dirInput.value = b.getAttribute('data-dir');
+        dirInput.setAttribute('form', 'dfsave-' + instrumentId);
+        slot.appendChild(idInput);
+        slot.appendChild(dirInput);
+      });
+    }
+
     // Order ▲ / ▼ buttons swap the row with its sibling client-side
     // and update the bulk-save form's hidden ``order`` inputs so the
     // new order only commits when the operator clicks Save. Cancel

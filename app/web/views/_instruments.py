@@ -207,6 +207,8 @@ def build_instruments_context(
     rtd_delete_blocked_assignments: int | None = None,
     rtd_would_empty_id: int | None = None,
     rtd_would_empty_instruments: str | None = None,
+    sort_save_error: str | None = None,
+    sort_save_error_instrument_id: int | None = None,
 ) -> dict[str, Any]:
     """Build the template context for the operator instruments index.
 
@@ -330,6 +332,8 @@ def build_instruments_context(
         "is_some_rtd_unlocked": effective_editing_rtd_id is not None,
         "rtd_delete_blocked": rtd_delete_blocked,
         "rtd_would_empty": rtd_would_empty,
+        "sort_save_error": sort_save_error,
+        "sort_save_error_instrument_id": sort_save_error_instrument_id,
         "breadcrumbs": breadcrumbs.operator_session_child(
             review_session, "Instruments"
         ),
