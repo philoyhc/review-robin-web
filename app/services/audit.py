@@ -446,6 +446,23 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "response_type_definitions.materialised_from_library": EventSchema(
         _IDENTITY | {"counts", "context"}
     ),
+    # Segment 15C Slice 3 — RTD library promote / demote actions.
+    # The library-side ``operator_rtd.created`` event is workspace-
+    # scoped (no session_id) and fires when the operator hits "Save
+    # to library" on a session RTD; the session-side
+    # ``saved_to_library`` event tells the session-scoped audit log
+    # that the same RTD was promoted, with refs back to both rows.
+    # ``added_from_library`` is the reverse direction (library → new
+    # session copy via the picker).
+    "operator_rtd.created": EventSchema(
+        frozenset({"snapshot", "refs", "context"})
+    ),
+    "response_type_definitions.saved_to_library": EventSchema(
+        _IDENTITY | {"snapshot", "refs", "context"}
+    ),
+    "response_type_definitions.added_from_library": EventSchema(
+        _IDENTITY | {"snapshot", "refs", "context"}
+    ),
     # PR 7 — settings
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "reviewees.imported": EventSchema(_IDENTITY | {"counts", "context"}),

@@ -858,7 +858,14 @@
           {% for rtd in rtds %}
             {% set is_editing_this = (editing_rtd_id == rtd.id) and not rtd.is_seeded and not is_ready %}
             <tr id="rtd-row-{{ rtd.id }}" class="muted">
-              <td><code>{{ rtd.response_type }}</code></td>
+              <td>
+                <code>{{ rtd.response_type }}</code>
+                {% if rtd.library_origin_id is not none and not rtd.is_seeded %}
+                  <span class="pill pill-info"
+                        title="Linked to an entry in your operator library (15C)."
+                        style="margin-left: 6px;">in library</span>
+                {% endif %}
+              </td>
               <td>{{ rtd.data_type }}</td>
               {% if is_editing_this %}
                 {# Unlocked state: per-row form, Min / Max / Step / List
@@ -921,6 +928,7 @@
                 <td>{% if rtd.data_type in ("Integer", "Decimal") %}{{ fmt_num(rtd.step, rtd.data_type) }}{% else %}NA{% endif %}</td>
                 <td>{% if rtd.data_type == "List" %}{{ rtd.list_csv or "—" }}{% else %}NA{% endif %}</td>
                 <td style="white-space: nowrap; text-align: right;">
+                  <div style="display: inline-flex; gap: 6px;">
                   {% if rtd.is_seeded or is_ready %}
                     {# Seeded rows: no buttons. Ready-session lock:
                        no buttons either (mirrors instrument cards). #}
@@ -942,6 +950,24 @@
                     <a class="btn secondary" style="{{ _rtd_btn_style }}"
                        href="/operator/sessions/{{ session.id }}/instruments?editing_rtd_id={{ rtd.id }}#rtd-row-{{ rtd.id }}">Edit</a>
                   {% endif %}
+                  {# 15C Slice 3: Save-to-library affordance — only on
+                     operator-defined rows that aren't already linked
+                     to a library entry. Hidden on seeded rows, ready
+                     sessions, and rows mid-edit. #}
+                  {% if not rtd.is_seeded
+                        and not is_ready
+                        and rtd.library_origin_id is none
+                        and not is_some_row_unlocked
+                        and not is_some_instrument_editing %}
+                    <form method="post"
+                          action="/operator/sessions/{{ session.id }}/response-types/{{ rtd.id }}/save-to-library"
+                          style="display: inline; margin: 0;">
+                      <button class="btn secondary" type="submit"
+                              title="Save this Response Type to your operator library."
+                              style="{{ _rtd_btn_style }}">To library</button>
+                    </form>
+                  {% endif %}
+                  </div>
                 </td>
               {% endif %}
             </tr>
@@ -965,6 +991,42 @@
       {# Slice 4d: also lock the Add card while a per-instrument
          card is being edited (mutual exclusion). #}
       {% set add_disabled = (editing_rtd_id is not none) or is_some_instrument_editing %}
+      {# 15C Slice 3: Add from library — only shown when the operator
+         has library RTDs not already in this session. Sits left of the
+         Add a Response Type card so the two creation paths are side
+         by side. #}
+      {% if library_rtds_available %}
+        <div style="margin-top: 16px; display: flex; gap: 16px; align-items: stretch;"
+             id="rtd-add-row">
+          <div class="card card-half" style="margin-bottom: 0; flex: 1;">
+            <h2 style="margin-top: 0;">Add from library</h2>
+            <p class="form-help">
+              Pull a Response Type from your operator library into this
+              session. Library entries currently in this session aren't
+              listed.
+            </p>
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/response-types/add-from-library"
+                  style="display: flex; gap: 16px; align-items: center; justify-content: flex-end;">
+              <label for="operator-rtd-picker"
+                     style="font-weight: normal; display: flex; gap: 8px; align-items: center;">
+                Response Type
+                <select id="operator-rtd-picker" name="operator_rtd_id"
+                        style="position: relative; top: 2px;"
+                        {% if add_disabled %}disabled{% endif %}>
+                  {% for lib in library_rtds_available %}
+                    <option value="{{ lib.id }}">{{ lib.response_type }} ({{ lib.data_type }})</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <button type="submit" class="btn secondary"
+                      style="width: 6em; box-sizing: border-box;"
+                      {% if add_disabled %}disabled
+                      title="Save or cancel the row in progress before adding another."{% endif %}>Add</button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
       <div style="margin-top: 16px; display: flex; justify-content: flex-end;"
            id="rtd-add-card">
         <div class="card card-half" style="margin-bottom: 0;">
