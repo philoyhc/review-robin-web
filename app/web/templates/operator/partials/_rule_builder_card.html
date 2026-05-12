@@ -57,17 +57,7 @@
     {% if builder.editable %}
       <div style="flex: 1 1 0;">
         <p style="margin: 0;">
-          <label for="rule-builder-name-input"
-                 style="display: inline-flex; gap: 8px; align-items: baseline;">
-            <strong>Name</strong>
-            {# In-library pill — mirrors the RTD card's pill on
-               session rows that point at an operator-library entry
-               via library_origin_id. Hidden on drafts (no DB row
-               yet) and on rows that haven't been Save-to-library'd. #}
-            {% if builder.has_library_origin and not builder.selected_is_draft and not builder.selected_is_blank %}
-              <span class="pill pill-info">in library</span>
-            {% endif %}
-          </label>
+          <label for="rule-builder-name-input"><strong>Name</strong></label>
           <input type="text"
                  id="rule-builder-name-input"
                  name="name"

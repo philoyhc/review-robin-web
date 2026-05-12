@@ -18,13 +18,16 @@
             {% else %}
               <strong>{{ entry.name }}</strong>
             {% endif %}
-            {# Pills mirror the RTD card convention: seeded rows are
-               workspace-shipped (their identity is the rule name +
-               description, no pill); operator-authored rows render
-               a "personal" pill so the operator can spot the ones
-               they own + can edit / delete. #}
-            {% if entry.is_personal %}
-              <span class="pill pill-count">personal</span>
+            {# Pills mirror the RTD card convention:
+                 - seeded rows: no pill (workspace-shipped; identity
+                   is the rule name + description).
+                 - has_library_origin: "in library" green pill.
+                 - else (operator-authored, session-only): "personal"
+                   blue pill. #}
+            {% if entry.has_library_origin and not entry.is_seed %}
+              <span class="pill pill-success">in library</span>
+            {% elif entry.is_personal %}
+              <span class="pill pill-info">personal</span>
             {% endif %}
           </div>
           {% if entry.description %}
