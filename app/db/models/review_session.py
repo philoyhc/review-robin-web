@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from app.db.models.response_type_definition import ResponseTypeDefinition
     from app.db.models.reviewee import Reviewee
     from app.db.models.reviewer import Reviewer
+    from app.db.models.session_field_label import SessionFieldLabel
     from app.db.models.session_operator import SessionOperator
     from app.db.models.user import User
 
@@ -74,6 +75,10 @@ class ReviewSession(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
     response_type_definitions: Mapped[list[ResponseTypeDefinition]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
+    field_labels: Mapped[list[SessionFieldLabel]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",
     )

@@ -354,7 +354,11 @@ def _display_field_rows(instrument: Instrument, n: int) -> list[Row]:
         rows.append(
             Row(f"{prefix}.source_field", _str(field.source_field), "string")
         )
-        rows.append(Row(f"{prefix}.label", _str(field.label), "string"))
+        # ``label`` row retired in Segment 15A Slice 1. The per-
+        # instrument override capability went away with the
+        # session-wide friendly-label resolver; the model column
+        # stays as dead data and the apply phase tolerates legacy
+        # ``label`` rows but silently drops them.
         rows.append(Row(f"{prefix}.visible", _bool(field.visible), "boolean"))
     return rows
 
@@ -750,6 +754,26 @@ _VALID_GROUP_KINDS = frozenset({"tag_1", "tag_2", "tag_3"})
 _VALID_DF_SOURCE_TYPES = frozenset({"reviewee", "pair_context"})
 _VALID_FL_SOURCE_TYPES = frozenset({"reviewer", "reviewee", "pair_context"})
 
+# Per-source allowlist for ``field_labels.*`` rows, mirroring
+# ``app.services.field_labels._VALID_SOURCE_FIELDS``. The DB column
+# is permissive (VARCHAR(64) with no enum gate); this map is the
+# only validation layer that keeps the table aligned with the
+# 12-slot intent on import.
+_VALID_FL_SOURCE_FIELDS: dict[str, frozenset[str]] = {
+    "reviewer": frozenset({"tag_1", "tag_2", "tag_3"}),
+    "reviewee": frozenset(
+        {
+            "name",
+            "email_or_identifier",
+            "tag_1",
+            "tag_2",
+            "tag_3",
+            "profile_link",
+        }
+    ),
+    "pair_context": frozenset({"1", "2", "3"}),
+}
+
 # Bracketed-key parsers. Each pattern captures the index / name and
 # an optional sub-key tail; the apply step routes by tail.
 _RX_INSTRUMENT_DF = re.compile(
@@ -964,7 +988,11 @@ def _apply_instrument_kv(
         elif attr == "source_field":
             df.source_field = value or None
         elif attr == "label":
-            df.label = value or None
+            # 15A Slice 1 — display-field per-instrument label
+            # retired. Legacy Settings CSVs may still carry this
+            # row; tolerate it and silently drop the value so
+            # round-trip imports continue to succeed.
+            pass
         elif attr == "visible":
             df.visible = _parse_bool(value, default=True)
         else:
@@ -1078,6 +1106,13 @@ def _apply_field_label_kv(
         raise _ParseError(
             f"unknown field_labels source_type {source_type!r}; "
             f"expected one of {sorted(_VALID_FL_SOURCE_TYPES)}"
+        )
+    allowed_fields = _VALID_FL_SOURCE_FIELDS[source_type]
+    if source_field not in allowed_fields:
+        raise _ParseError(
+            f"unknown field_labels source_field {source_field!r} "
+            f"for source_type {source_type!r}; expected one of "
+            f"{sorted(allowed_fields)}"
         )
     if value:
         plan.field_labels.append(
