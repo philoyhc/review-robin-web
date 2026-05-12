@@ -102,6 +102,8 @@ def instruments_index(
     rtd_delete_blocked_assignments: int | None = Query(default=None),
     rtd_would_empty_id: int | None = Query(default=None),
     rtd_would_empty_instruments: str | None = Query(default=None),
+    sort_save_error: str | None = Query(default=None),
+    sort_save_error_instrument_id: int | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -126,6 +128,8 @@ def instruments_index(
         rtd_delete_blocked_assignments=rtd_delete_blocked_assignments,
         rtd_would_empty_id=rtd_would_empty_id,
         rtd_would_empty_instruments=rtd_would_empty_instruments,
+        sort_save_error=sort_save_error,
+        sort_save_error_instrument_id=sort_save_error_instrument_id,
     )
     return _templates.TemplateResponse(
         request, "operator/instruments_index.html", context
@@ -762,6 +766,61 @@ async def instrument_bulk_save_fields(
     instruments_service.bulk_save_fields(
         db, instrument=instrument, rows=rows, actor=user
     )
+    # Sort spec (Segment 13B PR 2) — parsed from the Display
+    # Fields card's hidden ``sort_display_field_id`` + ``sort_dir``
+    # parallel arrays. Empty / missing → clear the spec back to
+    # the unsorted default. The service-layer validator owns
+    # length / dup / cross-instrument / dir checks; rejections
+    # bubble up as a per-instrument banner via the redirect.
+    sort_ids_raw = [str(v) for v in form.getlist("sort_display_field_id")]
+    sort_dirs_raw = [str(v) for v in form.getlist("sort_dir")]
+    if len(sort_ids_raw) != len(sort_dirs_raw):
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"?editing={instrument.id}"
+                f"&sort_save_error_instrument_id={instrument.id}"
+                f"&sort_save_error=Sort+spec+arrays+misaligned."
+                f"#instrument-{instrument.id}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    sort_pairs: list[tuple[int, str]] = []
+    for raw_id, raw_dir in zip(sort_ids_raw, sort_dirs_raw):
+        try:
+            sort_pairs.append((int(raw_id), raw_dir))
+        except ValueError:
+            return RedirectResponse(
+                url=(
+                    f"/operator/sessions/{review_session.id}/instruments"
+                    f"?editing={instrument.id}"
+                    f"&sort_save_error_instrument_id={instrument.id}"
+                    f"&sort_save_error=Sort+spec+ids+must+be+integers."
+                    f"#instrument-{instrument.id}"
+                ),
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
+    try:
+        instruments_service.set_sort_display_fields(
+            db,
+            instrument=instrument,
+            fields=sort_pairs,
+            actor=user,
+            correlation_id=request_correlation_id(),
+        )
+    except instruments_service.SortSpecError as exc:
+        from urllib.parse import quote
+
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/instruments"
+                f"?editing={instrument.id}"
+                f"&sort_save_error_instrument_id={instrument.id}"
+                f"&sort_save_error={quote(exc.message, safe=' ')}"
+                f"#instrument-{instrument.id}"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
     # Section A — instrument description shares the same Save / Cancel
     # state machine as the tables. Only push the update when the value
     # actually changed to avoid an audit-event for a no-op edit.
