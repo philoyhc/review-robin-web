@@ -25,7 +25,7 @@ applied. The Operations tab order swaps so Assignments sits
 to the left of Validate (operators preview the materialised
 pairs before validating them).
 
-**Sizing:** ~5 PRs.
+**Sizing:** ~6 PRs.
 **Depends on:** 15A shipped (friendly-label resolver — already
 done). No other hard dependency.
 **Doesn't depend on 15C.** 15C splits RuleSets into a two-tier
@@ -111,16 +111,25 @@ Three invariants this segment must preserve.
    affordance. Operators who never add a second instrument
    should not see any new chrome.
 
-4. **No Quick Setup affordance, no separate Generate
-   button.** The Quick Setup card's Assignments slot retired
-   in 15D PR 7a; this segment does **not** reintroduce it.
-   Generation happens implicitly as part of saving the
-   instrument-card edit (Slice 2 — picking a rule and Saving
-   triggers `replace_assignments(instrument_id=...)` in the
-   same transaction). Bulk-edit of per-instrument rules
-   happens via the existing Settings CSV (Quick Setup
-   Settings slot — already in place, end-to-end after Slice 2
-   lights up the apply path).
+4. **No Quick Setup affordance for assignments.** The Quick
+   Setup card's Assignments slot retired in 15D PR 7a; this
+   segment does **not** reintroduce it. Bulk-edit of per-
+   instrument rules happens via the existing Settings CSV
+   (Quick Setup Settings slot — already in place, end-to-end
+   after Slice 2 lights up the apply path).
+
+5. **Pinning a rule and materialising the pairs are
+   separate operator actions.** The Instrument card's only
+   job is to *pin* which rule applies to which instrument
+   (persists `rule_set_id`). Materialising the pairs (the
+   actual `replace_assignments` call) is **not triggered
+   from the Instrument card** — it's the operator's explicit
+   action on the **Assignments page** (Generate button, Slice
+   3) or on the **Next Action card** on Session Home
+   (Slice 4). This split exists because the rules-to-pairs
+   step can be slow on large rosters and the operator should
+   see a preview surface (Assignments page) before committing
+   to it.
 
 ---
 
@@ -134,17 +143,16 @@ same `pairs` list per instrument. Replace that with explicit
 per-instrument scope:
 
 - Add `instrument_id: int | None = None` parameter.
-- `instrument_id=None` keeps current behaviour — replace
-  assignments across every instrument. Retained for the
-  legacy callers that survive Slice 3 (today's Assignments-
-  page Rule Based card, removed in Slice 3) and as a safety
-  net during the transition; no live operator surface calls
-  this path after Slice 3 ships.
-- `instrument_id=<id>` replaces only that instrument's
-  assignments. The Instrument-card Save handler (Slice 2) is
-  the only operator-facing caller post-15B — invoked
-  implicitly when the operator saves an instrument card whose
-  rule picker changed.
+- `instrument_id=None` materialises across every instrument
+  that has a non-NULL `rule_set_id`. This is the path the
+  Assignments-page "Generate" button (Slice 3) and the
+  Next Action card "Generate assignments" button (Slice 4)
+  both call. Instruments with NULL `rule_set_id` are skipped
+  silently (they're "no rule pinned yet" — not an error).
+- `instrument_id=<id>` materialises only that instrument's
+  assignments. Reserved for the per-tab regenerate
+  affordance the Assignments page may grow as a follow-up;
+  not the primary path in 15B.
 
 Also touched:
 - `assignments.existing_count` /
@@ -238,32 +246,38 @@ is no separate "save the picker" form. The existing
 Save / Cancel buttons (which appear in place of Edit when the
 card is editing) cover the picker write-through.
 
-#### Save semantics — generation happens here
+#### Save semantics — pin only, no generation
 
-There is **no separate Generate button.** The bottom row of
-the card carries the existing Edit (locked) or Save / Cancel
-(editing) buttons plus Add new instrument. When the operator
-clicks **Save** while the picker selection has changed:
+Saving an instrument card whose picker changed **only
+persists `instruments.rule_set_id`**. It does **not** call
+`replace_assignments`, does not delete or write any
+`Assignment` rows, and does not change the materialised pair
+set on the Assignments page. The card's job is to pin which
+rule applies to which instrument; materialising the pairs is
+the operator's explicit next action on the Assignments page
+(Slice 3) or via the Next Action card on Session Home (Slice
+4).
 
-1. `instruments.rule_set_id` is written to the new value
-   (or NULL for the sentinel).
-2. `replace_assignments(instrument_id=<this>)` runs (per
-   Slice 1) — replaces this instrument's `Assignment` rows
-   with the materialised pairs from the new rule. If the
-   selection cleared to NULL, the call deletes existing rows
-   without writing replacements.
-3. The audit envelope (`assignments.replaced`) carries this
-   instrument's `instrument_id` + the new `rule_set_id` /
-   `rule_set_revision_id` refs.
-
-If the picker selection didn't change, Save is a no-op for
-assignments — only the other card edits persist.
+The audit envelope on Save carries an `instrument.rule_pinned`
+event with `before` / `after` `rule_set_id` values (uses the
+canonical `audit.changes(...)` envelope). The
+`assignments.replaced` event continues to fire **only** from
+the explicit generation surfaces in Slices 3 / 4.
 
 **`instruments.rule_set_id` resolution semantics.** The column
 is the single source of truth per instrument. NULL = "no rule
 selected" — the initial state for every existing instrument
 post-13D PR 4. Selecting "— No rule —" and Saving clears it
-back to NULL and deletes that instrument's `Assignment` rows.
+back to NULL; the next generation action then leaves this
+instrument's `Assignment` rows empty (or deletes any stale
+rows from a previous rule).
+
+**Why this split.** Materialising pairs can be slow on large
+rosters and creates a visible side-effect (existing reviewer
+work disappears if Assignment rows are replaced). The
+operator needs a moment between "I changed the rule" and "the
+pairs are now different" to preview and decide. Pinning is
+cheap and reversible; generation is what commits.
 
 **No session-level default.** If 80% of operators want the
 same rule on every instrument, the Settings CSV is the
@@ -309,32 +323,45 @@ rule in one shot do it via the existing Quick Setup Settings
 slot, not via per-card clicks. The per-card picker (this
 slice's UI work) is for incremental adjustment.
 
-### Slice 3 — Assignments page → preview-only + tab reorder (1 PR, ~350 LOC)
+### Slice 3 — Assignments page → preview + page-level Generate + tab reorder (1 PR, ~400 LOC)
 
 Two paired changes that ship together.
 
-**(a) Strip rule-application affordances from the Assignments
-page.** The page becomes purely a preview / monitoring surface:
+**(a) Reshape the Assignments page.** Rule *selection* moves
+off the page (it's now on Instrument cards, Slice 2). Rule
+*application* — i.e. materialising the `Assignment` rows from
+the rules pinned to each instrument — stays here as the
+primary surface for it.
 
-- **Remove the Rule Based card.** Rule selection now lives on
-  the Instrument cards (Slice 2). The Assignments page no
-  longer carries a RuleSet picker, no Generate button, no
-  "what-rule-is-this-session-using" question. The legacy
-  manual-CSV upload was retired in 2026-05-11 and stays gone.
+- **Remove the Rule Based card's picker.** No more RuleSet
+  dropdown, no more "what-rule-is-this-session-using"
+  question on this page. The legacy manual-CSV upload was
+  retired 2026-05-11 and stays gone.
+- **Add a page-level "Generate" affordance.** Single button
+  at the top of the page (or in a small toolbar above the
+  preview): "Generate assignments". Calls
+  `replace_assignments(instrument_id=None)` per Slice 1 —
+  materialises pairs for every instrument that has a rule
+  pinned, skips instruments with NULL `rule_set_id`. Confirm
+  dialog before running ("Replace assignments for N
+  instrument(s)? Existing pairs will be deleted."). Disabled
+  state when zero instruments have rules pinned, with a
+  helpful nudge: "Pin rules on the Instruments page first"
+  with a deep link.
 - **Keep the self-reviews Include toggle** — it's still the
   one bulk operation that makes sense here (it's a property
   of the rendered pair set, not the rule).
 - **Per-instrument grouping** when `len(instruments) > 1`:
   the existing pairs preview table grows a tab strip (one tab
   per instrument, plus an "All instruments" tab that shows
-  the union, read-only). Each tab renders the rule-set
-  currently in effect for that instrument as a small read-only
-  header ("Rule: Full Matrix · 42 pairs · Edit on Instruments
-  page"). The "Edit on Instruments page" link deep-links to
-  the matching instrument card.
-- **Single-instrument case** — the page renders byte-identical
-  to today minus the Rule Based card: just the self-reviews
-  toggle + the pairs preview table. No tabs, no breakdown.
+  the union, read-only). Each tab renders the rule pinned to
+  that instrument as a small read-only header ("Rule: Full
+  Matrix · 42 pairs · Edit on Instruments page"). The
+  "Edit on Instruments page" link deep-links to the matching
+  instrument card.
+- **Single-instrument case** — the page renders the
+  page-level Generate button + self-reviews toggle + pairs
+  preview table. No tabs, no breakdown.
 - **Per-instrument sort.** Folds in the carved-from-13B-Part-2-PR-F
   per-instrument table sort: cookie name shape
   `rrw-sort-assignments-{session_id}-{instrument_id}` (one
@@ -364,7 +391,45 @@ Touched: `app/web/templates/operator/partials/session_top_nav.html`
 `test_session_top_nav.py` (the existing chrome test pins tab
 order; the swap is one assertion edit).
 
-### Slice 4 — Validation per-instrument (1 PR, ~120 LOC)
+### Slice 4 — Next Action card surfaces "Generate assignments" (1 PR, ~150 LOC)
+
+The Next Action card on Session Home (per `spec/session_home.md`)
+already surfaces the next lifecycle move as its primary
+button (Validate Setup → Activate Session → Pause Session).
+This slice adds a new pre-Validate step:
+
+**"Generate assignments"** appears as the primary next action
+when:
+- The session is in a pre-active lifecycle state (draft /
+  configuring), **and**
+- At least one instrument has a rule pinned
+  (`rule_set_id IS NOT NULL`), **and**
+- Either no `Assignment` rows exist yet, **or** the
+  pinned-rules state has drifted from the materialised state
+  (the next-action resolver computes a small staleness
+  fingerprint — `(instrument_id, rule_set_id,
+  rule_set_revision_id)` tuples — and shows the button when
+  the fingerprint diverges from the audit log's last
+  `assignments.replaced` event).
+
+Clicking the button is equivalent to clicking Generate on the
+Assignments page — same service call
+(`replace_assignments(instrument_id=None)`), same confirm
+dialog, same audit event. The button is **Primary** style
+(it's the Next Action card's primary, by spec).
+
+When zero instruments have rules pinned, the Next Action card
+shows a *supporting* link ("Pin rules on the Instruments
+page") in place of the primary button — the operator has to
+go pin something before generation is meaningful.
+
+Touched: `app/web/views/_session_home.py` (or wherever the
+Next Action resolver lives — see `spec/session_home.md`),
+`app/web/templates/operator/session_home.html` (or the
+Next Action card partial). No new service code — Slice 1's
+`replace_assignments` is the call site.
+
+### Slice 5 — Validation per-instrument (1 PR, ~120 LOC)
 
 `validate_session_setup` currently checks "every reviewer has
 ≥1 assignment". Generalise to per-instrument:
@@ -384,7 +449,7 @@ No schema change. No reviewer-surface template change —
 that surface is already multi-instrument-aware from the
 Segment 11D follow-on.
 
-### Slice 5 — Reviewer dashboard per-instrument grouping (1 PR, ~150 LOC)
+### Slice 6 — Reviewer dashboard per-instrument grouping (1 PR, ~150 LOC)
 
 The reviewer dashboard (`/reviewer`) today shows one row per
 session with a single per-session pill. On a 2-instrument
@@ -459,7 +524,7 @@ to bump if something else slips.
   `app/services/session_config_io.py` (Slice 2 — apply-path
   light-up at line 1605, `rule_set_name` → `rule_set_id`
   resolution),
-  `app/services/validation.py` (Slice 4),
+  `app/services/validation.py` (Slice 5),
   `app/services/instruments/_instrument_crud.py` (Slice 2 —
   rule-picker write-through).
 - **Routes.**
@@ -473,24 +538,28 @@ to bump if something else slips.
   fragment for the picker's live refresh),
   `app/web/routes_operator/_rule_builder.py` (Slice 2 —
   thread `instrument_id` through Rule Builder URL),
-  `app/web/routes_reviewer.py` (Slice 5 — dashboard handler).
+  `app/web/routes_reviewer.py` (Slice 6 — dashboard handler).
 - **View adapters.**
   `app/web/views/_assignments.py` (or wherever the
   Assignments-page adapter lives),
   `app/web/views/_instruments.py` (Slice 2 — per-card rule-
   picker context),
-  `app/web/views/_validate.py` (Slice 4),
-  `app/web/views/_dashboard.py` (Slice 5).
+  `app/web/views/_validate.py` (Slice 5),
+  `app/web/views/_dashboard.py` (Slice 6),
+  `app/web/views/_session_home.py` (Slice 4 — Next Action
+  resolver).
 - **Templates.**
   `app/web/templates/operator/session_assignments.html`
-  (Slice 3 — preview-only reshape),
+  (Slice 3 — preview + page-level Generate reshape),
   `app/web/templates/operator/instruments_index.html`
-  (Slice 2 — per-card rule block),
+  (Slice 2 — per-card rule sub-card),
   `app/web/templates/operator/partials/session_top_nav.html`
   (Slice 3 — tab order swap),
+  `app/web/templates/operator/session_home.html` (Slice 4 —
+  Next Action card "Generate assignments" affordance),
   `app/web/templates/operator/session_validate.html`
-  (Slice 4),
-  `app/web/templates/reviewer/dashboard.html` (Slice 5).
+  (Slice 5),
+  `app/web/templates/reviewer/dashboard.html` (Slice 6).
 - **Schema dependency only:** `instruments.rule_set_id`
   pre-positioned by 13D PR 4; `session_rule_sets` table by
   13D PR 2. **No migration in 15B itself.**
@@ -507,33 +576,44 @@ to bump if something else slips.
     per-instrument paths; audit-event payload assertions.
   - **Slice 2** — `test_instrument_rule_set_picker.py` —
     picker `<select>` disabled when card is locked, enabled
-    in edit mode; Save with a new selection writes both
-    `instruments.rule_set_id` and the materialised
-    `Assignment` rows in one transaction; Save with the
-    sentinel cleared selection writes `NULL` and deletes
-    existing rows; Cancel reverts cleanly. Eligibility line
-    refreshes on picker change. Empty-pool case renders the
-    "Create a rule" deep link via the Open Rule Builder
-    button. Plus `test_session_config_io_rule_set.py` —
-    Settings CSV apply path resolves `rule_set_name` →
-    `rule_set_id` (happy path + unknown-name error +
-    empty-value clears).
-  - **Slice 3** — `test_assignments_page_preview_only.py` —
-    Rule Based card gone, preview table renders, tabs mount
-    when N > 1, single-instrument case stays
-    byte-identical. `test_session_top_nav.py` — Assignments
-    tab sits left of Validate.
-  - **Slice 4** — `assignments.reviewer_missing_for_instrument`
+    in edit mode; Save persists `instruments.rule_set_id`
+    only — does **not** touch the `Assignment` rows or fire
+    `assignments.replaced` (the test pins this absence). The
+    audit envelope on Save fires `instrument.rule_pinned`
+    with `before` / `after` `rule_set_id`. Cancel reverts the
+    picker cleanly. Eligibility line refreshes on picker
+    change. Empty-pool case renders the "Create a rule" deep
+    link via the Open Rule Builder button. Plus
+    `test_session_config_io_rule_set.py` — Settings CSV
+    apply path resolves `rule_set_name` → `rule_set_id`
+    (happy path + unknown-name error + empty-value clears).
+  - **Slice 3** — `test_assignments_page_generate.py` —
+    page-level Generate button fans out across instruments
+    with rules pinned, skips NULL ones, fires
+    `assignments.replaced` per instrument; disabled state
+    when no rules pinned. Plus
+    `test_assignments_page_preview.py` — Rule Based card's
+    picker gone, preview table renders, tabs mount when
+    N > 1. `test_session_top_nav.py` — Assignments tab sits
+    left of Validate.
+  - **Slice 4** — `test_session_home_next_action_generate.py`
+    — Next Action card shows "Generate assignments" primary
+    button when ≥1 instrument has a rule pinned and the
+    materialised state is stale; supporting link shown when
+    zero rules pinned; button disappears once generation has
+    run and the staleness fingerprint matches.
+  - **Slice 5** — `assignments.reviewer_missing_for_instrument`
     ValidationRule covered in `test_session_validate_page.py`.
-  - **Slice 5** — `test_reviewer_dashboard_per_instrument.py`
+  - **Slice 6** — `test_reviewer_dashboard_per_instrument.py`
     — single-instrument session renders one row + pill
     (byte-identical to pre-15B); multi-instrument session
     renders one sub-row per instrument.
-- Manual smoke on the dev slot for Slices 2 / 3 —
+- Manual smoke on the dev slot for Slices 2 / 3 / 4 —
   per-instrument rule selection persists (via per-card picker
-  *and* via Settings CSV round-trip), Assignments-page tabs
-  render correctly, reviewer surface honours the per-
-  instrument scope.
+  *and* via Settings CSV round-trip) without generation
+  side-effects; Assignments-page Generate fans out correctly;
+  Next Action card surfaces Generate at the right moment;
+  reviewer surface honours the per-instrument scope.
 
 ---
 
@@ -564,19 +644,27 @@ need updates to match the revised mental model:
   button (Secondary); no Primary button on the sub-card. The
   Edit / Save / Cancel / Add-new-instrument action row
   relocates to a row below the two half-width sub-cards.
-  Picker is gated by the card's edit-mode lock; Save
-  persists the selection and triggers
-  `replace_assignments(instrument_id=...)` — no separate
-  Generate button.
+  Picker is gated by the card's edit-mode lock; **Save
+  pins the selection only — does not materialise pairs.**
+  Generation lives on the Assignments page and on the Next
+  Action card.
 - **`spec/operations_pages.md`** — Assignments-page contract
   flips from "place to generate assignments" to "place to
   preview the materialised pairs"; per-instrument tab strip
   spec lands here.
 - **`spec/operator_button_audit.md`** — Section covering the
-  Assignments page loses the Rule Based card's buttons;
-  Instruments-page section gains the per-card Assignment-
-  rule sub-card's single button (Open Rule Builder,
-  Secondary). No Primary button on the sub-card.
+  Assignments page loses the Rule Based card's picker but
+  gains a page-level Generate button (Primary; matches the
+  pattern for other commit-style operations); Instruments-
+  page section gains the per-card Assignment-rule sub-card's
+  single button (Open Rule Builder, Secondary). No Primary
+  button on the sub-card. Session Home section gains the
+  Next Action card's "Generate assignments" affordance
+  (Primary, conditional on staleness).
+- **`spec/session_home.md`** — Next Action card spec gains a
+  pre-Validate "Generate assignments" step in the lifecycle-
+  next-action ladder (between configuring and Validate Setup);
+  states the staleness condition that surfaces it.
 - **`spec/settings_inventory.md`** — flip the
   `instruments.rule_set_id` row from "Inert until 15B Slice 2
   wires per-instrument selection" to wired; the Settings-CSV
@@ -585,5 +673,5 @@ need updates to match the revised mental model:
   live end-to-end.
 - **`docs/status.md`** — chronological entry per slice ship.
 - **`guide/todo_master.md`** — 15B moves from Upcoming to
-  in-progress, then to Done when Slice 5 lands.
-- Archive this file to `guide/archive/` when Slice 5 merges.
+  in-progress, then to Done when Slice 6 lands.
+- Archive this file to `guide/archive/` when Slice 6 merges.
