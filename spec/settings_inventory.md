@@ -442,7 +442,8 @@ was cloned from (provenance only).
 | `exclude_self_reviews` | `Boolean` | Snapshot flag. |
 | `seed` | `Integer` | Global RNG seed. |
 | `rules_json` | `JSON` | Serialised rule tree — same shape as `rule_set_revisions.rules_json`. |
-| `library_origin_id` | `Integer` (FK → `operator_rule_sets.id` ON DELETE SET NULL) | Provenance pointer; never read for resolution. NULL when the row was authored directly in the session or the library origin has been deleted. |
+| `library_origin_id` | `Integer` (FK → `operator_rule_sets.id` ON DELETE SET NULL) | Provenance pointer; never read for resolution. NULL when the row was authored directly in the session, materialised from a workspace seed, or the library origin has been deleted. |
+| `is_seeded` | `Boolean` | `True` for SessionRuleSets materialised from `SEEDED_RULE_SETS` at session-create time (mirror of the RTD pattern in `response_type_definitions.is_seeded`). Spec-locked: the service-tier `session_library.update_session_rule_set_in_place` / `rename` / `delete` / `save_to_library` all refuse on `is_seeded=True`. Operators customise a seed via Copy → Save-As, which writes a fresh row with `is_seeded=False`. Added by the post-15C polish PR #916. |
 
 Wired by 15B Slice 2 (`instruments.rule_set_id` points into this
 table) and 15C (auto-copy from operator library on session

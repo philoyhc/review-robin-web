@@ -302,6 +302,17 @@ Symmetric two-tier library / per-session-copy model for both RTDs and RuleSets. 
 
 15C unblocks Segment 15B (per-instrument assignments): Slice 1 populates `session_rule_sets` so the per-instrument picker has a non-empty pool; Slice 4 flips the Rule Builder picker so 15B's "Edit rule" deep link lands on the session copy.
 
+**Post-shipping polish (2026-05-12, PRs #915 → #922).** Eight follow-up PRs landed the same day on top of the 15C ship, after operator feedback on the resulting surfaces:
+
+- **#915** — centred the "To library" button label on the RTD card (swap from `width: 6em` to `min-width: 6em` + `text-align: center` so the longer label fits without squeezing).
+- **#916** — added `session_rule_sets.is_seeded` (Alembic migration `a4c8e91b2d6f` with seed-name backfill) + new `SessionRuleSetLockedError`. Seeded SessionRuleSets now refuse `update_in_place` / `rename` / `delete` / `save_to_library` at the service tier; routes catch and 409. Operators customise a seed via Copy → Save-As, mirroring the RTD spec-lock model.
+- **#917** — wrapped the Add-from-library + Add-a-new-Response-Type cards on the Instruments page in one flex row so they sit side-by-side; renamed the second card from "Add a Response Type" → "Add a new Response Type".
+- **#918** — fixed the Available rulesets sidebar's pill labelling. View-adapter previously hardcoded `is_personal=True` on every row (a Slice 4b leftover); now reads `is_seeded` off the row so seeds render no pill.
+- **#919** — added the missing `Save to library` button + `in library` pill to the Rule Builder card body (route shipped in 15C Slice 4a but the template never grew the UI).
+- **#920** — added the matching `Add from library` mini-card on the Rule Builder page right column, above the Available rulesets card; reuses `session_library.list_library_rule_sets_not_in_session` plus the Slice 4a route.
+- **#921** — unified the in-library + personal pill convention across the Available rulesets card and the RTD card on the Instruments page: `in library` → green `pill-success` for non-seeded rows whose `library_origin_id` is non-NULL; `personal` → blue `pill-info` for non-seeded session-only rows; no pill on seeded. The Rule Builder card's in-library pill (which #919 placed inline) retires in favour of the listing-card placement.
+- **#922** — moved the operator-Settings library cards (RTDs + RuleSets) to a half-width side-by-side row at the bottom of the page, after the SMTP + danger-zone cards.
+
 ---
 
 ### Segment 15A — Pervasive friendly labels — done 2026-05-12 (PRs #887 → #891)
