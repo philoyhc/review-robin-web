@@ -1,9 +1,12 @@
 # All buttons — operator surface audit
 
 Snapshot of every interactive button (and button-styled anchor)
-across the operator-facing templates. Last refreshed 2026-05-08
-after the first follow-up sweep (PR #629 area — see "Drift /
-inconsistencies" below for what changed).
+across the operator-facing templates. Last refreshed 2026-05-12
+after the post-15A sys-admin polish (PRs #895 → #899): the
+Accounts Management page flipped to a per-row checkbox + bulk
+toolbar, and the per-session Audit log filter strip's button
+row was right-aligned with the Apply button flipped to
+Secondary.
 
 Use it to:
 
@@ -432,6 +435,72 @@ canonical home is the `.back-link` row in `spec/ui_elements.md` §6.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 104 | Page top (above the SMTP form card) | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | |
+
+---
+
+## Section 19 — Accounts Management (`/operator/sys-admin/users`)
+
+Source: `app/web/templates/operator/sys_admin_users.html`. Sys-
+admin-gated. Reshaped 2026-05-12 (PRs #895 → #897) from per-row
+inline buttons + safety checkboxes to a per-row selection
+checkbox + a single bulk-action toolbar above the table.
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 111 | Page top | ← Back to Sessions Diagnostics | `<a>` | `back-link` | Return-to (`.back-link`) | |
+| 112 | Invite by email | Invite | `<button type="submit">` | `btn secondary` | Secondary | Posts `/sys-admin/users/invite`. Starts `disabled`; inline JS enables when the email input has text. |
+| 113 | Invite by email | Cancel | `<button type="reset">` | `btn secondary` | Secondary | Clears the email + sys-admin checkbox. Starts `disabled`; same dirty-check as Invite. |
+| 114 | Workspace users — bulk toolbar | Admit / Revoke | `<button type="submit">` | `btn secondary` | Secondary | Label flips based on the selected row's `is_operator`. Revoke gated client-side on `session_count == 0`; server-side guard `still_owner` returns 409 otherwise. Starts `disabled`; activates when one row is selected. |
+| 115 | Workspace users — bulk toolbar | Remove from all sessions | `<button type="submit">` | `btn secondary` | Secondary | Posts `/sys-admin/users/{id}/remove-from-all-sessions`. Active when row has `session_count > 0` AND `sole_owner_count == 0`; server-side guard `sole_owner` returns 409 otherwise. |
+| 116 | Workspace users — bulk toolbar | Promote / Demote | `<button type="submit">` | `btn secondary` | Secondary | Label flips based on the selected row's `is_sys_admin`. Demote gated client-side on `not last sys-admin`; server-side guard `last_admin` returns 409 otherwise. |
+| 117 | Workspace users — bulk toolbar | Delete | `<button type="submit">` | `btn destructive` | Destructive | Hard-deletes the `users` row. Active when `session_count == 0`; server-side guard `owns_sessions` returns 409 otherwise. Redirect omits `?selected=` so the deleted row isn't re-selected on the next render. |
+
+Notes:
+
+- **Toolbar layout.** `display: flex; flex-wrap: wrap; gap: 8px;
+  align-items: center; justify-content: flex-start;` so the four
+  buttons cluster next to the row checkboxes (left-aligned, PR
+  #897). Group labels (`Operator:` / `Sys Admin:` / `|`) live
+  inline between the buttons.
+- **Single-row selection.** Inline JS enforces one row at a time;
+  the other checkboxes grey out when one is checked. Self-row
+  renders `(self)` instead of a checkbox.
+- **Selection persistence.** Every action that doesn't delete the
+  row round-trips the selected `user_id` via the redirect's
+  `?selected={id}` query param; the template stamps `checked` on
+  the matching row so the operator can chain a second action
+  without re-selecting (PR #897).
+- **Safety checkbox retired.** The earlier inline "confirm
+  promote / demote" checkbox is gone (PR #895); the service-
+  layer `last_admin` guard is the structural safety net.
+
+---
+
+## Section 20 — Per-session Audit log (`/operator/sys-admin/sessions/{id}/audit-log`)
+
+Source: `app/web/templates/operator/sys_admin_session_audit_log.html`.
+Sys-admin-gated. Filter strip reshaped 2026-05-12 (PRs #898 +
+#899).
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 118 | Page top | ← Back to Sessions Diagnostics | `<a>` | `back-link` | Return-to (`.back-link`) | |
+| 119 | Audit log card heading | Download CSV | `<a>` | `btn secondary` | Secondary | Posts to `/export/audit_log.csv`; the URL forward-carries the active filter set so the CSV matches the on-screen view. |
+| 120 | Filter strip (button row) | Apply filters | `<button type="submit">` | `btn secondary` | Secondary | Right-aligned within a `.btn-pair` with `justify-content: flex-end`; Secondary style (was Primary pre-#899) so it doesn't compete with the Download CSV button up at the card heading. |
+| 121 | Filter strip (button row) | Clear filters | `<a>` | `btn secondary` | Secondary | Renders only when `filter_form.is_active`. Resets to the canonical viewer URL with no query string. |
+| 122 | Per-row detail | (expander) | `<summary>` inside `<details>` | `audit-detail summary` | Inline disclosure (custom) | PR 3 inline expander surfacing the canonical 11K detail envelopes in human-readable sections + raw JSON in a nested `<details>`. Not a `.btn` but interactive — listed for completeness. |
+
+Notes:
+
+- **Filter strip layout** (PR #898 reshape, post-15A):
+  - Left column: Event-type multi-select with `Ctrl/Cmd-click
+    to select multiple` hint.
+  - Right column flows actor email → From / To date selectors
+    side-by-side (each half-width, flex children) → severity
+    checkboxes on a single inline row.
+- **Button-row gap.** `.btn-pair` carries `margin-top: 16px;
+  margin-bottom: 24px;` so the row sits clear of both the
+  filter strip above and the audit-log table below (PR #899).
 
 ---
 
