@@ -1,0 +1,39 @@
+{# Add-from-library mini-card for the Rule Builder page.
+
+   Mirrors the RTD card's "Add from library" pattern on the
+   Instruments page. Lists operator-library RuleSets whose name
+   isn't already on this session; a single-choice picker + Add
+   button copies the chosen entry into ``session_rule_sets`` via
+   the 15C Slice 4a /add-from-library route.
+
+   Hidden when the pool is empty (operator hasn't promoted
+   anything to library yet, or every library entry is already in
+   this session). #}
+{% if builder.library_rule_sets_available %}
+  <div class="card" id="add-rule-set-from-library-card"
+       style="margin-bottom: 16px;">
+    <h2 style="margin-top: 0;">Add from library</h2>
+    <p class="form-help">
+      Pull a RuleSet from your operator library into this session.
+      Library entries currently in this session aren't listed.
+    </p>
+    <form method="post"
+          action="/operator/sessions/{{ session.id }}/assignments/rule-based-editor/add-from-library"
+          style="display: flex; gap: 16px; align-items: center; justify-content: flex-end;">
+      <label for="library-rule-set-picker"
+             style="font-weight: normal; display: flex; gap: 8px; align-items: center;">
+        RuleSet
+        <select id="library-rule-set-picker"
+                name="library_rule_set_id"
+                style="position: relative; top: 2px;">
+          {% for lib in builder.library_rule_sets_available %}
+            <option value="{{ lib.id }}">{{ lib.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit"
+              class="btn secondary"
+              style="min-width: 6em; text-align: center;">Add</button>
+    </form>
+  </div>
+{% endif %}

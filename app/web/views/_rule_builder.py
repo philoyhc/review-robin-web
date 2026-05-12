@@ -28,7 +28,7 @@ PR-9 strip (~1,245 LOC).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field as _dataclass_field
 from datetime import datetime
 from typing import Any
 
@@ -800,6 +800,14 @@ class RuleBuilderContext:
     set — drives the in-library badge + hides the Save-to-library
     button. Defaulted so the blank/draft branches don't have to set
     it explicitly."""
+    library_rule_sets_available: list[Any] = _dataclass_field(
+        default_factory=list
+    )
+    """Operator-library RuleSets whose name isn't already on the
+    session — drives the Add-from-library mini-card. Empty list
+    when the operator has no library entries or every entry is
+    already in this session. Each item is an ``app.db.models.RuleSet``
+    instance with ``.id`` + ``.name`` + ``.description``."""
 
 
 _RULE_BUILDER_ERROR_MESSAGES: dict[str, str] = {
@@ -834,6 +842,7 @@ def _rule_builder_blank_draft(
     name_override: str | None = None,
     description_override: str | None = None,
     available_rulesets: list[AvailableRuleSetEntry] | None = None,
+    library_rule_sets_available: list[Any] | None = None,
 ) -> RuleBuilderContext:
     """Live blank-draft context (Segment 13A-1 PR 3).
 
@@ -889,6 +898,7 @@ def _rule_builder_blank_draft(
         quota_strategy_options=list(_QUOTA_STRATEGY_OPTIONS),
         composite_op_options=list(_COMPOSITE_OP_OPTIONS),
         available_rulesets=available_rulesets or [],
+        library_rule_sets_available=library_rule_sets_available or [],
     )
 
 
@@ -1021,6 +1031,16 @@ def build_rule_builder_context(
     options, rows, by_id = _build_rule_builder_options(
         db, session_id=review_session.id
     )
+    # 15C parity: surface the operator-library RuleSets not already
+    # in this session so the Add-from-library mini-card has a pool
+    # to pick from. Empty list silences the card. Computed once
+    # here + threaded through every branch via the context's
+    # ``library_rule_sets_available`` field.
+    library_rule_sets_available = (
+        session_library.list_library_rule_sets_not_in_session(
+            db, owner_user=user, session_id=review_session.id
+        )
+    )
 
     if as_draft_from is not None:
         return _build_draft_context(
@@ -1034,6 +1054,7 @@ def build_rule_builder_context(
             saved_flash=saved_flash,
             draft_name_override=draft_name_override,
             rows=rows,
+            library_rule_sets_available=library_rule_sets_available,
         )
 
     if selected_id == RULE_BUILDER_BLANK_SENTINEL_ID:
@@ -1045,6 +1066,7 @@ def build_rule_builder_context(
             available_rulesets=_build_available_rulesets(
                 rows, active_id=None
             ),
+            library_rule_sets_available=library_rule_sets_available,
         )
 
     if selected_id is None or selected_id not in by_id:
@@ -1059,6 +1081,7 @@ def build_rule_builder_context(
                 available_rulesets=_build_available_rulesets(
                     rows, active_id=None
                 ),
+                library_rule_sets_available=library_rule_sets_available,
             )
 
     session_rule_set = by_id.get(selected_id)
@@ -1075,6 +1098,7 @@ def build_rule_builder_context(
                 available_rulesets=_build_available_rulesets(
                     rows, active_id=None
                 ),
+                library_rule_sets_available=library_rule_sets_available,
             )
 
     rules = session_rule_set.rules_json or []
@@ -1134,6 +1158,7 @@ def build_rule_builder_context(
             rows, active_id=session_rule_set.id
         ),
         has_library_origin=has_library_origin,
+        library_rule_sets_available=library_rule_sets_available,
     )
 
 
@@ -1150,6 +1175,7 @@ def _build_draft_context(
     draft_name_override: str | None,
     draft_description_override: str | None = None,
     rows: list[SessionRuleSet],
+    library_rule_sets_available: list[Any] | None = None,
 ) -> RuleBuilderContext:
     """Render the page as an unsaved draft cloning ``source_id``'s
     rules + combinator + seed (Copy from a session RuleSet). Falls
@@ -1177,6 +1203,7 @@ def _build_draft_context(
             available_rulesets=_build_available_rulesets(
                 rows, active_id=None
             ),
+            library_rule_sets_available=library_rule_sets_available,
         )
 
     rules = source.rules_json or []
@@ -1237,6 +1264,7 @@ def _build_draft_context(
         available_rulesets=_build_available_rulesets(
             rows, active_id=source.id
         ),
+        library_rule_sets_available=library_rule_sets_available or [],
     )
 
 
