@@ -12,7 +12,7 @@ plan lives at **`guide/segment_13C_enhanced_instrument.md`**;
 action-row sweep. Sibling segments: **13A** (rule-based
 assignments — `guide/archive/segment_13A_rulebased_assignment_builder.md`)
 and **13B** (sort by reviewee —
-`guide/segment_13B_sort_by_reviewee.md`). The three are
+`guide/segment_13B_sort_tables.md`). The three are
 independent and can ship in any order, though 13A's rule engine
 is the natural place to materialize group assignments and 13C
 PR 3 leans on it.

@@ -351,7 +351,7 @@ conflicts (none detected).
    read path → operator UI tri-state Sort column → reviewer-
    side live override). Independent of 13A and 13C; ships in
    any order.
-   **Plan:** `guide/segment_13B_sort_by_reviewee.md`.
+   **Plan:** `guide/segment_13B_sort_tables.md`.
    **Functional spec:** `spec/sort_by_reviewee.md`.
 
 2. **13C — Enhanced instruments.**

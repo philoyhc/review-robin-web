@@ -8,7 +8,7 @@
 > - **13B** — sort by reviewee. Reviewer-surface sort UX (operator
 >   default sort + reviewer live override). Functional spec at
 >   `spec/sort_by_reviewee.md`; plan at
->   `guide/segment_13B_sort_by_reviewee.md`.
+>   `guide/segment_13B_sort_tables.md`.
 > - **13C** — enhanced instruments. Group-scoped instruments
 >   (per-instrument flavour where one answer covers a group of
 >   reviewees) + a "Duplicate instrument" action-row button.

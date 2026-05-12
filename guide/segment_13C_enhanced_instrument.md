@@ -164,7 +164,7 @@ PR description: this sweep is mandatory.
 
 13A, 13B, and 13C are siblings — independent of each other,
 shippable in any order. See
-[`segment_13B_sort_by_reviewee.md`](segment_13B_sort_by_reviewee.md)
+[`segment_13B_sort_tables.md`](segment_13B_sort_tables.md)
 "Relationship to Segment 13A and 13C" for the per-segment
 surface map.
 
