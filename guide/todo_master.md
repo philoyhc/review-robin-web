@@ -406,24 +406,17 @@ that originated there before the catalog retired.
 
 ### Implementation sequence
 
-The locked block `13E → 12C → 15D → 12A-3` shipped 2026-05-10
-(see Done above for the four entries) and 12B (audit-events
-export) followed the same day. **Segments 16A** (Sys Admin
-page + workspace user/role management) and **16B PR 1 + PR 2**
-(per-session owner management) shipped 2026-05-10 → 2026-05-11,
-absorbing the audit-log download route 12B left UI-less,
-retiring the dev-only manual assignment upload, and standing
-up the operator-allowlist gate + workspace Accounts
-Management surface. **Segment 16C** (richer in-app audit views) MVP shipped 2026-05-11 the same day; the post-MVP polish (entity drill-in + cross-session search) carved out to `guide/deferred_until_pilot_feedback.md`. The remaining schedule items —
-13B, 13C, 13F, 14A, 14B, 14C, 15B, 15C, 15E, 15F, 17, 18A, 18B, 18C, 19, 20 — ship per
-their own plan; no ordering constraints beyond shared schema
-conflicts (none detected).
+Outstanding work, mutually independent unless flagged in
+**Sequencing notes** below. Each item carries its own plan
+doc — pick one and start when ready. Schedule items:
+**13C, 13F (PRs 3-5), 14A, 14B, 14C, 15B, 15E, 15F, 17A,
+17B, 18A, 18B, 18C, 19, 20**. No global ordering
+constraints beyond the few dep chains called out at the
+bottom of this file.
 
 #### Numbered queue
 
-1. *(13B shipped 2026-05-12 — see Done above.)*
-
-2. **13C — Enhanced instruments.**
+1. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
    instrument" action-row button. Sized as 5 PRs. Action row
@@ -439,12 +432,12 @@ conflicts (none detected).
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/group_scoped_instruments.md`.
 
-3. **14A — Production hardening.**
+2. **14A — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14A_production_hardening.md`.
 
-4. **14B — Email infrastructure (send activation + backends).**
+3. **14B — Email infrastructure (send activation + backends).**
    *(Renamed from 14-1 on 2026-05-11 as part of the 14 → 14A /
    14B / 14C split.)* All email *wiring* lives here. The schema
    columns Part A writes to landed with **Segment 11C Part 2**
@@ -462,7 +455,7 @@ conflicts (none detected).
    **Plan:** `guide/segment_14B_email_infrastructure.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-5. **14C — Reminders workflow.**
+4. **14C — Reminders workflow.**
    Scheduled, policy-driven reminder dispatch sitting on top
    of 14B's transport. Per-session cadence settings + a
    background scheduler + post-MVP cohort slicing + reminder
@@ -470,11 +463,7 @@ conflicts (none detected).
    (and reuses 14B Part C's worker scaffold if available).
    **Plan:** `guide/segment_14C_reminders_workflow.md`.
 
-6. *(15A shipped 2026-05-12 — see Done above.)*
-
-7. *(15C shipped 2026-05-12 — see Done above.)*
-
-8. **15B — Per-instrument assignments.** *(Unblocked by 15C
+5. **15B — Per-instrument assignments.** *(Unblocked by 15C
     shipping 2026-05-12; ready to start.)*
     Each `Instrument` carries its own assignment set (e.g. the
     Manager survey collects different reviewer → reviewee
@@ -597,53 +586,19 @@ conflicts (none detected).
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-#### Historical-reference entries
-
-These plan docs are archived alongside the segment they were
-folded into; they stay reachable as references for the contracts
-they pinned:
-
-- **12A-2 — Session settings import** — absorbed into 12A-3 under
-  the 2026-05-10 holistic-sequence revision; the import service +
-  route + Quick Setup slot 4 graduation all landed in 12A-3 PRs.
-  Plan: `guide/archive/segment_12A-2_import.md`.
-- **12C-2 / 12C-3** — absorbed into 15D under the same revision.
-  No standalone plan file; original scope (Quick Setup slot 3
-  retire-and-restore, chrome restructure, Operations Assignments
-  page move) shipped as part of 15D PRs 6a / 7a / 7c.
-
 ### Sequencing notes
 
-- **13E → 12C → 15D → 12A-3** was the locked
-  operator-facing block (locked 2026-05-10, fully
-  shipped 2026-05-10): self-review revamp + assignments
-  revamp + matching export / import updates as one
-  coherent direction. **All four segments shipped**
-  (see Done above). 13E shipped the schema prep inert;
-  12C-1 wired generation against the new column; 15D
-  added Relationships + restructured Quick Setup +
-  chrome + dropped `Assignment.context`; 12A-3 brought
-  Extract Data + Quick Setup into alignment with the
-  post-15D model (Relationships export, Assignments-CSV
-  retirement, Settings importer, Quick Setup slot 4
-  graduation). 12A-2 was absorbed into 12A-3; 12C-2 +
-  12C-3 were absorbed into 15D.
-- **11C Part 2 → 14B Part A** is the email pipeline: 11C Part 2
-  landed the schema (Migration `c4f6a8b0d2e5`, 2026-05-07); 14B
-  Part A is the first writer.
-- **11K → 12B** is the audit pipeline: 11K pinned the `detail`
-  shape (shipped 2026-05-07); 12B's export reads against it.
-- **12A is fully shipped** as of 2026-05-10 (12A-1 export +
-  12A-3 export-refresh + Settings importer + Quick Setup
-  slot 4 graduation; 12A-2 was absorbed into 12A-3). The
-  remaining schedule items — **13B, 13C, 13F, 14A, 14B, 14C,
-  15B, 15C, 15E, 15F, 17, 18A, 18B, 18C, 19, 20** — are independent of the email +
-  audit pipelines and can interleave at any time. The three
-  13-family segments are also independent of each other;
-  13C PR 3 (rule-engine fanout for group-scoped instruments)
-  lands more naturally after 13A's RuleSet machinery exists,
-  but 13C PRs 1 / 2 / 4 / 5 don't depend on 13A.
+- **11C Part 2 → 14B Part A** is the email pipeline: the
+  `email_outbox` audit-log schema landed inert in 11C Part 2
+  (Migration `c4f6a8b0d2e5`); 14B Part A is the first writer.
 - **Within 14B**, Parts B-E are sequential enhancements on top
   of Part A; Parts F-H are independent backend swaps. **14C
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
+- **13C, 13F (PRs 3-5), 14A, 15B, 15E, 15F, 17A, 17B, 18A,
+  18B, 18C, 19, 20** are independent of the email + audit
+  pipelines and can interleave at any time. The three
+  13-family segments are also independent of each other;
+  13C PR 3 (rule-engine fanout for group-scoped instruments)
+  lands more naturally after 13A's RuleSet machinery exists,
+  but 13C PRs 1 / 2 / 4 / 5 don't depend on 13A.
