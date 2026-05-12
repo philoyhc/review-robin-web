@@ -1,21 +1,34 @@
 {#-
   Segment 15A Slice 2 — operator-facing tag / pair-context column
-  header. Renders the friendly label (top, normal weight) plus
-  the canonical name (below, .muted subtext) when a session-wide
-  override is in effect.
+  headers.
+
+  Two macros split the cell into the friendly label (rendered
+  inline with the column-header sort button) and the canonical
+  subtext (rendered on the next line, muted). The split keeps
+  the sort button on the friendly-label row instead of being
+  pushed below the block-level subtext span.
 
   Usage:
 
       {% from "operator/partials/_field_label_header.html"
-         import field_label_header %}
-      {{ field_label_header(session, "reviewee", "tag_1") }}
+         import field_label_header, field_label_canonical_subtext %}
+      <th class="rrw-sortable" data-sort-key="...">
+        {{ field_label_header(session, "reviewee", "tag_1") }}<button
+          class="rrw-sort-btn" ...><span class="rrw-sort-badge">↕</span></button>{{
+          field_label_canonical_subtext(session, "reviewee", "tag_1")
+        }}
+      </th>
 
-  Returns just the label markup — callers wrap it inside their
-  own ``<th>`` so column attributes / sort buttons stay
-  template-local.
+  ``field_label_canonical_subtext`` emits the
+  ``<span class="field-label-canonical">…</span>`` only when a
+  session-wide override is set; otherwise it's empty and the
+  cell stays single-line.
 -#}
 {% macro field_label_header(session, source_type, source_field) -%}
+  {{ field_label_pair(session, source_type, source_field).friendly }}
+{%- endmacro %}
+
+{% macro field_label_canonical_subtext(session, source_type, source_field) -%}
   {%- set lp = field_label_pair(session, source_type, source_field) -%}
-  {{ lp.friendly }}
   {%- if lp.has_override %}<span class="field-label-canonical">{{ lp.canonical }}</span>{% endif -%}
 {%- endmacro %}

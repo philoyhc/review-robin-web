@@ -152,6 +152,15 @@ def test_reviewers_page_renders_editor_when_not_ready(
     assert 'name="tag_1"' in body
     assert 'name="tag_2"' in body
     assert 'name="tag_3"' in body
+    # Save + Cancel both render Secondary style, both start
+    # ``disabled``, both carry the marker attribute so the inline
+    # JS can find them.
+    assert "Cancel" in body
+    assert 'class="btn secondary"' in body
+    assert "data-field-labels-cancel" in body
+    assert "data-field-labels-save" in body
+    assert 'disabled>Cancel' in body
+    assert 'disabled>Save labels' in body
 
 
 def test_reviewers_page_renders_editor_disabled_when_ready(
@@ -164,10 +173,12 @@ def test_reviewers_page_renders_editor_disabled_when_ready(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
     assert "Reviewer tag labels" in body
-    # Inputs render with ``disabled``; the Save button is suppressed.
+    # Inputs render with ``disabled``; the Save + Cancel buttons
+    # are suppressed entirely.
     assert 'name="tag_1"' in body
     assert "disabled" in body
     assert "Save labels" not in body
+    assert "data-field-labels-cancel" not in body
 
 
 # ── Reviewees route (six slots) ─────────────────────────────────────────

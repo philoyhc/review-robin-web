@@ -94,6 +94,14 @@ def test_reviewers_page_renders_two_line_when_override_set(
     # name appears inside the .field-label-canonical subtext.
     assert "Cohort" in body
     assert 'class="field-label-canonical">Tag 1</span>' in body
+    # Canonical subtext lives AFTER the sort button — keeps the
+    # button inline with the friendly label on the first row
+    # rather than getting pushed below by a block-level span.
+    btn_idx = body.index('aria-label="Sort by Tag1"')
+    canonical_idx = body.index(
+        'class="field-label-canonical">Tag 1</span>'
+    )
+    assert canonical_idx > btn_idx
 
 
 # ── Reviewees Setup page ─────────────────────────────────────────────────
