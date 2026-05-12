@@ -440,6 +440,13 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "relationships.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "operator_email_settings.updated": EventSchema(frozenset({"changes"})),
     "operator_email_settings.cleared": EventSchema(frozenset()),
+    # Segment 15A Slice 1 — per-session friendly-label resolver mutations.
+    "session_field_label.set": EventSchema(
+        _IDENTITY | {"changes", "context"}
+    ),
+    "session_field_label.cleared": EventSchema(
+        _IDENTITY | {"snapshot", "context"}
+    ),
     "email_template.updated": EventSchema(_IDENTITY | {"changes", "context"}),
     "email_template.reset": EventSchema(_IDENTITY | {"changes", "context"}),
     # Segment 12A-1 — Extract Data card downloads (read-only).

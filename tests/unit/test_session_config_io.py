@@ -303,7 +303,10 @@ def test_instrument_block_emits_canonical_fields(db: Session) -> None:
         "instruments[1].rule_set_name", "", "string"
     )
 
-    # Display field row.
+    # Display field row. The ``.label`` row was retired in
+    # Segment 15A Slice 1 — per-instrument display-field labels
+    # are no longer round-tripped (the resolver reads only
+    # ``session_field_labels`` + built-in defaults).
     assert by_field["instruments[1].display_fields[1].source_type"].value == (
         "reviewee"
     )
@@ -311,7 +314,7 @@ def test_instrument_block_emits_canonical_fields(db: Session) -> None:
         by_field["instruments[1].display_fields[1].source_field"].value
         == "tag_1"
     )
-    assert by_field["instruments[1].display_fields[1].label"].value == "Cohort"
+    assert "instruments[1].display_fields[1].label" not in by_field
     assert by_field["instruments[1].display_fields[1].visible"].value == "true"
 
     # Response field row.
