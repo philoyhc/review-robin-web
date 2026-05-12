@@ -172,10 +172,12 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
+| 105 | Reviewer tag labels (15A Slice 3) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the three tag inputs to their initial snapshot and re-disables the pair. Hidden when `is_ready`. |
+| 106 | Reviewer tag labels (15A Slice 3) | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewers/field-labels`. Starts `disabled`; inline JS flips both Save + Cancel on when the form is dirty. Hidden when `is_ready`. |
 | 34 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | Inside `.card.lock` |
-| 35 | Upload Reviewers | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewers/import` |
+| 35 | Upload Reviewers | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewers/import`. Sits **below** the preview table (PR #892). |
 | 36 | Upload Reviewers | Edit Reviewers | `<a>` | `btn secondary disabled` | Secondary (Disabled) | Inline-editing not yet implemented |
-| 37 | Danger Zone | Delete all reviewers | `<button type="submit">` | `btn destructive` | Destructive | Posts `/reviewers/delete-all` |
+| 37 | Danger Zone | Delete all reviewers | `<button type="submit">` | `btn destructive` | Destructive | Posts `/reviewers/delete-all`. Sits **below** the preview table. |
 
 ---
 
@@ -185,10 +187,12 @@ Source: `app/web/templates/operator/session_reviewees.html`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
+| 107 | Reviewee field labels (15A Slice 3) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the six inputs (Name / Email / Photo / Tag 1-3) to their initial snapshot and re-disables the pair. Hidden when `is_ready`. |
+| 108 | Reviewee field labels (15A Slice 3) | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewees/field-labels`. Starts `disabled`; dirty-check via inline JS. Hidden when `is_ready`. |
 | 38 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
-| 39 | Upload Reviewees | Upload | `<button type="submit">` | `btn secondary` | Secondary | |
+| 39 | Upload Reviewees | Upload | `<button type="submit">` | `btn secondary` | Secondary | Sits **below** the preview table (PR #892). |
 | 40 | Upload Reviewees | Edit Reviewees | `<a>` | `btn secondary disabled` | Secondary (Disabled) | |
-| 41 | Danger Zone | Delete all reviewees | `<button type="submit">` | `btn destructive` | Destructive | |
+| 41 | Danger Zone | Delete all reviewees | `<button type="submit">` | `btn destructive` | Destructive | Sits **below** the preview table. |
 
 ---
 
@@ -200,10 +204,12 @@ Reviewees Setup shape (Upload + Danger Zone + preview table).
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
+| 109 | Pair-context labels (15A Slice 3) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the three pair-context inputs to their initial snapshot and re-disables the pair. Hidden when `is_ready`. |
+| 110 | Pair-context labels (15A Slice 3) | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/field-labels`. Starts `disabled`; dirty-check via inline JS. Hidden when `is_ready`. |
 | 42 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
-| 43 | Upload Relationships | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/import`. CSV columns: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`. |
+| 43 | Upload Relationships | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/import`. CSV columns: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`. Sits **below** the preview table (PR #892). |
 | 44 | Upload Relationships | Edit Relationships | `<a>` | `btn secondary disabled` | Secondary (Disabled) | "Inline editing — coming soon" tooltip (Segment 15F). |
-| 45 | Danger Zone | Delete all relationships | `<button type="submit">` | `btn destructive` | Destructive | Posts `/relationships/delete-all`. |
+| 45 | Danger Zone | Delete all relationships | `<button type="submit">` | `btn destructive` | Destructive | Posts `/relationships/delete-all`. Sits **below** the preview table. |
 
 **Retired:** Pre-15D this section described the Setup-row
 Assignments page (Rule Based Assignment card + Upload Manual
