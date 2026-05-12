@@ -711,6 +711,11 @@ class AvailableRuleSetEntry:
     is_seed: bool
     is_personal: bool
     is_active: bool
+    has_library_origin: bool = False
+    """True when the underlying SessionRuleSet's ``library_origin_id``
+    is non-NULL — drives the "in library" green pill on the
+    Available rulesets card. Mutually exclusive with the
+    "personal" blue pill at render time (seeded rows skip both)."""
 
 
 @dataclass(frozen=True)
@@ -995,6 +1000,7 @@ def _build_available_rulesets(
                 is_seed=seeded,
                 is_personal=not seeded,
                 is_active=(active_id == rs.id),
+                has_library_origin=rs.library_origin_id is not None,
             )
         )
     return entries

@@ -860,10 +860,23 @@
             <tr id="rtd-row-{{ rtd.id }}" class="muted">
               <td>
                 <code>{{ rtd.response_type }}</code>
-                {% if rtd.library_origin_id is not none and not rtd.is_seeded %}
-                  <span class="pill pill-info"
-                        title="Linked to an entry in your operator library (15C)."
-                        style="margin-left: 6px;">in library</span>
+                {# Pills mirror the Rule Builder's Available rulesets
+                   convention:
+                     - seeded rows: no pill.
+                     - library_origin_id set (non-seeded): "in library"
+                       green pill.
+                     - else (operator-authored, session-only): "personal"
+                       blue pill. #}
+                {% if not rtd.is_seeded %}
+                  {% if rtd.library_origin_id is not none %}
+                    <span class="pill pill-success"
+                          title="Linked to an entry in your operator library."
+                          style="margin-left: 6px;">in library</span>
+                  {% else %}
+                    <span class="pill pill-info"
+                          title="Session-only — not yet saved to your operator library."
+                          style="margin-left: 6px;">personal</span>
+                  {% endif %}
                 {% endif %}
               </td>
               <td>{{ rtd.data_type }}</td>
