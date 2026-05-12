@@ -17,6 +17,10 @@ persistence so the sort survives reloads on the same browser.
 > operator follow-on became the obvious next step. Section titles
 > below name the source spec where each surface is documented;
 > this plan owns the sequencing + persistence wiring.
+> **Renamed again 2026-05-12** from `segment_13B_sort_by_reviewee.md`
+> to `segment_13B_sort_tables.md` so the filename matches the
+> widened scope; cross-references in `spec/`, `guide/`, and
+> `docs/` updated in the same commit.
 
 ## Status
 
