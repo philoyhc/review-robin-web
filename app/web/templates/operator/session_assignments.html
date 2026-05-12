@@ -166,51 +166,69 @@
           </div>
         {% endfor %}
       </div>
-      <table id="assignments-table">
+      <table id="assignments-table"
+             data-rrw-sortable="rrw-sort-assignments-{{ session.id }}">
+        <thead>
         <tr>
-          <th>Reviewer</th>
-          <th class="assignment-col col-rt1">Tag1</th>
-          <th class="assignment-col col-rt2">Tag2</th>
-          <th class="assignment-col col-rt3">Tag3</th>
-          <th>Reviewee</th>
-          <th class="assignment-col col-et1">Tag1</th>
-          <th class="assignment-col col-et2">Tag2</th>
-          <th class="assignment-col col-et3">Tag3</th>
-          <th class="assignment-col col-p1">Pair1</th>
-          <th class="assignment-col col-p2">Pair2</th>
-          <th class="assignment-col col-p3">Pair3</th>
-          <th>Include</th>
-          <th>Instrument</th>
+          <th class="rrw-sortable" data-sort-key="reviewer"
+              onclick="rrwSortHeaderClick(event, this)">Reviewer<span class="rrw-sort-badge"></span></th>
+          <th class="assignment-col col-rt1 rrw-sortable" data-sort-key="reviewer_tag_1"
+              onclick="rrwSortHeaderClick(event, this)">Tag1<span class="rrw-sort-badge"></span></th>
+          <th class="assignment-col col-rt2 rrw-sortable" data-sort-key="reviewer_tag_2"
+              onclick="rrwSortHeaderClick(event, this)">Tag2<span class="rrw-sort-badge"></span></th>
+          <th class="assignment-col col-rt3 rrw-sortable" data-sort-key="reviewer_tag_3"
+              onclick="rrwSortHeaderClick(event, this)">Tag3<span class="rrw-sort-badge"></span></th>
+          <th class="rrw-sortable" data-sort-key="reviewee"
+              onclick="rrwSortHeaderClick(event, this)">Reviewee<span class="rrw-sort-badge"></span></th>
+          <th class="assignment-col col-et1 rrw-sortable" data-sort-key="reviewee_tag_1"
+              onclick="rrwSortHeaderClick(event, this)">Tag1<span class="rrw-sort-badge"></span></th>
+          <th class="assignment-col col-et2 rrw-sortable" data-sort-key="reviewee_tag_2"
+              onclick="rrwSortHeaderClick(event, this)">Tag2<span class="rrw-sort-badge"></span></th>
+          <th class="assignment-col col-et3 rrw-sortable" data-sort-key="reviewee_tag_3"
+              onclick="rrwSortHeaderClick(event, this)">Tag3<span class="rrw-sort-badge"></span></th>
+          <th class="assignment-col col-p1 rrw-sortable" data-sort-key="pair_tag_1"
+              onclick="rrwSortHeaderClick(event, this)">Pair1<span class="rrw-sort-badge"></span></th>
+          <th class="assignment-col col-p2 rrw-sortable" data-sort-key="pair_tag_2"
+              onclick="rrwSortHeaderClick(event, this)">Pair2<span class="rrw-sort-badge"></span></th>
+          <th class="assignment-col col-p3 rrw-sortable" data-sort-key="pair_tag_3"
+              onclick="rrwSortHeaderClick(event, this)">Pair3<span class="rrw-sort-badge"></span></th>
+          <th class="rrw-sortable" data-sort-key="include"
+              onclick="rrwSortHeaderClick(event, this)">Include<span class="rrw-sort-badge"></span></th>
+          <th class="rrw-sortable" data-sort-key="instrument"
+              onclick="rrwSortHeaderClick(event, this)">Instrument<span class="rrw-sort-badge"></span></th>
         </tr>
+        </thead>
+        <tbody class="rrw-rows">
         {% for assignment in pair_sample %}
           {% set rel = pair_context_lookup.get((assignment.reviewer_id, assignment.reviewee_id)) %}
           {% set rel_active = rel and rel.status == "active" %}
           <tr>
-            <td>
+            <td data-sort-value="{{ assignment.reviewer.name }}">
               {{ assignment.reviewer.name }} &middot;
               <code>{{ assignment.reviewer.email }}</code>
             </td>
-            <td class="assignment-col col-rt1">{{ assignment.reviewer.tag_1 or "" }}</td>
-            <td class="assignment-col col-rt2">{{ assignment.reviewer.tag_2 or "" }}</td>
-            <td class="assignment-col col-rt3">{{ assignment.reviewer.tag_3 or "" }}</td>
-            <td>
+            <td class="assignment-col col-rt1" data-sort-value="{{ assignment.reviewer.tag_1 or '' }}">{{ assignment.reviewer.tag_1 or "" }}</td>
+            <td class="assignment-col col-rt2" data-sort-value="{{ assignment.reviewer.tag_2 or '' }}">{{ assignment.reviewer.tag_2 or "" }}</td>
+            <td class="assignment-col col-rt3" data-sort-value="{{ assignment.reviewer.tag_3 or '' }}">{{ assignment.reviewer.tag_3 or "" }}</td>
+            <td data-sort-value="{{ assignment.reviewee.name }}">
               {{ assignment.reviewee.name }} &middot;
               <code>{{ assignment.reviewee.email_or_identifier }}</code>
             </td>
-            <td class="assignment-col col-et1">{{ assignment.reviewee.tag_1 or "" }}</td>
-            <td class="assignment-col col-et2">{{ assignment.reviewee.tag_2 or "" }}</td>
-            <td class="assignment-col col-et3">{{ assignment.reviewee.tag_3 or "" }}</td>
-            <td class="assignment-col col-p1">{{ rel.tag_1 or "" if rel_active else "" }}</td>
-            <td class="assignment-col col-p2">{{ rel.tag_2 or "" if rel_active else "" }}</td>
-            <td class="assignment-col col-p3">{{ rel.tag_3 or "" if rel_active else "" }}</td>
-            <td>
+            <td class="assignment-col col-et1" data-sort-value="{{ assignment.reviewee.tag_1 or '' }}">{{ assignment.reviewee.tag_1 or "" }}</td>
+            <td class="assignment-col col-et2" data-sort-value="{{ assignment.reviewee.tag_2 or '' }}">{{ assignment.reviewee.tag_2 or "" }}</td>
+            <td class="assignment-col col-et3" data-sort-value="{{ assignment.reviewee.tag_3 or '' }}">{{ assignment.reviewee.tag_3 or "" }}</td>
+            <td class="assignment-col col-p1" data-sort-value="{{ rel.tag_1 or '' if rel_active else '' }}">{{ rel.tag_1 or "" if rel_active else "" }}</td>
+            <td class="assignment-col col-p2" data-sort-value="{{ rel.tag_2 or '' if rel_active else '' }}">{{ rel.tag_2 or "" if rel_active else "" }}</td>
+            <td class="assignment-col col-p3" data-sort-value="{{ rel.tag_3 or '' if rel_active else '' }}">{{ rel.tag_3 or "" if rel_active else "" }}</td>
+            <td data-sort-value="{{ 'yes' if assignment.include else 'no' }}">
               <span class="pill {{ 'pill-info' if assignment.include else 'pill-empty' }}">{{ "yes" if assignment.include else "no" }}</span>
             </td>
-            <td>
+            <td data-sort-value="{{ assignment.instrument.short_label or assignment.instrument.name }}">
               {{ assignment.instrument.short_label or assignment.instrument.name }}
             </td>
           </tr>
         {% endfor %}
+        </tbody>
       </table>
       {% if truncated_count %}
         <p class="form-help">…and {{ truncated_count }} more not shown.</p>

@@ -64,6 +64,23 @@ def assignments_hub(
     )
 
 
+_ASSIGNMENT_SORT_KEYS = {
+    "reviewer",
+    "reviewer_tag_1",
+    "reviewer_tag_2",
+    "reviewer_tag_3",
+    "reviewee",
+    "reviewee_tag_1",
+    "reviewee_tag_2",
+    "reviewee_tag_3",
+    "pair_tag_1",
+    "pair_tag_2",
+    "pair_tag_3",
+    "include",
+    "instrument",
+}
+
+
 def _render_assignments_hub(
     request: Request,
     db: Session,
@@ -80,6 +97,56 @@ def _render_assignments_hub(
         assignments.list_pairs(db, review_session.id) if assignment_count else []
     )
     truncated_count = max(0, assignment_count - len(pair_sample))
+    # Pair-context lookup is built up-front so the cookie-backed
+    # sort (Segment 13B Part 2 PR 8) can resolve ``pair_tag_*``
+    # keys without a second pass through the relationships table.
+    pair_context_lookup = (
+        relationships_service.pair_context_lookup(db, review_session.id)
+        if pair_sample
+        else {}
+    )
+
+    def _assignment_sort_value(assignment, key: str):
+        if key == "reviewer":
+            return assignment.reviewer.name if assignment.reviewer else None
+        if key == "reviewee":
+            return assignment.reviewee.name if assignment.reviewee else None
+        if key.startswith("reviewer_tag_"):
+            slot = key.rsplit("_", 1)[-1]
+            return getattr(assignment.reviewer, f"tag_{slot}", None)
+        if key.startswith("reviewee_tag_"):
+            slot = key.rsplit("_", 1)[-1]
+            return getattr(assignment.reviewee, f"tag_{slot}", None)
+        if key.startswith("pair_tag_"):
+            rel = pair_context_lookup.get(
+                (assignment.reviewer_id, assignment.reviewee_id)
+            )
+            if rel is None or getattr(rel, "status", None) != "active":
+                return None
+            slot = key.rsplit("_", 1)[-1]
+            return getattr(rel, f"tag_{slot}", None)
+        if key == "include":
+            # Render-text parity: assignment.include True → "yes",
+            # False → "no". Sort lexically so "no" < "yes" (asc =
+            # excluded first).
+            return "yes" if assignment.include else "no"
+        if key == "instrument":
+            inst = assignment.instrument
+            if inst is None:
+                return None
+            return inst.short_label or inst.name
+        return None
+
+    sort_spec = views.decode_cookie_sort_spec(
+        cookies=dict(request.cookies),
+        cookie_name=f"rrw-sort-assignments-{review_session.id}",
+        valid_keys=_ASSIGNMENT_SORT_KEYS,
+    )
+    pair_sample = views.apply_cookie_sort(
+        pair_sample,
+        sort_spec,
+        value_resolver=_assignment_sort_value,
+    )
     self_review_active_count, self_review_deactivated_count = (
         assignments.self_review_include_breakdown(db, review_session.id)
         if assignment_count
@@ -103,13 +170,7 @@ def _render_assignments_hub(
             "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "pair_sample": pair_sample,
             "truncated_count": truncated_count,
-            "pair_context_lookup": (
-                relationships_service.pair_context_lookup(
-                    db, review_session.id
-                )
-                if pair_sample
-                else {}
-            ),
+            "pair_context_lookup": pair_context_lookup,
             "self_reviews_active": review_session.self_reviews_active,
             "self_review_total": self_review_total,
             "self_review_active_count": self_review_active_count,

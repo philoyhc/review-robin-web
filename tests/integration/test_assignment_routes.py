@@ -415,15 +415,24 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     # Header carries every per-slot column even when the data is sparse;
     # JS hides the empty ones via the toggle row. AssignmentContext
     # (a1/a2/a3) retired in 15D PR 6b.
-    assert '<th class="assignment-col col-rt1">Tag1</th>' in body
-    assert '<th class="assignment-col col-et2">Tag2</th>' in body
-    assert '<th class="assignment-col col-p1">Pair1</th>' in body
+    # The 13B Part 2 PR 8 sort scaffolding adds ``rrw-sortable``
+    # class + sort badge span inside each header, so match by
+    # substring rather than the exact tag.
+    assert 'class="assignment-col col-rt1 rrw-sortable"' in body
+    assert "Tag1" in body
+    assert 'class="assignment-col col-et2 rrw-sortable"' in body
+    assert "Tag2" in body
+    assert 'class="assignment-col col-p1 rrw-sortable"' in body
+    assert "Pair1" in body
     assert "col-a3" not in body
-    assert "<th>Reviewer</th>" in body
-    assert "<th>Reviewee</th>" in body
-    assert "<th>Include</th>" in body
+    # Identity / Include / Instrument headers — match by
+    # ``data-sort-key`` since the PR 8 sort scaffolding wraps
+    # the label and the closing tag is no longer adjacent.
+    assert 'data-sort-key="reviewer"' in body
+    assert 'data-sort-key="reviewee"' in body
+    assert 'data-sort-key="include"' in body
     # Diagnostic Instrument column at the end of each row.
-    assert "<th>Instrument</th>" in body
+    assert 'data-sort-key="instrument"' in body
 
     # Per-slot cells render values from rosters + relationships.
     assert ">senior</td>" in body
