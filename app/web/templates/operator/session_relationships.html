@@ -134,41 +134,52 @@
           Tag3
         </label>
       </div>
-      <table id="relationships-table">
+      <table id="relationships-table"
+             data-rrw-sortable="rrw-sort-relationships-{{ session.id }}">
+        <thead>
         <tr>
-          <th>Reviewer</th>
-          <th>Reviewee</th>
-          <th class="tag-col tag-col-1">Tag1</th>
-          <th class="tag-col tag-col-2">Tag2</th>
-          <th class="tag-col tag-col-3">Tag3</th>
-          <th>Status</th>
+          <th class="rrw-sortable" data-sort-key="reviewer"
+              onclick="rrwSortHeaderClick(event, this)">Reviewer<span class="rrw-sort-badge"></span></th>
+          <th class="rrw-sortable" data-sort-key="reviewee"
+              onclick="rrwSortHeaderClick(event, this)">Reviewee<span class="rrw-sort-badge"></span></th>
+          <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1"
+              onclick="rrwSortHeaderClick(event, this)">Tag1<span class="rrw-sort-badge"></span></th>
+          <th class="tag-col tag-col-2 rrw-sortable" data-sort-key="tag_2"
+              onclick="rrwSortHeaderClick(event, this)">Tag2<span class="rrw-sort-badge"></span></th>
+          <th class="tag-col tag-col-3 rrw-sortable" data-sort-key="tag_3"
+              onclick="rrwSortHeaderClick(event, this)">Tag3<span class="rrw-sort-badge"></span></th>
+          <th class="rrw-sortable" data-sort-key="status"
+              onclick="rrwSortHeaderClick(event, this)">Status<span class="rrw-sort-badge"></span></th>
         </tr>
+        </thead>
+        <tbody class="rrw-rows">
         {% for row in relationships %}
           {% set reviewer = reviewer_by_id.get(row.reviewer_id) %}
           {% set reviewee = reviewee_by_id.get(row.reviewee_id) %}
           <tr id="relationship-row-{{ row.id }}">
-            <td>
+            <td data-sort-value="{{ reviewer.email if reviewer else '' }}">
               {% if reviewer %}
                 <code>{{ reviewer.email }}</code>
               {% else %}
                 <span class="muted">(deleted reviewer)</span>
               {% endif %}
             </td>
-            <td>
+            <td data-sort-value="{{ reviewee.email_or_identifier if reviewee else '' }}">
               {% if reviewee %}
                 <code>{{ reviewee.email_or_identifier }}</code>
               {% else %}
                 <span class="muted">(deleted reviewee)</span>
               {% endif %}
             </td>
-            <td class="tag-col tag-col-1">{{ row.tag_1 or "" }}</td>
-            <td class="tag-col tag-col-2">{{ row.tag_2 or "" }}</td>
-            <td class="tag-col tag-col-3">{{ row.tag_3 or "" }}</td>
-            <td>
+            <td class="tag-col tag-col-1" data-sort-value="{{ row.tag_1 or '' }}">{{ row.tag_1 or "" }}</td>
+            <td class="tag-col tag-col-2" data-sort-value="{{ row.tag_2 or '' }}">{{ row.tag_2 or "" }}</td>
+            <td class="tag-col tag-col-3" data-sort-value="{{ row.tag_3 or '' }}">{{ row.tag_3 or "" }}</td>
+            <td data-sort-value="{{ row.status }}">
               <span class="pill {{ 'pill-info' if row.status == 'active' else 'pill-empty' }}">{{ row.status }}</span>
             </td>
           </tr>
         {% endfor %}
+        </tbody>
       </table>
     </div>
     <style>
