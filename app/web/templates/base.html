@@ -1832,19 +1832,39 @@
       }
 
       /* Segment 13B Part 2 PR 4 — shared sort primitive.
-         Any table that opts into the sort facility uses these
-         classes; the JS is in the body-end <script> block. */
+         Headers stay non-clickable; the small ``rrw-sort-btn``
+         next to each label is the click target so the label
+         text reads as a label, not a control. */
       body.ui-v2 th.rrw-sortable {
-        cursor: pointer;
-        user-select: none;
+        white-space: nowrap;
       }
-      body.ui-v2 th.rrw-sortable:hover {
+      body.ui-v2 .rrw-sort-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 4px;
+        padding: 0 4px;
+        min-width: 18px;
+        height: 18px;
+        line-height: 1;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+        color: var(--color-muted, #94a3b8);
+        font: inherit;
+        font-size: 0.85em;
+      }
+      body.ui-v2 .rrw-sort-btn:hover {
+        border-color: var(--border-muted, #cbd5e1);
         background: var(--bg-muted, #f1f5f9);
+      }
+      body.ui-v2 .rrw-sort-btn:focus-visible {
+        outline: 2px solid var(--color-link, #1d4ed8);
+        outline-offset: 1px;
       }
       body.ui-v2 .rrw-sort-badge {
         display: inline;
-        font-size: 0.85em;
-        color: var(--color-muted, #475569);
         font-variant-numeric: tabular-nums;
       }
       body.ui-v2 .rrw-sort-badge-active {
@@ -1932,7 +1952,16 @@
       var _RRW_SORT_MAX_KEYS = 3;
       var _rrwSortState = {};
 
-      function rrwSortHeaderClick(event, th) {
+      function rrwSortHeaderClick(event, target) {
+        // Accept either the ``<th>`` (legacy) or the
+        // ``<button class="rrw-sort-btn">`` inside it (refined
+        // 2026-05-12). The data-sort-key lives on the ``<th>``;
+        // walk up to find it.
+        var th = target.closest && target.closest('th[data-sort-key]');
+        if (!th && target.getAttribute && target.getAttribute('data-sort-key')) {
+          th = target;
+        }
+        if (!th) return;
         var table = th.closest('table[data-rrw-sortable]');
         if (!table) return;
         var tableId = table.getAttribute('data-rrw-sortable');
@@ -2092,11 +2121,14 @@
           if (!badge) continue;
           if (keyToPriority[key]) {
             badge.textContent =
-              ' ' + keyToPriority[key]
+              keyToPriority[key]
               + (keyToDir[key] === 'asc' ? '↑' : '↓');
             badge.classList.add('rrw-sort-badge-active');
           } else {
-            badge.textContent = '';
+            // Default-state ``↕`` so the operator can SEE the
+            // column is sortable. Non-active badge stays muted
+            // via the .rrw-sort-btn color rule.
+            badge.textContent = '↕';
             badge.classList.remove('rrw-sort-badge-active');
           }
         }

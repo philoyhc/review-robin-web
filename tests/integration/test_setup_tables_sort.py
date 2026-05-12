@@ -99,6 +99,14 @@ def test_reviewers_table_renders_sort_scaffolding(
     assert 'class="rrw-sortable" data-sort-key="name"' in body
     assert 'class="rrw-sortable" data-sort-key="email"' in body
     assert 'class="rrw-sortable" data-sort-key="status"' in body
+    # Refinement (2026-05-12): the click target is a small
+    # ``<button class="rrw-sort-btn">`` next to the header label
+    # rather than the ``<th>`` itself. Default badge content is
+    # ``↕`` so the operator sees the affordance even when the
+    # column isn't sorted.
+    assert 'class="rrw-sort-btn"' in body
+    assert 'aria-label="Sort by Name"' in body
+    assert '<span class="rrw-sort-badge">↕</span>' in body
     # Each <td> carries a data-sort-value mirroring the persisted
     # row value.
     assert 'data-sort-value="Alpha"' in body
