@@ -100,6 +100,43 @@ Reviewees has 3, Relationships has 3) that the inline JS +
 scoped `<style>` block per template is more legible than a macro
 with a sprawling parameter list.
 
+## Sortable headers (shared affordance)
+
+All three preview tables — Reviewers, Reviewees, Relationships
+— **opt into the shared sort primitive** that
+`spec/sort_by_reviewee.md` documents. Each table:
+
+- Carries a `<table data-rrw-sortable="rrw-sort-{surface}-{session_id}">`
+  marker. Surface tokens: `reviewers` / `reviewees` /
+  `relationships`.
+- Wraps its data rows in `<tbody class="rrw-rows">`.
+- Renders every sortable header with `class="rrw-sortable"` +
+  `data-sort-key="..."` + a child `<button class="rrw-sort-btn">`
+  carrying the `↕` / `1↑` / `2↓` badge.
+
+Cookie persistence is per-(browser, session, table) — see
+`spec/settings_inventory.md` §7 for the cookie shape. Sort state
+survives reloads on the same browser; clearing all cookies
+returns to insertion order. The route layer reads the cookie at
+render time so the initial HTML lands sorted (no JS-reorder
+flicker on first paint).
+
+Sortable columns per table:
+
+- **Reviewers:** `name`, `email`, `tag_1` / `tag_2` / `tag_3`,
+  `status`.
+- **Reviewees:** `name`, `email_or_identifier`, `tag_1` /
+  `tag_2` / `tag_3`, `status`. (The Photo column stays
+  non-sortable — it renders a link, not a comparable value.)
+- **Relationships:** `reviewer` (sorts on reviewer email),
+  `reviewee` (sorts on `email_or_identifier`),
+  `tag_1` / `tag_2` / `tag_3`, `status`.
+
+Sortable affordance and visibility-toggle affordance are
+orthogonal — toggling a column's visibility doesn't affect its
+sort state, and a sort spec referencing a hidden column still
+applies (the column data is still present in the DOM).
+
 ## Reviewers page (`session_reviewers.html`)
 
 ### Body grid (when not Activated)
@@ -225,9 +262,11 @@ Session Home carries the corresponding Download button.
   tooltip.
 - **Cross-entity validation.** Surfaced via the dedicated Validate
   page; not rendered inline on these pages.
-- **Sort or filter on preview tables.** Reviewer-side sort is
-  Segment 13B's concern (see `spec/sort_by_reviewee.md`); operator
-  preview rows render in primary-key order today.
+- **Filter on preview tables.** Out of scope for the initial
+  slice. Operator-side **sort** lives in the shared rrw-sort
+  primitive ("Sortable headers" section above; shipped 2026-05-12
+  as Segment 13B Part 2). Default render order remains
+  primary-key when no sort cookie is in play.
 - **Assignments generation.** Moved to the Operations row in
   Segment 15D PR 6a — see `spec/operator_ui_concept.md` §5.
 

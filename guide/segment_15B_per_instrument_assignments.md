@@ -260,6 +260,21 @@ PR sub-slices:
   per-instrument tab gets its own Rule Based card (the picker
   writes through to `instruments.rule_set_id` per Slice 2) and
   its own manual CSV upload.
+- **4c — Per-instrument Assignment-pairs table sort** *(carved
+  from Segment 13B Part 2 PR F)*. Each per-instrument tab's pairs
+  table opts into the shared rrw-sort primitive
+  (`spec/sort_by_reviewee.md`). Cookie name shape:
+  `rrw-sort-assignments-{session_id}-{instrument_id}` (one
+  cookie per instrument tab — same cascade scope as the rest of
+  the operator-table family but disambiguated by
+  `instrument_id`). Sortable columns mirror the existing
+  Operations Assignments table (Reviewer / Reviewer Tag* /
+  Reviewee / Reviewee Tag* / Pair Tag* / Include / Instrument).
+  All wiring exists in `app/web/views/_sort.py` already; this
+  slice just annotates the template + threads
+  `decode_cookie_sort_spec` + `apply_cookie_sort` through the
+  per-instrument render path. Tests follow the
+  `test_assignments_sort.py` shape.
 
 Operators who don't care about per-instrument differences keep an
 "apply to all" affordance — a button at the top of the All

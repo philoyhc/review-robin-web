@@ -1,10 +1,17 @@
 # Sort by Reviewee — functional spec
 
-**Status.** Forward-looking design spec for **Segment 13B**
-(reviewer-surface sort UX). Split out of the original Segment 13
-during the 2026-05-07 wrap-up. Locks in the decisions reached
-during the Segment 11 §2.6 discussion (2026-05-03); promoted
-from sketch.
+**Status.** **Shipped 2026-05-12** as Segment 13B, two parts:
+Part 1 (PRs #867 / #868 / #869) lit up the per-instrument
+operator-default sort + reviewer-side header click overrides;
+Part 2 (PRs #873 / #874 / #875 / #876 / #877 / #878) extracted
+a shared sort primitive into `base.html`, added cookie
+persistence, rolled the same affordance out to the Reviewers /
+Reviewees / Relationships / Operations-Assignments operator
+tables, and refined the click target to a small per-header
+`↕` button next to each label. Split out of the original
+Segment 13 during the 2026-05-07 wrap-up; locks in the
+decisions reached during the Segment 11 §2.6 discussion
+(2026-05-03).
 
 13B is now single-purpose: this sort feature. Sibling segments
 on the same surface family:
@@ -112,7 +119,25 @@ The reviewer surface table renders by default with the operator's configured sor
 
 The reviewer's override **spans both display and response columns**. Sort by display field is a read on existing reviewee data; sort by response field is a read on the reviewer's own response values (their `100int` rating, their `Yes_no` choice, etc.).
 
-**Persistence: live only.** No localStorage, no server-side per-reviewer state. Refresh returns to operator default. This is deliberate — keeps the state model simple and avoids the "I sorted then refresh and lost it / kept it / synced to my other device" question. If a pilot operator asks for persistence, it can be revisited.
+**Persistence: per-browser cookie.** As shipped 2026-05-12
+(Part 2 PR 5), the reviewer-side override persists in a
+`rrw-sort-rs-{session_id}-{instrument_id}` cookie scoped to
+`/reviewer/sessions/{id}`. The cookie carries the canonical
+`[{"key": "...", "dir": "asc|desc"}, ...]` shape; the server
+reads it at render time and threads the decoded spec through
+`views.order_rows_by_sort_spec` so the initial HTML already
+lands in the persisted order (no JS-reorder flicker). Clearing
+the sort writes an expired cookie, returning the next render
+to the operator default. Cookie scope is per-(browser, session,
+instrument) — different browsers / devices / cleared cookies
+all return cleanly to the operator default.
+
+The original design called this "live only — no persistence,
+revisit if pilot asks." The cookie path landed pre-pilot once
+the discoverability win (always-visible `↕` button) made
+persistence the obvious next move — operators can see at a
+glance that a column is sorted, so the "I forgot I sorted three
+weeks ago" footgun is defanged.
 
 ---
 
@@ -210,28 +235,67 @@ The Display Fields available to sort are scoped to the instrument's own display 
 ## Out of scope for the initial slice
 
 - Sort by **Response Fields** on the operator side. Excluded by design (see "Scope" above).
-- **Persistence** of reviewer-side override across sessions or refreshes. Live-only by design.
 - **Multi-column sort beyond 3.** Diminishing returns; the catalog can re-open the cap if a real session needs it.
 - A separate **sort-builder card or dialog**. The design constraint is "no new card; one Sort column on the Display Fields table."
 - Sort by **computed values** (e.g., per-reviewer "completion %"). Display fields and response fields only.
 - Sort **across instruments** (e.g., a session-wide sort applied to every instrument). Each instrument is independent by design.
 - Mass operator UI for "apply this sort to every instrument" (could be added later as a bulk action).
+- **Cross-browser persistence** of any sort (operator setup tables OR reviewer surface). Cookie-only; sort doesn't follow the user to a different device. Revisit only if pilot feedback specifically asks.
 
 ---
 
-## Implementation pointers (for Segment 13)
+## Implementation pointers — shipped
 
-These are notes for whoever picks this up; the spec above is the contract.
+13B Part 1 (PRs #867 / #868 / #869) + Part 2 (PRs #873 / #874 /
+#875 / #876 / #877 / #878). Key landmarks in the codebase:
 
-- **Schema migration:** add `sort_display_fields` JSON column to `instruments` table. NULL default. One-line Alembic migration.
-- **Service:** new `instruments.set_sort_display_fields(db, *, instrument, fields, user, correlation_id)` taking a list of `(display_field_id, dir)` tuples. Validates: max 3 entries, ids belong to this instrument, dir in `{asc, desc}`. Lifecycle-invalidates. Emits `instrument.sort_fields_updated`.
-- **Operator template** (`instruments_index.html`): the per-instrument Display Fields table gains a Sort column. Locked-state render is plain text (`1↑`, `2↓`, ☐). Unlocked-state interaction is JS-driven over hidden form inputs — same pattern as the existing JS-deferred Add Row / Delete Row mechanics on the same card.
-- **Reviewer template** (`review_surface.html`): server-side default sort applied to assignment iteration per instrument. Header rows gain JS click handlers for live override.
-- **Reviewer-side JS:** small inline script (~50 lines) tracking sort state in memory, re-sorting the visible rows via DOM reorder, attaching to header clicks. No localStorage. Reset link clears state.
+- **Schema:** `Instrument.sort_display_fields` JSON column
+  (Segment 13D PR 5, 2026-05-09; lit up by 13B PR 1).
+- **Service:** `app/services/instruments/_display_fields.py
+  ::set_sort_display_fields` with `SortSpecError` (codes
+  `too_many` / `unknown_dir` / `duplicate_id` /
+  `cross_instrument` / `bad_id`).
+- **Audit event:** `instrument.sort_fields_updated` registered
+  in `app/services/audit.py::EVENT_SCHEMAS`.
+- **Read path:** `app/web/views/_sort.py
+  ::order_rows_by_sort_spec` (pure-function reviewer-surface
+  helper); generic `decode_cookie_sort_spec` +
+  `apply_cookie_sort` for the operator-table cookies.
+- **Operator template** (`instruments_index.html`): Sort
+  column on the per-instrument Display Fields table; each
+  cell hosts a JS-driven `<button class="sort-btn">` that
+  cycles state into hidden `sort_display_field_id` /
+  `sort_dir` form arrays. Save path lands in the bulk-save
+  route in `_instruments.py`.
+- **Shared sort primitive:** `base.html` ships the
+  `rrwSortHeaderClick` + `_rrwApplySort` + cookie-I/O JS;
+  every sortable table gains a tiny `↕` button next to
+  the column label (the click target) via the
+  `rrw-sort-btn` class.
+- **Reviewer template** (`review_surface.html`) +
+  **operator tables** (Reviewers / Reviewees / Relationships
+  / Operations Assignments): each annotated with
+  `<table data-rrw-sortable="...">`, `th.rrw-sortable`,
+  `data-sort-key`, `data-sort-value` cells, and
+  `<tbody class="rrw-rows">`.
+- **Cookies:** `rrw-sort-{surface}-{session_id}[-{instrument_id}]`
+  carrying the canonical
+  `[{"key": "...", "dir": "asc|desc"}, ...]` shape.
 - **Tests:**
-  - Unit (`tests/unit/test_instruments_service.py`): `set_sort_display_fields` validates max 3, rejects unknown ids, rejects ids from other instruments, emits correct audit detail, lifecycle-invalidates.
-  - Integration: operator sets sort via instruments-page form, save, render reviewer surface, verify row order matches.
-  - Integration: cascade-clean — delete a sort-referenced display field, save instrument, verify the sort spec auto-compacts.
+  - `tests/unit/test_order_rows_by_sort_spec.py` (13
+    helper unit tests).
+  - `tests/integration/test_set_sort_display_fields.py`
+    (10 service-writer tests).
+  - `tests/integration/test_instruments_sort_column.py` (8
+    operator-UI tests).
+  - `tests/integration/test_reviewer_surface_sort.py` (8
+    integration tests on the reviewer surface).
+  - `tests/integration/test_reviewer_surface_sort_cookies.py`
+    (6 cookie-persistence tests).
+  - `tests/integration/test_setup_tables_sort.py` (12
+    operator-table tests).
+  - `tests/integration/test_assignments_sort.py` (5
+    Operations Assignments tests).
   - Render: reviewer-side override JS reorders visible rows; reset link returns to default. (Probably JS-via-Selenium; if too costly for this segment, defer to a follow-on PR with explicit deferral note.)
 - **Spec cross-ref updates:** when this lands, update `spec/operator_ui_concept.md` Display Fields section to describe the Sort column; update `spec/reviewer-surface.md` to describe the header-click override.
 

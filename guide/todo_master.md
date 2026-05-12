@@ -261,6 +261,33 @@ Last leg of the locked sequence `13E → 12C → 15D → 12A-3`. Brings the expo
 
 Bonus: **#781** — Grey out the Reviewers / Reviewees / Relationships / Responses Download buttons in the Extract Data card when the corresponding count is 0 (rendered between PR 2 and PR 3 as a small follow-on polish).
 
+### Segment 13B — Sortable tables (reviewer surface + operator surface) — done 2026-05-12 (PRs #867 → #878)
+
+Two parts. **Part 1** lit up the per-instrument operator-default sort + reviewer-side header click overrides on the reviewer surface. **Part 2** lifted the primitive into a site-wide `base.html` script, added cookie-backed persistence, rolled the same affordance into the four operator-surface tables, and refined the click target to a small `↕` button next to each label so the sort affordance is discoverable on first paint. PR F (per-instrument Assignments) carved out to 15B Slice 4c.
+
+Plan: `guide/segment_13B_sort_tables.md`. Functional spec: `spec/sort_by_reviewee.md`.
+
+**Part 1** (operator-default sort + reviewer override on the reviewer surface):
+
+- **#867** — PR 1 reviewer-surface read path + service writer. New `instruments.set_sort_display_fields` with `SortSpecError` (codes: `too_many` / `unknown_dir` / `duplicate_id` / `cross_instrument` / `bad_id`); validator + lifecycle invalidation + canonical `instrument.sort_fields_updated` audit emission. New `views.order_rows_by_sort_spec` pure-function helper (cascade, NULL-last, render-time defense). Reviewer surface consumes `instrument.sort_display_fields` per instrument group. Column docstring updated from earlier-design shape to canonical `display_field_id` / `dir`.
+- **#868** — PR 2 tri-state Sort column on the per-instrument Display Fields table. JS `toggleSort` cycles unsorted → asc → desc → unsorted, max 3 keys, cascade priorities stay contiguous. Bulk-save form ships `sort_display_field_id` + `sort_dir` parallel arrays into the existing route which calls `set_sort_display_fields`; validation errors surface as a per-instrument banner.
+- **#869** — PR 3 reviewer-side live override on the reviewer surface response table. Clickable headers (display + response + Reviewee identity column). Tri-state cycle + shift-click cascade up to 3 keys. NULL-last sentinel in the per-key compare so the asymmetry survives the asc/desc flip. Locale-aware string compare with `numeric: true`; numeric compare for Integer / Decimal via `data-sort-type`.
+
+**Part 2** (shared primitive + cookie persistence + operator-table rollout):
+
+- **#873** — PR 4 shared sort primitive lifted into `base.html`. `rrwSortHeaderClick` + `_rrwApplySort` + `_rrwRefreshSortBadges` + `_rrwCellValue` + `_rrwCompareValues`; same semantics as PR 3. New `data-rrw-sortable` table marker + `rrw-sortable` th class + `data-sort-key` / `data-sort-type` / `data-sort-value` + `<tbody class="rrw-rows">` annotation contract. Reviewer surface re-binds to the shared script (no page-local JS); regression guard added to `test_chrome_breadcrumbs.py`.
+- **#874** — PR 5 cookie persistence. `_rrwWriteCookie` / `_rrwReadCookie` / `_rrwHydrateFromCookies` in `base.html`; per-(browser, session, table) cookies named `rrw-sort-{surface}-{session_id}[-{instrument_id}]` carrying JSON `[{"key": "...", "dir": "asc|desc"}, ...]` in cascade order. New `views.decode_cookie_sort_spec_for_reviewer_surface` + generic `decode_cookie_sort_spec` + `apply_cookie_sort` helpers. Reviewer-surface SSR reads the cookie at render time so the initial HTML lands sorted (no JS-reorder flicker). Empty state writes an expired cookie; malformed JSON / unknown keys silently drop.
+- **#875** — PR 6 sort on Reviewers + Reviewees Setup tables. `_REVIEWER_SORT_KEYS` / `_REVIEWEE_SORT_KEYS` allowlists; route layer reads the cookie + calls `apply_cookie_sort` with per-page resolver. Templates annotated with the rrw-sort contract.
+- **#876** — PR 7 sort on Relationships Setup table. `_RELATIONSHIP_SORT_KEYS` + per-call closure resolver that consults `reviewer_by_id` / `reviewee_by_id` lookup maps for the identity columns (so sort follows the rendered email, not the raw FK).
+- **#877** — PR 8 sort on Operations Assignments table. `_ASSIGNMENT_SORT_KEYS` (13 sortable columns including reviewer / reviewee identity, all 9 tag columns, Include, Instrument). Resolver reaches through `assignment.reviewer` / `.reviewee` / `.instrument` + `pair_context_lookup`; pair tags from inactive relationships sort as null. `pair_context_lookup` build moves up so the resolver can use it before the template render.
+- **#878** — Refinement: small `↕` button beside each header label as the click target. Discoverability fix — the empty-state badge previously rendered blank, leaving operators to discover the affordance by hovering or clicking blindly. Button shows `↕` (unsorted) / `1↑` / `2↓` (sorted with priority). `th.rrw-sortable` no longer carries `cursor: pointer`; the button takes the click. JS resolves the parent `<th>` via `closest('th[data-sort-key]')` so existing call sites still work.
+
+Bonus on the path: **#870** added a diagnostic Instrument column to the Operations Assignments table (one PR before PR 8 rolled sort onto the same surface).
+
+61 new tests across `tests/unit/test_order_rows_by_sort_spec.py` + `tests/integration/test_set_sort_display_fields.py` + `test_instruments_sort_column.py` + `test_reviewer_surface_sort.py` + `test_reviewer_surface_sort_cookies.py` + `test_setup_tables_sort.py` + `test_assignments_sort.py`.
+
+---
+
 ### Segment 16C — Richer audit views (MVP) — done 2026-05-11 (PRs #860, #861, #863)
 
 Moves the audit log from "CSV download only" to a sys-admin-gated in-app viewer with filter strip + per-row pretty-printer. Reachable from the Sessions Diagnostics row's Audit log link (now points at the child page rather than the CSV directly). Plan archived: `guide/archive/segment_16C_richer_audit_views.md`. All three post-MVP PRs (4 + 5 + 6 — entity drill-in, cross-session search, Session Home Recent activity card) carved out to `guide/deferred_until_pilot_feedback.md`.
@@ -345,14 +372,7 @@ conflicts (none detected).
 
 #### Numbered queue
 
-1. **13B — Reviewer surface sort.**
-   Sort-by-reviewee column on the reviewer surface — operator
-   default + reviewer live override. Sized as 3 PRs (schema +
-   read path → operator UI tri-state Sort column → reviewer-
-   side live override). Independent of 13A and 13C; ships in
-   any order.
-   **Plan:** `guide/segment_13B_sort_tables.md`.
-   **Functional spec:** `spec/sort_by_reviewee.md`.
+1. *(13B shipped 2026-05-12 — see Done above.)*
 
 2. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
