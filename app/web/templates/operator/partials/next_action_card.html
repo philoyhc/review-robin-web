@@ -63,7 +63,10 @@
       <p>Run generation to create the assignment pairs (note that doing so will replace any previously generated assignment pairs).</p>
       <form method="post"
             action="/operator/sessions/{{ session.id }}/assignments/generate"
-            id="next-action-generate-form"></form>
+            id="next-action-generate-form">
+        <input type="hidden" name="confirm_replace" value="true">
+        <input type="hidden" name="acknowledge_response_loss" value="true">
+      </form>
     {% elif is_draft %}
       {% if validation_summary %}
         {# Validation just ran (?validated=1) and didn't pass — the
@@ -88,10 +91,15 @@
         </p>
         {# Form holder for the workflow-stepper Generate button below
            — the State 2 row offers a regenerate option as the
-           Secondary action. #}
+           Secondary action. Hidden confirm fields let the route
+           skip its confirm-replace + response-loss-ack checks; the
+           operator's acknowledgment lives in the button label. #}
         <form method="post"
               action="/operator/sessions/{{ session.id }}/assignments/generate"
-              id="next-action-generate-form"></form>
+              id="next-action-generate-form">
+          <input type="hidden" name="confirm_replace" value="true">
+          <input type="hidden" name="acknowledge_response_loss" value="true">
+        </form>
       {% endif %}
     {% elif is_validated %}
       {% if validation_summary and validation_summary.can_activate %}
@@ -123,10 +131,19 @@
       {% endif %}
       {# Empty form holders for the workflow-stepper bottom row;
          buttons declare form="..." so POST is wired even though
-         the buttons live in the bottom button row. #}
+         the buttons live in the bottom button row.
+
+         ``confirm_replace`` and ``acknowledge_response_loss`` are
+         pre-set so the Generate Primary fires without surfacing
+         a confirm dialog — the workflow-stepper acknowledgment
+         lives in the button label itself, matching the State 6
+         Revert hidden-confirm pattern. #}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/assignments/generate"
-            id="next-action-generate-form"></form>
+            id="next-action-generate-form">
+        <input type="hidden" name="confirm_replace" value="true">
+        <input type="hidden" name="acknowledge_response_loss" value="true">
+      </form>
       <form method="post"
             action="/operator/sessions/{{ session.id }}/revert"
             id="next-action-revert-form">

@@ -141,15 +141,24 @@ Buttons: workflow stepper with Generate as the live next action.
 
 POST `/assignments/generate` calls `assignments.replace_assignments`,
 materialising one `Assignment` row per `(reviewer, reviewee, instrument)`
-triple eligible under the pinned `SessionRuleSet`. When `existing_count
-> 0` (post-revert case), the route 303s to
-`/assignments?needs_confirm=1`, surfacing the inline confirm dialog
-on the Assignments page; from there the operator ticks the replace
-(and, if responses exist, response-loss) checkboxes and submits. When
-`existing_count == 0` the POST generates directly. Redirect always
-lands on `/operator/sessions/{id}/assignments` — the route does not
-honour `return_to`, so operators on Session Home end up on Assignments
-after the action fires.
+triple eligible under the pinned `SessionRuleSet`. The
+`next-action-generate-form` carries hidden `confirm_replace=true` and
+`acknowledge_response_loss=true` fields so the route's confirm-replace
+and response-loss-ack checks pass without surfacing a dialog — the
+operator's acknowledgment lives in the Generate button label itself.
+The route's `?needs_confirm=1` redirect path remains in place for
+direct route hits (e.g. `curl`) without the form, but is unreachable
+from the workflow card UI. Redirect always lands on
+`/operator/sessions/{id}/assignments` — the route does not honour
+`return_to`, so operators on Session Home end up on Assignments after
+the action fires.
+
+The standalone Generate assignments card on the Assignments page,
+which previously hosted a Secondary Generate button with inline
+confirm-replace and stale-pairs badge, retired with this same
+refresh — the Next Action card carries the full affordance and the
+per-instrument status blocks below it continue to report the engine
+pass's eligible / generated counts.
 
 ### State 2 — Draft, validation not yet run (`is_draft`, no summary)
 
