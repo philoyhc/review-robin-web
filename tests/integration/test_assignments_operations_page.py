@@ -197,20 +197,20 @@ def test_operations_page_drops_manual_upload_card(
     assert "manual/import" not in body
 
 
-def test_operations_page_renders_page_level_generate(
+def test_operations_page_does_not_render_generate_card(
     client: TestClient, db: Session
 ) -> None:
-    """Slice 3a — Rule Based card retired; the page now hosts a
-    page-level Generate button that materialises pairs for every
-    instrument with a pinned rule."""
+    """Slice 3a retired the Rule Based card; the Next-Action
+    workflow-stepper refresh subsequently retired the standalone
+    Generate assignments card too — the Next Action card's Generate
+    Primary now carries that affordance."""
 
     review_session = _make_session(client, db, code="ops-rule")
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
     assert 'id="rule-based-assignment"' not in body
-    assert 'id="assignments-generate-card"' in body
-    assert "Generate assignments" in body
+    assert 'id="assignments-generate-card"' not in body
 
 
 def _self_review_instrument_id(db: Session, session_id: int) -> int:

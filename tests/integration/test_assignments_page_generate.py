@@ -73,36 +73,14 @@ def _seed_pair(client: TestClient, session_id: int) -> None:
     )
 
 
-def test_generate_button_disabled_when_no_rule_pinned(
+def test_status_block_reports_pinned_rule_and_eligible_count(
     client: TestClient, db: Session
 ) -> None:
-    """Fresh session, rosters present, no rule pinned: button is
-    disabled with the "Pin rules on the Instruments page first"
-    nudge + a deep link to the Instruments page."""
-
-    review_session = _make_session(client, db, code="page-noPin")
-    _seed_pair(client, review_session.id)
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
-    ).text
-    assert 'id="assignments-generate-card"' in body
-    # The disabled <button> carries the nudge in its title attribute.
-    assert "Pin rules on the Instruments page first" in body
-    # Deep link surfaces in the help-text body.
-    assert (
-        f'href="/operator/sessions/{review_session.id}/instruments"'
-        in body
-    )
-    # Form (with submit button enabled) does NOT render.
-    assert 'id="assignments-generate-form"' not in body
-
-
-def test_generate_button_enabled_after_pin(
-    client: TestClient, db: Session
-) -> None:
-    """Pinning a rule on every instrument flips the button live —
-    the form renders and the disabled title is gone."""
+    """Pinning a rule on every instrument lights up the status
+    block: rule name + eligible count from the engine pass. The
+    standalone Generate card UI it previously gated retired with
+    the Next-Action workflow-stepper refresh, but the engine pass
+    still feeds the per-instrument status block."""
 
     review_session = _make_session(client, db, code="page-pin")
     _seed_pair(client, review_session.id)
@@ -111,10 +89,8 @@ def test_generate_button_enabled_after_pin(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    assert 'id="assignments-generate-form"' in body
-    assert "Pin rules on the Instruments page first" not in body
-    # Status block reports the pinned rule + eligible count from the
-    # engine pass.
+    # Status block reports the pinned rule + eligible count from
+    # the engine pass.
     assert "Full Matrix" in body
     # 1 reviewer × 1 reviewee = 1 eligible pair.
     status_section = body.split('id="assignments-status-blocks"', 1)[1]
@@ -163,49 +139,6 @@ def test_generate_materialises_per_instrument(
     # Generated-count pill renders with the actual row count (1
     # alice→carol pair in this fixture).
     assert ">1</span>" in body.split('id="assignments-status-blocks"', 1)[1]
-
-
-def test_stale_badge_surfaces_when_roster_changes_after_generate(
-    client: TestClient, db: Session
-) -> None:
-    """Workflow: pin → Generate → add a new reviewer (eligible
-    count goes up) → eligible diverges from generated → "Pairs
-    may be stale" badge appears + per-row stale pill."""
-
-    review_session = _make_session(client, db, code="page-stale")
-    _seed_pair(client, review_session.id)
-    pin_full_matrix_on_all_instruments(db, review_session.id)
-    generate_via_page_button(client, review_session.id)
-
-    # Add a second reviewer post-Generate. Eligible bumps to 2;
-    # generated stays at 1.
-    client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
-        files={
-            "file": (
-                "r2.csv",
-                (
-                    b"ReviewerName,ReviewerEmail\n"
-                    b"Alice,alice@example.edu\n"
-                    b"Bob,bob@example.edu\n"
-                ),
-                "text/csv",
-            )
-        },
-        data={"confirm_replace": "true"},
-        follow_redirects=False,
-    )
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
-    ).text
-    assert 'id="pairs-may-be-stale-badge"' in body
-    assert "Pairs may be stale" in body
-    # The page-level badge near the Generate button is the
-    # operator's primary cue. (The per-row "stale" pill in the
-    # status-block table only renders when the instrument has
-    # *some* generated rows — a 0-count instrument shows the
-    # "Not generated yet" placeholder regardless.)
 
 
 def test_status_block_renders_no_rule_pinned_state(

@@ -144,52 +144,10 @@
 
   {% include "operator/partials/validation_results.html" %}
 
-  {% if not is_ready %}
-    <div class="bottom-grid">
-      <section class="card" id="assignments-generate-card">
-        <h2>Generate assignments</h2>
-        {% if page_ctx.pinned_instrument_count == 0 %}
-          <p class="form-help">
-            No instruments have a rule pinned yet. Pin rules on the
-            <a href="{{ page_ctx.instruments_url }}">Instruments page</a>
-            first, then come back here to generate.
-          </p>
-          <p style="margin-bottom: 0;">
-            <button class="btn secondary" type="button"
-                    disabled aria-disabled="true"
-                    title="Pin rules on the Instruments page first.">Generate assignments</button>
-          </p>
-        {% else %}
-          <p class="form-help">
-            Materialises pairs for every instrument that has a rule
-            pinned ({{ page_ctx.pinned_instrument_count }} of
-            {{ page_ctx.status_blocks | length }}).
-            {% if page_ctx.any_stale %}
-              <span class="pill pill-empty"
-                    id="pairs-may-be-stale-badge">Pairs may be stale</span>
-            {% endif %}
-          </p>
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/assignments/generate"
-                id="assignments-generate-form">
-            {% if assignment_count %}
-              <p>
-                <label style="font-weight: normal;">
-                  <input type="checkbox" name="confirm_replace" value="true" required>
-                  Yes, replace the existing
-                  <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>.
-                </label>
-              </p>
-            {% endif %}
-            <p style="margin-bottom: 0;">
-              <button class="btn secondary" type="submit"
-                      id="assignments-generate-button">Generate assignments</button>
-            </p>
-          </form>
-        {% endif %}
-      </section>
-    </div>
-  {% endif %}
+  {# The standalone Generate assignments card retired with the
+     Next Action workflow-stepper refresh — the Generate Primary in
+     State 1A (and Secondary regenerate in States 2 / 4A / 4B) on
+     the Next Action card carries the affordance. #}
 
   {% if pair_sample %}
     {% set has_r_tag_1 = pair_sample | selectattr("reviewer.tag_1") | list | length > 0 %}

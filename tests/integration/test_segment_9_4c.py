@@ -174,12 +174,12 @@ def test_assignments_hub_inlines_method_forms(
         f'action="/operator/sessions/{review_session.id}/assignments/full-matrix"'
         not in body
     )
-    # Rule Based card retired in 15B Slice 3a; the page now hosts a
-    # page-level Generate button + per-instrument status blocks
-    # instead of the picker-on-this-page model.
+    # Rule Based card retired in 15B Slice 3a, and the standalone
+    # Generate assignments card retired with the Next-Action
+    # workflow-stepper refresh — the Generate Primary in the Next
+    # Action card now carries that affordance.
     assert 'id="rule-based-assignment"' not in body
-    assert 'id="assignments-generate-card"' in body
-    assert "Generate assignments" in body
+    assert 'id="assignments-generate-card"' not in body
 
 
 # ---------------------------------------------------------------------------
