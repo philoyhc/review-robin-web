@@ -213,6 +213,13 @@ def test_operations_page_renders_page_level_generate(
     assert "Generate assignments" in body
 
 
+def _self_review_instrument_id(db: Session, session_id: int) -> int:
+    from app.db.models import Instrument
+    return db.execute(
+        select(Instrument.id).where(Instrument.session_id == session_id)
+    ).scalars().first()
+
+
 def test_operations_page_renders_self_reviews_toggle_section(
     client: TestClient, db: Session
 ) -> None:
@@ -223,20 +230,28 @@ def test_operations_page_renders_self_reviews_toggle_section(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    assert 'id="self-reviews-toggle"' in body
-    assert 'id="self-reviews-toggle-button"' in body
-    # Default state on a fresh session is ``self_reviews_active=True``
-    # — the button label shows "Turn OFF".
-    assert "Turn OFF self-reviews" in body
-    # Active count pill renders (1 self-review pair: alice/alice).
-    assert "1 active" in body
+    instrument_id = _self_review_instrument_id(db, review_session.id)
+    # Standalone self-reviews card retired in the post-15B
+    # refinement sweep — per-instrument Self review column on the
+    # status block table owns the surface now.
+    assert 'id="self-reviews-toggle"' not in body
+    # The per-instrument checkbox is in the Self review column.
+    assert (
+        f'data-self-review-instrument="{instrument_id}"' in body
+    )
+    # Default state on a fresh session is ``self_reviews_active=True``;
+    # the single self-review row in this fixture lands include=True,
+    # so the checkbox renders as ``checked``.
+    assert (
+        'data-self-review-state="checked"' in body
+    )
 
 
-def test_self_reviews_toggle_button_disabled_when_zero(
+def test_self_reviews_column_omits_checkbox_when_count_zero(
     client: TestClient, db: Session
 ) -> None:
-    """Empty self-review state: button still renders for
-    discoverability but is disabled with a tooltip."""
+    """Empty self-review state: the Self review column shows a 0
+    pill but does NOT render the checkbox — nothing to toggle."""
 
     review_session = _make_session(client, db, code="ops-toggle-zero")
     # Generate against a population with no email overlap.
@@ -267,9 +282,15 @@ def test_self_reviews_toggle_button_disabled_when_zero(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    button_section = body.split('id="self-reviews-toggle-button"', 1)[1][:300]
-    assert "disabled" in button_section
-    assert "no self-review pairs" in body.lower()
+    instrument_id = _self_review_instrument_id(db, review_session.id)
+    # 0 self-review rows → pill still renders (with value 0) but no
+    # toggle checkbox.
+    assert (
+        f'data-self-review-count="{instrument_id}">0</span>' in body
+    )
+    assert (
+        f'data-self-review-instrument="{instrument_id}"' not in body
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -293,26 +314,26 @@ def _self_review_includes(
     }
 
 
-def test_bulk_toggle_off_flips_self_review_rows_to_inactive(
+def test_per_instrument_toggle_off_flips_self_review_rows_to_inactive(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="ops-flip-off")
     _seed_population_with_self_review(client, review_session.id)
     _generate_with_self_reviews(client, db, review_session.id)
+    instrument_id = _self_review_instrument_id(db, review_session.id)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/self-reviews/active",
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/{instrument_id}/self-reviews/active",
         data={"active": "false"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
 
-    db.refresh(review_session)
-    assert review_session.self_reviews_active is False
     assert _self_review_includes(db, review_session.id) == {False}
 
 
-def test_bulk_toggle_on_flips_self_review_rows_to_active(
+def test_per_instrument_toggle_on_flips_self_review_rows_to_active(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="ops-flip-on")
@@ -320,58 +341,64 @@ def test_bulk_toggle_on_flips_self_review_rows_to_active(
     db.commit()
     _seed_population_with_self_review(client, review_session.id)
     _generate_with_self_reviews(client, db, review_session.id)
-    # After generation against the new flag, self-review rows landed
-    # inactive (12C-1 PR 1 wired this).
+    # After generation against the OFF session flag, self-review
+    # rows landed inactive (12C-1 PR 1 wired this).
     assert _self_review_includes(db, review_session.id) == {False}
+    instrument_id = _self_review_instrument_id(db, review_session.id)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/self-reviews/active",
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/{instrument_id}/self-reviews/active",
         data={"active": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
 
-    db.refresh(review_session)
-    assert review_session.self_reviews_active is True
     assert _self_review_includes(db, review_session.id) == {True}
 
 
-def test_bulk_toggle_emits_audit_event(
+def test_per_instrument_toggle_emits_audit_event(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="ops-audit")
     _seed_population_with_self_review(client, review_session.id)
     _generate_with_self_reviews(client, db, review_session.id)
+    instrument_id = _self_review_instrument_id(db, review_session.id)
 
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/self-reviews/active",
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/{instrument_id}/self-reviews/active",
         data={"active": "false"},
         follow_redirects=False,
     )
 
     event = db.execute(
         select(AuditEvent).where(
-            AuditEvent.event_type == "assignments.self_reviews_active_set",
+            AuditEvent.event_type
+            == "assignments.instrument_self_reviews_active_set",
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
     detail = event.detail
     assert detail["counts"]["flipped"] == 1
     assert detail["context"]["active"] is False
+    assert detail["refs"]["instrument_id"] == instrument_id
 
 
-def test_bulk_toggle_idempotent_when_state_unchanged(
+def test_per_instrument_toggle_idempotent_when_state_unchanged(
     client: TestClient, db: Session
 ) -> None:
-    """Posting active=true on a session that's already active should
+    """Posting active=true on an already-active instrument should
     succeed and audit zero flipped rows (no work to do)."""
 
     review_session = _make_session(client, db, code="ops-idem")
     _seed_population_with_self_review(client, review_session.id)
     _generate_with_self_reviews(client, db, review_session.id)
-    # Default is_active=True; pressing the "on" button does nothing.
+    instrument_id = _self_review_instrument_id(db, review_session.id)
+    # Default is_active=True; toggling to true again does nothing.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/self-reviews/active",
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/{instrument_id}/self-reviews/active",
         data={"active": "true"},
         follow_redirects=False,
     )
@@ -379,7 +406,8 @@ def test_bulk_toggle_idempotent_when_state_unchanged(
 
     event = db.execute(
         select(AuditEvent).where(
-            AuditEvent.event_type == "assignments.self_reviews_active_set",
+            AuditEvent.event_type
+            == "assignments.instrument_self_reviews_active_set",
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()

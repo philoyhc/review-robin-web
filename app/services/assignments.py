@@ -254,65 +254,73 @@ def count_self_reviews_in_assignments(
     return sum(1 for _, reviewer, reviewee in rows if is_self_review(reviewer, reviewee))
 
 
-def self_review_include_breakdown(
+def self_review_breakdown_per_instrument(
     db: Session, session_id: int
-) -> tuple[int, int]:
-    """Return ``(active, deactivated)`` for self-review rows in the
-    session's assignments table. Powers the bulk Include toggle's
-    state pill / counts on the Operations Assignments page (15D PR
-    6a). ``active`` = self-review rows with ``include=True``;
-    ``deactivated`` = self-review rows with ``include=False``."""
+) -> dict[int, tuple[int, int]]:
+    """Per-instrument ``(active, deactivated)`` counts for
+    self-review rows. Drives the per-instrument **Self review**
+    column on the Assignments-page status blocks: the pill text is
+    ``active + deactivated``; the checkbox state is derived from
+    the (active, deactivated) ratio (all-active → checked;
+    all-deactivated → unchecked; mixed → ``indeterminate``).
 
+    Instruments with no self-review rows are absent from the dict.
+    Replaces the session-wide ``self_review_include_breakdown`` —
+    the per-instrument variant subsumes it for the only consumer
+    that's still around (the Assignments page).
+    """
     rows = db.execute(
         select(Assignment, Reviewer, Reviewee)
         .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
         .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
         .where(Assignment.session_id == session_id)
     ).all()
-    active = 0
-    deactivated = 0
+    out: dict[int, tuple[int, int]] = {}
     for assignment, reviewer, reviewee in rows:
         if not is_self_review(reviewer, reviewee):
             continue
+        active, deactivated = out.get(assignment.instrument_id, (0, 0))
         if assignment.include:
             active += 1
         else:
             deactivated += 1
-    return active, deactivated
+        out[assignment.instrument_id] = (active, deactivated)
+    return out
 
 
-def set_self_reviews_active(
+def set_instrument_self_reviews_active(
     db: Session,
     *,
     review_session: ReviewSession,
+    instrument_id: int,
     user: User,
     active: bool,
     correlation_id: str,
 ) -> int:
-    """Bulk-flip every self-review assignment row's ``include`` flag
-    to ``active`` and persist the operator's intent on
-    ``sessions.self_reviews_active``. Returns the count of rows
-    flipped (i.e. rows whose previous ``include`` differed from
-    ``active``).
+    """Bulk-flip self-review rows' ``include`` flag scoped to one
+    instrument. Mirror of the retired session-wide
+    ``set_self_reviews_active`` — the per-instrument Self review
+    column on the Slice 3a Assignments-page status blocks owns
+    this surface now.
 
-    Single transaction: writes ``sessions.self_reviews_active`` +
-    UPDATEs every self-review row in one go. Per-row Include
-    checkboxes still work post-flip (mixed state — toggle ON, row
-    explicitly OFF — is supported; the audit's ``counts.flipped``
-    captures the row count this call moved).
-
-    Audit event ``assignments.self_reviews_active_set`` registered
-    in ``EVENT_SCHEMAS``. Detail carries ``counts.flipped`` +
-    ``context.active`` (the resulting boolean).
+    Returns the row count actually flipped (rows whose previous
+    ``include`` differed from ``active``). Mixed states converge:
+    a partially-active instrument flipped to ``active=False``
+    moves every still-active row to ``False``; a partially-active
+    one flipped to ``active=True`` moves every deactivated row to
+    ``True``. Audit event
+    ``assignments.instrument_self_reviews_active_set`` carries
+    ``counts.flipped`` + ``context.active`` +
+    ``refs.instrument_id``.
     """
-
-    review_session.self_reviews_active = active
-
     rows = db.execute(
         select(Assignment, Reviewer, Reviewee)
         .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
         .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
-        .where(Assignment.session_id == review_session.id)
+        .where(
+            Assignment.session_id == review_session.id,
+            Assignment.instrument_id == instrument_id,
+        )
     ).all()
     flipped = 0
     for assignment, reviewer, reviewee in rows:
@@ -322,18 +330,19 @@ def set_self_reviews_active(
             assignment.include = active
             flipped += 1
     db.flush()
-
     audit.write_event(
         db,
-        event_type="assignments.self_reviews_active_set",
+        event_type="assignments.instrument_self_reviews_active_set",
         summary=(
-            f"Self-reviews bulk-set to {'active' if active else 'inactive'} "
+            f"Self-reviews on instrument {instrument_id} bulk-set "
+            f"to {'active' if active else 'inactive'} "
             f"({flipped} row{'s' if flipped != 1 else ''} flipped)"
         ),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(flipped=flipped),
         context={"active": active},
+        refs={"instrument_id": instrument_id},
         correlation_id=correlation_id,
     )
     db.commit()
