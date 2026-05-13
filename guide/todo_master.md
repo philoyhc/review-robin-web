@@ -450,7 +450,8 @@ bottom of this file.
     card, Assignments page reshape to preview-only + tab swap,
     Next Action card "Generate assignments" affordance,
     per-instrument validation, reviewer dashboard per-instrument
-    grouping. ~6 PRs. (Manual-CSV `Instrument` column catalog
+    grouping. ~8 PRs (2a / 2b / 3a / 3b split out the two
+    400-LOC slices). (Manual-CSV `Instrument` column catalog
     item #28 is moot post-15D; manual-row authoring retired.
     `AssignmentContext1-3` also retired.)
     **Plan:** `guide/segment_15B_per_instrument_assignments.md`.
