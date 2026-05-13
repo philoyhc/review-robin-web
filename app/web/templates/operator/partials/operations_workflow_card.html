@@ -18,7 +18,11 @@
 
   {# Empty <form> declarations are siblings of the button row so
      each button's ``form="..."`` attribute can wire up POST
-     without nesting forms (HTML forbids that). #}
+     without nesting forms (HTML forbids that). Destructive
+     confirm / acknowledge-warnings checkboxes render inline near
+     the button row below using the HTML5 ``form`` attribute on
+     ``<input>`` so the visible label sits next to the button it
+     gates, while the form element itself stays at the top. #}
   <form method="post"
         action="{{ workflow_card.generate_url }}"
         id="workflow-card-generate-form">
@@ -27,16 +31,10 @@
   </form>
   <form method="post"
         action="{{ workflow_card.activate_url }}"
-        id="workflow-card-activate-form">
-    {% if workflow_card.acknowledge_warnings_count > 0 %}
-      <input type="hidden" name="acknowledge_warnings" value="true">
-    {% endif %}
-  </form>
+        id="workflow-card-activate-form"></form>
   <form method="post"
         action="{{ workflow_card.pause_url }}"
-        id="workflow-card-pause-form">
-    <input type="hidden" name="confirm" value="true">
-  </form>
+        id="workflow-card-pause-form"></form>
 
   {% if workflow_card.banner_text %}
     <p class="workflow-card-banner {{ workflow_card.banner_kind }}"
@@ -49,6 +47,47 @@
   {% endif %}
 
   <p class="workflow-card-next-action">{{ workflow_card.next_action_line }}</p>
+
+  {# Inline checkbox rows for destructive / acknowledge-warnings
+     actions. Each ``<input>`` uses the HTML5 ``form`` attribute to
+     attach to the matching top-of-card ``<form>`` so the visible
+     label sits next to the action it gates. ``required`` prevents
+     the matching button from submitting until the box is ticked.
+
+     - **Activate with warnings** — visible only when there are
+       warnings in the readiness report.
+     - **Pause** — visible whenever the Pause button is enabled
+       (today: ``ready`` state); the existing
+       ``/operator/sessions/{id}/revert`` route already requires
+       ``confirm=true``. #}
+  {% if workflow_card.acknowledge_warnings_count > 0 %}
+    <p class="workflow-card-confirm" data-confirm-for="activate">
+      <label>
+        <input type="checkbox"
+               name="acknowledge_warnings"
+               value="true"
+               form="workflow-card-activate-form"
+               required>
+        I acknowledge {{ workflow_card.acknowledge_warnings_count }}
+        warning{% if workflow_card.acknowledge_warnings_count != 1 %}s{% endif %}
+        and want to activate anyway.
+      </label>
+    </p>
+  {% endif %}
+
+  {% if workflow_card.pause_enabled %}
+    <p class="workflow-card-confirm" data-confirm-for="pause">
+      <label>
+        <input type="checkbox"
+               name="confirm"
+               value="true"
+               form="workflow-card-pause-form"
+               required>
+        Yes, pause this session and return to draft. Existing
+        responses are preserved.
+      </label>
+    </p>
+  {% endif %}
 
   <div class="workflow-card-buttons">
     <button class="btn{% if not workflow_card.generate_is_primary %} secondary{% endif %}"
