@@ -50,19 +50,11 @@
     </div>
   {% endif %}
 
-  {% if generated_flash %}
-    <div class="banner banner-info" id="generated-flash">
-      <p style="margin: 0;">
-        Assignments generated. Per-instrument counts in the status blocks below.
-      </p>
-    </div>
-  {% endif %}
-
   {% include "operator/partials/validation_results.html" %}
 
   {# Segment 15B Slice 3a + refinements — page-level Generate
      (half-width, left column) + per-instrument status table
-     hosting Self review + Filter columns. Rule selection lives
+     hosting Self review + Show columns. Rule selection lives
      on the Instruments page (Slice 2a per-card picker). The
      standalone session-wide self-reviews toggle card retired
      here in favour of the per-instrument checkbox column —
@@ -124,7 +116,7 @@
             <th>Generated</th>
             <th>Self review</th>
             <th></th>
-            <th>Filter</th>
+            <th>Show</th>
           </tr>
         </thead>
         <tbody>
@@ -179,9 +171,14 @@
                 <a href="{{ block.edit_url }}">Edit on Instruments page</a>
               </td>
               <td>
+                <span class="pill pill-count"
+                      data-show-pill="{{ block.instrument_id }}"
+                      style="margin-right: 8px;"
+                      {% if block.generated_count == 0 %}hidden{% endif %}>{{ block.generated_count }}</span>
                 <input type="checkbox"
                        data-filter-instrument="{{ block.instrument_id }}"
-                       aria-label="Filter preview table to this instrument">
+                       {% if block.generated_count > 0 %}checked{% endif %}
+                       aria-label="Show this instrument's pairs in the preview table">
               </td>
             </tr>
           {% endfor %}
@@ -406,17 +403,27 @@
     })();
   </script>
 
-  {# Per-instrument Filter column — client-side filter of the
-     pairs preview table. Ticked checkboxes select instruments to
-     show; zero ticked → show everything (the natural post-Generate
-     state). State lives in the DOM only; not persisted across
-     page reloads — the user said "when generating, start with
-     untick". #}
+  {# Per-instrument Show column — client-side filter of the pairs
+     preview table. Server-side default: every instrument with
+     ``generated_count > 0`` renders checked, so the post-Generate
+     view shows every materialised pair. Untick to hide that
+     instrument's rows; untick all to empty the table (the user's
+     "show only if ticked" rule).
+
+     The per-row pill renders the instrument's generated count;
+     visibility tracks the checkbox (visible when ticked, hidden
+     when not). #}
   <script>
     (function () {
       var boxes = document.querySelectorAll(
         "input[data-filter-instrument]"
       );
+      // Status table only renders pre-ready (the "not is_ready"
+      // branch); on ready sessions there are no Show checkboxes
+      // but the pairs preview still renders. Skip wiring entirely
+      // when there's nothing to filter — otherwise apply() would
+      // hide every preview row.
+      if (boxes.length === 0) return;
       var rows = document.querySelectorAll("tr[data-row-instrument]");
       function apply() {
         var ticked = [];
@@ -424,18 +431,26 @@
           if (b.checked) ticked.push(b.dataset.filterInstrument);
         });
         rows.forEach(function (r) {
-          if (ticked.length === 0) {
-            r.style.display = "";
+          r.style.display = ticked.indexOf(
+            r.dataset.rowInstrument
+          ) >= 0 ? "" : "none";
+        });
+        boxes.forEach(function (b) {
+          var pill = document.querySelector(
+            '[data-show-pill="' + b.dataset.filterInstrument + '"]'
+          );
+          if (!pill) return;
+          if (b.checked) {
+            pill.removeAttribute("hidden");
           } else {
-            r.style.display = ticked.indexOf(
-              r.dataset.rowInstrument
-            ) >= 0 ? "" : "none";
+            pill.setAttribute("hidden", "");
           }
         });
       }
       boxes.forEach(function (b) {
         b.addEventListener("change", apply);
       });
+      apply();
     })();
   </script>
 {% endblock %}

@@ -50,7 +50,6 @@ router = APIRouter()
 @router.get("/sessions/{session_id}/assignments", response_class=HTMLResponse)
 def assignments_hub(
     request: Request,
-    generated: int | None = Query(default=None),
     needs_confirm: int | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -61,7 +60,6 @@ def assignments_hub(
         db,
         review_session,
         user,
-        generated_flash=generated == 1,
         missing_confirm=needs_confirm == 1,
     )
 
@@ -92,7 +90,6 @@ def _render_assignments_hub(
     issues: list | None = None,
     missing_confirm: bool = False,
     is_blocked: bool = False,
-    generated_flash: bool = False,
 ) -> HTMLResponse:
     assignment_count = assignments.existing_count(db, review_session.id)
     pair_sample = (
@@ -178,7 +175,6 @@ def _render_assignments_hub(
             "page_ctx": views.build_assignments_page_context(
                 db, review_session
             ),
-            "generated_flash": generated_flash,
         },
         status_code=status_code,
     )
@@ -233,10 +229,7 @@ def assignments_generate(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=(
-            f"/operator/sessions/{review_session.id}/assignments"
-            f"?generated=1"
-        ),
+        url=f"/operator/sessions/{review_session.id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
