@@ -43,6 +43,37 @@
               </span>
             </td>
           </tr>
+          {# Segment 15B Slice 6 — per-instrument sub-rows on
+             multi-instrument sessions. ``instrument_rows`` is empty
+             for single-instrument sessions so the render stays
+             byte-identical to its pre-15B shape. #}
+          {% for sub in item.instrument_rows %}
+            <tr class="dashboard-instrument-row">
+              <td class="muted" style="padding-left: 24px;">
+                ↳
+                <a href="/reviewer/sessions/{{ item.session.id }}/{{ sub.position }}">
+                  {{ sub.label }}
+                </a>
+              </td>
+              <td></td>
+              <td>
+                {% if sub.state == "submitted" %}
+                  <span class="pill pill-success">submitted</span>
+                {% elif sub.state == "in progress" %}
+                  <span class="pill pill-warning">in progress</span>
+                {% elif sub.state == "no assignments" %}
+                  <span class="pill pill-empty">no assignments</span>
+                {% else %}
+                  <span class="pill pill-info">not started</span>
+                {% endif %}
+                {% if sub.total_assignments %}
+                  <span class="muted">
+                    ({{ sub.completed_rows }}/{{ sub.total_assignments }})
+                  </span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
         {% endfor %}
       </table>
     </div>

@@ -57,6 +57,89 @@ def reviewer_review_count_for_user(db: Session, user: User) -> int:
     return sum(1 for r in rows if r.email.casefold() == target)
 
 
+@dataclass(frozen=True)
+class DashboardInstrumentRow:
+    """One per-instrument sub-row on the reviewer dashboard
+    (Segment 15B Slice 6).
+
+    Suppressed entirely when the session has only one instrument
+    so the single-instrument dashboard stays byte-identical to its
+    pre-15B render.
+
+    Fields:
+
+    - ``label`` — display name (``instrument.short_label`` when
+      set, ``instrument.name`` otherwise).
+    - ``position`` — 1-based position in the reviewer surface URL
+      shape (``/reviewer/sessions/{id}/{position}``). Indexed by
+      ``Instrument.order, Instrument.id`` so it matches the
+      reviewer surface's own page-button ordering.
+    - ``state`` — ``"not started"`` / ``"in progress"`` /
+      ``"submitted"`` / ``"no assignments"``. Last value covers
+      the case where the pinned rule excluded this reviewer from
+      this particular instrument (multi-instrument sessions can
+      have per-instrument pin gaps).
+    - ``completed_rows`` / ``total_assignments`` — surfaced in the
+      muted ``(N/M)`` suffix alongside the pill, same shape as
+      the per-session pill row.
+    """
+
+    label: str
+    position: int
+    state: str
+    completed_rows: int
+    total_assignments: int
+
+
+def _build_dashboard_instrument_rows(
+    db: Session, reviewer: Reviewer, review_session: ReviewSession
+) -> list[DashboardInstrumentRow]:
+    """Return one :class:`DashboardInstrumentRow` per session
+    instrument when ``N > 1``; empty list otherwise.
+
+    The empty-list-on-N==1 contract keeps the single-instrument
+    dashboard byte-identical (invariant #3 from the segment plan).
+    """
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    if len(instruments) <= 1:
+        return []
+    state_by_instrument = (
+        responses_service.reviewer_session_state_per_instrument(
+            db, reviewer=reviewer, session_id=review_session.id
+        )
+    )
+    rows: list[DashboardInstrumentRow] = []
+    for position, instrument in enumerate(instruments, start=1):
+        state = state_by_instrument.get(instrument.id)
+        if state is None:
+            rows.append(
+                DashboardInstrumentRow(
+                    label=instrument.short_label or instrument.name,
+                    position=position,
+                    state="no assignments",
+                    completed_rows=0,
+                    total_assignments=0,
+                )
+            )
+            continue
+        rows.append(
+            DashboardInstrumentRow(
+                label=instrument.short_label or instrument.name,
+                position=position,
+                state=state.pill_state,
+                completed_rows=state.completed_count,
+                total_assignments=state.total_assignments,
+            )
+        )
+    return rows
+
+
 @router.get("", response_class=HTMLResponse)
 def reviewer_dashboard(
     request: Request,
@@ -84,6 +167,9 @@ def reviewer_dashboard(
                 "reviewer": reviewer,
                 "session": review_session,
                 "pill": pill,
+                "instrument_rows": _build_dashboard_instrument_rows(
+                    db, reviewer, review_session
+                ),
             }
         )
     return _templates.TemplateResponse(
