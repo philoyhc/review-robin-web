@@ -19,11 +19,27 @@
   <div class="card">
     <h2>Issues</h2>
     {% if validate is defined %}
+      {# Segment 15E PR 2: groups are pre-sorted by (gate, source).
+         A gate heading renders before each gate's first group; the
+         per-source <h3> carries the original ``issue-source-{source}``
+         id on its first appearance only, preserving the setup-
+         coverage matrix's deep-link target when a source has rules
+         in both gates. #}
+      {% set _ns = namespace(current_gate=none, seen_sources=[]) %}
       {% for group in _groups %}
-        <h3 id="issue-source-{{ group.source }}" style="text-transform: capitalize;">
+        {% if group.gate != _ns.current_gate %}
+          <h2 id="gate-{{ group.gate }}" class="issue-gate-heading" style="text-transform: capitalize;">
+            {{ group.gate }} gate
+          </h2>
+          {% set _ns.current_gate = group.gate %}
+        {% endif %}
+        <h3{% if group.source not in _ns.seen_sources %} id="issue-source-{{ group.source }}"{% endif %} style="text-transform: capitalize;">
           {{ group.source }}
           <span class="muted">({{ group.count_summary }})</span>
         </h3>
+        {% if group.source not in _ns.seen_sources %}
+          {% set _ns.seen_sources = _ns.seen_sources + [group.source] %}
+        {% endif %}
         <ul class="issue-list">
           {% for issue in group.issues %}
             <li{% if issue.rule_key %} id="issue-{{ issue.rule_key }}-{{ loop.index }}"{% endif %}>
