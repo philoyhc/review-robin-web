@@ -12,6 +12,13 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
+  {# Segment 15E PR 3 — Operations Workflow Card. The single,
+     state-aware action surface; renders identically on every
+     Operations-row page (PR 4 extends to Validate / Previews /
+     Invitations / Responses). Sits directly below the chrome,
+     above the per-instrument status table. #}
+  {% include "operator/partials/operations_workflow_card.html" %}
+
   {# Segment 15B Slice 3a + refinements — per-instrument status
      card renders in BOTH draft + ready states (the "status info
      card" sits first under chrome, matching the Instruments

@@ -84,7 +84,7 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
     response = generate_via_page_button(client, review_session.id)
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.id}/assignments?wf=clean"
     )
     rows = list(
         db.execute(
@@ -299,7 +299,7 @@ def test_assignments_hub_no_flash_banner_after_generate(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     response = generate_via_page_button(client, review_session.id)
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.id}/assignments?wf=clean"
     )
     body = client.get(response.headers["location"]).text
     assert 'id="generated-flash"' not in body
