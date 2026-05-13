@@ -67,7 +67,10 @@ from app.services.instruments._rtds import (
     SEEDED_RESPONSE_TYPE_DEFINITIONS,
     validation_block_for_rtd,
 )
-from app.services.rules.seeds import SEEDED_RULE_SETS as _SEEDED_RULE_SETS
+from app.services.rules.seeds import (
+    SEEDED_RULE_SETS as _SEEDED_RULE_SETS,
+    materialise_seed_rule_sets,
+)
 
 _SEEDED_RTD_NAMES: frozenset[str] = frozenset(
     spec["response_type"] for spec in SEEDED_RESPONSE_TYPE_DEFINITIONS
@@ -1588,10 +1591,36 @@ def _apply_instruments(
             )
         ).scalars()
     }
+    # Per-instrument rule pin (Segment 15B Slice 2b). The session-tier
+    # ``session_rule_sets`` rows have been upserted by
+    # ``_apply_session_rule_sets`` earlier in the apply pipeline. The
+    # idempotent seed materialiser here covers any session that
+    # bypassed ``sessions.create_session`` (test fixtures, raw
+    # constructors) — mirrors the per-request safety net in
+    # ``views.build_instruments_context``.
+    materialise_seed_rule_sets(db, review_session)
+    rule_set_id_by_name = {
+        snap.name: snap.id
+        for snap in db.execute(
+            select(SessionRuleSet).where(
+                SessionRuleSet.session_id == review_session.id
+            )
+        ).scalars()
+    }
 
     for n in sorted(plan.instruments.keys()):
         spec = plan.instruments[n]
         assert spec.name is not None  # cross-row check enforced
+        if spec.rule_set_name:
+            resolved_rule_set_id = rule_set_id_by_name.get(spec.rule_set_name)
+            if resolved_rule_set_id is None:
+                raise _ParseError(
+                    f"rule set {spec.rule_set_name!r} not found in this "
+                    f"session — add it to the session's RuleSet pool first "
+                    f"(instruments[{n}].rule_set_name)"
+                )
+        else:
+            resolved_rule_set_id = None
         instrument = Instrument(
             session_id=review_session.id,
             name=spec.name,
@@ -1602,7 +1631,7 @@ def _apply_instruments(
             responses_visible_when_closed=spec.responses_visible_when_closed,
             sort_display_fields=spec.sort_display_fields,
             group_kind=spec.group_kind,
-            rule_set_id=None,  # 15B target; pre-15B left NULL
+            rule_set_id=resolved_rule_set_id,
         )
         db.add(instrument)
         db.flush()  # populate ``instrument.id``

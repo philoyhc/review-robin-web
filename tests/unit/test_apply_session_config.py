@@ -256,8 +256,9 @@ def test_unknown_rule_set_name_rejected(db: Session) -> None:
 
 def test_seeded_rule_set_name_resolves(db: Session) -> None:
     """An ``instruments[N].rule_set_name`` referencing a seeded
-    RuleSet (auto-materialised on session create) resolves
-    cleanly — pre-15B leaves ``Instrument.rule_set_id`` NULL."""
+    RuleSet (auto-materialised on session create) resolves to the
+    matching ``session_rule_sets.id`` and pins it on the instrument
+    (Segment 15B Slice 2b — pre-15B left ``rule_set_id`` NULL)."""
 
     review_session = _bare_session(db, code="seed-rs")
     rows = [
@@ -269,7 +270,57 @@ def test_seeded_rule_set_name_resolves(db: Session) -> None:
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    # Pre-15B: rule_set_id stays NULL.
+    full_matrix = db.execute(
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Full Matrix",
+        )
+    ).scalar_one()
+    assert instrument.rule_set_id == full_matrix.id
+
+
+def test_csv_rule_set_name_resolves_to_authored_block(db: Session) -> None:
+    """An ``instruments[N].rule_set_name`` pointing at a
+    ``session_rule_sets[M]`` block authored earlier in the same CSV
+    resolves to the upserted ``session_rule_sets.id``."""
+
+    review_session = _bare_session(db, code="csv-rs")
+    rows = [
+        Row("session_rule_sets[1].name", "Cohort A", "string"),
+        Row("session_rule_sets[1].combinator", "ALL_OF", "enum"),
+        Row("session_rule_sets[1].exclude_self_reviews", "true", "boolean"),
+        Row("session_rule_sets[1].rules_json", "[]", "json"),
+        Row("instruments[1].name", "Eval", "string"),
+        Row("instruments[1].rule_set_name", "Cohort A", "string"),
+    ]
+    result = apply_session_config(db, review_session, rows)
+    assert result.ok, result.errors
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    cohort_a = db.execute(
+        select(SessionRuleSet).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Cohort A",
+        )
+    ).scalar_one()
+    assert instrument.rule_set_id == cohort_a.id
+
+
+def test_empty_rule_set_name_leaves_pin_null(db: Session) -> None:
+    """Empty / missing ``rule_set_name`` leaves the pin NULL — the
+    "no rule picked yet" state."""
+
+    review_session = _bare_session(db, code="empty-rs")
+    rows = [
+        Row("instruments[1].name", "Eval", "string"),
+        Row("instruments[1].rule_set_name", "", "string"),
+    ]
+    result = apply_session_config(db, review_session, rows)
+    assert result.ok, result.errors
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
     assert instrument.rule_set_id is None
 
 
