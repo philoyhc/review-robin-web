@@ -135,13 +135,11 @@ def test_generate_materialises_per_instrument(
 
     response = generate_via_page_button(client, review_session.id)
     assert response.status_code == 303
-    # Segment 15E PR 3: Generate-wraps-validation adds a ``?wf=``
-    # banner-signal redirect param reflecting the post-flight
-    # readiness report (clean / warnings / errors / setup_errors).
-    # Bare-Generate path here is clean.
+    # Post-generate redirect lands plain on the Assignments page —
+    # the ``?generated=1`` flash signal retired with the banner.
     assert (
         response.headers["location"]
-        == f"/operator/sessions/{review_session.id}/assignments?wf=clean"
+        == f"/operator/sessions/{review_session.id}/assignments"
     )
 
     rows = list(
@@ -272,9 +270,8 @@ def test_generate_with_existing_pairs_requires_confirm(
         client, review_session.id, confirm_replace=True
     )
     assert confirmed.status_code == 303
-    # Segment 15E PR 3: clean Generate carries the ``?wf=clean``
-    # banner-signal redirect param.
+    # Redirect lands plain on the Assignments page (flash retired).
     assert (
         confirmed.headers["location"]
-        == f"/operator/sessions/{review_session.id}/assignments?wf=clean"
+        == f"/operator/sessions/{review_session.id}/assignments"
     )
