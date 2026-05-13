@@ -60,6 +60,10 @@ class InstrumentStatusBlock:
       indeterminate via inline JS.
     - ``self_review_toggle_url`` — POST target for the Self
       review checkbox's bulk-flip form.
+    - ``included_count`` — generated rows on this instrument with
+      ``include=True``. Drives the **Included** column pill on the
+      Assignments page status table; lags ``generated_count`` when
+      individual rows (e.g. self-reviews) have been deactivated.
     - ``is_stale`` — ``eligible_count != generated_count`` AND a
       rule is pinned. Operator hasn't clicked Generate since the
       rule / roster last changed.
@@ -71,6 +75,7 @@ class InstrumentStatusBlock:
     rule_name: str | None
     eligible_count: int
     generated_count: int
+    included_count: int
     self_review_total: int
     self_review_active_count: int
     self_review_checkbox_state: str
@@ -135,6 +140,9 @@ def build_assignments_page_context(
     generated_by_instrument = assignments_service.existing_count_per_instrument(
         db, review_session.id
     )
+    included_by_instrument = assignments_service.included_count_per_instrument(
+        db, review_session.id
+    )
     self_review_breakdown = (
         assignments_service.self_review_breakdown_per_instrument(
             db, review_session.id
@@ -155,6 +163,7 @@ def build_assignments_page_context(
             rule_name = None
             eligible_count = 0
         generated_count = generated_by_instrument.get(instrument.id, 0)
+        included_count = included_by_instrument.get(instrument.id, 0)
         is_stale = (
             rule_id is not None
             and eligible_count != generated_count
@@ -178,6 +187,7 @@ def build_assignments_page_context(
                 rule_name=rule_name,
                 eligible_count=eligible_count,
                 generated_count=generated_count,
+                included_count=included_count,
                 self_review_total=sr_total,
                 self_review_active_count=sr_active,
                 self_review_checkbox_state=sr_state,

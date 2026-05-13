@@ -15,6 +15,7 @@ Three layers:
 """
 from __future__ import annotations
 
+from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -314,3 +315,114 @@ def test_status_block_uses_short_label_when_available(
     assert by_id[inst_a.id].instrument_label == inst_a.name
     # inst_b's short_label wins.
     assert by_id[inst_b.id].instrument_label == "peer"
+
+
+def test_status_block_reports_included_count_per_instrument(
+    db: Session,
+) -> None:
+    """The **Included** column on the status table reports the
+    count of rows on that instrument with ``include=True`` (the
+    counterpart of the **Generated** total). Drives the new
+    ``data-included-count`` pill."""
+
+    user, review_session, inst_a, inst_b, alice_r, alice_e = (
+        _seed_multi_instrument(db, code="sr-included")
+    )
+    bob_r = Reviewer(
+        session_id=review_session.id,
+        name="Bob",
+        email="bob@example.edu",
+    )
+    bob_e = Reviewee(
+        session_id=review_session.id,
+        name="Bob",
+        email_or_identifier="bob@example.edu",
+    )
+    db.add_all([bob_r, bob_e])
+    db.flush()
+    # inst_a: 1 included, 1 excluded → included_count=1
+    _self_review(
+        db,
+        review_session=review_session,
+        instrument=inst_a,
+        reviewer=alice_r,
+        reviewee=alice_e,
+        include=True,
+    )
+    _self_review(
+        db,
+        review_session=review_session,
+        instrument=inst_a,
+        reviewer=bob_r,
+        reviewee=bob_e,
+        include=False,
+    )
+    # inst_b: 1 included → included_count=1
+    _self_review(
+        db,
+        review_session=review_session,
+        instrument=inst_b,
+        reviewer=alice_r,
+        reviewee=alice_e,
+        include=True,
+    )
+
+    ctx = build_assignments_page_context(db, review_session)
+    by_id = {b.instrument_id: b for b in ctx.status_blocks}
+
+    assert by_id[inst_a.id].generated_count == 2
+    assert by_id[inst_a.id].included_count == 1
+    assert by_id[inst_b.id].generated_count == 1
+    assert by_id[inst_b.id].included_count == 1
+
+
+def test_self_review_pill_class_tracks_checkbox_state(
+    client: TestClient, db: Session
+) -> None:
+    """Self review count pill: ``pill-info`` (blue) when self-
+    reviews are included for that instrument (checkbox ticked);
+    ``pill-warning`` (yellow) when not (unchecked or
+    indeterminate)."""
+
+    # Use the existing integration fixture to seed a session with
+    # an Alice→Alice self-review pair, then exercise the per-
+    # instrument toggle to flip include states and re-fetch the
+    # rendered page.
+    from tests.integration.test_assignments_operations_page import (
+        _generate_with_self_reviews,
+        _make_session,
+        _seed_population_with_self_review,
+        _self_review_instrument_id,
+    )
+
+    review_session = _make_session(client, db, code="sr-pill")
+    _seed_population_with_self_review(client, review_session.id)
+    _generate_with_self_reviews(client, db, review_session.id)
+    instrument_id = _self_review_instrument_id(db, review_session.id)
+
+    # Default ``self_reviews_active=True`` → self-review row lands
+    # include=True → state "checked" → blue pill.
+    checked_body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    checked_pill = checked_body.split(
+        f'data-self-review-count="{instrument_id}"', 1
+    )[0][-80:]
+    assert "pill-info" in checked_pill
+    assert "pill-warning" not in checked_pill
+
+    # Flip to unticked → state "unchecked" → yellow pill.
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/assignments/{instrument_id}/self-reviews/active",
+        data={"active": "false"},
+        follow_redirects=False,
+    )
+    unticked_body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    unticked_pill = unticked_body.split(
+        f'data-self-review-count="{instrument_id}"', 1
+    )[0][-80:]
+    assert "pill-warning" in unticked_pill
+    assert "pill-info" not in unticked_pill

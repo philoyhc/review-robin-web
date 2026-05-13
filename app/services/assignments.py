@@ -161,6 +161,29 @@ def existing_count(
     return len(db.execute(stmt).all())
 
 
+def included_count_per_instrument(
+    db: Session, session_id: int
+) -> dict[int, int]:
+    """Materialised ``Assignment`` row count keyed by
+    ``instrument_id``, restricted to rows where ``include=True``.
+
+    Drives the per-instrument **Included** count on the Assignments
+    page status table — the counterpart of
+    :func:`existing_count_per_instrument`, which surfaces the total
+    row count regardless of ``include``.
+    """
+    from sqlalchemy import func
+
+    rows = db.execute(
+        session_scoped(
+            Assignment.instrument_id, session_id
+        ).add_columns(func.count(Assignment.id))
+        .where(Assignment.include.is_(True))
+        .group_by(Assignment.instrument_id)
+    ).all()
+    return {instrument_id: count for instrument_id, count in rows}
+
+
 def existing_count_per_instrument(
     db: Session, session_id: int
 ) -> dict[int, int]:

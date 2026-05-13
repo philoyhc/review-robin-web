@@ -264,10 +264,14 @@ def test_assignments_hub_renders_count_and_mode(
     # filter checkbox renders ``checked`` by default for any
     # instrument with generated rows so the post-Generate view
     # surfaces every materialised pair (the user's "all ticked"
-    # rule). A row-count pill renders before the checkbox.
+    # rule). The row-count pill that used to sit before the
+    # checkbox retired — that count moved to the new Included
+    # column.
     assert "<th>Show</th>" in populated.text
+    assert "<th>Included</th>" in populated.text
     assert "<th>Filter</th>" not in populated.text
-    assert "data-show-pill=" in populated.text
+    assert "data-show-pill=" not in populated.text
+    assert "data-included-count=" in populated.text
     instrument_id = db.execute(
         select(Instrument.id).where(Instrument.session_id == review_session.id)
     ).scalars().first()
