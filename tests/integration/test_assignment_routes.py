@@ -254,7 +254,7 @@ def test_assignments_hub_renders_count_and_mode(
 
     generate_via_page_button(client, review_session.id)
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
-    assert "Assignment pairs" in populated.text
+    assert "Assignments preview" in populated.text
     # The per-instrument status table renders a Self review pill
     # (even when the instrument has zero self-review rows). Reads
     # the count via the ``data-self-review-count`` attribute so the
@@ -398,7 +398,7 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
     )
 
     empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
-    assert "Assignment pairs" not in empty.text
+    assert "Assignments preview" not in empty.text
 
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
@@ -406,7 +406,7 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    assert "Assignment pairs" in body
+    assert "Assignments preview" in body
     assert "alice@example.edu" in body
     assert "carol@example.edu" in body
 
