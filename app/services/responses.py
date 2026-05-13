@@ -619,10 +619,16 @@ class ReviewerSessionState:
         return self.required_total - self.missing_required_count
 
 
-def reviewer_session_state(
-    db: Session, *, reviewer: Reviewer, session_id: int
+def _state_from_assignments(
+    db: Session,
+    assignments: list[Assignment],
+    fields_by_instrument: dict[int, list[InstrumentResponseField]],
 ) -> ReviewerSessionState:
-    assignments = _reviewer_assignments(db, reviewer, session_id)
+    """Inner per-assignment-set rollup shared by
+    :func:`reviewer_session_state` (whole-session aggregate) and
+    :func:`reviewer_session_state_per_instrument` (per-instrument
+    breakdown). The two surfaces share field-set lookup so the
+    per-instrument path doesn't double the query count."""
     if not assignments:
         return ReviewerSessionState(
             total_assignments=0,
@@ -631,10 +637,6 @@ def reviewer_session_state(
             required_total=0,
             pill_state="not started",
         )
-
-    fields_by_instrument = _instrument_fields_by_id(
-        db, {a.instrument_id for a in assignments}
-    )
 
     any_response = False
     all_required_with_submitted = True
@@ -686,6 +688,51 @@ def reviewer_session_state(
         required_total=required_total,
         pill_state=pill_state,
     )
+
+
+def reviewer_session_state(
+    db: Session, *, reviewer: Reviewer, session_id: int
+) -> ReviewerSessionState:
+    """Whole-session aggregate state. See
+    :class:`ReviewerSessionState` for the field shape."""
+    assignments = _reviewer_assignments(db, reviewer, session_id)
+    fields_by_instrument = _instrument_fields_by_id(
+        db, {a.instrument_id for a in assignments}
+    )
+    return _state_from_assignments(db, assignments, fields_by_instrument)
+
+
+def reviewer_session_state_per_instrument(
+    db: Session, *, reviewer: Reviewer, session_id: int
+) -> dict[int, ReviewerSessionState]:
+    """Per-instrument rollup of :func:`reviewer_session_state`,
+    keyed by ``instrument_id``. Instruments where the reviewer has
+    no active ``Assignment`` rows are absent from the dict; the
+    dashboard's per-instrument sub-row builder treats them as
+    "no assignments on this instrument" rather than "not started".
+
+    Drives the Segment 15B Slice 6 dashboard per-instrument
+    grouping. Single source of truth shared with
+    :func:`reviewer_session_state` via the inner
+    ``_state_from_assignments`` helper.
+    """
+    assignments = _reviewer_assignments(db, reviewer, session_id)
+    by_instrument: dict[int, list[Assignment]] = {}
+    for assignment in assignments:
+        by_instrument.setdefault(assignment.instrument_id, []).append(
+            assignment
+        )
+    if not by_instrument:
+        return {}
+    fields_by_instrument = _instrument_fields_by_id(
+        db, set(by_instrument.keys())
+    )
+    return {
+        instrument_id: _state_from_assignments(
+            db, instr_assignments, fields_by_instrument
+        )
+        for instrument_id, instr_assignments in by_instrument.items()
+    }
 
 
 def session_pill_for_reviewer(
