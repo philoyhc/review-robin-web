@@ -12,6 +12,108 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
+  {# Segment 15B Slice 3a + refinements — per-instrument status
+     card renders in BOTH draft + ready states (the "status info
+     card" sits first under chrome, matching the Instruments
+     page pattern). Self review checkboxes are disabled in ready
+     state — review is ongoing, no flipping include flags from
+     here. Rule selection lives on the Instruments page (Slice
+     2a per-card picker); the standalone session-wide self-
+     reviews toggle card retired in favour of the per-instrument
+     checkbox column. #}
+  <section class="card" id="assignments-status-blocks">
+    <h2>Per-instrument status</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Instrument</th>
+          <th>Rule</th>
+          <th>Eligible pairs</th>
+          <th>Generated</th>
+          <th>Self review</th>
+          <th>Included</th>
+          <th>Show</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for block in page_ctx.status_blocks %}
+          {# Self review pill class tracks the checkbox state:
+             ``pill-info`` (blue) when included (checked);
+             ``pill-warning`` (yellow) when not (unchecked /
+             indeterminate). #}
+          {% set sr_pill_class = 'pill-info' if block.self_review_checkbox_state == 'checked' else 'pill-warning' %}
+          <tr id="status-block-{{ block.instrument_id }}"
+              {% if block.is_stale %}class="status-block-stale"{% endif %}>
+            <td>{{ block.instrument_label }}</td>
+            <td>
+              {% if block.rule_name %}
+                <span class="pill pill-info">{{ block.rule_name }}</span>
+              {% else %}
+                <span class="muted">— No rule pinned —</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if block.rule_name %}
+                <span class="pill pill-count">{{ block.eligible_count }}</span>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if block.generated_count %}
+                <span class="pill pill-count">{{ block.generated_count }}</span>
+                {% if block.is_stale %}
+                  <span class="pill pill-empty"
+                        data-stale-pill="{{ block.instrument_id }}">stale</span>
+                {% endif %}
+              {% else %}
+                <span class="muted">Not generated yet</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="pill {{ sr_pill_class }}"
+                    data-self-review-count="{{ block.instrument_id }}">{{ block.self_review_total }}</span>
+              {% if block.self_review_total > 0 %}
+                <form method="post"
+                      action="{{ block.self_review_toggle_url }}"
+                      id="sr-form-{{ block.instrument_id }}"
+                      class="instrument-self-review-form"
+                      style="display: inline; margin-left: 8px;">
+                  <input type="hidden" name="active" value="true">
+                  <input type="checkbox"
+                         data-self-review-instrument="{{ block.instrument_id }}"
+                         data-self-review-state="{{ block.self_review_checkbox_state }}"
+                         {% if block.self_review_checkbox_state == 'checked' %}checked{% endif %}
+                         {% if is_ready %}disabled aria-disabled="true"
+                           title="Session is ongoing — revert to draft to change self-review inclusion."{% endif %}
+                         aria-label="Include self-reviews for this instrument">
+                </form>
+              {% endif %}
+            </td>
+            <td>
+              {% if block.generated_count %}
+                <span class="pill pill-count"
+                      data-included-count="{{ block.instrument_id }}">{{ block.included_count }}</span>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <input type="checkbox"
+                     data-filter-instrument="{{ block.instrument_id }}"
+                     {% if block.generated_count > 0 %}checked{% endif %}
+                     aria-label="Show this instrument's pairs in the preview table">
+            </td>
+            <td>
+              <a href="{{ block.edit_url }}">Edit on Instruments page</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
   {% if is_ready %}
     <div class="card lock">
       <p style="margin: 0 0 12px 0;">
@@ -52,13 +154,6 @@
 
   {% include "operator/partials/validation_results.html" %}
 
-  {# Segment 15B Slice 3a + refinements — page-level Generate
-     (half-width, left column) + per-instrument status table
-     hosting Self review + Show columns. Rule selection lives
-     on the Instruments page (Slice 2a per-card picker). The
-     standalone session-wide self-reviews toggle card retired
-     here in favour of the per-instrument checkbox column —
-     each instrument owns its own self-review include state. #}
   {% if not is_ready %}
     <div class="bottom-grid">
       <section class="card" id="assignments-generate-card">
@@ -104,97 +199,6 @@
         {% endif %}
       </section>
     </div>
-
-    <section class="card" id="assignments-status-blocks">
-      <h2>Per-instrument status</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Instrument</th>
-            <th>Rule</th>
-            <th>Eligible pairs</th>
-            <th>Generated</th>
-            <th>Self review</th>
-            <th>Included</th>
-            <th>Show</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for block in page_ctx.status_blocks %}
-            {# Self review pill class tracks the checkbox state:
-               ``pill-info`` (blue) when included (checked);
-               ``pill-warning`` (yellow) when not (unchecked /
-               indeterminate). #}
-            {% set sr_pill_class = 'pill-info' if block.self_review_checkbox_state == 'checked' else 'pill-warning' %}
-            <tr id="status-block-{{ block.instrument_id }}"
-                {% if block.is_stale %}class="status-block-stale"{% endif %}>
-              <td>{{ block.instrument_label }}</td>
-              <td>
-                {% if block.rule_name %}
-                  <span class="pill pill-info">{{ block.rule_name }}</span>
-                {% else %}
-                  <span class="muted">— No rule pinned —</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if block.rule_name %}
-                  <span class="pill pill-count">{{ block.eligible_count }}</span>
-                {% else %}
-                  <span class="muted">—</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if block.generated_count %}
-                  <span class="pill pill-count">{{ block.generated_count }}</span>
-                  {% if block.is_stale %}
-                    <span class="pill pill-empty"
-                          data-stale-pill="{{ block.instrument_id }}">stale</span>
-                  {% endif %}
-                {% else %}
-                  <span class="muted">Not generated yet</span>
-                {% endif %}
-              </td>
-              <td>
-                <span class="pill {{ sr_pill_class }}"
-                      data-self-review-count="{{ block.instrument_id }}">{{ block.self_review_total }}</span>
-                {% if block.self_review_total > 0 %}
-                  <form method="post"
-                        action="{{ block.self_review_toggle_url }}"
-                        id="sr-form-{{ block.instrument_id }}"
-                        class="instrument-self-review-form"
-                        style="display: inline; margin-left: 8px;">
-                    <input type="hidden" name="active" value="true">
-                    <input type="checkbox"
-                           data-self-review-instrument="{{ block.instrument_id }}"
-                           data-self-review-state="{{ block.self_review_checkbox_state }}"
-                           {% if block.self_review_checkbox_state == 'checked' %}checked{% endif %}
-                           aria-label="Include self-reviews for this instrument">
-                  </form>
-                {% endif %}
-              </td>
-              <td>
-                {% if block.generated_count %}
-                  <span class="pill pill-count"
-                        data-included-count="{{ block.instrument_id }}">{{ block.included_count }}</span>
-                {% else %}
-                  <span class="muted">—</span>
-                {% endif %}
-              </td>
-              <td>
-                <input type="checkbox"
-                       data-filter-instrument="{{ block.instrument_id }}"
-                       {% if block.generated_count > 0 %}checked{% endif %}
-                       aria-label="Show this instrument's pairs in the preview table">
-              </td>
-              <td>
-                <a href="{{ block.edit_url }}">Edit on Instruments page</a>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </section>
   {% endif %}
 
   {% if pair_sample %}
@@ -427,11 +431,10 @@
       var boxes = document.querySelectorAll(
         "input[data-filter-instrument]"
       );
-      // Status table only renders pre-ready (the "not is_ready"
-      // branch); on ready sessions there are no Show checkboxes
-      // but the pairs preview still renders. Skip wiring entirely
-      // when there's nothing to filter — otherwise apply() would
-      // hide every preview row.
+      // Defensive guard: if the status table somehow didn't
+      // render any Show checkboxes (e.g. a future page state with
+      // no instruments), skip wiring entirely — otherwise
+      // ``apply()`` would hide every preview row.
       if (boxes.length === 0) return;
       var rows = document.querySelectorAll("tr[data-row-instrument]");
       function apply() {

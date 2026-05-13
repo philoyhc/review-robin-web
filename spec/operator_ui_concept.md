@@ -112,7 +112,9 @@ Surfaces for running a session and intervening when needed — validating setup,
 | Invitations | `session_invitations.html` | `/sessions/{id}/invitations` |
 | Responses | `session_responses.html` | `/sessions/{id}/responses` |
 
-Assignments moved Setup → Operations in Segment 15D PR 6a: pair-level context is configured on the Relationships Setup page above, and the Assignments page reframes as the place to **generate** the reviewer × reviewee × instrument materialisation via the Rule Based card (operator picks a RuleSet, hits Generate) plus a bulk Include-self-reviews toggle and the resulting "Assignment pairs" preview. The pre-15D Setup-row manual-CSV upload affordance retired with the move; the legacy manual-import route survives as a dev-diagnostic surface only.
+Assignments moved Setup → Operations in Segment 15D PR 6a: pair-level context is configured on the Relationships Setup page above, and the Assignments page reframes as the place to **generate** the reviewer × reviewee × instrument materialisation. Body shape (top-to-bottom): chrome → **Per-instrument status** card (first under chrome — sticky across draft + ready states) → yellow lock card when `ready` → Generate card when `draft` / `validated` → Assignments preview table. The status card carries per-instrument pills for Rule, Eligible pairs, Generated, Self review, Included, plus a Show checkbox that client-side-filters the preview table and an Edit link to the matching Instruments card; the Self review checkbox flips include flags for that instrument's self-review rows in bulk. The pre-15D Setup-row manual-CSV upload affordance retired with the move; the legacy manual-import route survives as a dev-diagnostic surface only.
+
+When the session is `ready`, the status card remains visible (operators inspect mid-cycle), but the per-instrument Self review checkbox renders `disabled` — review is ongoing and flipping include flags would silently change live invitation eligibility. Show + Edit + the inline filter JS stay interactive.
 
 The row pairs are deliberate: pre-flight (Validate, Assignments, Previews), monitoring (Invitations, Responses). See `spec/operations_pages.md` for the Invitations + Responses consolidation rationale and per-page contracts; `spec/rule_based_assignment.md` §7.1 covers the Rule Based card.
 
@@ -227,13 +229,14 @@ The route returns **HTTP 409** when the session is `ready` — operators must Pa
 All three setup-roster pages share an identical chrome shape:
 
 1. Session top nav.
-2. Yellow lock card when `ready` (with `return_to=reviewers` / `reviewees` / `relationships` so the operator returns here after reverting).
-3. **Info card** with the page heading and:
+2. **Info card** with the page heading and:
    - `Number of {reviewers / reviewees / pairwise relationships}: {pill}`.
    - `Fields with data: {pill, pill, …}` listing the actual CSV column names for fields with at least one non-empty value (e.g. `ReviewerName`, `RevieweeEmail`, `PhotoLink`, `RevieweeTag1..3`, `PairContextTag1..3`, `Status`).
-4. **Upload CSV** card — anchored at `#upload-csv`, hosts the import form. Hidden when the lock card is shown.
-5. Browseable data-preview table of the saved rows (always visible, even while locked).
-6. **Danger Zone** card with the **Delete all** confirm-checkbox form. Hidden when the lock card is shown.
+3. Yellow lock card when `ready` (with `return_to=reviewers` / `reviewees` / `relationships` so the operator returns here after reverting). Sits immediately under the info card — same status-info-then-yellow-lock pattern the Instruments and Assignments pages use.
+4. **Friendly-label editor** card — inline editor for the per-session tag-column labels. See `spec/setup_pages.md` "Shared body shape" §5.
+5. **Upload CSV** card — anchored at `#upload-csv`, hosts the import form. Hidden when the lock card is shown.
+6. Browseable data-preview table of the saved rows (always visible, even while locked).
+7. **Danger Zone** card with the **Delete all** confirm-checkbox form. Hidden when the lock card is shown.
 
 The **Edit Reviewers / Reviewees / Relationships** affordance for inline-editable rows is not yet implemented (Segment 15F); today these pages expose only the bulk Upload-CSV / Delete-all flow.
 
