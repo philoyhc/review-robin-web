@@ -23,19 +23,6 @@
     </p>
   </div>
 
-  {% set field_labels_form_action =
-        "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
-  {% set field_labels_source_type = "reviewer" %}
-  {% set field_labels_card_title = "Reviewer tag labels" %}
-  {% set field_labels_help =
-        "Rename the three reviewer tag columns for this session. " ~
-        "Friendly labels flow through every operator preview surface; " ~
-        "leave a cell blank to fall back to the default." %}
-  {% set field_labels_rows = [
-        [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
-  ] %}
-  {% include "operator/partials/_field_labels_editor.html" %}
-
   {% if is_ready %}
     <div class="card lock">
       <p style="margin: 0 0 12px 0;">
@@ -56,6 +43,19 @@
       </form>
     </div>
   {% endif %}
+
+  {% set field_labels_form_action =
+        "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
+  {% set field_labels_source_type = "reviewer" %}
+  {% set field_labels_card_title = "Reviewer tag labels" %}
+  {% set field_labels_help =
+        "Rename the three reviewer tag columns for this session. " ~
+        "Friendly labels flow through every operator preview surface; " ~
+        "leave a cell blank to fall back to the default." %}
+  {% set field_labels_rows = [
+        [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
+  ] %}
+  {% include "operator/partials/_field_labels_editor.html" %}
 
   {% if reviewers %}
     {% set has_tag_1 = reviewers | selectattr("tag_1") | list | length > 0 %}
