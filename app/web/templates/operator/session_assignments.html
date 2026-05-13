@@ -60,53 +60,58 @@
 
   {% include "operator/partials/validation_results.html" %}
 
-  {# Segment 15B Slice 3a — page-level Generate + per-instrument
-     status blocks. Rule selection moved off this page (per-card
-     picker on the Instruments page, Slice 2a); this page is now
-     preview + materialise. #}
+  {# Segment 15B Slice 3a + refinements — page-level Generate
+     (half-width, left column) + per-instrument status table
+     hosting Self review + Filter columns. Rule selection lives
+     on the Instruments page (Slice 2a per-card picker). The
+     standalone session-wide self-reviews toggle card retired
+     here in favour of the per-instrument checkbox column —
+     each instrument owns its own self-review include state. #}
   {% if not is_ready %}
-    <section class="card" id="assignments-generate-card">
-      <h2>Generate assignments</h2>
-      {% if page_ctx.pinned_instrument_count == 0 %}
-        <p class="form-help">
-          No instruments have a rule pinned yet. Pin rules on the
-          <a href="{{ page_ctx.instruments_url }}">Instruments page</a>
-          first, then come back here to generate.
-        </p>
-        <p style="margin-bottom: 0;">
-          <button class="btn secondary" type="button"
-                  disabled aria-disabled="true"
-                  title="Pin rules on the Instruments page first.">Generate assignments</button>
-        </p>
-      {% else %}
-        <p class="form-help">
-          Materialises pairs for every instrument that has a rule
-          pinned ({{ page_ctx.pinned_instrument_count }} of
-          {{ page_ctx.status_blocks | length }}).
-          {% if page_ctx.any_stale %}
-            <span class="pill pill-empty"
-                  id="pairs-may-be-stale-badge">Pairs may be stale</span>
-          {% endif %}
-        </p>
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/assignments/generate"
-              id="assignments-generate-form">
-          {% if assignment_count %}
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm_replace" value="true" required>
-                Yes, replace the existing
-                <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>.
-              </label>
-            </p>
-          {% endif %}
-          <p style="margin-bottom: 0;">
-            <button class="btn secondary" type="submit"
-                    id="assignments-generate-button">Generate assignments</button>
+    <div class="bottom-grid">
+      <section class="card" id="assignments-generate-card">
+        <h2>Generate assignments</h2>
+        {% if page_ctx.pinned_instrument_count == 0 %}
+          <p class="form-help">
+            No instruments have a rule pinned yet. Pin rules on the
+            <a href="{{ page_ctx.instruments_url }}">Instruments page</a>
+            first, then come back here to generate.
           </p>
-        </form>
-      {% endif %}
-    </section>
+          <p style="margin-bottom: 0;">
+            <button class="btn secondary" type="button"
+                    disabled aria-disabled="true"
+                    title="Pin rules on the Instruments page first.">Generate assignments</button>
+          </p>
+        {% else %}
+          <p class="form-help">
+            Materialises pairs for every instrument that has a rule
+            pinned ({{ page_ctx.pinned_instrument_count }} of
+            {{ page_ctx.status_blocks | length }}).
+            {% if page_ctx.any_stale %}
+              <span class="pill pill-empty"
+                    id="pairs-may-be-stale-badge">Pairs may be stale</span>
+            {% endif %}
+          </p>
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/assignments/generate"
+                id="assignments-generate-form">
+            {% if assignment_count %}
+              <p>
+                <label style="font-weight: normal;">
+                  <input type="checkbox" name="confirm_replace" value="true" required>
+                  Yes, replace the existing
+                  <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>.
+                </label>
+              </p>
+            {% endif %}
+            <p style="margin-bottom: 0;">
+              <button class="btn secondary" type="submit"
+                      id="assignments-generate-button">Generate assignments</button>
+            </p>
+          </form>
+        {% endif %}
+      </section>
+    </div>
 
     <section class="card" id="assignments-status-blocks">
       <h2>Per-instrument status</h2>
@@ -117,14 +122,16 @@
             <th>Rule</th>
             <th>Eligible pairs</th>
             <th>Generated</th>
+            <th>Self review</th>
             <th></th>
+            <th>Filter</th>
           </tr>
         </thead>
         <tbody>
           {% for block in page_ctx.status_blocks %}
             <tr id="status-block-{{ block.instrument_id }}"
                 {% if block.is_stale %}class="status-block-stale"{% endif %}>
-              <td>{{ block.instrument_name }}</td>
+              <td>{{ block.instrument_label }}</td>
               <td>
                 {% if block.rule_name %}
                   <span class="pill pill-info">{{ block.rule_name }}</span>
@@ -142,11 +149,6 @@
               <td>
                 {% if block.generated_count %}
                   <span class="pill pill-count">{{ block.generated_count }}</span>
-                  {% if block.last_generated_at %}
-                    <span class="muted" style="margin-left: 8px;">
-                      last generated {{ block.last_generated_at.strftime('%Y-%m-%d %H:%M UTC') }}
-                    </span>
-                  {% endif %}
                   {% if block.is_stale %}
                     <span class="pill pill-empty"
                           data-stale-pill="{{ block.instrument_id }}">stale</span>
@@ -156,65 +158,36 @@
                 {% endif %}
               </td>
               <td>
+                <span class="pill pill-count"
+                      data-self-review-count="{{ block.instrument_id }}">{{ block.self_review_total }}</span>
+                {% if block.self_review_total > 0 %}
+                  <form method="post"
+                        action="{{ block.self_review_toggle_url }}"
+                        id="sr-form-{{ block.instrument_id }}"
+                        class="instrument-self-review-form"
+                        style="display: inline; margin-left: 8px;">
+                    <input type="hidden" name="active" value="true">
+                    <input type="checkbox"
+                           data-self-review-instrument="{{ block.instrument_id }}"
+                           data-self-review-state="{{ block.self_review_checkbox_state }}"
+                           {% if block.self_review_checkbox_state == 'checked' %}checked{% endif %}
+                           aria-label="Include self-reviews for this instrument">
+                  </form>
+                {% endif %}
+              </td>
+              <td>
                 <a href="{{ block.edit_url }}">Edit on Instruments page</a>
+              </td>
+              <td>
+                <input type="checkbox"
+                       data-filter-instrument="{{ block.instrument_id }}"
+                       aria-label="Filter preview table to this instrument">
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </section>
-
-      {% if assignment_count %}
-        <section class="card" id="self-reviews-toggle">
-          <h2>Self-reviews</h2>
-          {% set zero_self_reviews = self_review_total == 0 %}
-          {% set state_label = "ON" if self_reviews_active else "OFF" %}
-          {% set state_pill_class = "pill-info" if self_reviews_active else "pill-empty" %}
-          <p style="margin: 0 0 12px 0;">
-            State:
-            <span class="pill {{ state_pill_class }}"
-                  id="self-reviews-state-pill">{{ state_label }}</span>
-            {% if zero_self_reviews %}
-              <span class="muted">(no self-review pairs in the assignments table)</span>
-            {% else %}
-              <span class="pill pill-count"
-                    id="self-reviews-active-count">{{ self_review_active_count }} active</span>
-              <span class="pill pill-count"
-                    id="self-reviews-deactivated-count">{{ self_review_deactivated_count }} deactivated</span>
-            {% endif %}
-          </p>
-          <p class="form-help">
-            Bulk toggle for self-review pairs the engine produced. ON =
-            every self-review row's Include flag flips to true. OFF =
-            every self-review row's Include flag flips to false. The
-            per-row Include checkbox can still override individually
-            post-flip.
-          </p>
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/assignments/self-reviews/active"
-                style="display: inline;">
-            {% if self_reviews_active %}
-              <input type="hidden" name="active" value="false">
-              <button class="btn alert"
-                      type="submit"
-                      id="self-reviews-toggle-button"
-                      {% if zero_self_reviews %}disabled aria-disabled="true"
-                        title="No self-review pairs in the assignments table — generate first."{% endif %}>
-                Turn OFF self-reviews
-              </button>
-            {% else %}
-              <input type="hidden" name="active" value="true">
-              <button class="btn primary"
-                      type="submit"
-                      id="self-reviews-toggle-button"
-                      {% if zero_self_reviews %}disabled aria-disabled="true"
-                        title="No self-review pairs in the assignments table — generate first."{% endif %}>
-                Turn ON self-reviews
-              </button>
-            {% endif %}
-          </form>
-        </section>
-      {% endif %}
   {% endif %}
 
   {% if pair_sample %}
@@ -328,7 +301,7 @@
         {% for assignment in pair_sample %}
           {% set rel = pair_context_lookup.get((assignment.reviewer_id, assignment.reviewee_id)) %}
           {% set rel_active = rel and rel.status == "active" %}
-          <tr>
+          <tr data-row-instrument="{{ assignment.instrument_id }}">
             <td data-sort-value="{{ assignment.reviewer.name }}">
               {{ assignment.reviewer.name }} &middot;
               <code>{{ assignment.reviewer.email }}</code>
@@ -407,4 +380,62 @@
       })();
     </script>
   {% endif %}
+
+  {# Per-instrument Self review column — set ``indeterminate`` on
+     mixed-state checkboxes; submit the bulk-toggle form on change
+     so a single click flips every self-review row on this
+     instrument. The hidden ``active`` field mirrors the checkbox's
+     new ``checked`` value at submit time. #}
+  <script>
+    (function () {
+      var boxes = document.querySelectorAll(
+        "input[data-self-review-instrument]"
+      );
+      boxes.forEach(function (box) {
+        if (box.dataset.selfReviewState === "indeterminate") {
+          box.indeterminate = true;
+        }
+        box.addEventListener("change", function () {
+          var form = box.closest("form");
+          if (!form) return;
+          var hidden = form.querySelector("input[name=active]");
+          if (hidden) hidden.value = box.checked ? "true" : "false";
+          form.submit();
+        });
+      });
+    })();
+  </script>
+
+  {# Per-instrument Filter column — client-side filter of the
+     pairs preview table. Ticked checkboxes select instruments to
+     show; zero ticked → show everything (the natural post-Generate
+     state). State lives in the DOM only; not persisted across
+     page reloads — the user said "when generating, start with
+     untick". #}
+  <script>
+    (function () {
+      var boxes = document.querySelectorAll(
+        "input[data-filter-instrument]"
+      );
+      var rows = document.querySelectorAll("tr[data-row-instrument]");
+      function apply() {
+        var ticked = [];
+        boxes.forEach(function (b) {
+          if (b.checked) ticked.push(b.dataset.filterInstrument);
+        });
+        rows.forEach(function (r) {
+          if (ticked.length === 0) {
+            r.style.display = "";
+          } else {
+            r.style.display = ticked.indexOf(
+              r.dataset.rowInstrument
+            ) >= 0 ? "" : "none";
+          }
+        });
+      }
+      boxes.forEach(function (b) {
+        b.addEventListener("change", apply);
+      });
+    })();
+  </script>
 {% endblock %}

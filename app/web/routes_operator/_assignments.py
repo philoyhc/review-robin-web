@@ -149,14 +149,6 @@ def _render_assignments_hub(
         sort_spec,
         value_resolver=_assignment_sort_value,
     )
-    self_review_active_count, self_review_deactivated_count = (
-        assignments.self_review_include_breakdown(db, review_session.id)
-        if assignment_count
-        else (0, 0)
-    )
-    self_review_total = (
-        self_review_active_count + self_review_deactivated_count
-    )
     status_code = (
         status.HTTP_400_BAD_REQUEST if (missing_confirm or is_blocked) else status.HTTP_200_OK
     )
@@ -173,10 +165,6 @@ def _render_assignments_hub(
             "pair_sample": pair_sample,
             "truncated_count": truncated_count,
             "pair_context_lookup": pair_context_lookup,
-            "self_reviews_active": review_session.self_reviews_active,
-            "self_review_total": self_review_total,
-            "self_review_active_count": self_review_active_count,
-            "self_review_deactivated_count": self_review_deactivated_count,
             "issues": issues,
             "missing_confirm": missing_confirm,
             "is_blocked": is_blocked,
@@ -281,28 +269,34 @@ def assignments_delete_all(
 
 
 @router.post(
-    "/sessions/{session_id}/assignments/self-reviews/active",
+    "/sessions/{session_id}/assignments/{instrument_id}/self-reviews/active",
     response_class=HTMLResponse,
     response_model=None,
 )
-def assignments_self_reviews_active(
+def assignments_instrument_self_reviews_active(
+    session_id: int,
+    instrument_id: int,
     active: str = Form(...),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Bulk Include toggle for self-reviews on the Operations
-    Assignments page (15D PR 6a). Single transaction: persist the
-    operator's intent on ``sessions.self_reviews_active`` + UPDATE
-    every self-review row's ``include`` to match. Audit event
-    ``assignments.self_reviews_active_set`` records the flipped row
-    count + the resulting boolean."""
+    """Per-instrument self-review include toggle — owns the
+    checkbox in the Self review column on the Assignments-page
+    status blocks. Bulk-flips every self-review row on this
+    instrument to the posted ``active`` boolean. Mixed states
+    converge: ``active=false`` flips remaining active rows to
+    false; ``active=true`` flips remaining deactivated rows to
+    true. Audit event
+    ``assignments.instrument_self_reviews_active_set`` records the
+    flipped row count + ``refs.instrument_id``."""
 
     _require_editable(review_session)
     is_active = active == "true"
-    assignments.set_self_reviews_active(
+    assignments.set_instrument_self_reviews_active(
         db,
         review_session=review_session,
+        instrument_id=instrument_id,
         user=user,
         active=is_active,
         correlation_id=request_correlation_id(),

@@ -255,7 +255,11 @@ def test_assignments_hub_renders_count_and_mode(
     generate_via_page_button(client, review_session.id)
     populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
     assert "Assignment pairs" in populated.text
-    assert 'id="self-reviews-toggle"' in populated.text
+    # The per-instrument status table renders a Self review pill
+    # (even when the instrument has zero self-review rows). Reads
+    # the count via the ``data-self-review-count`` attribute so the
+    # assertion is robust to formatting tweaks.
+    assert 'data-self-review-count=' in populated.text
 
 
 def test_non_operator_gets_403_on_assignments_hub_and_post(

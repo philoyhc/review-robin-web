@@ -21,7 +21,6 @@ Read alongside:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Literal
 
 from sqlalchemy import select
@@ -38,7 +37,10 @@ class InstrumentStatusBlock:
 
     Fields:
 
-    - ``instrument_id`` / ``instrument_name`` — display + deep-link.
+    - ``instrument_id`` — int primary key + deep-link anchor.
+    - ``instrument_label`` — display label
+      (``short_label or name`` — the same friendly label the
+      reviewer surface page-buttons use).
     - ``rule_name`` — the pinned RuleSet's name; ``None`` when
       ``Instrument.rule_set_id`` is NULL ("— No rule pinned —").
     - ``eligible_count`` — pairs the engine would produce if run
@@ -47,11 +49,17 @@ class InstrumentStatusBlock:
       roster edits immediately, before Generate.
     - ``generated_count`` — actual ``Assignment`` rows on this
       instrument right now.
-    - ``last_generated_at`` — timestamp of the most recent
-      ``assignments.generated`` audit event scoped to this
-      instrument; ``None`` when no per-instrument event exists
-      (instrument never generated, or only pre-Slice-1 aggregated
-      events that lack ``refs.instrument_id``).
+    - ``self_review_total`` — count of self-review rows on this
+      instrument (``active + deactivated``). ``0`` when the
+      instrument has no self-review pairs in its assignments.
+    - ``self_review_active_count`` — self-review rows on this
+      instrument with ``include=True``.
+    - ``self_review_checkbox_state`` — ``"checked"`` /
+      ``"unchecked"`` / ``"indeterminate"``. Drives the per-
+      instrument Self review column checkbox; mixed states render
+      indeterminate via inline JS.
+    - ``self_review_toggle_url`` — POST target for the Self
+      review checkbox's bulk-flip form.
     - ``is_stale`` — ``eligible_count != generated_count`` AND a
       rule is pinned. Operator hasn't clicked Generate since the
       rule / roster last changed.
@@ -59,11 +67,14 @@ class InstrumentStatusBlock:
     """
 
     instrument_id: int
-    instrument_name: str
+    instrument_label: str
     rule_name: str | None
     eligible_count: int
     generated_count: int
-    last_generated_at: datetime | None
+    self_review_total: int
+    self_review_active_count: int
+    self_review_checkbox_state: str
+    self_review_toggle_url: str
     is_stale: bool
     edit_url: str
 
@@ -124,8 +135,8 @@ def build_assignments_page_context(
     generated_by_instrument = assignments_service.existing_count_per_instrument(
         db, review_session.id
     )
-    latest_event_by_instrument = (
-        assignments_service.latest_generated_event_per_instrument(
+    self_review_breakdown = (
+        assignments_service.self_review_breakdown_per_instrument(
             db, review_session.id
         )
     )
@@ -144,22 +155,36 @@ def build_assignments_page_context(
             rule_name = None
             eligible_count = 0
         generated_count = generated_by_instrument.get(instrument.id, 0)
-        last_event = latest_event_by_instrument.get(instrument.id)
-        last_generated_at = last_event.created_at if last_event else None
         is_stale = (
             rule_id is not None
             and eligible_count != generated_count
         )
         if is_stale:
             any_stale = True
+        sr_active, sr_deactivated = self_review_breakdown.get(
+            instrument.id, (0, 0)
+        )
+        sr_total = sr_active + sr_deactivated
+        if sr_total == 0 or sr_active == sr_total:
+            sr_state = "checked"
+        elif sr_active == 0:
+            sr_state = "unchecked"
+        else:
+            sr_state = "indeterminate"
         blocks.append(
             InstrumentStatusBlock(
                 instrument_id=instrument.id,
-                instrument_name=instrument.name,
+                instrument_label=instrument.short_label or instrument.name,
                 rule_name=rule_name,
                 eligible_count=eligible_count,
                 generated_count=generated_count,
-                last_generated_at=last_generated_at,
+                self_review_total=sr_total,
+                self_review_active_count=sr_active,
+                self_review_checkbox_state=sr_state,
+                self_review_toggle_url=(
+                    f"/operator/sessions/{review_session.id}"
+                    f"/assignments/{instrument.id}/self-reviews/active"
+                ),
                 is_stale=is_stale,
                 edit_url=(
                     f"/operator/sessions/{review_session.id}/instruments"

@@ -150,10 +150,14 @@ def test_generate_materialises_per_instrument(
         f"/operator/sessions/{review_session.id}/assignments?generated=1"
     ).text
     assert 'id="generated-flash"' in body
-    # Status block now shows "last generated …" instead of
-    # "Not generated yet".
+    # Status block flips from "Not generated yet" placeholder to a
+    # generated-count pill. The "last generated …" timestamp
+    # suffix retired in the post-15B refinement sweep — the pill
+    # itself is the signal now.
     assert "Not generated yet" not in body
-    assert "last generated" in body
+    # Generated-count pill renders with the actual row count (1
+    # alice→carol pair in this fixture).
+    assert ">1</span>" in body.split('id="assignments-status-blocks"', 1)[1]
 
 
 def test_stale_badge_surfaces_when_roster_changes_after_generate(
