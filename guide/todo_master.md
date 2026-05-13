@@ -506,22 +506,32 @@ bottom of this file.
 
 #### Stubs
 
-- **15E — Validate page + Next Action revamp**
+- **15E — Operations Workflow Card**
   *(carved out of 15D PR 8, 2026-05-10; scope broadened
   2026-05-13 to absorb Validate-page revisions made
-  necessary by 15B's per-instrument assignments move)*.
-  Two coordinated revamps: (1) **Validate page** —
-  rework readiness rules + UI for per-instrument
-  assignments (per-instrument readiness pills, new
-  per-instrument `validation.py` rules, inline auto-fix
-  buttons where safe); (2) **Next Action card** — drive
-  Validate → Generate → Activate as one-click "super
-  button" chains, with single-step actions retained for
-  granular flows. End-to-end goal: streamline the
-  operator workflow from setup completion through to
-  just before email generation. Stub-state plan; ready
-  for sizing now that the locked block is closed.
-  **Plan:** `guide/segment_15E_validate_next_action_revamp.md`.
+  necessary by 15B's per-instrument assignments move;
+  reframed 2026-05-13 as the Operations Workflow Card
+  segment after working through the page-by-page operator
+  workflow)*.
+  Single, persistent **Operations workflow** card at the
+  top of every Operations-row chrome page (Assignments /
+  Validate / Previews / Invitations / Responses), carrying
+  the canonical next-action copy and the row of
+  lifecycle-transition buttons (Generate / Activate / Send
+  invitations / Pause / Close) greyed-out per state. Side
+  benefits: Validate page collapses to a pure diagnostic
+  detail surface; Generate (workflow card) wraps setup-gate
+  + replace_assignments + operations-gate validation;
+  Session Home Next Action card retires in the final PR,
+  freeing the page to focus on Setup readiness + data
+  extraction / retention. New per-instrument validation
+  rules (`instruments.no_rule_pinned` /
+  `stale_generated` / `zero_included`) land alongside.
+  End-to-end goal: streamline the operator workflow from
+  setup completion through to just before email
+  generation. Stub-state plan; ready for sizing now that
+  the locked block is closed.
+  **Plan:** `guide/segment_15E_operations_workflow_card.md`.
 
 - **15F — Enhanced Setup pages** *(carved out of the
   original Segment 15, 2026-05-10)*. Per-row inline edit +

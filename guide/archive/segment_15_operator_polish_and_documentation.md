@@ -125,7 +125,7 @@ have since found dedicated homes:
   pair, depending on whether invitations have actually been
   sent) — absorbed into **Segment 15E** (Next Action revamp
   + multi-step shortcuts;
-  `guide/segment_15E_validate_next_action_revamp.md`). 15E covers the
+  `guide/segment_15E_operations_workflow_card.md`). 15E covers the
   Next Action card UX across every lifecycle state including
   Activated.
 
