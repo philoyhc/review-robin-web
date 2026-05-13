@@ -268,11 +268,15 @@ def test_session_detail_advances_to_validated_with_query(
     assert (
         f'action="/operator/sessions/{review_session.id}/activate"' in body
     )
-    # Supporting actions: See validation details + See previews,
-    # both Secondary buttons.
-    assert ">See validation details</a>" in body
-    assert ">See previews</a>" in body
+    # Workflow-stepper row: Generate (Secondary regenerate) and
+    # Revert to draft (Secondary) flank the Activate primary; later
+    # stages preview as disabled buttons.
+    assert ">Generate assignments</button>" in body
     assert ">Revert to draft</button>" in body
+    for label in ("Invite reviewers", "Monitor responses"):
+        assert (
+            f'disabled aria-disabled="true">{label}</button>' in body
+        ), f"expected inert stepper button {label!r}"
 
 
 def test_validated_session_keeps_action_card_without_query(

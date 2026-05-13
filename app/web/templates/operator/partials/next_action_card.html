@@ -121,10 +121,12 @@
           and re-run validation before activating.
         </p>
       {% endif %}
-      {# Empty form holder for the Revert to draft button below; the
-         button declares form="next-action-revert-form" so POST is
-         wired even though the button lives in the bottom button
-         row. #}
+      {# Empty form holders for the workflow-stepper bottom row;
+         buttons declare form="..." so POST is wired even though
+         the buttons live in the bottom button row. #}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/assignments/generate"
+            id="next-action-generate-form"></form>
       <form method="post"
             action="/operator/sessions/{{ session.id }}/revert"
             id="next-action-revert-form">
@@ -191,6 +193,8 @@
               disabled aria-disabled="true">Invite reviewers</button>
       <button class="btn secondary" type="button"
               disabled aria-disabled="true">Monitor responses</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Revert to draft</button>
     </div>
   {% elif is_pre_generate %}
     {# State 1A: Generate is the live next action; later stages preview
@@ -204,6 +208,8 @@
               disabled aria-disabled="true">Invite reviewers</button>
       <button class="btn secondary" type="button"
               disabled aria-disabled="true">Monitor responses</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Revert to draft</button>
     </div>
   {% elif is_draft and not validation_summary %}
     {# State 2: Validate Setup is the live next action; Generate is
@@ -217,39 +223,57 @@
               disabled aria-disabled="true">Invite reviewers</button>
       <button class="btn secondary" type="button"
               disabled aria-disabled="true">Monitor responses</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Revert to draft</button>
+    </div>
+  {% elif is_validated and validation_summary and validation_summary.can_activate %}
+    {# State 4A / 4B: Activate Session is the live next action; the
+       earlier Generate stage is offered as a Secondary regenerate,
+       and Revert to draft sits at the end of the stepper as
+       Secondary. State 4B (needs_acknowledge) wraps Activate as a
+       link detouring through /validate?activate=1 so the operator
+       acknowledges warnings inline. #}
+    <div class="next-action-buttons">
+      <button class="btn secondary" type="submit"
+              form="next-action-generate-form">Generate assignments</button>
+      {% if validation_summary.needs_acknowledge %}
+        <a class="btn" href="{{ _activate_warns_href }}">Activate Session</a>
+      {% else %}
+        <button class="btn" type="submit"
+                form="next-action-activate-form">Activate Session</button>
+      {% endif %}
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Invite reviewers</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Monitor responses</button>
+      <button class="btn secondary" type="submit"
+              form="next-action-revert-form">Revert to draft</button>
+    </div>
+  {% elif is_validated %}
+    {# State 5: validated but a re-validation now surfaces errors —
+       every forward stage is inert; Revert to draft is the single
+       live action and promotes to Primary. #}
+    <div class="next-action-buttons">
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Generate assignments</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Activate Session</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Invite reviewers</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Monitor responses</button>
+      <button class="btn" type="submit"
+              form="next-action-revert-form">Revert to draft</button>
     </div>
   {% elif not is_ready %}
+  {# State 3: draft, validation just failed — keep the existing
+     two-button row (the failure pills already render in the body).
+     Revert is N/A from draft so isn't shown. #}
   <div class="next-action-buttons">
-    {% if is_draft %}
-      <a class="btn"
-         href="{{ _validate_setup_href }}">Validate Setup</a>
-      <a class="btn secondary"
-         href="/operator/sessions/{{ session.id }}/validate">See validation details</a>
-    {% elif is_validated %}
-      {% if validation_summary and validation_summary.can_activate %}
-        {% if validation_summary.needs_acknowledge %}
-          {# Warnings present — detour to /validate?activate=1 so the
-             operator acknowledges them with the warnings inline
-             (Segment 11G PR D). #}
-          <a class="btn"
-             href="{{ _activate_warns_href }}">Activate Session</a>
-        {% else %}
-          <button class="btn"
-                  type="submit"
-                  form="next-action-activate-form">Activate Session</button>
-        {% endif %}
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/validate">See validation details</a>
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/previews#reviewer-surface">See previews</a>
-      {% else %}
-        <a class="btn"
-           href="/operator/sessions/{{ session.id }}/validate">See validation details</a>
-      {% endif %}
-      <button class="btn secondary"
-              type="submit"
-              form="next-action-revert-form">Revert to draft</button>
-    {% endif %}
+    <a class="btn"
+       href="{{ _validate_setup_href }}">Validate Setup</a>
+    <a class="btn secondary"
+       href="/operator/sessions/{{ session.id }}/validate">See validation details</a>
   </div>
   {% endif %}
 </div>
