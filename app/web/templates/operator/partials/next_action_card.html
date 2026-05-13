@@ -86,6 +86,12 @@
           Run validation to surface errors and warnings before
           activating. Validation never mutates session data.
         </p>
+        {# Form holder for the workflow-stepper Generate button below
+           — the State 2 row offers a regenerate option as the
+           Secondary action. #}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/assignments/generate"
+              id="next-action-generate-form"></form>
       {% endif %}
     {% elif is_validated %}
       {% if validation_summary and validation_summary.can_activate %}
@@ -173,13 +179,48 @@
       </div>
     {% endif %}
   </div>
-  {% if not is_setup_empty and not is_ready %}
-  <div class="next-action-buttons">
-    {% if is_pre_generate %}
-      <button class="btn"
-              type="submit"
+  {% if is_setup_empty %}
+    {# State 1: workflow-stepper preview — every stage inert so the
+       operator can see the path ahead without acting on it. #}
+    <div class="next-action-buttons">
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Generate assignments</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Validate Setup</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Invite reviewers</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Monitor responses</button>
+    </div>
+  {% elif is_pre_generate %}
+    {# State 1A: Generate is the live next action; later stages preview
+       as inert buttons. #}
+    <div class="next-action-buttons">
+      <button class="btn" type="submit"
               form="next-action-generate-form">Generate assignments</button>
-    {% elif is_draft %}
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Validate Setup</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Invite reviewers</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Monitor responses</button>
+    </div>
+  {% elif is_draft and not validation_summary %}
+    {# State 2: Validate Setup is the live next action; Generate is
+       offered as a Secondary regenerate option (route surfaces the
+       confirm dialog when assignments already exist). #}
+    <div class="next-action-buttons">
+      <button class="btn secondary" type="submit"
+              form="next-action-generate-form">Generate assignments</button>
+      <a class="btn" href="{{ _validate_setup_href }}">Validate Setup</a>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Invite reviewers</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Monitor responses</button>
+    </div>
+  {% elif not is_ready %}
+  <div class="next-action-buttons">
+    {% if is_draft %}
       <a class="btn"
          href="{{ _validate_setup_href }}">Validate Setup</a>
       <a class="btn secondary"

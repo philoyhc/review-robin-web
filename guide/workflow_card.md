@@ -73,9 +73,13 @@ elif is_validated:
 elif is_ready:             → State 6
 ```
 
-The bottom button row is only emitted when the session is not
-`is_setup_empty` and not `is_ready` — State 6 ships its own buttons
-inline within the body (see below).
+For the draft phase (States 1, 1A, 2) the bottom row renders a
+four-stage **workflow stepper**: `Generate assignments`,
+`Validate Setup`, `Invite reviewers`, `Monitor responses`. The active
+stage uses Primary styling; earlier stages re-render as Secondary
+(re-clickable); later stages render as `<button disabled>` previews of
+what's coming. State 6 keeps its inline two-section buttons. States
+3 / 4 / 5 keep their existing state-specific rows.
 
 ### State 1 — Setup not yet populated (`is_setup_empty`)
 
@@ -89,8 +93,14 @@ Body copy: *"Session not fully set up. Make sure that reviewers,
 reviewees, and relationships (optional), and instruments have been
 set up before continuing."*
 
-Buttons: none. (Bottom button row is suppressed by the
-`not is_setup_empty and not is_ready` guard at `next_action_card.html:166`.)
+Buttons: workflow-stepper preview — every stage inert.
+
+| Label | Style | State |
+| --- | --- | --- |
+| **Generate assignments** | Secondary `<button>` | `disabled` |
+| **Validate Setup** | Secondary `<button>` | `disabled` |
+| **Invite reviewers** | Secondary `<button>` | `disabled` |
+| **Monitor responses** | Secondary `<button>` | `disabled` |
 
 ### State 1A — Draft, ready to generate (`is_pre_generate`)
 
@@ -113,37 +123,56 @@ posting to `/operator/sessions/{id}/assignments/generate`. The
 Generate assignments button below is a
 `<button type="submit" form="next-action-generate-form">`.
 
-Buttons:
+Buttons: workflow stepper with Generate as the live next action.
 
 | Label | Style | Method | Target |
 | --- | --- | --- | --- |
 | **Generate assignments** | Primary submit | POST | `/operator/sessions/{id}/assignments/generate` (form `next-action-generate-form`) |
+| **Validate Setup** | Secondary `<button>` | `disabled` | — |
+| **Invite reviewers** | Secondary `<button>` | `disabled` | — |
+| **Monitor responses** | Secondary `<button>` | `disabled` | — |
 
 POST `/assignments/generate` calls `assignments.replace_assignments`,
 materialising one `Assignment` row per `(reviewer, reviewee, instrument)`
-triple eligible under the pinned `SessionRuleSet`. Because
-`is_pre_generate` requires `existing_count == 0`, no `confirm_replace`
-field is needed in this state. Redirect always lands on
-`/operator/sessions/{id}/assignments` — the route does not honour
-`return_to`, so operators on Session Home end up on Assignments after
-the action fires.
+triple eligible under the pinned `SessionRuleSet`. When `existing_count
+> 0` (post-revert case), the route 303s to
+`/assignments?needs_confirm=1`, surfacing the inline confirm dialog
+on the Assignments page; from there the operator ticks the replace
+(and, if responses exist, response-loss) checkboxes and submits. When
+`existing_count == 0` the POST generates directly. Redirect always
+lands on `/operator/sessions/{id}/assignments` — the route does not
+honour `return_to`, so operators on Session Home end up on Assignments
+after the action fires.
 
 ### State 2 — Draft, validation not yet run (`is_draft`, no summary)
 
 Body copy: *"Run validation to surface errors and warnings before
 activating. Validation never mutates session data."*
 
-Buttons:
+A hidden form `id="next-action-generate-form"` is emitted in the body
+posting to `/operator/sessions/{id}/assignments/generate` — same form
+shape as State 1A; the regenerate button references it.
+
+Buttons: workflow stepper with Validate Setup as the live next action
+and Generate offered as a Secondary regenerate.
 
 | Label | Style | Method | Target |
 | --- | --- | --- | --- |
-| **Validate Setup** | Primary `<a>` | GET | `/operator/sessions/{id}/assignments?validated=1` |
-| **See validation details** | Secondary `<a>` | GET | `/operator/sessions/{id}/validate` |
+| **Generate assignments** | Secondary submit | POST | `/operator/sessions/{id}/assignments/generate` (form `next-action-generate-form`) |
+| **Validate Setup** | Primary `<a>` | GET | `/operator/sessions/{id}/assignments?validated=1` (or `/?validated=1` off the Assignments page) |
+| **Invite reviewers** | Secondary `<button>` | `disabled` | — |
+| **Monitor responses** | Secondary `<button>` | `disabled` | — |
 
 Validate Setup re-enters this same route with `validated=1`, which
 runs validation and (if clean) auto-promotes `draft → validated`
 before re-rendering — so the operator typically lands in State 4A or
 State 4B on the next paint. If validation fails, they land in State 3.
+
+Note: **"See validation details"** is no longer surfaced in the
+State 2 row (it's still present in State 3 and the post-validation
+states). For State 2 the validation page is reachable via the chrome
+top-nav or the Validate Setup primary, which both lead through the
+same `/validate` page.
 
 ### State 3 — Draft, validation failed (`is_draft` + `validation_summary`)
 

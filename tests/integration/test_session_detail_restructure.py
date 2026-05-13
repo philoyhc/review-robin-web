@@ -211,9 +211,9 @@ def test_session_detail_empty_rosters_renders_setup_short_circuit(
     client: TestClient, db: Session
 ) -> None:
     """A freshly-created draft (no reviewers / reviewees / assignments)
-    surfaces a "Session not fully set up" body and suppresses every
-    action button on the Next Action card — the operator's first move
-    is to fill the missing roster, not chase Validate.
+    surfaces a "Session not fully set up" body and renders the
+    workflow-stepper preview with every stage inert — no clickable
+    action is offered until the rosters are populated.
 
     Replaces the former empty-rosters-validation-failure test: with
     this short-circuit in place, the Validate Setup button is no
@@ -231,10 +231,21 @@ def test_session_detail_empty_rosters_renders_setup_short_circuit(
         "Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing."
         in body
     )
-    # Action buttons suppressed in this state.
+    # Clickable forward actions suppressed in this state — the
+    # workflow-stepper buttons are present but all carry `disabled`.
     assert ">Validate Setup</a>" not in body
     assert ">Activate Session</button>" not in body
     assert ">See validation details</a>" not in body
+    # Stepper preview present.
+    for label in (
+        "Generate assignments",
+        "Validate Setup",
+        "Invite reviewers",
+        "Monitor responses",
+    ):
+        assert (
+            f'disabled aria-disabled="true">{label}</button>' in body
+        ), f"expected inert stepper button {label!r}"
 
 
 def test_session_detail_advances_to_validated_with_query(
