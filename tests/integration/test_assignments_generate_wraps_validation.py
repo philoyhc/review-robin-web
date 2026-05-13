@@ -73,8 +73,13 @@ def _import_pair(client: TestClient, review_session: ReviewSession) -> None:
 def _pin_default_rule(
     db: Session, review_session: ReviewSession
 ) -> SessionRuleSet:
+    # Pick the Full Matrix seed explicitly — the seeded RuleSets
+    # include several alternatives whose engine output differs.
+    # ``.first()`` without an ORDER BY can pick a different one on
+    # Postgres than on SQLite.
     rule_set = db.query(SessionRuleSet).filter(
-        SessionRuleSet.session_id == review_session.id
+        SessionRuleSet.session_id == review_session.id,
+        SessionRuleSet.name == "Full Matrix",
     ).first()
     instrument = db.query(Instrument).filter(
         Instrument.session_id == review_session.id

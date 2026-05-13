@@ -346,8 +346,12 @@ def _seed_validated_with_warnings(
     # activate-warns detour reachable.
     from app.db.models import Instrument, SessionRuleSet
 
+    # Pick the Full Matrix seed explicitly — multiple seeded
+    # RuleSets per session, .first() ordering isn't deterministic
+    # on Postgres.
     rule_set = db.query(SessionRuleSet).filter(
-        SessionRuleSet.session_id == review_session.id
+        SessionRuleSet.session_id == review_session.id,
+        SessionRuleSet.name == "Full Matrix",
     ).first()
     instrument = db.query(Instrument).filter(
         Instrument.session_id == review_session.id

@@ -82,8 +82,13 @@ def _seed_pair_plus_pinned_instrument(
         },
         follow_redirects=False,
     )
+    # Pick the Full Matrix seed explicitly — the seeded RuleSets
+    # include several alternatives (Intra-group, Self-review only,
+    # …) whose engine output differs. ``.first()`` without an
+    # ORDER BY can pick a different one on Postgres than on SQLite.
     rule_set = db.query(SessionRuleSet).filter(
-        SessionRuleSet.session_id == review_session.id
+        SessionRuleSet.session_id == review_session.id,
+        SessionRuleSet.name == "Full Matrix",
     ).first()
     instrument = db.query(Instrument).filter(
         Instrument.session_id == review_session.id
