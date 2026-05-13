@@ -705,7 +705,7 @@ the destructive migration on its own reviewable surface.
 ### PR 8 — Super buttons (Validate + Generate, etc.) — *carved out into Segment 15E*
 
 **Carved out 2026-05-10** into
-``guide/segment_15E_validate_next_action_revamp.md``. The "super buttons"
+``guide/segment_15E_operations_workflow_card.md``. The "super buttons"
 work outgrew the Operations-Assignments-page framing the 15D plan
 sketched — its natural home is the Next Action card on Session
 Home, which already plays the role of "what's the operator's next
