@@ -302,6 +302,49 @@ def test_assignments_hub_no_flash_banner_after_generate(
     assert "Assignments generated" not in body
 
 
+def test_ready_session_preview_rows_render_alongside_show_script(
+    client: TestClient, db: Session
+) -> None:
+    """Regression: the Show-column JS lives outside ``{% if not
+    is_ready %}`` but the status table (which renders the Show
+    checkboxes) lives inside it. On ready sessions there are no
+    checkboxes — the script must early-return rather than hide
+    every preview row.
+
+    Pin: on a ready session, the page renders the pairs preview
+    (``data-row-instrument`` present) but no Show checkboxes
+    (``data-filter-instrument`` absent), and the early-return
+    guard is in the script body.
+    """
+
+    review_session = _make_session(client, db, code="ready-show")
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=["alice@example.edu"],
+        reviewee_idents=["carol@example.edu"],
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
+    # Flip to ready by direct write — the lifecycle transition
+    # surface lives elsewhere and isn't this test's concern.
+    review_session.status = "ready"
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    # Status table (and its Show checkboxes) hidden on ready
+    # sessions.
+    assert 'id="assignments-status-blocks"' not in body
+    assert "data-filter-instrument=" not in body
+    # Preview pairs table still renders for review.
+    assert "data-row-instrument=" in body
+    # Early-return guard present so the unconditional ``apply()``
+    # call doesn't hide every preview row.
+    assert "if (boxes.length === 0) return;" in body
+
+
 def test_non_operator_gets_403_on_assignments_hub_and_post(
     db: Session,
     alice: AuthenticatedUser,

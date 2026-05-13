@@ -418,6 +418,12 @@
       var boxes = document.querySelectorAll(
         "input[data-filter-instrument]"
       );
+      // Status table only renders pre-ready (the "not is_ready"
+      // branch); on ready sessions there are no Show checkboxes
+      // but the pairs preview still renders. Skip wiring entirely
+      // when there's nothing to filter — otherwise apply() would
+      // hide every preview row.
+      if (boxes.length === 0) return;
       var rows = document.querySelectorAll("tr[data-row-instrument]");
       function apply() {
         var ticked = [];
