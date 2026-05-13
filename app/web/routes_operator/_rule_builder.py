@@ -15,15 +15,21 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
-from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, RuleSet, User
+from app.db.models import (
+    Instrument,
+    ReviewSession,
+    RuleSet,
+    SessionRuleSet,
+    User,
+)
 from app.db.session import get_db
 from app.schemas.assignments import AssignmentMode
-from app.services import assignments, relationships as relationships_service
-from app.services.rules import engine, library, session_library
+from app.services import assignments
+from app.services._queries import session_scoped
+from app.services.rules import library, session_library
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -577,8 +583,6 @@ def rule_based_generate(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
 
-    from app.schemas.rules import Combinator, Rule, RuleSetOptions, RuleSetSchema
-
     _require_editable(review_session)
 
     loaded = library.load_rule_set(db, rule_set_id)
@@ -590,7 +594,7 @@ def rule_based_generate(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    rule_set_row, revision = loaded
+    rule_set_row, _revision = loaded
 
     existing = assignments.existing_count(db, review_session.id)
     if existing > 0 and confirm_replace != "true":
@@ -605,53 +609,47 @@ def rule_based_generate(
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
 
-    # Rehydrate the persisted RuleSet through the typed schema so the
-    # engine sees the same shape as the editor would. Validators run
-    # at ``model_validate`` time; the seed installer + editor save
-    # paths already gate on that, so a malformed row here is a
-    # data-integrity bug rather than user error.
-    rule_adapter = TypeAdapter(Rule)
-    rule_set_schema = RuleSetSchema(
-        id=rule_set_row.id,
-        name=rule_set_row.name,
-        description=rule_set_row.description or "",
-        scope=rule_set_row.scope,  # type: ignore[arg-type]
-        combinator=Combinator(revision.combinator),
-        rules=[
-            rule_adapter.validate_python(payload)
-            for payload in revision.rules_json
-        ],
-        options=RuleSetOptions(
-            excludeSelfReviews=revision.exclude_self_reviews,
-            seed=revision.seed,
-        ),
+    # Stopgap shim (15B Slice 1 → 3a). The Rule Based card picker still
+    # emits an operator-tier ``operator_rule_sets.id``; the new
+    # materialiser reads instrument-pinned ``session_rule_sets.id``.
+    # Resolve by name match (works for both seeded session copies and
+    # library-origin copies, since 15C's auto-copy uses name parity)
+    # and pin every instrument in the session to that rule. Slice 3a
+    # retires this card + route in favour of per-card pinning + a
+    # page-level Generate that materialises whatever each instrument
+    # currently points at.
+    session_rule_set_row = db.execute(
+        select(SessionRuleSet)
+        .where(SessionRuleSet.session_id == review_session.id)
+        .where(SessionRuleSet.name == rule_set_row.name)
+    ).scalar_one_or_none()
+    if session_rule_set_row is None:
+        # Library entry added after session create — auto-copy missed it.
+        session_rule_set_row = session_library.add_from_library(
+            db,
+            review_session=review_session,
+            library_rule_set=rule_set_row,
+            actor=user,
+            correlation_id=request_correlation_id(),
+        )
+    instrument_rows = list(
+        db.execute(
+            session_scoped(Instrument, review_session.id)
+        ).scalars()
     )
+    for inst in instrument_rows:
+        inst.rule_set_id = session_rule_set_row.id
+    db.flush()
 
     override_exclude_self = exclude_self_review == "true"
-    reviewers = assignments.list_reviewers(db, review_session.id)
-    reviewees = assignments.list_reviewees(db, review_session.id)
-    pair_context_lookup = relationships_service.pair_context_lookup(
-        db, review_session.id
-    )
-    result = engine.evaluate(
-        rule_set_schema,
-        reviewers=reviewers,
-        reviewees=reviewees,
-        override_exclude_self_reviews=override_exclude_self,
-        revision_seed=revision.id,
-        pair_context_lookup=pair_context_lookup,
-    )
-
     assignments.replace_assignments(
         db,
         review_session=review_session,
         user=user,
-        pairs=result.pairs,
-        mode=AssignmentMode.rule_based,
         correlation_id=request_correlation_id(),
-        excluded_counts=result.excluded_counts,
-        rule_set_revision=revision,
-        exclude_self_reviews=override_exclude_self,
+        instrument_id=None,
+        mode=AssignmentMode.rule_based,
+        override_exclude_self_reviews=override_exclude_self,
     )
 
     return RedirectResponse(

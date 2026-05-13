@@ -18,9 +18,9 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
     SessionOperator,
+    SessionRuleSet,
     User,
 )
-from app.schemas.assignments import AssignmentMode
 from app.schemas.imports import ReviewerImportRow
 from app.schemas.sessions import SessionCreate
 from app.services import (
@@ -68,6 +68,24 @@ def setup(
         instrument_id=instrument.id,
     )
     db.add(assignment)
+    db.flush()
+    # Post-15B Slice 1: ``replace_assignments`` reads each instrument's
+    # pinned ``rule_set_id`` and runs the engine internally. Pin a
+    # Full-Matrix-shape rule so the test's replace_assignments call
+    # actually does work (and thus invalidates).
+    rule_set = SessionRuleSet(
+        session_id=review_session.id,
+        name="Full Matrix",
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=False,
+        seed=None,
+        rules_json=[],
+        is_seeded=True,
+    )
+    db.add(rule_set)
+    db.flush()
+    instrument.rule_set_id = rule_set.id
     db.flush()
     review_session.status = lifecycle.SessionStatus.validated.value
     db.flush()
@@ -181,8 +199,6 @@ def test_assignments_replace_invalidates(
         db,
         review_session=review_session,
         user=op,
-        pairs=[(reviewer, reviewee)],
-        mode=AssignmentMode.rule_based,
         correlation_id="c1",
     )
 

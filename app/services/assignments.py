@@ -13,7 +13,7 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
-    RuleSetRevision,
+    SessionRuleSet,
     User,
 )
 from app.schemas.assignments import AssignmentMode
@@ -146,8 +146,19 @@ def get_or_create_default_instrument(
     return ensure_default_instrument(db, review_session)
 
 
-def existing_count(db: Session, session_id: int) -> int:
-    return len(db.execute(session_scoped(Assignment.id, session_id)).all())
+def existing_count(
+    db: Session,
+    session_id: int,
+    *,
+    instrument_id: int | None = None,
+) -> int:
+    """Count ``Assignment`` rows for the session, optionally scoped to
+    a single instrument.
+    """
+    stmt = session_scoped(Assignment.id, session_id)
+    if instrument_id is not None:
+        stmt = stmt.where(Assignment.instrument_id == instrument_id)
+    return len(db.execute(stmt).all())
 
 
 def is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
@@ -340,47 +351,197 @@ def coverage_stats(
     }
 
 
+def _session_rule_set_to_schema(row: SessionRuleSet) -> Any:
+    """Build a ``RuleSetSchema`` from a ``SessionRuleSet`` row.
+
+    The engine accepts any ``RuleSetSchema`` regardless of origin tier;
+    this adapter is the session-tier mirror of the operator-tier
+    rehydrate dance at ``_rule_builder.py::rule_based_generate``.
+    """
+    from pydantic import TypeAdapter
+
+    from app.schemas.rules import (
+        Combinator,
+        Rule,
+        RuleSetOptions,
+        RuleSetSchema,
+        RuleSetScope,
+    )
+
+    rule_adapter = TypeAdapter(Rule)
+    return RuleSetSchema(
+        id=row.id,
+        name=row.name,
+        description=row.description or "",
+        scope=RuleSetScope.personal,
+        combinator=Combinator(row.combinator),
+        rules=[rule_adapter.validate_python(payload) for payload in row.rules_json],
+        options=RuleSetOptions(
+            excludeSelfReviews=row.exclude_self_reviews,
+            seed=row.seed,
+        ),
+    )
+
+
+def _materialise_one_instrument(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    instrument: Instrument,
+    session_rule_set: SessionRuleSet,
+    reviewers: list[Reviewer],
+    reviewees: list[Reviewee],
+    pair_context_lookup: dict[tuple[int, int], Relationship],
+    mode: AssignmentMode,
+    override_exclude_self_reviews: bool | None,
+    correlation_id: str,
+) -> tuple[int, int]:
+    """Materialise ``Assignment`` rows for a single instrument.
+
+    Runs the engine against the instrument's pinned ``SessionRuleSet``,
+    deletes existing rows scoped to this instrument only, inserts the
+    new pair fan-out, and emits one ``assignments.generated`` audit
+    event keyed by ``refs.instrument_id``.
+
+    Returns ``(replaced, new)`` for this instrument.
+    """
+    from app.services.rules import engine
+
+    rule_set_schema = _session_rule_set_to_schema(session_rule_set)
+    result = engine.evaluate(
+        rule_set_schema,
+        reviewers=reviewers,
+        reviewees=reviewees,
+        override_exclude_self_reviews=override_exclude_self_reviews,
+        revision_seed=session_rule_set.id,
+        pair_context_lookup=pair_context_lookup,
+    )
+
+    replaced_here = existing_count(
+        db, review_session.id, instrument_id=instrument.id
+    )
+    db.execute(
+        delete(Assignment)
+        .where(Assignment.session_id == review_session.id)
+        .where(Assignment.instrument_id == instrument.id)
+    )
+
+    new_here = 0
+    for reviewer, reviewee in result.pairs:
+        if is_self_review(reviewer, reviewee):
+            pair_include = review_session.self_reviews_active
+        else:
+            pair_include = True
+        db.add(
+            Assignment(
+                session_id=review_session.id,
+                reviewer_id=reviewer.id,
+                reviewee_id=reviewee.id,
+                instrument_id=instrument.id,
+                include=pair_include,
+                created_by_mode=mode.value,
+            )
+        )
+        new_here += 1
+    db.flush()
+
+    counts_kwargs: dict[str, int] = {
+        "new": new_here,
+        "replaced": replaced_here,
+        "pairs": len(result.pairs),
+        "instruments": 1,
+    }
+    for reason, n in result.excluded_counts.items():
+        counts_kwargs[f"excluded_{reason}"] = n
+    context: dict[str, str | int | bool] = {"mode": mode.value}
+    if override_exclude_self_reviews is not None:
+        context["exclude_self_reviews"] = override_exclude_self_reviews
+    refs: dict[str, int] = {
+        "instrument_id": instrument.id,
+        "rule_set_id": session_rule_set.id,
+    }
+    audit.write_event(
+        db,
+        event_type="assignments.generated",
+        summary=(
+            f"Generated {new_here} assignments for {instrument.name!r} "
+            f"({len(result.pairs)} pair{'' if len(result.pairs) == 1 else 's'}) "
+            f"via {mode.value} (replaced {replaced_here})"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(**counts_kwargs),
+        context=context,
+        refs=refs,
+        correlation_id=correlation_id,
+    )
+    return replaced_here, new_here
+
+
 def replace_assignments(
     db: Session,
     *,
     review_session: ReviewSession,
     user: User,
-    pairs: list[tuple[Reviewer, Reviewee]],
-    mode: AssignmentMode,
     correlation_id: str,
-    excluded_counts: dict[str, int] | None = None,
-    filename: str | None = None,
-    includes: list[bool] | None = None,
-    rule_set_revision: RuleSetRevision | None = None,
-    exclude_self_reviews: bool | None = None,
+    instrument_id: int | None = None,
+    mode: AssignmentMode = AssignmentMode.rule_based,
+    override_exclude_self_reviews: bool | None = None,
 ) -> tuple[int, int]:
-    """Replace all assignments for the session. Returns (replaced, new).
+    """Materialise per-instrument ``Assignment`` rows from each
+    instrument's pinned ``rule_set_id``.
 
-    Each (reviewer, reviewee) pair fans out to **one Assignment row per
-    instrument** in the session. The unique constraint on
-    ``(session_id, reviewer_id, reviewee_id, instrument_id)`` allows the
-    same pair to coexist across instruments; on the reviewer surface
-    each Assignment is its own row inside its instrument's table, which
-    is what the multi-instrument paginated view needs to show all the
-    instrument groups.
+    ``instrument_id=None`` (default): iterate every instrument in the
+    session whose ``rule_set_id`` is non-NULL, run the rule engine
+    per-instrument against that instrument's pinned
+    ``session_rule_sets`` row, and write per-instrument pair fan-outs.
+    Instruments with NULL ``rule_set_id`` are skipped silently — they
+    are "no rule pinned yet", not an error condition.
 
-    ``includes`` is indexed by ``pairs`` (one entry per pair) and the
-    same value is replicated across every instrument fan-out for that
-    pair — pair-level metadata, not instrument-level. The legacy
-    ``contexts`` parameter retired in 15D PR 6b alongside the
-    ``Assignment.context`` column drop; per-pair tags now live on
-    the ``relationships`` table.
+    ``instrument_id=<id>``: scope to that single instrument only. The
+    instrument's ``rule_set_id`` must be non-NULL; raises ``ValueError``
+    otherwise.
 
-    Returns ``(replaced, new)`` as Assignment row counts (so for an
-    N-instrument session, ``new == len(pairs) * N``).
+    Returns aggregate ``(replaced, new)`` ``Assignment`` row counts
+    across every instrument processed. Emits one
+    ``assignments.generated`` audit event per processed instrument
+    with ``refs.instrument_id`` set.
 
-    ``excluded_counts`` is a generic map of exclusion-reason -> row count
-    (e.g. ``{"self_review": 3}``). Recorded on the audit event detail.
-    Future RuleBased exclusions (tag mismatch, capacity caps, deny lists)
-    plug in as additional keys without a schema change.
+    When zero instruments are processed (no pinned rules in scope),
+    returns ``(0, 0)`` and does not invalidate the validated
+    lifecycle state.
     """
-    if includes is not None and len(includes) != len(pairs):
-        raise ValueError("includes length must match pairs length")
+    get_or_create_default_instrument(db, review_session)
+    instruments_query = (
+        session_scoped(Instrument, review_session.id)
+        .order_by(Instrument.order, Instrument.id)
+    )
+    if instrument_id is not None:
+        instruments_query = instruments_query.where(Instrument.id == instrument_id)
+    all_instruments = list(db.execute(instruments_query).scalars())
+
+    if instrument_id is not None and not all_instruments:
+        raise ValueError(
+            f"instrument {instrument_id} not found in session "
+            f"{review_session.id}"
+        )
+
+    if instrument_id is not None:
+        # Single-instrument scope: the caller named the target; we
+        # require its ``rule_set_id`` to be pinned.
+        if all_instruments[0].rule_set_id is None:
+            raise ValueError(
+                f"instrument {instrument_id} has no rule pinned "
+                "(rule_set_id is NULL)"
+            )
+        targets = list(all_instruments)
+    else:
+        # Cross-instrument scope: silently skip unpinned ones.
+        targets = [i for i in all_instruments if i.rule_set_id is not None]
+
+    if not targets:
+        return 0, 0
 
     lifecycle.invalidate_if_validated(
         db,
@@ -390,82 +551,51 @@ def replace_assignments(
         correlation_id=correlation_id,
     )
 
-    # Make sure the session has at least the default instrument, then
-    # load the full instrument list so each pair fans out across all of
-    # them.
-    get_or_create_default_instrument(db, review_session)
-    instruments = list(
-        db.execute(
-            session_scoped(Instrument, review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
+    reviewers = list_reviewers(db, review_session.id)
+    reviewees = list_reviewees(db, review_session.id)
+    from app.services import relationships as relationships_service
+
+    pair_context_lookup = relationships_service.pair_context_lookup(
+        db, review_session.id
     )
 
-    replaced = existing_count(db, review_session.id)
-    db.execute(delete(Assignment).where(Assignment.session_id == review_session.id))
+    rule_set_ids = {i.rule_set_id for i in targets}
+    rule_set_rows = {
+        row.id: row
+        for row in db.execute(
+            select(SessionRuleSet).where(SessionRuleSet.id.in_(rule_set_ids))
+        ).scalars()
+    }
 
-    new_count = 0
-    for index, (reviewer, reviewee) in enumerate(pairs):
-        if includes is not None:
-            pair_include = includes[index]
-        elif is_self_review(reviewer, reviewee):
-            pair_include = review_session.self_reviews_active
-        else:
-            pair_include = True
-        for instrument in instruments:
-            db.add(
-                Assignment(
-                    session_id=review_session.id,
-                    reviewer_id=reviewer.id,
-                    reviewee_id=reviewee.id,
-                    instrument_id=instrument.id,
-                    include=pair_include,
-                    created_by_mode=mode.value,
-                )
+    total_replaced = 0
+    total_new = 0
+    for instrument in targets:
+        session_rule_set = rule_set_rows.get(instrument.rule_set_id)
+        if session_rule_set is None:
+            # Dangling FK shouldn't happen given the SET NULL cascade;
+            # treat as a data-integrity bug.
+            raise ValueError(
+                f"instrument {instrument.id} points at missing "
+                f"session_rule_set {instrument.rule_set_id}"
             )
-            new_count += 1
+        replaced_here, new_here = _materialise_one_instrument(
+            db,
+            review_session=review_session,
+            user=user,
+            instrument=instrument,
+            session_rule_set=session_rule_set,
+            reviewers=reviewers,
+            reviewees=reviewees,
+            pair_context_lookup=pair_context_lookup,
+            mode=mode,
+            override_exclude_self_reviews=override_exclude_self_reviews,
+            correlation_id=correlation_id,
+        )
+        total_replaced += replaced_here
+        total_new += new_here
 
     review_session.assignment_mode = mode.value
     db.flush()
-
-    counts_kwargs: dict[str, int] = {
-        "new": new_count,
-        "replaced": replaced,
-        "pairs": len(pairs),
-        "instruments": len(instruments),
-    }
-    for reason, n in (excluded_counts or {}).items():
-        counts_kwargs[f"excluded_{reason}"] = n
-    context: dict[str, str | int | bool] = {"mode": mode.value}
-    if filename is not None:
-        context["filename"] = filename
-    if exclude_self_reviews is not None:
-        # The actually-applied value the engine ran with — distinct
-        # from the RuleSet's stored ``options.excludeSelfReviews``
-        # because PR 4's card-level checkbox can override it for one
-        # Generate. The audit log is the source of truth for what ran.
-        context["exclude_self_reviews"] = exclude_self_reviews
-    refs: dict[str, int] = {}
-    if rule_set_revision is not None:
-        refs["rule_set_id"] = rule_set_revision.rule_set_id
-        refs["rule_set_revision_id"] = rule_set_revision.id
-    audit.write_event(
-        db,
-        event_type="assignments.generated",
-        summary=(
-            f"Generated {new_count} assignments "
-            f"({len(pairs)} pairs × {len(instruments)} instrument"
-            f"{'' if len(instruments) == 1 else 's'}) "
-            f"via {mode.value} (replaced {replaced})"
-        ),
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.counts(**counts_kwargs),
-        context=context,
-        refs=refs or None,
-        correlation_id=correlation_id,
-    )
-
     db.commit()
 
     # Lazy-seed pair_context display fields for any populated slots
@@ -474,7 +604,7 @@ def replace_assignments(
 
     if seed_display_fields_from_assignments(db, review_session):
         db.commit()
-    return replaced, new_count
+    return total_replaced, total_new
 
 
 def list_reviewers(db: Session, session_id: int) -> list[Reviewer]:
@@ -527,8 +657,15 @@ def delete_all_assignments(
     review_session: ReviewSession,
     user: User,
     correlation_id: str,
+    instrument_id: int | None = None,
 ) -> int:
-    """Remove every Assignment for the session. Clears assignment_mode."""
+    """Remove ``Assignment`` rows from the session.
+
+    ``instrument_id=None`` (default): clears every row and resets
+    ``assignment_mode`` to NULL. ``instrument_id=<id>``: scoped delete
+    that leaves rows on other instruments untouched and does NOT
+    clear ``assignment_mode``.
+    """
     lifecycle.invalidate_if_validated(
         db,
         review_session=review_session,
@@ -536,17 +673,20 @@ def delete_all_assignments(
         reason="assignments_deleted_all",
         correlation_id=correlation_id,
     )
-    rows = list(
-        db.execute(
-            session_scoped(Assignment, review_session.id)
-        ).scalars()
-    )
+    stmt = session_scoped(Assignment, review_session.id)
+    if instrument_id is not None:
+        stmt = stmt.where(Assignment.instrument_id == instrument_id)
+    rows = list(db.execute(stmt).scalars())
     deleted = len(rows)
     for row in rows:
         db.delete(row)
-    review_session.assignment_mode = None
+    if instrument_id is None:
+        review_session.assignment_mode = None
     db.flush()
 
+    refs: dict[str, int] | None = (
+        {"instrument_id": instrument_id} if instrument_id is not None else None
+    )
     audit.write_event(
         db,
         event_type="assignments.deleted_all",
@@ -554,6 +694,7 @@ def delete_all_assignments(
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(deleted=deleted),
+        refs=refs,
         correlation_id=correlation_id,
     )
     db.commit()

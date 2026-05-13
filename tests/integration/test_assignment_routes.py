@@ -152,13 +152,28 @@ def test_full_matrix_fans_pairs_out_per_instrument(
         pair_counts[key] = pair_counts.get(key, 0) + 1
     assert all(count == 2 for count in pair_counts.values())
 
-    event = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "assignments.generated")
-    ).scalar_one()
-    counts = event.detail["counts"]
-    assert counts["new"] == 4
-    assert counts["pairs"] == 2
-    assert counts["instruments"] == 2
+    # Post-15B Slice 1: one ``assignments.generated`` event per
+    # processed instrument, each scoped to its own instrument_id via
+    # the ``refs`` envelope. Both events carry ``instruments=1``
+    # (per-event); aggregate counts come from summing across events.
+    events = list(
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "assignments.generated")
+            .order_by(AuditEvent.id)
+        ).scalars()
+    )
+    assert len(events) == 2
+    total_new = sum(e.detail["counts"]["new"] for e in events)
+    total_pairs = sum(e.detail["counts"]["pairs"] for e in events)
+    assert total_new == 4
+    assert total_pairs == 4  # 2 pairs × 2 events × 1 instrument-each
+    for event in events:
+        assert event.detail["counts"]["instruments"] == 1
+        assert isinstance(event.detail["refs"]["instrument_id"], int)
+    assert {
+        event.detail["refs"]["instrument_id"] for event in events
+    } == set(instrument_ids)
 
 
 def test_full_matrix_re_save_without_confirm_blocks(
