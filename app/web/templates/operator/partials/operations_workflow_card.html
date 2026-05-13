@@ -1,0 +1,99 @@
+{# Operations Workflow Card (Segment 15E PR 3).
+
+   Single, state-aware action surface rendered identically at the
+   top of every Operations-row page. Includes:
+
+   - Title + next-action line (with optional inline acknowledge /
+     confirm checkbox continuation).
+   - Banner reflecting the most recent Generate-wrap outcome
+     (driven by ``?wf=clean|warnings|errors|setup_errors``).
+   - Five buttons: Generate · Activate · Send invitations ·
+     Send reminders · Pause. Greyed out per state.
+
+   Caller must pass ``workflow_card`` (a ``WorkflowCardContext``).
+   #}
+{% if workflow_card is defined %}
+<section class="card workflow-card" id="operations-workflow-card">
+  <h2>{{ workflow_card.title }}</h2>
+
+  {# Empty <form> declarations are siblings of the button row so
+     each button's ``form="..."`` attribute can wire up POST
+     without nesting forms (HTML forbids that). #}
+  <form method="post"
+        action="{{ workflow_card.generate_url }}"
+        id="workflow-card-generate-form">
+    <input type="hidden" name="confirm_replace" value="true">
+    <input type="hidden" name="acknowledge_response_loss" value="true">
+  </form>
+  <form method="post"
+        action="{{ workflow_card.activate_url }}"
+        id="workflow-card-activate-form">
+    {% if workflow_card.acknowledge_warnings_count > 0 %}
+      <input type="hidden" name="acknowledge_warnings" value="true">
+    {% endif %}
+  </form>
+  <form method="post"
+        action="{{ workflow_card.pause_url }}"
+        id="workflow-card-pause-form">
+    <input type="hidden" name="confirm" value="true">
+  </form>
+
+  {% if workflow_card.banner_text %}
+    <p class="workflow-card-banner {{ workflow_card.banner_kind }}"
+       data-banner-kind="{{ workflow_card.banner_kind }}">
+      {{ workflow_card.banner_text }}
+      {% if workflow_card.banner_link_href %}
+        <a href="{{ workflow_card.banner_link_href }}">See Validate ↗</a>
+      {% endif %}
+    </p>
+  {% endif %}
+
+  <p class="workflow-card-next-action">{{ workflow_card.next_action_line }}</p>
+
+  <div class="workflow-card-buttons">
+    <button class="btn{% if not workflow_card.generate_is_primary %} secondary{% endif %}"
+            type="submit"
+            form="workflow-card-generate-form"
+            data-wf-action="generate"
+            {% if not workflow_card.generate_enabled %}disabled{% endif %}>Generate</button>
+
+    <button class="btn{% if not workflow_card.activate_is_primary %} secondary{% endif %}"
+            type="submit"
+            form="workflow-card-activate-form"
+            data-wf-action="activate"
+            {% if not workflow_card.activate_enabled %}disabled{% endif %}>Activate</button>
+
+    {# PR 3: Send invitations / Send reminders are anchor links to
+       the Invitations page. PR 4 turns them into POSTs to a wrap
+       endpoint that runs generate-invitations + send-all-pending
+       atomically. #}
+    {% if workflow_card.send_invitations_enabled %}
+      <a class="btn{% if not workflow_card.send_invitations_is_primary %} secondary{% endif %}"
+         href="{{ workflow_card.invitations_url }}"
+         data-wf-action="send-invitations">Send invitations</a>
+    {% else %}
+      <button class="btn secondary"
+              type="button"
+              data-wf-action="send-invitations"
+              disabled>Send invitations</button>
+    {% endif %}
+
+    {% if workflow_card.send_reminders_enabled %}
+      <a class="btn secondary"
+         href="{{ workflow_card.invitations_url }}"
+         data-wf-action="send-reminders">Send reminders</a>
+    {% else %}
+      <button class="btn secondary"
+              type="button"
+              data-wf-action="send-reminders"
+              disabled>Send reminders</button>
+    {% endif %}
+
+    <button class="btn secondary"
+            type="submit"
+            form="workflow-card-pause-form"
+            data-wf-action="pause"
+            {% if not workflow_card.pause_enabled %}disabled{% endif %}>Pause</button>
+  </div>
+</section>
+{% endif %}

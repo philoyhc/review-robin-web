@@ -106,6 +106,12 @@ from ._validate import (
     validate_lifecycle_copy,
 )
 
+# Operations Workflow Card (Segment 15E PR 3).
+from ._workflow_card import (
+    WorkflowCardContext,
+    build_workflow_card_context,
+)
+
 # Previews page view-shapes (sliced in PR 9): reviewer picker,
 # three-tab email previews, merge-tag editor strip, reviewer-
 # surface preview card.
@@ -205,6 +211,7 @@ __all__ = [
     "SurfacePreviewContext",
     "SurfacePreviewMissing",
     "ValidateContext",
+    "WorkflowCardContext",
     # Builders / helpers.
     "build_assignments_page_context",
     "build_email_preview_body",
@@ -220,6 +227,7 @@ __all__ = [
     "build_setup_rows",
     "build_surface_preview_context",
     "build_validate_context",
+    "build_workflow_card_context",
     "compute_next_action_generate_state",
     "constraint_summary_for_field",
     "email_preview_from_display",

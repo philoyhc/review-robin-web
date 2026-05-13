@@ -29,6 +29,7 @@ from app.services import (
     assignments,
     csv_imports,
     relationships as relationships_service,
+    validation,
 )
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
@@ -51,6 +52,7 @@ router = APIRouter()
 def assignments_hub(
     request: Request,
     needs_confirm: int | None = Query(default=None),
+    wf: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -61,6 +63,7 @@ def assignments_hub(
         review_session,
         user,
         missing_confirm=needs_confirm == 1,
+        workflow_banner_kind=wf,
     )
 
 
@@ -90,6 +93,7 @@ def _render_assignments_hub(
     issues: list | None = None,
     missing_confirm: bool = False,
     is_blocked: bool = False,
+    workflow_banner_kind: str | None = None,
 ) -> HTMLResponse:
     assignment_count = assignments.existing_count(db, review_session.id)
     pair_sample = (
@@ -175,6 +179,9 @@ def _render_assignments_hub(
             "page_ctx": views.build_assignments_page_context(
                 db, review_session
             ),
+            "workflow_card": views.build_workflow_card_context(
+                db, review_session, banner_kind=workflow_banner_kind
+            ),
         },
         status_code=status_code,
     )
@@ -197,7 +204,25 @@ def assignments_generate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Page-level Generate (Segment 15B Slice 3a).
+    """Page-level Generate (Segment 15B Slice 3a + 15E PR 3 wrap).
+
+    Segment 15E PR 3 wraps the existing Generate with two validation
+    passes:
+
+    1. Pre-flight **setup-gate** check (rules grouped under the
+       Setup gate via ``app.web.views._validate.gate_for_rule_key``).
+       If any setup-gate errors, hard-stop with ``?wf=setup_errors``
+       — no assignment rows written. The workflow card banner
+       points the operator at the Validate page for detail.
+    2. Run ``replace_assignments`` (existing behaviour).
+    3. Post-flight full validation. When the readiness report is
+       clean (no errors), auto-call ``mark_validated`` to flip
+       ``draft → validated`` so the operator's next click is
+       Activate without an intermediate "Validate Setup" step.
+
+    The ``?wf=`` redirect param carries the outcome
+    (``clean | warnings | errors | setup_errors``); the workflow
+    card view-shape adapter renders the matching banner.
 
     Materialises ``Assignment`` rows for every instrument with a
     pinned ``rule_set_id``. Instruments with NULL ``rule_set_id``
@@ -207,8 +232,28 @@ def assignments_generate(
     when the session already has assignments — mirroring the
     pre-Slice-3a Rule Based card flow.
     """
+    from app.web.views._validate import gate_for_rule_key
 
     _require_editable(review_session)
+
+    # Pre-flight setup-gate validation. Setup-gate errors hard-stop
+    # the wrap; the operator fixes upstream on the Setup tabs.
+    pre_issues = validation.validate_session_setup(db, review_session)
+    setup_gate_errors = [
+        i
+        for i in pre_issues
+        if i.severity.value == "error"
+        and gate_for_rule_key(i.rule_key or "") == "setup"
+    ]
+    if setup_gate_errors:
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/assignments"
+                f"?wf=setup_errors"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
     existing = assignments.existing_count(db, review_session.id)
     if existing > 0 and confirm_replace != "true":
         return RedirectResponse(
@@ -222,14 +267,38 @@ def assignments_generate(
         _require_response_loss_ack(
             db, review_session, acknowledge_response_loss
         )
+    correlation_id = request_correlation_id()
     assignments.replace_assignments(
         db,
         review_session=review_session,
         user=user,
-        correlation_id=request_correlation_id(),
+        correlation_id=correlation_id,
     )
+
+    # Post-flight full validation. Surfaces clean / warnings /
+    # errors as the workflow-card banner via ``?wf=`` redirect.
+    # Auto-promoting draft → validated here would conflict with the
+    # lifecycle invariant ``replace_assignments`` enforces (it calls
+    # ``invalidate_if_validated`` deliberately so the operator
+    # re-acknowledges any validation findings after a mutation).
+    # The operator still clicks "Validate Setup" on Session Home to
+    # reach validated state in PR 3; PR 5 (Session Home Next Action
+    # retirement) will revisit how the validate step surfaces on the
+    # workflow card.
+    post_issues = validation.validate_session_setup(db, review_session)
+    post_report = lifecycle.build_readiness_report(post_issues)
+    if not post_report.can_activate:
+        wf_kind = "errors"
+    elif post_report.has_non_blocking_findings:
+        wf_kind = "warnings"
+    else:
+        wf_kind = "clean"
+
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
+        url=(
+            f"/operator/sessions/{review_session.id}/assignments"
+            f"?wf={wf_kind}"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
