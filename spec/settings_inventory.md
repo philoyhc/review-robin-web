@@ -449,7 +449,7 @@ Wired by 15B Slice 2 (`instruments.rule_set_id` points into this
 table) and 15C (auto-copy from operator library on session
 create + Save-to-library flow).
 
-**Canonical spec:** `guide/segment_15B_per_instrument_assignments.md`,
+**Canonical spec:** `guide/archive/segment_15B_per_instrument_assignments.md`,
 `guide/segment_15C_operator_libraries.md`.
 
 ### `operator_response_type_definitions` (Segment 15C target)

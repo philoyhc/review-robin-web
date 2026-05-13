@@ -1,5 +1,45 @@
 # Segment 15B — Per-instrument assignments
 
+**Status:** **Shipped 2026-05-13.** All eight planned slices
+landed across PRs **#930 → #937** plus the post-merge UI
+refinement bundle **#938 → #942**:
+
+| Slice | PR | Notes |
+|---|---|---|
+| 1 — Service-layer per-instrument scope | **#930** (+ fixup) | `replace_assignments(instrument_id=...)` |
+| 2a — Per-instrument rule picker on Instrument card | **#931** | Half-width "Assignment rule" sub-card |
+| 2b — Settings CSV apply-path light-up | **#932** | `rule_set_name` resolves to `instruments.rule_set_id` |
+| 3a — Assignments page reshape | **#933** | Page-level Generate + per-instrument status blocks |
+| 3b — Operations tab order swap | **#934** | Assignments now left of Validate |
+| 4 — Next Action card Generate resolver | **#935** | Wiring only (per-state surface in 15E) |
+| 5 — Per-instrument validation rules | **#936** | New `validation.py` rules + per-instrument readiness |
+| 6 — Reviewer dashboard per-instrument grouping | **#937** | Reviewer surface respects `Assignment.instrument_id` |
+
+Post-merge refinements (#938 → #942):
+- **#938** per-instrument self-review checkbox column +
+  per-instrument Show / Filter column; standalone session-
+  wide self-reviews toggle card retired in favour of the
+  per-instrument column.
+- **#939** Show column inverted (untick → hide that
+  instrument's rows; all-ticked default after Generate);
+  blue post-Generate flash banner retired.
+- **#940** Included column + self-review pill colour
+  tracks include state (blue when included, yellow when
+  not).
+- **#941** "Assignment pairs" → "Assignments preview" (the
+  table is capped at 200 rows).
+- **#942** Status info card lifts above the yellow lock
+  card on the Assignments / Reviewers / Reviewees /
+  Relationships pages (Instruments-page pattern); Self
+  review checkbox renders `disabled` when the session is
+  Activated.
+
+The plan text below is preserved as-shipped reference. The
+remainder of this file documents the locked plan as it
+entered implementation.
+
+---
+
 **Status:** Plan revised 2026-05-12. Previous draft (2026-05-09)
 assumed `Assignment.context` was live, `AssignmentContext1-3`
 was a future-possible slot, and manual-CSV assignment upload

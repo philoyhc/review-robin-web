@@ -92,7 +92,7 @@ needs that show up:
 | 12B — Audit retention | none | Operates on existing `audit_events` + `responses`. |
 | 14-1 — Email send activation | none | All schema already shipped in 11C Part 2 (Migration `c4f6a8b0d2e5`). |
 | 14 — Production hardening | type migrations only | JSON → JSONB, String(36) → native UUID. Postgres-specific, not "additive nullable" — stays in 14. |
-| 15B Slice 7 — `AssignmentContext1-3` | Three nullable columns on `assignments` | **Out of 13D scope by design.** AssignmentContext is logic-bearing (e.g. "this assignment is for Award X category"), not display-only like PairContext. If it ever lands, the schema + rule-engine integration + CSV column + UI plumbing all live together in `segment_15B_per_instrument_assignments.md` Slice 7 — not as a pre-positioned column here. |
+| 15B Slice 7 — `AssignmentContext1-3` | Three nullable columns on `assignments` | **Out of 13D scope by design.** AssignmentContext is logic-bearing (e.g. "this assignment is for Award X category"), not display-only like PairContext. If it ever lands, the schema + rule-engine integration + CSV column + UI plumbing all live together in `guide/archive/segment_15B_per_instrument_assignments.md` Slice 7 — not as a pre-positioned column here. |
 
 ---
 
@@ -329,7 +329,7 @@ provenance-pointer behaviour on
 **Why.** 15B's per-instrument RuleSet selection. Each instrument
 points at its session's copy of the chosen RuleSet (not at the
 operator-library row). Detail in
-`segment_15B_per_instrument_assignments.md` Slice 2.
+`guide/archive/segment_15B_per_instrument_assignments.md` Slice 2.
 
 **FK direction rationale.** This column lives on `instruments`,
 not on `session_rule_sets`. Instrument-scoped containers point at
