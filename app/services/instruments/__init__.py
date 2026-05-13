@@ -109,6 +109,7 @@ from ._instrument_crud import (
     delete_instrument,
     ensure_default_instrument,
     ensure_locked_display_fields,
+    pin_rule_set,
     update_instrument_description,
     update_short_label,
 )
@@ -170,6 +171,7 @@ __all__ = [
     "seed_display_fields_from_assignments",
     "seed_display_fields_from_reviewees",
     "set_sort_display_fields",
+    "pin_rule_set",
     "slugify_field_key",
     "update_display_field",
     "update_instrument_description",

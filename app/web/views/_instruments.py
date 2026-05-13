@@ -38,6 +38,14 @@ from app.web import breadcrumbs
 from ._setup import session_status_pills
 
 
+# Sentinel value the rule-picker `<select>` posts when the operator
+# chose the "— No rule —" option. Anything else is an int that
+# resolves to a ``session_rule_sets.id``. Lives at module scope so
+# both the template (via the form's hidden input default) and the
+# route handler agree on the literal.
+RULE_PICKER_NO_RULE_VALUE = ""
+
+
 @dataclass(frozen=True)
 class InstrumentHeading:
     """Title + optional subtitle for the per-instrument heading card.
@@ -189,6 +197,161 @@ def _bulk_state(values: list[bool]) -> str:
     return "mixed"
 
 
+@dataclass(frozen=True)
+class InstrumentRulePickerOption:
+    """One row in the per-card Assignment Rule picker's `<select>`.
+
+    Mirrors :class:`app.web.views._rule_builder.RuleBasedSelectorOption`
+    in shape but is keyed on ``session_rule_sets.id`` (not the
+    operator-tier id) because the picker writes that id to
+    ``instruments.rule_set_id``.
+    """
+
+    id: int
+    name: str
+    description: str
+    eligible_pair_count: int
+    is_seeded: bool
+
+
+@dataclass(frozen=True)
+class InstrumentRulePickerContext:
+    """Per-instrument context for the Assignment Rule sub-card.
+
+    ``selected_rule_set_id`` is the instrument's current pin (``None``
+    means the operator hasn't pinned anything yet — picker renders
+    the "— No rule —" sentinel option pre-selected). ``options`` is
+    the same list for every card on the page (the visible session
+    RuleSets); the per-card variation lives in
+    ``selected_rule_set_id`` + ``selected_eligible_pair_count`` +
+    ``open_rule_builder_url``.
+    """
+
+    options: list[InstrumentRulePickerOption]
+    selected_rule_set_id: int | None
+    selected_eligible_pair_count: int
+    open_rule_builder_url: str
+
+
+def _build_rule_picker_options(
+    db: Session, review_session: ReviewSession
+) -> tuple[list[InstrumentRulePickerOption], dict[int, int]]:
+    """Compute the picker option list + a per-rule eligibility-count
+    map (``rule_set_id -> N pairs``) once per page load.
+
+    Each option is the result of running the rule engine against the
+    session's current reviewer / reviewee populations, mirroring the
+    pre-15B Rule Based card pattern. The map lets per-instrument
+    contexts read the count for the currently-pinned rule without a
+    second engine pass.
+
+    Returns ``([], {})`` on rosters that produce no candidate pairs;
+    eligibility is then 0 for every option.
+    """
+    from app.schemas.rules import (
+        Combinator,
+        Rule,
+        RuleSetOptions,
+        RuleSetScope,
+        RuleSetSchema,
+    )
+    from app.services import assignments as assignments_service
+    from app.services import relationships as relationships_service
+    from app.services.rules import engine, session_library
+    from pydantic import TypeAdapter
+
+    rule_adapter = TypeAdapter(Rule)
+    rule_sets = session_library.list_visible_session_rule_sets(
+        db, session_id=review_session.id
+    )
+    if not rule_sets:
+        return [], {}
+
+    reviewers = assignments_service.list_reviewers(db, review_session.id)
+    reviewees = assignments_service.list_reviewees(db, review_session.id)
+    pair_context_lookup = relationships_service.pair_context_lookup(
+        db, review_session.id
+    )
+
+    options: list[InstrumentRulePickerOption] = []
+    eligibility_by_id: dict[int, int] = {}
+    for row in rule_sets:
+        try:
+            schema = RuleSetSchema(
+                id=row.id,
+                name=row.name,
+                description=row.description or "",
+                scope=RuleSetScope.personal,
+                combinator=Combinator(row.combinator),
+                rules=[
+                    rule_adapter.validate_python(payload)
+                    for payload in row.rules_json
+                ],
+                options=RuleSetOptions(
+                    excludeSelfReviews=row.exclude_self_reviews,
+                    seed=row.seed,
+                ),
+            )
+            result = engine.evaluate(
+                schema,
+                reviewers=reviewers,
+                reviewees=reviewees,
+                revision_seed=row.id,
+                pair_context_lookup=pair_context_lookup,
+            )
+            count = len(result.pairs)
+        except Exception:
+            count = 0
+        eligibility_by_id[row.id] = count
+        options.append(
+            InstrumentRulePickerOption(
+                id=row.id,
+                name=row.name,
+                description=row.description or "",
+                eligible_pair_count=count,
+                is_seeded=row.is_seeded,
+            )
+        )
+    return options, eligibility_by_id
+
+
+def build_instrument_rule_picker_contexts(
+    db: Session,
+    review_session: ReviewSession,
+    instruments: list[Instrument],
+) -> dict[int, InstrumentRulePickerContext]:
+    """One :class:`InstrumentRulePickerContext` per instrument, keyed
+    by ``instrument.id``. The option list + eligibility map are shared
+    across cards on the page — only the selected id + Rule Builder
+    deep-link vary per instrument.
+    """
+    options, eligibility_by_id = _build_rule_picker_options(
+        db, review_session
+    )
+    contexts: dict[int, InstrumentRulePickerContext] = {}
+    for instrument in instruments:
+        selected_id = instrument.rule_set_id
+        selected_count = (
+            eligibility_by_id.get(selected_id, 0)
+            if selected_id is not None
+            else 0
+        )
+        builder_url = (
+            f"/operator/sessions/{review_session.id}"
+            f"/assignments/rule-based-editor"
+            f"?instrument_id={instrument.id}"
+        )
+        if selected_id is not None:
+            builder_url += f"&rule_set_id={selected_id}"
+        contexts[instrument.id] = InstrumentRulePickerContext(
+            options=options,
+            selected_rule_set_id=selected_id,
+            selected_eligible_pair_count=selected_count,
+            open_rule_builder_url=builder_url,
+        )
+    return contexts
+
+
 def build_instruments_context(
     db: Session,
     *,
@@ -314,11 +477,16 @@ def build_instruments_context(
         else None
     )
 
+    rule_picker_by_instrument_id = build_instrument_rule_picker_contexts(
+        db, review_session, instruments
+    )
+
     return {
         "user": user,
         "session": review_session,
         "status_pills": session_status_pills(db, review_session),
         "instruments": instruments,
+        "rule_picker_by_instrument_id": rule_picker_by_instrument_id,
         "is_ready": is_ready,
         "can_edit": can_edit,
         "bulk_accepting_state": _bulk_state(

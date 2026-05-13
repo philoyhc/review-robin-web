@@ -375,6 +375,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "instrument.sort_fields_updated": EventSchema(
         _IDENTITY | {"changes", "refs"}
     ),
+    "instrument.rule_pinned": EventSchema(
+        _IDENTITY | {"changes", "refs"}
+    ),
     "instrument.field_added": EventSchema(
         _IDENTITY | {"snapshot", "refs", "context"}
     ),
