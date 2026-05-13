@@ -8,6 +8,8 @@
 
    - ``session`` (ReviewSession)
    - ``is_setup_empty`` (bool)
+   - ``is_pre_generate`` (bool) — draft with rosters and rule pins
+     populated but no assignment rows generated yet.
    - ``is_draft`` / ``is_validated`` / ``is_ready`` (bool flags)
    - ``validation_summary`` (dict | None) with ``error_count`` /
      ``warning_count`` / ``info_count`` / ``can_activate`` /
@@ -54,6 +56,14 @@
          not click Validate. No action buttons render below in
          this state. #}
       <p>Session not fully set up. Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing.</p>
+    {% elif is_pre_generate %}
+      {# Rosters populated, every instrument's assignment rule is
+         pinned, but no assignment rows exist yet. Push the operator
+         to Generate before they can validate. #}
+      <p>Run generation to create the assignment pairs (note that doing so will replace any previously generated assignment pairs).</p>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/assignments/generate"
+            id="next-action-generate-form"></form>
     {% elif is_draft %}
       {% if validation_summary %}
         {# Validation just ran (?validated=1) and didn't pass — the
@@ -165,7 +175,11 @@
   </div>
   {% if not is_setup_empty and not is_ready %}
   <div class="next-action-buttons">
-    {% if is_draft %}
+    {% if is_pre_generate %}
+      <button class="btn"
+              type="submit"
+              form="next-action-generate-form">Generate assignments</button>
+    {% elif is_draft %}
       <a class="btn"
          href="{{ _validate_setup_href }}">Validate Setup</a>
       <a class="btn secondary"

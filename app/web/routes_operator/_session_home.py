@@ -29,6 +29,7 @@ from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
 from app.services import (
+    assignments,
     csv_imports,
     instruments as instruments_service,
     responses,
@@ -113,6 +114,16 @@ def session_detail(
             and lifecycle.is_validated(review_session),
             "needs_acknowledge": report.has_non_blocking_findings,
         }
+    is_setup_empty = lifecycle.is_draft(review_session) and (
+        csv_imports.existing_reviewer_count(db, review_session.id) == 0
+        or csv_imports.existing_reviewee_count(db, review_session.id) == 0
+        or instruments_service.has_unpinned(db, review_session.id)
+    )
+    is_pre_generate = (
+        lifecycle.is_draft(review_session)
+        and not is_setup_empty
+        and assignments.existing_count(db, review_session.id) == 0
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_detail.html",
@@ -139,14 +150,11 @@ def session_detail(
             # instrument rule pins still missing. Computed after the
             # validation flow so a session that just transitioned
             # ``draft → validated`` no longer falls through this gate.
-            "is_setup_empty": (
-                lifecycle.is_draft(review_session)
-                and (
-                    csv_imports.existing_reviewer_count(db, review_session.id) == 0
-                    or csv_imports.existing_reviewee_count(db, review_session.id) == 0
-                    or instruments_service.has_unpinned(db, review_session.id)
-                )
-            ),
+            "is_setup_empty": is_setup_empty,
+            # Draft with everything set up but no generated assignment
+            # rows yet — surface the Generate prompt on the Next Action
+            # card before Validate.
+            "is_pre_generate": is_pre_generate,
             "has_responses": lifecycle.session_has_responses(db, review_session),
             "quick_setup": views.build_quick_setup_context(
                 db,
