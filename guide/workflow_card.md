@@ -73,13 +73,17 @@ elif is_validated:
 elif is_ready:             → State 6
 ```
 
-For the draft phase (States 1, 1A, 2) the bottom row renders a
-four-stage **workflow stepper**: `Generate assignments`,
-`Validate Setup`, `Invite reviewers`, `Monitor responses`. The active
-stage uses Primary styling; earlier stages re-render as Secondary
-(re-clickable); later stages render as `<button disabled>` previews of
-what's coming. State 6 keeps its inline two-section buttons. States
-3 / 4 / 5 keep their existing state-specific rows.
+For States 1, 1A, 2, 4A, 4B, and 5 the bottom row renders a unified
+**workflow stepper**: four stage buttons (`Generate assignments`,
+`Validate Setup` / `Activate Session`, `Invite reviewers`, `Monitor
+responses`) flanked by `Revert to draft` at the end. The active stage
+uses Primary styling; earlier stages re-render as Secondary
+(re-clickable); later stages render as `<button disabled>` previews
+of what's coming. The second slot's label morphs from "Validate
+Setup" (draft phase) to "Activate Session" (validated phase) to keep
+the operator's eye on the next forward action. State 3 (validation
+just failed) keeps its two-button row pre-stepper. State 6 (activated)
+keeps its inline two-section invitations / pause layout.
 
 ### State 1 — Setup not yet populated (`is_setup_empty`)
 
@@ -93,7 +97,8 @@ Body copy: *"Session not fully set up. Make sure that reviewers,
 reviewees, and relationships (optional), and instruments have been
 set up before continuing."*
 
-Buttons: workflow-stepper preview — every stage inert.
+Buttons: workflow-stepper preview — every stage inert, including the
+trailing Revert (revert is N/A from draft anyway).
 
 | Label | Style | State |
 | --- | --- | --- |
@@ -101,6 +106,7 @@ Buttons: workflow-stepper preview — every stage inert.
 | **Validate Setup** | Secondary `<button>` | `disabled` |
 | **Invite reviewers** | Secondary `<button>` | `disabled` |
 | **Monitor responses** | Secondary `<button>` | `disabled` |
+| **Revert to draft** | Secondary `<button>` | `disabled` |
 
 ### State 1A — Draft, ready to generate (`is_pre_generate`)
 
@@ -131,6 +137,7 @@ Buttons: workflow stepper with Generate as the live next action.
 | **Validate Setup** | Secondary `<button>` | `disabled` | — |
 | **Invite reviewers** | Secondary `<button>` | `disabled` | — |
 | **Monitor responses** | Secondary `<button>` | `disabled` | — |
+| **Revert to draft** | Secondary `<button>` | `disabled` | — |
 
 POST `/assignments/generate` calls `assignments.replace_assignments`,
 materialising one `Assignment` row per `(reviewer, reviewee, instrument)`
@@ -162,6 +169,7 @@ and Generate offered as a Secondary regenerate.
 | **Validate Setup** | Primary `<a>` | GET | `/operator/sessions/{id}/assignments?validated=1` (or `/?validated=1` off the Assignments page) |
 | **Invite reviewers** | Secondary `<button>` | `disabled` | — |
 | **Monitor responses** | Secondary `<button>` | `disabled` | — |
+| **Revert to draft** | Secondary `<button>` | `disabled` | — |
 
 Validate Setup re-enters this same route with `validated=1`, which
 runs validation and (if clean) auto-promotes `draft → validated`
@@ -200,13 +208,17 @@ A second hidden form `id="next-action-revert-form"` is emitted
 posting to `/operator/sessions/{id}/revert` with the same hidden
 `return_to`. The Revert to draft button targets that form.
 
-Buttons:
+Buttons: workflow stepper with Activate Session as the live next
+action, Generate offered as a Secondary regenerate (the route accepts
+`validated` as editable so the regenerate POST works without an
+explicit revert), and Revert to draft trailing as Secondary.
 
 | Label | Style | Method | Target |
 | --- | --- | --- | --- |
+| **Generate assignments** | Secondary submit | POST | `/operator/sessions/{id}/assignments/generate` (form `next-action-generate-form`) |
 | **Activate Session** | Primary submit | POST | `/operator/sessions/{id}/activate` (form `next-action-activate-form`) |
-| **See validation details** | Secondary `<a>` | GET | `/operator/sessions/{id}/validate` |
-| **See previews** | Secondary `<a>` | GET | `/operator/sessions/{id}/previews#reviewer-surface` |
+| **Invite reviewers** | Secondary `<button>` | `disabled` | — |
+| **Monitor responses** | Secondary `<button>` | `disabled` | — |
 | **Revert to draft** | Secondary submit | POST | `/operator/sessions/{id}/revert` (form `next-action-revert-form`) |
 
 POST `/activate` calls `lifecycle.activate_session(...,
@@ -223,6 +235,10 @@ transitioning `validated → draft` and emitting `session.invalidated`.
 No confirm checkbox is required in this branch. Redirect goes back to
 Assignments.
 
+Note: **"See validation details"** and **"See previews"** are no
+longer surfaced in the State 4A row. The Validate and Previews pages
+remain reachable via the chrome top-nav.
+
 ### State 4B — Validated, warnings to acknowledge (`needs_acknowledge`)
 
 Body copy: same opening paragraph as State 4A, plus a help line:
@@ -233,13 +249,16 @@ Activate button is an `<a>` instead, deliberately detouring through
 the Validate page so the operator sees the warnings inline before
 confirming.
 
-Buttons:
+Buttons: same workflow stepper as State 4A — Activate is rendered as
+an `<a>` detouring through `/validate?activate=1` instead of the
+direct POST so the operator acknowledges warnings inline.
 
 | Label | Style | Method | Target |
 | --- | --- | --- | --- |
+| **Generate assignments** | Secondary submit | POST | `/operator/sessions/{id}/assignments/generate` (form `next-action-generate-form`) |
 | **Activate Session** | Primary `<a>` | GET | `/operator/sessions/{id}/validate?activate=1&return_to=assignments` |
-| **See validation details** | Secondary `<a>` | GET | `/operator/sessions/{id}/validate` |
-| **See previews** | Secondary `<a>` | GET | `/operator/sessions/{id}/previews#reviewer-surface` |
+| **Invite reviewers** | Secondary `<button>` | `disabled` | — |
+| **Monitor responses** | Secondary `<button>` | `disabled` | — |
 | **Revert to draft** | Secondary submit | POST | `/operator/sessions/{id}/revert` (form `next-action-revert-form`) |
 
 The Validate page, when reached with `activate=1`, surfaces the
@@ -257,15 +276,21 @@ re-validation now surfaces errors — the session is still in the
 Body copy: *"Validation shows that there are error(s). Resolve them
 and re-run validation before activating."*
 
-Activate Session is dropped. **See validation details** is promoted
-from Secondary to Primary as the single forward action.
-
-Buttons:
+Buttons: workflow stepper with every forward stage inert; Revert to
+draft is the single live action and promotes to Primary.
 
 | Label | Style | Method | Target |
 | --- | --- | --- | --- |
-| **See validation details** | Primary `<a>` | GET | `/operator/sessions/{id}/validate` |
-| **Revert to draft** | Secondary submit | POST | `/operator/sessions/{id}/revert` (form `next-action-revert-form`) |
+| **Generate assignments** | Secondary `<button>` | `disabled` | — |
+| **Activate Session** | Secondary `<button>` | `disabled` | — |
+| **Invite reviewers** | Secondary `<button>` | `disabled` | — |
+| **Monitor responses** | Secondary `<button>` | `disabled` | — |
+| **Revert to draft** | Primary submit | POST | `/operator/sessions/{id}/revert` (form `next-action-revert-form`) |
+
+To re-validate after fixing the underlying data, operators revert to
+draft (landing in State 1A via the
+`needs_regeneration_after_revert` audit-history check), regenerate,
+then re-enter the Validate flow from State 2.
 
 ### State 6 — Activated (`is_ready`)
 

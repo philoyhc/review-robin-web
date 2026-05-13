@@ -704,12 +704,13 @@ def test_preview_singular_route_redirects_308_to_hub(
     )
 
 
-def test_session_home_see_previews_link_targets_hub(
+def test_session_home_previews_chrome_link_targets_hub(
     client: TestClient, db: Session
 ) -> None:
-    """Session Home's See previews secondary button points at the
-    consolidated previews hub anchored on the surface card, not the
-    retired /preview route."""
+    """The chrome top-nav Previews tab on Session Home points at the
+    consolidated previews hub, not the retired /preview route. (Replaces
+    the former See previews Next Action card secondary which retired
+    with the workflow-stepper redesign.)"""
     session = _create_session(client, db, code="prev-c-home-link")
     _import_reviewers(
         client,
@@ -728,7 +729,6 @@ def test_session_home_see_previews_link_targets_hub(
     ).text
 
     assert (
-        f'href="/operator/sessions/{session.id}/previews#reviewer-surface"'
+        f'href="/operator/sessions/{session.id}/previews">Previews</a>'
         in body
     )
-    assert ">See previews</a>" in body
