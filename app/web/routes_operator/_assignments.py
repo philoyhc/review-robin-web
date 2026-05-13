@@ -193,6 +193,11 @@ def _render_assignments_hub(
         or csv_imports.existing_reviewee_count(db, review_session.id) == 0
         or instruments_service.has_unpinned(db, review_session.id)
     )
+    is_pre_generate = (
+        lifecycle.is_draft(review_session)
+        and not is_setup_empty
+        and assignments.existing_count(db, review_session.id) == 0
+    )
 
     return _templates.TemplateResponse(
         request,
@@ -214,6 +219,7 @@ def _render_assignments_hub(
             "is_validated": lifecycle.is_validated(review_session),
             "is_ready": lifecycle.is_ready(review_session),
             "is_setup_empty": is_setup_empty,
+            "is_pre_generate": is_pre_generate,
             "validation_summary": validation_summary,
             # Wire the Next Action card forms to redirect back here
             # rather than to Session Home after their POST. The

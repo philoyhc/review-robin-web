@@ -31,6 +31,9 @@ these context keys to the partial:
   instrument has no assignment rule pinned (checked via
   `instruments.has_unpinned`, which also returns `True` when the
   session has zero instruments).
+- `is_pre_generate` — `True` iff session is in draft, `is_setup_empty`
+  is `False`, AND no `Assignment` rows exist yet. Surfaces the
+  Generate prompt before the operator can validate.
 - `validation_summary` — `dict | None`. Populated whenever the page
   was reached with `?validated=1` OR the session is already
   `validated`. Keys:
@@ -54,6 +57,7 @@ The body and the bottom button row are chosen by this cascade in
 
 ```
 if is_setup_empty:        → State 1
+elif is_pre_generate:     → State 1A
 elif is_draft:
     if validation_summary: → State 3
     else:                  → State 2
@@ -83,6 +87,36 @@ set up before continuing."*
 
 Buttons: none. (Bottom button row is suppressed by the
 `not is_setup_empty and not is_ready` guard at `next_action_card.html:166`.)
+
+### State 1A — Draft, ready to generate (`is_pre_generate`)
+
+Triggered while the session is in `draft`, `is_setup_empty` is `False`
+(rosters populated, every instrument has its rule pinned), AND no
+`Assignment` rows have been generated yet.
+
+Body copy: *"Run generation to create the assignment pairs (note
+that doing so will replace any previously generated assignment
+pairs)."*
+
+A hidden form `id="next-action-generate-form"` is emitted in the body
+posting to `/operator/sessions/{id}/assignments/generate`. The
+Generate assignments button below is a
+`<button type="submit" form="next-action-generate-form">`.
+
+Buttons:
+
+| Label | Style | Method | Target |
+| --- | --- | --- | --- |
+| **Generate assignments** | Primary submit | POST | `/operator/sessions/{id}/assignments/generate` (form `next-action-generate-form`) |
+
+POST `/assignments/generate` calls `assignments.replace_assignments`,
+materialising one `Assignment` row per `(reviewer, reviewee, instrument)`
+triple eligible under the pinned `SessionRuleSet`. Because
+`is_pre_generate` requires `existing_count == 0`, no `confirm_replace`
+field is needed in this state. Redirect always lands on
+`/operator/sessions/{id}/assignments` — the route does not honour
+`return_to`, so operators on Session Home end up on Assignments after
+the action fires.
 
 ### State 2 — Draft, validation not yet run (`is_draft`, no summary)
 
