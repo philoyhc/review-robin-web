@@ -1,8 +1,12 @@
-# Segment 15E — Next Action revamp + multi-step shortcuts
+# Segment 15E — Validate page + Next Action revamp
 
-**Status:** Planning — stub created 2026-05-10. Captures the
-"super buttons" idea originally sketched as 15D PR 8 and broadens
-it into a Next Action card revamp on Session Home.
+**Status:** Planning — stub created 2026-05-10; scope broadened
+2026-05-13 to absorb the Validate-page revisions made necessary
+by 15B's per-instrument assignments move. Captures the "super
+buttons" idea originally sketched as 15D PR 8 and broadens it
+into a Validate-page + Next Action revamp that **streamlines
+the operator workflow from setup completion through to just
+before email generation**.
 
 > **Working notes scratchpad** at the bottom — capture decisions,
 > scope tweaks, and open questions as they come up. Once the shape
@@ -11,19 +15,45 @@ it into a Next Action card revamp on Session Home.
 
 ## Goal
 
-Reduce the operator click-count from "did setup work; now nag the
-session through Validate → Generate → Activate one step at a
-time" to **"one button advances to the next sensible state."**
-The Next Action card on Session Home is the natural home: it
-already names the operator's next move per lifecycle state, but
-each move is a single primitive. 15E adds **multi-step shortcuts**
-that chain primitives together, while keeping the underlying
-single-step actions individually clickable for operators who want
-to pause / inspect between steps.
+Streamline the **setup → ready-to-send** stretch of the operator
+workflow. Today the operator clicks Validate → (fix issues) →
+Generate (per instrument or page-level) → Activate as separate
+primitives; the Validate page itself still leans on the
+pre-15B "one rule per session, generate the whole table" mental
+model that doesn't fit the per-instrument world. 15E
+re-examines that stretch as a single surface and lands two
+coordinated revamps:
 
-The 15D plan parked this work as a follow-on ("PR 8 — super
-buttons") with one paragraph of intent. 15E gives it a proper
-home + per-state surface plan.
+1. **Validate page** — rework the readiness rules + UI in light
+   of per-instrument assignments (15B). Each instrument now
+   carries its own pinned rule + materialised pair set; the
+   page should surface per-instrument readiness (pinned? stale?
+   generated? included rows > 0?) alongside the existing
+   session-wide checks. Validation actions that auto-fix where
+   safe (e.g. "Generate now" for instruments with pinned rules
+   but no rows) belong here, scoped to the failing instrument
+   rather than the whole session.
+
+2. **Next Action card** on Session Home — collapse the "did
+   setup; now nag through Validate → Generate → Activate"
+   click-chain to **"one button advances to the next sensible
+   state."** The card already names the operator's next move
+   per lifecycle state, but each move is a single primitive.
+   15E adds **multi-step shortcuts** that chain primitives
+   together, while keeping the underlying single-step actions
+   individually clickable for operators who want to pause /
+   inspect between steps.
+
+End-to-end test: after import + roster work, an operator should
+need at most a single click to advance from "setup done" to
+"ready to send invitations" — with the Validate page surfacing
+any per-instrument blockers along the way (and offering inline
+fixes where safe).
+
+The 15D plan parked the super-buttons piece as a follow-on
+("PR 8") with one paragraph of intent. 15E gives both the
+Validate page work and the multi-step shortcuts a proper home +
+per-state surface plan.
 
 ## Why a separate segment
 
@@ -33,15 +63,74 @@ home + per-state surface plan.
   surface. Putting the chained actions there keeps the single
   "what should I do next?" answer in one place.
 - 15D shipped per-step changes (Generate moved to Operations
-  Assignments page; Quick Setup loses Generate). Layering a
-  multi-step UI on top makes more sense as its own segment, after
-  the per-step routes settle.
+  Assignments page; Quick Setup loses Generate). 15B then shifted
+  Generate from session-wide to per-instrument (rule pinning on
+  the Instruments page, status table on the Assignments page).
+  Both moves leave the Validate page surfacing checks that no
+  longer match the underlying model — the page needs its own
+  pass. Layering the multi-step shortcuts on top makes more
+  sense after the Validate page settles, so the two revamps live
+  in the same segment to share the readiness-rule plumbing they
+  both depend on.
 - **Operations Assignments page** can also surface the
   Validate-+-Generate / +-Activate buttons for operators who land
   there directly, but the canonical home is Next Action. Decide
   during PR scoping.
 
 ## Likely surface
+
+### Validate page revamp (sketchy)
+
+The page today (Segment 11G) registers a `ValidationRule`
+registry, runs every rule against the session, and renders one
+issue list with severity-chip filters + per-issue
+fix-here deep-links. Pre-15B that was enough because the
+"Assignments" check was a single yes-or-no ("did the operator
+generate?"). Post-15B the picture is per-instrument and finer-
+grained.
+
+Surface adjustments:
+
+- **Per-instrument readiness pills.** A new section above (or
+  inside) the setup-coverage matrix lists every instrument with
+  its current readiness signal — `rule pinned` (yes/no),
+  `eligible pairs > 0`, `generated rows` (count), `included
+  rows > 0`, `stale` (eligible vs. generated diverge). Drives
+  the at-a-glance "which instrument blocks Activate?" question
+  without making the operator hop to the Assignments page first.
+- **New validation rules** (registered in `validation.py`):
+  - `instruments.no_rule_pinned` — error if any instrument has
+    `rule_set_id IS NULL` while the session has reviewers /
+    reviewees (otherwise that instrument can't produce
+    assignments). Fix link: the Instruments page card.
+  - `instruments.stale_generated` — warning if any pinned
+    instrument's eligible count diverges from its generated
+    count (operator hasn't regenerated since a roster / rule
+    change). Fix link: page-level Generate on Assignments
+    page.
+  - `instruments.zero_included` — warning (or info?) if any
+    instrument has `generated_count > 0` but `included_count
+    == 0` (every row deactivated, including via the Self-review
+    bulk toggle).
+  - Re-frame the existing session-wide assignment check —
+    `assignments.no_pairs` → tighter "no included pairs across
+    any instrument" (since per-instrument visibility is in the
+    new rules above).
+- **Inline auto-fix actions.** Where safe, the per-issue fix
+  button runs the fix in-line rather than deep-linking off-
+  page. Specifically: `instruments.stale_generated` gets a
+  "Generate this instrument" button that hits the per-instrument
+  Generate route (added in 15B, or to be added in this segment
+  if not yet present); on success the page reloads with the
+  rule's status updated.
+- **Severity chip strip stays.** The filter / count pattern
+  carries over unchanged; new rules slot into the existing
+  severity ladder.
+
+Out of scope for the Validate page work: re-render as something
+other than a flat issue list (the existing surface works; we're
+extending it). The setup-coverage matrix at the top stays as-is
+modulo the new per-instrument readiness pills.
 
 ### Next Action card states + super buttons (sketchy)
 
@@ -138,10 +227,22 @@ its own.
 
 ## Related context
 
+- **Segment 15B — per-instrument assignments**
+  (`guide/segment_15B_per_instrument_assignments.md`). The
+  Validate-page revamp half of 15E lights up the per-instrument
+  readiness signals 15B shipped (`Instrument.rule_set_id`,
+  per-instrument Generate, per-instrument Self review include).
 - **Segment 15D — Assignments revamp**
-  (`guide/archive/segment_15D_assignments_revamp.md`). Original "super
-  buttons" framing in PR 8; carved out into 15E for proper
-  surface scoping.
+  (`guide/archive/segment_15D_assignments_revamp.md`). Original
+  "super buttons" framing in PR 8; carved out into 15E for
+  proper surface scoping.
+- **Segment 11G — Validate page rebuild**
+  (`guide/archive/segment_11G_validate_page.md`). Shipped the
+  `ValidationRule` registry + per-issue fix-here deep-links 15E
+  extends.
+- **Validation service**
+  (`app/services/validation.py`). `REGISTERED_RULES` is the slot
+  for the new per-instrument rules.
 - **Session Home spec** (`spec/session_home.md`) — the canonical
   Next Action card behaviour. 15E extends rather than replaces.
 - **Next Action card template**
@@ -155,6 +256,7 @@ its own.
   here; 15E doesn't touch the state machine, just chains
   existing primitives.
 - **Operations Assignments page**
-  (15D PR 6a). Generate button + bulk Include toggle live here;
-  decide during scoping whether super buttons also surface
-  here.
+  (15D PR 6a + 15B refinements). Per-instrument status table +
+  page-level Generate live here; the Validate page's auto-fix
+  buttons share the per-instrument Generate route this surface
+  exposes.
