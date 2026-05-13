@@ -124,12 +124,16 @@ def test_chrome_assignments_tab_now_on_operations_row(
     )[0]
     assert ">Assignments</a>" in ops_strip
 
-    # Order on Ops row: Validate · Assignments · Previews · Invitations · Responses
+    # Order on Ops row (Slice 3b swap): Assignments · Validate ·
+    # Previews · Invitations · Responses. Assignments leads because
+    # it's now where the operator confirms materialised pairs are
+    # sensible *before* running Validate; pre-Slice-3a it was where
+    # the operator did the Generate work.
     indices = {
         label: ops_strip.find(f">{label}</a>")
         for label in (
-            "Validate",
             "Assignments",
+            "Validate",
             "Previews",
             "Invitations",
             "Responses",
@@ -137,8 +141,8 @@ def test_chrome_assignments_tab_now_on_operations_row(
     }
     assert all(idx > 0 for idx in indices.values())
     assert (
-        indices["Validate"]
-        < indices["Assignments"]
+        indices["Assignments"]
+        < indices["Validate"]
         < indices["Previews"]
         < indices["Invitations"]
         < indices["Responses"]
