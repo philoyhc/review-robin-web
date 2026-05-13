@@ -404,7 +404,7 @@ module reads or writes it yet, per 13D PR 2).
 - Doc updates: `spec/settings_inventory.md` §9 note on the
   `name` row, `guide/archive/segment_12A-1_export.md` caveat collapsed
   to "enforced at the schema level",
-  `guide/segment_15B_per_instrument_assignments.md` Slice 2
+  `guide/archive/segment_15B_per_instrument_assignments.md` Slice 2
   note that per-instrument selection relies on the constraint
   for stable name-based references in the 12A-1 export, and
   `guide/segment_15C_operator_libraries.md` Slice 4 note that

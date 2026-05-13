@@ -55,7 +55,7 @@ is discoverable on first paint.
 
 **Part 2 PR F (per-instrument Assignments after 15B) carved
 out to 15B Slice 4c** — see
-`guide/segment_15B_per_instrument_assignments.md`.
+`guide/archive/segment_15B_per_instrument_assignments.md`.
 
 Refreshed 2026-05-12 against the as-shipped 13D scaffolding.
 **Schema already in place** since Segment 13D PR 5

@@ -228,7 +228,7 @@ its own.
 ## Related context
 
 - **Segment 15B — per-instrument assignments**
-  (`guide/segment_15B_per_instrument_assignments.md`). The
+  (`guide/archive/segment_15B_per_instrument_assignments.md`). The
   Validate-page revamp half of 15E lights up the per-instrument
   readiness signals 15B shipped (`Instrument.rule_set_id`,
   per-instrument Generate, per-instrument Self review include).

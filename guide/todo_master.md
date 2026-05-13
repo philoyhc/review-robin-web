@@ -394,6 +394,29 @@ Symmetric two-tier library / per-session-copy model for both RTDs and RuleSets. 
 - **#921** — unified the in-library + personal pill convention across the Available rulesets card and the RTD card on the Instruments page: `in library` → green `pill-success` for non-seeded rows whose `library_origin_id` is non-NULL; `personal` → blue `pill-info` for non-seeded session-only rows; no pill on seeded. The Rule Builder card's in-library pill (which #919 placed inline) retires in favour of the listing-card placement.
 - **#922** — moved the operator-Settings library cards (RTDs + RuleSets) to a half-width side-by-side row at the bottom of the page, after the SMTP + danger-zone cards.
 
+### Segment 15B — Per-instrument assignments — done 2026-05-13 (PRs #930 → #937 + #938 → #942)
+
+Each `Instrument` now carries its own assignment rule + materialised pair set, replacing the pre-15B "one rule per session, generate the whole table" model. Eight planned slices shipped:
+
+- **#930** — Slice 1 service-layer per-instrument scope. `replace_assignments(instrument_id=...)` per-instrument scope; `None` fans across every instrument with a non-NULL `rule_set_id`. `existing_count` / `delete_session_assignments` gain optional `instrument_id` filters. The `assignments.generated` audit payload starts carrying real per-instrument variation. Fixup commit `338549e` adds the `session_rule_sets` join for last-generated rule name.
+- **#931** — Slice 2a per-instrument rule picker on the Instrument card. New half-width "Assignment rule" sub-card on each Instrument card with a `<select>` listing visible `session_rule_sets`, an eligibility line ("N eligible pairs found"), and a deep link to the Rule Builder.
+- **#932** — Slice 2b Settings CSV apply-path light-up. `rule_set_name` column in the Instruments CSV resolves to `instruments.rule_set_id` via `session_rule_sets` name lookup.
+- **#933** — Slice 3a Assignments page reshape. Page-level Generate button + per-instrument status blocks (Rule / Eligible / Generated). Pre-15B Rule Based card retired (rule selection lives on the Instruments page now).
+- **#934** — Slice 3b Operations tab order swap. Assignments moves left of Validate in the Operations row strip — operators preview the materialised pairs before validating them.
+- **#935** — Slice 4 Next Action card Generate resolver. Wiring only (per-state surface to land in Segment 15E); resolver returns `"generate"` when the session has reviewers + reviewees + at least one instrument with a pinned rule but unfilled assignments.
+- **#936** — Slice 5 per-instrument validation rules. New `validation.py` rules for per-instrument readiness (rule pinned / generated / included), wired into the Validate page's per-issue list. 15E broadens these further.
+- **#937** — Slice 6 reviewer dashboard per-instrument grouping. Reviewer surface respects `Assignment.instrument_id` so reviewers see their per-instrument question sets correctly when one session carries multiple instruments with different rule sets.
+
+**Post-merge UI refinements (#938 → #942, 2026-05-13):**
+
+- **#938** — Per-instrument self-review checkbox column + per-instrument Show / Filter column on the Assignments-page status blocks. Session-wide self-reviews toggle card retired; self-review include state owned per-instrument now. New audit event `assignments.instrument_self_reviews_active_set` replaces the retired session-wide variant.
+- **#939** — Show column inverted (untick → hide that instrument's preview rows; all-ticked default post-Generate); blue post-Generate flash banner retired. The Show column header renames from "Filter" → "Show".
+- **#940** — New "Included" column (rows with `include=True` per instrument); self-review pill colour tracks include state (blue `pill-info` when included, yellow `pill-warning` when not). Row-count pill under Show retired in favour of the Included column.
+- **#941** — Heading rename "Assignment pairs" → "Assignments preview" (the table is capped at 200 rows).
+- **#942** — Status info card lifts above the yellow lock card on Assignments / Reviewers / Reviewees / Relationships pages (Instruments-page pattern; status-info-then-yellow-lock); Self review checkbox renders `disabled` when the session is Activated so flipping include flags can't silently change live invitation eligibility.
+
+Plan archived: `guide/archive/segment_15B_per_instrument_assignments.md`.
+
 ---
 
 ## Upcoming
@@ -409,7 +432,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 3-5), 14A, 14B, 14C, 15B, 15E, 15F, 17A,
+**13C, 13F (PRs 3-5), 14A, 14B, 14C, 15E, 15F, 17A,
 17B, 18A, 18B, 18C, 18D, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
@@ -434,29 +457,7 @@ bottom of this file.
    scaffolding is now complete — Segment 16A is unblocked.**
    **Plan:** `guide/segment_13F_more_db_prep.md`.
 
-2. **15B — Per-instrument assignments.** *(Unblocked by 15C
-    shipping 2026-05-12; ready to start.)*
-    Each `Instrument` carries its own assignment set (e.g. the
-    Manager survey collects different reviewer → reviewee
-    pairings than the Peer survey within one session). Schema
-    already supports this — `Assignment` carries `instrument_id`
-    with a `(session_id, reviewer_id, reviewee_id, instrument_id)`
-    unique constraint — but `replace_assignments` fans out
-    uniformly today. Post-15D the per-instrument hook is
-    `instruments.rule_set_id` (the FK landed inert in 13D PR 4)
-    pointing at a `session_rule_sets` row that 15C populates.
-    Slices: per-instrument service scope + Settings CSV apply
-    path light-up, per-instrument rule picker on the Instrument
-    card, Assignments page reshape to preview-only + tab swap,
-    Next Action card "Generate assignments" affordance,
-    per-instrument validation, reviewer dashboard per-instrument
-    grouping. ~8 PRs (2a / 2b / 3a / 3b split out the two
-    400-LOC slices). (Manual-CSV `Instrument` column catalog
-    item #28 is moot post-15D; manual-row authoring retired.
-    `AssignmentContext1-3` also retired.)
-    **Plan:** `guide/segment_15B_per_instrument_assignments.md`.
-
-3. **13C — Enhanced instruments.**
+2. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
    instrument" action-row button. Sized as 5 PRs. Action row
@@ -472,12 +473,12 @@ bottom of this file.
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/group_scoped_instruments.md`.
 
-4. **14A — Production hardening.**
+3. **14A — Production hardening.**
    Observability, security, support runbooks, real-pilot prep.
    Catalog #26 (local Postgres docker-compose for dev).
    **Plan:** `guide/segment_14A_production_hardening.md`.
 
-5. **14B — Email infrastructure (send activation + backends).**
+4. **14B — Email infrastructure (send activation + backends).**
    *(Renamed from 14-1 on 2026-05-11 as part of the 14 → 14A /
    14B / 14C split.)* All email *wiring* lives here. The schema
    columns Part A writes to landed with **Segment 11C Part 2**
@@ -495,7 +496,7 @@ bottom of this file.
    **Plan:** `guide/segment_14B_email_infrastructure.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-6. **14C — Reminders workflow.**
+5. **14C — Reminders workflow.**
    Scheduled, policy-driven reminder dispatch sitting on top
    of 14B's transport. Per-session cadence settings + a
    background scheduler + post-MVP cohort slicing + reminder
