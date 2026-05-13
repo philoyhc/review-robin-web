@@ -394,17 +394,136 @@ def test_workflow_card_generate_form_posts_to_assignments_generate(
     assert 'id="workflow-card-generate-form"' in body
 
 
-def test_workflow_card_pause_form_includes_confirm_token(
+def test_workflow_card_pause_confirm_checkbox_renders_in_ready_state(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(client, db, code="wf-pause")
+    """The Pause form has an empty body at the top of the card and
+    a visible required ``confirm`` checkbox rendered inline near
+    the button row (attached via the HTML5 ``form`` attribute).
+    The checkbox blocks submission until ticked, matching today's
+    Session Home Pause UX."""
+    review_session = _seed_pair_plus_pinned_instrument(
+        client, db, code="wf-pause-ready"
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/assignments/generate",
+        follow_redirects=False,
+    )
+    client.get(
+        f"/operator/sessions/{review_session.id}?validated=1",
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/activate",
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+    assert lifecycle.is_ready(review_session)
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    # Pause form carries the confirm=true hidden input — the existing
-    # /revert route requires it.
+    # Form declaration at top of card (no hidden inputs).
     assert 'id="workflow-card-pause-form"' in body
-    assert 'name="confirm" value="true"' in body
+    # Visible required confirm checkbox attached to the pause form.
+    import re
+    confirm_input = re.search(
+        r'<input[^>]*name="confirm"[^>]*'
+        r'form="workflow-card-pause-form"[^>]*>',
+        body,
+    )
+    assert confirm_input is not None
+    assert 'required' in confirm_input.group(0)
+    assert "Yes, pause this session" in body
+
+
+def test_workflow_card_pause_checkbox_absent_in_draft_state(
+    client: TestClient, db: Session
+) -> None:
+    """Pause confirm checkbox shouldn't render when Pause is
+    disabled — the operator has no destructive action to confirm."""
+    review_session = _make_session(client, db, code="wf-pause-draft")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    assert 'data-confirm-for="pause"' not in body
+
+
+def test_workflow_card_acknowledge_warnings_checkbox_renders_when_warnings(
+    db: Session,
+) -> None:
+    """When the workflow card surfaces an acknowledge-warnings
+    count > 0, the partial renders a visible required checkbox
+    attached to the activate form."""
+    from app.db.models import User
+
+    user = User(email="op-wf-ack-ck@example.edu")
+    db.add(user)
+    db.flush()
+    review_session = ReviewSession(
+        name="WF-ack-ck",
+        code="wf-ack-ck",
+        created_by_user_id=user.id,
+        status="validated",
+    )
+    db.add(review_session)
+    db.flush()
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="A",
+            email="a@example.edu",
+        )
+    )
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="C",
+            email_or_identifier="c@example.edu",
+        )
+    )
+    db.flush()
+    from app.services.instruments import ensure_default_instrument
+
+    ensure_default_instrument(db, review_session)
+    rule_set = SessionRuleSet(
+        session_id=review_session.id,
+        name="Full Matrix",
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=False,
+        seed=None,
+        rules_json=[],
+        is_seeded=True,
+    )
+    db.add(rule_set)
+    db.flush()
+    instrument = db.query(Instrument).filter(
+        Instrument.session_id == review_session.id
+    ).first()
+    instrument.rule_set_id = rule_set.id
+    db.flush()
+    db.commit()
+
+    ctx = build_workflow_card_context(db, review_session)
+    assert ctx.acknowledge_warnings_count > 0
+    # Render via the partial to confirm the checkbox surfaces.
+    from app.web.routes_operator._shared import _templates
+
+    response = _templates.TemplateResponse(
+        request=None,
+        name="operator/partials/operations_workflow_card.html",
+        context={"workflow_card": ctx},
+    )
+    body = response.body.decode("utf-8")
+    import re
+    ack_input = re.search(
+        r'<input[^>]*name="acknowledge_warnings"[^>]*'
+        r'form="workflow-card-activate-form"[^>]*>',
+        body,
+    )
+    assert ack_input is not None
+    assert 'required' in ack_input.group(0)
+    assert "I acknowledge" in body
 
 
 # Suppress the unused-import lint that would otherwise flag
