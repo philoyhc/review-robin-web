@@ -161,6 +161,60 @@ def existing_count(
     return len(db.execute(stmt).all())
 
 
+def existing_count_per_instrument(
+    db: Session, session_id: int
+) -> dict[int, int]:
+    """Materialised ``Assignment`` row count keyed by ``instrument_id``.
+
+    Drives the per-instrument **Generated** count on the Slice 3a
+    Assignments page status blocks. Instruments with zero rows
+    (never generated, or wiped after a roster edit) are absent from
+    the dict — callers default-to-zero on lookup.
+    """
+    from sqlalchemy import func
+
+    rows = db.execute(
+        session_scoped(
+            Assignment.instrument_id, session_id
+        ).add_columns(func.count(Assignment.id))
+        .group_by(Assignment.instrument_id)
+    ).all()
+    return {instrument_id: count for instrument_id, count in rows}
+
+
+def latest_generated_event_per_instrument(
+    db: Session, session_id: int
+) -> dict[int, Any]:
+    """Latest ``assignments.generated`` ``AuditEvent`` keyed by
+    ``refs.instrument_id`` for the given session.
+
+    Reads only events with an integer ``refs.instrument_id`` slot —
+    pre-Slice-1 aggregated events (no instrument scope) are skipped.
+    Drives the "last generated …" timestamp on the per-instrument
+    status blocks introduced in Slice 3a.
+    """
+    from app.db.models import AuditEvent
+
+    events = db.execute(
+        select(AuditEvent)
+        .where(
+            AuditEvent.session_id == session_id,
+            AuditEvent.event_type == "assignments.generated",
+        )
+        .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
+    ).scalars()
+    latest: dict[int, AuditEvent] = {}
+    for event in events:
+        detail = event.detail or {}
+        refs = detail.get("refs") or {}
+        instrument_id = refs.get("instrument_id")
+        if not isinstance(instrument_id, int):
+            continue
+        # First seen wins — events are pre-sorted desc by created_at.
+        latest.setdefault(instrument_id, event)
+    return latest
+
+
 def is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
     identifier = reviewee.email_or_identifier
     if "@" not in identifier:

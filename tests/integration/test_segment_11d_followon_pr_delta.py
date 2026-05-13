@@ -32,7 +32,10 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 from app.services import instruments as instruments_service
 
 
@@ -74,11 +77,8 @@ def _setup_two_instrument_session(
         },
         follow_redirects=False,
     )
-    operator_client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator_client, review_session.id)
     [first] = list(
         db.execute(
             select(Instrument).where(Instrument.session_id == review_session.id)

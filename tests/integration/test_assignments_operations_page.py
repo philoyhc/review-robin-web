@@ -21,6 +21,10 @@ from app.db.models import (
     ReviewSession,
     RuleSet,
 )
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _make_session(
@@ -90,14 +94,8 @@ def _generate_with_self_reviews(
     exclude_self_review=false so self-review pairs reach the
     assignments table."""
 
-    response = client.post(
-        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
-        data={
-            "rule_set_id": _full_matrix_seed_id(db),
-            "exclude_self_review": "false",
-        },
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, session_id)
+    response = generate_via_page_button(client, session_id)
     assert response.status_code == 303, response.text
 
 
@@ -195,33 +193,20 @@ def test_operations_page_drops_manual_upload_card(
     assert "manual/import" not in body
 
 
-def test_operations_page_keeps_rule_based_card(
+def test_operations_page_renders_page_level_generate(
     client: TestClient, db: Session
 ) -> None:
+    """Slice 3a — Rule Based card retired; the page now hosts a
+    page-level Generate button that materialises pairs for every
+    instrument with a pinned rule."""
+
     review_session = _make_session(client, db, code="ops-rule")
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    assert 'id="rule-based-assignment"' in body
-    assert "Assignment Rule" in body
-
-
-def test_rule_based_card_drops_ad_hoc_exclude_self_review_checkbox(
-    client: TestClient, db: Session
-) -> None:
-    """The ad-hoc per-Generate Exclude self-review checkbox retires
-    in 15D PR 6a; self-review behaviour flows from the RuleSet's
-    stored flag + the bulk toggle on this page."""
-
-    review_session = _make_session(client, db, code="ops-noadhoc")
-    _seed_population_with_self_review(client, review_session.id)
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
-    ).text
-    # No <input name="exclude_self_review"> inside the rule-based
-    # card section.
-    rule_based_section = body.split('id="rule-based-assignment"', 1)[1]
-    assert 'name="exclude_self_review"' not in rule_based_section
+    assert 'id="rule-based-assignment"' not in body
+    assert 'id="assignments-generate-card"' in body
+    assert "Generate assignments" in body
 
 
 def test_operations_page_renders_self_reviews_toggle_section(

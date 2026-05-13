@@ -111,6 +111,79 @@ def list_visible_session_rule_sets(
     )
 
 
+def evaluate_session_rule_eligibility(
+    db: Session, review_session: ReviewSession
+) -> dict[int, int]:
+    """Per-rule eligibility-count map (``session_rule_sets.id ->
+    N pairs``) computed by running the rule engine against the
+    session's current reviewer / reviewee populations.
+
+    Shared by the Slice 2a per-instrument card picker (eligibility
+    pill on each option) and the Slice 3a Assignments-page status
+    blocks (Eligible-pairs count per instrument). Engine errors on
+    a malformed snapshot fall back to ``0`` for that rule rather
+    than tearing down the whole page render.
+
+    Empty rosters → returns ``{rule_set_id: 0, ...}`` for every
+    visible rule.
+    """
+    from pydantic import TypeAdapter
+
+    from app.schemas.rules import (
+        Combinator,
+        Rule,
+        RuleSetOptions,
+        RuleSetScope,
+        RuleSetSchema,
+    )
+    from app.services import (
+        assignments as assignments_service,
+        relationships as relationships_service,
+    )
+    from app.services.rules import engine
+
+    rule_sets = list_visible_session_rule_sets(
+        db, session_id=review_session.id
+    )
+    if not rule_sets:
+        return {}
+    rule_adapter = TypeAdapter(Rule)
+    reviewers = assignments_service.list_reviewers(db, review_session.id)
+    reviewees = assignments_service.list_reviewees(db, review_session.id)
+    pair_context_lookup = relationships_service.pair_context_lookup(
+        db, review_session.id
+    )
+    out: dict[int, int] = {}
+    for row in rule_sets:
+        try:
+            schema = RuleSetSchema(
+                id=row.id,
+                name=row.name,
+                description=row.description or "",
+                scope=RuleSetScope.personal,
+                combinator=Combinator(row.combinator),
+                rules=[
+                    rule_adapter.validate_python(payload)
+                    for payload in row.rules_json
+                ],
+                options=RuleSetOptions(
+                    excludeSelfReviews=row.exclude_self_reviews,
+                    seed=row.seed,
+                ),
+            )
+            result = engine.evaluate(
+                schema,
+                reviewers=reviewers,
+                reviewees=reviewees,
+                revision_seed=row.id,
+                pair_context_lookup=pair_context_lookup,
+            )
+            out[row.id] = len(result.pairs)
+        except Exception:
+            out[row.id] = 0
+    return out
+
+
 def list_library_rule_sets_not_in_session(
     db: Session, *, owner_user: User, session_id: int
 ) -> list[RuleSet]:

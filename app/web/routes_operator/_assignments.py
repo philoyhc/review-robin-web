@@ -50,7 +50,8 @@ router = APIRouter()
 @router.get("/sessions/{session_id}/assignments", response_class=HTMLResponse)
 def assignments_hub(
     request: Request,
-    rule_based_error: str | None = Query(default=None),
+    generated: int | None = Query(default=None),
+    needs_confirm: int | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -60,7 +61,8 @@ def assignments_hub(
         db,
         review_session,
         user,
-        rule_based_error=rule_based_error,
+        generated_flash=generated == 1,
+        missing_confirm=needs_confirm == 1,
     )
 
 
@@ -90,7 +92,7 @@ def _render_assignments_hub(
     issues: list | None = None,
     missing_confirm: bool = False,
     is_blocked: bool = False,
-    rule_based_error: str | None = None,
+    generated_flash: bool = False,
 ) -> HTMLResponse:
     assignment_count = assignments.existing_count(db, review_session.id)
     pair_sample = (
@@ -185,13 +187,10 @@ def _render_assignments_hub(
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Assignments"
             ),
-            "rule_based_card": views.build_rule_based_card_context(
-                db,
-                review_session,
-                user=user,
-                assignment_count=assignment_count,
-                error_kind=rule_based_error,
+            "page_ctx": views.build_assignments_page_context(
+                db, review_session
             ),
+            "generated_flash": generated_flash,
         },
         status_code=status_code,
     )
@@ -204,6 +203,54 @@ def _render_assignments_hub(
 # realistic operator scenario. Tests previously seeding assignments
 # via this route now use the rule-based generate endpoint with the
 # Full Matrix seed RuleSet.
+
+
+@router.post("/sessions/{session_id}/assignments/generate")
+def assignments_generate(
+    confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Page-level Generate (Segment 15B Slice 3a).
+
+    Materialises ``Assignment`` rows for every instrument with a
+    pinned ``rule_set_id``. Instruments with NULL ``rule_set_id``
+    are skipped silently by ``replace_assignments(instrument_id=None)``.
+    Any existing rows are replaced wholesale; the
+    ``confirm_replace`` form field gates the destructive path
+    when the session already has assignments — mirroring the
+    pre-Slice-3a Rule Based card flow.
+    """
+
+    _require_editable(review_session)
+    existing = assignments.existing_count(db, review_session.id)
+    if existing > 0 and confirm_replace != "true":
+        return RedirectResponse(
+            url=(
+                f"/operator/sessions/{review_session.id}/assignments"
+                f"?needs_confirm=1"
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    if existing > 0:
+        _require_response_loss_ack(
+            db, review_session, acknowledge_response_loss
+        )
+    assignments.replace_assignments(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/assignments"
+            f"?generated=1"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.post("/sessions/{session_id}/assignments/delete-all")

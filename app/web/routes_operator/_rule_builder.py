@@ -19,17 +19,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
-    Instrument,
     ReviewSession,
     RuleSet,
-    SessionRuleSet,
     User,
 )
 from app.db.session import get_db
-from app.schemas.assignments import AssignmentMode
-from app.services import assignments
-from app.services._queries import session_scoped
-from app.services.rules import library, session_library
+from app.services.rules import session_library
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -37,8 +32,6 @@ from app.web.deps import (
     require_session_operator,
 )
 from app.web.routes_operator._shared import (
-    _require_editable,
-    _require_response_loss_ack,
     _templates,
 )
 
@@ -581,97 +574,6 @@ def _resolve_save_as_name(
         n += 1
         if n > 1000:
             return None  # defensive — give up after absurd suffix run
-
-
-@router.post(
-    "/sessions/{session_id}/assignments/rule-based/generate",
-    response_class=HTMLResponse,
-    response_model=None,
-)
-def rule_based_generate(
-    request: Request,
-    rule_set_id: int = Form(...),
-    exclude_self_review: str | None = Form(default=None),
-    confirm_replace: str | None = Form(default=None),
-    acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-
-    _require_editable(review_session)
-
-    loaded = library.load_rule_set(db, rule_set_id)
-    if loaded is None:
-        return RedirectResponse(
-            url=(
-                f"/operator/sessions/{review_session.id}/assignments"
-                "?rule_based_error=missing_rule_set"
-            ),
-            status_code=status.HTTP_303_SEE_OTHER,
-        )
-    rule_set_row, _revision = loaded
-
-    existing = assignments.existing_count(db, review_session.id)
-    if existing > 0 and confirm_replace != "true":
-        return RedirectResponse(
-            url=(
-                f"/operator/sessions/{review_session.id}/assignments"
-                "?rule_based_error=needs_confirm"
-            ),
-            status_code=status.HTTP_303_SEE_OTHER,
-        )
-
-    if existing > 0:
-        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-
-    # Stopgap shim (15B Slice 1 → 3a). The Rule Based card picker still
-    # emits an operator-tier ``operator_rule_sets.id``; the new
-    # materialiser reads instrument-pinned ``session_rule_sets.id``.
-    # Resolve by name match (works for both seeded session copies and
-    # library-origin copies, since 15C's auto-copy uses name parity)
-    # and pin every instrument in the session to that rule. Slice 3a
-    # retires this card + route in favour of per-card pinning + a
-    # page-level Generate that materialises whatever each instrument
-    # currently points at.
-    session_rule_set_row = db.execute(
-        select(SessionRuleSet)
-        .where(SessionRuleSet.session_id == review_session.id)
-        .where(SessionRuleSet.name == rule_set_row.name)
-    ).scalar_one_or_none()
-    if session_rule_set_row is None:
-        # Library entry added after session create — auto-copy missed it.
-        session_rule_set_row = session_library.add_from_library(
-            db,
-            review_session=review_session,
-            library_rule_set=rule_set_row,
-            actor=user,
-            correlation_id=request_correlation_id(),
-        )
-    instrument_rows = list(
-        db.execute(
-            session_scoped(Instrument, review_session.id)
-        ).scalars()
-    )
-    for inst in instrument_rows:
-        inst.rule_set_id = session_rule_set_row.id
-    db.flush()
-
-    override_exclude_self = exclude_self_review == "true"
-    assignments.replace_assignments(
-        db,
-        review_session=review_session,
-        user=user,
-        correlation_id=request_correlation_id(),
-        instrument_id=None,
-        mode=AssignmentMode.rule_based,
-        override_exclude_self_reviews=override_exclude_self,
-    )
-
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
 
 
 # ---------------------------------------------------------------------------

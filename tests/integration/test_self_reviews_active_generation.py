@@ -1,20 +1,18 @@
 """Integration coverage for Segment 12C-1 PR 1 — generation paths
 honour ``sessions.self_reviews_active``.
 
-Exercises the wire-up via
-``POST /assignments/rule-based/generate`` against the seeded
-Full Matrix RuleSet, with the card-level
-``exclude_self_review=false`` override so self-review pairs do
-reach ``replace_assignments``.
+Post-15B Slice 3a, the wire-up flows through the page-level
+Generate button on the Assignments page (POST
+``/assignments/generate``) which calls
+``replace_assignments(instrument_id=None)``. Tests pin the seeded
+Full Matrix ``session_rule_sets`` row on every instrument, then
+click Generate.
 
-We seed a session whose population includes an email-matching
-reviewer / reviewee pair, flip the session-level
-``self_reviews_active`` flag to ``False``, run the generation,
-and assert that the self-review row landed with ``include=False``
-while the non-self-review rows landed with ``include=True``.
-
-When the flag is ``True`` (the default), self-review rows still
-land with ``include=True`` — the pre-12C behaviour.
+Pre-15B card-level ``exclude_self_review`` override retired with
+the Rule Based card; the per-RuleSet ``exclude_self_reviews``
+column on ``session_rule_sets`` is now the source of truth (the
+seeded Full Matrix carries ``False`` so self-review pairs reach
+the materialiser).
 """
 from __future__ import annotations
 
@@ -22,9 +20,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Assignment, Reviewee, Reviewer, ReviewSession, RuleSet
+from app.db.models import Assignment, Reviewee, Reviewer, ReviewSession
 from app.services import assignments as assignments_service
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _make_session(
@@ -49,9 +50,6 @@ def _make_session(
 def _seed_population_with_self_review(
     client: TestClient, review_session: ReviewSession
 ) -> None:
-    """Alice appears as both a reviewer and a reviewee — that pair is
-    the self-review the test pivots on."""
-
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -98,87 +96,42 @@ def _includes_by_pair(
     }
 
 
-def test_full_matrix_seed_route_self_review_inactive_when_flag_off(
+def test_full_matrix_self_review_inactive_when_flag_off(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(
         client, db, code="sra-fm-off", self_reviews_active=False
     )
     _seed_population_with_self_review(client, review_session)
+    pin_full_matrix_on_all_instruments(db, review_session.id)
 
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={
-            "rule_set_id": full_matrix_seed_id(db),
-            "exclude_self_review": "false",
-        },
-        follow_redirects=False,
-    )
+    response = generate_via_page_button(client, review_session.id)
     assert response.status_code == 303, response.text
 
     by_pair = _includes_by_pair(db, review_session.id)
     assert by_pair[("alice@example.edu", "alice@example.edu")] is False
-    # Non-self-review rows stay active.
     assert by_pair[("alice@example.edu", "carol@example.edu")] is True
     assert by_pair[("bob@example.edu", "alice@example.edu")] is True
     assert by_pair[("bob@example.edu", "carol@example.edu")] is True
 
 
-def test_full_matrix_seed_route_self_review_active_when_flag_on(
+def test_full_matrix_self_review_active_when_flag_on(
     client: TestClient, db: Session
 ) -> None:
-    """Default ``self_reviews_active=True`` preserves pre-12C behaviour:
-    self-review rows reach the table with ``include=True``."""
+    """Default ``self_reviews_active=True`` preserves pre-12C
+    behaviour: self-review rows reach the table with ``include=True``."""
 
     review_session = _make_session(
         client, db, code="sra-fm-on", self_reviews_active=True
     )
     _seed_population_with_self_review(client, review_session)
+    pin_full_matrix_on_all_instruments(db, review_session.id)
 
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={
-            "rule_set_id": full_matrix_seed_id(db),
-            "exclude_self_review": "false",
-        },
-        follow_redirects=False,
-    )
+    response = generate_via_page_button(client, review_session.id)
     assert response.status_code == 303
 
     by_pair = _includes_by_pair(db, review_session.id)
     assert by_pair[("alice@example.edu", "alice@example.edu")] is True
-
-
-def test_rule_based_generate_self_review_inactive_when_flag_off(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(
-        client, db, code="sra-rb-off", self_reviews_active=False
-    )
-    _seed_population_with_self_review(client, review_session)
-
-    full_matrix_id = db.execute(
-        select(RuleSet.id).where(
-            RuleSet.is_seed.is_(True), RuleSet.name == "Full Matrix"
-        )
-    ).scalar_one()
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={
-            "rule_set_id": full_matrix_id,
-            # Card-level override to KEEP self-reviews so they reach
-            # replace_assignments — that's the wire-up under test.
-            "exclude_self_review": "false",
-        },
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
-
-    by_pair = _includes_by_pair(db, review_session.id)
-    assert by_pair[("alice@example.edu", "alice@example.edu")] is False
-    assert by_pair[("alice@example.edu", "carol@example.edu")] is True
-    assert by_pair[("bob@example.edu", "alice@example.edu")] is True
 
 
 def test_is_self_review_predicate_unchanged(db: Session) -> None:

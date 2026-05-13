@@ -15,7 +15,10 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 from app.services import session_lifecycle as lifecycle
 
 
@@ -62,11 +65,8 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
 
 
 def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> None:
-    response = client.post(
-        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, session_id)
+    response = generate_via_page_button(client, session_id)
     assert response.status_code == 303, response.text
 
 
@@ -239,9 +239,8 @@ def test_each_mutating_endpoint_returns_409_while_ready(
         ),
         (f"/operator/sessions/{sid}/reviewees/delete-all", {"confirm": "true"}, {}),
         (
-            f"/operator/sessions/{sid}/assignments/rule-based/generate",
+            f"/operator/sessions/{sid}/assignments/generate",
             {
-                "rule_set_id": full_matrix_seed_id(db),
                 "confirm_replace": "true",
             },
             {},
