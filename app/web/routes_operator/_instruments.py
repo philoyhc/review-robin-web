@@ -861,6 +861,38 @@ async def instrument_bulk_save_fields(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(exc),
             ) from exc
+    # Section E — Assignment Rule picker (Segment 15B Slice 2a).
+    # Rides the same bulk-save form via the picker `<select>`'s
+    # ``form="dfsave-{id}"`` attribute. PIN-only: the service helper
+    # writes ``instruments.rule_set_id`` and emits
+    # ``instrument.rule_pinned``; no Assignment rows are touched.
+    # Materialisation belongs to Slice 3a / Slice 4 (page-level
+    # Generate). Empty string posts as "— No rule —" and clears the
+    # pin to NULL.
+    if "rule_set_id" in form:
+        raw_rule_set_id = form.get("rule_set_id")
+        if not isinstance(raw_rule_set_id, str) or raw_rule_set_id == "":
+            new_rule_set_id: int | None = None
+        else:
+            try:
+                new_rule_set_id = int(raw_rule_set_id)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="rule_set_id must be an integer.",
+                ) from exc
+        try:
+            instruments_service.pin_rule_set(
+                db,
+                instrument=instrument,
+                rule_set_id=new_rule_set_id,
+                actor=user,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
     # Redirect with ``?saved={iid}`` so the page renders a flash
     # confirmation. The ``?editing`` param is intentionally cleared —
     # per spec, a successful Save locks the tables.

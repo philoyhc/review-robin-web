@@ -11,7 +11,7 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  <a class="back-link" href="/operator/sessions/{{ session.id }}/assignments">← Back to Assignments</a>
+  <a class="back-link" href="{{ back_url | default('/operator/sessions/' ~ session.id ~ '/assignments') }}">← {{ back_label | default('Back to Assignments') }}</a>
 
   <div id="rule-builder-page-grid"
        style="display: flex; gap: 16px; align-items: flex-start;">

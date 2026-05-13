@@ -695,36 +695,51 @@
       {% else %}
         {% set add_delete_disabled_title = "" %}
       {% endif %}
+      {# Segment 15B Slice 2a — half-width Assignment Rule sub-card
+         lives to the left of Danger Zone. The picker writes
+         ``instruments.rule_set_id`` (the per-instrument pin). The
+         action-button row (Edit / Save / Cancel / Add new instrument)
+         relocates to a separate row below the two sub-cards. #}
+      {% set rule_picker = rule_picker_by_instrument_id.get(instrument.id) %}
       <div class="bottom-grid" style="margin-top: 12px;">
-        <div class="card" style="border: none; background: transparent; padding: 0;">
-          <div style="display: flex; justify-content: flex-end; gap: 8px;">
-            <div style="display: flex; gap: 8px;">
-              {% if is_editing %}
-                <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary"
-                        {% if is_ready %}disabled{% endif %}>Save</button>
-                <a class="btn secondary"
-                   href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
-                   {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
-              {% elif is_some_rtd_unlocked %}
-                <a class="btn secondary disabled"
-                   aria-disabled="true"
-                   title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
-              {% else %}
-                <a class="btn secondary{% if is_ready %} disabled{% endif %}"
-                   href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-                   {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
-              {% endif %}
-            </div>
-            <div>
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/instruments/add"
-                    style="display: inline; margin: 0;">
-                <input type="hidden" name="after" value="{{ instrument.id }}">
-                <button class="btn secondary" type="submit"
-                        {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add new instrument</button>
-              </form>
-            </div>
-          </div>
+        <div class="card" id="instrument-{{ instrument.id }}-rule-picker">
+          <h2>Assignment Rule</h2>
+          {% if rule_picker and rule_picker.options %}
+            <p>
+              <label for="rule-picker-{{ instrument.id }}">RuleSet</label>
+              <select id="rule-picker-{{ instrument.id }}"
+                      name="rule_set_id"
+                      {% if is_editing %}form="dfsave-{{ instrument.id }}"{% endif %}
+                      data-instrument-rule-picker="{{ instrument.id }}"
+                      {% if not is_editing %}disabled aria-disabled="true"{% endif %}>
+                <option value=""
+                        data-eligible-pairs="0"
+                        {% if rule_picker.selected_rule_set_id is none %}selected{% endif %}>— No rule —</option>
+                {% for option in rule_picker.options %}
+                  <option value="{{ option.id }}"
+                          data-eligible-pairs="{{ option.eligible_pair_count }}"
+                          {% if option.id == rule_picker.selected_rule_set_id %}selected{% endif %}>{{ option.name }}</option>
+                {% endfor %}
+              </select>
+            </p>
+            <p>
+              Number of eligible pairs found:
+              <span class="pill pill-info"
+                    data-instrument-rule-picker-count="{{ instrument.id }}">{{ rule_picker.selected_eligible_pair_count }}</span>
+            </p>
+            <p style="margin-top: 12px;">
+              <a class="btn secondary"
+                 href="{{ rule_picker.open_rule_builder_url }}">Open Rule Builder</a>
+            </p>
+          {% else %}
+            <p class="form-help">
+              No RuleSets visible in this session yet.
+            </p>
+            <p style="margin-top: 12px;">
+              <a class="btn secondary"
+                 href="/operator/sessions/{{ session.id }}/assignments/rule-based-editor?new=1&amp;instrument_id={{ instrument.id }}">Open Rule Builder</a>
+            </p>
+          {% endif %}
         </div>
 
         <div class="card danger-zone">
@@ -750,6 +765,35 @@
               <button class="btn destructive" type="submit"
                       {% if delete_disabled %}disabled title="{{ delete_title }}"{% endif %}>Delete this instrument</button>
             </p>
+          </form>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px;">
+        <div style="display: flex; gap: 8px;">
+          {% if is_editing %}
+            <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary"
+                    {% if is_ready %}disabled{% endif %}>Save</button>
+            <a class="btn secondary"
+               href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
+               {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
+          {% elif is_some_rtd_unlocked %}
+            <a class="btn secondary disabled"
+               aria-disabled="true"
+               title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
+          {% else %}
+            <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+               href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+               {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
+          {% endif %}
+        </div>
+        <div>
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/add"
+                style="display: inline; margin: 0;">
+            <input type="hidden" name="after" value="{{ instrument.id }}">
+            <button class="btn secondary" type="submit"
+                    {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add new instrument</button>
           </form>
         </div>
       </div>
@@ -1577,6 +1621,32 @@
           window.addEventListener("load", apply, { once: true });
         }
       }
+    })();
+  </script>
+
+  {# Slice 2a — Assignment Rule picker live count refresh. The
+     ``<option>`` rows carry the eligibility count in
+     ``data-eligible-pairs``; on selection change, swap the pill text
+     without a server round-trip. Same shape as the pre-15B Rule
+     Based card's selector JS. #}
+  <script>
+    (function () {
+      var pickers = document.querySelectorAll(
+        'select[data-instrument-rule-picker]'
+      );
+      pickers.forEach(function (select) {
+        var instrumentId = select.getAttribute('data-instrument-rule-picker');
+        var pill = document.querySelector(
+          'span[data-instrument-rule-picker-count="' + instrumentId + '"]'
+        );
+        if (!pill) return;
+        select.addEventListener('change', function () {
+          var option = select.options[select.selectedIndex];
+          pill.textContent = option && option.dataset.eligiblePairs
+            ? option.dataset.eligiblePairs
+            : '0';
+        });
+      });
     })();
   </script>
 {% endblock %}

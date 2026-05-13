@@ -66,7 +66,10 @@ from ._setup import (
 # helpers (sliced in PR 6).
 from ._instruments import (
     InstrumentHeading,
+    InstrumentRulePickerContext,
+    InstrumentRulePickerOption,
     PageButton,
+    build_instrument_rule_picker_contexts,
     build_instruments_context,
     constraint_summary_for_field,
     instrument_heading,
@@ -173,6 +176,8 @@ __all__ = [
     "ExtractDataContext",
     "ExtractDataRow",
     "InstrumentHeading",
+    "InstrumentRulePickerContext",
+    "InstrumentRulePickerOption",
     "InvitationsRow",
     "IssueSourceGroup",
     "PageButton",
@@ -197,6 +202,7 @@ __all__ = [
     # Builders / helpers.
     "build_email_preview_body",
     "build_extract_data_context",
+    "build_instrument_rule_picker_contexts",
     "build_instruments_context",
     "build_invitations_rows",
     "build_new_session_quick_setup_context",

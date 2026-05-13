@@ -59,6 +59,7 @@ def rule_builder_page(
     previous_id: int | None = Query(default=None),
     error: str | None = Query(default=None),
     saved: int | None = Query(default=None),
+    instrument_id: int | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -89,6 +90,19 @@ def rule_builder_page(
         error_kind=error,
         saved_flash=(saved == 1),
     )
+    # Segment 15B Slice 2a: when the operator opened the editor from
+    # an Instrument card, the back-link returns to the Instruments
+    # page anchored at that card; otherwise it returns to the
+    # Assignments page (the pre-15B entry point).
+    if instrument_id is not None:
+        back_url = (
+            f"/operator/sessions/{review_session.id}/instruments"
+            f"#instrument-{instrument_id}"
+        )
+        back_label = "Back to Instruments"
+    else:
+        back_url = f"/operator/sessions/{review_session.id}/assignments"
+        back_label = "Back to Assignments"
     return _templates.TemplateResponse(
         request,
         "operator/session_rule_builder.html",
@@ -97,6 +111,8 @@ def rule_builder_page(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "builder": context,
+            "back_url": back_url,
+            "back_label": back_label,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Rule Builder"
             ),
