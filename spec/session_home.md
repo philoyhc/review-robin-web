@@ -140,7 +140,7 @@ Activated state, in the inline section).
 | **Draft, validation just failed** — `is_draft` AND `validation_summary` populated (i.e. operator clicked Validate Setup but the report didn't pass) | "Validation didn't pass." headline + a pill row (`pill-error` / `pill-empty` / `pill-count` for error / warning / info counts) + "Resolve the errors and re-run validation before activating." | **Validate Setup** | See validation details |
 | **Validated (no errors)** — `is_validated` AND `can_activate` | "The session setup data has successfully validated. Preview the reviewer surface to make sure that it conforms to your requirements before activating." (+ optional `acknowledge_warnings` checkbox in the body when `needs_acknowledge`) | **Activate Session** | Generate assignments (Secondary regenerate, POST `/assignments/generate`) / Invite reviewers / Monitor responses (`disabled`) / Revert to draft |
 | **Validated (errors)** — `is_validated` AND not `can_activate` | "Validation shows that there are error(s). Resolve them and re-run validation before activating." | **Revert to draft** | Generate assignments / Activate Session / Invite reviewers / Monitor responses (all `disabled`) |
-| **Activated** — `is_ready` | Two sections split by `<hr class="next-action-divider">`. **§1 body:** "Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers." **§2 body:** "Pausing returns the session to draft and stops reviewers from submitting new responses. Existing responses will be preserved." | **§1:** Manage invitations · **§2:** Pause Session (with `.next-action-confirm` carrying "Yes, pause [Session name] and return to draft.") | **§1:** Monitor responses |
+| **Activated** — `is_ready` | "Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers." | **Revert to draft** (POST `/revert` with hidden `confirm=true`, pauses the session back to draft) | Generate assignments / Activate Session (both `disabled`) · Invite reviewers (link to `/invitations`) · Monitor responses (link to `/monitoring`) |
 
 Notes:
 
@@ -150,10 +150,14 @@ Notes:
   the same gap. The operator's path forward is the chrome top-nav
   Manage links (Reviewers / Reviewees / Assignments), which stay
   reachable while this state shows.
-- **Manage invitations promoted to Primary in `ready`.** During
-  the running session, inviting reviewers is the day-to-day
-  "doing things" action; Pause is the wind-down concern, separated
-  out into its own section so its consequences read explicitly.
+- **Workflow stepper in `ready`.** Inviting reviewers / monitoring
+  responses are the day-to-day ongoing-session actions and render
+  as Secondary links in the stepper row; Revert to draft is the
+  wind-down Primary. The pre-stepper Pause confirmation checkbox
+  retired with the State 6 refresh — the explicit acknowledgment
+  now lives in the Primary button label itself, and the
+  lifecycle-service `confirm` gate is upheld via a hidden field
+  in the form.
 - **No "See previews" in `ready`.** Operators monitor live
   responses while Activated; previewing is the validation-time
   affordance.
@@ -162,9 +166,6 @@ Notes:
   pill plus warning / info counts; the current spec drops them in
   favour of plain prose. Lifecycle and per-entity state belong in
   the chrome status strip, not the card body.
-- **Pause confirmation checkbox copy:** "Yes, pause [Session
-  name] and return to draft." (lowercase "draft" — running
-  prose).
 - **Reserved states (Expired, Archived).** Not yet in scope.
   Expected treatments:
   - **Expired** likely gets an Extract Data primary action with
