@@ -45,6 +45,7 @@ def validate_session(
     request: Request,
     severity: str = "all",
     activate: int = 0,
+    return_to: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -101,6 +102,7 @@ def validate_session(
             "is_draft": lifecycle.is_draft(review_session),
             "is_validated": lifecycle.is_validated(review_session),
             "is_ready": lifecycle.is_ready(review_session),
+            "activate_return_to": return_to,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Validate setup"
             ),

@@ -12,7 +12,20 @@
    - ``validation_summary`` (dict | None) with ``error_count`` /
      ``warning_count`` / ``info_count`` / ``can_activate`` /
      ``needs_acknowledge``. ``None`` outside the ``?validated=1``
-     entry path on Session Home.
+     entry path.
+
+   Optional context:
+
+   - ``next_action_return_to`` (str | None) — when set, the partial
+     wires the Validate Setup link, the Activate / Revert / Pause
+     forms, and the warnings-detour Activate link to land back on
+     the Operations-row page named by this string after the action
+     fires (must be one of the entries in
+     ``app/web/routes_operator/_session_home.py``
+     ``_REVERT_RETURN_TO``: ``reviewers`` / ``reviewees`` /
+     ``assignments`` / ``instruments``). ``None`` (the default)
+     preserves the Session Home behaviour where every action
+     redirects back to Home.
 
    The card uses a fixed min-height gauged on the Pause Session
    state (the largest body) so the card frame doesn't reflow when
@@ -20,6 +33,17 @@
    bottom of the card; the primary action uses Primary styling,
    supporting actions use Secondary styling — links are no longer
    used.  #}
+{% set _next_action_return_to = next_action_return_to | default(none) %}
+{% set _validate_setup_href = (
+  "/operator/sessions/" ~ session.id ~ "/" ~ _next_action_return_to ~ "?validated=1"
+  if _next_action_return_to
+  else "/operator/sessions/" ~ session.id ~ "?validated=1"
+) %}
+{% set _activate_warns_href = (
+  "/operator/sessions/" ~ session.id ~ "/validate?activate=1&return_to=" ~ _next_action_return_to
+  if _next_action_return_to
+  else "/operator/sessions/" ~ session.id ~ "/validate?activate=1"
+) %}
 <div class="card next-action" id="next-action">
   <h2>Next Action</h2>
   <div class="next-action-body">
@@ -69,7 +93,11 @@
           {# No warnings to acknowledge — direct activate POST. #}
           <form method="post"
                 action="/operator/sessions/{{ session.id }}/activate"
-                id="next-action-activate-form"></form>
+                id="next-action-activate-form">
+            {% if _next_action_return_to %}
+              <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+            {% endif %}
+          </form>
         {% endif %}
       {% else %}
         <p>
@@ -83,7 +111,11 @@
          row. #}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/revert"
-            id="next-action-revert-form"></form>
+            id="next-action-revert-form">
+        {% if _next_action_return_to %}
+          <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+        {% endif %}
+      </form>
     {% elif is_ready %}
       {# Two-section layout while activated. Section 1 nudges the
          operator toward inviting reviewers (the day-to-day "doing
@@ -113,6 +145,9 @@
         <form method="post"
               action="/operator/sessions/{{ session.id }}/revert"
               id="next-action-pause-form">
+          {% if _next_action_return_to %}
+            <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+          {% endif %}
           <p style="margin: 0;">
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required>
@@ -132,7 +167,7 @@
   <div class="next-action-buttons">
     {% if is_draft %}
       <a class="btn"
-         href="/operator/sessions/{{ session.id }}?validated=1">Validate Setup</a>
+         href="{{ _validate_setup_href }}">Validate Setup</a>
       <a class="btn secondary"
          href="/operator/sessions/{{ session.id }}/validate">See validation details</a>
     {% elif is_validated %}
@@ -142,7 +177,7 @@
              operator acknowledges them with the warnings inline
              (Segment 11G PR D). #}
           <a class="btn"
-             href="/operator/sessions/{{ session.id }}/validate?activate=1">Activate Session</a>
+             href="{{ _activate_warns_href }}">Activate Session</a>
         {% else %}
           <button class="btn"
                   type="submit"

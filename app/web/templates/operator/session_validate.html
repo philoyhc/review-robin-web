@@ -32,6 +32,9 @@
           <form method="post"
                 action="/operator/sessions/{{ session.id }}/activate">
             <input type="hidden" name="acknowledge_warnings" value="true">
+            {% if activate_return_to %}
+              <input type="hidden" name="return_to" value="{{ activate_return_to }}">
+            {% endif %}
             <button class="btn danger-solid" type="submit">Acknowledge and activate</button>
           </form>
         </div>
