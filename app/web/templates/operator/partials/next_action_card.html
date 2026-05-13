@@ -48,12 +48,12 @@
   <h2>Next Action</h2>
   <div class="next-action-body">
     {% if is_setup_empty %}
-      {# Freshly-created draft with at least one of reviewers /
-         reviewees / assignments still empty. Skip the validation
-         framing — the operator's first job is to fill the missing
-         roster, not click Validate. No action buttons render below
-         in this state. #}
-      <p>Session not fully set up. Make sure that reviewers, reviewees, and assignments have been set up before continuing.</p>
+      {# Freshly-created draft with reviewers, reviewees, or
+         instrument rule pins still missing. Skip the validation
+         framing — the operator's first job is to fill those out,
+         not click Validate. No action buttons render below in
+         this state. #}
+      <p>Session not fully set up. Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing.</p>
     {% elif is_draft %}
       {% if validation_summary %}
         {# Validation just ran (?validated=1) and didn't pass — the

@@ -228,7 +228,7 @@ def test_session_detail_empty_rosters_renders_setup_short_circuit(
     assert "<h2>Next Action</h2>" in body
     assert "Session not fully set up." in body
     assert (
-        "Make sure that reviewers, reviewees, and assignments have been set up before continuing."
+        "Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing."
         in body
     )
     # Action buttons suppressed in this state.

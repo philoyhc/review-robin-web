@@ -28,6 +28,7 @@ from app.db.session import get_db
 from app.services import (
     assignments,
     csv_imports,
+    instruments as instruments_service,
     relationships as relationships_service,
     validation,
 )
@@ -190,7 +191,7 @@ def _render_assignments_hub(
     is_setup_empty = lifecycle.is_draft(review_session) and (
         csv_imports.existing_reviewer_count(db, review_session.id) == 0
         or csv_imports.existing_reviewee_count(db, review_session.id) == 0
-        or assignments.existing_count(db, review_session.id) == 0
+        or instruments_service.has_unpinned(db, review_session.id)
     )
 
     return _templates.TemplateResponse(

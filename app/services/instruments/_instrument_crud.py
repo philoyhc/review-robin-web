@@ -24,7 +24,7 @@ PR-3 strip (~485 LOC).
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -408,6 +408,27 @@ def update_short_label(
     )
     db.commit()
     return instrument
+
+
+def has_unpinned(db: Session, session_id: int) -> bool:
+    """True iff the session has zero instruments, or any instrument
+    has a NULL ``rule_set_id``. Drives the Next Action card's
+    "Empty Setup" state — a session isn't ready to validate until
+    every instrument has its assignment rule pinned."""
+    total = db.scalar(
+        select(func.count(Instrument.id)).where(
+            Instrument.session_id == session_id
+        )
+    ) or 0
+    if total == 0:
+        return True
+    unpinned = db.scalar(
+        select(func.count(Instrument.id)).where(
+            Instrument.session_id == session_id,
+            Instrument.rule_set_id.is_(None),
+        )
+    ) or 0
+    return unpinned > 0
 
 
 def pin_rule_set(

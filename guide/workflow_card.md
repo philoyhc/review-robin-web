@@ -26,8 +26,11 @@ these context keys to the partial:
 - `session` — `ReviewSession` ORM object.
 - `is_draft`, `is_validated`, `is_ready` — booleans from
   `lifecycle.is_draft / is_validated / is_ready`.
-- `is_setup_empty` — `True` iff session is in draft AND any of
-  reviewer count / reviewee count / assignment count is 0.
+- `is_setup_empty` — `True` iff session is in draft AND any of:
+  reviewer count is 0, reviewee count is 0, or at least one
+  instrument has no assignment rule pinned (checked via
+  `instruments.has_unpinned`, which also returns `True` when the
+  session has zero instruments).
 - `validation_summary` — `dict | None`. Populated whenever the page
   was reached with `?validated=1` OR the session is already
   `validated`. Keys:
@@ -68,8 +71,15 @@ inline within the body (see below).
 
 ### State 1 — Setup not yet populated (`is_setup_empty`)
 
+Triggered while the session is in `draft` and any of the following
+holds: the reviewer roster is empty, the reviewee roster is empty,
+or at least one instrument has no assignment rule pinned (i.e.
+`Instrument.rule_set_id IS NULL`). A session with zero instruments
+also lands here.
+
 Body copy: *"Session not fully set up. Make sure that reviewers,
-reviewees, and assignments have been set up before continuing."*
+reviewees, and relationships (optional), and instruments have been
+set up before continuing."*
 
 Buttons: none. (Bottom button row is suppressed by the
 `not is_setup_empty and not is_ready` guard at `next_action_card.html:166`.)

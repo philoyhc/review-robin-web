@@ -134,7 +134,7 @@ Activated state, in the inline section).
 
 | State / trigger | Body | Primary | Supporting (Secondary) |
 |---|---|---|---|
-| **Empty draft** — `is_draft` AND any of reviewers / reviewees / assignments has zero rows | "Session not fully set up. Make sure that reviewers, reviewees, and assignments have been set up before continuing." | — *(none)* | — *(none)* |
+| **Empty draft** — `is_draft` AND any of: reviewers has zero rows, reviewees has zero rows, or at least one instrument has no assignment rule pinned (also fires when the session has zero instruments) | "Session not fully set up. Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing." | — *(none)* | — *(none)* |
 | **Draft, pre-validation** — `is_draft`, rosters populated, no `?validated=1` yet | "Run validation to surface errors and warnings before activating. Validation never mutates session data." | **Validate Setup** | See validation details |
 | **Draft, validation just failed** — `is_draft` AND `validation_summary` populated (i.e. operator clicked Validate Setup but the report didn't pass) | "Validation didn't pass." headline + a pill row (`pill-error` / `pill-empty` / `pill-count` for error / warning / info counts) + "Resolve the errors and re-run validation before activating." | **Validate Setup** | See validation details |
 | **Validated (no errors)** — `is_validated` AND `can_activate` | "The session setup data has successfully validated. Preview the reviewer surface to make sure that it conforms to your requirements before activating." (+ optional `acknowledge_warnings` checkbox in the body when `needs_acknowledge`) | **Activate Session** | See validation details · See previews · Revert to draft |
