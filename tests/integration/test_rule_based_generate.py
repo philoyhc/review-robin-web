@@ -165,7 +165,17 @@ def test_audit_context_records_actual_exclude_self_reviews_value(
     detail = event.detail or {}
     assert detail["context"]["mode"] == "rule_based"
     assert detail["context"]["exclude_self_reviews"] is False
-    assert detail["refs"]["rule_set_id"] == rule_set_id
+    # Post-15B Slice 1: ``refs.rule_set_id`` is the session-tier id,
+    # not the operator-tier id the form posted. Cross-reference by
+    # name to assert the right ``session_rule_sets`` row was used.
+    from app.db.models import SessionRuleSet
+    session_rule_set_id = db.execute(
+        select(SessionRuleSet.id).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Intra-group peer review",
+        )
+    ).scalar_one()
+    assert detail["refs"]["rule_set_id"] == session_rule_set_id
 
 
 def test_audit_refs_carry_instrument_and_rule_set_ids(

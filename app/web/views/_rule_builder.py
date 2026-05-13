@@ -243,9 +243,14 @@ def build_rule_based_card_context(
                 refs = last_event.detail.get("refs") or {}
                 rule_set_id = refs.get("rule_set_id")
                 if isinstance(rule_set_id, int):
-                    loaded = library.load_rule_set(db, rule_set_id)
-                    if loaded is not None:
-                        rule_set_name = loaded[0].name
+                    # Post-15B Slice 1: ``refs.rule_set_id`` points at
+                    # a ``session_rule_sets`` row (the per-instrument
+                    # pin), not the operator-tier library row.
+                    session_rule_set_row = db.get(
+                        SessionRuleSet, rule_set_id
+                    )
+                    if session_rule_set_row is not None:
+                        rule_set_name = session_rule_set_row.name
                 new_count = counts.get("new")
                 last_generated = RuleBasedLastGenerated(
                     pair_count=pair_count,
