@@ -197,16 +197,35 @@ def _check_instruments_no_fields(
             )
 
 
-def _check_assignments_no_mode(
+def _check_assignments_no_included_pairs(
     db: Session, review_session: ReviewSession
 ) -> Iterable[ValidationIssue]:
-    if review_session.assignment_mode is None:
+    """Session-wide warning: zero included rows across every
+    instrument.
+
+    Replaces the retired ``assignments.no_mode`` rule (which fired
+    only when ``assignment_mode`` was NULL). The successor catches
+    a strictly broader case — sessions where Generate ran but every
+    row is currently ``include=False`` (e.g. self-reviews bulk-
+    deactivated on every instrument), and sessions that never
+    generated at all. Either way reviewers would see an empty
+    surface.
+
+    Per-instrument detail rides on the
+    ``instruments.zero_included`` warning.
+    """
+    from app.services import assignments as assignments_service
+
+    included = assignments_service.included_count_per_instrument(
+        db, review_session.id
+    )
+    if sum(included.values()) == 0:
         yield ValidationIssue(
             severity=Severity.warning,
             source="assignments",
             message=(
-                "No assignments generated yet — reviewers will see an "
-                "empty surface"
+                "No included assignment rows on any instrument — "
+                "reviewers will see an empty surface"
             ),
         )
 
@@ -223,11 +242,13 @@ def _check_assignments_reviewer_missing(
     """Single-instrument sessions: every reviewer must appear on at
     least one ``Assignment`` row.
 
-    Skipped when ``assignment_mode is None`` (the ``assignments
-    .no_mode`` rule already covers the "no assignments yet" case;
-    surfacing every-reviewer-missing on top of that would double up
-    the noise on a freshly-created session). Also skipped on
-    multi-instrument sessions — the per-instrument rule
+    Skipped when ``assignment_mode is None`` — a session that has
+    never been Generated has no actionable per-reviewer breakdown,
+    and surfacing every-reviewer-missing on top of the
+    ``assignments.no_included_pairs`` /
+    ``instruments.no_rule_pinned`` warnings would double up the
+    noise. Also skipped on multi-instrument sessions — the
+    per-instrument rule
     (``assignments.reviewer_missing_for_instrument``) carries the
     breakdown there.
     """
@@ -281,8 +302,9 @@ def _check_assignments_reviewer_missing_for_instrument(
     Skipped on single-instrument sessions (the sibling
     ``assignments.reviewer_missing`` rule covers those without the
     per-instrument breakdown). Skipped when ``assignment_mode is
-    None``. Per-instrument issues are suppressed for an instrument
-    that has zero rows total — the sibling
+    None`` — a never-generated session has no actionable
+    per-reviewer breakdown. Per-instrument issues are suppressed for
+    an instrument that has zero rows total — the sibling
     ``assignments.instrument_empty`` rule covers that single case
     instead, so the operator sees one issue per empty instrument
     rather than (reviewers × instruments) duplicated noise.
@@ -344,10 +366,11 @@ def _check_assignments_instrument_empty(
     """Multi-instrument sessions: every instrument must have at
     least one ``Assignment`` row.
 
-    Skipped on single-instrument sessions (the sibling
-    ``assignments.no_mode`` rule covers the "no assignments at all"
-    case without needing the per-instrument breakdown). Skipped
-    when ``assignment_mode is None`` for the same reason.
+    Skipped on single-instrument sessions (the session-wide
+    ``assignments.no_included_pairs`` warning + per-instrument
+    ``instruments.zero_included`` warning cover the no-rows case
+    without needing the multi-instrument breakdown). Skipped when
+    ``assignment_mode is None`` for the same reason.
     """
     if review_session.assignment_mode is None:
         return
@@ -381,6 +404,151 @@ def _check_assignments_instrument_empty(
             ),
             fix_anchor=f"#instrument-{instrument.id}",
         )
+
+
+def _check_instruments_no_rule_pinned(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    """Error per instrument with ``rule_set_id IS NULL`` once the
+    session has reviewers + reviewees.
+
+    Without a pinned rule, ``replace_assignments`` silently skips
+    the instrument — reviewers landing on its page see nothing.
+    Gating on rosters being populated prevents the rule from firing
+    on a freshly created session (which always has a default
+    instrument that's unpinned out of the box); the
+    ``reviewers.empty`` / ``reviewees.empty`` errors already cover
+    that case more specifically.
+    """
+    has_reviewer = db.execute(
+        select(Reviewer.id)
+        .where(Reviewer.session_id == review_session.id)
+        .limit(1)
+    ).first()
+    has_reviewee = db.execute(
+        select(Reviewee.id)
+        .where(Reviewee.session_id == review_session.id)
+        .limit(1)
+    ).first()
+    if has_reviewer is None or has_reviewee is None:
+        return
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    for instrument in instruments:
+        if instrument.rule_set_id is not None:
+            continue
+        yield ValidationIssue(
+            severity=Severity.warning,
+            source="instruments",
+            message=(
+                f"Instrument {_instrument_label(instrument)!r} has no "
+                "rule pinned — Generate will skip it; reviewers see "
+                "an empty page"
+            ),
+            fix_anchor=f"#instrument-{instrument.id}",
+        )
+
+
+def _check_instruments_stale_generated(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    """Warning per pinned instrument whose materialised pair count
+    diverges from its current eligible count.
+
+    Catches: never-generated pinned instruments, instruments whose
+    rule changed post-Generate, instruments whose roster /
+    relationships changed post-Generate. Shares the staleness
+    predicate with the Assignments-page view-shape via
+    :func:`app.services.assignments.compute_staleness`.
+    """
+    from app.services import assignments as assignments_service
+    from app.services.rules import session_library
+
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    pinned = [i for i in instruments if i.rule_set_id is not None]
+    if not pinned:
+        return
+    eligibility_by_rule = session_library.evaluate_session_rule_eligibility(
+        db, review_session
+    )
+    generated_by_instrument = assignments_service.existing_count_per_instrument(
+        db, review_session.id
+    )
+    for instrument in pinned:
+        eligible = eligibility_by_rule.get(instrument.rule_set_id, 0)
+        generated = generated_by_instrument.get(instrument.id, 0)
+        if not assignments_service.compute_staleness(
+            instrument.rule_set_id, eligible, generated
+        ):
+            continue
+        yield ValidationIssue(
+            severity=Severity.warning,
+            source="instruments",
+            message=(
+                f"Instrument {_instrument_label(instrument)!r} pairs "
+                f"may be stale (eligible {eligible}, generated "
+                f"{generated}) — re-Generate to refresh"
+            ),
+            fix_anchor=f"#instrument-{instrument.id}",
+        )
+
+
+def _check_instruments_zero_included(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    """Warning per instrument with ``generated_count > 0`` but
+    ``included_count == 0``.
+
+    Typical cause: the operator bulk-deactivated every row on the
+    instrument (e.g. flipping the Self review checkbox off on a
+    self-review-only instrument). Reviewers will land on the
+    instrument's page and see nothing.
+
+    Instruments that never generated are silent here — the sibling
+    ``assignments.instrument_empty`` / ``assignments.no_included_pairs``
+    rules cover the no-rows-at-all case.
+    """
+    from app.services import assignments as assignments_service
+
+    generated_by_instrument = assignments_service.existing_count_per_instrument(
+        db, review_session.id
+    )
+    included_by_instrument = assignments_service.included_count_per_instrument(
+        db, review_session.id
+    )
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    for instrument in instruments:
+        generated = generated_by_instrument.get(instrument.id, 0)
+        included = included_by_instrument.get(instrument.id, 0)
+        if generated > 0 and included == 0:
+            yield ValidationIssue(
+                severity=Severity.warning,
+                source="instruments",
+                message=(
+                    f"Instrument {_instrument_label(instrument)!r} has "
+                    f"{generated} generated row"
+                    f"{'' if generated == 1 else 's'} but none are "
+                    "included — reviewers won't see this page"
+                ),
+                fix_anchor=f"#instrument-{instrument.id}",
+            )
 
 
 def _check_email_template_no_help_contact(
@@ -557,18 +725,36 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         check=_check_instruments_no_fields,
     ),
     ValidationRule(
-        key="assignments.no_mode",
+        key="instruments.no_rule_pinned",
+        source="instruments",
+        severity=Severity.warning,
+        why=(
+            "Each instrument needs a pinned RuleSet so Generate "
+            "knows how to materialise reviewer / reviewee pairs "
+            "for that instrument. An unpinned instrument is silently "
+            "skipped during generation, leaving its reviewer page "
+            "empty. Pin a rule on the Instruments page card."
+        ),
+        fix_url=_instruments_url,
+        fix_page_label="Instruments Setup",
+        check=_check_instruments_no_rule_pinned,
+    ),
+    ValidationRule(
+        key="assignments.no_included_pairs",
         source="assignments",
         severity=Severity.warning,
         why=(
-            "An active session with no assignment mode means "
-            "reviewers see an empty review surface and have nothing "
-            "to do. Generate assignments before activating, or "
-            "proceed knowing reviewers will see no work to complete."
+            "Reviewers see assignments only for rows where the "
+            "``include`` flag is True. When every row across every "
+            "instrument is deactivated — or no rows have been "
+            "generated yet — reviewers land on an empty surface "
+            "and have nothing to do. Re-Generate or re-include rows "
+            "before activating, or proceed knowing reviewers will "
+            "see no work."
         ),
         fix_url=_assignments_url,
-        fix_page_label="Assignments Setup",
-        check=_check_assignments_no_mode,
+        fix_page_label="Assignments",
+        check=_check_assignments_no_included_pairs,
     ),
     ValidationRule(
         key="assignments.reviewer_missing",
@@ -643,6 +829,37 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         fix_url=_instruments_url,
         fix_page_label="Instruments Setup",
         check=_check_instruments_no_display_fields,
+    ),
+    ValidationRule(
+        key="instruments.stale_generated",
+        source="instruments",
+        severity=Severity.warning,
+        why=(
+            "Generated assignment rows are materialised from the "
+            "engine's eligible-pair output at Generate time. When "
+            "the pinned rule changes, or the reviewer / reviewee "
+            "rosters or relationships change after Generate, the "
+            "materialised rows fall out of sync with what the engine "
+            "would produce now. Re-Generate to refresh the pairs."
+        ),
+        fix_url=_assignments_url,
+        fix_page_label="Assignments",
+        check=_check_instruments_stale_generated,
+    ),
+    ValidationRule(
+        key="instruments.zero_included",
+        source="instruments",
+        severity=Severity.warning,
+        why=(
+            "An instrument with generated rows but zero included "
+            "rows is invisible to every reviewer — typically the "
+            "operator bulk-deactivated rows (e.g. flipped the Self "
+            "review checkbox off). Re-include rows on the "
+            "Assignments page or re-Generate."
+        ),
+        fix_url=_assignments_url,
+        fix_page_label="Assignments",
+        check=_check_instruments_zero_included,
     ),
 )
 

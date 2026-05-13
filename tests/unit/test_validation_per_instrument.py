@@ -1,6 +1,6 @@
 """Slice 5 coverage for the per-instrument validation rules.
 
-Three new ``ValidationRule`` entries land in this slice:
+Three ``ValidationRule`` entries land in this slice:
 
 - ``assignments.reviewer_missing`` — single-instrument sessions
   only; flags reviewers with zero ``Assignment`` rows.
@@ -11,12 +11,14 @@ Three new ``ValidationRule`` entries land in this slice:
 - ``assignments.instrument_empty`` — multi-instrument sessions
   only; flags instruments with zero ``Assignment`` rows.
 
-All three rules skip the check when ``assignment_mode is None``
-(the ``assignments.no_mode`` rule already covers the
-no-assignments-yet case). The per-reviewer-per-instrument rule
-also skips any instrument whose total row count is zero — the
-``assignments.instrument_empty`` sibling handles that case
-without (reviewers × instruments) duplicate noise.
+All three rules skip the check when ``assignment_mode is None`` —
+a never-generated session has no actionable per-reviewer
+breakdown, and 15E's ``assignments.no_included_pairs`` /
+``instruments.no_rule_pinned`` warnings cover the upstream case.
+The per-reviewer-per-instrument rule also skips any instrument
+whose total row count is zero — the ``assignments.instrument_empty``
+sibling handles that case without (reviewers × instruments)
+duplicate noise.
 """
 from __future__ import annotations
 
@@ -112,10 +114,11 @@ def _issues_with_key(
 def test_reviewer_missing_skipped_when_no_assignment_mode(
     db: Session,
 ) -> None:
-    """When ``assignment_mode is None`` the ``assignments.no_mode``
-    rule already fires; the per-reviewer rule sits this one out so
-    operators see one issue rather than (reviewers × 1) duplicate
-    noise on a freshly-created session."""
+    """When ``assignment_mode is None`` the per-reviewer rule sits
+    out so operators see one issue rather than (reviewers × 1)
+    duplicate noise on a freshly-created session. Post-15E the
+    session-wide ``assignments.no_included_pairs`` warning fires
+    instead (sum of included rows is zero)."""
 
     review_session, _reviewers, _reviewees = _seed(db, code="skip-nm")
     # assignment_mode stays None — the seed never generates.
@@ -128,8 +131,9 @@ def test_reviewer_missing_skipped_when_no_assignment_mode(
         == []
     )
     assert _issues_with_key(issues, "assignments.instrument_empty") == []
-    # ``assignments.no_mode`` still fires.
-    assert _issues_with_key(issues, "assignments.no_mode")
+    # ``assignments.no_included_pairs`` (15E successor of no_mode)
+    # fires because sum of included_count_per_instrument is zero.
+    assert _issues_with_key(issues, "assignments.no_included_pairs")
 
 
 def test_single_instrument_flags_reviewer_with_no_assignments(

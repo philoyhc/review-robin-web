@@ -249,9 +249,9 @@ def test_validate_page_filter_errors_only(
     body = client.get(
         f"/operator/sessions/{review_session.id}/validate?severity=error"
     ).text
-    # The assignments.no_mode warning is the only warning in the bare
-    # session; under errors-only it should not appear in the body.
-    assert "assignments.no_mode" not in body
+    # Warnings like assignments.no_included_pairs should not appear
+    # under errors-only filtering of the bare session.
+    assert "assignments.no_included_pairs" not in body
     # Errors chip carries the active styling now.
     assert (
         'href="/operator/sessions/' in body
@@ -311,10 +311,11 @@ def test_validate_page_renders_why_disclosure_per_issue(
 def _seed_validated_with_warnings(
     client: TestClient, db: Session, *, code: str
 ) -> ReviewSession:
-    """Set up a session in validated state with one warning
-    (assignments.no_mode) so the activate-warns detour path is
-    reachable. Reviewers + reviewees imported, but no assignments
-    generated."""
+    """Set up a session in validated state with at least one
+    warning (e.g. assignments.no_included_pairs, the 15E successor
+    of the retired assignments.no_mode) so the activate-warns
+    detour path is reachable. Reviewers + reviewees imported, but
+    no assignments generated."""
     review_session = _make_session(client, db, code=code)
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
@@ -338,6 +339,22 @@ def _seed_validated_with_warnings(
         },
         follow_redirects=False,
     )
+    # 15E PR 1: instruments.no_rule_pinned now fires as an error when
+    # rosters are imported but no rule is pinned. Pin the default
+    # instrument to any existing seeded SessionRuleSet so only the
+    # assignments.no_included_pairs warning remains, keeping the
+    # activate-warns detour reachable.
+    from app.db.models import Instrument, SessionRuleSet
+
+    rule_set = db.query(SessionRuleSet).filter(
+        SessionRuleSet.session_id == review_session.id
+    ).first()
+    instrument = db.query(Instrument).filter(
+        Instrument.session_id == review_session.id
+    ).first()
+    instrument.rule_set_id = rule_set.id
+    db.flush()
+    db.commit()
     # ?validated=1 marks the session validated when can_activate
     # (no errors). Warnings don't block.
     client.get(f"/operator/sessions/{review_session.id}?validated=1")

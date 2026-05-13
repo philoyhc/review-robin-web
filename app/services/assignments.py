@@ -205,6 +205,26 @@ def existing_count_per_instrument(
     return {instrument_id: count for instrument_id, count in rows}
 
 
+def compute_staleness(
+    rule_id: int | None,
+    eligible_count: int,
+    generated_count: int,
+) -> bool:
+    """Return ``True`` when the instrument is pinned but its
+    materialised pair count diverges from what the engine would
+    produce now. ``False`` when no rule is pinned or counts match.
+
+    Catches: never-generated pinned instruments
+    (``eligible > 0``, ``generated == 0``), instruments whose
+    pinned rule changed post-Generate, instruments whose roster /
+    relationships changed post-Generate. The view-shape
+    ``InstrumentStatusBlock.is_stale`` field, the per-page
+    ``any_stale`` aggregate, and the ``instruments.stale_generated``
+    validation rule all share this one definition.
+    """
+    return rule_id is not None and eligible_count != generated_count
+
+
 def latest_generated_event_per_instrument(
     db: Session, session_id: int
 ) -> dict[int, Any]:

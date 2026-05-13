@@ -164,9 +164,8 @@ def build_assignments_page_context(
             eligible_count = 0
         generated_count = generated_by_instrument.get(instrument.id, 0)
         included_count = included_by_instrument.get(instrument.id, 0)
-        is_stale = (
-            rule_id is not None
-            and eligible_count != generated_count
+        is_stale = assignments_service.compute_staleness(
+            rule_id, eligible_count, generated_count
         )
         if is_stale:
             any_stale = True
