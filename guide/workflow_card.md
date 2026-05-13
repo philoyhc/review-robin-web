@@ -32,8 +32,12 @@ these context keys to the partial:
   `instruments.has_unpinned`, which also returns `True` when the
   session has zero instruments).
 - `is_pre_generate` — `True` iff session is in draft, `is_setup_empty`
-  is `False`, AND no `Assignment` rows exist yet. Surfaces the
-  Generate prompt before the operator can validate.
+  is `False`, AND either no `Assignment` rows exist yet OR the most
+  recent revert (`session.invalidated` or `session.reverted_to_draft`)
+  is newer than the most recent `assignments.generated` event
+  (`lifecycle.needs_regeneration_after_revert`). Surfaces the
+  Generate prompt before the operator can validate, including after
+  a Revert / Pause that returns the session to draft.
 - `validation_summary` — `dict | None`. Populated whenever the page
   was reached with `?validated=1` OR the session is already
   `validated`. Keys:
@@ -91,8 +95,14 @@ Buttons: none. (Bottom button row is suppressed by the
 ### State 1A — Draft, ready to generate (`is_pre_generate`)
 
 Triggered while the session is in `draft`, `is_setup_empty` is `False`
-(rosters populated, every instrument has its rule pinned), AND no
-`Assignment` rows have been generated yet.
+(rosters populated, every instrument has its rule pinned), AND either
+no `Assignment` rows have been generated yet OR the session was
+reverted to draft (via Revert from `validated` or Pause from `ready`)
+after the most recent generation — i.e.
+`lifecycle.needs_regeneration_after_revert(db, session_id)` returns
+`True`. Reverted sessions land here even though their old assignment
+rows still exist, since post-revert the operator typically needs to
+regenerate before validating.
 
 Body copy: *"Run generation to create the assignment pairs (note
 that doing so will replace any previously generated assignment

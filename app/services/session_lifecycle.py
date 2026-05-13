@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    AuditEvent,
     Instrument,
     Response,
     ReviewSession,
@@ -541,6 +542,33 @@ def session_has_responses(db: Session, review_session: ReviewSession) -> bool:
         .limit(1)
     ).first()
     return row is not None
+
+
+def needs_regeneration_after_revert(db: Session, session_id: int) -> bool:
+    """True iff the session's most recent ``session.invalidated`` or
+    ``session.reverted_to_draft`` audit event is newer than its most
+    recent ``assignments.generated`` event. Surfaces the post-revert
+    case where assignment rows still exist from before the revert but
+    the operator hasn't regenerated since — drives the Next Action
+    card's State 1A on a reverted session."""
+    revert_events = {"session.invalidated", "session.reverted_to_draft"}
+    last_revert = db.scalar(
+        select(AuditEvent.id)
+        .where(AuditEvent.session_id == session_id)
+        .where(AuditEvent.event_type.in_(revert_events))
+        .order_by(AuditEvent.id.desc())
+        .limit(1)
+    )
+    if last_revert is None:
+        return False
+    last_generate = db.scalar(
+        select(AuditEvent.id)
+        .where(AuditEvent.session_id == session_id)
+        .where(AuditEvent.event_type == "assignments.generated")
+        .order_by(AuditEvent.id.desc())
+        .limit(1)
+    )
+    return last_generate is None or last_revert > last_generate
 
 
 def assert_status_draft(review_session: ReviewSession) -> None:

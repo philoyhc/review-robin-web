@@ -122,7 +122,12 @@ def session_detail(
     is_pre_generate = (
         lifecycle.is_draft(review_session)
         and not is_setup_empty
-        and assignments.existing_count(db, review_session.id) == 0
+        and (
+            assignments.existing_count(db, review_session.id) == 0
+            or lifecycle.needs_regeneration_after_revert(
+                db, review_session.id
+            )
+        )
     )
     return _templates.TemplateResponse(
         request,
