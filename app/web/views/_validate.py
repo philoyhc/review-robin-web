@@ -17,13 +17,74 @@ Source range in pre-PR-8 ``_legacy.py``: lines 33-392.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession
 from app.services import assignments, csv_imports
+
+
+# --------------------------------------------------------------------------- #
+# Setup gate vs. Operations gate (Segment 15E PR 2)
+# --------------------------------------------------------------------------- #
+#
+# Each registered ``ValidationRule`` belongs to one of two gates:
+#
+# - **Setup gate** — structural readiness rules an operator fixes
+#   on the Setup-row pages (session metadata, rosters, instrument
+#   shape, email template).
+# - **Operations gate** — readiness rules about generated
+#   assignments (the workflow card's Generate / Activate buttons
+#   rely on these).
+#
+# Source axis alone isn't enough: ``instruments``-source rules
+# split across both gates (``instruments.no_fields`` is structural
+# Setup, while ``instruments.stale_generated`` is post-Generate
+# Operations). Hence an explicit per-key mapping.
+#
+# Display-only split. The Validate page renders one section per
+# gate; PR 3's workflow card uses the same mapping to decide
+# which rules its Generate-setup-gate / operations-gate check
+# considers.
+
+Gate = Literal["setup", "operations"]
+
+
+_RULE_KEY_GATE: dict[str, Gate] = {
+    "session.no_name": "setup",
+    "session.no_code": "setup",
+    "reviewers.empty": "setup",
+    "reviewers.duplicate_email": "setup",
+    "reviewees.empty": "setup",
+    "reviewees.duplicate_id": "setup",
+    "instruments.no_fields": "setup",
+    "instruments.no_display_fields": "setup",
+    "email_template.no_help_contact": "setup",
+    "instruments.no_rule_pinned": "operations",
+    "instruments.stale_generated": "operations",
+    "instruments.zero_included": "operations",
+    "assignments.no_included_pairs": "operations",
+    "assignments.reviewer_missing": "operations",
+    "assignments.reviewer_missing_for_instrument": "operations",
+    "assignments.instrument_empty": "operations",
+}
+
+
+def gate_for_rule_key(rule_key: str) -> Gate:
+    """Return the gate a registered rule key belongs to.
+
+    Falls back to a source-based heuristic (``assignments.*`` →
+    Operations, anything else → Setup) when the key isn't in the
+    explicit mapping, so a newly added rule slots into a sensible
+    default until the mapping is updated.
+    """
+    gate = _RULE_KEY_GATE.get(rule_key)
+    if gate is not None:
+        return gate
+    source = rule_key.split(".", 1)[0]
+    return "operations" if source == "assignments" else "setup"
 
 
 @dataclass(frozen=True)
@@ -64,11 +125,20 @@ class SeverityChip:
 class IssueSourceGroup:
     """Per-source group on the issue list. ``count_summary`` is the
     inline summary line under the ``<h3>`` (e.g. "2 errors, 1
-    warning") respecting the active severity filter."""
+    warning") respecting the active severity filter.
+
+    ``gate`` (Segment 15E PR 2) splits the issue list into two
+    sections — Setup gate vs. Operations gate. The same source can
+    appear in both gates when its rules span structural readiness
+    (e.g. ``instruments.no_fields``) and post-Generate readiness
+    (e.g. ``instruments.stale_generated``); the grouping is by
+    ``(gate, source)`` rather than source alone.
+    """
 
     source: str
     count_summary: str
     issues: list[Any]  # list[ValidationIssue], untyped to avoid circular import
+    gate: Gate = "setup"
 
 
 @dataclass(frozen=True)
@@ -347,16 +417,27 @@ def build_validate_context(
             i for i in issues if i.severity.value == severity_filter
         ]
 
-    grouped: dict[str, list[Any]] = {}
+    # Group by (gate, source) so the Validate page can render two
+    # gate sections (Setup / Operations) with per-source headings
+    # inside each. Iteration order of ``filtered_issues`` matches
+    # ``REGISTERED_RULES`` order — preserve it via insertion-ordered
+    # dict, then re-emit in gate order so setup-gate groups come
+    # before operations-gate groups regardless of the underlying rule
+    # order.
+    grouped: dict[tuple[Gate, str], list[Any]] = {}
     for issue in filtered_issues:
-        grouped.setdefault(issue.source, []).append(issue)
+        key = (gate_for_rule_key(issue.rule_key or ""), issue.source)
+        grouped.setdefault(key, []).append(issue)
     issue_groups = [
         IssueSourceGroup(
             source=source,
             count_summary=_per_source_count_summary(group_issues),
             issues=group_issues,
+            gate=gate,
         )
-        for source, group_issues in grouped.items()
+        for gate_filter in ("setup", "operations")
+        for (gate, source), group_issues in grouped.items()
+        if gate == gate_filter
     ]
 
     return ValidateContext(
