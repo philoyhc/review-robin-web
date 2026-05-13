@@ -135,7 +135,12 @@ def test_generate_materialises_per_instrument(
 
     response = generate_via_page_button(client, review_session.id)
     assert response.status_code == 303
-    assert "?generated=1" in response.headers["location"]
+    # Post-generate redirect lands plain on the Assignments page —
+    # the ``?generated=1`` flash signal retired with the banner.
+    assert (
+        response.headers["location"]
+        == f"/operator/sessions/{review_session.id}/assignments"
+    )
 
     rows = list(
         db.execute(
@@ -147,9 +152,9 @@ def test_generate_materialises_per_instrument(
     assert len(rows) == 1
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments?generated=1"
+        f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    assert 'id="generated-flash"' in body
+    assert 'id="generated-flash"' not in body
     # Status block flips from "Not generated yet" placeholder to a
     # generated-count pill. The "last generated …" timestamp
     # suffix retired in the post-15B refinement sweep — the pill
@@ -265,4 +270,8 @@ def test_generate_with_existing_pairs_requires_confirm(
         client, review_session.id, confirm_replace=True
     )
     assert confirmed.status_code == 303
-    assert "?generated=1" in confirmed.headers["location"]
+    # Redirect lands plain on the Assignments page (flash retired).
+    assert (
+        confirmed.headers["location"]
+        == f"/operator/sessions/{review_session.id}/assignments"
+    )

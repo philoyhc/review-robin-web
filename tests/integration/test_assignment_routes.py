@@ -23,7 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Assignment, AuditEvent, ReviewSession
+from app.db.models import Assignment, AuditEvent, Instrument, ReviewSession
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -84,7 +84,7 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
     response = generate_via_page_button(client, review_session.id)
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments?generated=1"
+        f"/operator/sessions/{review_session.id}/assignments"
     )
     rows = list(
         db.execute(
@@ -260,6 +260,46 @@ def test_assignments_hub_renders_count_and_mode(
     # the count via the ``data-self-review-count`` attribute so the
     # assertion is robust to formatting tweaks.
     assert 'data-self-review-count=' in populated.text
+    # Show column: header renamed from "Filter" → "Show"; the
+    # filter checkbox renders ``checked`` by default for any
+    # instrument with generated rows so the post-Generate view
+    # surfaces every materialised pair (the user's "all ticked"
+    # rule). A row-count pill renders before the checkbox.
+    assert "<th>Show</th>" in populated.text
+    assert "<th>Filter</th>" not in populated.text
+    assert "data-show-pill=" in populated.text
+    instrument_id = db.execute(
+        select(Instrument.id).where(Instrument.session_id == review_session.id)
+    ).scalars().first()
+    show_cell = populated.text.split(
+        f'data-filter-instrument="{instrument_id}"', 1
+    )[1][:200]
+    assert "checked" in show_cell
+
+
+def test_assignments_hub_no_flash_banner_after_generate(
+    client: TestClient, db: Session
+) -> None:
+    """Post-15B refinement: the blue "Assignments generated" flash
+    banner retired. The redirect after Generate lands plain on the
+    Assignments page; the status table is the only post-generate
+    signal."""
+
+    review_session = _make_session(client, db, code="no-flash")
+    _seed_roster(
+        client,
+        review_session.id,
+        reviewer_emails=["alice@example.edu"],
+        reviewee_idents=["carol@example.edu"],
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    response = generate_via_page_button(client, review_session.id)
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}/assignments"
+    )
+    body = client.get(response.headers["location"]).text
+    assert 'id="generated-flash"' not in body
+    assert "Assignments generated" not in body
 
 
 def test_non_operator_gets_403_on_assignments_hub_and_post(
