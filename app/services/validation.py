@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    Assignment,
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
@@ -210,6 +211,178 @@ def _check_assignments_no_mode(
         )
 
 
+def _instrument_label(instrument: Instrument) -> str:
+    """Short reviewer-facing label for messages, with the long
+    name as a fallback when no short label is set."""
+    return instrument.short_label or instrument.name
+
+
+def _check_assignments_reviewer_missing(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    """Single-instrument sessions: every reviewer must appear on at
+    least one ``Assignment`` row.
+
+    Skipped when ``assignment_mode is None`` (the ``assignments
+    .no_mode`` rule already covers the "no assignments yet" case;
+    surfacing every-reviewer-missing on top of that would double up
+    the noise on a freshly-created session). Also skipped on
+    multi-instrument sessions — the per-instrument rule
+    (``assignments.reviewer_missing_for_instrument``) carries the
+    breakdown there.
+    """
+    if review_session.assignment_mode is None:
+        return
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    if len(instruments) != 1:
+        return
+    reviewers = list(
+        db.execute(
+            select(Reviewer)
+            .where(Reviewer.session_id == review_session.id)
+            .order_by(Reviewer.id)
+        ).scalars()
+    )
+    reviewer_ids_with_assignments = {
+        row[0]
+        for row in db.execute(
+            select(Assignment.reviewer_id)
+            .where(Assignment.session_id == review_session.id)
+            .distinct()
+        ).all()
+    }
+    for reviewer in reviewers:
+        if reviewer.id in reviewer_ids_with_assignments:
+            continue
+        yield ValidationIssue(
+            severity=Severity.warning,
+            source="assignments",
+            field=f"reviewer_id:{reviewer.id}",
+            message=(
+                f"Reviewer {reviewer.name!r} ({reviewer.email}) is "
+                "missing assignments"
+            ),
+            fix_anchor=f"#reviewer-row-{reviewer.id}",
+        )
+
+
+def _check_assignments_reviewer_missing_for_instrument(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    """Multi-instrument sessions: every (reviewer, instrument) pair
+    must appear on at least one ``Assignment`` row.
+
+    Skipped on single-instrument sessions (the sibling
+    ``assignments.reviewer_missing`` rule covers those without the
+    per-instrument breakdown). Skipped when ``assignment_mode is
+    None``. Per-instrument issues are suppressed for an instrument
+    that has zero rows total — the sibling
+    ``assignments.instrument_empty`` rule covers that single case
+    instead, so the operator sees one issue per empty instrument
+    rather than (reviewers × instruments) duplicated noise.
+    """
+    if review_session.assignment_mode is None:
+        return
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    if len(instruments) <= 1:
+        return
+    reviewers = list(
+        db.execute(
+            select(Reviewer)
+            .where(Reviewer.session_id == review_session.id)
+            .order_by(Reviewer.id)
+        ).scalars()
+    )
+    # Per-instrument reviewer-presence map keyed by instrument_id.
+    presence: dict[int, set[int]] = {i.id: set() for i in instruments}
+    for instrument_id, reviewer_id in db.execute(
+        select(Assignment.instrument_id, Assignment.reviewer_id)
+        .where(Assignment.session_id == review_session.id)
+        .distinct()
+    ).all():
+        if instrument_id in presence:
+            presence[instrument_id].add(reviewer_id)
+    for instrument in instruments:
+        in_use = presence[instrument.id]
+        if not in_use:
+            # Sibling instrument_empty rule covers this case.
+            continue
+        for reviewer in reviewers:
+            if reviewer.id in in_use:
+                continue
+            yield ValidationIssue(
+                severity=Severity.warning,
+                source="assignments",
+                field=(
+                    f"reviewer_id:{reviewer.id}"
+                    f"|instrument_id:{instrument.id}"
+                ),
+                message=(
+                    f"Reviewer {reviewer.name!r} ({reviewer.email}) "
+                    f"is missing assignments for the "
+                    f"{_instrument_label(instrument)!r} instrument"
+                ),
+                fix_anchor=f"#instrument-{instrument.id}",
+            )
+
+
+def _check_assignments_instrument_empty(
+    db: Session, review_session: ReviewSession
+) -> Iterable[ValidationIssue]:
+    """Multi-instrument sessions: every instrument must have at
+    least one ``Assignment`` row.
+
+    Skipped on single-instrument sessions (the sibling
+    ``assignments.no_mode`` rule covers the "no assignments at all"
+    case without needing the per-instrument breakdown). Skipped
+    when ``assignment_mode is None`` for the same reason.
+    """
+    if review_session.assignment_mode is None:
+        return
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    if len(instruments) <= 1:
+        return
+    instrument_ids_with_rows = {
+        row[0]
+        for row in db.execute(
+            select(Assignment.instrument_id)
+            .where(Assignment.session_id == review_session.id)
+            .distinct()
+        ).all()
+    }
+    for instrument in instruments:
+        if instrument.id in instrument_ids_with_rows:
+            continue
+        yield ValidationIssue(
+            severity=Severity.warning,
+            source="assignments",
+            field=f"instrument_id:{instrument.id}",
+            message=(
+                f"Instrument {_instrument_label(instrument)!r} has "
+                "no assignments — reviewers won't see this page"
+            ),
+            fix_anchor=f"#instrument-{instrument.id}",
+        )
+
+
 def _check_email_template_no_help_contact(
     db: Session, review_session: ReviewSession
 ) -> Iterable[ValidationIssue]:
@@ -396,6 +569,52 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         fix_url=_assignments_url,
         fix_page_label="Assignments Setup",
         check=_check_assignments_no_mode,
+    ),
+    ValidationRule(
+        key="assignments.reviewer_missing",
+        source="assignments",
+        severity=Severity.warning,
+        why=(
+            "A reviewer with no assignment rows sees an empty "
+            "review surface and has nothing to do. Typically this "
+            "means the pinned rule excluded the reviewer (e.g. a "
+            "tag mismatch on an Intra-group rule) or the reviewer "
+            "joined the roster after the last Generate. Re-Generate "
+            "after fixing the rule or roster."
+        ),
+        fix_url=_assignments_url,
+        fix_page_label="Assignments",
+        check=_check_assignments_reviewer_missing,
+    ),
+    ValidationRule(
+        key="assignments.reviewer_missing_for_instrument",
+        source="assignments",
+        severity=Severity.warning,
+        why=(
+            "On a multi-instrument session each instrument has its "
+            "own pinned rule. A reviewer who's present on some "
+            "instruments but missing on others sees a partial "
+            "review surface — they'll never reach the pages where "
+            "they have no assignments. Adjust that instrument's "
+            "rule on the Instruments page or re-Generate."
+        ),
+        fix_url=_instruments_url,
+        fix_page_label="Instruments",
+        check=_check_assignments_reviewer_missing_for_instrument,
+    ),
+    ValidationRule(
+        key="assignments.instrument_empty",
+        source="assignments",
+        severity=Severity.warning,
+        why=(
+            "An instrument with zero assignment rows is invisible "
+            "to every reviewer — the page never opens for anyone. "
+            "Either pin a rule on the Instruments page and "
+            "re-Generate, or delete the instrument."
+        ),
+        fix_url=_instruments_url,
+        fix_page_label="Instruments",
+        check=_check_assignments_instrument_empty,
     ),
     ValidationRule(
         key="email_template.no_help_contact",
