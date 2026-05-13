@@ -52,16 +52,33 @@ router = APIRouter()
 def assignments_hub(
     request: Request,
     needs_confirm: int | None = Query(default=None),
+    validated: bool = Query(default=False),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    # ``?validated=1`` mirrors the Session Home Validate Setup entry
+    # path: run validation live, promote ``draft → validated`` when
+    # the readiness report is clean, and surface the inline summary
+    # pills in the Next Action card render below.
+    if validated:
+        issues = validation.validate_session_setup(db, review_session)
+        report = lifecycle.build_readiness_report(issues)
+        if report.can_activate and lifecycle.is_draft(review_session):
+            lifecycle.mark_validated(
+                db,
+                review_session=review_session,
+                user=user,
+                report=report,
+                correlation_id=request_correlation_id(),
+            )
     return _render_assignments_hub(
         request,
         db,
         review_session,
         user,
         missing_confirm=needs_confirm == 1,
+        validated_just_ran=validated,
     )
 
 
@@ -91,6 +108,7 @@ def _render_assignments_hub(
     issues: list | None = None,
     missing_confirm: bool = False,
     is_blocked: bool = False,
+    validated_just_ran: bool = False,
 ) -> HTMLResponse:
     assignment_count = assignments.existing_count(db, review_session.id)
     pair_sample = (
@@ -153,19 +171,20 @@ def _render_assignments_hub(
 
     # Next Action card context — same shape Session Home builds so
     # the duplicated card on the Assignments page surfaces the same
-    # state-aware copy + button row. ``validation_summary`` runs only
-    # in ``validated`` state (matching Session Home's "?validated=1
-    # OR already validated" gate); other states fall back to the
-    # generic copy.
+    # state-aware copy + button row. ``validation_summary`` runs on
+    # the ``?validated=1`` entry path AND whenever the session is
+    # already in ``validated`` (matching Session Home's gate); other
+    # states fall back to the generic copy.
     validation_summary: dict[str, object] | None = None
-    if lifecycle.is_validated(review_session):
+    if validated_just_ran or lifecycle.is_validated(review_session):
         issues_for_summary = validation.validate_session_setup(db, review_session)
         report = lifecycle.build_readiness_report(issues_for_summary)
         validation_summary = {
             "error_count": len(report.errors),
             "warning_count": len(report.warnings),
             "info_count": len(report.info),
-            "can_activate": report.can_activate,
+            "can_activate": report.can_activate
+            and lifecycle.is_validated(review_session),
             "needs_acknowledge": report.has_non_blocking_findings,
         }
     is_setup_empty = lifecycle.is_draft(review_session) and (
@@ -195,6 +214,12 @@ def _render_assignments_hub(
             "is_ready": lifecycle.is_ready(review_session),
             "is_setup_empty": is_setup_empty,
             "validation_summary": validation_summary,
+            # Wire the Next Action card forms to redirect back here
+            # rather than to Session Home after their POST. The
+            # /activate and /revert routes honour ``return_to`` via
+            # the ``_REVERT_RETURN_TO`` allowlist (which already
+            # includes "assignments").
+            "next_action_return_to": "assignments",
             "fields_with_data": assignments.assignment_fields_with_data(
                 db, review_session.id
             ),

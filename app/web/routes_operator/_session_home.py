@@ -289,6 +289,7 @@ def session_delete(
 @router.post("/sessions/{session_id}/activate")
 def session_activate(
     acknowledge_warnings: str | None = Form(default=None),
+    return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -306,8 +307,11 @@ def session_activate(
         )
     except lifecycle.LifecycleError as exc:
         raise _lifecycle_error_response(exc) from exc
+    target = f"/operator/sessions/{review_session.id}"
+    if return_to in _REVERT_RETURN_TO:
+        target = f"{target}/{return_to}"
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}",
+        url=target,
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
