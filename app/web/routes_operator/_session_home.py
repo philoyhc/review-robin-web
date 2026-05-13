@@ -125,6 +125,16 @@ def session_detail(
             "is_draft": lifecycle.is_draft(review_session),
             "is_validated": lifecycle.is_validated(review_session),
             "is_ready": lifecycle.is_ready(review_session),
+            # Segment 15B Slice 4 — pre-Validate Generate signal for
+            # the Next Action card. Internal wiring lands now; the
+            # matching template branches (primary "Generate
+            # assignments" button + supporting "Pin rules" link)
+            # ship in Segment 15E. The dataclass surface is final;
+            # 15E reads from this context key with no further
+            # service-layer changes.
+            "next_action_generate": views.compute_next_action_generate_state(
+                db, review_session
+            ),
             # Freshly-created draft with at least one of reviewers /
             # reviewees / assignments still empty. Computed after the
             # validation flow so a session that just transitioned
