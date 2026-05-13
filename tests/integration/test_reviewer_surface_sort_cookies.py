@@ -27,7 +27,10 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Instrument, InstrumentDisplayField, ReviewSession
 
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _setup_session_with_three_reviewees(
@@ -72,14 +75,8 @@ def _setup_session_with_three_reviewees(
         },
         follow_redirects=False,
     )
-    operator_client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={
-            "rule_set_id": full_matrix_seed_id(db),
-            "exclude_self_review": "true",
-        },
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator_client, review_session.id)
     return review_session
 
 

@@ -5,7 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, InstrumentResponseField, ReviewSession
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
@@ -90,11 +93,8 @@ def test_assignment_generation_reuses_existing_default_instrument(
         },
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
 
     instruments = list(
         db.execute(

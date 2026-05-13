@@ -19,7 +19,10 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import ReviewSession
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
@@ -66,11 +69,8 @@ def _seed_pair(
 def _activate(
     client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
     client.get(f"/operator/sessions/{review_session.id}?validated=1")
     client.post(
         f"/operator/sessions/{review_session.id}/activate",

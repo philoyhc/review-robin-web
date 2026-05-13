@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, Instrument, Reviewer, ReviewSession
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 from ._preview_iframe import get_surface_preview_html
 
@@ -54,11 +57,8 @@ def _operator_creates_session_with_pair(
         },
         follow_redirects=False,
     )
-    operator_client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator_client, review_session.id)
     operator_client.get(f"/operator/sessions/{review_session.id}?validated=1")
     operator_client.post(
         f"/operator/sessions/{review_session.id}/activate",
@@ -466,11 +466,8 @@ def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
         },
         follow_redirects=False,
     )
-    operator.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
     # full-matrix pins all assignments to the default instrument; add a
     # second instrument and slot in an extra Assignment for it so the
     # reviewer sees both in their surface.
@@ -581,11 +578,8 @@ def test_operator_preview_keeps_operator_chrome(
         },
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
     body = get_surface_preview_html(
         client, review_session.id, "r@example.edu"
     )

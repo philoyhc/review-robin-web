@@ -22,7 +22,10 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
 from app.web import views
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -74,11 +77,8 @@ def _seed_pair(
         },
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
     return review_session
 
 

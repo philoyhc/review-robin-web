@@ -20,7 +20,10 @@ from app.db.models import (
     InstrumentResponseField,
     ReviewSession,
 )
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -65,11 +68,8 @@ def _populate_rosters(client: TestClient, db: Session, session_id: int) -> None:
         },
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, session_id)
+    generate_via_page_button(client, session_id)
 
 
 def _validated_session(
@@ -238,11 +238,8 @@ def test_add_instrument_clones_existing_full_matrix_assignments(
         },
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, session.id)
+    generate_via_page_button(client, session.id)
     pre_assignments = (
         db.execute(
             select(Assignment).where(Assignment.session_id == session.id)

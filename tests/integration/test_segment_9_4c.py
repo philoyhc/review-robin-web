@@ -174,10 +174,12 @@ def test_assignments_hub_inlines_method_forms(
         f'action="/operator/sessions/{review_session.id}/assignments/full-matrix"'
         not in body
     )
-    # Rule Based card stays — it's the Generate path post-15D.
-    # Title was renamed to "Assignment Rule" in the layout polish.
-    assert "Assignment Rule" in body
-    assert 'id="rule-based-assignment"' in body
+    # Rule Based card retired in 15B Slice 3a; the page now hosts a
+    # page-level Generate button + per-instrument status blocks
+    # instead of the picker-on-this-page model.
+    assert 'id="rule-based-assignment"' not in body
+    assert 'id="assignments-generate-card"' in body
+    assert "Generate assignments" in body
 
 
 # ---------------------------------------------------------------------------

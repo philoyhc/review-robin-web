@@ -239,79 +239,31 @@ def _build_rule_picker_options(
     """Compute the picker option list + a per-rule eligibility-count
     map (``rule_set_id -> N pairs``) once per page load.
 
-    Each option is the result of running the rule engine against the
-    session's current reviewer / reviewee populations, mirroring the
-    pre-15B Rule Based card pattern. The map lets per-instrument
-    contexts read the count for the currently-pinned rule without a
-    second engine pass.
-
-    Returns ``([], {})`` on rosters that produce no candidate pairs;
-    eligibility is then 0 for every option.
+    Each option's count comes from the shared
+    :func:`session_library.evaluate_session_rule_eligibility` engine
+    pass — same helper drives the Slice 3a Assignments-page status
+    blocks. Empty rule pool → ``([], {})``.
     """
-    from app.schemas.rules import (
-        Combinator,
-        Rule,
-        RuleSetOptions,
-        RuleSetScope,
-        RuleSetSchema,
-    )
-    from app.services import assignments as assignments_service
-    from app.services import relationships as relationships_service
-    from app.services.rules import engine, session_library
-    from pydantic import TypeAdapter
+    from app.services.rules import session_library
 
-    rule_adapter = TypeAdapter(Rule)
     rule_sets = session_library.list_visible_session_rule_sets(
         db, session_id=review_session.id
     )
     if not rule_sets:
         return [], {}
-
-    reviewers = assignments_service.list_reviewers(db, review_session.id)
-    reviewees = assignments_service.list_reviewees(db, review_session.id)
-    pair_context_lookup = relationships_service.pair_context_lookup(
-        db, review_session.id
+    eligibility_by_id = session_library.evaluate_session_rule_eligibility(
+        db, review_session
     )
-
-    options: list[InstrumentRulePickerOption] = []
-    eligibility_by_id: dict[int, int] = {}
-    for row in rule_sets:
-        try:
-            schema = RuleSetSchema(
-                id=row.id,
-                name=row.name,
-                description=row.description or "",
-                scope=RuleSetScope.personal,
-                combinator=Combinator(row.combinator),
-                rules=[
-                    rule_adapter.validate_python(payload)
-                    for payload in row.rules_json
-                ],
-                options=RuleSetOptions(
-                    excludeSelfReviews=row.exclude_self_reviews,
-                    seed=row.seed,
-                ),
-            )
-            result = engine.evaluate(
-                schema,
-                reviewers=reviewers,
-                reviewees=reviewees,
-                revision_seed=row.id,
-                pair_context_lookup=pair_context_lookup,
-            )
-            count = len(result.pairs)
-        except Exception:
-            count = 0
-        eligibility_by_id[row.id] = count
-        options.append(
-            InstrumentRulePickerOption(
-                id=row.id,
-                name=row.name,
-                description=row.description or "",
-                eligible_pair_count=count,
-                is_seeded=row.is_seeded,
-            )
+    options = [
+        InstrumentRulePickerOption(
+            id=row.id,
+            name=row.name,
+            description=row.description or "",
+            eligible_pair_count=eligibility_by_id.get(row.id, 0),
+            is_seeded=row.is_seeded,
         )
+        for row in rule_sets
+    ]
     return options, eligibility_by_id
 
 

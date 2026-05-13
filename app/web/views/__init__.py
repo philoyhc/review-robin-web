@@ -39,6 +39,14 @@ from ._extract_data import (
     build_extract_data_context,
 )
 
+# Assignments page status blocks + Generate context (Segment 15B
+# Slice 3a).
+from ._assignments import (
+    AssignmentsPageContext,
+    InstrumentStatusBlock,
+    build_assignments_page_context,
+)
+
 # Manage Invitations page rows (sliced in PR 3).
 from ._invitations import InvitationsRow, build_invitations_rows
 
@@ -124,13 +132,9 @@ from ._rule_builder import (
     RULE_BUILDER_DRAFT_DEFAULT_DESCRIPTION,
     AvailableRuleSetEntry,
     EditableRule,
-    RuleBasedCardContext,
-    RuleBasedLastGenerated,
-    RuleBasedSelectorOption,
     RuleBuilderContext,
     RuleBuilderOption,
     RuleLine,
-    build_rule_based_card_context,
     build_rule_builder_context,
 )
 
@@ -172,12 +176,14 @@ __all__ = [
     "AvailableRuleSetEntry",
     "EditableRule",
     "EmailBody",
+    "AssignmentsPageContext",
     "EmailPreviewTab",
     "ExtractDataContext",
     "ExtractDataRow",
     "InstrumentHeading",
     "InstrumentRulePickerContext",
     "InstrumentRulePickerOption",
+    "InstrumentStatusBlock",
     "InvitationsRow",
     "IssueSourceGroup",
     "PageButton",
@@ -186,9 +192,6 @@ __all__ = [
     "QuickSetupContext",
     "QuickSetupSlot",
     "ResponsesRow",
-    "RuleBasedCardContext",
-    "RuleBasedLastGenerated",
-    "RuleBasedSelectorOption",
     "RuleBuilderContext",
     "RuleBuilderOption",
     "RuleLine",
@@ -200,6 +203,7 @@ __all__ = [
     "SurfacePreviewMissing",
     "ValidateContext",
     # Builders / helpers.
+    "build_assignments_page_context",
     "build_email_preview_body",
     "build_extract_data_context",
     "build_instrument_rule_picker_contexts",
@@ -209,7 +213,6 @@ __all__ = [
     "build_preview_picker_context",
     "build_quick_setup_context",
     "build_responses_rows",
-    "build_rule_based_card_context",
     "build_rule_builder_context",
     "build_setup_rows",
     "build_surface_preview_context",

@@ -18,7 +18,10 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession, User
 from app.services import field_labels
 
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
@@ -248,14 +251,8 @@ def test_assignments_page_picks_up_friendly_label_in_table_and_toggle(
         follow_redirects=False,
     )
     # Generate Full Matrix assignments so the table renders.
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={
-            "rule_set_id": full_matrix_seed_id(db),
-            "exclude_self_review": "true",
-        },
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
 
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"

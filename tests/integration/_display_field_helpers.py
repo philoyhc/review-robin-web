@@ -27,6 +27,10 @@ from app.db.models import (
     ReviewSession,
     RuleSet,
 )
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _make_session(
@@ -87,14 +91,8 @@ def _generate_full_matrix(
     pass-through behaviour (the legacy route's empty-string default
     also resolved to ``False``)."""
 
-    client.post(
-        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
-        data={
-            "rule_set_id": _full_matrix_seed_id(db),
-            "exclude_self_review": "false",
-        },
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, session_id)
+    generate_via_page_button(client, session_id)
 
 
 def _activate(client: TestClient, db: Session, session_id: int) -> None:

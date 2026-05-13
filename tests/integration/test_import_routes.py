@@ -8,7 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import AuditEvent, Reviewer, ReviewSession
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _make_session(client: TestClient, db: Session, code: str = "spring-2026") -> ReviewSession:
@@ -366,11 +369,8 @@ def test_reviewer_replace_cascades_assignments(
         },
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
     assignments_before = list(
         db.execute(
             _select(Assignment).where(Assignment.session_id == review_session.id)
@@ -449,11 +449,8 @@ def test_reviewee_replace_cascades_assignments(
         },
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
     assignments_before = list(
         db.execute(
             _select(Assignment).where(Assignment.session_id == review_session.id)
@@ -539,11 +536,8 @@ def test_reviewer_import_form_warns_about_cascade(
         },
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": "true"},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(client, review_session.id)
 
     page = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"

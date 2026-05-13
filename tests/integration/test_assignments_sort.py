@@ -14,7 +14,10 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
 
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _make_session(
@@ -69,14 +72,8 @@ def _populate_full_matrix(
         },
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
-        data={
-            "rule_set_id": full_matrix_seed_id(db),
-            "exclude_self_review": "true",
-        },
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, session_id)
+    generate_via_page_button(client, session_id)
 
 
 def test_assignments_table_renders_sort_scaffolding(

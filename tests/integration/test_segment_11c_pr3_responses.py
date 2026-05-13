@@ -13,7 +13,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession
-from ._full_matrix import full_matrix_seed_id
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _strip_datalist(body: str) -> str:
@@ -67,11 +70,8 @@ def _populate(
         files={"file": ("e.csv", revw_csv, "text/csv")},
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
-        data={"rule_set_id": full_matrix_seed_id(db), "exclude_self_review": ""},
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, session_id)
+    generate_via_page_button(client, session_id)
 
 
 def _activate(client: TestClient, session_id: int) -> None:

@@ -15,7 +15,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, RuleSet
+from app.db.models import ReviewSession
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _extract_iframe_srcdoc(body: str) -> str:
@@ -540,19 +544,8 @@ def _import_reviewees(
 def _generate_full_matrix(
     client: TestClient, db: Session, session_id: int
 ) -> None:
-    rule_set_id = db.execute(
-        select(RuleSet.id).where(
-            RuleSet.is_seed.is_(True), RuleSet.name == "Full Matrix"
-        )
-    ).scalar_one()
-    response = client.post(
-        f"/operator/sessions/{session_id}/assignments/rule-based/generate",
-        data={
-            "rule_set_id": rule_set_id,
-            "exclude_self_review": "false",
-        },
-        follow_redirects=False,
-    )
+    pin_full_matrix_on_all_instruments(db, session_id)
+    response = generate_via_page_button(client, session_id)
     assert response.status_code == 303, response.text
 
 

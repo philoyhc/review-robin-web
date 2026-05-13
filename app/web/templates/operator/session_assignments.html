@@ -50,11 +50,119 @@
     </div>
   {% endif %}
 
+  {% if generated_flash %}
+    <div class="banner banner-info" id="generated-flash">
+      <p style="margin: 0;">
+        Assignments generated. Per-instrument counts in the status blocks below.
+      </p>
+    </div>
+  {% endif %}
+
   {% include "operator/partials/validation_results.html" %}
 
+  {# Segment 15B Slice 3a — page-level Generate + per-instrument
+     status blocks. Rule selection moved off this page (per-card
+     picker on the Instruments page, Slice 2a); this page is now
+     preview + materialise. #}
   {% if not is_ready %}
-    <div class="bottom-grid">
-      {% include "operator/partials/_rule_based_card.html" %}
+    <section class="card" id="assignments-generate-card">
+      <h2>Generate assignments</h2>
+      {% if page_ctx.pinned_instrument_count == 0 %}
+        <p class="form-help">
+          No instruments have a rule pinned yet. Pin rules on the
+          <a href="{{ page_ctx.instruments_url }}">Instruments page</a>
+          first, then come back here to generate.
+        </p>
+        <p style="margin-bottom: 0;">
+          <button class="btn secondary" type="button"
+                  disabled aria-disabled="true"
+                  title="Pin rules on the Instruments page first.">Generate assignments</button>
+        </p>
+      {% else %}
+        <p class="form-help">
+          Materialises pairs for every instrument that has a rule
+          pinned ({{ page_ctx.pinned_instrument_count }} of
+          {{ page_ctx.status_blocks | length }}).
+          {% if page_ctx.any_stale %}
+            <span class="pill pill-empty"
+                  id="pairs-may-be-stale-badge">Pairs may be stale</span>
+          {% endif %}
+        </p>
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/assignments/generate"
+              id="assignments-generate-form">
+          {% if assignment_count %}
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm_replace" value="true" required>
+                Yes, replace the existing
+                <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>.
+              </label>
+            </p>
+          {% endif %}
+          <p style="margin-bottom: 0;">
+            <button class="btn secondary" type="submit"
+                    id="assignments-generate-button">Generate assignments</button>
+          </p>
+        </form>
+      {% endif %}
+    </section>
+
+    <section class="card" id="assignments-status-blocks">
+      <h2>Per-instrument status</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Instrument</th>
+            <th>Rule</th>
+            <th>Eligible pairs</th>
+            <th>Generated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for block in page_ctx.status_blocks %}
+            <tr id="status-block-{{ block.instrument_id }}"
+                {% if block.is_stale %}class="status-block-stale"{% endif %}>
+              <td>{{ block.instrument_name }}</td>
+              <td>
+                {% if block.rule_name %}
+                  <span class="pill pill-info">{{ block.rule_name }}</span>
+                {% else %}
+                  <span class="muted">— No rule pinned —</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if block.rule_name %}
+                  <span class="pill pill-count">{{ block.eligible_count }}</span>
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if block.generated_count %}
+                  <span class="pill pill-count">{{ block.generated_count }}</span>
+                  {% if block.last_generated_at %}
+                    <span class="muted" style="margin-left: 8px;">
+                      last generated {{ block.last_generated_at.strftime('%Y-%m-%d %H:%M UTC') }}
+                    </span>
+                  {% endif %}
+                  {% if block.is_stale %}
+                    <span class="pill pill-empty"
+                          data-stale-pill="{{ block.instrument_id }}">stale</span>
+                  {% endif %}
+                {% else %}
+                  <span class="muted">Not generated yet</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{{ block.edit_url }}">Edit on Instruments page</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
 
       {% if assignment_count %}
         <section class="card" id="self-reviews-toggle">
@@ -107,7 +215,6 @@
           </form>
         </section>
       {% endif %}
-    </div>
   {% endif %}
 
   {% if pair_sample %}
