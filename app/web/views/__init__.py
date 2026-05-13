@@ -44,7 +44,9 @@ from ._extract_data import (
 from ._assignments import (
     AssignmentsPageContext,
     InstrumentStatusBlock,
+    NextActionGenerateState,
     build_assignments_page_context,
+    compute_next_action_generate_state,
 )
 
 # Manage Invitations page rows (sliced in PR 3).
@@ -187,6 +189,7 @@ __all__ = [
     "InvitationsRow",
     "IssueSourceGroup",
     "PageButton",
+    "NextActionGenerateState",
     "PreviewPickerContext",
     "PreviewPickerOption",
     "QuickSetupContext",
@@ -217,6 +220,7 @@ __all__ = [
     "build_setup_rows",
     "build_surface_preview_context",
     "build_validate_context",
+    "compute_next_action_generate_state",
     "constraint_summary_for_field",
     "email_preview_from_display",
     "filter_invitations_rows",
