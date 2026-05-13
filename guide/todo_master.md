@@ -505,14 +505,22 @@ bottom of this file.
 
 #### Stubs
 
-- **15E — Next Action revamp + multi-step shortcuts**
-  *(carved out of 15D PR 8, 2026-05-10)*. Promotes the
-  Next Action card on Session Home to drive Validate →
-  Generate → Activate as one-click "super button"
-  chains, with single-step actions retained for granular
-  flows. Stub-state plan; ready for sizing now that the
-  locked block is closed.
-  **Plan:** `guide/segment_15E_next_action_revamp.md`.
+- **15E — Validate page + Next Action revamp**
+  *(carved out of 15D PR 8, 2026-05-10; scope broadened
+  2026-05-13 to absorb Validate-page revisions made
+  necessary by 15B's per-instrument assignments move)*.
+  Two coordinated revamps: (1) **Validate page** —
+  rework readiness rules + UI for per-instrument
+  assignments (per-instrument readiness pills, new
+  per-instrument `validation.py` rules, inline auto-fix
+  buttons where safe); (2) **Next Action card** — drive
+  Validate → Generate → Activate as one-click "super
+  button" chains, with single-step actions retained for
+  granular flows. End-to-end goal: streamline the
+  operator workflow from setup completion through to
+  just before email generation. Stub-state plan; ready
+  for sizing now that the locked block is closed.
+  **Plan:** `guide/segment_15E_validate_next_action_revamp.md`.
 
 - **15F — Enhanced Setup pages** *(carved out of the
   original Segment 15, 2026-05-10)*. Per-row inline edit +
