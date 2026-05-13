@@ -1,25 +1,33 @@
 """Unit coverage for Segment 12C-1 PR 1 — `replace_assignments` honours
 ``sessions.self_reviews_active`` when writing self-review rows.
 
-Two-layer model contract:
+Two-layer model contract (post-15B Slice 1):
 
-- The RuleSet (or the legacy full-matrix toggle) decides whether
+- The instrument's pinned ``SessionRuleSet`` decides whether
   self-review pairs are emitted by the generator at all.
 - When self-review pairs ARE emitted, ``replace_assignments`` reads
   the session's ``self_reviews_active`` column to decide their
   ``include`` flag.
 
-Manual-CSV path is unaffected: when an explicit ``includes`` list is
-passed (the manual-CSV save path) the operator-typed value wins,
-regardless of what the session-level column says.
+The 15D-retired ``includes=`` parameter is gone (manual-CSV
+authoring deleted in 15D PR 7a); the per-pair operator override
+now lives on the ``relationships`` row via the engine's
+``pair_context`` predicate path.
 """
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.db.models import Assignment, Reviewee, Reviewer, ReviewSession, User
-from app.schemas.assignments import AssignmentMode
+from app.db.models import (
+    Assignment,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    SessionRuleSet,
+    User,
+)
 from app.services import assignments
+from app.services.instruments import ensure_default_instrument
 
 
 def _seed(db: Session, *, self_reviews_active: bool) -> tuple[
@@ -54,6 +62,27 @@ def _seed(db: Session, *, self_reviews_active: bool) -> tuple[
     )
     db.add_all([alice_r, bob_r, alice_e, carol_e])
     db.flush()
+
+    # Pin a Full-Matrix-shape rule to the default instrument so the
+    # engine emits every reviewer × reviewee pair (including
+    # self-reviews) — that's the population ``replace_assignments``
+    # then writes through with the session-flag-aware include flag.
+    full_matrix = SessionRuleSet(
+        session_id=review_session.id,
+        name="Full Matrix",
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=False,
+        seed=None,
+        rules_json=[],
+        is_seeded=True,
+    )
+    db.add(full_matrix)
+    db.flush()
+    default_inst = ensure_default_instrument(db, review_session)
+    default_inst.rule_set_id = full_matrix.id
+    db.flush()
+
     return user, review_session, alice_r, bob_r, alice_e, carol_e
 
 
@@ -74,17 +103,12 @@ def test_self_review_row_inactive_when_session_flag_off(db: Session) -> None:
     """``self_reviews_active=False`` flips self-review rows' ``include``
     to ``False``; non-self-review rows stay ``True``."""
 
-    user, review_session, alice_r, bob_r, alice_e, carol_e = _seed(
-        db, self_reviews_active=False
-    )
+    user, review_session, *_ = _seed(db, self_reviews_active=False)
 
-    pairs = [(alice_r, alice_e), (alice_r, carol_e), (bob_r, alice_e)]
     assignments.replace_assignments(
         db,
         review_session=review_session,
         user=user,
-        pairs=pairs,
-        mode=AssignmentMode.rule_based,
         correlation_id="corr-off",
     )
 
@@ -92,71 +116,33 @@ def test_self_review_row_inactive_when_session_flag_off(db: Session) -> None:
     assert len(self_reviews) == 1
     assert self_reviews[0].include is False
 
-    non_self = (
-        db.query(Assignment).filter(Assignment.session_id == review_session.id).all()
+    rows = (
+        db.query(Assignment)
+        .filter(Assignment.session_id == review_session.id)
+        .all()
     )
     non_self_includes = {
-        a.include
-        for a in non_self
-        if a not in self_reviews
+        a.include for a in rows if a not in self_reviews
     }
     assert non_self_includes == {True}
 
 
 def test_self_review_row_active_when_session_flag_on(db: Session) -> None:
     """Default ``self_reviews_active=True`` keeps self-review rows
-    ``include=True`` (matches pre-12C behaviour for unaffected callers)."""
+    ``include=True`` (matches pre-12C behaviour)."""
 
-    user, review_session, alice_r, bob_r, alice_e, carol_e = _seed(
-        db, self_reviews_active=True
-    )
+    user, review_session, *_ = _seed(db, self_reviews_active=True)
 
-    pairs = [(alice_r, alice_e), (bob_r, carol_e)]
     assignments.replace_assignments(
         db,
         review_session=review_session,
         user=user,
-        pairs=pairs,
-        mode=AssignmentMode.rule_based,
         correlation_id="corr-on",
     )
 
     rows = (
-        db.query(Assignment).filter(Assignment.session_id == review_session.id).all()
-    )
-    assert {a.include for a in rows} == {True}
-
-
-def test_explicit_includes_win_over_session_flag(db: Session) -> None:
-    """The rule-based engine passes an explicit ``includes`` list
-    derived from per-pair ``relationships`` rows; those operator-
-    chosen values must beat the session-level default even when the
-    pair is a self-review and the session flag is off."""
-
-    user, review_session, alice_r, _bob_r, alice_e, carol_e = _seed(
-        db, self_reviews_active=False
-    )
-
-    pairs = [(alice_r, alice_e), (alice_r, carol_e)]
-    assignments.replace_assignments(
-        db,
-        review_session=review_session,
-        user=user,
-        pairs=pairs,
-        mode=AssignmentMode.rule_based,
-        correlation_id="corr-includes",
-        includes=[True, False],
-    )
-
-    rows = (
-        db.query(Assignment, Reviewer, Reviewee)
-        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
-        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        db.query(Assignment)
         .filter(Assignment.session_id == review_session.id)
         .all()
     )
-    by_pair = {
-        (r.email, e.email_or_identifier): a.include for a, r, e in rows
-    }
-    assert by_pair[("alice@example.edu", "alice@example.edu")] is True
-    assert by_pair[("alice@example.edu", "carol@example.edu")] is False
+    assert {a.include for a in rows} == {True}

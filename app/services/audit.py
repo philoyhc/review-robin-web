@@ -417,7 +417,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "assignments.generated": EventSchema(
         _IDENTITY | {"counts", "context", "refs"}
     ),
-    "assignments.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    "assignments.deleted_all": EventSchema(_IDENTITY | {"counts", "refs"}),
     "assignments.self_reviews_active_set": EventSchema(
         _IDENTITY | {"counts", "context"}
     ),

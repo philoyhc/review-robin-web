@@ -45,16 +45,23 @@ def test_assignments_table_lacks_context_column(db: Session) -> None:
 
 def test_replace_assignments_signature_drops_contexts_param() -> None:
     """``replace_assignments`` no longer accepts ``contexts``. The
-    parameter retired alongside the column drop."""
+    parameter retired alongside the 15D PR 6b column drop. The
+    ``includes`` / ``pairs`` / ``rule_set_revision`` / ``filename`` /
+    ``excluded_counts`` parameters retired with 15B Slice 1 when the
+    function flipped to reading each instrument's pinned
+    ``rule_set_id`` and running the engine internally."""
 
     import inspect as inspect_mod
 
     from app.services import assignments
 
     params = inspect_mod.signature(assignments.replace_assignments).parameters
-    assert "contexts" not in params
-    # ``includes`` survives.
-    assert "includes" in params
+    for retired in (
+        "contexts", "includes", "pairs",
+        "rule_set_revision", "filename", "excluded_counts",
+    ):
+        assert retired not in params, retired
+    assert "instrument_id" in params
 
 
 def test_lazy_seed_fires_from_relationships_save(

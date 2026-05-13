@@ -168,9 +168,19 @@ def test_audit_context_records_actual_exclude_self_reviews_value(
     assert detail["refs"]["rule_set_id"] == rule_set_id
 
 
-def test_audit_refs_carry_rule_set_revision_id(
+def test_audit_refs_carry_instrument_and_rule_set_ids(
     client: TestClient, db: Session
 ) -> None:
+    """Post-15B Slice 1: each ``assignments.generated`` event carries
+    ``refs.instrument_id`` (per-instrument event) and
+    ``refs.rule_set_id`` pointing at the **session-tier**
+    ``session_rule_sets`` row pinned to that instrument. The pre-15B
+    ``refs.rule_set_revision_id`` retired alongside the per-session
+    revisions table (session copies are minimalistic — see
+    ``app/db/models/session_rule_set.py`` docstring)."""
+
+    from app.db.models import Instrument, SessionRuleSet
+
     review_session = _make_session(client, db, code="rb-refs")
     _seed_population(client, review_session)
 
@@ -192,9 +202,20 @@ def test_audit_refs_carry_rule_set_revision_id(
         )
     ).scalars().one()
     refs = (event.detail or {}).get("refs", {})
-    assert refs.get("rule_set_id") == rule_set_id
-    assert isinstance(refs.get("rule_set_revision_id"), int)
-    assert refs["rule_set_revision_id"] > 0
+
+    instrument_id = db.execute(
+        select(Instrument.id).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    session_rule_set_id = db.execute(
+        select(SessionRuleSet.id).where(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Full Matrix",
+        )
+    ).scalar_one()
+
+    assert refs.get("instrument_id") == instrument_id
+    assert refs.get("rule_set_id") == session_rule_set_id
+    assert "rule_set_revision_id" not in refs
 
 
 def test_generate_without_confirm_replace_redirects_back_with_error(
