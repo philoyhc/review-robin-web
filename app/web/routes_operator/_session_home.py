@@ -29,8 +29,8 @@ from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
 from app.services import (
-    assignments,
     csv_imports,
+    instruments as instruments_service,
     responses,
     session_owners,
     sessions,
@@ -135,8 +135,8 @@ def session_detail(
             "next_action_generate": views.compute_next_action_generate_state(
                 db, review_session
             ),
-            # Freshly-created draft with at least one of reviewers /
-            # reviewees / assignments still empty. Computed after the
+            # Freshly-created draft with reviewers, reviewees, or
+            # instrument rule pins still missing. Computed after the
             # validation flow so a session that just transitioned
             # ``draft → validated`` no longer falls through this gate.
             "is_setup_empty": (
@@ -144,7 +144,7 @@ def session_detail(
                 and (
                     csv_imports.existing_reviewer_count(db, review_session.id) == 0
                     or csv_imports.existing_reviewee_count(db, review_session.id) == 0
-                    or assignments.existing_count(db, review_session.id) == 0
+                    or instruments_service.has_unpinned(db, review_session.id)
                 )
             ),
             "has_responses": lifecycle.session_has_responses(db, review_session),
