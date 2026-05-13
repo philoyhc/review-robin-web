@@ -135,50 +135,30 @@
         {% endif %}
       </form>
     {% elif is_ready %}
-      {# Two-section layout while activated. Section 1 nudges the
-         operator toward inviting reviewers (the day-to-day "doing
-         things" action) — Manage invitations is the Primary;
-         Monitor responses sits next to it as Secondary.  Section 2
-         is the standalone Pause path with its own confirm checkbox
-         + Primary button, separated from section 1 by a horizontal
-         rule so the two are read as distinct concerns. #}
+      {# State 6: activated. Body explains the current state; the
+         workflow stepper below renders Invite reviewers / Monitor
+         responses as live Secondary actions and Revert to draft
+         (which calls /revert and pauses the session) as Primary.
+         Generate / Activate are inert previews of past stages. #}
       <p>
         Session is currently activated. Reviewers can access forms
         and save responses. Don't forget to generate and send out
         emails to notify the reviewers.
       </p>
-      <div class="next-action-buttons">
-        <a class="btn"
-           href="/operator/sessions/{{ session.id }}/invitations">Manage invitations</a>
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/monitoring">Monitor responses</a>
-      </div>
-      <hr class="next-action-divider">
-      <p>
-        Pausing returns the session to draft and stops reviewers
-        from submitting new responses. Existing responses will be
-        preserved.
-      </p>
-      <div class="next-action-confirm">
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/revert"
-              id="next-action-pause-form">
-          {% if _next_action_return_to %}
-            <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
-          {% endif %}
-          <p style="margin: 0;">
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required>
-              Yes, pause <strong>{{ session.name }}</strong> and return to draft.
-            </label>
-          </p>
-        </form>
-      </div>
-      <div class="next-action-buttons">
-        <button class="btn"
-                type="submit"
-                form="next-action-pause-form">Pause Session</button>
-      </div>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/revert"
+            id="next-action-pause-form">
+        {% if _next_action_return_to %}
+          <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+        {% endif %}
+        {# Confirm checkbox replaced with a hidden field on the
+           Segment-15F workflow-stepper refresh — the explicit
+           acknowledgment now lives in the Primary button label
+           ("Revert to draft"), not a separate checkbox. The
+           lifecycle service still enforces ``confirm=True`` as a
+           safety gate against direct route hits without this form. #}
+        <input type="hidden" name="confirm" value="true">
+      </form>
     {% endif %}
   </div>
   {% if is_setup_empty %}
@@ -265,7 +245,23 @@
       <button class="btn" type="submit"
               form="next-action-revert-form">Revert to draft</button>
     </div>
-  {% elif not is_ready %}
+  {% elif is_ready %}
+    {# State 6: invitations + monitoring are the live ongoing-session
+       actions; Generate / Activate previews of past stages render
+       inert; Revert to draft is the wind-down Primary. #}
+    <div class="next-action-buttons">
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Generate assignments</button>
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Activate Session</button>
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/invitations">Invite reviewers</a>
+      <a class="btn secondary"
+         href="/operator/sessions/{{ session.id }}/monitoring">Monitor responses</a>
+      <button class="btn" type="submit"
+              form="next-action-pause-form">Revert to draft</button>
+    </div>
+  {% else %}
   {# State 3: draft, validation just failed — keep the existing
      two-button row (the failure pills already render in the body).
      Revert is N/A from draft so isn't shown. #}

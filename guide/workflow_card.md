@@ -73,17 +73,17 @@ elif is_validated:
 elif is_ready:             → State 6
 ```
 
-For States 1, 1A, 2, 4A, 4B, and 5 the bottom row renders a unified
+For States 1, 1A, 2, 4A, 4B, 5, and 6 the bottom row renders a unified
 **workflow stepper**: four stage buttons (`Generate assignments`,
 `Validate Setup` / `Activate Session`, `Invite reviewers`, `Monitor
 responses`) flanked by `Revert to draft` at the end. The active stage
 uses Primary styling; earlier stages re-render as Secondary
 (re-clickable); later stages render as `<button disabled>` previews
 of what's coming. The second slot's label morphs from "Validate
-Setup" (draft phase) to "Activate Session" (validated phase) to keep
-the operator's eye on the next forward action. State 3 (validation
-just failed) keeps its two-button row pre-stepper. State 6 (activated)
-keeps its inline two-section invitations / pause layout.
+Setup" (draft phase) to "Activate Session" (validated and activated
+phases) to keep the operator's eye on the next forward action. State 3
+(validation just failed) is the only state that keeps a state-specific
+two-button row outside the stepper layout.
 
 ### State 1 — Setup not yet populated (`is_setup_empty`)
 
@@ -294,35 +294,30 @@ then re-enter the Validate flow from State 2.
 
 ### State 6 — Activated (`is_ready`)
 
-The body is split into two sections by an `<hr class="next-action-divider">`,
-and the buttons live inline within the body — the outer bottom button
-row is suppressed by the `not is_ready` guard at line 166.
-
-**Section 1 — Invitations / monitoring.**
-
 Body copy: *"Session is currently activated. Reviewers can access
 forms and save responses. Don't forget to generate and send out emails
 to notify the reviewers."*
 
-| Label | Style | Method | Target |
-| --- | --- | --- | --- |
-| **Manage invitations** | Primary `<a>` | GET | `/operator/sessions/{id}/invitations` |
-| **Monitor responses** | Secondary `<a>` | GET | `/operator/sessions/{id}/monitoring` |
-
-**Section 2 — Pause.**
-
-Body copy: *"Pausing returns the session to draft and stops reviewers
-from submitting new responses. Existing responses will be preserved."*
-
 A hidden form `id="next-action-pause-form"` posts to
-`/operator/sessions/{id}/revert` with `return_to=assignments` and a
-required checkbox `name="confirm" value="true"` labeled *"Yes, pause
-**{session name}** and return to draft."*. The Pause Session button is
-a `<button type="submit" form="next-action-pause-form">`.
+`/operator/sessions/{id}/revert` carrying `return_to=assignments` (on
+the Assignments page) and a hidden `confirm=true` field. The Revert
+to draft button references it via `form="next-action-pause-form"`.
+The pre-stepper UI required an inline checkbox acknowledgment; the
+stepper refresh moves the acknowledgment onto the Primary button
+label itself, keeping the lifecycle-service `confirm` gate in place
+as protection against direct route hits without the form.
+
+Buttons: workflow stepper with Invite reviewers / Monitor responses
+as the live ongoing-session actions and Revert to draft (which pauses
+the session back to draft) as Primary. Earlier stages preview inert.
 
 | Label | Style | Method | Target |
 | --- | --- | --- | --- |
-| **Pause Session** | Primary submit | POST | `/operator/sessions/{id}/revert` (form `next-action-pause-form`, requires `confirm=true`) |
+| **Generate assignments** | Secondary `<button>` | `disabled` | — |
+| **Activate Session** | Secondary `<button>` | `disabled` | — |
+| **Invite reviewers** | Secondary `<a>` | GET | `/operator/sessions/{id}/invitations` |
+| **Monitor responses** | Secondary `<a>` | GET | `/operator/sessions/{id}/monitoring` |
+| **Revert to draft** | Primary submit | POST | `/operator/sessions/{id}/revert` (form `next-action-pause-form`, hidden `confirm=true`) |
 
 POST `/revert` against a `ready` session dispatches to
 `lifecycle.revert_session_to_draft(..., confirm=confirm == "true")`,
@@ -334,7 +329,14 @@ which:
 - Emits `session.reverted_to_draft`.
 - Preserves all reviewer responses (does not delete).
 
-Redirect lands back on Assignments.
+Redirect lands back on Assignments. After the revert, the session
+falls into State 1A (reverted-draft path via
+`needs_regeneration_after_revert`).
+
+The yellow `.card.lock` notice that previously rendered alongside the
+Assignments page's pair table when `is_ready` was retired with this
+stepper refresh — the Next Action card's Revert primary now carries
+the same affordance directly.
 
 ## Quick reference: what each POST route does
 

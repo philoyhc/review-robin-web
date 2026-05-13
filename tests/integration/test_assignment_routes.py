@@ -377,12 +377,10 @@ def test_ready_session_preview_rows_render_alongside_show_script(
     # case is still possible — e.g. a session with no
     # instruments — even if uncommon).
     assert "if (boxes.length === 0) return;" in body
-    # Yellow banner sits BELOW the status info card (Instruments-
-    # page pattern).
-    assert (
-        body.index('id="assignments-status-blocks"')
-        < body.index('class="card lock"')
-    )
+    # The yellow ``card lock`` revert notice was retired with the
+    # Next Action card State 6 workflow-stepper refresh — the
+    # stepper's Revert to draft Primary now carries that affordance.
+    assert 'class="card lock"' not in body
 
 
 def test_non_operator_gets_403_on_assignments_hub_and_post(

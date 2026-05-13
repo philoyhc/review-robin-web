@@ -788,33 +788,32 @@ def test_next_action_card_in_ready_renders_pause(
 
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
-    # Card title is constant ("Next action"); the action verb lives
-    # in the primary button label inside.
+    # Card title is constant ("Next action"); the workflow-stepper
+    # row carries Revert to draft as the Primary wind-down action.
     assert "<h2>Next Action</h2>" in body
-    assert ">Pause Session</button>" in body
-    # Pause form posts to /revert, with the button outside the form
-    # and wired via the form="..." attribute.
+    assert ">Revert to draft</button>" in body
+    # Pause form still POSTs to /revert with the hidden
+    # confirm=true gate; the button references it via form="...".
     assert (
         f'action="/operator/sessions/{review_session.id}/revert"' in body
     )
     assert 'form="next-action-pause-form"' in body
-    # Activated-state lays out as two body sections separated by
-    # ``hr.next-action-divider``: section 1 surfaces Manage
-    # invitations (Primary) + Monitor responses (Secondary); section
-    # 2 is the Pause path. "See previews" is intentionally absent
-    # while Activated — operators monitor live responses, not
-    # previews.
-    assert "next-action-divider" in body
-    assert ">Manage invitations</a>" in body
+    assert 'name="confirm" value="true"' in body
+    # State 6 stepper: Generate / Activate previews inert; Invite
+    # reviewers / Monitor responses live Secondary links; Revert
+    # primary submit. The two-section pause body retired with the
+    # stepper refresh — body is a single paragraph now.
+    assert '<hr class="next-action-divider">' not in body
+    assert ">Pause Session</button>" not in body
+    for label in ("Generate assignments", "Activate Session"):
+        assert (
+            f'disabled aria-disabled="true">{label}</button>' in body
+        ), f"expected inert stepper button {label!r}"
+    assert ">Invite reviewers</a>" in body
     assert ">Monitor responses</a>" in body
     assert ">See previews</a>" not in body
     # Body copy: single-paragraph rewrite per the latest pass.
-    # Substrings are tested without crossing the template's source
-    # line breaks (Jinja preserves whitespace, so "submitting new
-    # responses" spans a newline and isn't a substring).
     assert "Session is currently activated" in body
-    assert "submitting new" in body
-    assert "return to draft" in body
     # Old "Run Session" header is gone.
     assert "<h2>Run Session</h2>" not in body
 

@@ -120,26 +120,10 @@
     </table>
   </section>
 
-  {% if is_ready %}
-    <div class="card lock">
-      <p style="margin: 0 0 12px 0;">
-        Assignments cannot be modified while the session is ongoing.
-        Revert the session to draft if you wish to modify anything.
-      </p>
-      <form method="post" action="/operator/sessions/{{ session.id }}/revert">
-        <input type="hidden" name="return_to" value="assignments">
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required>
-            Yes, revert <strong>{{ session.name }}</strong> to draft.
-          </label>
-        </p>
-        <p style="margin-bottom: 0;">
-          <button class="btn alert" type="submit">Revert to draft</button>
-        </p>
-      </form>
-    </div>
-  {% endif %}
+  {# Yellow ``card lock`` retired on the State 6 workflow-stepper
+     refresh — the Next Action card's stepper row now carries the
+     Revert to draft Primary when the session is activated, so the
+     duplicate notice + button is redundant. #}
 
   {% if not is_ready and (reviewer_count == 0 or reviewee_count == 0) %}
     <div class="card lock">
