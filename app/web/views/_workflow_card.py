@@ -1,7 +1,7 @@
 """Workflow card context builder — shared by every Operations-row
 page that renders ``operator/partials/next_action_card.html``.
 
-After PR 5 of ``guide/workflow_card.md`` A.8, every Operations-row
+After PR 5 of ``spec/workflow_card.md`` A.8, every Operations-row
 page route (Assignments today; Validate / Previews / Invitations /
 Responses incoming in PRs 6+) builds its template context by
 calling ``build_workflow_card_context(...)`` and merging the

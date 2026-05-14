@@ -348,7 +348,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.invalidated": EventSchema(_IDENTITY | {"reason"}),
     "session.activated": EventSchema(_IDENTITY | {"counts", "context"}),
     "session.reverted_to_draft": EventSchema(_IDENTITY | {"counts"}),
-    # Workflow super-button (PR 3 of guide/workflow_card.md). The
+    # Workflow super-button (per spec/workflow_card.md). The
     # ``started`` event marks each Activate-session click; per-step
     # success continues to write the underlying ``session.validated``
     # / ``session.activated`` / ``assignments.generated`` events. The

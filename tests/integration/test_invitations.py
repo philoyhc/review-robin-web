@@ -95,7 +95,7 @@ def _ready_session(
 def test_invitations_page_renders_workflow_card(
     client: TestClient, db: Session
 ) -> None:
-    """PR 9 of guide/workflow_card.md A.8 — the Invitations page hosts
+    """Per spec/workflow_card.md — the Invitations page hosts
     the Workflow card with ``next_action_return_to=invitations``."""
     session = _ready_session(client, db, code="inv-card")
     body = client.get(f"/operator/sessions/{session.id}/invitations").text

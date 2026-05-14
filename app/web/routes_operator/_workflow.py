@@ -1,7 +1,7 @@
 """Operator workflow super-button — collapses Generate + Validate +
 Activate into a single ``POST /workflow/activate`` route.
 
-Per ``guide/workflow_card.md`` appendix A (PR 3 of the rollout). Lives
+Per ``spec/workflow_card.md`` appendix A (PR 3 of the rollout). Lives
 in its own slice so the super-button perimeter is easy to retire /
 move once PR 4 cleans up the orphaned per-step routes.
 

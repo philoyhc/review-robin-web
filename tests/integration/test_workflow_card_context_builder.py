@@ -1,6 +1,6 @@
 """Unit-style coverage for ``views.build_workflow_card_context``,
 the shared context builder introduced in PR 5 of
-``guide/workflow_card.md`` A.8. The builder is the canonical entry
+``spec/workflow_card.md`` A.8. The builder is the canonical entry
 point every Operations-row page route will call once the Workflow
 card spreads beyond Assignments. Pinning its output shape here
 keeps the per-page wiring drop-in for PRs 6+.

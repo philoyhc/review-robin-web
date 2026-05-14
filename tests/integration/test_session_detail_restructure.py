@@ -133,7 +133,7 @@ def test_session_detail_renders_session_layout(
 
     assert response.status_code == 200
     assert "<h2>Session Details</h2>" in body
-    # PR 6 of guide/workflow_card.md A.8 brought the Workflow card
+    # Per spec/workflow_card.md, the Workflow card
     # back to Session Home (full-width, just below the chrome).
     assert 'id="next-action"' in body
     assert "<h2>Workflow</h2>" in body
@@ -718,7 +718,7 @@ def test_session_card_buttons_when_ready(
         in body
     )
     # Workflow card is back on Session Home (PR 6 of
-    # guide/workflow_card.md A.8) — its ready-state pause form
+    # spec/workflow_card.md) — its ready-state pause form
     # posts to /revert.
     assert (
         f'action="/operator/sessions/{review_session.id}/revert"'

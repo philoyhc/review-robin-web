@@ -106,7 +106,7 @@ from ._validate import (
     validate_lifecycle_copy,
 )
 
-# Workflow card context builder (PR 5 of guide/workflow_card.md
+# Workflow card context builder (per spec/workflow_card.md
 # A.8): shared by every Operations-row page that hosts the
 # card — Assignments today; Validate / Previews / Invitations /
 # Responses incoming in PRs 6+.

@@ -468,7 +468,7 @@ def test_session_home_renders_workflow_card_with_return_to_home(
     client: TestClient, db: Session
 ) -> None:
     """Session Home hosts the Workflow card too (PR 6 of
-    guide/workflow_card.md A.8). The card's forms post back to
+    spec/workflow_card.md). The card's forms post back to
     Session Home via ``return_to=home`` rather than to an
     Operations-row page."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-home")
