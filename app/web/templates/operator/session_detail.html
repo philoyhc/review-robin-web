@@ -12,15 +12,12 @@
   </div>
 
   <div class="bottom-grid">
-    {# Left column — Contextual primary action, Quick setup #}
+    {# Left column — Extract Data, Danger Zone. The Workflow card
+       retired from Session Home on the super-button refresh; the
+       card now only lives on the Operations-row pages
+       (Assignments etc.). #}
     <div class="bottom-left">
-      {% include "operator/partials/next_action_card.html" %}
-
-      {# Extract Data — full scaffolded shape per Segment 11H PR B.
-         Sits immediately under the Next Action card so the
-         operator's two most common reads on Home (current
-         lifecycle action + responses-to-extract status) sit in
-         the same column. #}
+      {# Extract Data — full scaffolded shape per Segment 11H PR B. #}
       {% include "operator/partials/_extract_data_card.html" %}
 
       <div class="card danger-zone" id="danger-zone">

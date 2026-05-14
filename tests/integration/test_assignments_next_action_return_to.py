@@ -377,30 +377,22 @@ def test_validate_warnings_banner_acknowledge_form_carries_return_to(
 # --------------------------------------------------------------------------- #
 
 
-def test_session_home_next_action_card_omits_return_to(
+def test_session_home_omits_next_action_card(
     client: TestClient, db: Session
 ) -> None:
-    """Session Home doesn't pass ``next_action_return_to`` — the
-    Next Action card forms there omit the hidden field and /activate
-    + /revert keep their Session Home redirects (regression guard)."""
+    """Session Home no longer renders the Workflow card at all —
+    the card lives on the Operations-row pages only (regression
+    guard against accidentally re-adding the include)."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-home")
     client.post(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
     )
-    client.get(
-        f"/operator/sessions/{review_session.id}?validated=1",
-        follow_redirects=False,
-    )
     body = client.get(
         f"/operator/sessions/{review_session.id}"
     ).text
-    # Activate form has no return_to.
-    import re
-    activate_form = re.search(
-        r'(<form[^>]*id="next-action-activate-form"[^>]*>.*?</form>)',
-        body,
-        re.DOTALL,
-    )
-    assert activate_form is not None
-    assert 'name="return_to"' not in activate_form.group(1)
+    assert 'id="next-action"' not in body
+    assert 'id="next-action-activate-form"' not in body
+    assert 'id="next-action-pause-form"' not in body
+    assert 'id="next-action-revert-form"' not in body
+    assert 'id="next-action-generate-form"' not in body

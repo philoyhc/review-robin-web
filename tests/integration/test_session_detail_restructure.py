@@ -124,10 +124,6 @@ def test_build_setup_rows_returns_expected_shape(
 def test_session_detail_renders_session_layout(
     client: TestClient, db: Session
 ) -> None:
-    # ``_seed_pair`` populates reviewers / reviewees / assignments so
-    # the Next Action card lands in the populated-draft state (Validate
-    # Setup as Primary), not the freshly-created "not fully set up"
-    # short-circuit which intentionally suppresses action buttons.
     review_session = _seed_pair(
         client, db, code="layout-cards", reviewer_email="r@example.edu"
     )
@@ -137,14 +133,10 @@ def test_session_detail_renders_session_layout(
 
     assert response.status_code == 200
     assert "<h2>Session Details</h2>" in body
-    # Per spec/session_home.md, the Next action card replaces the
-    # old "Run Session" four-CTA card. The card title is constant
-    # ("Next action") across lifecycle states; the per-state action
-    # surfaces as the primary button label inside the card.
-    assert 'id="next-action"' in body
-    assert "<h2>Workflow</h2>" in body
-    # Populated draft state: primary button is "Validate setup".
-    assert ">Validate setup</a>" in body
+    # The Workflow card retired from Session Home on the super-button
+    # refresh — it now only lives on the Operations-row pages.
+    assert 'id="next-action"' not in body
+    assert "<h2>Workflow</h2>" not in body
     assert "<h2>Run Session</h2>" not in body
     assert "Danger Zone" in body
     assert 'id="danger-zone"' in body
@@ -195,128 +187,14 @@ def test_session_detail_no_validate_summary_by_default(
         client, db, code="no-summary", reviewer_email="r@example.edu"
     )
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    # Populated draft session, no ``?validated=1`` — no validation card
-    # and no Activate form should appear. The Next action card surfaces
-    # "Validate setup" as its primary button.
-    assert "<h2>Workflow</h2>" in body
-    assert ">Validate setup</a>" in body
+    # Populated draft session, no ``?validated=1`` — Session Home no
+    # longer carries the Workflow card or any validation summary; both
+    # live on the Operations-row pages now.
+    assert "<h2>Workflow</h2>" not in body
     assert "<h2>Validation summary</h2>" not in body
     assert (
         f'action="/operator/sessions/{review_session.id}/activate"'
         not in body
-    )
-
-
-def test_session_detail_empty_rosters_renders_setup_short_circuit(
-    client: TestClient, db: Session
-) -> None:
-    """A freshly-created draft (no reviewers / reviewees / assignments)
-    surfaces a "Session not fully set up" body and renders the
-    workflow-stepper preview with every stage inert — no clickable
-    action is offered until the rosters are populated.
-
-    Replaces the former empty-rosters-validation-failure test: with
-    this short-circuit in place, the Validate Setup button is no
-    longer reachable until the rosters are populated, so the inline
-    validation-failure feedback isn't the first thing an empty
-    session shows."""
-    review_session = _make_session(client, db, code="empty-shortcircuit")
-    body = client.get(
-        f"/operator/sessions/{review_session.id}?validated=1"
-    ).text
-
-    assert "<h2>Workflow</h2>" in body
-    assert "Session not fully set up." in body
-    assert (
-        "Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing."
-        in body
-    )
-    # Clickable forward actions suppressed in this state — the
-    # workflow-stepper buttons are present but all carry `disabled`.
-    # (The inert ``disabled`` markup is checked in the loop below;
-    # here we verify no live-form markup leaks through.)
-    assert ">Validate setup</a>" not in body
-    assert 'id="next-action-activate-form"' not in body
-    assert 'id="next-action-generate-form"' not in body
-    assert ">See validation details</a>" not in body
-    # Stepper preview present: every stage rendered inert.
-    for label in (
-        "Generate assignments",
-        "Validate setup",
-        "Start session",
-        "Generate invites",
-        "Send invites",
-        "Send reminders",
-        "Revert to draft",
-    ):
-        assert (
-            f'disabled aria-disabled="true">{label}</button>' in body
-        ), f"expected inert stepper button {label!r}"
-
-
-def test_session_detail_advances_to_validated_with_query(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _seed_pair(
-        client, db, code="with-summary", reviewer_email="r@example.edu"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.id}?validated=1"
-    ).text
-
-    # The Next action card stays titled "Next action" — the per-state
-    # action surfaces as the primary button label inside.
-    assert "<h2>Workflow</h2>" in body
-    assert ">Start session</button>" in body
-    # Validated-can-activate body copy (no pills any more).
-    assert "successfully validated" in body
-    # Activate form on the card.
-    assert (
-        f'action="/operator/sessions/{review_session.id}/activate"' in body
-    )
-    # Workflow-stepper row: Generate (Secondary regenerate) and
-    # Revert to draft (Secondary) flank the Start session primary;
-    # Validate setup re-renders as an inert preview of the past
-    # stage; the three invitation stages are future-stage previews.
-    assert ">Generate assignments</button>" in body
-    assert ">Revert to draft</button>" in body
-    for label in (
-        "Validate setup",
-        "Generate invites",
-        "Send invites",
-        "Send reminders",
-    ):
-        assert (
-            f'disabled aria-disabled="true">{label}</button>' in body
-        ), f"expected inert stepper button {label!r}"
-
-
-def test_validated_session_keeps_action_card_without_query(
-    client: TestClient, db: Session
-) -> None:
-    """Once validated, the action card persists as Activate Session
-    without needing ``?validated=1``. (Pre-11B, the validation summary
-    card was query-gated; the spec replaces that with a state-driven
-    card that reflects the persistent lifecycle state.)"""
-
-    review_session = _seed_pair(
-        client, db, code="lose-summary", reviewer_email="r@example.edu"
-    )
-    # Walk through ?validated=1 to mark the session validated.
-    with_query = client.get(
-        f"/operator/sessions/{review_session.id}?validated=1"
-    ).text
-    assert ">Start session</button>" in with_query
-
-    # On a refresh without the query, the card stays — state, not URL,
-    # drives the contents now.
-    without_query = client.get(
-        f"/operator/sessions/{review_session.id}"
-    ).text
-    assert ">Start session</button>" in without_query
-    assert (
-        f'action="/operator/sessions/{review_session.id}/activate"'
-        in without_query
     )
 
 
@@ -783,68 +661,10 @@ def test_chrome_status_pill_renders_activated_for_ready_session(
 
 
 # ---------------------------------------------------------------------------
-# Slice 11B — Next action card per state
+# Slice 11B — Workflow card on Session Home retired (it only renders on the
+# Operations-row pages now); equivalent stepper behaviour is covered in
+# test_assignments_next_action_return_to.py against the Assignments URL.
 # ---------------------------------------------------------------------------
-
-
-def test_next_action_card_in_ready_renders_pause(
-    db: Session,
-    alice: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    operator = make_client(alice)
-    review_session = _seed_pair(
-        operator, db, code="ready-pause", reviewer_email="r@example.edu"
-    )
-    _activate(operator, db, review_session)
-
-    body = operator.get(f"/operator/sessions/{review_session.id}").text
-
-    # Card title is constant ("Next action"); the workflow-stepper
-    # row carries Revert to draft as the Primary wind-down action.
-    assert "<h2>Workflow</h2>" in body
-    assert ">Revert to draft</button>" in body
-    # Pause form still POSTs to /revert with the hidden
-    # confirm=true gate; the button references it via form="...".
-    assert (
-        f'action="/operator/sessions/{review_session.id}/revert"' in body
-    )
-    assert 'form="next-action-pause-form"' in body
-    assert 'name="confirm" value="true"' in body
-    # State 6 stepper (just-activated, no invitations generated yet):
-    # Generate / Validate setup / Start session previews inert.
-    # Generate invites is the live Primary; Send invites + Send
-    # reminders are inert future-stage previews. Revert to draft
-    # renders as a Secondary submit. The two-section pause body
-    # retired with the stepper refresh — body is a single paragraph
-    # now.
-    assert '<hr class="next-action-divider">' not in body
-    assert ">Pause Session</button>" not in body
-    for label in (
-        "Generate assignments",
-        "Validate setup",
-        "Start session",
-        "Send invites",
-        "Send reminders",
-    ):
-        assert (
-            f'disabled aria-disabled="true">{label}</button>' in body
-        ), f"expected inert stepper button {label!r}"
-    # Generate invites is the live Primary in State 6.
-    assert (
-        'form="next-action-generate-invites-form">Generate invites</button>'
-        in body
-    )
-    # Revert to draft is Secondary even while ready.
-    assert (
-        '"btn secondary" type="submit"\n              form="next-action-pause-form">Revert to draft</button>'
-        in body
-    )
-    assert ">See previews</a>" not in body
-    # Body copy: single-paragraph rewrite per the latest pass.
-    assert "Session is currently activated" in body
-    # Old "Run Session" header is gone.
-    assert "<h2>Run Session</h2>" not in body
 
 
 def test_revert_route_handles_validated_to_draft(
@@ -896,9 +716,11 @@ def test_session_card_buttons_when_ready(
         f'href="/operator/sessions/{review_session.id}/edit">Edit</a>'
         in body
     )
-    # Revert to draft form present
+    # The /revert POST form no longer renders on Session Home — it
+    # lives in the Workflow card on the Operations-row pages now.
     assert (
-        f'action="/operator/sessions/{review_session.id}/revert"' in body
+        f'action="/operator/sessions/{review_session.id}/revert"'
+        not in body
     )
     # Delete Data form still present (allowed in ready)
     assert (
