@@ -77,7 +77,7 @@ def _validated_session(
 ) -> ReviewSession:
     session = _create_session(client, db, code=code)
     _populate_rosters(client, db, session.id)
-    response = client.get(f"/operator/sessions/{session.id}?validated=1")
+    response = client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
     assert response.status_code == 200
     db.refresh(session)
     assert session.status == "validated"
@@ -443,7 +443,7 @@ def test_delete_instrument_invalidates_validated_session(
     )
     # Walk back to validated after the add (which dropped us to draft).
     _populate_rosters(client, db, session.id)
-    response = client.get(f"/operator/sessions/{session.id}?validated=1")
+    response = client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
     assert response.status_code == 200
     db.refresh(session)
     assert session.status == "validated"
@@ -509,7 +509,7 @@ def test_delete_instrument_returns_409_when_session_ready(
     )
     # Re-validate + activate after the add.
     _populate_rosters(client, db, session.id)
-    client.get(f"/operator/sessions/{session.id}?validated=1")
+    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
     response = client.post(
         f"/operator/sessions/{session.id}/activate",
         data={"acknowledge_warnings": "true"},

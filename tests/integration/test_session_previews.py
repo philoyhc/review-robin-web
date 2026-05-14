@@ -725,7 +725,7 @@ def test_session_home_previews_chrome_link_targets_hub(
     _generate_full_matrix(client, db, session.id)
 
     body = client.get(
-        f"/operator/sessions/{session.id}?validated=1"
+        f"/operator/sessions/{session.id}/assignments?validated=1"
     ).text
 
     assert (

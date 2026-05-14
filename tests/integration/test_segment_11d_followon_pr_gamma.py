@@ -122,7 +122,7 @@ def _setup_two_instrument_session(
             description=second_description,
             actor=None,
         )
-    operator_client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    operator_client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     operator_client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -405,7 +405,7 @@ def test_instrument_heading_single_short_label_only(
     instruments_service.update_short_label(
         db, instrument=instrument, short_label="Self-eval", actor=None
     )
-    operator.get(f"/operator/sessions/{review_session.id}?validated=1")
+    operator.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     operator.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},

@@ -230,7 +230,7 @@ def test_activate_form_includes_return_to_assignments(
         follow_redirects=False,
     )
     client.get(
-        f"/operator/sessions/{review_session.id}?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments?validated=1",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -269,7 +269,7 @@ def test_activate_post_with_return_to_redirects_to_assignments(
         follow_redirects=False,
     )
     client.get(
-        f"/operator/sessions/{review_session.id}?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments?validated=1",
         follow_redirects=False,
     )
     response = client.post(
@@ -296,7 +296,7 @@ def test_activate_post_without_return_to_redirects_to_session_home(
         follow_redirects=False,
     )
     client.get(
-        f"/operator/sessions/{review_session.id}?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments?validated=1",
         follow_redirects=False,
     )
     response = client.post(
@@ -325,7 +325,7 @@ def test_revert_form_on_assignments_carries_return_to(
         follow_redirects=False,
     )
     client.get(
-        f"/operator/sessions/{review_session.id}?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments?validated=1",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -355,7 +355,7 @@ def test_pause_form_on_assignments_carries_return_to(
         follow_redirects=False,
     )
     client.get(
-        f"/operator/sessions/{review_session.id}?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments?validated=1",
         follow_redirects=False,
     )
     client.post(
@@ -401,7 +401,7 @@ def test_activate_warnings_detour_link_carries_return_to(
         follow_redirects=False,
     )
     client.get(
-        f"/operator/sessions/{review_session.id}?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments?validated=1",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -441,7 +441,7 @@ def test_validate_warnings_banner_acknowledge_form_carries_return_to(
         follow_redirects=False,
     )
     client.get(
-        f"/operator/sessions/{review_session.id}?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments?validated=1",
         follow_redirects=False,
     )
     from app.db.models import Assignment

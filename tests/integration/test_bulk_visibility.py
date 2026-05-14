@@ -205,7 +205,7 @@ def test_bulk_visibility_does_not_invalidate_validated_session(
     """
     session = _create_session(client, db, code="bv-validated")
     _populate_rosters(client, db, session.id)
-    response = client.get(f"/operator/sessions/{session.id}?validated=1")
+    response = client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
     assert response.status_code == 200
     db.refresh(session)
     assert session.status == "validated"

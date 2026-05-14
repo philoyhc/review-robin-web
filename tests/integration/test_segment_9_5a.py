@@ -54,7 +54,7 @@ def _populate(client: TestClient, db: Session, session_id: int) -> None:
 
 
 def _validate(client: TestClient, session_id: int) -> None:
-    response = client.get(f"/operator/sessions/{session_id}?validated=1")
+    response = client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
     assert response.status_code == 200
 
 
@@ -80,7 +80,7 @@ def test_validated_query_flips_draft_to_validated_when_no_errors(
     session = _create_session(client, db, code="t1-ok")
     _populate(client, db, session.id)
 
-    client.get(f"/operator/sessions/{session.id}?validated=1")
+    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
 
     db.refresh(session)
     assert session.status == "validated"
@@ -92,7 +92,7 @@ def test_validated_query_does_not_flip_when_errors_exist(
     session = _create_session(client, db, code="t1-err")
     # No setup → validation has errors
 
-    client.get(f"/operator/sessions/{session.id}?validated=1")
+    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
 
     db.refresh(session)
     assert session.status == "draft"
@@ -103,7 +103,7 @@ def test_validated_query_idempotent_when_already_validated(
 ) -> None:
     session = _validated_session(client, db, code="t1-idem")
 
-    client.get(f"/operator/sessions/{session.id}?validated=1")
+    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
 
     db.refresh(session)
     assert session.status == "validated"
@@ -380,7 +380,7 @@ def test_session_validated_audit_event(
     session = _create_session(client, db, code="audit-v")
     _populate(client, db, session.id)
 
-    client.get(f"/operator/sessions/{session.id}?validated=1")
+    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
 
     event = db.execute(
         select(AuditEvent).where(
