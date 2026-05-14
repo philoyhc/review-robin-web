@@ -1,5 +1,5 @@
 """Coverage for the Activate session super-button (PR 3 of
-guide/workflow_card.md). The route fuses Generate + Validate +
+spec/workflow_card.md). The route fuses Generate + Validate +
 Activate into a single click; this file pins the four failure
 paths from appendix A.6 + the audit-event story per case + the
 right-column failure banner that surfaces the diagnostic.

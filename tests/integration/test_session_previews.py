@@ -68,7 +68,7 @@ def _import_reviewers(
 def test_previews_page_renders_workflow_card(
     client: TestClient, db: Session
 ) -> None:
-    """PR 8 of guide/workflow_card.md A.8 — the Previews page hosts
+    """Per spec/workflow_card.md — the Previews page hosts
     the Workflow card. ``next_action_return_to=previews`` flows
     into the card's forms; full ``value="previews"`` flow-through
     is covered by the cross-page tests in

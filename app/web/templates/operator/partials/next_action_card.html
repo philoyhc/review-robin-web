@@ -79,7 +79,7 @@
     {% elif is_draft and validation_summary %}
       {# State 3: validation just failed. The pill row + per-issue
          summary moved to the right column on PR 2 of the
-         super-button rollout (guide/workflow_card.md A.8). #}
+         super-button rollout (spec/workflow_card.md). #}
       <p><strong>Validation didn't pass.</strong></p>
       <p>Resolve the errors and re-run validation before activating.</p>
     {% elif is_draft %}
@@ -189,7 +189,7 @@
      Revert to draft sits leftmost (always Secondary when live);
      Activate session is the single forward super-button (collapsed
      from the previous Generate / Validate / Start trio in PR 3 of
-     guide/workflow_card.md); then the three invitation stages. #}
+     spec/workflow_card.md); then the three invitation stages. #}
   <div class="next-action-buttons">
     {# Revert to draft — leftmost, always Secondary when live. #}
     {% if is_ready %}
@@ -253,7 +253,7 @@
     </div>
     {# Right column — state-conditional status reports + (PR 3)
        super-button failure banner. Per-state content per the table
-       in guide/workflow_card.md A.4. #}
+       in spec/workflow_card.md. #}
     <aside class="next-action-status" id="next-action-status">
       {% if super_failure %}
         {# Activate-session failure banner. The banner sits above

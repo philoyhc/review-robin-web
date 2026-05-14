@@ -417,6 +417,44 @@ Each `Instrument` now carries its own assignment rule + materialised pair set, r
 
 Plan archived: `guide/archive/segment_15B_per_instrument_assignments.md`.
 
+### Segment 15E — Operations Workflow Card — done 2026-05-14
+
+Operations-row "chrome" — a single persistent **Workflow** card that
+renders identically at the top of Session Home + every
+Operations-row page (Assignments / Validate / Previews / Invitations
+/ Responses). The card carries state-aware explanatory copy, a
+uniform seven-stage stepper, and a right-column status / errors
+aside. Generate + Validate + Activate collapse into a single
+**Activate session** super-button that runs the three steps in
+sequence with per-step rollback on failure and a warnings-detour
+path to the Validate page. Page-body bulk-action buttons (Generate
+invitations / Send invitations / Send reminders / Manage Invitations)
+on Invitations + Responses retire — those affordances now live in
+the Workflow card. Info cards on Invitations + Responses reshape to
+inline middle-dot lifecycle / coverage counters. Yellow `.card.lock`
+"session must be Activated" notices retire on the three
+post-Operations pages (Assignments / Invitations / Responses) — the
+Workflow card's stepper makes lifecycle state explicit.
+
+Spec at `spec/workflow_card.md`. Plan archived:
+`guide/archive/segment_15E_operations_workflow_card.md`. The plan
+sized 5 PRs at stub time; actual rollout landed across ~12 PRs as
+the design evolved through naming refinements (Next Action →
+Workflow; Activate Session → Activate session), the
+seven-button-stepper formalisation, the super-button design with
+warnings detour + rollback, two-column card layout with right-side
+status aside, and the rollout from Session Home onto Operations-row
+pages. New audit events `session.workflow_run_started` /
+`session.workflow_run_failed` registered in `EVENT_SCHEMAS`. New
+helper `views.build_workflow_card_context(...)` shared across every
+host route. New super-button route
+`POST /operator/sessions/{id}/workflow/activate` in
+`app/web/routes_operator/_workflow.py`. Per-instrument validation
+rules (`instruments.no_rule_pinned` / `stale_generated` /
+`zero_included`) shipped earlier with 15B Slice 5. Generate-wraps-
+validation lives inside the super-button rather than on a standalone
+Generate route.
+
 ---
 
 ## Upcoming
@@ -432,7 +470,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 3-5), 14A, 14B, 14C, 15E, 15F, 17A,
+**13C, 13F (PRs 3-5), 14A, 14B, 14C, 15F, 17A,
 17B, 18A, 18B, 18C, 18D, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
@@ -505,33 +543,6 @@ bottom of this file.
    **Plan:** `guide/segment_14C_reminders_workflow.md`.
 
 #### Stubs
-
-- **15E — Operations Workflow Card**
-  *(carved out of 15D PR 8, 2026-05-10; scope broadened
-  2026-05-13 to absorb Validate-page revisions made
-  necessary by 15B's per-instrument assignments move;
-  reframed 2026-05-13 as the Operations Workflow Card
-  segment after working through the page-by-page operator
-  workflow)*.
-  Single, persistent **Operations workflow** card at the
-  top of every Operations-row chrome page (Assignments /
-  Validate / Previews / Invitations / Responses), carrying
-  the canonical next-action copy and the row of
-  lifecycle-transition buttons (Generate / Activate / Send
-  invitations / Pause / Close) greyed-out per state. Side
-  benefits: Validate page collapses to a pure diagnostic
-  detail surface; Generate (workflow card) wraps setup-gate
-  + replace_assignments + operations-gate validation;
-  Session Home Next Action card retires in the final PR,
-  freeing the page to focus on Setup readiness + data
-  extraction / retention. New per-instrument validation
-  rules (`instruments.no_rule_pinned` /
-  `stale_generated` / `zero_included`) land alongside.
-  End-to-end goal: streamline the operator workflow from
-  setup completion through to just before email
-  generation. Stub-state plan; ready for sizing now that
-  the locked block is closed.
-  **Plan:** `guide/segment_15E_operations_workflow_card.md`.
 
 - **15F — Enhanced Setup pages** *(carved out of the
   original Segment 15, 2026-05-10)*. Per-row inline edit +
@@ -627,7 +638,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **14C
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13C, 13F (PRs 3-5), 14A, 15B, 15E, 15F, 17A, 17B, 18A,
+- **13C, 13F (PRs 3-5), 14A, 15F, 17A, 17B, 18A,
   18B, 18C, 18D, 19, 20** are independent of the email + audit
   pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;

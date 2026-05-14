@@ -113,7 +113,7 @@ def _ready_session(
 def test_responses_page_renders_workflow_card(
     client: TestClient, db: Session
 ) -> None:
-    """PR 10 of guide/workflow_card.md A.8 — the Responses page hosts
+    """Per spec/workflow_card.md — the Responses page hosts
     the Workflow card with ``next_action_return_to=responses``."""
     session = _ready_session(
         client,

@@ -135,7 +135,7 @@ def test_validate_lifecycle_copy_ready() -> None:
 def test_validate_page_renders_workflow_card_with_return_to_validate(
     client: TestClient, db: Session
 ) -> None:
-    """PR 7 of guide/workflow_card.md A.8 — the Validate page hosts
+    """Per spec/workflow_card.md — the Validate page hosts
     the Workflow card, with ``next_action_return_to=validate`` so
     the card's POSTs land back here."""
     review_session = _seed_pair(client, db, code="val-card")
