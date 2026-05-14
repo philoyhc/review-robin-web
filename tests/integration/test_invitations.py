@@ -976,15 +976,37 @@ def test_regenerate_all_with_zero_invitations_writes_no_audit(
     assert audit_rows == []
 
 
-def test_regenerate_all_button_renders_on_page(
+def test_invitations_info_card_omits_bulk_action_buttons(
     client: TestClient, db: Session
 ) -> None:
+    """The info card on the Invitations page retired its bulk-
+    action buttons (Generate invitations / Send all pending /
+    Regenerate all / Send reminders) with the
+    Workflow-card-as-Operations-chrome rollout. The card now
+    reports an eight-counter lifecycle inventory only; the
+    affordances those buttons covered live on the Workflow card's
+    Create / Send invites / Send reminders super-buttons. The
+    /invitations/regenerate-all route stays alive for the per-
+    invitation regenerate flow (still surfaced in the per-row
+    actions column)."""
     session = _ready_session(client, db, code="regen-all-btn")
     body = client.get(
         f"/operator/sessions/{session.id}/invitations"
     ).text
-    assert (
-        f'action="/operator/sessions/{session.id}/invitations/regenerate-all"'
-        in body
-    )
-    assert "Regenerate all" in body
+    # The card itself renders with its new info-list shape.
+    assert 'id="invitations-info-card"' in body
+    # Bulk-action buttons retire.
+    assert "Regenerate all" not in body
+    assert "Send all pending" not in body
+    # The eight counters are present.
+    for label in (
+        "Eligible reviewers",
+        "Invitations created",
+        "Invitations sent",
+        "Pending invitations",
+        "Reminders sent",
+        "Pending reminders",
+        "Completed reviews",
+        "Incomplete reviews",
+    ):
+        assert f">{label}\n" in body or label in body, label

@@ -26,31 +26,21 @@
   {% endif %}
 
   <div class="bottom-grid">
-    <div class="card">
-      <p>
-        Reviewees:
-        <span class="pill pill-count">{{ total_row_count }}</span>
-        &middot; Incomplete reviewers across the session:
-        <span class="pill pill-empty">{{ incomplete_count }}</span>
-      </p>
-      <p class="form-help">
-        Reviewees are classified by the fraction of their assigned
-        reviewers who have submitted responses. Bulk reminders go to
-        every reviewer across the session who hasn't completed (same
-        dispatch path Manage Invitations uses).
-      </p>
-      <div class="card-action-row">
-        <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/invitations">Manage Invitations</a>
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete">
-          <button class="btn"
-                  type="submit"
-                  {% if not is_ready or incomplete_count == 0 %}disabled{% endif %}>
-            Send reminders to {{ incomplete_count }} incomplete reviewer{% if incomplete_count != 1 %}s{% endif %}
-          </button>
-        </form>
-      </div>
+    <div class="card" id="responses-info-card">
+      {# Info card — reviewee-coverage counters. Bulk-action buttons
+         (Manage Invitations / Send reminders) retired with the
+         Workflow-card-as-Operations-chrome rollout
+         (guide/workflow_card.md A.8 PR 10); the Workflow card's
+         Send reminders super-button + the chrome top-nav
+         Invitations tab carry those affordances now. #}
+      <ul class="responses-info-list">
+        <li>Number of reviewees
+          <span class="pill pill-count">{{ total_row_count }}</span></li>
+        <li>Reviewees with responses
+          <span class="pill pill-count">{{ reviewees_with_responses_count }}</span></li>
+        <li>Reviewees without responses
+          <span class="pill {% if reviewees_without_responses_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ reviewees_without_responses_count }}</span></li>
+      </ul>
     </div>
 
     <div class="card filter-card">

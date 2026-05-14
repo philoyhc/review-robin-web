@@ -339,6 +339,20 @@ def invitations_index(
         if r.invitation.status == "pending"
     )
     incomplete_count = sum(1 for r in all_rows if r.is_incomplete)
+    # Info-card metric inventory: eight counters across the
+    # invitation / reminder / response lifecycle.
+    invitations_sent_count = sum(
+        1 for r in all_rows if r.email_sent_at is not None
+    )
+    reminders_sent_count = sum(
+        1 for r in all_rows if r.last_reminder_at is not None
+    )
+    pending_reminders_count = sum(
+        1
+        for r in all_rows
+        if r.is_incomplete and r.last_reminder_at is None
+    )
+    completed_count = sum(1 for r in all_rows if not r.is_incomplete)
     workflow_ctx = views.build_workflow_card_context(
         db,
         review_session,
@@ -365,6 +379,10 @@ def invitations_index(
             "pending_count": pending_count,
             "incomplete_count": incomplete_count,
             "total_invitation_count": len(invitation_rows),
+            "invitations_sent_count": invitations_sent_count,
+            "reminders_sent_count": reminders_sent_count,
+            "pending_reminders_count": pending_reminders_count,
+            "completed_count": completed_count,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Invitations"
             ),
@@ -605,6 +623,16 @@ def session_responses(
     search_options = views.responses_search_options(all_rows)
     summary = monitoring.summary_counts(db, review_session)
     incomplete_count = summary.incomplete
+    # Info-card metrics: total reviewees + the with-response /
+    # without-response split. ``no responses`` is the only
+    # coverage_state value that means "this reviewee has had
+    # nothing submitted about them".
+    reviewees_with_responses_count = sum(
+        1 for r in all_rows if r.coverage_state != "no responses"
+    )
+    reviewees_without_responses_count = sum(
+        1 for r in all_rows if r.coverage_state == "no responses"
+    )
     workflow_ctx = views.build_workflow_card_context(
         db,
         review_session,
@@ -627,6 +655,10 @@ def session_responses(
             "filter_status_options": views.RESPONSES_STATUS_OPTIONS,
             "filter_search_options": search_options,
             "incomplete_count": incomplete_count,
+            "reviewees_with_responses_count": reviewees_with_responses_count,
+            "reviewees_without_responses_count": (
+                reviewees_without_responses_count
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Responses"
             ),

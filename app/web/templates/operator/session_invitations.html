@@ -27,62 +27,31 @@
   {% endif %}
 
   <div class="bottom-grid">
-    <div class="card">
-      <p>
-        Eligible reviewers (active + at least one assignment):
-        <span class="pill pill-count">{{ eligible_count }}</span>
-        &middot; Without invitation yet:
-        <span class="pill pill-count">{{ uninvited_count }}</span>
-        &middot; Pending send:
-        <span class="pill pill-count">{{ pending_count }}</span>
-        &middot; Incomplete:
-        <span class="pill pill-empty">{{ incomplete_count }}</span>
-      </p>
-      <p class="form-help">
-        Each "Send" rotates the invitation token (the previous URL
-        becomes stale). Reminders reuse the most-recent invitation URL
-        so the reviewer's existing link keeps working.
-      </p>
-      {# "View outbox" button retired in 16A PR 3 — Outbox is reached
-         from the workspace Admin chrome (top-bar Admin link →
-         Sessions Diagnostics tab → per-row link) so it sits behind
-         the sys-admin gate rather than in operator-facing chrome.
-         Existing per-session /operator/sessions/{id}/outbox URL
-         stays reachable via direct navigation / bookmarks. #}
-      <div class="card-action-row">
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/invitations/generate">
-          <button class="btn secondary"
-                  type="submit"
-                  {% if not is_ready or uninvited_count == 0 %}disabled{% endif %}>
-            Generate invitations
-          </button>
-        </form>
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/invitations/send-all">
-          <button class="btn"
-                  type="submit"
-                  {% if not is_ready or pending_count == 0 %}disabled{% endif %}>
-            Send all pending
-          </button>
-        </form>
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/invitations/regenerate-all">
-          <button class="btn secondary"
-                  type="submit"
-                  {% if not is_ready or total_invitation_count == 0 %}disabled{% endif %}>
-            Regenerate all
-          </button>
-        </form>
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete">
-          <button class="btn"
-                  type="submit"
-                  {% if not is_ready or incomplete_count == 0 %}disabled{% endif %}>
-            Send reminders to {{ incomplete_count }} incomplete reviewer{% if incomplete_count != 1 %}s{% endif %}
-          </button>
-        </form>
-      </div>
+    <div class="card" id="invitations-info-card">
+      {# Info card — eight lifecycle counters. Bulk-action buttons
+         (Generate invitations / Send all pending / Regenerate all /
+         Send reminders) retired with the Workflow-card-as-Operations-
+         chrome rollout (guide/workflow_card.md A.8 PRs 8-9); the
+         Workflow card's Create / Send invites / Send reminders
+         super-buttons carry those affordances now. #}
+      <ul class="invitations-info-list">
+        <li>Eligible reviewers
+          <span class="pill pill-count">{{ eligible_count }}</span></li>
+        <li>Invitations created
+          <span class="pill pill-count">{{ total_invitation_count }}</span></li>
+        <li>Invitations sent
+          <span class="pill pill-count">{{ invitations_sent_count }}</span></li>
+        <li>Pending invitations
+          <span class="pill {% if pending_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ pending_count }}</span></li>
+        <li>Reminders sent
+          <span class="pill pill-count">{{ reminders_sent_count }}</span></li>
+        <li>Pending reminders
+          <span class="pill {% if pending_reminders_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ pending_reminders_count }}</span></li>
+        <li>Completed reviews
+          <span class="pill pill-count">{{ completed_count }}</span></li>
+        <li>Incomplete reviews
+          <span class="pill {% if incomplete_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ incomplete_count }}</span></li>
+      </ul>
     </div>
 
     <div class="card filter-card">

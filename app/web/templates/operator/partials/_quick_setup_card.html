@@ -46,18 +46,6 @@
     {{ slot.label }}
     <span class="quick-setup-slot-action">Upload a CSV</span>
   </h3>
-  {# Error banner — populated when this slot's last submit was
-     rejected. Cancel returns to a clean URL with the slot fragment. #}
-  <div class="banner banner-error banner-scroll-target"
-       id="quick-setup-{{ slot.key }}-error-banner"
-       {% if not slot.error_message %}hidden{% endif %}>
-    {% if slot.error_message %}
-      <p style="margin: 0 0 var(--space-2) 0;">{{ slot.error_message }}</p>
-      <div style="text-align: right;">
-        <a class="btn alert" href="{{ slot.cancel_url }}">Cancel</a>
-      </div>
-    {% endif %}
-  </div>
   {% if slot.is_wired %}
     {# Live slot — file upload. Submit lives at the bottom of the
        card, not per-slot. #}
@@ -81,6 +69,25 @@
   {% endif %}
 </section>
 {%- endmacro %}
+
+{# Slot-error banner — populated when a slot's last submit was
+   rejected. Rendered above the two-column grid so a single
+   full-width banner sits at the top of the card instead of
+   competing for layout space with its slot's file input. Cancel
+   returns to a clean URL with the slot fragment. #}
+{% macro quick_setup_slot_banner(slot) -%}
+<div class="banner banner-error banner-scroll-target"
+     id="quick-setup-{{ slot.key }}-error-banner"
+     {% if not slot.error_message %}hidden{% endif %}>
+  {% if slot.error_message %}
+    <p style="margin: 0 0 var(--space-2) 0;">{{ slot.error_message }}</p>
+    <div style="text-align: right;">
+      <a class="btn alert" href="{{ slot.cancel_url }}">Cancel</a>
+    </div>
+  {% endif %}
+</div>
+{%- endmacro %}
+
 
 {% set submit_all_form_id = quick_setup.external_form_id or "quick-setup-submit-all-form" %}
 {% set is_session_scoped = session is defined and session %}
@@ -116,6 +123,15 @@
   <div class="quick-setup-body{% if quick_setup.is_locked %} locked{% endif %}">
     <h2>{{ quick_setup.title }}</h2>
     <p class="form-help">{{ quick_setup.description }}</p>
+    {# Slot error banners — full-width, above the two columns so the
+       operator sees the diagnostic before scanning the slots. Each
+       banner stays tied to its slot via the ``quick-setup-{slot}-
+       error-banner`` id (used by the scroll-into-view JS). Banners
+       with no current ``error_message`` render hidden so the layout
+       doesn't shift when the JS re-checks. #}
+    {% for slot in quick_setup.slots %}
+      {{ quick_setup_slot_banner(slot) }}
+    {% endfor %}
     {# Slot layout: first half (Reviewers + Reviewees) on the left,
        second half (Relationships + Session settings) on the right. #}
     {% set _split = (quick_setup.slots | length + 1) // 2 %}
