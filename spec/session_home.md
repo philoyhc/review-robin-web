@@ -132,15 +132,33 @@ Activated state, in the inline section).
 
 **Contents by lifecycle state:**
 
-| State / trigger | Body | Primary | Supporting (Secondary) |
-|---|---|---|---|
-| **Empty draft** — `is_draft` AND any of: reviewers has zero rows, reviewees has zero rows, or at least one instrument has no assignment rule pinned (also fires when the session has zero instruments) | "Session not fully set up. Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing." | — *(workflow-stepper preview: Generate assignments / Validate Setup / Invite reviewers / Monitor responses / Revert to draft, all `disabled`)* | — |
-| **Draft, pre-generate** — `is_draft`, rosters populated, every instrument has its rule pinned, AND either no `Assignment` rows yet OR the session was reverted to draft (Revert / Pause) after the last generation | "Run generation to create the assignment pairs (note that doing so will replace any previously generated assignment pairs)." | **Generate assignments** (POST `/assignments/generate`) | Validate Setup / Invite reviewers / Monitor responses / Revert to draft (`disabled`) |
-| **Draft, pre-validation** — `is_draft`, rosters populated, assignments generated, no `?validated=1` yet | "Run validation to surface errors and warnings before activating. Validation never mutates session data." | **Validate Setup** | Generate assignments (Secondary regenerate, POST `/assignments/generate`) / Invite reviewers / Monitor responses / Revert to draft (`disabled`) |
-| **Draft, validation just failed** — `is_draft` AND `validation_summary` populated (i.e. operator clicked Validate Setup but the report didn't pass) | "Validation didn't pass." headline + a pill row (`pill-error` / `pill-empty` / `pill-count` for error / warning / info counts) + "Resolve the errors and re-run validation before activating." | **Validate Setup** | See validation details |
-| **Validated (no errors)** — `is_validated` AND `can_activate` | "The session setup data has successfully validated. Preview the reviewer surface to make sure that it conforms to your requirements before activating." (+ optional `acknowledge_warnings` checkbox in the body when `needs_acknowledge`) | **Activate Session** | Generate assignments (Secondary regenerate, POST `/assignments/generate`) / Invite reviewers / Monitor responses (`disabled`) / Revert to draft |
-| **Validated (errors)** — `is_validated` AND not `can_activate` | "Validation shows that there are error(s). Resolve them and re-run validation before activating." | **Revert to draft** | Generate assignments / Activate Session / Invite reviewers / Monitor responses (all `disabled`) |
-| **Activated** — `is_ready` | "Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers." | **Revert to draft** (POST `/revert` with hidden `confirm=true`, pauses the session back to draft) | Generate assignments / Activate Session (both `disabled`) · Invite reviewers (link to `/invitations`) · Monitor responses (link to `/monitoring`) |
+The bottom row of the card is a uniform six-stage **workflow
+stepper**, in the same order across every state: `Generate assignments`
+· `Validate setup` · `Start session` · `Invite` · `Monitor` · `Revert
+to draft`. Each slot is either live (Primary or Secondary, clickable)
+or inert (`<button disabled>` in the Secondary style). The matrix:
+
+| Slot | Empty draft | Pre-generate | Pre-validation | Just failed | Validated (no warn) | Validated (warn) | Validated (errors) | Activated |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Generate assignments | — | **Pri** | Sec | Sec | Sec | Sec | — | — |
+| Validate setup | — | — | **Pri** | **Pri** | — | — | — | — |
+| Start session | — | — | — | — | **Pri** | **Pri** | — | — |
+| Invite | — | — | — | — | — | — | — | Sec |
+| Monitor | — | — | — | — | — | — | — | Sec |
+| Revert to draft | — | — | — | — | Sec | Sec | **Pri** | **Pri** |
+
+Body copy per state:
+
+| State / trigger | Body |
+|---|---|
+| **Empty draft** — `is_draft` AND any of: reviewers has zero rows, reviewees has zero rows, or at least one instrument has no assignment rule pinned (also fires when the session has zero instruments) | "Session not fully set up. Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing." |
+| **Draft, pre-generate** — `is_draft`, rosters populated, every instrument has its rule pinned, AND either no `Assignment` rows yet OR the session was reverted to draft (Revert / Pause) after the last generation | "Run generation to create the assignment pairs (note that doing so will replace any previously generated assignment pairs)." |
+| **Draft, pre-validation** — `is_draft`, rosters populated, assignments generated, no `?validated=1` yet | "Run validation to surface errors and warnings before activating. Validation never mutates session data." |
+| **Draft, validation just failed** — `is_draft` AND `validation_summary` populated (i.e. operator clicked Validate setup but the report didn't pass) | "Validation didn't pass." headline + a pill row (`pill-error` / `pill-empty` / `pill-count` for error / warning / info counts) + "Resolve the errors and re-run validation before activating." |
+| **Validated (no warnings)** — `is_validated` AND `can_activate` AND not `needs_acknowledge` | "The session setup data has successfully validated. Preview the reviewer surface to make sure that it conforms to your requirements before activating." |
+| **Validated (warnings)** — `is_validated` AND `can_activate` AND `needs_acknowledge` | Same as above plus help-line: "{N} warning(s) — review on Validate before activating." (Start session button is rendered as an `<a>` detouring through `/validate?activate=1` so warnings can be acknowledged inline.) |
+| **Validated (errors)** — `is_validated` AND not `can_activate` | "Validation shows that there are error(s). Resolve them and re-run validation before activating." |
+| **Activated** — `is_ready` | "Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers." |
 
 Notes:
 
