@@ -721,7 +721,15 @@ the pair table, so it naturally has room for the inner split.
   template already consumed for its ready-state gating now comes
   from the builder's output instead of an inline
   `lifecycle.is_ready` call.)
-- **PR 10 (planned):** Workflow card on the Responses page.
+- **PR 10 (shipped 2026-05-14):** Workflow card on the Responses
+  page. Final per-page rollout PR. Same drop-in pattern; the
+  inline `lifecycle.is_ready` key the template used for its
+  ready-state lock card now comes from the builder's output.
+
+All five Operations-row pages (Assignments, Validate, Previews,
+Invitations, Responses) plus Session Home now host the Workflow
+card. Super-button rollout end-to-end complete; the card is true
+Operations-page chrome.
 
 Splitting this way keeps each PR reviewable; the template + content
 moves are cosmetic and the route work is the only behaviour change.
