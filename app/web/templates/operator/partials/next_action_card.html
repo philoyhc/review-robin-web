@@ -284,9 +284,13 @@
           {% endif %}
         </div>
       {% endif %}
-      {% if is_setup_empty %}
-        {# State 1: setup-completion checklist with deep links to
-           the relevant Operations-row pages. #}
+      {% if is_setup_empty or is_pre_generate %}
+        {# States 1 + 1A: setup-completion checklist with deep links to
+           the relevant Operations-row pages. State 1A's row check
+           values flip to ✓ across the board (that's what makes it
+           1A rather than 1), but the layout stays consistent so
+           the right-column content doesn't reflow between the two
+           states. #}
         <h3 class="next-action-status-heading">Setup checklist</h3>
         <ul class="next-action-checklist">
           <li>
@@ -314,9 +318,6 @@
             <a href="/operator/sessions/{{ session.id }}/instruments">Instruments (all rules pinned)</a>
           </li>
         </ul>
-      {% elif is_pre_generate %}
-        <h3 class="next-action-status-heading">Status</h3>
-        <p class="form-help" style="margin: 0;">Ready to run setup.</p>
       {% elif is_draft and validation_summary %}
         {# State 3: validation just failed — pill row + per-issue
            list (errors first, then warnings, then info). #}
