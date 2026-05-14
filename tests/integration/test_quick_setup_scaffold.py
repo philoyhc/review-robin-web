@@ -73,7 +73,7 @@ def _seed_pair(
 def _activate(
     client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},

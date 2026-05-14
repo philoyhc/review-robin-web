@@ -80,7 +80,7 @@ def _seed_pair(
 
 
 def _activate(client: TestClient, db: Session, review_session: ReviewSession) -> None:
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     response = client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -679,7 +679,7 @@ def test_revert_route_handles_validated_to_draft(
         client, db, code="validated-revert", reviewer_email="r@example.edu"
     )
     # Mark validated via the ?validated=1 entry path.
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     db.refresh(review_session)
     assert review_session.status == "validated"
 

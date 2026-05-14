@@ -59,7 +59,7 @@ def _operator_creates_session_with_pair(
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
-    operator_client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    operator_client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     operator_client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -484,7 +484,7 @@ def test_review_surface_multi_instrument_renders_next_button_in_both_rows(
     # ``instruments/add`` clones full-matrix assignments onto the new
     # instrument automatically (per ``create_instrument``), so no
     # manual Assignment seeding is needed.
-    operator.get(f"/operator/sessions/{review_session.id}?validated=1")
+    operator.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     operator.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},

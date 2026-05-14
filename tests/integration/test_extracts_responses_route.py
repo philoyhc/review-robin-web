@@ -206,7 +206,7 @@ def test_route_works_in_every_lifecycle_state(
     assert response.status_code == 200
 
     # Activate.
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     activate = client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},

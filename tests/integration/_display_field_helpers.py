@@ -96,7 +96,7 @@ def _generate_full_matrix(
 
 
 def _activate(client: TestClient, db: Session, session_id: int) -> None:
-    client.get(f"/operator/sessions/{session_id}?validated=1")
+    client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
     client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -105,7 +105,7 @@ def _activate(client: TestClient, db: Session, session_id: int) -> None:
 
 
 def _validate(client: TestClient, db: Session, session_id: int) -> None:
-    client.get(f"/operator/sessions/{session_id}?validated=1")
+    client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
 
 
 def _instrument(db: Session, session_id: int) -> Instrument:

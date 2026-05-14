@@ -29,10 +29,6 @@ from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
 from app.services import (
-    assignments,
-    csv_imports,
-    instruments as instruments_service,
-    invitations,
     responses,
     session_owners,
     sessions,
@@ -81,7 +77,6 @@ def new_session_form(
 @router.get("/sessions/{session_id}", response_class=HTMLResponse)
 def session_detail(
     request: Request,
-    validated: bool = Query(default=False),
     quick_setup_error: str | None = Query(default=None),
     quick_setup_reason: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
@@ -89,51 +84,6 @@ def session_detail(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     setup_rows = views.build_setup_rows(db, review_session)
-    validation_summary: dict[str, object] | None = None
-    # Run validation on the ?validated=1 entry path AND whenever the
-    # session is already in validated — the Activate Session control on
-    # the contextual action card needs ``can_activate`` /
-    # ``needs_acknowledge`` to render the right form shape.
-    if validated or lifecycle.is_validated(review_session):
-        issues = validation.validate_session_setup(db, review_session)
-        report = lifecycle.build_readiness_report(issues)
-        if report.can_activate and lifecycle.is_draft(review_session):
-            lifecycle.mark_validated(
-                db,
-                review_session=review_session,
-                user=user,
-                report=report,
-                correlation_id=request_correlation_id(),
-            )
-        validation_summary = {
-            "error_count": len(report.errors),
-            "warning_count": len(report.warnings),
-            "info_count": len(report.info),
-            "can_activate": report.can_activate
-            and lifecycle.is_validated(review_session),
-            "needs_acknowledge": report.has_non_blocking_findings,
-        }
-    is_setup_empty = lifecycle.is_draft(review_session) and (
-        csv_imports.existing_reviewer_count(db, review_session.id) == 0
-        or csv_imports.existing_reviewee_count(db, review_session.id) == 0
-        or instruments_service.has_unpinned(db, review_session.id)
-    )
-    is_pre_generate = (
-        lifecycle.is_draft(review_session)
-        and not is_setup_empty
-        and (
-            assignments.existing_count(db, review_session.id) == 0
-            or lifecycle.needs_regeneration_after_revert(
-                db, review_session.id
-            )
-        )
-    )
-    invitations_generated = invitations.has_invitations(
-        db, review_session.id
-    )
-    invitations_sent = invitations.has_sent_invitations(
-        db, review_session.id
-    )
     return _templates.TemplateResponse(
         request,
         "operator/session_detail.html",
@@ -142,33 +92,7 @@ def session_detail(
             "session": review_session,
             "setup_rows": setup_rows,
             "status_pills": views.session_status_pills(db, review_session),
-            "validation_summary": validation_summary,
-            "is_draft": lifecycle.is_draft(review_session),
-            "is_validated": lifecycle.is_validated(review_session),
             "is_ready": lifecycle.is_ready(review_session),
-            # Segment 15B Slice 4 — pre-Validate Generate signal for
-            # the Next Action card. Internal wiring lands now; the
-            # matching template branches (primary "Generate
-            # assignments" button + supporting "Pin rules" link)
-            # ship in Segment 15E. The dataclass surface is final;
-            # 15E reads from this context key with no further
-            # service-layer changes.
-            "next_action_generate": views.compute_next_action_generate_state(
-                db, review_session
-            ),
-            # Freshly-created draft with reviewers, reviewees, or
-            # instrument rule pins still missing. Computed after the
-            # validation flow so a session that just transitioned
-            # ``draft → validated`` no longer falls through this gate.
-            "is_setup_empty": is_setup_empty,
-            # Draft with everything set up but no generated assignment
-            # rows yet — surface the Generate prompt on the Next Action
-            # card before Validate.
-            "is_pre_generate": is_pre_generate,
-            # Activated-phase invitation lifecycle flags for the Next
-            # Action card's State 6 / 7 / 8 split.
-            "invitations_generated": invitations_generated,
-            "invitations_sent": invitations_sent,
             "has_responses": lifecycle.session_has_responses(db, review_session),
             "quick_setup": views.build_quick_setup_context(
                 db,

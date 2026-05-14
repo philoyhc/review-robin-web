@@ -85,7 +85,7 @@ def _seed_pair(
 def _activate(
     client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -361,7 +361,7 @@ def _seed_validated_with_warnings(
     db.commit()
     # ?validated=1 marks the session validated when can_activate
     # (no errors). Warnings don't block.
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     db.refresh(review_session)
     assert review_session.status == "validated"
     return review_session
@@ -430,7 +430,7 @@ def test_validate_activate_param_no_warnings_redirects(
     """Validated session with no warnings: ?activate=1 has nothing
     to acknowledge → 303 to clean /validate URL."""
     review_session = _seed_pair(client, db, code="no-warn-redir")
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     db.refresh(review_session)
 
     response = client.get(

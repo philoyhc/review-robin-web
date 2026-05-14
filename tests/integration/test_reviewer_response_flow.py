@@ -64,7 +64,7 @@ def _operator_creates_session_with_pair(
 def _activate(
     operator_client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
-    operator_client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    operator_client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     response = operator_client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},

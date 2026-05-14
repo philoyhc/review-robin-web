@@ -79,7 +79,7 @@ def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> N
 
 
 def _activate(client: TestClient, db: Session, session_id: int) -> None:
-    client.get(f"/operator/sessions/{session_id}?validated=1")
+    client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
     client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -136,7 +136,7 @@ def test_edit_description_redirects_and_invalidates(
     review_session = _make_session(client, db, code="desc-1")
     _populate_rosters(client, review_session.id)
     _generate_full_matrix(client, db, review_session.id)
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     db.refresh(review_session)
     assert review_session.status == "validated"
 
@@ -479,7 +479,7 @@ def test_activation_blocked_when_instrument_has_no_response_fields(
             follow_redirects=False,
         )
 
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
+    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
     db.refresh(review_session)
     assert review_session.status != "validated"
 

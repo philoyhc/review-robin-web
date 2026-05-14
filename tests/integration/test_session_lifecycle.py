@@ -76,7 +76,7 @@ def _build_ready_session(
     session = _create_session(client, db, code=code)
     _populate_rosters(client, session.id)
     _generate_full_matrix(client, db, session.id)
-    client.get(f"/operator/sessions/{session.id}?validated=1")
+    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
     response = client.post(
         f"/operator/sessions/{session.id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -120,7 +120,7 @@ def test_activate_requires_acknowledge_when_warnings_present(
     session = _create_session(client, db, code="warn-1")
     _populate_rosters(client, session.id)
     # Skip _generate_full_matrix so the assignment_mode-is-None warning fires.
-    client.get(f"/operator/sessions/{session.id}?validated=1")
+    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
     db.refresh(session)
     assert session.status == "validated"
 
