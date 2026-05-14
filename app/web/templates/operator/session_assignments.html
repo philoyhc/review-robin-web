@@ -120,19 +120,11 @@
     </table>
   </section>
 
-  {# Yellow ``card lock`` retired on the State 6 workflow-stepper
-     refresh — the Next Action card's stepper row now carries the
-     Revert to draft Primary when the session is activated, so the
-     duplicate notice + button is redundant. #}
-
-  {% if not is_ready and (reviewer_count == 0 or reviewee_count == 0) %}
-    <div class="card lock">
-      <p style="margin: 0;">
-        Import at least one reviewer and one reviewee before generating
-        assignments.
-      </p>
-    </div>
-  {% endif %}
+  {# Yellow ``card lock`` retired with the Workflow-card-as-Operations-
+     chrome rollout. The Workflow card's State 1 setup checklist
+     (right-column) surfaces the "rosters not yet populated" signal,
+     and the stepper makes the next action explicit; the duplicate
+     notice is redundant. #}
 
   {% if missing_confirm %}
     <div class="banner banner-error banner-scroll-target" id="missing-confirm-banner">
