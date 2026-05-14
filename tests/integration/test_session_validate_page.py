@@ -367,49 +367,10 @@ def _seed_validated_with_warnings(
     return review_session
 
 
-def test_session_home_validated_with_warnings_links_to_validate_detour(
-    client: TestClient, db: Session
-) -> None:
-    """Per PR D, when a validated session has warnings the
-    Next Action card's Activate button is an anchor to
-    `/validate?activate=1` rather than a POST submit. The
-    acknowledge_warnings checkbox is gone."""
-    review_session = _seed_validated_with_warnings(
-        client, db, code="home-detour"
-    )
-    body = client.get(f"/operator/sessions/{review_session.id}").text
-    # Activate Session anchor points at the detour URL.
-    assert (
-        f'href="/operator/sessions/{review_session.id}/validate?activate=1"'
-        in body
-    )
-    # No acknowledge_warnings checkbox on Home.
-    assert 'name="acknowledge_warnings"' not in body
-    # Warning-count line under the primary button surfaces.
-    assert "warning" in body and "review on Validate" in body
-
-
-def test_session_home_validated_no_warnings_keeps_direct_post(
-    client: TestClient, db: Session
-) -> None:
-    """Validated session with zero warnings keeps the direct
-    Activate POST — no detour."""
-    review_session = _seed_pair(client, db, code="no-detour")
-    client.get(f"/operator/sessions/{review_session.id}?validated=1")
-    db.refresh(review_session)
-    assert review_session.status == "validated"
-
-    body = client.get(f"/operator/sessions/{review_session.id}").text
-    # Direct POST form to /activate is present.
-    assert (
-        f'action="/operator/sessions/{review_session.id}/activate"'
-        in body
-    )
-    # No detour anchor.
-    assert (
-        f'href="/operator/sessions/{review_session.id}/validate?activate=1"'
-        not in body
-    )
+# Session-Home-specific Workflow card tests retired: the card now
+# only renders on the Operations-row pages. Equivalent activate-form
+# / warnings-detour coverage on the Assignments page lives in
+# tests/integration/test_assignments_next_action_return_to.py.
 
 
 def test_validate_activate_param_renders_warning_banner(

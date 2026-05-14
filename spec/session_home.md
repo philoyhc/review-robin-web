@@ -59,20 +59,31 @@ states.
 
 Two-column body below the chrome and status strip.
 
+> **Workflow card retired from Session Home (2026-05-14).** The
+> card now lives only on the Operations-row pages (currently the
+> Assignments page; eventually every Operations page once the
+> super-button work in `guide/workflow_card.md` lands). Session
+> Home loses the lifecycle-advancing card entirely; the
+> Operations row in the chrome top-nav is the entry point for
+> state-advancing work. The historical Workflow-card material
+> below (sections 1 + 5) is preserved as the authoritative
+> behaviour reference for the card itself, but the per-state
+> behaviour and the stepper now render on the Operations-row
+> pages, not on Home.
+
 ### Left column — running the session and danger
 
 Stack of cards, top to bottom:
 
-1. **Workflow card** (top).
-2. **Extract Data card** (middle). *(scaffolded in Segment 11H PR B; wired across 12A-1 + 12A-3 + 12B, 2026-05-09 → 2026-05-10)*
-3. **Danger Zone card** (bottom).
+1. **Extract Data card** (top). *(scaffolded in Segment 11H PR B; wired across 12A-1 + 12A-3 + 12B, 2026-05-09 → 2026-05-10)*
+2. **Danger Zone card** (bottom).
 
 ### Right column — metadata and bulk-setup
 
 1. **Session Details card** (top).
 2. **Quick Setup card** (bottom). *(scaffolded in Segment 11H PR A; wired in Segment 11J + slot 4 graduation in 12A-3 PR 4)*
 
-The mobile-collapse DOM order — Workflow → Extract Data → Danger Zone → Session Details → Quick Setup — falls out of the source order. Quick Setup sits in the right column rather than the working column so its destructive setup-bulk actions don't compete with the lifecycle-advancing Workflow card for attention; Danger Zone sits at the bottom of the left column so the operator's destructive cleanup actions sit at the natural end of the working column rather than under the right column's read-mostly metadata.
+The mobile-collapse DOM order — Extract Data → Danger Zone → Session Details → Quick Setup — falls out of the source order. Quick Setup sits in the right column rather than the working column so its destructive setup-bulk actions don't compete with the working column for attention; Danger Zone sits at the bottom of the left column so the operator's destructive cleanup actions sit at the natural end of the working column rather than under the right column's read-mostly metadata.
 
 ## Cards
 

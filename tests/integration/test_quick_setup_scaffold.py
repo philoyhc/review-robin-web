@@ -309,22 +309,20 @@ def test_quick_setup_card_lives_in_right_column_under_session_details(
 ) -> None:
     """Per ``spec/session_home.md`` the page-level card order is:
 
-    1. Next Action (left column, top)
-    2. Extract Data (left column, middle)
-    3. Danger Zone (left column, bottom)
-    4. Session Details (right column, top)
-    5. Quick Setup (right column, bottom)
+    1. Extract Data (left column, top)
+    2. Danger Zone (left column, bottom)
+    3. Session Details (right column, top)
+    4. Quick Setup (right column, bottom)
 
-    Pin the DOM order so a template tweak can't silently regress
-    the column placement. Mobile DOM collapse follows source
-    order: Next Action → Extract Data → Danger Zone → Session
-    Details → Quick Setup.
+    (The Workflow card retired from Session Home on the super-button
+    refresh — it now only lives on the Operations-row pages.) Pin
+    the DOM order so a template tweak can't silently regress the
+    column placement.
     """
 
     review_session = _make_session(client, db, code="qs-card-order")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    next_action_pos = body.find('id="next-action"')
     extract_data_pos = body.find('id="extract-data"')
     danger_zone_pos = body.find('id="danger-zone"')
     session_details_pos = body.find("<h2>Session Details</h2>")
@@ -332,17 +330,18 @@ def test_quick_setup_card_lives_in_right_column_under_session_details(
 
     # All anchors found.
     assert -1 not in (
-        next_action_pos,
         extract_data_pos,
         danger_zone_pos,
         session_details_pos,
         quick_setup_pos,
     )
 
+    # The Workflow card no longer renders on Session Home.
+    assert 'id="next-action"' not in body
+
     # Source order = mobile DOM collapse order = page reading order.
     assert (
-        next_action_pos
-        < extract_data_pos
+        extract_data_pos
         < danger_zone_pos
         < session_details_pos
         < quick_setup_pos
