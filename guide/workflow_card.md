@@ -225,8 +225,31 @@ This appendix sketches what it would take to fuse the first three live
 forward stages of the stepper into one button that runs all three
 actions in sequence, stops at the first failure, surfaces a banner
 with the underlying error message(s), and leaves the session in a
-state that the workflow card resolves to **State 1A** so the operator
-can retry by clicking the same button again.
+state the workflow card resolves to **State 1A** so the operator can
+retry by clicking the same button again.
+
+Decisions baked in (settled with the spec author):
+
+- **The super-button replaces the three individual stage buttons**
+  rather than sitting alongside them. The stepper drops from seven
+  slots to five.
+- **Validate-failure end state stays State 3**, not strict State 1A.
+  Pill counts in the body / right column still surface the diagnostic;
+  the error banner adds context. The chain only forcibly drops back
+  to State 1A when Activate fails (via `invalidate_session`'s
+  natural `session.invalidated` event tripping the
+  `needs_regeneration_after_revert` predicate).
+- **The card adopts a two-column inner layout.** Left column carries
+  the existing body + stepper row; right column carries lifecycle
+  status reports, validation summaries, and super-button error
+  messages. The reduced stepper width makes the split fit.
+- **Warnings keep their inline detour** through
+  `/validate?activate=1` rather than auto-acknowledging on
+  super-button click. Operators see warnings before they fire.
+- **Audit events:** new `session.workflow_run_started` and
+  `session.workflow_run_failed` envelope rows distinguish
+  super-button invocations from their individual per-step audit
+  trail.
 
 ### A.1 What the three steps look like today
 
@@ -260,262 +283,316 @@ at least one of:
 2. session status is `draft` AND a revert-class audit event is newer
    than any assignment-generation event.
 
-Today's failure paths violate this:
+Today's failure paths land in different states naturally:
 
 - **Generate succeeds, Validate fails (errors found):** session
-  status stays `draft`, but assignments are fresh and there's no new
-  revert event. Predicate evaluates to State **2 / 3** (depending
-  on whether `validation_summary` is populated), not 1A.
+  status stays `draft`, assignments are fresh, `validation_summary`
+  is populated → State **3**. ← settled: we keep this; pills carry
+  the diagnostic.
 - **Generate succeeds, Validate succeeds, Activate fails:** session
-  is `validated`, fresh assignments, no revert event. Predicate
-  evaluates to State **4A / 4B / 5**, not 1A.
+  is `validated`, fresh assignments, no revert event → State 4 / 5.
+  ← we rollback via `invalidate_session` so the
+  `session.invalidated` audit event trips the
+  `needs_regeneration_after_revert` predicate and the card resolves
+  to State **1A**.
+- **Generate fails first:** session was draft, still is. Predicate
+  evaluates to State **1A** (no fresh `assignments.generated` event
+  newer than the prior revert, if any) or State **1** if the failure
+  was actually a precondition violation (e.g. rosters empty).
 
-The card resolves to State 1A naturally only when the failure leaves
-the session in `draft` with either an empty assignment table or a
-revert-newer-than-generate audit pair.
+### A.3 Chosen rollback strategy
 
-### A.3 Design options for "drop back to State 1A"
+**Inverse-step rollback on failure (Option 2), with a deliberate
+exception for the Validate-failure case.** The super-button route
+runs each step sequentially, catches exceptions / failure-summary
+signals, and explicitly undoes any committed step that violates the
+target landing state:
 
-**Option 1 — Single-transaction wrap (atomic).** Refactor
-`replace_assignments`, `mark_validated`, and `activate_session` to
-accept a `commit: bool = True` flag (or move their `db.commit()` calls
-to their callers). The super-button route would call each with
-`commit=False`, then `db.commit()` only after all three succeed; on
-any exception, `db.rollback()` cleanly undoes every preceding step.
-Audit events would also need to land inside the same transaction
-(they do today — they go through `audit.write_event` which uses the
-same session).
-
-- Pros: cleanest semantic — the partial state genuinely doesn't
-  exist. No audit-event noise from rolled-back attempts. No special
-  predicate plumbing needed; on failure the session was never
-  touched, so it's still in whatever pre-button state it was in
-  (which the caller can constrain to State 1A by only exposing the
-  button when the predicate is already true).
-- Cons: API change across three services + their existing callers.
-  ~20 call sites to audit. Risk: `replace_assignments` flushes /
-  commits per-instrument today to keep the audit log readable when a
-  multi-instrument generate run hits an error halfway; a single
-  transaction means a single audit event or atomic batch is needed
-  there too.
-- Effort: largest. Probably 2 PRs (services + route).
-
-**Option 2 — Inverse-step rollback on failure.** Keep service
-commit semantics as-is. The super-button route runs each step
-sequentially, catches exceptions / failure-summary signals, and
-explicitly undoes any committed steps before returning the error:
-- Validate fails after Generate succeeded → call
-  `invalidate_if_validated` (no-op here, since session is still
-  `draft`) AND either (a) write a synthetic
-  `session.reverted_to_draft` audit event so
-  `needs_regeneration_after_revert` trips, or (b) delete the
-  freshly-created `Assignment` rows.
-- Activate fails after Validate succeeded → call
-  `invalidate_session(reason="super_button_rollback")`. That writes
-  `session.invalidated`, which IS in the `revert_events` set in
+- Generate raises → no rollback needed; the route never advanced.
+- Validate finds errors → leave the fresh assignments in place,
+  surface the readiness report on the next render (State 3). The
+  operator gets the pill counts AND the error banner.
+- Activate raises → call
+  `lifecycle.invalidate_session(reason="workflow_run_rollback")`.
+  The audit event it writes (`session.invalidated`) is already in
+  the `revert_events` set of
   `needs_regeneration_after_revert`, so the predicate trips and the
-  card lands in State 1A. Free of new schema or new audit-event
-  types.
-- Generate fails first → no rollback needed; session was draft going
-  in, draft coming out, with no new audit events.
+  card lands in State 1A on the next render.
 
-- Pros: each service stays as-is. Activate-failure rollback is
-  already free (the existing `invalidate_session` event satisfies
-  the predicate). Smallest code footprint.
-- Cons: the Validate-failure case is awkward. Writing a synthetic
-  `session.reverted_to_draft` event when no actual revert happened
-  is a misuse of the audit log — the audit envelope is supposed to
-  reflect real lifecycle transitions, and registering a fake one
-  pollutes downstream analytics. Deleting freshly-created
-  assignments is destructive and the audit log would record both
-  the create and the delete, which is noisy too.
-- Effort: small (~one route + one helper) but the semantic
-  cleanliness is poor on the Validate-failure path.
+We considered atomic single-transaction wrapping (Option 1) — it's
+the cleanest semantic but requires service-API changes across three
+services + their existing callers, and the per-instrument
+`assignments.generated` audit trail would need batching. Not worth
+the churn for a UX shortcut.
 
-**Option 3 — New "super-button-failed" marker.** Add a small piece
-of state (column, audit event, or transient signal) that explicitly
-forces State 1A independent of assignment counts and revert history.
-Cleared on next successful Generate or Validate.
+We also considered a new `session.workflow_run_failed` audit event
+or a `workflow_pending_retry` column (Option 3 sub-variants). We're
+adopting `session.workflow_run_started` / `_failed` for
+observability but **not** for state-resolution — the existing
+revert-history check covers what we need on the Activate-failure
+path, and we'd rather not co-opt the audit log into state-machine
+plumbing.
 
-- Sub-variant 3a: new column `review_sessions.workflow_pending_retry`
-  (or similar). Migration + model field. State 1A predicate widens
-  to `... OR review_session.workflow_pending_retry`.
-- Sub-variant 3b: new audit event type
-  `session.workflow_chain_failed`. State 1A predicate widens to
-  treat it as a revert-class event for the audit-history check.
+### A.4 The chosen stepper layout — five buttons
 
-- Pros: cleanest separation of concerns — the marker exists
-  precisely for this purpose; doesn't co-opt revert semantics.
-- Cons: more moving parts. 3a needs a schema migration. 3b needs an
-  event-schema registration and a tweak to the audit-history
-  predicate.
-- Effort: medium. Worth it only if Option 2's semantic muddle
-  bothers reviewers.
+The three forward stages collapse into one **Run setup** button.
+The stepper grows from seven slots to five:
 
-**Recommendation.** Option 2 with a narrow Validate-failure rollback
-strategy: **leave the fresh assignments in place but skip the State
-1A coercion**. Concretely:
+```
+Revert to draft · Run setup · Generate invites · Send invites · Send reminders
+```
 
-- Failure mode "Generate raised" → session was draft, still is.
-  Resolves to State 1A (or State 1) naturally. Banner shows the
-  Generate error.
-- Failure mode "Validate found errors" → session is draft, fresh
-  assignments. **Resolves to State 3** (validation failed; pills in
-  the body show the counts; banner adds the same diagnostic context
-  with `validation_summary` already populated). This is arguably the
-  more useful end state than 1A — the operator gets the pill counts
-  AND the error banner.
-- Failure mode "Activate raised" → call
-  `invalidate_session(reason="super_button_rollback")`, session flips
-  back to draft, the `session.invalidated` event trips
-  `needs_regeneration_after_revert`, card resolves to State 1A. ✓
+Per-state matrix (`Pri` = Primary live, `Sec` = Secondary live, `—`
+= inert preview / past stage):
 
-This trades strict adherence to the spec ("always drop back to 1A")
-for a more legible failure surface. If the spec is non-negotiable,
-escalate the Validate-failure branch to Option 1 (single-transaction
-wrap) so the freshly-committed assignments roll back too.
+| Slot | 1 | 1A | 2 | 3 | 4A | 4B | 5 | 6 | 7 | 8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Revert to draft | — | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec |
+| Run setup | — | **Pri** | **Pri** | **Pri** | **Pri** | **Pri** | — | — | — | — |
+| Generate invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
+| Send invites | — | — | — | — | — | — | — | — | **Pri** | Sec |
+| Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
 
-### A.4 Implementation tasks for the recommended path (Option 2 / mixed)
+Notes:
+- Run setup is the single Primary across the entire setup phase
+  (States 1A / 2 / 3 / 4A / 4B). The route always runs Generate +
+  Validate + Activate in sequence; the operator doesn't have to
+  reason about which step is next. Re-Generate is idempotent for a
+  session without responses; for a session with responses, the
+  hidden `acknowledge_response_loss=true` field on the form lets
+  the chain proceed (matching the existing single-button Generate
+  behaviour).
+- State 4B (warnings present) routes Run setup through the
+  `/validate?activate=1` detour same as today's Start-session
+  button — Run setup renders as an `<a>` link rather than a submit
+  button in this state, with `return_to` carried through so the
+  operator lands back on the workflow card after acknowledging.
+- State 5 (errors block activation): Run setup inert. Revert is
+  the only live forward path.
+- States 6 / 7 / 8: Run setup inert (the session is already
+  running). The three invitation buttons take over.
+
+### A.5 Two-column card layout
+
+The card grows a right column dedicated to status reports / error
+messages so the left column's body + stepper row no longer have to
+carry both the prose and the diagnostic detail. The reduced
+five-button stepper width makes the split fit.
+
+```
+┌── .card.workflow (was .card.next-action) ────────────────────┐
+│ <h2>Workflow</h2>                                            │
+│ ┌─ left column ──────────────┐ ┌─ right column ────────────┐ │
+│ │ <p>State-specific body</p> │ │ <h3>Status / errors</h3>  │ │
+│ │ <div .workflow-buttons>    │ │ <state-specific content>  │ │
+│ │   Revert · Run setup …     │ │                           │ │
+│ │ </div>                     │ │                           │ │
+│ └────────────────────────────┘ └───────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Right-column content by state (proposed):
+
+| State | Right column content |
+| --- | --- |
+| 1 (setup empty) | Setup-completion checklist — reviewers ✓/✗, reviewees ✓/✗, all instruments pinned ✓/✗. Deep links to the relevant Operations-row pages. |
+| 1A | "Ready to run setup." (optional summary of assignment-row counts pinned per instrument, mirroring the per-instrument status blocks below the card on the Assignments page.) |
+| 2 | Empty / minimal — assignment-row counts. |
+| 3 | The pill row (`pill-error` / `pill-empty` / `pill-count`) + the per-issue summary list (each issue's `summary` text + `fix_url` deep link). Moves out of the left-column body. |
+| 4A | "Setup validated." status line. Optionally a one-line summary of how many warnings / info findings were dismissed. |
+| 4B | Same as 4A + the warning details inline (so the operator sees what they're about to acknowledge before clicking the detour). |
+| 5 | Error-issue summary list (same shape as State 3). |
+| 6 / 7 / 8 | Invitation status counts — reviewers invited / sent / opened / completed (Phase 2 candidate; not blocking the super-button work). |
+
+On super-button failure, the right column also renders a
+`banner-error`-styled block with the captured error message(s) at
+the top, above whatever state-specific content was going to render.
+A small `<p class="form-help">` below the banner names the step that
+failed ("Failed at step 2 of 3: Validate setup") so the operator
+knows where to look.
+
+Stepper-only states (no card-wide redesign needed elsewhere): the
+existing layouts on other operator pages that use the
+`.bottom-grid` two-column shell continue to work — the card itself
+becomes a wider single-card sub-grid rather than a row in the outer
+grid. Session Home's `.bottom-grid` already gives the card the full
+left column; on the Assignments page the card is full-width above
+the pair table, so it naturally has room for the inner split.
+
+### A.6 Implementation tasks
 
 1. **New route.** `POST /operator/sessions/{id}/workflow/run-setup`
-   (or similar) in either `_session_home.py` or a new
-   `_workflow.py` slice under `routes_operator/`. Form fields:
-   `return_to` (same allowlist as the existing actions),
-   `acknowledge_warnings` (mirrors the existing State-4B detour).
+   in either `_session_home.py` or a new `_workflow.py` slice under
+   `routes_operator/`. Form fields: `return_to` (same allowlist as
+   the existing actions). No `acknowledge_warnings` — warnings still
+   detour through the Validate page in State 4B.
 2. **Route body.** Sequential best-effort run with structured
    per-step error capture:
 
    ```python
-   errors: list[str] = []
-
-   # Step 1: Generate
-   if not lifecycle.is_editable(review_session):
-       errors.append("Session can't be edited from its current state.")
-   else:
-       try:
-           assignments.replace_assignments(db, ...)
-       except ValueError as exc:
-           errors.append(str(exc))
-
-   if errors:
-       return _redirect_with_flash(review_session, return_to, errors)
-
-   # Step 2: Validate (always runs; readiness drives next step)
-   issues = validation.validate_session_setup(db, review_session)
-   report = lifecycle.build_readiness_report(issues)
-   if not report.can_activate:
-       # Stays in draft; let State 3 surface the pills.
-       return _redirect_with_validation_summary(...)
+   step = None
    try:
+       step = "generate"
+       if not lifecycle.is_editable(review_session):
+           raise _StepFailed("Session can't be edited from its current state.")
+       assignments.replace_assignments(db, ...)
+
+       step = "validate"
+       issues = validation.validate_session_setup(db, review_session)
+       report = lifecycle.build_readiness_report(issues)
+       if not report.can_activate:
+           # Stays in draft; State 3 surfaces the pills + right-column issue list.
+           return _redirect(review_session, return_to, run_status="validation_failed")
        lifecycle.mark_validated(db, ..., report=report)
-   except lifecycle.LifecycleError as exc:
-       errors.append(str(exc))
-       return _redirect_with_flash(...)
 
-   # Step 3: Activate
-   try:
+       step = "activate"
+       if report.has_non_blocking_findings:
+           # Warnings: redirect to the Validate page's activate-ack flow.
+           return _redirect_to_warnings_detour(review_session, return_to)
        lifecycle.activate_session(
-           db, ..., report=report,
-           acknowledge_warnings=acknowledge_warnings == "true",
+           db, ..., report=report, acknowledge_warnings=False,
        )
-   except lifecycle.LifecycleError as exc:
-       # Rollback validated → draft so the card lands in State 1A.
-       lifecycle.invalidate_session(
-           db, ..., reason="super_button_rollback",
+   except (_StepFailed, lifecycle.LifecycleError, ValueError) as exc:
+       # If we got past Validate, the session is now `validated` — roll
+       # it back so the card resolves to State 1A on the next render.
+       if step == "activate" and lifecycle.is_validated(review_session):
+           lifecycle.invalidate_session(
+               db, ..., reason="workflow_run_rollback",
+           )
+       _audit_workflow_run_failed(db, review_session, step, exc)
+       return _redirect(
+           review_session,
+           return_to,
+           run_status="failed",
+           run_step=step,
+           run_error=str(exc),
        )
-       errors.append(str(exc))
-       return _redirect_with_flash(...)
-
-   return _redirect_to_ready_landing(review_session, return_to)
    ```
 
-3. **Banner / flash mechanism.** The card currently has no
-   inline-error rendering. Easiest hook is a query param on the
-   redirect target (e.g. `?super_error=<urlencoded>`) plus a
-   `super_error` context key passed into the partial that renders a
-   `.banner.banner-error.banner-scroll-target` above the workflow
-   card. Pattern already used by `missing-confirm-banner` in
-   `session_assignments.html:138`. The card body can additionally
-   carry a state-conditional "Last attempt failed at step N — see
-   banner above" line.
-4. **New audit event.** Register
-   `session.workflow_run_started` (start) and
-   `session.workflow_run_failed` (stop) in `EVENT_SCHEMAS`
-   (`app/services/audit.py`) so the operator's history page reflects
-   the super-button attempt distinct from the per-step `assignments.generated`
-   / `session.validated` / `session.activated` / `session.invalidated`
-   trail. Optional but useful for diagnosing pilot reports of "I
-   clicked the button and nothing happened".
-5. **Workflow card.** Add a new stage button — e.g. **"Run setup"**
-   — in either of two layouts:
-   - **Replacement.** Collapse the three live forward stages
-     (Generate / Validate / Start) into one slot positioned between
-     Revert to draft and Generate invites. States 1A / 2 / 4A drop
-     to a single "Run setup" Primary; State 5 still surfaces the
-     errors but the operator's single live action is Revert.
-   - **Addition.** Keep the three individual buttons (so the
-     operator can still run one step at a time) and add "Run setup"
-     as an eighth slot. Primary on whichever of 1A / 2 / 4A is
-     currently the live state; inert elsewhere.
+3. **Error display.** Right-column banner driven by query params on
+   the redirect target — `?run_status=failed&run_step=...&run_error=...`
+   — or by session-scoped cookies if the URL gets unwieldy. The
+   `_render_*_hub` builders read these and pass `run_failure` (a
+   small dict) into the partial. Pattern matches the existing
+   `quick_setup_error` / `quick_setup_reason` flow on Session Home
+   (`_session_home.py:86`).
+4. **New audit events.** Register
+   `session.workflow_run_started` and `session.workflow_run_failed`
+   in `EVENT_SCHEMAS` (`app/services/audit.py`). Payload envelope:
+   `context` carrying `step` (`generate` / `validate` / `activate`)
+   and `error_code` / `error_message`. Successful end-to-end runs
+   write `workflow_run_started` + the existing per-step events; we
+   don't need a `workflow_run_succeeded` since the trio of step
+   events already documents success.
+5. **Card template restructure.** Split `next_action_card.html`
+   into a two-column layout. Left column keeps the existing body +
+   `.next-action-buttons` row, trimmed to five buttons (Revert ·
+   Run setup · Generate invites · Send invites · Send reminders).
+   Right column is a new `.next-action-status` div with
+   state-conditional content from the table in A.5. CSS goes in
+   `base.html` next to the existing `.card.next-action` rules
+   (display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
+   1fr); gap: var(--space-4)). On narrow viewports the columns
+   collapse to a stack.
+6. **Move State 3 pills into the right column.** Today they live in
+   the body block at `next_action_card.html:64-73`. They become the
+   default right-column content for State 3 (and State 5, with the
+   same shape but error-only pills). The left-column body keeps
+   the prose intro ("Validation didn't pass.") + the wrap-up
+   ("Resolve the errors and re-run validation before activating.").
+7. **Retire the three forms in the partial.** `next-action-generate-form`,
+   `next-action-activate-form`, and the warnings-detour `<a>`
+   collapse into one `next-action-run-setup-form` (or, for the
+   detour case, a single `<a>` whose `href` carries the same
+   `return_to=...`). The pause and revert forms stay.
+8. **Permission / lifecycle gate.** The route rejects when:
+   - Session is `ready` → 4xx with "Session is already running."
+     (Run setup is inert in States 6 / 7 / 8 anyway; this is the
+     defensive gate.)
+   - `is_setup_empty` is True → 4xx with "Fill rosters and pin
+     instrument rules first." (Run setup is inert in State 1, but
+     a stale form post could still arrive.)
+9. **Stay-on-page redirect.** Same `return_to` allowlist as the
+   other workflow-card actions; honour `assignments` / `home` /
+   `reviewers` / `reviewees` / `instruments` plus the
+   warnings-detour case where Run setup redirects to
+   `/validate?activate=1&return_to=...` so the existing detour UI
+   does the acknowledgment.
+10. **Retire old routes only after the super-button ships.** The
+    individual `POST /assignments/generate` and `POST /activate`
+    routes stay live during the transition. Once Run setup is the
+    default and tests cover every path, decide whether to retire
+    the individual routes or keep them as the lower-level surface
+    (the standalone Assignments page may still want them; the
+    Validate page certainly wants `/activate`).
 
-   The replacement layout matches the user's "one super button"
-   intent better; the addition layout preserves the granular control
-   the existing stepper offers, which is useful while debugging
-   setup-data problems.
-6. **Form holder.** New `next-action-run-setup-form` posting to the
-   route, carrying `return_to` and (when the readiness report has
-   warnings) a hidden `acknowledge_warnings=true`. Mirrors the
-   existing pattern.
-7. **Permission / lifecycle gate.** The route should reject when the
-   session is `ready` (matches the natural "you've already done
-   this" path) and when `is_setup_empty` is True (no rule pins yet
-   → Generate would no-op). Both checked upstream of the
-   try/except chain so the error banner reads cleanly.
-8. **State 4B / warnings.** If the readiness report has non-blocking
-   findings, the existing flow detours through `/validate?activate=1`
-   so the operator acknowledges warnings inline. The super-button
-   either inherits that detour on Validate-clean + warnings (i.e.
-   305 to the warnings page) or accepts an implicit "ack-via-super-
-   button" by submitting `acknowledge_warnings=true` directly. The
-   second is more in the spirit of a one-click action; the first is
-   safer.
+### A.7 Tests to add
 
-### A.5 Tests to add
-
-- Each step in isolation succeeding → session ends `ready`,
-  redirect honours `return_to`.
-- Generate path raises → session still `draft`, no fresh
-  assignments, banner surfaces the error message.
-- Validate-found-errors → session still `draft`, fresh assignments
-  exist, `validation_summary` populated on the next page render
-  (State 3 not 1A), banner surfaces the per-issue summary.
+- End-to-end success from each starting state (1A / 2 / 3 / 4A) →
+  session ends `ready`, no warnings, no banners, redirect honours
+  `return_to`. Audit log contains the four expected event rows
+  (workflow_run_started + assignments.generated + session.validated
+  + session.activated) per success.
+- Generate step raises → session still `draft`, no fresh
+  assignments, right-column banner surfaces the error message.
+  Card lands in State 1A or State 1 depending on input state.
+- Validate-found-errors → session still `draft`, fresh assignments,
+  `validation_summary` populated on next render. Card resolves to
+  State 3 (left-column prose, right-column pill row + per-issue
+  list). Banner reads "Failed at step 2 of 3: Validate setup. See
+  the issues at right."
 - Activate raises `LifecycleError(has_errors)` after Validate
-  somehow passed (race / re-entrancy) → session is back in `draft`
-  via the `invalidate_session` rollback step; predicate trips
-  `needs_regeneration_after_revert`; card resolves to State 1A.
-- Warnings-only → either auto-acknowledged (path A) or detoured to
-  Validate page (path B) — pick one and pin it.
+  somehow passed (race / re-entrancy) → session is rolled back
+  to `draft` via `invalidate_session`; the
+  `needs_regeneration_after_revert` predicate trips; card resolves
+  to State 1A. Audit log shows workflow_run_started +
+  assignments.generated + session.validated + session.invalidated
+  + workflow_run_failed.
+- Warnings-only → request 303s to the Validate page's
+  `?activate=1&return_to=...` detour. From there the operator
+  acknowledges and the existing `/activate` flow fires. The chain
+  doesn't roll back; the inline ack is the explicit gate.
 - Pre-condition: `is_setup_empty` → 4xx, no audit events written.
 - Pre-condition: session already `ready` → 4xx with a clear banner
-  ("Session is already running").
+  ("Session is already running.").
 
-### A.6 Open questions / decisions to settle before coding
+### A.8 Decisions resolved
 
-1. **Does the super-button replace the three individual stage
-   buttons, or sit alongside them?** (Section A.4 step 5.)
-2. **Validate-failure end state: State 3 (recommended) or strict
-   State 1A?** If strict, we need either Option 1 (atomic wrap) or
-   destructive assignment deletion; flag the trade-off in the PR
-   description.
-3. **Warnings handling: auto-acknowledge on super-button click, or
-   keep the inline warnings detour?** Recommend keeping the
-   detour — operators should see warnings, even if the button is
-   intended to be one-click.
-4. **Audit-event naming.** `session.workflow_run_started` /
-   `session.workflow_run_failed` are placeholders; pick names that
-   match existing conventions (the `session.*` prefix already
-   covers lifecycle transitions, so this naming fits).
-5. **Stay-on-page redirect target.** Same `return_to` allowlist as
-   the existing actions; honor `assignments` / `home` consistent
-   with the rest of the workflow card.
+1. **Super-button replaces the three individual buttons.** Stepper
+   drops to five slots.
+2. **Validate-failure end state is State 3** (not strict State 1A).
+   Pills surface the diagnostic in the right column.
+3. **Two-column card layout.** Left = body + stepper row. Right =
+   status / errors. CSS via grid; collapses to a stack on narrow
+   viewports.
+4. **Warnings: keep the existing inline detour** through
+   `/validate?activate=1`.
+5. **Audit event naming:** `session.workflow_run_started` /
+   `session.workflow_run_failed`, with `context.step` and
+   `context.error_code` / `context.error_message` carrying the
+   diagnostic. Successful runs are documented by the existing
+   per-step events; no separate "succeeded" envelope.
+
+### A.9 Suggested rollout
+
+- **PR 1 (template-only):** restructure the card into two columns
+  with the right column wired up but empty (placeholder
+  `<aside>`). Tests confirm the layout renders and the existing
+  body / stepper still works.
+- **PR 2 (right-column content):** move the State 3 pills and add
+  the per-state right-column content from the A.5 table for States
+  1 / 1A / 3 / 4A / 4B / 5. State 6 / 7 / 8 right-column status
+  (invitation counts) can defer to a follow-up.
+- **PR 3 (super-button):** new route, retire the three individual
+  buttons in the partial (replace with `Run setup`), wire the
+  banner / right-column error rendering. Tests cover every
+  failure path.
+- **PR 4 (cleanup):** decide whether to retire the now-orphaned
+  `/assignments/generate` and `/activate` routes — leave them if
+  any other page still posts to them; remove if not. Drop the
+  acknowledge-warnings query plumbing if Run setup absorbs that
+  path too.
+
+Splitting this way keeps each PR reviewable; the template + content
+moves are cosmetic and the route work is the only behaviour change.
 
