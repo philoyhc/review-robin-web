@@ -16,15 +16,10 @@
      so the card's POSTs land back here. #}
   {% include "operator/partials/next_action_card.html" %}
 
-  {% if not is_ready %}
-    <div class="card lock">
-      <p style="margin: 0;">
-        Invitation and reminder actions can only be issued while the
-        session is Activated. Activate the session from the validation
-        page to enable these actions.
-      </p>
-    </div>
-  {% endif %}
+  {# Yellow ``card lock`` "session must be Activated" retired with
+     the Workflow-card-as-Operations-chrome rollout — the Workflow
+     card's stepper makes the lifecycle state explicit and the
+     Activate session super-button is the single entry point. #}
 
   <div class="bottom-grid">
     <div class="card" id="invitations-info-card">
