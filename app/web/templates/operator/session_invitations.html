@@ -34,24 +34,24 @@
          chrome rollout (guide/workflow_card.md A.8 PRs 8-9); the
          Workflow card's Create / Send invites / Send reminders
          super-buttons carry those affordances now. #}
-      <ul class="invitations-info-list">
-        <li>Eligible reviewers
-          <span class="pill pill-count">{{ eligible_count }}</span></li>
-        <li>Invitations created
-          <span class="pill pill-count">{{ total_invitation_count }}</span></li>
-        <li>Invitations sent
-          <span class="pill pill-count">{{ invitations_sent_count }}</span></li>
-        <li>Pending invitations
-          <span class="pill {% if pending_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ pending_count }}</span></li>
-        <li>Reminders sent
-          <span class="pill pill-count">{{ reminders_sent_count }}</span></li>
-        <li>Pending reminders
-          <span class="pill {% if pending_reminders_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ pending_reminders_count }}</span></li>
-        <li>Completed reviews
-          <span class="pill pill-count">{{ completed_count }}</span></li>
-        <li>Incomplete reviews
-          <span class="pill {% if incomplete_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ incomplete_count }}</span></li>
-      </ul>
+      <p>
+        Eligible reviewers
+        <span class="pill pill-count">{{ eligible_count }}</span>
+        &middot; Invitations created
+        <span class="pill pill-count">{{ total_invitation_count }}</span>
+        &middot; Invitations sent
+        <span class="pill pill-count">{{ invitations_sent_count }}</span>
+        &middot; Pending invitations
+        <span class="pill {% if pending_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ pending_count }}</span>
+        &middot; Reminders sent
+        <span class="pill pill-count">{{ reminders_sent_count }}</span>
+        &middot; Pending reminders
+        <span class="pill {% if pending_reminders_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ pending_reminders_count }}</span>
+        &middot; Completed reviews
+        <span class="pill pill-count">{{ completed_count }}</span>
+        &middot; Incomplete reviews
+        <span class="pill {% if incomplete_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ incomplete_count }}</span>
+      </p>
     </div>
 
     <div class="card filter-card">
