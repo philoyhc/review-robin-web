@@ -524,10 +524,16 @@ the pair table, so it naturally has room for the inner split.
 
 ### A.8 Suggested rollout
 
-- **PR 1 (template-only):** restructure the card into two columns
-  with the right column wired up but empty (placeholder
-  `<aside>`). Tests confirm the layout renders and the existing
-  body / stepper still works.
+- **PR 0 (shipped 2026-05-14, #967):** retire the Workflow card from
+  Session Home so the card and the super-button work only have to
+  reason about the Operations-row pages. Template-only on the card
+  side. The `session_detail` route handler still computes the
+  (now-unused) workflow-card context keys and honours `?validated=1`
+  on Home — those test-helper hooks defer to a later cleanup PR.
+- **PR 1 (template-only):** restructure the card on the Assignments
+  page into two columns with the right column wired up but empty
+  (placeholder `<aside>`). Tests confirm the layout renders and the
+  existing body / stepper still works.
 - **PR 2 (right-column content):** move the State 3 pills and add
   the per-state right-column content from the A.4 table for States
   1 / 1A / 3 / 4A / 4B / 5. State 6 / 7 / 8 right-column status
@@ -540,7 +546,10 @@ the pair table, so it naturally has room for the inner split.
   `/assignments/generate` and `/activate` routes — leave them if
   any other page still posts to them; remove if not. Drop the
   acknowledge-warnings query plumbing if Run setup absorbs that
-  path too.
+  path too. Migrate the test helpers that hit
+  `/operator/sessions/{id}?validated=1` (deferred from PR 0) to use
+  the Assignments URL instead, and strip the Home route's
+  `?validated=1` plumbing + unused context keys.
 
 Splitting this way keeps each PR reviewable; the template + content
 moves are cosmetic and the route work is the only behaviour change.

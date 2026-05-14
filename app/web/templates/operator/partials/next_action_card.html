@@ -61,7 +61,9 @@
 {% set _send_reminders_live = is_ready and invitations_sent %}
 <div class="card next-action" id="next-action">
   <h2>Workflow</h2>
-  <div class="next-action-body">
+  <div class="next-action-grid">
+    <div class="next-action-main">
+      <div class="next-action-body">
     {% if is_setup_empty %}
       {# State 1: rosters / rule pins missing. No live action. #}
       <p>Session not fully set up. Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing.</p>
@@ -267,5 +269,12 @@
       <button class="btn secondary" type="button"
               disabled aria-disabled="true">Send reminders</button>
     {% endif %}
+  </div>
+    </div>
+    {# Right column — state-conditional status reports + super-button
+       error messages. Wired up empty in PR 1 of the super-button
+       rollout (guide/workflow_card.md A.8); per-state content lands
+       in PR 2. #}
+    <aside class="next-action-status" id="next-action-status"></aside>
   </div>
 </div>
