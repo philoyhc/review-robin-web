@@ -348,6 +348,15 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.invalidated": EventSchema(_IDENTITY | {"reason"}),
     "session.activated": EventSchema(_IDENTITY | {"counts", "context"}),
     "session.reverted_to_draft": EventSchema(_IDENTITY | {"counts"}),
+    # Workflow super-button (PR 3 of guide/workflow_card.md). The
+    # ``started`` event marks each Activate-session click; per-step
+    # success continues to write the underlying ``session.validated``
+    # / ``session.activated`` / ``assignments.generated`` events. The
+    # ``failed`` event records which step failed (in
+    # ``context.step``) and the operator-facing message
+    # (``context.error_message``); see ``_workflow.py``.
+    "session.workflow_run_started": EventSchema(_IDENTITY | {"context"}),
+    "session.workflow_run_failed": EventSchema(_IDENTITY | {"context"}),
     "instrument.opened": EventSchema(_IDENTITY | {"refs"}),
     "instrument.closed": EventSchema(_IDENTITY | {"refs", "reason", "context"}),
     # PR 2 — instruments

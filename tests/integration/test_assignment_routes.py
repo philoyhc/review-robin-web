@@ -247,8 +247,10 @@ def test_assignments_hub_renders_count_and_mode(
 
     empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
     assert empty.status_code == 200
-    # Page-level Generate button is now the materialise affordance.
-    assert "Generate assignments" in empty.text
+    # The Workflow card's Activate session super-button is the
+    # operator's entry point to materialising assignments now (it
+    # runs Generate + Validate + Activate in sequence).
+    assert ">Activate session</button>" in empty.text
     # Per-instrument status block surfaces the pinned rule.
     assert "Full Matrix" in empty.text
 

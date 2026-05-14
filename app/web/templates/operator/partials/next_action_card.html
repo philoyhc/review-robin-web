@@ -42,20 +42,24 @@
    lifecycle position. Revert to draft is always rendered in
    Secondary style. #}
 {% set _next_action_return_to = next_action_return_to | default(none) %}
-{% set _validate_setup_href = (
-  "/operator/sessions/" ~ session.id ~ "/" ~ _next_action_return_to ~ "?validated=1"
-  if _next_action_return_to
-  else "/operator/sessions/" ~ session.id ~ "?validated=1"
-) %}
 {% set _activate_warns_href = (
   "/operator/sessions/" ~ session.id ~ "/validate?activate=1&return_to=" ~ _next_action_return_to
   if _next_action_return_to
   else "/operator/sessions/" ~ session.id ~ "/validate?activate=1"
 ) %}
 {# Lifecycle convenience flags for the stepper-row branches. #}
-{% set _validate_live = is_draft and not is_setup_empty and not is_pre_generate %}
-{% set _generate_live = is_pre_generate or _validate_live or (is_validated and validation_summary and validation_summary.can_activate) %}
-{% set _start_live = is_validated and validation_summary and validation_summary.can_activate %}
+{# The single forward-stage Activate session button is live across
+   the setup phase: pre-generate, pre-validation (post-generate),
+   validation-just-failed, and validated (with or without warnings).
+   Inert in States 1 / 5 / 6 / 7 / 8. State 4B's super-button is
+   rendered as an <a> to the warnings-detour URL so the operator
+   acknowledges warnings inline before /activate fires. #}
+{% set _activate_live = (
+  is_pre_generate
+  or (is_draft and not is_setup_empty and not is_pre_generate)
+  or (is_validated and validation_summary and validation_summary.can_activate)
+) %}
+{% set _activate_needs_warnings_detour = is_validated and validation_summary and validation_summary.can_activate and validation_summary.needs_acknowledge %}
 {% set _generate_invites_live = is_ready and not invitations_generated %}
 {% set _send_invites_live = is_ready and invitations_generated and not invitations_sent %}
 {% set _send_reminders_live = is_ready and invitations_sent %}
@@ -124,18 +128,14 @@
        lifecycle / invitations routes; the hidden inputs pre-
        acknowledge the service-layer confirm gates so the buttons
        fire without inline checkbox dialogs. #}
-    {% if _generate_live %}
+    {% if _activate_live and not _activate_needs_warnings_detour %}
+      {# The super-button: posts to the new /workflow/activate route
+         which runs Generate + Validate + Activate in sequence. State
+         4B's button is an <a> to the warnings detour instead, so no
+         form is needed in that case. #}
       <form method="post"
-            action="/operator/sessions/{{ session.id }}/assignments/generate"
-            id="next-action-generate-form">
-        <input type="hidden" name="confirm_replace" value="true">
-        <input type="hidden" name="acknowledge_response_loss" value="true">
-      </form>
-    {% endif %}
-    {% if _start_live and not validation_summary.needs_acknowledge %}
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/activate"
-            id="next-action-activate-form">
+            action="/operator/sessions/{{ session.id }}/workflow/activate"
+            id="next-action-activate-session-form">
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
         {% endif %}
@@ -185,11 +185,11 @@
     {% endif %}
   </div>
 
-  {# Workflow stepper — uniform seven-button row across every state.
-     Revert to draft sits leftmost (always Secondary when live), then
-     the forward stages: Generate assignments / Validate setup /
-     Start session / Generate invites / Send invites / Send
-     reminders. #}
+  {# Workflow stepper — uniform five-button row across every state.
+     Revert to draft sits leftmost (always Secondary when live);
+     Activate session is the single forward super-button (collapsed
+     from the previous Generate / Validate / Start trio in PR 3 of
+     guide/workflow_card.md); then the three invitation stages. #}
   <div class="next-action-buttons">
     {# Revert to draft — leftmost, always Secondary when live. #}
     {% if is_ready %}
@@ -203,35 +203,18 @@
               disabled aria-disabled="true">Revert to draft</button>
     {% endif %}
 
-    {# Generate assignments #}
-    {% if is_pre_generate %}
+    {# Activate session — super-button. Posts to /workflow/activate
+       which runs Generate + Validate + Activate in sequence (or
+       detours through /validate?activate=1 in State 4B so warnings
+       are acknowledged inline). #}
+    {% if _activate_needs_warnings_detour %}
+      <a class="btn" href="{{ _activate_warns_href }}">Activate session</a>
+    {% elif _activate_live %}
       <button class="btn" type="submit"
-              form="next-action-generate-form">Generate assignments</button>
-    {% elif _generate_live %}
-      <button class="btn secondary" type="submit"
-              form="next-action-generate-form">Generate assignments</button>
+              form="next-action-activate-session-form">Activate session</button>
     {% else %}
       <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Generate assignments</button>
-    {% endif %}
-
-    {# Validate setup #}
-    {% if _validate_live %}
-      <a class="btn" href="{{ _validate_setup_href }}">Validate setup</a>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Validate setup</button>
-    {% endif %}
-
-    {# Start session #}
-    {% if _start_live and validation_summary.needs_acknowledge %}
-      <a class="btn" href="{{ _activate_warns_href }}">Start session</a>
-    {% elif _start_live %}
-      <button class="btn" type="submit"
-              form="next-action-activate-form">Start session</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Start session</button>
+              disabled aria-disabled="true">Activate session</button>
     {% endif %}
 
     {# Generate invites #}
@@ -268,10 +251,39 @@
     {% endif %}
   </div>
     </div>
-    {# Right column — state-conditional status reports and (post-
-       PR 3) super-button error messages. Per-state content per the
-       table in guide/workflow_card.md A.4. #}
+    {# Right column — state-conditional status reports + (PR 3)
+       super-button failure banner. Per-state content per the table
+       in guide/workflow_card.md A.4. #}
     <aside class="next-action-status" id="next-action-status">
+      {% if super_failure %}
+        {# Activate-session failure banner. The banner sits above
+           whatever per-state content the right column would
+           otherwise render — the State 3 / 5 pill row + issue list
+           continues to surface below it. #}
+        {% set _step_label_map = {
+          "generate": "Generate assignments",
+          "validate": "Validate setup",
+          "activate": "Activate session",
+          "precondition": "pre-flight check",
+        } %}
+        {% set _step_index_map = {
+          "generate": 1,
+          "validate": 2,
+          "activate": 3,
+        } %}
+        <div class="banner banner-error banner-scroll-target"
+             id="next-action-super-failure-banner">
+          <p class="banner-headline">
+            Activate session failed{% if super_failure.step in _step_index_map %}
+              at step {{ _step_index_map[super_failure.step] }} of 3:
+              {{ _step_label_map[super_failure.step] }}{% elif super_failure.step in _step_label_map %}
+              at the {{ _step_label_map[super_failure.step] }}{% endif %}.
+          </p>
+          {% if super_failure.error %}
+            <p style="margin: var(--space-2) 0 0 0;">{{ super_failure.error }}</p>
+          {% endif %}
+        </div>
+      {% endif %}
       {% if is_setup_empty %}
         {# State 1: setup-completion checklist with deep links to
            the relevant Operations-row pages. #}
