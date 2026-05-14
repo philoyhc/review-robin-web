@@ -64,7 +64,7 @@ _templates.env.filters["lifecycle_label"] = (
 
 # Operations-row pages whose forms can override the default
 # "redirect back to Session Home" behaviour after a workflow-card
-# action (Activate / Revert / Generate invites / Send invites / Send
+# action (Activate / Revert / Create invites / Send invites / Send
 # reminders). Form posts include a hidden ``return_to`` field carrying
 # one of these slugs; the route honours the override only when it
 # matches.

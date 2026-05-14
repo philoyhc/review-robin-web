@@ -106,7 +106,7 @@ order — Revert to draft sits leftmost, then the forward stages in
 their workflow order:
 
 ```
-Revert to draft · Generate assignments · Validate setup · Start session · Generate invites · Send invites · Send reminders
+Revert to draft · Generate assignments · Validate setup · Start session · Create invites · Send invites · Send reminders
 ```
 
 Each slot is either **live** (Primary or Secondary, clickable) or
@@ -124,7 +124,7 @@ the stepper never promotes it to Primary.
 | Generate assignments | — | **Pri** | Sec | Sec | Sec | Sec | — | — | — | — |
 | Validate setup | — | — | **Pri** | **Pri** | — | — | — | — | — | — |
 | Start session | — | — | — | — | **Pri** | **Pri** | — | — | — | — |
-| Generate invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
+| Create invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
 | Send invites | — | — | — | — | — | — | — | — | **Pri** | Sec |
 | Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
 
@@ -151,7 +151,7 @@ Notes:
   `/operator/sessions/{id}/validate?activate=1&return_to=...`, routing
   the operator through the Validate page to acknowledge warnings
   inline before the `/activate` POST fires from that page's banner.
-- **Generate invites** posts to
+- **Create invites** posts to
   `/operator/sessions/{id}/invitations/generate` via
   `next-action-generate-invites-form`. Calls
   `invitations.generate_invitations`, which idempotently creates one
@@ -329,7 +329,7 @@ the third stage formerly labeled "Start session") collapse into one
 five:
 
 ```
-Revert to draft · Activate session · Generate invites · Send invites · Send reminders
+Revert to draft · Activate session · Create invites · Send invites · Send reminders
 ```
 
 Per-state matrix (`Pri` = Primary live, `Sec` = Secondary live, `—`
@@ -339,7 +339,7 @@ Per-state matrix (`Pri` = Primary live, `Sec` = Secondary live, `—`
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Revert to draft | — | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec |
 | Activate session | — | **Pri** | **Pri** | **Pri** | **Pri** | **Pri** | — | — | — | — |
-| Generate invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
+| Create invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
 | Send invites | — | — | — | — | — | — | — | — | **Pri** | Sec |
 | Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
 

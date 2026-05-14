@@ -167,7 +167,7 @@ The card is titled **"Workflow"**. The bottom row is a uniform
 seven-stage **workflow stepper**, in the same order across every
 state — Revert to draft sits leftmost, then the forward stages in
 their workflow order: `Revert to draft` · `Generate assignments` ·
-`Validate setup` · `Start session` · `Generate invites` · `Send
+`Validate setup` · `Start session` · `Create invites` · `Send
 invites` · `Send reminders`. Each slot is either live (Primary or
 Secondary, clickable) or inert (`<button disabled>` in the Secondary
 style). Revert to draft is rendered in Secondary style whenever it's
@@ -179,7 +179,7 @@ live — the stepper never promotes it to Primary.
 | Generate assignments | — | **Pri** | Sec | Sec | Sec | Sec | — | — | — | — |
 | Validate setup | — | — | **Pri** | **Pri** | — | — | — | — | — | — |
 | Start session | — | — | — | — | **Pri** | **Pri** | — | — | — | — |
-| Generate invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
+| Create invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
 | Send invites | — | — | — | — | — | — | — | — | **Pri** | Sec |
 | Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
 

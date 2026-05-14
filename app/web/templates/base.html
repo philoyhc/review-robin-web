@@ -1418,11 +1418,7 @@
          viewports so the stepper buttons don't get squeezed. */
       body.ui-v2 .card.next-action .next-action-grid {
         display: grid;
-        /* 3/5 vs 2/5 split — left column needs the wider track so
-           the five-button stepper row fits on a single line at
-           typical card widths. Right column is the status / errors
-           aside. */
-        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: var(--space-4);
         flex: 1 1 auto;
       }
