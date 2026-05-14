@@ -710,13 +710,14 @@ the pair table, so it naturally has room for the inner split.
   banner (rendered on `?activate=1`) keeps its own template
   block — it's the State 4B detour landing surface and stays
   separate from the workflow stepper.
-- **PRs 8 / 9 / 10 (planned):** Workflow card on the Previews,
-  Invitations, and Responses pages respectively. Each PR is small
-  once the shared context builder + `_REVERT_RETURN_TO` slugs
-  land in PR 7: include the partial, plumb the
-  `super_status` / `super_step` / `super_error` query params,
-  call the builder with the page-specific `return_to`, merge
-  `**workflow_ctx`.
+- **PR 8 (shipped 2026-05-14):** Workflow card on the Previews
+  page. Same drop-in pattern PR 7 set up — include the partial,
+  add the `super_status` / `super_step` / `super_error` query
+  params on the route, call
+  `views.build_workflow_card_context(return_to="previews", ...)`,
+  merge `**workflow_ctx`.
+- **PRs 9 / 10 (planned):** Workflow card on the Invitations and
+  Responses pages respectively. Same drop-in pattern.
 
 Splitting this way keeps each PR reviewable; the template + content
 moves are cosmetic and the route work is the only behaviour change.
