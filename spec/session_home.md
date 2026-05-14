@@ -162,67 +162,42 @@ hidden form id in the body and the submit button declares
 near its checkbox while the button lives in the row (or, in the
 Activated state, in the inline section).
 
-**Contents by lifecycle state:**
+**Contents by lifecycle state:** see **`spec/workflow_card.md`**.
+That spec is the canonical source for the ten-state cascade
+(States 1 / 1A / 2 / 3 / 4A / 4B / 5 / 6 / 7 / 8), the uniform
+seven-stage stepper, the **Activate session** super-button (which
+collapses Generate → Validate → Activate into a single click with
+per-step rollback and a warnings-detour to `/validate?activate=1`),
+and the right-column state-aware status / errors aside. Session
+Home renders the same partial that every Operations-row page
+renders; nothing on Home overrides the card's per-state behaviour.
 
-The card is titled **"Workflow"**. The bottom row is a uniform
-seven-stage **workflow stepper**, in the same order across every
-state — Revert to draft sits leftmost, then the forward stages in
-their workflow order: `Revert to draft` · `Generate assignments` ·
-`Validate setup` · `Start session` · `Create invites` · `Send
-invites` · `Send reminders`. Each slot is either live (Primary or
-Secondary, clickable) or inert (`<button disabled>` in the Secondary
-style). Revert to draft is rendered in Secondary style whenever it's
-live — the stepper never promotes it to Primary.
-
-| Slot | Empty draft | Pre-generate | Pre-validation | Just failed | Validated (no warn) | Validated (warn) | Validated (errors) | Activated, invitations not generated | Activated, generated not sent | Activated, sent |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Revert to draft | — | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec |
-| Generate assignments | — | **Pri** | Sec | Sec | Sec | Sec | — | — | — | — |
-| Validate setup | — | — | **Pri** | **Pri** | — | — | — | — | — | — |
-| Start session | — | — | — | — | **Pri** | **Pri** | — | — | — | — |
-| Create invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
-| Send invites | — | — | — | — | — | — | — | — | **Pri** | Sec |
-| Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
-
-Body copy per state:
-
-| State / trigger | Body |
-|---|---|
-| **Empty draft** — `is_draft` AND any of: reviewers has zero rows, reviewees has zero rows, or at least one instrument has no assignment rule pinned (also fires when the session has zero instruments) | "Session not fully set up. Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing." |
-| **Draft, pre-generate** — `is_draft`, rosters populated, every instrument has its rule pinned, AND either no `Assignment` rows yet OR the session was reverted to draft (Revert / Pause) after the last generation | "Run generation to create the assignment pairs (note that doing so will replace any previously generated assignment pairs)." |
-| **Draft, pre-validation** — `is_draft`, rosters populated, assignments generated, no `?validated=1` yet | "Run validation to surface errors and warnings before activating. Validation never mutates session data." |
-| **Draft, validation just failed** — `is_draft` AND `validation_summary` populated (i.e. operator clicked Validate setup but the report didn't pass) | "Validation didn't pass." headline + a pill row (`pill-error` / `pill-empty` / `pill-count` for error / warning / info counts) + "Resolve the errors and re-run validation before activating." |
-| **Validated (no warnings)** — `is_validated` AND `can_activate` AND not `needs_acknowledge` | "The session setup data has successfully validated. Preview the reviewer surface to make sure that it conforms to your requirements before activating." |
-| **Validated (warnings)** — `is_validated` AND `can_activate` AND `needs_acknowledge` | Same as above plus help-line: "{N} warning(s) — review on Validate before activating." (Start session button is rendered as an `<a>` detouring through `/validate?activate=1` so warnings can be acknowledged inline.) |
-| **Validated (errors)** — `is_validated` AND not `can_activate` | "Validation shows that there are error(s). Resolve them and re-run validation before activating." |
-| **Activated, invitations not generated** — `is_ready` AND no `Invitation` rows yet | "Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers." |
-| **Activated, invitations generated but not sent** — `is_ready` AND Invitation rows exist AND none have `sent_at` | "Session is currently activated. Reviewers can access forms and save responses. Don't forget to send out emails to notify the reviewers." |
-| **Activated, invitations sent** — `is_ready` AND at least one Invitation has `sent_at` | "Session is currently activated. Reviewers can access forms and save responses. You may remind reviewers if needed." |
-
-Notes:
+Notes specific to Session Home:
 
 - **Empty-draft short-circuit.** The card surfaces a clear
   "fill the rosters first" instruction rather than sending the
-  operator to Validate Setup, where every error would amount to
+  operator to Validate, where every error would amount to
   the same gap. The operator's path forward is the chrome top-nav
   Manage links (Reviewers / Reviewees / Assignments), which stay
   reachable while this state shows.
-- **Workflow stepper in `ready`.** Inviting reviewers / monitoring
-  responses are the day-to-day ongoing-session actions and render
-  as Secondary links in the stepper row; Revert to draft is the
-  wind-down Primary. The pre-stepper Pause confirmation checkbox
-  retired with the State 6 refresh — the explicit acknowledgment
-  now lives in the Primary button label itself, and the
+- **Workflow stepper in `ready`.** The forward stages (Create
+  invites · Send invites · Send reminders) advance through States
+  6 → 7 → 8 as Invitation rows are created and sent; whichever
+  stage is the next forward action renders Primary, the others
+  Secondary. Revert to draft is always Secondary when live — the
+  stepper never promotes it to Primary. The pre-stepper Pause
+  confirmation checkbox retired with the State 6 refresh; the
   lifecycle-service `confirm` gate is upheld via a hidden field
   in the form.
 - **No "See previews" in `ready`.** Operators monitor live
   responses while Activated; previewing is the validation-time
   affordance.
-- **No status pills in body** (other than the validation-failure
-  count row above). Earlier drafts surfaced a "Setup validated"
-  pill plus warning / info counts; the current spec drops them in
-  favour of plain prose. Lifecycle and per-entity state belong in
-  the chrome status strip, not the card body.
+- **Status pills + per-issue list live in the right column**, not
+  the body. States 3 and 5 surface the readiness pill row
+  (`pill-error` / `pill-empty` / `pill-count`) and per-issue list
+  in the right-column `.next-action-status` aside; the left
+  column carries prose only. See `spec/workflow_card.md`
+  "Right column — per state".
 - **Reserved states (Expired, Archived).** Not yet in scope.
   Expected treatments:
   - **Expired** likely gets an Extract Data primary action with
@@ -414,10 +389,11 @@ Cards that have graduated out of the placeholder pattern:
 
 | State (enum / display) | Workflow card | Quick Setup | Extract Data | Danger Zone Delete Session |
 |---|---|---|---|---|
-| `draft` / Draft, rosters empty | "Session not fully set up…" — no buttons | Live (all four slots wired; default-locked) | Live (5 tiles; empty-count tiles grey their Download button) | Active |
-| `draft` / Draft, rosters populated | Primary: Validate Setup | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
-| `validated` / Validated | Primary: Activate Session (or See validation details on errors) | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
-| `ready` / Activated | Two sections: Manage invitations (Primary) + Monitor responses; `<hr>`; Pause Session (Primary, with confirm) | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (5 tiles; identical rendering across lifecycle) | Visible-but-disabled |
+| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; every stepper slot inert | Live (all four slots wired; default-locked) | Live (5 tiles; empty-count tiles grey their Download button) | Active |
+| `draft` / Draft, rosters populated, pre-generate | State 1A: Activate session live (Primary; super-button runs Generate → Validate → Activate) | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
+| `draft` / Draft, generated | States 2 / 3: Activate session live (Primary); right column carries validation pill row + per-issue list when State 3 | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
+| `validated` / Validated | States 4A / 4B / 5: Activate session live (Primary; 4B detours through `/validate?activate=1`); Revert to draft live (Secondary) | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
+| `ready` / Activated | States 6 / 7 / 8: Create invites · Send invites · Send reminders forward stages (whichever is next renders Primary); Revert to draft live (Secondary, "Pause") | Live but body-greyed (toggle still visible; submits rejected at the service layer with a "Pause first" banner) | Live (5 tiles; identical rendering across lifecycle) | Visible-but-disabled |
 
 Reserved states (Expired, Archived) not yet in scope. When
 introduced, this table extends with their treatment.

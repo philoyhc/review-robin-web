@@ -58,11 +58,9 @@ Once an operator is **inside a session**, the Control Panel is that session's ho
 
 - `session_detail.html` — `GET /operator/sessions/{id}`.
 
-Most of the operator's time is spent doing **phase work** — configuring setup, then running operations — on the phase pages where that work belongs. But the **transitions between lifecycle states** are session-level commits, not phase-level work: validating a setup is the act of declaring setup done; activating is the act of going live; pausing back to Draft is the canonical recovery path. These belong to the session itself, so they live on the session's Home page.
+Most of the operator's time is spent doing **phase work** — configuring setup, then running operations — on the phase pages where that work belongs. But the **transitions between lifecycle states** are session-level commits and the Workflow card on every session-scoped page surfaces the next one explicitly: validating a setup, activating, and reverting to draft all happen via the Workflow card's stepper.
 
-Home is therefore visited *at transitions*, not during phase work. Phase work is decentralised across the phase pages; lifecycle commits are centralised on Home.
-
-Home's body, layout, and per-state behaviour are specified in **`spec/session_home.md`**. The high-level shape: a two-column body (left for "running the session", right for metadata + danger), with a single state-conditional **Next Action card** at top-left whose primary button advances the session (Validate Setup → Activate Session → Pause Session) and whose supporting links point at validation detail, preview, etc. The Quick Setup card sits below the action card; the Extract Data card below that. Right column holds Session Details and Danger Zone.
+Home's body, layout, and per-state behaviour are specified in **`spec/session_home.md`**. The Workflow card itself is specified in **`spec/workflow_card.md`** (same partial renders on Session Home and every Operations-row page). The high-level Home shape: a full-width **Workflow card** above two independent flex columns — left column carries Session Details + Danger Zone, right column carries Quick Setup + Extract Data. The Workflow card's seven-stage stepper is the canonical entry point for every lifecycle-advancing action; the Activate session super-button collapses Generate → Validate → Activate into a single click.
 
 #### Sub-pages of Home
 
@@ -140,11 +138,11 @@ Within a session, **Setup and Operations are both navigable from the chrome on e
 
 ### P3 — Home is the launch point for lifecycle transitions
 
-Home is the session's **identity** and the place where **lifecycle-advancing actions** live (Validate, Activate, Pause). Phase work happens on the phase pages; Home is visited *at transitions*, not during phase work. The Next Action card on Home (per `spec/session_home.md`) embodies this — its primary button is always the next lifecycle move.
+Home is the session's **identity** and the canonical anchor for session-level concerns (metadata, Quick Setup, Extract Data, Danger Zone). Lifecycle-advancing actions live on the Workflow card, which renders on Home AND on every Operations-row page (per `spec/workflow_card.md`), so the operator can advance the session from wherever they happen to be looking.
 
 ### P4 — Lifecycle disables, never hides
 
-Pages remain reachable across all session lifecycle states. Affordances that don't apply to the current state render disabled. The default disabled treatment for setup-mutation surfaces is the yellow lock card pattern (`spec/visual_style_rrw.md`); Home itself is the exception — disabled state on Home is plain greying out, since the Next Action card already explains state in prose (see `spec/session_home.md`).
+Pages remain reachable across all session lifecycle states. Affordances that don't apply to the current state render disabled. The default disabled treatment for setup-mutation surfaces is the yellow lock card pattern (`spec/visual_style_rrw.md`); the three post-Operations pages (Assignments / Invitations / Responses) are the exception — their yellow `.card.lock` notices retired because the Workflow card's stepper already makes lifecycle state explicit. Home is the same exception via the same Workflow card.
 
 The four-line shape: two principles about *where the operator can go* (P1, P2), one about *what Home is for* (P3), one about *what stays reachable* (P4). None of them overlap.
 
@@ -182,7 +180,7 @@ Below the chrome, a **status row** renders the at-a-glance session status, ident
 
 ### What the chrome does not do
 
-- It doesn't carry **lifecycle-transition actions**. Validate Setup, Activate, and Pause are body-level actions on Home (via the Next Action card), not chrome buttons. Putting them in the chrome would make them reachable from every page, which contradicts the launch-point framing — transitions are deliberate acts the operator returns to Home for.
+- It doesn't carry **lifecycle-transition actions**. Activate session and Revert to draft are body-level actions on the Workflow card (which renders on Home + every Operations-row page), not chrome buttons. Keeping them off the chrome leaves the chrome a stable launch-point surface, while the Workflow card carries the per-state stepper next to the page body the operator is currently working in.
 - It doesn't carry **cross-session navigation**. Switching sessions means returning to the Overview.
 - It doesn't **change shape** based on lifecycle state or sysadmin mode. Stability matters; the operator should learn the chrome once.
 
@@ -208,7 +206,7 @@ Top-level operator lobby. A table of sessions, one row per session, columns: **N
 
 ### `/operator/sessions/{id}` — Session Home / Control Panel
 
-The per-session home. **Detailed spec: `spec/session_home.md`.** Two-column body with the Next Action card on top-left, Quick Setup and Extract Data below it; Session Details on top-right with the Danger Zone below it. The lifecycle state determines the Next Action card's primary button (Validate Setup → Activate Session → Pause Session) and supporting affordances.
+The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card** above two independent flex columns; left column carries Session Details + Danger Zone, right column carries Quick Setup + Extract Data. The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via its uniform seven-stage stepper and the Activate session super-button.
 
 ### `/operator/sessions/new` — Create new session
 
@@ -222,7 +220,7 @@ Same shape as the create form, with pre-populated values; no session top nav (it
 
 Same four fields as create, pre-filled. Action row: **Save changes** (Primary) submits to `POST /operator/sessions/{id}/edit` → emits a `session.updated` audit event with `changes: {field: [old, new]}` for each changed field, invalidates `validated → draft`, and 303 back to session detail. **Cancel** (Secondary) → session detail.
 
-The route returns **HTTP 409** when the session is `ready` — operators must Pause back to Draft first via the Next Action card on Home.
+The route returns **HTTP 409** when the session is `ready` — operators must Revert to draft first via the Workflow card.
 
 ### Setup pages (Reviewers / Reviewees / Relationships) — shared shape
 
@@ -260,11 +258,11 @@ The composer's `?template=` query param keeps each tab bookmarkable. The `respon
 
 Operations row tab. Read-only deep-dive of every setup issue, intended for the operator who needs the per-issue breakdown beyond the at-a-glance counts on Home.
 
-- **Page intro** (form-help text): "Read-only view of setup readiness for this session. Errors must be cleared before activation. Warnings can be acknowledged and overridden. Activate from the Next Action card on Session Home."
+- **Page intro** (form-help text): "Read-only view of setup readiness for this session. Errors must be cleared before activation. Warnings can be acknowledged and overridden. Activate from the Workflow card at the top of any session page."
 - **Severity counts** (three pills inline): error / warning / info counts.
 - **Per-issue list** (rendered via the `operator/partials/validation_results.html` partial) — one entry per issue, with severity pill, source (e.g. "Reviewers", "Assignments"), and human description.
 
-There is no Activate button on this page; activation lives only on Session Home (so the activate contract is enforced at a single place).
+There is no standalone Activate button on this page body; activation fires from the Workflow card's Activate session super-button. The Validate page does still own the **warnings-detour banner** (`/validate?activate=1`) — the super-button redirects there when the readiness report has non-blocking findings so the operator can acknowledge them before the underlying `/activate` POST fires.
 
 ### `/operator/sessions/{id}/previews` — Previews hub
 
@@ -320,10 +318,11 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/visual_style_general.md`** — portable design system.
 - **`spec/visual_style_rrw.md`** — Review-Robin chrome instantiation, including all visual specifics elided here.
 - **`spec/architecture.md`** — domain entities and layering. Reads upstream of this file.
-- **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including the Next Action card and lifecycle display-label mapping.
+- **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including layout + lifecycle display-label mapping.
+- **`spec/workflow_card.md`** — Workflow card (the single persistent action card that renders on Session Home + every Operations-row page); ten-state cascade, seven-stage stepper, Activate session super-button.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home.
 - **`spec/preview_hub.md`** — Preview hub on the Operations row.
-- **`spec/operations_pages.md`** — Invitations + Responses functional spec; consolidates the Manage Invitations + Monitoring pages into a reviewer-centric Invitations page and adds a reviewee-centric Responses page.
+- **`spec/operations_pages.md`** — Invitations + Responses functional spec (reviewer-centric Invitations + reviewee-centric Responses; bulk-action affordances live on the Workflow card stepper).
 - **`spec/reviewer-surface.md`** — reviewer-facing surface contracts (separate audience).
 - **`spec/ui_elements.md`** — implementation catalogue mapping the canonical primitives to CSS classes and templates.
 - **`spec/instruments.md`** — locked spec for the Instruments page.

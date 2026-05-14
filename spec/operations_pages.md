@@ -1,35 +1,37 @@
 # Invitations & Responses — functional spec
 
-Two Operations pages that together cover the running-session work
-of engaging reviewers and tracking reviewee coverage:
+Two Operations-row pages that together cover the running-session
+work of engaging reviewers and tracking reviewee coverage:
 
 - **Invitations** — reviewer-centric: who has been invited, who has
-  responded, who needs nudging. Combines what was previously split
-  across the Manage Invitations and Monitoring pages.
-- **Responses** — reviewee-centric: per-reviewee coverage,
-  surfacing under-served reviewees that the reviewer-centric view
-  doesn't make visible.
+  responded, who needs nudging.
+- **Responses** — reviewee-centric: per-reviewee coverage, surfacing
+  under-served reviewees that the reviewer-centric view doesn't make
+  visible.
 
-Both follow a shared list-with-bulk-actions pattern; specifics
-differ by audience.
+Both render the same overall chrome shape: the **Workflow card** at
+the top (per `spec/workflow_card.md`), then an info card with
+inline counters, then a filter card, then a table. Bulk-actions
+(Create invites · Send invites · Send reminders) live on the
+Workflow card's stepper — neither page body carries its own bulk
+action bar.
 
 ## Page identity
 
 | Page | Template | URL | Operations row position |
 |---|---|---|---|
-| Invitations | `session_invitations.html` | `/sessions/{id}/invitations` | After Validate, Preview |
-| Responses | `session_responses.html` | `/sessions/{id}/responses` | After Invitations |
+| Invitations | `session_invitations.html` | `/operator/sessions/{id}/invitations` | After Previews |
+| Responses | `session_responses.html` | `/operator/sessions/{id}/responses` | After Invitations |
 
-Operations row after this consolidation:
+Operations row order:
 
 ```
-Operations  [Validate][Preview][Invitations][Responses]
+Operations  [Assignments][Validate][Previews][Invitations][Responses]
 ```
 
-Pre-flight pair (Validate, Preview), monitoring pair (Invitations,
-Responses). The dev-diagnostic Outbox page (`session_outbox.html`)
-sits **outside the chrome** — it's reachable from a "View outbox"
-button on Manage Invitations, not a tab. Day-to-day operator work
+The dev-diagnostic Outbox page (`sys_admin_session_outbox.html`)
+sits **outside the chrome** under the Sys Admin doorway at
+`/operator/sys-admin/sessions/{id}/outbox`. Day-to-day operator work
 shouldn't need it; pilot debugging and send-troubleshooting do.
 
 ## Why "Invitations" and "Responses"
@@ -45,133 +47,113 @@ follow-up reminders as a natural extension of the same activity).
 "Responses" centers on what's coming back. Together they cover both
 sides of the running-session conversation.
 
-## Shared patterns
+## Shared page shape
 
-Both pages share the same overall structure: a primary list, with
-filtering, selection, bulk actions, and per-row drill-in.
+Both pages render the same four stacked regions, in order:
 
-### List structure
-
-A table-style list of rows, one per primary entity (reviewer for
-Invitations, reviewee for Responses). Standard table styling per
-Part 1 of the visual style spec. Columns vary per page; common
-elements:
-
-- **Identity** (name + key context).
-- **Status** (lifecycle within the page's domain — e.g.,
-  "responded," "at risk").
-- **Quantitative summary** (counts, percentages).
-- **Per-row actions** (small buttons or icon-buttons, scoped to
-  that row).
-
-### Filtering
-
-Above the list, a filter strip with:
-
-- **Status filter** (dropdown or pill-row): show only rows in a
-  particular status. Page-specific values.
-- **Search** (text input): filter by name or other identifying
-  text.
-
-Filters compose: applying a status filter + search narrows to rows
-matching both.
-
-### Bulk selection and actions
-
-- **Checkbox column** as the leftmost table column. A header
-  checkbox selects/deselects all currently-visible (filtered) rows.
-- **Bulk action bar** appears above the list when at least one row
-  is selected. Shows count of selected rows and available bulk
-  actions as buttons.
-- Bulk actions act on the selection only, not the full filtered
-  set unless "select all" is engaged.
-- Bulk actions follow the standard inline-confirmation pattern from
-  Part 1 — primary button transforms into "Confirm" with adjacent
-  Cancel.
-
-### Per-row drill-in
-
-Clicking a row (outside the checkbox and any inline buttons) opens
-a detail panel or sub-page showing that entity's full state and
-history. Drill-in is for investigating specific cases; the main
-mode of operator use is the list itself.
-
-Implementation choice (panel vs. sub-page) is a UI decision left to
-implementation; a side panel keeps the operator in context, a
-sub-page allows more detail.
+1. **Chrome** — two-row session chrome (top-nav with the active tab
+   highlighted) + setup-status row.
+2. **Workflow card** — full-width, per `spec/workflow_card.md`. Same
+   ten-state cascade and seven-stage stepper as on every other
+   session-scoped page. The stepper carries the bulk-action
+   affordances (Create invites · Send invites · Send reminders) so
+   the page bodies stay focused on per-row inspection + targeted
+   intervention.
+3. **Info card + filter card** — two half-width cards in a
+   `bottom-grid`. The info card on the left renders an inline
+   middle-dot prose row of lifecycle / coverage counters; the filter
+   card on the right is a `GET` form (Status `<select>` + Search
+   `<input>` with a `<datalist>` for autocomplete). Apply submits;
+   Clear is a link back to the bare URL.
+4. **Result table** — single-card containing the filtered row list,
+   or an empty-state `.muted` message when no rows match.
 
 ### Lifecycle behavior
 
-Both pages render content across all session lifecycle states but
-with different action availability:
+Both pages render content across all session lifecycle states. Per
+the Workflow-card-as-Operations-chrome rollout, the previous yellow
+`.card.lock` "session must be Activated" notice retired here — the
+Workflow card's stepper makes lifecycle state explicit and the
+**Activate session** super-button is the single entry point.
 
-- **Draft / Validated:** pages render with empty or minimal data
-  ("No invitations sent yet — activate the session to begin").
-  Bulk and per-row send/remind actions are disabled with
-  contextual explanation. Pages remain reachable, consistent with
-  P4 (lifecycle disables, never hides).
-- **Activated:** full functionality. Sending, reminding, and
-  drill-in all work normally.
-- **Reserved states (Expired, Archived):** when introduced, pages
-  likely render read-only — historical data still inspectable, but
-  no new sends or reminders. Treatment to be defined when those
-  states ship.
+Per-row action buttons on the Invitations page render `disabled`
+when the session isn't `ready` (`is_ready=False`); the underlying
+service-layer gates remain the source of truth.
 
 ---
 
 ## Invitations page
 
-Reviewer-centric. The operator's working surface for engaging
-reviewers throughout the session.
+Reviewer-centric. The operator's working surface for monitoring +
+nudging individual reviewers throughout the session.
 
-### Columns
+### Info card — eight lifecycle counters
+
+A single inline middle-dot prose row carrying eight counters:
+
+```
+Eligible reviewers N · Invitations created M · Invitations sent K ·
+Pending invitations P · Reminders sent R · Pending reminders Q ·
+Completed reviews C · Incomplete reviews I
+```
+
+Each counter renders as a `.pill.pill-count` (or `.pill.pill-empty`
+when the variant is "zero-is-good / nonzero-is-attention" and the
+value is nonzero — applied to Pending invitations, Pending
+reminders, and Incomplete reviews).
+
+### Filter card
+
+- **Status `<select>`** — `all` plus the per-status options exposed
+  by the route via `filter_status_options`.
+- **Search `<input>`** — autocompletes against
+  `filter_search_options` (reviewer name or email), matched against
+  the filtered status set.
+- **Apply / Clear** — Apply submits the form; Clear (visible only
+  when a filter is active) is a link back to the unparameterised
+  page.
+- A muted "Showing N of M." line appears alongside the buttons when
+  a filter is active.
+
+### Table columns
 
 | Column | Content |
 |---|---|
-| ☐ | Selection checkbox |
-| Reviewer | Name + email |
-| Invited | Timestamp of invitation, or "—" if not invited |
-| Last activity | Most recent reviewer activity (response submission, link click, login) — operator-meaningful, not raw audit data |
-| Response status | Progress summary: "7 / 7 complete," "3 / 5 incomplete," "not started," etc. |
-| Actions | Per-row buttons: Send invitation (if uninvited), Send reminder (if invited but incomplete) |
+| Reviewer | Name + `<code>` email; name links to per-invitation detail page when an `Invitation` row exists |
+| Email Status | Pill: `sent` / `queued` / `not sent` |
+| Email Sent | Timestamp pill, or `—` |
+| Review Progress | Pill: `submitted (D/T)` or `<state> (D/T)` where state is a per-invitation lifecycle label |
+| Required Fields | Pill: `(D/T)` |
+| Last reminder | Timestamp pill, or `—` |
+| (actions) | Per-row buttons — see below |
 
-### Status filter values
+### Per-row action buttons
 
-- All
-- Not yet invited
-- Invited, not started
-- In progress
-- Complete
-- Stale (invited but no recent activity, threshold operator-configurable or app-default)
+Rendered in the rightmost (unlabelled) column when an `Invitation`
+row exists:
 
-### Bulk actions
+- **Send** — visible when the invitation is `pending` (not yet
+  sent). POSTs to `/operator/sessions/{session_id}/invitations/{id}/send`.
+- **Send reminder** — visible when the invitation is past `pending`.
+  Disabled when the row is complete (`not row.is_incomplete`).
+  POSTs to `/operator/sessions/{session_id}/invitations/{id}/remind`.
+- **Regenerate** — always visible when an invitation row exists.
+  POSTs to `/operator/sessions/{session_id}/invitations/{id}/regenerate`.
 
-- **Send invitations** — to selected reviewers who haven't been
-  invited. Reviewers already invited are silently skipped (the
-  action's confirmation makes this clear: "Send invitations to 12
-  selected reviewers (3 already invited will be skipped)").
-- **Send reminders** — to selected reviewers who have been invited
-  but are not yet complete. Same skip behavior for reviewers
-  already complete or not yet invited.
-
-The two actions are deliberately separate even though both produce
-emails. Combining them ("Reach out to selected") would obscure the
-distinction the operator usually cares about (first contact vs.
-follow-up).
+All three buttons render `disabled` when `is_ready=False`.
 
 ### Per-row drill-in
 
-Shows the reviewer's full engagement history:
+The reviewer name is a link to a per-invitation detail page
+(`/operator/sessions/{session_id}/invitations/{invitation_id}/detail`)
+showing the reviewer's full engagement history.
 
-- Invitation sent (timestamp).
-- Reminders sent (each timestamp).
-- Logins / link clicks (if tracked).
-- Response submissions (per-instrument timestamps).
-- Currently assigned reviewees with per-reviewee response status.
+### Empty-state copy
 
-Drill-in is read-only; actions on the reviewer (resending, manual
-reminders) happen via the row's Actions column or via bulk
-selection, not from inside the drill-in.
+When no rows match a filter: `No reviewers match the current
+filter.` When no reviewers are assigned yet at all: `No reviewers
+assigned yet — generate assignments before activating the
+session.`
 
 ---
 
@@ -181,91 +163,79 @@ Reviewee-centric. Surfaces coverage from the reviewee's perspective
 and identifies under-served reviewees that the Invitations page
 doesn't make visible.
 
-### Columns
+### Info card — three coverage counters
+
+A single inline middle-dot prose row:
+
+```
+Number of reviewees N · With responses M · Without responses O
+```
+
+`With responses` renders as `.pill.pill-count`; `Without responses`
+renders as `.pill.pill-empty` when nonzero (the "zero-is-good"
+variant).
+
+### Filter card
+
+Same shape as the Invitations filter card: Status `<select>` +
+Search `<input>` against `filter_search_options` (reviewee name or
+email) + Apply / Clear / "Showing N of M." muted note.
+
+### Table columns
 
 | Column | Content |
 |---|---|
-| ☐ | Selection checkbox |
-| Reviewee | Name + key context |
-| Reviewers assigned | Count of reviewers expected to review this reviewee |
-| Responses received | Count of reviewers who have completed their review of this reviewee |
-| Coverage | Visual indicator (e.g., 4/5, with bar or percentage) |
-| Status | "Complete" / "Adequate" / "At risk" / "No responses" — operator-meaningful summary |
-| Actions | Per-row button: Remind assigned reviewers (sends reminders to the subset of this reviewee's assigned reviewers who haven't yet responded for this reviewee) |
+| Reviewee | Name + `<code>` email-or-identifier; name links to per-reviewee detail page |
+| Coverage | Pill: `complete` / `adequate` / `at risk` / `no responses` |
+| Reviewers completed | Pill: `D/T` (filled count vs. total) or `—` when total is 0 |
+| Last response | Timestamp pill, or `—` |
 
-### Status definitions
+### Coverage state definitions
 
-Operator-meaningful summaries derived from the coverage:
+Operator-meaningful summaries computed by the view adapter:
 
-- **Complete** — all assigned reviewers have responded.
-- **Adequate** — coverage above some threshold (e.g., ≥ 60% of
-  assigned reviewers responded). Threshold is app-default; future
-  enhancement could let operator configure.
-- **At risk** — coverage below threshold and session deadline
-  approaching, or zero responses well into session run.
-- **No responses** — zero reviewers have responded for this
+- **complete** — all assigned reviewers have responded.
+- **adequate** — partial coverage above an app-default threshold.
+- **at risk** — partial coverage below threshold (or session
+  deadline approaching with low coverage).
+- **no responses** — zero reviewers have responded for this
   reviewee.
 
 These are guidance, not enforcement. The operator decides what to
-do; the status helps them prioritize.
-
-### Status filter values
-
-- All
-- At risk
-- No responses
-- Adequate
-- Complete
-
-### Bulk actions
-
-- **Remind assigned reviewers for selected reviewees** — sends
-  reminders to the union of "reviewers assigned to any selected
-  reviewee, who haven't yet responded for that reviewee." This
-  crosses into the Invitations page's reminder mechanism but is
-  triggered from the reviewee view because it's a reviewee-centric
-  intervention.
-
-  Confirmation makes the scope clear: "Send reminders to 8
-  reviewers covering 3 selected reviewees."
-
-The action shares the underlying reminder send-path with the
-Invitations page; only the selection logic differs.
+do; the coverage state helps them prioritize.
 
 ### Per-row drill-in
 
-Shows the reviewee's coverage detail:
+The reviewee name is a link to a per-reviewee detail page
+(`/operator/sessions/{session_id}/responses/{reviewee_id}/detail`)
+showing the per-reviewer response status for this reviewee.
 
-- List of reviewers assigned to this reviewee.
-- Per-reviewer response status for this reviewee specifically.
-- Timestamps for completed responses.
-- A "Remind non-responders" action that triggers reminders to the
-  subset that hasn't responded for this reviewee.
+### No per-row action buttons
 
-Drill-in is read-only for response content (the operator doesn't
-read responses here — that's the Extract Data flow); it shows
-status and lets the operator trigger reminders.
+Responses currently has no Actions column. Reminder targeting at a
+single-reviewee or selected-reviewee granularity is out of scope for
+this iteration — the Workflow card's **Send reminders** super-button
+fires reminders to every incomplete reviewer across the session.
+
+### Empty-state copy
+
+When no rows match a filter: `No reviewees match the current
+filter.` When no reviewees are assigned yet at all: `No reviewees
+assigned yet — generate assignments before activating the
+session.`
 
 ---
 
 ## Cross-page interactions
 
-The two pages share data and occasionally overlap in operator intent:
-
 - **Reminder send-path is shared.** Whether the operator triggers a
-  reminder from the Invitations page (reviewer-centric), the
-  Responses page (reviewee-centric), or per-row drill-in, the same
-  underlying email send happens. Implementation should not duplicate
-  the send logic.
-- **Pre-fill across pages.** When the Responses page surfaces an
-  at-risk reviewee and the operator wants more context, a "View
-  reviewers for this reviewee" link can navigate to the Invitations
-  page pre-filtered to the relevant reviewers. Optional; useful
-  for investigation flows.
-- **Reminder content and configuration live on the Email Template
-  Setup page**, not on these Operations pages. These pages trigger
-  sends; the content (subject, body, reminder schedule defaults)
-  is configured at setup time.
+  reminder from the Workflow card (Send reminders super-button on
+  any session-scoped page) or from a per-row Send reminder button on
+  the Invitations page, the same underlying email send happens.
+  Implementation does not duplicate the send logic.
+- **Reminder content lives on the Email Template Setup page**, not
+  on these Operations pages. These pages trigger sends; the content
+  (subject, body, merge tags) is configured at setup time.
 
 ---
 
@@ -277,81 +247,34 @@ The two pages share data and occasionally overlap in operator intent:
   exist, not *what* they say.
 - **Edit assignments or rosters.** Cannot move reviewers around,
   reassign reviewees, or change instruments. That's Setup work; if
-  the operator needs to do it mid-session, they Pause Session and
-  go to the Setup pages.
+  the operator needs to do it mid-session, they Revert to draft via
+  the Workflow card and go to the Setup pages.
 - **Modify email content.** Reminder and invitation emails are
   edited on the Email Template Setup page. These pages send
   whatever the templates produce.
-- **Live updates.** Pages render snapshot data. A refresh
-  affordance updates the snapshot; auto-refresh is out of scope.
+- **Bulk-select rows for batch action.** Bulk send / remind happens
+  via the Workflow card's super-buttons (which act on every eligible
+  row session-wide); per-row buttons handle targeted intervention.
+  No multi-select checkbox column on either table.
+- **Live updates.** Pages render snapshot data on each request. A
+  navigation re-renders; auto-refresh is out of scope.
 - **Cross-session views.** Both pages are scoped to a single
-  session per P1 of the UI concept doc.
+  session per P1 of `spec/operator_ui_concept.md`.
 
 ---
-
-## Migration from the current pages
-
-The current implementation has two Operations pages:
-
-- `session_invitations.html` (`/sessions/{id}/invitations`) —
-  Manage Invitations.
-- `session_monitoring.html` (`/sessions/{id}/monitoring`) —
-  Monitoring with reminders.
-
-After this consolidation:
-
-- The new Invitations page (`session_invitations.html`,
-  `/sessions/{id}/invitations`) **reuses the URL slug** and
-  template name of the current Manage Invitations page, but its
-  content is the consolidated reviewer-centric list with sending +
-  monitoring + reminders combined.
-- The new Responses page (`session_responses.html`,
-  `/sessions/{id}/responses`) is a new template and URL.
-- The current `session_monitoring.html` is retired. The
-  `/sessions/{id}/monitoring` URL can either redirect to
-  `/sessions/{id}/invitations` (preserving inbound links) or 404
-  with explanation. The redirect is friendlier for any existing
-  bookmarks.
-
-The reuse of the Invitations slug is intentional: it's the closest
-fit semantically, and bookmarks/links to that URL still land on a
-useful page.
-
----
-
-## Doc impact
-
-`spec/operator_ui_concept.md`:
-
-- Operations Pages list updates to reflect the new structure:
-  Validate, Preview, Invitations, Responses. (The Outbox page
-  retains its `/sessions/{id}/outbox` URL but exits the chrome
-  taxonomy — reachable from a button on Manage Invitations.)
-- Description of Invitations updates to note its broader scope
-  (sending + monitoring + reminders).
-- Responses is a new entry.
-- New page-level contract entries for Responses and the
-  consolidated Invitations.
-- Retired contract for the old Monitoring page.
 
 ## Implementation pointers
 
-- The list-with-bulk-actions pattern is shared between the two
-  pages. Implement once as a reusable component (or set of
-  conventions); both pages instantiate it with their own columns,
-  filters, and actions.
-- Per-row and bulk reminder send-paths must share their underlying
-  implementation — single source of truth for "send reminder
-  email."
-- Filtering and selection state is page-local and not persisted
-  across navigations. Operators returning to the page see the
-  default unfiltered list.
-- Drill-in implementation choice (side panel vs. sub-page) is open;
-  pick whichever fits the codebase's existing patterns. If
-  introducing a new pattern, side panel is gentler — keeps the
-  operator in list context.
-- "At risk" thresholds and status definitions on the Responses
-  page should be implemented as constants or config in one place,
-  not scattered across rendering code. Future operator
-  configuration of these thresholds becomes a small change to that
-  one location.
+- View-shape adapters in `app/web/views/_invitations.py` and
+  `app/web/views/_responses.py` own the per-row projection + the
+  info-card counter aggregation. Routes stay thin.
+- Per-row and Workflow-card reminder send-paths share their
+  underlying implementation in `app/services/invitations.py` —
+  single source of truth for "send reminder email."
+- Filter parsing lives in `app/web/views/_filters.py` so the
+  Invitations and Responses pages reuse the same Status / Search
+  contract.
+- "At risk" thresholds and coverage-state definitions on the
+  Responses page are computed in one place in
+  `app/web/views/_responses.py`. Future operator configuration of
+  the threshold becomes a small change to that one location.
