@@ -129,6 +129,9 @@ def previews_index(
     request: Request,
     reviewer_email: str = "",
     email: str = "invitation",
+    super_status: str | None = None,
+    super_step: str | None = None,
+    super_error: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -193,6 +196,14 @@ def previews_index(
                     ),
                 }
             )
+    workflow_ctx = views.build_workflow_card_context(
+        db,
+        review_session,
+        return_to="previews",
+        super_failure=views.parse_super_failure(
+            super_status, super_step, super_error
+        ),
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_previews.html",
@@ -209,6 +220,7 @@ def previews_index(
             "email_body": email_body,
             "surface_card": surface_card,
             "surface_html": surface_html,
+            **workflow_ctx,
         },
     )
 

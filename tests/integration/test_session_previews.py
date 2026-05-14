@@ -65,6 +65,21 @@ def _import_reviewers(
     assert response.status_code in (200, 303), response.text
 
 
+def test_previews_page_renders_workflow_card(
+    client: TestClient, db: Session
+) -> None:
+    """PR 8 of guide/workflow_card.md A.8 — the Previews page hosts
+    the Workflow card. ``next_action_return_to=previews`` flows
+    into the card's forms; full ``value="previews"`` flow-through
+    is covered by the cross-page tests in
+    test_assignments_next_action_return_to.py (the partial is
+    identical regardless of host page)."""
+    session = _create_session(client, db, code="prev-card")
+    body = client.get(f"/operator/sessions/{session.id}/previews").text
+    assert 'id="next-action"' in body
+    assert "<h2>Workflow</h2>" in body
+
+
 def test_first_load_renders_unselected_picker_and_pick_prompt(
     client: TestClient, db: Session
 ) -> None:
