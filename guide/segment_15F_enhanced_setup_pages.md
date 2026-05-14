@@ -46,8 +46,10 @@ surfaces:
    Responses tables — the "Showing N of M" muted line tells
    the operator when they've hit the cap.
 
-2. **Search + filter strip.** Reuse `app/web/views/_filters.py`
-   (the Invitations / Responses helper). `<input list>` +
+2. **Search + filter strip.** Lives inside the right-side
+   operator-actions card (see Decision 7), below the
+   Add-row inputs. Reuses `app/web/views/_filters.py` (the
+   Invitations / Responses helper). `<input list>` +
    `<datalist>` autocompleted from the unfiltered roster's
    distinct values, plus a Status `<select>` (`all` /
    `active` / `inactive`). `GET` form so URL state survives
@@ -69,9 +71,13 @@ surfaces:
 5. **Leftmost checkbox column for bulk-only actions.**
    Header checkbox selects-all-visible (i.e. all rendered
    rows on the current filtered page; doesn't reach hidden
-   capped rows). Bulk-action bar above the table renders
-   only when ≥1 row is selected — Inactivate selected /
-   Reactivate selected. No bulk Edit, no bulk Delete.
+   capped rows). The **bulk-action buttons sit at the
+   bottom of the right-side operator-actions card** (see
+   Decision 7) — Inactivate selected / Reactivate selected.
+   They're always visible but render `disabled` when zero
+   rows are selected, and surface a small selected-count pill
+   above the row of buttons when ≥1 row is selected. No bulk
+   Edit, no bulk Delete.
 
 6. **No per-row hard Delete.** Inline-edit covers the
    single-row inactivate use case; bulk inactivate via the
@@ -81,14 +87,53 @@ surfaces:
    accidental destruction of audit-pointed data and keeps the
    surface honest about which actions are reversible.
 
-7. **Add-row card layout.** The friendly-labels editor card
-   currently runs full-width above the table on each Setup
-   page (Segment 15A Slice 3). 15F splits that into a
-   `bottom-grid` row of two half-width cards: the existing
-   labels editor stays on the **left**, a new Add-row card
-   anchors the **right**. Add card carries the same inputs
-   as the inline-edit row + an Add button; emits a single
-   POST that creates one new row + 303s back.
+7. **Right-side operator-actions card.** The friendly-labels
+   editor card currently runs full-width above the table on
+   each Setup page (Segment 15A Slice 3). 15F splits that
+   into a `bottom-grid` row of two half-width cards: the
+   existing labels editor stays on the **left**, a new
+   **operator-actions card** anchors the **right** and
+   consolidates every page-level operator action that isn't
+   per-row. Three vertically-stacked sections inside that
+   card, top to bottom:
+
+   1. **Add row.** Inputs match the inline-edit row's shape
+      (name / email / tags for Reviewers; etc.). Single
+      Add button submits a per-page POST that creates one
+      new row + 303s back. Status defaults to `active`.
+   2. **Search + filter.** Status `<select>` (`all` /
+      `active` / `inactive`) + Search `<input list>` over
+      the page's identity columns. `GET` form; "Showing N
+      of M" muted line under the inputs when a filter is
+      active. Submit / Clear buttons.
+   3. **Bulk action buttons.** Inactivate selected /
+      Reactivate selected. Always rendered but
+      `disabled`-when-zero-selected; a small selected-count
+      pill (e.g. "3 selected") sits above the buttons when
+      ≥1 row is checked.
+
+   Layout sketch:
+
+   ```
+   ┌── Friendly labels editor (15A) ──┐  ┌── Operator actions ──────┐
+   │  left, half-width                │  │  right, half-width       │
+   │                                  │  │                          │
+   │  (existing 15A content)          │  │  Add row                  │
+   │                                  │  │  ─────────                │
+   │                                  │  │  Search + status filter   │
+   │                                  │  │  ─────────                │
+   │                                  │  │  [3 selected]             │
+   │                                  │  │  Inactivate · Reactivate  │
+   └──────────────────────────────────┘  └──────────────────────────┘
+   ┌── Rows table ────────────────────────────────────────────────────┐
+   │  ☐  Reviewer  Email  Tag1  Tag2  Tag3  Status  [Edit]            │
+   │  …                                                               │
+   └──────────────────────────────────────────────────────────────────┘
+   ```
+
+   The table below the two cards stays clean — no filter
+   strip above it, no bulk-action bar overlay; the
+   operator-actions card carries those affordances.
 
 8. **One row in edit mode at a time.** If the operator clicks
    Edit on a second row, the first row's pending edits prompt
@@ -185,12 +230,48 @@ The four items move together because they share:
   `relationship.updated` (canonical `changes` envelope per
   Segment 11K).
 
-### Bulk selection + bulk actions
+### Right-side operator-actions card
 
-- Leftmost checkbox column. Header checkbox selects-all-visible.
-- Bulk-action bar renders above the table when ≥1 row is
-  selected; carries Inactivate selected + Reactivate selected.
-  No bulk Edit, no bulk Delete.
+Half-width card on the right; left-side half-width is the
+existing 15A friendly-labels editor. Three vertically-stacked
+sections, in order:
+
+**Section 1 — Add row.**
+- Inputs match the inline-edit row's shape: name / email /
+  tags (Reviewers); name / identifier / profile-link / tags
+  (Reviewees); reviewer-select / reviewee-select / tags
+  (Relationships). Status defaults to `active`; operator
+  can flip via subsequent inline edit.
+- Submit: per-page POST emitting `reviewer.created` /
+  `reviewee.created` / `relationship.created` (snapshot
+  envelope).
+- Validation feedback: inline error banner inside the card
+  (close to the form that produced the error), not a
+  page-top banner.
+
+**Section 2 — Search + status filter.**
+- Status `<select>` (`all` / `active` / `inactive`) +
+  Search `<input list>` autocompleted from the unfiltered
+  roster's distinct identity values. Submit + Clear
+  buttons; "Showing N of M" muted line below when a filter
+  is active.
+- Server-side filter (the route's view-adapter consults
+  `request.query_params`); `GET` form so URL state survives
+  reload.
+- Search matches case-insensitive substring across the
+  page's identity columns (name / email; for Relationships,
+  reviewer-name + reviewee-name).
+- 200-row cap applies to the unfiltered render; lifts to
+  500 when either filter is applied.
+
+**Section 3 — Bulk action buttons.**
+- Inactivate selected · Reactivate selected. No bulk Edit,
+  no bulk Delete.
+- Selected-count pill (e.g. "3 selected") above the row of
+  buttons when ≥1 row is checked.
+- Buttons render `disabled` when zero rows are checked
+  (always present so the card layout doesn't reflow on
+  selection change).
 - Audit events: `reviewer.status_changed_bulk` /
   `reviewee.status_changed_bulk` /
   `relationship.status_changed_bulk` with the canonical
@@ -198,34 +279,6 @@ The four items move together because they share:
   removed = newly reactivated ids — or split into separate
   event types per the audit-emitter style, decide during PR
   scoping).
-
-### Add-row affordance
-
-- Half-width "Add row" card to the right of the friendly-labels
-  editor card (which moves from full-width to half-width left).
-- Inputs match the inline-edit row's shape — name / email /
-  tags (Reviewers); name / identifier / profile-link / tags
-  (Reviewees); reviewer-select / reviewee-select / tags
-  (Relationships). Status defaults to `active`; the operator
-  can flip it to `inactive` via subsequent inline edit.
-- Submit: per-page POST emitting `reviewer.created` /
-  `reviewee.created` / `relationship.created` (snapshot
-  envelope).
-
-### Search + status filter strip
-
-- Above the table on every Setup page. Status `<select>`
-  (`all` / `active` / `inactive`) + Search `<input list>`
-  autocompleted from the unfiltered roster.
-- Server-side filter (the route's view-adapter consults
-  `request.query_params`); the visible-rows count line
-  reports "Showing N of M" matching the Invitations /
-  Responses pattern.
-- Search matches case-insensitive substring across the
-  page's identity columns (name / email; for Relationships,
-  reviewer-name + reviewee-name).
-- 200-row cap applies to the unfiltered render; lifts to
-  500 when either filter is applied.
 
 ### Lifecycle gate
 
@@ -265,29 +318,33 @@ surface yet — the CSV importer continues to be the only writer.
 **Tests.** Service-layer happy-path + lifecycle gate + audit
 envelope strict-mode checks.
 
-### PR 2 — Reviewers page search + filter + 200/500 cap
+### PR 2 — Reviewers page right-side operator-actions card scaffolding
 
-**Scope.** View-adapter consumes
-`request.query_params` for search / status; route slices the
-result with the 200 / 500 cap. New filter strip above the
-table; muted "Showing N of M" line. No per-row edit yet.
+**Scope.** Split the full-width 15A friendly-labels editor
+into a half-width left card + new half-width right
+operator-actions card. Wire the right card's middle section
+(search + filter) end-to-end: view-adapter consumes
+`request.query_params`, route slices the result with the
+200 / 500 cap, template renders the muted "Showing N of M"
+line. The card's Add-row section + bulk-action section render
+as inert placeholders this PR. No per-row edit yet.
 Establishes the find-a-row machinery the later UI PRs sit on.
 
-**Tests.** Filter parsing, cap application, "Showing N of M"
-rendering.
+**Tests.** Layout regression, filter parsing, cap application,
+"Showing N of M" rendering.
 
-### PR 3 — Reviewers page inline edit + bulk inactivate +
-Add card
+### PR 3 — Reviewers page inline edit + bulk inactivate + Add row
 
-**Scope.** Template grows the checkbox column, the per-row
-Edit / Save / Cancel state machine, the bulk-action bar, and
-the half-width Add-row card layout (friendly-labels editor
-narrows to half-width left). Route handlers wire the new
-service-layer calls from PR 1. Targeted inline JS for the
-row-state toggle + "one row at a time" guard.
+**Scope.** Template grows the leftmost checkbox column and
+the per-row Edit / Save / Cancel state machine. Right-side
+operator-actions card's Add-row + bulk-action sections light
+up. Route handlers wire the new service-layer calls from
+PR 1. Targeted inline JS for the row-state toggle + "one row
+at a time" guard + selected-count pill.
 
-**Tests.** Per-row edit happy-path, bulk inactivate, Add card
-POST, "one row at a time" guard.
+**Tests.** Per-row edit happy-path, bulk inactivate, Add
+section POST, "one row at a time" guard, selected-count pill
+behaviour.
 
 ### PR 4 — Reviewees (clone PRs 1–3)
 
