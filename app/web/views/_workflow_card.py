@@ -1,0 +1,186 @@
+"""Workflow card context builder — shared by every Operations-row
+page that renders ``operator/partials/next_action_card.html``.
+
+After PR 5 of ``guide/workflow_card.md`` A.8, every Operations-row
+page route (Assignments today; Validate / Previews / Invitations /
+Responses incoming in PRs 6+) builds its template context by
+calling ``build_workflow_card_context(...)`` and merging the
+returned dict into its page-specific context. The card partial
+expects every key in the returned dict to be present.
+
+The builder owns:
+
+- the lifecycle convenience booleans
+  (``is_draft`` / ``is_validated`` / ``is_ready``);
+- the workflow-card state predicates
+  (``is_setup_empty`` / ``is_pre_generate``);
+- the readiness summary + per-issue breakdown
+  (``validation_summary`` / ``validation_issues_by_severity``);
+- the invitation lifecycle flags
+  (``invitations_generated`` / ``invitations_sent``);
+- the setup-completion checklist for State 1
+  (``setup_checklist``);
+- the super-button failure banner state (``super_failure``);
+- the ``return_to`` slug each Operations-row page uses to land
+  the workflow card's POSTs back on itself
+  (``next_action_return_to``).
+
+The builder is read-only with one exception: when
+``validated_just_ran`` is True (the page's ``?validated=1`` entry
+path) AND the readiness report is clean AND the session is still
+in draft, it calls ``lifecycle.mark_validated`` to flip
+``draft → validated`` before computing the rest of the context.
+This matches the historical behaviour of the inline computation in
+``_assignments.py``.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from sqlalchemy.orm import Session
+
+from app.db.models import ReviewSession, User
+from app.services import (
+    assignments,
+    csv_imports,
+    invitations,
+    validation,
+)
+from app.services import instruments as instruments_service
+from app.services import session_lifecycle as lifecycle
+
+
+def build_workflow_card_context(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    return_to: str,
+    validated_just_ran: bool = False,
+    super_failure: dict[str, str] | None = None,
+    user: User | None = None,
+    correlation_id: str | None = None,
+) -> dict[str, Any]:
+    """Build the dict of context keys consumed by the Workflow card.
+
+    ``return_to`` is the operations-row slug for the calling page
+    (e.g. ``"assignments"`` / ``"validate"`` / ``"previews"`` /
+    ``"invitations"`` / ``"responses"``). It flows into the partial
+    as ``next_action_return_to`` and drives the hidden ``return_to``
+    field on every workflow-card form so the post-action redirect
+    lands back on the same page.
+
+    ``validated_just_ran`` (the page's ``?validated=1`` entry path)
+    triggers an inline ``validate_session_setup`` run; when the
+    report is clean and the session is still draft, the helper
+    flips it to ``validated`` via ``lifecycle.mark_validated``
+    before populating the rest of the context. ``user`` and
+    ``correlation_id`` are required when this path fires.
+    """
+    reviewer_count = csv_imports.existing_reviewer_count(
+        db, review_session.id
+    )
+    reviewee_count = csv_imports.existing_reviewee_count(
+        db, review_session.id
+    )
+    has_unpinned = instruments_service.has_unpinned(db, review_session.id)
+    is_draft = lifecycle.is_draft(review_session)
+    is_validated = lifecycle.is_validated(review_session)
+    is_ready = lifecycle.is_ready(review_session)
+
+    validation_summary: dict[str, object] | None = None
+    validation_issues_by_severity: dict[str, list] = {
+        "errors": [],
+        "warnings": [],
+        "info": [],
+    }
+    if validated_just_ran or is_validated:
+        issues = validation.validate_session_setup(db, review_session)
+        report = lifecycle.build_readiness_report(issues)
+        if (
+            validated_just_ran
+            and report.can_activate
+            and is_draft
+            and user is not None
+        ):
+            lifecycle.mark_validated(
+                db,
+                review_session=review_session,
+                user=user,
+                report=report,
+                correlation_id=correlation_id,
+            )
+            # Refresh the lifecycle booleans after the flip.
+            is_draft = lifecycle.is_draft(review_session)
+            is_validated = lifecycle.is_validated(review_session)
+        validation_summary = {
+            "error_count": len(report.errors),
+            "warning_count": len(report.warnings),
+            "info_count": len(report.info),
+            "can_activate": report.can_activate and is_validated,
+            "needs_acknowledge": report.has_non_blocking_findings,
+        }
+        validation_issues_by_severity = {
+            "errors": report.errors,
+            "warnings": report.warnings,
+            "info": report.info,
+        }
+
+    is_setup_empty = is_draft and (
+        reviewer_count == 0 or reviewee_count == 0 or has_unpinned
+    )
+    is_pre_generate = (
+        is_draft
+        and not is_setup_empty
+        and (
+            assignments.existing_count(db, review_session.id) == 0
+            or lifecycle.needs_regeneration_after_revert(
+                db, review_session.id
+            )
+        )
+    )
+
+    return {
+        "is_draft": is_draft,
+        "is_validated": is_validated,
+        "is_ready": is_ready,
+        "is_setup_empty": is_setup_empty,
+        "is_pre_generate": is_pre_generate,
+        "invitations_generated": invitations.has_invitations(
+            db, review_session.id
+        ),
+        "invitations_sent": invitations.has_sent_invitations(
+            db, review_session.id
+        ),
+        "validation_summary": validation_summary,
+        "validation_issues_by_severity": validation_issues_by_severity,
+        "setup_checklist": {
+            "reviewers_ok": reviewer_count > 0,
+            "reviewees_ok": reviewee_count > 0,
+            "instruments_pinned_ok": not has_unpinned,
+        },
+        "super_failure": super_failure,
+        "next_action_return_to": return_to,
+    }
+
+
+def parse_super_failure(
+    super_status: str | None,
+    super_step: str | None,
+    super_error: str | None,
+) -> dict[str, str] | None:
+    """Convert the workflow super-button's redirect query params
+    into the ``super_failure`` dict the partial expects (or ``None``
+    when the URL doesn't carry a failure signal)."""
+    if super_status != "failed":
+        return None
+    return {
+        "step": super_step or "unknown",
+        "error": super_error or "",
+    }
+
+
+__all__ = [
+    "build_workflow_card_context",
+    "parse_super_failure",
+]

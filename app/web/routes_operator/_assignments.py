@@ -28,12 +28,8 @@ from app.db.session import get_db
 from app.services import (
     assignments,
     csv_imports,
-    instruments as instruments_service,
-    invitations,
     relationships as relationships_service,
-    validation,
 )
-from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -62,27 +58,11 @@ def assignments_hub(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    # ``?validated=1`` mirrors the Session Home Validate Setup entry
-    # path: run validation live, promote ``draft → validated`` when
-    # the readiness report is clean, and surface the inline summary
-    # pills in the Next Action card render below.
-    if validated:
-        issues = validation.validate_session_setup(db, review_session)
-        report = lifecycle.build_readiness_report(issues)
-        if report.can_activate and lifecycle.is_draft(review_session):
-            lifecycle.mark_validated(
-                db,
-                review_session=review_session,
-                user=user,
-                report=report,
-                correlation_id=request_correlation_id(),
-            )
-    super_failure: dict[str, str] | None = None
-    if super_status == "failed":
-        super_failure = {
-            "step": super_step or "unknown",
-            "error": super_error or "",
-        }
+    # ``?validated=1`` is the workflow-card Validate Setup entry path.
+    # ``build_workflow_card_context`` runs validation live and
+    # promotes ``draft → validated`` inline when the report is
+    # clean; the resulting validation_summary + per-issue list
+    # flows through to the partial via the same builder.
     return _render_assignments_hub(
         request,
         db,
@@ -90,7 +70,9 @@ def assignments_hub(
         user,
         missing_confirm=needs_confirm == 1,
         validated_just_ran=validated,
-        super_failure=super_failure,
+        super_failure=views.parse_super_failure(
+            super_status, super_step, super_error
+        ),
     )
 
 
@@ -182,64 +164,20 @@ def _render_assignments_hub(
         status.HTTP_400_BAD_REQUEST if (missing_confirm or is_blocked) else status.HTTP_200_OK
     )
 
-    # Next Action card context — same shape Session Home builds so
-    # the duplicated card on the Assignments page surfaces the same
-    # state-aware copy + button row. ``validation_summary`` runs on
-    # the ``?validated=1`` entry path AND whenever the session is
-    # already in ``validated`` (matching Session Home's gate); other
-    # states fall back to the generic copy.
-    validation_summary: dict[str, object] | None = None
-    validation_issues_by_severity: dict[str, list] = {
-        "errors": [],
-        "warnings": [],
-        "info": [],
-    }
-    if validated_just_ran or lifecycle.is_validated(review_session):
-        issues_for_summary = validation.validate_session_setup(db, review_session)
-        report = lifecycle.build_readiness_report(issues_for_summary)
-        validation_summary = {
-            "error_count": len(report.errors),
-            "warning_count": len(report.warnings),
-            "info_count": len(report.info),
-            "can_activate": report.can_activate
-            and lifecycle.is_validated(review_session),
-            "needs_acknowledge": report.has_non_blocking_findings,
-        }
-        validation_issues_by_severity = {
-            "errors": report.errors,
-            "warnings": report.warnings,
-            "info": report.info,
-        }
-    reviewer_count = csv_imports.existing_reviewer_count(db, review_session.id)
-    reviewee_count = csv_imports.existing_reviewee_count(db, review_session.id)
-    has_unpinned_instruments = instruments_service.has_unpinned(
-        db, review_session.id
-    )
-    is_setup_empty = lifecycle.is_draft(review_session) and (
-        reviewer_count == 0
-        or reviewee_count == 0
-        or has_unpinned_instruments
-    )
-    setup_checklist = {
-        "reviewers_ok": reviewer_count > 0,
-        "reviewees_ok": reviewee_count > 0,
-        "instruments_pinned_ok": not has_unpinned_instruments,
-    }
-    is_pre_generate = (
-        lifecycle.is_draft(review_session)
-        and not is_setup_empty
-        and (
-            assignments.existing_count(db, review_session.id) == 0
-            or lifecycle.needs_regeneration_after_revert(
-                db, review_session.id
-            )
-        )
-    )
-    invitations_generated = invitations.has_invitations(
-        db, review_session.id
-    )
-    invitations_sent = invitations.has_sent_invitations(
-        db, review_session.id
+    # Workflow card context — shared builder owns the lifecycle
+    # booleans, state predicates, validation summary + per-issue
+    # list, setup checklist, invitation flags, super-button failure
+    # banner state, and the ``return_to`` slug. Page-specific
+    # context (reviewer / reviewee counts, pair sample, etc.) is
+    # computed separately below and merged into the template dict.
+    workflow_ctx = views.build_workflow_card_context(
+        db,
+        review_session,
+        return_to="assignments",
+        validated_just_ran=validated_just_ran,
+        super_failure=super_failure,
+        user=user,
+        correlation_id=request_correlation_id(),
     )
 
     return _templates.TemplateResponse(
@@ -250,31 +188,18 @@ def _render_assignments_hub(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "assignment_count": assignment_count,
-            "reviewer_count": reviewer_count,
-            "reviewee_count": reviewee_count,
-            "setup_checklist": setup_checklist,
-            "validation_issues_by_severity": validation_issues_by_severity,
+            "reviewer_count": csv_imports.existing_reviewer_count(
+                db, review_session.id
+            ),
+            "reviewee_count": csv_imports.existing_reviewee_count(
+                db, review_session.id
+            ),
             "pair_sample": pair_sample,
             "truncated_count": truncated_count,
             "pair_context_lookup": pair_context_lookup,
             "issues": issues,
             "missing_confirm": missing_confirm,
             "is_blocked": is_blocked,
-            "is_draft": lifecycle.is_draft(review_session),
-            "is_validated": lifecycle.is_validated(review_session),
-            "is_ready": lifecycle.is_ready(review_session),
-            "is_setup_empty": is_setup_empty,
-            "is_pre_generate": is_pre_generate,
-            "invitations_generated": invitations_generated,
-            "invitations_sent": invitations_sent,
-            "validation_summary": validation_summary,
-            "super_failure": super_failure,
-            # Wire the Next Action card forms to redirect back here
-            # rather than to Session Home after their POST. The
-            # /activate and /revert routes honour ``return_to`` via
-            # the ``_REVERT_RETURN_TO`` allowlist (which already
-            # includes "assignments").
-            "next_action_return_to": "assignments",
             "fields_with_data": assignments.assignment_fields_with_data(
                 db, review_session.id
             ),
@@ -284,6 +209,7 @@ def _render_assignments_hub(
             "page_ctx": views.build_assignments_page_context(
                 db, review_session
             ),
+            **workflow_ctx,
         },
         status_code=status_code,
     )
