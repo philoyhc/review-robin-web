@@ -36,7 +36,7 @@
 
    The card renders the same seven-stage workflow stepper across
    every state: Generate assignments / Validate setup / Start
-   session / Generate invites / Send invites / Send reminders /
+   session / Create invites / Send invites / Send reminders /
    Revert to draft. Each slot is live (Primary or Secondary) or
    inert (``disabled``) depending on the session's current
    lifecycle position. Revert to draft is always rendered in
@@ -217,16 +217,16 @@
               disabled aria-disabled="true">Activate session</button>
     {% endif %}
 
-    {# Generate invites #}
+    {# Create invites #}
     {% if _generate_invites_live %}
       <button class="btn" type="submit"
-              form="next-action-generate-invites-form">Generate invites</button>
+              form="next-action-generate-invites-form">Create invites</button>
     {% elif is_ready %}
       <button class="btn secondary" type="submit"
-              form="next-action-generate-invites-form">Generate invites</button>
+              form="next-action-generate-invites-form">Create invites</button>
     {% else %}
       <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Generate invites</button>
+              disabled aria-disabled="true">Create invites</button>
     {% endif %}
 
     {# Send invites #}
