@@ -71,19 +71,39 @@ Two-column body below the chrome and status strip.
 > behaviour and the stepper now render on the Operations-row
 > pages, not on Home.
 
-### Left column — running the session and danger
+### Page-card grid (2 × 2)
 
-Stack of cards, top to bottom:
+The four cards sit as direct children of `.bottom-grid`, with
+explicit `.card-tl` / `.card-tr` / `.card-bl` / `.card-br`
+placement classes driving desktop visual position (mirrors the
+`.page-grid` primitives in `base.html`).
 
-1. **Extract Data card** (top). *(scaffolded in Segment 11H PR B; wired across 12A-1 + 12A-3 + 12B, 2026-05-09 → 2026-05-10)*
-2. **Danger Zone card** (bottom).
+```
+┌── Session Details (tl) ──┐ ┌── Quick Setup (tr) ──┐
+│   metadata + Edit        │ │   scaffolded bulk    │
+└──────────────────────────┘ └──────────────────────┘
+┌── Danger Zone   (bl) ────┐ ┌── Extract Data (br) ─┐
+│   destructive cleanup    │ │   responses extract  │
+└──────────────────────────┘ └──────────────────────┘
+```
 
-### Right column — metadata and bulk-setup
+DOM source order = mobile-collapse order: **Session Details → Quick
+Setup → Extract Data → Danger Zone**. Below ~800px viewport width
+the grid collapses to a single stacked column in that same order.
 
-1. **Session Details card** (top).
-2. **Quick Setup card** (bottom). *(scaffolded in Segment 11H PR A; wired in Segment 11J + slot 4 graduation in 12A-3 PR 4)*
+Quick Setup sits in the right column (top-right) so the operator
+reads it next to Session Details rather than mixed in with the
+destructive-cleanup column. Danger Zone sits in the left column
+(bottom-left) so the operator's destructive cleanup actions sit at
+the natural end of the working column rather than next to the
+read-mostly Session Details. Extract Data anchors the bottom-right
+slot — the operator reaches for it once responses are in, which is
+late in the session lifecycle, so it reads as the natural follow-on
+to Quick Setup above it.
 
-The mobile-collapse DOM order — Extract Data → Danger Zone → Session Details → Quick Setup — falls out of the source order. Quick Setup sits in the right column rather than the working column so its destructive setup-bulk actions don't compete with the working column for attention; Danger Zone sits at the bottom of the left column so the operator's destructive cleanup actions sit at the natural end of the working column rather than under the right column's read-mostly metadata.
+*(Session Details + Quick Setup placement updated 2026-05-14 to
+swap columns; the original layout had the Workflow card top-left
+on Session Home, which retired in PR #967.)*
 
 ## Cards
 
