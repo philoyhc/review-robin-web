@@ -132,6 +132,29 @@ def test_validate_lifecycle_copy_ready() -> None:
 # --------------------------------------------------------------------------- #
 
 
+def test_validate_page_renders_workflow_card_with_return_to_validate(
+    client: TestClient, db: Session
+) -> None:
+    """PR 7 of guide/workflow_card.md A.8 — the Validate page hosts
+    the Workflow card, with ``next_action_return_to=validate`` so
+    the card's POSTs land back here."""
+    review_session = _seed_pair(client, db, code="val-card")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+    ).text
+    assert 'id="next-action"' in body
+    assert "<h2>Workflow</h2>" in body
+    # Activate session super-button form carries return_to=validate.
+    import re
+    form = re.search(
+        r'(<form[^>]*id="next-action-activate-session-form"[^>]*>.*?</form>)',
+        body,
+        re.DOTALL,
+    )
+    assert form is not None
+    assert 'value="validate"' in form.group(1)
+
+
 def test_setup_coverage_matrix_renders_canonical_rows(
     client: TestClient, db: Session
 ) -> None:

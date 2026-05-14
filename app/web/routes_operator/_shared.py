@@ -68,7 +68,16 @@ _templates.env.filters["lifecycle_label"] = (
 # reminders). Form posts include a hidden ``return_to`` field carrying
 # one of these slugs; the route honours the override only when it
 # matches.
-_REVERT_RETURN_TO = {"reviewers", "reviewees", "assignments", "instruments"}
+_REVERT_RETURN_TO = {
+    "reviewers",
+    "reviewees",
+    "assignments",
+    "instruments",
+    "validate",
+    "previews",
+    "invitations",
+    "responses",
+}
 
 
 def _require_editable(review_session: ReviewSession) -> None:

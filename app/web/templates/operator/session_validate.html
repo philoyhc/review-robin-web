@@ -11,6 +11,11 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
+  {# Workflow card — Operations-page chrome, PR 7 of
+     guide/workflow_card.md A.8. ``next_action_return_to=validate``
+     so the card's POSTs land back here. #}
+  {% include "operator/partials/next_action_card.html" %}
+
   {% if activate_banner %}
     {% if activate_banner.kind == "warning" %}
       <div class="banner banner-warning banner-scroll-target"
