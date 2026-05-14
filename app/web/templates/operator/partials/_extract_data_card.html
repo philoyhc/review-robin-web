@@ -34,8 +34,7 @@
 </section>
 {%- endmacro %}
 
-{% set _extra_card_class = extra_card_class | default("") %}
-<div class="card{% if _extra_card_class %} {{ _extra_card_class }}{% endif %}" id="extract-data">
+<div class="card" id="extract-data">
   <h2>Extract Data</h2>
   <p class="form-help">
     Download per-entity CSVs of the session's data.

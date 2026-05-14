@@ -79,11 +79,22 @@ def session_detail(
     request: Request,
     quick_setup_error: str | None = Query(default=None),
     quick_setup_reason: str | None = Query(default=None),
+    super_status: str | None = Query(default=None),
+    super_step: str | None = Query(default=None),
+    super_error: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     setup_rows = views.build_setup_rows(db, review_session)
+    workflow_ctx = views.build_workflow_card_context(
+        db,
+        review_session,
+        return_to="home",
+        super_failure=views.parse_super_failure(
+            super_status, super_step, super_error
+        ),
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_detail.html",
@@ -92,7 +103,6 @@ def session_detail(
             "session": review_session,
             "setup_rows": setup_rows,
             "status_pills": views.session_status_pills(db, review_session),
-            "is_ready": lifecycle.is_ready(review_session),
             "has_responses": lifecycle.session_has_responses(db, review_session),
             "quick_setup": views.build_quick_setup_context(
                 db,
@@ -104,6 +114,7 @@ def session_detail(
             ),
             "extract_data": views.build_extract_data_context(db, review_session),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
+            **workflow_ctx,
         },
     )
 
