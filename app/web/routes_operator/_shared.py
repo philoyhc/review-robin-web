@@ -61,6 +61,16 @@ _templates.env.filters["lifecycle_label"] = (
 # ------------------------------------------------------------------ #
 # Lifecycle / edit-lock guards (cross-slice).
 # ------------------------------------------------------------------ #
+
+# Operations-row pages whose forms can override the default
+# "redirect back to Session Home" behaviour after a workflow-card
+# action (Activate / Revert / Generate invites / Send invites / Send
+# reminders). Form posts include a hidden ``return_to`` field carrying
+# one of these slugs; the route honours the override only when it
+# matches.
+_REVERT_RETURN_TO = {"reviewers", "reviewees", "assignments", "instruments"}
+
+
 def _require_editable(review_session: ReviewSession) -> None:
     """Reject mutating operator actions while session is not draft/validated."""
     if not lifecycle.is_editable(review_session):

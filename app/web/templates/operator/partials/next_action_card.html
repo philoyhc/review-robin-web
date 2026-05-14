@@ -60,7 +60,7 @@
 {% set _send_invites_live = is_ready and invitations_generated and not invitations_sent %}
 {% set _send_reminders_live = is_ready and invitations_sent %}
 <div class="card next-action" id="next-action">
-  <h2>Next Action</h2>
+  <h2>Workflow</h2>
   <div class="next-action-body">
     {% if is_setup_empty %}
       {# State 1: rosters / rule pins missing. No live action. #}
@@ -160,24 +160,50 @@
         {% endif %}
         <input type="hidden" name="confirm" value="true">
       </form>
+      {# Invitation forms carry an explicit ``return_to`` so the
+         route lands the operator back on whichever page the card
+         is rendered on (Assignments or Session Home), rather than
+         the consolidated Invitations page (the route's default for
+         direct form posts elsewhere). #}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/invitations/generate"
-            id="next-action-generate-invites-form"></form>
+            id="next-action-generate-invites-form">
+        <input type="hidden" name="return_to"
+               value="{{ _next_action_return_to or 'home' }}">
+      </form>
       <form method="post"
             action="/operator/sessions/{{ session.id }}/invitations/send-all"
-            id="next-action-send-invites-form"></form>
+            id="next-action-send-invites-form">
+        <input type="hidden" name="return_to"
+               value="{{ _next_action_return_to or 'home' }}">
+      </form>
       <form method="post"
             action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete"
-            id="next-action-send-reminders-form"></form>
+            id="next-action-send-reminders-form">
+        <input type="hidden" name="return_to"
+               value="{{ _next_action_return_to or 'home' }}">
+      </form>
     {% endif %}
   </div>
 
   {# Workflow stepper — uniform seven-button row across every state.
-     Stage 1: Generate assignments. Stage 2: Validate setup.
-     Stage 3: Start session. Stage 4: Generate invites.
-     Stage 5: Send invites. Stage 6: Send reminders.
-     Stage 7: Revert to draft (always Secondary). #}
+     Revert to draft sits leftmost (always Secondary when live), then
+     the forward stages: Generate assignments / Validate setup /
+     Start session / Generate invites / Send invites / Send
+     reminders. #}
   <div class="next-action-buttons">
+    {# Revert to draft — leftmost, always Secondary when live. #}
+    {% if is_ready %}
+      <button class="btn secondary" type="submit"
+              form="next-action-pause-form">Revert to draft</button>
+    {% elif is_validated %}
+      <button class="btn secondary" type="submit"
+              form="next-action-revert-form">Revert to draft</button>
+    {% else %}
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Revert to draft</button>
+    {% endif %}
+
     {# Generate assignments #}
     {% if is_pre_generate %}
       <button class="btn" type="submit"
@@ -240,18 +266,6 @@
     {% else %}
       <button class="btn secondary" type="button"
               disabled aria-disabled="true">Send reminders</button>
-    {% endif %}
-
-    {# Revert to draft — always Secondary when live. #}
-    {% if is_ready %}
-      <button class="btn secondary" type="submit"
-              form="next-action-pause-form">Revert to draft</button>
-    {% elif is_validated %}
-      <button class="btn secondary" type="submit"
-              form="next-action-revert-form">Revert to draft</button>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Revert to draft</button>
     {% endif %}
   </div>
 </div>

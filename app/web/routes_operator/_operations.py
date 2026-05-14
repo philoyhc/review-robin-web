@@ -13,7 +13,7 @@ from __future__ import annotations
 import secrets
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,7 +34,18 @@ from app.web.deps import (
     request_correlation_id,
     require_session_operator,
 )
-from app.web.routes_operator._shared import _templates
+from app.web.routes_operator._shared import _REVERT_RETURN_TO, _templates
+
+
+def _invitation_redirect_url(session_id: int, return_to: str | None) -> str:
+    """Resolve the redirect target for an invitation action. ``return_to``
+    overrides only when it matches the operations-row allowlist; otherwise
+    fall back to the consolidated Invitations page."""
+    if return_to in _REVERT_RETURN_TO:
+        return f"/operator/sessions/{session_id}/{return_to}"
+    if return_to == "home":
+        return f"/operator/sessions/{session_id}"
+    return f"/operator/sessions/{session_id}/invitations"
 
 
 router = APIRouter()
@@ -386,6 +397,7 @@ def invitation_reviewer_detail(
 
 @router.post("/sessions/{session_id}/invitations/generate")
 def invitations_generate(
+    return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -398,7 +410,7 @@ def invitations_generate(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/invitations",
+        url=_invitation_redirect_url(review_session.id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -406,6 +418,7 @@ def invitations_generate(
 @router.post("/sessions/{session_id}/invitations/send-all")
 def invitations_send_all(
     request: Request,
+    return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -427,7 +440,7 @@ def invitations_send_all(
             correlation_id=request_correlation_id(),
         )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/invitations",
+        url=_invitation_redirect_url(review_session.id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -665,6 +678,7 @@ def invitations_remind_one(
 )
 def invitations_remind_incomplete(
     request: Request,
+    return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -685,7 +699,7 @@ def invitations_remind_incomplete(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/invitations",
+        url=_invitation_redirect_url(review_session.id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

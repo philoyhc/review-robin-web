@@ -1,7 +1,9 @@
-# Next Action card — behavior on the Assignments page
+# Workflow card — behavior on the Assignments page
 
-This note documents the actual current behavior of the "Next Action"
-card as rendered on the Assignments page
+This note documents the actual current behavior of the "Workflow"
+card (formerly titled "Next Action"; the template + CSS class names
+still use the ``next_action`` prefix) as rendered on the Assignments
+page
 (`/operator/sessions/{session_id}/assignments`), derived directly from
 the code:
 
@@ -61,7 +63,7 @@ page renders.
 
 ## States
 
-The card has a constant frame (H2 "Next Action" + blue-bordered card).
+The card has a constant frame (H2 "Workflow" + blue-bordered card).
 The body and the bottom button row are chosen by this cascade in
 `next_action_card.html`:
 
@@ -99,10 +101,12 @@ elif is_ready:
 
 ## Workflow stepper — uniform 7-button row
 
-Every state renders the same seven-stage bottom row, in the same order:
+Every state renders the same seven-stage bottom row, in the same
+order — Revert to draft sits leftmost, then the forward stages in
+their workflow order:
 
 ```
-Generate assignments · Validate setup · Start session · Generate invites · Send invites · Send reminders · Revert to draft
+Revert to draft · Generate assignments · Validate setup · Start session · Generate invites · Send invites · Send reminders
 ```
 
 Each slot is either **live** (Primary or Secondary, clickable) or
@@ -116,13 +120,13 @@ the stepper never promotes it to Primary.
 
 | Slot | 1 | 1A | 2 | 3 | 4A | 4B | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Revert to draft | — | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec |
 | Generate assignments | — | **Pri** | Sec | Sec | Sec | Sec | — | — | — | — |
 | Validate setup | — | — | **Pri** | **Pri** | — | — | — | — | — | — |
 | Start session | — | — | — | — | **Pri** | **Pri** | — | — | — | — |
 | Generate invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
 | Send invites | — | — | — | — | — | — | — | — | **Pri** | Sec |
 | Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
-| Revert to draft | — | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec |
 
 Notes:
 - **Generate assignments** posts to
@@ -164,7 +168,16 @@ Notes:
   assignments aren't complete.
 - All three invitation forms emit on every ready state (6 / 7 / 8)
   so the Secondary "re-run an earlier stage" buttons stay wired;
-  only the corresponding Primary slot's live state changes.
+  only the corresponding Primary slot's live state changes. Each
+  form carries a hidden `return_to=<page>` field so the post-action
+  303 lands back on the page that rendered the card. The value is
+  `assignments` on the Assignments page, `home` on Session Home
+  (resolved server-side to `/operator/sessions/{id}`), or one of
+  the other operations-row slugs (`reviewers` / `reviewees` /
+  `instruments`) if a future page adopts the card. Direct form
+  posts elsewhere (e.g. the standalone Invitations page) omit
+  `return_to` and the route falls back to its historical default
+  of `/operator/sessions/{id}/invitations`.
 - **Revert to draft**:
   - States 4A / 4B / 5 (validated): Secondary submit via
     `next-action-revert-form` to `/operator/sessions/{id}/revert`.

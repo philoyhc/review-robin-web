@@ -63,7 +63,7 @@ Two-column body below the chrome and status strip.
 
 Stack of cards, top to bottom:
 
-1. **Next Action card** (top).
+1. **Workflow card** (top).
 2. **Extract Data card** (middle). *(scaffolded in Segment 11H PR B; wired across 12A-1 + 12A-3 + 12B, 2026-05-09 → 2026-05-10)*
 3. **Danger Zone card** (bottom).
 
@@ -72,11 +72,11 @@ Stack of cards, top to bottom:
 1. **Session Details card** (top).
 2. **Quick Setup card** (bottom). *(scaffolded in Segment 11H PR A; wired in Segment 11J + slot 4 graduation in 12A-3 PR 4)*
 
-The mobile-collapse DOM order — Next Action → Extract Data → Danger Zone → Session Details → Quick Setup — falls out of the source order. Quick Setup sits in the right column rather than the working column so its destructive setup-bulk actions don't compete with the lifecycle-advancing Next Action card for attention; Danger Zone sits at the bottom of the left column so the operator's destructive cleanup actions sit at the natural end of the working column rather than under the right column's read-mostly metadata.
+The mobile-collapse DOM order — Workflow → Extract Data → Danger Zone → Session Details → Quick Setup — falls out of the source order. Quick Setup sits in the right column rather than the working column so its destructive setup-bulk actions don't compete with the lifecycle-advancing Workflow card for attention; Danger Zone sits at the bottom of the left column so the operator's destructive cleanup actions sit at the natural end of the working column rather than under the right column's read-mostly metadata.
 
 ## Cards
 
-### 1. Next Action card (left column, top)
+### 1. Workflow card (left column, top)
 
 The page's center of gravity. Shows the single lifecycle-advancing
 action appropriate to the session's current state, plus supporting
@@ -84,7 +84,7 @@ context that helps the operator decide whether to take it.
 
 **Frame.** The card frame is constant across all lifecycle states:
 
-- H2 title is the literal string **"Next Action"** (constant —
+- H2 title is the literal string **"Workflow"** (constant —
   the per-state action verb lives in the primary button label, not
   in the H2).
 - Border picks up `accent-blue`, the same shade as the Primary
@@ -132,23 +132,25 @@ Activated state, in the inline section).
 
 **Contents by lifecycle state:**
 
-The bottom row of the card is a uniform seven-stage **workflow
-stepper**, in the same order across every state: `Generate assignments`
-· `Validate setup` · `Start session` · `Generate invites` · `Send
-invites` · `Send reminders` · `Revert to draft`. Each slot is either
-live (Primary or Secondary, clickable) or inert (`<button disabled>`
-in the Secondary style). Revert to draft is rendered in Secondary
-style whenever it's live — the stepper never promotes it to Primary.
+The card is titled **"Workflow"**. The bottom row is a uniform
+seven-stage **workflow stepper**, in the same order across every
+state — Revert to draft sits leftmost, then the forward stages in
+their workflow order: `Revert to draft` · `Generate assignments` ·
+`Validate setup` · `Start session` · `Generate invites` · `Send
+invites` · `Send reminders`. Each slot is either live (Primary or
+Secondary, clickable) or inert (`<button disabled>` in the Secondary
+style). Revert to draft is rendered in Secondary style whenever it's
+live — the stepper never promotes it to Primary.
 
 | Slot | Empty draft | Pre-generate | Pre-validation | Just failed | Validated (no warn) | Validated (warn) | Validated (errors) | Activated, invitations not generated | Activated, generated not sent | Activated, sent |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Revert to draft | — | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec |
 | Generate assignments | — | **Pri** | Sec | Sec | Sec | Sec | — | — | — | — |
 | Validate setup | — | — | **Pri** | **Pri** | — | — | — | — | — | — |
 | Start session | — | — | — | — | **Pri** | **Pri** | — | — | — | — |
 | Generate invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
 | Send invites | — | — | — | — | — | — | — | — | **Pri** | Sec |
 | Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
-| Revert to draft | — | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec |
 
 Body copy per state:
 
@@ -263,7 +265,7 @@ border, H2 in the same warning brown).
   lifecycle gate in `/delete` is the source of truth — a direct
   POST while Activated still 4xxs. Visible greyed-out so the
   operator always sees the affordance and the path forward (Pause
-  via the Next Action card first, then delete).
+  via the Workflow card first, then delete).
 
 Both actions follow the inline-confirmation pattern: the operator
 ticks the checkbox to enable the destructive submit.
@@ -307,7 +309,7 @@ identity lives.
 
 The previously-rendered duplicate `Status:` pill on this card
 was retired in PR #375; lifecycle state is shown in the chrome
-status strip and (on Home) in the Next Action card's body copy
+status strip and (on Home) in the Workflow card's body copy
 when relevant.
 
 ### 5. Quick Setup card (right column, bottom)
@@ -378,7 +380,7 @@ Cards that have graduated out of the placeholder pattern:
 
 ## Lifecycle behavior summary
 
-| State (enum / display) | Next Action card | Quick Setup | Extract Data | Danger Zone Delete Session |
+| State (enum / display) | Workflow card | Quick Setup | Extract Data | Danger Zone Delete Session |
 |---|---|---|---|---|
 | `draft` / Draft, rosters empty | "Session not fully set up…" — no buttons | Live (all four slots wired; default-locked) | Live (5 tiles; empty-count tiles grey their Download button) | Active |
 | `draft` / Draft, rosters populated | Primary: Validate Setup | Live (all four slots wired; default-locked) | Live (5 tiles) | Active |
@@ -389,7 +391,7 @@ Reserved states (Expired, Archived) not yet in scope. When
 introduced, this table extends with their treatment.
 
 **Disabled treatment on Home is plain greying-out, not yellow
-lock cards.** The Next Action card carries any explanatory
+lock cards.** The Workflow card carries any explanatory
 messaging the operator needs about the session's current state
 and what's locked. Yellow lock cards remain in use elsewhere in
 the app (the Setup tabs, for instance) where there's no adjacent
@@ -409,8 +411,8 @@ action card doing the explanatory job.
 
 ## Implementation pointers
 
-- The Next Action card's content is state-conditional. The card
-  frame's constants are the H2 ("Next Action") and the
+- The Workflow card's content is state-conditional. The card
+  frame's constants are the H2 ("Workflow") and the
   `accent-blue` border; height grows to fit content. The standard
   body / confirm / buttons stack handles every state except
   Activated, which uses an inline two-section layout. Implement as
@@ -456,4 +458,4 @@ Segment 11B shipped this spec in seven slices:
 | #383 (PR D) | Quick Setup disabled in ready + Danger Zone visible-disabled | Two visual changes, no behaviour change beyond the Delete-Session UI |
 | #384 (PR E) | Stale `.pill-lifecycle-closed` cleanup | CSS-only |
 | #385 / #386 / #387 / #388 | Placeholder card unification | Quick Setup + Extract Data + Rule Based Assignment now share `.card.placeholder` + `placeholder_card` macro |
-| #390 / #391 / #392 / #393 | Next Action card refinements | Constant title + bottom button row + sentence-case button copy + state-conditional trims + confirm above buttons + 200px min-height + blue border + Title Case heading |
+| #390 / #391 / #392 / #393 | Workflow card refinements | Constant title + bottom button row + sentence-case button copy + state-conditional trims + confirm above buttons + 200px min-height + blue border + Title Case heading |
