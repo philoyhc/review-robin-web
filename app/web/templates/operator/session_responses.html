@@ -33,14 +33,14 @@
          (guide/workflow_card.md A.8 PR 10); the Workflow card's
          Send reminders super-button + the chrome top-nav
          Invitations tab carry those affordances now. #}
-      <ul class="responses-info-list">
-        <li>Number of reviewees
-          <span class="pill pill-count">{{ total_row_count }}</span></li>
-        <li>Reviewees with responses
-          <span class="pill pill-count">{{ reviewees_with_responses_count }}</span></li>
-        <li>Reviewees without responses
-          <span class="pill {% if reviewees_without_responses_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ reviewees_without_responses_count }}</span></li>
-      </ul>
+      <p>
+        Number of reviewees
+        <span class="pill pill-count">{{ total_row_count }}</span>
+        &middot; Reviewees with responses
+        <span class="pill pill-count">{{ reviewees_with_responses_count }}</span>
+        &middot; Reviewees without responses
+        <span class="pill {% if reviewees_without_responses_count > 0 %}pill-empty{% else %}pill-count{% endif %}">{{ reviewees_without_responses_count }}</span>
+      </p>
     </div>
 
     <div class="card filter-card">
