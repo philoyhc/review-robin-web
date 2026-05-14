@@ -161,16 +161,16 @@ def test_workflow_card_renders_two_column_grid(
     assert main_open != -1 and status_open != -1 and status_open > main_open
 
 
-def test_validate_setup_link_targets_assignments_page(
+def test_activate_session_super_button_form_targets_workflow_route(
     client: TestClient, db: Session
 ) -> None:
-    """Draft session past setup-empty → Next Action card's Validate
-    Setup button on Assignments page anchors at
-    ``/assignments?validated=1`` (not ``/?validated=1`` which is
-    Session Home)."""
-    review_session = _seed_pair_plus_pinned(client, db, code="rt-validate")
-    # Generate so the session leaves the ``is_setup_empty`` state —
-    # otherwise the Next Action card body has no action buttons.
+    """Draft session past setup-empty → Workflow card's Activate
+    session super-button form posts to /workflow/activate, not the
+    retired per-step routes (/assignments/generate or /activate).
+    Replaces the pre-PR-3 test that asserted the Validate setup link
+    pointed at /assignments?validated=1; that link retired with the
+    super-button collapse."""
+    review_session = _seed_pair_plus_pinned(client, db, code="rt-activate-form")
     client.post(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
@@ -178,15 +178,14 @@ def test_validate_setup_link_targets_assignments_page(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
+    assert 'id="next-action-activate-session-form"' in body
     assert (
-        f'href="/operator/sessions/{review_session.id}/assignments?validated=1"'
+        f'action="/operator/sessions/{review_session.id}/workflow/activate"'
         in body
     )
-    # Stale Session Home target must not appear.
-    assert (
-        f'href="/operator/sessions/{review_session.id}?validated=1"'
-        not in body
-    )
+    # Retired per-step links / forms must not render in the card.
+    assert 'id="next-action-generate-form"' not in body
+    assert 'id="next-action-activate-form"' not in body
 
 
 def test_validated_query_param_promotes_draft_to_validated_on_assignments(
@@ -239,15 +238,20 @@ def test_activate_form_includes_return_to_assignments(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
-    # The activate form on the Next Action card carries the hidden
-    # return_to=assignments token.
+    # The Activate session super-button form on the Workflow card
+    # carries the hidden return_to=assignments token. Posts to
+    # /workflow/activate (super-button collapse, PR 3).
     import re
     activate_form = re.search(
-        r'(<form[^>]*id="next-action-activate-form"[^>]*>.*?</form>)',
+        r'(<form[^>]*id="next-action-activate-session-form"[^>]*>.*?</form>)',
         body,
         re.DOTALL,
     )
     assert activate_form is not None
+    assert (
+        f'action="/operator/sessions/{review_session.id}/workflow/activate"'
+        in activate_form.group(1)
+    )
     assert 'name="return_to"' in activate_form.group(1)
     assert 'value="assignments"' in activate_form.group(1)
 

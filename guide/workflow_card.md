@@ -637,14 +637,14 @@ the pair table, so it naturally has room for the inner split.
   Also adds a vertical divider between the two columns of the card
   (1px border on the left column's right edge; collapses to a
   horizontal rule on the stacked mobile layout).
-- **PR 3 (super-button):** new `POST /workflow/activate` route
-  + new `_workflow.py` slice; collapse the three forward stage
-  buttons in the partial (Generate assignments / Validate setup /
-  the third-stage button currently labeled "Start session") into
-  one **Activate session** button; wire the right-column failure
-  banner via `super_status` / `super_step` / `super_error` query
-  params; register `session.workflow_run_started` /
-  `session.workflow_run_failed` audit events; fold the
+- **PR 3 (shipped 2026-05-14):** new `POST /workflow/activate`
+  route + new `_workflow.py` slice; collapsed the three forward
+  stage buttons in the partial (Generate assignments / Validate
+  setup / the third-stage button formerly labeled "Start session")
+  into one **Activate session** button; wired the right-column
+  failure banner via `super_status` / `super_step` / `super_error`
+  query params; registered `session.workflow_run_started` /
+  `session.workflow_run_failed` audit events; folded the
   `"Start session"` → `"Activate session"` rename into the same
   PR.
 - **PR 4 (cleanup):** decide whether to retire the now-orphaned

@@ -55,6 +55,9 @@ def assignments_hub(
     request: Request,
     needs_confirm: int | None = Query(default=None),
     validated: bool = Query(default=False),
+    super_status: str | None = Query(default=None),
+    super_step: str | None = Query(default=None),
+    super_error: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -74,6 +77,12 @@ def assignments_hub(
                 report=report,
                 correlation_id=request_correlation_id(),
             )
+    super_failure: dict[str, str] | None = None
+    if super_status == "failed":
+        super_failure = {
+            "step": super_step or "unknown",
+            "error": super_error or "",
+        }
     return _render_assignments_hub(
         request,
         db,
@@ -81,6 +90,7 @@ def assignments_hub(
         user,
         missing_confirm=needs_confirm == 1,
         validated_just_ran=validated,
+        super_failure=super_failure,
     )
 
 
@@ -111,6 +121,7 @@ def _render_assignments_hub(
     missing_confirm: bool = False,
     is_blocked: bool = False,
     validated_just_ran: bool = False,
+    super_failure: dict[str, str] | None = None,
 ) -> HTMLResponse:
     assignment_count = assignments.existing_count(db, review_session.id)
     pair_sample = (
@@ -257,6 +268,7 @@ def _render_assignments_hub(
             "invitations_generated": invitations_generated,
             "invitations_sent": invitations_sent,
             "validation_summary": validation_summary,
+            "super_failure": super_failure,
             # Wire the Next Action card forms to redirect back here
             # rather than to Session Home after their POST. The
             # /activate and /revert routes honour ``return_to`` via

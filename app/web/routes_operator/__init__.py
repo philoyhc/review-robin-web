@@ -35,6 +35,7 @@ from . import (
     _setup_invite,
     _setup_rosters,
     _sys_admin,
+    _workflow,
 )
 
 router = APIRouter(
@@ -54,3 +55,4 @@ router.include_router(_operations.router)
 router.include_router(_instruments.router)
 router.include_router(_extracts.router)
 router.include_router(_sys_admin.router)
+router.include_router(_workflow.router)
