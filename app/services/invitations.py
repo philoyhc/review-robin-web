@@ -419,6 +419,29 @@ def reviewers_eligible_for_invitation(
     )
 
 
+def has_invitations(db: Session, session_id: int) -> bool:
+    """True iff at least one ``Invitation`` row exists for the session."""
+    row = db.execute(
+        select(Invitation.id)
+        .where(Invitation.session_id == session_id)
+        .limit(1)
+    ).first()
+    return row is not None
+
+
+def has_sent_invitations(db: Session, session_id: int) -> bool:
+    """True iff at least one ``Invitation`` row for the session has a
+    non-NULL ``sent_at``. Drives the State 7 → State 8 transition on
+    the Next Action card workflow stepper."""
+    row = db.execute(
+        select(Invitation.id)
+        .where(Invitation.session_id == session_id)
+        .where(Invitation.sent_at.is_not(None))
+        .limit(1)
+    ).first()
+    return row is not None
+
+
 # --------------------------------------------------------------------------- #
 # Reminders (Segment 9.3)
 # --------------------------------------------------------------------------- #
@@ -611,6 +634,8 @@ __all__ = [
     "InvitationRow",
     "hash_token",
     "generate_invitations",
+    "has_invitations",
+    "has_sent_invitations",
     "regenerate_token",
     "regenerate_all_tokens",
     "send_invitation",

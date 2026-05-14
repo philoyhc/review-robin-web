@@ -244,8 +244,9 @@ def test_session_detail_empty_rosters_renders_setup_short_circuit(
         "Generate assignments",
         "Validate setup",
         "Start session",
-        "Invite",
-        "Monitor",
+        "Generate invites",
+        "Send invites",
+        "Send reminders",
         "Revert to draft",
     ):
         assert (
@@ -276,10 +277,15 @@ def test_session_detail_advances_to_validated_with_query(
     # Workflow-stepper row: Generate (Secondary regenerate) and
     # Revert to draft (Secondary) flank the Start session primary;
     # Validate setup re-renders as an inert preview of the past
-    # stage; Invite + Monitor are future-stage previews.
+    # stage; the three invitation stages are future-stage previews.
     assert ">Generate assignments</button>" in body
     assert ">Revert to draft</button>" in body
-    for label in ("Validate setup", "Invite", "Monitor"):
+    for label in (
+        "Validate setup",
+        "Generate invites",
+        "Send invites",
+        "Send reminders",
+    ):
         assert (
             f'disabled aria-disabled="true">{label}</button>' in body
         ), f"expected inert stepper button {label!r}"
@@ -805,22 +811,35 @@ def test_next_action_card_in_ready_renders_pause(
     )
     assert 'form="next-action-pause-form"' in body
     assert 'name="confirm" value="true"' in body
-    # State 6 stepper: Generate / Validate setup / Start session
-    # previews inert; Invite + Monitor live Secondary links;
-    # Revert primary submit. The two-section pause body retired
-    # with the stepper refresh — body is a single paragraph now.
+    # State 6 stepper (just-activated, no invitations generated yet):
+    # Generate / Validate setup / Start session previews inert.
+    # Generate invites is the live Primary; Send invites + Send
+    # reminders are inert future-stage previews. Revert to draft
+    # renders as a Secondary submit. The two-section pause body
+    # retired with the stepper refresh — body is a single paragraph
+    # now.
     assert '<hr class="next-action-divider">' not in body
     assert ">Pause Session</button>" not in body
     for label in (
         "Generate assignments",
         "Validate setup",
         "Start session",
+        "Send invites",
+        "Send reminders",
     ):
         assert (
             f'disabled aria-disabled="true">{label}</button>' in body
         ), f"expected inert stepper button {label!r}"
-    assert ">Invite</a>" in body
-    assert ">Monitor</a>" in body
+    # Generate invites is the live Primary in State 6.
+    assert (
+        'form="next-action-generate-invites-form">Generate invites</button>'
+        in body
+    )
+    # Revert to draft is Secondary even while ready.
+    assert (
+        '"btn secondary" type="submit"\n              form="next-action-pause-form">Revert to draft</button>'
+        in body
+    )
     assert ">See previews</a>" not in body
     # Body copy: single-paragraph rewrite per the latest pass.
     assert "Session is currently activated" in body
