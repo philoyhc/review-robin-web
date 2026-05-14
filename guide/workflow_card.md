@@ -647,14 +647,35 @@ the pair table, so it naturally has room for the inner split.
   `session.workflow_run_failed` audit events; folded the
   `"Start session"` → `"Activate session"` rename into the same
   PR.
-- **PR 4 (cleanup):** decide whether to retire the now-orphaned
-  `/assignments/generate` and `/activate` routes — leave them if
-  any other page still posts to them; remove if not. Drop the
-  acknowledge-warnings query plumbing if the super-button absorbs
-  that path too. Migrate the test helpers that hit
-  `/operator/sessions/{id}?validated=1` (deferred from PR 0) to use
-  the Assignments URL instead, and strip the Home route's
-  `?validated=1` plumbing + unused context keys.
+- **PR 4 (shipped 2026-05-14):** cleanup pass. Migrated the ~30
+  test helpers that hit `/operator/sessions/{id}?validated=1` to
+  the equivalent `/operator/sessions/{id}/assignments?validated=1`
+  URL (deferred from PR 0), then stripped the Home route's
+  `?validated=1` plumbing and the workflow-card-only context keys
+  (`is_setup_empty`, `is_pre_generate`, `invitations_generated`,
+  `invitations_sent`, `validation_summary`,
+  `next_action_generate`, `is_draft`, `is_validated`) plus the
+  unused imports (`assignments`, `csv_imports`,
+  `instruments_service`, `invitations`) from
+  `_session_home.py:session_detail`. The
+  `/assignments/generate` and `/activate` routes stay live —
+  `/assignments/generate` has no UI consumer but the orphan
+  surface is harmless, and `/activate` is load-bearing for the
+  Validate-page warnings-detour banner (the super-button itself
+  303s to that page in State 4B).
+- **PR 5 (planned, "extract"):** introduce a shared
+  workflow-card context builder under `app/web/views/` so the
+  Assignments route's inline context computation (the canonical
+  source after PR 4) can be reused as the card spreads to the
+  other Operations-row pages (Validate / Previews / Invitations /
+  Responses). PR 5 has one immediate caller (Assignments) and
+  scaffolds the entry point for the four-page rollout that
+  follows.
+- **PRs 6+ (planned, "rollout"):** add the Workflow card to each
+  remaining Operations-row page (Validate, Previews, Invitations,
+  Responses), one PR per page. Each PR is small once the shared
+  context builder lands in PR 5: include the partial, plumb the
+  context dict, add a page-specific `return_to` slug.
 
 Splitting this way keeps each PR reviewable; the template + content
 moves are cosmetic and the route work is the only behaviour change.
