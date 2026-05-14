@@ -530,14 +530,17 @@ the pair table, so it naturally has room for the inner split.
   side. The `session_detail` route handler still computes the
   (now-unused) workflow-card context keys and honours `?validated=1`
   on Home — those test-helper hooks defer to a later cleanup PR.
-- **PR 1 (template-only):** restructure the card on the Assignments
-  page into two columns with the right column wired up but empty
-  (placeholder `<aside>`). Tests confirm the layout renders and the
-  existing body / stepper still works.
-- **PR 2 (right-column content):** move the State 3 pills and add
-  the per-state right-column content from the A.4 table for States
-  1 / 1A / 3 / 4A / 4B / 5. State 6 / 7 / 8 right-column status
-  (invitation counts) can defer to a follow-up.
+- **PR 1 (shipped 2026-05-14, #968):** restructure the card on the
+  Assignments page into two columns with the right column wired up
+  but empty (placeholder `<aside>`). Tests confirm the layout
+  renders and the existing body / stepper still works.
+- **PR 2 (shipped 2026-05-14):** move the State 3 pills into the
+  right column and add the per-state right-column content from the
+  A.4 table for States 1 / 1A / 3 / 4A / 4B / 5. State 6 / 7 / 8
+  right-column status (invitation counts) defers to a follow-up.
+  Also adds a vertical divider between the two columns of the card
+  (1px border on the left column's right edge; collapses to a
+  horizontal rule on the stacked mobile layout).
 - **PR 3 (super-button):** new route, retire the three individual
   buttons in the partial (replace with `Run setup`), wire the
   banner / right-column error rendering. Tests cover every

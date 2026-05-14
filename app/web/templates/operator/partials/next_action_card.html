@@ -73,13 +73,10 @@
          next action. #}
       <p>Run generation to create the assignment pairs (note that doing so will replace any previously generated assignment pairs).</p>
     {% elif is_draft and validation_summary %}
-      {# State 3: validation just failed; pills surface the counts. #}
+      {# State 3: validation just failed. The pill row + per-issue
+         summary moved to the right column on PR 2 of the
+         super-button rollout (guide/workflow_card.md A.8). #}
       <p><strong>Validation didn't pass.</strong></p>
-      <p>
-        <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
-        <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
-        <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
-      </p>
       <p>Resolve the errors and re-run validation before activating.</p>
     {% elif is_draft %}
       {# State 2: validation hasn't run yet. #}
@@ -271,10 +268,78 @@
     {% endif %}
   </div>
     </div>
-    {# Right column — state-conditional status reports + super-button
-       error messages. Wired up empty in PR 1 of the super-button
-       rollout (guide/workflow_card.md A.8); per-state content lands
-       in PR 2. #}
-    <aside class="next-action-status" id="next-action-status"></aside>
+    {# Right column — state-conditional status reports and (post-
+       PR 3) super-button error messages. Per-state content per the
+       table in guide/workflow_card.md A.4. #}
+    <aside class="next-action-status" id="next-action-status">
+      {% if is_setup_empty %}
+        {# State 1: setup-completion checklist with deep links to
+           the relevant Operations-row pages. #}
+        <h3 class="next-action-status-heading">Setup checklist</h3>
+        <ul class="next-action-checklist">
+          <li>
+            {% if setup_checklist.reviewers_ok %}
+              <span class="pill pill-success" aria-label="done">✓</span>
+            {% else %}
+              <span class="pill pill-empty" aria-label="not done">✗</span>
+            {% endif %}
+            <a href="/operator/sessions/{{ session.id }}/reviewers">Reviewers</a>
+          </li>
+          <li>
+            {% if setup_checklist.reviewees_ok %}
+              <span class="pill pill-success" aria-label="done">✓</span>
+            {% else %}
+              <span class="pill pill-empty" aria-label="not done">✗</span>
+            {% endif %}
+            <a href="/operator/sessions/{{ session.id }}/reviewees">Reviewees</a>
+          </li>
+          <li>
+            {% if setup_checklist.instruments_pinned_ok %}
+              <span class="pill pill-success" aria-label="done">✓</span>
+            {% else %}
+              <span class="pill pill-empty" aria-label="not done">✗</span>
+            {% endif %}
+            <a href="/operator/sessions/{{ session.id }}/instruments">Instruments (all rules pinned)</a>
+          </li>
+        </ul>
+      {% elif is_pre_generate %}
+        <h3 class="next-action-status-heading">Status</h3>
+        <p class="form-help" style="margin: 0;">Ready to run setup.</p>
+      {% elif is_draft and validation_summary %}
+        {# State 3: validation just failed — pill row + per-issue
+           list (errors first, then warnings, then info). #}
+        <h3 class="next-action-status-heading">Validation issues</h3>
+        <p>
+          <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
+          <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
+          <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
+        </p>
+        {% include "operator/partials/_next_action_issue_list.html" %}
+      {% elif is_validated and validation_summary and not validation_summary.can_activate %}
+        {# State 5: validated but a re-validation now surfaces errors. #}
+        <h3 class="next-action-status-heading">Validation issues</h3>
+        <p>
+          <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
+          <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
+          <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
+        </p>
+        {% include "operator/partials/_next_action_issue_list.html" %}
+      {% elif is_validated and validation_summary and validation_summary.can_activate %}
+        {# State 4A / 4B: validated, ready to activate. State 4B
+           lists the warning details so the operator sees what
+           they're about to acknowledge. #}
+        <h3 class="next-action-status-heading">Status</h3>
+        <p class="form-help" style="margin: 0;">Setup validated.</p>
+        {% if validation_summary.needs_acknowledge %}
+          <p style="margin-top: var(--space-3);">
+            <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
+            {% if validation_summary.info_count %}
+              <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
+            {% endif %}
+          </p>
+          {% include "operator/partials/_next_action_issue_list.html" %}
+        {% endif %}
+      {% endif %}
+    </aside>
   </div>
 </div>
