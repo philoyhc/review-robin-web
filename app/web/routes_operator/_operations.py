@@ -581,6 +581,9 @@ def session_responses(
     request: Request,
     status: str = "all",
     q: str = "",
+    super_status: str | None = None,
+    super_step: str | None = None,
+    super_error: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -602,6 +605,14 @@ def session_responses(
     search_options = views.responses_search_options(all_rows)
     summary = monitoring.summary_counts(db, review_session)
     incomplete_count = summary.incomplete
+    workflow_ctx = views.build_workflow_card_context(
+        db,
+        review_session,
+        return_to="responses",
+        super_failure=views.parse_super_failure(
+            super_status, super_step, super_error
+        ),
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_responses.html",
@@ -616,10 +627,10 @@ def session_responses(
             "filter_status_options": views.RESPONSES_STATUS_OPTIONS,
             "filter_search_options": search_options,
             "incomplete_count": incomplete_count,
-            "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Responses"
             ),
+            **workflow_ctx,
         },
     )
 

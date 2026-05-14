@@ -11,6 +11,11 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
+  {# Workflow card — Operations-page chrome, PR 10 of
+     guide/workflow_card.md A.8. ``next_action_return_to=responses``
+     so the card's POSTs land back here. #}
+  {% include "operator/partials/next_action_card.html" %}
+
   {% if not is_ready %}
     <div class="card lock">
       <p style="margin: 0;">

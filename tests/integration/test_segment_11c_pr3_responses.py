@@ -110,6 +110,26 @@ def _ready_session(
 # --------------------------------------------------------------------------- #
 
 
+def test_responses_page_renders_workflow_card(
+    client: TestClient, db: Session
+) -> None:
+    """PR 10 of guide/workflow_card.md A.8 — the Responses page hosts
+    the Workflow card with ``next_action_return_to=responses``."""
+    session = _ready_session(
+        client,
+        db,
+        "resp-card",
+        reviewer_emails=["rae@example.edu"],
+        reviewee_emails=["carol@example.edu"],
+    )
+    body = client.get(f"/operator/sessions/{session.id}/responses").text
+    assert 'id="next-action"' in body
+    assert "<h2>Workflow</h2>" in body
+    # In a ready session, the card's invitation forms render with
+    # the page-specific return_to slug.
+    assert 'value="responses"' in body
+
+
 def test_responses_page_renders_table_for_assigned_reviewees(
     client: TestClient, db: Session
 ) -> None:
