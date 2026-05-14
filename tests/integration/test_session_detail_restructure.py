@@ -133,10 +133,10 @@ def test_session_detail_renders_session_layout(
 
     assert response.status_code == 200
     assert "<h2>Session Details</h2>" in body
-    # The Workflow card retired from Session Home on the super-button
-    # refresh — it now only lives on the Operations-row pages.
-    assert 'id="next-action"' not in body
-    assert "<h2>Workflow</h2>" not in body
+    # PR 6 of guide/workflow_card.md A.8 brought the Workflow card
+    # back to Session Home (full-width, just below the chrome).
+    assert 'id="next-action"' in body
+    assert "<h2>Workflow</h2>" in body
     assert "<h2>Run Session</h2>" not in body
     assert "Danger Zone" in body
     assert 'id="danger-zone"' in body
@@ -187,15 +187,16 @@ def test_session_detail_no_validate_summary_by_default(
         client, db, code="no-summary", reviewer_email="r@example.edu"
     )
     body = client.get(f"/operator/sessions/{review_session.id}").text
-    # Populated draft session, no ``?validated=1`` — Session Home no
-    # longer carries the Workflow card or any validation summary; both
-    # live on the Operations-row pages now.
-    assert "<h2>Workflow</h2>" not in body
+    # Populated draft session — the Workflow card surfaces State 2
+    # (Validate-not-yet-run), so no validation-summary pill row
+    # renders and no direct /activate form is emitted (the
+    # super-button POSTs to /workflow/activate instead).
+    assert "<h2>Workflow</h2>" in body
     assert "<h2>Validation summary</h2>" not in body
-    assert (
-        f'action="/operator/sessions/{review_session.id}/activate"'
-        not in body
-    )
+    # The only path to /activate is the warnings-detour banner on
+    # the Validate page; Session Home's Workflow card never emits
+    # a direct /activate form.
+    assert 'id="next-action-activate-form"' not in body
 
 
 def test_validate_page_activate_form_removed(
@@ -716,11 +717,12 @@ def test_session_card_buttons_when_ready(
         f'href="/operator/sessions/{review_session.id}/edit">Edit</a>'
         in body
     )
-    # The /revert POST form no longer renders on Session Home — it
-    # lives in the Workflow card on the Operations-row pages now.
+    # Workflow card is back on Session Home (PR 6 of
+    # guide/workflow_card.md A.8) — its ready-state pause form
+    # posts to /revert.
     assert (
         f'action="/operator/sessions/{review_session.id}/revert"'
-        not in body
+        in body
     )
     # Delete Data form still present (allowed in ready)
     assert (

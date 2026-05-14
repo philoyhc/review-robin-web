@@ -464,12 +464,13 @@ def test_validate_warnings_banner_acknowledge_form_carries_return_to(
 # --------------------------------------------------------------------------- #
 
 
-def test_session_home_omits_next_action_card(
+def test_session_home_renders_workflow_card_with_return_to_home(
     client: TestClient, db: Session
 ) -> None:
-    """Session Home no longer renders the Workflow card at all —
-    the card lives on the Operations-row pages only (regression
-    guard against accidentally re-adding the include)."""
+    """Session Home hosts the Workflow card too (PR 6 of
+    guide/workflow_card.md A.8). The card's forms post back to
+    Session Home via ``return_to=home`` rather than to an
+    Operations-row page."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-home")
     client.post(
         f"/operator/sessions/{review_session.id}/assignments/generate",
@@ -478,8 +479,14 @@ def test_session_home_omits_next_action_card(
     body = client.get(
         f"/operator/sessions/{review_session.id}"
     ).text
-    assert 'id="next-action"' not in body
-    assert 'id="next-action-activate-form"' not in body
-    assert 'id="next-action-pause-form"' not in body
-    assert 'id="next-action-revert-form"' not in body
-    assert 'id="next-action-generate-form"' not in body
+    assert 'id="next-action"' in body
+    assert "<h2>Workflow</h2>" in body
+    # Activate session super-button form carries return_to=home.
+    import re
+    activate_form = re.search(
+        r'(<form[^>]*id="next-action-activate-session-form"[^>]*>.*?</form>)',
+        body,
+        re.DOTALL,
+    )
+    assert activate_form is not None
+    assert 'value="home"' in activate_form.group(1)

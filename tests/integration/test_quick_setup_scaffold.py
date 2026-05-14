@@ -304,57 +304,53 @@ def test_quick_setup_lock_toggle_hidden_when_session_activated(
     assert 'class="quick-setup-body locked"' in body
 
 
-def test_quick_setup_card_lives_in_top_right_via_grid_placement(
+def test_quick_setup_card_lives_in_right_column_above_extract_data(
     client: TestClient, db: Session
 ) -> None:
-    """Per ``spec/session_home.md`` the Session Home page-card grid
-    is:
+    """Per ``spec/session_home.md`` the Session Home page-card
+    layout (post-PR-6) is:
 
-       Session Details (tl) | Quick Setup (tr)
-       Danger Zone      (bl) | Extract Data (br)
+       Workflow                  (full-width, top)
+       ┌───────────────────┐  ┌───────────────────┐
+       │  Session Details  │  │  Quick Setup      │
+       │  Danger Zone      │  │  Extract Data     │
+       └───────────────────┘  └───────────────────┘
 
-    DOM source order = mobile-collapse order: Session Details →
-    Quick Setup → Extract Data → Danger Zone. The four cards are
-    direct children of ``.bottom-grid`` carrying ``.card-tl`` /
-    ``.card-tr`` / ``.card-br`` / ``.card-bl`` placement classes
-    (mirrors the ``.page-grid`` primitives). Pin the markup so a
-    template tweak can't silently regress the layout.
+    Two independent flex columns; cards in each column stack in
+    DOM order with the normal inter-card gap. Quick Setup +
+    Extract Data live in the right column so Extract Data sits
+    directly below Quick Setup with no row-alignment forcing.
+
+    Mobile collapse order follows source: Workflow → Session
+    Details → Danger Zone → Quick Setup → Extract Data.
     """
 
     review_session = _make_session(client, db, code="qs-card-order")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    extract_data_pos = body.find('id="extract-data"')
-    danger_zone_pos = body.find('id="danger-zone"')
+    workflow_pos = body.find('id="next-action"')
     session_details_pos = body.find("<h2>Session Details</h2>")
+    danger_zone_pos = body.find('id="danger-zone"')
     quick_setup_pos = body.find('id="quick-setup"')
+    extract_data_pos = body.find('id="extract-data"')
 
-    # All anchors found.
+    # All anchors found — Workflow card now on Home too.
     assert -1 not in (
-        extract_data_pos,
-        danger_zone_pos,
+        workflow_pos,
         session_details_pos,
+        danger_zone_pos,
         quick_setup_pos,
+        extract_data_pos,
     )
-
-    # The Workflow card no longer renders on Session Home.
-    assert 'id="next-action"' not in body
 
     # Source order = mobile DOM collapse order.
     assert (
-        session_details_pos
+        workflow_pos
+        < session_details_pos
+        < danger_zone_pos
         < quick_setup_pos
         < extract_data_pos
-        < danger_zone_pos
     )
-
-    # Desktop visual placement comes from grid-placement classes
-    # on the direct ``.bottom-grid`` children.
-    assert 'id="quick-setup"' in body
-    qs_block = body.split('id="quick-setup"', 1)[0].rsplit("<div", 1)[1]
-    assert "card-tr" in qs_block, "Quick Setup should carry .card-tr"
-    ed_block = body.split('id="extract-data"', 1)[0].rsplit("<div", 1)[1]
-    assert "card-br" in ed_block, "Extract Data should carry .card-br"
 
 
 def test_quick_setup_top_grid_layout(

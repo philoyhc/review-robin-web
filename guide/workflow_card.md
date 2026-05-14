@@ -682,11 +682,28 @@ the pair table, so it naturally has room for the inner split.
   `_render_assignments_hub` now calls both helpers and merges the
   returned dict into its template context with `**workflow_ctx`.
   Each PR-6+ page route follows the same one-call pattern.
-- **PRs 6+ (planned, "rollout"):** add the Workflow card to each
-  remaining Operations-row page (Validate, Previews, Invitations,
-  Responses), one PR per page. Each PR is small once the shared
-  context builder lands in PR 5: include the partial, plumb the
-  context dict, add a page-specific `return_to` slug.
+- **PR 6 (shipped 2026-05-14):** restore the Workflow card to
+  Session Home (the card is now Operations-page chrome generally;
+  Session Home is no exception). Include the partial full-width
+  just below the chrome; call `views.build_workflow_card_context`
+  with `return_to="home"`; plumb the `super_status` /
+  `super_step` / `super_error` query params. Same PR replaces the
+  2×2 page-card grid with two independent flex columns so Extract
+  Data sits directly below Quick Setup without row-alignment
+  forcing (the user-facing rationale: Danger Zone in the left
+  column tends to be taller than the right-column counterpart,
+  and forcing row-2 cards to start at `max(left_row2_height,
+  right_row2_height)` made Extract Data drift down with a large
+  visual gap above it). The retired
+  `.bottom-grid > .card-tl/tr/bl/br` placement rules + the
+  `extra_card_class` Jinja variable on the two card partials
+  retire as cruft.
+- **PRs 7+ (planned, "Operations-row rollout"):** add the
+  Workflow card to each remaining Operations-row page (Validate,
+  Previews, Invitations, Responses), one PR per page. Each PR is
+  small once the shared context builder lands in PR 5: include
+  the partial, plumb the context dict, add a page-specific
+  `return_to` slug.
 
 Splitting this way keeps each PR reviewable; the template + content
 moves are cosmetic and the route work is the only behaviour change.

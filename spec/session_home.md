@@ -59,51 +59,52 @@ states.
 
 Two-column body below the chrome and status strip.
 
-> **Workflow card retired from Session Home (2026-05-14).** The
-> card now lives only on the Operations-row pages (currently the
-> Assignments page; eventually every Operations page once the
-> super-button work in `guide/workflow_card.md` lands). Session
-> Home loses the lifecycle-advancing card entirely; the
-> Operations row in the chrome top-nav is the entry point for
-> state-advancing work. The historical Workflow-card material
-> below (sections 1 + 5) is preserved as the authoritative
-> behaviour reference for the card itself, but the per-state
-> behaviour and the stepper now render on the Operations-row
-> pages, not on Home.
-
-### Page-card grid (2 × 2)
-
-The four cards sit as direct children of `.bottom-grid`, with
-explicit `.card-tl` / `.card-tr` / `.card-bl` / `.card-br`
-placement classes driving desktop visual position (mirrors the
-`.page-grid` primitives in `base.html`).
+### Page-card layout (workflow card + two columns)
 
 ```
-┌── Session Details (tl) ──┐ ┌── Quick Setup (tr) ──┐
-│   metadata + Edit        │ │   scaffolded bulk    │
-└──────────────────────────┘ └──────────────────────┘
-┌── Danger Zone   (bl) ────┐ ┌── Extract Data (br) ─┐
-│   destructive cleanup    │ │   responses extract  │
-└──────────────────────────┘ └──────────────────────┘
+┌────────────── Workflow ──────────────────────────────────────┐
+│  full-width, just below the chrome                           │
+└──────────────────────────────────────────────────────────────┘
+┌── Session Details ───────┐  ┌── Quick Setup ───────────┐
+│   metadata + Edit        │  │   scaffolded bulk        │
+└──────────────────────────┘  └──────────────────────────┘
+┌── Danger Zone ───────────┐  ┌── Extract Data ──────────┐
+│   destructive cleanup    │  │   responses extract      │
+└──────────────────────────┘  └──────────────────────────┘
 ```
 
-DOM source order = mobile-collapse order: **Session Details → Quick
-Setup → Extract Data → Danger Zone**. Below ~800px viewport width
-the grid collapses to a single stacked column in that same order.
+The Workflow card sits full-width at the top of the page-card
+region, just below the chrome (same `next_action_card.html`
+partial the Operations-row pages render). Underneath it, the
+remaining four cards lay out in two **independent flex columns**
+(`.bottom-left` flex-column wrappers); each column flows
+independently so Extract Data sits directly below Quick Setup
+with the normal inter-card gap regardless of how tall Danger
+Zone grows in the other column.
 
-Quick Setup sits in the right column (top-right) so the operator
-reads it next to Session Details rather than mixed in with the
-destructive-cleanup column. Danger Zone sits in the left column
-(bottom-left) so the operator's destructive cleanup actions sit at
-the natural end of the working column rather than next to the
-read-mostly Session Details. Extract Data anchors the bottom-right
-slot — the operator reaches for it once responses are in, which is
-late in the session lifecycle, so it reads as the natural follow-on
-to Quick Setup above it.
+DOM source order = mobile-collapse order:
+**Workflow → Session Details → Danger Zone → Quick Setup →
+Extract Data**. Below ~800px viewport width the columns collapse
+into a single stacked column in that same order.
 
-*(Session Details + Quick Setup placement updated 2026-05-14 to
-swap columns; the original layout had the Workflow card top-left
-on Session Home, which retired in PR #967.)*
+Quick Setup + Extract Data live in the right column so the
+destructive-cleanup column (Danger Zone) stays on the left and
+the bulk-setup affordances cluster on the right. Extract Data
+anchors the bottom of the right column — operators reach for it
+once responses are in, which is late in the session lifecycle.
+
+*Layout history:*
+- 2026-05-14 (PR #967): Workflow card retired from Session Home;
+  cards reorganised into a 2×2 grid (Session Details / Quick
+  Setup top, Danger Zone / Extract Data bottom).
+- 2026-05-14 (PR #969): Session Details + Quick Setup swapped
+  with Danger Zone + Extract Data so Session Details anchored
+  the top-left slot.
+- 2026-05-14 (PR 6): Workflow card returns to Session Home (the
+  card now functions as Operations-page chrome generally and
+  Session Home is no exception); 2×2 grid replaced with two
+  independent flex columns so Extract Data sits directly below
+  Quick Setup without row-alignment forcing.
 
 ## Cards
 
