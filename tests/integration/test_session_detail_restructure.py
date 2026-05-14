@@ -143,8 +143,8 @@ def test_session_detail_renders_session_layout(
     # surfaces as the primary button label inside the card.
     assert 'id="next-action"' in body
     assert "<h2>Next Action</h2>" in body
-    # Populated draft state: primary button is "Validate Setup".
-    assert ">Validate Setup</a>" in body
+    # Populated draft state: primary button is "Validate setup".
+    assert ">Validate setup</a>" in body
     assert "<h2>Run Session</h2>" not in body
     assert "Danger Zone" in body
     assert 'id="danger-zone"' in body
@@ -197,9 +197,9 @@ def test_session_detail_no_validate_summary_by_default(
     body = client.get(f"/operator/sessions/{review_session.id}").text
     # Populated draft session, no ``?validated=1`` — no validation card
     # and no Activate form should appear. The Next action card surfaces
-    # "Validate Setup" as its primary button.
+    # "Validate setup" as its primary button.
     assert "<h2>Next Action</h2>" in body
-    assert ">Validate Setup</a>" in body
+    assert ">Validate setup</a>" in body
     assert "<h2>Validation summary</h2>" not in body
     assert (
         f'action="/operator/sessions/{review_session.id}/activate"'
@@ -233,15 +233,20 @@ def test_session_detail_empty_rosters_renders_setup_short_circuit(
     )
     # Clickable forward actions suppressed in this state — the
     # workflow-stepper buttons are present but all carry `disabled`.
-    assert ">Validate Setup</a>" not in body
-    assert ">Activate Session</button>" not in body
+    # (The inert ``disabled`` markup is checked in the loop below;
+    # here we verify no live-form markup leaks through.)
+    assert ">Validate setup</a>" not in body
+    assert 'id="next-action-activate-form"' not in body
+    assert 'id="next-action-generate-form"' not in body
     assert ">See validation details</a>" not in body
-    # Stepper preview present.
+    # Stepper preview present: every stage rendered inert.
     for label in (
         "Generate assignments",
-        "Validate Setup",
-        "Invite reviewers",
-        "Monitor responses",
+        "Validate setup",
+        "Start session",
+        "Invite",
+        "Monitor",
+        "Revert to draft",
     ):
         assert (
             f'disabled aria-disabled="true">{label}</button>' in body
@@ -261,7 +266,7 @@ def test_session_detail_advances_to_validated_with_query(
     # The Next action card stays titled "Next action" — the per-state
     # action surfaces as the primary button label inside.
     assert "<h2>Next Action</h2>" in body
-    assert ">Activate Session</button>" in body
+    assert ">Start session</button>" in body
     # Validated-can-activate body copy (no pills any more).
     assert "successfully validated" in body
     # Activate form on the card.
@@ -269,11 +274,12 @@ def test_session_detail_advances_to_validated_with_query(
         f'action="/operator/sessions/{review_session.id}/activate"' in body
     )
     # Workflow-stepper row: Generate (Secondary regenerate) and
-    # Revert to draft (Secondary) flank the Activate primary; later
-    # stages preview as disabled buttons.
+    # Revert to draft (Secondary) flank the Start session primary;
+    # Validate setup re-renders as an inert preview of the past
+    # stage; Invite + Monitor are future-stage previews.
     assert ">Generate assignments</button>" in body
     assert ">Revert to draft</button>" in body
-    for label in ("Invite reviewers", "Monitor responses"):
+    for label in ("Validate setup", "Invite", "Monitor"):
         assert (
             f'disabled aria-disabled="true">{label}</button>' in body
         ), f"expected inert stepper button {label!r}"
@@ -294,14 +300,14 @@ def test_validated_session_keeps_action_card_without_query(
     with_query = client.get(
         f"/operator/sessions/{review_session.id}?validated=1"
     ).text
-    assert ">Activate Session</button>" in with_query
+    assert ">Start session</button>" in with_query
 
     # On a refresh without the query, the card stays — state, not URL,
     # drives the contents now.
     without_query = client.get(
         f"/operator/sessions/{review_session.id}"
     ).text
-    assert ">Activate Session</button>" in without_query
+    assert ">Start session</button>" in without_query
     assert (
         f'action="/operator/sessions/{review_session.id}/activate"'
         in without_query
@@ -799,18 +805,22 @@ def test_next_action_card_in_ready_renders_pause(
     )
     assert 'form="next-action-pause-form"' in body
     assert 'name="confirm" value="true"' in body
-    # State 6 stepper: Generate / Activate previews inert; Invite
-    # reviewers / Monitor responses live Secondary links; Revert
-    # primary submit. The two-section pause body retired with the
-    # stepper refresh — body is a single paragraph now.
+    # State 6 stepper: Generate / Validate setup / Start session
+    # previews inert; Invite + Monitor live Secondary links;
+    # Revert primary submit. The two-section pause body retired
+    # with the stepper refresh — body is a single paragraph now.
     assert '<hr class="next-action-divider">' not in body
     assert ">Pause Session</button>" not in body
-    for label in ("Generate assignments", "Activate Session"):
+    for label in (
+        "Generate assignments",
+        "Validate setup",
+        "Start session",
+    ):
         assert (
             f'disabled aria-disabled="true">{label}</button>' in body
         ), f"expected inert stepper button {label!r}"
-    assert ">Invite reviewers</a>" in body
-    assert ">Monitor responses</a>" in body
+    assert ">Invite</a>" in body
+    assert ">Monitor</a>" in body
     assert ">See previews</a>" not in body
     # Body copy: single-paragraph rewrite per the latest pass.
     assert "Session is currently activated" in body
