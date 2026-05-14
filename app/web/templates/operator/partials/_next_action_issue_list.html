@@ -1,0 +1,39 @@
+{# Compact per-issue list for the Workflow card's right column.
+   Renders the issues currently in ``validation_issues_by_severity``
+   grouped by severity (errors → warnings → info), each item
+   showing the issue's summary text + an optional fix-page deep
+   link (``fix_url`` + ``fix_page_label``, stamped by the
+   validate-session-setup rule registry; see Segment 11G PR B).
+
+   The full per-issue ``<details>`` "Why this check?" disclosure
+   that the Validate page renders is intentionally NOT included
+   here — the right column is a compact summary, not the
+   authoritative diagnostic surface. Operators who want the
+   full report still navigate to the Validate page via the
+   chrome top-nav. #}
+{% set _issue_groups = [
+  ("error", validation_issues_by_severity.get("errors", []), "pill-error"),
+  ("warning", validation_issues_by_severity.get("warnings", []), "pill-empty"),
+  ("info", validation_issues_by_severity.get("info", []), "pill-count"),
+] %}
+{% set _has_any = (
+  validation_issues_by_severity.get("errors", []) | length
+  + validation_issues_by_severity.get("warnings", []) | length
+  + validation_issues_by_severity.get("info", []) | length
+) > 0 %}
+{% if _has_any %}
+  <ul class="next-action-issue-list">
+    {% for severity, group, pill_class in _issue_groups %}
+      {% for issue in group %}
+        <li>
+          <span class="pill {{ pill_class }}">{{ severity }}</span>
+          <span class="next-action-issue-message">{{ issue.message }}</span>
+          {% if issue.fix_url %}
+            <a class="next-action-issue-fix"
+               href="{{ issue.fix_url }}{% if issue.fix_anchor %}#{{ issue.fix_anchor }}{% endif %}">{{ issue.fix_page_label or "Fix" }}</a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    {% endfor %}
+  </ul>
+{% endif %}

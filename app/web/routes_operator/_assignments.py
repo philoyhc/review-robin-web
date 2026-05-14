@@ -178,6 +178,11 @@ def _render_assignments_hub(
     # already in ``validated`` (matching Session Home's gate); other
     # states fall back to the generic copy.
     validation_summary: dict[str, object] | None = None
+    validation_issues_by_severity: dict[str, list] = {
+        "errors": [],
+        "warnings": [],
+        "info": [],
+    }
     if validated_just_ran or lifecycle.is_validated(review_session):
         issues_for_summary = validation.validate_session_setup(db, review_session)
         report = lifecycle.build_readiness_report(issues_for_summary)
@@ -189,11 +194,26 @@ def _render_assignments_hub(
             and lifecycle.is_validated(review_session),
             "needs_acknowledge": report.has_non_blocking_findings,
         }
-    is_setup_empty = lifecycle.is_draft(review_session) and (
-        csv_imports.existing_reviewer_count(db, review_session.id) == 0
-        or csv_imports.existing_reviewee_count(db, review_session.id) == 0
-        or instruments_service.has_unpinned(db, review_session.id)
+        validation_issues_by_severity = {
+            "errors": report.errors,
+            "warnings": report.warnings,
+            "info": report.info,
+        }
+    reviewer_count = csv_imports.existing_reviewer_count(db, review_session.id)
+    reviewee_count = csv_imports.existing_reviewee_count(db, review_session.id)
+    has_unpinned_instruments = instruments_service.has_unpinned(
+        db, review_session.id
     )
+    is_setup_empty = lifecycle.is_draft(review_session) and (
+        reviewer_count == 0
+        or reviewee_count == 0
+        or has_unpinned_instruments
+    )
+    setup_checklist = {
+        "reviewers_ok": reviewer_count > 0,
+        "reviewees_ok": reviewee_count > 0,
+        "instruments_pinned_ok": not has_unpinned_instruments,
+    }
     is_pre_generate = (
         lifecycle.is_draft(review_session)
         and not is_setup_empty
@@ -219,8 +239,10 @@ def _render_assignments_hub(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "assignment_count": assignment_count,
-            "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
-            "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
+            "reviewer_count": reviewer_count,
+            "reviewee_count": reviewee_count,
+            "setup_checklist": setup_checklist,
+            "validation_issues_by_severity": validation_issues_by_severity,
             "pair_sample": pair_sample,
             "truncated_count": truncated_count,
             "pair_context_lookup": pair_context_lookup,
