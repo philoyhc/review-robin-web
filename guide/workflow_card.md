@@ -716,8 +716,12 @@ the pair table, so it naturally has room for the inner split.
   params on the route, call
   `views.build_workflow_card_context(return_to="previews", ...)`,
   merge `**workflow_ctx`.
-- **PRs 9 / 10 (planned):** Workflow card on the Invitations and
-  Responses pages respectively. Same drop-in pattern.
+- **PR 9 (shipped 2026-05-14):** Workflow card on the Invitations
+  page. Same drop-in pattern. (The `is_ready` lifecycle key the
+  template already consumed for its ready-state gating now comes
+  from the builder's output instead of an inline
+  `lifecycle.is_ready` call.)
+- **PR 10 (planned):** Workflow card on the Responses page.
 
 Splitting this way keeps each PR reviewable; the template + content
 moves are cosmetic and the route work is the only behaviour change.
