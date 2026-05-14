@@ -318,6 +318,9 @@ def invitations_index(
     request: Request,
     status: str = "all",
     q: str = "",
+    super_status: str | None = None,
+    super_step: str | None = None,
+    super_error: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -336,6 +339,14 @@ def invitations_index(
         if r.invitation.status == "pending"
     )
     incomplete_count = sum(1 for r in all_rows if r.is_incomplete)
+    workflow_ctx = views.build_workflow_card_context(
+        db,
+        review_session,
+        return_to="invitations",
+        super_failure=views.parse_super_failure(
+            super_status, super_step, super_error
+        ),
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_invitations.html",
@@ -354,10 +365,10 @@ def invitations_index(
             "pending_count": pending_count,
             "incomplete_count": incomplete_count,
             "total_invitation_count": len(invitation_rows),
-            "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Invitations"
             ),
+            **workflow_ctx,
         },
     )
 
