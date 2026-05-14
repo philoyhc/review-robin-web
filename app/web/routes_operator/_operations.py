@@ -57,6 +57,9 @@ def validate_session(
     severity: str = "all",
     activate: int = 0,
     return_to: str | None = None,
+    super_status: str | None = None,
+    super_step: str | None = None,
+    super_error: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -68,7 +71,7 @@ def validate_session(
     # ``validated`` sessions that have warnings or new errors. On
     # ineligible states (draft / ready / closed) or when there's
     # nothing to acknowledge, drop the param and 303 to the clean
-    # URL — operator can activate (or not) from Home.
+    # URL — operator can activate (or not) from the Workflow card.
     activate_banner: dict[str, object] | None = None
     if activate:
         if not lifecycle.is_validated(review_session):
@@ -94,6 +97,14 @@ def validate_session(
     validate_ctx = views.build_validate_context(
         db, review_session, issues, severity_filter=severity
     )
+    workflow_ctx = views.build_workflow_card_context(
+        db,
+        review_session,
+        return_to="validate",
+        super_failure=views.parse_super_failure(
+            super_status, super_step, super_error
+        ),
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_validate.html",
@@ -104,19 +115,11 @@ def validate_session(
             "issues": issues,
             "validate": validate_ctx,
             "activate_banner": activate_banner,
-            "error_count": len(report.errors),
-            "warning_count": len(report.warnings),
-            "info_count": len(report.info),
-            "can_activate": report.can_activate
-            and lifecycle.is_validated(review_session),
-            "needs_acknowledge": report.has_non_blocking_findings,
-            "is_draft": lifecycle.is_draft(review_session),
-            "is_validated": lifecycle.is_validated(review_session),
-            "is_ready": lifecycle.is_ready(review_session),
             "activate_return_to": return_to,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Validate setup"
             ),
+            **workflow_ctx,
         },
     )
 

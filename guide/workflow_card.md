@@ -698,12 +698,25 @@ the pair table, so it naturally has room for the inner split.
   `.bottom-grid > .card-tl/tr/bl/br` placement rules + the
   `extra_card_class` Jinja variable on the two card partials
   retire as cruft.
-- **PRs 7+ (planned, "Operations-row rollout"):** add the
-  Workflow card to each remaining Operations-row page (Validate,
-  Previews, Invitations, Responses), one PR per page. Each PR is
-  small once the shared context builder lands in PR 5: include
-  the partial, plumb the context dict, add a page-specific
-  `return_to` slug.
+- **PR 7 (shipped 2026-05-14):** Workflow card on the Validate
+  page. New `return_to="validate"` slug added to
+  `_REVERT_RETURN_TO` in `_shared.py` (alongside `previews`,
+  `invitations`, and `responses`, which the remaining rollout
+  PRs will pick up). Route handler in `_operations.py:validate_session`
+  now calls `views.build_workflow_card_context` + merges
+  `**workflow_ctx` into its template context. The pre-existing
+  lifecycle / readiness keys (`is_draft`, `is_validated`, etc.)
+  collapse into the builder's output. The Validate-page warnings
+  banner (rendered on `?activate=1`) keeps its own template
+  block — it's the State 4B detour landing surface and stays
+  separate from the workflow stepper.
+- **PRs 8 / 9 / 10 (planned):** Workflow card on the Previews,
+  Invitations, and Responses pages respectively. Each PR is small
+  once the shared context builder + `_REVERT_RETURN_TO` slugs
+  land in PR 7: include the partial, plumb the
+  `super_status` / `super_step` / `super_error` query params,
+  call the builder with the page-specific `return_to`, merge
+  `**workflow_ctx`.
 
 Splitting this way keeps each PR reviewable; the template + content
 moves are cosmetic and the route work is the only behaviour change.
