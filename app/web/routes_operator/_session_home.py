@@ -47,6 +47,7 @@ from app.web.deps import (
     require_sys_admin_or_session_operator,
 )
 from app.web.routes_operator._shared import (
+    _REVERT_RETURN_TO,
     _lifecycle_error_response,
     _quick_setup_unlocked,
     _require_editable,
@@ -56,9 +57,6 @@ from app.web.routes_operator._shared import (
 
 
 router = APIRouter()
-
-
-_REVERT_RETURN_TO = {"reviewers", "reviewees", "assignments", "instruments"}
 
 
 @router.get("/sessions/new", response_class=HTMLResponse)

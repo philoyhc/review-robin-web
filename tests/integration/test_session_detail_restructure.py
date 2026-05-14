@@ -142,7 +142,7 @@ def test_session_detail_renders_session_layout(
     # ("Next action") across lifecycle states; the per-state action
     # surfaces as the primary button label inside the card.
     assert 'id="next-action"' in body
-    assert "<h2>Next Action</h2>" in body
+    assert "<h2>Workflow</h2>" in body
     # Populated draft state: primary button is "Validate setup".
     assert ">Validate setup</a>" in body
     assert "<h2>Run Session</h2>" not in body
@@ -198,7 +198,7 @@ def test_session_detail_no_validate_summary_by_default(
     # Populated draft session, no ``?validated=1`` — no validation card
     # and no Activate form should appear. The Next action card surfaces
     # "Validate setup" as its primary button.
-    assert "<h2>Next Action</h2>" in body
+    assert "<h2>Workflow</h2>" in body
     assert ">Validate setup</a>" in body
     assert "<h2>Validation summary</h2>" not in body
     assert (
@@ -225,7 +225,7 @@ def test_session_detail_empty_rosters_renders_setup_short_circuit(
         f"/operator/sessions/{review_session.id}?validated=1"
     ).text
 
-    assert "<h2>Next Action</h2>" in body
+    assert "<h2>Workflow</h2>" in body
     assert "Session not fully set up." in body
     assert (
         "Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing."
@@ -266,7 +266,7 @@ def test_session_detail_advances_to_validated_with_query(
 
     # The Next action card stays titled "Next action" — the per-state
     # action surfaces as the primary button label inside.
-    assert "<h2>Next Action</h2>" in body
+    assert "<h2>Workflow</h2>" in body
     assert ">Start session</button>" in body
     # Validated-can-activate body copy (no pills any more).
     assert "successfully validated" in body
@@ -802,7 +802,7 @@ def test_next_action_card_in_ready_renders_pause(
 
     # Card title is constant ("Next action"); the workflow-stepper
     # row carries Revert to draft as the Primary wind-down action.
-    assert "<h2>Next Action</h2>" in body
+    assert "<h2>Workflow</h2>" in body
     assert ">Revert to draft</button>" in body
     # Pause form still POSTs to /revert with the hidden
     # confirm=true gate; the button references it via form="...".
