@@ -78,6 +78,37 @@ def _seed_pair_plus_pinned(
 # --------------------------------------------------------------------------- #
 
 
+def test_workflow_card_renders_two_column_grid(
+    client: TestClient, db: Session
+) -> None:
+    """The Workflow card on the Assignments page wraps its existing
+    body + stepper row in a ``.next-action-grid`` two-column layout,
+    with an empty ``<aside class="next-action-status">`` as the right
+    column. PR 2 fills the aside with state-conditional content; this
+    test pins the structural markup so the layout can't silently
+    regress."""
+    review_session = _seed_pair_plus_pinned(client, db, code="rt-grid")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/assignments"
+    ).text
+    assert 'class="next-action-grid"' in body
+    assert 'class="next-action-main"' in body
+    assert 'class="next-action-status"' in body
+    assert 'id="next-action-status"' in body
+    # The body and stepper-buttons divs still render inside the
+    # left-column ``next-action-main`` wrapper.
+    assert 'class="next-action-body"' in body
+    assert 'class="next-action-buttons"' in body
+    # The grid wrapper sits inside the card, after the H2.
+    card_open = body.find('id="next-action"')
+    grid_open = body.find('class="next-action-grid"')
+    assert card_open != -1 and grid_open != -1 and grid_open > card_open
+    # The right-column aside renders after the left-column main.
+    main_open = body.find('class="next-action-main"')
+    status_open = body.find('class="next-action-status"')
+    assert main_open != -1 and status_open != -1 and status_open > main_open
+
+
 def test_validate_setup_link_targets_assignments_page(
     client: TestClient, db: Session
 ) -> None:

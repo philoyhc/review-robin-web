@@ -1392,6 +1392,33 @@
         gap: var(--space-2);
         padding-top: var(--space-3);
       }
+      /* Two-column inner layout for the Workflow card: left column
+         carries the existing body + stepper row; right column
+         (.next-action-status) carries lifecycle status reports,
+         validation summaries, and super-button error messages.
+         Wired up empty in PR 1 of the super-button rollout
+         (guide/workflow_card.md A.8); per-state content lands in
+         PR 2. Collapses to a single stacked column at narrow
+         viewports so the stepper buttons don't get squeezed. */
+      body.ui-v2 .card.next-action .next-action-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--space-4);
+        flex: 1 1 auto;
+      }
+      body.ui-v2 .card.next-action .next-action-main {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      body.ui-v2 .card.next-action .next-action-status {
+        min-width: 0;
+      }
+      @media (max-width: 720px) {
+        body.ui-v2 .card.next-action .next-action-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
       /* Code block — bg-muted-tinted block for monospace content
          (e.g. rendered email bodies on the Outbox page). */
       body.ui-v2 .code-block {
