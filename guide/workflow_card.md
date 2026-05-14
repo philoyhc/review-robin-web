@@ -663,14 +663,25 @@ the pair table, so it naturally has room for the inner split.
   surface is harmless, and `/activate` is load-bearing for the
   Validate-page warnings-detour banner (the super-button itself
   303s to that page in State 4B).
-- **PR 5 (planned, "extract"):** introduce a shared
-  workflow-card context builder under `app/web/views/` so the
-  Assignments route's inline context computation (the canonical
-  source after PR 4) can be reused as the card spreads to the
-  other Operations-row pages (Validate / Previews / Invitations /
-  Responses). PR 5 has one immediate caller (Assignments) and
-  scaffolds the entry point for the four-page rollout that
-  follows.
+- **PR 5 (shipped 2026-05-14):** extracted the shared workflow-card
+  context builder into `app/web/views/_workflow_card.py`. Two
+  entry points:
+  - `views.build_workflow_card_context(db, review_session, *,
+    return_to, validated_just_ran, super_failure, user,
+    correlation_id)` returns the 12-key context dict the partial
+    expects (lifecycle booleans + state predicates +
+    `validation_summary` + `validation_issues_by_severity` +
+    `setup_checklist` + invitation flags + `super_failure` +
+    `next_action_return_to`). The builder also owns the inline
+    `?validated=1` validate-and-promote step that used to live
+    in the Assignments route.
+  - `views.parse_super_failure(super_status, super_step,
+    super_error)` decodes the workflow super-button's redirect
+    query-param triple into the `super_failure` dict (or
+    `None`).
+  `_render_assignments_hub` now calls both helpers and merges the
+  returned dict into its template context with `**workflow_ctx`.
+  Each PR-6+ page route follows the same one-call pattern.
 - **PRs 6+ (planned, "rollout"):** add the Workflow card to each
   remaining Operations-row page (Validate, Previews, Invitations,
   Responses), one PR per page. Each PR is small once the shared

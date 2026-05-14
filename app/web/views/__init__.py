@@ -106,6 +106,15 @@ from ._validate import (
     validate_lifecycle_copy,
 )
 
+# Workflow card context builder (PR 5 of guide/workflow_card.md
+# A.8): shared by every Operations-row page that hosts the
+# card — Assignments today; Validate / Previews / Invitations /
+# Responses incoming in PRs 6+.
+from ._workflow_card import (
+    build_workflow_card_context,
+    parse_super_failure,
+)
+
 # Previews page view-shapes (sliced in PR 9): reviewer picker,
 # three-tab email previews, merge-tag editor strip, reviewer-
 # surface preview card.
@@ -220,6 +229,8 @@ __all__ = [
     "build_setup_rows",
     "build_surface_preview_context",
     "build_validate_context",
+    "build_workflow_card_context",
+    "parse_super_failure",
     "compute_next_action_generate_state",
     "constraint_summary_for_field",
     "email_preview_from_display",
