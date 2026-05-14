@@ -1,5 +1,5 @@
 {# Next Action card — constant title and frame, state-conditional
-   body, plus a uniform six-button workflow-stepper row at the
+   body, plus a uniform seven-button workflow-stepper row at the
    bottom. Per spec/session_home.md, this card carries any
    explanatory messaging the operator needs about the session's
    lifecycle state, replacing the retired top-of-body lock cards.
@@ -12,6 +12,10 @@
    - ``is_pre_generate`` (bool) — draft with rosters and rule pins
      populated but no assignment rows generated yet.
    - ``is_draft`` / ``is_validated`` / ``is_ready`` (bool flags)
+   - ``invitations_generated`` (bool) — at least one Invitation
+     row exists for the session.
+   - ``invitations_sent`` (bool) — at least one Invitation row has
+     a non-NULL ``sent_at``.
    - ``validation_summary`` (dict | None) with ``error_count`` /
      ``warning_count`` / ``info_count`` / ``can_activate`` /
      ``needs_acknowledge``. ``None`` outside the ``?validated=1``
@@ -30,11 +34,13 @@
      preserves the Session Home behaviour where every action
      redirects back to Home.
 
-   The card renders the same six-stage workflow stepper across
+   The card renders the same seven-stage workflow stepper across
    every state: Generate assignments / Validate setup / Start
-   session / Invite / Monitor / Revert to draft. Each slot is
-   live (Primary or Secondary) or inert (``disabled``) depending
-   on the session's current lifecycle position. #}
+   session / Generate invites / Send invites / Send reminders /
+   Revert to draft. Each slot is live (Primary or Secondary) or
+   inert (``disabled``) depending on the session's current
+   lifecycle position. Revert to draft is always rendered in
+   Secondary style. #}
 {% set _next_action_return_to = next_action_return_to | default(none) %}
 {% set _validate_setup_href = (
   "/operator/sessions/" ~ session.id ~ "/" ~ _next_action_return_to ~ "?validated=1"
@@ -50,6 +56,9 @@
 {% set _validate_live = is_draft and not is_setup_empty and not is_pre_generate %}
 {% set _generate_live = is_pre_generate or _validate_live or (is_validated and validation_summary and validation_summary.can_activate) %}
 {% set _start_live = is_validated and validation_summary and validation_summary.can_activate %}
+{% set _generate_invites_live = is_ready and not invitations_generated %}
+{% set _send_invites_live = is_ready and invitations_generated and not invitations_sent %}
+{% set _send_reminders_live = is_ready and invitations_sent %}
 <div class="card next-action" id="next-action">
   <h2>Next Action</h2>
   <div class="next-action-body">
@@ -87,20 +96,35 @@
         <p>Validation shows that there are error(s). Resolve them and re-run validation before activating.</p>
       {% endif %}
     {% elif is_ready %}
-      {# State 6: activated. #}
-      <p>
-        Session is currently activated. Reviewers can access forms
-        and save responses. Don't forget to generate and send out
-        emails to notify the reviewers.
-      </p>
+      {% if not invitations_generated %}
+        {# State 6: activated, invitations not yet generated. #}
+        <p>
+          Session is currently activated. Reviewers can access forms
+          and save responses. Don't forget to generate and send out
+          emails to notify the reviewers.
+        </p>
+      {% elif not invitations_sent %}
+        {# State 7: activated, invitations generated but not sent. #}
+        <p>
+          Session is currently activated. Reviewers can access forms
+          and save responses. Don't forget to send out emails to
+          notify the reviewers.
+        </p>
+      {% else %}
+        {# State 8: activated, invitations generated and sent. #}
+        <p>
+          Session is currently activated. Reviewers can access forms
+          and save responses. You may remind reviewers if needed.
+        </p>
+      {% endif %}
     {% endif %}
 
     {# Hidden form holders for the stepper-row buttons; each one is
        emitted only when its corresponding stepper button is live so
        form= references never dangle. All forms post to the existing
-       lifecycle routes; the hidden inputs pre-acknowledge the
-       service-layer confirm gates so the buttons fire without
-       inline checkbox dialogs. #}
+       lifecycle / invitations routes; the hidden inputs pre-
+       acknowledge the service-layer confirm gates so the buttons
+       fire without inline checkbox dialogs. #}
     {% if _generate_live %}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/assignments/generate"
@@ -136,13 +160,23 @@
         {% endif %}
         <input type="hidden" name="confirm" value="true">
       </form>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/invitations/generate"
+            id="next-action-generate-invites-form"></form>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/invitations/send-all"
+            id="next-action-send-invites-form"></form>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/invitations/remind-incomplete"
+            id="next-action-send-reminders-form"></form>
     {% endif %}
   </div>
 
-  {# Workflow stepper — uniform six-button row across every state.
+  {# Workflow stepper — uniform seven-button row across every state.
      Stage 1: Generate assignments. Stage 2: Validate setup.
-     Stage 3: Start session. Stage 4: Invite. Stage 5: Monitor.
-     Stage 6: Revert to draft. #}
+     Stage 3: Start session. Stage 4: Generate invites.
+     Stage 5: Send invites. Stage 6: Send reminders.
+     Stage 7: Revert to draft (always Secondary). #}
   <div class="next-action-buttons">
     {# Generate assignments #}
     {% if is_pre_generate %}
@@ -175,33 +209,43 @@
               disabled aria-disabled="true">Start session</button>
     {% endif %}
 
-    {# Invite #}
-    {% if is_ready %}
-      <a class="btn secondary"
-         href="/operator/sessions/{{ session.id }}/invitations">Invite</a>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Invite</button>
-    {% endif %}
-
-    {# Monitor #}
-    {% if is_ready %}
-      <a class="btn secondary"
-         href="/operator/sessions/{{ session.id }}/monitoring">Monitor</a>
-    {% else %}
-      <button class="btn secondary" type="button"
-              disabled aria-disabled="true">Monitor</button>
-    {% endif %}
-
-    {# Revert to draft #}
-    {% if is_ready %}
+    {# Generate invites #}
+    {% if _generate_invites_live %}
       <button class="btn" type="submit"
+              form="next-action-generate-invites-form">Generate invites</button>
+    {% elif is_ready %}
+      <button class="btn secondary" type="submit"
+              form="next-action-generate-invites-form">Generate invites</button>
+    {% else %}
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Generate invites</button>
+    {% endif %}
+
+    {# Send invites #}
+    {% if _send_invites_live %}
+      <button class="btn" type="submit"
+              form="next-action-send-invites-form">Send invites</button>
+    {% elif is_ready and invitations_generated %}
+      <button class="btn secondary" type="submit"
+              form="next-action-send-invites-form">Send invites</button>
+    {% else %}
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Send invites</button>
+    {% endif %}
+
+    {# Send reminders #}
+    {% if _send_reminders_live %}
+      <button class="btn" type="submit"
+              form="next-action-send-reminders-form">Send reminders</button>
+    {% else %}
+      <button class="btn secondary" type="button"
+              disabled aria-disabled="true">Send reminders</button>
+    {% endif %}
+
+    {# Revert to draft — always Secondary when live. #}
+    {% if is_ready %}
+      <button class="btn secondary" type="submit"
               form="next-action-pause-form">Revert to draft</button>
-    {% elif is_validated and not _start_live %}
-      {# State 5: errors block activation; Revert is the single live
-         forward path and promotes to Primary. #}
-      <button class="btn" type="submit"
-              form="next-action-revert-form">Revert to draft</button>
     {% elif is_validated %}
       <button class="btn secondary" type="submit"
               form="next-action-revert-form">Revert to draft</button>

@@ -38,6 +38,12 @@ Home.
   (`lifecycle.needs_regeneration_after_revert`). Surfaces the
   Generate prompt before the operator can validate, including after
   a Revert / Pause that returns the session to draft.
+- `invitations_generated` — `True` iff at least one `Invitation` row
+  exists for the session (`invitations.has_invitations`). Splits
+  the ready phase into State 6 (not yet generated) vs States 7 / 8.
+- `invitations_sent` — `True` iff at least one `Invitation` row has
+  a non-NULL `sent_at` (`invitations.has_sent_invitations`). Splits
+  States 7 (none sent yet) vs 8 (some / all sent).
 - `validation_summary` — `dict | None`. Populated whenever the page
   was reached with `?validated=1` OR the session is already
   `validated`. Keys:
@@ -70,7 +76,10 @@ elif is_validated:
         if needs_acknowledge: → State 4B
         else:                 → State 4A
     else:                  → State 5
-elif is_ready:             → State 6
+elif is_ready:
+    if not invitations_generated: → State 6
+    elif not invitations_sent:    → State 7
+    else:                         → State 8
 ```
 
 ### Per-state body copy
@@ -84,14 +93,16 @@ elif is_ready:             → State 6
 | **4A** | `is_validated` + `can_activate` + not `needs_acknowledge` | *"The session setup data has successfully validated. Preview the reviewer surface to make sure that it conforms to your requirements before activating."* |
 | **4B** | `is_validated` + `can_activate` + `needs_acknowledge` | Same as 4A plus help-line: *"{N} warning(s) — review on Validate before activating."* |
 | **5** | `is_validated`, not `can_activate` | *"Validation shows that there are error(s). Resolve them and re-run validation before activating."* |
-| **6** | `is_ready` | *"Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers."* |
+| **6** | `is_ready`, no Invitation rows yet | *"Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers."* |
+| **7** | `is_ready`, Invitation rows exist, none `sent_at` | *"Session is currently activated. Reviewers can access forms and save responses. Don't forget to send out emails to notify the reviewers."* |
+| **8** | `is_ready`, at least one Invitation with `sent_at` | *"Session is currently activated. Reviewers can access forms and save responses. You may remind reviewers if needed."* |
 
-## Workflow stepper — uniform 6-button row
+## Workflow stepper — uniform 7-button row
 
-Every state renders the same six-stage bottom row, in the same order:
+Every state renders the same seven-stage bottom row, in the same order:
 
 ```
-Generate assignments · Validate setup · Start session · Invite · Monitor · Revert to draft
+Generate assignments · Validate setup · Start session · Generate invites · Send invites · Send reminders · Revert to draft
 ```
 
 Each slot is either **live** (Primary or Secondary, clickable) or
@@ -100,24 +111,29 @@ Secondary style for visual consistency).
 
 The matrix below shows what each slot does per state. `Pri` = Primary
 live, `Sec` = Secondary live, `—` = inert preview / past stage.
+Revert to draft is rendered in Secondary style whenever it's live —
+the stepper never promotes it to Primary.
 
-| Slot | 1 | 1A | 2 | 3 | 4A | 4B | 5 | 6 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Generate assignments | — | **Pri** | Sec | Sec | Sec | Sec | — | — |
-| Validate setup | — | — | **Pri** | **Pri** | — | — | — | — |
-| Start session | — | — | — | — | **Pri** | **Pri** | — | — |
-| Invite | — | — | — | — | — | — | — | Sec |
-| Monitor | — | — | — | — | — | — | — | Sec |
-| Revert to draft | — | — | — | — | Sec | Sec | **Pri** | **Pri** |
+| Slot | 1 | 1A | 2 | 3 | 4A | 4B | 5 | 6 | 7 | 8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Generate assignments | — | **Pri** | Sec | Sec | Sec | Sec | — | — | — | — |
+| Validate setup | — | — | **Pri** | **Pri** | — | — | — | — | — | — |
+| Start session | — | — | — | — | **Pri** | **Pri** | — | — | — | — |
+| Generate invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
+| Send invites | — | — | — | — | — | — | — | — | **Pri** | Sec |
+| Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
+| Revert to draft | — | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec |
 
 Notes:
-- **Generate** posts to `/operator/sessions/{id}/assignments/generate`
-  via the `next-action-generate-form` hidden form. The form ships
-  hidden `confirm_replace=true` + `acknowledge_response_loss=true`, so
-  clicking Generate fires without surfacing the route's confirm dialogs
-  (the operator's acknowledgment lives in the button label). The form
-  is emitted only in states where Generate is live (1A / 2 / 3 / 4A /
-  4B); other states render the inert preview.
+- **Generate assignments** posts to
+  `/operator/sessions/{id}/assignments/generate` via the
+  `next-action-generate-form` hidden form. The form ships hidden
+  `confirm_replace=true` + `acknowledge_response_loss=true`, so
+  clicking Generate fires without surfacing the route's confirm
+  dialogs (the operator's acknowledgment lives in the button
+  label). The form is emitted only in states where Generate is
+  live (1A / 2 / 3 / 4A / 4B); other states render the inert
+  preview.
 - **Validate setup** is an `<a>` whose `href` is
   `/operator/sessions/{id}/{return_to}?validated=1` (or
   `/?validated=1` off the Assignments page). Re-entering the page
@@ -131,20 +147,34 @@ Notes:
   `/operator/sessions/{id}/validate?activate=1&return_to=...`, routing
   the operator through the Validate page to acknowledge warnings
   inline before the `/activate` POST fires from that page's banner.
-- **Invite** / **Monitor** are `<a>`s to
-  `/operator/sessions/{id}/invitations` /
-  `/operator/sessions/{id}/monitoring` while `is_ready`; otherwise
-  inert previews.
+- **Generate invites** posts to
+  `/operator/sessions/{id}/invitations/generate` via
+  `next-action-generate-invites-form`. Calls
+  `invitations.generate_invitations`, which idempotently creates one
+  `Invitation` row per assigned active reviewer (skipping reviewers
+  with no `include=True` assignment and reviewers already invited).
+- **Send invites** posts to
+  `/operator/sessions/{id}/invitations/send-all` via
+  `next-action-send-invites-form`. The route iterates every pending
+  invitation and dispatches via `invitations.send_invitation`.
+- **Send reminders** posts to
+  `/operator/sessions/{id}/invitations/remind-incomplete` via
+  `next-action-send-reminders-form`. Calls
+  `invitations.send_reminders_to_incomplete` for reviewers whose
+  assignments aren't complete.
+- All three invitation forms emit on every ready state (6 / 7 / 8)
+  so the Secondary "re-run an earlier stage" buttons stay wired;
+  only the corresponding Primary slot's live state changes.
 - **Revert to draft**:
-  - States 4A / 4B (validated): Secondary submit via
+  - States 4A / 4B / 5 (validated): Secondary submit via
     `next-action-revert-form` to `/operator/sessions/{id}/revert`.
     Route dispatches to `lifecycle.invalidate_session` (validated →
     draft, audit `session.invalidated`).
-  - State 5 (validated + errors): same form, promoted to Primary.
-  - State 6 (ready): Primary submit via `next-action-pause-form` to
-    the same `/revert` endpoint with hidden `confirm=true`. Route
-    dispatches to `lifecycle.revert_session_to_draft` (ready →
-    draft, audit `session.reverted_to_draft`; instruments flip
+  - States 6 / 7 / 8 (ready): Secondary submit via
+    `next-action-pause-form` to the same `/revert` endpoint with
+    hidden `confirm=true`. Route dispatches to
+    `lifecycle.revert_session_to_draft` (ready → draft, audit
+    `session.reverted_to_draft`; instruments flip
     `accepting_responses = False`; responses preserved).
 
 ## Things that retired with the workflow-stepper refresh

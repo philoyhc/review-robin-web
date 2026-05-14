@@ -29,6 +29,7 @@ from app.services import (
     assignments,
     csv_imports,
     instruments as instruments_service,
+    invitations,
     relationships as relationships_service,
     validation,
 )
@@ -203,6 +204,12 @@ def _render_assignments_hub(
             )
         )
     )
+    invitations_generated = invitations.has_invitations(
+        db, review_session.id
+    )
+    invitations_sent = invitations.has_sent_invitations(
+        db, review_session.id
+    )
 
     return _templates.TemplateResponse(
         request,
@@ -225,6 +232,8 @@ def _render_assignments_hub(
             "is_ready": lifecycle.is_ready(review_session),
             "is_setup_empty": is_setup_empty,
             "is_pre_generate": is_pre_generate,
+            "invitations_generated": invitations_generated,
+            "invitations_sent": invitations_sent,
             "validation_summary": validation_summary,
             # Wire the Next Action card forms to redirect back here
             # rather than to Session Home after their POST. The

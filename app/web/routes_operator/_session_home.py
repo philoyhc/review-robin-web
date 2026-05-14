@@ -32,6 +32,7 @@ from app.services import (
     assignments,
     csv_imports,
     instruments as instruments_service,
+    invitations,
     responses,
     session_owners,
     sessions,
@@ -129,6 +130,12 @@ def session_detail(
             )
         )
     )
+    invitations_generated = invitations.has_invitations(
+        db, review_session.id
+    )
+    invitations_sent = invitations.has_sent_invitations(
+        db, review_session.id
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_detail.html",
@@ -160,6 +167,10 @@ def session_detail(
             # rows yet — surface the Generate prompt on the Next Action
             # card before Validate.
             "is_pre_generate": is_pre_generate,
+            # Activated-phase invitation lifecycle flags for the Next
+            # Action card's State 6 / 7 / 8 split.
+            "invitations_generated": invitations_generated,
+            "invitations_sent": invitations_sent,
             "has_responses": lifecycle.session_has_responses(db, review_session),
             "quick_setup": views.build_quick_setup_context(
                 db,

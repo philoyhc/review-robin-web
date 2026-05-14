@@ -132,20 +132,23 @@ Activated state, in the inline section).
 
 **Contents by lifecycle state:**
 
-The bottom row of the card is a uniform six-stage **workflow
+The bottom row of the card is a uniform seven-stage **workflow
 stepper**, in the same order across every state: `Generate assignments`
-· `Validate setup` · `Start session` · `Invite` · `Monitor` · `Revert
-to draft`. Each slot is either live (Primary or Secondary, clickable)
-or inert (`<button disabled>` in the Secondary style). The matrix:
+· `Validate setup` · `Start session` · `Generate invites` · `Send
+invites` · `Send reminders` · `Revert to draft`. Each slot is either
+live (Primary or Secondary, clickable) or inert (`<button disabled>`
+in the Secondary style). Revert to draft is rendered in Secondary
+style whenever it's live — the stepper never promotes it to Primary.
 
-| Slot | Empty draft | Pre-generate | Pre-validation | Just failed | Validated (no warn) | Validated (warn) | Validated (errors) | Activated |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Generate assignments | — | **Pri** | Sec | Sec | Sec | Sec | — | — |
-| Validate setup | — | — | **Pri** | **Pri** | — | — | — | — |
-| Start session | — | — | — | — | **Pri** | **Pri** | — | — |
-| Invite | — | — | — | — | — | — | — | Sec |
-| Monitor | — | — | — | — | — | — | — | Sec |
-| Revert to draft | — | — | — | — | Sec | Sec | **Pri** | **Pri** |
+| Slot | Empty draft | Pre-generate | Pre-validation | Just failed | Validated (no warn) | Validated (warn) | Validated (errors) | Activated, invitations not generated | Activated, generated not sent | Activated, sent |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Generate assignments | — | **Pri** | Sec | Sec | Sec | Sec | — | — | — | — |
+| Validate setup | — | — | **Pri** | **Pri** | — | — | — | — | — | — |
+| Start session | — | — | — | — | **Pri** | **Pri** | — | — | — | — |
+| Generate invites | — | — | — | — | — | — | — | **Pri** | Sec | Sec |
+| Send invites | — | — | — | — | — | — | — | — | **Pri** | Sec |
+| Send reminders | — | — | — | — | — | — | — | — | — | **Pri** |
+| Revert to draft | — | — | — | — | Sec | Sec | Sec | Sec | Sec | Sec |
 
 Body copy per state:
 
@@ -158,7 +161,9 @@ Body copy per state:
 | **Validated (no warnings)** — `is_validated` AND `can_activate` AND not `needs_acknowledge` | "The session setup data has successfully validated. Preview the reviewer surface to make sure that it conforms to your requirements before activating." |
 | **Validated (warnings)** — `is_validated` AND `can_activate` AND `needs_acknowledge` | Same as above plus help-line: "{N} warning(s) — review on Validate before activating." (Start session button is rendered as an `<a>` detouring through `/validate?activate=1` so warnings can be acknowledged inline.) |
 | **Validated (errors)** — `is_validated` AND not `can_activate` | "Validation shows that there are error(s). Resolve them and re-run validation before activating." |
-| **Activated** — `is_ready` | "Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers." |
+| **Activated, invitations not generated** — `is_ready` AND no `Invitation` rows yet | "Session is currently activated. Reviewers can access forms and save responses. Don't forget to generate and send out emails to notify the reviewers." |
+| **Activated, invitations generated but not sent** — `is_ready` AND Invitation rows exist AND none have `sent_at` | "Session is currently activated. Reviewers can access forms and save responses. Don't forget to send out emails to notify the reviewers." |
+| **Activated, invitations sent** — `is_ready` AND at least one Invitation has `sent_at` | "Session is currently activated. Reviewers can access forms and save responses. You may remind reviewers if needed." |
 
 Notes:
 
