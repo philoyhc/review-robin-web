@@ -11,122 +11,121 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
+  {# Session Home page-card layout (post-Workflow-card retirement):
+
+       ┌── Session Details (tl) ──┐ ┌── Quick Setup (tr) ──┐
+       │                          │ │                      │
+       └──────────────────────────┘ └──────────────────────┘
+       ┌── Danger Zone (bl) ──────┐ ┌── Extract Data (br) ─┐
+       │                          │ │                      │
+       └──────────────────────────┘ └──────────────────────┘
+
+     DOM source order = mobile-collapse order:
+     Session Details → Quick Setup → Extract Data → Danger Zone.
+     Desktop visual placement comes from the .card-tl/tr/bl/br
+     placement classes (mirrors the .page-grid primitives). #}
   <div class="bottom-grid">
-    {# Left column — Extract Data, Danger Zone. The Workflow card
-       retired from Session Home on the super-button refresh; the
-       card now only lives on the Operations-row pages
-       (Assignments etc.). #}
-    <div class="bottom-left">
-      {# Extract Data — full scaffolded shape per Segment 11H PR B. #}
-      {% include "operator/partials/_extract_data_card.html" %}
-
-      <div class="card danger-zone" id="danger-zone">
-        <h2>Danger Zone</h2>
-        <p class="form-help">
-          Delete Data wipes every reviewer response while leaving session setup intact.
-          Delete session removes the entire session and is locked while session is Activated.
-        </p>
-
-        <form method="post" action="/operator/sessions/{{ session.id }}/delete-data">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required>
-              Yes, delete every reviewer response on
-              <strong>{{ session.name }}</strong>. Setup data is preserved.
-            </label>
+    <div class="card card-tl">
+      <h2>Session Details</h2>
+      <div class="session-meta-row">
+        <div>
+          <p class="form-help" style="margin: 0;">Created by</p>
+          <p style="margin: 0 0 var(--space-3) 0;">
+            <span class="pill pill-count">{{ session.created_by_user.display_name or session.created_by_user.email }}</span>
           </p>
-          <p>
-            <button class="btn destructive" type="submit">Delete Data</button>
+          <p class="form-help" style="margin: 0;">Created</p>
+          <p style="margin: 0 0 var(--space-3) 0;">
+            <span class="pill pill-count">{{ session.created_at.isoformat() }}</span>
           </p>
-        </form>
-
-        <hr>
-
-        {# Per spec/session_home.md, the Delete Session affordance
-           stays visible-but-disabled while Activated rather than
-           being hidden — the operator should always see the action
-           and the path forward (Pause first, then delete). The
-           server still rejects the POST while ready (the lifecycle
-           gate in the route is the source of truth); this is a
-           visual change only. #}
-        <form method="post" action="/operator/sessions/{{ session.id }}/delete">
-          <p>
-            <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required
-                     {% if is_ready %}disabled{% endif %}>
-              Yes, delete <strong>{{ session.name }}</strong> and all its data.
-            </label>
+          <p class="form-help" style="margin: 0;">Last Modified</p>
+          <p style="margin: 0 0 var(--space-3) 0;">
+            <span class="pill pill-count">{{ session.updated_at.isoformat() }}</span>
           </p>
-          <p>
-            <button class="btn destructive" type="submit"
-                    {% if is_ready %}disabled aria-disabled="true"{% endif %}>Delete session</button>
+        </div>
+        <div>
+          <p class="form-help" style="margin: 0;">Deadline</p>
+          <p style="margin: 0 0 var(--space-3) 0;">
+            {% if session.deadline %}
+              <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
+            {% else %}
+              <span class="pill pill-empty">Not set</span>
+            {% endif %}
           </p>
-          {% if is_ready %}
-            <p class="form-help" style="margin-bottom: 0;">
-              Session deletion is locked while status is Activated. Pause the session
-              first to enable deletion.
-            </p>
-          {% endif %}
-        </form>
+          <p class="form-help" style="margin: 0;">Code</p>
+          <p style="margin: 0 0 var(--space-3) 0;"><code>{{ session.code }}</code></p>
+          <p class="form-help" style="margin: 0;">Help contact</p>
+          <p style="margin: 0 0 var(--space-3) 0;">{{ session.help_contact or "—" }}</p>
+        </div>
+      </div>
+      <p class="form-help" style="margin: 0;">Name</p>
+      <p style="margin: 0 0 var(--space-3) 0;">{{ session.name }}</p>
+      <p class="form-help" style="margin: 0;">Description</p>
+      <p style="margin: 0 0 var(--space-3) 0;">{{ session.description or "—" }}</p>
+      {# Lifecycle state shown in the chrome status strip — no
+         duplicate Status pill here per spec/session_home.md. #}
+      <div style="display: flex; justify-content: flex-end;">
+        <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
       </div>
     </div>
 
-    {# Right column — Session Details, Quick Setup. Quick Setup
-       sits in the right column rather than the working column so
-       its destructive setup-bulk actions don't compete with the
-       Next Action card for attention. Mobile DOM order is
-       Next Action → Extract Data → Danger Zone → Session Details
-       → Quick Setup. #}
-    <div class="bottom-left">
-      <div class="card">
-        <h2>Session Details</h2>
-        <div class="session-meta-row">
-          <div>
-            <p class="form-help" style="margin: 0;">Created by</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session.created_by_user.display_name or session.created_by_user.email }}</span>
-            </p>
-            <p class="form-help" style="margin: 0;">Created</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session.created_at.isoformat() }}</span>
-            </p>
-            <p class="form-help" style="margin: 0;">Last Modified</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session.updated_at.isoformat() }}</span>
-            </p>
-          </div>
-          <div>
-            <p class="form-help" style="margin: 0;">Deadline</p>
-            <p style="margin: 0 0 var(--space-3) 0;">
-              {% if session.deadline %}
-                <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
-              {% else %}
-                <span class="pill pill-empty">Not set</span>
-              {% endif %}
-            </p>
-            <p class="form-help" style="margin: 0;">Code</p>
-            <p style="margin: 0 0 var(--space-3) 0;"><code>{{ session.code }}</code></p>
-            <p class="form-help" style="margin: 0;">Help contact</p>
-            <p style="margin: 0 0 var(--space-3) 0;">{{ session.help_contact or "—" }}</p>
-          </div>
-        </div>
-        <p class="form-help" style="margin: 0;">Name</p>
-        <p style="margin: 0 0 var(--space-3) 0;">{{ session.name }}</p>
-        <p class="form-help" style="margin: 0;">Description</p>
-        <p style="margin: 0 0 var(--space-3) 0;">{{ session.description or "—" }}</p>
-        {# Lifecycle state shown in the chrome status strip — no
-           duplicate Status pill here per spec/session_home.md. #}
-        <div style="display: flex; justify-content: flex-end;">
-          <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
-        </div>
-      </div>
-
-      {# Quick Setup — full scaffolded shape per Segment 11H PR A.
-         Lives in the right column under Session Details and above
-         Danger Zone so the destructive setup-bulk actions cluster
-         with the other right-column cards rather than competing
-         with the Next Action card for attention. #}
+    {# Quick Setup — full scaffolded shape per Segment 11H PR A. #}
+    {% with extra_card_class = "card-tr" %}
       {% include "operator/partials/_quick_setup_card.html" %}
+    {% endwith %}
+
+    {# Extract Data — full scaffolded shape per Segment 11H PR B. #}
+    {% with extra_card_class = "card-br" %}
+      {% include "operator/partials/_extract_data_card.html" %}
+    {% endwith %}
+
+    <div class="card card-bl danger-zone" id="danger-zone">
+      <h2>Danger Zone</h2>
+      <p class="form-help">
+        Delete Data wipes every reviewer response while leaving session setup intact.
+        Delete session removes the entire session and is locked while session is Activated.
+      </p>
+
+      <form method="post" action="/operator/sessions/{{ session.id }}/delete-data">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required>
+            Yes, delete every reviewer response on
+            <strong>{{ session.name }}</strong>. Setup data is preserved.
+          </label>
+        </p>
+        <p>
+          <button class="btn destructive" type="submit">Delete Data</button>
+        </p>
+      </form>
+
+      <hr>
+
+      {# Per spec/session_home.md, the Delete Session affordance
+         stays visible-but-disabled while Activated rather than
+         being hidden — the operator should always see the action
+         and the path forward (Pause first, then delete). The
+         server still rejects the POST while ready (the lifecycle
+         gate in the route is the source of truth); this is a
+         visual change only. #}
+      <form method="post" action="/operator/sessions/{{ session.id }}/delete">
+        <p>
+          <label style="font-weight: normal;">
+            <input type="checkbox" name="confirm" value="true" required
+                   {% if is_ready %}disabled{% endif %}>
+            Yes, delete <strong>{{ session.name }}</strong> and all its data.
+          </label>
+        </p>
+        <p>
+          <button class="btn destructive" type="submit"
+                  {% if is_ready %}disabled aria-disabled="true"{% endif %}>Delete session</button>
+        </p>
+        {% if is_ready %}
+          <p class="form-help" style="margin-bottom: 0;">
+            Session deletion is locked while status is Activated. Pause the session
+            first to enable deletion.
+          </p>
+        {% endif %}
+      </form>
     </div>
   </div>
 {% endblock %}

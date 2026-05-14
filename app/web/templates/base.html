@@ -609,6 +609,15 @@
         margin-bottom: 20px;
       }
       .bottom-grid .card { margin-bottom: 0; }
+      /* Explicit grid placement for direct-child cards on
+         Session Home (mirrors the .page-grid card-tl/tr/bl/br
+         primitives above). DOM source order is the mobile-
+         collapse order; the grid-areas drive desktop visual
+         placement. */
+      .bottom-grid > .card-tl { grid-column: 1; grid-row: 1; }
+      .bottom-grid > .card-tr { grid-column: 2; grid-row: 1; }
+      .bottom-grid > .card-bl { grid-column: 1; grid-row: 2; }
+      .bottom-grid > .card-br { grid-column: 2; grid-row: 2; }
       .bottom-left {
         display: flex;
         flex-direction: column;
@@ -767,6 +776,13 @@
           grid-row: auto;
         }
         .bottom-grid { grid-template-columns: 1fr; }
+        .bottom-grid > .card-tl,
+        .bottom-grid > .card-tr,
+        .bottom-grid > .card-bl,
+        .bottom-grid > .card-br {
+          grid-column: 1;
+          grid-row: auto;
+        }
         .card-half { max-width: 100%; }
       }
       /* ──────────────────────────────────────────────────────────

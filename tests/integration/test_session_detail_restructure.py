@@ -426,7 +426,7 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     # Outer card with stable id; no .placeholder modifier.
-    assert 'class="card" id="quick-setup"' in body
+    assert 'id="quick-setup"' in body
     assert "<h2>Quick Setup</h2>" in body
     # Action-oriented body copy in draft / validated.
     assert (
@@ -578,7 +578,7 @@ def test_extract_data_card_renders_scaffold_in_draft(
     review_session = _make_session(client, db, code="extract-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    assert 'class="card" id="extract-data"' in body
+    assert 'id="extract-data"' in body
     assert "<h2>Extract Data</h2>" in body
     # Card subtitle stays.
     assert "Download per-entity CSVs of the session's data." in body
@@ -626,7 +626,7 @@ def test_extract_data_card_stays_interactive_in_ready(
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
     # No ``disabled`` modifier on the Extract Data card.
-    assert 'class="card" id="extract-data"' in body
+    assert 'id="extract-data"' in body
     assert 'class="card disabled" id="extract-data"' not in body
     # Rows still render with their counts.
     assert 'id="extract-data-responses"' in body

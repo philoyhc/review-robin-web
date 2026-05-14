@@ -304,20 +304,21 @@ def test_quick_setup_lock_toggle_hidden_when_session_activated(
     assert 'class="quick-setup-body locked"' in body
 
 
-def test_quick_setup_card_lives_in_right_column_under_session_details(
+def test_quick_setup_card_lives_in_top_right_via_grid_placement(
     client: TestClient, db: Session
 ) -> None:
-    """Per ``spec/session_home.md`` the page-level card order is:
+    """Per ``spec/session_home.md`` the Session Home page-card grid
+    is:
 
-    1. Extract Data (left column, top)
-    2. Danger Zone (left column, bottom)
-    3. Session Details (right column, top)
-    4. Quick Setup (right column, bottom)
+       Session Details (tl) | Quick Setup (tr)
+       Danger Zone      (bl) | Extract Data (br)
 
-    (The Workflow card retired from Session Home on the super-button
-    refresh — it now only lives on the Operations-row pages.) Pin
-    the DOM order so a template tweak can't silently regress the
-    column placement.
+    DOM source order = mobile-collapse order: Session Details →
+    Quick Setup → Extract Data → Danger Zone. The four cards are
+    direct children of ``.bottom-grid`` carrying ``.card-tl`` /
+    ``.card-tr`` / ``.card-br`` / ``.card-bl`` placement classes
+    (mirrors the ``.page-grid`` primitives). Pin the markup so a
+    template tweak can't silently regress the layout.
     """
 
     review_session = _make_session(client, db, code="qs-card-order")
@@ -339,13 +340,21 @@ def test_quick_setup_card_lives_in_right_column_under_session_details(
     # The Workflow card no longer renders on Session Home.
     assert 'id="next-action"' not in body
 
-    # Source order = mobile DOM collapse order = page reading order.
+    # Source order = mobile DOM collapse order.
     assert (
-        extract_data_pos
-        < danger_zone_pos
-        < session_details_pos
+        session_details_pos
         < quick_setup_pos
+        < extract_data_pos
+        < danger_zone_pos
     )
+
+    # Desktop visual placement comes from grid-placement classes
+    # on the direct ``.bottom-grid`` children.
+    assert 'id="quick-setup"' in body
+    qs_block = body.split('id="quick-setup"', 1)[0].rsplit("<div", 1)[1]
+    assert "card-tr" in qs_block, "Quick Setup should carry .card-tr"
+    ed_block = body.split('id="extract-data"', 1)[0].rsplit("<div", 1)[1]
+    assert "card-br" in ed_block, "Extract Data should carry .card-br"
 
 
 def test_quick_setup_top_grid_layout(

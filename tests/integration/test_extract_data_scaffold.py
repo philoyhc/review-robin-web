@@ -314,7 +314,8 @@ def test_extract_data_card_renders_when_session_is_activated(
     body = operator.get(f"/operator/sessions/{review_session.id}").text
 
     # Card rendered without a ``.disabled`` modifier.
-    assert 'class="card" id="extract-data"' in body
+    assert 'id="extract-data"' in body
+    assert 'class="card disabled' not in body
     # Five rows still present with their counts surfaced.
     for key in (
         "settings",
