@@ -197,6 +197,37 @@ surfaces:
     separate question (Segment 17A) — 15F doesn't depend
     on it.
 
+12. **Bulk-status audit shape: two events.** Inactivate
+    selected emits `reviewer.bulk_inactivated` (snapshot
+    envelope listing the flipped ids); Reactivate selected
+    emits `reviewer.bulk_reactivated`. Mirror events on
+    Reviewees + Relationships. Distinct event types
+    surface the operator's two distinct intents in the
+    audit log without forcing readers to crack a
+    set_changes envelope.
+
+13. **Inline-edit always emits `reviewer.updated`** (changes
+    envelope) regardless of which fields the operator
+    changed — including a status-only change made via the
+    inline-edit form. The targeted `reviewer.bulk_*` events
+    stay reserved for the bulk-button path. Avoids
+    double-emission when a single mutation surface (the
+    inline-edit form) writes a single event.
+
+14. **Search `<datalist>` capped at 200 alphabetically.** A
+    1500-row roster's autocomplete list is bigger than
+    operators ever scan; the suggestions are a convenience,
+    not the search itself. The server-side filter still
+    runs against the full roster when the operator types
+    something not in the suggestions. Pilot feedback can
+    re-tune the cap if needed.
+
+15. **Cancel keeps the row checked.** Cancelling an inline
+    edit restores the row's pre-edit text without touching
+    the checkbox state — the operator can immediately retry
+    Edit, or click Inactivate selected, etc. Selection is
+    independent of edit state.
+
 ## Why one segment
 
 The four items move together because they share:
@@ -296,6 +327,10 @@ sections, in order:
   reviewer-name + reviewee-name).
 - 200-row cap applies to the unfiltered render; lifts to
   500 when either filter is applied.
+- `<datalist>` autocomplete capped at 200 alphabetically
+  (Decision 14) — the suggestions are a convenience, not
+  the search itself; the server-side filter handles
+  anything the operator types.
 
 **Section 2 — Action buttons.**
 - Four buttons in one row — **Edit** ·
@@ -329,14 +364,17 @@ sections, in order:
   persisted, no server round-trip.
 - **Inactivate selected** / **Reactivate selected** fire on
   the current checkbox selection without entering edit mode.
-  Audit events: `reviewer.status_changed_bulk` /
-  `reviewee.status_changed_bulk` /
-  `relationship.status_changed_bulk` with the canonical
-  `set_changes` envelope (added = newly inactivated ids,
-  removed = newly reactivated ids — or split into separate
-  event types per the audit-emitter style, decide during PR
-  scoping). These work on a one-row selection too, for
-  "flip status only" without opening the edit form.
+  Two distinct audit events per Decision 12 — Inactivate
+  selected emits `reviewer.bulk_inactivated` (snapshot
+  envelope listing the flipped ids); Reactivate selected
+  emits `reviewer.bulk_reactivated`. Mirror events on
+  Reviewees (`reviewee.bulk_inactivated` / `.bulk_reactivated`)
+  and Relationships
+  (`relationship.bulk_inactivated` / `.bulk_reactivated`).
+  These work on a one-row selection too, for "flip status
+  only" without opening the edit form (Decision 13:
+  inline-edit still emits `reviewer.updated` even for a
+  status-only change made via the form).
 - All four buttons render in fixed positions (always
   present) so the card layout doesn't reflow on selection
   change. No bulk Edit (Edit is single-row by design); no
@@ -374,11 +412,12 @@ sized.
 ### PR 1 — Reviewers service-layer CRUD + audit events
 
 **Scope.** New `app/services/reviewers.py` with `create_reviewer`,
-`update_reviewer`, `set_reviewer_status`, `bulk_set_status`. Each
+`update_reviewer`, `bulk_inactivate`, `bulk_reactivate`. Each
 mutator calls `lifecycle.invalidate_if_validated` and emits the
 canonical audit event. New event types
-(`reviewer.created` / `.updated` / `.status_changed` /
-`.status_changed_bulk`) registered in `EVENT_SCHEMAS`. No UI
+(`reviewer.created` / `.updated` / `.bulk_inactivated` /
+`.bulk_reactivated`) registered in `EVENT_SCHEMAS` per
+Decisions 12–13. No UI
 surface yet — the CSV importer continues to be the only writer.
 
 **Tests.** Service-layer happy-path + lifecycle gate + audit
@@ -436,15 +475,22 @@ profile_link / tags / status.
 reviewer / reviewee FKs are not inline-editable (changing the
 FK on a `Relationship` row is conceptually delete + create,
 not edit) — the inline-edit form locks the identity columns
-and only edits tags + status. Add card needs `<select>`
-pickers for reviewer / reviewee.
+and only edits tags + status. Add new row prepends an empty
+`<tr>` whose Reviewer + Reviewee inputs are `<input list>`
+typeaheads (Decision 14: datalist capped at 200
+alphabetically; the server-side validator handles anything
+the operator types and resolves it back to an id).
+UNIQUE constraint on `(session_id, reviewer_id, reviewee_id)`
+— Add must reject duplicate pairs with a clean inline error.
 
-### PR 6 — Defensive status re-check on `invitations_send_one`
+### PR 6 — Defensive status re-check on `invitations_send_one` (folded into PR 3)
 
 **Scope.** One-liner in `_operations.py:541` — refuse to send
-when `reviewer.status != "active"`. Ride-along with whichever
-of PR 3 / 4 lands the per-row Inactivate. Catches the
-direct-POST / stale-tab edge case.
+when `reviewer.status != "active"`. Ride-along with PR 3
+(when per-row Inactivate first becomes operator-reachable).
+Catches the direct-POST / stale-tab edge case. Kept as a
+named entry here for traceability; doesn't ship as a
+standalone PR.
 
 ## Out of scope
 
@@ -473,24 +519,13 @@ direct-POST / stale-tab edge case.
   case; the row's full state lives in the existing audit
   log accessible from Sys Admin.
 
-## Working notes / open questions
+## Working notes
 
-- **Bulk-action audit shape.** Single emit with
-  `set_changes` (added / removed) vs. one emit per row.
-  Lean single emit so audit-log readers see "operator
-  inactivated 7 reviewers in one click" as one entry, not
-  seven.
-- **Add card validation feedback.** Inline error banner on
-  the card (per the existing Setup-page error treatment) vs.
-  a global page-top banner. Lean card-local — keeps the
-  error close to the form that produced it.
-- **Search autocomplete cardinality.** A 1500-row roster
-  would produce a 1500-option `<datalist>`. The Invitations
-  / Responses pattern works fine at smaller scale (a few
-  hundred). If render-time pressure shows up, cap the
-  datalist at the first N alphabetically — search-by-typing
-  still works against the server-side filter, the autocomplete
-  is just a convenience.
+All open questions resolved 2026-05-15 (see Decisions 12–15
+in `## Decisions locked`). PR scoping conversations may surface
+follow-on details (e.g. exact button copy, error-banner
+placement specifics) but no design-shape decisions are
+outstanding.
 
 ## Related context
 
