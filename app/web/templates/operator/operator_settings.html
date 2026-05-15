@@ -90,6 +90,39 @@
     </form>
   </div>
 
+  {# Segment 18B PR 2 — per-operator default display timezone.
+     Searchable <datalist> over every IANA zone name. The signed-in
+     operator's surfaces render in this zone; new sessions inherit
+     it as their per-session default. #}
+  <div class="card" id="timezone-settings">
+    <h2>Date &amp; time</h2>
+    <p class="muted">
+      Your default timezone. The app renders dates and times in this
+      zone, and new sessions you create start from it (each session
+      can be overridden individually). Times show as
+      <code>YYYY-MM-DD HH:MM</code> with a zone label.
+    </p>
+    <form method="post" action="/operator/settings/timezone">
+      {% if return_to_raw %}
+        <input type="hidden" name="return_to" value="{{ return_to_raw }}">
+      {% endif %}
+      <label for="display_timezone">Default timezone</label>
+      <input type="text" id="display_timezone" name="display_timezone"
+             list="timezone-options" autocomplete="off" required
+             value="{{ current_timezone }}"
+             placeholder="Start typing — e.g. Asia/Singapore">
+      <datalist id="timezone-options">
+        {% for tz in timezone_options %}
+          <option value="{{ tz }}"></option>
+        {% endfor %}
+      </datalist>
+      <div class="settings-actions"
+           style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px;">
+        <button class="btn secondary" type="submit">Save timezone</button>
+      </div>
+    </form>
+  </div>
+
   <div class="card danger-zone" id="danger-zone">
     <h2>Clear all settings</h2>
     <p>

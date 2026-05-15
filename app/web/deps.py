@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,7 +10,7 @@ from app.auth.identity import AuthenticatedUser, get_current_user
 from app.config import settings as default_settings
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
-from app.services import permissions, sessions
+from app.services import operator_settings, permissions, sessions
 
 
 class OperatorAllowlistDenied(Exception):
@@ -32,7 +32,17 @@ def _email_in(allowlist: list[str], email: str | None) -> bool:
     return any(item.casefold() == target for item in allowlist)
 
 
+def _stash_display_timezone(request: Request, user: User) -> None:
+    """Resolve the signed-in operator's default display timezone and
+    park it on ``request.state`` for the Jinja context processor
+    (``app/web/date_filters.py``) to pick up. Segment 18B PR 2."""
+    request.state.display_timezone = operator_settings.get_display_timezone(
+        user
+    )
+
+
 def get_or_create_user(
+    request: Request,
     current_user: AuthenticatedUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> User:
@@ -46,6 +56,7 @@ def get_or_create_user(
         select(User).where(User.email == current_user.email)
     ).scalar_one_or_none()
     if user is not None:
+        _stash_display_timezone(request, user)
         return user
 
     # Option C strict-allowlist bootstrap on first sign-in. Env vars
@@ -72,6 +83,7 @@ def get_or_create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+    _stash_display_timezone(request, user)
     return user
 
 

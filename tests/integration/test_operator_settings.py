@@ -371,3 +371,104 @@ def test_settings_save_preserves_return_to_through_redirect(
     assert response.headers["location"] == (
         "/operator/settings?return_to=/operator/sessions"
     )
+
+
+# ── Display timezone (Segment 18B PR 2) ──────────────────────────────────
+
+
+def test_settings_get_renders_timezone_card(
+    client: TestClient, db: Session
+) -> None:
+    """The Date & time card renders with a searchable datalist and the
+    operator's current default (UTC before any save)."""
+    body = client.get("/operator/settings").text
+    assert "Date &amp; time" in body
+    assert 'name="display_timezone"' in body
+    assert 'list="timezone-options"' in body
+    assert '<datalist id="timezone-options">' in body
+    # Default pre-fill is UTC; a representative zone is in the list.
+    assert 'value="UTC"' in body
+    assert '<option value="Asia/Singapore">' in body
+
+
+def test_settings_save_timezone_persists_and_audits(
+    client: TestClient, db: Session
+) -> None:
+    response = client.post(
+        "/operator/settings/timezone",
+        data={"display_timezone": "Asia/Singapore"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/operator/settings"
+
+    user = _alice_row(db)
+    assert user.preferences == {"display_timezone": "Asia/Singapore"}
+
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "operator.display_timezone_set"
+        )
+    ).scalar_one()
+    assert event.detail["changes"]["display_timezone"] == [
+        "UTC",
+        "Asia/Singapore",
+    ]
+
+
+def test_settings_save_timezone_rejects_unknown_zone(
+    client: TestClient, db: Session
+) -> None:
+    response = client.post(
+        "/operator/settings/timezone",
+        data={"display_timezone": "Mars/Olympus"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    assert _alice_row(db).preferences in (None, {})
+
+
+def test_settings_save_timezone_unchanged_is_noop(
+    client: TestClient, db: Session
+) -> None:
+    """Saving the current value (UTC default) writes nothing and emits
+    no audit event."""
+    response = client.post(
+        "/operator/settings/timezone",
+        data={"display_timezone": "UTC"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "operator.display_timezone_set"
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert events == []
+
+
+def test_settings_save_timezone_preserves_other_preference_keys(
+    client: TestClient, db: Session
+) -> None:
+    """Writing the timezone key leaves unrelated preference keys
+    intact — the JSON container is shared by future settings."""
+    client.get("/operator/settings")  # materialise the operator row
+    user = _alice_row(db)
+    user.preferences = {"other_key": "keep-me"}
+    db.commit()
+
+    client.post(
+        "/operator/settings/timezone",
+        data={"display_timezone": "Europe/London"},
+        follow_redirects=False,
+    )
+
+    refreshed = _alice_row(db)
+    assert refreshed.preferences == {
+        "other_key": "keep-me",
+        "display_timezone": "Europe/London",
+    }

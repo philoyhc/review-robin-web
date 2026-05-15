@@ -1,10 +1,12 @@
 # Segment 18B — Date and time settings
 
-> **In flight — PR 1 shipped 2026-05-15.** Scoping decisions
-> locked (see "Locked decisions" below). PR 1 (canonical format
-> + shared display helper) is shipped; PRs 2-3 (the timezone
-> infra) follow once 13F lands the inert columns they consume
-> (PR 7 `users.preferences`, PR 6 `sessions.display_timezone`).
+> **In flight — PRs 1 + 2 shipped 2026-05-15.** Scoping
+> decisions locked (see "Locked decisions" below). PR 1
+> (canonical format + shared display helper) and PR 2
+> (per-operator default timezone + `/operator/settings` card)
+> are shipped; PR 3 (per-session override) follows. 13F PR 6
+> + PR 7 (the inert columns this segment consumes) shipped
+> 2026-05-15.
 >
 > The 18B segment number was previously held by "Session tagging
 > + archiving", which was folded into 18A (Sessions lobby
@@ -228,7 +230,30 @@ Original scope notes:
   stay ISO-8601 UTC (machine formats don't localize).
 - No schema change.
 
-### PR 2 — Per-operator default timezone + `/operator/settings` card
+### PR 2 — Per-operator default timezone + `/operator/settings` card — ✅ shipped 2026-05-15
+
+**Outcome.** `users.preferences['display_timezone']` is now lit
+up (no migration — column from 13F PR 7). New `operator_settings`
+helpers `get_display_timezone` / `set_display_timezone` /
+`timezone_options` / `is_valid_timezone`; audit event
+`operator.display_timezone_set` (changes envelope) registered in
+`EVENT_SCHEMAS`. New `/operator/settings` "Date & time" card with
+a searchable `<datalist>` over every IANA zone + a
+`POST /operator/settings/timezone` route. `date_formatting`
+helpers grew a `tz_name` parameter + `resolve_zone`; the Jinja
+filters became context-aware (`app/web/date_filters.py` —
+`@pass_context` filters + a `display_timezone` context processor).
+`get_or_create_user` stamps `request.state.display_timezone` from
+the signed-in operator's preference. 13 new tests.
+
+**Scope note (deviation from original plan wording).** Operator
+surfaces render in the **signed-in operator's** zone. Reviewer
+surfaces continue to render in **UTC** until PR 3 — a reviewer's
+correct zone is the *session* zone, which PR 3 wires; threading
+the session-creator's personal default as an interim was
+deliberately skipped as throwaway work.
+
+Original scope notes:
 
 - Lights up the `display_timezone` key of `users.preferences` —
   the column is pre-positioned inert by **13F PR 7**, so this PR
@@ -240,8 +265,6 @@ Original scope notes:
   zone token reflects the resolved zone.
 - Audit event `operator.display_timezone_set` (changes
   envelope), registered in `EVENT_SCHEMAS`.
-- After this PR every operator + reviewer surface renders in the
-  viewing / owning operator's zone with a correct token.
 
 ### PR 3 — Per-session timezone override + Session Edit card
 

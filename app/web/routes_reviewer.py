@@ -23,13 +23,17 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.services import date_formatting
 from app.services import instruments as instruments_service
 from app.services import invitations as invitations_service
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
+from app.web.date_filters import (
+    display_timezone_context_processor,
+    format_date_filter,
+    format_datetime_filter,
+)
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -38,11 +42,16 @@ from app.web.deps import (
 
 router = APIRouter(prefix="/reviewer", tags=["reviewer"])
 
-_templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+_templates = Jinja2Templates(
+    directory=str(Path(__file__).parent / "templates"),
+    context_processors=[display_timezone_context_processor],
+)
 _templates.env.globals["app_version"] = settings.app_version
-# Canonical date / time display formatting — Segment 18B PR 1.
-_templates.env.filters["format_datetime"] = date_formatting.format_datetime
-_templates.env.filters["format_date"] = date_formatting.format_date
+# Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
+# Context-aware: the filters resolve their display zone from the
+# ``display_timezone`` context key the processor above injects.
+_templates.env.filters["format_datetime"] = format_datetime_filter
+_templates.env.filters["format_date"] = format_date_filter
 
 
 def reviewer_review_count_for_user(db: Session, user: User) -> int:

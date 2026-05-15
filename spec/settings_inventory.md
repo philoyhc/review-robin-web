@@ -47,7 +47,7 @@ back-link returns the operator to wherever they came from
 | `smtp_from_display_name` | `String(255)` | Friendly name used in the `From:` header. |
 | `smtp_encryption` | `String(16)` | `none` / `starttls` / `tls`. |
 | `smtp_transport` | `String(16)` | `smtp` (default; only value supported today). Reserved for the Segment 14B backend swaps (Microsoft Graph, ACS). |
-| `preferences` | `JSON` | General per-operator preferences container (Segment 18B). JSON object keyed by individual operator-level display preferences; first key `display_timezone` (the operator's default timezone for sessions they create). NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. **Inert** until 18B PR 2 wires the `/operator/settings` timezone card (landed in 13F PR 7). |
+| `preferences` | `JSON` | General per-operator preferences container (Segment 18B). JSON object keyed by individual operator-level display preferences. First key `display_timezone` — the operator's default display timezone (an IANA zone name), edited on the **Date & time** card on `/operator/settings` (18B PR 2). NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. Operator surfaces render dates / times in this zone; the canonical render is `YYYY-MM-DD HH:MM <ZONE>` (e.g. `2026-05-15 17:00 +08`) via the `format_datetime` Jinja filter. |
 
 **Send-as-me identity model.** The operator who initiates a send in
 Manage Invitations sends from their own SMTP credentials. There is

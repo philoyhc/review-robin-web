@@ -58,6 +58,7 @@ def operator_settings_form(
     """
     db.refresh(user)
     has_password = user.smtp_password_encrypted is not None
+    current_timezone = operator_settings.get_display_timezone(user)
     target = resolve_return_to(return_to, db)
 
     # 15C Slice 5: operator-library management. List the operator's
@@ -89,6 +90,8 @@ def operator_settings_form(
             "user": user,
             "has_password": has_password,
             "encryption_modes": operator_settings.SMTP_ENCRYPTION_MODES,
+            "current_timezone": current_timezone,
+            "timezone_options": operator_settings.timezone_options(),
             "return_to_raw": return_to,
             "return_to_url": target.url,
             "return_to_label": target.label,
@@ -147,6 +150,33 @@ def operator_settings_save(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
         ) from exc
+    return RedirectResponse(
+        url=_settings_redirect_url(return_to),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/settings/timezone")
+def operator_settings_save_timezone(
+    display_timezone: str = Form(...),
+    return_to: str | None = Form(default=None),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Persist the operator's default display timezone (Segment 18B
+    PR 2). New sessions this operator creates inherit it; existing
+    sessions keep their own per-session setting."""
+    if not operator_settings.is_valid_timezone(display_timezone):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"unknown timezone {display_timezone!r}",
+        )
+    operator_settings.set_display_timezone(
+        db,
+        user=user,
+        timezone_name=display_timezone,
+        correlation_id=request_correlation_id(),
+    )
     return RedirectResponse(
         url=_settings_redirect_url(return_to),
         status_code=status.HTTP_303_SEE_OTHER,
