@@ -1,29 +1,31 @@
-# Segment 13F — More DB prep (14C / 16A / 16B / 18A / 18C ride-along)
+# Segment 13F — More DB prep (14C / 16A / 16B / 18A / 18B / 18C ride-along)
 
 **Status:** In flight — **PRs 1 + 2 shipped 2026-05-11**
-(migrations `779b90e4b397` + `8003c2be99d8`); PRs 3-5
-deferred until their consumer segments (18A / 14C / 18C) are
-picked up, per the "piecemeal, front-load the 16-series work"
-sequencing decision. The 16-series schema scaffolding is now
-complete — Segment 16A is unblocked to start its PR ladder.
+(migrations `779b90e4b397` + `8003c2be99d8`); PRs 3-6
+deferred until their consumer segments (18A / 14C / 18C / 18B)
+are picked up, per the "piecemeal, front-load the 16-series
+work" sequencing decision. The 16-series schema scaffolding is
+now complete — Segment 16A is unblocked to start its PR ladder.
 Stub created 2026-05-11; revised 2026-05-11 to fold in the
 16-series admin / owner-role requirements after a codebase
 audit; revised again 2026-05-11 to add the operator-allowlist
 column once Option C became the locked access posture;
 revised again 2026-05-11 to reorder PRs so the 16-series work
 comes first (PR 1 + PR 2) and the consumer-deferred work
-follows (PRs 3-5).
+follows (PRs 3-5); revised again 2026-05-15 to add PR 6
+(`sessions.display_timezone`) as the schema slot for the 18B
+per-session timezone work.
 Mirrors the **Segment 13D** (and 13E) inert-migrations pattern:
 pre-position the additive, nullable, no-backfill schema changes
 the rest of the active workplan needs, so the downstream feature
 segments are pure service / UI / template work.
 
-**Sizing:** ~5 PRs (one per migration; PR-sized).
+**Sizing:** ~6 PRs (one per migration; PR-sized).
 **Depends on:** none. Lands cleanly after 13D / 13E.
 **Unblocks:** 14C (reminder cadence), 16A (Sys Admin auth via
 persisted flag instead of env-allowlist), 16B (per-session
-owner UI), 18A (session tagging), 18C (retention exception +
-per-session policy).
+owner UI), 18A (session tagging), 18B (per-session display
+timezone), 18C (retention exception + per-session policy).
 
 ---
 
@@ -60,9 +62,10 @@ session_tags                              # PR 3: 18A per-session free-form tags
 sessions.reminder_settings                # PR 4: 14C reminder cadence (JSON, pending)
 sessions.retention_exception              # PR 5: 18C per-session opt-out (Bool, pending)
 sessions.retention_overrides              # PR 5: 18C per-session policy (JSON, post-MVP, pending)
+sessions.display_timezone                 # PR 6: 18B per-session display timezone (String, pending)
 ```
 
-Five migrations + one model-only correction across four PRs.
+Six migrations + one model-only correction across six PRs.
 Every column nullable (PR 1's `is_sys_admin` has a SQL-level
 `false` server-default so existing rows backfill safely); every
 new table starts empty; no service or web code reads or writes
@@ -112,6 +115,7 @@ needs identified for the remaining workplan:
 | **18A** — Session tagging | New table `session_tags` | Required by 18A Part 2. The plan flags "Tag table vs JSON column" as an open scoping question; we lock the answer here (table — easier per-tag indexing + delete-cascade). |
 | **18C** — Retention / deletion workflow Part 2 | New `sessions.retention_exception` Boolean (default `False`, nullable) | Required by 18C Part 2 (per-session opt-out of auto-purge — e.g. legal hold). Minimal cost, large policy value. |
 | **18C** — Retention / deletion workflow Part 3 (post-MVP) | New `sessions.retention_overrides` JSON column | Required by 18C Part 3 if it lands. Per-session retention-policy overrides (`response_days` / `audit_days` / `archived_days` keys). NULL means "use deployment default". |
+| **18B** — Date and time settings | New `sessions.display_timezone` String column (nullable; IANA zone name) | Required by 18B PR 3 (per-session display-timezone override). One nullable string column; `NULL` means "inherit the deployment default timezone". The deployment-default side of 18B is a separate workspace-scoped setting that 18B owns directly — only the per-session column rides here. |
 | **16A** — Sys Admin page + admin user role | New `users.is_sys_admin` Boolean column (server-default `false`) | Required by 16A PR 2 (sys-admin gate). Persisted per-user flag bootstrapped from the existing `SYS_ADMIN_EMAILS` env var on first-sign-in but extensible in-app afterwards via 16A PR 6. |
 | **16A** — Workspace operator allowlist (Option C access model) | New `users.is_operator` Boolean column (server-default `false`) | Required by 16A PR 1 (operator-allowlist gate). Locked 2026-05-11: the app is a citizen project with no tech-support promise, so the access model is strict (Option C) — only operators a sys-admin explicitly admits can use operator routes. Bootstrap source on first-sign-in is a new `OPERATOR_EMAILS` env var; persisted column is authoritative thereafter. Sys-admin implies operator (read-path checks `is_operator OR is_sys_admin`). |
 | **16B** — Role delegation (owner / manager) | **No schema change.** `session_operators.role` already exists (`String(32)`, NOT NULL). Today's only written value is `"owner"`. PR 1 locks the value-set constant (`SESSION_OPERATOR_ROLES = ("owner", "manager")`) and fixes the dead Python-default from `"operator"` to `"owner"`. | The column lands inert (already written). The value-set lock + default fix ride in PR 1 since they're cohesive with the `users.is_sys_admin` admin-role plumbing. |
@@ -132,9 +136,9 @@ needs identified for the remaining workplan:
 
 PRs land in two waves: the **16-series wave** (PR 1 + PR 2)
 pre-positions the admin / allowlist plumbing for Segment 16A;
-the **consumer-deferred wave** (PRs 3-5) pre-positions the
+the **consumer-deferred wave** (PRs 3-6) pre-positions the
 remaining tables and columns when their consumer segments
-(18A / 14C / 18C) are ready to be picked up.
+(18A / 14C / 18C / 18B) are ready to be picked up.
 
 ### PR 1 — `users.is_sys_admin` Boolean + lock `session_operators.role` value-set + default fix (16A / 16B ride-along) — ✅ **shipped 2026-05-11**
 
@@ -382,6 +386,37 @@ vars).
 back as `NULL` for both columns; mutating one doesn't affect the
 other. Inert audit: zero service / web references at PR close.
 
+### PR 6 — New column `sessions.display_timezone` String (18B ride-along)
+
+**Scope.** One nullable string column on `sessions`. Holds an
+IANA timezone name (e.g. `Asia/Singapore`); `NULL` means
+"inherit the deployment default timezone".
+
+```python
+# app/db/models/review_session.py
+display_timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+```
+
+Why nullable rather than NOT NULL with a default: the
+`NULL`-means-inherit semantics are load-bearing in 18B's
+resolution order (session override → deployment default →
+UTC). 18B PR 3 stamps new sessions with the resolved deployment
+default at create-time, but the column stays nullable so
+"inherit" remains expressible (e.g. for sessions created before
+the deployment default was set, or if 18B later adds an
+explicit "revert to default" affordance).
+
+`String(64)` comfortably fits every IANA zone name (the longest
+is well under 40 chars). No CHECK constraint — validity is
+enforced at the service layer against `zoneinfo.available_timezones()`
+when 18B PR 3 lights the column up.
+
+**Tests.** Migration round-trip on SQLite + `ci-postgres`.
+Default reads back as `NULL`. Round-trips an IANA name string
+(`Asia/Singapore`). Inert audit: zero service / web references
+at PR close — light-up lives in 18B PR 3 (per-session timezone
+card + create-time stamping).
+
 ---
 
 ## Sequencing
@@ -409,6 +444,9 @@ migration history.
   is picked up. Specifically Part 2 (per-deployment retention
   policy) is the first consumer; Part 3 (per-session policy
   overrides) is the second.
+- **PR 6** — defer until 18B (date and time settings) is
+  picked up. Specifically 18B PR 3 (per-session display-timezone
+  override + Session Edit card) is the consumer.
 
 The schema-only PRs are deliberately small (~50-100 LOC each
 including the migration, model edit, and the round-trip test).
@@ -468,16 +506,16 @@ A reviewer can model the whole contract in one sitting per PR.
 
 ## Critical files
 
-- New: `app/db/models/session_tag.py` (PR 3), four Alembic
+- New: `app/db/models/session_tag.py` (PR 3), six Alembic
   migrations (PR 1 adds one migration for `users.is_sys_admin`
   plus a model-only edit on `session_operator.py`; PR 2 adds
-  one migration for `users.is_operator`; PRs 3 / 4 / 5 each
+  one migration for `users.is_operator`; PRs 3 / 4 / 5 / 6 each
   add one migration for the table or column they introduce).
 - Touched: `app/db/models/user.py` (PR 1 Part A + PR 2),
   `app/db/models/session_operator.py` (PR 1 Part B —
   Python-default fix + `SESSION_OPERATOR_ROLES` constant),
-  `app/db/models/review_session.py` (PR 4 + PR 5).
-- Inert audit at every PR-close: `grep -rn "reminder_settings\|retention_exception\|retention_overrides\|session_tags\|is_sys_admin\|is_operator\|SESSION_OPERATOR_ROLES" app/services/ app/web/` should return nothing until the owning feature segment lights up.
+  `app/db/models/review_session.py` (PR 4 + PR 5 + PR 6).
+- Inert audit at every PR-close: `grep -rn "reminder_settings\|retention_exception\|retention_overrides\|session_tags\|is_sys_admin\|is_operator\|SESSION_OPERATOR_ROLES\|display_timezone" app/services/ app/web/` should return nothing until the owning feature segment lights up.
 
 ---
 
@@ -508,9 +546,9 @@ When PRs ship:
   the relevant per-session settings sections (each marked
   **Inert** until the owning feature segment lights it up,
   mirroring the post-13D entries).
-- Owning feature plans (14C / 16A / 16B / 18A / 18C) updated
-  to reference "schema pre-positioned in 13F PR N" instead of
-  "new column / new table". In particular 16A flips from
+- Owning feature plans (14C / 16A / 16B / 18A / 18B / 18C)
+  updated to reference "schema pre-positioned in 13F PR N"
+  instead of "new column / new table". In particular 16A flips from
   Option C (env-allowlist) to Option B (persisted flag with
   env-bootstrap); 16B PR 3 becomes unconditional MVP scope
   rather than conditional-on-future-migration.
