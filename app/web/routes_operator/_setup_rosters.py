@@ -1139,11 +1139,24 @@ def _render_relationships_page(
             "filter_search_by": search_dimension,
             "filter_search": search,
             "filter_search_by_options": views.RELATIONSHIPS_SEARCH_BY_OPTIONS,
-            "filter_search_options": views.relationships_search_options(
-                all_rows,
-                reviewer_by_id=reviewer_by_id,
-                reviewee_by_id=reviewee_by_id,
-                search_by=search_dimension,
+            # Both dimensions' datalists ship every render — the
+            # template's `<select>` swaps the input's `list=` so the
+            # autocomplete is "Search by"-aware without a reload.
+            "filter_search_options_reviewer": (
+                views.relationships_search_options(
+                    all_rows,
+                    reviewer_by_id=reviewer_by_id,
+                    reviewee_by_id=reviewee_by_id,
+                    search_by="reviewer",
+                )
+            ),
+            "filter_search_options_reviewee": (
+                views.relationships_search_options(
+                    all_rows,
+                    reviewer_by_id=reviewer_by_id,
+                    reviewee_by_id=reviewee_by_id,
+                    search_by="reviewee",
+                )
             ),
             "fields_with_data": relationships_service.fields_with_data(
                 db, review_session.id

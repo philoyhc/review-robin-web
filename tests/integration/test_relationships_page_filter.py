@@ -223,9 +223,13 @@ def test_clear_link_only_when_filtered(
     assert ">Clear</a>" in filtered
 
 
-def test_search_datalist_built_for_selected_dimension(
+def test_both_dimension_datalists_render_with_correct_options(
     db: Session, client: TestClient
 ) -> None:
+    """Both datalists ship every render — the dropdown swaps the
+    input's ``list`` so autocomplete tracks Search-by without a
+    reload. The reviewer datalist holds only reviewers; the
+    reviewee datalist only reviewees."""
     review_session = _make_session(client, db, code="rel-f-datalist")
     _seed(
         db,
@@ -234,13 +238,37 @@ def test_search_datalist_built_for_selected_dimension(
         reviewees=["Carol"],
         pairs=[(0, 0)],
     )
-    # reviewer dimension → datalist carries the reviewer label.
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships"
+    ).text
+
+    rev_start = body.find('id="relationships-search-reviewer"')
+    rev_block = body[rev_start : body.find("</datalist>", rev_start)]
+    assert "Alice (alice@example.edu)" in rev_block
+    assert "Carol (carol@example.edu)" not in rev_block
+
+    ree_start = body.find('id="relationships-search-reviewee"')
+    ree_block = body[ree_start : body.find("</datalist>", ree_start)]
+    assert "Carol (carol@example.edu)" in ree_block
+    assert "Alice (alice@example.edu)" not in ree_block
+
+
+def test_search_input_list_tracks_search_by(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-f-listattr")
+    _seed(
+        db,
+        review_session.id,
+        reviewers=["Alice"],
+        reviewees=["Carol"],
+        pairs=[(0, 0)],
+    )
     rev = client.get(
         f"/operator/sessions/{review_session.id}/relationships?search_by=reviewer"
     ).text
-    assert "Alice (alice@example.edu)" in rev
-    # reviewee dimension → datalist carries the reviewee label.
+    assert 'list="relationships-search-reviewer"' in rev
     ree = client.get(
         f"/operator/sessions/{review_session.id}/relationships?search_by=reviewee"
     ).text
-    assert "Carol (carol@example.edu)" in ree
+    assert 'list="relationships-search-reviewee"' in ree
