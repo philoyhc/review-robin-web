@@ -1113,8 +1113,8 @@ def _require_relationship_in_session(
 def relationships_update(
     request: Request,
     relationship_id: int,
-    reviewer_id: int = Form(...),
-    reviewee_id: int = Form(...),
+    reviewer_pick: str = Form(default=""),
+    reviewee_pick: str = Form(default=""),
     tag_1: str = Form(default=""),
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
@@ -1127,6 +1127,44 @@ def relationships_update(
     relationship = _require_relationship_in_session(
         db, review_session, relationship_id
     )
+    # The edit row's reviewer / reviewee cells are name-or-email
+    # search boxes — resolve the submitted label back to a roster id
+    # (Segment 15F).
+    reviewer_id = _resolve_picker_label(
+        reviewer_pick,
+        _relationship_picker_options(
+            assignments.list_reviewers(db, review_session.id),
+            handle_attr="email",
+        ),
+    )
+    reviewee_id = _resolve_picker_label(
+        reviewee_pick,
+        _relationship_picker_options(
+            assignments.list_reviewees(db, review_session.id),
+            handle_attr="email_or_identifier",
+        ),
+    )
+    edit_values: dict[str, object] = {
+        "reviewer_label": reviewer_pick,
+        "reviewee_label": reviewee_pick,
+        "tag_1": tag_1,
+        "tag_2": tag_2,
+        "tag_3": tag_3,
+        "status": status_value,
+    }
+    if reviewer_id is None or reviewee_id is None:
+        return _render_relationships_page(
+            request=request,
+            review_session=review_session,
+            user=user,
+            db=db,
+            issues=[],
+            filename=None,
+            edit_id=relationship_id,
+            edit_values=edit_values,
+            edit_error="Pick a reviewer and a reviewee from the list.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
     try:
         relationships_service.update_relationship(
             db,
@@ -1149,14 +1187,7 @@ def relationships_update(
             issues=[],
             filename=None,
             edit_id=relationship_id,
-            edit_values={
-                "reviewer_id": reviewer_id,
-                "reviewee_id": reviewee_id,
-                "tag_1": tag_1,
-                "tag_2": tag_2,
-                "tag_3": tag_3,
-                "status": status_value,
-            },
+            edit_values=edit_values,
             edit_error=exc.message,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
@@ -1218,20 +1249,43 @@ def relationships_bulk_reactivate(
     )
 
 
+def _picker_label(member: object, handle_attr: str) -> str:
+    """Canonical relationship-picker label — ``"Name (handle)"`` with
+    a ``— inactive`` suffix on non-active members. Carries both the
+    name and the handle so a `<datalist>` autocomplete matches a
+    substring of either (Segment 15F)."""
+    label = f"{member.name} ({getattr(member, handle_attr)})"  # type: ignore[attr-defined]
+    if member.status != "active":  # type: ignore[attr-defined]
+        label += " — inactive"
+    return label
+
+
 def _relationship_picker_options(
     members: list, *, handle_attr: str
 ) -> list[tuple[int, str]]:
-    """``(id, label)`` tuples for a reviewer / reviewee `<select>`
-    picker — ``"Name (handle)"``, ``— inactive`` suffix on
-    non-active members, sorted by name (Segment 15F PR 5 stage 2).
-    No cap: a `<select>` must list every member to be usable."""
-    out: list[tuple[int, str]] = []
-    for m in sorted(members, key=lambda x: x.name.casefold()):
-        label = f"{m.name} ({getattr(m, handle_attr)})"
-        if m.status != "active":
-            label += " — inactive"
-        out.append((m.id, label))
-    return out
+    """``(id, label)`` tuples for a reviewer / reviewee picker,
+    sorted by name (Segment 15F PR 5). The label feeds a
+    `<datalist>` the operator searches by name or email — it scales
+    past a native `<select>` for 1,000+ rosters. No cap: every
+    member must be reachable for a re-point to be possible."""
+    return [
+        (m.id, _picker_label(m, handle_attr))
+        for m in sorted(members, key=lambda x: x.name.casefold())
+    ]
+
+
+def _resolve_picker_label(
+    value: str, options: list[tuple[int, str]]
+) -> int | None:
+    """Map a submitted picker string back to its member id by exact
+    label match. ``None`` when the operator typed something that
+    isn't a roster member — the route then re-renders with an error
+    rather than guessing (Segment 15F)."""
+    cleaned = value.strip()
+    for opt_id, label in options:
+        if label == cleaned:
+            return opt_id
+    return None
 
 
 def _render_relationships_page(
@@ -1310,15 +1364,27 @@ def _render_relationships_page(
             relationships = [edited, *relationships]
 
     # Resolve the edit-row prefill values from the row on a plain
-    # edit GET; an error re-render supplies its own dict.
+    # edit GET; an error re-render supplies its own dict. The
+    # reviewer / reviewee cells prefill with the picker label so the
+    # search box shows the current member.
     if edit_values is None and edit_id is not None:
         edited = next(
             (r for r in relationships if r.id == edit_id), None
         )
         if edited is not None:
+            edit_reviewer = reviewer_by_id.get(edited.reviewer_id)
+            edit_reviewee = reviewee_by_id.get(edited.reviewee_id)
             edit_values = {
-                "reviewer_id": edited.reviewer_id,
-                "reviewee_id": edited.reviewee_id,
+                "reviewer_label": (
+                    _picker_label(edit_reviewer, "email")
+                    if edit_reviewer is not None
+                    else ""
+                ),
+                "reviewee_label": (
+                    _picker_label(edit_reviewee, "email_or_identifier")
+                    if edit_reviewee is not None
+                    else ""
+                ),
                 "tag_1": edited.tag_1 or "",
                 "tag_2": edited.tag_2 or "",
                 "tag_3": edited.tag_3 or "",

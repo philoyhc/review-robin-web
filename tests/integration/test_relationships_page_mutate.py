@@ -3,7 +3,7 @@ reactivate — Segment 15F PR 5 stage 2.
 
 Pins the service mutators (`update_relationship` /
 `bulk_inactivate` / `bulk_reactivate`), the routes, the
-server-rendered edit state + reviewer / reviewee `<select>`
+server-rendered edit state + reviewer / reviewee search-box
 pickers, and the name-display table reshape. Add a new row is
 stage 3.
 """
@@ -255,10 +255,11 @@ def test_edit_id_renders_pickers(
     assert "relationship-edit-row" in body
     assert 'id="relationship-edit-form"' in body
     assert ">Edit relationship</h2>" in body
-    # Reviewer / reviewee `<select>` pickers, both roster members
-    # listed as options.
-    assert 'name="reviewer_id"' in body
-    assert 'name="reviewee_id"' in body
+    # Reviewer / reviewee search-box pickers backed by a datalist,
+    # both roster members listed as datalist options.
+    assert 'name="reviewer_pick"' in body
+    assert 'name="reviewee_pick"' in body
+    assert 'id="relationship-reviewer-options"' in body
     assert "Ali (ali@example.edu)" in body
     assert "Peter (peter@example.edu)" in body
     assert "operator-actions-main is-locked" in body
@@ -301,8 +302,8 @@ def test_edit_post_updates_and_redirects(
         f"/operator/sessions/{review_session.id}"
         f"/relationships/{rels[0].id}/update",
         data={
-            "reviewer_id": rv[0].id,
-            "reviewee_id": rels[0].reviewee_id,
+            "reviewer_pick": "Ali (ali@example.edu)",
+            "reviewee_pick": "Jane (jane@example.edu)",
             "tag_1": "Supervisor",
             "tag_2": "",
             "tag_3": "",
@@ -324,7 +325,7 @@ def test_edit_post_duplicate_pair_rerenders_400(
     db: Session, client: TestClient
 ) -> None:
     review_session = _make_session(client, db, code="rel-m-editdup")
-    rv, _re, rels = _seed(
+    _rv, _re, rels = _seed(
         db,
         review_session.id,
         reviewers=["Ali", "Peter"],
@@ -335,8 +336,9 @@ def test_edit_post_duplicate_pair_rerenders_400(
         f"/operator/sessions/{review_session.id}"
         f"/relationships/{rels[1].id}/update",
         data={
-            "reviewer_id": rv[0].id,  # collides with rels[0]
-            "reviewee_id": rels[1].reviewee_id,
+            # Ali (ali@example.edu) collides with rels[0].
+            "reviewer_pick": "Ali (ali@example.edu)",
+            "reviewee_pick": "Jane (jane@example.edu)",
             "tag_1": "",
             "tag_2": "",
             "tag_3": "",
@@ -347,6 +349,34 @@ def test_edit_post_duplicate_pair_rerenders_400(
     assert response.status_code == 400
     assert "relationship-edit-row" in response.text
     assert "banner-error" in response.text
+
+
+def test_edit_post_unresolvable_pick_rerenders_400(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-m-editbadpick")
+    _rv, _re, rels = _seed(
+        db,
+        review_session.id,
+        reviewers=["Ali"],
+        reviewees=["Jane"],
+        pairs=[(0, 0)],
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/relationships/{rels[0].id}/update",
+        data={
+            "reviewer_pick": "Nobody In Particular",
+            "reviewee_pick": "Jane (jane@example.edu)",
+            "status": "active",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "relationship-edit-row" in response.text
+    assert "banner-error" in response.text
+    # The operator's typed text survives the re-render.
+    assert "Nobody In Particular" in response.text
 
 
 def test_bulk_inactivate_route(db: Session, client: TestClient) -> None:
@@ -398,7 +428,7 @@ def test_update_on_ready_session_is_409(
     review_session = _make_session(
         client, db, code="rel-m-ready-upd", status="ready"
     )
-    rv, _re, rels = _seed(
+    _rv, _re, rels = _seed(
         db,
         review_session.id,
         reviewers=["Ali"],
@@ -409,8 +439,8 @@ def test_update_on_ready_session_is_409(
         f"/operator/sessions/{review_session.id}"
         f"/relationships/{rels[0].id}/update",
         data={
-            "reviewer_id": rv[0].id,
-            "reviewee_id": rels[0].reviewee_id,
+            "reviewer_pick": "Ali (ali@example.edu)",
+            "reviewee_pick": "Jane (jane@example.edu)",
             "status": "active",
         },
         follow_redirects=False,

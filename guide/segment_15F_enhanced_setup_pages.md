@@ -529,19 +529,26 @@ that rules can't capture; once that's admitted, full-row edit
 is required ("Jane was taught by Prof Ali, not Prof Peter").
 Both Add and Edit therefore re-point the reviewer / reviewee.
 
-**Picker design.** Reviewer / reviewee are chosen via native
-`<select>` controls — one `<option value="{id}">` per roster
-member, label `"Name (handle)"`, inactive members suffixed
-`— inactive`, sorted by name. A `<select>` makes an invalid
-pair impossible by construction (unlike the `<datalist>`
-typeahead, which is free-text). **No 200 cap on the select** —
-a `<select>` must be complete to be usable. For large rosters
-a lightweight vanilla-JS filter input hides non-matching
-`<option>`s (progressive enhancement). Server-side
-`create_relationship` / `update_relationship` still resolve +
-session-check each id and reject a duplicate
-`(reviewer, reviewee)` pair (`duplicate_pair`). Empty-roster
-guard: Add disabled with a hint when either roster is empty.
+**Picker design (revised 2026-05-15).** Reviewer / reviewee are
+chosen via a **name-or-email search box** — a text `<input>`
+backed by a `<datalist>` whose options are `"Name (handle)"`
+strings (inactive members suffixed `— inactive`, sorted by
+name). This is the same control style as the operator-actions
+search box, and it scales past a native `<select>` for 1,000+
+rosters (a select with thousands of `<option>`s is unusable).
+**No 200 cap** — every member must be reachable for a re-point
+to be possible. The submitted label resolves back to a roster
+id server-side by exact match (`_resolve_picker_label`); an
+unmatched string re-renders the edit row with an error rather
+than guessing. Server-side `create_relationship` /
+`update_relationship` still resolve + session-check each id and
+reject a duplicate `(reviewer, reviewee)` pair
+(`duplicate_pair`). Empty-roster guard: Add disabled with a
+hint when either roster is empty.
+
+> The earlier native-`<select>` picker design (shipped in
+> stage 2, swapped 2026-05-15) is retained in git history; it
+> did not scale to large rosters.
 
 **Staged delivery:**
 
@@ -575,11 +582,14 @@ guard: Add disabled with a hint when either roster is empty.
   state. Mirrors the Reviewers / Reviewees route shape.
 
   *Edit pickers* — the Edit row's Reviewer + Reviewee cells
-  render native `<select>` controls per the Picker-design
-  section above (every roster member, `"Name (handle)"` label,
-  `— inactive` suffix, sorted by name, no cap). The route
-  helper `_relationship_picker_options` builds the two option
-  lists.
+  render name-or-email search boxes (`<input>` + `<datalist>`)
+  per the Picker-design section above (every roster member,
+  `"Name (handle)"` label, `— inactive` suffix, sorted by name,
+  no cap). The route helper `_relationship_picker_options`
+  builds the two option lists and `_resolve_picker_label` maps
+  a submitted label back to a roster id. (Stage 2 originally
+  shipped native `<select>` pickers; swapped to the search box
+  2026-05-15 to scale to 1,000+ rosters.)
 
   *Table reshape — name display + sort.* Each identity cell
   reshapes from email-only (`<code>{{ reviewer.email }}</code>`)
