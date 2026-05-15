@@ -335,6 +335,7 @@
                   <input type="checkbox" class="reviewee-select"
                          name="reviewee_ids" value="{{ reviewee.id }}"
                          form="reviewees-bulk-form"
+                         {% if reviewee.id in selected_ids %}checked{% endif %}
                          aria-label="Select {{ reviewee.name }}">
                 {% endif %}
               </td>

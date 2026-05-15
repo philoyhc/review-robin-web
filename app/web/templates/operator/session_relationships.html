@@ -313,6 +313,7 @@
                   <input type="checkbox" class="relationship-select"
                          name="relationship_ids" value="{{ row.id }}"
                          form="relationships-bulk-form"
+                         {% if row.id in selected_ids %}checked{% endif %}
                          aria-label="Select relationship {{ row.id }}">
                 {% endif %}
               </td>

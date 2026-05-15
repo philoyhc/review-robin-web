@@ -9,6 +9,8 @@ Source ranges in pre-refactor ``routes_operator.py``: 528-667,
 
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -49,6 +51,21 @@ from app.web.routes_operator._shared import (
     _require_response_loss_ack,
     _templates,
 )
+
+
+def _redirect_keeping_selection(
+    base_url: str, selected_ids: list[int]
+) -> RedirectResponse:
+    """303 back to a Setup page, carrying the acted-on row ids as
+    ``?selected=`` params. The page re-checks those checkboxes so
+    the operator clears the selection themselves rather than the
+    action silently clearing it (Segment 15F)."""
+    url = base_url
+    if selected_ids:
+        url = base_url + "?" + urlencode(
+            [("selected", i) for i in selected_ids]
+        )
+    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 router = APIRouter()
@@ -198,6 +215,7 @@ async def _handle_import(
                     "add_mode": False,
                     "edit_values": None,
                     "edit_error": None,
+                    "selected_ids": set(),
                 }
             )
         return _templates.TemplateResponse(
@@ -266,6 +284,7 @@ def _render_reviewers_page(
     add_mode: bool = False,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
+    selected_ids: set[int] | None = None,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     """Render the Reviewers Setup page.
@@ -353,6 +372,7 @@ def _render_reviewers_page(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "reviewers": reviewers,
+            "selected_ids": selected_ids or set(),
             "total_row_count": len(all_reviewers),
             "displayed_row_count": displayed_row_count,
             "filter_status": status_filter,
@@ -387,6 +407,7 @@ def reviewers_list(
     q: str = "",
     edit_id: int | None = None,
     add: int = 0,
+    selected: list[int] = Query(default=[]),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -400,6 +421,7 @@ def reviewers_list(
         search=q,
         edit_id=edit_id,
         add_mode=bool(add),
+        selected_ids=set(selected),
     )
 
 
@@ -523,9 +545,8 @@ def reviewers_update(
             edit_error=exc.message,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewers",
-        status_code=status.HTTP_303_SEE_OTHER,
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/reviewers", [reviewer_id]
     )
 
 
@@ -549,9 +570,8 @@ def reviewers_bulk_inactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewers",
-        status_code=status.HTTP_303_SEE_OTHER,
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/reviewers", reviewer_ids
     )
 
 
@@ -575,9 +595,8 @@ def reviewers_bulk_reactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewers",
-        status_code=status.HTTP_303_SEE_OTHER,
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/reviewers", reviewer_ids
     )
 
 
@@ -593,6 +612,7 @@ def _render_reviewees_page(
     add_mode: bool = False,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
+    selected_ids: set[int] | None = None,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     """Render the Reviewees Setup page — the reviewee-side mirror of
@@ -665,6 +685,7 @@ def _render_reviewees_page(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "reviewees": reviewees,
+            "selected_ids": selected_ids or set(),
             "total_row_count": len(all_reviewees),
             "displayed_row_count": displayed_row_count,
             "filter_status": status_filter,
@@ -699,6 +720,7 @@ def reviewees_list(
     q: str = "",
     edit_id: int | None = None,
     add: int = 0,
+    selected: list[int] = Query(default=[]),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -712,6 +734,7 @@ def reviewees_list(
         search=q,
         edit_id=edit_id,
         add_mode=bool(add),
+        selected_ids=set(selected),
     )
 
 
@@ -841,9 +864,8 @@ def reviewees_update(
             edit_error=exc.message,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewees",
-        status_code=status.HTTP_303_SEE_OTHER,
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/reviewees", [reviewee_id]
     )
 
 
@@ -867,9 +889,8 @@ def reviewees_bulk_inactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewees",
-        status_code=status.HTTP_303_SEE_OTHER,
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/reviewees", reviewee_ids
     )
 
 
@@ -893,9 +914,8 @@ def reviewees_bulk_reactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/reviewees",
-        status_code=status.HTTP_303_SEE_OTHER,
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/reviewees", reviewee_ids
     )
 
 
@@ -964,6 +984,7 @@ def relationships_list(
     search_by: str = "reviewer",
     q: str = "",
     edit_id: int | None = None,
+    selected: list[int] = Query(default=[]),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -978,6 +999,7 @@ def relationships_list(
         search_by=search_by,
         search=q,
         edit_id=edit_id,
+        selected_ids=set(selected),
     )
 
 
@@ -1138,9 +1160,9 @@ def relationships_update(
             edit_error=exc.message,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/relationships",
-        status_code=status.HTTP_303_SEE_OTHER,
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/relationships",
+        [relationship_id],
     )
 
 
@@ -1164,9 +1186,9 @@ def relationships_bulk_inactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/relationships",
-        status_code=status.HTTP_303_SEE_OTHER,
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/relationships",
+        relationship_ids,
     )
 
 
@@ -1190,9 +1212,9 @@ def relationships_bulk_reactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/relationships",
-        status_code=status.HTTP_303_SEE_OTHER,
+    return _redirect_keeping_selection(
+        f"/operator/sessions/{review_session.id}/relationships",
+        relationship_ids,
     )
 
 
@@ -1226,6 +1248,7 @@ def _render_relationships_page(
     edit_id: int | None = None,
     edit_values: dict[str, object] | None = None,
     edit_error: str | None = None,
+    selected_ids: set[int] | None = None,
     status_code: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     is_ready = lifecycle.is_ready(review_session)
@@ -1309,6 +1332,7 @@ def _render_relationships_page(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "relationships": relationships,
+            "selected_ids": selected_ids or set(),
             "reviewer_by_id": reviewer_by_id,
             "reviewee_by_id": reviewee_by_id,
             "existing_count": len(all_rows),
