@@ -520,28 +520,52 @@ New: `app/services/reviewees.py` (`create_reviewee` /
 / `/bulk-reactivate` + the server-rendered edit state on the
 GET route.
 
-### PR 5 — Relationships (clone PRs 1–3)
+### PR 5 — Relationships (staged)
 
-**Scope.** Mirror onto the Relationships page. Wrinkle:
-reviewer / reviewee FKs are not inline-editable (changing the
-FK on a `Relationship` row is conceptually delete + create,
-not edit) — the inline-edit form locks the identity columns
-and only edits tags + status. Add new row prepends an empty
-`<tr>` whose Reviewer + Reviewee inputs are `<input list>`
-typeaheads (Decision 14: datalist capped at 200
-alphabetically; the server-side validator handles anything
-the operator types and resolves it back to an id).
-UNIQUE constraint on `(session_id, reviewer_id, reviewee_id)`
-— Add must reject duplicate pairs with a clean inline error.
+**Design revision (2026-05-15).** The earlier "FKs not
+inline-editable" stance is dropped. Relationships are an
+optional manual affordance for arbitrary per-pair information
+that rules can't capture; once that's admitted, full-row edit
+is required ("Jane was taught by Prof Ali, not Prof Peter").
+Both Add and Edit therefore re-point the reviewer / reviewee.
+
+**Picker design.** Reviewer / reviewee are chosen via native
+`<select>` controls — one `<option value="{id}">` per roster
+member, label `"Name (handle)"`, inactive members suffixed
+`— inactive`, sorted by name. A `<select>` makes an invalid
+pair impossible by construction (unlike the `<datalist>`
+typeahead, which is free-text). **No 200 cap on the select** —
+a `<select>` must be complete to be usable. For large rosters
+a lightweight vanilla-JS filter input hides non-matching
+`<option>`s (progressive enhancement). Server-side
+`create_relationship` / `update_relationship` still resolve +
+session-check each id and reject a duplicate
+`(reviewer, reviewee)` pair (`duplicate_pair`). Empty-roster
+guard: Add disabled with a hint when either roster is empty.
+
+**Staged delivery:**
+
+- **Stage 1 — locate-a-pair search (SHIPPED).** Operator-
+  actions card on the Relationships page with a `Search by`
+  dropdown (Reviewer / Reviewee — picks which side of the pair
+  the search box matches) + search box + 200/500 cap, mirroring
+  Reviewers / Reviewees. Action buttons render as inert
+  placeholders. New `RELATIONSHIPS_SEARCH_BY_OPTIONS` /
+  `filter_relationships_rows` / `relationships_search_options`
+  in `_filters.py`.
+- **Stage 2 — per-row Edit / Add / bulk + the pickers.**
+  Service layer (`create_relationship` / `update_relationship`
+  / `bulk_inactivate` / `bulk_reactivate` +
+  `RelationshipOperationError`), four `relationship.*` audit
+  events, the checkbox column, the server-rendered edit state,
+  and the reviewer / reviewee `<select>` pickers.
 
 ### PR 6 — Defensive status re-check on `invitations_send_one` (folded into PR 3)
 
-**Scope.** One-liner in `_operations.py:541` — refuse to send
-when `reviewer.status != "active"`. Ride-along with PR 3
-(when per-row Inactivate first becomes operator-reachable).
-Catches the direct-POST / stale-tab edge case. Kept as a
-named entry here for traceability; doesn't ship as a
-standalone PR.
+### PR 6 — Defensive status re-check on `invitations_send_one` (folded into PR 3)
+
+**Scope.** One-liner in `_operations.py` — refuse to send
+when `reviewer.status != "active"`. Shipped folded into PR 3.
 
 ## Out of scope
 
