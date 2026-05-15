@@ -18,7 +18,7 @@ per §4.1), 2182-2294, 2447-2510.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -29,6 +29,7 @@ from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
 from app.services import (
+    date_formatting,
     operator_settings,
     responses,
     session_owners,
@@ -130,6 +131,7 @@ def session_edit_form(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    session_timezone = sessions.resolve_session_timezone(review_session)
     return _templates.TemplateResponse(
         request,
         "operator/session_edit.html",
@@ -145,6 +147,10 @@ def session_edit_form(
             "timezone_options": operator_settings.timezone_options(),
             "inherited_timezone": operator_settings.get_display_timezone(
                 review_session.created_by_user
+            ),
+            "current_session_timezone": session_timezone,
+            "timezone_sample": date_formatting.format_datetime(
+                datetime.now(timezone.utc), session_timezone
             ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Edit details"

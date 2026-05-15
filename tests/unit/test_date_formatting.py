@@ -17,13 +17,13 @@ def test_format_datetime_none_is_empty_string() -> None:
 
 def test_format_datetime_aware_utc() -> None:
     value = datetime(2026, 5, 15, 17, 0, tzinfo=timezone.utc)
-    assert format_datetime(value) == "2026-05-15 17:00 UTC"
+    assert format_datetime(value) == "2026-05-15 17:00"
 
 
 def test_format_datetime_naive_assumed_utc() -> None:
     # SQLite returns stored timestamps naive; they are UTC.
     value = datetime(2026, 5, 15, 17, 0)
-    assert format_datetime(value) == "2026-05-15 17:00 UTC"
+    assert format_datetime(value) == "2026-05-15 17:00"
 
 
 def test_format_datetime_aware_non_utc_converted() -> None:
@@ -31,7 +31,7 @@ def test_format_datetime_aware_non_utc_converted() -> None:
     value = datetime(
         2026, 5, 15, 17, 0, tzinfo=timezone(timedelta(hours=8))
     )
-    assert format_datetime(value) == "2026-05-15 09:00 UTC"
+    assert format_datetime(value) == "2026-05-15 09:00"
 
 
 def test_format_date_none_is_empty_string() -> None:
@@ -55,23 +55,24 @@ def test_format_date_from_datetime_uses_utc_date() -> None:
     assert format_date(value) == "2026-05-14"
 
 
-# ── Segment 18B PR 2 — zone-aware rendering ──────────────────────────────
+# ── Segment 18B PR 2 — zone-aware rendering (no zone token) ──────────────
 
 
 def test_format_datetime_in_named_zone() -> None:
-    # 09:00 UTC is 17:00 in Singapore (+08); the token reflects it.
+    # 09:00 UTC is 17:00 in Singapore — the value is converted, but
+    # no zone token is appended.
     value = datetime(2026, 5, 15, 9, 0, tzinfo=timezone.utc)
-    assert format_datetime(value, "Asia/Singapore") == "2026-05-15 17:00 +08"
+    assert format_datetime(value, "Asia/Singapore") == "2026-05-15 17:00"
 
 
-def test_format_datetime_utc_zone_token() -> None:
+def test_format_datetime_utc_zone() -> None:
     value = datetime(2026, 5, 15, 17, 0, tzinfo=timezone.utc)
-    assert format_datetime(value, "UTC") == "2026-05-15 17:00 UTC"
+    assert format_datetime(value, "UTC") == "2026-05-15 17:00"
 
 
 def test_format_datetime_unknown_zone_falls_back_to_utc() -> None:
     value = datetime(2026, 5, 15, 17, 0, tzinfo=timezone.utc)
-    assert format_datetime(value, "Bogus/Zone") == "2026-05-15 17:00 UTC"
+    assert format_datetime(value, "Bogus/Zone") == "2026-05-15 17:00"
 
 
 def test_format_datetime_none_with_zone_is_empty_string() -> None:

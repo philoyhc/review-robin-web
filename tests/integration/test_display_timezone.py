@@ -300,6 +300,30 @@ def test_reviewer_surface_renders_deadline_in_session_zone(
     )
     response = reviewer.get(f"/reviewer/sessions/{session.id}")
     assert response.status_code == 200
-    # 02:00 UTC is 10:00 in Singapore — the deadline shows +08.
+    # 02:00 UTC is 10:00 in Singapore — the deadline is converted to
+    # the session zone (rendered bare, no zone token).
     assert format_datetime(session.deadline, "Asia/Singapore") in response.text
     assert format_datetime(session.deadline, "UTC") not in response.text
+
+
+# ── Timezone-sample preview on the config cards ──────────────────────────
+
+
+def test_settings_card_renders_timezone_sample(
+    client: TestClient, db: Session
+) -> None:
+    body = client.get("/operator/settings").text
+    assert 'id="tz-sample"' in body
+    assert 'id="tz-sample-zone"' in body
+    # The bare canonical format — date + time, no zone token.
+    assert "Sample (right now):" in body
+
+
+def test_edit_card_renders_timezone_sample(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="tz-sample")
+    body = client.get(f"/operator/sessions/{session.id}/edit").text
+    assert 'id="tz-sample"' in body
+    assert 'id="tz-sample-zone"' in body
+    assert "Sample (right now):" in body

@@ -6,6 +6,7 @@ Source range in pre-refactor ``routes_operator.py``: 126-238.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
@@ -15,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import OperatorResponseTypeDefinition, RuleSet, User
 from app.db.session import get_db
+from app.services import date_formatting
 from app.services import instruments as instruments_service
 from app.services import operator_settings
 from app.services._secrets import MissingEncryptionKey
@@ -91,6 +93,9 @@ def operator_settings_form(
             "has_password": has_password,
             "encryption_modes": operator_settings.SMTP_ENCRYPTION_MODES,
             "current_timezone": current_timezone,
+            "timezone_sample": date_formatting.format_datetime(
+                datetime.now(timezone.utc), current_timezone
+            ),
             "timezone_options": operator_settings.timezone_options(),
             "return_to_raw": return_to,
             "return_to_url": target.url,

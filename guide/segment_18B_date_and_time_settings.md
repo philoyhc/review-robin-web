@@ -7,6 +7,16 @@
 > (the inert columns this segment consumes) shipped 2026-05-15.
 > The Post-MVP input-consistency item below remains deferred.
 >
+> **Post-ship adjustment (2026-05-15).** Decision 7's canonical
+> date-time format dropped its trailing zone token. IANA reports
+> a numeric offset (`+08`) for many zones and a letter code
+> (`EDT`) for others, so the mixed token read poorly and could
+> not be made uniformly 3-letter. Times now render bare
+> (`YYYY-MM-DD HH:MM`); which zone they are in is made explicit
+> on the `/operator/settings` and Session Edit cards instead, via
+> a live worked sample that names the selected zone in full. The
+> resolution order and per-render zone wiring are unchanged.
+>
 > The 18B segment number was previously held by "Session tagging
 > + archiving", which was folded into 18A (Sessions lobby
 > enhancements) on 2026-05-15. 18B is reused here for an

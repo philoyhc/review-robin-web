@@ -93,22 +93,28 @@
   {# Segment 18B PR 2 — per-operator default display timezone.
      Searchable <datalist> over every IANA zone name. The signed-in
      operator's surfaces render in this zone; new sessions inherit
-     it as their per-session default. #}
+     it as their per-session default. Times render bare
+     (YYYY-MM-DD HH:MM, no zone token) — the worked sample below
+     the label is where the chosen zone is made explicit. #}
   <div class="card" id="timezone-settings">
     <h2>Date &amp; time</h2>
     <p class="muted">
       Your default timezone. The app renders dates and times in this
       zone, and new sessions you create start from it (each session
-      can be overridden individually). Times show as
-      <code>YYYY-MM-DD HH:MM</code> with a zone label.
+      can be overridden individually).
     </p>
     <form method="post" action="/operator/settings/timezone">
       {% if return_to_raw %}
         <input type="hidden" name="return_to" value="{{ return_to_raw }}">
       {% endif %}
       <label for="display_timezone">Default timezone</label>
+      <p class="muted tz-sample-line" style="margin: 4px 0 10px;">
+        Sample (right now): <strong id="tz-sample">{{ timezone_sample }}</strong>
+        in timezone <strong id="tz-sample-zone">{{ current_timezone }}</strong>
+      </p>
       <input type="text" id="display_timezone" name="display_timezone"
              list="timezone-options" autocomplete="off" required
+             data-inherit-zone="{{ current_timezone }}"
              value="{{ current_timezone }}"
              placeholder="Start typing — e.g. Asia/Singapore">
       <datalist id="timezone-options">
@@ -122,6 +128,42 @@
       </div>
     </form>
   </div>
+
+  {# Live timezone-sample preview — progressive enhancement. The
+     server renders the sample for the saved zone; this updates it
+     as the operator picks a different zone. Shared verbatim with
+     the Session Edit "Display timezone" card. #}
+  <script>
+    (function () {
+      var input = document.getElementById("display_timezone");
+      var sample = document.getElementById("tz-sample");
+      var zoneLabel = document.getElementById("tz-sample-zone");
+      if (!input || !sample || !zoneLabel) return;
+      var fallback = input.getAttribute("data-inherit-zone") || "UTC";
+      function render(zone) {
+        try {
+          var parts = new Intl.DateTimeFormat("en-US", {
+            timeZone: zone, year: "numeric", month: "2-digit",
+            day: "2-digit", hour: "2-digit", minute: "2-digit",
+            hour12: false,
+          }).formatToParts(new Date());
+          var p = {};
+          parts.forEach(function (x) { p[x.type] = x.value; });
+          var hour = p.hour === "24" ? "00" : p.hour;
+          return p.year + "-" + p.month + "-" + p.day + " " + hour + ":" + p.minute;
+        } catch (e) { return null; }
+      }
+      function update() {
+        var zone = input.value.trim() || fallback;
+        var text = render(zone);
+        if (text === null) return;
+        sample.textContent = text;
+        zoneLabel.textContent = zone;
+      }
+      input.addEventListener("input", update);
+      input.addEventListener("change", update);
+    })();
+  </script>
 
   <div class="card danger-zone" id="danger-zone">
     <h2>Clear all settings</h2>
