@@ -113,7 +113,7 @@ def test_all_five_merge_fields_substitute() -> None:
     )
     assert body == (
         "Hi Rae,\n"
-        "Please review for Spring 2026 (deadline 2026-06-30 17:00 UTC).\n"
+        "Please review for Spring 2026 (deadline 2026-06-30 17:00).\n"
         "Questions? Contact Prof X <x@example.edu>.\n"
         "Link: https://app/i/abc\n"
     )

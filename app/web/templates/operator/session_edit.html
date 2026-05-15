@@ -55,19 +55,26 @@
      <datalist> over every IANA zone; a blank input clears the
      override so the session inherits the creating operator's
      default. Dates / times across this session's operator and
-     reviewer surfaces render in the resolved zone. #}
+     reviewer surfaces render in the resolved zone. Times render
+     bare (YYYY-MM-DD HH:MM, no zone token) — the worked sample
+     below the label is where the chosen zone is made explicit. #}
   <div class="card" id="timezone">
     <h2 style="margin-top: 0;">Display timezone</h2>
     <p class="muted">
       Dates and times for this session — deadlines, sent / response
-      timestamps — render in this zone, with a zone label. Leave
-      the field blank to inherit the creating operator's default
-      (currently <code>{{ inherited_timezone }}</code>).
+      timestamps — render in this zone. Leave the field blank to
+      inherit the creating operator's default (currently
+      <code>{{ inherited_timezone }}</code>).
     </p>
     <form method="post" action="/operator/sessions/{{ session.id }}/timezone">
       <label for="display_timezone">Session timezone</label>
+      <p class="muted tz-sample-line" style="margin: 4px 0 10px;">
+        Sample (right now): <strong id="tz-sample">{{ timezone_sample }}</strong>
+        in timezone <strong id="tz-sample-zone">{{ current_session_timezone }}</strong>
+      </p>
       <input type="text" id="display_timezone" name="display_timezone"
              list="timezone-options" autocomplete="off"
+             data-inherit-zone="{{ inherited_timezone }}"
              value="{{ session.display_timezone or '' }}"
              placeholder="Inherit operator default ({{ inherited_timezone }})">
       <datalist id="timezone-options">
@@ -80,6 +87,43 @@
       </div>
     </form>
   </div>
+
+  {# Live timezone-sample preview — progressive enhancement. The
+     server renders the sample for the resolved zone; this updates
+     it as the operator picks. A blank field falls back to the
+     inherited operator default. Shared verbatim with the
+     /operator/settings "Date & time" card. #}
+  <script>
+    (function () {
+      var input = document.getElementById("display_timezone");
+      var sample = document.getElementById("tz-sample");
+      var zoneLabel = document.getElementById("tz-sample-zone");
+      if (!input || !sample || !zoneLabel) return;
+      var fallback = input.getAttribute("data-inherit-zone") || "UTC";
+      function render(zone) {
+        try {
+          var parts = new Intl.DateTimeFormat("en-US", {
+            timeZone: zone, year: "numeric", month: "2-digit",
+            day: "2-digit", hour: "2-digit", minute: "2-digit",
+            hour12: false,
+          }).formatToParts(new Date());
+          var p = {};
+          parts.forEach(function (x) { p[x.type] = x.value; });
+          var hour = p.hour === "24" ? "00" : p.hour;
+          return p.year + "-" + p.month + "-" + p.day + " " + hour + ":" + p.minute;
+        } catch (e) { return null; }
+      }
+      function update() {
+        var zone = input.value.trim() || fallback;
+        var text = render(zone);
+        if (text === null) return;
+        sample.textContent = text;
+        zoneLabel.textContent = zone;
+      }
+      input.addEventListener("input", update);
+      input.addEventListener("change", update);
+    })();
+  </script>
 
   {# Owners management — Segment 16B PR 2. Reachable from this
      page for owners (normal route) and for sys-admins on
