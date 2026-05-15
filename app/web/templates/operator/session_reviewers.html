@@ -394,40 +394,58 @@
         var countPill = document.getElementById("reviewers-selected-count");
         var selectAll = document.getElementById("reviewers-select-all");
         if (!editBtn) return;
-        function selected() {
-          return Array.prototype.slice.call(
-            document.querySelectorAll(".reviewer-select:checked"));
+        function boxes() {
+          return document.querySelectorAll(".reviewer-select");
+        }
+        function countChecked() {
+          var all = boxes();
+          var n = 0;
+          for (var i = 0; i < all.length; i++) {
+            if (all[i].checked) n++;
+          }
+          return n;
         }
         function refresh() {
-          var n = selected().length;
+          var all = boxes();
+          var n = countChecked();
           editBtn.disabled = (n !== 1);
           inactivateBtn.disabled = (n === 0);
           reactivateBtn.disabled = (n === 0);
-          if (n > 0) {
-            countPill.textContent = n + " selected";
-            countPill.hidden = false;
-          } else {
-            countPill.hidden = true;
+          countPill.textContent = n + " selected";
+          countPill.hidden = (n === 0);
+          if (selectAll) {
+            selectAll.checked = (n > 0 && n === all.length);
           }
         }
-        Array.prototype.forEach.call(
-          document.querySelectorAll(".reviewer-select"),
-          function (cb) { cb.addEventListener("change", refresh); }
-        );
-        if (selectAll) {
-          selectAll.addEventListener("change", function () {
-            Array.prototype.forEach.call(
-              document.querySelectorAll(".reviewer-select"),
-              function (cb) { cb.checked = selectAll.checked; }
-            );
+        // Event delegation — one ``change`` listener catches every
+        // checkbox toggle (check AND uncheck; ``change`` bubbles) so
+        // the count can't drift out of sync.
+        document.addEventListener("change", function (e) {
+          var t = e.target;
+          if (!t) return;
+          if (t === selectAll) {
+            var all = boxes();
+            for (var i = 0; i < all.length; i++) {
+              all[i].checked = selectAll.checked;
+            }
             refresh();
-          });
-        }
+          } else if (t.classList &&
+                     t.classList.contains("reviewer-select")) {
+            refresh();
+          }
+        });
         editBtn.addEventListener("click", function () {
-          var sel = selected();
-          if (sel.length !== 1) return;
+          var all = boxes();
+          var picked = null;
+          for (var i = 0; i < all.length; i++) {
+            if (all[i].checked) {
+              if (picked !== null) return;  // more than one
+              picked = all[i];
+            }
+          }
+          if (picked === null) return;
           window.location =
-            {{ reviewers_base_url | tojson }} + "?edit_id=" + sel[0].value;
+            {{ reviewers_base_url | tojson }} + "?edit_id=" + picked.value;
         });
         refresh();
       })();
