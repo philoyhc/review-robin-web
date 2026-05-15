@@ -177,6 +177,20 @@
   {% if edit_mode %}
     <form id="relationship-edit-form" method="post"
           action="{{ relationships_base_url }}/{{ edit_id }}/update"></form>
+    {# Name-or-email-searchable pickers for the edit row. A
+       `<datalist>` scales past a native `<select>` for 1,000+
+       rosters; the picked label resolves back to a roster id
+       server-side. #}
+    <datalist id="relationship-reviewer-options">
+      {% for opt_id, opt_label in reviewer_picker_options %}
+        <option value="{{ opt_label }}"></option>
+      {% endfor %}
+    </datalist>
+    <datalist id="relationship-reviewee-options">
+      {% for opt_id, opt_label in reviewee_picker_options %}
+        <option value="{{ opt_label }}"></option>
+      {% endfor %}
+    </datalist>
   {% elif not is_ready %}
     <form id="relationships-bulk-form" method="post"
           action="{{ relationships_base_url }}/bulk-inactivate"></form>
@@ -277,18 +291,20 @@
             <tr class="relationship-edit-row" id="relationship-row-{{ row.id }}">
               <td class="row-select-cell"></td>
               <td>
-                <select name="reviewer_id" form="relationship-edit-form" required>
-                  {% for opt_id, opt_label in reviewer_picker_options %}
-                    <option value="{{ opt_id }}"{% if edit_values.reviewer_id == opt_id %} selected{% endif %}>{{ opt_label }}</option>
-                  {% endfor %}
-                </select>
+                <input type="text" name="reviewer_pick"
+                       form="relationship-edit-form"
+                       list="relationship-reviewer-options"
+                       value="{{ edit_values.reviewer_label }}"
+                       autocomplete="off" required
+                       placeholder="Search name or email">
               </td>
               <td>
-                <select name="reviewee_id" form="relationship-edit-form" required>
-                  {% for opt_id, opt_label in reviewee_picker_options %}
-                    <option value="{{ opt_id }}"{% if edit_values.reviewee_id == opt_id %} selected{% endif %}>{{ opt_label }}</option>
-                  {% endfor %}
-                </select>
+                <input type="text" name="reviewee_pick"
+                       form="relationship-edit-form"
+                       list="relationship-reviewee-options"
+                       value="{{ edit_values.reviewee_label }}"
+                       autocomplete="off" required
+                       placeholder="Search name or email">
               </td>
               <td class="tag-col tag-col-1"><input type="text" name="tag_1"
                          form="relationship-edit-form"
