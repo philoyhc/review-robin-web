@@ -53,9 +53,11 @@
     </div>
   {% endif %}
 
-  {# Friendly-labels editor (left, half-width) + operator-actions
-     card (right, half-width). #}
+  {# Friendly-labels editor (left, half-width); right column stacks
+     the operator-actions card + (in edit / add mode) the focused
+     Add / Edit card below it. #}
   <div class="bottom-grid">
+    <div class="bottom-left">
     {% set field_labels_form_action =
           "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
     {% set field_labels_source_type = "reviewer" %}
@@ -68,6 +70,9 @@
           [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
     ] %}
     {% include "operator/partials/_field_labels_editor.html" %}
+    </div>
+
+    <div class="bottom-left">
 
     {# Operator-actions card stays visible in edit / add mode but
        greyed (``is-locked``) — the focused Add / Edit card renders
@@ -132,12 +137,12 @@
                 id="reviewers-inactivate-btn"
                 form="reviewers-bulk-form"
                 formaction="{{ reviewers_base_url }}/bulk-inactivate"
-                disabled aria-disabled="true">Inactivate selected</button>
+                disabled aria-disabled="true">Inactivate</button>
         <button class="btn secondary" type="submit"
                 id="reviewers-reactivate-btn"
                 form="reviewers-bulk-form"
                 formaction="{{ reviewers_base_url }}/bulk-reactivate"
-                disabled aria-disabled="true">Reactivate selected</button>
+                disabled aria-disabled="true">Activate</button>
         {% if is_ready or edit_mode %}
           <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
         {% else %}
@@ -146,32 +151,33 @@
         {% endif %}
       </div>
     </div>
-  </div>
 
-  {# Focused Add / Edit card — renders below the operator-actions
-     card while in edit / add mode. #}
-  {% if edit_mode %}
-    <div class="card">
-      <h2>{{ "Add new reviewer" if add_mode else "Edit reviewer" }}</h2>
-      {% if edit_error %}
-        <p class="banner banner-error">{{ edit_error }}</p>
-      {% endif %}
-      <p class="form-help">
-        {% if add_mode %}
-          Fill in the new row below, then Save.
-        {% else %}
-          Edit the highlighted row below, then Save.
+    {# Focused Add / Edit card — half-width, directly below the
+       operator-actions card in the right column. #}
+    {% if edit_mode %}
+      <div class="card">
+        <h2>{{ "Add new reviewer" if add_mode else "Edit reviewer" }}</h2>
+        {% if edit_error %}
+          <p class="banner banner-error">{{ edit_error }}</p>
         {% endif %}
-      </p>
-      <div style="display: flex; justify-content: flex-end;
-                  gap: 12px; margin-top: var(--space-3);">
-        <button class="btn primary" type="submit"
-                form="reviewer-edit-form">Save</button>
-        <a class="btn secondary"
-           href="{{ reviewers_base_url }}">Cancel</a>
+        <p class="form-help">
+          {% if add_mode %}
+            Fill in the new row below, then Save.
+          {% else %}
+            Edit the highlighted row below, then Save.
+          {% endif %}
+        </p>
+        <div style="display: flex; justify-content: flex-end;
+                    gap: 12px; margin-top: var(--space-3);">
+          <button class="btn primary" type="submit"
+                  form="reviewer-edit-form">Save</button>
+          <a class="btn secondary"
+             href="{{ reviewers_base_url }}">Cancel</a>
+        </div>
       </div>
+    {% endif %}
     </div>
-  {% endif %}
+  </div>
 
   {# Hidden form shells. ``form=`` attributes on the table
      checkboxes / edit-row inputs / card buttons attach to these. #}
