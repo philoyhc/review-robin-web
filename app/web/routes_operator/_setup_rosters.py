@@ -24,16 +24,18 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewer, ReviewSession, User
+from app.db.models import Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import (
     assignments,
     csv_imports,
     field_labels as field_labels_service,
     relationships as relationships_service,
+    reviewees as reviewees_service,
     reviewers as reviewers_service,
 )
 from app.services import session_lifecycle as lifecycle
+from app.services.reviewees import RevieweeOperationError
 from app.services.reviewers import ReviewerOperationError
 from app.web import breadcrumbs, views
 from app.web.deps import (
@@ -163,28 +165,34 @@ async def _handle_import(
                 review_session, crumb_label
             ),
         }
-        if kind == "reviewers":
-            # Segment 15F PR 2 — the reviewers template's right-side
-            # operator-actions card needs the filter / cap context
-            # even on the error-render path so the form keeps reading
-            # consistent.
+        if kind in ("reviewers", "reviewees"):
+            # Segment 15F — the Reviewers / Reviewees templates'
+            # right-side operator-actions card needs the filter / cap
+            # context even on the CSV-import error-render path so the
+            # form keeps reading consistent. The error render is
+            # never an edit state.
+            if kind == "reviewers":
+                status_options = views.REVIEWERS_STATUS_OPTIONS
+                search_options = views.reviewers_search_options(list_items)
+                fields_with_data = assignments.reviewer_fields_with_data(
+                    db, review_session.id
+                )
+            else:
+                status_options = views.REVIEWEES_STATUS_OPTIONS
+                search_options = views.reviewees_search_options(list_items)
+                fields_with_data = assignments.reviewee_fields_with_data(
+                    db, review_session.id
+                )
             context.update(
                 {
                     "total_row_count": len(list_items),
                     "displayed_row_count": len(list_items),
                     "filter_status": "all",
                     "filter_search": "",
-                    "filter_status_options": views.REVIEWERS_STATUS_OPTIONS,
-                    "filter_search_options": (
-                        views.reviewers_search_options(list_items)
-                    ),
+                    "filter_status_options": status_options,
+                    "filter_search_options": search_options,
                     "is_ready": lifecycle.is_ready(review_session),
-                    "fields_with_data": assignments.reviewer_fields_with_data(
-                        db, review_session.id
-                    ),
-                    # The CSV-import error render is never an edit
-                    # state — the operator-actions card stays in its
-                    # filter + four-button shape.
+                    "fields_with_data": fields_with_data,
                     "edit_id": None,
                     "add_mode": False,
                     "edit_values": None,
@@ -572,24 +580,82 @@ def reviewers_bulk_reactivate(
     )
 
 
-@router.get("/sessions/{session_id}/reviewees", response_class=HTMLResponse)
-def reviewees_list(
+def _render_reviewees_page(
+    *,
     request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
+    db: Session,
+    user: User,
+    review_session: ReviewSession,
+    status_filter: str = "all",
+    search: str = "",
+    edit_id: int | None = None,
+    add_mode: bool = False,
+    edit_values: dict[str, str] | None = None,
+    edit_error: str | None = None,
+    http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
-    reviewees = assignments.list_reviewees(db, review_session.id)
+    """Render the Reviewees Setup page — the reviewee-side mirror of
+    ``_render_reviewers_page`` (Segment 15F PR 4)."""
+    is_ready = lifecycle.is_ready(review_session)
+    if is_ready:
+        edit_id = None
+        add_mode = False
+
+    all_reviewees = assignments.list_reviewees(db, review_session.id)
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
         cookie_name=f"rrw-sort-reviewees-{review_session.id}",
         valid_keys=_REVIEWEE_SORT_KEYS,
     )
-    reviewees = views.apply_cookie_sort(
-        reviewees,
+    all_reviewees = views.apply_cookie_sort(
+        all_reviewees,
         sort_spec,
         value_resolver=_reviewee_sort_value,
     )
+
+    filtered = views.filter_reviewees_rows(
+        all_reviewees, status=status_filter, search=search
+    )
+    is_filtered = status_filter != "all" or bool(search.strip())
+    cap = _REVIEWERS_FILTERED_CAP if is_filtered else _REVIEWERS_DEFAULT_CAP
+    capped = filtered[:cap]
+    displayed_row_count = len(capped)
+
+    reviewees = capped
+    if edit_id is not None and edit_id not in {r.id for r in reviewees}:
+        edited = next(
+            (r for r in all_reviewees if r.id == edit_id), None
+        )
+        if edited is None:
+            edit_id = None
+        else:
+            reviewees = [edited, *reviewees]
+
+    if edit_values is None and edit_id is not None:
+        edited = next(
+            (r for r in reviewees if r.id == edit_id), None
+        )
+        if edited is not None:
+            edit_values = {
+                "name": edited.name,
+                "email_or_identifier": edited.email_or_identifier,
+                "profile_link": edited.profile_link or "",
+                "tag_1": edited.tag_1 or "",
+                "tag_2": edited.tag_2 or "",
+                "tag_3": edited.tag_3 or "",
+                "status": edited.status,
+            }
+    if edit_values is None and add_mode:
+        edit_values = {
+            "name": "",
+            "email_or_identifier": "",
+            "profile_link": "",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status": "active",
+        }
+
     return _templates.TemplateResponse(
         request,
         "operator/session_reviewees.html",
@@ -598,17 +664,237 @@ def reviewees_list(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "reviewees": reviewees,
+            "total_row_count": len(all_reviewees),
+            "displayed_row_count": displayed_row_count,
+            "filter_status": status_filter,
+            "filter_search": search,
+            "filter_status_options": views.REVIEWEES_STATUS_OPTIONS,
+            "filter_search_options": views.reviewees_search_options(
+                all_reviewees
+            ),
             "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
-            "is_ready": lifecycle.is_ready(review_session),
+            "is_ready": is_ready,
             "fields_with_data": assignments.reviewee_fields_with_data(
                 db, review_session.id
             ),
+            "edit_id": edit_id,
+            "add_mode": add_mode,
+            "edit_values": edit_values,
+            "edit_error": edit_error,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Reviewees"
             ),
         },
+        status_code=http_status,
+    )
+
+
+@router.get("/sessions/{session_id}/reviewees", response_class=HTMLResponse)
+def reviewees_list(
+    request: Request,
+    status_filter: str = Query(default="all", alias="status"),
+    q: str = "",
+    edit_id: int | None = None,
+    add: int = 0,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    return _render_reviewees_page(
+        request=request,
+        db=db,
+        user=user,
+        review_session=review_session,
+        status_filter=status_filter,
+        search=q,
+        edit_id=edit_id,
+        add_mode=bool(add),
+    )
+
+
+def _require_reviewee_in_session(
+    db: Session, review_session: ReviewSession, reviewee_id: int
+) -> Reviewee:
+    reviewee = db.execute(
+        select(Reviewee).where(
+            Reviewee.id == reviewee_id,
+            Reviewee.session_id == review_session.id,
+        )
+    ).scalar_one_or_none()
+    if reviewee is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return reviewee
+
+
+@router.post(
+    "/sessions/{session_id}/reviewees/create",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def reviewees_create(
+    request: Request,
+    name: str = Form(default=""),
+    email_or_identifier: str = Form(default=""),
+    profile_link: str = Form(default=""),
+    tag_1: str = Form(default=""),
+    tag_2: str = Form(default=""),
+    tag_3: str = Form(default=""),
+    status_value: str = Form(default="active", alias="status"),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse | RedirectResponse:
+    _require_editable(review_session)
+    try:
+        reviewees_service.create_reviewee(
+            db,
+            review_session=review_session,
+            name=name,
+            email_or_identifier=email_or_identifier,
+            profile_link=profile_link,
+            tag_1=tag_1,
+            tag_2=tag_2,
+            tag_3=tag_3,
+            status=status_value,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RevieweeOperationError as exc:
+        return _render_reviewees_page(
+            request=request,
+            db=db,
+            user=user,
+            review_session=review_session,
+            add_mode=True,
+            edit_values={
+                "name": name,
+                "email_or_identifier": email_or_identifier,
+                "profile_link": profile_link,
+                "tag_1": tag_1,
+                "tag_2": tag_2,
+                "tag_3": tag_3,
+                "status": status_value,
+            },
+            edit_error=exc.message,
+            http_status=status.HTTP_400_BAD_REQUEST,
+        )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/reviewees",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/reviewees/{reviewee_id}/update",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def reviewees_update(
+    request: Request,
+    reviewee_id: int,
+    name: str = Form(default=""),
+    email_or_identifier: str = Form(default=""),
+    profile_link: str = Form(default=""),
+    tag_1: str = Form(default=""),
+    tag_2: str = Form(default=""),
+    tag_3: str = Form(default=""),
+    status_value: str = Form(default="active", alias="status"),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse | RedirectResponse:
+    _require_editable(review_session)
+    reviewee = _require_reviewee_in_session(db, review_session, reviewee_id)
+    try:
+        reviewees_service.update_reviewee(
+            db,
+            reviewee=reviewee,
+            name=name,
+            email_or_identifier=email_or_identifier,
+            profile_link=profile_link,
+            tag_1=tag_1,
+            tag_2=tag_2,
+            tag_3=tag_3,
+            status=status_value,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RevieweeOperationError as exc:
+        return _render_reviewees_page(
+            request=request,
+            db=db,
+            user=user,
+            review_session=review_session,
+            edit_id=reviewee_id,
+            edit_values={
+                "name": name,
+                "email_or_identifier": email_or_identifier,
+                "profile_link": profile_link,
+                "tag_1": tag_1,
+                "tag_2": tag_2,
+                "tag_3": tag_3,
+                "status": status_value,
+            },
+            edit_error=exc.message,
+            http_status=status.HTTP_400_BAD_REQUEST,
+        )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/reviewees",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/reviewees/bulk-inactivate")
+def reviewees_bulk_inactivate(
+    reviewee_ids: list[int] = Form(default=[]),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_editable(review_session)
+    try:
+        reviewees_service.bulk_inactivate(
+            db,
+            review_session=review_session,
+            reviewee_ids=reviewee_ids,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RevieweeOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/reviewees",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/reviewees/bulk-reactivate")
+def reviewees_bulk_reactivate(
+    reviewee_ids: list[int] = Form(default=[]),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_editable(review_session)
+    try:
+        reviewees_service.bulk_reactivate(
+            db,
+            review_session=review_session,
+            reviewee_ids=reviewee_ids,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RevieweeOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/reviewees",
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

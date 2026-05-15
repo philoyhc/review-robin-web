@@ -521,6 +521,12 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "reviewer.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
     "reviewer.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "reviewer.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    # Segment 15F PR 4 — per-row reviewee authoring + bulk status
+    # flips. ``app/services/reviewees.py`` is the sole emitter.
+    "reviewee.created": EventSchema(_IDENTITY | {"snapshot"}),
+    "reviewee.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "reviewee.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    "reviewee.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "operator_email_settings.updated": EventSchema(frozenset({"changes"})),
     "operator_email_settings.cleared": EventSchema(frozenset()),
     # Segment 15A Slice 1 — per-session friendly-label resolver mutations.

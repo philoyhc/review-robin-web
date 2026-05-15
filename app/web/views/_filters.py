@@ -26,7 +26,7 @@ import re
 from ._invitations import InvitationsRow
 from ._responses import ResponsesRow
 
-from app.db.models import Reviewer
+from app.db.models import Reviewee, Reviewer
 
 # Cap for the per-page `<datalist>` autocomplete options. Decision 14
 # in ``guide/segment_15F_enhanced_setup_pages.md`` — the
@@ -233,6 +233,61 @@ def reviewers_search_options(rows: list[Reviewer]) -> list[str]:
     anything the operator types beyond the first N matches."""
     labels = sorted(
         (f"{r.name} ({r.email})" for r in rows),
+        key=str.casefold,
+    )
+    return labels[:REVIEWERS_DATALIST_CAP]
+
+
+# Status filter options for the Reviewees Setup page. Order matters
+# (dropdown order operators see). ``"all"`` is implicit. Segment 15F
+# PR 4 — same shape as ``REVIEWERS_STATUS_OPTIONS``.
+REVIEWEES_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("active", "Active"),
+    ("inactive", "Inactive"),
+)
+
+
+def filter_reviewees_rows(
+    rows: list[Reviewee], *, status: str, search: str
+) -> list[Reviewee]:
+    """Apply status + search filters to a Reviewee list.
+
+    ``status`` is one of ``REVIEWEES_STATUS_OPTIONS`` keys
+    (``"active"`` / ``"inactive"``) or ``"all"``. ``search`` is
+    matched case-insensitively against the reviewee's name or
+    ``email_or_identifier``; when the value looks like a
+    ``"Name (identifier)"`` typeahead pick, the bracketed handle is
+    used for an exact match instead. Empty ``search`` is a no-op."""
+    out = list(rows)
+    valid_status = {key for key, _ in REVIEWEES_STATUS_OPTIONS}
+    if status in valid_status:
+        out = [r for r in out if r.status == status]
+    needle = search.strip()
+    if needle:
+        tail = _extract_filter_label_tail(needle)
+        if tail is not None:
+            picked = tail.casefold()
+            out = [
+                r
+                for r in out
+                if r.email_or_identifier.casefold() == picked
+            ]
+        else:
+            out = [
+                r
+                for r in out
+                if _matches_search(r.name, needle)
+                or _matches_search(r.email_or_identifier, needle)
+            ]
+    return out
+
+
+def reviewees_search_options(rows: list[Reviewee]) -> list[str]:
+    """``"Name (identifier)"`` labels for the Reviewees page
+    typeahead. Sorted alphabetically; capped at
+    ``REVIEWERS_DATALIST_CAP`` per decision 14."""
+    labels = sorted(
+        (f"{r.name} ({r.email_or_identifier})" for r in rows),
         key=str.casefold,
     )
     return labels[:REVIEWERS_DATALIST_CAP]
