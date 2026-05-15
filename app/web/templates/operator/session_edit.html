@@ -51,6 +51,36 @@
     </form>
   </div>
 
+  {# Per-session display timezone — Segment 18B PR 3. Searchable
+     <datalist> over every IANA zone; a blank input clears the
+     override so the session inherits the creating operator's
+     default. Dates / times across this session's operator and
+     reviewer surfaces render in the resolved zone. #}
+  <div class="card" id="timezone">
+    <h2 style="margin-top: 0;">Display timezone</h2>
+    <p class="muted">
+      Dates and times for this session — deadlines, sent / response
+      timestamps — render in this zone, with a zone label. Leave
+      the field blank to inherit the creating operator's default
+      (currently <code>{{ inherited_timezone }}</code>).
+    </p>
+    <form method="post" action="/operator/sessions/{{ session.id }}/timezone">
+      <label for="display_timezone">Session timezone</label>
+      <input type="text" id="display_timezone" name="display_timezone"
+             list="timezone-options" autocomplete="off"
+             value="{{ session.display_timezone or '' }}"
+             placeholder="Inherit operator default ({{ inherited_timezone }})">
+      <datalist id="timezone-options">
+        {% for tz in timezone_options %}
+          <option value="{{ tz }}"></option>
+        {% endfor %}
+      </datalist>
+      <div class="btn-pair" style="margin-top: 20px;">
+        <button class="btn" type="submit">Save timezone</button>
+      </div>
+    </form>
+  </div>
+
   {# Owners management — Segment 16B PR 2. Reachable from this
      page for owners (normal route) and for sys-admins on
      non-member sessions (relaxed gate). #}

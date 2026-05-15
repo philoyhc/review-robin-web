@@ -112,8 +112,21 @@ def require_sys_admin(user: User = Depends(get_or_create_user)) -> User:
     )
 
 
+def _stash_session_timezone(
+    request: Request, review_session: ReviewSession
+) -> None:
+    """Re-stamp ``request.state.display_timezone`` with the session's
+    resolved zone, overriding the viewing-operator default that
+    ``get_or_create_user`` parked there. Every session-scoped render
+    then localises to the session zone. Segment 18B PR 3."""
+    request.state.display_timezone = sessions.resolve_session_timezone(
+        review_session
+    )
+
+
 def require_session_operator(
     session_id: int,
+    request: Request,
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> ReviewSession:
@@ -125,11 +138,13 @@ def require_session_operator(
     review_session = sessions.get_for_user(db, user, session_id)
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    _stash_session_timezone(request, review_session)
     return review_session
 
 
 def require_sys_admin_or_session_operator(
     session_id: int,
+    request: Request,
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> ReviewSession:
@@ -146,12 +161,16 @@ def require_sys_admin_or_session_operator(
         ).scalar_one_or_none()
         if review_session is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        _stash_session_timezone(request, review_session)
         return review_session
-    return require_session_operator(session_id=session_id, user=user, db=db)
+    return require_session_operator(
+        session_id=session_id, request=request, user=user, db=db
+    )
 
 
 def require_reviewer_in_session(
     session_id: int,
+    request: Request,
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewer, ReviewSession]:
@@ -184,6 +203,7 @@ def require_reviewer_in_session(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not an active reviewer in this session",
         )
+    _stash_session_timezone(request, review_session)
     return matched, review_session
 
 

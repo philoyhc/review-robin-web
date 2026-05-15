@@ -1,12 +1,11 @@
 # Segment 18B — Date and time settings
 
-> **In flight — PRs 1 + 2 shipped 2026-05-15.** Scoping
-> decisions locked (see "Locked decisions" below). PR 1
-> (canonical format + shared display helper) and PR 2
-> (per-operator default timezone + `/operator/settings` card)
-> are shipped; PR 3 (per-session override) follows. 13F PR 6
-> + PR 7 (the inert columns this segment consumes) shipped
-> 2026-05-15.
+> **Complete — all 3 PRs shipped 2026-05-15.** PR 1 (canonical
+> format + shared display helper), PR 2 (per-operator default
+> timezone + `/operator/settings` card), and PR 3 (per-session
+> override + Session Edit card) are all shipped. 13F PR 6 + PR 7
+> (the inert columns this segment consumes) shipped 2026-05-15.
+> The Post-MVP input-consistency item below remains deferred.
 >
 > The 18B segment number was previously held by "Session tagging
 > + archiving", which was folded into 18A (Sessions lobby
@@ -266,7 +265,30 @@ Original scope notes:
 - Audit event `operator.display_timezone_set` (changes
   envelope), registered in `EVENT_SCHEMAS`.
 
-### PR 3 — Per-session timezone override + Session Edit card
+### PR 3 — Per-session timezone override + Session Edit card — ✅ shipped 2026-05-15
+
+**Outcome.** `sessions.display_timezone` is now lit up (no
+migration — column from 13F PR 6). New `sessions` helpers
+`resolve_session_timezone` (resolution order: session override →
+creating operator's default → UTC) and `set_session_display_timezone`;
+`create_session` stamps the column with the creating operator's
+default at create time. Audit event `session.display_timezone_set`
+(`_IDENTITY | changes`) registered in `EVENT_SCHEMAS`. New
+**Display timezone** card on `/operator/sessions/{id}/edit` —
+searchable `<datalist>`, blank field clears the override back to
+inherit — backed by `POST /operator/sessions/{id}/timezone` (not
+lifecycle-gated; display-only). The session-resolving dependencies
+(`require_session_operator`, `require_sys_admin_or_session_operator`,
+`require_reviewer_in_session`) re-stamp `request.state.display_timezone`
+with the session's resolved zone, overriding the viewing-operator
+default `get_or_create_user` parks there — so every session-scoped
+operator + reviewer render localises to the session zone. 11 new
+tests (extending `tests/integration/test_display_timezone.py`).
+
+Session-less surfaces (sessions lobby, sys-admin pages) keep
+rendering in the viewing operator's zone, as planned.
+
+Original scope notes:
 
 - Lights up `sessions.display_timezone` — the column itself is
   pre-positioned inert by **13F PR 6**, so this PR carries **no

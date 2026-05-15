@@ -29,6 +29,7 @@ from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
 from app.services import (
+    operator_settings,
     responses,
     session_owners,
     sessions,
@@ -141,6 +142,10 @@ def session_edit_form(
                 db, review_session
             ),
             "owners_error": owners_error,
+            "timezone_options": operator_settings.timezone_options(),
+            "inherited_timezone": operator_settings.get_display_timezone(
+                review_session.created_by_user
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Edit details"
             ),
@@ -190,6 +195,41 @@ def session_edit_submit(
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/timezone")
+def session_set_timezone(
+    display_timezone: str = Form(default=""),
+    review_session: ReviewSession = Depends(
+        require_sys_admin_or_session_operator
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Set or clear the per-session display-timezone override
+    (Segment 18B PR 3). A blank value clears the override — the
+    session falls back to inheriting the creating operator's
+    default. Not lifecycle-gated: the display zone stays editable
+    in any session state."""
+    timezone_name = display_timezone.strip() or None
+    if timezone_name is not None and not operator_settings.is_valid_timezone(
+        timezone_name
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"unknown timezone {timezone_name!r}",
+        )
+    sessions.set_session_display_timezone(
+        db,
+        review_session=review_session,
+        user=user,
+        timezone_name=timezone_name,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/edit#timezone",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

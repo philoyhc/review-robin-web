@@ -1,20 +1,34 @@
-"""Segment 18B PR 2 — operator surfaces render timestamps in the
-signed-in operator's configured display timezone.
+"""Segment 18B PR 2 / PR 3 — date / time rendering localises to the
+resolved display timezone.
 
-Exercises the full filter-wiring chain: ``get_or_create_user``
-stamps ``request.state.display_timezone`` from the operator's
-``users.preferences``; the ``date_filters`` context processor
-injects it; the context-aware ``format_datetime`` filter resolves
-the zone at render time.
+PR 2: operator surfaces render in the signed-in operator's
+configured zone (``users.preferences['display_timezone']``).
+
+PR 3: session-scoped surfaces render in the session's resolved
+zone — ``sessions.display_timezone`` override → creating
+operator's default → UTC.
+
+Exercises the full filter-wiring chain: the auth / session
+dependencies stamp ``request.state.display_timezone``; the
+``date_filters`` context processor injects it; the context-aware
+``format_datetime`` filter resolves the zone at render time.
 """
 from __future__ import annotations
+
+from collections.abc import Callable
+from datetime import datetime
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.auth.identity import AuthenticatedUser
+from app.db.models import AuditEvent, ReviewSession
 from app.services.date_formatting import format_datetime
+from ._full_matrix import (
+    generate_via_page_button,
+    pin_full_matrix_on_all_instruments,
+)
 
 
 def _create_session(
@@ -54,3 +68,238 @@ def test_lobby_renders_in_operator_zone_after_save(
     assert format_datetime(session.created_at, "Asia/Singapore") in body
     # ...and the UTC render (a different wall-clock time) is gone.
     assert format_datetime(session.created_at, "UTC") not in body
+
+
+# ── PR 3 — per-session timezone override ─────────────────────────────────
+
+
+def test_new_session_stamped_with_operator_default(
+    client: TestClient, db: Session
+) -> None:
+    """A new session captures the creating operator's default zone at
+    create time (a snapshot, not a live link)."""
+    client.post(
+        "/operator/settings/timezone",
+        data={"display_timezone": "Asia/Singapore"},
+        follow_redirects=False,
+    )
+    session = _create_session(client, db, code="tz-stamp")
+    assert session.display_timezone == "Asia/Singapore"
+
+
+def test_new_session_stamped_utc_when_operator_has_no_default(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="tz-stamp-utc")
+    assert session.display_timezone == "UTC"
+
+
+def test_session_timezone_override_persists_and_audits(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="tz-ov")
+    response = client.post(
+        f"/operator/sessions/{session.id}/timezone",
+        data={"display_timezone": "America/New_York"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/operator/sessions/{session.id}/edit#timezone"
+    )
+
+    db.refresh(session)
+    assert session.display_timezone == "America/New_York"
+
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.display_timezone_set"
+        )
+    ).scalar_one()
+    # Stamped "UTC" at create (operator had no default), now New York.
+    assert event.detail["changes"]["display_timezone"] == [
+        "UTC",
+        "America/New_York",
+    ]
+    assert event.session_id == session.id
+
+
+def test_session_timezone_blank_clears_override(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="tz-clear")
+    client.post(
+        f"/operator/sessions/{session.id}/timezone",
+        data={"display_timezone": "Europe/London"},
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/timezone",
+        data={"display_timezone": ""},
+        follow_redirects=False,
+    )
+    db.refresh(session)
+    assert session.display_timezone is None
+
+
+def test_session_timezone_rejects_unknown_zone(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="tz-bad")
+    response = client.post(
+        f"/operator/sessions/{session.id}/timezone",
+        data={"display_timezone": "Mars/Base"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+
+
+def test_edit_page_renders_timezone_card(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="tz-card")
+    body = client.get(f"/operator/sessions/{session.id}/edit").text
+    assert 'id="timezone"' in body
+    assert "Display timezone" in body
+    assert 'name="display_timezone"' in body
+    assert '<option value="Asia/Singapore">' in body
+
+
+def test_session_detail_renders_in_override_zone(
+    client: TestClient, db: Session
+) -> None:
+    """A session-scoped page localises timestamps to the session's
+    own override zone — not the viewing operator's default."""
+    session = _create_session(client, db, code="tz-render")
+    client.post(
+        f"/operator/sessions/{session.id}/timezone",
+        data={"display_timezone": "Asia/Singapore"},
+        follow_redirects=False,
+    )
+    db.refresh(session)
+
+    body = client.get(f"/operator/sessions/{session.id}").text
+    assert format_datetime(session.created_at, "Asia/Singapore") in body
+    assert format_datetime(session.created_at, "UTC") not in body
+
+
+def test_session_with_no_override_inherits_operator_default(
+    client: TestClient, db: Session
+) -> None:
+    """With the override cleared, a session-scoped render resolves to
+    the creating operator's *current* default."""
+    session = _create_session(client, db, code="tz-inherit")
+    # The operator picks up a default only after the session exists.
+    client.post(
+        "/operator/settings/timezone",
+        data={"display_timezone": "Asia/Singapore"},
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/timezone",
+        data={"display_timezone": ""},
+        follow_redirects=False,
+    )
+    db.refresh(session)
+    assert session.display_timezone is None
+
+    body = client.get(f"/operator/sessions/{session.id}").text
+    assert format_datetime(session.created_at, "Asia/Singapore") in body
+
+
+def _build_active_session_with_reviewer(
+    operator: TestClient,
+    db: Session,
+    *,
+    code: str,
+    reviewer_email: str,
+) -> ReviewSession:
+    operator.post(
+        "/operator/sessions",
+        data={"name": code.title(), "code": code},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                f"ReviewerName,ReviewerEmail\nR,{reviewer_email}\n".encode(),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{session.id}/relationships/import",
+        files={
+            "file": (
+                "rel.csv",
+                (
+                    f"ReviewerEmail,RevieweeEmail\n"
+                    f"{reviewer_email},carol@example.edu\n"
+                ).encode(),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    pin_full_matrix_on_all_instruments(db, session.id)
+    generate_via_page_button(operator, session.id)
+    operator.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    operator.post(
+        f"/operator/sessions/{session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    db.refresh(session)
+    return session
+
+
+def test_reviewer_surface_renders_deadline_in_session_zone(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The reviewer surface localises the session deadline to the
+    session's zone (18B PR 3 deadline-first verification)."""
+    operator = make_client(alice)
+    session = _build_active_session_with_reviewer(
+        operator, db, code="tz-rev", reviewer_email="rae@example.edu"
+    )
+    session.deadline = datetime(2026, 6, 1, 2, 0)
+    db.commit()
+    operator.post(
+        f"/operator/sessions/{session.id}/timezone",
+        data={"display_timezone": "Asia/Singapore"},
+        follow_redirects=False,
+    )
+    db.refresh(session)
+
+    reviewer = make_client(
+        AuthenticatedUser(
+            principal_id="rae-oid",
+            email="rae@example.edu",
+            name="Rae Reviewer",
+            provider="aad",
+        )
+    )
+    response = reviewer.get(f"/reviewer/sessions/{session.id}")
+    assert response.status_code == 200
+    # 02:00 UTC is 10:00 in Singapore — the deadline shows +08.
+    assert format_datetime(session.deadline, "Asia/Singapore") in response.text
+    assert format_datetime(session.deadline, "UTC") not in response.text
