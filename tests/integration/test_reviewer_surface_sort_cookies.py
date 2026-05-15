@@ -18,6 +18,7 @@ Pins:
 from __future__ import annotations
 
 import json
+from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -169,6 +170,34 @@ def test_cookie_drives_ssr_initial_row_order(
     )
     body = response.text
     # Reverse-alphabetical: Charlie, Bravo, Alpha.
+    assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
+
+
+def test_percent_encoded_cookie_drives_ssr_row_order(
+    db: Session,
+    client: TestClient,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """The browser primitive writes the cookie percent-encoded
+    (``encodeURIComponent``); the SSR decoder must ``unquote``
+    before parsing or the server silently ignores the sort."""
+    review_session = _setup_session_with_three_reviewees(
+        client, db, code="ck-enc", reviewer_email=rae.email
+    )
+    instrument = _instrument(db, review_session)
+    _activate(client, db, review_session)
+
+    rae_client = make_client(rae)
+    cookie_name = f"rrw-sort-rs-{review_session.id}-{instrument.id}"
+    rae_client.cookies.set(
+        cookie_name,
+        quote(json.dumps([{"key": "reviewee.name", "dir": "desc"}])),
+        path=f"/reviewer/sessions/{review_session.id}",
+    )
+    body = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}"
+    ).text
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
 
 

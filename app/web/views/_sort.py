@@ -65,14 +65,20 @@ def decode_cookie_sort_spec(
     caps at 3 entries, and silently drops keys not in
     ``valid_keys`` (when supplied) so a stale cookie referencing
     a deleted column is a no-op rather than a render error.
+
+    The browser primitive writes the cookie value percent-encoded
+    (``encodeURIComponent``); Starlette does not percent-decode
+    cookie values, so the raw value is ``unquote``-d here before
+    parsing. ``unquote`` is a no-op on already-plain JSON.
     """
     import json
+    from urllib.parse import unquote
 
     raw = cookies.get(cookie_name)
     if not raw:
         return []
     try:
-        decoded = json.loads(raw)
+        decoded = json.loads(unquote(raw))
     except (TypeError, ValueError):
         return []
     if not isinstance(decoded, list):
@@ -188,6 +194,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     primitive's hard cap, at most 3 entries.
     """
     import json
+    from urllib.parse import unquote
 
     cookie_name = (
         f"{_REVIEWER_COOKIE_PREFIX}-{session_id}-{instrument_id}"
@@ -196,7 +203,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     if not raw:
         return None
     try:
-        decoded = json.loads(raw)
+        decoded = json.loads(unquote(raw))
     except (TypeError, ValueError):
         return None
     if not isinstance(decoded, list):
