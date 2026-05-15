@@ -673,6 +673,7 @@
       .operator-actions-card .filter-row {
         display: flex;
         gap: 16px;
+        align-items: flex-end;
       }
       .operator-actions-card .filter-row > label {
         display: flex;
@@ -680,11 +681,18 @@
         gap: 4px;
       }
       .operator-actions-card .filter-row > label.filter-status { flex: 1; }
-      .operator-actions-card .filter-row > label.filter-search { flex: 4; }
+      .operator-actions-card .filter-row > label.filter-search { flex: 3; }
       .operator-actions-card .filter-row select,
       .operator-actions-card .filter-row input[type="text"] {
         width: 100%;
         box-sizing: border-box;
+      }
+      /* While a row is being edited / added the operator-actions
+         card greys out — the focused Add / Edit card below it owns
+         the operator's attention (Segment 15F PR 3 follow-up). */
+      .operator-actions-card.is-locked {
+        opacity: 0.5;
+        pointer-events: none;
       }
       .operator-actions-card .filter-actions {
         display: flex;
