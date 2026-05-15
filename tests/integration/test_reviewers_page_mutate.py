@@ -97,8 +97,10 @@ def test_edit_id_renders_target_row_as_inputs(
     # The edited row's name prefilled into an input.
     assert 'name="name"' in body
     assert 'value="Alice"' in body
-    # The operator-actions card stays visible but greyed out.
-    assert "operator-actions-card is-locked" in body
+    # The operator-actions card's filter + buttons grey out; the
+    # Add / Edit form sits below the divider in the same card.
+    assert "operator-actions-main is-locked" in body
+    assert 'class="operator-actions-divider"' in body
 
 
 def test_edit_post_updates_row_and_redirects(

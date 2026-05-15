@@ -53,11 +53,9 @@
     </div>
   {% endif %}
 
-  {# Friendly-labels editor (left, half-width); right column stacks
-     the operator-actions card + (in edit / add mode) the focused
-     Add / Edit card below it. #}
+  {# Friendly-labels editor (left, half-width) + operator-actions
+     card (right, half-width). #}
   <div class="bottom-grid">
-    <div class="bottom-left">
     {% set field_labels_form_action =
           "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
     {% set field_labels_source_type = "reviewer" %}
@@ -70,46 +68,41 @@
           [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
     ] %}
     {% include "operator/partials/_field_labels_editor.html" %}
-    </div>
 
-    <div class="bottom-left">
-
-    {# Operator-actions card stays visible in edit / add mode but
-       greyed (``is-locked``) — the focused Add / Edit card renders
-       below it. #}
-    <div class="card operator-actions-card{% if edit_mode %} is-locked{% endif %}">
+    <div class="card operator-actions-card">
       <h2>Operator actions</h2>
-      <form method="get"
-            action="{{ reviewers_base_url }}"
-            class="operator-actions-filter">
-        <div class="filter-row">
-          <label class="filter-status">
-            Status:
-            <select name="status">
-              <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
-              {% for value, label in filter_status_options %}
-                <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label class="filter-search">
-            Search:
-            <input type="text"
-                   name="q"
-                   list="reviewers-search-options"
-                   value="{{ filter_search }}"
-                   autocomplete="off"
-                   placeholder="Reviewer name or email">
-            <datalist id="reviewers-search-options">
-              {% for label in filter_search_options %}
-                <option value="{{ label }}"></option>
-              {% endfor %}
-            </datalist>
-          </label>
-          <button class="btn secondary" type="submit">Apply</button>
-        </div>
-        {% if displayed_row_count != total_row_count
-              or filter_status != "all" or filter_search %}
+      {# Filter + action buttons grey out (``is-locked``) while a
+         row is being edited / added; the Add / Edit form below the
+         divider stays interactive. #}
+      <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
+        <form method="get"
+              action="{{ reviewers_base_url }}"
+              class="operator-actions-filter">
+          <div class="filter-row">
+            <label class="filter-status">
+              Status:
+              <select name="status">
+                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+                {% for value, label in filter_status_options %}
+                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="filter-search">
+              Search:
+              <input type="text"
+                     name="q"
+                     list="reviewers-search-options"
+                     value="{{ filter_search }}"
+                     autocomplete="off"
+                     placeholder="Reviewer name or email">
+              <datalist id="reviewers-search-options">
+                {% for label in filter_search_options %}
+                  <option value="{{ label }}"></option>
+                {% endfor %}
+              </datalist>
+            </label>
+          </div>
           <div class="filter-actions">
             {% if displayed_row_count != total_row_count %}
               <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
@@ -118,44 +111,42 @@
               <a class="btn secondary"
                  href="{{ reviewers_base_url }}">Clear</a>
             {% endif %}
+            <button class="btn secondary" type="submit">Apply</button>
           </div>
-        {% endif %}
-      </form>
-      {# Action buttons — selection-driven enable/disable
-         (Segment 15F decision 3). The bulk buttons submit the
-         ``reviewers-bulk-form`` via ``formaction``; Add new row
-         is a plain link; Edit is JS-driven (reads the single
-         checked row). All disabled when the session is ongoing. #}
-      <div class="operator-actions-buttons"
-           style="margin-top: var(--space-3);">
-        <span class="pill pill-count"
-              id="reviewers-selected-count" hidden>0 selected</span>
-        <button class="btn secondary" type="button"
-                id="reviewers-edit-btn"
-                disabled aria-disabled="true">Edit</button>
-        <button class="btn secondary" type="submit"
-                id="reviewers-inactivate-btn"
-                form="reviewers-bulk-form"
-                formaction="{{ reviewers_base_url }}/bulk-inactivate"
-                disabled aria-disabled="true">Inactivate</button>
-        <button class="btn secondary" type="submit"
-                id="reviewers-reactivate-btn"
-                form="reviewers-bulk-form"
-                formaction="{{ reviewers_base_url }}/bulk-reactivate"
-                disabled aria-disabled="true">Activate</button>
-        {% if is_ready or edit_mode %}
-          <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
-        {% else %}
-          <a class="btn secondary"
-             href="{{ reviewers_base_url }}?add=1">Add new row</a>
-        {% endif %}
+        </form>
+        {# Action buttons — selection-driven enable/disable
+           (Segment 15F decision 3). The bulk buttons submit the
+           ``reviewers-bulk-form`` via ``formaction``; Add new row
+           is a plain link; Edit is JS-driven (reads the single
+           checked row). All disabled when the session is ongoing. #}
+        <div class="operator-actions-buttons"
+             style="margin-top: var(--space-3);">
+          <span class="pill pill-count"
+                id="reviewers-selected-count" hidden>0 selected</span>
+          <button class="btn secondary" type="button"
+                  id="reviewers-edit-btn"
+                  disabled aria-disabled="true">Edit</button>
+          <button class="btn secondary" type="submit"
+                  id="reviewers-inactivate-btn"
+                  form="reviewers-bulk-form"
+                  formaction="{{ reviewers_base_url }}/bulk-inactivate"
+                  disabled aria-disabled="true">Inactivate</button>
+          <button class="btn secondary" type="submit"
+                  id="reviewers-reactivate-btn"
+                  form="reviewers-bulk-form"
+                  formaction="{{ reviewers_base_url }}/bulk-reactivate"
+                  disabled aria-disabled="true">Activate</button>
+          {% if is_ready or edit_mode %}
+            <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
+          {% else %}
+            <a class="btn secondary"
+               href="{{ reviewers_base_url }}?add=1">Add new row</a>
+          {% endif %}
+        </div>
       </div>
-    </div>
-
-    {# Focused Add / Edit card — half-width, directly below the
-       operator-actions card in the right column. #}
-    {% if edit_mode %}
-      <div class="card">
+      {# Focused Add / Edit form — same card, below a divider. #}
+      {% if edit_mode %}
+        <hr class="operator-actions-divider">
         <h2>{{ "Add new reviewer" if add_mode else "Edit reviewer" }}</h2>
         {% if edit_error %}
           <p class="banner banner-error">{{ edit_error }}</p>
@@ -174,8 +165,7 @@
           <a class="btn secondary"
              href="{{ reviewers_base_url }}">Cancel</a>
         </div>
-      </div>
-    {% endif %}
+      {% endif %}
     </div>
   </div>
 
