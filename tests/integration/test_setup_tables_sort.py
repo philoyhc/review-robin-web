@@ -125,22 +125,27 @@ def test_reviewers_updated_at_sort_surfaces_recent_row(
     recently touched row floats to the top under a desc sort. This
     is the column's reason for existing: surface the most recently
     added / edited rows without busting the 200-row cap."""
-    from datetime import datetime
+    from datetime import timedelta
 
     from app.db.models import Reviewer
 
     review_session = _make_session(client, db, code="rev-upd-sort")
     _populate_reviewers(client, review_session.id)
-    # Stamp Charlie with a far-future ``updated_at`` so the desc
-    # sort is deterministic (SQLite ``func.now()`` only has
-    # second granularity, too coarse for a real-time edit).
-    charlie = db.execute(
+    # Stamp Charlie a year past the rest so the desc sort is
+    # deterministic (SQLite ``func.now()`` only has second
+    # granularity, too coarse for a real-time edit). Derive the
+    # value by offsetting an existing row's ``updated_at`` so it
+    # keeps the dialect's tz-awareness — Postgres returns
+    # tz-aware datetimes, SQLite naive ones.
+    rows = db.execute(
         select(Reviewer).where(
-            Reviewer.session_id == review_session.id,
-            Reviewer.name == "Charlie",
+            Reviewer.session_id == review_session.id
         )
-    ).scalar_one()
-    charlie.updated_at = datetime(2099, 1, 1, 12, 0, 0)
+    ).scalars().all()
+    by_name = {r.name: r for r in rows}
+    by_name["Charlie"].updated_at = (
+        by_name["Alpha"].updated_at + timedelta(days=365)
+    )
     db.commit()
 
     cookie_name = f"rrw-sort-reviewers-{review_session.id}"
