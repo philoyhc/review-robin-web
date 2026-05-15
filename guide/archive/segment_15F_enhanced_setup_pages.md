@@ -1,6 +1,7 @@
 # Segment 15F — Enhanced Setup pages
 
-**Status:** Sized 2026-05-14. Carved out 2026-05-10 from the original
+**Status:** SHIPPED 2026-05-15 (PRs #993 → #1012). Carved out
+2026-05-10 from the original
 `guide/archive/segment_15_operator_polish_and_documentation.md` once it
 became clear the per-row Manage-page enhancements are a
 distinct scope from the documentation pass (now Segment 20).
@@ -497,7 +498,7 @@ GET + POST happy-path, Add new row GET + POST, bulk inactivate
 included past the cap, defensive `invitations_send_one` 409.
 behaviour.
 
-### PR 4 — Reviewees (clone PRs 1–3)
+### PR 4 — Reviewees (clone PRs 1–3) — SHIPPED
 
 **Scope.** Mirror the shipped Reviewers surface onto the
 Reviewees page in a single PR — service layer + filter helpers
@@ -624,6 +625,38 @@ hint when either roster is empty.
 
 **Scope.** One-liner in `_operations.py` — refuse to send
 when `reviewer.status != "active"`. Shipped folded into PR 3.
+
+## Post-shipping follow-ons (2026-05-15)
+
+Four polish PRs landed after the PR ladder, walking the live
+pages with the operator:
+
+- **#1008 — Relationships edit pickers → name/email search
+  box.** The native `<select>` reviewer/reviewee pickers in
+  the edit row swapped to an `<input>` + `<datalist>` (see the
+  revised Picker-design section above) so they scale past
+  1,000-row rosters. The same control backs the stage-3 Add
+  row.
+- **#1009 — Filter preservation through actions.** A per-row
+  Edit or bulk inactivate/reactivate now carries the active
+  search / status filter through the redirect (hidden
+  `filter_*` form fields), so the operator lands back on the
+  same filtered view rather than the unfiltered list. Builds
+  on the `?selected=` selection-persistence already in place.
+- **#1011 — SSR table-sort cookie-decode fix.** The shared
+  sortable-table primitive writes its cookie percent-encoded;
+  the SSR decoders (`decode_cookie_sort_spec` /
+  `…_for_reviewer_surface`) didn't `unquote` before
+  `json.loads`, so server-side sort silently fell back to
+  insertion order while the JS badge still showed the column
+  sorted. A latent bug, not 15F-specific — surfaced here
+  because the post-action redirect re-runs SSR.
+- **#1012 — Sortable `Updated` column.** A right-end
+  timestamp column on all three tables, rendering
+  `updated_at` (`%Y-%m-%d %H:%M`, UTC). Sorting it descending
+  surfaces the most recently added / edited rows — the answer
+  to "the new row landed mid-list and I can't find it"
+  without busting the 200-row cap.
 
 ## Out of scope
 
