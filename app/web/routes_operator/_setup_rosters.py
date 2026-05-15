@@ -252,7 +252,9 @@ async def _handle_import(
     )
 
 
-_REVIEWER_SORT_KEYS = {"name", "email", "tag_1", "tag_2", "tag_3", "status"}
+_REVIEWER_SORT_KEYS = {
+    "name", "email", "tag_1", "tag_2", "tag_3", "status", "updated_at",
+}
 _REVIEWEE_SORT_KEYS = {
     "name",
     "email_or_identifier",
@@ -260,6 +262,7 @@ _REVIEWEE_SORT_KEYS = {
     "tag_2",
     "tag_3",
     "status",
+    "updated_at",
 }
 
 
@@ -1121,6 +1124,7 @@ def relationships_delete_all(
 
 _RELATIONSHIP_SORT_KEYS = {
     "reviewer", "reviewee", "tag_1", "tag_2", "tag_3", "status",
+    "updated_at",
 }
 
 
