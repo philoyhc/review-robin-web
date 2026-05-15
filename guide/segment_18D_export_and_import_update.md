@@ -2,10 +2,9 @@
 
 > **Stub created 2026-05-12** as part of the Segment 18
 > (Session lifecycle adjacencies) family. Siblings: **18A**
-> (Session cloning, `guide/segment_18A_session_cloning.md`),
-> **18B** (Session tagging + archiving,
-> `guide/segment_18B_session_tagging_archiving.md`), and
-> **18C** (Retention / deletion workflow,
+> (Sessions lobby enhancements — cloning / tagging /
+> archiving, `guide/segment_18A_sessions_lobby_enhancements.md`)
+> and **18C** (Retention / deletion workflow,
 > `guide/segment_18C_retention_deletion.md`).
 
 **Stub. Sketch-level scope only.** Detailed PR breakdowns

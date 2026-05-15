@@ -506,13 +506,13 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13C, 13F (PRs 3-5), 14A, 14B, 14C, 17A,
-17B, 18A, 18B, 18C, 18D, 19, 20**. No global ordering
+17B, 18A, 18C, 18D, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
 #### Numbered queue
 
-1. **13F — More DB prep (14C / 16A / 16B / 18B / 18C
+1. **13F — More DB prep (14C / 16A / 16B / 18A / 18C
    ride-along)** *(in flight — **PRs 1 + 2 shipped 2026-05-11**;
    PRs 3-5 deferred until consumer segments)*. Mirrors the
    13D / 13E inert-migrations pattern for the **next** batch
@@ -525,7 +525,7 @@ bottom of this file.
    reads it). PRs 3-5 (`session_tags`,
    `sessions.reminder_settings`,
    `sessions.retention_exception` + `retention_overrides`)
-   ride with their consumer segments (18B / 14C / 18C) when
+   ride with their consumer segments (18A / 14C / 18C) when
    those segments are picked up. **The 16-series schema
    scaffolding is now complete — Segment 16A is unblocked.**
    **Plan:** `guide/segment_13F_more_db_prep.md`.
@@ -595,24 +595,23 @@ bottom of this file.
   be decreased slightly.
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
-- **18A — Session cloning** *(stub created 2026-05-11)*.
-  One-click clone of an existing session's setup
-  (reviewers / reviewees / relationships / instruments /
-  RTDs / RuleSets / email-template overrides / settings)
-  into a new session, without carrying responses, audit
-  history, or runtime state. Closes the §22 acceptance
-  criterion "Session cloning". Lands more cleanly after
-  15C (library auto-copy precedent) and 15B (per-instrument
-  RuleSet pointers).
-  **Plan:** `guide/segment_18A_session_cloning.md`.
-
-- **18B — Session tagging and archiving** *(stub created
-  2026-05-11)*. Free-form per-session tags surfaced as
-  filterable chips on the Sessions lobby + the
-  `closed → archived` lifecycle transition that lights up
-  the reserved `archived` state from `spec/lifecycle.md`.
-  Independent of 18A / 18C.
-  **Plan:** `guide/segment_18B_session_tagging_archiving.md`.
+- **18A — Sessions lobby enhancements** *(stubs created
+  2026-05-11; consolidated 2026-05-15)*. Three Sessions-lobby
+  items: **session cloning** (one-click clone of an existing
+  session's setup — reviewers / reviewees / relationships /
+  instruments / RTDs / RuleSets / email-template overrides /
+  settings — into a new session, without responses, audit
+  history, or runtime state), **session tagging / grouping**
+  (free-form per-session tags surfaced as filterable lobby
+  chips), and **session archiving** (the `closed → archived`
+  lifecycle transition lighting up the reserved `archived`
+  state). Consolidated from the former 18A (cloning) + 18B
+  (tagging + archiving) stubs; **18B is retired** as a
+  segment number. Cloning lands more cleanly after 15C
+  (library auto-copy precedent) and 15B (per-instrument
+  RuleSet pointers); tagging wants `session_tags` from 13F
+  PR 3.
+  **Plan:** `guide/segment_18A_sessions_lobby_enhancements.md`.
 
 - **18C — Retention / deletion workflow** *(stub created
   2026-05-11)*. Per-session selective purge (responses /
@@ -665,7 +664,7 @@ bottom of this file.
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 3-5), 14A, 17A, 17B, 18A,
-  18B, 18C, 18D, 19, 20** are independent of the email + audit
+  18C, 18D, 19, 20** are independent of the email + audit
   pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;
   13C PR 3 (rule-engine fanout for group-scoped instruments)

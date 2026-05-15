@@ -1,10 +1,9 @@
 # Segment 18C — Retention / deletion workflow
 
 > **Stub created 2026-05-11** as part of the Stage 4 guide/
-> reorg. Siblings: **18A** (Session cloning,
-> `guide/segment_18A_session_cloning.md`) and **18B**
-> (Session tagging and archiving,
-> `guide/segment_18B_session_tagging_archiving.md`).
+> reorg. Sibling: **18A** (Sessions lobby enhancements —
+> cloning / tagging / archiving,
+> `guide/segment_18A_sessions_lobby_enhancements.md`).
 
 **Stub. Sketch-level scope only.** Detailed PR breakdowns
 get drafted when this segment is picked up.
@@ -131,7 +130,7 @@ Likely shape (deferred — confirm need with pilot feedback):
 - **Soft-delete** (mark deleted, retain in DB). All purges
   in this segment are hard-deletes; soft-delete would be a
   bigger schema change and a separate ask. The reserved
-  `archived` lifecycle state (owned by 18B) covers the
+  `archived` lifecycle state (owned by 18A) covers the
   closest-to-soft-delete use case for whole sessions.
 - **Cross-session purge** ("delete every session's responses
   older than X"). 18C is per-session-scoped or
