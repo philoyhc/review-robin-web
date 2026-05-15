@@ -505,7 +505,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 3-7), 14A, 14B, 14C, 17A,
+**13C, 13F (PRs 3-5), 14A, 14B, 14C, 17A,
 17B, 18A, 18B, 18C, 18D, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
@@ -513,8 +513,9 @@ bottom of this file.
 #### Numbered queue
 
 1. **13F — More DB prep (14C / 16A / 16B / 18A / 18B / 18C
-   ride-along)** *(in flight — **PRs 1 + 2 shipped 2026-05-11**;
-   PRs 3-7 deferred until consumer segments)*. Mirrors the
+   ride-along)** *(in flight — **PRs 1 + 2 shipped 2026-05-11**,
+   **PRs 6 + 7 shipped 2026-05-15**; PRs 3-5 deferred until
+   consumer segments)*. Mirrors the
    13D / 13E inert-migrations pattern for the **next** batch
    of schema needs identified during the Segment 16 PR-ladder
    sizing pass. Reordered 2026-05-11 so the 16-series work
@@ -522,13 +523,14 @@ bottom of this file.
    + model-only `session_operators.role` value-set lock and
    Python-default fix; **PR 2 (shipped)** — `users.is_operator`
    Boolean for Option C strict-allowlist access (16A PR 1
-   reads it). PRs 3-7 (`session_tags`,
-   `sessions.reminder_settings`,
-   `sessions.retention_exception` + `retention_overrides`,
-   `sessions.display_timezone`, `users.preferences`) ride with
-   their consumer segments (18A / 14C / 18C / 18B) when those
-   segments are picked up. A fresh schema sweep across every
-   upcoming segment (2026-05-15) confirmed PR 7
+   reads it); **PR 6 (shipped)** — `sessions.display_timezone`
+   String for 18B PR 3; **PR 7 (shipped)** —
+   `users.preferences` JSON for 18B PR 2. PRs 3-5
+   (`session_tags`, `sessions.reminder_settings`,
+   `sessions.retention_exception` + `retention_overrides`)
+   ride with their consumer segments (18A / 14C / 18C) when
+   those segments are picked up. A fresh schema sweep across
+   every upcoming segment (2026-05-15) confirmed PR 7
    (`users.preferences` JSON — a per-operator preferences
    container for 18B PR 2 and future operator-level display
    settings) is the only new addition; 14A's type migrations
@@ -683,7 +685,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **14C
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13C, 13F (PRs 3-7), 14A, 17A, 17B, 18A,
+- **13C, 13F (PRs 3-5), 14A, 17A, 17B, 18A,
   18B, 18C, 18D, 19, 20** are independent of the email + audit
   pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —

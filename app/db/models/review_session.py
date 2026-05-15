@@ -45,6 +45,19 @@ class ReviewSession(Base, TimestampMixin):
     # consumed by Segment 11C Part 2 PR H).
     email_template_overrides: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
+    # Per-session display timezone (Segment 18B). An IANA zone
+    # name (e.g. ``Asia/Singapore``) used to render this session's
+    # dates / times. ``NULL`` means "inherit the creating
+    # operator's default timezone" — load-bearing in 18B's
+    # resolution order (session override -> operator default ->
+    # UTC). Schema pre-positioned in 13F PR 6; lands inert — no
+    # service module reads or writes the column until 18B PR 3
+    # lights it up (per-session timezone card + create-time
+    # stamping). Validity is enforced at the service layer
+    # against ``zoneinfo.available_timezones()`` at light-up, not
+    # by a DB CHECK constraint.
+    display_timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
     created_by_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=False
     )
