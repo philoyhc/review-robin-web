@@ -506,7 +506,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13C, 13F (PRs 3-5), 14A, 14B, 14C, 17A,
-17B, 18A, 18C, 18D, 19, 20**. No global ordering
+17B, 18A, 18B, 18C, 18D, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -613,6 +613,16 @@ bottom of this file.
   PR 3.
   **Plan:** `guide/segment_18A_sessions_lobby_enhancements.md`.
 
+- **18B — Date and time settings** *(stub created
+  2026-05-15)*. Cross-cutting display change: a deployment
+  timezone setting + a shared date/time formatting helper, so
+  timestamps stop rendering as raw UTC ISO strings with no zone
+  cue and in three-plus inconsistent formats. The stub carries a
+  full audit of every date/time display site. Unrelated to the
+  18A / 18C / 18D session-lifecycle family — reuses the 18B
+  number freed when tagging+archiving folded into 18A.
+  **Plan:** `guide/segment_18B_date_and_time_settings.md`.
+
 - **18C — Retention / deletion workflow** *(stub created
   2026-05-11)*. Per-session selective purge (responses /
   audit log / rosters) + per-deployment retention policy
@@ -664,7 +674,7 @@ bottom of this file.
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 3-5), 14A, 17A, 17B, 18A,
-  18C, 18D, 19, 20** are independent of the email + audit
+  18B, 18C, 18D, 19, 20** are independent of the email + audit
   pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;
   13C PR 3 (rule-engine fanout for group-scoped instruments)
