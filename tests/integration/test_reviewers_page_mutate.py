@@ -318,6 +318,38 @@ def test_bulk_inactivate_flips_selected_rows(
     }
 
 
+def test_bulk_action_keeps_selection(
+    db: Session, client: TestClient
+) -> None:
+    """After a bulk action the redirect carries the acted-on ids
+    so the operator clears the selection themselves."""
+    review_session = _make_session(client, db, code="rev-m-keepsel")
+    rows = _seed(db, review_session.id, ["Alice", "Bob", "Carol"])
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/bulk-inactivate",
+        data={"reviewer_ids": [rows[0].id, rows[2].id]},
+        follow_redirects=False,
+    )
+    loc = response.headers["location"]
+    assert f"selected={rows[0].id}" in loc
+    assert f"selected={rows[2].id}" in loc
+
+    body = client.get(loc).text
+    table = body[body.find('id="reviewers-table"') :]
+    # The acted-on rows render their checkbox checked.
+    for rid in (rows[0].id, rows[2].id):
+        marker = f'value="{rid}"'
+        cell = table[table.find(marker) - 160 : table.find(marker) + 160]
+        assert "checked" in cell
+    # The untouched row is not pre-checked.
+    bob_marker = f'value="{rows[1].id}"'
+    bob_cell = table[
+        table.find(bob_marker) - 160 : table.find(bob_marker) + 160
+    ]
+    assert "checked" not in bob_cell
+
+
 def test_bulk_reactivate_flips_selected_rows(
     db: Session, client: TestClient
 ) -> None:
