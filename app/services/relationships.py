@@ -497,6 +497,98 @@ def _pair_taken(
     return db.execute(stmt).first() is not None
 
 
+def create_relationship(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    reviewer_id: int,
+    reviewee_id: int,
+    tag_1: str | None = None,
+    tag_2: str | None = None,
+    tag_3: str | None = None,
+    status: str = "active",
+    user: User,
+    correlation_id: str | None = None,
+) -> Relationship:
+    """Insert a new Relationship row (Segment 15F PR 5 stage 3 — Add
+    a new row). Validates that the reviewer and reviewee belong to
+    the session and rejects a duplicate ``(reviewer, reviewee)``
+    pair against the UNIQUE constraint. Emits ``relationship.created``
+    (snapshot envelope); returns the persisted row."""
+    _require_session_member(
+        db,
+        session_id=review_session.id,
+        model=Reviewer,
+        member_id=reviewer_id,
+        label="Reviewer",
+    )
+    _require_session_member(
+        db,
+        session_id=review_session.id,
+        model=Reviewee,
+        member_id=reviewee_id,
+        label="Reviewee",
+    )
+    clean_status = _normalised_rel_status(status)
+    clean_tag_1 = _normalised_rel_tag(tag_1)
+    clean_tag_2 = _normalised_rel_tag(tag_2)
+    clean_tag_3 = _normalised_rel_tag(tag_3)
+
+    if _pair_taken(
+        db,
+        session_id=review_session.id,
+        reviewer_id=reviewer_id,
+        reviewee_id=reviewee_id,
+    ):
+        raise RelationshipOperationError(
+            "duplicate_pair",
+            "A relationship for this reviewer / reviewee pair "
+            "already exists.",
+        )
+
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=review_session,
+        user=user,
+        reason="relationship_created",
+        correlation_id=correlation_id,
+    )
+
+    relationship = Relationship(
+        session_id=review_session.id,
+        reviewer_id=reviewer_id,
+        reviewee_id=reviewee_id,
+        tag_1=clean_tag_1,
+        tag_2=clean_tag_2,
+        tag_3=clean_tag_3,
+        status=clean_status,
+    )
+    db.add(relationship)
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type="relationship.created",
+        summary=f"Created relationship #{relationship.id}",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.snapshot(
+            {
+                "relationship_id": relationship.id,
+                "reviewer_id": reviewer_id,
+                "reviewee_id": reviewee_id,
+                "status": clean_status,
+                "tag_1": clean_tag_1,
+                "tag_2": clean_tag_2,
+                "tag_3": clean_tag_3,
+            }
+        ),
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return relationship
+
+
 def update_relationship(
     db: Session,
     *,
@@ -711,6 +803,7 @@ __all__ = [
     "RelationshipOperationError",
     "bulk_inactivate",
     "bulk_reactivate",
+    "create_relationship",
     "delete_all_relationships",
     "existing_count",
     "fields_with_data",
@@ -720,6 +813,3 @@ __all__ = [
     "save_relationships",
     "update_relationship",
 ]
-# ``create_relationship`` lands in Segment 15F PR 5 stage 3 (Add a
-# new row); the shared ``_require_session_member`` / ``_pair_taken``
-# / ``_normalised_rel_*`` helpers above are already in place for it.
