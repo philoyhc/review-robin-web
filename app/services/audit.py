@@ -538,6 +538,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 18B PR 2 — per-operator default display timezone.
     # ``app/services/operator_settings.py`` emits.
     "operator.display_timezone_set": EventSchema(frozenset({"changes"})),
+    # Segment 18B PR 3 — per-session display-timezone override.
+    # ``app/services/sessions.py`` emits.
+    "session.display_timezone_set": EventSchema(_IDENTITY | {"changes"}),
     # Segment 15A Slice 1 — per-session friendly-label resolver mutations.
     "session_field_label.set": EventSchema(
         _IDENTITY | {"changes", "context"}

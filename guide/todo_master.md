@@ -623,16 +623,19 @@ bottom of this file.
   PR 3.
   **Plan:** `guide/segment_18A_sessions_lobby_enhancements.md`.
 
-- **18B — Date and time settings** *(in flight — PRs 1 + 2
+- **18B — Date and time settings** *(complete — all 3 PRs
   shipped 2026-05-15)*. Cross-cutting display change in 3 PRs:
   a shared date/time formatting helper standardizing every site
-  on one canonical format (**PR 1, shipped**), then
-  per-operator / per-session display-timezone infra — a
-  searchable IANA-zone card on `/operator/settings` for the
-  per-operator default (**PR 2, shipped**), a per-session
-  override card on Session Edit (PR 3). The plan carries a full
-  audit of every date/time display site. Reuses the 18B number
-  freed when tagging+archiving folded into 18A.
+  on one canonical format (**PR 1**), then per-operator /
+  per-session display-timezone infra — a searchable IANA-zone
+  card on `/operator/settings` for the per-operator default
+  (**PR 2**), a per-session override card on Session Edit with
+  the session → operator-default → UTC resolution order
+  (**PR 3**). The plan carries a full audit of every date/time
+  display site. Reuses the 18B number freed when
+  tagging+archiving folded into 18A. The Post-MVP
+  input-consistency item (reconciling the `datetime-local`
+  deadline input with the session zone) remains deferred.
   **Plan:** `guide/segment_18B_date_and_time_settings.md`.
 
 - **18C — Retention / deletion workflow** *(stub created

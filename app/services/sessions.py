@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 from app.schemas.sessions import SessionCreate
-from app.services import audit, session_lifecycle as lifecycle
+from app.services import audit, operator_settings, session_lifecycle as lifecycle
 from app.services.instruments import ensure_default_instrument
 from app.services.library_materialise import materialise_operator_libraries
 from app.services.rules.seeds import materialise_seed_rule_sets
@@ -25,6 +25,10 @@ def create_session(
         deadline=payload.deadline,
         help_contact=payload.help_contact,
         created_by_user_id=user.id,
+        # 18B PR 3: stamp the creating operator's default display
+        # timezone at create time. A snapshot, not a live link —
+        # changing the operator default later leaves this untouched.
+        display_timezone=operator_settings.get_display_timezone(user),
     )
     db.add(review_session)
     db.flush()
@@ -196,6 +200,62 @@ def update_session(
     db.commit()
     db.refresh(review_session)
     return review_session
+
+
+def resolve_session_timezone(review_session: ReviewSession) -> str:
+    """The display zone for a session-scoped render (Segment 18B PR 3).
+
+    Resolution order: the session's own ``display_timezone`` override
+    → the creating operator's default → ``UTC``. ``get_display_timezone``
+    supplies the ``UTC`` floor, so this never returns an empty string.
+    """
+    override = review_session.display_timezone
+    if override and operator_settings.is_valid_timezone(override):
+        return override
+    return operator_settings.get_display_timezone(
+        review_session.created_by_user
+    )
+
+
+def set_session_display_timezone(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    timezone_name: str | None,
+    correlation_id: str | None = None,
+) -> None:
+    """Persist a session's display-timezone override (Segment 18B PR 3).
+
+    ``timezone_name=None`` clears the override — the session falls back
+    to inheriting the creating operator's default. A no-op when the
+    value is unchanged. Raises ``ValueError`` for an unknown zone.
+    """
+    if timezone_name is not None and not operator_settings.is_valid_timezone(
+        timezone_name
+    ):
+        raise ValueError(f"unknown timezone {timezone_name!r}")
+
+    old = review_session.display_timezone
+    if old == timezone_name:
+        return
+
+    review_session.display_timezone = timezone_name
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type="session.display_timezone_set",
+        summary=(
+            f"Session {review_session.code} display timezone set to "
+            f"{timezone_name or 'inherit operator default'}"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.changes({"display_timezone": [old, timezone_name]}),
+        correlation_id=correlation_id,
+    )
+    db.commit()
 
 
 def delete_session(

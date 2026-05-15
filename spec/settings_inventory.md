@@ -89,7 +89,7 @@ Owners section on the Edit page, Segment 16B PR 2).
 | `assignment_mode` | `String(32)` | `manual` / `rule_based`. **Not directly editable** — set by whichever assignment-generation path the operator runs. Post-15D, the rule-based engine is the only operator-facing path (sets `rule_based`); the legacy Manual CSV upload (sets `manual`) survives as a dev-diagnostic surface only. |
 | `help_contact` | `String(320)` | Free-text contact info shown to reviewers. |
 | `email_template_overrides` | `JSON` | Free-form JSON with the recognised keys named in §3 below. |
-| `display_timezone` | `String(64)` | IANA zone name used to render this session's dates / times (Segment 18B). NULL = "inherit the creating operator's default timezone" — load-bearing in 18B's resolution order (session override → operator default → UTC). **Inert** until 18B PR 3 wires the per-session timezone card + create-time stamping (landed in 13F PR 6). |
+| `display_timezone` | `String(64)` | IANA zone name used to render this session's dates / times (Segment 18B PR 3). NULL = "inherit the creating operator's default timezone" — load-bearing in 18B's resolution order (session override → creating operator's default → UTC). Edited on the **Display timezone** card on `/operator/sessions/{id}/edit` (a blank field clears the override back to NULL). Stamped at create time with the creating operator's default, so rarely NULL in practice. Every session-scoped operator + reviewer surface renders dates / times in the resolved zone. |
 | `created_by_user_id` | `Integer` (FK) | Identity. Not user-editable. |
 
 **Canonical specs:** `spec/session_home.md` (Session Details card),
