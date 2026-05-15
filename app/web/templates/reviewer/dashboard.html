@@ -25,7 +25,7 @@
             </td>
             <td>
               {% if item.session.deadline %}
-                {{ item.session.deadline.isoformat() }}
+                {{ item.session.deadline | format_datetime }}
               {% else %}
                 <span class="muted">—</span>
               {% endif %}

@@ -34,13 +34,13 @@
         {% endif %}
         &middot; Email Sent:
         {% if row.email_sent_at %}
-          {{ row.email_sent_at.strftime("%Y-%m-%d %H:%M") }}
+          {{ row.email_sent_at | format_datetime }}
         {% else %}
           —
         {% endif %}
         &middot; Last reminder:
         {% if row.last_reminder_at %}
-          {{ row.last_reminder_at.strftime("%Y-%m-%d %H:%M") }}
+          {{ row.last_reminder_at | format_datetime }}
         {% else %}
           —
         {% endif %}

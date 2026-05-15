@@ -118,7 +118,7 @@
             </td>
             <td>
               {% if row.last_response_at %}
-                <span class="pill pill-count">{{ row.last_response_at.strftime("%Y-%m-%d %H:%M") }}</span>
+                <span class="pill pill-count">{{ row.last_response_at | format_datetime }}</span>
               {% else %}
                 <span class="pill pill-empty">—</span>
               {% endif %}

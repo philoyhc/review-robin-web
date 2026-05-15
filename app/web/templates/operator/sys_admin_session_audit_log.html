@@ -189,7 +189,7 @@
             <td class="col-summary">{{ row.summary }}</td>
             <td class="col-actor">{{ row.actor_email or "—" }}</td>
             <td class="col-correlation">{% if row.correlation_id %}<code>{{ row.correlation_id }}</code>{% else %}—{% endif %}</td>
-            <td class="col-when">{{ row.created_at_iso }}</td>
+            <td class="col-when">{{ row.created_at_display }}</td>
             <td class="col-detail">
               {% if row.detail.is_empty %}
                 —

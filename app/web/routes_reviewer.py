@@ -23,6 +23,7 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
+from app.services import date_formatting
 from app.services import instruments as instruments_service
 from app.services import invitations as invitations_service
 from app.services import relationships as relationships_service
@@ -39,6 +40,9 @@ router = APIRouter(prefix="/reviewer", tags=["reviewer"])
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _templates.env.globals["app_version"] = settings.app_version
+# Canonical date / time display formatting — Segment 18B PR 1.
+_templates.env.filters["format_datetime"] = date_formatting.format_datetime
+_templates.env.filters["format_date"] = date_formatting.format_date
 
 
 def reviewer_review_count_for_user(db: Session, user: User) -> int:

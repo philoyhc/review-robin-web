@@ -35,18 +35,18 @@
             </p>
             <p class="form-help" style="margin: 0;">Created</p>
             <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session.created_at.isoformat() }}</span>
+              <span class="pill pill-count">{{ session.created_at | format_datetime }}</span>
             </p>
             <p class="form-help" style="margin: 0;">Last Modified</p>
             <p style="margin: 0 0 var(--space-3) 0;">
-              <span class="pill pill-count">{{ session.updated_at.isoformat() }}</span>
+              <span class="pill pill-count">{{ session.updated_at | format_datetime }}</span>
             </p>
           </div>
           <div>
             <p class="form-help" style="margin: 0;">Deadline</p>
             <p style="margin: 0 0 var(--space-3) 0;">
               {% if session.deadline %}
-                <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
+                <span class="pill pill-count">{{ session.deadline | format_datetime }}</span>
               {% else %}
                 <span class="pill pill-empty">Not set</span>
               {% endif %}

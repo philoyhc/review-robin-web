@@ -169,7 +169,7 @@
             </td>
             <td><code>{{ row.email }}</code></td>
             <td>{{ row.display_name or "—" }}</td>
-            <td>{{ row.created_at.strftime("%Y-%m-%d") }}</td>
+            <td>{{ row.created_at | format_date }}</td>
             <td>
               {% if row.is_operator %}
                 <span class="pill pill-info">yes</span>

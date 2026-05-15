@@ -27,7 +27,7 @@
   <div class="rs-page-header">
     <h1>{{ session.name }}</h1>
     {% if session.deadline %}
-      <span class="muted">Deadline: {{ session.deadline.isoformat() }}</span>
+      <span class="muted">Deadline: {{ session.deadline | format_datetime }}</span>
     {% endif %}
     {% if session.help_contact %}
       <span class="muted">Questions? Contact {{ session.help_contact }}</span>
@@ -330,7 +330,7 @@
                       {% if row.submitted_at %}
                         <div class="muted"
                              style="font-size: 0.85em; margin-top: 4px; white-space: normal;">
-                          submitted {{ row.submitted_at.strftime("%Y-%m-%d %H:%M") }}
+                          submitted {{ row.submitted_at | format_datetime }}
                         </div>
                       {% endif %}
                     {% endif %}

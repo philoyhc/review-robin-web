@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import ReviewSession
+from app.services import date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import lifecycle_display, session_lifecycle as lifecycle
@@ -56,6 +57,9 @@ _templates.env.globals["field_label_pair"] = field_labels_service.resolve_pair
 _templates.env.filters["lifecycle_label"] = (
     lifecycle_display.lifecycle_display_label
 )
+# Canonical date / time display formatting — Segment 18B PR 1.
+_templates.env.filters["format_datetime"] = date_formatting.format_datetime
+_templates.env.filters["format_date"] = date_formatting.format_date
 
 
 # ------------------------------------------------------------------ #

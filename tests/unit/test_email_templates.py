@@ -97,7 +97,7 @@ def test_reminder_override_body_keeps_default_subject() -> None:
 
 def test_all_five_merge_fields_substitute() -> None:
     session = _session(
-        deadline=datetime(2026, 6, 30, tzinfo=timezone.utc),
+        deadline=datetime(2026, 6, 30, 17, 0, tzinfo=timezone.utc),
         help_contact="Prof X <x@example.edu>",
         overrides={
             "invitation_body": (
@@ -113,7 +113,7 @@ def test_all_five_merge_fields_substitute() -> None:
     )
     assert body == (
         "Hi Rae,\n"
-        "Please review for Spring 2026 (deadline 2026-06-30).\n"
+        "Please review for Spring 2026 (deadline 2026-06-30 17:00 UTC).\n"
         "Questions? Contact Prof X <x@example.edu>.\n"
         "Link: https://app/i/abc\n"
     )
