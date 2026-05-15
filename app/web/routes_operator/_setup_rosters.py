@@ -146,23 +146,42 @@ async def _handle_import(
         list_items = assignments.list_reviewees(db, review_session.id)
 
     def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
+        context: dict[str, object] = {
+            "user": user,
+            "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
+            list_key: list_items,
+            "existing_count": existing,
+            "assignment_count": assignment_count,
+            "issues": result.issues,
+            "filename": file.filename,
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, crumb_label
+            ),
+        }
+        if kind == "reviewers":
+            # Segment 15F PR 2 — the reviewers template's right-side
+            # operator-actions card needs the filter / cap context
+            # even on the error-render path so the form keeps reading
+            # consistent.
+            context.update(
+                {
+                    "total_row_count": len(list_items),
+                    "displayed_row_count": len(list_items),
+                    "filter_status": "all",
+                    "filter_search": "",
+                    "filter_status_options": views.REVIEWERS_STATUS_OPTIONS,
+                    "filter_search_options": (
+                        views.reviewers_search_options(list_items)
+                    ),
+                    "is_ready": lifecycle.is_ready(review_session),
+                    "fields_with_data": assignments.reviewer_fields_with_data(
+                        db, review_session.id
+                    ),
+                }
+            )
         return _templates.TemplateResponse(
-            request,
-            template,
-            {
-                "user": user,
-                "session": review_session,
-                "status_pills": views.session_status_pills(db, review_session),
-                list_key: list_items,
-                "existing_count": existing,
-                "assignment_count": assignment_count,
-                "issues": result.issues,
-                "filename": file.filename,
-                "breadcrumbs": breadcrumbs.operator_session_child(
-                    review_session, crumb_label
-                ),
-            },
-            status_code=status_code,
+            request, template, context, status_code=status_code
         )
 
     if result.is_blocked:
@@ -211,25 +230,43 @@ def _reviewee_sort_value(reviewee, key: str):
     return getattr(reviewee, key, None)
 
 
+_REVIEWERS_DEFAULT_CAP: int = 200
+_REVIEWERS_FILTERED_CAP: int = 500
+
+
 @router.get("/sessions/{session_id}/reviewers", response_class=HTMLResponse)
 def reviewers_list(
     request: Request,
+    status: str = "all",
+    q: str = "",
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    reviewers = assignments.list_reviewers(db, review_session.id)
+    all_reviewers = assignments.list_reviewers(db, review_session.id)
     # Segment 13B Part 2 PR 6 — cookie-backed personal sort.
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
         cookie_name=f"rrw-sort-reviewers-{review_session.id}",
         valid_keys=_REVIEWER_SORT_KEYS,
     )
-    reviewers = views.apply_cookie_sort(
-        reviewers,
+    all_reviewers = views.apply_cookie_sort(
+        all_reviewers,
         sort_spec,
         value_resolver=_reviewer_sort_value,
     )
+
+    # Segment 15F PR 2 — server-side search + status filter, 200/500
+    # cap (200 unfiltered, 500 when either filter is applied). Cap is
+    # applied after sort so the visible window is the same as the
+    # operator's chosen sort order.
+    filtered = views.filter_reviewers_rows(
+        all_reviewers, status=status, search=q
+    )
+    is_filtered = status != "all" or bool(q.strip())
+    cap = _REVIEWERS_FILTERED_CAP if is_filtered else _REVIEWERS_DEFAULT_CAP
+    reviewers = filtered[:cap]
+
     return _templates.TemplateResponse(
         request,
         "operator/session_reviewers.html",
@@ -238,6 +275,14 @@ def reviewers_list(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "reviewers": reviewers,
+            "total_row_count": len(all_reviewers),
+            "displayed_row_count": len(reviewers),
+            "filter_status": status,
+            "filter_search": q,
+            "filter_status_options": views.REVIEWERS_STATUS_OPTIONS,
+            "filter_search_options": views.reviewers_search_options(
+                all_reviewers
+            ),
             "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],

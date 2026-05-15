@@ -127,6 +127,9 @@ def test_reviewers_cookie_drives_ssr_initial_order(
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
+    # Slice from the table marker so the Segment 15F search-autocomplete
+    # `<datalist>` options above the table don't interfere.
+    body = body[body.find('id="reviewers-table"') :]
     # Alphabetical ascending.
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
 
@@ -146,6 +149,7 @@ def test_reviewers_cookie_desc_order(
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
+    body = body[body.find('id="reviewers-table"') :]
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
 
 
@@ -164,6 +168,7 @@ def test_reviewers_malformed_cookie_falls_back_to_insertion_order(
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
+    body = body[body.find('id="reviewers-table"') :]
     # Insertion order: Bravo, Alpha, Charlie.
     assert body.find("Bravo") < body.find("Alpha") < body.find("Charlie")
 
@@ -189,6 +194,7 @@ def test_reviewers_stale_cookie_key_dropped(
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
+    body = body[body.find('id="reviewers-table"') :]
     # tag_5 drops; name asc still applies.
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
 
