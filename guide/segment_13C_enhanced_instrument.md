@@ -258,6 +258,14 @@ identified above; missing one means an export over-counts
 group responses by `group_size`. Reviewer's note pinned in the
 PR description: this sweep is mandatory.
 
+PR 2's Extract Data work also **materializes the derived group
+identity as explicit columns** on the exported rows — one
+column per `group_kind` key — so the CSV reads standalone (see
+the spec's "Materializing the group identity at extraction").
+The group identity stays unstored; only the *export* surfaces
+it as columns, computed the same way `collapse_group_duplicates`
+derives `group_id`.
+
 ## Relationship to Segment 13A and 13B
 
 13A, 13B, and 13C are siblings — independent of each other,

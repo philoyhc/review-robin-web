@@ -365,6 +365,27 @@ correctly because the count is "instruments where this reviewer
 has answered everything" — a per-reviewer-per-instrument metric
 that doesn't care about the underlying fanout.
 
+### Materializing the group identity at extraction
+
+The group identity is *derived*, not stored — but that's a
+storage decision, not an output one. At the point of
+extraction, the Extract Data exports **should surface the
+derived group identity as explicit columns** on the exported
+rows, even though no group column exists on `Response`. One
+column per `group_kind` key (e.g. `Cohort`, `Class`, `Small
+Group`) carrying that row's tag-tuple facets, so the export
+reads standalone — a human opening the CSV sees which group a
+response belongs to without re-joining to `Instrument` +
+`Reviewee` themselves.
+
+This holds for both export shapes: the collapsed shape (one row
+per group) and the fanout shape (one row per member). The
+exporter computes the facets the same way `collapse_group_duplicates`
+derives `group_id` — reading the instrument's `group_kind`
+keys against each reviewee's tags — and writes them as ordinary
+columns. Per-reviewee (non-group) instruments simply leave
+these columns blank.
+
 ## What's out of scope
 
 - **Per-question group scope.** Rejected (see Rationale).
