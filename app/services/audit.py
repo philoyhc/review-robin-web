@@ -511,6 +511,16 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "reviewers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "reviewees.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "relationships.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    # Segment 15F PR 1 — per-row reviewer authoring + bulk status flips.
+    # ``app/services/reviewers.py`` is the sole emitter; the inline-edit
+    # form path always emits ``reviewer.updated`` (decision 13) while
+    # the card's bulk buttons emit the two distinct
+    # ``reviewer.bulk_inactivated`` / ``.bulk_reactivated`` events
+    # (decision 12).
+    "reviewer.created": EventSchema(_IDENTITY | {"snapshot"}),
+    "reviewer.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "reviewer.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    "reviewer.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "operator_email_settings.updated": EventSchema(frozenset({"changes"})),
     "operator_email_settings.cleared": EventSchema(frozenset()),
     # Segment 15A Slice 1 — per-session friendly-label resolver mutations.
