@@ -455,6 +455,41 @@ rules (`instruments.no_rule_pinned` / `stale_generated` /
 validation lives inside the super-button rather than on a standalone
 Generate route.
 
+### Segment 15F — Enhanced Setup pages — done 2026-05-15
+
+Per-row affordances on the Reviewers / Reviewees / Relationships
+Setup pages so operators no longer round-trip a CSV bulk-replace to
+fix one name, retire one person, or add one row. Each page gains a
+right-side **Operator actions** card (search + status filter strip
+above a selection-driven button row), a leftmost checkbox column,
+server-rendered inline **Edit** of the selected row, **Inactivate /
+Reactivate** of the checkbox selection, and **Add new row**. CSV
+bulk upload stays as the bulk-create path. Relationships re-points
+reviewer / reviewee via name-or-email search-box pickers (`<input>`
++ `<datalist>`, scales past 1,000-row rosters); Add is disabled with
+a hint when either roster is empty.
+
+Shipped across PRs **#993 → #1012**. PR 1 reviewers service +
+audit events (#993); PR 2 operator-actions card scaffolding
+(#994, #995); PR 3 selection-driven Edit + bulk + Add (#996 →
+#1000); PR 4 reviewees clone; PR 5 relationships in three stages
+(locate-a-pair search · per-row Edit + bulk + name-display table
+reshape · Add a new row). New services `reviewers.py` /
+`reviewees.py` + per-row mutators on `relationships.py`; new
+audit events `reviewer.*` / `reviewee.*` / `relationship.created` /
+`.updated` / `.bulk_inactivated` / `.bulk_reactivated`.
+
+Post-shipping follow-ons (2026-05-15): Relationships edit pickers
+swapped from native `<select>` to a name/email search box (#1008);
+the search / status filter rides through Edit + bulk actions
+(#1009); a latent SSR table-sort bug fixed — the decoders now
+`unquote` the browser's percent-encoded sort cookie before
+`json.loads` (#1011); a sortable right-end **Updated** timestamp
+column added to all three tables so the most recently added /
+edited rows can be surfaced without busting the 200-row cap
+(#1012). Spec: `spec/setup_pages.md`. Plan archived:
+`guide/archive/segment_15F_enhanced_setup_pages.md`.
+
 ---
 
 ## Upcoming
@@ -470,7 +505,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 3-5), 14A, 14B, 14C, 15F, 17A,
+**13C, 13F (PRs 3-5), 14A, 14B, 14C, 17A,
 17B, 18A, 18B, 18C, 18D, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
@@ -543,15 +578,6 @@ bottom of this file.
    **Plan:** `guide/segment_14C_reminders_workflow.md`.
 
 #### Stubs
-
-- **15F — Enhanced Setup pages** *(carved out of the
-  original Segment 15, 2026-05-10)*. Per-row inline edit +
-  Inactivate / Reactivate affordances on the Reviewers /
-  Reviewees / Relationships Manage pages. Today's only
-  per-row edit path is CSV bulk-replace; 15F adds the
-  single-row affordance so operators don't have to round-
-  trip a CSV to fix one name or toggle one status.
-  **Plan:** `guide/segment_15F_enhanced_setup_pages.md`.
 
 - **17A — AG Grid replacement of the reviewer-surface table**
   *(carved out of the original Segment 15, 2026-05-10;
@@ -638,7 +664,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **14C
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13C, 13F (PRs 3-5), 14A, 15F, 17A, 17B, 18A,
+- **13C, 13F (PRs 3-5), 14A, 17A, 17B, 18A,
   18B, 18C, 18D, 19, 20** are independent of the email + audit
   pipelines and can interleave at any time. The three
   13-family segments are also independent of each other;

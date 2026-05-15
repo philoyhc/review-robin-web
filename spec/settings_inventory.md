@@ -254,9 +254,9 @@ Segment 15F) and system state.
 **Surface:** Setup Pages — `/operator/sessions/{id}/reviewers`,
 `/operator/sessions/{id}/reviewees`, and
 `/operator/sessions/{id}/relationships`. Bulk-populated via Quick
-Setup or per-entity CSV; managed inline (Manage rows are
-read-only today; inline edit deferred to Segment 15F per
-`guide/segment_15F_enhanced_setup_pages.md`).
+Setup or per-entity CSV; managed inline — per-row Edit / Add /
+bulk inactivate-reactivate shipped in Segment 15F
+(`guide/archive/segment_15F_enhanced_setup_pages.md`).
 
 ### Reviewer
 
@@ -264,7 +264,7 @@ read-only today; inline edit deferred to Segment 15F per
 |---|---|---|
 | `name` | `String(255)` | |
 | `email` | `String(320)` | Identity used for invitation matching. |
-| `status` | `String(32)` | `active` / `inactive`. Inactivate UI deferred to Segment 15F (`guide/segment_15F_enhanced_setup_pages.md`). |
+| `status` | `String(32)` | `active` / `inactive`. Flipped via the per-row Edit / bulk inactivate-reactivate UI shipped in Segment 15F. |
 | `tag_1`, `tag_2`, `tag_3` | `String(255)` | Free-form labels. Used by rule-based assignment matching and surfaced on the reviewer surface when the corresponding column toggle is enabled. |
 
 ### Reviewee
@@ -583,8 +583,9 @@ for the Settings importer contract.
   — CSV export / import contract referenced by §10.
   (`guide/segment_12A-2_import.md` is the superseded importer
   plan, kept as historical reference.)
-- `guide/segment_15F_enhanced_setup_pages.md` — inline-editable
-  Manage rows + Inactivate / Reactivate UI for Reviewers /
-  Reviewees / Relationships (covers the two deferred-settings
-  surfaces that were previously catalogued as items #25 + #36 in
-  the retired `guide/archive/unfinished_business.md`).
+- `guide/archive/segment_15F_enhanced_setup_pages.md` —
+  inline-editable Setup rows + Add + Inactivate / Reactivate UI
+  for Reviewers / Reviewees / Relationships (covers the two
+  deferred-settings surfaces that were previously catalogued as
+  items #25 + #36 in the retired
+  `guide/archive/unfinished_business.md`).
