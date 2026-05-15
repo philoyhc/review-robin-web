@@ -1,8 +1,8 @@
-# Segment 13F — More DB prep (14C / 16A / 16B / 18B / 18C ride-along)
+# Segment 13F — More DB prep (14C / 16A / 16B / 18A / 18C ride-along)
 
 **Status:** In flight — **PRs 1 + 2 shipped 2026-05-11**
 (migrations `779b90e4b397` + `8003c2be99d8`); PRs 3-5
-deferred until their consumer segments (18B / 14C / 18C) are
+deferred until their consumer segments (18A / 14C / 18C) are
 picked up, per the "piecemeal, front-load the 16-series work"
 sequencing decision. The 16-series schema scaffolding is now
 complete — Segment 16A is unblocked to start its PR ladder.
@@ -22,7 +22,7 @@ segments are pure service / UI / template work.
 **Depends on:** none. Lands cleanly after 13D / 13E.
 **Unblocks:** 14C (reminder cadence), 16A (Sys Admin auth via
 persisted flag instead of env-allowlist), 16B (per-session
-owner UI), 18B (session tagging), 18C (retention exception +
+owner UI), 18A (session tagging), 18C (retention exception +
 per-session policy).
 
 ---
@@ -56,7 +56,7 @@ users.is_operator                         # PR 2: ✅ shipped — 16A workspace 
                                           #       under Option C access model
                                           #       (strict admit-by-sys-admin)
                                           #       (migration 8003c2be99d8)
-session_tags                              # PR 3: 18B per-session free-form tags (pending)
+session_tags                              # PR 3: 18A per-session free-form tags (pending)
 sessions.reminder_settings                # PR 4: 14C reminder cadence (JSON, pending)
 sessions.retention_exception              # PR 5: 18C per-session opt-out (Bool, pending)
 sessions.retention_overrides              # PR 5: 18C per-session policy (JSON, post-MVP, pending)
@@ -109,7 +109,7 @@ needs identified for the remaining workplan:
 | Source | Change | Why ride along here |
 |---|---|---|
 | **14C** — Reminders workflow Part 1 | New `sessions.reminder_settings` JSON column (`auto_enabled` / `cadence` / `max_count` / `time_of_day` / `quiet_hours`) | Required by 14C Part 1 (per-session reminder cadence). One column, JSON-shaped (`14C` calls out "columns or JSON blob"; JSON keeps the migration footprint flat). |
-| **18B** — Session tagging | New table `session_tags` | Required by 18B Part 2. The plan flags "Tag table vs JSON column" as an open scoping question; we lock the answer here (table — easier per-tag indexing + delete-cascade). |
+| **18A** — Session tagging | New table `session_tags` | Required by 18A Part 2. The plan flags "Tag table vs JSON column" as an open scoping question; we lock the answer here (table — easier per-tag indexing + delete-cascade). |
 | **18C** — Retention / deletion workflow Part 2 | New `sessions.retention_exception` Boolean (default `False`, nullable) | Required by 18C Part 2 (per-session opt-out of auto-purge — e.g. legal hold). Minimal cost, large policy value. |
 | **18C** — Retention / deletion workflow Part 3 (post-MVP) | New `sessions.retention_overrides` JSON column | Required by 18C Part 3 if it lands. Per-session retention-policy overrides (`response_days` / `audit_days` / `archived_days` keys). NULL means "use deployment default". |
 | **16A** — Sys Admin page + admin user role | New `users.is_sys_admin` Boolean column (server-default `false`) | Required by 16A PR 2 (sys-admin gate). Persisted per-user flag bootstrapped from the existing `SYS_ADMIN_EMAILS` env var on first-sign-in but extensible in-app afterwards via 16A PR 6. |
@@ -134,7 +134,7 @@ PRs land in two waves: the **16-series wave** (PR 1 + PR 2)
 pre-positions the admin / allowlist plumbing for Segment 16A;
 the **consumer-deferred wave** (PRs 3-5) pre-positions the
 remaining tables and columns when their consumer segments
-(18B / 14C / 18C) are ready to be picked up.
+(18A / 14C / 18C) are ready to be picked up.
 
 ### PR 1 — `users.is_sys_admin` Boolean + lock `session_operators.role` value-set + default fix (16A / 16B ride-along) — ✅ **shipped 2026-05-11**
 
@@ -314,7 +314,7 @@ PR 1 in principle. Kept separate because (a) PR 1 already
 shipped, (b) the access-model decision came after PR 1 landed,
 (c) one migration per PR is the 13D / 13E precedent.
 
-### PR 3 — New table `session_tags` (18B ride-along)
+### PR 3 — New table `session_tags` (18A ride-along)
 
 **Scope.** SQL + model only. New table:
 
@@ -400,7 +400,7 @@ migration history.
   Unblocks 16A PR 1 (operator-allowlist gate read) + 16A PR 6
   (workspace admit/revoke surface) + 16B PR 1 + 2
   (admitted-pool query).
-- **PR 3** — defer until 18B (session tagging + archiving)
+- **PR 3** — defer until 18A (session tagging + archiving)
   is picked up.
 - **PR 4** — defer until 14C (reminders workflow) is picked
   up. Specifically Part 1 (per-session cadence settings)
@@ -508,7 +508,7 @@ When PRs ship:
   the relevant per-session settings sections (each marked
   **Inert** until the owning feature segment lights it up,
   mirroring the post-13D entries).
-- Owning feature plans (14C / 16A / 16B / 18B / 18C) updated
+- Owning feature plans (14C / 16A / 16B / 18A / 18C) updated
   to reference "schema pre-positioned in 13F PR N" instead of
   "new column / new table". In particular 16A flips from
   Option C (env-allowlist) to Option B (persisted flag with
