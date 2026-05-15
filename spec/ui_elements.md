@@ -363,8 +363,9 @@ vocabulary as follows.
 - Disabled buttons skip via `pointer-events: none`.
 
 > **Disabled anchor-as-button** — anchors used as buttons that
-> render disabled (Edit Reviewers / Edit Reviewees on the manage
-> pages, Extract Data CTA on Session Home).
+> render disabled (the Extract Data zip-all CTA on Session Home;
+> the Operator actions card's "Add new row" anchor when a row is
+> being edited or a roster is empty).
 > *Current:* inconsistent — `.btn.alert-solid.disabled` with
 > `aria-disabled="true"` and ad-hoc inline
 > `style="opacity: 0.5; pointer-events: none;"` in some places;

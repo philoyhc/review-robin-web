@@ -69,8 +69,9 @@ is byte-stable.
 | 5 | `ReviewerTag3` | `reviewer.tag_3` | Same. |
 
 `Status` is **not** exported (reviewers carry a `status` column
-internally but the roster CSV doesn't surface it; it lives only
-on the Manage page until Segment 15F lights up inline edit).
+internally but the roster CSV doesn't surface it; it is edited
+on the Reviewers Setup page via the per-row Edit / bulk
+inactivate-reactivate UI shipped in Segment 15F).
 
 **Row order:** active rows first (`status='active'`), then by
 `name`, then by `email`. Deterministic.

@@ -56,31 +56,47 @@ Every Setup Page renders, top-to-bottom:
    the friendly-label editor so the yellow card immediately
    follows the status info card — the same status-info-then-
    yellow-lock pattern the Instruments and Assignments pages use.
-5. **Friendly-label editor** (Segment 15A Slice 3) — inline
-   editor card via `operator/partials/_field_labels_editor.html`.
-   Reviewers + Relationships render a 3-cell row; Reviewees a
-   2-row stacked grid (identity + tags, 6 cells). Save + Cancel
-   pair in Secondary style at the bottom, both starting
-   `disabled` until the form is dirty (inline JS toggles via an
-   initial-value snapshot). Gated by `is_ready`: when the
-   session is Activated, inputs render `disabled` and the
-   Save/Cancel pair is suppressed; the lifecycle-gate card above
-   carries the "revert to draft" prompt for that state. POST
-   handlers in
-   `app/web/routes_operator/_setup_rosters.py` upsert / clear via
-   `app/services/field_labels.py`.
+5. **Friendly-label editor (left) + Operator actions card
+   (right)** — a half-width `bottom-grid` pair.
+   - The **friendly-label editor** (Segment 15A Slice 3) is the
+     inline editor card via
+     `operator/partials/_field_labels_editor.html`. Reviewers +
+     Relationships render a 3-cell row; Reviewees a 2-row stacked
+     grid (identity + tags, 6 cells). Save + Cancel pair in
+     Secondary style, both starting `disabled` until the form is
+     dirty (inline JS toggles via an initial-value snapshot).
+     POST handlers in
+     `app/web/routes_operator/_setup_rosters.py` upsert / clear
+     via `app/services/field_labels.py`.
+   - The **Operator actions card** (Segment 15F) is the per-row
+     authoring surface — search / status filter strip + a
+     selection-driven button row (Edit · Inactivate · Activate ·
+     Add new row). See "Operator actions card" below.
+   - Both are gated by `is_ready`: when the session is Activated
+     the friendly-label inputs render `disabled`, the
+     Save/Cancel pair is suppressed, and the operator-actions
+     button row renders inert; the lifecycle-gate card above
+     carries the "revert to draft" prompt for that state.
 6. **Preview table card** — Reviewers / Reviewees / Relationships.
-   Always renders when the entity is non-empty, regardless of
-   lifecycle state. Column headers render the resolved friendly
-   label via `operator/partials/_field_label_header.html`; when
-   an override is set, the canonical name appears as
-   `.field-label-canonical` muted subtext below the friendly
-   label and the sort `↕` button.
+   Always renders when the entity is non-empty (or when Add mode
+   is active), regardless of lifecycle state. A **leftmost
+   checkbox column** drives the operator-actions selection (a
+   header select-all checkbox toggles every visible row). Column
+   headers render the resolved friendly label via
+   `operator/partials/_field_label_header.html`; when an override
+   is set, the canonical name appears as `.field-label-canonical`
+   muted subtext below the friendly label and the sort `↕`
+   button. While a row is being edited (`?edit_id=`) or a blank
+   Add row is active (`?add=1`), that row's cells render as
+   inputs / pickers — see "Per-row Edit / Add / bulk actions".
 7. **Body grid** — Upload + Danger Zone cards. Hidden when the
-   session is Activated. Placed **after** the preview table so
-   the operator's eye lands on the data they're managing first;
-   the upload-CSV + delete-all destructive actions sit below the
-   table as a deliberate de-prioritised cluster.
+   session is Activated *or* while a row is being edited / added.
+   Placed **after** the preview table so the operator's eye lands
+   on the data they're managing first; the upload-CSV +
+   delete-all destructive actions sit below the table as a
+   deliberate de-prioritised cluster. CSV upload stays the
+   bulk-create path; the Operator actions card covers single-row
+   authoring.
 
 ## Preview tables (shared toggle pattern)
 
@@ -151,9 +167,10 @@ Sortable columns per table:
   `tag_2` / `tag_3`, `status`, `updated_at`. (The Photo column
   stays non-sortable — it renders a link, not a comparable
   value.)
-- **Relationships:** `reviewer` (sorts on reviewer email),
-  `reviewee` (sorts on `email_or_identifier`),
-  `tag_1` / `tag_2` / `tag_3`, `status`, `updated_at`.
+- **Relationships:** `reviewer` / `reviewee` (both sort on the
+  resolved member **name** — the prominent identity text since
+  Segment 15F), `tag_1` / `tag_2` / `tag_3`, `status`,
+  `updated_at`.
 
 The right-end **Updated** column shows each row's `updated_at`
 timestamp (`%Y-%m-%d %H:%M`); sorting it descending surfaces the
@@ -166,6 +183,77 @@ Sortable affordance and visibility-toggle affordance are
 orthogonal — toggling a column's visibility doesn't affect its
 sort state, and a sort spec referencing a hidden column still
 applies (the column data is still present in the DOM).
+
+## Operator actions card (Segment 15F)
+
+The right half of the `bottom-grid` pair (friendly-label editor
+on the left). It is the per-row authoring surface — operators no
+longer round-trip a CSV bulk-replace to fix one name, retire one
+person, or add one row. Top-to-bottom:
+
+1. **Search + filter strip.** A search box (name / email
+   typeahead, backed by a `<datalist>` of the unfiltered
+   roster's distinct values) plus, on Reviewers / Reviewees, a
+   **Status** filter (`all` / `active` / `inactive`). Relationships
+   substitutes a **Search by** dropdown (Reviewer / Reviewee —
+   picks which side of the pair the search box matches) since a
+   relationship has no single status-vs-roster distinction worth
+   a filter. Apply submits a GET; a Clear link resets it.
+2. **Selection-driven button row** — **Edit**, **Inactivate**,
+   **Activate**, **Add new row**, plus a selected-count pill.
+   Buttons enable / disable from the checkbox selection (see
+   below). The row greys out (`is-locked`) while a row is being
+   edited / added; a focused **Save / Cancel** pair renders
+   below a divider in that state.
+
+The list is **capped at 200 rows** (lifted to **500** when a
+search or status filter is applied) — the cap is applied after
+sort, so the visible window matches the operator's chosen order.
+A "Showing N of M" hint renders when the cap or filter trims the
+list.
+
+## Per-row Edit / Add / bulk actions (Segment 15F)
+
+**Selection.** The leftmost checkbox column is the sole selection
+mechanism — rows carry no per-row action buttons. Button state:
+
+| Selection | Edit | Inactivate / Activate | Add new row |
+|---|---|---|---|
+| 0 rows | disabled | disabled | enabled |
+| 1 row | enabled | enabled | disabled |
+| ≥2 rows | disabled | enabled | disabled |
+
+**Edit** (`?edit_id=<id>`) and **Add** (`?add=1`) are
+server-rendered states — no client-side DOM surgery. The target
+row's cells render as `<input>` / `<select>`; Add prepends a
+blank row at the top of the table. The Operator actions card
+swaps its filter strip + button row for the focused Save /
+Cancel pair. Editing a row's **status** to `inactive` /
+`active` is the inactivate / reactivate path — there is no
+separate per-row toggle. **Inactivate** / **Activate** flip the
+`status` of every checkbox-selected row in one POST (reversible,
+so no confirm checkbox).
+
+After an Edit or a bulk action the redirect **preserves the row
+selection** (`?selected=` query params re-check those rows) and
+the **active search / status filter** (so the operator lands
+back on the same filtered view, not the unfiltered list). CSV
+bulk upload stays as the bulk-create path.
+
+**Relationships pickers.** The Relationships Edit / Add rows
+choose reviewer + reviewee via **name-or-email search-box
+pickers** — a text `<input>` backed by a `<datalist>` of
+`"Name (handle)"` options (inactive members suffixed
+`— inactive`), not a native `<select>`. This scales past
+1,000-row rosters; the submitted label resolves back to a roster
+id server-side. Add is disabled with a hint when either roster
+is empty — a pairwise relationship needs both sides.
+
+Mutating service modules: `app/services/reviewers.py` /
+`reviewees.py` and the per-row mutators on `relationships.py`.
+Audit events: `reviewer.created` / `.updated` /
+`.bulk_inactivated` / `.bulk_reactivated` and the parallel
+`reviewee.*` / `relationship.*` families.
 
 ## Reviewers page (`session_reviewers.html`)
 
@@ -188,6 +276,7 @@ section beneath:
 
 | # | Column | Toggle? | Notes |
 |---|---|---|---|
+| 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the Operator actions card |
 | 1 | Name | — | `reviewer.name` |
 | 2 | Email | — | `<code>{{ reviewer.email }}</code>` |
 | 3 | Tag1 | ✓ | `data-tag-toggle="1"` / `class="tag-col tag-col-1"` |
@@ -212,6 +301,7 @@ Danger Zone on the right. CSV header copy lists `RevieweeName`,
 
 | # | Column | Toggle? | Notes |
 |---|---|---|---|
+| 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the Operator actions card |
 | 1 | Name | — | `reviewee.name` |
 | 2 | Email / Identifier | — | `<code>{{ reviewee.email_or_identifier }}</code>` |
 | 3 | Photo | — | Conditional: rendered only when at least one reviewee has `profile_link`. Cell renders `<a href="…" target="_blank">link</a>`. |
@@ -263,8 +353,9 @@ treatment). Fields-with-data labels come from
 
 | # | Column | Toggle? | Notes |
 |---|---|---|---|
-| 1 | Reviewer | — | `<a href=…>name</a> · <code>email</code>` |
-| 2 | Reviewee | — | `<a href=…>name</a> · <code>email_or_identifier</code>` |
+| 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the Operator actions card |
+| 1 | Reviewer | — | Resolved **name** stacked above `<code>email</code>`; sorts on name |
+| 2 | Reviewee | — | Resolved **name** stacked above `<code>email_or_identifier</code>`; sorts on name |
 | 3 | Tag1 | ✓ | `data-tag-toggle="1"` / `class="tag-col tag-col-1"` |
 | 4 | Tag2 | ✓ | `data-tag-toggle="2"` / `class="tag-col tag-col-2"` |
 | 5 | Tag3 | ✓ | `data-tag-toggle="3"` / `class="tag-col tag-col-3"` |
@@ -290,21 +381,22 @@ Session Home carries the corresponding Download button.
 
 ## Out of scope for these pages
 
-- **Per-record inline editing.** Setup pages today are import +
-  preview only; per-record editing is deferred to Segment 15F
-  (bundled with per-row Inactivate / Reactivate affordances).
-  The Edit buttons on Reviewers / Reviewees / Relationships
-  pages render disabled with an "Inline editing — coming soon"
-  tooltip.
+- **Per-row hard Delete.** Inactivate-via-edit covers the
+  single-row retire case; the Danger Zone Delete-all flow covers
+  the bulk-clear case. A per-row Delete is a separate ask if it
+  surfaces in pilot feedback.
 - **Cross-entity validation.** Surfaced via the dedicated Validate
   page; not rendered inline on these pages.
-- **Filter on preview tables.** Out of scope for the initial
-  slice. Operator-side **sort** lives in the shared rrw-sort
-  primitive ("Sortable headers" section above; shipped 2026-05-12
-  as Segment 13B Part 2). Default render order remains
-  primary-key when no sort cookie is in play.
+- **Paging.** The 200-row (500-when-filtered) cap + the search /
+  status filter cover the long-list case; there is no pager.
 - **Assignments generation.** Moved to the Operations row in
   Segment 15D PR 6a — see `spec/operator_ui_concept.md` §5.
+
+Per-row inline Edit / Add / bulk inactivate-reactivate and the
+search / status filter strip — previously listed here as
+deferred — **shipped in Segment 15F** (2026-05-15); see
+"Operator actions card" and "Per-row Edit / Add / bulk actions"
+above.
 
 ## Implementation pointers
 
