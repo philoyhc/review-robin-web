@@ -227,9 +227,12 @@ The route returns **HTTP 409** when the session is `ready` — operators must Re
 All three setup-roster pages share an identical chrome shape:
 
 1. Session top nav.
-2. **Info card** with the page heading and:
-   - `Number of {reviewers / reviewees / pairwise relationships}: {pill}`.
-   - `Fields with data: {pill, pill, …}` listing the actual CSV column names for fields with at least one non-empty value (e.g. `ReviewerName`, `RevieweeEmail`, `PhotoLink`, `RevieweeTag1..3`, `PairContextTag1..3`, `Status`).
+2. **Info card** with `Fields with data: {pill, pill, …}` listing
+   the actual CSV column names for fields with at least one
+   non-empty value (e.g. `ReviewerName`, `RevieweeEmail`,
+   `PhotoLink`, `RevieweeTag1..3`, `PairContextTag1..3`,
+   `Status`). The per-entity row count is **not** repeated here —
+   the chrome status strip already carries it.
 3. Yellow lock card when `ready` (with `return_to=reviewers` / `reviewees` / `relationships` so the operator returns here after reverting). Sits immediately under the info card — same status-info-then-yellow-lock pattern the Instruments and Assignments pages use.
 4. **Friendly-label editor (left) + Operator actions card (right)** — a half-width `bottom-grid` pair. The friendly-label editor is the inline editor for the per-session tag-column labels; the Operator actions card (Segment 15F) carries the search / status filter strip and the selection-driven Edit · Inactivate · Activate · Add-new-row button row. See `spec/setup_pages.md` "Operator actions card".
 5. Browseable data-preview table of the saved rows (always visible, even while locked) — leftmost checkbox column drives the operator-actions selection; a row flips to inline inputs in Edit (`?edit_id=`) / Add (`?add=1`) mode.

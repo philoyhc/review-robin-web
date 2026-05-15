@@ -339,15 +339,15 @@ when `Status` is omitted. POSTs to
 
 ### Stats card
 
-Single-line counts card above the body grid:
+Single-line "Fields with data" card above the body grid:
 
-> Number of pairwise relationships: **{pill}** · Fields with data:
-> {pill, pill, …}
+> Fields with data: {pill, pill, …}
 
-Mirrors the Reviewers / Reviewees stats card shape (Segment 15
-post-cleanup polish #762 unified the three pages on this
-treatment). Fields-with-data labels come from
-`relationships.fields_with_data(...)` in `app/services/relationships.py`.
+Mirrors the Reviewers / Reviewees stats card shape exactly — the
+per-entity row count is **not** repeated here, since the chrome
+status strip already carries it. Fields-with-data labels come
+from `relationships.fields_with_data(...)` in
+`app/services/relationships.py`.
 
 ### Preview table
 

@@ -21,9 +21,7 @@
 
   <div class="card">
     <p style="margin: 0;">
-      Number of pairwise relationships:
-      <span class="pill pill-count">{{ existing_count or 0 }}</span>
-      &nbsp;&nbsp;Fields with data:
+      Fields with data:
       {% for label in fields_with_data %}
         <span class="pill pill-count">{{ label }}</span>
       {% else %}
