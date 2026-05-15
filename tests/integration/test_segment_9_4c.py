@@ -68,7 +68,7 @@ def _seed_pair(client: TestClient, db: Session, *, code: str) -> ReviewSession:
 # ---------------------------------------------------------------------------
 
 
-def test_reviewers_page_renders_anchored_upload_card_and_disabled_edit(
+def test_reviewers_page_renders_anchored_upload_card(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="r-reshape")
@@ -83,10 +83,11 @@ def test_reviewers_page_renders_anchored_upload_card_and_disabled_edit(
         f'action="/operator/sessions/{review_session.id}/reviewers/import"'
         in body
     )
-    # Edit Reviewers button rendered disabled (anchor, not button)
-    assert "Edit Reviewers" in body
-    assert 'aria-disabled="true"' in body
-    assert 'title="Inline editing — coming soon"' in body
+    # Segment 15F PR 3 retired the "Edit Reviewers — coming soon"
+    # placeholder anchor; the real per-row Edit affordance now lives
+    # in the operator-actions card.
+    assert "Edit Reviewers" not in body
+    assert 'class="card operator-actions-card"' in body
 
 
 def test_reviewees_page_renders_anchored_upload_card_and_disabled_edit(

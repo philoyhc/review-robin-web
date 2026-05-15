@@ -5,6 +5,15 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
+  {# Segment 15F PR 3 — ``edit_mode`` is the server-rendered edit
+     state: one row's cells render as inputs (Edit) or a fresh blank
+     row prepends (Add new row). The operator-actions card swaps its
+     filter strip + four-button row for a focused Save / Cancel pair
+     while editing. #}
+  {% set edit_mode = (edit_id is not none) or add_mode %}
+  {% set reviewers_base_url =
+        "/operator/sessions/" ~ session.id ~ "/reviewers" %}
+
   <div class="session-nav-card">
     {% with current_page = "Reviewers" %}
       {% include "operator/partials/session_top_nav.html" %}
@@ -44,10 +53,8 @@
     </div>
   {% endif %}
 
-  {# Segment 15F PR 2 — friendly-labels editor narrows from full-
-     width to half-width left; new operator-actions card sits
-     half-width right. Action-button row in the right card renders
-     as inert placeholders this PR; PR 3 lights them up. #}
+  {# Friendly-labels editor (left, half-width) + operator-actions
+     card (right, half-width). #}
   <div class="bottom-grid">
     {% set field_labels_form_action =
           "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
@@ -63,124 +70,258 @@
     {% include "operator/partials/_field_labels_editor.html" %}
 
     <div class="card operator-actions-card">
-      <h2>Operator actions</h2>
-      <form method="get"
-            action="/operator/sessions/{{ session.id }}/reviewers"
-            class="operator-actions-filter">
-        <div class="filter-row">
-          <label class="filter-status">
-            Status:
-            <select name="status">
-              <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
-              {% for value, label in filter_status_options %}
-                <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label class="filter-search">
-            Search:
-            <input type="text"
-                   name="q"
-                   list="reviewers-search-options"
-                   value="{{ filter_search }}"
-                   autocomplete="off"
-                   placeholder="Reviewer name or email">
-            <datalist id="reviewers-search-options">
-              {% for label in filter_search_options %}
-                <option value="{{ label }}"></option>
-              {% endfor %}
-            </datalist>
-          </label>
-        </div>
-        <div class="filter-actions">
-          {% if displayed_row_count != total_row_count %}
-            <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
+      {% if edit_mode %}
+        <h2>{{ "Add reviewer" if add_mode else "Edit reviewer" }}</h2>
+        {% if edit_error %}
+          <p class="banner banner-error">{{ edit_error }}</p>
+        {% endif %}
+        <p class="form-help">
+          {% if add_mode %}
+            Fill in the new row below, then Save.
+          {% else %}
+            Edit the highlighted row below, then Save.
           {% endif %}
-          {% if filter_status != "all" or filter_search %}
+        </p>
+        <div class="operator-actions-buttons"
+             style="margin-top: var(--space-3);">
+          <button class="btn primary" type="submit"
+                  form="reviewer-edit-form">Save</button>
+          <a class="btn secondary"
+             href="{{ reviewers_base_url }}">Cancel</a>
+        </div>
+      {% else %}
+        <h2>Operator actions</h2>
+        <form method="get"
+              action="{{ reviewers_base_url }}"
+              class="operator-actions-filter">
+          <div class="filter-row">
+            <label class="filter-status">
+              Status:
+              <select name="status">
+                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+                {% for value, label in filter_status_options %}
+                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="filter-search">
+              Search:
+              <input type="text"
+                     name="q"
+                     list="reviewers-search-options"
+                     value="{{ filter_search }}"
+                     autocomplete="off"
+                     placeholder="Reviewer name or email">
+              <datalist id="reviewers-search-options">
+                {% for label in filter_search_options %}
+                  <option value="{{ label }}"></option>
+                {% endfor %}
+              </datalist>
+            </label>
+          </div>
+          <div class="filter-actions">
+            {% if displayed_row_count != total_row_count %}
+              <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
+            {% endif %}
+            {% if filter_status != "all" or filter_search %}
+              <a class="btn secondary"
+                 href="{{ reviewers_base_url }}">Clear</a>
+            {% endif %}
+            <button class="btn secondary" type="submit">Apply</button>
+          </div>
+        </form>
+        {# Action buttons — selection-driven enable/disable
+           (Segment 15F decision 3). The bulk buttons submit the
+           ``reviewers-bulk-form`` via ``formaction``; Add new row
+           is a plain link; Edit is JS-driven (reads the single
+           checked row). All disabled when the session is ongoing. #}
+        <div class="operator-actions-buttons"
+             style="margin-top: var(--space-3);">
+          <span class="pill pill-count"
+                id="reviewers-selected-count" hidden>0 selected</span>
+          <button class="btn secondary" type="button"
+                  id="reviewers-edit-btn"
+                  disabled aria-disabled="true">Edit</button>
+          <button class="btn secondary" type="submit"
+                  id="reviewers-inactivate-btn"
+                  form="reviewers-bulk-form"
+                  formaction="{{ reviewers_base_url }}/bulk-inactivate"
+                  disabled aria-disabled="true">Inactivate selected</button>
+          <button class="btn secondary" type="submit"
+                  id="reviewers-reactivate-btn"
+                  form="reviewers-bulk-form"
+                  formaction="{{ reviewers_base_url }}/bulk-reactivate"
+                  disabled aria-disabled="true">Reactivate selected</button>
+          {% if is_ready %}
+            <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
+          {% else %}
             <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/reviewers">Clear</a>
+               href="{{ reviewers_base_url }}?add=1">Add new row</a>
           {% endif %}
-          <button class="btn secondary" type="submit">Apply</button>
         </div>
-      </form>
-      {# PR 3 lights up these four buttons with selection-driven
-         enable/disable (Decision 3 in spec). Inert placeholders here
-         lock the layout in PR 2. #}
-      <div class="operator-actions-buttons"
-           style="margin-top: var(--space-3);">
-        <button class="btn secondary" type="button" disabled aria-disabled="true">Edit</button>
-        <button class="btn secondary" type="button" disabled aria-disabled="true">Inactivate selected</button>
-        <button class="btn secondary" type="button" disabled aria-disabled="true">Reactivate selected</button>
-        <button class="btn secondary" type="button" disabled aria-disabled="true">Add new row</button>
-      </div>
+      {% endif %}
     </div>
   </div>
 
-  {% if reviewers %}
-    {% set has_tag_1 = reviewers | selectattr("tag_1") | list | length > 0 %}
-    {% set has_tag_2 = reviewers | selectattr("tag_2") | list | length > 0 %}
-    {% set has_tag_3 = reviewers | selectattr("tag_3") | list | length > 0 %}
+  {# Hidden form shells. ``form=`` attributes on the table
+     checkboxes / edit-row inputs / card buttons attach to these. #}
+  {% if edit_mode %}
+    {% set edit_action = reviewers_base_url ~ "/create" if add_mode
+          else reviewers_base_url ~ "/" ~ edit_id ~ "/update" %}
+    <form id="reviewer-edit-form" method="post"
+          action="{{ edit_action }}"></form>
+  {% elif not is_ready %}
+    <form id="reviewers-bulk-form" method="post"
+          action="{{ reviewers_base_url }}/bulk-inactivate"></form>
+  {% endif %}
+
+  {% if reviewers or add_mode %}
+    {% set selectable = not edit_mode and not is_ready %}
+    {% if not edit_mode %}
+      {% set has_tag_1 = reviewers | selectattr("tag_1") | list | length > 0 %}
+      {% set has_tag_2 = reviewers | selectattr("tag_2") | list | length > 0 %}
+      {% set has_tag_3 = reviewers | selectattr("tag_3") | list | length > 0 %}
+    {% endif %}
     <div class="card">
-      <div class="tag-col-toggles"
-           style="display: flex; justify-content: flex-end; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2);">
-        <label style="font-weight: normal;">
-          <input type="checkbox"
-                 class="tag-col-toggle"
-                 data-tag-toggle="1"
-                 {% if has_tag_1 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-          Tag1
-        </label>
-        <label style="font-weight: normal;">
-          <input type="checkbox"
-                 class="tag-col-toggle"
-                 data-tag-toggle="2"
-                 {% if has_tag_2 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-          Tag2
-        </label>
-        <label style="font-weight: normal;">
-          <input type="checkbox"
-                 class="tag-col-toggle"
-                 data-tag-toggle="3"
-                 {% if has_tag_3 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-          Tag3
-        </label>
-      </div>
+      {% if not edit_mode %}
+        <div class="tag-col-toggles"
+             style="display: flex; justify-content: flex-end; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2);">
+          <label style="font-weight: normal;">
+            <input type="checkbox"
+                   class="tag-col-toggle"
+                   data-tag-toggle="1"
+                   {% if has_tag_1 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+            Tag1
+          </label>
+          <label style="font-weight: normal;">
+            <input type="checkbox"
+                   class="tag-col-toggle"
+                   data-tag-toggle="2"
+                   {% if has_tag_2 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+            Tag2
+          </label>
+          <label style="font-weight: normal;">
+            <input type="checkbox"
+                   class="tag-col-toggle"
+                   data-tag-toggle="3"
+                   {% if has_tag_3 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+            Tag3
+          </label>
+        </div>
+      {% endif %}
       <table id="reviewers-table"
-             data-rrw-sortable="rrw-sort-reviewers-{{ session.id }}">
+             {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewers-{{ session.id }}"{% endif %}>
         <thead>
         <tr>
-          <th class="rrw-sortable" data-sort-key="name">Name<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Name"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="rrw-sortable" data-sort-key="email">Email<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Email"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1">{{ field_label_header(session, "reviewer", "tag_1") }}<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Tag1"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewer", "tag_1") }}</th>
-          <th class="tag-col tag-col-2 rrw-sortable" data-sort-key="tag_2">{{ field_label_header(session, "reviewer", "tag_2") }}<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Tag2"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewer", "tag_2") }}</th>
-          <th class="tag-col tag-col-3 rrw-sortable" data-sort-key="tag_3">{{ field_label_header(session, "reviewer", "tag_3") }}<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Tag3"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewer", "tag_3") }}</th>
-          <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Status"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="row-select-cell">
+            {% if selectable %}
+              <input type="checkbox" id="reviewers-select-all"
+                     aria-label="Select all reviewers">
+            {% endif %}
+          </th>
+          {% if edit_mode %}
+            <th>Name</th>
+            <th>Email</th>
+            <th class="tag-col tag-col-1">{{ field_label_header(session, "reviewer", "tag_1") }}{{ field_label_canonical_subtext(session, "reviewer", "tag_1") }}</th>
+            <th class="tag-col tag-col-2">{{ field_label_header(session, "reviewer", "tag_2") }}{{ field_label_canonical_subtext(session, "reviewer", "tag_2") }}</th>
+            <th class="tag-col tag-col-3">{{ field_label_header(session, "reviewer", "tag_3") }}{{ field_label_canonical_subtext(session, "reviewer", "tag_3") }}</th>
+            <th>Status</th>
+          {% else %}
+            <th class="rrw-sortable" data-sort-key="name">Name<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Name"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="rrw-sortable" data-sort-key="email">Email<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Email"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1">{{ field_label_header(session, "reviewer", "tag_1") }}<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Tag1"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewer", "tag_1") }}</th>
+            <th class="tag-col tag-col-2 rrw-sortable" data-sort-key="tag_2">{{ field_label_header(session, "reviewer", "tag_2") }}<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Tag2"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewer", "tag_2") }}</th>
+            <th class="tag-col tag-col-3 rrw-sortable" data-sort-key="tag_3">{{ field_label_header(session, "reviewer", "tag_3") }}<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Tag3"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewer", "tag_3") }}</th>
+            <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Status"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          {% endif %}
         </tr>
         </thead>
-        <tbody class="rrw-rows">
-        {% for reviewer in reviewers %}
-          <tr id="reviewer-row-{{ reviewer.id }}">
-            <td data-sort-value="{{ reviewer.name }}">{{ reviewer.name }}</td>
-            <td data-sort-value="{{ reviewer.email }}"><code>{{ reviewer.email }}</code></td>
-            <td class="tag-col tag-col-1" data-sort-value="{{ reviewer.tag_1 or '' }}">{{ reviewer.tag_1 or "" }}</td>
-            <td class="tag-col tag-col-2" data-sort-value="{{ reviewer.tag_2 or '' }}">{{ reviewer.tag_2 or "" }}</td>
-            <td class="tag-col tag-col-3" data-sort-value="{{ reviewer.tag_3 or '' }}">{{ reviewer.tag_3 or "" }}</td>
-            <td data-sort-value="{{ reviewer.status }}">
-              <span class="pill {{ 'pill-info' if reviewer.status == 'active' else 'pill-empty' }}">{{ reviewer.status }}</span>
+        <tbody{% if not edit_mode %} class="rrw-rows"{% endif %}>
+        {% if add_mode %}
+          {# Fresh blank edit row at the top of the table. #}
+          <tr class="reviewer-edit-row">
+            <td class="row-select-cell"></td>
+            <td><input type="text" name="name" form="reviewer-edit-form"
+                       value="{{ edit_values.name }}" maxlength="255"
+                       placeholder="Name" required></td>
+            <td><input type="email" name="email" form="reviewer-edit-form"
+                       value="{{ edit_values.email }}" maxlength="320"
+                       placeholder="Email" required></td>
+            <td class="tag-col tag-col-1"><input type="text" name="tag_1"
+                       form="reviewer-edit-form"
+                       value="{{ edit_values.tag_1 }}" maxlength="255"></td>
+            <td class="tag-col tag-col-2"><input type="text" name="tag_2"
+                       form="reviewer-edit-form"
+                       value="{{ edit_values.tag_2 }}" maxlength="255"></td>
+            <td class="tag-col tag-col-3"><input type="text" name="tag_3"
+                       form="reviewer-edit-form"
+                       value="{{ edit_values.tag_3 }}" maxlength="255"></td>
+            <td>
+              <select name="status" form="reviewer-edit-form">
+                <option value="active"{% if edit_values.status == "active" %} selected{% endif %}>active</option>
+                <option value="inactive"{% if edit_values.status == "inactive" %} selected{% endif %}>inactive</option>
+              </select>
             </td>
           </tr>
+        {% endif %}
+        {% for reviewer in reviewers %}
+          {% if edit_id is not none and reviewer.id == edit_id %}
+            <tr class="reviewer-edit-row" id="reviewer-row-{{ reviewer.id }}">
+              <td class="row-select-cell"></td>
+              <td><input type="text" name="name" form="reviewer-edit-form"
+                         value="{{ edit_values.name }}" maxlength="255"
+                         required></td>
+              <td><input type="email" name="email" form="reviewer-edit-form"
+                         value="{{ edit_values.email }}" maxlength="320"
+                         required></td>
+              <td class="tag-col tag-col-1"><input type="text" name="tag_1"
+                         form="reviewer-edit-form"
+                         value="{{ edit_values.tag_1 }}" maxlength="255"></td>
+              <td class="tag-col tag-col-2"><input type="text" name="tag_2"
+                         form="reviewer-edit-form"
+                         value="{{ edit_values.tag_2 }}" maxlength="255"></td>
+              <td class="tag-col tag-col-3"><input type="text" name="tag_3"
+                         form="reviewer-edit-form"
+                         value="{{ edit_values.tag_3 }}" maxlength="255"></td>
+              <td>
+                <select name="status" form="reviewer-edit-form">
+                  <option value="active"{% if edit_values.status == "active" %} selected{% endif %}>active</option>
+                  <option value="inactive"{% if edit_values.status == "inactive" %} selected{% endif %}>inactive</option>
+                </select>
+              </td>
+            </tr>
+          {% else %}
+            <tr id="reviewer-row-{{ reviewer.id }}">
+              <td class="row-select-cell">
+                {% if selectable %}
+                  <input type="checkbox" class="reviewer-select"
+                         name="reviewer_ids" value="{{ reviewer.id }}"
+                         form="reviewers-bulk-form"
+                         aria-label="Select {{ reviewer.name }}">
+                {% endif %}
+              </td>
+              <td data-sort-value="{{ reviewer.name }}">{{ reviewer.name }}</td>
+              <td data-sort-value="{{ reviewer.email }}"><code>{{ reviewer.email }}</code></td>
+              <td class="tag-col tag-col-1" data-sort-value="{{ reviewer.tag_1 or '' }}">{{ reviewer.tag_1 or "" }}</td>
+              <td class="tag-col tag-col-2" data-sort-value="{{ reviewer.tag_2 or '' }}">{{ reviewer.tag_2 or "" }}</td>
+              <td class="tag-col tag-col-3" data-sort-value="{{ reviewer.tag_3 or '' }}">{{ reviewer.tag_3 or "" }}</td>
+              <td data-sort-value="{{ reviewer.status }}">
+                <span class="pill {{ 'pill-info' if reviewer.status == 'active' else 'pill-empty' }}">{{ reviewer.status }}</span>
+              </td>
+            </tr>
+          {% endif %}
         {% endfor %}
         </tbody>
       </table>
@@ -192,7 +333,8 @@
       <p class="muted">No reviewers match the current filter.</p>
     </div>
   {% endif %}
-  {% if reviewers %}
+
+  {% if not edit_mode %}
     <style>
       #reviewers-table.tag-hidden-1 .tag-col-1,
       #reviewers-table.tag-hidden-2 .tag-col-2,
@@ -241,7 +383,58 @@
     </script>
   {% endif %}
 
-  {% if not is_ready %}
+  {# Selection → action-button state binding (Segment 15F PR 3).
+     Only runs in the interactive non-edit / non-ready state. #}
+  {% if not edit_mode and not is_ready %}
+    <script>
+      (function () {
+        var editBtn = document.getElementById("reviewers-edit-btn");
+        var inactivateBtn = document.getElementById("reviewers-inactivate-btn");
+        var reactivateBtn = document.getElementById("reviewers-reactivate-btn");
+        var countPill = document.getElementById("reviewers-selected-count");
+        var selectAll = document.getElementById("reviewers-select-all");
+        if (!editBtn) return;
+        function selected() {
+          return Array.prototype.slice.call(
+            document.querySelectorAll(".reviewer-select:checked"));
+        }
+        function refresh() {
+          var n = selected().length;
+          editBtn.disabled = (n !== 1);
+          inactivateBtn.disabled = (n === 0);
+          reactivateBtn.disabled = (n === 0);
+          if (n > 0) {
+            countPill.textContent = n + " selected";
+            countPill.hidden = false;
+          } else {
+            countPill.hidden = true;
+          }
+        }
+        Array.prototype.forEach.call(
+          document.querySelectorAll(".reviewer-select"),
+          function (cb) { cb.addEventListener("change", refresh); }
+        );
+        if (selectAll) {
+          selectAll.addEventListener("change", function () {
+            Array.prototype.forEach.call(
+              document.querySelectorAll(".reviewer-select"),
+              function (cb) { cb.checked = selectAll.checked; }
+            );
+            refresh();
+          });
+        }
+        editBtn.addEventListener("click", function () {
+          var sel = selected();
+          if (sel.length !== 1) return;
+          window.location =
+            {{ reviewers_base_url | tojson }} + "?edit_id=" + sel[0].value;
+        });
+        refresh();
+      })();
+    </script>
+  {% endif %}
+
+  {% if not is_ready and not edit_mode %}
   <div class="bottom-grid">
     <section class="card" id="upload-csv">
       <h2>Upload Reviewers</h2>
@@ -274,9 +467,6 @@
 
         <div class="btn-pair" style="margin-top: 20px;">
           <button class="btn secondary" type="submit">Upload</button>
-          <a class="btn secondary disabled"
-             aria-disabled="true"
-             title="Inline editing — coming soon">Edit Reviewers</a>
         </div>
       </form>
     </section>

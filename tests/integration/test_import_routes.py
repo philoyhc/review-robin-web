@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 from fastapi.testclient import TestClient
@@ -607,17 +608,18 @@ def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
 
     # Toggle row above the table — Tag1 / Tag2 ticked (have data),
     # Tag3 disabled because the column has no data anywhere.
-    assert 'data-tag-toggle="1"\n                 checked' in body
-    assert 'data-tag-toggle="2"\n                 checked' in body
-    assert 'data-tag-toggle="3"\n                 checked' not in body
+    # Whitespace-normalised so the assertions survive template
+    # indentation changes (e.g. the Segment 15F edit-mode wrapper).
+    flat = re.sub(r"\s+", " ", body)
+    assert 'data-tag-toggle="1" checked' in flat
+    assert 'data-tag-toggle="2" checked' in flat
+    assert 'data-tag-toggle="3" checked' not in flat
     assert (
-        'data-tag-toggle="3"\n                 disabled aria-disabled="true" '
+        'data-tag-toggle="3" disabled aria-disabled="true" '
         'title="No data in this column"'
-    ) in body
+    ) in flat
     # Tag1 / Tag2 are NOT disabled (they have data).
-    assert (
-        'data-tag-toggle="1"\n                 disabled' not in body
-    )
+    assert 'data-tag-toggle="1" disabled' not in flat
 
     # Tag values render in their own cells (no "1: " prefix).
     assert "1: senior" not in body
