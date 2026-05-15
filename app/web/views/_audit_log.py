@@ -36,6 +36,7 @@ from datetime import date
 from urllib.parse import urlencode
 
 from app.services.audit import AuditFilters, AuditLogRow
+from app.services.date_formatting import format_datetime
 
 __all__ = [
     "AuditDetailChangeRow",
@@ -75,7 +76,7 @@ class AuditLogTableRow:
     summary: str
     actor_email: str
     correlation_id: str
-    created_at_iso: str
+    created_at_display: str
     detail_json: str
     detail: AuditDetailRender
 
@@ -101,7 +102,7 @@ def build_audit_log_rows(
             summary=row.summary,
             actor_email=row.actor_email or "",
             correlation_id=row.correlation_id or "",
-            created_at_iso=_isoformat_utc(row.created_at),
+            created_at_display=format_datetime(row.created_at),
             detail_json=_json_or_empty(row.detail),
             detail=format_audit_detail(row.event_type, row.detail),
         )
@@ -453,16 +454,6 @@ def _format_scalar(value: object) -> str:
     import json
 
     return json.dumps(value, separators=(",", ":"), sort_keys=True)
-
-
-def _isoformat_utc(value: object) -> str:
-    if value is None:
-        return ""
-    from datetime import datetime, timezone
-
-    if isinstance(value, datetime) and value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-    return value.isoformat()  # type: ignore[union-attr]
 
 
 def _json_or_empty(value: object) -> str:

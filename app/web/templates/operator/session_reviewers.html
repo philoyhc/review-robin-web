@@ -321,7 +321,7 @@
                 </select>
               </td>
               <td data-sort-value="{{ reviewer.updated_at.isoformat() }}">
-                {{ reviewer.updated_at.strftime("%Y-%m-%d %H:%M") }}
+                {{ reviewer.updated_at | format_datetime }}
               </td>
             </tr>
           {% else %}
@@ -344,7 +344,7 @@
                 <span class="pill {{ 'pill-info' if reviewer.status == 'active' else 'pill-empty' }}">{{ reviewer.status }}</span>
               </td>
               <td data-sort-value="{{ reviewer.updated_at.isoformat() }}">
-                {{ reviewer.updated_at.strftime("%Y-%m-%d %H:%M") }}
+                {{ reviewer.updated_at | format_datetime }}
               </td>
             </tr>
           {% endif %}

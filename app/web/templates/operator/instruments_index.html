@@ -61,7 +61,7 @@
     <p style="margin: 0;">
       Session deadline (auto-close):
       {% if session.deadline %}
-        <span class="pill pill-count">{{ session.deadline.isoformat() }}</span>
+        <span class="pill pill-count">{{ session.deadline | format_datetime }}</span>
       {% else %}
         <span class="pill pill-empty">not set</span>
       {% endif %}
@@ -230,7 +230,7 @@
           </p>
           {% if instrument.deadline_closed_at %}
             <p class="form-help" style="margin-top: 4px;">
-              Closed by deadline at <code>{{ instrument.deadline_closed_at.isoformat() }}</code>.
+              Closed by deadline at <code>{{ instrument.deadline_closed_at | format_datetime }}</code>.
             </p>
           {% endif %}
           <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">

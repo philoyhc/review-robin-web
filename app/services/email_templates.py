@@ -40,6 +40,7 @@ from sqlalchemy.orm.exc import UnmappedInstanceError
 
 from app.db.models import Assignment, Response, Reviewer, ReviewSession, User
 from app.services import audit as audit_service
+from app.services.date_formatting import format_datetime
 
 # Default templates — verbatim parameterisations of the strings the
 # original ``invitations._email_body`` / ``_reminder_body`` helpers
@@ -131,12 +132,10 @@ def _substitute(template_str: str, **merge: Any) -> str:
 
 
 def _format_deadline(review_session: ReviewSession) -> str:
-    if review_session.deadline is None:
-        return ""
-    # Render in ISO date form (UTC). The editor preview will format
-    # the same way; reviewer-side display formatting (timezone /
-    # locale) is a separate concern.
-    return review_session.deadline.strftime("%Y-%m-%d")
+    # Canonical date-time render (Segment 18B PR 1): the deadline
+    # is operator-entered with a time component, so the time is
+    # shown and an explicit zone token carried.
+    return format_datetime(review_session.deadline)
 
 
 def _merge_context(
@@ -227,7 +226,7 @@ def _format_submitted_at(submitted_at: datetime | None) -> str:
     live send path always has a stamped ``submitted_at``."""
     if submitted_at is None:
         return "(not yet submitted)"
-    return submitted_at.strftime("%Y-%m-%d %H:%M %Z").rstrip()
+    return format_datetime(submitted_at)
 
 
 def render_responses_received(

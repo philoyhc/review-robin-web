@@ -1,8 +1,9 @@
 # Segment 18B — Date and time settings
 
-> **Planned 2026-05-15.** Scoping decisions locked (see "Locked
-> decisions" below); PR ladder drafted. Detailed per-PR
-> breakdowns get finalised when the segment is picked up.
+> **In flight — PR 1 shipped 2026-05-15.** Scoping decisions
+> locked (see "Locked decisions" below). PR 1 (canonical format
+> + shared display helper) is shipped; PRs 2-3 (the timezone
+> infra) follow once 13F PR 6 lands the per-session column.
 >
 > The 18B segment number was previously held by "Session tagging
 > + archiving", which was folded into 18A (Sessions lobby
@@ -180,7 +181,26 @@ Three PRs. PR 1 is independently shippable and delivers goal 1
 (format standardization) on its own; PRs 2-3 layer the timezone
 infra (goal 2).
 
-### PR 1 — Canonical format + shared display helper
+### PR 1 — Canonical format + shared display helper — ✅ shipped 2026-05-15
+
+**Outcome.** New module `app/services/date_formatting.py` exposes
+`format_datetime` (→ `YYYY-MM-DD HH:MM UTC`) and `format_date`
+(→ `YYYY-MM-DD`); both normalise naive/aware datetimes to UTC and
+return `""` for `None`. Registered as Jinja filters on the
+operator (`routes_operator/_shared.py`) and reviewer
+(`routes_reviewer.py`) template environments. Every template +
+service display site in the audit migrated to the filters /
+helper: 16 templates, the `$deadline` + `$submitted_at` email
+merge fields, and the audit-log viewer cell (the `_audit_log.py`
+`_isoformat_utc` helper dropped; field renamed
+`created_at_iso` → `created_at_display`). The deadline now
+renders as a full date-time (it is operator-entered with a time
+component) — `$deadline` shifts from date-only to
+`YYYY-MM-DD HH:MM UTC`. CSV extracts + audit-detail JSON + the
+`datetime-local` / date filter **inputs** deliberately untouched.
+8 new tests in `tests/unit/test_date_formatting.py`.
+
+Original scope notes:
 
 - Add `format_datetime` / `format_date` Jinja filters (+ a
   plain-Python helper for the email / service paths) in one new
@@ -195,9 +215,7 @@ infra (goal 2).
   ugliest and the priority.
 - **Not touched:** the CSV extracts + audit-detail JSON — those
   stay ISO-8601 UTC (machine formats don't localize).
-- No schema change. May split 1a (helper + operator templates) /
-  1b (reviewer templates + email merge fields) if the diff is
-  large.
+- No schema change.
 
 ### PR 2 — Deployment default timezone + `/operator/settings` card
 

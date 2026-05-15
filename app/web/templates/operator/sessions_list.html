@@ -35,7 +35,7 @@
               <td><code>{{ s.code }}</code></td>
               <td>
                 {% if s.deadline %}
-                  <span class="pill pill-info">{{ s.deadline.isoformat() }}</span>
+                  <span class="pill pill-info">{{ s.deadline | format_datetime }}</span>
                 {% else %}
                   <span class="muted">No deadline</span>
                 {% endif %}
@@ -44,10 +44,10 @@
                 <span class="pill pill-count">{{ s.created_by_user.display_name or s.created_by_user.email }}</span>
               </td>
               <td>
-                <span class="pill pill-count">{{ s.created_at.isoformat() }}</span>
+                <span class="pill pill-count">{{ s.created_at | format_datetime }}</span>
               </td>
               <td>
-                <span class="pill pill-count">{{ s.updated_at.isoformat() }}</span>
+                <span class="pill pill-count">{{ s.updated_at | format_datetime }}</span>
               </td>
               <td>
                 <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>

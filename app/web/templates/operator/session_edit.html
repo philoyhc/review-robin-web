@@ -94,7 +94,7 @@
           <td><code>{{ owner.email }}</code></td>
           <td>{{ owner.display_name or "—" }}</td>
           <td>{{ owner.role }}</td>
-          <td>{{ owner.joined_at.strftime("%Y-%m-%d") }}</td>
+          <td>{{ owner.joined_at | format_date }}</td>
           <td class="col-shrink">
             <form method="post"
                   style="display:inline"

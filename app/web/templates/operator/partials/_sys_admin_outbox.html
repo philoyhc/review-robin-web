@@ -24,7 +24,7 @@
           &middot;
           {% if row.status == "sent" %}
             <span class="pill pill-count">sent</span>
-            {% if row.sent_at %} at {{ row.sent_at.strftime("%Y-%m-%d %H:%M") }}{% endif %}
+            {% if row.sent_at %} at {{ row.sent_at | format_datetime }}{% endif %}
           {% else %}
             <span class="pill pill-empty">{{ row.status }}</span>
           {% endif %}

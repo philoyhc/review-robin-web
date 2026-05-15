@@ -39,7 +39,7 @@
         &middot;
         Last response:
         {% if row.last_response_at %}
-          {{ row.last_response_at.strftime("%Y-%m-%d %H:%M") }}
+          {{ row.last_response_at | format_datetime }}
         {% else %}
           —
         {% endif %}

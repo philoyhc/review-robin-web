@@ -124,7 +124,7 @@
             </td>
             <td>
               {% if row.email_sent_at %}
-                <span class="pill pill-count">{{ row.email_sent_at.strftime("%Y-%m-%d %H:%M") }}</span>
+                <span class="pill pill-count">{{ row.email_sent_at | format_datetime }}</span>
               {% else %}
                 <span class="pill pill-empty">—</span>
               {% endif %}
@@ -149,7 +149,7 @@
             </td>
             <td>
               {% if row.last_reminder_at %}
-                <span class="pill pill-count">{{ row.last_reminder_at.strftime("%Y-%m-%d %H:%M") }}</span>
+                <span class="pill pill-count">{{ row.last_reminder_at | format_datetime }}</span>
               {% else %}
                 <span class="pill pill-empty">—</span>
               {% endif %}
