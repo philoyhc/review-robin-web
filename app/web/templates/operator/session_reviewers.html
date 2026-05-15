@@ -69,56 +69,42 @@
     ] %}
     {% include "operator/partials/_field_labels_editor.html" %}
 
-    <div class="card operator-actions-card">
-      {% if edit_mode %}
-        <h2>{{ "Add reviewer" if add_mode else "Edit reviewer" }}</h2>
-        {% if edit_error %}
-          <p class="banner banner-error">{{ edit_error }}</p>
-        {% endif %}
-        <p class="form-help">
-          {% if add_mode %}
-            Fill in the new row below, then Save.
-          {% else %}
-            Edit the highlighted row below, then Save.
-          {% endif %}
-        </p>
-        <div class="operator-actions-buttons"
-             style="margin-top: var(--space-3);">
-          <button class="btn primary" type="submit"
-                  form="reviewer-edit-form">Save</button>
-          <a class="btn secondary"
-             href="{{ reviewers_base_url }}">Cancel</a>
+    {# Operator-actions card stays visible in edit / add mode but
+       greyed (``is-locked``) — the focused Add / Edit card renders
+       below it. #}
+    <div class="card operator-actions-card{% if edit_mode %} is-locked{% endif %}">
+      <h2>Operator actions</h2>
+      <form method="get"
+            action="{{ reviewers_base_url }}"
+            class="operator-actions-filter">
+        <div class="filter-row">
+          <label class="filter-status">
+            Status:
+            <select name="status">
+              <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+              {% for value, label in filter_status_options %}
+                <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="filter-search">
+            Search:
+            <input type="text"
+                   name="q"
+                   list="reviewers-search-options"
+                   value="{{ filter_search }}"
+                   autocomplete="off"
+                   placeholder="Reviewer name or email">
+            <datalist id="reviewers-search-options">
+              {% for label in filter_search_options %}
+                <option value="{{ label }}"></option>
+              {% endfor %}
+            </datalist>
+          </label>
+          <button class="btn secondary" type="submit">Apply</button>
         </div>
-      {% else %}
-        <h2>Operator actions</h2>
-        <form method="get"
-              action="{{ reviewers_base_url }}"
-              class="operator-actions-filter">
-          <div class="filter-row">
-            <label class="filter-status">
-              Status:
-              <select name="status">
-                <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
-                {% for value, label in filter_status_options %}
-                  <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label class="filter-search">
-              Search:
-              <input type="text"
-                     name="q"
-                     list="reviewers-search-options"
-                     value="{{ filter_search }}"
-                     autocomplete="off"
-                     placeholder="Reviewer name or email">
-              <datalist id="reviewers-search-options">
-                {% for label in filter_search_options %}
-                  <option value="{{ label }}"></option>
-                {% endfor %}
-              </datalist>
-            </label>
-          </div>
+        {% if displayed_row_count != total_row_count
+              or filter_status != "all" or filter_search %}
           <div class="filter-actions">
             {% if displayed_row_count != total_row_count %}
               <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
@@ -127,41 +113,65 @@
               <a class="btn secondary"
                  href="{{ reviewers_base_url }}">Clear</a>
             {% endif %}
-            <button class="btn secondary" type="submit">Apply</button>
           </div>
-        </form>
-        {# Action buttons — selection-driven enable/disable
-           (Segment 15F decision 3). The bulk buttons submit the
-           ``reviewers-bulk-form`` via ``formaction``; Add new row
-           is a plain link; Edit is JS-driven (reads the single
-           checked row). All disabled when the session is ongoing. #}
-        <div class="operator-actions-buttons"
-             style="margin-top: var(--space-3);">
-          <span class="pill pill-count"
-                id="reviewers-selected-count" hidden>0 selected</span>
-          <button class="btn secondary" type="button"
-                  id="reviewers-edit-btn"
-                  disabled aria-disabled="true">Edit</button>
-          <button class="btn secondary" type="submit"
-                  id="reviewers-inactivate-btn"
-                  form="reviewers-bulk-form"
-                  formaction="{{ reviewers_base_url }}/bulk-inactivate"
-                  disabled aria-disabled="true">Inactivate selected</button>
-          <button class="btn secondary" type="submit"
-                  id="reviewers-reactivate-btn"
-                  form="reviewers-bulk-form"
-                  formaction="{{ reviewers_base_url }}/bulk-reactivate"
-                  disabled aria-disabled="true">Reactivate selected</button>
-          {% if is_ready %}
-            <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
-          {% else %}
-            <a class="btn secondary"
-               href="{{ reviewers_base_url }}?add=1">Add new row</a>
-          {% endif %}
-        </div>
-      {% endif %}
+        {% endif %}
+      </form>
+      {# Action buttons — selection-driven enable/disable
+         (Segment 15F decision 3). The bulk buttons submit the
+         ``reviewers-bulk-form`` via ``formaction``; Add new row
+         is a plain link; Edit is JS-driven (reads the single
+         checked row). All disabled when the session is ongoing. #}
+      <div class="operator-actions-buttons"
+           style="margin-top: var(--space-3);">
+        <span class="pill pill-count"
+              id="reviewers-selected-count" hidden>0 selected</span>
+        <button class="btn secondary" type="button"
+                id="reviewers-edit-btn"
+                disabled aria-disabled="true">Edit</button>
+        <button class="btn secondary" type="submit"
+                id="reviewers-inactivate-btn"
+                form="reviewers-bulk-form"
+                formaction="{{ reviewers_base_url }}/bulk-inactivate"
+                disabled aria-disabled="true">Inactivate selected</button>
+        <button class="btn secondary" type="submit"
+                id="reviewers-reactivate-btn"
+                form="reviewers-bulk-form"
+                formaction="{{ reviewers_base_url }}/bulk-reactivate"
+                disabled aria-disabled="true">Reactivate selected</button>
+        {% if is_ready or edit_mode %}
+          <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
+        {% else %}
+          <a class="btn secondary"
+             href="{{ reviewers_base_url }}?add=1">Add new row</a>
+        {% endif %}
+      </div>
     </div>
   </div>
+
+  {# Focused Add / Edit card — renders below the operator-actions
+     card while in edit / add mode. #}
+  {% if edit_mode %}
+    <div class="card">
+      <h2>{{ "Add new reviewer" if add_mode else "Edit reviewer" }}</h2>
+      {% if edit_error %}
+        <p class="banner banner-error">{{ edit_error }}</p>
+      {% endif %}
+      <p class="form-help">
+        {% if add_mode %}
+          Fill in the new row below, then Save.
+        {% else %}
+          Edit the highlighted row below, then Save.
+        {% endif %}
+      </p>
+      <div style="display: flex; justify-content: flex-end;
+                  gap: 12px; margin-top: var(--space-3);">
+        <button class="btn primary" type="submit"
+                form="reviewer-edit-form">Save</button>
+        <a class="btn secondary"
+           href="{{ reviewers_base_url }}">Cancel</a>
+      </div>
+    </div>
+  {% endif %}
 
   {# Hidden form shells. ``form=`` attributes on the table
      checkboxes / edit-row inputs / card buttons attach to these. #}

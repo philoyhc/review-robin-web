@@ -90,14 +90,15 @@ def test_edit_id_renders_target_row_as_inputs(
     ).text
     assert "reviewer-edit-row" in body
     assert 'id="reviewer-edit-form"' in body
-    # The card swapped to Save + Cancel.
+    # Focused Edit card with Save + Cancel.
+    assert ">Edit reviewer</h2>" in body
     assert ">Save</button>" in body
     assert ">Cancel</a>" in body
     # The edited row's name prefilled into an input.
     assert 'name="name"' in body
     assert 'value="Alice"' in body
-    # Filter strip is hidden in edit mode.
-    assert 'name="q"' not in body
+    # The operator-actions card stays visible but greyed out.
+    assert "operator-actions-card is-locked" in body
 
 
 def test_edit_post_updates_row_and_redirects(
@@ -207,7 +208,7 @@ def test_add_renders_blank_edit_row(
         f"/operator/sessions/{review_session.id}/reviewers?add=1"
     ).text
     assert "reviewer-edit-row" in body
-    assert ">Add reviewer</h2>" in body
+    assert ">Add new reviewer</h2>" in body
     assert ">Save</button>" in body
 
 
@@ -267,7 +268,7 @@ def test_add_post_validation_error_rerenders_in_add_mode(
         follow_redirects=False,
     )
     assert response.status_code == 400
-    assert ">Add reviewer</h2>" in response.text
+    assert ">Add new reviewer</h2>" in response.text
     assert "banner-error" in response.text
     # The bad value is preserved for correction.
     assert 'value="not-an-email"' in response.text
