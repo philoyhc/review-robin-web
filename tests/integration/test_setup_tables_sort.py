@@ -16,6 +16,7 @@ Pins:
 from __future__ import annotations
 
 import json
+from urllib.parse import quote
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -151,6 +152,30 @@ def test_reviewers_cookie_desc_order(
     ).text
     body = body[body.find('id="reviewers-table"') :]
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
+
+
+def test_reviewers_percent_encoded_cookie_drives_ssr_order(
+    db: Session, client: TestClient
+) -> None:
+    """The browser primitive writes the sort cookie percent-encoded
+    (``encodeURIComponent``); Starlette doesn't percent-decode
+    cookie values, so the SSR decoder must ``unquote`` before
+    parsing. Without it the server silently falls back to insertion
+    order while the JS badge still shows the column sorted."""
+    review_session = _make_session(client, db, code="rev-cookie-enc")
+    _populate_reviewers(client, review_session.id)
+
+    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    client.cookies.set(
+        cookie_name,
+        quote(json.dumps([{"key": "name", "dir": "asc"}])),
+        path=f"/operator/sessions/{review_session.id}",
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    body = body[body.find('id="reviewers-table"') :]
+    assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
 
 
 def test_reviewers_malformed_cookie_falls_back_to_insertion_order(
