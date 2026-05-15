@@ -535,6 +535,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "relationship.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "operator_email_settings.updated": EventSchema(frozenset({"changes"})),
     "operator_email_settings.cleared": EventSchema(frozenset()),
+    # Segment 18B PR 2 — per-operator default display timezone.
+    # ``app/services/operator_settings.py`` emits.
+    "operator.display_timezone_set": EventSchema(frozenset({"changes"})),
     # Segment 15A Slice 1 — per-session friendly-label resolver mutations.
     "session_field_label.set": EventSchema(
         _IDENTITY | {"changes", "context"}

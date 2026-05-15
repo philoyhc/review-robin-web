@@ -1,4 +1,4 @@
-"""Per-operator settings — today: SMTP credentials only.
+"""Per-operator settings — SMTP credentials + display preferences.
 
 Segment 11E PR 4 ships the operator-level Settings page at
 ``/operator/settings`` that populates the seven ``users.smtp_*``
@@ -7,6 +7,12 @@ columns. The ``EmailSettings`` dataclass returned by
 consumes — Segment 11C PR F's Manage Invitations send handler
 calls ``transport_for(settings)`` (Segment 11E PR 5's transport
 factory) to pick the right backend.
+
+Segment 18B PR 2 adds the per-operator default display timezone,
+stored as the ``display_timezone`` key inside the general
+``users.preferences`` JSON container (column pre-positioned by
+13F PR 7). ``get_display_timezone`` / ``set_display_timezone``
+are the only readers / writers of that key.
 
 **Send-as-me identity model.** Credentials are scoped to the
 ``User`` row, not to the session. The signed-in operator who hits
@@ -23,6 +29,7 @@ backend consumes.
 
 from __future__ import annotations
 
+import zoneinfo
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -30,6 +37,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import User
 from app.services import _secrets, audit
+from app.services.date_formatting import DEFAULT_TIMEZONE
 
 
 # Today the only legal transport is SMTP. The ``Literal`` widens to
@@ -37,6 +45,16 @@ from app.services import _secrets, audit
 # real implementation.
 EmailTransportName = Literal["smtp"]
 SMTP_ENCRYPTION_MODES = ("starttls", "ssl")
+
+# Every IANA zone name, resolved once at import. Used both to
+# validate operator input and to populate the Settings-card picker.
+_AVAILABLE_TIMEZONES: frozenset[str] = frozenset(
+    zoneinfo.available_timezones()
+)
+
+# The ``users.preferences`` key holding the operator's default
+# display timezone (Segment 18B PR 2).
+_DISPLAY_TIMEZONE_KEY = "display_timezone"
 
 
 @dataclass(frozen=True)
@@ -188,6 +206,71 @@ def clear_email_settings(
         summary=f"Operator {user.email} cleared SMTP settings",
         actor_user_id=user.id,
         session=None,
+        correlation_id=correlation_id,
+    )
+    db.flush()
+    db.commit()
+
+
+# --------------------------------------------------------------------------- #
+# Display timezone (Segment 18B PR 2)
+# --------------------------------------------------------------------------- #
+
+
+def timezone_options() -> list[str]:
+    """Sorted IANA zone names for the Settings-card picker."""
+    return sorted(_AVAILABLE_TIMEZONES)
+
+
+def is_valid_timezone(name: str) -> bool:
+    return name in _AVAILABLE_TIMEZONES
+
+
+def get_display_timezone(user: User) -> str:
+    """The operator's configured default display timezone.
+
+    Reads the ``display_timezone`` key out of ``users.preferences``;
+    an unset / unknown value falls through to ``UTC``."""
+    preferences = user.preferences or {}
+    value = preferences.get(_DISPLAY_TIMEZONE_KEY)
+    if isinstance(value, str) and is_valid_timezone(value):
+        return value
+    return DEFAULT_TIMEZONE
+
+
+def set_display_timezone(
+    db: Session,
+    *,
+    user: User,
+    timezone_name: str,
+    correlation_id: str | None = None,
+) -> None:
+    """Persist the operator's default display timezone.
+
+    Writes the ``display_timezone`` key inside the ``users.preferences``
+    JSON container, leaving any other keys intact. A no-op when the
+    value is unchanged. Raises ``ValueError`` for an unknown zone —
+    the route validates first, so this is a defence-in-depth guard.
+    """
+    if not is_valid_timezone(timezone_name):
+        raise ValueError(f"unknown timezone {timezone_name!r}")
+
+    old = get_display_timezone(user)
+    if old == timezone_name:
+        return
+
+    # JSON columns only flag dirty on reassignment — mutate a copy.
+    preferences = dict(user.preferences or {})
+    preferences[_DISPLAY_TIMEZONE_KEY] = timezone_name
+    user.preferences = preferences
+
+    audit.write_event(
+        db,
+        event_type="operator.display_timezone_set",
+        summary=f"Operator {user.email} set default timezone to {timezone_name}",
+        actor_user_id=user.id,
+        session=None,
+        payload=audit.changes({_DISPLAY_TIMEZONE_KEY: [old, timezone_name]}),
         correlation_id=correlation_id,
     )
     db.flush()

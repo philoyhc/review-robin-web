@@ -21,7 +21,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -440,6 +440,8 @@ def test_get_or_create_user_reuses_existing_row_without_reapplying_bootstrap(
     monkeypatch.setattr(settings, "operator_emails", ["alice@example.edu"])
 
     # Drive through the dependency to mimic a sign-in.
-    returned = get_or_create_user(current_user=auth_alice, db=db)
+    returned = get_or_create_user(
+        request=Request({"type": "http"}), current_user=auth_alice, db=db
+    )
     assert returned.id == user.id
     assert returned.is_operator is False

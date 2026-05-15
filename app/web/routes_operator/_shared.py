@@ -21,10 +21,14 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import ReviewSession
-from app.services import date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import lifecycle_display, session_lifecycle as lifecycle
+from app.web.date_filters import (
+    display_timezone_context_processor,
+    format_date_filter,
+    format_datetime_filter,
+)
 
 
 # ------------------------------------------------------------------ #
@@ -38,7 +42,8 @@ from app.services import lifecycle_display, session_lifecycle as lifecycle
 # rendering ``GET /operator/sessions``.
 # ------------------------------------------------------------------ #
 _templates = Jinja2Templates(
-    directory=str(Path(__file__).parent.parent / "templates")
+    directory=str(Path(__file__).parent.parent / "templates"),
+    context_processors=[display_timezone_context_processor],
 )
 _templates.env.globals["app_version"] = settings.app_version
 _templates.env.globals["display_field_label"] = (
@@ -57,9 +62,11 @@ _templates.env.globals["field_label_pair"] = field_labels_service.resolve_pair
 _templates.env.filters["lifecycle_label"] = (
     lifecycle_display.lifecycle_display_label
 )
-# Canonical date / time display formatting — Segment 18B PR 1.
-_templates.env.filters["format_datetime"] = date_formatting.format_datetime
-_templates.env.filters["format_date"] = date_formatting.format_date
+# Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
+# Context-aware: the filters resolve their display zone from the
+# ``display_timezone`` context key the processor above injects.
+_templates.env.filters["format_datetime"] = format_datetime_filter
+_templates.env.filters["format_date"] = format_date_filter
 
 
 # ------------------------------------------------------------------ #
