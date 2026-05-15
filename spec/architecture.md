@@ -175,20 +175,24 @@ for SMTP. Rows synchronously flip `queued → sent` when the operator
 clicks Send. Real SMTP / production email is deferred to Segment 14B;
 the outbox table itself stays useful for debugging in any environment.
 
-### Monitoring + reminders (Segment 9.3)
+### Reminders (Segment 9.3; monitoring surface reshaped in 11C / 15E)
 
-`/operator/sessions/{id}/monitoring` renders a session-level summary
-(assigned / invited / opened / submitted / incomplete) and a
-per-reviewer table with progress counts, invitation status, and a
-per-row "Send reminder" button. Per-reviewee progress is intentionally
-deferred.
+The standalone `/operator/sessions/{id}/monitoring` page retired in
+Segment 11C Part 1 — its reviewer-progress view consolidated into the
+**Invitations** Operations page (reviewer-centric) and its
+reviewee-coverage view into the **Responses** page
+(reviewee-centric); see `spec/operations_pages.md`. The legacy
+`/monitoring` URL redirects to
+`/operator/sessions/{id}/invitations` to preserve bookmarks.
 
 A reviewer is **incomplete** iff their session pill is anything other
 than `submitted` — i.e. any of "never opened", "opened but not
 submitted", or "submitted-with-warn-override that still has missing
-required" classify them as incomplete. Bulk
-`/monitoring/remind-incomplete` and per-row `/invitations/{iid}/remind`
-target this set.
+required" classify them as incomplete. The Workflow card's **Send
+reminders** stepper action (Segment 15E) targets every incomplete
+reviewer session-wide; the Invitations page's per-row **Send
+reminder** button (`POST /operator/sessions/{id}/invitations/{iid}/remind`)
+targets one reviewer.
 
 Reminders **reuse the URL from the most recent invitation outbox row**
 verbatim — the token is **not** rotated, so the reviewer's previously
