@@ -10,8 +10,8 @@ The hub is the human analogue of Validate: where Validate checks the session's s
 
 For that reason, the hub is an **Operations Page**, not a Setup Page and not a sub-page of Home:
 
-- It draws from multiple Setup Pages (Email Template, Instruments, Reviewers, Assignments) but is owned by none of them.
-- Its purpose — pre-flight inspection — is operationally adjacent to Invitations and Monitoring.
+- It draws from multiple Setup Pages (Email Template, Instruments, Reviewers, Reviewees, Relationships) but is owned by none of them.
+- Its purpose — pre-flight inspection — is operationally adjacent to Invitations and Responses.
 - Placing it alongside the other Operations Pages keeps Home focused on lifecycle transitions and metadata.
 
 ### Page identity
@@ -27,13 +27,13 @@ The hub URL is plural (`/previews`) to match the chrome tab and the broader "pre
 
 ### Chrome and navigation
 
-The Operations row of the session chrome carries a `Previews` tab, sitting alongside Validate, Invitations, and Responses (Segment 11C Part 1 retired the standalone Monitoring tab into Invitations + Responses; Outbox is no longer a chrome tab — it's a dev-diagnostic surface reachable via "View outbox" on Manage Invitations). Shipped order:
+The Operations row of the session chrome carries a `Previews` tab, sitting alongside Assignments, Validate, Invitations, and Responses (Segment 11C Part 1 retired the standalone Monitoring tab into Invitations + Responses; Segment 15D moved Assignments onto the Operations row and Segment 15B Slice 3b ordered it left of Validate; Outbox is no longer a chrome tab — it's a dev-diagnostic surface reachable via "View outbox" on Manage Invitations). Shipped order:
 
 ```
-Operations  [Validate][Previews][Invitations][Responses]
+Operations  [Assignments][Validate][Previews][Invitations][Responses]
 ```
 
-Previews sits second because it's the artifact the operator consults pre-flight (alongside Validate); Invitations and Responses are consulted during and after.
+Previews sits third because it's the artifact the operator consults pre-flight (alongside Validate); Invitations and Responses are consulted during and after.
 
 Session Home's Next Action card carries a "See previews" secondary button while the session is `validated` and ready-to-activate; the button targets `/previews#reviewer-surface` to land directly on the surface card.
 
@@ -116,8 +116,8 @@ The hub never renders fully locked behind a yellow lock card — even on closed 
 - **Editing artifacts.** The hub is strictly read-only; edits happen on the Setup pages.
 - **A/B comparing previews** across multiple reviewers side-by-side.
 - **Generating exportable previews** (PDF, screenshot, downloadable bundle).
-- **Showing the reviewer's submission state** (that's Monitoring's job).
-- **History of past sends** (that's Monitoring / Outbox).
+- **Showing the reviewer's submission state** (that's the Responses page's job).
+- **History of past sends** (that's the Invitations / Responses pages + the dev Outbox).
 
 ### Forward-looking: Reviewee Experience Preview
 
