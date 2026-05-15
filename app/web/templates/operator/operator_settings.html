@@ -140,17 +140,24 @@
       var zoneLabel = document.getElementById("tz-sample-zone");
       if (!input || !sample || !zoneLabel) return;
       var fallback = input.getAttribute("data-inherit-zone") || "UTC";
+      var showToken = {{ show_zone_token | tojson }};
       function render(zone) {
         try {
-          var parts = new Intl.DateTimeFormat("en-US", {
+          var opts = {
             timeZone: zone, year: "numeric", month: "2-digit",
             day: "2-digit", hour: "2-digit", minute: "2-digit",
             hour12: false,
-          }).formatToParts(new Date());
+          };
+          if (showToken) opts.timeZoneName = "short";
+          var parts = new Intl.DateTimeFormat("en-US", opts)
+            .formatToParts(new Date());
           var p = {};
           parts.forEach(function (x) { p[x.type] = x.value; });
           var hour = p.hour === "24" ? "00" : p.hour;
-          return p.year + "-" + p.month + "-" + p.day + " " + hour + ":" + p.minute;
+          var out = p.year + "-" + p.month + "-" + p.day
+            + " " + hour + ":" + p.minute;
+          if (showToken && p.timeZoneName) out += " " + p.timeZoneName;
+          return out;
         } catch (e) { return null; }
       }
       function update() {

@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import ReviewSession
+from app.services import date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import lifecycle_display, session_lifecycle as lifecycle
@@ -67,6 +68,9 @@ _templates.env.filters["lifecycle_label"] = (
 # ``display_timezone`` context key the processor above injects.
 _templates.env.filters["format_datetime"] = format_datetime_filter
 _templates.env.filters["format_date"] = format_date_filter
+# Mirrors the date_formatting.SHOW_ZONE_TOKEN switch into templates
+# so the two timezone-card live previews match the server render.
+_templates.env.globals["show_zone_token"] = date_formatting.SHOW_ZONE_TOKEN
 
 
 # ------------------------------------------------------------------ #

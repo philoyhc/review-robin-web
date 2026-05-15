@@ -9,12 +9,19 @@ UTC timestamp is converted into a resolved display zone before
 formatting. ``tz_name`` defaults to ``UTC`` — callers that pass
 nothing (e.g. the email merge fields) keep rendering in UTC.
 
-Segment 18B follow-up: the date-time render no longer appends a
-zone token — IANA reports a numeric offset (``+08``) for many
-zones, so a mixed letter/offset token read poorly. Times render
-bare (``YYYY-MM-DD HH:MM``); which zone they are in is made
-explicit on the ``/operator/settings`` and Session Edit cards
-instead, via a worked sample.
+Segment 18B follow-up: the date-time render dropped its zone token
+by default — IANA reports a numeric offset (``+08``) for many zones
+and a letter code (``EDT``) for others, so a mixed token read
+poorly. Times render bare (``YYYY-MM-DD HH:MM``); which zone they
+are in is made explicit on the ``/operator/settings`` and Session
+Edit cards instead, via a worked sample.
+
+The token is not gone — it is behind one internal switch,
+``SHOW_ZONE_TOKEN`` below. Flip that constant to ``True`` and
+restart the app: every display site (the filter reads it on each
+call) and the two card previews (the operator Jinja env exposes
+it as the ``show_zone_token`` global) append the token again. No
+env var, no database migration.
 
 The per-render zone is resolved upstream (``app/web/date_filters.py``
 context processor + the ``display_timezone`` Jinja context key);
@@ -30,6 +37,12 @@ _DATETIME_FORMAT = "%Y-%m-%d %H:%M"
 _DATE_FORMAT = "%Y-%m-%d"
 
 DEFAULT_TIMEZONE = "UTC"
+
+# Single internal switch for the trailing zone token on date-time
+# renders. Off by default (see the module docstring). Flip to True
+# + restart the app to append the resolved zone's ``%Z`` token to
+# every ``format_datetime`` render and both timezone-card previews.
+SHOW_ZONE_TOKEN = False
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -58,14 +71,18 @@ def format_datetime(value: datetime | None, tz_name: str | None = None) -> str:
     """Render a stored UTC datetime as ``YYYY-MM-DD HH:MM``.
 
     ``value`` is converted from UTC into ``tz_name``'s zone (default
-    UTC) before formatting; no zone token is appended. Returns ``""``
-    for ``None`` so templates can pipe a nullable column through the
-    filter without an ``{% if %}`` guard.
+    UTC) before formatting. When ``SHOW_ZONE_TOKEN`` is on, the
+    resolved zone's ``%Z`` token is appended (e.g. ``... UTC`` /
+    ``... +08``). Returns ``""`` for ``None`` so templates can pipe a
+    nullable column through the filter without an ``{% if %}`` guard.
     """
     if value is None:
         return ""
     local = _as_utc(value).astimezone(resolve_zone(tz_name))
-    return local.strftime(_DATETIME_FORMAT)
+    rendered = local.strftime(_DATETIME_FORMAT)
+    if SHOW_ZONE_TOKEN:
+        rendered = f"{rendered} {local.strftime('%Z')}"
+    return rendered
 
 
 def format_date(

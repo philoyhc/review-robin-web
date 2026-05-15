@@ -17,6 +17,12 @@
 > a live worked sample that names the selected zone in full. The
 > resolution order and per-render zone wiring are unchanged.
 >
+> The token is not deleted — it is behind one internal switch,
+> `date_formatting.SHOW_ZONE_TOKEN` (off by default). Flipping
+> that constant to `True` and restarting restores the token on
+> every display site and both card previews; no env var, no
+> database migration.
+>
 > The 18B segment number was previously held by "Session tagging
 > + archiving", which was folded into 18A (Sessions lobby
 > enhancements) on 2026-05-15. 18B is reused here for an

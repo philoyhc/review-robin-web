@@ -315,8 +315,9 @@ def test_settings_card_renders_timezone_sample(
     body = client.get("/operator/settings").text
     assert 'id="tz-sample"' in body
     assert 'id="tz-sample-zone"' in body
-    # The bare canonical format — date + time, no zone token.
     assert "Sample (right now):" in body
+    # The SHOW_ZONE_TOKEN switch wires through to the preview JS.
+    assert "var showToken = false;" in body
 
 
 def test_edit_card_renders_timezone_sample(
@@ -327,3 +328,4 @@ def test_edit_card_renders_timezone_sample(
     assert 'id="tz-sample"' in body
     assert 'id="tz-sample-zone"' in body
     assert "Sample (right now):" in body
+    assert "var showToken = false;" in body
