@@ -664,6 +664,36 @@
         margin-top: 12px;
         flex-wrap: wrap;
       }
+      /* Operator-actions card (Segment 15F) — Reviewers / Reviewees /
+         Relationships Setup pages. Same filter-strip shape as
+         `.filter-card` but the status dropdown is squeezed to ~1/5 of
+         the row (4/5 to Search) since the status option list is tiny
+         and the typeahead's "Name (email)" labels want the room. */
+      .operator-actions-card form { margin: 0; }
+      .operator-actions-card .filter-row {
+        display: flex;
+        gap: 16px;
+      }
+      .operator-actions-card .filter-row > label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .operator-actions-card .filter-row > label.filter-status { flex: 1; }
+      .operator-actions-card .filter-row > label.filter-search { flex: 4; }
+      .operator-actions-card .filter-row select,
+      .operator-actions-card .filter-row input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .operator-actions-card .filter-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
       /* Reviewer picker on the Previews page (segment 11F). Two
          side-by-side half-width cards in a `.bottom-grid`:
          **Previewing as** (typeahead input + Apply on one flex row,
