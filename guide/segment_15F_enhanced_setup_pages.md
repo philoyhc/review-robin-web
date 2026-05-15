@@ -55,29 +55,44 @@ surfaces:
    `active` / `inactive`). `GET` form so URL state survives
    reload.
 
-3. **Per-row Edit button** in an Actions column. Clicking it
-   flips the row into edit mode (inputs replace text in-place
-   for the editable cells); Save / Cancel buttons appear in
-   that column. One row in edit mode at a time. Single-row
-   edit is the dominant case; bulk-edit on free-text fields
-   isn't useful.
+3. **Selection drives row mutation, not per-row buttons.**
+   The leftmost checkbox column is the single row-mutation
+   selector — rows don't carry their own action buttons.
+   The right-side card's action-button row reads the
+   checkbox selection and enables / disables its buttons
+   accordingly:
+
+   | Selection | Edit | Inactivate selected | Reactivate selected | Add new row |
+   | --- | --- | --- | --- | --- |
+   | 0 rows | disabled | disabled | disabled | enabled |
+   | 1 row | **enabled** | enabled | enabled | enabled |
+   | 2+ rows | disabled | enabled | enabled | enabled |
+   | Any row in edit mode | (replaced by Save + Cancel) | disabled | disabled | disabled |
+
+   Operators with long rosters narrow with search first,
+   then select one (or several) by checkbox, then act. No
+   per-row clutter; one consistent "click row → act from
+   card" flow for every mutation.
 
 4. **Status flip via inline edit, not a separate button.** The
    Status cell becomes a `<select>` (`active` / `inactive`)
-   while the row is in edit mode. Removes the need for a
-   per-row Inactivate / Reactivate button and keeps the row's
-   action column thin (just Edit / Save / Cancel).
+   while the row is in edit mode (Edit button on the card
+   was clicked with exactly one row selected). For
+   one-shot status flips on a selection set, the card's
+   Inactivate selected / Reactivate selected buttons fire
+   without entering edit mode. Together: inline edit covers
+   "change anything on one row including status"; bulk
+   buttons cover "flip status on N rows without touching
+   other fields".
 
-5. **Leftmost checkbox column for bulk-only actions.**
+5. **Leftmost checkbox column as the sole selection mechanism.**
    Header checkbox selects-all-visible (i.e. all rendered
    rows on the current filtered page; doesn't reach hidden
-   capped rows). The **bulk-action buttons sit at the
-   bottom of the right-side operator-actions card** (see
-   Decision 7) — Inactivate selected / Reactivate selected.
-   They're always visible but render `disabled` when zero
-   rows are selected, and surface a small selected-count pill
-   above the row of buttons when ≥1 row is selected. No bulk
-   Edit, no bulk Delete.
+   capped rows). The card's action buttons react to the
+   selection per the table above. While a row is in edit
+   mode the other checkboxes render `disabled` so the
+   operator can't change selection mid-edit; finishing or
+   cancelling the edit re-enables them.
 
 6. **No per-row hard Delete.** Inline-edit covers the
    single-row inactivate use case; bulk inactivate via the
@@ -102,55 +117,70 @@ surfaces:
       the page's identity columns. `GET` form; "Showing N
       of M" muted line under the inputs when a filter is
       active. Submit / Clear buttons.
-   2. **Action buttons.** Three buttons in one row —
-      **Add new row**, **Inactivate selected**, **Reactivate
-      selected**. Add new row is always live and prepends a
+   2. **Action buttons.** Four buttons in one row —
+      **Edit**, **Inactivate selected**, **Reactivate
+      selected**, **Add new row**. Selection-dependent
+      enable/disable per the table in Decision 3. A small
+      selected-count pill (e.g. "3 selected") sits to the
+      left of the row when ≥1 row is selected.
+      Add new row is always live; clicking it prepends a
       fresh editable row to the top of the table (no
       separate inputs section in the card; the new row uses
-      the inline-edit machinery in-place). Inactivate /
-      Reactivate render `disabled` when zero rows are
-      checked, with a small selected-count pill
-      (e.g. "3 selected") to the left of the row when ≥1 row
-      is selected.
+      the inline-edit machinery in-place).
+      When a row is in edit mode the Edit button transforms
+      into **Save** + **Cancel**; the other three buttons
+      disable until the edit completes or cancels.
 
    Layout sketch:
 
    ```
-   ┌── Friendly labels editor (15A) ──┐  ┌── Operator actions ────────────────┐
-   │  left, half-width                │  │  right, half-width                 │
-   │                                  │  │                                    │
-   │  (existing 15A content)          │  │  Search + status filter            │
-   │                                  │  │  ─────────                          │
-   │                                  │  │  [3 selected]                       │
-   │                                  │  │  [Add new row] [Inactivate] [Reactivate]
-   └──────────────────────────────────┘  └────────────────────────────────────┘
+   ┌── Friendly labels editor (15A) ──┐  ┌── Operator actions ───────────────────────┐
+   │  left, half-width                │  │  right, half-width                        │
+   │                                  │  │                                           │
+   │  (existing 15A content)          │  │  Search + status filter                   │
+   │                                  │  │  ─────────                                 │
+   │                                  │  │  [3 selected]                              │
+   │                                  │  │  [Edit] [Inactivate] [Reactivate] [Add new row]
+   └──────────────────────────────────┘  └───────────────────────────────────────────┘
    ┌── Rows table ────────────────────────────────────────────────────────────┐
-   │  ☐  Reviewer  Email  Tag1  Tag2  Tag3  Status  [Edit]                    │
+   │  ☐  Reviewer  Email  Tag1  Tag2  Tag3  Status                            │
    │  …                                                                       │
    └──────────────────────────────────────────────────────────────────────────┘
    ```
 
-   The table below the two cards stays clean — no filter
-   strip above it, no bulk-action bar overlay; the
-   operator-actions card carries those affordances.
+   The table itself carries only the checkbox column + data
+   columns — no per-row Actions column, no per-row buttons.
+   Every mutation fires from the operator-actions card.
 
-8. **Add new row mechanics.** Clicking the Add new row
-   button prepends a fresh `<tr>` to the table in edit
-   mode — empty inputs in every editable column, Status
-   defaulting to `active`, Save / Cancel buttons in the
-   Actions column. Save POSTs to the per-page create
-   endpoint and 303s back. Cancel removes the row from the
-   DOM (no server round-trip; nothing was persisted). The
-   "one row in edit mode at a time" guard (Decision 9)
-   applies — a pending edit on an existing row prompts
-   before the new row opens.
+8. **Edit / Add new row mechanics.** Clicking **Edit** (with
+   exactly one row checked) flips that row's editable cells
+   from text to `<input>` / `<select>` in-place; the card's
+   Edit button becomes Save + Cancel. Save POSTs the row's
+   update to the per-page edit endpoint; Cancel restores
+   the snapshot and leaves the row checked.
 
-9. **One row in edit mode at a time.** If the operator clicks
-   Edit on a second row (or Add new row while another row is
-   in edit mode), the existing row's pending edits prompt
-   for save-or-discard (inline JS, no modal). Keeps the form
-   state model simple and prevents losing unsaved changes
-   silently.
+   Clicking **Add new row** prepends a fresh `<tr>` to the
+   top of the table in edit mode — empty inputs in every
+   editable column, Status defaulting to `active`. The
+   card's Edit button becomes Save + Cancel (same affordance
+   as Edit). Save POSTs to the per-page create endpoint and
+   303s back. Cancel removes the row from the DOM (nothing
+   was persisted; no server round-trip).
+
+   Both flows reuse the same in-table inline-edit machinery —
+   inputs are anchored to the row that will be saved, not to
+   the card. The "one row in edit mode at a time" guard
+   (Decision 9) prevents starting either flow while another
+   is pending.
+
+9. **One row in edit mode at a time.** While a row is in
+   edit mode, the card's Edit / Inactivate / Reactivate /
+   Add-new-row buttons disable (Edit replaced by Save +
+   Cancel) and the other rows' checkboxes disable. The
+   operator finishes by clicking Save (commits) or Cancel
+   (reverts) before any other mutation can start. Keeps the
+   form state model simple and prevents losing unsaved
+   changes silently.
 
 10. **Lifecycle gate stays at `_require_editable`.** Every new
     mutation route (per-row edit / per-row add / bulk
@@ -224,11 +254,16 @@ The four items move together because they share:
 
 ### Inline-edit UX
 
-- Edit affordance: per-row Edit button in the rightmost
-  Actions column. Click → row's editable cells flip from text
-  to `<input>` / `<select>` (Status becomes a `<select>`);
-  Save + Cancel buttons replace the Edit button. Save POSTs
-  the row, Cancel restores the snapshot. One row at a time.
+- Edit affordance: selection-driven from the right-side
+  operator-actions card. Operator checks exactly one row,
+  card's **Edit** button enables, click flips that row's
+  editable cells from text to `<input>` / `<select>` (Status
+  becomes a `<select>`) in-place. Card's Edit button
+  transforms into **Save** + **Cancel**. Save POSTs the row,
+  Cancel restores the snapshot. One row at a time.
+- No per-row Edit button on the table itself; the table has
+  no Actions column. The card carries every mutation
+  affordance.
 - Validation: client-side immediate (matching the existing
   CSV importer's per-column rules — email shape, tag length,
   non-empty name); server-side authoritative.
@@ -263,35 +298,53 @@ sections, in order:
   500 when either filter is applied.
 
 **Section 2 — Action buttons.**
-- Three buttons in one row — **Add new row** ·
-  **Inactivate selected** · **Reactivate selected**.
-- **Add new row** is always live. Clicking it prepends a
-  fresh `<tr>` at the top of the table in edit mode (empty
-  inputs in every editable column; Status defaults to
-  `active`; Save / Cancel buttons in the Actions column).
-  Save POSTs to the per-page create endpoint
+- Four buttons in one row — **Edit** ·
+  **Inactivate selected** · **Reactivate selected** ·
+  **Add new row**. Selected-count pill (e.g. "3 selected")
+  to the left of the row when ≥1 row is selected.
+  Selection-dependent enable/disable per Decision 3:
+
+  | Selection | Edit | Inact. sel. | React. sel. | Add new row |
+  | --- | --- | --- | --- | --- |
+  | 0 rows | disabled | disabled | disabled | enabled |
+  | 1 row | **enabled** | enabled | enabled | enabled |
+  | 2+ rows | disabled | enabled | enabled | enabled |
+  | Any row in edit mode | (Save + Cancel) | disabled | disabled | disabled |
+
+- **Edit** opens inline edit on the single checked row.
+  Card's Edit button transforms into **Save** + **Cancel**.
+  Save POSTs to the per-page edit endpoint
+  (`reviewer.updated` / `reviewee.updated` /
+  `relationship.updated`, canonical `changes` envelope per
+  Segment 11K). Cancel restores the row's pre-edit text and
+  leaves the checkbox checked.
+- **Add new row** prepends a fresh `<tr>` at the top of the
+  table in edit mode (empty inputs in every editable column;
+  Status defaults to `active`). Card's Edit button
+  transforms into **Save** + **Cancel** (same mechanism as
+  Edit). Save POSTs to the per-page create endpoint
   (`reviewer.created` / `reviewee.created` /
   `relationship.created`, snapshot envelope) and 303s back.
   Cancel removes the row from the DOM — nothing was
-  persisted, no server round-trip. The "one row in edit
-  mode at a time" guard applies (Decision 9 in
-  `## Decisions locked`).
-- **Inactivate selected** / **Reactivate selected** render
-  `disabled` when zero rows are checked, with a small
-  selected-count pill (e.g. "3 selected") to the left of
-  the button row when ≥1 row is selected. Buttons are
-  always present so the card layout doesn't reflow on
-  selection change. No bulk Edit, no bulk Delete.
-- Bulk audit events: `reviewer.status_changed_bulk` /
+  persisted, no server round-trip.
+- **Inactivate selected** / **Reactivate selected** fire on
+  the current checkbox selection without entering edit mode.
+  Audit events: `reviewer.status_changed_bulk` /
   `reviewee.status_changed_bulk` /
   `relationship.status_changed_bulk` with the canonical
   `set_changes` envelope (added = newly inactivated ids,
   removed = newly reactivated ids — or split into separate
   event types per the audit-emitter style, decide during PR
-  scoping).
-- Add-row validation feedback: inline error banner inside
-  the new row (or inside the operator-actions card), not a
-  page-top banner.
+  scoping). These work on a one-row selection too, for
+  "flip status only" without opening the edit form.
+- All four buttons render in fixed positions (always
+  present) so the card layout doesn't reflow on selection
+  change. No bulk Edit (Edit is single-row by design); no
+  bulk Delete.
+- Validation feedback for Edit / Add: inline error banner
+  inside the row being edited (or inside the
+  operator-actions card if the error is row-shape-agnostic),
+  not a page-top banner.
 
 ### Lifecycle gate
 
@@ -346,19 +399,28 @@ find-a-row machinery the later UI PRs sit on.
 **Tests.** Layout regression, filter parsing, cap application,
 "Showing N of M" rendering.
 
-### PR 3 — Reviewers page inline edit + bulk inactivate + Add new row
+### PR 3 — Reviewers page selection-driven Edit + bulk inactivate + Add new row
 
-**Scope.** Template grows the leftmost checkbox column and
-the per-row Edit / Save / Cancel state machine. Right-side
-operator-actions card's three action buttons light up — Add
-new row prepends a fresh editable `<tr>` to the table,
-Inactivate / Reactivate fire on the checkbox selection. Route
-handlers wire the new service-layer calls from PR 1. Targeted
-inline JS for the row-state toggle + "one row at a time"
-guard + selected-count pill + Add-new-row DOM insertion.
+**Scope.** Template grows the leftmost checkbox column.
+Right-side operator-actions card's four action buttons light
+up with selection-dependent enable/disable: **Edit** (single
+row), **Inactivate selected** / **Reactivate selected** (≥1
+row), **Add new row** (always). Edit + Add new row drive the
+shared inline-edit machinery in-table (Edit button on the
+card transforms into Save + Cancel while a row is being
+edited). Inactivate / Reactivate fire on the checkbox
+selection without opening edit mode. Route handlers wire the
+new service-layer calls from PR 1. Targeted inline JS for the
+selection→button-state binding, the row-state toggle, the
+"one row in edit mode at a time" guard (disables other
+checkboxes during edit), the selected-count pill, and the
+Add-new-row DOM insertion. No per-row Actions column on the
+table.
 
-**Tests.** Per-row edit happy-path, bulk inactivate, Add new
-row POST, "one row at a time" guard, selected-count pill
+**Tests.** Selection→button-state binding, single-row Edit
+happy-path, bulk inactivate / reactivate, Add new row POST,
+Cancel-removes-row-from-DOM, "one row at a time" guard
+(other checkboxes disabled during edit), selected-count pill
 behaviour.
 
 ### PR 4 — Reviewees (clone PRs 1–3)
