@@ -286,6 +286,28 @@ def test_bulk_inactivate_flips_selected(
     }
 
 
+def test_bulk_action_keeps_filter(
+    db: Session, client: TestClient
+) -> None:
+    """The active search / status filter rides through a bulk
+    action so the operator lands back on the same filtered view."""
+    review_session = _make_session(client, db, code="rve-keepfilter")
+    rows = _seed(db, review_session.id, ["Alice", "Bob"])
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/bulk-inactivate",
+        data={
+            "reviewee_ids": [rows[0].id],
+            "filter_status": "active",
+            "filter_q": "Ali",
+        },
+        follow_redirects=False,
+    )
+    loc = response.headers["location"]
+    assert "status=active" in loc
+    assert "q=Ali" in loc
+
+
 def test_bulk_reactivate_flips_selected(
     db: Session, client: TestClient
 ) -> None:
