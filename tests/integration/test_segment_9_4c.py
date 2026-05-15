@@ -90,7 +90,7 @@ def test_reviewers_page_renders_anchored_upload_card(
     assert 'class="card operator-actions-card"' in body
 
 
-def test_reviewees_page_renders_anchored_upload_card_and_disabled_edit(
+def test_reviewees_page_renders_anchored_upload_card(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="e-reshape")
@@ -104,8 +104,11 @@ def test_reviewees_page_renders_anchored_upload_card_and_disabled_edit(
         f'action="/operator/sessions/{review_session.id}/reviewees/import"'
         in body
     )
-    assert "Edit Reviewees" in body
-    assert 'aria-disabled="true"' in body
+    # Segment 15F PR 4 retired the "Edit Reviewees — coming soon"
+    # placeholder; the real per-row Edit affordance lives in the
+    # operator-actions card.
+    assert "Edit Reviewees" not in body
+    assert 'class="card operator-actions-card"' in body
 
 
 def test_reviewers_import_get_route_removed(

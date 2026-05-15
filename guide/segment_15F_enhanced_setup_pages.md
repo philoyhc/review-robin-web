@@ -435,7 +435,16 @@ placeholders. New helpers `filter_reviewers_rows` /
 Follow-on #995 squeezed the status dropdown to 1/5 of the
 filter row.
 
-### PR 3 — Reviewers page selection-driven Edit + bulk inactivate + Add new row
+### PR 3 — Reviewers page selection-driven Edit + bulk inactivate + Add new row — SHIPPED (#996 → #1000)
+
+Shipped across the beachhead PR (#996) plus four rounds of
+screenshot-driven UI refinement (#997 → #1000): flush-right
+action row + selected-count drift fix; inline-Apply experiment
+then reverted; the Add/Edit form folded into the operator-actions
+card below an `<hr>` divider; the grey-out (`is-locked`) scoped
+to an inner `.operator-actions-main` wrapper so the Add/Edit form
+stays interactive; button labels shortened to **Inactivate** /
+**Activate**.
 
 **Scope.** Template grows the leftmost checkbox column.
 Right-side operator-actions card's four action buttons light
@@ -490,10 +499,26 @@ behaviour.
 
 ### PR 4 — Reviewees (clone PRs 1–3)
 
-**Scope.** Mirror PRs 1–3 onto the Reviewees page; reuse the
-templates / view shapes / service contract from PRs 1–3.
-Reviewees-specific columns: name / email_or_identifier /
-profile_link / tags / status.
+**Scope.** Mirror the shipped Reviewers surface onto the
+Reviewees page in a single PR — service layer + filter helpers
++ routes + template + tests. Reviewees-specific columns: name /
+email_or_identifier / profile_link / tags / status (one more
+editable column than Reviewers — `profile_link` — and the
+identity column is `email_or_identifier`, validated non-strict
+so non-email handles are accepted).
+
+Layout mirrors Reviewers exactly — the Reviewee field-labels
+editor sits half-width left, the operator-actions card
+half-width right, in the same `bottom-grid`.
+
+New: `app/services/reviewees.py` (`create_reviewee` /
+`update_reviewee` / `bulk_inactivate` / `bulk_reactivate` +
+`RevieweeOperationError`); four `reviewee.*` audit events;
+`REVIEWEES_STATUS_OPTIONS` / `filter_reviewees_rows` /
+`reviewees_search_options` in `_filters.py`. Routes
+`POST /reviewees/create` / `/{id}/update` / `/bulk-inactivate`
+/ `/bulk-reactivate` + the server-rendered edit state on the
+GET route.
 
 ### PR 5 — Relationships (clone PRs 1–3)
 
