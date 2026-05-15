@@ -123,10 +123,16 @@ The reviewer's override **spans both display and response columns**. Sort by dis
 (Part 2 PR 5), the reviewer-side override persists in a
 `rrw-sort-rs-{session_id}-{instrument_id}` cookie scoped to
 `/reviewer/sessions/{id}`. The cookie carries the canonical
-`[{"key": "...", "dir": "asc|desc"}, ...]` shape; the server
-reads it at render time and threads the decoded spec through
+`[{"key": "...", "dir": "asc|desc"}, ...]` shape, **percent-encoded**
+(the browser primitive writes it via `encodeURIComponent`); the
+server reads it at render time, `unquote()`-s the raw value
+before `json.loads`, and threads the decoded spec through
 `views.order_rows_by_sort_spec` so the initial HTML already
-lands in the persisted order (no JS-reorder flicker). Clearing
+lands in the persisted order (no JS-reorder flicker). *(The
+`unquote()` step was missing until 2026-05-15 — until then SSR
+sort silently fell back to insertion order in real browsers
+while the JS badge still showed the column sorted; the test
+suite missed it because tests set raw-JSON cookies.)* Clearing
 the sort writes an expired cookie, returning the next render
 to the operator default. Cookie scope is per-(browser, session,
 instrument) — different browsers / devices / cleared cookies
@@ -260,7 +266,12 @@ The Display Fields available to sort are scoped to the instrument's own display 
 - **Read path:** `app/web/views/_sort.py
   ::order_rows_by_sort_spec` (pure-function reviewer-surface
   helper); generic `decode_cookie_sort_spec` +
-  `apply_cookie_sort` for the operator-table cookies.
+  `apply_cookie_sort` for the operator-table cookies;
+  `decode_cookie_sort_spec_for_reviewer_surface` for the
+  reviewer surface. Both decoders `unquote()` the raw cookie
+  value before `json.loads` (the browser writes it
+  percent-encoded; Starlette does not percent-decode cookie
+  values).
 - **Operator template** (`instruments_index.html`): Sort
   column on the per-instrument Display Fields table; each
   cell hosts a JS-driven `<button class="sort-btn">` that
@@ -280,7 +291,9 @@ The Display Fields available to sort are scoped to the instrument's own display 
   `<tbody class="rrw-rows">`.
 - **Cookies:** `rrw-sort-{surface}-{session_id}[-{instrument_id}]`
   carrying the canonical
-  `[{"key": "...", "dir": "asc|desc"}, ...]` shape.
+  `[{"key": "...", "dir": "asc|desc"}, ...]` shape,
+  percent-encoded (`encodeURIComponent`) — the SSR decoders
+  `unquote()` before parsing.
 - **Tests:**
   - `tests/unit/test_order_rows_by_sort_spec.py` (13
     helper unit tests).

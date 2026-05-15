@@ -1,12 +1,17 @@
 # All buttons — operator surface audit
 
 Snapshot of every interactive button (and button-styled anchor)
-across the operator-facing templates. Last refreshed 2026-05-12
-after the post-15A sys-admin polish (PRs #895 → #899): the
-Accounts Management page flipped to a per-row checkbox + bulk
-toolbar, and the per-session Audit log filter strip's button
-row was right-aligned with the Apply button flipped to
-Secondary.
+across the operator-facing templates. Last refreshed 2026-05-15
+after Segment 15F (Enhanced Setup pages): the Reviewers /
+Reviewees / Relationships Setup pages gained an Operator actions
+card — a search / status filter strip and a selection-driven
+Edit · Inactivate · Activate · Add-new-row button row, plus an
+inline Save / Cancel pair in Edit / Add mode. The prior
+"refreshed 2026-05-12" pass covered the post-15A sys-admin
+polish (PRs #895 → #899): the Accounts Management page flipped
+to a per-row checkbox + bulk toolbar, and the per-session Audit
+log filter strip's button row was right-aligned with the Apply
+button flipped to Secondary.
 
 Use it to:
 
@@ -179,7 +184,14 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 | 106 | Reviewer tag labels (15A Slice 3) | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewers/field-labels`. Starts `disabled`; inline JS flips both Save + Cancel on when the form is dirty. Hidden when `is_ready`. |
 | 34 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | Inside `.card.lock` |
 | 35 | Upload Reviewers | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewers/import`. Sits **below** the preview table (PR #892). |
-| 36 | Upload Reviewers | Edit Reviewers | `<a>` | `btn secondary disabled` | Secondary (Disabled) | Inline-editing not yet implemented |
+| 36 | Operator actions (15F) | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`. |
+| 123 | Operator actions (15F) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewers/bulk-inactivate`; enabled on ≥1 selection. |
+| 124 | Operator actions (15F) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewers/bulk-reactivate`; enabled on ≥1 selection. |
+| 125 | Operator actions (15F) | Add new row | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; renders disabled while a row is being edited / added. |
+| 126 | Operator actions (15F) | Apply | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. |
+| 127 | Operator actions (15F) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
+| 128 | Operator actions (15F, Edit/Add) | Save | `<button type="submit">` | `btn primary` | Primary | Submits the `/{id}/update` or `/create` form; shown below the divider in Edit/Add mode. |
+| 129 | Operator actions (15F, Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
 | 37 | Danger Zone | Delete all reviewers | `<button type="submit">` | `btn destructive` | Destructive | Posts `/reviewers/delete-all`. Sits **below** the preview table. |
 
 ---
@@ -194,7 +206,14 @@ Source: `app/web/templates/operator/session_reviewees.html`.
 | 108 | Reviewee field labels (15A Slice 3) | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewees/field-labels`. Starts `disabled`; dirty-check via inline JS. Hidden when `is_ready`. |
 | 38 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
 | 39 | Upload Reviewees | Upload | `<button type="submit">` | `btn secondary` | Secondary | Sits **below** the preview table (PR #892). |
-| 40 | Upload Reviewees | Edit Reviewees | `<a>` | `btn secondary disabled` | Secondary (Disabled) | |
+| 40 | Operator actions (15F) | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`. |
+| 130 | Operator actions (15F) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewees/bulk-inactivate`; enabled on ≥1 selection. |
+| 131 | Operator actions (15F) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewees/bulk-reactivate`; enabled on ≥1 selection. |
+| 132 | Operator actions (15F) | Add new row | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; renders disabled while a row is being edited / added. |
+| 133 | Operator actions (15F) | Apply | `<button type="submit">` | `btn secondary` | Secondary | Submits the search + status filter GET. |
+| 134 | Operator actions (15F) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
+| 135 | Operator actions (15F, Edit/Add) | Save | `<button type="submit">` | `btn primary` | Primary | Submits the `/{id}/update` or `/create` form; shown below the divider in Edit/Add mode. |
+| 136 | Operator actions (15F, Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
 | 41 | Danger Zone | Delete all reviewees | `<button type="submit">` | `btn destructive` | Destructive | Sits **below** the preview table. |
 
 ---
@@ -211,7 +230,14 @@ Reviewees Setup shape (Upload + Danger Zone + preview table).
 | 110 | Pair-context labels (15A Slice 3) | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/field-labels`. Starts `disabled`; dirty-check via inline JS. Hidden when `is_ready`. |
 | 42 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
 | 43 | Upload Relationships | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/import`. CSV columns: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`. Sits **below** the preview table (PR #892). |
-| 44 | Upload Relationships | Edit Relationships | `<a>` | `btn secondary disabled` | Secondary (Disabled) | "Inline editing — coming soon" tooltip (Segment 15F). |
+| 44 | Operator actions (15F) | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`. |
+| 137 | Operator actions (15F) | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-inactivate`; enabled on ≥1 selection. |
+| 138 | Operator actions (15F) | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-reactivate`; enabled on ≥1 selection. |
+| 139 | Operator actions (15F) | Add new row | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; disabled while editing / when either roster is empty. |
+| 140 | Operator actions (15F) | Apply | `<button type="submit">` | `btn secondary` | Secondary | Submits the "Search by" + search GET. |
+| 141 | Operator actions (15F) | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
+| 142 | Operator actions (15F, Edit/Add) | Save | `<button type="submit">` | `btn primary` | Primary | Submits the `/{id}/update` or `/create` form; reviewer / reviewee chosen via name-or-email `<datalist>` pickers. |
+| 143 | Operator actions (15F, Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
 | 45 | Danger Zone | Delete all relationships | `<button type="submit">` | `btn destructive` | Destructive | Posts `/relationships/delete-all`. Sits **below** the preview table. |
 
 **Retired:** Pre-15D this section described the Setup-row
@@ -595,11 +621,12 @@ without cancelling and exiting. Documented in
 no other templates use it yet, but it can apply to any future
 editor with per-field overrides.
 
-### 6. Perma-disabled `Edit Reviewers` / `Edit Reviewees` (deferred)
+### 6. ~~Perma-disabled `Edit Reviewers` / `Edit Reviewees` (deferred)~~ — RESOLVED 2026-05-15
 
-#36 and #40 stay as `btn secondary disabled` anchors with a
-"coming soon" tooltip. Acceptable today; wire them when a
-per-record-edit segment lands.
+Segment 15F landed the per-record-edit surface. The previously
+perma-disabled `Edit` anchors (#36 / #40 / #44) are now live
+`<button>`s in the Operator actions card, selection-driven and
+enabled on a single checked row. No remaining drift here.
 
 ---
 
