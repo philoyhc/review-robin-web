@@ -30,10 +30,13 @@ Stored on the `users` table. One row per authenticated principal
 Auth). The same row backs every session that operator owns or
 co-operates.
 
-**Surface:** `/operator/settings`. Form-card with Cancel + Save
-(both Secondary). The `← Back to {{ return_to_label }}` chrome
-back-link returns the operator to wherever they came from
-(`?return_to=<path>`).
+**Surface:** `/operator/settings`. The Email send (SMTP) form-card
+carries Cancel + Save (both Secondary); since Segment 18B the page
+also carries a **Date & time** card (its own Save, Secondary)
+editing the `display_timezone` preference key, with a live
+worked-sample preview that names the selected zone in full. The
+`← Back to {{ return_to_label }}` chrome back-link returns the
+operator to wherever they came from (`?return_to=<path>`).
 
 | Field | Type | Notes |
 |---|---|---|
@@ -78,6 +81,10 @@ Owners section on the Edit page, Segment 16B PR 2).
   operator allowlist. Gated by
   `require_sys_admin_or_session_operator` so a sys-admin can
   reach a session they don't own + self-add as owner.
+  Also hosts the **Display timezone** card (Segment 18B PR 3) —
+  the per-session timezone override; a blank field clears the
+  override back to NULL (inherit the creating operator's
+  default), with a live worked-sample preview.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -85,7 +92,7 @@ Owners section on the Edit page, Segment 16B PR 2).
 | `code` | `String(64)` (unique) | Stable short code; appears in `<code>` on lobby + Session Details. |
 | `description` | `String(2000)` | Free-text. |
 | `status` | `String(32)` | `draft` / `validated` / `ready` / `closed`. **Not directly editable** — driven by the lifecycle-transition actions (Validate / Activate / Pause / Close). Listed here because it's the ground truth that gates every other operator action. |
-| `deadline` | `DateTime(timezone=True)` | Optional; rendered ISO 8601 with date+time. |
+| `deadline` | `DateTime(timezone=True)` | Optional. Rendered on operator + reviewer surfaces via the `format_datetime` Jinja filter as bare `YYYY-MM-DD HH:MM` in the session's resolved display timezone (Segment 18B); CSV extracts and audit-detail JSON keep ISO 8601. The Session Edit form's `datetime-local` input is browser-local (Segment 18B Post-MVP item). |
 | `assignment_mode` | `String(32)` | `manual` / `rule_based`. **Not directly editable** — set by whichever assignment-generation path the operator runs. Post-15D, the rule-based engine is the only operator-facing path (sets `rule_based`); the legacy Manual CSV upload (sets `manual`) survives as a dev-diagnostic surface only. |
 | `help_contact` | `String(320)` | Free-text contact info shown to reviewers. |
 | `email_template_overrides` | `JSON` | Free-form JSON with the recognised keys named in §3 below. |

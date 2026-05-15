@@ -112,6 +112,7 @@ Source: `app/web/templates/operator/session_edit.html`.
 |---|---|---|---|---|---|---|
 | 16 | Form card | Save changes | `<button type="submit">` | `btn` | Primary | |
 | 17 | Form card | Cancel | `<a>` | `btn secondary` | Secondary | Returns to Session Home |
+| 17a | Display timezone card (18B) | Save timezone | `<button type="submit">` | `btn` | Primary | Posts `/operator/sessions/{id}/timezone`; sets / clears the per-session timezone override |
 
 ---
 
@@ -403,6 +404,7 @@ Source: `app/web/templates/operator/operator_settings.html`.
 |---|---|---|---|---|---|---|
 | 92 | Email send (SMTP) form | Cancel | `<a>` | `btn secondary` | Secondary | Returns to `?return_to=<path>` |
 | 93 | Email send (SMTP) form | Save | `<button type="submit">` | `btn secondary` | Secondary | Disabled until input touched |
+| 93a | Date & time card (18B) | Save timezone | `<button type="submit">` | `btn secondary` | Secondary | Posts `/operator/settings/timezone`; persists the `display_timezone` preference |
 | 94 | Danger Zone | Clear all settings | `<button type="submit">` | `btn destructive` | Destructive | Posts `/operator/settings/clear` |
 
 ---
