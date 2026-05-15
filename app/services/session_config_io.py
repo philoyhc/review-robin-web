@@ -1051,12 +1051,7 @@ def _apply_instrument_kv(
     elif attr == "sort_display_fields":
         instrument.sort_display_fields = _parse_json(value, default=[])
     elif attr == "group_kind":
-        if value and value not in _VALID_GROUP_KINDS:
-            raise _ParseError(
-                f"unknown instrument group_kind {value!r}; expected one of "
-                f"{sorted(_VALID_GROUP_KINDS)}"
-            )
-        instrument.group_kind = value or None
+        instrument.group_kind = _parse_group_kind(value)
     elif attr == "rule_set_name":
         instrument.rule_set_name = value or None
     else:
@@ -1306,6 +1301,27 @@ def _parse_json(value: str, *, default: Any) -> Any:
         return json.loads(value)
     except json.JSONDecodeError as exc:
         raise _ParseError(f"expected JSON, got {value!r}") from exc
+
+
+def _parse_group_kind(value: str) -> str | None:
+    """Parse an ``instruments[].group_kind`` config value.
+
+    Empty/NULL = a per-reviewee instrument. A non-empty value is
+    an ordered, comma-joined list of distinct reviewee tag keys
+    (``tag_1`` / ``tag_2`` / ``tag_3``) — e.g. ``tag_1`` or
+    ``tag_1,tag_2,tag_3`` — composing the group key. Returns the
+    canonical (whitespace-stripped) form.
+    """
+    if not value:
+        return None
+    keys = [part.strip() for part in value.split(",")]
+    invalid = [k for k in keys if k not in _VALID_GROUP_KINDS]
+    if invalid or len(set(keys)) != len(keys):
+        raise _ParseError(
+            f"invalid instrument group_kind {value!r}; expected a comma-"
+            f"joined list of distinct keys from {sorted(_VALID_GROUP_KINDS)}"
+        )
+    return ",".join(keys)
 
 
 # --------------------------------------------------------------------------- #

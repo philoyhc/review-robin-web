@@ -17,6 +17,20 @@ about a *group* of reviewees rather than per-individual.
 > 13D PR 6). The "Data model", "Rule-engine integration", and
 > "Aggregation contract" sections below carry the reworked
 > mechanism.
+>
+> **Revised 2026-05-15 (composite key).** `group_kind` was a
+> single reviewee tag key; it is now an **ordered, comma-joined
+> list** of one or more distinct tag keys
+> (`tag_1` / `tag_2` / `tag_3`) — e.g. `tag_1` or
+> `tag_1,tag_2,tag_3`. The group a reviewee belongs to is the
+> **tuple** of those tags' values, so an operator can partition
+> by a composite like *(cohort, class, small group)* without
+> packing all three facets into one overloaded tag value. This
+> is still **one grouping per instrument** — one set of rows at
+> one granularity — not the rejected multi-level case (see
+> "One grouping per instrument"). Still zero schema change:
+> `group_kind` is already `String(32)`, which holds the longest
+> composite (`tag_1,tag_2,tag_3`, 17 chars).
 
 This file is the source of truth for the design. Implementation
 plan lives at **`guide/segment_13C_enhanced_instrument.md`**;
@@ -70,12 +84,13 @@ both individually *and* to the group — they author two
 instruments. That cost is small and explicit; conflating the two
 on the reviewer's screen is not worth the savings.
 
-## One grouping level per instrument
+## One grouping per instrument
 
-A group-scoped instrument carries **one** grouping level — small
-group, cohort, team, etc. The instrument's `group_kind` scalar
-identifies which level. **The same instrument cannot generate
-rows for multiple grouping levels** (e.g. one instrument
+A group-scoped instrument carries **one** grouping — one set of
+rows at one granularity. The instrument's `group_kind`
+identifies that grouping; it may be a single reviewee tag or a
+**composite** of several. **The same instrument cannot generate
+rows at two different granularities** (e.g. one instrument
 producing "rate your small group" + "rate your cohort" rows for
 the same reviewer).
 
@@ -87,24 +102,45 @@ genuinely need both author two instruments. If
 "instrument template / clone" ships later, the duplication cost
 goes to roughly zero.
 
-`group_kind` starts as a scalar on `Instrument`. If a future
-power-user case demands multi-level, the column lifts to a list
-in a forward-compatible way. The strict default keeps most
-operators out of the complexity.
+### Single vs composite grouping — the distinction
+
+A **composite** `group_kind` is *not* the rejected multi-level
+case. Multi-level would render rows at two granularities at once
+(a small-group block *and* a cohort block) — two memberships,
+two row-sets, the cognitive trap above. A composite key instead
+identifies **one** granularity whose group is named by a *tuple*
+of tags: a reviewer sees one row per distinct
+`(cohort, class, small group)` combination, each question once.
+
+The composite exists because real groupings nest. "Small group
+G4" is only unambiguous *within* a cohort and class; absent
+composite support an operator must pack the parent facets into
+the tag value itself (`2026-5A-G4` instead of `G4`) — brittle,
+and it forces the same packing on every consumer of that tag.
+Letting `group_kind` name an ordered list of tags
+(`tag_1,tag_2,tag_3`) keeps each tag clean and single-purpose.
+
+`group_kind` is an ordered, comma-joined list of distinct tag
+keys. The first key is the **primary** group-identity column
+(position 0 in the editor's display fields, the lead facet in
+the reviewer-surface group label). Order is operator-chosen and
+preserved. A single-tag value (`tag_1`) is just the
+one-element case — no special path.
 
 ## Data model — no schema change at all
 
 The trick: **duplicate `Response` rows per group member**, and
 **derive** the group each row belongs to from the instrument's
-`group_kind` + the reviewee's own `tag_N` value — so downstream
+`group_kind` + the reviewee's own tag values — so downstream
 consumers can collapse the duplicates back to one without any
 stored group metadata.
 
 - The group a `(reviewer, reviewee)` assignment belongs to is
-  the reviewee's `tag_N` value, where `N` is the instrument's
-  `group_kind`. Reviewees sharing a tag value form one group;
-  the tag value *is* the `group_id`. Nothing is stamped on the
-  `Assignment`.
+  the **tuple** of the reviewee's tag values for the tag keys
+  named in the instrument's `group_kind` (one key for a simple
+  grouping, several for a composite). Reviewees whose tag tuple
+  matches on every key form one group; that tuple *is* the
+  `group_id`. Nothing is stamped on the `Assignment`.
 - The reviewer surface presents **one** set of response inputs
   per group, shaped against the response fields of the
   group-scoped instrument; submit writes the same value to every
@@ -116,7 +152,7 @@ stored group metadata.
   through one shared helper (proposed name:
   `responses.collapse_group_duplicates(rows)`) that groups by
   `(reviewer_id, response_field_id, group_id, value)` — where
-  `group_id` is the derived reviewee `tag_N` value — and returns
+  `group_id` is the derived reviewee tag tuple — and returns
   either the deduped row or the per-reviewee fan-out, depending
   on the consumer's needs.
 
@@ -134,8 +170,8 @@ aggregator's call site for migration is mandatory when the
 feature ships.
 
 **Trade-off — derived (not frozen) membership.** Because the
-group is derived live, editing a reviewee's `tag_N` after
-assignment generation re-clusters that reviewee. This is benign
+group is derived live, editing any of a reviewee's grouping tags
+after assignment generation re-clusters that reviewee. This is benign
 in practice: editing session entities after activation requires
 reverting to draft, which regenerates assignments anyway.
 Freezing membership at generation time would need a new stamped
@@ -145,13 +181,16 @@ Freezing membership at generation time would need a new stamped
 
 | Field | Where | Type | Notes |
 |---|---|---|---|
-| `group_kind` | `Instrument` | `String(32) | NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument (today's default). Non-null = group-scoped; the column stores the source-field key (`tag_1` / `tag_2` / `tag_3`). The display label ("Small Group", "Cohort", "Team", etc.) lives in operator copy. |
+| `group_kind` | `Instrument` | `String(32) | NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument (today's default). Non-null = group-scoped; the column stores an ordered, comma-joined list of one or more distinct source-field keys (`tag_1` / `tag_2` / `tag_3`) — e.g. `tag_1` or `tag_1,tag_2,tag_3`. The display labels ("Small Group", "Cohort", "Team", etc.) live in operator copy. |
 
 No `Assignment` and no `Response` change. The original design's
 `Assignment.context` stamping is not needed — the group is
-derived. `Instrument.group_kind` stays a scalar enum string; if
-a future power-user case demands a richer group definition, a
-lookup-table FK can replace it forward-compatibly.
+derived. `group_kind` stays a plain string: the comma-joined
+tag-key list needs no migration (the column is already
+`String(32)`, and the longest list — `tag_1,tag_2,tag_3` — is
+17 characters). If a future power-user case demands a richer
+group definition, a lookup-table FK can replace it
+forward-compatibly.
 
 ## Operator editor
 
@@ -162,9 +201,12 @@ Two creation entrypoints on `/operator/sessions/{id}/instruments`:
 - **Add an instrument** — today's button. Creates a per-reviewee
   instrument (`group_kind=NULL`).
 - **Add a group-scoped instrument** — new button. Opens a small
-  inline dialog asking which reviewee tag identifies the group
-  (Tag 1 / Tag 2 / Tag 3). Creates a group-scoped instrument with
-  `group_kind` set to the chosen tag.
+  inline dialog asking which reviewee tag(s) identify the group
+  (Tag 1 / Tag 2 / Tag 3). The operator picks one tag for a
+  simple grouping or several for a composite — the pick order
+  sets the key order, first = primary identity. Creates a
+  group-scoped instrument with `group_kind` set to the
+  comma-joined list (e.g. `tag_1` or `tag_1,tag_2`).
 
 **Mode is set at creation and is not toggleable** afterward. An
 operator who wants to change an instrument's mode deletes it and
@@ -200,17 +242,19 @@ restriction:
   identity is the group, not a person.
 - The display-fields picker hides the disallowed sources entirely
   in group mode (rather than showing them disabled).
-- The tag chosen as `group_kind` at creation is locked into the
-  display-fields list as the "group identity" column at
-  position 0; operators can still re-order or hide the other
-  two tags.
+- The tag(s) chosen as `group_kind` at creation are locked into
+  the display-fields list, in `group_kind` order — the primary
+  (first) tag as the "group identity" column at position 0, any
+  further composite tags immediately after it. Operators can
+  still re-order or hide any non-`group_kind` tags.
 - Response fields, descriptions, ordering, accepting-responses
   / visibility toggles, and the Save / Edit / Delete affordances
   are unchanged.
 
 A small visual chip near the instrument-card heading reads
-**Group-scoped (by Tag 1)** so the operator never wonders which
-mode they're editing.
+**Group-scoped (by Tag 1)** — or, for a composite key,
+**Group-scoped (by Tag 1 + Tag 2 + Tag 3)** — so the operator
+never wonders which mode they're editing.
 
 ## Reviewer surface
 
@@ -222,11 +266,13 @@ blocks:
   as today.
 - **Group identity row** — for each group the reviewer is
   assigned on, one labeled row reads e.g.
-  `Small Group: Team Alpha — Alice, Bob, Carol` (the group name
-  comes from the source-field value; the member names from
-  joining `Assignment` rows back to their reviewees). A single
-  set of response inputs sits on that row — one rating, one
-  comment, etc., for the whole group.
+  `Small Group: Team Alpha — Alice, Bob, Carol`. For a composite
+  `group_kind` the label joins every facet in key order, e.g.
+  `Cohort: Spring 2026 · Class: 5A · Small Group: G4 — Alice,
+  Bob, Carol`. The facet values come from the source-field tag
+  values; the member names from joining `Assignment` rows back
+  to their reviewees. A single set of response inputs sits on
+  that row — one rating, one comment, etc., for the whole group.
 - **Multiple groups, one instrument.** A reviewer assigned across
   multiple groups (e.g. they're in two cohorts) gets one row per
   group within the same instrument's table.
@@ -248,21 +294,23 @@ natural place to materialize group assignments. When the
 operator runs assignment generation against a group-scoped
 instrument:
 
-1. The engine reads each reviewee's `tag_N` value (the
-   `group_kind` source).
-2. Reviewees clustered by that value form **groups** — the
-   group identifier is the shared tag value (e.g. all reviewees
-   with `tag_1="Team Alpha"` form one group).
+1. The engine reads each reviewee's tag values for the keys in
+   `group_kind` (one key, or several for a composite).
+2. Reviewees clustered by that tag tuple form **groups** — the
+   group identifier is the shared tuple (e.g. all reviewees with
+   `tag_1="Team Alpha"` form one group; or, for a composite,
+   all reviewees matching on `(tag_1, tag_2, tag_3)`).
 3. For each `(reviewer, group)` pair the rule selects, the
    engine emits **one `Assignment` per group member** (i.e. the
    matrix is fanned out per-member). The rows are ordinary
    `(reviewer, reviewee, instrument)` assignments — nothing is
    stamped; the group is recoverable from each reviewee's
-   `tag_N`.
+   grouping tags.
 4. The reviewer surface sees N rows for the group on the wire,
-   clusters them by the derived `group_id` (reviewee `tag_N`)
-   into one logical row in the rendered template, and writes the
-   reviewer's single answer back to all N rows on submit.
+   clusters them by the derived `group_id` (the reviewee tag
+   tuple) into one logical row in the rendered template, and
+   writes the reviewer's single answer back to all N rows on
+   submit.
 
 **FullMatrix needs no engine change.** Its output is already
 "every reviewer × every reviewee" — for a group-scoped
@@ -294,9 +342,10 @@ def collapse_group_duplicates(
     """Collapse N group-duplicate response rows back to one.
 
     For each input row that belongs to a group-scoped instrument,
-    derive its ``group_id`` (the reviewee's ``tag_N`` value, with
-    ``N`` from the instrument's ``group_kind``) and emit a single
-    row keyed on ``(reviewer_id, response_field_id, group_id)``
+    derive its ``group_id`` (the tuple of the reviewee's tag
+    values for the keys in the instrument's ``group_kind``) and
+    emit a single row keyed on
+    ``(reviewer_id, response_field_id, group_id)``
     with the shared value. Per-reviewee rows pass through
     unchanged.
 
@@ -316,11 +365,36 @@ correctly because the count is "instruments where this reviewer
 has answered everything" — a per-reviewer-per-instrument metric
 that doesn't care about the underlying fanout.
 
+### Materializing the group identity at extraction
+
+The group identity is *derived*, not stored — but that's a
+storage decision, not an output one. At the point of
+extraction, the Extract Data exports **should surface the
+derived group identity as explicit columns** on the exported
+rows, even though no group column exists on `Response`. One
+column per `group_kind` key (e.g. `Cohort`, `Class`, `Small
+Group`) carrying that row's tag-tuple facets, so the export
+reads standalone — a human opening the CSV sees which group a
+response belongs to without re-joining to `Instrument` +
+`Reviewee` themselves.
+
+This holds for both export shapes: the collapsed shape (one row
+per group) and the fanout shape (one row per member). The
+exporter computes the facets the same way `collapse_group_duplicates`
+derives `group_id` — reading the instrument's `group_kind`
+keys against each reviewee's tags — and writes them as ordinary
+columns. Per-reviewee (non-group) instruments simply leave
+these columns blank.
+
 ## What's out of scope
 
 - **Per-question group scope.** Rejected (see Rationale).
-- **Multi-level grouping in one instrument.** Rejected.
-  `group_kind` is a scalar.
+- **Multi-level grouping in one instrument.** Rejected — one
+  instrument renders rows at a single granularity only, never a
+  small-group block *and* a cohort block together. This is
+  distinct from a **composite** `group_kind` (supported): a
+  composite is still one granularity, named by a tuple of tags.
+  See "One grouping per instrument".
 - **Mode-flipping after creation.** Rejected. Operators delete
   and recreate.
 - **DB schema modifications.** Rejected — and not needed. The
@@ -329,7 +403,8 @@ that doesn't care about the underlying fanout.
   single-reviewee FK shape, and `Instrument.group_kind` already
   exists.
 - **A separate `Group` entity.** Not needed for this design —
-  the group identifier is just a tag value (or a hash of one).
+  the group identifier is just a tag value or tag tuple (or a
+  hash of one).
   If a future feature needs richer group metadata (a description,
   a membership history, etc.), a `Group` table can be added
   without disturbing the rest of this spec.
@@ -338,11 +413,12 @@ that doesn't care about the underlying fanout.
 
 ## Open questions
 
-- **Group name source.** The simplest answer is "the value of the
-  source tag" (e.g. `tag_1="Team Alpha"`). If groups need richer
-  display names (a separate "human-readable" tag), the
-  `group_kind` column could expand to a tuple — `(id_tag,
-  display_tag)`. Defer until an operator asks.
+- **Group name source.** A group's display name is built from
+  its grouping-tag values — one facet per `group_kind` key,
+  joined in key order (see Reviewer surface). If groups ever
+  need a human-readable name *distinct* from the grouping tags
+  themselves, a dedicated display tag or a `Group` lookup table
+  would be the path. Defer until an operator asks.
 - **Cohort vs Small Group vocabulary.** Whether `Instrument.group_kind`
   stores the source-field key (`tag_1`) or a domain label
   (`small_group`) is an open call. Source-field key is more
@@ -366,7 +442,8 @@ that doesn't care about the underlying fanout.
 - `app/db/models/instrument.py` — `group_kind` column (already
   exists, shipped inert in 13D PR 6).
 - `app/db/models/reviewee.py` — `tag_1` / `tag_2` / `tag_3`
-  columns; the reviewee's tag value is the derived `group_id`.
+  columns; the tuple of the reviewee's values for the
+  `group_kind` keys is the derived `group_id`.
 - `app/services/instruments/_display_fields.py` — `DISPLAY_FIELD_LABELS` /
   `DISPLAY_FIELD_KEYS` mappings; group-scoped instrument editor
   picks against a restricted subset of the same registry.

@@ -58,8 +58,13 @@ class Instrument(Base, TimestampMixin):
     """Group-scoping flavour for Segment 13C's group-scoped
     instruments — e.g. one shared answer covers a whole group of
     reviewees instead of per-reviewee. NULL = "regular per-reviewee
-    instrument" (current behaviour). 13C settles the value-set; 13D
-    PR 6 just pre-positions the column.
+    instrument" (current behaviour). A non-null value is an
+    ordered, comma-joined list of one or more distinct reviewee
+    tag keys (``tag_1`` / ``tag_2`` / ``tag_3``) — e.g. ``tag_1``
+    or ``tag_1,tag_2,tag_3``. The group a reviewee belongs to is
+    the tuple of its values for those keys, so a composite key
+    can partition by e.g. (cohort, class, small group). See
+    ``spec/group_scoped_instruments.md``.
 
     Lands inert in 13D PR 6 — no service module reads or writes
     the column; reviewer-surface render behaviour unchanged. 13C
