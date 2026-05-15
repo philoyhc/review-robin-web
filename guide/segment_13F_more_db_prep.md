@@ -1,7 +1,7 @@
 # Segment 13F — More DB prep (14C / 16A / 16B / 18A / 18B / 18C ride-along)
 
 **Status:** In flight — **PRs 1 + 2 shipped 2026-05-11**
-(migrations `779b90e4b397` + `8003c2be99d8`); PRs 3-6
+(migrations `779b90e4b397` + `8003c2be99d8`); PRs 3-7
 deferred until their consumer segments (18A / 14C / 18C / 18B)
 are picked up, per the "piecemeal, front-load the 16-series
 work" sequencing decision. The 16-series schema scaffolding is
@@ -14,18 +14,22 @@ revised again 2026-05-11 to reorder PRs so the 16-series work
 comes first (PR 1 + PR 2) and the consumer-deferred work
 follows (PRs 3-5); revised again 2026-05-15 to add PR 6
 (`sessions.display_timezone`) as the schema slot for the 18B
-per-session timezone work.
+per-session timezone work; revised again 2026-05-15 — after a
+fresh sweep of every upcoming segment — to add PR 7
+(`users.preferences`) as the per-operator preferences container
+for 18B PR 2 and future operator-level display settings.
 Mirrors the **Segment 13D** (and 13E) inert-migrations pattern:
 pre-position the additive, nullable, no-backfill schema changes
 the rest of the active workplan needs, so the downstream feature
 segments are pure service / UI / template work.
 
-**Sizing:** ~6 PRs (one per migration; PR-sized).
+**Sizing:** ~7 PRs (one per migration; PR-sized).
 **Depends on:** none. Lands cleanly after 13D / 13E.
 **Unblocks:** 14C (reminder cadence), 16A (Sys Admin auth via
 persisted flag instead of env-allowlist), 16B (per-session
-owner UI), 18A (session tagging), 18B (per-session display
-timezone), 18C (retention exception + per-session policy).
+owner UI), 18A (session tagging), 18B (per-operator default +
+per-session display timezone), 18C (retention exception +
+per-session policy).
 
 ---
 
@@ -63,9 +67,10 @@ sessions.reminder_settings                # PR 4: 14C reminder cadence (JSON, pe
 sessions.retention_exception              # PR 5: 18C per-session opt-out (Bool, pending)
 sessions.retention_overrides              # PR 5: 18C per-session policy (JSON, post-MVP, pending)
 sessions.display_timezone                 # PR 6: 18B per-session display timezone (String, pending)
+users.preferences                         # PR 7: per-operator preferences container (JSON, pending)
 ```
 
-Six migrations + one model-only correction across six PRs.
+Seven migrations + one model-only correction across seven PRs.
 Every column nullable (PR 1's `is_sys_admin` has a SQL-level
 `false` server-default so existing rows backfill safely); every
 new table starts empty; no service or web code reads or writes
@@ -115,7 +120,8 @@ needs identified for the remaining workplan:
 | **18A** — Session tagging | New table `session_tags` | Required by 18A Part 2. The plan flags "Tag table vs JSON column" as an open scoping question; we lock the answer here (table — easier per-tag indexing + delete-cascade). |
 | **18C** — Retention / deletion workflow Part 2 | New `sessions.retention_exception` Boolean (default `False`, nullable) | Required by 18C Part 2 (per-session opt-out of auto-purge — e.g. legal hold). Minimal cost, large policy value. |
 | **18C** — Retention / deletion workflow Part 3 (post-MVP) | New `sessions.retention_overrides` JSON column | Required by 18C Part 3 if it lands. Per-session retention-policy overrides (`response_days` / `audit_days` / `archived_days` keys). NULL means "use deployment default". |
-| **18B** — Date and time settings | New `sessions.display_timezone` String column (nullable; IANA zone name) | Required by 18B PR 3 (per-session display-timezone override). One nullable string column; `NULL` means "inherit the deployment default timezone". The deployment-default side of 18B is a separate workspace-scoped setting that 18B owns directly — only the per-session column rides here. |
+| **18B** — Date and time settings | New `sessions.display_timezone` String column (nullable; IANA zone name) | Required by 18B PR 3 (per-session display-timezone override). One nullable string column; `NULL` means "inherit the operator default timezone". |
+| **18B** — Date and time settings | New `users.preferences` JSON column (nullable) | Required by 18B PR 2 (per-operator default timezone). A general per-operator preferences container — first key `display_timezone`, future keys for other operator-level display settings (display sizing, the typography knob). JSON over flat columns: the key set is open-ended — same reasoning as `sessions.reminder_settings`. Added 2026-05-15 after the re-sweep below. |
 | **16A** — Sys Admin page + admin user role | New `users.is_sys_admin` Boolean column (server-default `false`) | Required by 16A PR 2 (sys-admin gate). Persisted per-user flag bootstrapped from the existing `SYS_ADMIN_EMAILS` env var on first-sign-in but extensible in-app afterwards via 16A PR 6. |
 | **16A** — Workspace operator allowlist (Option C access model) | New `users.is_operator` Boolean column (server-default `false`) | Required by 16A PR 1 (operator-allowlist gate). Locked 2026-05-11: the app is a citizen project with no tech-support promise, so the access model is strict (Option C) — only operators a sys-admin explicitly admits can use operator routes. Bootstrap source on first-sign-in is a new `OPERATOR_EMAILS` env var; persisted column is authoritative thereafter. Sys-admin implies operator (read-path checks `is_operator OR is_sys_admin`). |
 | **16B** — Role delegation (owner / manager) | **No schema change.** `session_operators.role` already exists (`String(32)`, NOT NULL). Today's only written value is `"owner"`. PR 1 locks the value-set constant (`SESSION_OPERATOR_ROLES = ("owner", "manager")`) and fixes the dead Python-default from `"operator"` to `"owner"`. | The column lands inert (already written). The value-set lock + default fix ride in PR 1 since they're cohesive with the `users.is_sys_admin` admin-role plumbing. |
@@ -129,6 +135,49 @@ needs identified for the remaining workplan:
 | **14A** — Production hardening | type migrations only | JSON → JSONB, String(36) → native UUID, JSONB indexes. Postgres-specific, not "additive nullable" — stays in 14A. |
 | **14B** — Email infrastructure | none | All schema already shipped in 11C Part 2 (Migration `c4f6a8b0d2e5`). |
 | **14C** — Reminders workflow Part 2 (scheduled dispatch) | none | Reads against existing `email_outbox` + `audit_events`. The cadence-settings column from Part 1 is the only schema move. |
+
+---
+
+## Scope re-sweep (2026-05-15)
+
+Re-ran the sweep across every current `guide/segment_*.md` plan
+plus `deferred_until_pilot_feedback.md`, cross-checked against
+the live ORM in `app/db/models/`. The 16-/15-series segments
+that drove the original sweep have since shipped; the question
+was whether the *remaining* upcoming work surfaces any new
+additive schema need.
+
+**Findings:**
+
+- **One new rideable addition — `users.preferences` JSON**
+  (PR 7). 18B's per-operator default timezone needs a persisted,
+  operator-editable home; rather than a one-column-per-setting
+  accretion on `users`, it lands as a general per-operator
+  preferences JSON container (first key `display_timezone`;
+  future keys for display sizing / the typography knob). 18B PR 2
+  consumes it. *(The earlier 18B sketch floated a workspace-
+  singleton `workspace_settings` table; the per-operator JSON
+  container was chosen instead 2026-05-15 — it fits the existing
+  `users`-tied grain and is open-ended.)*
+- **Everything else is already covered** — `session_tags`
+  (PR 3), `sessions.reminder_settings` (PR 4),
+  `sessions.retention_*` (PR 5), `sessions.display_timezone`
+  (PR 6) — or needs no schema (14B reads existing `email_outbox`
+  columns; 17A's "value_version" is the existing
+  `Response.version`; 17B / 19 / 20 are UI / docs; 18A cloning +
+  18D import/export are service-layer-only; 18C's retention
+  policy is env-var config).
+- **14A type migrations stay out of 13F.** 14A's JSON→`JSONB`,
+  `String(36)`→native `UUID`, `String`→DB `ENUM`, and GIN /
+  partial indexes are Postgres-only and destructive — they break
+  13F's "same migration runs on SQLite and Postgres" contract.
+  They remain 14A's own, gated on real query plans.
+- **Flagged, not actionable here — 13C stale plan.** `segment_13C`
+  builds group fanout on `Assignment.context` JSON, a column
+  **retired in 15D PR 6b**. 13C needs a re-scope to relocate its
+  group-fanout metadata before any of its schema can be
+  pre-positioned; the column name / shape is undefined, so it is
+  **not** a 13F candidate now. Raise with whoever picks up 13C.
 
 ---
 
@@ -390,7 +439,7 @@ other. Inert audit: zero service / web references at PR close.
 
 **Scope.** One nullable string column on `sessions`. Holds an
 IANA timezone name (e.g. `Asia/Singapore`); `NULL` means
-"inherit the deployment default timezone".
+"inherit the creating operator's default timezone".
 
 ```python
 # app/db/models/review_session.py
@@ -399,11 +448,11 @@ display_timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 Why nullable rather than NOT NULL with a default: the
 `NULL`-means-inherit semantics are load-bearing in 18B's
-resolution order (session override → deployment default →
-UTC). 18B PR 3 stamps new sessions with the resolved deployment
-default at create-time, but the column stays nullable so
-"inherit" remains expressible (e.g. for sessions created before
-the deployment default was set, or if 18B later adds an
+resolution order (session override → operator default → UTC).
+18B PR 3 stamps new sessions with the creating operator's
+resolved default at create-time, but the column stays nullable
+so "inherit" remains expressible (e.g. for sessions created
+before the operator set a default, or if 18B later adds an
 explicit "revert to default" affordance).
 
 `String(64)` comfortably fits every IANA zone name (the longest
@@ -417,12 +466,52 @@ Default reads back as `NULL`. Round-trips an IANA name string
 at PR close — light-up lives in 18B PR 3 (per-session timezone
 card + create-time stamping).
 
+### PR 7 — New column `users.preferences` JSON (18B ride-along)
+
+**Scope.** One nullable JSON column on `users` — a general
+per-operator preferences container.
+
+```python
+# app/db/models/user.py
+preferences: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+```
+
+The column holds a JSON object whose keys are individual
+operator-level preferences. **First consumer:** 18B PR 2 reads /
+writes the `display_timezone` key (the operator's default
+timezone for sessions they create). The container is
+deliberately general — future operator-level display settings
+(a display-sizing knob, the typography knob from
+`spec/domain_assumptions.md`) become **new keys, not new
+migrations**.
+
+`NULL` (or an absent key) means "no preference set" — the
+consumer falls through to its in-code default (`UTC` for the
+timezone key). JSON over a column-per-setting: the key set is
+open-ended, and operator UI preferences are read on render,
+never queried or filtered — the same reasoning that put
+`sessions.reminder_settings` (PR 4) in JSON. The per-key shape
+is owned by each consuming segment, not pinned here; PR 7 just
+opens the container.
+
+This is a per-operator setting, not workspace-wide — it joins
+the existing `users`-tied operator config (SMTP credentials,
+the `is_operator` / `is_sys_admin` flags, the RTD / RuleSet
+library `owner_user_id` rows). No workspace-singleton table is
+introduced.
+
+**Tests.** Migration round-trip on SQLite + `ci-postgres`.
+Default reads back as `NULL`. Round-trips a fixture dict
+(e.g. `{"display_timezone": "Asia/Singapore"}`). Inert audit:
+zero service / web references at PR close — light-up lives in
+18B PR 2.
+
 ---
 
 ## Sequencing
 
 **16-series wave first** (PR 1 → PR 2), then the
-**consumer-deferred wave** (PRs 3-5 ride with their owning
+**consumer-deferred wave** (PRs 3-7 ride with their owning
 feature segments when those are picked up). Each PR is
 independent and self-contained; no inter-PR ordering
 constraints beyond landing them in numeric order for tidy
@@ -447,6 +536,9 @@ migration history.
 - **PR 6** — defer until 18B (date and time settings) is
   picked up. Specifically 18B PR 3 (per-session display-timezone
   override + Session Edit card) is the consumer.
+- **PR 7** — defer until 18B is picked up. Specifically 18B PR 2
+  (per-operator default timezone + `/operator/settings` card)
+  is the consumer; lands just before 18B PR 2.
 
 The schema-only PRs are deliberately small (~50-100 LOC each
 including the migration, model edit, and the round-trip test).
@@ -459,12 +551,12 @@ A reviewer can model the whole contract in one sitting per PR.
 - **Migration safety.** Every change is additive + nullable; no
   backfill except PR 1's server-default. SQLite + Postgres
   parity is exercised by the existing `ci-postgres` job.
-- **JSON shape commitments.** PR 2's `reminder_settings` and
-  PR 3's `retention_overrides` are JSON; the actual key schema
-  is locked by 14C Part 1 and 18C Part 2-3 respectively. Until
-  then, the columns are inert containers. Worth a short note
-  in each PR description naming where the shape will be
-  pinned.
+- **JSON shape commitments.** PR 4's `reminder_settings`,
+  PR 5's `retention_overrides`, and PR 7's `users.preferences`
+  are JSON; the actual key schema is locked by 14C Part 1,
+  18C Part 2-3, and 18B PR 2 respectively. Until then, the
+  columns are inert containers. Worth a short note in each PR
+  description naming where the shape will be pinned.
 - **`session_operators.role` Python-default flip.** PR 1
   changes the model's `default="operator"` to
   `default="owner"`. This affects ORM `SessionOperator(...)`
@@ -506,16 +598,17 @@ A reviewer can model the whole contract in one sitting per PR.
 
 ## Critical files
 
-- New: `app/db/models/session_tag.py` (PR 3), six Alembic
+- New: `app/db/models/session_tag.py` (PR 3), seven Alembic
   migrations (PR 1 adds one migration for `users.is_sys_admin`
   plus a model-only edit on `session_operator.py`; PR 2 adds
-  one migration for `users.is_operator`; PRs 3 / 4 / 5 / 6 each
-  add one migration for the table or column they introduce).
-- Touched: `app/db/models/user.py` (PR 1 Part A + PR 2),
+  one migration for `users.is_operator`; PRs 3 / 4 / 5 / 6 / 7
+  each add one migration for the table or column they
+  introduce).
+- Touched: `app/db/models/user.py` (PR 1 Part A + PR 2 + PR 7),
   `app/db/models/session_operator.py` (PR 1 Part B —
   Python-default fix + `SESSION_OPERATOR_ROLES` constant),
   `app/db/models/review_session.py` (PR 4 + PR 5 + PR 6).
-- Inert audit at every PR-close: `grep -rn "reminder_settings\|retention_exception\|retention_overrides\|session_tags\|is_sys_admin\|is_operator\|SESSION_OPERATOR_ROLES\|display_timezone" app/services/ app/web/` should return nothing until the owning feature segment lights up.
+- Inert audit at every PR-close: `grep -rn "reminder_settings\|retention_exception\|retention_overrides\|session_tags\|is_sys_admin\|is_operator\|SESSION_OPERATOR_ROLES\|display_timezone\|\.preferences" app/services/ app/web/` should return nothing until the owning feature segment lights up.
 
 ---
 

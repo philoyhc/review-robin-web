@@ -3,7 +3,8 @@
 > **In flight — PR 1 shipped 2026-05-15.** Scoping decisions
 > locked (see "Locked decisions" below). PR 1 (canonical format
 > + shared display helper) is shipped; PRs 2-3 (the timezone
-> infra) follow once 13F PR 6 lands the per-session column.
+> infra) follow once 13F lands the inert columns they consume
+> (PR 7 `users.preferences`, PR 6 `sessions.display_timezone`).
 >
 > The 18B segment number was previously held by "Session tagging
 > + archiving", which was folded into 18A (Sessions lobby
@@ -58,18 +59,24 @@ no cue it isn't their local time (this surfaced in conversation
 ## Locked decisions (2026-05-15 scoping)
 
 1. **Setting scope — per-session, two-tier.** Each session
-   carries its own display timezone. A **deployment-wide
-   default** is inherited by every new session and can be
-   **overridden per session**. Mirrors the 15C library /
+   carries its own display timezone. A **per-operator default**
+   is inherited by every new session that operator creates and
+   can be **overridden per session**. Mirrors the 15C library /
    per-session-copy pattern (default → per-session copy).
-2. **Surfaces — two cards.** The deployment default is edited on
-   a card on the operator Settings page (`/operator/settings`);
-   the per-session override is edited on a card on the Session
-   Edit page (`/operator/sessions/{id}/edit`), next to the
-   deadline field.
-3. **New-session default — deployment default zone.** A session
-   created today inherits the configured deployment timezone;
-   the operator only touches the per-session card to deviate.
+   *(Revised 2026-05-15: the default is per-operator, not
+   workspace-wide — see "Data model". A per-operator default
+   fits the existing grain — SMTP creds, RTD / RuleSet libraries
+   are all `users`-tied — and needs no new workspace-singleton
+   table.)*
+2. **Surfaces — two cards.** The per-operator default is edited
+   on a card on the operator Settings page (`/operator/settings`
+   — itself a per-operator page), and the per-session override
+   on a card on the Session Edit page
+   (`/operator/sessions/{id}/edit`), next to the deadline field.
+3. **New-session default — the creating operator's zone.** A
+   session inherits the timezone its creator has configured (at
+   create time, stamped onto the session's own column); the
+   operator only touches the per-session card to deviate.
 4. **Card controls timezone only.** The date-time and date-only
    *formats* are standardized in code (goal 1, decision 7) — not
    operator-configurable. The cards expose only the timezone
@@ -152,28 +159,32 @@ operator-entered. Display sites:
 
 ## Data model
 
-- **Deployment default timezone.** A workspace-scoped setting,
-  DB-persisted so the `/operator/settings` card can edit it (an
-  env var alone wouldn't be operator-editable). Either a
-  single-row settings table or a typed key/value row — this is
-  the first workspace-scoped setting in the app, so the table
-  shape is a small design call at PR time. An env var can seed
-  the initial value on a fresh deployment; default `UTC`.
+- **Per-operator default timezone.** Stored as the
+  `display_timezone` key inside a per-operator **`users.preferences`
+  JSON column** — a deliberately general operator-preferences
+  container (so future operator-level display settings, e.g. a
+  display-sizing / typography knob, become new keys, not new
+  migrations). The column is **pre-positioned inert by 13F PR 7**
+  — 18B does not own this migration. The `/operator/settings`
+  card reads / writes the `display_timezone` key; absent key ⇒
+  fall through to `UTC`.
 - **Per-session override.** The nullable column
   `sessions.display_timezone` (`String(64)`, IANA zone name;
-  `NULL` = inherit the deployment default) is **pre-positioned
-  inert by 13F PR 6** — it is not a migration this segment
-  owns. 18B PR 3 lights the existing column up. New sessions are
-  stamped with the deployment default at create time, so the
-  column is rarely NULL in practice — but `NULL`-means-inherit
-  stays meaningful.
-- **Resolution order:** `sessions.display_timezone` → deployment
-  default → `UTC`. The shared helper resolves this once per
-  render. Session-less surfaces (cross-session sessions lobby,
-  sys-admin pages) resolve to the deployment default.
-- The deployment-default setting is the one new shape 18B owns
-  directly (PR 2). The per-session column is additive / nullable
-  / no-backfill — the 13D/13E playbook, landed via 13F PR 6.
+  `NULL` = inherit the operator default) is **pre-positioned
+  inert by 13F PR 6** — also not a migration this segment owns.
+  18B PR 3 lights the existing column up. New sessions are
+  stamped with the creating operator's default at create time,
+  so the column is rarely NULL in practice — but
+  `NULL`-means-inherit stays meaningful.
+- **Resolution order:** `sessions.display_timezone` → creating
+  operator's `users.preferences['display_timezone']` → `UTC`.
+  The shared helper resolves this once per render. Session-less
+  surfaces (cross-session sessions lobby, sys-admin pages)
+  resolve to the viewing operator's preference.
+- 18B owns **no migration** — both the per-operator column
+  (13F PR 7) and the per-session column (13F PR 6) are
+  pre-positioned. 18B PRs 2-3 are pure service / UI / template
+  work.
 
 ## Plan (PR ladder)
 
@@ -217,29 +228,32 @@ Original scope notes:
   stay ISO-8601 UTC (machine formats don't localize).
 - No schema change.
 
-### PR 2 — Deployment default timezone + `/operator/settings` card
+### PR 2 — Per-operator default timezone + `/operator/settings` card
 
-- The workspace-default-timezone data model (above) + an
-  `/operator/settings` card with the full IANA timezone picker.
+- Lights up the `display_timezone` key of `users.preferences` —
+  the column is pre-positioned inert by **13F PR 7**, so this PR
+  carries **no migration**. Adds an `/operator/settings` card
+  with the full IANA timezone picker that reads / writes that
+  key.
 - The shared helper grows timezone resolution: it converts the
-  UTC value into the deployment default zone before formatting,
-  and the zone token reflects the resolved zone.
-- Audit event `workspace.display_timezone_set` (changes
+  UTC value into the resolved zone before formatting, and the
+  zone token reflects the resolved zone.
+- Audit event `operator.display_timezone_set` (changes
   envelope), registered in `EVENT_SCHEMAS`.
 - After this PR every operator + reviewer surface renders in the
-  deployment zone with a correct token.
+  viewing / owning operator's zone with a correct token.
 
 ### PR 3 — Per-session timezone override + Session Edit card
 
 - Lights up `sessions.display_timezone` — the column itself is
   pre-positioned inert by **13F PR 6**, so this PR carries **no
   migration**, only the service / UI work. New sessions get
-  stamped with the deployment default on create.
+  stamped with the creating operator's default on create.
 - A card on the Session Edit page with the IANA picker + an
-  "inherit deployment default" affordance.
-- The helper's resolution order becomes session → deployment →
-  UTC; every render with a session in scope uses the session
-  zone.
+  "inherit operator default" affordance.
+- The helper's resolution order becomes session → operator
+  default → UTC; every render with a session in scope uses the
+  session zone.
 - Audit event `session.display_timezone_set` (changes envelope).
 - **Deadline-first verification.** Re-check every deadline
   display site — Session Home, reviewer surface, sessions list,
@@ -257,23 +271,28 @@ display side is in operators' hands.
 
 ## Hard dependencies
 
-- **PR 1 + PR 2 — none.** Cross-cutting display change —
-  templates + a workspace setting + one helper module.
+- **PR 1 — none** (shipped).
+- **PR 2 depends on 13F PR 7**, which pre-positions the
+  `users.preferences` JSON column inert.
 - **PR 3 depends on 13F PR 6**, which pre-positions the
-  `sessions.display_timezone` column inert. 13F PR 6 is
-  consumer-deferred — it lands when 18B is picked up, just
-  before (or with) 18B PR 3.
+  `sessions.display_timezone` column inert.
+- Both 13F PRs are consumer-deferred — they land when 18B is
+  picked up, just before (or with) the 18B PR that consumes
+  them. 18B itself owns no migration.
 - **Surface precedents already exist:** `/operator/settings`
-  shipped in Segment 11E (the deployment-default card joins it);
-  the Session Edit page gained the Owners card in 16B (the
+  shipped in Segment 11E and is itself a per-operator page (SMTP
+  creds) — the per-operator-default timezone card is a natural
+  fit; the Session Edit page gained the Owners card in 16B (the
   per-session card joins it next to the deadline field).
 
 ## Out of scope
 
-- **Per-operator timezone.** The setting is per-session (with a
-  deployment default), not per-operator — an operator viewing a
-  session sees that session's zone, not their own preference.
-  Considered at scoping and dropped.
+- **Per-operator *viewing* preference.** The per-operator
+  default is a *create-time default source* for new sessions —
+  it is not a viewing preference. A session always renders in
+  its own configured zone, the same for every operator who
+  opens it; the rule engine and reviewer surface never re-zone
+  per viewer.
 - **Per-reviewer timezone.** Reviewers see the session's zone
   (with an explicit token); a per-reviewer preference is
   over-engineering for the pilot.
@@ -292,9 +311,9 @@ When parts ship:
 
 - `docs/status.md` timeline entry.
 - `guide/todo_master.md` updated.
-- `spec/settings_inventory.md` — the new workspace-default
-  timezone setting + the `sessions.display_timezone` column +
-  the two cards; note the canonical display format.
+- `spec/settings_inventory.md` — the `users.preferences`
+  `display_timezone` key + the `sessions.display_timezone`
+  column + the two cards; note the canonical display format.
 - `spec/sessions_overview.md` / a Session Edit spec — the
   per-session timezone card.
 - `spec/visual_style_rrw.md` / `spec/ui_elements.md` — document
@@ -305,11 +324,13 @@ When parts ship:
 ## Working notes
 
 - _(placeholder for decisions during PR scoping)_
-- **Workspace-settings table shape.** This is the app's first
-  workspace-scoped (vs per-operator / per-session) setting.
-  Decide at PR 2 scoping: a single-row `workspace_settings`
-  table vs a typed key/value table. Lean single-row table —
-  simplest, and a second workspace setting is not on the horizon.
+- **Operator-preferences container.** ✅ Decided 2026-05-15 —
+  the per-operator default lives as the `display_timezone` key
+  in a `users.preferences` JSON column (not a workspace-singleton
+  table). JSON keeps the container open-ended so future
+  operator-level display settings (display sizing, the
+  typography knob) become new keys rather than new migrations.
+  The column is pre-positioned by 13F PR 7.
 - **`isoformat()` sites are the ugliest** (`2026-05-15T10:00:00+00:00`
   in a pill) — priority migration targets in PR 1, legibility
   alone.
