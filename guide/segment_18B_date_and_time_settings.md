@@ -158,17 +158,21 @@ operator-entered. Display sites:
   the first workspace-scoped setting in the app, so the table
   shape is a small design call at PR time. An env var can seed
   the initial value on a fresh deployment; default `UTC`.
-- **Per-session override.** New nullable column
-  `sessions.display_timezone` (IANA zone-name string; `NULL` =
-  inherit the deployment default). New sessions are stamped with
-  the deployment default at create time, so the column is rarely
-  NULL in practice — but `NULL`-means-inherit stays meaningful.
+- **Per-session override.** The nullable column
+  `sessions.display_timezone` (`String(64)`, IANA zone name;
+  `NULL` = inherit the deployment default) is **pre-positioned
+  inert by 13F PR 6** — it is not a migration this segment
+  owns. 18B PR 3 lights the existing column up. New sessions are
+  stamped with the deployment default at create time, so the
+  column is rarely NULL in practice — but `NULL`-means-inherit
+  stays meaningful.
 - **Resolution order:** `sessions.display_timezone` → deployment
   default → `UTC`. The shared helper resolves this once per
   render. Session-less surfaces (cross-session sessions lobby,
   sys-admin pages) resolve to the deployment default.
-- All migrations additive / nullable, no backfill — the 13D/13E
-  playbook.
+- The deployment-default setting is the one new shape 18B owns
+  directly (PR 2). The per-session column is additive / nullable
+  / no-backfill — the 13D/13E playbook, landed via 13F PR 6.
 
 ## Plan (PR ladder)
 
@@ -209,7 +213,9 @@ infra (goal 2).
 
 ### PR 3 — Per-session timezone override + Session Edit card
 
-- `sessions.display_timezone` column + migration; new sessions
+- Lights up `sessions.display_timezone` — the column itself is
+  pre-positioned inert by **13F PR 6**, so this PR carries **no
+  migration**, only the service / UI work. New sessions get
   stamped with the deployment default on create.
 - A card on the Session Edit page with the IANA picker + an
   "inherit deployment default" affordance.
@@ -233,9 +239,12 @@ display side is in operators' hands.
 
 ## Hard dependencies
 
-- **None strictly required.** Cross-cutting display change —
-  templates + a workspace setting + a `sessions` column + one
-  helper module.
+- **PR 1 + PR 2 — none.** Cross-cutting display change —
+  templates + a workspace setting + one helper module.
+- **PR 3 depends on 13F PR 6**, which pre-positions the
+  `sessions.display_timezone` column inert. 13F PR 6 is
+  consumer-deferred — it lands when 18B is picked up, just
+  before (or with) 18B PR 3.
 - **Surface precedents already exist:** `/operator/settings`
   shipped in Segment 11E (the deployment-default card joins it);
   the Session Edit page gained the Owners card in 16B (the
