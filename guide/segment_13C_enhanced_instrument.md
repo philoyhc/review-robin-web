@@ -48,14 +48,18 @@ migrations.**
 ### PR 1 — Operator editor: "Add a group-scoped instrument"
 
 New action-row button alongside the existing "Add new
-instrument". An inline dialog asks which reviewee tag (Tag 1 /
-Tag 2 / Tag 3) identifies the group; creation sets
-`group_kind="tag_1"` / `"tag_2"` / `"tag_3"` on the new
-instrument. The group-scoped editor restricts display fields to
-the three reviewee tags, locks the chosen tag into position 0,
-and shows a per-card chip "Group-scoped (by Tag 1)". Mode is set
-at creation and is not toggleable (operators delete + recreate).
-Audit event `instrument.created_group_scoped`.
+instrument". An inline dialog asks which reviewee tag(s) (Tag 1 /
+Tag 2 / Tag 3) identify the group — one for a simple grouping,
+several for a composite; pick order sets key order. Creation
+sets `group_kind` to the comma-joined key list (e.g. `"tag_1"`
+or `"tag_1,tag_2,tag_3"`) on the new instrument. The
+group-scoped editor restricts display fields to the three
+reviewee tags, locks the `group_kind` tags into the leading
+positions in key order, and shows a per-card chip
+"Group-scoped (by Tag 1)" (or "… by Tag 1 + Tag 2" for a
+composite). Mode is set at creation and is not toggleable
+(operators delete + recreate). Audit event
+`instrument.created_group_scoped`.
 
 No schema change — `group_kind` already exists. After PR 1,
 group-scoped instruments can be authored and generate
@@ -142,11 +146,15 @@ Danger Zone card per `spec/instruments.md` Section C.
 
 - **`Instrument.group_kind`** (`String(32) | NULL`) already
   exists — shipped inert in 13D PR 6. `NULL` = a per-reviewee
-  instrument (today's default); a non-null value is the
-  source-field key (`tag_1` / `tag_2` / `tag_3`) naming the
-  reviewee tag that defines the group. The operator-facing
-  display label ("Group-scoped (by Tag 1)") lives in template
-  copy. 13C PR 1 is the first writer of this column.
+  instrument (today's default); a non-null value is an ordered,
+  comma-joined list of one or more distinct source-field keys
+  (`tag_1` / `tag_2` / `tag_3`) naming the reviewee tag(s) that
+  define the group — e.g. `tag_1` for a simple grouping or
+  `tag_1,tag_2,tag_3` for a composite. The longest list is 17
+  characters, so `String(32)` already fits — still zero
+  migrations. The operator-facing display label
+  ("Group-scoped (by Tag 1)") lives in template copy. 13C PR 1
+  is the first writer of this column.
 - **No `Assignment` change.** The original design stamped
   `Assignment.context` JSON with `{group_id, group_kind,
   group_size}`; that column was retired in 15D PR 6b. It is not
@@ -159,15 +167,17 @@ Danger Zone card per `spec/instruments.md` Section C.
 
 ## How a group is derived
 
-A group-scoped instrument carries `group_kind` ∈ {`tag_1`,
-`tag_2`, `tag_3`}. For any reviewer, their group memberships for
-that instrument are computed live:
+A group-scoped instrument's `group_kind` is a comma-joined list
+of one or more keys drawn from {`tag_1`, `tag_2`, `tag_3`}. For
+any reviewer, their group memberships for that instrument are
+computed live:
 
 1. Take the reviewer's `Assignment` rows for the instrument.
-2. Join each to its `Reviewee` and read `reviewee.<group_kind>`
-   (`Reviewee.tag_1` / `tag_2` / `tag_3` — these columns exist).
-3. Reviewees sharing a tag value form one **group**; the tag
-   value *is* the group identity (`group_id`).
+2. Join each to its `Reviewee` and read the reviewee's value for
+   every key in `group_kind` (`Reviewee.tag_1` / `tag_2` /
+   `tag_3` — these columns exist), forming a tag tuple.
+3. Reviewees sharing the same tag tuple form one **group**; that
+   tuple *is* the group identity (`group_id`).
 4. `group_size` = the count of distinct reviewees in the
    cluster.
 
@@ -177,9 +187,9 @@ submit path fans on write, and `collapse_group_duplicates`
 groups on the same derived key.
 
 **Trade-off (accepted 2026-05-15).** Deriving live means group
-membership tracks the reviewee's *current* `tag_N`. If an
-operator edits a reviewee's tag after assignments are generated,
-that reviewee re-clusters. In practice this is benign: editing
+membership tracks the reviewee's *current* grouping tags. If an
+operator edits one of those tags after assignments are
+generated, that reviewee re-clusters. In practice this is benign: editing
 session entities after activation requires reverting to draft,
 which regenerates assignments anyway. Freezing membership at
 generation time would have needed a new stamped `Assignment`
@@ -203,8 +213,11 @@ unchanged on the per-reviewee path.
 ## Out of scope
 
 - **Per-question group scope** — rejected by the spec.
-- **Multi-level grouping in one instrument** — `group_kind`
-  stays a scalar.
+- **Multi-level grouping in one instrument** — one instrument
+  renders rows at a single granularity only. A *composite*
+  `group_kind` (a tuple of tags naming one granularity) is
+  supported and is not this rejected case — see the spec's
+  "One grouping per instrument".
 - **Mode-flipping after creation** — operators delete and
   recreate.
 - **Manual CSV mode for group-scoped instruments** — rule mode
@@ -225,9 +238,9 @@ unchanged on the per-reviewee path.
 PR 2 introduces `responses.collapse_group_duplicates(rows)` per
 the spec. It collapses the N group-duplicate response rows to
 one, keyed on `(reviewer_id, response_field_id, group_id)` where
-`group_id` is the **derived** group identity (the reviewee's
-`tag_N` value — see "How a group is derived"), not a stored
-field. Every consumer that aggregates by reviewee or reports
+`group_id` is the **derived** group identity (the tuple of the
+reviewee's `group_kind`-tag values — see "How a group is
+derived"), not a stored field. Every consumer that aggregates by reviewee or reports
 "completion" routes through the helper:
 
 - `views.build_invitations_rows` — Review Progress column.

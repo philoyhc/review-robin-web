@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import datetime as dt
 
+import pytest
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -36,6 +37,7 @@ from app.services.session_config_io import (
     Row,
     serialize_session_config,
 )
+from app.services.session_config_io import _ParseError, _parse_group_kind
 
 
 # --------------------------------------------------------------------------- #
@@ -791,3 +793,34 @@ def test_post_15b_per_instrument_selection_takes_precedence(
         by_field["instruments[1].rule_set_name"].value
         == "Cross-cohort fanout"
     )
+
+
+# --------------------------------------------------------------------------- #
+# group_kind parsing — single + composite keys (Segment 13C)
+# --------------------------------------------------------------------------- #
+
+
+def test_parse_group_kind_empty_is_none() -> None:
+    assert _parse_group_kind("") is None
+
+
+def test_parse_group_kind_single_key() -> None:
+    assert _parse_group_kind("tag_2") == "tag_2"
+
+
+def test_parse_group_kind_composite_key() -> None:
+    """A composite group key is an ordered, comma-joined list of
+    distinct reviewee tag keys; whitespace is stripped."""
+
+    assert _parse_group_kind("tag_1,tag_2,tag_3") == "tag_1,tag_2,tag_3"
+    assert _parse_group_kind("tag_3, tag_1") == "tag_3,tag_1"
+
+
+def test_parse_group_kind_rejects_unknown_key() -> None:
+    with pytest.raises(_ParseError):
+        _parse_group_kind("tag_1,tag_9")
+
+
+def test_parse_group_kind_rejects_duplicate_key() -> None:
+    with pytest.raises(_ParseError):
+        _parse_group_kind("tag_1,tag_1")
