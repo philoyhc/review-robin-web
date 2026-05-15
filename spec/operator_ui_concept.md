@@ -157,7 +157,7 @@ A double-height **Home** anchor on the left, two rows of phase tabs to its right
 ```
 ┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Relationships][Instruments][Email Template]
 │  Home  │
-└────────┴─ OPERATIONS ▶ [Validate][Assignments][Previews][Invitations][Responses]
+└────────┴─ OPERATIONS ▶ [Assignments][Validate][Previews][Invitations][Responses]
 ```
 
 - **Home** is double-height to span both rows, signalling that it's one level up from the phase tabs rather than a peer of any of them. It carries the session's identity, so the chrome itself answers *"which session am I in?"* The session's lifecycle state surfaces in the status row below the chrome, not inside the Home anchor.

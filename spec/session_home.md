@@ -178,7 +178,7 @@ Notes specific to Session Home:
   "fill the rosters first" instruction rather than sending the
   operator to Validate, where every error would amount to
   the same gap. The operator's path forward is the chrome top-nav
-  Manage links (Reviewers / Reviewees / Assignments), which stay
+  Setup links (Reviewers / Reviewees / Relationships), which stay
   reachable while this state shows.
 - **Workflow stepper in `ready`.** The forward stages (Create
   invites · Send invites · Send reminders) advance through States

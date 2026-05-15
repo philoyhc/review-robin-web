@@ -52,10 +52,10 @@ The general visual spec (`spec/visual_style_general.md` Components > Cards) defi
 Cards are either **half-width** or **full-width**:
 
 - **Half-width is the default.** Half-width cards keep line lengths reasonable — full-width body text and form labels sprawl across the screen and become harder to scan. Pair half-width cards in a `.bottom-grid` (a 2-column grid with `align-items: start` so each side keeps its natural height — never stretches to match the taller column). When two half-width cards naturally belong together side-by-side, write them as a pair; when several stack on one side, wrap them in a `.bottom-left` flex column inside the grid. Example arrangements on operator pages:
-  - Reviewers / Reviewees / Assignments: Upload card (left) + Danger Zone (right).
+  - Reviewers / Reviewees / Relationships: the friendly-label editor (left) + Operator actions card (right) pair, with the Upload card (left) + Danger Zone (right) pair below it.
   - Session Home: Next Action / Quick Setup / Extract Data stack inside a `.bottom-left` on the left; Session Details + Danger Zone stack inside a `.bottom-left` on the right.
 - **Full-width when content requires it.** Reach for full-width only when the card's content genuinely needs more horizontal space:
-  - Wide tables (Reviewers / Reviewees / Monitoring / Invitations data tables) where half-width would force horizontal scroll or column truncation.
+  - Wide tables (Reviewers / Reviewees / Relationships / Invitations / Responses data tables) where half-width would force horizontal scroll or column truncation.
   - Per-instrument cards on the Instruments page, each of which hosts nested half-width Display Fields + Response Fields children.
   - Top-of-page status / overview cards that span the chrome's status strip width — the "All Instrument Status" card is one such case.
   - Multi-column forms whose grouping exceeds a half-width column.
@@ -79,17 +79,17 @@ A page is composed of cards drawn from a small named vocabulary. The kind sets t
 
 **Status / info card** — read-mostly, no primary action. Renders pills, counts, summaries, identifying metadata. Default visual treatment (white background, neutral border). Examples:
 
-- "Fields with data" card at the top of Reviewers / Reviewees / Assignments.
+- "Fields with data" card at the top of Reviewers / Reviewees / Relationships.
 - Session Details card on Session Home.
-- Summary card on Monitoring (assigned / invited / opened / submitted / incomplete pills).
+- Summary card on the Responses page (assigned / invited / opened / submitted / incomplete pills).
 - "All Instrument Status" card at the top of Instruments.
 
 **Action card** — primary content is a form or affordance. The card exists to host the action, with framing copy and any required confirmation around it. Default visual treatment (white background, neutral border). Examples:
 
-- Upload card on Reviewers / Reviewees / Assignments.
+- Upload card on Reviewers / Reviewees / Relationships.
 - Quick Setup card on Session Home.
 - Next Action card on Session Home (the state-conditional Validate / Activate / Pause card).
-- The Generate / Send-all / Reminder action cards on Invitations / Monitoring.
+- The Rule Based Assignment card on the Operations Assignments page.
 
 **Lock card (yellow warning)** — lifecycle-locked or otherwise non-interactive surface, with optional recovery action. `accent-amber-bg` background, `accent-amber-dark` border (the warning brown). The recovery action inside follows P7 and uses the outline-amber button. See "Warning surfaces — shared brown framing" below for the per-page application matrix.
 
@@ -121,9 +121,9 @@ The session-scoped chrome consists of:
 **Chrome itself**: a double-height **Home** anchor on the left, two rows of phase tabs to its right.
 
 ```
-┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Assignments][Instruments][Email Template]
+┌────────┬─ SETUP ▶      [Reviewers][Reviewees][Relationships][Instruments][Email Template]
 │  Home  │
-└────────┴─ OPERATIONS ▶ [Validate][Previews][Invitations][Monitoring]
+└────────┴─ OPERATIONS ▶ [Assignments][Validate][Previews][Invitations][Responses]
 ```
 
 Specifics:
@@ -146,10 +146,10 @@ Specifics:
 The status strip sits below the chrome and above the page body on all session-scoped pages. Composition, left to right:
 
 ```
-Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Assignments: [count or NONE]  ·  Instruments: [count]  ·  Email Template: [count or NOT SET UP]  ·  Invitations: [state]  ·  Responses: [state]
+Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Relationships: [count]  ·  Instruments: [count]  ·  Email Template: [count or NOT SET UP]  ·  Invitations: [state]  ·  Responses: [state]
 ```
 
-Lifecycle badge first, then the five Setup entities in canonical order (Reviewers, Reviewees, Assignments, Instruments, Email Template), then the two operations indicators (Invitations, Responses) at the right. Counts use the standard count-badge styling; missing/empty states use the amber empty-indicator badge.
+Lifecycle badge first, then the five Setup entities in canonical order (Reviewers, Reviewees, Relationships, Instruments, Email Template), then the two operations indicators (Invitations, Responses) at the right. Counts use the standard count-badge styling; missing/empty states use the amber empty-indicator badge.
 
 The strip is a setup + ops at-a-glance summary, not a running-session dashboard. Detailed operations state (per-reviewer invitation status, per-instrument response counts) lives on the Operations pages themselves.
 
@@ -188,7 +188,7 @@ The lock card pattern is consistent across all of these. Its prominence and expl
 
 #### Danger-zone card uses
 
-Groups the destructive actions for a given Setup entity (Delete all reviewers / reviewees / assignments / instruments) and the session-level destructive actions (Delete data, Delete session). H2 is "Danger Zone" in `accent-amber-dark`. Lives at the bottom-right of the page (or in the bottom row of a `.bottom-grid`) so it stays visually grouped with the entity it operates on but isn't the first thing the eye lands on.
+Groups the destructive actions for a given Setup entity (Delete all reviewers / reviewees / relationships / instruments) and the session-level destructive actions (Delete data, Delete session). H2 is "Danger Zone" in `accent-amber-dark`. Lives at the bottom-right of the page (or in the bottom row of a `.bottom-grid`) so it stays visually grouped with the entity it operates on but isn't the first thing the eye lands on.
 
 ---
 
