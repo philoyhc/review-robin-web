@@ -613,14 +613,16 @@ bottom of this file.
   PR 3.
   **Plan:** `guide/segment_18A_sessions_lobby_enhancements.md`.
 
-- **18B — Date and time settings** *(stub created
-  2026-05-15)*. Cross-cutting display change: a deployment
-  timezone setting + a shared date/time formatting helper, so
-  timestamps stop rendering as raw UTC ISO strings with no zone
-  cue and in three-plus inconsistent formats. The stub carries a
-  full audit of every date/time display site. Unrelated to the
-  18A / 18C / 18D session-lifecycle family — reuses the 18B
-  number freed when tagging+archiving folded into 18A.
+- **18B — Date and time settings** *(planned 2026-05-15)*.
+  Cross-cutting display change in 3 PRs: a shared date/time
+  formatting helper standardizing every site on one canonical
+  format (PR 1), then per-session display-timezone infra with a
+  deployment default — a card on `/operator/settings` for the
+  default, a per-session override card on Session Edit, a full
+  IANA picker, reviewer-facing dates always carrying a zone
+  token (PRs 2-3). The plan carries a full audit of every
+  date/time display site. Reuses the 18B number freed when
+  tagging+archiving folded into 18A.
   **Plan:** `guide/segment_18B_date_and_time_settings.md`.
 
 - **18C — Retention / deletion workflow** *(stub created
