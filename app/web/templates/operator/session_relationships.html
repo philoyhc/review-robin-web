@@ -77,7 +77,7 @@
           <div class="filter-row">
             <label class="filter-status">
               Search by:
-              <select name="search_by">
+              <select name="search_by" id="relationships-search-by">
                 {% for value, label in filter_search_by_options %}
                   <option value="{{ value }}"{% if filter_search_by == value %} selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -85,14 +85,24 @@
             </label>
             <label class="filter-search">
               Search:
+              {# Two datalists — one per dimension. The Search-by
+                 `<select>` swaps the input's `list=` (inline JS
+                 below) so the autocomplete tracks the dropdown
+                 without a reload. #}
               <input type="text"
                      name="q"
-                     list="relationships-search-options"
+                     id="relationships-search-input"
+                     list="relationships-search-{{ filter_search_by }}"
                      value="{{ filter_search }}"
                      autocomplete="off"
                      placeholder="Name or email">
-              <datalist id="relationships-search-options">
-                {% for label in filter_search_options %}
+              <datalist id="relationships-search-reviewer">
+                {% for label in filter_search_options_reviewer %}
+                  <option value="{{ label }}"></option>
+                {% endfor %}
+              </datalist>
+              <datalist id="relationships-search-reviewee">
+                {% for label in filter_search_options_reviewee %}
                   <option value="{{ label }}"></option>
                 {% endfor %}
               </datalist>
@@ -127,6 +137,20 @@
       </div>
     </div>
   </div>
+
+  {# Keep the search autocomplete in sync with the Search-by
+     dropdown — swap the input's ``list`` to the matching
+     datalist the moment the operator changes the dimension. #}
+  <script>
+    (function () {
+      var sel = document.getElementById("relationships-search-by");
+      var input = document.getElementById("relationships-search-input");
+      if (!sel || !input) return;
+      sel.addEventListener("change", function () {
+        input.setAttribute("list", "relationships-search-" + sel.value);
+      });
+    })();
+  </script>
 
   {% if relationships %}
     {% set has_tag_1 = relationships | selectattr("tag_1") | list | length > 0 %}
