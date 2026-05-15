@@ -26,6 +26,15 @@ import re
 from ._invitations import InvitationsRow
 from ._responses import ResponsesRow
 
+from app.db.models import Reviewer
+
+# Cap for the per-page `<datalist>` autocomplete options. Decision 14
+# in ``guide/segment_15F_enhanced_setup_pages.md`` — the
+# autocomplete suggestions are a convenience, not the search itself;
+# the server-side filter still handles anything the operator types
+# beyond the first 200 alphabetical matches.
+REVIEWERS_DATALIST_CAP: int = 200
+
 
 # Status filter options for Manage Invitations. Order matters: it's the
 # dropdown order operators see. ``"all"`` (no filter) is implicit.
@@ -171,3 +180,59 @@ def responses_search_options(rows: list[ResponsesRow]) -> list[str]:
         for r in rows
     ]
     return sorted(labels, key=str.casefold)
+
+
+# Status filter options for the Reviewers Setup page. Order matters
+# (dropdown order operators see). ``"all"`` is implicit (no filter).
+# Segment 15F PR 2.
+REVIEWERS_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("active", "Active"),
+    ("inactive", "Inactive"),
+)
+
+
+def filter_reviewers_rows(
+    rows: list[Reviewer], *, status: str, search: str
+) -> list[Reviewer]:
+    """Apply status + search filters to a Reviewer list.
+
+    ``status`` is one of ``REVIEWERS_STATUS_OPTIONS`` keys
+    (``"active"`` / ``"inactive"``) or ``"all"`` (anything else
+    falls through to ``"all"``). ``search`` is matched
+    case-insensitively against the reviewer's name or email; when
+    the value looks like a ``"Name (email)"`` typeahead pick, the
+    bracketed email is used for an exact match instead. Empty
+    ``search`` is a no-op."""
+    out = list(rows)
+    valid_status = {key for key, _ in REVIEWERS_STATUS_OPTIONS}
+    if status in valid_status:
+        out = [r for r in out if r.status == status]
+    needle = search.strip()
+    if needle:
+        tail = _extract_filter_label_tail(needle)
+        if tail is not None and "@" in tail:
+            picked = tail.casefold()
+            out = [r for r in out if r.email.casefold() == picked]
+        else:
+            out = [
+                r
+                for r in out
+                if _matches_search(r.name, needle)
+                or _matches_search(r.email, needle)
+            ]
+    return out
+
+
+def reviewers_search_options(rows: list[Reviewer]) -> list[str]:
+    """``"Name (email)"`` labels for the Reviewers page typeahead.
+
+    Sorted alphabetically (case-insensitive); capped at
+    ``REVIEWERS_DATALIST_CAP`` per decision 14 in
+    ``guide/segment_15F_enhanced_setup_pages.md`` — the autocomplete
+    suggestions are a convenience, the server-side filter handles
+    anything the operator types beyond the first N matches."""
+    labels = sorted(
+        (f"{r.name} ({r.email})" for r in rows),
+        key=str.casefold,
+    )
+    return labels[:REVIEWERS_DATALIST_CAP]

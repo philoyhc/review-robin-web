@@ -44,18 +44,77 @@
     </div>
   {% endif %}
 
-  {% set field_labels_form_action =
-        "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
-  {% set field_labels_source_type = "reviewer" %}
-  {% set field_labels_card_title = "Reviewer tag labels" %}
-  {% set field_labels_help =
-        "Rename the three reviewer tag columns for this session. " ~
-        "Friendly labels flow through every operator preview surface; " ~
-        "leave a cell blank to fall back to the default." %}
-  {% set field_labels_rows = [
-        [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
-  ] %}
-  {% include "operator/partials/_field_labels_editor.html" %}
+  {# Segment 15F PR 2 — friendly-labels editor narrows from full-
+     width to half-width left; new operator-actions card sits
+     half-width right. Action-button row in the right card renders
+     as inert placeholders this PR; PR 3 lights them up. #}
+  <div class="bottom-grid">
+    {% set field_labels_form_action =
+          "/operator/sessions/" ~ session.id ~ "/reviewers/field-labels" %}
+    {% set field_labels_source_type = "reviewer" %}
+    {% set field_labels_card_title = "Reviewer tag labels" %}
+    {% set field_labels_help =
+          "Rename the three reviewer tag columns for this session. " ~
+          "Friendly labels flow through every operator preview surface; " ~
+          "leave a cell blank to fall back to the default." %}
+    {% set field_labels_rows = [
+          [("tag_1", "tag_1"), ("tag_2", "tag_2"), ("tag_3", "tag_3")],
+    ] %}
+    {% include "operator/partials/_field_labels_editor.html" %}
+
+    <div class="card operator-actions-card">
+      <h2>Operator actions</h2>
+      <form method="get"
+            action="/operator/sessions/{{ session.id }}/reviewers"
+            class="operator-actions-filter">
+        <div class="filter-row">
+          <label class="filter-status">
+            Status:
+            <select name="status">
+              <option value="all"{% if filter_status not in filter_status_options|map(attribute=0)|list %} selected{% endif %}>All</option>
+              {% for value, label in filter_status_options %}
+                <option value="{{ value }}"{% if filter_status == value %} selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="filter-search">
+            Search:
+            <input type="text"
+                   name="q"
+                   list="reviewers-search-options"
+                   value="{{ filter_search }}"
+                   autocomplete="off"
+                   placeholder="Reviewer name or email">
+            <datalist id="reviewers-search-options">
+              {% for label in filter_search_options %}
+                <option value="{{ label }}"></option>
+              {% endfor %}
+            </datalist>
+          </label>
+        </div>
+        <div class="filter-actions">
+          {% if displayed_row_count != total_row_count %}
+            <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
+          {% endif %}
+          {% if filter_status != "all" or filter_search %}
+            <a class="btn secondary"
+               href="/operator/sessions/{{ session.id }}/reviewers">Clear</a>
+          {% endif %}
+          <button class="btn secondary" type="submit">Apply</button>
+        </div>
+      </form>
+      {# PR 3 lights up these four buttons with selection-driven
+         enable/disable (Decision 3 in spec). Inert placeholders here
+         lock the layout in PR 2. #}
+      <div class="operator-actions-buttons"
+           style="margin-top: var(--space-3);">
+        <button class="btn secondary" type="button" disabled aria-disabled="true">Edit</button>
+        <button class="btn secondary" type="button" disabled aria-disabled="true">Inactivate selected</button>
+        <button class="btn secondary" type="button" disabled aria-disabled="true">Reactivate selected</button>
+        <button class="btn secondary" type="button" disabled aria-disabled="true">Add new row</button>
+      </div>
+    </div>
+  </div>
 
   {% if reviewers %}
     {% set has_tag_1 = reviewers | selectattr("tag_1") | list | length > 0 %}
@@ -126,6 +185,14 @@
         </tbody>
       </table>
     </div>
+  {% elif total_row_count > 0 %}
+    {# Filter matched nothing — preserve the total-row context so
+       the operator knows the data isn't gone, just filtered out. #}
+    <div class="card">
+      <p class="muted">No reviewers match the current filter.</p>
+    </div>
+  {% endif %}
+  {% if reviewers %}
     <style>
       #reviewers-table.tag-hidden-1 .tag-col-1,
       #reviewers-table.tag-hidden-2 .tag-col-2,
@@ -214,7 +281,7 @@
       </form>
     </section>
 
-    {% if reviewers %}
+    {% if total_row_count and total_row_count > 0 %}
       <div class="card danger-zone">
         <h2>Danger Zone</h2>
         <form method="post" action="/operator/sessions/{{ session.id }}/reviewers/delete-all">
@@ -222,7 +289,7 @@
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required>
               Yes, delete the existing
-              <span class="pill pill-empty">{{ reviewers | length }} reviewer{% if reviewers | length != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+              <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
               and
               <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}.
             </label>
