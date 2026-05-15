@@ -215,8 +215,8 @@ def test_operator_actions_card_renders_inert_buttons(
     # All four action affordances present.
     for label in (
         ">Edit</button>",
-        ">Inactivate selected</button>",
-        ">Reactivate selected</button>",
+        ">Inactivate</button>",
+        ">Activate</button>",
         ">Add new row</a>",
     ):
         assert label in body

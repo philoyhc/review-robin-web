@@ -687,6 +687,13 @@
         width: 100%;
         box-sizing: border-box;
       }
+      /* Apply button matches the input metrics so, bottom-aligned
+         against the Search box, it reads as one row. */
+      .operator-actions-card .filter-row > button {
+        font-size: var(--fs-body);
+        padding-top: var(--space-2);
+        padding-bottom: var(--space-2);
+      }
       /* While a row is being edited / added the operator-actions
          card greys out — the focused Add / Edit card below it owns
          the operator's attention (Segment 15F PR 3 follow-up). */
