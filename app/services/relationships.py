@@ -409,7 +409,308 @@ def delete_all_relationships(
     return deleted
 
 
+# --------------------------------------------------------------------------- #
+# Per-row CRUD — Segment 15F PR 5 stage 2.
+#
+# The mutator surface the 15F Relationships Setup page lights up.
+# ``save_relationships`` stays the bulk CSV wipe-and-replace path;
+# these cover single-row authoring + selection-driven status flips.
+# --------------------------------------------------------------------------- #
+
+
+class RelationshipOperationError(ValueError):
+    """Raised when a relationship mutation violates an invariant.
+
+    ``code`` is a stable machine identifier the route translates to
+    an HTTP status; ``message`` is the human-readable explanation.
+
+    Codes:
+    - ``not_in_session`` — a reviewer / reviewee id (or a bulk row
+      id) doesn't belong to the target session.
+    - ``duplicate_pair`` — the ``(reviewer, reviewee)`` pair already
+      has a relationship row (the UNIQUE constraint).
+    - ``invalid_status`` — status not in ``{"active", "inactive"}``.
+    """
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+_UNSET: object = object()
+
+
+def _normalised_rel_status(status: str) -> str:
+    value = (status or "active").strip().lower()
+    if value not in _VALID_STATUS:
+        raise RelationshipOperationError(
+            "invalid_status",
+            f"Status must be one of {sorted(_VALID_STATUS)}; got {status!r}.",
+        )
+    return value
+
+
+def _normalised_rel_tag(value: str | None) -> str | None:
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def _require_session_member(
+    db: Session,
+    *,
+    session_id: int,
+    model: type,
+    member_id: int,
+    label: str,
+) -> object:
+    obj = db.execute(
+        select(model).where(
+            model.id == member_id, model.session_id == session_id
+        )
+    ).scalar_one_or_none()
+    if obj is None:
+        raise RelationshipOperationError(
+            "not_in_session",
+            f"{label} id {member_id} does not belong to this session.",
+        )
+    return obj
+
+
+def _pair_taken(
+    db: Session,
+    *,
+    session_id: int,
+    reviewer_id: int,
+    reviewee_id: int,
+    exclude_id: int | None = None,
+) -> bool:
+    stmt = select(Relationship.id).where(
+        Relationship.session_id == session_id,
+        Relationship.reviewer_id == reviewer_id,
+        Relationship.reviewee_id == reviewee_id,
+    )
+    if exclude_id is not None:
+        stmt = stmt.where(Relationship.id != exclude_id)
+    return db.execute(stmt).first() is not None
+
+
+def update_relationship(
+    db: Session,
+    *,
+    relationship: Relationship,
+    reviewer_id: int | object = _UNSET,
+    reviewee_id: int | object = _UNSET,
+    tag_1: str | None | object = _UNSET,
+    tag_2: str | None | object = _UNSET,
+    tag_3: str | None | object = _UNSET,
+    status: str | object = _UNSET,
+    user: User,
+    correlation_id: str | None = None,
+) -> dict[str, list[object]]:
+    """Field-level update — reviewer / reviewee included (full-row
+    edit). Re-points are validated against the session roster and
+    the ``(reviewer, reviewee)`` UNIQUE constraint. Emits
+    ``relationship.updated`` only when at least one field changed;
+    returns the changes dict."""
+    session_id = relationship.session_id
+    proposed: dict[str, object] = {}
+    if reviewer_id is not _UNSET:
+        _require_session_member(
+            db,
+            session_id=session_id,
+            model=Reviewer,
+            member_id=reviewer_id,  # type: ignore[arg-type]
+            label="Reviewer",
+        )
+        proposed["reviewer_id"] = reviewer_id
+    if reviewee_id is not _UNSET:
+        _require_session_member(
+            db,
+            session_id=session_id,
+            model=Reviewee,
+            member_id=reviewee_id,  # type: ignore[arg-type]
+            label="Reviewee",
+        )
+        proposed["reviewee_id"] = reviewee_id
+    if status is not _UNSET:
+        proposed["status"] = _normalised_rel_status(status)  # type: ignore[arg-type]
+    if tag_1 is not _UNSET:
+        proposed["tag_1"] = _normalised_rel_tag(tag_1)  # type: ignore[arg-type]
+    if tag_2 is not _UNSET:
+        proposed["tag_2"] = _normalised_rel_tag(tag_2)  # type: ignore[arg-type]
+    if tag_3 is not _UNSET:
+        proposed["tag_3"] = _normalised_rel_tag(tag_3)  # type: ignore[arg-type]
+
+    final_reviewer = proposed.get("reviewer_id", relationship.reviewer_id)
+    final_reviewee = proposed.get("reviewee_id", relationship.reviewee_id)
+    if (
+        final_reviewer != relationship.reviewer_id
+        or final_reviewee != relationship.reviewee_id
+    ) and _pair_taken(
+        db,
+        session_id=session_id,
+        reviewer_id=final_reviewer,  # type: ignore[arg-type]
+        reviewee_id=final_reviewee,  # type: ignore[arg-type]
+        exclude_id=relationship.id,
+    ):
+        raise RelationshipOperationError(
+            "duplicate_pair",
+            "A relationship for this reviewer / reviewee pair "
+            "already exists.",
+        )
+
+    changes: dict[str, list[object]] = {}
+    for field, new_value in proposed.items():
+        old_value = getattr(relationship, field)
+        if old_value != new_value:
+            changes[field] = [old_value, new_value]
+
+    if not changes:
+        return {}
+
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=relationship.session,
+        user=user,
+        reason="relationship_updated",
+        correlation_id=correlation_id,
+    )
+
+    for field, (_, new_value) in changes.items():
+        setattr(relationship, field, new_value)
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type="relationship.updated",
+        summary=f"Updated relationship #{relationship.id}",
+        actor_user_id=user.id,
+        session=relationship.session,
+        payload=audit.changes(changes),
+        refs={"relationship_id": relationship.id},
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return changes
+
+
+def _bulk_set_status(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    relationship_ids: list[int],
+    target_status: str,
+    event_type: str,
+    user: User,
+    correlation_id: str | None,
+) -> list[int]:
+    """Shared implementation for bulk_inactivate / bulk_reactivate."""
+    clean_target = _normalised_rel_status(target_status)
+    if not relationship_ids:
+        return []
+
+    candidates = list(
+        db.execute(
+            select(Relationship)
+            .where(
+                Relationship.session_id == review_session.id,
+                Relationship.id.in_(relationship_ids),
+            )
+            .order_by(Relationship.id)
+        ).scalars()
+    )
+    missing = set(relationship_ids) - {r.id for r in candidates}
+    if missing:
+        raise RelationshipOperationError(
+            "not_in_session",
+            f"Relationship ids {sorted(missing)} do not belong to "
+            f"session {review_session.id}.",
+        )
+
+    flipped = [r for r in candidates if r.status != clean_target]
+    if not flipped:
+        return []
+
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=review_session,
+        user=user,
+        reason="relationship_bulk_status_change",
+        correlation_id=correlation_id,
+    )
+
+    flipped_ids = [r.id for r in flipped]
+    for r in flipped:
+        r.status = clean_target
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type=event_type,
+        summary=(
+            f"Flipped {len(flipped_ids)} relationship"
+            f"{'' if len(flipped_ids) == 1 else 's'} → {clean_target}"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.snapshot({"relationship_ids": flipped_ids}),
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    return flipped_ids
+
+
+def bulk_inactivate(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    relationship_ids: list[int],
+    user: User,
+    correlation_id: str | None = None,
+) -> list[int]:
+    """Flip ``status="inactive"`` on every relationship in
+    ``relationship_ids`` not already inactive. Returns the flipped
+    ids."""
+    return _bulk_set_status(
+        db,
+        review_session=review_session,
+        relationship_ids=relationship_ids,
+        target_status="inactive",
+        event_type="relationship.bulk_inactivated",
+        user=user,
+        correlation_id=correlation_id,
+    )
+
+
+def bulk_reactivate(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    relationship_ids: list[int],
+    user: User,
+    correlation_id: str | None = None,
+) -> list[int]:
+    """Flip ``status="active"`` on every relationship in
+    ``relationship_ids`` not already active. Returns the flipped
+    ids."""
+    return _bulk_set_status(
+        db,
+        review_session=review_session,
+        relationship_ids=relationship_ids,
+        target_status="active",
+        event_type="relationship.bulk_reactivated",
+        user=user,
+        correlation_id=correlation_id,
+    )
+
+
 __all__ = [
+    "RelationshipOperationError",
+    "bulk_inactivate",
+    "bulk_reactivate",
     "delete_all_relationships",
     "existing_count",
     "fields_with_data",
@@ -417,4 +718,8 @@ __all__ = [
     "pair_context_lookup",
     "parse_relationship_csv",
     "save_relationships",
+    "update_relationship",
 ]
+# ``create_relationship`` lands in Segment 15F PR 5 stage 3 (Add a
+# new row); the shared ``_require_session_member`` / ``_pair_taken``
+# / ``_normalised_rel_*`` helpers above are already in place for it.

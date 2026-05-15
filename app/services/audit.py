@@ -527,6 +527,12 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "reviewee.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
     "reviewee.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "reviewee.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    # Segment 15F PR 5 stage 2 — per-row relationship edit + bulk
+    # status flips. ``app/services/relationships.py`` emits.
+    # ``relationship.created`` lands with stage 3 (Add a new row).
+    "relationship.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "relationship.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    "relationship.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "operator_email_settings.updated": EventSchema(frozenset({"changes"})),
     "operator_email_settings.cleared": EventSchema(frozenset()),
     # Segment 15A Slice 1 — per-session friendly-label resolver mutations.
