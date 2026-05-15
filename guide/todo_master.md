@@ -492,6 +492,40 @@ edited rows can be surfaced without busting the 200-row cap
 
 ---
 
+### Segment 18B — Date and time settings — done 2026-05-15
+
+Cross-cutting display change: one shared date/time formatting
+helper (`app/services/date_formatting.py`) standardising every
+display site on one canonical format, plus per-operator and
+per-session display-timezone infrastructure. A searchable
+IANA-zone card on `/operator/settings` sets the per-operator
+default (the `display_timezone` key of `users.preferences`); a
+per-session override card on Session Edit drives the
+session → operator-default → UTC resolution order. Every
+operator + reviewer surface, the `$deadline` / `$submitted_at`
+email merge fields, and the audit-log viewer localise to the
+resolved zone.
+
+Shipped across PRs **#1021 → #1033**. #1021 locked the canonical
+format spec; #1023 PR 1 (shared helper + filter migration of 16
+templates); #1027 carried 13F PR 6 + PR 7 (the
+`sessions.display_timezone` + `users.preferences` schema slots);
+#1028 PR 2 (per-operator default + Settings card); #1029 PR 3
+(per-session override + Session Edit card). Follow-ups: #1030
+dropped the trailing zone token (IANA's mixed offset/letter
+tokens read unevenly) and added the live worked-sample preview
+on both cards; #1032 swept `guide/` + `spec/` for the
+follow-up; #1033 put the zone token behind one internal switch
+(`date_formatting.SHOW_ZONE_TOKEN`, off by default — flip +
+restart, no env var or migration).
+
+The Post-MVP input-consistency item (reconciling the
+`datetime-local` deadline input with the session zone) remains
+deferred. Spec: `spec/settings_inventory.md` §1 / §2 / §8.5.
+Plan archived: `guide/archive/segment_18B_date_and_time_settings.md`.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -506,7 +540,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13C, 13F (PRs 3-5), 14A, 14B, 14C, 17A,
-17B, 18A, 18B, 18C, 18D, 19, 20**. No global ordering
+17B, 18A, 18C, 18D, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -623,21 +657,6 @@ bottom of this file.
   PR 3.
   **Plan:** `guide/segment_18A_sessions_lobby_enhancements.md`.
 
-- **18B — Date and time settings** *(complete — all 3 PRs
-  shipped 2026-05-15)*. Cross-cutting display change in 3 PRs:
-  a shared date/time formatting helper standardizing every site
-  on one canonical format (**PR 1**), then per-operator /
-  per-session display-timezone infra — a searchable IANA-zone
-  card on `/operator/settings` for the per-operator default
-  (**PR 2**), a per-session override card on Session Edit with
-  the session → operator-default → UTC resolution order
-  (**PR 3**). The plan carries a full audit of every date/time
-  display site. Reuses the 18B number freed when
-  tagging+archiving folded into 18A. The Post-MVP
-  input-consistency item (reconciling the `datetime-local`
-  deadline input with the session zone) remains deferred.
-  **Plan:** `guide/segment_18B_date_and_time_settings.md`.
-
 - **18C — Retention / deletion workflow** *(stub created
   2026-05-11)*. Per-session selective purge (responses /
   audit log / rosters) + per-deployment retention policy
@@ -689,7 +708,7 @@ bottom of this file.
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 3-5), 14A, 17A, 17B, 18A,
-  18B, 18C, 18D, 19, 20** are independent of the email + audit
+  18C, 18D, 19, 20** are independent of the email + audit
   pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
   13C's re-scoped 3-PR ladder (2026-05-15) needs no rule-engine

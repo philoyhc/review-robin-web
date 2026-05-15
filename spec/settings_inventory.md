@@ -426,6 +426,21 @@ deployed environments. Source: `app/config.py`.
 
 ---
 
+## 8.5. Internal display switches (source constants)
+
+Listed for context — these are neither operator- nor
+deployer-determined. They are module-level constants in `app/`,
+flipped by editing the source and restarting; no env var, no
+database migration, no UI. Reserved for display-shape decisions
+that a deployment might want to reverse without a feature-flag
+framework.
+
+| Constant | Default | Purpose |
+|---|---|---|
+| `date_formatting.SHOW_ZONE_TOKEN` | `False` | When `True`, the `format_datetime` helper appends the resolved zone's `%Z` token (`UTC` / `+08` / `EDT`) to every date-time render, and both timezone-card live previews follow via the operator Jinja env's `show_zone_token` global. Off by default — IANA reports a numeric offset for many zones and a letter code for others, so the mixed token reads unevenly; the zone is instead named on the `/operator/settings` and Session Edit cards. Segment 18B follow-up. |
+
+---
+
 ## 9. Pre-positioned (inert) schema for upcoming surfaces
 
 Tables / columns that landed in Segment 13D as schema-only
