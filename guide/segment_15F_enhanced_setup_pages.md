@@ -409,7 +409,7 @@ send-path's status filter. Ride-along, not its own PR.
 Conservative slicing — each PR self-contained and reviewer-
 sized.
 
-### PR 1 — Reviewers service-layer CRUD + audit events
+### PR 1 — Reviewers service-layer CRUD + audit events — SHIPPED (#993)
 
 **Scope.** New `app/services/reviewers.py` with `create_reviewer`,
 `update_reviewer`, `bulk_inactivate`, `bulk_reactivate`. Each
@@ -417,49 +417,75 @@ mutator calls `lifecycle.invalidate_if_validated` and emits the
 canonical audit event. New event types
 (`reviewer.created` / `.updated` / `.bulk_inactivated` /
 `.bulk_reactivated`) registered in `EVENT_SCHEMAS` per
-Decisions 12–13. No UI
-surface yet — the CSV importer continues to be the only writer.
+Decisions 12–13. Service-only slice — no UI; the CSV importer
+stayed the only other writer. 20 tests in
+`test_reviewers_crud.py`.
 
-**Tests.** Service-layer happy-path + lifecycle gate + audit
-envelope strict-mode checks.
-
-### PR 2 — Reviewers page right-side operator-actions card scaffolding
+### PR 2 — Reviewers page right-side operator-actions card scaffolding — SHIPPED (#994, #995)
 
 **Scope.** Split the full-width 15A friendly-labels editor
 into a half-width left card + new half-width right
-operator-actions card. Wire the right card's top section
-(search + filter) end-to-end: view-adapter consumes
-`request.query_params`, route slices the result with the
-200 / 500 cap, template renders the muted "Showing N of M"
-line. The card's action-button row renders as inert
-placeholders this PR. No per-row edit yet. Establishes the
-find-a-row machinery the later UI PRs sit on.
-
-**Tests.** Layout regression, filter parsing, cap application,
-"Showing N of M" rendering.
+operator-actions card. Wired the search + filter section
+end-to-end: view-adapter consumes `request.query_params`, route
+slices with the 200 / 500 cap, template renders the muted
+"Showing N of M" line. Action buttons rendered as inert
+placeholders. New helpers `filter_reviewers_rows` /
+`reviewers_search_options` (datalist capped at 200) in
+`_filters.py`. 12 tests in `test_reviewers_page_filter.py`.
+Follow-on #995 squeezed the status dropdown to 1/5 of the
+filter row.
 
 ### PR 3 — Reviewers page selection-driven Edit + bulk inactivate + Add new row
 
 **Scope.** Template grows the leftmost checkbox column.
 Right-side operator-actions card's four action buttons light
-up with selection-dependent enable/disable: **Edit** (single
-row), **Inactivate selected** / **Reactivate selected** (≥1
-row), **Add new row** (always). Edit + Add new row drive the
-shared inline-edit machinery in-table (Edit button on the
-card transforms into Save + Cancel while a row is being
-edited). Inactivate / Reactivate fire on the checkbox
+up: **Edit** (enabled on a single selection), **Inactivate
+selected** / **Reactivate selected** (≥1 selection), **Add new
+row** (always). Inactivate / Reactivate fire on the checkbox
 selection without opening edit mode. Route handlers wire the
-new service-layer calls from PR 1. Targeted inline JS for the
-selection→button-state binding, the row-state toggle, the
-"one row in edit mode at a time" guard (disables other
-checkboxes during edit), the selected-count pill, and the
-Add-new-row DOM insertion. No per-row Actions column on the
-table.
+new service-layer calls from PR 1.
 
-**Tests.** Selection→button-state binding, single-row Edit
-happy-path, bulk inactivate / reactivate, Add new row POST,
-Cancel-removes-row-from-DOM, "one row at a time" guard
-(other checkboxes disabled during edit), selected-count pill
+**Edit-state model — server-rendered (revised from the
+client-side sketch in Decisions 7–9).** The original sketch had
+the Edit / Add buttons toggle row state via client-side DOM
+surgery. PR-3 implementation lands a **server-rendered edit
+state** instead — far more robust, no fragile input-building
+JS, and the operator-facing behaviour is the same modulo one
+imperceptible page render:
+
+- Edit / Add navigate to `/reviewers?edit_id={id}` /
+  `/reviewers?add=1`. The route re-renders with that row's
+  cells as `<input>` / `<select>` (Status becomes a select).
+  The edited row is force-included even when it falls outside
+  the 200-row cap.
+- The operator-actions card, in edit mode, swaps its filter
+  strip + four-button row for a focused **Save + Cancel** pair
+  (plus an inline error banner on validation failure). Save
+  POSTs `/reviewers/create` or `/reviewers/{id}/update`;
+  Cancel is a link back to the clean list URL.
+- The "one row in edit mode at a time" guard is automatic —
+  only one `edit_id`. Other rows render without checkboxes
+  while in edit mode.
+- Validation errors (`ReviewerOperationError`) re-render the
+  edit row with the operator's submitted values + the error
+  message, HTTP 400.
+
+Targeted inline JS is now minimal: the selection→button-state
+binding (checkbox count drives Edit / Inactivate / Reactivate
+disabled state + the selected-count pill) and the Edit-button
+navigation (read the single checked row, go to `?edit_id=`).
+Bulk actions submit natively via a `form=`-linked
+`<form>` + per-button `formaction`; Add new row is a plain
+`<a>` link. No client-side DOM surgery.
+
+The PR also folds in **PR 6** — the defensive `status` re-check
+on `invitations_send_one` (`_operations.py`).
+
+**Tests.** Selection→button-state scaffold, single-row Edit
+GET + POST happy-path, Add new row GET + POST, bulk inactivate
+/ reactivate, validation-error re-render, edit-mode chrome
+(Save + Cancel replace the filter strip), edit row force-
+included past the cap, defensive `invitations_send_one` 409.
 behaviour.
 
 ### PR 4 — Reviewees (clone PRs 1–3)

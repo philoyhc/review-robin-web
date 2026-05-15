@@ -549,6 +549,15 @@ def invitations_send_one(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
     ).scalar_one()
+    # Segment 15F — defensive status re-check. The Invitations table
+    # filters inactive reviewers out so the per-row Send button never
+    # renders for them, but a direct POST / stale tab could still
+    # reach this route. Match the bulk send-path's active-only gate.
+    if reviewer.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Reviewer is inactive; reactivate before sending.",
+        )
     invitations.send_invitation(
         db,
         invitation=invitation,
