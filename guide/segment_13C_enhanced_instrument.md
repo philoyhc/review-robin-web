@@ -1,15 +1,21 @@
 # Segment 13C — Enhanced instruments
 
-> **Sequencing note (2026-05-12).** 13C now lands **after 15B
-> (Per-instrument assignments)**. The post-15D plan-revision note
-> in `guide/todo_master.md` flagged that the original 13C design
-> stashed per-instrument flavour metadata on the now-retired
-> `Assignment.context` JSON column; the relocated home for that
-> metadata depends on choices 15B makes about per-instrument
-> selection / fanout. Wait for 15B to settle that surface before
-> opening 13C PRs. The earlier sequencing (13C as #2 in the
-> Numbered queue) is superseded by this note — re-read this
-> preamble before kicking off any 13C work.
+> **Re-scoped 2026-05-15 — investigation update.** The original
+> 13C design stamped per-instrument group metadata onto the
+> `Assignment.context` JSON column. That column was retired in
+> 15D PR 6b (`pair_context_*` keys lifted to the `relationships`
+> table; `assignment_context_*` retired entirely). An
+> investigation confirmed this is **not** a blocker: a group is
+> fully derivable from `Instrument.group_kind` + the reviewee's
+> own `tag_N` value — `Assignment.context` only ever held a
+> *stamped copy* of derivable data. **Decision (2026-05-15):
+> derive the group live; no `Assignment` schema change, and 13C
+> needs no migration at all** (`Instrument.group_kind` already
+> shipped inert in 13D PR 6). 15B (Per-instrument assignments)
+> has shipped, so 13C is unblocked. The PR ladder, schema
+> section, and mechanism description below were rewritten to
+> match; the pre-2026-05-15 design (context-stamping, rule-engine
+> fanout PR, 5 PRs) is superseded.
 
 Implementation plan for two additions to the per-instrument
 operator card on `/operator/sessions/{id}/instruments`:
@@ -32,57 +38,80 @@ one segment.
 
 ## Status
 
-Planning. Sized as **5 PRs** in dependency order:
+Planning — re-scoped 2026-05-15. `Instrument.group_kind`
+(`String(32) | NULL`) already shipped inert in 13D PR 6, and the
+derive-the-group decision (see "How a group is derived" below)
+removes the rule-engine fanout PR + the `Assignment.context`
+stamping the original plan called for. Net: **3 PRs, zero
+migrations.**
 
-1. **PR 1 — Schema + render path for group_kind.**
-   `Instrument.group_kind` (`String(32) | NULL`) column +
-   migration. Reviewer-surface render adapter reads it but
-   nothing else changes yet (no creation flow, no per-card
-   chip). Tests pin that today's per-reviewee instruments stay
-   `group_kind=NULL` and render identically.
-2. **PR 2 — Operator editor: "Add a group-scoped instrument".**
-   New action-row button alongside the existing "Add new
-   instrument". Inline dialog asks which reviewee tag (Tag 1 /
-   Tag 2 / Tag 3) identifies the group; sets
-   `group_kind="tag_1"` / etc. on creation. Group-scoped editor
-   restricts display fields to the three reviewee tags; locks
-   the chosen tag into position 0. Per-card chip reads
-   "Group-scoped (by Tag 1)".
-3. **PR 3 — Rule-engine fanout for group-scoped instruments.**
-   FullMatrix (and any other rule that processes group-scoped
-   instruments) clusters reviewees by their `tag_N` value and
-   emits one `Assignment` per `(reviewer, group_member)` with
-   `context = {"group_id": "team-alpha", "group_kind": "tag_1",
-   "group_size": 5}` stamped on every row. Manual mode is
-   disallowed for group-scoped instruments (rule mode only).
-4. **PR 4 — Reviewer surface: group block + write fanout.**
-   Group-scoped instrument renders as a self-contained block
-   per group on the reviewer surface (group identity row
-   showing the source-tag value + member names). Single set of
-   response inputs; submit fans the same value across all N
-   `Assignment`'s response rows that share `context.group_id`.
-   New aggregation helper
-   `responses.collapse_group_duplicates(rows)` and migration of
-   every aggregator that reads response data (Manage
-   Invitations, Responses page, Extract Data exports) through
-   it.
-5. **PR 5 — Duplicate instrument button.** New "Duplicate
-   instrument" action-row button. Server-side endpoint copies
-   the instrument's description / display fields / response
-   fields / response-fields-help / `group_kind` /
-   `sort_display_fields` (if 13B has shipped) into a new
-   instrument inserted immediately after the source. The new
-   instrument's name is auto-generated (`{source.name} (copy)`
-   or similar; operator renames if needed). `accepting_responses`
-   defaults to `False` on the copy regardless of the source's
-   state. New audit event `instrument.duplicated` carries the
-   source + new instrument IDs.
+### PR 1 — Operator editor: "Add a group-scoped instrument"
 
-PRs 1-4 ship the group-scoped feature end-to-end; PR 5 is
-independent and can land in any order relative to PRs 1-4 (it
-doesn't depend on `group_kind`, but it does need to copy the
-column once 13C PR 1 lands). For dependency safety, PR 5 lands
-after PR 1.
+New action-row button alongside the existing "Add new
+instrument". An inline dialog asks which reviewee tag (Tag 1 /
+Tag 2 / Tag 3) identifies the group; creation sets
+`group_kind="tag_1"` / `"tag_2"` / `"tag_3"` on the new
+instrument. The group-scoped editor restricts display fields to
+the three reviewee tags, locks the chosen tag into position 0,
+and shows a per-card chip "Group-scoped (by Tag 1)". Mode is set
+at creation and is not toggleable (operators delete + recreate).
+Audit event `instrument.created_group_scoped`.
+
+No schema change — `group_kind` already exists. After PR 1,
+group-scoped instruments can be authored and generate
+`Assignment` rows normally (FullMatrix produces standard
+`(reviewer, reviewee)` rows); the reviewer surface still renders
+them per-reviewee until PR 2. The operator's `accepting_responses`
+toggle (default `False`) is the gate against premature reviewer
+exposure in that interim.
+
+### PR 2 — Reviewer surface: group blocks + write fanout + aggregation sweep
+
+The end-to-end reviewer-facing feature, landed as one PR so
+there is never a window where group responses exist but
+aggregators over-count them.
+
+- A service helper derives group membership: given a
+  group-scoped instrument and a reviewer's assignments for it,
+  cluster by `reviewee.tag_N` (N from `group_kind`).
+- The reviewer surface renders a group-scoped instrument as a
+  self-contained block — one group-identity row per group
+  (source-tag value + member names), one set of response
+  inputs. Read path collapses the N member assignments into one
+  logical group row; the preview hub renders the same blocks.
+- Submit fans the reviewer's single answer across all N
+  assignments' response rows for the group.
+- `responses.collapse_group_duplicates(rows)` + the mandatory
+  sweep migrating every aggregator (Manage Invitations Review
+  Progress, Responses page coverage, Extract Data exports) — see
+  "Aggregation contract" below.
+
+FullMatrix needs **no engine change** — its output is already
+"every reviewer × every reviewee", which the surface clusters by
+tag. RuleBased group-selection (a quota rule that selects whole
+*groups* rather than individuals) is **out of scope** for the
+first cut — rule mode means FullMatrix here. Manual CSV mode is
+disallowed for group-scoped instruments.
+
+> **Sizing note.** PR 2 is the largest PR. Split into 2a
+> (render + write fanout) / 2b (aggregation sweep) **only** if
+> the diff is unwieldy *and* group-scoped instruments are kept
+> un-openable to reviewers until 2b lands — otherwise the
+> over-count window opens. Default: one PR.
+
+### PR 3 — Duplicate instrument button
+
+New "Duplicate instrument" action-row button. A server-side
+endpoint copies the instrument's description / display fields /
+response fields / response-fields-help / `group_kind` /
+`sort_display_fields` into a new instrument inserted immediately
+after the source. The new instrument's name is auto-generated
+(`{source.name} (copy)`; operator renames if needed).
+`accepting_responses` defaults to `False` on the copy regardless
+of the source's state. Audit event `instrument.duplicated`
+carries the source + new instrument IDs.
+
+Independent of PRs 1-2 — can land in any order relative to them.
 
 ## Action row at the end of 13C
 
@@ -96,8 +125,8 @@ carries this fixed button set (left card, per
 | `Save` | Primary | Card is open for editing. |
 | `Cancel` | Alert Outline | Card is open for editing. Adjacent to Save. |
 | `Add new instrument` | Secondary | Always visible. Existing today. Creates a per-reviewee instrument inserted immediately after this one. |
-| `Add group-scoped instrument` | Secondary | Always visible. **New (PR 2).** Creates a group-scoped instrument inserted immediately after this one. |
-| `Duplicate instrument` | Secondary | Always visible. **New (PR 5).** Clones this instrument's content; new card inserted immediately after the source. |
+| `Add group-scoped instrument` | Secondary | Always visible. **New (PR 1).** Creates a group-scoped instrument inserted immediately after this one. |
+| `Duplicate instrument` | Secondary | Always visible. **New (PR 3).** Clones this instrument's content; new card inserted immediately after the source. |
 
 `Edit` / `Save` / `Cancel` remain mutually exclusive per the
 existing spec; the three create-flavour buttons (`Add new`,
@@ -107,16 +136,54 @@ contend with the editing-state machine.
 `Delete this instrument` continues to live in the right-hand
 Danger Zone card per `spec/instruments.md` Section C.
 
-## Schema additions
+## Schema — none required
 
-| Field | Where | Type | Notes |
-|---|---|---|---|
-| `group_kind` | `Instrument` | `String(32) | NULL` | `NULL` = today's per-reviewee instrument. Non-null = group-scoped. Stored value is the source-field key (`tag_1` / `tag_2` / `tag_3`); the operator-facing display label ("Group-scoped (by Tag 1)") lives in template copy. |
-| `Assignment.context` (existing) | `Assignment` | `JSON | NULL` | Already on the model. New documented keys for group-scoped assignments: `group_id` (string, typically the source-tag's value), `group_kind` (mirror of the instrument's), `group_size` (int). |
+13C ships **zero migrations.**
 
-No `Response` schema change. The duplicate-and-stamp trick on
-`Assignment.context` carries the whole feature without touching
-`Response.assignment_id`'s single-reviewee shape.
+- **`Instrument.group_kind`** (`String(32) | NULL`) already
+  exists — shipped inert in 13D PR 6. `NULL` = a per-reviewee
+  instrument (today's default); a non-null value is the
+  source-field key (`tag_1` / `tag_2` / `tag_3`) naming the
+  reviewee tag that defines the group. The operator-facing
+  display label ("Group-scoped (by Tag 1)") lives in template
+  copy. 13C PR 1 is the first writer of this column.
+- **No `Assignment` change.** The original design stamped
+  `Assignment.context` JSON with `{group_id, group_kind,
+  group_size}`; that column was retired in 15D PR 6b. It is not
+  needed — every value is derived (see below).
+- **No `Response` change.** `Response.assignment_id` stays
+  strictly single-reviewee. The write path fans one answer to N
+  response rows, but each row is still an ordinary
+  single-assignment `Response` — no nullable FKs, no
+  polymorphic target.
+
+## How a group is derived
+
+A group-scoped instrument carries `group_kind` ∈ {`tag_1`,
+`tag_2`, `tag_3`}. For any reviewer, their group memberships for
+that instrument are computed live:
+
+1. Take the reviewer's `Assignment` rows for the instrument.
+2. Join each to its `Reviewee` and read `reviewee.<group_kind>`
+   (`Reviewee.tag_1` / `tag_2` / `tag_3` — these columns exist).
+3. Reviewees sharing a tag value form one **group**; the tag
+   value *is* the group identity (`group_id`).
+4. `group_size` = the count of distinct reviewees in the
+   cluster.
+
+No value is stored — `Assignment.context` was only ever a
+stamped copy of this. The reviewer surface clusters on read, the
+submit path fans on write, and `collapse_group_duplicates`
+groups on the same derived key.
+
+**Trade-off (accepted 2026-05-15).** Deriving live means group
+membership tracks the reviewee's *current* `tag_N`. If an
+operator edits a reviewee's tag after assignments are generated,
+that reviewee re-clusters. In practice this is benign: editing
+session entities after activation requires reverting to draft,
+which regenerates assignments anyway. Freezing membership at
+generation time would have needed a new stamped `Assignment`
+column — deliberately not done.
 
 ## Audit events
 
@@ -142,6 +209,10 @@ unchanged on the per-reviewee path.
   recreate.
 - **Manual CSV mode for group-scoped instruments** — rule mode
   only first cut.
+- **RuleBased group-selection** — a quota / predicate rule that
+  selects whole *groups* (rather than individuals) then fans to
+  members. First cut is FullMatrix-only, which needs no engine
+  change. Group-aware RuleBased selection is a later concern.
 - **A separate `Group` entity** — the group identifier is just
   a tag value.
 - **Cross-session instrument duplication / templates** — the
@@ -151,14 +222,17 @@ unchanged on the per-reviewee path.
 
 ## Aggregation contract for group-scoped responses
 
-PR 4 introduces `responses.collapse_group_duplicates(rows)` per
-the spec. Every consumer that aggregates by reviewee or reports
+PR 2 introduces `responses.collapse_group_duplicates(rows)` per
+the spec. It collapses the N group-duplicate response rows to
+one, keyed on `(reviewer_id, response_field_id, group_id)` where
+`group_id` is the **derived** group identity (the reviewee's
+`tag_N` value — see "How a group is derived"), not a stored
+field. Every consumer that aggregates by reviewee or reports
 "completion" routes through the helper:
 
 - `views.build_invitations_rows` — Review Progress column.
 - `views.build_responses_rows` — Responses page coverage.
-- Extract Data exports (whichever per-entity / unified
-  exporters land in 12A).
+- Extract Data exports (the per-entity + unified exporters).
 
 The contract: a single group response counts as **one
 completion** at the group-scoped-instrument level, not N. The
@@ -166,7 +240,7 @@ test suite gains a single shared fixture (a group-scoped
 instrument with N assignments and one rendered response) +
 assertions against each consumer's output.
 
-The work in PR 4 includes a sweep over every aggregator
+The work in PR 2 includes a sweep over every aggregator
 identified above; missing one means an export over-counts
 group responses by `group_size`. Reviewer's note pinned in the
 PR description: this sweep is mandatory.
@@ -183,16 +257,14 @@ surface map.
 
 When 13C kicks off:
 
-- Promote each PR's scope into per-PR descriptions in this
-  file (sized like the 13A / 13B plans).
 - Update `spec/instruments.md` Section C "Action row" to
   describe the two new buttons (Add group-scoped instrument,
   Duplicate instrument) and the post-13C button set.
 - Update `spec/reviewer-surface.md` to describe the group-block
   treatment for group-scoped instruments.
 - Update `guide/todo_master.md` to move 13C from Upcoming to
-  in-progress; move to Done when PR 5 lands.
-- Migrate this file to `guide/archive/` when PR 5 merges.
+  in-progress; move to Done when PR 3 lands.
+- Migrate this file to `guide/archive/` when PR 3 merges.
 - `spec/group_scoped_instruments.md` ticks off when each
   Open question / Out-of-scope item from its design spec
   resolves.

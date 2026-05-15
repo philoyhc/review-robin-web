@@ -6,6 +6,18 @@ Captures the design for a second kind of instrument — a
 instrument, so a reviewer can record one rating / comment / etc.
 about a *group* of reviewees rather than per-individual.
 
+> **Revised 2026-05-15.** The original design stamped group
+> metadata onto an `Assignment.context` JSON column. That column
+> was retired in 15D PR 6b. The mechanism was reworked: the
+> group is **derived** from `Instrument.group_kind` + the
+> reviewee's own `tag_N` value, not stored. `Assignment.context`
+> only ever held a stamped copy of derivable data. Net effect:
+> group-scoped instruments need **no schema change at all**
+> (`Instrument.group_kind` already exists, shipped inert in
+> 13D PR 6). The "Data model", "Rule-engine integration", and
+> "Aggregation contract" sections below carry the reworked
+> mechanism.
+
 This file is the source of truth for the design. Implementation
 plan lives at **`guide/segment_13C_enhanced_instrument.md`**;
 13C also picks up the duplicate-instrument button on the same
@@ -13,9 +25,10 @@ action-row sweep. Sibling segments: **13A** (rule-based
 assignments — `guide/archive/segment_13A_rulebased_assignment_builder.md`)
 and **13B** (sort by reviewee —
 `guide/archive/segment_13B_sort_tables.md`). The three are
-independent and can ship in any order, though 13A's rule engine
-is the natural place to materialize group assignments and 13C
-PR 3 leans on it.
+independent and can ship in any order. 13A's rule engine
+materialises the per-member assignment fan-out, but needs no
+group-specific change for the FullMatrix-first cut (see
+"Rule-engine integration").
 
 Subsequent edits to this design go here and propagate to the
 implementation, not the other way around.
@@ -79,54 +92,66 @@ power-user case demands multi-level, the column lifts to a list
 in a forward-compatible way. The strict default keeps most
 operators out of the complexity.
 
-## Data model — no schema change to `Response`
+## Data model — no schema change at all
 
-The trick: **duplicate `Response` rows per group member**, but
-stamp each underlying `Assignment` with group metadata so
-downstream consumers can collapse the duplicates back to one.
+The trick: **duplicate `Response` rows per group member**, and
+**derive** the group each row belongs to from the instrument's
+`group_kind` + the reviewee's own `tag_N` value — so downstream
+consumers can collapse the duplicates back to one without any
+stored group metadata.
 
-- `Assignment.context` (already a `Mapped[dict[str, Any] | None]`
-  JSON column on `app/db/models/assignment.py`, currently unused)
-  carries `{"group_id": "team-alpha", "group_kind":
-  "small_group", "group_size": 5}` on every assignment that
-  belongs to a group-scoped instrument.
+- The group a `(reviewer, reviewee)` assignment belongs to is
+  the reviewee's `tag_N` value, where `N` is the instrument's
+  `group_kind`. Reviewees sharing a tag value form one group;
+  the tag value *is* the `group_id`. Nothing is stamped on the
+  `Assignment`.
 - The reviewer surface presents **one** set of response inputs
-  per group, shaped against the response fields of the group-
-  scoped instrument; submit writes the same value to every
+  per group, shaped against the response fields of the
+  group-scoped instrument; submit writes the same value to every
   underlying `Assignment`'s response rows (one per group
-  member), all stamped with the same `Assignment.context`.
+  member).
 - Downstream code that aggregates by reviewee — Manage
   Invitations' Review Progress column, the Responses page's
   per-reviewee coverage, the Extract Data exports — routes
   through one shared helper (proposed name:
   `responses.collapse_group_duplicates(rows)`) that groups by
-  `(reviewer_id, response_field_id, context.group_id, value)`
-  and returns either the deduped row or the per-reviewee fan-
-  out, depending on the consumer's needs.
+  `(reviewer_id, response_field_id, group_id, value)` — where
+  `group_id` is the derived reviewee `tag_N` value — and returns
+  either the deduped row or the per-reviewee fan-out, depending
+  on the consumer's needs.
 
 This keeps `Response.assignment_id` strictly single-reviewee —
 no nullable FKs, no polymorphic target — and lets every existing
 non-group-aware query keep working unchanged. Group awareness is
 opt-in per consumer.
 
-**Trade-off.** The dedup logic must be honored everywhere data
-leaves the system or rolls up. Exports especially: a missed
-dedup in a CSV export over-counts group responses by `group_size`.
-The single helper + a unit test pinning the contract is the
-defense; reviewing every aggregator's call site for migration is
-mandatory when the feature ships.
+**Trade-off — dedup discipline.** The dedup logic must be
+honored everywhere data leaves the system or rolls up. Exports
+especially: a missed dedup in a CSV export over-counts group
+responses by `group_size`. The single helper + a unit test
+pinning the contract is the defense; reviewing every
+aggregator's call site for migration is mandatory when the
+feature ships.
 
-### Proposed schema additions
+**Trade-off — derived (not frozen) membership.** Because the
+group is derived live, editing a reviewee's `tag_N` after
+assignment generation re-clusters that reviewee. This is benign
+in practice: editing session entities after activation requires
+reverting to draft, which regenerates assignments anyway.
+Freezing membership at generation time would need a new stamped
+`Assignment` column — deliberately rejected (decided 2026-05-15).
+
+### Schema — none required
 
 | Field | Where | Type | Notes |
 |---|---|---|---|
-| `group_kind` | `Instrument` | `String(32) | NULL` | `NULL` = per-reviewee instrument (today's default). Non-null = group-scoped. Operator-facing values are a small enum mapped from the Display Field that defines the group (e.g. picking `tag_1` ⇒ `group_kind="tag_1"`). The display label ("Small Group", "Cohort", "Team", etc.) lives in operator copy; the column stores the source-field key. |
-| `Assignment.context` (existing) | `Assignment` | `JSON | NULL` | Already on the model. New documented keys for group-scoped assignments: `group_id` (string identifying the group — typically the source-field's value), `group_kind` (mirror of the instrument's), `group_size` (int — for sanity / dedup checks). |
+| `group_kind` | `Instrument` | `String(32) | NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument (today's default). Non-null = group-scoped; the column stores the source-field key (`tag_1` / `tag_2` / `tag_3`). The display label ("Small Group", "Cohort", "Team", etc.) lives in operator copy. |
 
-`Instrument.group_kind` can be a scalar enum string (`tag_1` /
-`tag_2` / `tag_3`) or a small lookup-table FK to a future
-`group_definitions` table. Scalar string is the simpler start and
-forward-compatible.
+No `Assignment` and no `Response` change. The original design's
+`Assignment.context` stamping is not needed — the group is
+derived. `Instrument.group_kind` stays a scalar enum string; if
+a future power-user case demands a richer group definition, a
+lookup-table FK can replace it forward-compatibly.
 
 ## Operator editor
 
@@ -230,18 +255,22 @@ instrument:
    with `tag_1="Team Alpha"` form one group).
 3. For each `(reviewer, group)` pair the rule selects, the
    engine emits **one `Assignment` per group member** (i.e. the
-   matrix is fanned out per-member) with `context = {"group_id":
-   "team-alpha", "group_kind": "tag_1", "group_size": 5}`
-   stamped on every row.
+   matrix is fanned out per-member). The rows are ordinary
+   `(reviewer, reviewee, instrument)` assignments — nothing is
+   stamped; the group is recoverable from each reviewee's
+   `tag_N`.
 4. The reviewer surface sees N rows for the group on the wire,
-   collapses them by `context.group_id` into one logical row in
-   the rendered template, and writes the reviewer's single
-   answer back to all N rows on submit.
+   clusters them by the derived `group_id` (reviewee `tag_N`)
+   into one logical row in the rendered template, and writes the
+   reviewer's single answer back to all N rows on submit.
 
-FullMatrix can also support group-scoped instruments by treating
-each unique `tag_N` value as a target instead of each individual
-reviewee. The engine's emission shape (one row per member,
-shared `context.group_id`) is the same.
+**FullMatrix needs no engine change.** Its output is already
+"every reviewer × every reviewee" — for a group-scoped
+instrument that is exactly the per-member fan-out, and the
+reviewer surface does the clustering on read. Group-aware
+*RuleBased* selection — a quota / predicate rule that picks
+whole groups rather than individuals — is a later concern; the
+first cut is FullMatrix-only.
 
 Manual CSV imports are tricky for group-scoped instruments
 because the operator would have to write multiple rows that
@@ -264,10 +293,12 @@ def collapse_group_duplicates(
 ) -> list[ResponseRow]:
     """Collapse N group-duplicate response rows back to one.
 
-    For each input row whose underlying assignment carries a
-    ``context.group_id``, emit a single row keyed on
-    ``(reviewer_id, response_field_id, group_id)`` with the
-    shared value. Per-reviewee rows pass through unchanged.
+    For each input row that belongs to a group-scoped instrument,
+    derive its ``group_id`` (the reviewee's ``tag_N`` value, with
+    ``N`` from the instrument's ``group_kind``) and emit a single
+    row keyed on ``(reviewer_id, response_field_id, group_id)``
+    with the shared value. Per-reviewee rows pass through
+    unchanged.
 
     Consumers that need the *fanout* shape (e.g. a CSV export
     where each group member should appear as a separate row,
@@ -292,10 +323,11 @@ that doesn't care about the underlying fanout.
   `group_kind` is a scalar.
 - **Mode-flipping after creation.** Rejected. Operators delete
   and recreate.
-- **DB schema modifications to `Response` or its FK shape.**
-  Rejected. The duplicate-and-stamp trick on
-  `Assignment.context` carries the whole feature without
-  touching `Response`.
+- **DB schema modifications.** Rejected — and not needed. The
+  duplicate-`Response`-rows + derive-the-group approach carries
+  the whole feature with zero migrations: `Response` keeps its
+  single-reviewee FK shape, and `Instrument.group_kind` already
+  exists.
 - **A separate `Group` entity.** Not needed for this design —
   the group identifier is just a tag value (or a hash of one).
   If a future feature needs richer group metadata (a description,
@@ -331,9 +363,10 @@ that doesn't care about the underlying fanout.
 
 ## Cross-references
 
-- `app/db/models/assignment.py` — `Assignment.context` column
-  (already exists).
-- `app/db/models/instrument.py` — gains `group_kind` column.
+- `app/db/models/instrument.py` — `group_kind` column (already
+  exists, shipped inert in 13D PR 6).
+- `app/db/models/reviewee.py` — `tag_1` / `tag_2` / `tag_3`
+  columns; the reviewee's tag value is the derived `group_id`.
 - `app/services/instruments/_display_fields.py` — `DISPLAY_FIELD_LABELS` /
   `DISPLAY_FIELD_KEYS` mappings; group-scoped instrument editor
   picks against a restricted subset of the same registry.

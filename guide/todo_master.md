@@ -539,16 +539,18 @@ bottom of this file.
 2. **13C — Enhanced instruments.**
    Group-scoped instruments (per-instrument flavour where one
    answer covers a group of reviewees) + a "Duplicate
-   instrument" action-row button. Sized as 5 PRs. Action row
-   ends up with: Edit / Save / Cancel (state-aware) + Add new
-   instrument + Add group-scoped instrument (new) + Duplicate
-   instrument (new). No `Response` schema change. **Note**
-   (post-15D): the original plan stamped per-instrument flavour
-   metadata onto the now-dropped `Assignment.context` JSON
-   column; that stash will need to relocate (likely onto the
-   `relationships` row or onto a new per-instrument column on
-   `assignments`) — flag for the 13C plan revision.
-   Independent of 13A and 13B.
+   instrument" action-row button. **Re-scoped 2026-05-15** —
+   sized as **3 PRs, zero migrations**: (1) operator editor to
+   author group-scoped instruments, (2) reviewer surface + write
+   fanout + group-aware aggregation sweep, (3) Duplicate
+   instrument button. Action row ends up with: Edit / Save /
+   Cancel (state-aware) + Add new instrument + Add group-scoped
+   instrument (new) + Duplicate instrument (new). The original
+   plan stamped flavour metadata onto the now-dropped
+   `Assignment.context` JSON column; an investigation confirmed
+   the group is fully **derivable** from `Instrument.group_kind`
+   (already shipped, 13D PR 6) + the reviewee's own `tag_N`, so
+   13C needs no schema change. Independent of 13A and 13B.
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/group_scoped_instruments.md`.
 
@@ -684,7 +686,7 @@ bottom of this file.
 - **13C, 13F (PRs 3-7), 14A, 17A, 17B, 18A,
   18B, 18C, 18D, 19, 20** are independent of the email + audit
   pipelines and can interleave at any time. The three
-  13-family segments are also independent of each other;
-  13C PR 3 (rule-engine fanout for group-scoped instruments)
-  lands more naturally after 13A's RuleSet machinery exists,
-  but 13C PRs 1 / 2 / 4 / 5 don't depend on 13A.
+  13-family segments are also independent of each other —
+  13C's re-scoped 3-PR ladder (2026-05-15) needs no rule-engine
+  change for its FullMatrix-first cut, so it does not depend on
+  13A.
