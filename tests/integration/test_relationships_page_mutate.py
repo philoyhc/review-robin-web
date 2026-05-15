@@ -474,3 +474,208 @@ def test_update_on_ready_session_is_409(
         follow_redirects=False,
     )
     assert response.status_code == 409
+
+
+# --------------------------------------------------------------------------- #
+# Add a new row — Segment 15F PR 5 stage 3.
+# --------------------------------------------------------------------------- #
+
+
+def test_create_relationship_service(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-m-svc-create")
+    rv, re_, _rels = _seed(
+        db,
+        review_session.id,
+        reviewers=["Ali"],
+        reviewees=["Jane"],
+        pairs=[],
+    )
+    rel = relationships_service.create_relationship(
+        db,
+        review_session=review_session,
+        reviewer_id=rv[0].id,
+        reviewee_id=re_[0].id,
+        tag_1="Supervisor",
+        user=_operator(db),
+    )
+    assert rel.id is not None
+    assert rel.tag_1 == "Supervisor"
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "relationship.created"
+        )
+    ).scalar_one()
+    assert event.detail["snapshot"]["reviewer_id"] == rv[0].id
+
+
+def test_create_service_rejects_duplicate_pair(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-m-svc-cdup")
+    rv, re_, _rels = _seed(
+        db,
+        review_session.id,
+        reviewers=["Ali"],
+        reviewees=["Jane"],
+        pairs=[(0, 0)],
+    )
+    with pytest.raises(RelationshipOperationError) as exc_info:
+        relationships_service.create_relationship(
+            db,
+            review_session=review_session,
+            reviewer_id=rv[0].id,
+            reviewee_id=re_[0].id,
+            user=_operator(db),
+        )
+    assert exc_info.value.code == "duplicate_pair"
+
+
+def test_add_renders_blank_picker_row(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-m-addget")
+    _seed(
+        db,
+        review_session.id,
+        reviewers=["Ali"],
+        reviewees=["Jane"],
+        pairs=[],
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships?add=1"
+    ).text
+    assert "relationship-edit-row" in body
+    assert ">Add new relationship</h2>" in body
+    assert 'name="reviewer_pick"' in body
+    assert 'name="reviewee_pick"' in body
+    assert 'id="relationship-reviewer-options"' in body
+    assert "operator-actions-main is-locked" in body
+
+
+def test_add_post_creates_and_redirects(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-m-addpost")
+    _seed(
+        db,
+        review_session.id,
+        reviewers=["Ali"],
+        reviewees=["Jane"],
+        pairs=[],
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/relationships/create",
+        data={
+            "reviewer_pick": "Ali (ali@example.edu)",
+            "reviewee_pick": "Jane (jane@example.edu)",
+            "tag_1": "Supervisor",
+            "tag_2": "",
+            "tag_3": "",
+            "status": "active",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    row = db.execute(
+        select(Relationship).where(
+            Relationship.session_id == review_session.id
+        )
+    ).scalar_one()
+    assert row.tag_1 == "Supervisor"
+
+
+def test_add_post_duplicate_pair_rerenders_400(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-m-adddup")
+    _seed(
+        db,
+        review_session.id,
+        reviewers=["Ali"],
+        reviewees=["Jane"],
+        pairs=[(0, 0)],
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/relationships/create",
+        data={
+            "reviewer_pick": "Ali (ali@example.edu)",
+            "reviewee_pick": "Jane (jane@example.edu)",
+            "status": "active",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "relationship-edit-row" in response.text
+    assert "banner-error" in response.text
+    assert ">Add new relationship</h2>" in response.text
+
+
+def test_add_post_unresolvable_pick_rerenders_400(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(client, db, code="rel-m-addbadpick")
+    _seed(
+        db,
+        review_session.id,
+        reviewers=["Ali"],
+        reviewees=["Jane"],
+        pairs=[],
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/relationships/create",
+        data={
+            "reviewer_pick": "Ali (ali@example.edu)",
+            "reviewee_pick": "Nobody In Particular",
+            "status": "active",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "banner-error" in response.text
+    assert "Nobody In Particular" in response.text
+
+
+def test_add_disabled_when_a_roster_is_empty(
+    db: Session, client: TestClient
+) -> None:
+    """A relationship needs both sides — Add is disabled with a hint
+    when either roster is empty."""
+    review_session = _make_session(client, db, code="rel-m-addempty")
+    _seed(
+        db,
+        review_session.id,
+        reviewers=["Ali"],
+        reviewees=[],
+        pairs=[],
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships"
+    ).text
+    assert "Add a reviewer and a reviewee first" in body
+
+
+def test_create_on_ready_session_is_409(
+    db: Session, client: TestClient
+) -> None:
+    review_session = _make_session(
+        client, db, code="rel-m-ready-create", status="ready"
+    )
+    _seed(
+        db,
+        review_session.id,
+        reviewers=["Ali"],
+        reviewees=["Jane"],
+        pairs=[],
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/relationships/create",
+        data={
+            "reviewer_pick": "Ali (ali@example.edu)",
+            "reviewee_pick": "Jane (jane@example.edu)",
+            "status": "active",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 409

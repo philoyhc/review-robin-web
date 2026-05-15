@@ -5,10 +5,10 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
-  {# Segment 15F PR 5 stage 2 — ``edit_mode`` is the server-rendered
-     edit state: one row's cells render as inputs / pickers. Add a
-     new row lands in stage 3. #}
-  {% set edit_mode = edit_id is not none %}
+  {# Segment 15F PR 5 — ``edit_mode`` is the server-rendered row-form
+     state: one row's cells render as inputs / search-box pickers
+     (Edit), or a fresh blank row prepends (Add new row). #}
+  {% set edit_mode = (edit_id is not none) or add_mode %}
   {% set relationships_base_url =
         "/operator/sessions/" ~ session.id ~ "/relationships" %}
 
@@ -129,7 +129,8 @@
         {# Action buttons — selection-driven enable/disable. Edit is
            JS-driven (reads the single checked row); Inactivate /
            Activate submit the bulk form via ``formaction``. Add new
-           row lands in stage 3 — inert placeholder for now. #}
+           row is a plain link, disabled with a hint when either
+           roster is empty (a pair needs both sides). #}
         <div class="operator-actions-buttons"
              style="margin-top: var(--space-3);">
           <span class="pill pill-count"
@@ -147,19 +148,30 @@
                   form="relationships-bulk-form"
                   formaction="{{ relationships_base_url }}/bulk-reactivate"
                   disabled aria-disabled="true">Activate</button>
-          <button class="btn secondary" type="button"
-                  disabled aria-disabled="true">Add new row</button>
+          {% if is_ready or edit_mode %}
+            <a class="btn secondary disabled" aria-disabled="true">Add new row</a>
+          {% elif not can_add_relationship %}
+            <a class="btn secondary disabled" aria-disabled="true"
+               title="Add a reviewer and a reviewee first — a relationship needs both.">Add new row</a>
+          {% else %}
+            <a class="btn secondary"
+               href="{{ relationships_base_url }}?add=1">Add new row</a>
+          {% endif %}
         </div>
       </div>
-      {# Focused Edit form — same card, below a divider. #}
+      {# Focused Add / Edit form — same card, below a divider. #}
       {% if edit_mode %}
         <hr class="operator-actions-divider">
-        <h2>Edit relationship</h2>
+        <h2>{{ "Add new relationship" if add_mode else "Edit relationship" }}</h2>
         {% if edit_error %}
           <p class="banner banner-error">{{ edit_error }}</p>
         {% endif %}
         <p class="form-help">
-          Edit the highlighted row below, then Save.
+          {% if add_mode %}
+            Fill in the new row below, then Save.
+          {% else %}
+            Edit the highlighted row below, then Save.
+          {% endif %}
         </p>
         <div style="display: flex; justify-content: flex-end;
                     gap: 12px; margin-top: var(--space-3);">
@@ -178,8 +190,10 @@
      through Edit / bulk actions so the operator lands back on the
      same filtered view (Segment 15F). #}
   {% if edit_mode %}
+    {% set edit_action = relationships_base_url ~ "/create" if add_mode
+          else relationships_base_url ~ "/" ~ edit_id ~ "/update" %}
     <form id="relationship-edit-form" method="post"
-          action="{{ relationships_base_url }}/{{ edit_id }}/update">
+          action="{{ edit_action }}">
       <input type="hidden" name="filter_search_by"
              value="{{ filter_search_by }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
@@ -221,7 +235,7 @@
     })();
   </script>
 
-  {% if relationships %}
+  {% if relationships or add_mode %}
     {% set selectable = not edit_mode and not is_ready %}
     {% if not edit_mode %}
       {% set has_tag_1 = relationships | selectattr("tag_1") | list | length > 0 %}
@@ -295,6 +309,43 @@
         </tr>
         </thead>
         <tbody{% if not edit_mode %} class="rrw-rows"{% endif %}>
+        {% if add_mode %}
+          {# Fresh blank edit row at the top of the table. #}
+          <tr class="relationship-edit-row">
+            <td class="row-select-cell"></td>
+            <td>
+              <input type="text" name="reviewer_pick"
+                     form="relationship-edit-form"
+                     list="relationship-reviewer-options"
+                     value="{{ edit_values.reviewer_label }}"
+                     autocomplete="off" required
+                     placeholder="Search name or email">
+            </td>
+            <td>
+              <input type="text" name="reviewee_pick"
+                     form="relationship-edit-form"
+                     list="relationship-reviewee-options"
+                     value="{{ edit_values.reviewee_label }}"
+                     autocomplete="off" required
+                     placeholder="Search name or email">
+            </td>
+            <td class="tag-col tag-col-1"><input type="text" name="tag_1"
+                       form="relationship-edit-form"
+                       value="{{ edit_values.tag_1 }}" maxlength="255"></td>
+            <td class="tag-col tag-col-2"><input type="text" name="tag_2"
+                       form="relationship-edit-form"
+                       value="{{ edit_values.tag_2 }}" maxlength="255"></td>
+            <td class="tag-col tag-col-3"><input type="text" name="tag_3"
+                       form="relationship-edit-form"
+                       value="{{ edit_values.tag_3 }}" maxlength="255"></td>
+            <td>
+              <select name="status" form="relationship-edit-form">
+                <option value="active"{% if edit_values.status == "active" %} selected{% endif %}>active</option>
+                <option value="inactive"{% if edit_values.status == "inactive" %} selected{% endif %}>inactive</option>
+              </select>
+            </td>
+          </tr>
+        {% endif %}
         {% for row in relationships %}
           {% set reviewer = reviewer_by_id.get(row.reviewer_id) %}
           {% set reviewee = reviewee_by_id.get(row.reviewee_id) %}

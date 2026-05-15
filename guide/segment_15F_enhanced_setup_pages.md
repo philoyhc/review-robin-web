@@ -607,14 +607,18 @@ hint when either roster is empty.
   switch from email to name** (`data-sort-value` + the route's
   `_relationship_sort_value`).
 
-- **Stage 3 — Add a new row.** `create_relationship` service
-  mutator + `relationship.created` audit event;
-  `POST /relationships/create` route + the `add` query param /
-  blank server-rendered edit row; the Add-new-row button goes
-  live (an `<a>` to `?add=1`). Empty-roster guard: Add renders
-  disabled with a hint when the session has zero reviewers or
-  zero reviewees. (Edit and Add were split into separate stages
-  so each ships as a small reviewable slice.)
+- **Stage 3 — Add a new row (SHIPPED).** `create_relationship`
+  service mutator + `relationship.created` audit event
+  (snapshot envelope); `POST /relationships/create` route + the
+  `add` query param / blank server-rendered edit row; the
+  Add-new-row button goes live (an `<a>` to `?add=1`). The
+  blank row's Reviewer / Reviewee cells use the same
+  name-or-email search-box pickers as the Edit row (`<input>` +
+  `<datalist>`, label resolved server-side). Empty-roster
+  guard: Add renders disabled with a hint when the session has
+  zero reviewers or zero reviewees. (Edit and Add were split
+  into separate stages so each ships as a small reviewable
+  slice.)
 
 ### PR 6 — Defensive status re-check on `invitations_send_one` (folded into PR 3)
 

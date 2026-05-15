@@ -1015,6 +1015,7 @@ def relationships_list(
     search_by: str = "reviewer",
     q: str = "",
     edit_id: int | None = None,
+    add: int = 0,
     selected: list[int] = Query(default=[]),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -1030,6 +1031,7 @@ def relationships_list(
         search_by=search_by,
         search=q,
         edit_id=edit_id,
+        add_mode=bool(add),
         selected_ids=set(selected),
     )
 
@@ -1134,6 +1136,91 @@ def _require_relationship_in_session(
     if relationship is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return relationship
+
+
+@router.post(
+    "/sessions/{session_id}/relationships/create",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def relationships_create(
+    request: Request,
+    reviewer_pick: str = Form(default=""),
+    reviewee_pick: str = Form(default=""),
+    tag_1: str = Form(default=""),
+    tag_2: str = Form(default=""),
+    tag_3: str = Form(default=""),
+    status_value: str = Form(default="active", alias="status"),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse | RedirectResponse:
+    _require_editable(review_session)
+    reviewer_id = _resolve_picker_label(
+        reviewer_pick,
+        _relationship_picker_options(
+            assignments.list_reviewers(db, review_session.id),
+            handle_attr="email",
+        ),
+    )
+    reviewee_id = _resolve_picker_label(
+        reviewee_pick,
+        _relationship_picker_options(
+            assignments.list_reviewees(db, review_session.id),
+            handle_attr="email_or_identifier",
+        ),
+    )
+    edit_values: dict[str, object] = {
+        "reviewer_label": reviewer_pick,
+        "reviewee_label": reviewee_pick,
+        "tag_1": tag_1,
+        "tag_2": tag_2,
+        "tag_3": tag_3,
+        "status": status_value,
+    }
+    if reviewer_id is None or reviewee_id is None:
+        return _render_relationships_page(
+            request=request,
+            review_session=review_session,
+            user=user,
+            db=db,
+            issues=[],
+            filename=None,
+            add_mode=True,
+            edit_values=edit_values,
+            edit_error="Pick a reviewer and a reviewee from the list.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        relationships_service.create_relationship(
+            db,
+            review_session=review_session,
+            reviewer_id=reviewer_id,
+            reviewee_id=reviewee_id,
+            tag_1=tag_1,
+            tag_2=tag_2,
+            tag_3=tag_3,
+            status=status_value,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RelationshipOperationError as exc:
+        return _render_relationships_page(
+            request=request,
+            review_session=review_session,
+            user=user,
+            db=db,
+            issues=[],
+            filename=None,
+            add_mode=True,
+            edit_values=edit_values,
+            edit_error=exc.message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/relationships",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.post(
@@ -1340,6 +1427,7 @@ def _render_relationships_page(
     search_by: str = "reviewer",
     search: str = "",
     edit_id: int | None = None,
+    add_mode: bool = False,
     edit_values: dict[str, object] | None = None,
     edit_error: str | None = None,
     selected_ids: set[int] | None = None,
@@ -1348,6 +1436,7 @@ def _render_relationships_page(
     is_ready = lifecycle.is_ready(review_session)
     if is_ready:
         edit_id = None
+        add_mode = False
 
     rows = relationships_service.list_for_session(db, review_session.id)
     reviewers = assignments.list_reviewers(db, review_session.id)
@@ -1430,6 +1519,15 @@ def _render_relationships_page(
                 "tag_3": edited.tag_3 or "",
                 "status": edited.status,
             }
+    if edit_values is None and add_mode:
+        edit_values = {
+            "reviewer_label": "",
+            "reviewee_label": "",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status": "active",
+        }
     return _templates.TemplateResponse(
         request,
         "operator/session_relationships.html",
@@ -1446,6 +1544,8 @@ def _render_relationships_page(
             "displayed_row_count": displayed_row_count,
             "is_ready": is_ready,
             "edit_id": edit_id,
+            "add_mode": add_mode,
+            "can_add_relationship": bool(reviewers) and bool(reviewees),
             "edit_values": edit_values,
             "edit_error": edit_error,
             "reviewer_picker_options": _relationship_picker_options(
