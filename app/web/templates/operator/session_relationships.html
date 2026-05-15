@@ -413,15 +413,26 @@
         function boxes() {
           return document.querySelectorAll(".relationship-select");
         }
+        function setBtn(btn, disabled) {
+          // Sync ``aria-disabled`` with ``disabled`` — base.html
+          // greys + ``pointer-events: none`` any ``.btn`` carrying
+          // ``aria-disabled="true"``.
+          btn.disabled = disabled;
+          if (disabled) {
+            btn.setAttribute("aria-disabled", "true");
+          } else {
+            btn.removeAttribute("aria-disabled");
+          }
+        }
         function refresh() {
           var all = boxes();
           var n = 0;
           for (var i = 0; i < all.length; i++) {
             if (all[i].checked) n++;
           }
-          editBtn.disabled = (n !== 1);
-          inactivateBtn.disabled = (n === 0);
-          reactivateBtn.disabled = (n === 0);
+          setBtn(editBtn, n !== 1);
+          setBtn(inactivateBtn, n === 0);
+          setBtn(reactivateBtn, n === 0);
           countPill.textContent = n + " selected";
           countPill.hidden = (n === 0);
           if (selectAll) {
