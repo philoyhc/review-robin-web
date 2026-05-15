@@ -24,7 +24,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewee, Reviewer, ReviewSession, User
+from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import (
     assignments,
@@ -35,6 +35,7 @@ from app.services import (
     reviewers as reviewers_service,
 )
 from app.services import session_lifecycle as lifecycle
+from app.services.relationships import RelationshipOperationError
 from app.services.reviewees import RevieweeOperationError
 from app.services.reviewers import ReviewerOperationError
 from app.web import breadcrumbs, views
@@ -962,6 +963,7 @@ def relationships_list(
     request: Request,
     search_by: str = "reviewer",
     q: str = "",
+    edit_id: int | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -975,6 +977,7 @@ def relationships_list(
         filename=None,
         search_by=search_by,
         search=q,
+        edit_id=edit_id,
     )
 
 
@@ -1066,6 +1069,149 @@ _RELATIONSHIP_SORT_KEYS = {
 }
 
 
+def _require_relationship_in_session(
+    db: Session, review_session: ReviewSession, relationship_id: int
+) -> Relationship:
+    relationship = db.execute(
+        select(Relationship).where(
+            Relationship.id == relationship_id,
+            Relationship.session_id == review_session.id,
+        )
+    ).scalar_one_or_none()
+    if relationship is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return relationship
+
+
+@router.post(
+    "/sessions/{session_id}/relationships/{relationship_id}/update",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+def relationships_update(
+    request: Request,
+    relationship_id: int,
+    reviewer_id: int = Form(...),
+    reviewee_id: int = Form(...),
+    tag_1: str = Form(default=""),
+    tag_2: str = Form(default=""),
+    tag_3: str = Form(default=""),
+    status_value: str = Form(default="active", alias="status"),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse | RedirectResponse:
+    _require_editable(review_session)
+    relationship = _require_relationship_in_session(
+        db, review_session, relationship_id
+    )
+    try:
+        relationships_service.update_relationship(
+            db,
+            relationship=relationship,
+            reviewer_id=reviewer_id,
+            reviewee_id=reviewee_id,
+            tag_1=tag_1,
+            tag_2=tag_2,
+            tag_3=tag_3,
+            status=status_value,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RelationshipOperationError as exc:
+        return _render_relationships_page(
+            request=request,
+            review_session=review_session,
+            user=user,
+            db=db,
+            issues=[],
+            filename=None,
+            edit_id=relationship_id,
+            edit_values={
+                "reviewer_id": reviewer_id,
+                "reviewee_id": reviewee_id,
+                "tag_1": tag_1,
+                "tag_2": tag_2,
+                "tag_3": tag_3,
+                "status": status_value,
+            },
+            edit_error=exc.message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/relationships",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/relationships/bulk-inactivate")
+def relationships_bulk_inactivate(
+    relationship_ids: list[int] = Form(default=[]),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_editable(review_session)
+    try:
+        relationships_service.bulk_inactivate(
+            db,
+            review_session=review_session,
+            relationship_ids=relationship_ids,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RelationshipOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/relationships",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/relationships/bulk-reactivate")
+def relationships_bulk_reactivate(
+    relationship_ids: list[int] = Form(default=[]),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _require_editable(review_session)
+    try:
+        relationships_service.bulk_reactivate(
+            db,
+            review_session=review_session,
+            relationship_ids=relationship_ids,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RelationshipOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/relationships",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+def _relationship_picker_options(
+    members: list, *, handle_attr: str
+) -> list[tuple[int, str]]:
+    """``(id, label)`` tuples for a reviewer / reviewee `<select>`
+    picker — ``"Name (handle)"``, ``— inactive`` suffix on
+    non-active members, sorted by name (Segment 15F PR 5 stage 2).
+    No cap: a `<select>` must list every member to be usable."""
+    out: list[tuple[int, str]] = []
+    for m in sorted(members, key=lambda x: x.name.casefold()):
+        label = f"{m.name} ({getattr(m, handle_attr)})"
+        if m.status != "active":
+            label += " — inactive"
+        out.append((m.id, label))
+    return out
+
+
 def _render_relationships_page(
     *,
     request: Request,
@@ -1077,24 +1223,31 @@ def _render_relationships_page(
     missing_confirm: bool = False,
     search_by: str = "reviewer",
     search: str = "",
+    edit_id: int | None = None,
+    edit_values: dict[str, object] | None = None,
+    edit_error: str | None = None,
     status_code: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
+    is_ready = lifecycle.is_ready(review_session)
+    if is_ready:
+        edit_id = None
+
     rows = relationships_service.list_for_session(db, review_session.id)
     reviewers = assignments.list_reviewers(db, review_session.id)
     reviewees = assignments.list_reviewees(db, review_session.id)
     reviewer_by_id = {r.id: r for r in reviewers}
     reviewee_by_id = {r.id: r for r in reviewees}
     # Segment 13B Part 2 PR 7 — cookie-backed personal sort.
-    # ``reviewer`` / ``reviewee`` resolve via the lookup maps so
-    # sort matches the rendered identity (email) rather than the
-    # raw FK id; tags + status resolve directly on the row.
+    # ``reviewer`` / ``reviewee`` resolve via the lookup maps; the
+    # sort keys on the rendered name (Segment 15F PR 5 stage 2 —
+    # name is now the prominent identity text).
     def _relationship_sort_value(row, key: str):
         if key == "reviewer":
             reviewer = reviewer_by_id.get(row.reviewer_id)
-            return reviewer.email if reviewer else None
+            return reviewer.name if reviewer else None
         if key == "reviewee":
             reviewee = reviewee_by_id.get(row.reviewee_id)
-            return reviewee.email_or_identifier if reviewee else None
+            return reviewee.name if reviewee else None
         return getattr(row, key, None)
 
     sort_spec = views.decode_cookie_sort_spec(
@@ -1122,7 +1275,32 @@ def _render_relationships_page(
     is_filtered = bool(search.strip())
     cap = _REVIEWERS_FILTERED_CAP if is_filtered else _REVIEWERS_DEFAULT_CAP
     capped = filtered[:cap]
+    displayed_row_count = len(capped)
 
+    relationships = capped
+    # Force-include the edited row when it falls outside the cap.
+    if edit_id is not None and edit_id not in {r.id for r in relationships}:
+        edited = next((r for r in all_rows if r.id == edit_id), None)
+        if edited is None:
+            edit_id = None
+        else:
+            relationships = [edited, *relationships]
+
+    # Resolve the edit-row prefill values from the row on a plain
+    # edit GET; an error re-render supplies its own dict.
+    if edit_values is None and edit_id is not None:
+        edited = next(
+            (r for r in relationships if r.id == edit_id), None
+        )
+        if edited is not None:
+            edit_values = {
+                "reviewer_id": edited.reviewer_id,
+                "reviewee_id": edited.reviewee_id,
+                "tag_1": edited.tag_1 or "",
+                "tag_2": edited.tag_2 or "",
+                "tag_3": edited.tag_3 or "",
+                "status": edited.status,
+            }
     return _templates.TemplateResponse(
         request,
         "operator/session_relationships.html",
@@ -1130,12 +1308,22 @@ def _render_relationships_page(
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
-            "relationships": capped,
+            "relationships": relationships,
             "reviewer_by_id": reviewer_by_id,
             "reviewee_by_id": reviewee_by_id,
             "existing_count": len(all_rows),
             "total_row_count": len(all_rows),
-            "displayed_row_count": len(capped),
+            "displayed_row_count": displayed_row_count,
+            "is_ready": is_ready,
+            "edit_id": edit_id,
+            "edit_values": edit_values,
+            "edit_error": edit_error,
+            "reviewer_picker_options": _relationship_picker_options(
+                reviewers, handle_attr="email"
+            ),
+            "reviewee_picker_options": _relationship_picker_options(
+                reviewees, handle_attr="email_or_identifier"
+            ),
             "filter_search_by": search_dimension,
             "filter_search": search,
             "filter_search_by_options": views.RELATIONSHIPS_SEARCH_BY_OPTIONS,
@@ -1164,7 +1352,6 @@ def _render_relationships_page(
             "issues": issues,
             "missing_confirm": missing_confirm,
             "filename": filename,
-            "is_ready": lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Relationships"
             ),

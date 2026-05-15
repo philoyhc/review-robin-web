@@ -309,7 +309,9 @@ def test_relationships_table_renders_sort_scaffolding(
     assert '<tbody class="rrw-rows">' in body
     assert 'class="rrw-sortable" data-sort-key="reviewer"' in body
     assert 'class="rrw-sortable" data-sort-key="reviewee"' in body
-    assert 'data-sort-value="alpha@example.edu"' in body
+    # Segment 15F PR 5 stage 2 — the reviewer / reviewee cells sort
+    # on the rendered name, not the email.
+    assert 'data-sort-value="A Rev"' in body
 
 
 def test_relationships_cookie_sort_by_reviewer_asc(

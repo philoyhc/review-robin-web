@@ -5,6 +5,13 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
+  {# Segment 15F PR 5 stage 2 — ``edit_mode`` is the server-rendered
+     edit state: one row's cells render as inputs / pickers. Add a
+     new row lands in stage 3. #}
+  {% set edit_mode = edit_id is not none %}
+  {% set relationships_base_url =
+        "/operator/sessions/" ~ session.id ~ "/relationships" %}
+
   <div class="session-nav-card">
     {% with current_page = "Relationships" %}
       {% include "operator/partials/session_top_nav.html" %}
@@ -46,9 +53,6 @@
     </div>
   {% endif %}
 
-  {% set relationships_base_url =
-        "/operator/sessions/" ~ session.id ~ "/relationships" %}
-
   {# Pair-context labels editor (left, half-width) + operator-actions
      card (right, half-width). #}
   <div class="bottom-grid">
@@ -68,7 +72,10 @@
 
     <div class="card operator-actions-card">
       <h2>Operator actions</h2>
-      <div class="operator-actions-main">
+      {# Filter + action buttons grey out (``is-locked``) while a
+         row is being edited; the Edit form below the divider stays
+         interactive. #}
+      <div class="operator-actions-main{% if edit_mode %} is-locked{% endif %}">
         {# Locate a specific pair — the ``Search by`` dropdown picks
            which side of the pair the Search box matches. #}
         <form method="get"
@@ -119,24 +126,61 @@
             <button class="btn secondary" type="submit">Apply</button>
           </div>
         </form>
-        {# Action buttons land in Segment 15F PR 5b — inert
-           placeholders here lock the layout. #}
+        {# Action buttons — selection-driven enable/disable. Edit is
+           JS-driven (reads the single checked row); Inactivate /
+           Activate submit the bulk form via ``formaction``. Add new
+           row lands in stage 3 — inert placeholder for now. #}
         <div class="operator-actions-buttons"
              style="margin-top: var(--space-3);">
           <span class="pill pill-count"
                 id="relationships-selected-count" hidden>0 selected</span>
           <button class="btn secondary" type="button"
+                  id="relationships-edit-btn"
                   disabled aria-disabled="true">Edit</button>
-          <button class="btn secondary" type="button"
+          <button class="btn secondary" type="submit"
+                  id="relationships-inactivate-btn"
+                  form="relationships-bulk-form"
+                  formaction="{{ relationships_base_url }}/bulk-inactivate"
                   disabled aria-disabled="true">Inactivate</button>
-          <button class="btn secondary" type="button"
+          <button class="btn secondary" type="submit"
+                  id="relationships-reactivate-btn"
+                  form="relationships-bulk-form"
+                  formaction="{{ relationships_base_url }}/bulk-reactivate"
                   disabled aria-disabled="true">Activate</button>
           <button class="btn secondary" type="button"
                   disabled aria-disabled="true">Add new row</button>
         </div>
       </div>
+      {# Focused Edit form — same card, below a divider. #}
+      {% if edit_mode %}
+        <hr class="operator-actions-divider">
+        <h2>Edit relationship</h2>
+        {% if edit_error %}
+          <p class="banner banner-error">{{ edit_error }}</p>
+        {% endif %}
+        <p class="form-help">
+          Edit the highlighted row below, then Save.
+        </p>
+        <div style="display: flex; justify-content: flex-end;
+                    gap: 12px; margin-top: var(--space-3);">
+          <button class="btn primary" type="submit"
+                  form="relationship-edit-form">Save</button>
+          <a class="btn secondary"
+             href="{{ relationships_base_url }}">Cancel</a>
+        </div>
+      {% endif %}
     </div>
   </div>
+
+  {# Hidden form shells. ``form=`` attributes on the table
+     checkboxes / edit-row inputs / card buttons attach to these. #}
+  {% if edit_mode %}
+    <form id="relationship-edit-form" method="post"
+          action="{{ relationships_base_url }}/{{ edit_id }}/update"></form>
+  {% elif not is_ready %}
+    <form id="relationships-bulk-form" method="post"
+          action="{{ relationships_base_url }}/bulk-inactivate"></form>
+  {% endif %}
 
   {# Keep the search autocomplete in sync with the Search-by
      dropdown — swap the input's ``list`` to the matching
@@ -153,84 +197,147 @@
   </script>
 
   {% if relationships %}
-    {% set has_tag_1 = relationships | selectattr("tag_1") | list | length > 0 %}
-    {% set has_tag_2 = relationships | selectattr("tag_2") | list | length > 0 %}
-    {% set has_tag_3 = relationships | selectattr("tag_3") | list | length > 0 %}
+    {% set selectable = not edit_mode and not is_ready %}
+    {% if not edit_mode %}
+      {% set has_tag_1 = relationships | selectattr("tag_1") | list | length > 0 %}
+      {% set has_tag_2 = relationships | selectattr("tag_2") | list | length > 0 %}
+      {% set has_tag_3 = relationships | selectattr("tag_3") | list | length > 0 %}
+    {% endif %}
     <div class="card">
-      <div class="tag-col-toggles"
-           style="display: flex; justify-content: flex-end; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2);">
-        <label style="font-weight: normal;">
-          <input type="checkbox"
-                 class="tag-col-toggle"
-                 data-tag-toggle="1"
-                 {% if has_tag_1 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-          Tag1
-        </label>
-        <label style="font-weight: normal;">
-          <input type="checkbox"
-                 class="tag-col-toggle"
-                 data-tag-toggle="2"
-                 {% if has_tag_2 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-          Tag2
-        </label>
-        <label style="font-weight: normal;">
-          <input type="checkbox"
-                 class="tag-col-toggle"
-                 data-tag-toggle="3"
-                 {% if has_tag_3 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-          Tag3
-        </label>
-      </div>
+      {% if not edit_mode %}
+        <div class="tag-col-toggles"
+             style="display: flex; justify-content: flex-end; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2);">
+          <label style="font-weight: normal;">
+            <input type="checkbox"
+                   class="tag-col-toggle"
+                   data-tag-toggle="1"
+                   {% if has_tag_1 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+            Tag1
+          </label>
+          <label style="font-weight: normal;">
+            <input type="checkbox"
+                   class="tag-col-toggle"
+                   data-tag-toggle="2"
+                   {% if has_tag_2 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+            Tag2
+          </label>
+          <label style="font-weight: normal;">
+            <input type="checkbox"
+                   class="tag-col-toggle"
+                   data-tag-toggle="3"
+                   {% if has_tag_3 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+            Tag3
+          </label>
+        </div>
+      {% endif %}
       <table id="relationships-table"
-             data-rrw-sortable="rrw-sort-relationships-{{ session.id }}">
+             {% if not edit_mode %}data-rrw-sortable="rrw-sort-relationships-{{ session.id }}"{% endif %}>
         <thead>
         <tr>
-          <th class="rrw-sortable" data-sort-key="reviewer">Reviewer<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Reviewer"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="rrw-sortable" data-sort-key="reviewee">Reviewee<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Reviewee"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-          <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1">{{ field_label_header(session, "pair_context", "1") }}<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Tag1"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "pair_context", "1") }}</th>
-          <th class="tag-col tag-col-2 rrw-sortable" data-sort-key="tag_2">{{ field_label_header(session, "pair_context", "2") }}<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Tag2"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "pair_context", "2") }}</th>
-          <th class="tag-col tag-col-3 rrw-sortable" data-sort-key="tag_3">{{ field_label_header(session, "pair_context", "3") }}<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Tag3"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "pair_context", "3") }}</th>
-          <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
-              aria-label="Sort by Status"
-              onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          <th class="row-select-cell">
+            {% if selectable %}
+              <input type="checkbox" id="relationships-select-all"
+                     aria-label="Select all relationships">
+            {% endif %}
+          </th>
+          {% if edit_mode %}
+            <th>Reviewer</th>
+            <th>Reviewee</th>
+            <th class="tag-col tag-col-1">{{ field_label_header(session, "pair_context", "1") }}{{ field_label_canonical_subtext(session, "pair_context", "1") }}</th>
+            <th class="tag-col tag-col-2">{{ field_label_header(session, "pair_context", "2") }}{{ field_label_canonical_subtext(session, "pair_context", "2") }}</th>
+            <th class="tag-col tag-col-3">{{ field_label_header(session, "pair_context", "3") }}{{ field_label_canonical_subtext(session, "pair_context", "3") }}</th>
+            <th>Status</th>
+          {% else %}
+            <th class="rrw-sortable" data-sort-key="reviewer">Reviewer<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Reviewer"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="rrw-sortable" data-sort-key="reviewee">Reviewee<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Reviewee"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1">{{ field_label_header(session, "pair_context", "1") }}<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Tag1"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "pair_context", "1") }}</th>
+            <th class="tag-col tag-col-2 rrw-sortable" data-sort-key="tag_2">{{ field_label_header(session, "pair_context", "2") }}<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Tag2"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "pair_context", "2") }}</th>
+            <th class="tag-col tag-col-3 rrw-sortable" data-sort-key="tag_3">{{ field_label_header(session, "pair_context", "3") }}<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Tag3"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "pair_context", "3") }}</th>
+            <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Status"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          {% endif %}
         </tr>
         </thead>
-        <tbody class="rrw-rows">
+        <tbody{% if not edit_mode %} class="rrw-rows"{% endif %}>
         {% for row in relationships %}
           {% set reviewer = reviewer_by_id.get(row.reviewer_id) %}
           {% set reviewee = reviewee_by_id.get(row.reviewee_id) %}
-          <tr id="relationship-row-{{ row.id }}">
-            <td data-sort-value="{{ reviewer.email if reviewer else '' }}">
-              {% if reviewer %}
-                <code>{{ reviewer.email }}</code>
-              {% else %}
-                <span class="muted">(deleted reviewer)</span>
-              {% endif %}
-            </td>
-            <td data-sort-value="{{ reviewee.email_or_identifier if reviewee else '' }}">
-              {% if reviewee %}
-                <code>{{ reviewee.email_or_identifier }}</code>
-              {% else %}
-                <span class="muted">(deleted reviewee)</span>
-              {% endif %}
-            </td>
-            <td class="tag-col tag-col-1" data-sort-value="{{ row.tag_1 or '' }}">{{ row.tag_1 or "" }}</td>
-            <td class="tag-col tag-col-2" data-sort-value="{{ row.tag_2 or '' }}">{{ row.tag_2 or "" }}</td>
-            <td class="tag-col tag-col-3" data-sort-value="{{ row.tag_3 or '' }}">{{ row.tag_3 or "" }}</td>
-            <td data-sort-value="{{ row.status }}">
-              <span class="pill {{ 'pill-info' if row.status == 'active' else 'pill-empty' }}">{{ row.status }}</span>
-            </td>
-          </tr>
+          {% if edit_id is not none and row.id == edit_id %}
+            <tr class="relationship-edit-row" id="relationship-row-{{ row.id }}">
+              <td class="row-select-cell"></td>
+              <td>
+                <select name="reviewer_id" form="relationship-edit-form" required>
+                  {% for opt_id, opt_label in reviewer_picker_options %}
+                    <option value="{{ opt_id }}"{% if edit_values.reviewer_id == opt_id %} selected{% endif %}>{{ opt_label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td>
+                <select name="reviewee_id" form="relationship-edit-form" required>
+                  {% for opt_id, opt_label in reviewee_picker_options %}
+                    <option value="{{ opt_id }}"{% if edit_values.reviewee_id == opt_id %} selected{% endif %}>{{ opt_label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td class="tag-col tag-col-1"><input type="text" name="tag_1"
+                         form="relationship-edit-form"
+                         value="{{ edit_values.tag_1 }}" maxlength="255"></td>
+              <td class="tag-col tag-col-2"><input type="text" name="tag_2"
+                         form="relationship-edit-form"
+                         value="{{ edit_values.tag_2 }}" maxlength="255"></td>
+              <td class="tag-col tag-col-3"><input type="text" name="tag_3"
+                         form="relationship-edit-form"
+                         value="{{ edit_values.tag_3 }}" maxlength="255"></td>
+              <td>
+                <select name="status" form="relationship-edit-form">
+                  <option value="active"{% if edit_values.status == "active" %} selected{% endif %}>active</option>
+                  <option value="inactive"{% if edit_values.status == "inactive" %} selected{% endif %}>inactive</option>
+                </select>
+              </td>
+            </tr>
+          {% else %}
+            <tr id="relationship-row-{{ row.id }}">
+              <td class="row-select-cell">
+                {% if selectable %}
+                  <input type="checkbox" class="relationship-select"
+                         name="relationship_ids" value="{{ row.id }}"
+                         form="relationships-bulk-form"
+                         aria-label="Select relationship {{ row.id }}">
+                {% endif %}
+              </td>
+              <td data-sort-value="{{ reviewer.name if reviewer else '' }}">
+                {% if reviewer %}
+                  {{ reviewer.name }}<br><code>{{ reviewer.email }}</code>
+                {% else %}
+                  <span class="muted">(deleted reviewer)</span>
+                {% endif %}
+              </td>
+              <td data-sort-value="{{ reviewee.name if reviewee else '' }}">
+                {% if reviewee %}
+                  {{ reviewee.name }}<br><code>{{ reviewee.email_or_identifier }}</code>
+                {% else %}
+                  <span class="muted">(deleted reviewee)</span>
+                {% endif %}
+              </td>
+              <td class="tag-col tag-col-1" data-sort-value="{{ row.tag_1 or '' }}">{{ row.tag_1 or "" }}</td>
+              <td class="tag-col tag-col-2" data-sort-value="{{ row.tag_2 or '' }}">{{ row.tag_2 or "" }}</td>
+              <td class="tag-col tag-col-3" data-sort-value="{{ row.tag_3 or '' }}">{{ row.tag_3 or "" }}</td>
+              <td data-sort-value="{{ row.status }}">
+                <span class="pill {{ 'pill-info' if row.status == 'active' else 'pill-empty' }}">{{ row.status }}</span>
+              </td>
+            </tr>
+          {% endif %}
         {% endfor %}
         </tbody>
       </table>
@@ -241,7 +348,8 @@
       <p class="muted">No relationships match the current filter.</p>
     </div>
   {% endif %}
-  {% if relationships %}
+
+  {% if relationships and not edit_mode %}
     <style>
       #relationships-table.tag-hidden-1 .tag-col-1,
       #relationships-table.tag-hidden-2 .tag-col-2,
@@ -290,7 +398,69 @@
     </script>
   {% endif %}
 
-  {% if not is_ready %}
+  {# Selection → action-button state binding (Segment 15F PR 5
+     stage 2). Only runs in the interactive non-edit / non-ready
+     state. #}
+  {% if not edit_mode and not is_ready %}
+    <script>
+      (function () {
+        var editBtn = document.getElementById("relationships-edit-btn");
+        var inactivateBtn = document.getElementById("relationships-inactivate-btn");
+        var reactivateBtn = document.getElementById("relationships-reactivate-btn");
+        var countPill = document.getElementById("relationships-selected-count");
+        var selectAll = document.getElementById("relationships-select-all");
+        if (!editBtn) return;
+        function boxes() {
+          return document.querySelectorAll(".relationship-select");
+        }
+        function refresh() {
+          var all = boxes();
+          var n = 0;
+          for (var i = 0; i < all.length; i++) {
+            if (all[i].checked) n++;
+          }
+          editBtn.disabled = (n !== 1);
+          inactivateBtn.disabled = (n === 0);
+          reactivateBtn.disabled = (n === 0);
+          countPill.textContent = n + " selected";
+          countPill.hidden = (n === 0);
+          if (selectAll) {
+            selectAll.checked = (n > 0 && n === all.length);
+          }
+        }
+        document.addEventListener("change", function (e) {
+          var t = e.target;
+          if (!t) return;
+          if (t === selectAll) {
+            var all = boxes();
+            for (var i = 0; i < all.length; i++) {
+              all[i].checked = selectAll.checked;
+            }
+            refresh();
+          } else if (t.classList &&
+                     t.classList.contains("relationship-select")) {
+            refresh();
+          }
+        });
+        editBtn.addEventListener("click", function () {
+          var all = boxes();
+          var picked = null;
+          for (var i = 0; i < all.length; i++) {
+            if (all[i].checked) {
+              if (picked !== null) return;
+              picked = all[i];
+            }
+          }
+          if (picked === null) return;
+          window.location =
+            {{ relationships_base_url | tojson }} + "?edit_id=" + picked.value;
+        });
+        refresh();
+      })();
+    </script>
+  {% endif %}
+
+  {% if not is_ready and not edit_mode %}
   <div class="bottom-grid">
     <section class="card" id="upload-csv">
       <h2>Upload Relationships</h2>

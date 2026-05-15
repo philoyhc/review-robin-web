@@ -553,42 +553,38 @@ guard: Add disabled with a hint when either roster is empty.
   placeholders. New `RELATIONSHIPS_SEARCH_BY_OPTIONS` /
   `filter_relationships_rows` / `relationships_search_options`
   in `_filters.py`.
-- **Stage 2 — per-row Edit / Add / bulk + the pickers.**
+- **Stage 2 — per-row Edit + bulk + table reshape (SHIPPED).**
 
-  *Service layer* — new `app/services/relationships.py`
-  mutators alongside the existing CSV `save_relationships`:
-  `create_relationship` / `update_relationship` /
-  `bulk_inactivate` / `bulk_reactivate`, plus
+  *Service layer* — `update_relationship` / `bulk_inactivate` /
+  `bulk_reactivate` in `app/services/relationships.py`
+  (alongside the existing CSV `save_relationships`), plus
   `RelationshipOperationError` (codes: `not_in_session` for a
-  reviewer/reviewee id outside the session, `duplicate_pair`
-  for a `(reviewer, reviewee)` collision against the UNIQUE
-  constraint, `invalid_status`). Each mutator wraps
-  `lifecycle.invalidate_if_validated` and emits the canonical
-  envelope. Four new audit events registered in
-  `EVENT_SCHEMAS`: `relationship.created` (snapshot) /
-  `.updated` (changes + refs) / `.bulk_inactivated` /
-  `.bulk_reactivated` (snapshot).
+  reviewer/reviewee/relationship id outside the session,
+  `duplicate_pair` for a `(reviewer, reviewee)` collision
+  against the UNIQUE constraint, `invalid_status`). Each
+  mutator wraps `lifecycle.invalidate_if_validated`. Three
+  audit events: `relationship.updated` (changes + refs) /
+  `.bulk_inactivated` / `.bulk_reactivated` (snapshot). The
+  shared `_require_session_member` / `_pair_taken` /
+  `_normalised_rel_*` helpers land here too — stage 3's
+  `create_relationship` reuses them.
 
-  *Routes* — `POST /relationships/create` / `/{id}/update` /
-  `/bulk-inactivate` / `/bulk-reactivate`, and `edit_id` /
-  `add` query params on the GET route driving the
-  server-rendered edit state. Mirrors the Reviewers / Reviewees
-  route shape.
+  *Routes* — `POST /relationships/{id}/update` /
+  `/bulk-inactivate` / `/bulk-reactivate`; `edit_id` query
+  param on the GET route drives the server-rendered edit
+  state. Mirrors the Reviewers / Reviewees route shape.
 
-  *Pickers* — the Add / Edit row's Reviewer + Reviewee cells
+  *Edit pickers* — the Edit row's Reviewer + Reviewee cells
   render native `<select>` controls per the Picker-design
   section above (every roster member, `"Name (handle)"` label,
-  `— inactive` suffix, sorted by name, no cap, optional JS
-  option-filter). A new view helper builds the two option
-  lists. Empty-roster guard: the Add-new-row button renders
-  disabled with a hint when the session has zero reviewers or
-  zero reviewees.
+  `— inactive` suffix, sorted by name, no cap). The route
+  helper `_relationship_picker_options` builds the two option
+  lists.
 
-  *Table reshape — name display + sort.* The Relationships
-  data table currently identifies both sides by email only
-  (`<code>{{ reviewer.email }}</code>`). Stage 2 reshapes each
-  identity cell to the Invitations-table shape — the resolved
-  **name** stacked above the email in `<code>`:
+  *Table reshape — name display + sort.* Each identity cell
+  reshapes from email-only (`<code>{{ reviewer.email }}</code>`)
+  to the Invitations-table shape — the resolved **name**
+  stacked above the email in `<code>`:
 
   ```
   | Reviewer              | Reviewee             | …
@@ -596,17 +592,19 @@ guard: Add disabled with a hint when either roster is empty.
   | jane@university.edu   | peter@faculty.edu    |
   ```
 
-  The name is already in hand (the route passes the
-  `reviewer_by_id` / `reviewee_by_id` lookup maps; the template
-  resolves the object per row) — no new derivation, a
-  template change. The `(deleted reviewer)` /
-  `(deleted reviewee)` dangling-FK fallback stays. The
-  Reviewer / Reviewee column **sort keys switch from email to
-  name** (the `data-sort-value` + the route's
-  `_relationship_sort_value` resolver) so the sort tracks the
-  now-prominent text.
+  The `(deleted reviewer)` / `(deleted reviewee)` dangling-FK
+  fallback stays. The Reviewer / Reviewee column **sort keys
+  switch from email to name** (`data-sort-value` + the route's
+  `_relationship_sort_value`).
 
-### PR 6 — Defensive status re-check on `invitations_send_one` (folded into PR 3)
+- **Stage 3 — Add a new row.** `create_relationship` service
+  mutator + `relationship.created` audit event;
+  `POST /relationships/create` route + the `add` query param /
+  blank server-rendered edit row; the Add-new-row button goes
+  live (an `<a>` to `?add=1`). Empty-roster guard: Add renders
+  disabled with a hint when the session has zero reviewers or
+  zero reviewees. (Edit and Add were split into separate stages
+  so each ships as a small reviewable slice.)
 
 ### PR 6 — Defensive status re-check on `invitations_send_one` (folded into PR 3)
 
