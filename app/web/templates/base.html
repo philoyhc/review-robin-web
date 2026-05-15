@@ -694,6 +694,15 @@
         margin-top: 12px;
         flex-wrap: wrap;
       }
+      /* The selected-count pill + action-button row sits flush
+         right (Segment 15F PR 3 follow-up). */
+      .operator-actions-card .operator-actions-buttons {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
       /* Reviewer picker on the Previews page (segment 11F). Two
          side-by-side half-width cards in a `.bottom-grid`:
          **Previewing as** (typeahead input + Apply on one flex row,

@@ -212,18 +212,22 @@ def test_operator_actions_card_renders_inert_buttons(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
     assert 'class="card operator-actions-card"' in body
-    # All four buttons present + disabled.
+    # All four action affordances present.
     for label in (
-        ">Edit<",
-        ">Inactivate selected<",
-        ">Reactivate selected<",
-        ">Add new row<",
+        ">Edit</button>",
+        ">Inactivate selected</button>",
+        ">Reactivate selected</button>",
+        ">Add new row</a>",
     ):
         assert label in body
-    # Count disabled action buttons inside the operator-actions-buttons
-    # block (4 of them).
-    buttons_section = body[body.find("operator-actions-buttons") :][:2000]
-    assert buttons_section.count("disabled") >= 4
+    # The three buttons (Edit / Inactivate / Reactivate) start
+    # disabled — JS enables them on selection. Anchor on the div's
+    # ``class="..."`` so the base.html CSS rule with the same class
+    # name doesn't shadow the match.
+    buttons_section = body[
+        body.find('class="operator-actions-buttons"') :
+    ][:2000]
+    assert buttons_section.count("disabled") >= 3
 
 
 def test_search_filter_form_renders_status_options_and_datalist(
