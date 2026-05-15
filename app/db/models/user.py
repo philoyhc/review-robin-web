@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Integer, LargeBinary, String, text
+from sqlalchemy import JSON, Boolean, Integer, LargeBinary, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -62,6 +62,19 @@ class User(Base, TimestampMixin):
     is_operator: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=text("false"), nullable=False
     )
+
+    # Per-operator preferences container (Segment 18B). A JSON
+    # object whose keys are individual operator-level display
+    # preferences. First consumer: 18B PR 2 reads / writes the
+    # ``display_timezone`` key (the operator's default timezone
+    # for sessions they create). The container is deliberately
+    # general — future operator-level display settings become new
+    # keys, not new migrations. ``NULL`` (or an absent key) means
+    # "no preference set"; the consumer falls through to its
+    # in-code default (``UTC`` for the timezone key). Schema
+    # pre-positioned in 13F PR 7; lands inert — no service module
+    # reads or writes the column until 18B PR 2 lights it up.
+    preferences: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     review_sessions: Mapped[list[ReviewSession]] = relationship(
         back_populates="created_by_user",

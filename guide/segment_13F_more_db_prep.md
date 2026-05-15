@@ -1,10 +1,12 @@
 # Segment 13F — More DB prep (14C / 16A / 16B / 18A / 18B / 18C ride-along)
 
 **Status:** In flight — **PRs 1 + 2 shipped 2026-05-11**
-(migrations `779b90e4b397` + `8003c2be99d8`); PRs 3-7
-deferred until their consumer segments (18A / 14C / 18C / 18B)
-are picked up, per the "piecemeal, front-load the 16-series
-work" sequencing decision. The 16-series schema scaffolding is
+(migrations `779b90e4b397` + `8003c2be99d8`); **PRs 6 + 7
+shipped 2026-05-15** (migrations `2fec0f646bd2` +
+`e9277c43b251`) ahead of Segment 18B being picked up; PRs 3-5
+deferred until their consumer segments (18A / 14C / 18C) are
+picked up, per the "piecemeal, front-load the 16-series work"
+sequencing decision. The 16-series schema scaffolding is
 now complete — Segment 16A is unblocked to start its PR ladder.
 Stub created 2026-05-11; revised 2026-05-11 to fold in the
 16-series admin / owner-role requirements after a codebase
@@ -66,8 +68,10 @@ session_tags                              # PR 3: 18A per-session free-form tags
 sessions.reminder_settings                # PR 4: 14C reminder cadence (JSON, pending)
 sessions.retention_exception              # PR 5: 18C per-session opt-out (Bool, pending)
 sessions.retention_overrides              # PR 5: 18C per-session policy (JSON, post-MVP, pending)
-sessions.display_timezone                 # PR 6: 18B per-session display timezone (String, pending)
-users.preferences                         # PR 7: per-operator preferences container (JSON, pending)
+sessions.display_timezone                 # PR 6: ✅ shipped — 18B per-session display
+                                          #       timezone (String) (migration 2fec0f646bd2)
+users.preferences                         # PR 7: ✅ shipped — per-operator preferences
+                                          #       container (JSON) (migration e9277c43b251)
 ```
 
 Seven migrations + one model-only correction across seven PRs.
@@ -435,7 +439,15 @@ vars).
 back as `NULL` for both columns; mutating one doesn't affect the
 other. Inert audit: zero service / web references at PR close.
 
-### PR 6 — New column `sessions.display_timezone` String (18B ride-along)
+### PR 6 — New column `sessions.display_timezone` String (18B ride-along) — ✅ **shipped 2026-05-15**
+
+**Outcome.** Migration `2fec0f646bd2` adds `sessions.display_timezone`
+(`String(64)`, nullable). 3 new tests
+(`tests/integration/test_session_display_timezone_schema.py`)
+round-trip the column on both dialects (default `NULL`, an IANA
+name string, set/clear flip). Inert audit at PR close: zero
+hits for `display_timezone` in `app/services/` + `app/web/` —
+light-up lives in 18B PR 3.
 
 **Scope.** One nullable string column on `sessions`. Holds an
 IANA timezone name (e.g. `Asia/Singapore`); `NULL` means
@@ -466,7 +478,15 @@ Default reads back as `NULL`. Round-trips an IANA name string
 at PR close — light-up lives in 18B PR 3 (per-session timezone
 card + create-time stamping).
 
-### PR 7 — New column `users.preferences` JSON (18B ride-along)
+### PR 7 — New column `users.preferences` JSON (18B ride-along) — ✅ **shipped 2026-05-15**
+
+**Outcome.** Migration `e9277c43b251` adds `users.preferences`
+(`JSON`, nullable). 3 new tests
+(`tests/integration/test_user_preferences_schema.py`) round-trip
+the column on both dialects (default `NULL`, a fixture dict,
+replace/clear mutation). Inert audit at PR close: zero hits for
+`preferences` in `app/services/` + `app/web/` — light-up lives
+in 18B PR 2.
 
 **Scope.** One nullable JSON column on `users` — a general
 per-operator preferences container.
@@ -533,12 +553,12 @@ migration history.
   is picked up. Specifically Part 2 (per-deployment retention
   policy) is the first consumer; Part 3 (per-session policy
   overrides) is the second.
-- **PR 6** — defer until 18B (date and time settings) is
-  picked up. Specifically 18B PR 3 (per-session display-timezone
-  override + Session Edit card) is the consumer.
-- **PR 7** — defer until 18B is picked up. Specifically 18B PR 2
-  (per-operator default timezone + `/operator/settings` card)
-  is the consumer; lands just before 18B PR 2.
+- **PR 6** — ✅ shipped 2026-05-15 (migration `2fec0f646bd2`).
+  Unblocks 18B PR 3 (per-session display-timezone override +
+  Session Edit card).
+- **PR 7** — ✅ shipped 2026-05-15 (migration `e9277c43b251`).
+  Unblocks 18B PR 2 (per-operator default timezone +
+  `/operator/settings` card).
 
 The schema-only PRs are deliberately small (~50-100 LOC each
 including the migration, model edit, and the round-trip test).

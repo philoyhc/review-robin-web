@@ -47,6 +47,7 @@ back-link returns the operator to wherever they came from
 | `smtp_from_display_name` | `String(255)` | Friendly name used in the `From:` header. |
 | `smtp_encryption` | `String(16)` | `none` / `starttls` / `tls`. |
 | `smtp_transport` | `String(16)` | `smtp` (default; only value supported today). Reserved for the Segment 14B backend swaps (Microsoft Graph, ACS). |
+| `preferences` | `JSON` | General per-operator preferences container (Segment 18B). JSON object keyed by individual operator-level display preferences; first key `display_timezone` (the operator's default timezone for sessions they create). NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. **Inert** until 18B PR 2 wires the `/operator/settings` timezone card (landed in 13F PR 7). |
 
 **Send-as-me identity model.** The operator who initiates a send in
 Manage Invitations sends from their own SMTP credentials. There is
@@ -88,6 +89,7 @@ Owners section on the Edit page, Segment 16B PR 2).
 | `assignment_mode` | `String(32)` | `manual` / `rule_based`. **Not directly editable** — set by whichever assignment-generation path the operator runs. Post-15D, the rule-based engine is the only operator-facing path (sets `rule_based`); the legacy Manual CSV upload (sets `manual`) survives as a dev-diagnostic surface only. |
 | `help_contact` | `String(320)` | Free-text contact info shown to reviewers. |
 | `email_template_overrides` | `JSON` | Free-form JSON with the recognised keys named in §3 below. |
+| `display_timezone` | `String(64)` | IANA zone name used to render this session's dates / times (Segment 18B). NULL = "inherit the creating operator's default timezone" — load-bearing in 18B's resolution order (session override → operator default → UTC). **Inert** until 18B PR 3 wires the per-session timezone card + create-time stamping (landed in 13F PR 6). |
 | `created_by_user_id` | `Integer` (FK) | Identity. Not user-editable. |
 
 **Canonical specs:** `spec/session_home.md` (Session Details card),
