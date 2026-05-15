@@ -46,19 +46,87 @@
     </div>
   {% endif %}
 
-  {% set field_labels_form_action =
-        "/operator/sessions/" ~ session.id ~ "/relationships/field-labels" %}
-  {% set field_labels_source_type = "pair_context" %}
-  {% set field_labels_card_title = "Pair-context labels" %}
-  {% set field_labels_help =
-        "Rename the three pair-context columns for this session. " ~
-        "Friendly labels flow through every operator preview + the " ~
-        "reviewer surface; leave a cell blank to fall back to the " ~
-        "default." %}
-  {% set field_labels_rows = [
-        [("slot_1", "1"), ("slot_2", "2"), ("slot_3", "3")],
-  ] %}
-  {% include "operator/partials/_field_labels_editor.html" %}
+  {% set relationships_base_url =
+        "/operator/sessions/" ~ session.id ~ "/relationships" %}
+
+  {# Pair-context labels editor (left, half-width) + operator-actions
+     card (right, half-width). #}
+  <div class="bottom-grid">
+    {% set field_labels_form_action =
+          "/operator/sessions/" ~ session.id ~ "/relationships/field-labels" %}
+    {% set field_labels_source_type = "pair_context" %}
+    {% set field_labels_card_title = "Pair-context labels" %}
+    {% set field_labels_help =
+          "Rename the three pair-context columns for this session. " ~
+          "Friendly labels flow through every operator preview + the " ~
+          "reviewer surface; leave a cell blank to fall back to the " ~
+          "default." %}
+    {% set field_labels_rows = [
+          [("slot_1", "1"), ("slot_2", "2"), ("slot_3", "3")],
+    ] %}
+    {% include "operator/partials/_field_labels_editor.html" %}
+
+    <div class="card operator-actions-card">
+      <h2>Operator actions</h2>
+      <div class="operator-actions-main">
+        {# Locate a specific pair — the ``Search by`` dropdown picks
+           which side of the pair the Search box matches. #}
+        <form method="get"
+              action="{{ relationships_base_url }}"
+              class="operator-actions-filter">
+          <div class="filter-row">
+            <label class="filter-status">
+              Search by:
+              <select name="search_by">
+                {% for value, label in filter_search_by_options %}
+                  <option value="{{ value }}"{% if filter_search_by == value %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="filter-search">
+              Search:
+              <input type="text"
+                     name="q"
+                     list="relationships-search-options"
+                     value="{{ filter_search }}"
+                     autocomplete="off"
+                     placeholder="Name or email">
+              <datalist id="relationships-search-options">
+                {% for label in filter_search_options %}
+                  <option value="{{ label }}"></option>
+                {% endfor %}
+              </datalist>
+            </label>
+          </div>
+          <div class="filter-actions">
+            {% if displayed_row_count != total_row_count %}
+              <span class="muted">Showing {{ displayed_row_count }} of {{ total_row_count }}.</span>
+            {% endif %}
+            {% if filter_search %}
+              <a class="btn secondary"
+                 href="{{ relationships_base_url }}">Clear</a>
+            {% endif %}
+            <button class="btn secondary" type="submit">Apply</button>
+          </div>
+        </form>
+        {# Action buttons land in Segment 15F PR 5b — inert
+           placeholders here lock the layout. #}
+        <div class="operator-actions-buttons"
+             style="margin-top: var(--space-3);">
+          <span class="pill pill-count"
+                id="relationships-selected-count" hidden>0 selected</span>
+          <button class="btn secondary" type="button"
+                  disabled aria-disabled="true">Edit</button>
+          <button class="btn secondary" type="button"
+                  disabled aria-disabled="true">Inactivate</button>
+          <button class="btn secondary" type="button"
+                  disabled aria-disabled="true">Activate</button>
+          <button class="btn secondary" type="button"
+                  disabled aria-disabled="true">Add new row</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   {% if relationships %}
     {% set has_tag_1 = relationships | selectattr("tag_1") | list | length > 0 %}
@@ -143,6 +211,13 @@
         </tbody>
       </table>
     </div>
+  {% elif total_row_count > 0 %}
+    {# Filter matched nothing — preserve the total-row context. #}
+    <div class="card">
+      <p class="muted">No relationships match the current filter.</p>
+    </div>
+  {% endif %}
+  {% if relationships %}
     <style>
       #relationships-table.tag-hidden-1 .tag-col-1,
       #relationships-table.tag-hidden-2 .tag-col-2,
@@ -224,14 +299,11 @@
 
         <div class="btn-pair" style="margin-top: 20px;">
           <button class="btn secondary" type="submit">Upload</button>
-          <a class="btn secondary disabled"
-             aria-disabled="true"
-             title="Inline editing — coming soon">Edit Relationships</a>
         </div>
       </form>
     </section>
 
-    {% if relationships %}
+    {% if total_row_count and total_row_count > 0 %}
       <div class="card danger-zone">
         <h2>Danger Zone</h2>
         <form method="post" action="/operator/sessions/{{ session.id }}/relationships/delete-all">
@@ -239,7 +311,7 @@
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required>
               Yes, delete the existing
-              <span class="pill pill-empty">{{ relationships | length }} relationship{% if relationships | length != 1 %}s{% endif %}</span>.
+              <span class="pill pill-empty">{{ total_row_count }} relationship{% if total_row_count != 1 %}s{% endif %}</span>.
             </label>
           </p>
           <p>

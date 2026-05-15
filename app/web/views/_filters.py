@@ -26,7 +26,7 @@ import re
 from ._invitations import InvitationsRow
 from ._responses import ResponsesRow
 
-from app.db.models import Reviewee, Reviewer
+from app.db.models import Relationship, Reviewee, Reviewer
 
 # Cap for the per-page `<datalist>` autocomplete options. Decision 14
 # in ``guide/segment_15F_enhanced_setup_pages.md`` — the
@@ -291,3 +291,96 @@ def reviewees_search_options(rows: list[Reviewee]) -> list[str]:
         key=str.casefold,
     )
     return labels[:REVIEWERS_DATALIST_CAP]
+
+
+# Relationships Setup page (Segment 15F PR 5). The dropdown picks
+# which side of the pair the search box matches — a relationship
+# row has two identity columns, so the operator says which one.
+# ``"all"`` is *not* offered: a search always targets one side.
+RELATIONSHIPS_SEARCH_BY_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("reviewer", "Reviewer"),
+    ("reviewee", "Reviewee"),
+)
+
+
+def _relationship_person(
+    row: Relationship,
+    *,
+    dimension: str,
+    reviewer_by_id: dict[int, Reviewer],
+    reviewee_by_id: dict[int, Reviewee],
+) -> tuple[object | None, str | None]:
+    """Resolve the (person, handle) for one side of a relationship
+    row. ``handle`` is the email (reviewer) or email_or_identifier
+    (reviewee). Either may be ``None`` when the FK is dangling."""
+    if dimension == "reviewee":
+        person = reviewee_by_id.get(row.reviewee_id)
+        return person, (person.email_or_identifier if person else None)
+    person = reviewer_by_id.get(row.reviewer_id)
+    return person, (person.email if person else None)
+
+
+def filter_relationships_rows(
+    rows: list[Relationship],
+    *,
+    reviewer_by_id: dict[int, Reviewer],
+    reviewee_by_id: dict[int, Reviewee],
+    search_by: str,
+    search: str,
+) -> list[Relationship]:
+    """Filter relationship rows by one side of the pair.
+
+    ``search_by`` is ``"reviewer"`` or ``"reviewee"`` (anything else
+    falls through to ``"reviewer"``). ``search`` matches
+    case-insensitively against that side's name or handle; a
+    ``"Name (handle)"`` typeahead pick exact-matches the handle.
+    Empty ``search`` is a no-op."""
+    needle = search.strip()
+    if not needle:
+        return list(rows)
+    dimension = search_by if search_by == "reviewee" else "reviewer"
+    tail = _extract_filter_label_tail(needle)
+    out: list[Relationship] = []
+    for row in rows:
+        person, handle = _relationship_person(
+            row,
+            dimension=dimension,
+            reviewer_by_id=reviewer_by_id,
+            reviewee_by_id=reviewee_by_id,
+        )
+        if person is None or handle is None:
+            continue
+        if tail is not None:
+            if handle.casefold() == tail.casefold():
+                out.append(row)
+        elif _matches_search(person.name, needle) or _matches_search(
+            handle, needle
+        ):
+            out.append(row)
+    return out
+
+
+def relationships_search_options(
+    rows: list[Relationship],
+    *,
+    reviewer_by_id: dict[int, Reviewer],
+    reviewee_by_id: dict[int, Reviewee],
+    search_by: str,
+) -> list[str]:
+    """``"Name (handle)"`` labels for the Relationships typeahead,
+    built for the currently-selected ``search_by`` dimension. One
+    entry per distinct individual appearing in ``rows``; sorted,
+    capped at ``REVIEWERS_DATALIST_CAP``."""
+    dimension = search_by if search_by == "reviewee" else "reviewer"
+    seen: dict[int, str] = {}
+    for row in rows:
+        person, handle = _relationship_person(
+            row,
+            dimension=dimension,
+            reviewer_by_id=reviewer_by_id,
+            reviewee_by_id=reviewee_by_id,
+        )
+        if person is None or handle is None:
+            continue
+        seen[person.id] = f"{person.name} ({handle})"
+    return sorted(seen.values(), key=str.casefold)[:REVIEWERS_DATALIST_CAP]

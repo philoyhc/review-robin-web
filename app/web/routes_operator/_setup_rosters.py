@@ -960,6 +960,8 @@ def reviewees_delete_all(
 @router.get("/sessions/{session_id}/relationships", response_class=HTMLResponse)
 def relationships_list(
     request: Request,
+    search_by: str = "reviewer",
+    q: str = "",
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -971,6 +973,8 @@ def relationships_list(
         db=db,
         issues=[],
         filename=None,
+        search_by=search_by,
+        search=q,
     )
 
 
@@ -1071,6 +1075,8 @@ def _render_relationships_page(
     issues: list,
     filename: str | None,
     missing_confirm: bool = False,
+    search_by: str = "reviewer",
+    search: str = "",
     status_code: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     rows = relationships_service.list_for_session(db, review_session.id)
@@ -1096,11 +1102,27 @@ def _render_relationships_page(
         cookie_name=f"rrw-sort-relationships-{review_session.id}",
         valid_keys=_RELATIONSHIP_SORT_KEYS,
     )
-    rows = views.apply_cookie_sort(
+    all_rows = views.apply_cookie_sort(
         rows,
         sort_spec,
         value_resolver=_relationship_sort_value,
     )
+
+    # Segment 15F PR 5 — locate-a-pair search: the ``search_by``
+    # dropdown picks which side of the pair the search box matches.
+    # 200/500 cap mirrors Reviewers / Reviewees.
+    search_dimension = search_by if search_by == "reviewee" else "reviewer"
+    filtered = views.filter_relationships_rows(
+        all_rows,
+        reviewer_by_id=reviewer_by_id,
+        reviewee_by_id=reviewee_by_id,
+        search_by=search_dimension,
+        search=search,
+    )
+    is_filtered = bool(search.strip())
+    cap = _REVIEWERS_FILTERED_CAP if is_filtered else _REVIEWERS_DEFAULT_CAP
+    capped = filtered[:cap]
+
     return _templates.TemplateResponse(
         request,
         "operator/session_relationships.html",
@@ -1108,10 +1130,21 @@ def _render_relationships_page(
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
-            "relationships": rows,
+            "relationships": capped,
             "reviewer_by_id": reviewer_by_id,
             "reviewee_by_id": reviewee_by_id,
-            "existing_count": len(rows),
+            "existing_count": len(all_rows),
+            "total_row_count": len(all_rows),
+            "displayed_row_count": len(capped),
+            "filter_search_by": search_dimension,
+            "filter_search": search,
+            "filter_search_by_options": views.RELATIONSHIPS_SEARCH_BY_OPTIONS,
+            "filter_search_options": views.relationships_search_options(
+                all_rows,
+                reviewer_by_id=reviewer_by_id,
+                reviewee_by_id=reviewee_by_id,
+                search_by=search_dimension,
+            ),
             "fields_with_data": relationships_service.fields_with_data(
                 db, review_session.id
             ),

@@ -327,6 +327,7 @@ def test_relationships_cookie_sort_by_reviewer_asc(
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
+    body = body[body.find('id="relationships-table"') :]
     # Reviewer column sorts on email — alphabetical: alpha,
     # bravo, charlie.
     assert (
@@ -351,6 +352,7 @@ def test_relationships_cookie_sort_desc(
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
+    body = body[body.find('id="relationships-table"') :]
     assert (
         body.find("charlie@example.edu")
         < body.find("bravo@example.edu")
@@ -376,6 +378,7 @@ def test_relationships_stale_cookie_key_dropped(
     body = client.get(
         f"/operator/sessions/{review_session.id}/relationships"
     ).text
+    body = body[body.find('id="relationships-table"') :]
     assert (
         body.find("alpha@example.edu")
         < body.find("bravo@example.edu")
