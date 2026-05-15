@@ -50,7 +50,7 @@ operator to wherever they came from (`?return_to=<path>`).
 | `smtp_from_display_name` | `String(255)` | Friendly name used in the `From:` header. |
 | `smtp_encryption` | `String(16)` | `none` / `starttls` / `tls`. |
 | `smtp_transport` | `String(16)` | `smtp` (default; only value supported today). Reserved for the Segment 14B backend swaps (Microsoft Graph, ACS). |
-| `preferences` | `JSON` | General per-operator preferences container (Segment 18B). JSON object keyed by individual operator-level display preferences. First key `display_timezone` — the operator's default display timezone (an IANA zone name), edited on the **Date & time** card on `/operator/settings` (18B PR 2). NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. Operator surfaces render dates / times converted into this zone; the canonical render is bare `YYYY-MM-DD HH:MM` (no zone token) via the `format_datetime` Jinja filter — the card carries a worked sample that names the zone. |
+| `preferences` | `JSON` | General per-operator preferences container (Segment 18B). JSON object keyed by individual operator-level display preferences. First key `display_timezone` — the operator's default display timezone (an IANA zone name), edited on the **Date & time** card on `/operator/settings` (18B PR 2). NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. Operator surfaces render dates / times converted into this zone; the canonical render is bare `YYYY-MM-DD HH:MM` (no zone token) via the `format_datetime` Jinja filter — the card carries a worked sample that names the zone. The trailing zone token is behind one internal switch, `date_formatting.SHOW_ZONE_TOKEN` (off by default; flip + restart, no env var or migration). |
 
 **Send-as-me identity model.** The operator who initiates a send in
 Manage Invitations sends from their own SMTP credentials. There is
@@ -423,6 +423,21 @@ deployed environments. Source: `app/config.py`.
 **Canonical spec:** `docs/local_setup.md` (env-var setup),
 `docs/deployment_dev.md` (deployment-side configuration),
 `docs/authentication.md` (Easy Auth + `ALLOW_FAKE_AUTH`).
+
+---
+
+## 8.5. Internal display switches (source constants)
+
+Listed for context — these are neither operator- nor
+deployer-determined. They are module-level constants in `app/`,
+flipped by editing the source and restarting; no env var, no
+database migration, no UI. Reserved for display-shape decisions
+that a deployment might want to reverse without a feature-flag
+framework.
+
+| Constant | Default | Purpose |
+|---|---|---|
+| `date_formatting.SHOW_ZONE_TOKEN` | `False` | When `True`, the `format_datetime` helper appends the resolved zone's `%Z` token (`UTC` / `+08` / `EDT`) to every date-time render, and both timezone-card live previews follow via the operator Jinja env's `show_zone_token` global. Off by default — IANA reports a numeric offset for many zones and a letter code for others, so the mixed token reads unevenly; the zone is instead named on the `/operator/settings` and Session Edit cards. Segment 18B follow-up. |
 
 ---
 

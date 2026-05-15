@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 
+from app.services import date_formatting
 from app.services.date_formatting import (
     format_date,
     format_datetime,
@@ -89,3 +90,24 @@ def test_resolve_zone_unknown_and_none_fall_back_to_utc() -> None:
     assert resolve_zone("Bogus/Zone").key == "UTC"
     assert resolve_zone(None).key == "UTC"
     assert resolve_zone("Asia/Singapore").key == "Asia/Singapore"
+
+
+# ── Segment 18B follow-up — the SHOW_ZONE_TOKEN switch ───────────────────
+
+
+def test_zone_token_off_by_default() -> None:
+    assert date_formatting.SHOW_ZONE_TOKEN is False
+
+
+def test_format_datetime_appends_token_when_switch_on(monkeypatch) -> None:
+    monkeypatch.setattr(date_formatting, "SHOW_ZONE_TOKEN", True)
+    value = datetime(2026, 5, 15, 9, 0, tzinfo=timezone.utc)
+    assert format_datetime(value, "UTC") == "2026-05-15 09:00 UTC"
+    assert format_datetime(value, "Asia/Singapore") == "2026-05-15 17:00 +08"
+
+
+def test_format_date_ignores_zone_token_switch(monkeypatch) -> None:
+    # The token only ever rode the date-time render, never date-only.
+    monkeypatch.setattr(date_formatting, "SHOW_ZONE_TOKEN", True)
+    value = datetime(2026, 5, 15, 9, 0, tzinfo=timezone.utc)
+    assert format_date(value, "Asia/Singapore") == "2026-05-15"
