@@ -171,14 +171,22 @@
 
   {# Hidden form shells. ``form=`` attributes on the table
      checkboxes / edit-row inputs / card buttons attach to these. #}
+  {# ``filter_*`` hidden inputs carry the active search / status
+     filter through Edit / bulk actions so the operator lands back
+     on the same filtered view (Segment 15F). #}
   {% if edit_mode %}
     {% set edit_action = reviewers_base_url ~ "/create" if add_mode
           else reviewers_base_url ~ "/" ~ edit_id ~ "/update" %}
-    <form id="reviewer-edit-form" method="post"
-          action="{{ edit_action }}"></form>
+    <form id="reviewer-edit-form" method="post" action="{{ edit_action }}">
+      <input type="hidden" name="filter_status" value="{{ filter_status }}">
+      <input type="hidden" name="filter_q" value="{{ filter_search }}">
+    </form>
   {% elif not is_ready %}
     <form id="reviewers-bulk-form" method="post"
-          action="{{ reviewers_base_url }}/bulk-inactivate"></form>
+          action="{{ reviewers_base_url }}/bulk-inactivate">
+      <input type="hidden" name="filter_status" value="{{ filter_status }}">
+      <input type="hidden" name="filter_q" value="{{ filter_search }}">
+    </form>
   {% endif %}
 
   {% if reviewers or add_mode %}

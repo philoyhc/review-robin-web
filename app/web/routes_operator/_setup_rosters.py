@@ -54,17 +54,24 @@ from app.web.routes_operator._shared import (
 
 
 def _redirect_keeping_selection(
-    base_url: str, selected_ids: list[int]
+    base_url: str,
+    selected_ids: list[int],
+    *,
+    filter_params: list[tuple[str, str]] | None = None,
 ) -> RedirectResponse:
     """303 back to a Setup page, carrying the acted-on row ids as
     ``?selected=`` params. The page re-checks those checkboxes so
     the operator clears the selection themselves rather than the
-    action silently clearing it (Segment 15F)."""
-    url = base_url
-    if selected_ids:
-        url = base_url + "?" + urlencode(
-            [("selected", i) for i in selected_ids]
-        )
+    action silently clearing it (Segment 15F).
+
+    ``filter_params`` carries the active search / status filter
+    (empty values dropped) through the action so the operator
+    lands back on the same filtered view."""
+    params: list[tuple[str, object]] = []
+    if filter_params:
+        params.extend((key, value) for key, value in filter_params if value)
+    params.extend(("selected", i) for i in selected_ids)
+    url = base_url if not params else base_url + "?" + urlencode(params)
     return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -508,6 +515,8 @@ def reviewers_update(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -546,13 +555,17 @@ def reviewers_update(
             http_status=status.HTTP_400_BAD_REQUEST,
         )
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewers", [reviewer_id]
+        f"/operator/sessions/{review_session.id}/reviewers",
+        [reviewer_id],
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )
 
 
 @router.post("/sessions/{session_id}/reviewers/bulk-inactivate")
 def reviewers_bulk_inactivate(
     reviewer_ids: list[int] = Form(default=[]),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -571,13 +584,17 @@ def reviewers_bulk_inactivate(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewers", reviewer_ids
+        f"/operator/sessions/{review_session.id}/reviewers",
+        reviewer_ids,
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )
 
 
 @router.post("/sessions/{session_id}/reviewers/bulk-reactivate")
 def reviewers_bulk_reactivate(
     reviewer_ids: list[int] = Form(default=[]),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -596,7 +613,9 @@ def reviewers_bulk_reactivate(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewers", reviewer_ids
+        f"/operator/sessions/{review_session.id}/reviewers",
+        reviewer_ids,
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )
 
 
@@ -825,6 +844,8 @@ def reviewees_update(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -865,13 +886,17 @@ def reviewees_update(
             http_status=status.HTTP_400_BAD_REQUEST,
         )
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewees", [reviewee_id]
+        f"/operator/sessions/{review_session.id}/reviewees",
+        [reviewee_id],
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )
 
 
 @router.post("/sessions/{session_id}/reviewees/bulk-inactivate")
 def reviewees_bulk_inactivate(
     reviewee_ids: list[int] = Form(default=[]),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -890,13 +915,17 @@ def reviewees_bulk_inactivate(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewees", reviewee_ids
+        f"/operator/sessions/{review_session.id}/reviewees",
+        reviewee_ids,
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )
 
 
 @router.post("/sessions/{session_id}/reviewees/bulk-reactivate")
 def reviewees_bulk_reactivate(
     reviewee_ids: list[int] = Form(default=[]),
+    filter_status: str = Form(default="all"),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -915,7 +944,9 @@ def reviewees_bulk_reactivate(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewees", reviewee_ids
+        f"/operator/sessions/{review_session.id}/reviewees",
+        reviewee_ids,
+        filter_params=[("status", filter_status), ("q", filter_q)],
     )
 
 
@@ -1119,6 +1150,8 @@ def relationships_update(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    filter_search_by: str = Form(default="reviewer"),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1194,12 +1227,15 @@ def relationships_update(
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/relationships",
         [relationship_id],
+        filter_params=[("search_by", filter_search_by), ("q", filter_q)],
     )
 
 
 @router.post("/sessions/{session_id}/relationships/bulk-inactivate")
 def relationships_bulk_inactivate(
     relationship_ids: list[int] = Form(default=[]),
+    filter_search_by: str = Form(default="reviewer"),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1220,12 +1256,15 @@ def relationships_bulk_inactivate(
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/relationships",
         relationship_ids,
+        filter_params=[("search_by", filter_search_by), ("q", filter_q)],
     )
 
 
 @router.post("/sessions/{session_id}/relationships/bulk-reactivate")
 def relationships_bulk_reactivate(
     relationship_ids: list[int] = Form(default=[]),
+    filter_search_by: str = Form(default="reviewer"),
+    filter_q: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1246,6 +1285,7 @@ def relationships_bulk_reactivate(
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/relationships",
         relationship_ids,
+        filter_params=[("search_by", filter_search_by), ("q", filter_q)],
     )
 
 

@@ -401,6 +401,34 @@ def test_bulk_inactivate_route(db: Session, client: TestClient) -> None:
     ).scalar_one().status == "inactive"
 
 
+def test_bulk_action_keeps_filter(
+    db: Session, client: TestClient
+) -> None:
+    """The active search filter rides through a bulk action so the
+    operator lands back on the same filtered view."""
+    review_session = _make_session(client, db, code="rel-m-keepfilter")
+    _rv, _re, rels = _seed(
+        db,
+        review_session.id,
+        reviewers=["Ali"],
+        reviewees=["Jane", "Bob"],
+        pairs=[(0, 0), (0, 1)],
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        "/relationships/bulk-inactivate",
+        data={
+            "relationship_ids": [rels[0].id],
+            "filter_search_by": "reviewee",
+            "filter_q": "Jane",
+        },
+        follow_redirects=False,
+    )
+    loc = response.headers["location"]
+    assert "search_by=reviewee" in loc
+    assert "q=Jane" in loc
+
+
 def test_edit_mode_suppressed_on_ready_session(
     db: Session, client: TestClient
 ) -> None:
