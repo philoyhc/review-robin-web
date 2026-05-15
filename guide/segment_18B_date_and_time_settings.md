@@ -70,16 +70,27 @@ no cue it isn't their local time (this surfaced in conversation
    created today inherits the configured deployment timezone;
    the operator only touches the per-session card to deviate.
 4. **Card controls timezone only.** The date-time and date-only
-   *formats* are standardized in code (goal 1) — not operator-
-   configurable. The cards expose only the timezone choice.
+   *formats* are standardized in code (goal 1, decision 7) — not
+   operator-configurable. The cards expose only the timezone
+   choice.
 5. **Full IANA timezone picker.** The card is a dropdown of IANA
    zone names (e.g. `Asia/Singapore`, `UTC`), not a binary
    local/UTC toggle — so a session can be pinned to any zone.
 6. **Reviewer surface — always an explicit zone token.**
    Reviewer-facing dates (above all the deadline) render in the
    session's configured zone **and always carry a visible zone
-   abbreviation / offset**, so a reviewer physically elsewhere
-   is never left guessing.
+   abbreviation** (see decision 7), so a reviewer physically
+   elsewhere is never left guessing.
+7. **Canonical formats.**
+   - Date-only: `YYYY-MM-DD` (e.g. `2026-05-15`).
+   - Date-time: `YYYY-MM-DD HH:MM` in 24-hour time, followed by
+     the resolved zone's abbreviation — e.g. `2026-05-15 17:00
+     SGT`. The zone abbreviation is part of the date-time render
+     everywhere (not delegated to a surrounding label).
+   - The abbreviation is typically three letters (`SGT`, `EST`),
+     but is whatever the zone's standard abbreviation is — a few
+     zones use four letters (`AEDT`) or a numeric offset; see
+     the working note on `%Z`.
 
 ## Audit — every date/time display site (2026-05-15)
 
@@ -169,7 +180,8 @@ infra (goal 2).
 
 - Add `format_datetime` / `format_date` Jinja filters (+ a
   plain-Python helper for the email / service paths) in one new
-  module — one canonical date-time format, one date-only format.
+  module — the canonical formats from decision 7
+  (`YYYY-MM-DD HH:MM <ZONE>` / `YYYY-MM-DD`).
 - The helper takes a stored UTC datetime and, **at this stage**,
   formats it in UTC with an explicit `UTC` token appended — so
   every site is immediately unambiguous even before the timezone
@@ -275,12 +287,13 @@ When parts ship:
   in a pill) — priority migration targets in PR 1, legibility
   alone.
 - **`%Z` already in use** on the `$submitted_at` merge field —
-  the canonical format should always carry a zone token, so this
-  becomes consistent rather than a one-off.
+  decision 7 makes the zone abbreviation part of the canonical
+  date-time format, so this becomes consistent rather than a
+  one-off. `%Z` on a `zoneinfo`-aware datetime yields the zone
+  abbreviation directly; verify it for the target zones at PR 2,
+  since a few zones surface a numeric offset (`+08`) rather than
+  a letter code depending on the tz database.
 - **IANA picker UX.** A raw `<select>` of ~350+ IANA zones is
   unwieldy; consider a shortlist of common zones + a searchable
   control, or a `<datalist>` (the Segment 15F relationship-picker
   pattern). Decide at PR 2.
-- **Reviewer zone token wording.** Abbreviation (`SGT`), offset
-  (`UTC+8`), or both — pick at PR 2 for consistency across every
-  display site.
