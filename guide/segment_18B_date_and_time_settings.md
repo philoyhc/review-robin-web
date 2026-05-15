@@ -10,9 +10,26 @@
 
 ## Goal
 
-Give the deployment (and possibly the operator) control over how
-**dates and times are displayed**, and make the display
-**consistent** across the app.
+Two linked goals:
+
+1. **Standardize the format.** Replace the three-plus ad-hoc
+   render formats in flight today with one canonical date-time
+   format and one date-only format, applied through a single
+   shared helper so every display site is consistent.
+2. **Build central local-vs-UTC display infra.** One place —
+   config-driven, not per-template — decides whether a given
+   timestamp renders in the deployment's **local timezone** or in
+   **UTC**. Every display site reads that decision through the
+   shared helper, so the choice is made once and applied
+   everywhere.
+
+Why the local-vs-UTC decision has to be *central* rather than
+sprinkled per template: it must stay consistent, and it matters
+most for **business-critical timestamps — above all the session
+deadline.** A reviewer or operator misreading a deadline by the
+UTC offset (e.g. treating an 18:00 UTC+8 deadline as 18:00 UTC)
+can miss it entirely. The deadline is the timestamp where an
+ambiguous zone has real consequences, so it drives the design.
 
 Today every timestamp is stored and displayed in **UTC** with no
 timezone indicator, and the rendering is **inconsistent** — some
@@ -95,19 +112,31 @@ operator-entered. Display sites:
 
 ## Scope (sketch)
 
-### Part 1 — Display timezone + a shared formatting helper
+### Part 1 — Central display infra: timezone decision + shared helper
+
+The core of the segment — the central place that owns both the
+format and the local-vs-UTC decision.
 
 - A **deployment timezone** setting (env var in `app/config.py`,
-  e.g. `DISPLAY_TIMEZONE`, default `UTC`). Possibly later a
-  per-operator override — confirm at scoping whether per-deploy
-  is enough for the pilot.
+  e.g. `DISPLAY_TIMEZONE`, default `UTC`) plus a **display-mode**
+  decision (render in `DISPLAY_TIMEZONE` local time, or render
+  UTC). Whether that's one setting (the timezone, with `UTC`
+  meaning "no conversion") or two is a scoping call; either way
+  the decision lives in **one** config-backed place.
 - A single **Jinja filter / helper** (e.g. `format_datetime` /
-  `format_date`) that takes a stored UTC datetime, converts to
-  the display timezone, and renders one canonical format. Every
-  template display site above migrates to it.
+  `format_date`) that takes a stored UTC datetime, applies the
+  central timezone decision, and renders one canonical format.
+  Every template display site in the audit above migrates to it
+  — no template makes its own zone or format choice.
 - Decide the canonical formats: one for date-time, one for
-  date-only. Include an unambiguous timezone token (or label the
-  column) so "10:00" is never read as the wrong zone.
+  date-only. The render **always carries an unambiguous timezone
+  token** (or the surrounding label does) so a value is never
+  read against the wrong zone — non-negotiable for the deadline.
+- **Deadline-first.** The deadline display sites (Session Home /
+  reviewer surface / sessions list / instruments page / the
+  `$deadline` email merge field) are the highest-stakes
+  consumers; verify them first and make sure the zone token is
+  present wherever a deadline shows.
 - The extract / audit-JSON sites stay **ISO-8601 UTC** — machine
   formats shouldn't localize. Audit viewer: decide whether the
   on-screen cell localizes while the CSV stays UTC.
