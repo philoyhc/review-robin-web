@@ -1,7 +1,8 @@
 # Segment 18B — Date and time settings
 
-> **Stub created 2026-05-15.** Sketch-level scope only; detailed
-> PR breakdowns get drafted when this segment is picked up.
+> **Planned 2026-05-15.** Scoping decisions locked (see "Locked
+> decisions" below); PR ladder drafted. Detailed per-PR
+> breakdowns get finalised when the segment is picked up.
 >
 > The 18B segment number was previously held by "Session tagging
 > + archiving", which was folded into 18A (Sessions lobby
@@ -52,6 +53,33 @@ no cue it isn't their local time (this surfaced in conversation
   formats in flight (`isoformat()`, `%Y-%m-%d %H:%M`,
   `%Y-%m-%d`, `%Y-%m-%dT%H:%M` for the one datetime-local input).
   A shared display helper / Jinja filter would unify them.
+
+## Locked decisions (2026-05-15 scoping)
+
+1. **Setting scope — per-session, two-tier.** Each session
+   carries its own display timezone. A **deployment-wide
+   default** is inherited by every new session and can be
+   **overridden per session**. Mirrors the 15C library /
+   per-session-copy pattern (default → per-session copy).
+2. **Surfaces — two cards.** The deployment default is edited on
+   a card on the operator Settings page (`/operator/settings`);
+   the per-session override is edited on a card on the Session
+   Edit page (`/operator/sessions/{id}/edit`), next to the
+   deadline field.
+3. **New-session default — deployment default zone.** A session
+   created today inherits the configured deployment timezone;
+   the operator only touches the per-session card to deviate.
+4. **Card controls timezone only.** The date-time and date-only
+   *formats* are standardized in code (goal 1) — not operator-
+   configurable. The cards expose only the timezone choice.
+5. **Full IANA timezone picker.** The card is a dropdown of IANA
+   zone names (e.g. `Asia/Singapore`, `UTC`), not a binary
+   local/UTC toggle — so a session can be pinned to any zone.
+6. **Reviewer surface — always an explicit zone token.**
+   Reviewer-facing dates (above all the deadline) render in the
+   session's configured zone **and always carry a visible zone
+   abbreviation / offset**, so a reviewer physically elsewhere
+   is never left guessing.
 
 ## Audit — every date/time display site (2026-05-15)
 
@@ -110,54 +138,111 @@ operator-entered. Display sites:
   filter → parsed by `views/_audit_log.py` via
   `date.fromisoformat`.
 
-## Scope (sketch)
+## Data model
 
-### Part 1 — Central display infra: timezone decision + shared helper
+- **Deployment default timezone.** A workspace-scoped setting,
+  DB-persisted so the `/operator/settings` card can edit it (an
+  env var alone wouldn't be operator-editable). Either a
+  single-row settings table or a typed key/value row — this is
+  the first workspace-scoped setting in the app, so the table
+  shape is a small design call at PR time. An env var can seed
+  the initial value on a fresh deployment; default `UTC`.
+- **Per-session override.** New nullable column
+  `sessions.display_timezone` (IANA zone-name string; `NULL` =
+  inherit the deployment default). New sessions are stamped with
+  the deployment default at create time, so the column is rarely
+  NULL in practice — but `NULL`-means-inherit stays meaningful.
+- **Resolution order:** `sessions.display_timezone` → deployment
+  default → `UTC`. The shared helper resolves this once per
+  render. Session-less surfaces (cross-session sessions lobby,
+  sys-admin pages) resolve to the deployment default.
+- All migrations additive / nullable, no backfill — the 13D/13E
+  playbook.
 
-The core of the segment — the central place that owns both the
-format and the local-vs-UTC decision.
+## Plan (PR ladder)
 
-- A **deployment timezone** setting (env var in `app/config.py`,
-  e.g. `DISPLAY_TIMEZONE`, default `UTC`) plus a **display-mode**
-  decision (render in `DISPLAY_TIMEZONE` local time, or render
-  UTC). Whether that's one setting (the timezone, with `UTC`
-  meaning "no conversion") or two is a scoping call; either way
-  the decision lives in **one** config-backed place.
-- A single **Jinja filter / helper** (e.g. `format_datetime` /
-  `format_date`) that takes a stored UTC datetime, applies the
-  central timezone decision, and renders one canonical format.
-  Every template display site in the audit above migrates to it
-  — no template makes its own zone or format choice.
-- Decide the canonical formats: one for date-time, one for
-  date-only. The render **always carries an unambiguous timezone
-  token** (or the surrounding label does) so a value is never
-  read against the wrong zone — non-negotiable for the deadline.
-- **Deadline-first.** The deadline display sites (Session Home /
-  reviewer surface / sessions list / instruments page / the
-  `$deadline` email merge field) are the highest-stakes
-  consumers; verify them first and make sure the zone token is
-  present wherever a deadline shows.
-- The extract / audit-JSON sites stay **ISO-8601 UTC** — machine
-  formats shouldn't localize. Audit viewer: decide whether the
-  on-screen cell localizes while the CSV stays UTC.
+Three PRs. PR 1 is independently shippable and delivers goal 1
+(format standardization) on its own; PRs 2-3 layer the timezone
+infra (goal 2).
 
-### Part 2 — Input consistency (post-MVP / fold-in)
+### PR 1 — Canonical format + shared display helper
 
-- The deadline `datetime-local` input is implicitly local-to-the-
-  browser; reconcile it with the chosen display timezone so an
-  operator entering "5 PM" gets "5 PM" in the display zone.
+- Add `format_datetime` / `format_date` Jinja filters (+ a
+  plain-Python helper for the email / service paths) in one new
+  module — one canonical date-time format, one date-only format.
+- The helper takes a stored UTC datetime and, **at this stage**,
+  formats it in UTC with an explicit `UTC` token appended — so
+  every site is immediately unambiguous even before the timezone
+  infra lands.
+- Migrate every template + service display site in the audit
+  above to the helper. The `isoformat()` pill sites are the
+  ugliest and the priority.
+- **Not touched:** the CSV extracts + audit-detail JSON — those
+  stay ISO-8601 UTC (machine formats don't localize).
+- No schema change. May split 1a (helper + operator templates) /
+  1b (reviewer templates + email merge fields) if the diff is
+  large.
+
+### PR 2 — Deployment default timezone + `/operator/settings` card
+
+- The workspace-default-timezone data model (above) + an
+  `/operator/settings` card with the full IANA timezone picker.
+- The shared helper grows timezone resolution: it converts the
+  UTC value into the deployment default zone before formatting,
+  and the zone token reflects the resolved zone.
+- Audit event `workspace.display_timezone_set` (changes
+  envelope), registered in `EVENT_SCHEMAS`.
+- After this PR every operator + reviewer surface renders in the
+  deployment zone with a correct token.
+
+### PR 3 — Per-session timezone override + Session Edit card
+
+- `sessions.display_timezone` column + migration; new sessions
+  stamped with the deployment default on create.
+- A card on the Session Edit page with the IANA picker + an
+  "inherit deployment default" affordance.
+- The helper's resolution order becomes session → deployment →
+  UTC; every render with a session in scope uses the session
+  zone.
+- Audit event `session.display_timezone_set` (changes envelope).
+- **Deadline-first verification.** Re-check every deadline
+  display site — Session Home, reviewer surface, sessions list,
+  instruments page, and the `$deadline` / `$submitted_at` email
+  merge fields — carries the right zone + token.
+
+### Post-MVP — input consistency
+
+The deadline `<input type="datetime-local">` on Session Edit is
+implicitly browser-local; reconcile it with the session's
+configured zone so an operator entering "5 PM" gets "5 PM" in the
+session zone, not the browser's. Likewise the audit-log
+`<input type="date">` filter. Deferred — confirm need once the
+display side is in operators' hands.
 
 ## Hard dependencies
 
-- **None.** This is a cross-cutting display change; it touches
-  templates + a config setting + one helper module.
+- **None strictly required.** Cross-cutting display change —
+  templates + a workspace setting + a `sessions` column + one
+  helper module.
+- **Surface precedents already exist:** `/operator/settings`
+  shipped in Segment 11E (the deployment-default card joins it);
+  the Session Edit page gained the Owners card in 16B (the
+  per-session card joins it next to the deadline field).
 
 ## Out of scope
 
-- **Per-reviewer timezone.** Reviewers see the session deadline;
-  a per-reviewer tz is over-engineering for the pilot.
+- **Per-operator timezone.** The setting is per-session (with a
+  deployment default), not per-operator — an operator viewing a
+  session sees that session's zone, not their own preference.
+  Considered at scoping and dropped.
+- **Per-reviewer timezone.** Reviewers see the session's zone
+  (with an explicit token); a per-reviewer preference is
+  over-engineering for the pilot.
+- **Operator-configurable date *format*.** The cards control the
+  timezone only; the date-time / date-only formats are fixed in
+  code.
 - **Localized date *formats* per locale** (DD/MM vs MM/DD via
-  `Accept-Language`). Pick one canonical format; i18n is a much
+  `Accept-Language`). One canonical format; i18n is a much
   larger separate concern.
 - **Changing stored values.** The DB stays UTC; this is a
   display-layer change only.
@@ -168,24 +253,34 @@ When parts ship:
 
 - `docs/status.md` timeline entry.
 - `guide/todo_master.md` updated.
-- `spec/settings_inventory.md` — new deployment (and/or
-  per-operator) timezone setting row; note the canonical display
-  format.
+- `spec/settings_inventory.md` — the new workspace-default
+  timezone setting + the `sessions.display_timezone` column +
+  the two cards; note the canonical display format.
+- `spec/sessions_overview.md` / a Session Edit spec — the
+  per-session timezone card.
 - `spec/visual_style_rrw.md` / `spec/ui_elements.md` — document
-  the canonical date-time render + the Jinja filter.
-- Any spec that quotes a timestamp example refreshed to the
-  canonical format.
+  the canonical date-time render + the Jinja filter; refresh any
+  quoted timestamp example to the canonical format.
+- `spec/architecture.md` — the two new audit events.
 
 ## Working notes
 
 - _(placeholder for decisions during PR scoping)_
-- **Per-deploy vs per-operator timezone.** A single deployment
-  serves one institution in one timezone — per-deploy is likely
-  enough. Per-operator only matters for multi-region operator
-  teams; defer unless pilot feedback asks for it.
+- **Workspace-settings table shape.** This is the app's first
+  workspace-scoped (vs per-operator / per-session) setting.
+  Decide at PR 2 scoping: a single-row `workspace_settings`
+  table vs a typed key/value table. Lean single-row table —
+  simplest, and a second workspace setting is not on the horizon.
 - **`isoformat()` sites are the ugliest** (`2026-05-15T10:00:00+00:00`
-  in a pill) — they're the priority migration targets even before
-  the timezone work, purely on legibility.
+  in a pill) — priority migration targets in PR 1, legibility
+  alone.
 - **`%Z` already in use** on the `$submitted_at` merge field —
-  decide whether the canonical format always carries a tz token
-  or whether the column header / label carries it instead.
+  the canonical format should always carry a zone token, so this
+  becomes consistent rather than a one-off.
+- **IANA picker UX.** A raw `<select>` of ~350+ IANA zones is
+  unwieldy; consider a shortlist of common zones + a searchable
+  control, or a `<datalist>` (the Segment 15F relationship-picker
+  pattern). Decide at PR 2.
+- **Reviewer zone token wording.** Abbreviation (`SGT`), offset
+  (`UTC+8`), or both — pick at PR 2 for consistency across every
+  display site.
