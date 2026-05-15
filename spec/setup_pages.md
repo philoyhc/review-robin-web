@@ -146,13 +146,21 @@ flicker on first paint).
 Sortable columns per table:
 
 - **Reviewers:** `name`, `email`, `tag_1` / `tag_2` / `tag_3`,
-  `status`.
+  `status`, `updated_at`.
 - **Reviewees:** `name`, `email_or_identifier`, `tag_1` /
-  `tag_2` / `tag_3`, `status`. (The Photo column stays
-  non-sortable — it renders a link, not a comparable value.)
+  `tag_2` / `tag_3`, `status`, `updated_at`. (The Photo column
+  stays non-sortable — it renders a link, not a comparable
+  value.)
 - **Relationships:** `reviewer` (sorts on reviewer email),
   `reviewee` (sorts on `email_or_identifier`),
-  `tag_1` / `tag_2` / `tag_3`, `status`.
+  `tag_1` / `tag_2` / `tag_3`, `status`, `updated_at`.
+
+The right-end **Updated** column shows each row's `updated_at`
+timestamp (`%Y-%m-%d %H:%M`); sorting it descending surfaces the
+most recently added / edited rows. Freshly inserted rows carry
+`updated_at == created_at`; a per-row edit bumps it. The
+server-rendered Add / Edit rows show `—` in this cell (no
+committed value yet).
 
 Sortable affordance and visibility-toggle affordance are
 orthogonal — toggling a column's visibility doesn't affect its
@@ -186,6 +194,7 @@ section beneath:
 | 4 | Tag2 | ✓ | `data-tag-toggle="2"` / `class="tag-col tag-col-2"` |
 | 5 | Tag3 | ✓ | `data-tag-toggle="3"` / `class="tag-col tag-col-3"` |
 | 6 | Status | — | `reviewer.status` |
+| 7 | Updated | — | `reviewer.updated_at` (`%Y-%m-%d %H:%M`) |
 
 Toggle row sits right-flushed above the table (`Tag1`, `Tag2`,
 `Tag3` checkboxes); see "Preview tables (shared toggle pattern)"
@@ -210,6 +219,7 @@ Danger Zone on the right. CSV header copy lists `RevieweeName`,
 | 5 | Tag2 | ✓ | |
 | 6 | Tag3 | ✓ | |
 | 7 | Status | — | `reviewee.status` |
+| 8 | Updated | — | `reviewee.updated_at` (`%Y-%m-%d %H:%M`) |
 
 The Photo column is *not* on a toggle — its presence is governed
 solely by whether any reviewee has a populated `profile_link` in
@@ -259,6 +269,7 @@ treatment). Fields-with-data labels come from
 | 4 | Tag2 | ✓ | `data-tag-toggle="2"` / `class="tag-col tag-col-2"` |
 | 5 | Tag3 | ✓ | `data-tag-toggle="3"` / `class="tag-col tag-col-3"` |
 | 6 | Status | — | `<span class="pill pill-info\|pill-empty">active\|inactive</span>` per the canonical pill treatment (post-15 cleanup polish #768) |
+| 7 | Updated | — | `relationship.updated_at` (`%Y-%m-%d %H:%M`) |
 
 Toggle row sits right-flushed above the table (`Tag1`, `Tag2`,
 `Tag3` checkboxes); same default-state and persistence rules as

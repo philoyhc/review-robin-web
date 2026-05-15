@@ -100,6 +100,11 @@ def test_reviewers_table_renders_sort_scaffolding(
     assert 'class="rrw-sortable" data-sort-key="name"' in body
     assert 'class="rrw-sortable" data-sort-key="email"' in body
     assert 'class="rrw-sortable" data-sort-key="status"' in body
+    # Segment 15F follow-on — the right-end "Updated" timestamp
+    # column is sortable so the operator can surface the
+    # most-recently-added / edited rows.
+    assert 'class="rrw-sortable" data-sort-key="updated_at"' in body
+    assert ">Updated<" in body
     # Refinement (2026-05-12): the click target is a small
     # ``<button class="rrw-sort-btn">`` next to the header label
     # rather than the ``<th>`` itself. Default badge content is
@@ -111,6 +116,45 @@ def test_reviewers_table_renders_sort_scaffolding(
     # Each <td> carries a data-sort-value mirroring the persisted
     # row value.
     assert 'data-sort-value="Alpha"' in body
+
+
+def test_reviewers_updated_at_sort_surfaces_recent_row(
+    db: Session, client: TestClient
+) -> None:
+    """The right-end ``updated_at`` column is sortable — a more
+    recently touched row floats to the top under a desc sort. This
+    is the column's reason for existing: surface the most recently
+    added / edited rows without busting the 200-row cap."""
+    from datetime import datetime
+
+    from app.db.models import Reviewer
+
+    review_session = _make_session(client, db, code="rev-upd-sort")
+    _populate_reviewers(client, review_session.id)
+    # Stamp Charlie with a far-future ``updated_at`` so the desc
+    # sort is deterministic (SQLite ``func.now()`` only has
+    # second granularity, too coarse for a real-time edit).
+    charlie = db.execute(
+        select(Reviewer).where(
+            Reviewer.session_id == review_session.id,
+            Reviewer.name == "Charlie",
+        )
+    ).scalar_one()
+    charlie.updated_at = datetime(2099, 1, 1, 12, 0, 0)
+    db.commit()
+
+    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    client.cookies.set(
+        cookie_name,
+        json.dumps([{"key": "updated_at", "dir": "desc"}]),
+        path=f"/operator/sessions/{review_session.id}",
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    body = body[body.find('id="reviewers-table"') :]
+    assert body.find("Charlie") < body.find("Bravo")
+    assert body.find("Charlie") < body.find("Alpha")
 
 
 def test_reviewers_cookie_drives_ssr_initial_order(

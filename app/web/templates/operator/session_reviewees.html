@@ -244,6 +244,7 @@
             <th class="tag-col tag-col-2">{{ field_label_header(session, "reviewee", "tag_2") }}{{ field_label_canonical_subtext(session, "reviewee", "tag_2") }}</th>
             <th class="tag-col tag-col-3">{{ field_label_header(session, "reviewee", "tag_3") }}{{ field_label_canonical_subtext(session, "reviewee", "tag_3") }}</th>
             <th>Status</th>
+            <th>Updated</th>
           {% else %}
             <th class="rrw-sortable" data-sort-key="name">{{ field_label_header(session, "reviewee", "name") }}<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Name"
@@ -263,6 +264,9 @@
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_3") }}</th>
             <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Status"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="rrw-sortable" data-sort-key="updated_at">Updated<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Updated"
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
           {% endif %}
         </tr>
@@ -301,6 +305,7 @@
                 <option value="inactive"{% if edit_values.status == "inactive" %} selected{% endif %}>inactive</option>
               </select>
             </td>
+            <td class="muted">—</td>
           </tr>
         {% endif %}
         {% for reviewee in reviewees %}
@@ -335,6 +340,9 @@
                   <option value="inactive"{% if edit_values.status == "inactive" %} selected{% endif %}>inactive</option>
                 </select>
               </td>
+              <td data-sort-value="{{ reviewee.updated_at.isoformat() }}">
+                {{ reviewee.updated_at.strftime("%Y-%m-%d %H:%M") }}
+              </td>
             </tr>
           {% else %}
             <tr id="reviewee-row-{{ reviewee.id }}">
@@ -361,6 +369,9 @@
               <td class="tag-col tag-col-3" data-sort-value="{{ reviewee.tag_3 or '' }}">{{ reviewee.tag_3 or "" }}</td>
               <td data-sort-value="{{ reviewee.status }}">
                 <span class="pill {{ 'pill-info' if reviewee.status == 'active' else 'pill-empty' }}">{{ reviewee.status }}</span>
+              </td>
+              <td data-sort-value="{{ reviewee.updated_at.isoformat() }}">
+                {{ reviewee.updated_at.strftime("%Y-%m-%d %H:%M") }}
               </td>
             </tr>
           {% endif %}
