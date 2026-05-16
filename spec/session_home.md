@@ -296,11 +296,18 @@ identity lives.
 
 **Edit affordance behavior:**
 
-- Available in Draft and Validated states without restriction.
-- In Activated state, the Edit button remains visible and
-  clickable, but the edit form itself may restrict which fields
-  are mutable. Field-level restrictions are the edit page's
-  concern; Home just offers the launch point.
+- A live link in Draft and Validated states — the editable
+  states the edit route's `_require_editable` gate accepts.
+- In Activated state (and any other non-editable state) the Edit
+  button renders **inert** — `aria-disabled="true"`, no `href`,
+  with a "Revert the session to draft to edit its details"
+  tooltip — mirroring the route gate so the button never offers
+  an action the route would reject. The operator reverts to
+  draft to edit.
+- Editing session metadata (name / code / description / deadline
+  / help contact / timezone) is non-destructive: it never
+  deletes assignments or responses, so the edit form carries no
+  response-loss acknowledgement gate.
 - No inline editing on the card itself. Edit always opens the
   sub-page. Keeps Home's right column read-only-feeling and
   avoids a mid-card form that competes with the action work in

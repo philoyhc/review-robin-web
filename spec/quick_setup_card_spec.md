@@ -60,7 +60,7 @@ Each CSV's expected schema (column names, required vs. optional fields, encoding
 
 **Replacement confirmation.** A single card-level checkbox sits above the slot grid, inside the `.quick-setup-body` wrapper:
 
-> ☐ This will replace any existing reviewers, reviewees, relationships or settings, according to what is uploaded.
+> ☐ Yes, replace existing reviewers, reviewees or settings, according to what is uploaded.
 
 Inline JS mirrors the checkbox state into the form's hidden `confirm_replace` input on submit. The route gate stays the source of truth: when any slot whose `existing > 0` runs without `confirm_replace == "true"`, the submit 303s with `?quick_setup_error={kind}&quick_setup_reason=needs_confirm` and the slot's banner-error directs the operator at the card-level checkbox.
 
@@ -72,7 +72,7 @@ Inline JS mirrors the checkbox state into the form's hidden `confirm_replace` in
 
 The single card-level checkbox covers the cascade implicitly — its copy ("any existing reviewers, reviewees, relationships or settings") names every entity that might be cleared by any combination of slot uploads. Per-slot inline cascade banners (formerly the `banner-warning` per slot) are not used.
 
-**Locked state.** The card-level checkbox sits inside `.quick-setup-body`, so it greys along with the H2 title and slot controls when the card is locked.
+**Locked state.** The card-level checkbox sits inside `.quick-setup-body`, so it greys along with the H2 title and slot controls when the card is locked. Greying is not the only signal: when the card is locked, the slot file inputs **and** the replacement-confirmation checkbox also carry the HTML `disabled` attribute, so a locked card cannot have a file staged or the box ticked — not merely a greyed-but-live surface.
 
 **Lock state on navigation.** Unlocking the card sets a per-session cookie (`qsu_{session_id}=1`, scoped to `/operator/sessions/{id}`) that survives form submissions on Session Home itself — the operator can unlock once, upload through several slots, and stay unlocked. Navigating to **any other page** (per-entity Setup pages, Operations tabs, the sessions lobby, any other operator route) expires the cookie via a Starlette HTTP middleware. Returning to Session Home then renders the card locked again. The Quick Setup endpoints themselves (`/quick-setup/lock`, `/quick-setup/submit-all`, and the legacy per-slot endpoints retained for fixture compatibility) are whitelisted so the card's own form submissions don't trigger the relock.
 
@@ -114,7 +114,7 @@ The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relat
 | `ready` | (any) | **Unavailable.** Same treatment. Counts / rule still display in the greyed body for context. |
 | `closed` | (any) | Same as `ready`. |
 
-The single description copy ("Available only when session is in draft mode and does not have any responses.") covers the rule from the operator's vantage point — both gates show up as the same visual signal (greyed body, no toggle). Defense-in-depth route gates (`_require_editable` + `_require_response_loss_ack`) stay in place but never fire from this surface because the submit forms aren't reachable when the body's locked.
+The description copy explains the rule from the operator's vantage point. It has two variants: the default ("Available only when session is in draft mode and does not have any responses.") and a responses-specific one shown when the session holds responses — typically a session activated then reverted to draft, which keeps its responses and so lands `draft`-but-locked. The responses variant names the reason ("Quick Setup is locked because this session already holds reviewer responses from a prior activation.") and points the operator at the per-entity Setup pages. Both gates otherwise show up as the same visual signal (greyed body with disabled controls, no toggle). Defense-in-depth route gates (`_require_editable` + `_require_response_loss_ack`) stay in place but never fire from this surface because the submit forms aren't reachable when the body's locked.
 
 ### New-session variant (`/operator/sessions/new`)
 
@@ -136,7 +136,7 @@ The card does not appear in the page taxonomy or the chrome. The chrome (two-row
 
 - Reuse the existing per-entity CSV parsing and validation modules. The card is a UI affordance over the same import paths the Setup pages already expose.
 - Reuse the cascading-clearance logic that the per-entity pages already implement (or should implement) when reviewers/reviewees are replaced — the card should not introduce a parallel cascade implementation.
-- The card's locked-state styling is a single `.quick-setup-body.locked` body wrapper applied uniformly across `draft` / `validated` / `ready`, and includes the H2 title + the card-level confirmation checkbox alongside the slot controls. The Lock / Unlock toggle is the consistent affordance; lifecycle-driven differences live in the description copy and the route layer's `_require_editable` rejection, not in a separate visual primitive.
+- The card's locked-state styling is a single `.quick-setup-body.locked` body wrapper applied uniformly across `draft` / `validated` / `ready`, and includes the H2 title + the card-level confirmation checkbox alongside the slot controls. On top of the greying, a locked card's slot file inputs and confirmation checkbox carry the HTML `disabled` attribute (the `quick_setup_slot` macro takes a `locked` flag; the checkbox keys off `quick_setup.is_locked`) so the controls are genuinely inert, not merely dimmed. The Lock / Unlock toggle is the consistent affordance; lifecycle-driven differences live in the description copy and the route layer's `_require_editable` rejection, not in a separate visual primitive.
 - The card-level confirmation checkbox is a plain `<input type="checkbox">` outside any slot form. Inline JS on each form's `submit` event mirrors the checkbox state into a hidden `confirm_replace` input on the form. Server-side `confirm_replace == "true"` gate stays the source of truth — the JS just spares the operator from per-slot bookkeeping.
 
 The intent throughout: Quick Setup is a thin convenience surface over existing import primitives. It should not own meaningful logic of its own.
