@@ -72,7 +72,9 @@ def test_audit_log_page_renders_for_sys_admin(
         in response.text
     )
     assert "Download CSV" in response.text
-    # The date filter is interpreted in UTC — the labels say so.
+    # The audit log is UTC end-to-end — the column header and the
+    # date-filter labels say so.
+    assert "When (UTC)" in response.text
     assert "From (UTC)" in response.text
     assert "To (UTC)" in response.text
 
@@ -120,7 +122,7 @@ def test_audit_log_page_renders_seeded_events(
         "Summary",
         "Actor",
         "Correlation",
-        "When",
+        "When (UTC)",
         "Detail",
     ):
         assert f">{header}<" in body

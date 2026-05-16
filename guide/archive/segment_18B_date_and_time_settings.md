@@ -363,11 +363,16 @@ UTC instant (`format_datetime_local`). #1038 also retired the
 standalone Display timezone card / `POST .../timezone` route,
 folding the control into the (lifecycle-gated) edit form.
 
-The audit-log `<input type="date">` filter (Sys Admin viewer)
-stays UTC-based — it bounds the UTC `created_at` column, with
-each whole "to" day inclusive. No behaviour change was needed;
-its labels now read "From (UTC)" / "To (UTC)" so the basis is
-explicit. 18B owns no remaining deferred work.
+The Sys Admin audit-log viewer stays UTC end-to-end — a
+deliberate choice for a forensic surface. Its event-row
+timestamps render in UTC (`_audit_log.py` formats `created_at`
+with no display zone) and its `<input type="date">` filter
+bounds the UTC `created_at` column (each whole "to" day
+inclusive). No behaviour change was needed; the column header
+reads "When (UTC)" and the filter labels "From (UTC)" /
+"To (UTC)" so the basis is explicit. Every other operator +
+reviewer surface localises to the session's resolved zone.
+18B owns no remaining deferred work.
 
 ## Hard dependencies
 
