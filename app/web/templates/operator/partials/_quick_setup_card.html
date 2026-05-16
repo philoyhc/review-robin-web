@@ -38,7 +38,7 @@
    rejection surfaces inside the offending slot as a ``banner-error``
    (see ``views._quick_setup_error_message``).
 #}
-{% macro quick_setup_slot(slot, form_id) -%}
+{% macro quick_setup_slot(slot, form_id, locked) -%}
 <section class="quick-setup-slot"
          id="quick-setup-{{ slot.key }}"
          data-wire-target="quick-setup-{{ slot.key }}">
@@ -50,11 +50,16 @@
     {# Live slot — file upload. Submit lives at the bottom of the
        card, not per-slot. #}
     <div class="quick-setup-slot-controls">
+      {# ``locked`` disables the input outright — not just the CSS
+         greying — so an unavailable / locked card can't have a file
+         staged. ``is_locked`` is force-``True`` whenever the session
+         isn't in draft (see ``views._quick_setup``). #}
       <input type="file"
              name="{{ slot.key }}_file"
              accept=".csv"
              form="{{ form_id }}"
-             data-quick-setup-file>
+             data-quick-setup-file
+             {% if locked %}disabled aria-disabled="true"{% endif %}>
     </div>
   {% else %}
     {# Inert slot (Settings, until Segment 12A PR 6 wires it). Same
@@ -138,12 +143,12 @@
     <div class="quick-setup-top-grid">
       <div class="quick-setup-top-grid-col">
         {% for slot in quick_setup.slots[:_split] %}
-          {{ quick_setup_slot(slot, submit_all_form_id) }}
+          {{ quick_setup_slot(slot, submit_all_form_id, quick_setup.is_locked) }}
         {% endfor %}
       </div>
       <div class="quick-setup-top-grid-col">
         {% for slot in quick_setup.slots[_split:] %}
-          {{ quick_setup_slot(slot, submit_all_form_id) }}
+          {{ quick_setup_slot(slot, submit_all_form_id, quick_setup.is_locked) }}
         {% endfor %}
       </div>
     </div>
@@ -158,7 +163,8 @@
     {% if quick_setup.show_confirm_replace %}
       <p class="form-help quick-setup-confirm-replace">
         <label style="font-weight: normal;">
-          <input type="checkbox" id="quick-setup-confirm-replace-toggle">
+          <input type="checkbox" id="quick-setup-confirm-replace-toggle"
+                 {% if quick_setup.is_locked %}disabled aria-disabled="true"{% endif %}>
           Yes, replace existing reviewers, reviewees or settings,
           according to what is uploaded. This discards any submitted
           reviewer responses — replacing the roster or re-importing

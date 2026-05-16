@@ -754,11 +754,13 @@ def test_session_card_buttons_when_ready(
 
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    # Edit button still shown (lock is enforced server-side on the POST)
+    # Edit button is rendered inert on an activated session — editing
+    # session details is lifecycle-gated to draft / validated, so the
+    # button drops its href and carries aria-disabled.
     assert (
-        f'href="/operator/sessions/{review_session.id}/edit">Edit</a>'
-        in body
+        f'href="/operator/sessions/{review_session.id}/edit"' not in body
     )
+    assert '<a class="btn secondary" aria-disabled="true"' in body
     # Workflow card is back on Session Home (PR 6 of
     # spec/workflow_card.md) — its ready-state pause form
     # posts to /revert.
