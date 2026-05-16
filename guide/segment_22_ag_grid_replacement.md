@@ -1,10 +1,15 @@
-# Segment 17A — AG Grid replacement of the reviewer-surface table
+# Segment 22 — AG Grid replacement of the reviewer-surface table
 
 **Status:** Stub. Carved out 2026-05-10 from the original
 `guide/archive/segment_15_operator_polish_and_documentation.md` once it
 became clear AG Grid is a focused infrastructure replacement
 that deserves its own segment rather than being bundled with
 the documentation pass (now Segment 20).
+
+> **Renumbered 17A → 22 on 2026-05-16** so the upcoming
+> reviewee-surface work could take a lower number (Segment 21
+> — Peer review enhancements). AG Grid has no sequencing tie to
+> the segments around it, so the higher number costs nothing.
 
 ## Goal
 
@@ -88,7 +93,7 @@ Grid instance backed by the existing render adapter +
 ### Spec absorption
 
 - `spec/reviewer-surface.md` already has "AG Grid table +
-  large-table ergonomics" sketched; Segment 17A promotes
+  large-table ergonomics" sketched; Segment 22 promotes
   that section to a locked spec contract as part of the
   rollout.
 
@@ -102,7 +107,7 @@ Grid instance backed by the existing render adapter +
   defer.
 - **Custom cell renderers beyond the existing Display +
   Response field types.** AG Grid supports rich renderers
-  but Segment 17A sticks to the field-type vocabulary the
+  but Segment 22 sticks to the field-type vocabulary the
   spec already covers (`String`, `Integer`, `Decimal`,
   `List`).
 
@@ -123,7 +128,7 @@ Grid instance backed by the existing render adapter +
 
 - **`spec/reviewer-surface.md`** — covers the reviewer-
   surface contract; AG Grid section is sketched and
-  Segment 17A promotes it to locked spec.
+  Segment 22 promotes it to locked spec.
 - **Workplan §11 / archived Segment 8 plan** — original
   AG Grid framing that never landed.
 - **Segment 11 Tier 2 §2.1** (2026-05-03 decision log) —
