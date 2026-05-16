@@ -68,7 +68,16 @@
         {# Lifecycle state shown in the chrome status strip — no
            duplicate Status pill here per spec/session_home.md. #}
         <div style="display: flex; justify-content: flex-end;">
-          <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
+          {# Editing session details is lifecycle-gated to the
+             editable states (draft / validated) by the route's
+             ``_require_editable``; the button mirrors that gate so it
+             isn't live on an activated session. #}
+          {% if is_draft or is_validated %}
+            <a class="btn secondary" href="/operator/sessions/{{ session.id }}/edit">Edit</a>
+          {% else %}
+            <a class="btn secondary" aria-disabled="true"
+               title="Revert the session to draft to edit its details.">Edit</a>
+          {% endif %}
         </div>
       </div>
 
