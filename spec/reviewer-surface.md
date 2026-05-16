@@ -96,8 +96,12 @@ Top-to-bottom, the page renders:
 2. **Preview banner** — `body.ui-v2` only (operator preview mode
    reuses this template); rendered as `.banner.banner-info`.
 3. **Page header** — `.rs-page-header` flex row carrying the session
-   name as H1 plus the deadline inline as `.muted`. (D7 — settled in
-   Segment 11D PR C and adjusted post-merge.)
+   name as H1 plus the deadline inline as `.muted`. The deadline
+   renders in the session's resolved zone followed by that zone's
+   CLDR display name in parentheses — e.g. `Deadline: 2026-06-02
+   07:59 (Australian Eastern Standard Time)` — with the raw IANA id
+   as the fallback. (D7 — settled in Segment 11D PR C and adjusted
+   post-merge.)
 4. **Description + status bar** — a `.bottom-grid` 2-column row with:
    - **Description card** — half-width `.card.rs-description-card`
      flushed left, only when `session.description` is set. Collapses
@@ -631,8 +635,10 @@ is an active reviewer on, with a per-session progress pill.
   - **Session** — `<a>` to `/reviewer/sessions/{id}/1` (always
     lands on Page 1; the surface itself handles which page is
     "current").
-  - **Deadline** — ISO timestamp, or `<span class="muted">—</span>`
-    when null.
+  - **Deadline** — the canonical `YYYY-MM-DD HH:MM` timestamp in
+    that session's own resolved zone, followed by the zone's CLDR
+    display name in parentheses (raw IANA id as fallback); or
+    `<span class="muted">—</span>` when null.
   - **Status** — pill (`not started` / `in progress` /
     `submitted`) computed from the reviewer's `Response` rows; plus
     a muted `(completed_rows / total_assignments)` count alongside.

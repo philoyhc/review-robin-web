@@ -33,6 +33,8 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from babel.dates import get_timezone_name
+
 _DATETIME_FORMAT = "%Y-%m-%d %H:%M"
 _DATE_FORMAT = "%Y-%m-%d"
 
@@ -99,3 +101,25 @@ def format_date(
     if isinstance(value, datetime):
         value = _as_utc(value).astimezone(resolve_zone(tz_name)).date()
     return value.strftime(_DATE_FORMAT)
+
+
+def timezone_label(tz_name: str | None, at: datetime | None = None) -> str:
+    """CLDR long display name for an IANA zone — e.g. ``Asia/Singapore``
+    becomes ``Singapore Standard Time``.
+
+    Backed by the CLDR snapshot ``babel`` ships; the raw IANA name is
+    the fallback when CLDR yields nothing. ``at`` picks the standard /
+    daylight variant: pass the instant being labelled (a deadline) so
+    a winter date reads ``... Standard Time`` and a summer date
+    ``... Daylight Time``. With ``at`` unset the current moment is
+    used.
+    """
+    zone = resolve_zone(tz_name)
+    reference = (
+        _as_utc(at).astimezone(zone) if at is not None else datetime.now(zone)
+    )
+    try:
+        name = get_timezone_name(reference, width="long", locale="en")
+    except Exception:
+        name = ""
+    return name or tz_name or DEFAULT_TIMEZONE

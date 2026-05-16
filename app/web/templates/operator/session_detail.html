@@ -43,6 +43,8 @@
             </p>
           </div>
           <div>
+            <p class="form-help" style="margin: 0;">Code</p>
+            <p style="margin: 0 0 var(--space-3) 0;"><code>{{ session.code }}</code></p>
             <p class="form-help" style="margin: 0;">Deadline</p>
             <p style="margin: 0 0 var(--space-3) 0;">
               {% if session.deadline %}
@@ -51,16 +53,18 @@
                 <span class="pill pill-empty">Not set</span>
               {% endif %}
             </p>
-            <p class="form-help" style="margin: 0;">Code</p>
-            <p style="margin: 0 0 var(--space-3) 0;"><code>{{ session.code }}</code></p>
-            <p class="form-help" style="margin: 0;">Help contact</p>
-            <p style="margin: 0 0 var(--space-3) 0;">{{ session.help_contact or "—" }}</p>
+            <p class="form-help" style="margin: 0;">Timezone</p>
+            <p style="margin: 0 0 var(--space-3) 0;">
+              <span class="pill pill-count">{{ session_timezone_label }}</span>
+            </p>
           </div>
         </div>
         <p class="form-help" style="margin: 0;">Name</p>
         <p style="margin: 0 0 var(--space-3) 0;">{{ session.name }}</p>
         <p class="form-help" style="margin: 0;">Description</p>
         <p style="margin: 0 0 var(--space-3) 0;">{{ session.description or "—" }}</p>
+        <p class="form-help" style="margin: 0;">Help contact</p>
+        <p style="margin: 0 0 var(--space-3) 0;">{{ session.help_contact or "—" }}</p>
         {# Lifecycle state shown in the chrome status strip — no
            duplicate Status pill here per spec/session_home.md. #}
         <div style="display: flex; justify-content: flex-end;">

@@ -285,11 +285,11 @@ operator does occasionally need to update session metadata
 and Home is the natural place for that since it's where session
 identity lives.
 
-**Contents.** Two-column meta row above a single-column Name + Description block:
+**Contents.** Two-column meta row above a single-column Name + Description + Help contact block:
 
-- **Column 1 (all rendered as count pills):** Created by · Created · Last Modified. Created and Last Modified render the full ISO 8601 timestamp (date + time), matching Deadline's grain.
-- **Column 2:** Deadline (count pill with the full ISO 8601 timestamp, or `pill-empty` "Not set" when null) · Code (rendered in `<code>`) · Help contact (plain text, "—" when null).
-- **Below the meta row:** full-width Name and Description rows.
+- **Column 1 (all rendered as count pills):** Created by · Created · Last Modified. Created and Last Modified render the canonical `YYYY-MM-DD HH:MM` timestamp in the session's resolved display zone, matching Deadline's grain.
+- **Column 2:** Code (rendered in `<code>`) · Deadline (count pill with the canonical timestamp, or `pill-empty` "Not set" when null) · Timezone (count pill with the session's resolved zone as its CLDR display name — e.g. "Singapore Standard Time" — falling back to the raw IANA id).
+- **Below the meta row:** full-width Name, Description, and Help contact (plain text, "—" when null) rows.
 - **Edit button** (Secondary styling), bottom-right of the card.
   Opens `session_edit.html` as a sub-page of Home for full
   metadata editing.

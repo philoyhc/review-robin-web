@@ -9,6 +9,7 @@ from app.services.date_formatting import (
     format_date,
     format_datetime,
     resolve_zone,
+    timezone_label,
 )
 
 
@@ -111,3 +112,28 @@ def test_format_date_ignores_zone_token_switch(monkeypatch) -> None:
     monkeypatch.setattr(date_formatting, "SHOW_ZONE_TOKEN", True)
     value = datetime(2026, 5, 15, 9, 0, tzinfo=timezone.utc)
     assert format_date(value, "Asia/Singapore") == "2026-05-15"
+
+
+# ── CLDR zone display names — timezone_label ─────────────────────────────
+
+
+def test_timezone_label_returns_cldr_name() -> None:
+    assert timezone_label("Asia/Singapore") == "Singapore Standard Time"
+
+
+def test_timezone_label_picks_standard_or_daylight_from_at() -> None:
+    # June is winter in Australia (standard), January is summer (daylight).
+    winter = datetime(2026, 6, 2, 8, 0, tzinfo=timezone.utc)
+    summer = datetime(2026, 1, 2, 8, 0, tzinfo=timezone.utc)
+    assert (
+        timezone_label("Australia/Melbourne", at=winter)
+        == "Australian Eastern Standard Time"
+    )
+    assert (
+        timezone_label("Australia/Melbourne", at=summer)
+        == "Australian Eastern Daylight Time"
+    )
+
+
+def test_timezone_label_none_resolves_to_utc_name() -> None:
+    assert timezone_label(None) == "Coordinated Universal Time"

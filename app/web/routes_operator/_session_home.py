@@ -115,6 +115,9 @@ def session_detail(
                 error_reason=quick_setup_reason,
             ),
             "extract_data": views.build_extract_data_context(db, review_session),
+            "session_timezone_label": date_formatting.timezone_label(
+                sessions.resolve_session_timezone(review_session)
+            ),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
             **workflow_ctx,
         },

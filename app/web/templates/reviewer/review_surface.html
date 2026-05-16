@@ -27,7 +27,8 @@
   <div class="rs-page-header">
     <h1>{{ session.name }}</h1>
     {% if session.deadline %}
-      <span class="muted">Deadline: {{ session.deadline | format_datetime }}</span>
+      <span class="muted">Deadline: {{ session.deadline | format_datetime }}
+        ({{ deadline_timezone_label }})</span>
     {% endif %}
     {% if session.help_contact %}
       <span class="muted">Questions? Contact {{ session.help_contact }}</span>
