@@ -34,6 +34,8 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services.assignments import is_self_review
+from app.services.date_formatting import iso_in_zone
+from app.services.sessions import resolve_session_timezone
 
 __all__ = ["HEADER", "serialize_responses"]
 
@@ -105,6 +107,11 @@ def serialize_responses(
 
     yield HEADER
 
+    # Timestamps render in the session's resolved zone (18B) — ISO
+    # 8601 carrying that zone's offset, so the cell is precise and
+    # round-trip-safe while still naming the session zone.
+    session_zone = resolve_session_timezone(review_session)
+
     stmt = (
         select(
             Response,
@@ -160,11 +167,7 @@ def serialize_responses(
             rtd.response_type,
             response.value if response.value is not None else "",
             "TRUE" if is_self_review(reviewer, reviewee) else "FALSE",
-            response.saved_at.isoformat() if response.saved_at else "",
-            (
-                response.submitted_at.isoformat()
-                if response.submitted_at
-                else ""
-            ),
+            iso_in_zone(response.saved_at, session_zone),
+            iso_in_zone(response.submitted_at, session_zone),
             str(response.version),
         )

@@ -122,6 +122,10 @@ operator-uploaded).
 | Self-review (1) | `SelfReview` — uppercase `TRUE` / `FALSE` per Excel idiom. Computed via `is_self_review(reviewer, reviewee)` (case-insensitive email match; `FALSE` for non-email reviewee identifiers). |
 | Lifecycle (3) | `SavedAt`, `SubmittedAt`, `Version` |
 
+`SavedAt` / `SubmittedAt` are ISO 8601 carrying the **session
+zone's** UTC offset (e.g. `2026-06-02T08:00:00+08:00`), via
+`date_formatting.iso_in_zone` — see `spec/timezone_display.md`.
+
 **Streaming:** the serialiser uses `yield_per(1000)` cursor
 streaming so large sessions don't materialise every Response
 row in memory. Row order: `(reviewer_id, reviewee_id,
@@ -140,7 +144,7 @@ live.
 | 3 | `Summary` | `summary` | Human-readable one-liner. |
 | 4 | `ActorEmail` | LEFT JOIN through `actor_user_id` → `users.email`. Empty cell ⇒ system-emitted event with no actor. |
 | 5 | `CorrelationId` | `correlation_id` | Request-scoped UUID. |
-| 6 | `CreatedAt` | `created_at` | ISO 8601 with timezone offset; naive readbacks (SQLite) normalised to UTC for dialect-stable output. |
+| 6 | `CreatedAt` | `created_at` | ISO 8601 in **UTC** (`...+00:00`); naive readbacks (SQLite) normalised to UTC for dialect-stable output. The audit log is the deliberate UTC exception (`spec/timezone_display.md`) — unlike the other per-session extracts, this column is *not* localised to the session zone. |
 | 7 | `DetailJson` | `json.dumps(detail, sort_keys=True)` | Empty cell when `detail is None`. |
 
 **Row order:** `(created_at ASC, id ASC)`. **Streaming:**
@@ -216,7 +220,7 @@ one file.
 
 ```
 session.name,Spring Review,String
-session.deadline,2026-06-01T00:00:00+00:00,DateTime
+session.deadline,2026-06-01T08:00:00+08:00,DateTime
 email_template_overrides.invitation_subject,Please review your assigned reviewees,String
 rtd.Long_text.data_type,Long_text,String
 instruments[1].name,Default,String
@@ -275,9 +279,12 @@ Concrete guarantees the importers + serialisers maintain:
 3. **Encoding parity.** UTF-8 in, UTF-8 out. BOM stripped on
    read, never emitted on write.
 4. **Datetime normalisation.** Naive readbacks (SQLite without
-   tzinfo) normalised to UTC on serialise so the cell is
-   dialect-stable. Settings `_datetime` formatter folds this
-   in.
+   tzinfo) are normalised to UTC, then converted to the session's
+   resolved display zone, and serialised as ISO 8601 carrying that
+   zone's offset (`date_formatting.iso_in_zone`) — precise,
+   dialect-stable, and round-trip-safe (any ISO 8601 offset parses
+   back). The audit-events extract is the exception: it stays in
+   UTC (`spec/timezone_display.md`).
 5. **Vocabulary normalisation.** RTD `data_type` accepts both
    lowercase tokens (`long_text`) and capitalised model values
    (`Long_text`) on import; serialise emits the capitalised

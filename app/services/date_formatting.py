@@ -138,6 +138,19 @@ def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
     return local.astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def iso_in_zone(value: datetime | None, tz_name: str | None) -> str:
+    """ISO 8601 rendering of a stored UTC datetime, converted into
+    ``tz_name``'s zone so the trailing offset reflects that zone —
+    e.g. ``2026-06-02T08:00:00+08:00``. ``""`` for ``None``.
+
+    Used by the per-session CSV extracts: a precise, round-trip-safe
+    machine format whose offset names the session zone. Segment 18B.
+    """
+    if value is None:
+        return ""
+    return _as_utc(value).astimezone(resolve_zone(tz_name)).isoformat()
+
+
 def format_datetime_local(
     value: datetime | None, tz_name: str | None
 ) -> str:

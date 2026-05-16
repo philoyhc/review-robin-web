@@ -98,6 +98,19 @@ def test_session_rows_emit_typed_cells(db: Session) -> None:
     )
 
 
+def test_session_deadline_emits_in_session_zone(db: Session) -> None:
+    """session.deadline exports as ISO 8601 carrying the session
+    zone's offset, not a bare UTC `+00:00` (Segment 18B)."""
+    review_session = _bare_session(db, code="tzc")
+    review_session.display_timezone = "Asia/Singapore"
+    db.flush()
+    by_field = _row_dict(serialize_session_config(db, review_session))
+    # 2026-05-15 17:00 UTC is 2026-05-16 01:00 in Singapore (+08).
+    assert by_field["session.deadline"] == Row(
+        "session.deadline", "2026-05-16T01:00:00+08:00", "datetime"
+    )
+
+
 def test_session_rows_handle_nullable_fields(db: Session) -> None:
     """Empty cells emit ``""`` for nullable session columns. Round-trips
     through the importer (when it lands) as ``None``."""
