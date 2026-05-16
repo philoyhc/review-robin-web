@@ -8,7 +8,8 @@ by `review_surface` in `app/web/routes_reviewer.py`). The
 headline change vs the original stub: 17B now **also owns the
 large-table ergonomics** that `spec/visual_style_rrw.md` pins
 as first-class — auto-save, return-to-place, visible progress,
-sticky headers, filter-to-incomplete, keyboard navigation. These
+filter-to-incomplete, keyboard navigation (sticky headers were
+investigated and dropped — see below). These
 were once bundled into the AG Grid segment; that segment has
 been taken off the roadmap (AG Grid is judged overkill — see
 `guide/future_possibilities.md`), so the ergonomics are pursued
@@ -78,9 +79,18 @@ work is template + inline JS + CSS.
   wanted, wiring `Response.version` is *additional* optional
   work (a small service change, still no schema change); treat
   it as a separate decision, not a freebie.
-- **Sticky column headers.** CSS `position: sticky` on the
-  `<th>` row so headers stay visible while scrolling a long
-  reviewee list. Pure CSS.
+- **Sticky column headers — investigated and dropped
+  (2026-05-16).** `position: sticky` on the `<th>` row does
+  nothing useful here: the reviewer table's `.table-scroll`
+  wrapper has `overflow-x: auto`, which forces an `overflow-y`
+  scroll context, so the header sticks relative to that wrapper
+  (which has no height and never scrolls internally) rather than
+  the window. The only working fix is to give the table its own
+  vertical scroll viewport (a `max-height` box) — turning a long
+  reviewee list into an internal scroll region. That scroll-model
+  change was judged not worth a header that stays put, so the
+  surface keeps whole-page scroll and a non-sticky header. Not a
+  17B PR.
 - **Return-to-place + visible progress.** Preserve scroll
   position across save / reload; a small "N of M complete"
   progress indicator. (`_surface_context` already computes
@@ -124,9 +134,10 @@ reuse the same helper.
 - `spec/reviewer-surface.md` — the reviewer-surface contract;
   §"Large-table ergonomics" assigns these items to 17B and
   pins the `_surface_context` dict shape stable.
-- `spec/visual_style_rrw.md` — pins auto-save / sticky headers
-  / progress / return-to-place / filter-to-incomplete /
-  keyboard navigation as first-class requirements.
+- `spec/visual_style_rrw.md` — pins auto-save / progress /
+  return-to-place / filter-to-incomplete / keyboard navigation
+  as first-class requirements (its sticky-column-headers item
+  carries the 17B "investigated and dropped" annotation).
 - `guide/codebase_assessment_16may.md` — §5 weakness 4 names
   the `routes_reviewer.py` packaging as 17B's opening step.
 - `guide/future_possibilities.md` — why the JS-grid route is

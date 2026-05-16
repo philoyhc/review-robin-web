@@ -657,7 +657,14 @@ this principle imposes are:
   leftmost column.
 - **Sticky column headers.** When the reviewer is on row 60, the
   column headers (question text) should still be visible at the
-  top of the viewport.
+  top of the viewport. *Investigated and dropped in Segment 17B
+  (2026-05-16):* the reviewer table sits in a `.table-scroll`
+  wrapper whose `overflow-x` forces an `overflow-y` scroll
+  context, so a `position: sticky` header would only stay visible
+  if the table became its own internal scroll viewport (a
+  `max-height` box). That scroll-model change was judged not worth
+  a header that stays put — the surface keeps whole-page scroll
+  and a non-sticky header.
 - **Filter to incomplete.** A "show only unscored" toggle is
   invaluable for reviewers working across multiple sessions or
   returning to a table they partially filled.
