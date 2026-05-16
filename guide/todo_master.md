@@ -601,6 +601,27 @@ count — `regen_choice` retired for an `acknowledge_response_loss`
 flag. Spec (kept as the design record):
 `spec/reconciling_regeneration.md`.
 
+### Mid-cycle edit safety + UI gating follow-ups — done 2026-05-16 (PRs #1071 → #1074)
+
+Follow-on polish on the reconciling-regeneration arc, mostly
+from operator testing of reverted sessions. **#1071** removed a
+spurious `_require_response_loss_ack` gate from the Session
+Details edit route — `update_session` only writes scalar session
+columns, so the gate falsely (and un-satisfiably — no checkbox in
+the form) blocked editing the name / code of a session with
+responses. **#1072** fixed a Settings CSV import crash —
+`apply_session_config` Core-deleted assignments before responses,
+tripping the `responses` FK on a reverted session; it clears
+responses first now (a settings re-import rebuilds the instrument
+structure, so they cannot survive regardless). **#1073** disabled
+two off-draft controls that were still live — the Session Details
+Edit button (inert outside draft / validated) and the Quick Setup
+file inputs + confirm checkbox (`disabled` when the card is
+locked, not just CSS greying). **#1074** made the Quick Setup
+card description responses-aware so a reverted, permanently-locked
+session explains why. Specs updated: `spec/quick_setup_card_spec.md`,
+`spec/session_home.md`.
+
 ---
 
 ## Upcoming
