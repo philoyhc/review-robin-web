@@ -281,6 +281,94 @@ def test_page_status_pill_flips_to_submitted_after_submit(
     assert "Page 1: submitted" in body
 
 
+# ── Session-wide rollup pill + per-instrument completion pills ────────
+
+
+def test_session_status_pill_rolls_up_draft_saved_submitted(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The session-wide pill rolls the per-page states up: Draft on a
+    fresh session, Saved but not submitted once a value is saved,
+    Submitted once the page is submitted."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-sess-roll",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).scalar_one()
+    rae_client = make_client(rae)
+
+    fresh = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    assert 'class="rs-session-status"' in fresh
+    assert "Draft" in fresh
+
+    rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/1/save",
+        data={f"response[{assignment.id}][comments]": "thoughts"},
+        follow_redirects=False,
+    )
+    saved = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    assert "Saved but not submitted" in saved
+
+    rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/submit",
+        data={
+            "current_position": "1",
+            f"response[{assignment.id}][rating]": "4",
+        },
+        follow_redirects=False,
+    )
+    submitted = rae_client.get(
+        f"/reviewer/sessions/{review_session.id}/1"
+    ).text
+    assert "Submitted" in submitted
+
+
+def test_instrument_card_shows_completion_pills(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The instrument card carries response-cell completion pills —
+    required-only and overall — that track saved values. The pair has
+    one reviewee and the seeded instrument's two fields (one required
+    ``rating``, one optional ``comments``)."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-pills",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).scalar_one()
+    rae_client = make_client(rae)
+
+    fresh = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    assert "Required items completed: 0/1" in fresh
+    assert "All items completed: 0/2" in fresh
+
+    rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/1/save",
+        data={f"response[{assignment.id}][rating]": "4"},
+        follow_redirects=False,
+    )
+    after = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
+    assert "Required items completed: 1/1" in after
+    assert "All items completed: 1/2" in after
+
+
 # ── Operator preview suppresses per-page pills ────────────────────────
 
 
