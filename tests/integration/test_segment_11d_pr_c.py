@@ -396,9 +396,9 @@ def test_review_surface_single_instrument_has_no_page_buttons(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Single-instrument sessions don't render Page N anchors — there
-    is nowhere to navigate to. The unified action row collapses to
-    Save / Discard / divider / Submit only."""
+    """Single-instrument sessions still render one Page #1 button
+    (there is just nowhere else to navigate). The unified action row
+    reads Save / Discard / Submit / divider / Page #1."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,

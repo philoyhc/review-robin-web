@@ -133,12 +133,12 @@
     {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/{{ current_position }}/save">
     <input type="hidden" name="current_position" value="{{ current_position }}">
     {% endif %}
-      {# PR γ unified action row, mirrored top + bottom. Order
-         left-to-right: Save / Discard / Page #N: short_label /
-         vertical divider / Submit. Whole row flush right. The
-         page-level cluster reads "act on this page"; Submit is the
-         review-session-wide commit. The vertical divider visually
-         separates the two scopes without splitting the row. #}
+      {# Unified action row, mirrored top + bottom. Order
+         left-to-right: Save / Discard / Submit / vertical divider /
+         Page #N: short_label. The top instance is flush left, the
+         bottom flush right. Save / Discard / Submit are the
+         review-level controls; the divider separates them from the
+         per-page navigation. #}
       {% if (any_accepting and not preview_mode) or (preview_mode and page_buttons) %}
         {% with action_row_position="top" %}
           {% include "reviewer/_action_row.html" %}
@@ -562,6 +562,45 @@
           group.dataset.rsDirty = "true";
           if (group.classList.contains("rs-active")) {
             setSaveEnabled(true);
+          }
+        });
+
+        // Keyboard navigation — Enter moves focus to the response
+        // cell directly below (Shift+Enter: above), so a reviewer can
+        // work down a column without the mouse. Tab already walks
+        // cells across a row natively. Enter is intercepted
+        // (`preventDefault`) so it no longer submits the form from
+        // inside the table; textareas keep native Enter for newlines
+        // and are left alone.
+        root.addEventListener("keydown", function (event) {
+          if (event.key !== "Enter") return;
+          var target = event.target;
+          if (!target) return;
+          var tag = target.tagName;
+          if (tag === "TEXTAREA") return;
+          if (tag !== "INPUT" && tag !== "SELECT") return;
+          var cell = target.closest("td");
+          var row = target.closest("tr");
+          if (!cell || !row) return;
+          event.preventDefault();
+          var colIndex = cell.cellIndex;
+          function step(r) {
+            return event.shiftKey
+              ? r.previousElementSibling
+              : r.nextElementSibling;
+          }
+          var probe = step(row);
+          while (probe) {
+            var nextCell = probe.cells && probe.cells[colIndex];
+            if (nextCell) {
+              var ctrl = nextCell.querySelector("input, textarea, select");
+              if (ctrl && !ctrl.disabled) {
+                ctrl.focus();
+                if (typeof ctrl.select === "function") ctrl.select();
+                return;
+              }
+            }
+            probe = step(probe);
           }
         });
 
