@@ -59,10 +59,12 @@ from app.db.models import (
 )
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
+from app.services.date_formatting import iso_in_zone
 from app.services.email_templates import (
     OVERRIDE_KEYS,
     RESPONSES_RECEIVED_ENABLED_KEY,
 )
+from app.services.sessions import resolve_session_timezone
 from app.services.instruments._rtds import (
     SEEDED_RESPONSE_TYPE_DEFINITIONS,
     validation_block_for_rtd,
@@ -169,7 +171,10 @@ def _session_rows(review_session: ReviewSession) -> list[Row]:
         ),
         Row(
             "session.deadline",
-            _datetime(review_session.deadline),
+            iso_in_zone(
+                review_session.deadline,
+                resolve_session_timezone(review_session),
+            ),
             "datetime",
         ),
         Row(
@@ -581,19 +586,6 @@ def _decimal(value: float | None) -> str:
     if isinstance(value, float) and value.is_integer():
         return str(int(value))
     return str(value)
-
-
-def _datetime(value: object | None) -> str:
-    if value is None:
-        return ""
-    # SQLite's DateTime column drops tzinfo on readback (Postgres
-    # preserves it). Normalise naive readbacks to UTC so the
-    # export shape is stable across both dialects.
-    if isinstance(value, datetime) and value.tzinfo is None:
-        from datetime import timezone
-
-        value = value.replace(tzinfo=timezone.utc)
-    return value.isoformat()  # type: ignore[union-attr]
 
 
 def _json(value: object) -> str:
