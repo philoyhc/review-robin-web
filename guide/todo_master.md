@@ -721,20 +721,18 @@ bottom of this file.
 
 #### Stubs
 
-- **17B — Reviewer surface refinements** *(stub created
-  2026-05-12; revised 2026-05-16 against the codebase)*.
-  Polish + ergonomics pass on the reviewer response surface.
-  **PR 1** packages the 1,362-LOC `routes_reviewer.py` into a
-  `routes_reviewer/` package by concern (the last route file
-  still a single module; per assessment §5). Then small chrome
-  polish (button order, status-card location, denser rows — the
-  surface is already on v2 chrome since the 11D sweep), and the
-  **large-table ergonomics** `spec/visual_style_rrw.md` pins as
-  first-class — cell autosave, sticky headers, return-to-place
-  + visible progress, filter-to-incomplete, keyboard nav — each
-  a separate small PR, pursued as vanilla progressive
-  enhancement (no JS framework; the AG Grid route is off the
-  roadmap, see `guide/future_possibilities.md`).
+- **17B — Reviewer surface refinements** *(partly shipped
+  2026-05-16)*. Polish + ergonomics pass on the reviewer response
+  surface. **Shipped:** PR 1 (`routes_reviewer/` package, commit
+  `801af2f`); the action-row reorder + keyboard navigation
+  (Tab + Enter) (#1076); the visible-progress pills — session-wide
+  status + per-instrument completion (#1077); sticky headers were
+  investigated and dropped. **Remaining:** cell autosave,
+  filter-to-incomplete, return-to-place, and the rest of the
+  chrome polish (status-card location, denser rows) — each a
+  separate small PR, pursued as vanilla progressive enhancement
+  (no JS framework; the AG Grid route is off the roadmap, see
+  `guide/future_possibilities.md`).
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
 - **18A — Sessions lobby enhancements** *(stubs created
