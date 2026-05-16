@@ -150,6 +150,24 @@ def _lifecycle_error_response(exc: lifecycle.LifecycleError) -> HTTPException:
     )
 
 
+def _can_edit_instrument(review_session: ReviewSession) -> bool:
+    """Setup-side instrument / RTD mutations are blocked while the
+    session is ready."""
+    return not lifecycle.is_ready(review_session)
+
+
+def _require_instrument_editable(review_session: ReviewSession) -> None:
+    """Guard shared by the Instruments and Response-Type slices —
+    reject structure mutations on a ready session."""
+    if not _can_edit_instrument(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Instrument structure is locked while the session is ready"
+            ),
+        )
+
+
 # ------------------------------------------------------------------ #
 # Quick Setup cookie naming.
 #
