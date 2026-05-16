@@ -278,7 +278,8 @@ not just the CSV export.
    `session_config_io.py` 1,733, `_instruments.py` 1,398.
    Three files over 1.3k, none on a split plan. The
    `_instruments.py` warning from May 11 went unaddressed and
-   `_setup_rosters.py` overtook it.
+   `_setup_rosters.py` overtook it. **§6 below recommends the
+   specific splits.**
 
 4. **`guide/archive/` keeps ballooning** — **37,269 LOC / 75
    files** (+24% since May 11). The "compression would matter
@@ -310,7 +311,68 @@ not just the CSV export.
    (documented in `docs/authentication.md`); no reviewer
    self-service profile (not an MVP requirement).
 
-## 6. LOC budget estimate to project completion
+## 6. Recommended file splits
+
+Weakness #3 calls out three production files past 1.3k LOC,
+none on a refactor plan. The codebase has a working precedent —
+the May 9 splits of `instruments.py` (2,469 LOC → package) and
+`views.py` (3,483 LOC → package) both held under heavy pressure
+since — and a documented convention (`CLAUDE.md`: operator
+routes split by feature area; services split by concern into
+packages). The recommendations below apply that precedent.
+
+**Priority 1 — `app/web/routes_operator/_setup_rosters.py`
+(1,759 LOC).** The clearest case. This one slice carries
+*three* independent Setup pages — Reviewers, Reviewees,
+Relationships — each with its own page-render helper, per-row
+create / update, bulk inactivate / reactivate, and delete-all.
+That is three feature areas in one file, directly against the
+"one slice per feature area" convention every other operator
+route follows. Split into three sibling slices —
+`_setup_reviewers.py`, `_setup_reviewees.py`,
+`_setup_relationships.py` — with the shared plumbing
+(`_redirect_keeping_selection`, the sort-value helpers, the
+`_picker_label` datalist helper) lifted into `_shared.py`.
+Low-risk: the three route groups already have near-zero
+cross-references.
+
+**Priority 2 — `app/services/session_config_io.py` (1,733
+LOC).** Two genuinely separate halves live here:
+`serialize_session_config` (the six-section CSV exporter) and
+`apply_session_config` (the two-phase importer — its inverse).
+Promote to a `session_config_io/` package mirroring
+`extracts/` and `instruments/`: `_serialize.py`, `_apply.py`,
+a shared `_rows.py` (the `Row` NamedTuple + the `_str` /
+`_bool` / `_int` / `_decimal` / `_json` typed-cell helpers),
+and an `__init__.py` re-exporting the public surface so
+callers keep writing `from app.services import
+session_config_io` unchanged.
+
+**Priority 3 — `app/web/routes_operator/_instruments.py`
+(1,398 LOC).** Less urgent — it is reasonably cohesive
+(instrument + display-field + response-field CRUD all serve
+one page). The cleanest carve is the Response Type Definition
+routes (operator add / edit / delete / add-from-library, the
+block already marked "Slice 4b", ~250 LOC) into a
+`_response_types.py` slice. Worth doing if `_instruments.py`
+keeps growing; not pressing today.
+
+**Watch list (not yet actionable).**
+`app/web/routes_reviewer.py` (1,362 LOC) is the only reviewer
+route file and — unlike the operator side — is *not* a
+package. Segments 17B (reviewer refinements) and 22 (AG Grid)
+will both grow it, so converting it to a `routes_reviewer/`
+package is worth doing as the first step of whichever lands
+first. `app/web/views/_rule_builder.py` (1,043 LOC) is a
+single large view-adapter sub-module — monitor, no split
+needed yet.
+
+Every split above is pure structure — no behaviour change,
+each a small reviewable PR. They fold naturally into Segment
+19 (spec / hygiene) or are best done opportunistically, just
+ahead of whichever segment next touches each surface.
+
+## 7. LOC budget estimate to project completion
 
 The May 11 model forecast the 15-family at ~5,400 code /
 ~8,100 tests; actuals across the whole window were +9,879 code
@@ -362,7 +424,7 @@ genuine greenfield (new auth posture, new chrome) rather than
 the operator-polish breadth that dominated the May 11–16 window
 and estimates more reliably.
 
-## 7. Five-day delta summary
+## 8. Five-day delta summary
 
 What changed between the May 11 baseline and this assessment:
 
@@ -383,7 +445,7 @@ What changed between the May 11 baseline and this assessment:
 - **AG Grid renumbered 17A → 22; Segment 21 (peer review /
   reviewee surface) stubbed.**
 
-## 8. One-line verdict
+## 9. One-line verdict
 
 A disciplined, well-tested, well-documented FastAPI monolith at
 **~35.5k LOC of production code (+39% in five days)**, **~55k
