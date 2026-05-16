@@ -139,7 +139,7 @@ left.
 | 2  | Reviewer upload/edit | ✅ **inline edit shipped (15F)** | **upgraded ⚠️→✅** |
 | 3  | Reviewee upload/edit | ✅ **inline edit shipped (15F)** | **upgraded ⚠️→✅** |
 | 4  | Single-instrument configuration | ✅ | — |
-| 5  | Manual assignment upload/edit | ⚠️ manual-CSV path is **dev-only**; rule-based + relationships is the operator path | — |
+| 5  | Manual assignment upload/edit | ✅ delivered via the rule engine + Relationships table; the literal manual-CSV upload path was **fully retired** by design (16A PR 5, 2026-05-11) | **corrected** — May 11 mis-stated this as a lingering dev-only path |
 | 6  | Full-matrix assignment generation | ✅ (seeded RuleSet) | — |
 | 7  | Basic readiness validation | ✅ (15B + 15E broadened the rule set) | — |
 | 8  | Email invitations with individualized links | ⚠️ outbox-only until **14B Part A** | — |
@@ -152,12 +152,15 @@ left.
 | 15 | Basic audit log | ✅ 103 event types + **in-app viewer shipped (16C MVP)** + filtered CSV | extended (viewer shipped) |
 | 16 | Basic retention/deletion workflow | ❌ owned by **Segment 18C** (stub); not started | — |
 
-**Score: 12/16 fully present (+2 — inline roster edit closed
-#2 and #3), 3 functionally-present-but-dev-only/outbox (#5,
-#8, #13), 1 not implemented (#16).** The remaining four are the
-same four flagged on May 11; only the email pair (#8 / #13) and
-the retention item (#16) are genuine feature gaps — #5 is a
-deliberate UI retirement.
+**Score: 13/16 fully present, 2 outbox-only (#8, #13), 1 not
+implemented (#16).** Two items crossed the line via 15F inline
+roster edit (#2, #3). #5 is re-scored ✅: the May 11 assessment
+mis-stated the manual-CSV path as a lingering dev-only escape
+hatch, but 16A PR 5 retired it outright — the rule engine +
+Relationships table fully cover precise operator control of who
+reviews whom. The only genuine feature gaps left are the email
+pair (#8 / #13, outbox-only until 14B Part A) and retention
+(#16, not built).
 
 ### §22 Expanded release items
 
@@ -275,44 +278,101 @@ not just the CSV export.
    `session_config_io.py` 1,733, `_instruments.py` 1,398.
    Three files over 1.3k, none on a split plan. The
    `_instruments.py` warning from May 11 went unaddressed and
-   `_setup_rosters.py` overtook it.
+   `_setup_rosters.py` overtook it. **§6 below recommends the
+   specific splits.**
 
-4. **Manual-assignment path lingers in dev-only limbo.**
-   Unchanged from May 11 — schema supports it, test helpers
-   exercise it, operators can't reach it. Either delete it or
-   repromote it as a documented Sys-Admin escape hatch.
-
-5. **`guide/archive/` keeps ballooning** — **37,269 LOC / 75
+4. **`guide/archive/` keeps ballooning** — **37,269 LOC / 75
    files** (+24% since May 11). The "compression would matter
    at scale" note is now three assessments old. Not yet a real
    problem; still drifting the wrong way.
 
-6. **Production hardening (14A) untouched.** Key Vault, VNet,
+5. **Production hardening (14A) untouched.** Key Vault, VNet,
    soft-delete, full-Postgres pytest — 521-LOC plan, not
    started. It gates pilot-readiness alongside email.
 
-7. **Reviewer surface still plain HTML.** AG Grid + cell
+6. **Reviewer surface still plain HTML.** AG Grid + cell
    autosave (renumbered 17A → **22** this week) is still
    deferred; the reviewer table is `<input>` / `<textarea>` /
    `<select>` with form-based save.
 
-8. **The reviewee is still not an audience.** A whole
+7. **The reviewee is still not an audience.** A whole
    third-audience surface (results-sharing, feedback
    acknowledgement, non-confidential peer review) is only just
    stubbed as **Segment 21** — sizeable greenfield work, no
    implementation.
 
-9. **Test-suite runtime is creeping.** 1,766 tests / ~90 s is
+8. **Test-suite runtime is creeping.** 1,766 tests / ~90 s is
    fine today but has no headroom plan (no parallelisation,
    no split fast/slow tiers). Worth watching as 14B / 21 add
    route-heavy coverage.
 
-10. **Structural caveats unchanged.** No multi-tenant story
-    (single-deployment by design); CSRF leans on Easy Auth
-    (documented in `docs/authentication.md`); no reviewer
-    self-service profile (not an MVP requirement).
+9. **Structural caveats unchanged.** No multi-tenant story
+   (single-deployment by design); CSRF leans on Easy Auth
+   (documented in `docs/authentication.md`); no reviewer
+   self-service profile (not an MVP requirement).
 
-## 6. LOC budget estimate to project completion
+## 6. Recommended file splits
+
+Weakness #3 calls out three production files past 1.3k LOC,
+none on a refactor plan. The codebase has a working precedent —
+the May 9 splits of `instruments.py` (2,469 LOC → package) and
+`views.py` (3,483 LOC → package) both held under heavy pressure
+since — and a documented convention (`CLAUDE.md`: operator
+routes split by feature area; services split by concern into
+packages). The recommendations below apply that precedent.
+
+**Priority 1 — `app/web/routes_operator/_setup_rosters.py`
+(1,759 LOC).** The clearest case. This one slice carries
+*three* independent Setup pages — Reviewers, Reviewees,
+Relationships — each with its own page-render helper, per-row
+create / update, bulk inactivate / reactivate, and delete-all.
+That is three feature areas in one file, directly against the
+"one slice per feature area" convention every other operator
+route follows. Split into three sibling slices —
+`_setup_reviewers.py`, `_setup_reviewees.py`,
+`_setup_relationships.py` — with the shared plumbing
+(`_redirect_keeping_selection`, the sort-value helpers, the
+`_picker_label` datalist helper) lifted into `_shared.py`.
+Low-risk: the three route groups already have near-zero
+cross-references.
+
+**Priority 2 — `app/services/session_config_io.py` (1,733
+LOC).** Two genuinely separate halves live here:
+`serialize_session_config` (the six-section CSV exporter) and
+`apply_session_config` (the two-phase importer — its inverse).
+Promote to a `session_config_io/` package mirroring
+`extracts/` and `instruments/`: `_serialize.py`, `_apply.py`,
+a shared `_rows.py` (the `Row` NamedTuple + the `_str` /
+`_bool` / `_int` / `_decimal` / `_json` typed-cell helpers),
+and an `__init__.py` re-exporting the public surface so
+callers keep writing `from app.services import
+session_config_io` unchanged.
+
+**Priority 3 — `app/web/routes_operator/_instruments.py`
+(1,398 LOC).** Less urgent — it is reasonably cohesive
+(instrument + display-field + response-field CRUD all serve
+one page). The cleanest carve is the Response Type Definition
+routes (operator add / edit / delete / add-from-library, the
+block already marked "Slice 4b", ~250 LOC) into a
+`_response_types.py` slice. Worth doing if `_instruments.py`
+keeps growing; not pressing today.
+
+**Watch list (not yet actionable).**
+`app/web/routes_reviewer.py` (1,362 LOC) is the only reviewer
+route file and — unlike the operator side — is *not* a
+package. Segments 17B (reviewer refinements) and 22 (AG Grid)
+will both grow it, so converting it to a `routes_reviewer/`
+package is worth doing as the first step of whichever lands
+first. `app/web/views/_rule_builder.py` (1,043 LOC) is a
+single large view-adapter sub-module — monitor, no split
+needed yet.
+
+Every split above is pure structure — no behaviour change,
+each a small reviewable PR. They fold naturally into Segment
+19 (spec / hygiene) or are best done opportunistically, just
+ahead of whichever segment next touches each surface.
+
+## 7. LOC budget estimate to project completion
 
 The May 11 model forecast the 15-family at ~5,400 code /
 ~8,100 tests; actuals across the whole window were +9,879 code
@@ -364,7 +424,7 @@ genuine greenfield (new auth posture, new chrome) rather than
 the operator-polish breadth that dominated the May 11–16 window
 and estimates more reliably.
 
-## 7. Five-day delta summary
+## 8. Five-day delta summary
 
 What changed between the May 11 baseline and this assessment:
 
@@ -380,18 +440,18 @@ What changed between the May 11 baseline and this assessment:
   `spec/timezone_display.md` follow-on.
 - **Sortable tables** (13B) landed across the operator and
   reviewer surfaces.
-- **MVP score: 10 → 12 of 16.** Audit event types 62 → 103;
+- **MVP score: 10 → 13 of 16.** Audit event types 62 → 103;
   routes ~100 → ~136; production Python +39%.
 - **AG Grid renumbered 17A → 22; Segment 21 (peer review /
   reviewee surface) stubbed.**
 
-## 8. One-line verdict
+## 9. One-line verdict
 
 A disciplined, well-tested, well-documented FastAPI monolith at
 **~35.5k LOC of production code (+39% in five days)**, **~55k
 LOC of tests (1.56 × ratio)**, with the **operator surface now
-genuinely polished** and **12 of 16 MVP acceptance criteria
-fully met (+2)**. The one blocker between "runs locally,
+genuinely polished** and **13 of 16 MVP acceptance criteria
+fully met**. The one blocker between "runs locally,
 fully featured" and "runs a real pilot" is unchanged and now
 starkly isolated: **email send activation (Segment 14B Part A)**
 — with production hardening (14A) and retention tooling (18C)
