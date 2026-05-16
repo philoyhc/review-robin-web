@@ -17,6 +17,9 @@ from app.db.models import (
     Assignment,
     AuditEvent,
     Instrument,
+    InstrumentResponseField,
+    Response,
+    ResponseTypeDefinition,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -242,6 +245,72 @@ def test_scoped_replace_rejects_unpinned_instrument(db: Session) -> None:
             correlation_id="c1",
             instrument_id=inst_b.id,
         )
+
+
+def test_regenerate_clears_responses_on_replaced_assignments(
+    db: Session,
+) -> None:
+    """Regenerating assignments for an instrument that already has
+    submitted responses removes the dependent ``responses`` rows
+    instead of tripping the FK constraint.
+
+    The per-instrument delete is a bulk Core statement, which bypasses
+    the ORM ``delete-orphan`` cascade on ``Assignment.responses``; the
+    service must clear the responses explicitly.
+    """
+
+    user, review_session, inst_a, inst_b, rule_set = _seed_two_instruments(db)
+    inst_a.rule_set_id = rule_set.id
+    db.flush()
+
+    # First materialisation — gives inst_a a set of Assignment rows.
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+
+    # Attach a response to one of inst_a's assignments.
+    rtd = ResponseTypeDefinition(
+        session_id=review_session.id,
+        response_type="Rating",
+        data_type="number",
+    )
+    db.add(rtd)
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=inst_a.id,
+        field_key="score",
+        label="Score",
+        response_type_id=rtd.id,
+    )
+    db.add(field)
+    db.flush()
+    an_assignment = db.execute(
+        select(Assignment).where(Assignment.instrument_id == inst_a.id)
+    ).scalars().first()
+    db.add(
+        Response(
+            assignment_id=an_assignment.id,
+            response_field_id=field.id,
+            value="5",
+        )
+    )
+    db.flush()
+    db.commit()
+
+    # Regenerate — must not raise an IntegrityError.
+    replaced, new = assignments.replace_assignments(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id="c2",
+        instrument_id=inst_a.id,
+    )
+
+    assert (replaced, new) == (4, 4)
+    # The orphaned response was cleared with its assignment.
+    assert (
+        db.execute(select(Response)).first() is None
+    )
 
 
 def test_existing_count_filters_by_instrument(db: Session) -> None:

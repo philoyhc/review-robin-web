@@ -10,6 +10,7 @@ from app.db.models import (
     Assignment,
     Instrument,
     Relationship,
+    Response,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -526,6 +527,20 @@ def _materialise_one_instrument(
 
     replaced_here = existing_count(
         db, review_session.id, instrument_id=instrument.id
+    )
+    # The bulk Core ``delete`` below bypasses the ORM
+    # ``delete-orphan`` cascade on ``Assignment.responses``, so any
+    # responses still pointing at these assignments must be cleared
+    # first or the FK constraint fails.
+    instrument_assignment_ids = (
+        select(Assignment.id)
+        .where(Assignment.session_id == review_session.id)
+        .where(Assignment.instrument_id == instrument.id)
+    )
+    db.execute(
+        delete(Response).where(
+            Response.assignment_id.in_(instrument_assignment_ids)
+        )
     )
     db.execute(
         delete(Assignment)
