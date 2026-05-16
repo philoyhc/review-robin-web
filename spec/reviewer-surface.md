@@ -763,8 +763,8 @@ re-architecting; see "Designed-for-extensibility" below.
   Today the post-submit signal is the per-page `submitted` pill in
   the overview card and the per-row submitted-timestamp in
   the status column.
-- **Large-table ergonomics** (cell autosave, sticky headers,
-  return-to-place, visible progress, filter-to-incomplete) —
+- **Large-table ergonomics** (cell autosave, return-to-place,
+  visible progress, filter-to-incomplete) —
   Segment 17B, as targeted progressive enhancement. A wholesale
   JS data-grid swap (AG Grid or equivalent) is *not* planned —
   judged overkill; recorded as an aspirational possibility in
@@ -826,8 +826,10 @@ artifacts at scale): auto-save, return-to-place, visible progress,
 sticky column headers, filter-to-incomplete, keyboard navigation,
 and column-type ergonomics. **Segment 17B owns these**, pursued as
 targeted progressive enhancement (debounced `fetch` to `POST /save`,
-CSS `position: sticky`, small inline scripts) — *not* a JS
-data-grid framework. A wholesale grid swap (AG Grid or equivalent)
+small inline scripts, CSS) — *not* a JS
+data-grid framework. (Sticky column headers are the one item 17B
+investigated and dropped — see below.) A wholesale grid swap
+(AG Grid or equivalent)
 was considered and taken off the roadmap as overkill; it is
 recorded as an aspirational possibility in
 `guide/future_possibilities.md`. Notes on how the surface stays
@@ -848,11 +850,22 @@ compatible either way:
   JS-driven grid unchanged, should one ever be adopted.
 - **What lands later (Segment 17B).** The ergonomics arrive
   incrementally as progressive enhancement on the existing
-  `<table>` — autosave wired to `POST /save`, `position: sticky`
-  headers, a progress indicator, a filter-to-incomplete toggle —
-  each a small independent PR. They are *not* treated as one
-  all-or-nothing bundle gated on a grid library; that bundling was
-  the AG-Grid framing, now off the roadmap.
+  `<table>` — autosave wired to `POST /save`, a progress
+  indicator, a filter-to-incomplete toggle — each a small
+  independent PR. They are *not* treated as one all-or-nothing
+  bundle gated on a grid library; that bundling was the AG-Grid
+  framing, now off the roadmap.
+- **Investigated and dropped — sticky column headers.** Pinned as
+  first-class by `visual_style_rrw.md`, but dropped in Segment 17B
+  (2026-05-16). `position: sticky` on the `<th>` row does nothing
+  useful here: the `.table-scroll` wrapper's `overflow-x` forces
+  an `overflow-y` scroll context, so the header sticks relative to
+  that wrapper rather than the window — and the wrapper has no
+  height, so it never scrolls internally. The only working fix is
+  to give the table its own vertical scroll viewport (a
+  `max-height` box), turning a long reviewee list into an internal
+  scroll region; that scroll-model change was judged not worth it.
+  The surface keeps whole-page scroll and a non-sticky header.
 
 ---
 
