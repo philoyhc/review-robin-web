@@ -83,12 +83,13 @@ ordered by `created_at DESC` (most recent first).
 |---|---|---|---|
 | 1 | **Session Name** | `session.name` | `<a href="/operator/sessions/{id}">{name}</a>` — clicking the name lands the operator on Session Home. |
 | 2 | **Session Code** | `session.code` | Inline `<code>` tag. |
-| 3 | **Deadline** | `session.deadline` | `<span class="pill pill-info">{iso}</span>` when set, `<span class="muted">No deadline</span>` otherwise. ISO 8601 format. |
+| 3 | **Deadline** | `session.deadline` | `<span class="pill pill-info">{when}</span>` when set, `<span class="muted">No deadline</span>` otherwise. Rendered `YYYY-MM-DD HH:MM` via `format_datetime`. |
 | 4 | **Created by** | `session.created_by_user.display_name` (falls back to `.email`) | `<span class="pill pill-count">{name}</span>`. |
-| 5 | **Created** | `session.created_at` | `<span class="pill pill-count">{iso}</span>`. ISO 8601 with date and time. |
-| 6 | **Last Modified** | `session.updated_at` | `<span class="pill pill-count">{iso}</span>`. ISO 8601 with date and time. |
-| 7 | **Status** | `session.status` | `<span class="pill pill-lifecycle-{status}">{label}</span>` — same lifecycle-tinted variants the session-home `session_setup_status_row.html` and the 16A Admin Sessions Diagnostics table use (draft / validated / ready / closed each carry distinct tints from `base.html`). The label is the human-readable form produced by the `lifecycle_label` Jinja filter. |
-| 8 | *(unlabelled)* | `session.id` | Bulk-action select-row checkbox. |
+| 5 | **Created** | `session.created_at` | `<span class="pill pill-count">{when}</span>`. `YYYY-MM-DD HH:MM` via `format_datetime`. |
+| 6 | **Last Modified** | `session.updated_at` | `<span class="pill pill-count">{when}</span>`. `YYYY-MM-DD HH:MM` via `format_datetime`. |
+| 7 | **Timezone** | `resolve_session_timezone(session)` (the `session_timezone` Jinja global) | Inline `<code>` tag with the raw IANA id, e.g. `Asia/Singapore`. The lobby lists many sessions, so its timestamp cells (Deadline / Created / Last Modified) render in the *viewing operator's* zone; this column names each row's own resolved session zone. See `spec/timezone_display.md`. |
+| 8 | **Status** | `session.status` | `<span class="pill pill-lifecycle-{status}">{label}</span>` — same lifecycle-tinted variants the session-home `session_setup_status_row.html` and the 16A Admin Sessions Diagnostics table use (draft / validated / ready / closed each carry distinct tints from `base.html`). The label is the human-readable form produced by the `lifecycle_label` Jinja filter. |
+| 9 | *(unlabelled)* | `session.id` | Bulk-action select-row checkbox. |
 
 The trailing column has `class="col-shrink"` (auto-narrow CSS).
 

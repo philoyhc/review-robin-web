@@ -87,6 +87,20 @@ def test_lobby_renders_in_operator_zone_after_save(
     assert format_datetime(session.created_at, "UTC") not in body
 
 
+def test_lobby_shows_session_timezone_column(
+    client: TestClient, db: Session
+) -> None:
+    """The lobby names each row's resolved session zone (raw IANA id)
+    in a Timezone column — the timestamp cells stay in the operator's
+    zone since the table lists many sessions."""
+    session = _create_session(client, db, code="tz-lobby")
+    _set_session_timezone(client, session, "Asia/Singapore")
+
+    body = client.get("/operator/sessions").text
+    assert "<th>Timezone</th>" in body
+    assert "<code>Asia/Singapore</code>" in body
+
+
 # ── PR 3 — per-session timezone override ─────────────────────────────────
 
 
