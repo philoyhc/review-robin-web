@@ -154,12 +154,12 @@ def session_edit_form(
             ),
             "owners_error": owners_error,
             "timezone_options": operator_settings.timezone_options(),
-            "inherited_timezone": operator_settings.get_display_timezone(
-                review_session.created_by_user
-            ),
             "current_session_timezone": session_timezone,
             "timezone_sample": date_formatting.format_datetime(
                 datetime.now(timezone.utc), session_timezone
+            ),
+            "deadline_input_value": date_formatting.format_datetime_local(
+                review_session.deadline, session_timezone
             ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Edit details"
@@ -174,6 +174,7 @@ def session_edit_submit(
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
+    display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
@@ -184,16 +185,41 @@ def session_edit_submit(
 ) -> RedirectResponse:
     _require_editable(review_session)
     _require_response_loss_ack(db, review_session, acknowledge_response_loss)
+
+    # 18B PR 5: the display timezone is a field of this form (folded
+    # in from the former standalone card). Blank ⇒ leave the session's
+    # current zone unchanged. The deadline picker is wall-clock in
+    # this zone.
+    timezone_name = (
+        display_timezone.strip()
+        or sessions.resolve_session_timezone(review_session)
+    )
+    if not operator_settings.is_valid_timezone(timezone_name):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"unknown timezone {timezone_name!r}",
+        )
+
     parsed_deadline: datetime | None = None
     if deadline:
         try:
-            parsed_deadline = datetime.fromisoformat(deadline)
+            parsed_deadline = date_formatting.parse_local_datetime(
+                deadline, timezone_name
+            )
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="deadline must be ISO-8601",
             ) from exc
 
+    correlation_id = request_correlation_id()
+    sessions.set_session_display_timezone(
+        db,
+        review_session=review_session,
+        user=user,
+        timezone_name=timezone_name,
+        correlation_id=correlation_id,
+    )
     payload = SessionCreate(
         name=name,
         code=code,
@@ -206,45 +232,10 @@ def session_edit_submit(
         review_session=review_session,
         user=user,
         payload=payload,
-        correlation_id=request_correlation_id(),
+        correlation_id=correlation_id,
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-@router.post("/sessions/{session_id}/timezone")
-def session_set_timezone(
-    display_timezone: str = Form(default=""),
-    review_session: ReviewSession = Depends(
-        require_sys_admin_or_session_operator
-    ),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    """Set or clear the per-session display-timezone override
-    (Segment 18B PR 3). A blank value clears the override — the
-    session falls back to inheriting the creating operator's
-    default. Not lifecycle-gated: the display zone stays editable
-    in any session state."""
-    timezone_name = display_timezone.strip() or None
-    if timezone_name is not None and not operator_settings.is_valid_timezone(
-        timezone_name
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"unknown timezone {timezone_name!r}",
-        )
-    sessions.set_session_display_timezone(
-        db,
-        review_session=review_session,
-        user=user,
-        timezone_name=timezone_name,
-        correlation_id=request_correlation_id(),
-    )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/edit#timezone",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

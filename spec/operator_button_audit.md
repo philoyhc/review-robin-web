@@ -112,7 +112,6 @@ Source: `app/web/templates/operator/session_edit.html`.
 |---|---|---|---|---|---|---|
 | 16 | Form card | Save changes | `<button type="submit">` | `btn` | Primary | |
 | 17 | Form card | Cancel | `<a>` | `btn secondary` | Secondary | Returns to Session Home |
-| 17a | Display timezone card (18B) | Save timezone | `<button type="submit">` | `btn` | Primary | Posts `/operator/sessions/{id}/timezone`; sets / clears the per-session timezone override |
 
 ---
 

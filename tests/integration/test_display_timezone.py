@@ -44,6 +44,23 @@ def _create_session(
     ).scalar_one()
 
 
+def _set_session_timezone(
+    client: TestClient, session: ReviewSession, zone: str, **extra: str
+):
+    """Post the Edit Session Details form to set the display timezone.
+    The standalone /timezone route was retired in 18B PR 5 — the
+    timezone is now a field of the (lifecycle-gated) edit form, so
+    this only works while the session is draft / validated."""
+    data = {"name": session.name, "code": session.code,
+            "display_timezone": zone}
+    data.update(extra)
+    return client.post(
+        f"/operator/sessions/{session.id}/edit",
+        data=data,
+        follow_redirects=False,
+    )
+
+
 def test_lobby_renders_in_utc_before_any_preference(
     client: TestClient, db: Session
 ) -> None:
@@ -132,15 +149,8 @@ def test_session_timezone_override_persists_and_audits(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="tz-ov")
-    response = client.post(
-        f"/operator/sessions/{session.id}/timezone",
-        data={"display_timezone": "America/New_York"},
-        follow_redirects=False,
-    )
+    response = _set_session_timezone(client, session, "America/New_York")
     assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}/edit#timezone"
-    )
 
     db.refresh(session)
     assert session.display_timezone == "America/New_York"
@@ -158,45 +168,39 @@ def test_session_timezone_override_persists_and_audits(
     assert event.session_id == session.id
 
 
-def test_session_timezone_blank_clears_override(
-    client: TestClient, db: Session
-) -> None:
-    session = _create_session(client, db, code="tz-clear")
-    client.post(
-        f"/operator/sessions/{session.id}/timezone",
-        data={"display_timezone": "Europe/London"},
-        follow_redirects=False,
-    )
-    client.post(
-        f"/operator/sessions/{session.id}/timezone",
-        data={"display_timezone": ""},
-        follow_redirects=False,
-    )
-    db.refresh(session)
-    assert session.display_timezone is None
-
-
 def test_session_timezone_rejects_unknown_zone(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="tz-bad")
-    response = client.post(
-        f"/operator/sessions/{session.id}/timezone",
-        data={"display_timezone": "Mars/Base"},
-        follow_redirects=False,
-    )
+    response = _set_session_timezone(client, session, "Mars/Base")
     assert response.status_code == 422
 
 
-def test_edit_page_renders_timezone_card(
+def test_edit_deadline_interpreted_in_session_zone(
+    client: TestClient, db: Session
+) -> None:
+    """The Edit form's deadline picker is wall-clock in the submitted
+    timezone (18B PR 5)."""
+    session = _create_session(client, db, code="tz-edit-dl")
+    _set_session_timezone(
+        client, session, "Asia/Singapore", deadline="2026-06-02T17:00"
+    )
+    db.refresh(session)
+    assert session.display_timezone == "Asia/Singapore"
+    # 17:00 Singapore (+08) is the 09:00 UTC instant.
+    assert format_datetime(session.deadline, "UTC") == "2026-06-02 09:00"
+
+
+def test_edit_page_renders_timezone_field(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="tz-card")
     body = client.get(f"/operator/sessions/{session.id}/edit").text
-    assert 'id="timezone"' in body
-    assert "Display timezone" in body
+    # The timezone is a field of the Edit Session Details form now,
+    # not a standalone card (18B PR 5).
     assert 'name="display_timezone"' in body
     assert '<option value="Asia/Singapore">' in body
+    assert 'id="deadline-zone"' in body
 
 
 def test_session_detail_renders_in_override_zone(
@@ -205,11 +209,7 @@ def test_session_detail_renders_in_override_zone(
     """A session-scoped page localises timestamps to the session's
     own override zone — not the viewing operator's default."""
     session = _create_session(client, db, code="tz-render")
-    client.post(
-        f"/operator/sessions/{session.id}/timezone",
-        data={"display_timezone": "Asia/Singapore"},
-        follow_redirects=False,
-    )
+    _set_session_timezone(client, session, "Asia/Singapore")
     db.refresh(session)
 
     body = client.get(f"/operator/sessions/{session.id}").text
@@ -217,25 +217,20 @@ def test_session_detail_renders_in_override_zone(
     assert format_datetime(session.created_at, "UTC") not in body
 
 
-def test_session_with_no_override_inherits_operator_default(
+def test_session_with_null_timezone_resolves_to_operator_default(
     client: TestClient, db: Session
 ) -> None:
-    """With the override cleared, a session-scoped render resolves to
-    the creating operator's *current* default."""
+    """A session whose display_timezone is NULL (legacy rows — the UI
+    no longer produces NULL) resolves to the creating operator's
+    current default."""
     session = _create_session(client, db, code="tz-inherit")
-    # The operator picks up a default only after the session exists.
     client.post(
         "/operator/settings/timezone",
         data={"display_timezone": "Asia/Singapore"},
         follow_redirects=False,
     )
-    client.post(
-        f"/operator/sessions/{session.id}/timezone",
-        data={"display_timezone": ""},
-        follow_redirects=False,
-    )
-    db.refresh(session)
-    assert session.display_timezone is None
+    session.display_timezone = None
+    db.commit()
 
     body = client.get(f"/operator/sessions/{session.id}").text
     assert format_datetime(session.created_at, "Asia/Singapore") in body
@@ -247,11 +242,7 @@ def test_session_detail_shows_timezone_label(
     """The Session Details card's Timezone item shows the CLDR
     display name of the session's resolved zone."""
     session = _create_session(client, db, code="tz-label")
-    client.post(
-        f"/operator/sessions/{session.id}/timezone",
-        data={"display_timezone": "Asia/Singapore"},
-        follow_redirects=False,
-    )
+    _set_session_timezone(client, session, "Asia/Singapore")
 
     body = client.get(f"/operator/sessions/{session.id}").text
     assert "Timezone" in body
@@ -332,13 +323,11 @@ def test_reviewer_surface_renders_deadline_in_session_zone(
     session = _build_active_session_with_reviewer(
         operator, db, code="tz-rev", reviewer_email="rae@example.edu"
     )
+    # The session is Activated, so the (lifecycle-gated) edit form
+    # can't set the zone — stamp it directly.
     session.deadline = datetime(2026, 6, 1, 2, 0)
+    session.display_timezone = "Asia/Singapore"
     db.commit()
-    operator.post(
-        f"/operator/sessions/{session.id}/timezone",
-        data={"display_timezone": "Asia/Singapore"},
-        follow_redirects=False,
-    )
     db.refresh(session)
 
     reviewer = make_client(
@@ -370,13 +359,11 @@ def test_reviewer_dashboard_shows_deadline_with_timezone_label(
     session = _build_active_session_with_reviewer(
         operator, db, code="tz-dash", reviewer_email="rae@example.edu"
     )
+    # Activated session — stamp the zone directly (the edit form is
+    # lifecycle-gated).
     session.deadline = datetime(2026, 6, 1, 2, 0)
+    session.display_timezone = "Asia/Singapore"
     db.commit()
-    operator.post(
-        f"/operator/sessions/{session.id}/timezone",
-        data={"display_timezone": "Asia/Singapore"},
-        follow_redirects=False,
-    )
     db.refresh(session)
 
     reviewer = make_client(

@@ -218,7 +218,7 @@ Fields: Name (required, max 255), Code (required, max 64; unique per operator), 
 
 Same shape as the create form, with pre-populated values; no session top nav (it's a meta-edit, sub-page of Home). Breadcrumb is `Sessions → {session.name} → Edit Session`.
 
-Same four fields as create, pre-filled. Action row: **Save changes** (Primary) submits to `POST /operator/sessions/{id}/edit` → emits a `session.updated` audit event with `changes: {field: [old, new]}` for each changed field, invalidates `validated → draft`, and 303 back to session detail. **Cancel** (Secondary) → session detail.
+Same fields as create (Name, Code, Timezone, Deadline, Description, Help contact), pre-filled — the Timezone field was folded in from the former standalone Display timezone card in Segment 18B PR 5, so the display zone is now lifecycle-gated like the rest of the form. Action row: **Save changes** (Primary) submits to `POST /operator/sessions/{id}/edit` → emits a `session.updated` audit event with `changes: {field: [old, new]}` for each changed field (plus a `session.display_timezone_set` event when the zone changes), invalidates `validated → draft`, and 303 back to session detail. **Cancel** (Secondary) → session detail.
 
 The route returns **HTTP 409** when the session is `ready` — operators must Revert to draft first via the Workflow card.
 
