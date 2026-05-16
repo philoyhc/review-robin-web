@@ -176,15 +176,21 @@ skip it.
 ## Tests + lint
 
 ```bash
-pytest                  # full suite (SQLite, ~12s)
+pytest                  # full suite (SQLite)
+pytest -n auto          # same, parallelised across CPU cores
 ruff check .            # lint (config in pyproject.toml)
 alembic upgrade head    # local SQLite migration
 alembic downgrade -1    # round-trip check
 ```
 
+`pytest-xdist` provides `-n auto`; the SQLite `:memory:`
+engine is per-process and tests roll back per-test, so the
+workers stay isolated. The SQLite CI job runs `pytest -n auto`.
+
 CI runs the same `pytest` against a `postgres:16` service
 container too (`ci-postgres` job) — the suite covers both
-dialects on every PR.
+dialects on every PR. That job stays single-process: its
+workers would otherwise share one Postgres database.
 
 ## Project documents
 
