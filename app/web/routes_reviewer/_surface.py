@@ -1,17 +1,34 @@
+"""Reviewer response surface — the multi-instrument-aware
+review table at ``/reviewer/sessions/{id}/{instrument_position}``,
+its per-page Save, and the session-wide Submit / Clear.
+
+Carved out of the single-file ``routes_reviewer.py`` in Segment
+17B PR 1.
+
+Reviewer surface — multi-instrument-aware URL pattern (Segment
+11D follow-on, PR α onward):
+
+- GET  /sessions/{id}                         → 303 to /sessions/{id}/1
+- GET  /sessions/{id}/{instrument_position}   → renders the surface
+- POST /sessions/{id}/{instrument_position}/save
+- POST /sessions/{id}/submit                  → session-wide
+- POST /sessions/{id}/clear                   → session-wide
+
+Submit and Clear stay session-wide; their redirect targets read a
+``current_position`` hidden form field so the reviewer lands back
+on the page they were on.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
-from types import SimpleNamespace
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
-from sqlalchemy import and_, not_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from app.config import settings
 from app.db.models import (
     Assignment,
     Instrument,
@@ -25,185 +42,23 @@ from app.db.models import (
 from app.db.session import get_db
 from app.services import date_formatting
 from app.services import instruments as instruments_service
-from app.services import invitations as invitations_service
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.web import breadcrumbs, views
-from app.web.date_filters import (
-    display_timezone_context_processor,
-    format_date_filter,
-    format_datetime_filter,
-)
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
     require_reviewer_in_session,
 )
-
-router = APIRouter(prefix="/reviewer", tags=["reviewer"])
-
-_templates = Jinja2Templates(
-    directory=str(Path(__file__).parent / "templates"),
-    context_processors=[display_timezone_context_processor],
+from app.web.routes_reviewer._shared import (
+    _NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD,
+    _templates,
+    reviewer_review_count_for_user,
 )
-_templates.env.globals["app_version"] = settings.app_version
-# Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
-# Context-aware: the filters resolve their display zone from the
-# ``display_timezone`` context key the processor above injects.
-_templates.env.filters["format_datetime"] = format_datetime_filter
-_templates.env.filters["format_date"] = format_date_filter
 
-
-def reviewer_review_count_for_user(db: Session, user: User) -> int:
-    """Count active Reviewer rows whose email matches ``user``, case-insensitive.
-
-    Drives the conditional "My Reviews" link in the reviewer chrome
-    (suppressed when the user has only a single review — the dashboard
-    isn't useful as a navigation hub in that case).
-    """
-    target = (user.email or "").casefold()
-    if not target:
-        return 0
-    rows = db.execute(
-        select(Reviewer).where(Reviewer.status == "active")
-    ).scalars()
-    return sum(1 for r in rows if r.email.casefold() == target)
-
-
-@dataclass(frozen=True)
-class DashboardInstrumentRow:
-    """One per-instrument sub-row on the reviewer dashboard
-    (Segment 15B Slice 6).
-
-    Suppressed entirely when the session has only one instrument
-    so the single-instrument dashboard stays byte-identical to its
-    pre-15B render.
-
-    Fields:
-
-    - ``label`` — display name (``instrument.short_label`` when
-      set, ``instrument.name`` otherwise).
-    - ``position`` — 1-based position in the reviewer surface URL
-      shape (``/reviewer/sessions/{id}/{position}``). Indexed by
-      ``Instrument.order, Instrument.id`` so it matches the
-      reviewer surface's own page-button ordering.
-    - ``state`` — ``"not started"`` / ``"in progress"`` /
-      ``"submitted"`` / ``"no assignments"``. Last value covers
-      the case where the pinned rule excluded this reviewer from
-      this particular instrument (multi-instrument sessions can
-      have per-instrument pin gaps).
-    - ``completed_rows`` / ``total_assignments`` — surfaced in the
-      muted ``(N/M)`` suffix alongside the pill, same shape as
-      the per-session pill row.
-    """
-
-    label: str
-    position: int
-    state: str
-    completed_rows: int
-    total_assignments: int
-
-
-def _build_dashboard_instrument_rows(
-    db: Session, reviewer: Reviewer, review_session: ReviewSession
-) -> list[DashboardInstrumentRow]:
-    """Return one :class:`DashboardInstrumentRow` per session
-    instrument when ``N > 1``; empty list otherwise.
-
-    The empty-list-on-N==1 contract keeps the single-instrument
-    dashboard byte-identical (invariant #3 from the segment plan).
-    """
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    if len(instruments) <= 1:
-        return []
-    state_by_instrument = (
-        responses_service.reviewer_session_state_per_instrument(
-            db, reviewer=reviewer, session_id=review_session.id
-        )
-    )
-    rows: list[DashboardInstrumentRow] = []
-    for position, instrument in enumerate(instruments, start=1):
-        state = state_by_instrument.get(instrument.id)
-        if state is None:
-            rows.append(
-                DashboardInstrumentRow(
-                    label=instrument.short_label or instrument.name,
-                    position=position,
-                    state="no assignments",
-                    completed_rows=0,
-                    total_assignments=0,
-                )
-            )
-            continue
-        rows.append(
-            DashboardInstrumentRow(
-                label=instrument.short_label or instrument.name,
-                position=position,
-                state=state.pill_state,
-                completed_rows=state.completed_count,
-                total_assignments=state.total_assignments,
-            )
-        )
-    return rows
-
-
-@router.get("", response_class=HTMLResponse)
-def reviewer_dashboard(
-    request: Request,
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    user_email = (user.email or "").casefold()
-    rows = list(
-        db.execute(
-            select(Reviewer, ReviewSession)
-            .join(ReviewSession, ReviewSession.id == Reviewer.session_id)
-            .where(Reviewer.status == "active")
-            .order_by(ReviewSession.updated_at.desc())
-        ).all()
-    )
-    items = []
-    for reviewer, review_session in rows:
-        if reviewer.email.casefold() != user_email:
-            continue
-        pill = responses_service.session_pill_for_reviewer(
-            db, reviewer=reviewer, session_id=review_session.id
-        )
-        session_zone = sessions_service.resolve_session_timezone(review_session)
-        items.append(
-            {
-                "reviewer": reviewer,
-                "session": review_session,
-                "pill": pill,
-                "deadline_text": date_formatting.format_datetime(
-                    review_session.deadline, session_zone
-                ),
-                "deadline_timezone_label": date_formatting.timezone_label(
-                    session_zone, at=review_session.deadline
-                ),
-                "instrument_rows": _build_dashboard_instrument_rows(
-                    db, reviewer, review_session
-                ),
-            }
-        )
-    return _templates.TemplateResponse(
-        request,
-        "reviewer/dashboard.html",
-        {
-            "user": user,
-            "items": items,
-            "reviewer_review_count": len(items),
-            "breadcrumbs": breadcrumbs.reviewer_root(),
-        },
-    )
+router = APIRouter(prefix="/reviewer")
 
 
 def _load_assignments_with_relations(
@@ -277,18 +132,6 @@ def _page_status_for_group(group_rows: list[dict]) -> PageStatusState:
         for r in group_rows
     )
     return "in_progress" if has_any_value else "not_started"
-
-
-_NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD = not_(
-    and_(
-        InstrumentDisplayField.source_type == "reviewee",
-        InstrumentDisplayField.source_field.in_(["name", "email_or_identifier"]),
-    )
-)
-"""Filter expression: exclude display fields that duplicate the always-rendered
-Reviewee identity column (name + email). The operator can still configure these
-on the Instruments page; they're just not rendered as separate columns on the
-reviewer surface since the Reviewee column already shows both."""
 
 
 def _instruments_for_session(db: Session, session_id: int) -> dict[int, Instrument]:
@@ -690,374 +533,6 @@ def _surface_context(
     }
 
 
-# ---------------------------------------------------------------------------
-# Operator preview surface (Segment 10B-3)
-# ---------------------------------------------------------------------------
-
-# Sample placeholder values per display-field source. Used to fill cells on
-# synthetic preview rows when the session has fewer than three real
-# assignments. Keys cover the seven D6 sources; pair_context.* and
-# reviewee.tag_* share copy-text per the segment plan.
-_SYNTHETIC_VALUES_BY_SOURCE: dict[tuple[str, str], str] = {
-    ("reviewee", "name"): "",  # rendered in the dedicated Reviewee cell
-    ("reviewee", "email_or_identifier"): "",
-    ("reviewee", "tag_1"): "Sample tag value",
-    ("reviewee", "tag_2"): "Sample tag value",
-    ("reviewee", "tag_3"): "Sample tag value",
-    ("reviewee", "profile_link"): "https://example.edu/sample-profile",
-    ("pair_context", "1"): "Sample pair context",
-    ("pair_context", "2"): "Sample pair context",
-    ("pair_context", "3"): "Sample pair context",
-}
-
-
-def _make_synthetic_row(
-    *,
-    instrument: Instrument,
-    index: int,
-    response_fields: list[InstrumentResponseField],
-    display_fields: list[InstrumentDisplayField],
-    review_session: ReviewSession | None = None,
-) -> dict:
-    """Build a row dict with the same shape as ``_surface_context`` for a
-    synthetic (placeholder) reviewee. Used by ``build_preview_context`` to
-    pad up to three rows when a session has fewer real assignments.
-
-    Synthetic rows expose only the attributes the reviewer-surface template
-    actually reads:
-
-    - ``assignment.id`` (negative to avoid colliding with real autoincrement
-      ids; the form wrapper is suppressed in preview, so this id never gets
-      submitted).
-    - ``assignment.reviewee.name`` and ``email_or_identifier``.
-
-    A future template edit referencing a new attribute on the synthetic
-    namespace would silently AttributeError; the unit tests guard the
-    currently-exposed shape.
-    """
-    reviewee = SimpleNamespace(
-        name=f"Sample Reviewee {index + 1}",
-        email_or_identifier=f"sample{index + 1}@example.edu",
-    )
-    assignment = SimpleNamespace(
-        id=-(index + 1),
-        reviewee=reviewee,
-    )
-    display_cells = [
-        {
-            "field": df,
-            "label": instruments_service.display_field_label(df, session=review_session),
-            "value": _SYNTHETIC_VALUES_BY_SOURCE.get(
-                (df.source_type, df.source_field)
-            ),
-            "is_profile_link": (
-                df.source_type == "reviewee"
-                and df.source_field == "profile_link"
-            ),
-        }
-        for df in display_fields
-    ]
-    cells = [
-        {
-            "field": field,
-            "value": "",
-            "placeholder": views.placeholder_for_field(field),
-        }
-        for field in response_fields
-    ]
-    return {
-        "assignment": assignment,
-        "cells": cells,
-        "is_complete": False,
-        "missing_count": 0,
-        "submitted_at": None,
-        "display_cells": display_cells,
-        "accepting": False,
-        "show_values": True,
-    }
-
-
-def build_preview_context(
-    *,
-    db: Session,
-    user: User,
-    review_session: ReviewSession,
-    target_reviewer: Reviewer | None = None,
-) -> dict:
-    """Operator-side mirror of :func:`_surface_context`.
-
-    Builds the reviewer-surface view shape with up to three rows: real
-    assignments first (by ``Assignment.id`` ascending), padded with
-    synthetic placeholders to reach three. When ``target_reviewer`` is
-    provided (Segment 11F PR C — picker-driven previews hub), the real
-    assignments are filtered to that reviewer so the iframe surfaces
-    *that reviewer's* reviewees. With no target_reviewer (the legacy
-    ``/preview`` redirect target / direct caller path) the query
-    returns the first three assignments in the session regardless of
-    reviewer. Per Segment 10B-3 D9 this is read-only — it does **not**
-    call ``lifecycle.observe_deadline`` (which mutates the DB on a
-    deadline crossing) and forces ``accepting=False`` on every row so
-    the existing template's ``disabled_attr`` branch renders every
-    input disabled.
-    """
-    instruments = list(
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars()
-    )
-    if not instruments:
-        return {
-            "user": user,
-            "session": review_session,
-            "reviewer": None,
-            "instrument_groups": [],
-            "rows": [],
-            "missing": [],
-            "errors": [],
-            "show_incomplete_marks": False,
-            "any_required": False,
-            "any_accepting": False,
-            "any_closed_with_hidden_values": False,
-            "page_statuses": [],
-            "page_buttons": [],
-            "current_position": 1,
-            "deadline_timezone_label": date_formatting.timezone_label(
-                sessions_service.resolve_session_timezone(review_session),
-                at=review_session.deadline,
-            ),
-            "preview_mode": True,
-        }
-
-    instrument_ids = [i.id for i in instruments]
-    fields_by_instrument: dict[int, list[InstrumentResponseField]] = {}
-    stmt = (
-        select(InstrumentResponseField)
-        .where(InstrumentResponseField.instrument_id.in_(instrument_ids))
-        .order_by(InstrumentResponseField.order)
-    )
-    for field in db.execute(stmt).scalars():
-        fields_by_instrument.setdefault(field.instrument_id, []).append(field)
-
-    display_fields_by_instrument: dict[int, list[InstrumentDisplayField]] = {}
-    stmt = (
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id.in_(instrument_ids))
-        .where(InstrumentDisplayField.visible.is_(True))
-        .where(_NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD)
-        .order_by(InstrumentDisplayField.order, InstrumentDisplayField.id)
-    )
-    for field in db.execute(stmt).scalars():
-        display_fields_by_instrument.setdefault(field.instrument_id, []).append(
-            field
-        )
-
-    assignments_stmt = (
-        select(Assignment)
-        .options(
-            joinedload(Assignment.reviewee),
-            joinedload(Assignment.instrument),
-        )
-        .where(
-            Assignment.session_id == review_session.id,
-            Assignment.include.is_(True),
-        )
-    )
-    if target_reviewer is not None:
-        assignments_stmt = assignments_stmt.where(
-            Assignment.reviewer_id == target_reviewer.id
-        )
-    real_assignments = list(
-        db.execute(
-            assignments_stmt.order_by(Assignment.id).limit(3)
-        ).scalars()
-    )
-    pair_context_lookup = relationships_service.pair_context_lookup(
-        db, review_session.id
-    )
-
-    rows_by_instrument: dict[int, list[dict]] = {}
-    for assignment in real_assignments:
-        fields = fields_by_instrument.get(assignment.instrument_id, [])
-        display_fields = display_fields_by_instrument.get(
-            assignment.instrument_id, []
-        )
-        cells = [
-            {
-                "field": field,
-                "value": "",
-                "placeholder": views.placeholder_for_field(field),
-            }
-            for field in fields
-        ]
-        display_cells = [
-            {
-                "field": df,
-                "label": instruments_service.display_field_label(df, session=review_session),
-                "value": instruments_service.display_field_value(
-                    df,
-                    assignment,
-                    pair_context_lookup=pair_context_lookup,
-                ),
-                "is_profile_link": (
-                    df.source_type == "reviewee"
-                    and df.source_field == "profile_link"
-                ),
-            }
-            for df in display_fields
-        ]
-        rows_by_instrument.setdefault(assignment.instrument_id, []).append(
-            {
-                "assignment": assignment,
-                "cells": cells,
-                "is_complete": False,
-                "missing_count": 0,
-                "submitted_at": None,
-                "display_cells": display_cells,
-                "accepting": False,
-                "show_values": True,
-            }
-        )
-
-    # Pad with synthetic rows. Anchor synthetic rows to the first instrument
-    # that has real rows. When no real assignments exist, anchor to the
-    # session's first instrument.
-    needed = 3 - len(real_assignments)
-    if needed > 0:
-        if rows_by_instrument:
-            anchor_id = next(iter(rows_by_instrument))
-        else:
-            anchor_id = instruments[0].id
-        anchor_instrument = next(i for i in instruments if i.id == anchor_id)
-        anchor_response_fields = fields_by_instrument.get(anchor_id, [])
-        anchor_display_fields = display_fields_by_instrument.get(anchor_id, [])
-        synthetic_offset = len(real_assignments)
-        for offset in range(needed):
-            rows_by_instrument.setdefault(anchor_id, []).append(
-                _make_synthetic_row(
-                    instrument=anchor_instrument,
-                    index=synthetic_offset + offset,
-                    response_fields=anchor_response_fields,
-                    display_fields=anchor_display_fields,
-                    review_session=review_session,
-                )
-            )
-
-    instrument_groups: list[dict] = []
-    flat_rows: list[dict] = []
-    total_instrument_count = len(instruments)
-    for position, instrument in enumerate(instruments, start=1):
-        group_rows = rows_by_instrument.get(instrument.id, [])
-        if not group_rows:
-            continue
-        fields = fields_by_instrument.get(instrument.id, [])
-        help_block_items = [
-            f for f in fields if f.help_text and f.help_text_visible
-        ]
-        heading = views.instrument_heading(
-            instrument=instrument,
-            position=position,
-            total_count=total_instrument_count,
-        )
-        display_fields = display_fields_by_instrument.get(instrument.id, [])
-        display_field_headers = [
-            {
-                "field": df,
-                "label": instruments_service.display_field_label(df, session=review_session),
-                "is_profile_link": (
-                    df.source_type == "reviewee"
-                    and df.source_field == "profile_link"
-                ),
-            }
-            for df in display_fields
-        ]
-        constraints = []
-        for f in fields:
-            summary = views.constraint_summary_for_field(f)
-            if summary:
-                constraints.append({"label": f.label, "summary": summary})
-        instrument_groups.append(
-            {
-                "instrument": instrument,
-                "heading": heading,
-                "position": position,
-                # Operator preview always treats Page #1 as the active
-                # group; the synthetic surface has no client-side
-                # navigation handler.
-                "is_current": position == 1,
-                "rows": group_rows,
-                "help_block_items": help_block_items,
-                "display_fields": display_field_headers,
-                "constraints": constraints,
-                "show_status_col": False,
-            }
-        )
-        flat_rows.extend(group_rows)
-
-    # Operator preview — build Page N buttons so multi-instrument
-    # preview lets the operator flip between pages (per Segment 11D
-    # follow-on PR ε). The unified action row collapses to Page N
-    # buttons only in preview; Save / Discard / Submit / divider are
-    # suppressed at the partial level. Segment 11F PR C now embeds
-    # the surface inside a sandboxed iframe on the previews hub —
-    # the JS that swaps pages client-side doesn't run in the iframe,
-    # so click-fallback hrefs land the operator on the previews hub
-    # surface card (the closest sensible target). The standalone
-    # ``/preview`` route is a 308 to that same hub.
-    page_buttons: list[views.PageButton] = [
-        views.PageButton(
-            position=group["position"],
-            label=views.page_button_label(group["instrument"], group["position"]),
-            href=f"/operator/sessions/{review_session.id}/previews#reviewer-surface",
-            is_current=group["is_current"],
-        )
-        for group in instrument_groups
-    ]
-
-    return {
-        "user": user,
-        "session": review_session,
-        "reviewer": None,
-        "instrument_groups": instrument_groups,
-        "rows": flat_rows,
-        "missing": [],
-        "errors": [],
-        "show_incomplete_marks": False,
-        "any_required": False,
-        "any_accepting": False,
-        "any_closed_with_hidden_values": False,
-        "page_statuses": [],
-        "page_buttons": page_buttons,
-        "current_position": 1,
-        "deadline_timezone_label": date_formatting.timezone_label(
-            sessions_service.resolve_session_timezone(review_session),
-            at=review_session.deadline,
-        ),
-        "preview_mode": True,
-    }
-
-
-# ─────────────────────────────────────────────────────────────────
-# Reviewer surface — multi-instrument-aware URL pattern (Segment 11D
-# follow-on, PR α). The surface itself still renders today's stacked
-# layout; the URL gains an `{instrument_position}` segment so PRs β/γ/δ
-# can layer the per-page UI on top without another URL break.
-#
-# - GET  /sessions/{id}                         → 303 to /sessions/{id}/1
-# - GET  /sessions/{id}/{instrument_position}   → renders the surface
-# - POST /sessions/{id}/{instrument_position}/save
-# - POST /sessions/{id}/submit                  → session-wide
-# - POST /sessions/{id}/clear                   → session-wide
-#
-# Submit and Clear stay session-wide; their redirect targets read a
-# `current_position` hidden form field so the reviewer lands back on the
-# page they were on. The position segment on Save is decorative in PR α
-# (the route accepts it but doesn't filter by it) — PR γ wires the
-# per-position filter alongside the rendering-narrows step.
-# ─────────────────────────────────────────────────────────────────
-
-
 def submit_redirect_url(review_session: ReviewSession, position: int) -> str:
     """Where to send the reviewer after a successful submit — back to
     the page they pressed Submit from. The deferred standalone-
@@ -1312,51 +787,5 @@ async def reviewer_clear(
     )
     return RedirectResponse(
         url=f"/reviewer/sessions/{review_session.id}/{current_position}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-@router.get("/invite/{token}", name="reviewer_invite", response_class=HTMLResponse)
-def reviewer_invite(
-    request: Request,
-    token: str,
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-):
-    """Token landing page (Easy Auth required).
-
-    Looks up the invitation by sha256(token); 404 if unknown. If the
-    signed-in user's email matches the invitation's reviewer email
-    (case-insensitive), stamps ``opened_at`` on first hit and 303s to
-    the reviewer surface for that session. Mismatched email returns 403
-    with a dedicated page.
-    """
-    found = invitations_service.lookup_invitation_by_token(db, token)
-    if found is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    invitation, review_session, reviewer = found
-    if (user.email or "").casefold() != reviewer.email.casefold():
-        return _templates.TemplateResponse(
-            request,
-            "reviewer/invite_mismatch.html",
-            {
-                "user": user,
-                "session": review_session,
-                "reviewer_email": reviewer.email,
-                "reviewer_review_count": reviewer_review_count_for_user(
-                    db, user
-                ),
-                "breadcrumbs": breadcrumbs.reviewer_invite_mismatch(),
-            },
-            status_code=status.HTTP_403_FORBIDDEN,
-        )
-    invitations_service.record_open(
-        db,
-        invitation=invitation,
-        user=user,
-        correlation_id=request_correlation_id(),
-    )
-    return RedirectResponse(
-        url=f"/reviewer/sessions/{review_session.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )

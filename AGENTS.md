@@ -73,7 +73,8 @@ Local auth shortcut: set `ALLOW_FAKE_AUTH=true` plus `FAKE_AUTH_EMAIL`/`FAKE_AUT
 The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer split:
 
 1. **Route handlers** (`app/web/routes_*.py` plus the
-   `app/web/routes_operator/` package) parse the request, resolve
+   `app/web/routes_operator/` and `app/web/routes_reviewer/`
+   packages) parse the request, resolve
    identity via dependencies, and call into services. They stay thin
    — no SQL, no business rules. The operator routes are split by
    feature area into sibling sub-modules (`_lobby.py`,
