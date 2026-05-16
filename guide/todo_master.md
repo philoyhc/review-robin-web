@@ -529,6 +529,18 @@ retired). 18B is fully closed. Spec: `spec/settings_inventory.md`
 §1 / §2 / §8.5. Plan archived:
 `guide/archive/segment_18B_date_and_time_settings.md`.
 
+Follow-on (2026-05-16): the timezone-display principles were
+written up as a standalone spec — `spec/timezone_display.md`,
+covering the workspace / operator / session layer model, the
+`resolve_session_timezone` order, and which zone each surface
+renders in (#1041). Two surface gaps it named were then closed:
+the sessions lobby gained a **Timezone** column naming each
+row's resolved session zone as a raw IANA id (#1042), and the
+per-session CSV extracts (Responses, Settings) now emit
+timestamps as ISO 8601 carrying the session zone's offset via
+`date_formatting.iso_in_zone`, with the audit-events extract
+held at UTC as the documented exception (#1043).
+
 ---
 
 ## Upcoming
