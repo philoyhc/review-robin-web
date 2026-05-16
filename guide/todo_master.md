@@ -641,19 +641,21 @@ bottom of this file.
 #### Stubs
 
 - **17A — Housekeeping (file splits + test-suite runtime)**
-  *(stub created 2026-05-16)*. Pure structural / infrastructure
-  cleanup, no behaviour change. **Track A** splits the three
-  production files past 1.3k LOC per the 2026-05-16 assessment
-  §6 — `_setup_rosters.py` into three Setup-page slices,
-  `session_config_io.py` into a serialise / apply package, and
-  (optionally) the Response Type routes out of `_instruments.py`.
-  **Track B** cuts test-suite runtime per assessment §5
-  weakness 8 — `pytest-xdist` parallelism + a
-  `Base.metadata.create_all()` swap for the SQLite engine
-  fixture. The "17A" number is recycled from the AG Grid
-  segment, which was taken off the roadmap (now an aspirational
-  item in `guide/future_possibilities.md`); the scopes are
-  unrelated.
+  *(planned 2026-05-16; PR sequence set)*. Pure structural /
+  infrastructure cleanup, no behaviour change. Five PRs, both
+  tracks pursued, Track B first: **PR 1** `pytest-xdist`
+  (`-n auto`); **PR 2** swap the SQLite engine fixture's
+  migration replay for `Base.metadata.create_all()`; **PR 3**
+  split `_setup_rosters.py` into three Setup-page slices;
+  **PR 4** promote `session_config_io.py` to a package; **PR 5**
+  *(optional)* carve the Response Type routes out of
+  `_instruments.py`. Track B (PRs 1-2) cuts test-suite runtime
+  per assessment §5 weakness 8; Track A (PRs 3-5) splits the
+  production files past 1.3k LOC per assessment §6. PR 1 → 2 is
+  the one hard ordering; the rest can interleave. The "17A"
+  number is recycled from the AG Grid segment, which was taken
+  off the roadmap (now an aspirational item in
+  `guide/future_possibilities.md`); the scopes are unrelated.
   **Plan:** `guide/segment_17A_housekeeping.md`.
 
 - **17B — Reviewer surface refinements** *(stub created
