@@ -20,6 +20,18 @@ to that URL before calling ``activate_session`` so the operator
 acknowledges warnings inline. The detour writes no
 ``workflow_run_failed`` event — the run is paused at the
 acknowledgement step, not failed.
+
+A second detour guards saved responses: a session reverted from
+``ready`` back to ``draft`` keeps its responses (see
+``revert_session_to_draft``), so the super-button's Generate step —
+which regenerates assignments and deletes their responses — would
+silently destroy data. When responses exist and the operator hasn't
+yet chosen, the route 303s back to the host page with
+``?activate_confirm=responses``; the workflow card renders a
+confirmation offering ``regen_choice=keep`` (skip Generate, preserve
+responses + existing assignments) or ``regen_choice=regenerate``
+(run Generate, deleting the responses). Like the warnings detour
+this writes no ``workflow_run_failed`` event.
 """
 
 from __future__ import annotations
@@ -65,6 +77,7 @@ def _redirect_url(
     super_status: str | None = None,
     super_step: str | None = None,
     super_error: str | None = None,
+    activate_confirm: bool = False,
 ) -> str:
     """Resolve the post-action redirect target. ``return_to`` honours
     the allowlist; anything else falls through to Session Home. Failure
@@ -74,6 +87,8 @@ def _redirect_url(
         base = f"/operator/sessions/{session_id}/{return_to}"
     else:
         base = f"/operator/sessions/{session_id}"
+    if activate_confirm:
+        return f"{base}?{urlencode({'activate_confirm': 'responses'})}"
     if super_status is None:
         return base
     params = {"super_status": super_status}
@@ -97,11 +112,19 @@ def _warnings_detour_url(session_id: int, return_to: str | None) -> str:
 @router.post("/sessions/{session_id}/workflow/activate")
 def workflow_activate(
     return_to: str | None = Form(default=None),
+    regen_choice: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Run Generate + Validate + Activate as one click."""
+    """Run Generate + Validate + Activate as one click.
+
+    ``regen_choice`` resolves the saved-response confirmation detour:
+    ``None`` means the operator hasn't been asked yet; ``"keep"``
+    skips the Generate step (preserving responses + existing
+    assignments); ``"regenerate"`` runs Generate, deleting the
+    responses.
+    """
     correlation_id = request_correlation_id()
 
     # Pre-flight gates — defensive; the workflow-card stepper renders
@@ -114,6 +137,22 @@ def workflow_activate(
                 super_status="failed",
                 super_step="precondition",
                 super_error="Session is already activated.",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    # Saved-response confirmation detour. A session reverted from
+    # ``ready`` keeps its responses; the Generate step would delete
+    # them. Bounce to the workflow card's confirmation block until the
+    # operator picks ``keep`` or ``regenerate``.
+    if (
+        regen_choice is None
+        and lifecycle.is_editable(review_session)
+        and lifecycle.session_has_responses(db, review_session)
+    ):
+        return RedirectResponse(
+            url=_redirect_url(
+                review_session.id, return_to, activate_confirm=True
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -135,12 +174,17 @@ def workflow_activate(
             raise _StepFailed(
                 "Session can't be edited from its current state."
             )
-        assignments.replace_assignments(
-            db,
-            review_session=review_session,
-            user=user,
-            correlation_id=correlation_id,
-        )
+        # ``regen_choice == "keep"`` skips Generate so saved responses
+        # and their assignments survive the run. Any other value
+        # (``"regenerate"`` after a confirmation, or ``None`` when no
+        # responses exist) runs the engine as before.
+        if regen_choice != "keep":
+            assignments.replace_assignments(
+                db,
+                review_session=review_session,
+                user=user,
+                correlation_id=correlation_id,
+            )
 
         step = "validate"
         issues = validation.validate_session_setup(db, review_session)

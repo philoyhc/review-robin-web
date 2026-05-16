@@ -90,6 +90,7 @@ def session_detail(
     super_status: str | None = Query(default=None),
     super_step: str | None = Query(default=None),
     super_error: str | None = Query(default=None),
+    activate_confirm: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -102,6 +103,7 @@ def session_detail(
         super_failure=views.parse_super_failure(
             super_status, super_step, super_error
         ),
+        activate_confirm=activate_confirm,
     )
     return _templates.TemplateResponse(
         request,

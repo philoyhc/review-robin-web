@@ -45,6 +45,7 @@ from app.services import (
     assignments,
     csv_imports,
     invitations,
+    responses,
     validation,
 )
 from app.services import instruments as instruments_service
@@ -58,6 +59,7 @@ def build_workflow_card_context(
     return_to: str,
     validated_just_ran: bool = False,
     super_failure: dict[str, str] | None = None,
+    activate_confirm: str | None = None,
     user: User | None = None,
     correlation_id: str | None = None,
 ) -> dict[str, Any]:
@@ -76,6 +78,12 @@ def build_workflow_card_context(
     flips it to ``validated`` via ``lifecycle.mark_validated``
     before populating the rest of the context. ``user`` and
     ``correlation_id`` are required when this path fires.
+
+    ``activate_confirm`` (the page's ``?activate_confirm=responses``
+    entry path) is the super-button's saved-response detour: when
+    set to ``"responses"`` and the session actually has responses,
+    the returned ``activate_confirm`` key carries the response count
+    so the card renders its keep / regenerate confirmation block.
     """
     reviewer_count = csv_imports.existing_reviewer_count(
         db, review_session.id
@@ -140,6 +148,14 @@ def build_workflow_card_context(
         )
     )
 
+    activate_confirm_ctx: dict[str, int] | None = None
+    if activate_confirm == "responses":
+        response_count = responses.session_response_count(
+            db, review_session.id
+        )
+        if response_count > 0:
+            activate_confirm_ctx = {"response_count": response_count}
+
     return {
         "is_draft": is_draft,
         "is_validated": is_validated,
@@ -160,6 +176,7 @@ def build_workflow_card_context(
             "instruments_pinned_ok": not has_unpinned,
         },
         "super_failure": super_failure,
+        "activate_confirm": activate_confirm_ctx,
         "next_action_return_to": return_to,
     }
 

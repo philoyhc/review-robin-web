@@ -54,6 +54,7 @@ def assignments_hub(
     super_status: str | None = Query(default=None),
     super_step: str | None = Query(default=None),
     super_error: str | None = Query(default=None),
+    activate_confirm: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -73,6 +74,7 @@ def assignments_hub(
         super_failure=views.parse_super_failure(
             super_status, super_step, super_error
         ),
+        activate_confirm=activate_confirm,
     )
 
 
@@ -104,6 +106,7 @@ def _render_assignments_hub(
     is_blocked: bool = False,
     validated_just_ran: bool = False,
     super_failure: dict[str, str] | None = None,
+    activate_confirm: str | None = None,
 ) -> HTMLResponse:
     assignment_count = assignments.existing_count(db, review_session.id)
     pair_sample = (
@@ -176,6 +179,7 @@ def _render_assignments_hub(
         return_to="assignments",
         validated_just_ran=validated_just_ran,
         super_failure=super_failure,
+        activate_confirm=activate_confirm,
         user=user,
         correlation_id=request_correlation_id(),
     )
