@@ -3,7 +3,7 @@
 Per `guide/archive/segment_11D_v2_sweep_non_session.md` "Follow-on: Reviewer
 surface — multi-instrument rewrite" → PR γ. Replaces the dual top +
 bottom action rows with a single unified `.rs-action-row` per side
-(Save / Discard / `Page #N: {short_label}` / divider / Submit),
+(Save / Discard / Submit / divider / `Page #N: {short_label}`),
 swaps the `<h2>{group.heading}</h2>` block for a
 `.rs-instrument-heading` title+subtitle row, narrows rendering to
 the URL position's instrument group, and adds a per-position Save
@@ -148,14 +148,14 @@ def rae() -> AuthenticatedUser:
 # ── Action row order ─────────────────────────────────────────────────────
 
 
-def test_action_row_orders_save_discard_pages_divider_submit(
+def test_action_row_orders_save_discard_submit_divider_pages(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """The unified `.rs-action-row` lays out left-to-right as
-    Save / Discard / Page #1 / Page #2 / divider / Submit. Each side
+    Save / Discard / Submit / divider / Page #1 / Page #2. Each side
     of the surface mirrors this order; here we just assert the first
     occurrence."""
     operator = make_client(alice)
@@ -174,7 +174,7 @@ def test_action_row_orders_save_discard_pages_divider_submit(
     divider_idx = body.find('class="rs-action-divider"')
     submit_idx = body.find("/submit")
 
-    assert -1 < save_idx < discard_idx < page1_idx < page2_idx < divider_idx < submit_idx
+    assert -1 < save_idx < discard_idx < submit_idx < divider_idx < page1_idx < page2_idx
 
 
 def test_action_row_renders_mirrored_top_and_bottom(
