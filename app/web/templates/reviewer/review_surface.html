@@ -57,6 +57,16 @@
         </div>
       {% endif %}
       {% if page_statuses %}
+        {# Session-wide rollup pill — Submitted (every page submitted)
+           / Saved but not submitted / Draft (nothing started). Sits
+           above the per-page pills as the at-a-glance summary. #}
+        {% if session_status %}
+          <p class="rs-session-status">
+            <span class="pill {% if session_status == 'submitted' %}pill-success{% elif session_status == 'saved' %}pill-warning{% else %}pill-empty{% endif %}">
+              {% if session_status == 'submitted' %}Submitted{% elif session_status == 'saved' %}Saved but not submitted{% else %}Draft{% endif %}
+            </span>
+          </p>
+        {% endif %}
         <ul class="rs-page-status-pills">
           {% for ps in page_statuses %}
             <li>
@@ -160,12 +170,26 @@
            sits alone in its own half-width slot. Help text cards
            start in their own 2-col grid below — they don't share a
            row with the heading. #}
-        {% if group.heading.title %}
+        {% if group.heading.title or group.completion %}
           <div class="rs-intro-grid">
             <div class="card rs-instrument-card">
-              <h2>{{ group.heading.title }}</h2>
-              {% if group.heading.subtitle %}
-                <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
+              {% if group.heading.title %}
+                <h2>{{ group.heading.title }}</h2>
+                {% if group.heading.subtitle %}
+                  <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
+                {% endif %}
+              {% endif %}
+              {# Per-instrument progress pills — completed vs total
+                 response cells ("items"), required-only and overall. #}
+              {% if group.completion %}
+                <p class="rs-instrument-progress">
+                  <span class="pill {% if group.completion.required_done == group.completion.required_total %}pill-success{% else %}pill-warning{% endif %}">
+                    Required items completed: {{ group.completion.required_done }}/{{ group.completion.required_total }}
+                  </span>
+                  <span class="pill {% if group.completion.all_done == group.completion.all_total %}pill-success{% else %}pill-count{% endif %}">
+                    All items completed: {{ group.completion.all_done }}/{{ group.completion.all_total }}
+                  </span>
+                </p>
               {% endif %}
             </div>
           </div>

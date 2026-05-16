@@ -134,6 +134,69 @@ def _page_status_for_group(group_rows: list[dict]) -> PageStatusState:
     return "in_progress" if has_any_value else "not_started"
 
 
+SessionStatusState = Literal["draft", "saved", "submitted"]
+
+
+def _session_status(page_statuses: list["PageStatus"]) -> SessionStatusState | None:
+    """Roll the per-page states into one session-wide status.
+
+    ``submitted`` — every page submitted; ``draft`` — nothing started
+    on any page; ``saved`` — anything in between (some saved but not
+    all submitted). ``None`` when the reviewer has no pages, so the
+    template renders no session pill.
+    """
+    if not page_statuses:
+        return None
+    states = {ps.state for ps in page_statuses}
+    if states == {"submitted"}:
+        return "submitted"
+    if states == {"not_started"}:
+        return "draft"
+    return "saved"
+
+
+@dataclass(frozen=True)
+class GroupCompletion:
+    """Per-instrument response-cell completion tallies for the
+    Page-card progress pills. An "item" is one response cell — a
+    single field for one reviewee. ``required_*`` counts cells whose
+    field is required; ``all_*`` counts every response cell.
+    """
+
+    required_done: int
+    required_total: int
+    all_done: int
+    all_total: int
+
+
+def _group_completion(group_rows: list[dict], fields: list) -> GroupCompletion:
+    """Tally completed vs total response cells for one instrument.
+
+    ``required_done`` is derived from each row's ``missing_count``
+    (DB-accurate); ``all_done`` counts display-cell values, which
+    matches what the reviewer sees on a live surface.
+    """
+    n_rows = len(group_rows)
+    required_field_count = sum(1 for f in fields if f.required)
+    required_total = required_field_count * n_rows
+    required_done = required_total - sum(
+        r.get("missing_count", 0) for r in group_rows
+    )
+    all_total = len(fields) * n_rows
+    all_done = sum(
+        1
+        for r in group_rows
+        for cell in r.get("cells", [])
+        if (cell.get("value") or "").strip()
+    )
+    return GroupCompletion(
+        required_done=required_done,
+        required_total=required_total,
+        all_done=all_done,
+        all_total=all_total,
+    )
+
+
 def _instruments_for_session(db: Session, session_id: int) -> dict[int, Instrument]:
     rows = db.execute(
         select(Instrument).where(Instrument.session_id == session_id)
@@ -455,6 +518,7 @@ def _surface_context(
                 "constraints": constraints,
                 "show_status_col": show_incomplete_marks
                 or any(r.get("submitted_at") for r in group_rows),
+                "completion": _group_completion(group_rows, fields),
             }
         )
         flat_rows.extend(group_rows)
@@ -524,6 +588,7 @@ def _surface_context(
         "any_accepting": any_accepting,
         "any_closed_with_hidden_values": any_closed_with_hidden_values,
         "page_statuses": page_statuses,
+        "session_status": _session_status(page_statuses),
         "page_buttons": page_buttons,
         "current_position": current_position,
         "deadline_timezone_label": date_formatting.timezone_label(
