@@ -78,15 +78,14 @@ Owners section on the Edit page, Segment 16B PR 2).
 - **Read:** Session Home > Session Details card (`session_detail.html`).
 - **Edit:** `/operator/sessions/{id}/edit` (Edit Session sub-page,
   reached via the Edit Secondary in the Session Details card).
-  Also hosts the **Owners** card (Segment 16B PR 2) — current
-  co-owners + Add-owner typeahead picker over the workspace
-  operator allowlist. Gated by
+  The Edit Session Details form carries a **Timezone** field
+  (Segment 18B PR 5 — folded in from the former standalone Display
+  timezone card), placed before the deadline it scopes; lifecycle-
+  gated like the rest of the form. Also hosts the **Owners** card
+  (Segment 16B PR 2) — current co-owners + Add-owner typeahead
+  picker over the workspace operator allowlist. Gated by
   `require_sys_admin_or_session_operator` so a sys-admin can
   reach a session they don't own + self-add as owner.
-  Also hosts the **Display timezone** card (Segment 18B PR 3) —
-  the per-session timezone override; a blank field clears the
-  override back to NULL (inherit the creating operator's
-  default), with a live worked-sample preview.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -98,7 +97,7 @@ Owners section on the Edit page, Segment 16B PR 2).
 | `assignment_mode` | `String(32)` | `manual` / `rule_based`. **Not directly editable** — set by whichever assignment-generation path the operator runs. Post-15D, the rule-based engine is the only operator-facing path (sets `rule_based`); the legacy Manual CSV upload (sets `manual`) survives as a dev-diagnostic surface only. |
 | `help_contact` | `String(320)` | Free-text contact info shown to reviewers. |
 | `email_template_overrides` | `JSON` | Free-form JSON with the recognised keys named in §3 below. |
-| `display_timezone` | `String(64)` | IANA zone name used to render this session's dates / times (Segment 18B PR 3). NULL = "inherit the creating operator's default timezone" — load-bearing in 18B's resolution order (session override → creating operator's default → UTC). Edited on the **Display timezone** card on `/operator/sessions/{id}/edit` (a blank field clears the override back to NULL). Stamped at create time with the creating operator's default, so rarely NULL in practice. Every session-scoped operator + reviewer surface renders dates / times in the resolved zone. |
+| `display_timezone` | `String(64)` | IANA zone name used to render this session's dates / times (Segment 18B PR 3). Resolution order: session value → creating operator's default → UTC; NULL ("inherit the operator default") survives only for legacy rows — the Create form (PR 4) stamps a concrete zone and the Edit form (PR 5) always writes one, so new sessions are never NULL. Set on the Create Session form's **Timezone** field and the Edit Session Details form's **Timezone** field — both pre-filled, both also scoping the deadline picker (the deadline is wall-clock in this zone). Every session-scoped operator + reviewer surface renders dates / times in the resolved zone. |
 | `created_by_user_id` | `Integer` (FK) | Identity. Not user-editable. |
 
 **Canonical specs:** `spec/session_home.md` (Session Details card),

@@ -1,0 +1,90 @@
+{# Live timezone preview + deadline re-render — progressive
+   enhancement, shared by the Create Session and Edit Session
+   Details forms (Segment 18B PR 5). Requires a `display_timezone`
+   input plus `tz-sample` / `tz-sample-zone` spans; the `deadline`
+   input and `deadline-zone` span are optional. As the operator
+   picks a zone it updates the worked sample, the CLDR zone label
+   and the "Entered in" deadline hint, and re-renders the deadline
+   input so its wall-clock tracks the picked zone — the instant
+   stays fixed, only the display moves. The no-JS fallback is the
+   server-rendered sample + the raw IANA id. #}
+<script>
+  (function () {
+    var input = document.getElementById("display_timezone");
+    var sample = document.getElementById("tz-sample");
+    var zoneLabel = document.getElementById("tz-sample-zone");
+    var deadline = document.getElementById("deadline");
+    var deadlineZone = document.getElementById("deadline-zone");
+    if (!input || !sample || !zoneLabel) return;
+    var showToken = {{ show_zone_token | tojson }};
+    var prevZone = input.value.trim() || "UTC";
+
+    function partsInZone(instant, zone) {
+      var p = {};
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: zone, year: "numeric", month: "2-digit",
+        day: "2-digit", hour: "2-digit", minute: "2-digit",
+        hour12: false,
+      }).formatToParts(new Date(instant)).forEach(function (x) {
+        if (x.type !== "literal") p[x.type] = x.value;
+      });
+      if (p.hour === "24") p.hour = "00";
+      return p;
+    }
+    function sampleText(zone) {
+      try {
+        var p = partsInZone(Date.now(), zone);
+        var out = p.year + "-" + p.month + "-" + p.day
+          + " " + p.hour + ":" + p.minute;
+        if (showToken) {
+          new Intl.DateTimeFormat("en-US", {
+            timeZone: zone, timeZoneName: "short", year: "numeric",
+          }).formatToParts(new Date()).forEach(function (x) {
+            if (x.type === "timeZoneName") out += " " + x.value;
+          });
+        }
+        return out;
+      } catch (e) { return null; }
+    }
+    function longName(zone) {
+      try {
+        var parts = new Intl.DateTimeFormat("en", {
+          timeZone: zone, year: "numeric", timeZoneName: "long",
+        }).formatToParts(new Date());
+        for (var i = 0; i < parts.length; i++) {
+          if (parts[i].type === "timeZoneName") return parts[i].value;
+        }
+      } catch (e) { /* fall through to null */ }
+      return null;
+    }
+    function instantOf(str, zone) {
+      var m = str.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+      if (!m) return null;
+      var want = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+      var p = partsInZone(want, zone);
+      var got = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+      return want + (want - got);
+    }
+    function wallClock(ms, zone) {
+      var p = partsInZone(ms, zone);
+      return p.year + "-" + p.month + "-" + p.day
+        + "T" + p.hour + ":" + p.minute;
+    }
+    function update() {
+      var zone = input.value.trim() || "UTC";
+      var text = sampleText(zone);
+      if (text === null) return;  // invalid zone mid-type — keep prevZone
+      if (deadline && deadline.value && zone !== prevZone) {
+        var inst = instantOf(deadline.value, prevZone);
+        if (inst !== null) deadline.value = wallClock(inst, zone);
+      }
+      prevZone = zone;
+      sample.textContent = text;
+      var name = longName(zone) || zone;
+      zoneLabel.textContent = name;
+      if (deadlineZone) deadlineZone.textContent = name;
+    }
+    input.addEventListener("input", update);
+    input.addEventListener("change", update);
+  })();
+</script>

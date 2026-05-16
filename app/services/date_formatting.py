@@ -136,3 +136,17 @@ def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
     naive = datetime.fromisoformat(value)
     local = naive.replace(tzinfo=resolve_zone(tz_name))
     return local.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def format_datetime_local(
+    value: datetime | None, tz_name: str | None
+) -> str:
+    """Render a stored UTC datetime as a browser ``datetime-local``
+    value (``YYYY-MM-DDTHH:MM``) in ``tz_name``'s zone — the inverse
+    of :func:`parse_local_datetime`, used to pre-fill a deadline
+    picker. ``""`` for ``None``. Segment 18B PR 5.
+    """
+    if value is None:
+        return ""
+    local = _as_utc(value).astimezone(resolve_zone(tz_name))
+    return local.strftime("%Y-%m-%dT%H:%M")
