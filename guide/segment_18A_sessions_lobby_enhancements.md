@@ -60,25 +60,53 @@ session off an old one. Three major items:
 
 ## Scope (sketch)
 
+### Lobby quality-of-life (small enhancements)
+
+Standalone tidy-ups that don't need a full Part — landed
+opportunistically as the segment opens:
+
+- **Select-all checkbox** — *shipped.* The select-row column's
+  `<th>` header carries a select-all checkbox that toggles every
+  row checkbox at once; inline JS keeps it in sync with the rows
+  (checked / `indeterminate` / clear). See
+  `spec/sessions_overview.md`.
+
 ### Part 1 — Session cloning
 
 **Goal.** A new `sessions.clone_session(db, source_session, *,
-new_name, owner_user, correlation_id) -> ReviewSession` service
-helper that creates a fresh session and copies setup-shape rows
-from `source_session`.
+new_name, owner_user, mode, correlation_id) -> ReviewSession`
+service helper that creates a fresh `draft` session and copies
+setup-shape rows from `source_session`.
+
+**Two clone modes** — the operator picks one at clone time:
+
+- **Mode A — "Duplicate all except responses."** Copies the full
+  setup: reviewers, reviewees, relationships, instruments (with
+  RTD pointers cloned via the same library-clone mechanism 15C
+  ships), `instrument_display_fields`,
+  `instrument_response_fields`, `session_rule_sets`,
+  `session_field_labels`, `email_template_overrides`,
+  `responses_received_enabled`, `help_contact`. For re-running
+  the same review with the same cohort.
+- **Mode B — "Duplicate all except responses, reviewers,
+  reviewees, relationships."** Copies the configuration shell
+  only — instruments + their display / response fields,
+  `session_rule_sets`, `session_field_labels`,
+  `email_template_overrides`, `responses_received_enabled`,
+  `help_contact`. The roster (reviewers / reviewees) and the
+  relationships are **not** copied. For standing a
+  structurally-identical session up for a *different* cohort.
 
 Likely shape (service):
 
-- **Copied as setup-shape:** reviewers, reviewees, relationships,
-  instruments (with RTD pointers cloned via the same
-  library-clone mechanism 15C ships), `instrument_display_fields`,
-  `instrument_response_fields`, `session_rule_sets`,
-  `session_field_labels`, `email_template_overrides`,
-  `responses_received_enabled`, `help_contact`, deadline (offset
-  by an operator-chosen delta or cleared).
-- **NOT copied:** `assignments` rows (regenerate from the
-  rule_set after clone), `responses`, `invitations`,
-  `email_outbox`, `audit_events`.
+- **Never copied (either mode):** `assignments` (regenerated from
+  each instrument's pinned rule set after clone — and in Mode B
+  there is no roster to pair anyway), `responses`, `invitations`,
+  `email_outbox`, `audit_events`. The deadline is offset by an
+  operator-chosen delta or cleared. Session tags (Part 2) are
+  per-session classification — whether a clone carries them is a
+  scoping call (lean: Mode A may copy tags, Mode B starts
+  untagged).
 - **Lifecycle state:** the clone target lands in `draft`
   regardless of source state. Operator runs Validate + Generate
   + Activate as they would for any fresh session.
@@ -86,17 +114,18 @@ Likely shape (service):
   `_generate_session_code` helper; the source's code is not
   reused.
 - **Audit events:** `session.cloned` on the source
-  (`refs.target_session_id`) + the canonical `session.created`
-  on the target (`reason="cloned"`, `refs.source_session_id`).
+  (`refs.target_session_id`, `context.mode`) + the canonical
+  `session.created` on the target (`reason="cloned"`,
+  `refs.source_session_id`, `context.mode`).
 
 Likely shape (UI):
 
 - "Clone session" affordance — a per-row action on the Sessions
   lobby and/or a button in Session Home (probably both, like the
   current Delete-session affordance pattern). Decide at scoping.
-- Clone-session form: prompts for the new session name +
-  optionally a deadline override; everything else is copied
-  verbatim.
+- Clone-session form: prompts for the new session name, the
+  clone mode (A / B above), and optionally a deadline override;
+  everything else is copied verbatim per the chosen mode.
 
 ### Part 2 — Session tagging / grouping
 
