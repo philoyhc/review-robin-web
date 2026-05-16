@@ -556,8 +556,8 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 3-5), 14A, 14B, 14C, 17A,
-17B, 18A, 18C, 18D, 19, 20**. No global ordering
+**13C, 13F (PRs 3-5), 14A, 14B, 14C, 17B,
+18A, 18C, 18D, 19, 20, 21, 22**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -640,16 +640,6 @@ bottom of this file.
 
 #### Stubs
 
-- **17A — AG Grid replacement of the reviewer-surface table**
-  *(carved out of the original Segment 15, 2026-05-10;
-  renamed from 17 → 17A on 2026-05-12 when 17B was carved
-  off)*. Replaces the plain HTML `<input>` / `<textarea>` /
-  `<select>` reviewer-surface table with an AG Grid
-  instance backed by the existing render adapter +
-  `POST /save` endpoint. Unlocks cell-level autosave +
-  large-table ergonomics.
-  **Plan:** `guide/segment_17A_ag_grid_replacement.md`.
-
 - **17B — Reviewer surface refinements** *(stub created
   2026-05-12)*. Polish pass on the reviewer surface — to
   v2, buttons order, status card location, row height can
@@ -715,6 +705,31 @@ bottom of this file.
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
+- **21 — Peer review enhancements** *(stub created
+  2026-05-16)*. Brings the **reviewee** online as a third
+  live audience — the people being reviewed get their own
+  surface, instead of being purely subjects of review.
+  Pivots Review Robin toward the non-confidential use cases
+  `spec/audience_and_identity_model.md` §3 records as
+  forward-looking: peer review where participants see each
+  other, 360-degree feedback, results-sharing. Reviewee
+  identity / auth, a results-sharing surface, feedback
+  acknowledgement, and reviewee-facing notifications. Opt-in
+  per session — confidential sessions keep no reviewee
+  surface.
+  **Plan:** `guide/segment_21_peer_review_enhancements.md`.
+
+- **22 — AG Grid replacement of the reviewer-surface table**
+  *(carved out of the original Segment 15, 2026-05-10;
+  renamed 17 → 17A on 2026-05-12 when 17B was carved off,
+  then 17A → 22 on 2026-05-16 so the reviewee-surface work
+  could take Segment 21)*. Replaces the plain HTML
+  `<input>` / `<textarea>` / `<select>` reviewer-surface
+  table with an AG Grid instance backed by the existing
+  render adapter + `POST /save` endpoint. Unlocks cell-level
+  autosave + large-table ergonomics.
+  **Plan:** `guide/segment_22_ag_grid_replacement.md`.
+
 ### Sequencing notes
 
 - **11C Part 2 → 14B Part A** is the email pipeline: the
@@ -724,9 +739,9 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **14C
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13C, 13F (PRs 3-5), 14A, 17A, 17B, 18A,
-  18C, 18D, 19, 20** are independent of the email + audit
-  pipelines and can interleave at any time. The three
+- **13C, 13F (PRs 3-5), 14A, 17B, 18A,
+  18C, 18D, 19, 20, 21, 22** are independent of the email +
+  audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
   13C's re-scoped 3-PR ladder (2026-05-15) needs no rule-engine
   change for its FullMatrix-first cut, so it does not depend on
