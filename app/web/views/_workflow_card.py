@@ -45,7 +45,6 @@ from app.services import (
     assignments,
     csv_imports,
     invitations,
-    responses,
     validation,
 )
 from app.services import instruments as instruments_service
@@ -80,10 +79,12 @@ def build_workflow_card_context(
     ``correlation_id`` are required when this path fires.
 
     ``activate_confirm`` (the page's ``?activate_confirm=responses``
-    entry path) is the super-button's saved-response detour: when
-    set to ``"responses"`` and the session actually has responses,
-    the returned ``activate_confirm`` key carries the response count
-    so the card renders its keep / regenerate confirmation block.
+    entry path) is the super-button's saved-response detour: when set
+    to ``"responses"``, the builder dry-runs the reconcile via
+    ``assignments.reconcile_impact`` and — if a run would delete one
+    or more responses — returns an ``activate_confirm`` dict carrying
+    ``responses_deleted`` / ``deleted_pairs`` so the card renders its
+    confirmation block.
     """
     reviewer_count = csv_imports.existing_reviewer_count(
         db, review_session.id
@@ -149,12 +150,15 @@ def build_workflow_card_context(
     )
 
     activate_confirm_ctx: dict[str, int] | None = None
-    if activate_confirm == "responses":
-        response_count = responses.session_response_count(
-            db, review_session.id
-        )
-        if response_count > 0:
-            activate_confirm_ctx = {"response_count": response_count}
+    if activate_confirm == "responses" and lifecycle.session_has_responses(
+        db, review_session
+    ):
+        impact = assignments.reconcile_impact(db, review_session)
+        if impact.responses_deleted > 0:
+            activate_confirm_ctx = {
+                "responses_deleted": impact.responses_deleted,
+                "deleted_pairs": impact.deleted,
+            }
 
     return {
         "is_draft": is_draft,

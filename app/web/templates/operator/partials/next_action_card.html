@@ -34,11 +34,13 @@
      preserves the Session Home behaviour where every action
      redirects back to Home.
 
-   - ``activate_confirm`` (dict | None) — when set (``response_count``
-     key), the card renders the saved-response confirmation banner
-     so the operator chooses between activating without regenerating
-     and regenerating (which deletes the responses). ``None`` outside
-     the super-button's ``?activate_confirm=responses`` detour.
+   - ``activate_confirm`` (dict | None) — when set (``responses_deleted``
+     / ``deleted_pairs`` keys), the card renders the saved-response
+     confirmation banner: activating would delete that many responses
+     on pairs the current setup no longer produces, so the operator
+     confirms (Regenerate & activate) or cancels. ``None`` outside the
+     super-button's ``?activate_confirm=responses`` detour and
+     whenever a run would delete no responses.
 
    The card renders the same seven-stage workflow stepper across
    every state: Generate assignments / Validate setup / Start
@@ -52,6 +54,14 @@
   "/operator/sessions/" ~ session.id ~ "/validate?activate=1&return_to=" ~ _next_action_return_to
   if _next_action_return_to
   else "/operator/sessions/" ~ session.id ~ "/validate?activate=1"
+) %}
+{# Host page the workflow card renders on — where the saved-response
+   confirmation's Cancel link returns. ``home`` (and no slug) resolve
+   to the session root; the other slugs are Operations-row children. #}
+{% set _next_action_page_href = (
+  "/operator/sessions/" ~ session.id ~ "/" ~ _next_action_return_to
+  if _next_action_return_to and _next_action_return_to != "home"
+  else "/operator/sessions/" ~ session.id
 ) %}
 {# Lifecycle convenience flags for the stepper-row branches. #}
 {# The single forward-stage Activate session button is live across
@@ -75,30 +85,32 @@
     <div class="next-action-main">
       <div class="next-action-body">
     {% if activate_confirm %}
-      {# Saved-response confirmation. The session was reverted from
-         ``ready`` and still holds responses; the Activate super-
-         button's Generate step would delete them. The operator
-         picks a path before the run proceeds. #}
+      {# Saved-response confirmation. Activating reconciles
+         assignments, which would delete responses on pairs the
+         current setup no longer produces. The operator confirms
+         before the run proceeds. #}
       <div class="banner banner-warning banner-scroll-target"
            id="next-action-activate-confirm-banner">
         <p class="banner-headline">
-          This session has {{ activate_confirm.response_count }}
-          saved response{{ "" if activate_confirm.response_count == 1 else "s" }}.
+          Activating will delete {{ activate_confirm.responses_deleted }}
+          saved response{{ "" if activate_confirm.responses_deleted == 1 else "s" }}.
         </p>
         <p style="margin: var(--space-2) 0 0 0;">
-          Activating regenerates assignment pairs, which deletes
-          those responses. Activate without regenerating to keep the
-          existing assignments and responses instead.
+          Regenerating drops {{ activate_confirm.deleted_pairs }}
+          assignment pair{{ "" if activate_confirm.deleted_pairs == 1 else "s" }}
+          that the current setup no longer produces, along with
+          {{ "its" if activate_confirm.responses_deleted == 1 else "their" }}
+          saved response{{ "" if activate_confirm.responses_deleted == 1 else "s" }}.
+          Responses on unchanged pairs are kept.
         </p>
         <div class="next-action-buttons" style="margin-top: var(--space-3);">
-          <button class="btn" type="submit"
-                  form="next-action-activate-keep-form">
-            Activate without regenerating
-          </button>
           <button class="btn danger-solid" type="submit"
                   form="next-action-activate-regenerate-form">
             Regenerate &amp; activate
           </button>
+          <a class="btn secondary" href="{{ _next_action_page_href }}">
+            Cancel
+          </a>
         </div>
       </div>
     {% endif %}
@@ -176,25 +188,17 @@
       </form>
     {% endif %}
     {% if activate_confirm %}
-      {# Saved-response confirmation forms — referenced by the
-         banner's two buttons via ``form=``. ``keep`` skips the
-         Generate step; ``regenerate`` runs it and deletes the
-         responses. #}
-      <form method="post"
-            action="/operator/sessions/{{ session.id }}/workflow/activate"
-            id="next-action-activate-keep-form">
-        {% if _next_action_return_to %}
-          <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
-        {% endif %}
-        <input type="hidden" name="regen_choice" value="keep">
-      </form>
+      {# Saved-response confirmation form — the banner's "Regenerate &
+         activate" button posts here via ``form=``.
+         ``acknowledge_response_loss`` re-runs the super-button past
+         the saved-response detour. #}
       <form method="post"
             action="/operator/sessions/{{ session.id }}/workflow/activate"
             id="next-action-activate-regenerate-form">
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
         {% endif %}
-        <input type="hidden" name="regen_choice" value="regenerate">
+        <input type="hidden" name="acknowledge_response_loss" value="true">
       </form>
     {% endif %}
     {% if is_validated %}

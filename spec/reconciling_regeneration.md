@@ -1,10 +1,9 @@
 # Reconciling assignment regeneration
 
-**Status: partially implemented.** PR slice 1 (the reconcile core)
-has landed — `_materialise_one_instrument` reconciles. Slice 2 (the
-impact-driven super-button confirmation) is still pending; the
-super-button confirmation remains the binary keep / regenerate from
-PR #1066.
+**Status: implemented.** Both slices have landed — slice 1 (the
+reconcile core, `_materialise_one_instrument`) and slice 2 (the
+impact-driven super-button confirmation: `assignments.reconcile_impact`
++ the dry-run detour). This file is kept as the design record.
 
 ## Problem
 
@@ -172,11 +171,15 @@ acceptable.
    deleted pairs. The final assignment set is unchanged for
    sessions without responses; the per-instrument tests cover the
    add / drop / unchanged cases.
-2. **Impact-driven confirmation.** *(Pending.)* Add
-   `reconcile_impact(...)`; rework the super-button detour to
-   dry-run, skip the confirmation when `responses_deleted == 0`,
-   and show the precise count otherwise; retire `regen_choice=keep`.
-   Update `spec/workflow_card.md`.
+2. **Impact-driven confirmation.** *(Done.)* `reconcile_impact(...)`
+   dry-runs the reconcile (sharing `_diff_one_instrument` /
+   `_load_reconcile_inputs` with `replace_assignments`). The
+   super-button detours only when the dry-run's `responses_deleted`
+   is non-zero, and the confirmation banner shows the precise
+   `responses_deleted` / `deleted_pairs` counts. `regen_choice` was
+   retired in favour of an `acknowledge_response_loss` flag; the
+   banner offers Regenerate & activate / Cancel. `spec/workflow_card.md`
+   updated.
 
 ## Source-of-truth pointers
 

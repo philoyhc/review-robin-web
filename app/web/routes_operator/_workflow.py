@@ -21,17 +21,17 @@ acknowledges warnings inline. The detour writes no
 ``workflow_run_failed`` event — the run is paused at the
 acknowledgement step, not failed.
 
-A second detour guards saved responses: a session reverted from
-``ready`` back to ``draft`` keeps its responses (see
-``revert_session_to_draft``), so the super-button's Generate step —
-which regenerates assignments and deletes their responses — would
-silently destroy data. When responses exist and the operator hasn't
-yet chosen, the route 303s back to the host page with
-``?activate_confirm=responses``; the workflow card renders a
-confirmation offering ``regen_choice=keep`` (skip Generate, preserve
-responses + existing assignments) or ``regen_choice=regenerate``
-(run Generate, deleting the responses). Like the warnings detour
-this writes no ``workflow_run_failed`` event.
+A second detour guards saved responses. The Generate step
+reconciles assignments (see ``spec/reconciling_regeneration.md``),
+which deletes the responses on any pair the current setup no longer
+produces. Before running, the route dry-runs the reconcile via
+``assignments.reconcile_impact``; when that impact would delete one
+or more responses and the operator hasn't acknowledged it, the
+route 303s back to the host page with ``?activate_confirm=responses``
+so the workflow card can render the confirmation. The operator
+proceeds by re-POSTing with ``acknowledge_response_loss=true``. A
+reconcile that deletes no responses never detours. Like the
+warnings detour this writes no ``workflow_run_failed`` event.
 """
 
 from __future__ import annotations
@@ -112,18 +112,19 @@ def _warnings_detour_url(session_id: int, return_to: str | None) -> str:
 @router.post("/sessions/{session_id}/workflow/activate")
 def workflow_activate(
     return_to: str | None = Form(default=None),
-    regen_choice: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """Run Generate + Validate + Activate as one click.
 
-    ``regen_choice`` resolves the saved-response confirmation detour:
-    ``None`` means the operator hasn't been asked yet; ``"keep"``
-    skips the Generate step (preserving responses + existing
-    assignments); ``"regenerate"`` runs Generate, deleting the
-    responses.
+    ``acknowledge_response_loss="true"`` confirms the saved-response
+    detour: the operator has seen the workflow card's confirmation
+    and accepts that the reconcile will delete responses on pairs the
+    current setup no longer produces. Absent it, the route dry-runs
+    the reconcile and detours to the confirmation when a run would
+    delete responses.
     """
     correlation_id = request_correlation_id()
 
@@ -141,21 +142,25 @@ def workflow_activate(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    # Saved-response confirmation detour. A session reverted from
-    # ``ready`` keeps its responses; the Generate step would delete
-    # them. Bounce to the workflow card's confirmation block until the
-    # operator picks ``keep`` or ``regenerate``.
+    # Saved-response confirmation detour. The Generate step reconciles
+    # assignments, which deletes responses on pairs the current setup
+    # no longer produces. Dry-run the reconcile; if it would delete
+    # responses and the operator hasn't acknowledged that, bounce to
+    # the workflow card's confirmation. ``session_has_responses`` is a
+    # cheap pre-check so first activations skip the dry-run entirely.
     if (
-        regen_choice is None
+        acknowledge_response_loss != "true"
         and lifecycle.is_editable(review_session)
         and lifecycle.session_has_responses(db, review_session)
     ):
-        return RedirectResponse(
-            url=_redirect_url(
-                review_session.id, return_to, activate_confirm=True
-            ),
-            status_code=status.HTTP_303_SEE_OTHER,
-        )
+        impact = assignments.reconcile_impact(db, review_session)
+        if impact.responses_deleted > 0:
+            return RedirectResponse(
+                url=_redirect_url(
+                    review_session.id, return_to, activate_confirm=True
+                ),
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
 
     audit.write_event(
         db,
@@ -174,17 +179,12 @@ def workflow_activate(
             raise _StepFailed(
                 "Session can't be edited from its current state."
             )
-        # ``regen_choice == "keep"`` skips Generate so saved responses
-        # and their assignments survive the run. Any other value
-        # (``"regenerate"`` after a confirmation, or ``None`` when no
-        # responses exist) runs the engine as before.
-        if regen_choice != "keep":
-            assignments.replace_assignments(
-                db,
-                review_session=review_session,
-                user=user,
-                correlation_id=correlation_id,
-            )
+        assignments.replace_assignments(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id,
+        )
 
         step = "validate"
         issues = validation.validate_session_setup(db, review_session)

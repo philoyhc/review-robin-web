@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import delete, func, select
@@ -488,33 +489,38 @@ def _session_rule_set_to_schema(row: SessionRuleSet) -> Any:
     )
 
 
-def _materialise_one_instrument(
+@dataclass
+class _InstrumentDiff:
+    """The reconcile diff for one instrument — see :func:`_diff_one_instrument`."""
+
+    new_pairs: dict[tuple[int, int], tuple[Reviewer, Reviewee, bool]]
+    existing_rows: dict[tuple[int, int], Assignment]
+    to_insert: set[tuple[int, int]]
+    to_delete: set[tuple[int, int]]
+    to_keep: set[tuple[int, int]]
+    responses_deleted: int
+    pairs_count: int
+    excluded_counts: dict[str, int]
+
+
+def _diff_one_instrument(
     db: Session,
     *,
     review_session: ReviewSession,
-    user: User,
     instrument: Instrument,
     session_rule_set: SessionRuleSet,
     reviewers: list[Reviewer],
     reviewees: list[Reviewee],
     pair_context_lookup: dict[tuple[int, int], Relationship],
-    mode: AssignmentMode,
     override_exclude_self_reviews: bool | None,
-    correlation_id: str,
-) -> tuple[int, int]:
-    """Materialise ``Assignment`` rows for a single instrument.
+) -> _InstrumentDiff:
+    """Run the engine for one instrument and diff its pair fan-out
+    against the instrument's existing ``Assignment`` rows.
 
-    Runs the engine against the instrument's pinned ``SessionRuleSet``,
-    then **reconciles** the result against the instrument's existing
-    rows: newly eligible pairs are inserted, pairs the rule no longer
-    produces are deleted (along with their responses), and pairs
-    present before and after are left untouched so their responses
-    survive. Emits one ``assignments.generated`` audit event keyed by
-    ``refs.instrument_id``.
-
-    Returns ``(deleted, new)`` for this instrument — the ``replaced``
-    slot of the ``replace_assignments`` 2-tuple now carries the count
-    of pairs removed by the reconcile.
+    Read-only: runs the (pure) rule engine and issues ``SELECT``s, but
+    writes nothing. Shared by :func:`_materialise_one_instrument` (which
+    then applies the diff) and :func:`reconcile_impact` (which only
+    sums the counts for the dry-run).
     """
     from app.services.rules import engine
 
@@ -557,9 +563,6 @@ def _materialise_one_instrument(
     to_delete = existing_keys - new_keys
     to_keep = new_keys & existing_keys
 
-    # Drop pairs the rule no longer produces. Their responses go first
-    # so the FK constraint holds (the bulk Core ``delete`` bypasses the
-    # ORM ``delete-orphan`` cascade — see PR #1065).
     responses_deleted = 0
     if to_delete:
         delete_ids = [existing_rows[key].id for key in to_delete]
@@ -570,14 +573,71 @@ def _materialise_one_instrument(
                 )
             ).scalar_one()
         )
+
+    return _InstrumentDiff(
+        new_pairs=new_pairs,
+        existing_rows=existing_rows,
+        to_insert=to_insert,
+        to_delete=to_delete,
+        to_keep=to_keep,
+        responses_deleted=responses_deleted,
+        pairs_count=len(result.pairs),
+        excluded_counts=dict(result.excluded_counts),
+    )
+
+
+def _materialise_one_instrument(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    instrument: Instrument,
+    session_rule_set: SessionRuleSet,
+    reviewers: list[Reviewer],
+    reviewees: list[Reviewee],
+    pair_context_lookup: dict[tuple[int, int], Relationship],
+    mode: AssignmentMode,
+    override_exclude_self_reviews: bool | None,
+    correlation_id: str,
+) -> tuple[int, int]:
+    """Materialise ``Assignment`` rows for a single instrument.
+
+    Runs the engine against the instrument's pinned ``SessionRuleSet``,
+    then **reconciles** the result against the instrument's existing
+    rows: newly eligible pairs are inserted, pairs the rule no longer
+    produces are deleted (along with their responses), and pairs
+    present before and after are left untouched so their responses
+    survive. Emits one ``assignments.generated`` audit event keyed by
+    ``refs.instrument_id``.
+
+    Returns ``(deleted, new)`` for this instrument — the ``replaced``
+    slot of the ``replace_assignments`` 2-tuple now carries the count
+    of pairs removed by the reconcile.
+    """
+    diff = _diff_one_instrument(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        session_rule_set=session_rule_set,
+        reviewers=reviewers,
+        reviewees=reviewees,
+        pair_context_lookup=pair_context_lookup,
+        override_exclude_self_reviews=override_exclude_self_reviews,
+    )
+
+    # Drop pairs the rule no longer produces. Their responses go first
+    # so the FK constraint holds (the bulk Core ``delete`` bypasses the
+    # ORM ``delete-orphan`` cascade — see PR #1065).
+    if diff.to_delete:
+        delete_ids = [diff.existing_rows[key].id for key in diff.to_delete]
         db.execute(
             delete(Response).where(Response.assignment_id.in_(delete_ids))
         )
         db.execute(delete(Assignment).where(Assignment.id.in_(delete_ids)))
 
     # Insert newly eligible pairs.
-    for key in to_insert:
-        reviewer, reviewee, pair_include = new_pairs[key]
+    for key in diff.to_insert:
+        reviewer, reviewee, pair_include = diff.new_pairs[key]
         db.add(
             Assignment(
                 session_id=review_session.id,
@@ -591,22 +651,22 @@ def _materialise_one_instrument(
 
     # Matched pairs keep their row + responses; only refresh ``include``
     # in place when a ``self_reviews_active`` toggle changed it.
-    for key in to_keep:
-        _, _, pair_include = new_pairs[key]
-        row = existing_rows[key]
+    for key in diff.to_keep:
+        _, _, pair_include = diff.new_pairs[key]
+        row = diff.existing_rows[key]
         if row.include != pair_include:
             row.include = pair_include
     db.flush()
 
     counts_kwargs: dict[str, int] = {
-        "new": len(to_insert),
-        "deleted": len(to_delete),
-        "kept": len(to_keep),
-        "responses_deleted": responses_deleted,
-        "pairs": len(result.pairs),
+        "new": len(diff.to_insert),
+        "deleted": len(diff.to_delete),
+        "kept": len(diff.to_keep),
+        "responses_deleted": diff.responses_deleted,
+        "pairs": diff.pairs_count,
         "instruments": 1,
     }
-    for reason, n in result.excluded_counts.items():
+    for reason, n in diff.excluded_counts.items():
         counts_kwargs[f"excluded_{reason}"] = n
     context: dict[str, str | int | bool] = {"mode": mode.value}
     if override_exclude_self_reviews is not None:
@@ -620,8 +680,8 @@ def _materialise_one_instrument(
         event_type="assignments.generated",
         summary=(
             f"Reconciled assignments for {instrument.name!r}: "
-            f"+{len(to_insert)} new, -{len(to_delete)} removed, "
-            f"{len(to_keep)} kept via {mode.value}"
+            f"+{len(diff.to_insert)} new, -{len(diff.to_delete)} removed, "
+            f"{len(diff.to_keep)} kept via {mode.value}"
         ),
         actor_user_id=user.id,
         session=review_session,
@@ -630,7 +690,149 @@ def _materialise_one_instrument(
         refs=refs,
         correlation_id=correlation_id,
     )
-    return len(to_delete), len(to_insert)
+    return len(diff.to_delete), len(diff.to_insert)
+
+
+@dataclass
+class _ReconcileInputs:
+    """Read-only inputs a reconcile run needs — see
+    :func:`_load_reconcile_inputs`."""
+
+    targets: list[Instrument]
+    reviewers: list[Reviewer]
+    reviewees: list[Reviewee]
+    pair_context_lookup: dict[tuple[int, int], Relationship]
+    rule_set_rows: dict[int, SessionRuleSet]
+
+    def rule_set_for(self, instrument: Instrument) -> SessionRuleSet:
+        rule_set = self.rule_set_rows.get(instrument.rule_set_id)
+        if rule_set is None:
+            # Dangling FK shouldn't happen given the SET NULL cascade;
+            # treat as a data-integrity bug.
+            raise ValueError(
+                f"instrument {instrument.id} points at missing "
+                f"session_rule_set {instrument.rule_set_id}"
+            )
+        return rule_set
+
+
+def _load_reconcile_inputs(
+    db: Session,
+    review_session: ReviewSession,
+    instrument_id: int | None,
+) -> _ReconcileInputs:
+    """Read-only setup shared by :func:`replace_assignments` and
+    :func:`reconcile_impact`: resolve the target instruments and load
+    the reviewer / reviewee / relationship / rule-set inputs the engine
+    needs. Writes nothing.
+
+    ``instrument_id=None`` targets every rule-pinned instrument
+    (unpinned ones skipped silently); ``instrument_id=<id>`` targets
+    that one instrument and raises ``ValueError`` if it is missing or
+    has no rule pinned.
+    """
+    instruments_query = (
+        session_scoped(Instrument, review_session.id)
+        .order_by(Instrument.order, Instrument.id)
+    )
+    if instrument_id is not None:
+        instruments_query = instruments_query.where(
+            Instrument.id == instrument_id
+        )
+    all_instruments = list(db.execute(instruments_query).scalars())
+
+    if instrument_id is not None and not all_instruments:
+        raise ValueError(
+            f"instrument {instrument_id} not found in session "
+            f"{review_session.id}"
+        )
+    if instrument_id is not None:
+        # Single-instrument scope: the caller named the target; we
+        # require its ``rule_set_id`` to be pinned.
+        if all_instruments[0].rule_set_id is None:
+            raise ValueError(
+                f"instrument {instrument_id} has no rule pinned "
+                "(rule_set_id is NULL)"
+            )
+        targets = list(all_instruments)
+    else:
+        # Cross-instrument scope: silently skip unpinned ones.
+        targets = [i for i in all_instruments if i.rule_set_id is not None]
+
+    reviewers = list_reviewers(db, review_session.id)
+    reviewees = list_reviewees(db, review_session.id)
+    from app.services import relationships as relationships_service
+
+    pair_context_lookup = relationships_service.pair_context_lookup(
+        db, review_session.id
+    )
+
+    rule_set_ids = {i.rule_set_id for i in targets}
+    rule_set_rows = {
+        row.id: row
+        for row in db.execute(
+            select(SessionRuleSet).where(SessionRuleSet.id.in_(rule_set_ids))
+        ).scalars()
+    }
+    return _ReconcileInputs(
+        targets=targets,
+        reviewers=reviewers,
+        reviewees=reviewees,
+        pair_context_lookup=pair_context_lookup,
+        rule_set_rows=rule_set_rows,
+    )
+
+
+@dataclass(frozen=True)
+class ReconcileImpact:
+    """Aggregate dry-run impact of a reconcile across every targeted
+    instrument — see :func:`reconcile_impact`."""
+
+    new: int
+    deleted: int
+    kept: int
+    responses_deleted: int
+
+
+def reconcile_impact(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    instrument_id: int | None = None,
+    override_exclude_self_reviews: bool | None = None,
+) -> ReconcileImpact:
+    """Dry-run the per-instrument reconcile and return the aggregate
+    impact a real :func:`replace_assignments` run would have —
+    **without writing anything**.
+
+    Drives the workflow super-button's saved-response confirmation:
+    ``responses_deleted`` is the number of ``Response`` rows a run
+    would delete (responses on pairs the current setup no longer
+    produces); ``deleted`` is how many such pairs there are.
+    """
+    inputs = _load_reconcile_inputs(db, review_session, instrument_id)
+    new = deleted = kept = responses_deleted = 0
+    for instrument in inputs.targets:
+        diff = _diff_one_instrument(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            session_rule_set=inputs.rule_set_for(instrument),
+            reviewers=inputs.reviewers,
+            reviewees=inputs.reviewees,
+            pair_context_lookup=inputs.pair_context_lookup,
+            override_exclude_self_reviews=override_exclude_self_reviews,
+        )
+        new += len(diff.to_insert)
+        deleted += len(diff.to_delete)
+        kept += len(diff.to_keep)
+        responses_deleted += diff.responses_deleted
+    return ReconcileImpact(
+        new=new,
+        deleted=deleted,
+        kept=kept,
+        responses_deleted=responses_deleted,
+    )
 
 
 def replace_assignments(
@@ -667,34 +869,9 @@ def replace_assignments(
     lifecycle state.
     """
     get_or_create_default_instrument(db, review_session)
-    instruments_query = (
-        session_scoped(Instrument, review_session.id)
-        .order_by(Instrument.order, Instrument.id)
-    )
-    if instrument_id is not None:
-        instruments_query = instruments_query.where(Instrument.id == instrument_id)
-    all_instruments = list(db.execute(instruments_query).scalars())
+    inputs = _load_reconcile_inputs(db, review_session, instrument_id)
 
-    if instrument_id is not None and not all_instruments:
-        raise ValueError(
-            f"instrument {instrument_id} not found in session "
-            f"{review_session.id}"
-        )
-
-    if instrument_id is not None:
-        # Single-instrument scope: the caller named the target; we
-        # require its ``rule_set_id`` to be pinned.
-        if all_instruments[0].rule_set_id is None:
-            raise ValueError(
-                f"instrument {instrument_id} has no rule pinned "
-                "(rule_set_id is NULL)"
-            )
-        targets = list(all_instruments)
-    else:
-        # Cross-instrument scope: silently skip unpinned ones.
-        targets = [i for i in all_instruments if i.rule_set_id is not None]
-
-    if not targets:
+    if not inputs.targets:
         return 0, 0
 
     lifecycle.invalidate_if_validated(
@@ -705,42 +882,18 @@ def replace_assignments(
         correlation_id=correlation_id,
     )
 
-    reviewers = list_reviewers(db, review_session.id)
-    reviewees = list_reviewees(db, review_session.id)
-    from app.services import relationships as relationships_service
-
-    pair_context_lookup = relationships_service.pair_context_lookup(
-        db, review_session.id
-    )
-
-    rule_set_ids = {i.rule_set_id for i in targets}
-    rule_set_rows = {
-        row.id: row
-        for row in db.execute(
-            select(SessionRuleSet).where(SessionRuleSet.id.in_(rule_set_ids))
-        ).scalars()
-    }
-
     total_replaced = 0
     total_new = 0
-    for instrument in targets:
-        session_rule_set = rule_set_rows.get(instrument.rule_set_id)
-        if session_rule_set is None:
-            # Dangling FK shouldn't happen given the SET NULL cascade;
-            # treat as a data-integrity bug.
-            raise ValueError(
-                f"instrument {instrument.id} points at missing "
-                f"session_rule_set {instrument.rule_set_id}"
-            )
+    for instrument in inputs.targets:
         replaced_here, new_here = _materialise_one_instrument(
             db,
             review_session=review_session,
             user=user,
             instrument=instrument,
-            session_rule_set=session_rule_set,
-            reviewers=reviewers,
-            reviewees=reviewees,
-            pair_context_lookup=pair_context_lookup,
+            session_rule_set=inputs.rule_set_for(instrument),
+            reviewers=inputs.reviewers,
+            reviewees=inputs.reviewees,
+            pair_context_lookup=inputs.pair_context_lookup,
             mode=mode,
             override_exclude_self_reviews=override_exclude_self_reviews,
             correlation_id=correlation_id,

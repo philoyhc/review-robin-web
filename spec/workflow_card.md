@@ -84,12 +84,14 @@ its template context via `**workflow_ctx`. The builder lives in
   `?super_status=failed&super_step=...&super_error=...` query-
   param triple via `views.parse_super_failure`. Drives the
   right-column failure banner.
-- `activate_confirm` — `dict | None`. Populated (`response_count`
-  key) when the builder is called with
-  `activate_confirm="responses"` AND the session actually has
-  saved responses. Drives the saved-response confirmation banner
-  in the card body. `None` outside the super-button's
-  `?activate_confirm=responses` detour.
+- `activate_confirm` — `dict | None`. Populated
+  (`responses_deleted` / `deleted_pairs` keys) when the builder is
+  called with `activate_confirm="responses"` AND a dry-run
+  reconcile (`assignments.reconcile_impact`) shows a run would
+  delete one or more responses. Drives the saved-response
+  confirmation banner in the card body. `None` outside the
+  super-button's `?activate_confirm=responses` detour and whenever
+  a run would delete no responses.
 - `next_action_return_to` — the `return_to` slug, passed
   through.
 
@@ -210,13 +212,12 @@ The Activate session button POSTs to a single
 1. **Generate.** `assignments.replace_assignments(...)` —
    materialises one `Assignment` row per `(reviewer, reviewee,
    instrument)` triple eligible under each instrument's pinned
-   rule. This step is **skipped** when the operator picked
-   `regen_choice=keep` in the saved-response confirmation detour
-   below; otherwise it runs and **reconciles** the existing rows
-   (see `spec/reconciling_regeneration.md`) — inserting newly
-   eligible pairs, deleting pairs the rule no longer produces along
-   with their responses, and leaving matched pairs and their
-   responses untouched.
+   rule. It **reconciles** the existing rows (see
+   `spec/reconciling_regeneration.md`) — inserting newly eligible
+   pairs, deleting pairs the rule no longer produces along with
+   their responses, and leaving matched pairs and their responses
+   untouched. The saved-response confirmation detour below gates
+   this step when it would delete responses.
 2. **Validate.** `validation.validate_session_setup(...)` →
    `lifecycle.build_readiness_report(...)`. When the report is
    clean, `lifecycle.mark_validated(...)` flips `draft →
@@ -227,37 +228,35 @@ The Activate session button POSTs to a single
    `session.activated`.
 
 The route runs Validate + Activate from any `draft` / `validated`
-starting state. The Generate step runs on every click **except**
-when the saved-response detour resolved to `regen_choice=keep`.
+starting state, and the Generate step runs on every click.
 
 #### Saved-response confirmation detour
 
 A session reverted from `ready` back to `draft` keeps its
 responses (`revert_session_to_draft` preserves them). The Generate
-step's reconcile can delete responses for any pair the rule no
-longer produces, so re-activating such a session could destroy
-recorded data without warning.
+step's reconcile deletes responses for any pair the rule no longer
+produces (see `spec/reconciling_regeneration.md`), so re-activating
+such a session could destroy recorded data without warning.
 
-To prevent that, the super-button checks for saved responses
-before running. When the session is editable, has responses, and
-the POST carried no `regen_choice` form field, the route 303s back
-to the host page with `?activate_confirm=responses` instead of
-running. The workflow card decodes that param (via the
-`activate_confirm` builder kwarg) and renders a confirmation
-banner in the card body with two buttons, both POSTing back to
-`/workflow/activate`:
+The detour is **impact-driven**: it fires only when a run would
+actually delete a response, not whenever responses merely exist.
+When the session is editable, has responses, and the POST carried
+no `acknowledge_response_loss` field, the route dry-runs the
+reconcile via `assignments.reconcile_impact(...)`. If that impact's
+`responses_deleted` is zero, the run proceeds straight through —
+no confirmation. If it is non-zero, the route 303s back to the host
+page with `?activate_confirm=responses`.
 
-- **Activate without regenerating** — `regen_choice=keep`. The
-  Generate step is skipped; the existing assignments and their
-  responses survive, and the run proceeds straight to Validate +
-  Activate.
-- **Regenerate & activate** — `regen_choice=regenerate`. The
-  Generate step runs and reconciles; responses on pairs the rule no
-  longer produces are deleted, the rest are kept. Validate +
-  Activate then proceed. (The banner copy still phrases this as a
-  blanket deletion — the impact-driven rework that follows the
-  reconcile lands in a later PR; see
-  `spec/reconciling_regeneration.md`.)
+The workflow card decodes that param (via the `activate_confirm`
+builder kwarg, which re-runs `reconcile_impact` to populate the
+`responses_deleted` / `deleted_pairs` counts) and renders a
+confirmation banner in the card body:
+
+- **Regenerate & activate** posts back to `/workflow/activate` with
+  `acknowledge_response_loss=true`, which skips the detour so the
+  run proceeds: the reconcile deletes the responses on the orphaned
+  pairs, keeps the rest, and Validate + Activate follow.
+- **Cancel** is a plain link back to the host page — nothing runs.
 
 Like the warnings detour, the confirmation detour writes no
 `workflow_run_failed` event — the run is paused at the
@@ -401,7 +400,7 @@ routes:
 
 | Route | Service | Allowed prior state | Resulting state | Audit event |
 | --- | --- | --- | --- | --- |
-| `POST /operator/sessions/{id}/workflow/activate` | `assignments.replace_assignments` (skipped on `regen_choice=keep`) → `lifecycle.mark_validated` → `lifecycle.activate_session` | `draft` or `validated` (`is_editable`) | `ready` (or detour to Validate page in warnings case, or to the host page in the saved-response confirmation case) | `session.workflow_run_started` + per-step events; `session.workflow_run_failed` on failure |
+| `POST /operator/sessions/{id}/workflow/activate` | `assignments.replace_assignments` → `lifecycle.mark_validated` → `lifecycle.activate_session` | `draft` or `validated` (`is_editable`) | `ready` (or detour to Validate page in warnings case, or to the host page in the saved-response confirmation case) | `session.workflow_run_started` + per-step events; `session.workflow_run_failed` on failure |
 | `POST /operator/sessions/{id}/assignments/generate` | `assignments.replace_assignments` | `draft` or `validated` | unchanged | `assignments.generated` |
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |
