@@ -150,6 +150,34 @@ def test_session_detail_renders_session_layout(
     assert "Validate & activate" not in body
 
 
+def test_session_detail_description_preserves_line_breaks(
+    client: TestClient, db: Session
+) -> None:
+    """A multi-paragraph session description renders in a <p> with the
+    ``session-detail-description`` styling hook so the operator's
+    line breaks survive instead of collapsing to whitespace."""
+    description = "First paragraph.\n\nSecond paragraph."
+    response = client.post(
+        "/operator/sessions",
+        data={
+            "name": "Multi-para",
+            "code": "multi-desc",
+            "description": description,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "multi-desc")
+    ).scalar_one()
+
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    assert 'class="session-detail-description"' in body
+    # The newline-bearing text reaches the page verbatim; the CSS
+    # ``white-space: pre-line`` renders the breaks.
+    assert description in body
+
+
 def test_setup_table_renders_manage_links(
     client: TestClient, db: Session
 ) -> None:
