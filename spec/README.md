@@ -78,6 +78,7 @@ target contract; the code doesn't match them yet.
 
 | File | Covers |
 |---|---|
+| `reconciling_regeneration.md` | **Proposed** — diff-and-reconcile assignment regeneration: a follow-up to PR #1066 that preserves responses on unchanged pairs (inserting newly eligible pairs, dropping orphaned ones) instead of the wholesale per-instrument replace, plus the impact-driven super-button confirmation that follows from it. |
 | `sort_by_reviewee.md` | **Segment 13B** — reviewer-surface sort UX (operator default sort + reviewer live override). Display Fields only on the operator side; reviewer side gets clickable column headers with live-only persistence. |
 | `group_scoped_instruments.md` | **Segment 13C** — group-scoped instruments (one shared response covers a whole group of reviewees). Plan needs revision post-15D since it originally stamped per-instrument flavour onto the now-dropped `Assignment.context` JSON column. |
 
