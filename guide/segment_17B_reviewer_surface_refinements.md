@@ -3,9 +3,11 @@
 **Status:** Partly shipped (2026-05-16). PR 1 (`routes_reviewer`
 packaging, commit `801af2f`), the action-row reorder, keyboard
 navigation, and the progress pills have landed (PRs #1076 / #1077).
-Autosave, filter-to-incomplete, and return-to-place remain; the
-reviewer-facing timezone-clarity item is covered incidentally by
-the 18B follow-ups (the deadline carries a zone label).
+Cell autosave and filter-to-incomplete are deferred to
+`guide/deferred_until_pilot_feedback.md`; return-to-place and the
+remaining chrome polish are still open. The reviewer-facing
+timezone-clarity item is covered incidentally by the 18B
+follow-ups (the deadline carries a zone label).
 
 A polish + ergonomics pass on the reviewer response surface
 (`GET /reviewer/sessions/{id}/{instrument_position}`, rendered
@@ -76,20 +78,13 @@ explicitly pinned stable** for exactly this work
 of the items below needs a route or view-adapter change — the
 work is template + inline JS + CSS.
 
-- **Cell-level autosave.** A debounced `fetch` to the existing
-  `POST /reviewer/sessions/{id}/{position}/save` endpoint on
-  cell blur / change, replacing (or sitting alongside) the
-  per-page form Save. Per-cell status indicator — in-flight /
-  saved / failed. **Concurrency note:** the `Response.version`
-  column exists (added inert by the 13F DB-prep — *no migration
-  needed*) but is **not currently wired** into the save path;
-  `responses.save_draft` does not read or bump it. Plain cell
-  autosave is therefore last-write-wins, exactly like today's
-  per-page Save — acceptable, since one reviewer owns their own
-  rows. If genuine version-gated optimistic concurrency is
-  wanted, wiring `Response.version` is *additional* optional
-  work (a small service change, still no schema change); treat
-  it as a separate decision, not a freebie.
+- **Cell-level autosave — deferred (2026-05-16)** to
+  `guide/deferred_until_pilot_feedback.md`. The per-page form
+  Save already persists a page's edits in one click; per-cell
+  autosave (debounced `fetch` to the existing `/save` route,
+  per-cell status indicator) is built only if pilot feedback
+  asks. The full design + the `Response.version` concurrency
+  note live in the deferred-items doc.
 - **Sticky column headers — investigated and dropped
   (2026-05-16).** `position: sticky` on the `<th>` row does
   nothing useful here: the reviewer table's `.table-scroll`
@@ -107,8 +102,11 @@ work is template + inline JS + CSS.
   but not submitted / Draft) and per-instrument
   `Required / All items completed` pills. *Return-to-place*
   (preserve scroll position across save / reload) remains open.
-- **Filter-to-incomplete.** A client-side toggle that hides
-  rows already complete, so a reviewer can find what is left.
+- **Filter-to-incomplete — deferred (2026-05-16)** to
+  `guide/deferred_until_pilot_feedback.md`. A client-side toggle
+  that hides already-complete rows; the per-instrument progress
+  pills already surface what is left, so a table filter waits on
+  pilot feedback.
 - **Keyboard navigation — shipped (#1076).** Tab walks cells
   across a row natively; Enter / Shift+Enter move focus down / up
   a column (per `spec/visual_style_rrw.md`, which pins Tab +

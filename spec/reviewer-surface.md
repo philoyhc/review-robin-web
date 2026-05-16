@@ -320,9 +320,10 @@ template iterates and renders one pill per entry.
 
 ### Session-wide status pill
 
-Above the per-page pills, the overview card renders a single
-session-wide rollup pill — the at-a-glance "where is this review
-overall", set from the per-page states:
+Leading the per-page pills — first on the same flex-wrap row — the
+overview card renders a single session-wide rollup pill, the
+at-a-glance "where is this review overall", set from the per-page
+states:
 
 | Pill | Pill class | Condition |
 |---|---|---|
@@ -893,13 +894,14 @@ compatible either way:
   "Session-wide status pill" and "Above the table" above). The
   action row was also reordered to Save / Discard / Submit /
   divider / Page #N.
-- **What lands later (Segment 17B).** The remaining ergonomics
-  arrive incrementally as progressive enhancement on the existing
-  `<table>` — autosave wired to `POST /save`, a filter-to-incomplete
-  toggle, return-to-place — each a small independent PR. They are
-  *not* treated as one all-or-nothing bundle gated on a grid
-  library; that bundling was the AG-Grid framing, now off the
-  roadmap.
+- **What lands later (Segment 17B).** Return-to-place (preserve
+  scroll position across save / reload) is the remaining 17B
+  ergonomics item. Cell autosave and filter-to-incomplete were
+  deferred to `guide/deferred_until_pilot_feedback.md`
+  (2026-05-16) — both are pure progressive enhancement built only
+  if pilot feedback asks. None of this was ever an all-or-nothing
+  bundle gated on a grid library; that bundling was the AG-Grid
+  framing, now off the roadmap.
 - **Investigated and dropped — sticky column headers.** Pinned as
   first-class by `visual_style_rrw.md`, but dropped in Segment 17B
   (2026-05-16). `position: sticky` on the `<th>` row does nothing

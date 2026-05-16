@@ -307,7 +307,7 @@ def test_session_status_pill_rolls_up_draft_saved_submitted(
     rae_client = make_client(rae)
 
     fresh = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
-    assert 'class="rs-session-status"' in fresh
+    assert 'class="rs-page-status-pills"' in fresh
     assert "Draft" in fresh
 
     rae_client.post(

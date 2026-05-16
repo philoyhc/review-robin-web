@@ -727,12 +727,12 @@ bottom of this file.
   `801af2f`); the action-row reorder + keyboard navigation
   (Tab + Enter) (#1076); the visible-progress pills — session-wide
   status + per-instrument completion (#1077); sticky headers were
-  investigated and dropped. **Remaining:** cell autosave,
-  filter-to-incomplete, return-to-place, and the rest of the
-  chrome polish (status-card location, denser rows) — each a
-  separate small PR, pursued as vanilla progressive enhancement
-  (no JS framework; the AG Grid route is off the roadmap, see
-  `guide/future_possibilities.md`).
+  investigated and dropped. **Remaining:** return-to-place and the
+  rest of the chrome polish (status-card location, denser rows).
+  **Deferred** (to `guide/deferred_until_pilot_feedback.md`,
+  2026-05-16): cell autosave and filter-to-incomplete — built
+  only if pilot feedback asks. No JS framework; the AG Grid route
+  is off the roadmap, see `guide/future_possibilities.md`.
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
 - **18A — Sessions lobby enhancements** *(stubs created

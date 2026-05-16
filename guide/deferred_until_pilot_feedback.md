@@ -157,3 +157,71 @@ into the Session Home context builder. Reuses
 `audit.list_events_for_session` from 16C PR 1.
 
 ---
+
+## 17B — Cell-level autosave (reviewer surface)
+
+> Carved from `guide/segment_17B_reviewer_surface_refinements.md`
+> 2026-05-16. Listed there as a large-table-ergonomics item;
+> deferred rather than built speculatively.
+
+**Ships.**
+
+- A debounced `fetch` to the existing
+  `POST /reviewer/sessions/{id}/{position}/save` endpoint on cell
+  blur / change, sitting alongside (or replacing) the per-page
+  form Save.
+- Per-cell status indicator — in-flight / saved / failed.
+- Pure progressive enhancement — the `_surface_context` payload is
+  already pinned stable for this; template + inline JS + CSS, no
+  route or view-adapter change.
+
+**Concurrency note.** The `Response.version` column exists (added
+inert by the 13F DB-prep — no migration needed) but is not wired
+into the save path; `responses.save_draft` neither reads nor bumps
+it. Plain cell autosave is therefore last-write-wins, exactly like
+today's per-page Save — acceptable, since one reviewer owns their
+own rows. Version-gated optimistic concurrency would be additional
+optional work (a small service change, still no schema change).
+
+**Why deferred.** Today's per-page form Save already persists a
+page's edits in one click; whether reviewers also want per-cell
+autosave is exactly the ergonomic accelerant pilot feedback
+surfaces (or doesn't). Building it speculatively risks tuning a
+debounce / status-indicator UX nobody asked for.
+
+**Lift trigger.** Reviewers say they lost work because they forgot
+to Save, or ask for edits to persist as they go.
+
+**Wire-up.** Template + inline JS in `review_surface.html`; the
+debounced `fetch` targets the per-position `/save` route the form
+already posts to.
+
+---
+
+## 17B — Filter-to-incomplete toggle (reviewer surface)
+
+> Carved from `guide/segment_17B_reviewer_surface_refinements.md`
+> 2026-05-16.
+
+**Ships.**
+
+- A client-side toggle on the reviewer response table that hides
+  rows already complete, so a reviewer working a long roster sees
+  only what is left.
+- Pure progressive enhancement — `_surface_context` already
+  computes per-row completion state (`is_complete`); template +
+  inline JS + CSS, no route or view-adapter change.
+
+**Why deferred.** The per-instrument progress pills (shipped in
+#1077) already tell a reviewer how much is left; whether they also
+want to *filter the table* to the incomplete rows depends on how
+large real rosters get and how reviewers work them — pilot-feedback
+territory.
+
+**Lift trigger.** Reviewers on large rosters say they keep losing
+their place hunting for the unfilled rows.
+
+**Wire-up.** Template + inline JS in `review_surface.html`, keying
+off the per-row `is_complete` flag already in the payload.
+
+---
