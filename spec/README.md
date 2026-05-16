@@ -40,6 +40,7 @@ detailed contracts.
 | `validate_page.md` | Validate page (Operations row) — `ValidationRule` registry + find-and-fix surface: setup-coverage grid, severity chip strip, per-issue "Fix on X ↗" deep-links + "Why this check?" disclosure, activate-warns detour banner. |
 | `operations_pages.md` | Operations pages — Invitations + Responses (reviewer-centric + reviewee-centric monitoring surfaces). |
 | `rule_based_assignment.md` | Rule-based assignment engine + Rule Builder page + Rule Based card on the Operations Assignments page. |
+| `reconciling_regeneration.md` | Diff-and-reconcile assignment regeneration (PRs #1065 → #1069) — `replace_assignments` preserves responses on unchanged pairs (inserting newly eligible pairs, dropping orphaned ones) instead of a wholesale per-instrument replace, plus the impact-driven super-button confirmation. The design record for that behaviour. |
 
 ## Reviewer-facing
 
@@ -78,7 +79,6 @@ target contract; the code doesn't match them yet.
 
 | File | Covers |
 |---|---|
-| `reconciling_regeneration.md` | **Proposed** — diff-and-reconcile assignment regeneration: a follow-up to PR #1066 that preserves responses on unchanged pairs (inserting newly eligible pairs, dropping orphaned ones) instead of the wholesale per-instrument replace, plus the impact-driven super-button confirmation that follows from it. |
 | `sort_by_reviewee.md` | **Segment 13B** — reviewer-surface sort UX (operator default sort + reviewer live override). Display Fields only on the operator side; reviewer side gets clickable column headers with live-only persistence. |
 | `group_scoped_instruments.md` | **Segment 13C** — group-scoped instruments (one shared response covers a whole group of reviewees). Plan needs revision post-15D since it originally stamped per-instrument flavour onto the now-dropped `Assignment.context` JSON column. |
 
