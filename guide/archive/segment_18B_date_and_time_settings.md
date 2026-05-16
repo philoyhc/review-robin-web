@@ -23,6 +23,21 @@
 > every display site and both card previews; no env var, no
 > database migration.
 >
+> **CLDR display names (2026-05-16, PRs #1034 / #1035).** Naming
+> a zone by its raw IANA id (`Australia/Melbourne`) reads poorly,
+> so zone labels now show the CLDR long display name
+> (`Australian Eastern Standard Time`), with the IANA id as the
+> fallback. #1034 — the `/operator/settings` and Session Edit
+> card previews resolve the name client-side via `Intl`
+> (`timeZoneName: 'long'`), no dependency. #1035 — adds the
+> `babel` dependency and a `date_formatting.timezone_label`
+> helper for server-rendered names: the Session Details card
+> gains a Timezone item (right column reordered Code / Deadline /
+> Timezone, Help contact moved below Description), and the
+> reviewer dashboard + review-surface deadlines render in their
+> session's zone with the CLDR name in parentheses. `at` selects
+> the standard / daylight variant.
+>
 > The 18B segment number was previously held by "Session tagging
 > + archiving", which was folded into 18A (Sessions lobby
 > enhancements) on 2026-05-15. 18B is reused here for an
