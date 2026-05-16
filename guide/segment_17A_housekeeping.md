@@ -111,25 +111,37 @@ this track is "do it before the suite crosses ~2-3 min", which
   a typical multi-core box). Fits the codebase: `:memory:`
   SQLite is already per-process and the per-test
   transaction-rollback isolation means no cross-test shared
-  state. Each worker re-runs `alembic upgrade head` once at
-  startup — offset many times over by the parallelism. Add
-  `pytest-xdist` to the `[dev]` extra, wire `-n auto` into the
-  CI pytest job, and document the change in `README.md` per the
-  testing-expectations note in `CLAUDE.md`. A short spike at
-  the top of the PR should confirm worker isolation behaves
-  before committing. **Also in this PR:** if
-  `tests/integration/conftest.py` rebuilds the app /
-  `TestClient` per-test, hoist it to module or session scope —
-  it is a modest, naturally-related win; check first and skip
-  the hoist if construction is already shared.
+  state; the `committed_engine` harness uses a per-test
+  `tmp_path` DB, also xdist-safe. Each worker re-runs
+  `alembic upgrade head` once at startup — offset many times
+  over by the parallelism. Add `pytest-xdist` to the `[dev]`
+  extra **only** (not `requirements.txt`, which is runtime-only
+  for the Azure deploy; both CI test jobs install `.[dev]`),
+  wire `-n auto` into the CI pytest job, and document the
+  change in `README.md` per the testing-expectations note in
+  `CLAUDE.md`. A short spike at the top of the PR should
+  confirm worker isolation behaves before committing.
+  *Not in this PR:* hoisting `TestClient` construction. It is
+  already per-test only because each test installs its own
+  `get_db` / `get_current_user` dependency overrides — `app`
+  itself is imported once at module scope — so there is no
+  clean hoist without reworking the override mechanism. Not
+  worth it.
 - **PR 2 — swap `alembic upgrade head` →
-  `Base.metadata.create_all()`** in the SQLite `engine` fixture
-  (`tests/conftest.py`). The 40-migration replay is pure
-  session-startup cost; `create_all` is near-instant. Fidelity
-  tradeoff: SQLite tests stop exercising the migration chain —
-  acceptable because the `ci-postgres` job already round-trips
-  migrations. Compounds with PR 1 (every xdist worker saves the
-  replay). Land after PR 1.
+  `Base.metadata.create_all()`** in both SQLite engine
+  fixtures: the session-scoped `engine` (`tests/conftest.py`)
+  and the per-test `committed_engine`
+  (`tests/integration/conftest.py`). The 40-migration replay is
+  pure schema-build cost; `create_all` is near-instant.
+  `committed_engine` replays the full chain *per test* (it
+  backs only `test_route_persistence.py`, so the cost is
+  bounded — but per-test replay is a heavier cumulative hit
+  than the session engine's one-time replay, so it is worth
+  swapping too). Fidelity tradeoff: SQLite tests stop
+  exercising the migration chain — acceptable because the
+  `ci-postgres` job already round-trips migrations. Compounds
+  with PR 1 (every xdist worker saves the replay). Land after
+  PR 1.
 - **Not pursued:** a fast/slow marker split — it only changes
   *perceived* time, not total, and is not worth the
   marker-maintenance burden on top of the two PRs above.
