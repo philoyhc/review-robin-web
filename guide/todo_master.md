@@ -556,7 +556,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 3-5), 14A, 14B, 14C, 17B,
+**13C, 13F (PRs 3-5), 14A, 14B, 14C, 17A, 17B,
 18A, 18C, 18D, 19, 20, 21, 22**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
@@ -639,6 +639,20 @@ bottom of this file.
    **Plan:** `guide/segment_14C_reminders_workflow.md`.
 
 #### Stubs
+
+- **17A — Housekeeping (file splits + test-suite runtime)**
+  *(stub created 2026-05-16)*. Pure structural / infrastructure
+  cleanup, no behaviour change. **Track A** splits the three
+  production files past 1.3k LOC per the 2026-05-16 assessment
+  §6 — `_setup_rosters.py` into three Setup-page slices,
+  `session_config_io.py` into a serialise / apply package, and
+  (optionally) the Response Type routes out of `_instruments.py`.
+  **Track B** cuts test-suite runtime per assessment §5
+  weakness 8 — `pytest-xdist` parallelism + a
+  `Base.metadata.create_all()` swap for the SQLite engine
+  fixture. The "17A" number is recycled from the AG Grid
+  segment (renumbered 17A → 22); the scopes are unrelated.
+  **Plan:** `guide/segment_17A_housekeeping.md`.
 
 - **17B — Reviewer surface refinements** *(stub created
   2026-05-12)*. Polish pass on the reviewer surface — to
@@ -739,7 +753,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **14C
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13C, 13F (PRs 3-5), 14A, 17B, 18A,
+- **13C, 13F (PRs 3-5), 14A, 17A, 17B, 18A,
   18C, 18D, 19, 20, 21, 22** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
