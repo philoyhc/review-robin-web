@@ -203,10 +203,10 @@ def test_re_save_without_confirm_blocks(
 def test_re_save_with_confirm_replaces(
     client: TestClient, db: Session
 ) -> None:
-    """``confirm_replace=true`` lets the page-level Generate cascade
-    over existing rows. The new event's ``replaced`` count reflects
-    the per-instrument tear-down (1 row replaced on the only
-    instrument)."""
+    """``confirm_replace=true`` lets the page-level Generate run
+    again over existing rows. The roster is unchanged, so the
+    reconcile keeps the single pair and deletes nothing — the new
+    event's counts report ``deleted=0`` / ``kept=1``."""
 
     review_session = _make_session(client, db)
     _seed_roster(
@@ -230,7 +230,8 @@ def test_re_save_with_confirm_replaces(
             .order_by(AuditEvent.id.desc())
         ).scalars()
     )
-    assert events[0].detail["counts"]["replaced"] == 1
+    assert events[0].detail["counts"]["deleted"] == 0
+    assert events[0].detail["counts"]["kept"] == 1
 
 
 def test_assignments_hub_renders_count_and_mode(
