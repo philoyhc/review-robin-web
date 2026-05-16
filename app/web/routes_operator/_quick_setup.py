@@ -655,9 +655,12 @@ async def import_session_config(
 ) -> RedirectResponse:
     """Apply a Settings CSV to ``review_session``.
 
-    Lifecycle gate: ``status in {"draft", "validated"}``;
-    importing into a session with reviewer responses is blocked
-    via the gate (responses only exist in ``ready``).
+    Lifecycle gate: ``status in {"draft", "validated"}``. A settings
+    re-import rebuilds the instrument structure, so it discards any
+    submitted reviewer responses the session carried over from a
+    prior activation cycle — ``apply_session_config`` clears them
+    explicitly so the rebuild does not trip the ``responses`` foreign
+    key.
 
     Reachable from Quick Setup slot 4 (PR 4) and as a direct
     POST endpoint — same success / error redirect shape the
