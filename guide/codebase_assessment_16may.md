@@ -304,10 +304,13 @@ not just the CSV export.
    soft-delete, full-Postgres pytest — 521-LOC plan, not
    started. It gates pilot-readiness alongside email.
 
-6. **Reviewer surface still plain HTML.** AG Grid + cell
-   autosave (renumbered 17A → **22** this week) is still
-   deferred; the reviewer table is `<input>` / `<textarea>` /
-   `<select>` with form-based save.
+6. **Reviewer surface still plain HTML, no autosave.** The
+   reviewer table is `<input>` / `<textarea>` / `<select>` with
+   per-page form-based save. The large-table ergonomics
+   (cell-level autosave, sticky headers, visible progress) are
+   now owned by **Segment 17B** as vanilla progressive
+   enhancement — the AG Grid framing was taken off the roadmap
+   (see `guide/future_possibilities.md`).
 
 7. **The reviewee is still not an audience.** A whole
    third-audience surface (results-sharing, feedback
@@ -374,10 +377,10 @@ keeps growing; not pressing today.
 **Watch list (not yet actionable).**
 `app/web/routes_reviewer.py` (1,362 LOC) is the only reviewer
 route file and — unlike the operator side — is *not* a
-package. Segments 17B (reviewer refinements) and 22 (AG Grid)
-will both grow it, so converting it to a `routes_reviewer/`
-package is worth doing as the first step of whichever lands
-first. `app/web/views/_rule_builder.py` (1,043 LOC) is a
+package. Segment 17B (reviewer refinements + large-table
+ergonomics) will grow it, so converting it to a
+`routes_reviewer/` package is worth doing as the first step of
+17B. `app/web/views/_rule_builder.py` (1,043 LOC) is a
 single large view-adapter sub-module — monitor, no split
 needed yet.
 
@@ -406,21 +409,21 @@ Thirteen segments remain (per `guide/todo_master.md`):
 | 14B — email infra (Parts A → E) | ~1,800 | ~2,000 | 0 |
 | 14B — email infra (Parts F → H, optional backends) | ~1,800 | ~1,500 | 0 |
 | 14C — reminders workflow | ~1,200 | ~1,400 | 0-1 |
-| 17B — reviewer surface refinements | ~400 | ~400 | 0 |
+| 17A — housekeeping (file splits + test runtime) | ~600 | ~300 | 0 |
+| 17B — reviewer surface refinements + ergonomics | ~900 | ~900 | 0 |
 | 18A — session cloning + tagging + archiving | ~1,300 | ~1,500 | 0-1 |
 | 18C — retention / deletion workflow | ~900 | ~1,000 | 0-1 |
 | 18D — export / import update | ~700 | ~900 | 0 |
 | 19 — spec documentation | n/a (docs) | n/a | 0 |
 | 20 — operator polish + docs | ~500 | ~400 | 0 |
 | 21 — peer review enhancements (reviewee surface) | ~2,500 | ~2,500 | 1-2 |
-| 22 — AG Grid replacement | ~1,800 | ~600 | 0 |
-| **Total remaining** | **~16,300** | **~15,100** | **~5-9** |
+| **Total remaining** | **~15,100** | **~14,900** | **~3-9** |
 
 ### Likely shape at completion
 
 | Area | Today | At completion (estimate) | Δ |
 |---|---:|---:|---:|
-| `app/` Python | 35,515 | **~51,000** | +44% |
+| `app/` Python | 35,515 | **~50,500** | +43% |
 | Tests Python | 55,250 | **~70,000** | +27% |
 | Templates | 11,876 | **~14,500** | +22% |
 | Alembic migrations | 40 files / 3,489 LOC | **~46 / ~3,900** | +15% |
@@ -428,7 +431,7 @@ Thirteen segments remain (per `guide/todo_master.md`):
 | Guides (active + archive) | 43,040 | **~45,000** | +5% |
 | **Total project (all artifacts)** | **~162k LOC** | **~200k LOC** | **+23%** |
 
-**Production Python at completion: ~50–52k LOC, ~+44% over
+**Production Python at completion: ~50–51k LOC, ~+43% over
 today.** The two biggest remaining chunks are now **Segment 21**
 (the reviewee surface — a new audience, ~2,500 code / ~2,500
 tests) and **Segment 14B** (email infra). The 14B figure above
@@ -459,8 +462,11 @@ What changed between the May 11 baseline and this assessment:
   reviewer surfaces.
 - **MVP score: 10 → 13 of 16.** Audit event types 62 → 103;
   routes ~100 → ~136; production Python +39%.
-- **AG Grid renumbered 17A → 22; Segment 21 (peer review /
-  reviewee surface) stubbed.**
+- **Roadmap reshaped.** Segment 21 (peer review / reviewee
+  surface) stubbed; a housekeeping segment took the 17A slot;
+  the AG Grid replacement was taken off the roadmap as overkill
+  (now an aspirational item in `guide/future_possibilities.md`),
+  its reviewer-surface ergonomics folded into 17B.
 
 ## 9. One-line verdict
 

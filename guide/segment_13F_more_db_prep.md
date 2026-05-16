@@ -167,10 +167,11 @@ additive schema need.
   (PR 3), `sessions.reminder_settings` (PR 4),
   `sessions.retention_*` (PR 5), `sessions.display_timezone`
   (PR 6) — or needs no schema (14B reads existing `email_outbox`
-  columns; 22's "value_version" is the existing
-  `Response.version`; 17B / 19 / 20 are UI / docs; 18A cloning +
-  18D import/export are service-layer-only; 18C's retention
-  policy is env-var config; 21's reviewee surface is scoped
+  columns; 17B's cell autosave reuses the existing
+  `Response.version`; 17A / 19 / 20 are hygiene / UI / docs;
+  18A cloning + 18D import/export are service-layer-only;
+  18C's retention policy is env-var config; 21's reviewee
+  surface is scoped
   during PR planning).
 - **14A type migrations stay out of 13F.** 14A's JSON→`JSONB`,
   `String(36)`→native `UUID`, `String`→DB `ENUM`, and GIN /

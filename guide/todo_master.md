@@ -557,7 +557,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13C, 13F (PRs 3-5), 14A, 14B, 14C, 17A, 17B,
-18A, 18C, 18D, 19, 20, 21, 22**. No global ordering
+18A, 18C, 18D, 19, 20, 21**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -651,7 +651,9 @@ bottom of this file.
   weakness 8 — `pytest-xdist` parallelism + a
   `Base.metadata.create_all()` swap for the SQLite engine
   fixture. The "17A" number is recycled from the AG Grid
-  segment (renumbered 17A → 22); the scopes are unrelated.
+  segment, which was taken off the roadmap (now an aspirational
+  item in `guide/future_possibilities.md`); the scopes are
+  unrelated.
   **Plan:** `guide/segment_17A_housekeeping.md`.
 
 - **17B — Reviewer surface refinements** *(stub created
@@ -733,16 +735,14 @@ bottom of this file.
   surface.
   **Plan:** `guide/segment_21_peer_review_enhancements.md`.
 
-- **22 — AG Grid replacement of the reviewer-surface table**
-  *(carved out of the original Segment 15, 2026-05-10;
-  renamed 17 → 17A on 2026-05-12 when 17B was carved off,
-  then 17A → 22 on 2026-05-16 so the reviewee-surface work
-  could take Segment 21)*. Replaces the plain HTML
-  `<input>` / `<textarea>` / `<select>` reviewer-surface
-  table with an AG Grid instance backed by the existing
-  render adapter + `POST /save` endpoint. Unlocks cell-level
-  autosave + large-table ergonomics.
-  **Plan:** `guide/segment_22_ag_grid_replacement.md`.
+> The AG Grid replacement of the reviewer-surface table was
+> briefly a segment here (numbered 17 → 17A → 22) but was
+> taken off the roadmap on 2026-05-16 — a JS data-grid is
+> judged overkill. The reviewer-surface ergonomics it would
+> have delivered (autosave, sticky headers, visible progress)
+> are folded into **Segment 17B** as vanilla progressive
+> enhancement; the wholesale grid swap is recorded as an
+> aspirational item in `guide/future_possibilities.md`.
 
 ### Sequencing notes
 
@@ -754,7 +754,7 @@ bottom of this file.
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 3-5), 14A, 17A, 17B, 18A,
-  18C, 18D, 19, 20, 21, 22** are independent of the email +
+  18C, 18D, 19, 20, 21** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
   13C's re-scoped 3-PR ladder (2026-05-15) needs no rule-engine

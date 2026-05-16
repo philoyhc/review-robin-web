@@ -2,13 +2,16 @@
 
 **Status:** Stub. Created 2026-05-16.
 
-The "17A" segment number was vacated when the AG Grid
-replacement renumbered 17A → 22 (2026-05-16). This fills the
-freed slot with the code-hygiene items surfaced by the
+The "17A" segment number was freed when the AG Grid
+replacement was taken off the roadmap (2026-05-16) — it is now
+an aspirational item in `guide/future_possibilities.md`, not a
+segment. This fills the freed slot with the code-hygiene items
+surfaced by the
 [2026-05-16 codebase assessment](codebase_assessment_16may.md) —
 §6 (recommended file splits) and §5 weakness 8 (test-suite
-runtime). It is **not** related to the old 17A scope; the only
-thing carried over is the number.
+runtime). It is **not** related to the AG Grid work that
+briefly held this number; the only thing carried over is the
+number itself.
 
 ## Goal
 
@@ -62,9 +65,8 @@ structure — move code, keep the public import surface stable.
 
 Out of Track A's scope: packaging `app/web/routes_reviewer.py`
 (1,362 LOC). It is on the assessment watch list, but the right
-time to package it is as the first step of whichever of
-Segment 17B or 22 next touches the reviewer surface — so it
-lands there, not here.
+time to package it is as the first step of Segment 17B, which
+will grow the reviewer surface — so it lands there, not here.
 
 ## Track B — test-suite runtime
 
@@ -115,10 +117,10 @@ note in `CLAUDE.md`.
 
 ## Out of scope
 
-- AG Grid / reviewer-surface table replacement — that is
-  **Segment 22** (the segment this number was vacated from).
+- AG Grid / reviewer-surface table replacement — off the
+  roadmap; an aspirational item in `guide/future_possibilities.md`.
 - Any behaviour change, new feature, new route, or new model.
-- `app/web/routes_reviewer.py` packaging — deferred to 17B / 22
+- `app/web/routes_reviewer.py` packaging — deferred to 17B
   (see Track A).
 - `guide/archive/` compression — a recurring assessment
   grumble, but a docs-tree concern, not code hygiene; leave it
