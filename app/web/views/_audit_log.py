@@ -102,6 +102,9 @@ def build_audit_log_rows(
             summary=row.summary,
             actor_email=row.actor_email or "",
             correlation_id=row.correlation_id or "",
+            # Intentionally UTC (no display zone): the audit log is a
+            # UTC-based forensic surface — its date filter and the
+            # "When (UTC)" column header say so. Don't localise.
             created_at_display=format_datetime(row.created_at),
             detail_json=_json_or_empty(row.detail),
             detail=format_audit_detail(row.event_type, row.detail),
