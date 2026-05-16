@@ -363,9 +363,11 @@ UTC instant (`format_datetime_local`). #1038 also retired the
 standalone Display timezone card / `POST .../timezone` route,
 folding the control into the (lifecycle-gated) edit form.
 
-Still genuinely deferred: the audit-log `<input type="date">`
-filter is unchanged — low-stakes (a whole-day filter) and left
-for a future pass.
+The audit-log `<input type="date">` filter (Sys Admin viewer)
+stays UTC-based — it bounds the UTC `created_at` column, with
+each whole "to" day inclusive. No behaviour change was needed;
+its labels now read "From (UTC)" / "To (UTC)" so the basis is
+explicit. 18B owns no remaining deferred work.
 
 ## Hard dependencies
 

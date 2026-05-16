@@ -72,6 +72,9 @@ def test_audit_log_page_renders_for_sys_admin(
         in response.text
     )
     assert "Download CSV" in response.text
+    # The date filter is interpreted in UTC — the labels say so.
+    assert "From (UTC)" in response.text
+    assert "To (UTC)" in response.text
 
 
 def test_audit_log_page_404s_on_missing_session(
