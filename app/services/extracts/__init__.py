@@ -4,7 +4,7 @@ Shared plumbing for the five downloads on the Extract Data
 card — filename convention + a chunked CSV-streaming helper.
 The per-extract serialisers live alongside this module:
 
-- ``app/services/session_config_io.py`` — Settings CSV
+- ``app/services/session_config_io/`` — Settings CSV
   (3-column ``field,value,data_type`` shape).
 - ``app/services/extracts/reviewers_extract.py`` — Reviewers
   CSV (12A-1 PR 2).

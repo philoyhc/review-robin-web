@@ -67,7 +67,7 @@ _DEFAULT_LABELS: dict[tuple[str, str], str] = {
 # Per-source allowlist. The DB column is ``VARCHAR(64)`` with no
 # enum gate, so this map is the only validation layer for what a
 # session may rename. Mirrored by ``_VALID_FL_SOURCE_FIELDS`` in
-# ``app/services/session_config_io.py`` for Settings-CSV import.
+# ``app/services/session_config_io/`` for Settings-CSV import.
 _VALID_SOURCE_FIELDS: dict[str, frozenset[str]] = {
     "reviewer": frozenset({"tag_1", "tag_2", "tag_3"}),
     "reviewee": frozenset(
