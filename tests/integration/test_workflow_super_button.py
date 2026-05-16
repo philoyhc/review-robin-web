@@ -17,6 +17,8 @@ from app.db.models import (
     InstrumentResponseField,
     Response,
     ResponseTypeDefinition,
+    Reviewee,
+    Reviewer,
     ReviewSession,
     SessionRuleSet,
 )
@@ -83,13 +85,44 @@ def _seed_pair_plus_pinned(
     return review_session
 
 
+def _attach_response(db: Session, *, assignment: Assignment, key: str) -> int:
+    """Attach one ``Response`` to ``assignment`` and return its id.
+
+    Builds the response-type definition + instrument field the
+    ``Response`` row needs; ``key`` makes both unique per session /
+    instrument."""
+    rtd = ResponseTypeDefinition(
+        session_id=assignment.session_id,
+        response_type=f"RT-{key}",
+        data_type="number",
+    )
+    db.add(rtd)
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=assignment.instrument_id,
+        field_key=key,
+        label="Score",
+        response_type_id=rtd.id,
+    )
+    db.add(field)
+    db.flush()
+    response = Response(
+        assignment_id=assignment.id,
+        response_field_id=field.id,
+        value="5",
+    )
+    db.add(response)
+    db.flush()
+    db.commit()
+    return response.id
+
+
 def _seed_reverted_session_with_response(
     client: TestClient, db: Session, *, code: str
 ) -> ReviewSession:
     """Activate a seeded session, record one response, then revert it
-    to draft. The session ends in draft holding a saved response —
-    the state that makes the super-button's Generate step
-    destructive."""
+    to draft. The roster is unchanged, so re-activating reconciles
+    with no response loss."""
     review_session = _seed_pair_plus_pinned(client, db, code=code)
     client.post(
         f"/operator/sessions/{review_session.id}/workflow/activate",
@@ -107,30 +140,7 @@ def _seed_reverted_session_with_response(
         .scalars()
         .first()
     )
-    rtd = ResponseTypeDefinition(
-        session_id=review_session.id,
-        response_type="SuperBtnRating",
-        data_type="number",
-    )
-    db.add(rtd)
-    db.flush()
-    field = InstrumentResponseField(
-        instrument_id=assignment.instrument_id,
-        field_key="superbtn_score",
-        label="Score",
-        response_type_id=rtd.id,
-    )
-    db.add(field)
-    db.flush()
-    db.add(
-        Response(
-            assignment_id=assignment.id,
-            response_field_id=field.id,
-            value="5",
-        )
-    )
-    db.flush()
-    db.commit()
+    _attach_response(db, assignment=assignment, key="superbtn")
 
     # Revert ready → draft; responses are preserved across the flip.
     client.post(
@@ -140,6 +150,104 @@ def _seed_reverted_session_with_response(
     )
     db.refresh(review_session)
     assert lifecycle.is_draft(review_session)
+    return review_session
+
+
+def _seed_session_with_droppable_response(
+    client: TestClient, db: Session, *, code: str
+) -> ReviewSession:
+    """Seed a draft session where re-activation will drop a pair that
+    holds a response.
+
+    Reviewer ``Sam`` and reviewee ``Sam`` share an email, so Full
+    Matrix pairs them (a self-review). After activating, recording a
+    response on that self-pair, and reverting to draft, the rule set
+    is flipped to exclude self-reviews — so the next reconcile drops
+    the self-pair and deletes its response.
+
+    Reviewee ``Dan`` is along for the ride so that, once the
+    self-pair is gone, every reviewer and reviewee still has at least
+    one assignment — keeping validation clean either side of the
+    reconcile."""
+    review_session = _make_session(client, db, code=code)
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\n"
+                b"Sam,sam@example.edu\nTom,tom@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\n"
+                b"Sam,sam@example.edu\nDan,dan@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    rule_set = (
+        db.query(SessionRuleSet)
+        .filter(
+            SessionRuleSet.session_id == review_session.id,
+            SessionRuleSet.name == "Full Matrix",
+        )
+        .first()
+    )
+    instrument = (
+        db.query(Instrument)
+        .filter(Instrument.session_id == review_session.id)
+        .first()
+    )
+    instrument.rule_set_id = rule_set.id
+    db.flush()
+    db.commit()
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/workflow/activate",
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+    assert lifecycle.is_ready(review_session)
+
+    self_pair = (
+        db.execute(
+            select(Assignment)
+            .join(Reviewer, Reviewer.id == Assignment.reviewer_id)
+            .join(Reviewee, Reviewee.id == Assignment.reviewee_id)
+            .where(
+                Assignment.session_id == review_session.id,
+                Reviewer.email == "sam@example.edu",
+                Reviewee.email_or_identifier == "sam@example.edu",
+            )
+        )
+        .scalars()
+        .one()
+    )
+    _attach_response(db, assignment=self_pair, key="selfpair")
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/revert",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+    assert lifecycle.is_draft(review_session)
+
+    # Flip the rule to exclude self-reviews — the next reconcile drops
+    # Sam's self-pair (and its response).
+    db.refresh(rule_set)
+    rule_set.exclude_self_reviews = True
+    db.flush()
+    db.commit()
     return review_session
 
 
@@ -330,14 +438,40 @@ def test_super_failure_banner_renders_in_right_column(
 # --------------------------------------------------------------------------- #
 
 
-def test_super_button_detours_to_confirmation_when_responses_exist(
+def test_super_button_runs_through_when_reconcile_deletes_no_responses(
     client: TestClient, db: Session
 ) -> None:
-    """A draft session that still holds responses (reverted from
-    ready) bounces the super-button to ``?activate_confirm=responses``
-    instead of regenerating and destroying the responses."""
+    """A reverted session whose roster is unchanged reconciles with no
+    response loss — the super-button runs straight through with no
+    confirmation detour, and the saved response survives."""
     review_session = _seed_reverted_session_with_response(
-        client, db, code="confirm-detour"
+        client, db, code="no-loss"
+    )
+    assert _response_count(db, review_session.id) == 1
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/workflow/activate",
+        data={"return_to": "assignments"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}/assignments"
+    )
+
+    db.refresh(review_session)
+    assert lifecycle.is_ready(review_session)
+    assert _response_count(db, review_session.id) == 1
+
+
+def test_super_button_detours_when_reconcile_would_delete_responses(
+    client: TestClient, db: Session
+) -> None:
+    """When the reconcile would drop a pair that holds a response, the
+    super-button 303s to ``?activate_confirm=responses`` instead of
+    running."""
+    review_session = _seed_session_with_droppable_response(
+        client, db, code="loss-detour"
     )
     assert _response_count(db, review_session.id) == 1
 
@@ -358,19 +492,23 @@ def test_super_button_detours_to_confirmation_when_responses_exist(
     assert _response_count(db, review_session.id) == 1
 
 
-def test_super_button_keep_preserves_responses_and_activates(
+def test_super_button_acknowledged_loss_regenerates_and_activates(
     client: TestClient, db: Session
 ) -> None:
-    """``regen_choice=keep`` skips the Generate step: the session
-    activates with its existing assignments and the responses
-    survive."""
-    review_session = _seed_reverted_session_with_response(
-        client, db, code="keep-path"
+    """``acknowledge_response_loss=true`` runs past the detour: the
+    orphaned self-pair and its response are deleted and the session
+    activates."""
+    review_session = _seed_session_with_droppable_response(
+        client, db, code="loss-ack"
     )
+    assert _response_count(db, review_session.id) == 1
 
     response = client.post(
         f"/operator/sessions/{review_session.id}/workflow/activate",
-        data={"return_to": "assignments", "regen_choice": "keep"},
+        data={
+            "return_to": "assignments",
+            "acknowledge_response_loss": "true",
+        },
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -380,63 +518,42 @@ def test_super_button_keep_preserves_responses_and_activates(
 
     db.refresh(review_session)
     assert lifecycle.is_ready(review_session)
-    assert _response_count(db, review_session.id) == 1
-
-
-def test_super_button_regenerate_reconciles_and_activates(
-    client: TestClient, db: Session
-) -> None:
-    """``regen_choice=regenerate`` runs the Generate step and
-    activates. Generation reconciles rather than wholesale-replaces,
-    so with an unchanged roster the saved response sits on a kept
-    pair and survives the run."""
-    review_session = _seed_reverted_session_with_response(
-        client, db, code="regen-path"
-    )
-    assert _response_count(db, review_session.id) == 1
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
-        data={"return_to": "assignments", "regen_choice": "regenerate"},
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments"
-    )
-
-    db.refresh(review_session)
-    assert lifecycle.is_ready(review_session)
-    # Reconcile kept the unchanged pair — the response survives.
-    assert _response_count(db, review_session.id) == 1
+    # Sam's self-pair was dropped — its response went with it.
+    assert _response_count(db, review_session.id) == 0
 
 
 def test_activate_confirm_banner_renders_on_host_page(
     client: TestClient, db: Session
 ) -> None:
     """The Workflow card renders the saved-response confirmation
-    banner with both action buttons when the host page is hit with
-    ``?activate_confirm=responses`` and responses exist."""
-    review_session = _seed_reverted_session_with_response(
-        client, db, code="confirm-banner"
+    banner with the reconcile impact counts when a run would delete
+    responses."""
+    review_session = _seed_session_with_droppable_response(
+        client, db, code="loss-banner"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}"
         f"/assignments?activate_confirm=responses"
     ).text
     assert 'id="next-action-activate-confirm-banner"' in body
-    assert "saved response" in body
-    assert "Activate without regenerating" in body
+    # Collapse template whitespace so the multi-line banner copy can
+    # be matched as a single phrase.
+    normalized = " ".join(body.split())
+    assert "Activating will delete 1 saved response." in normalized
+    assert "drops 1 assignment pair" in normalized
     assert "Regenerate &amp; activate" in body
+    assert "Cancel" in body
 
 
-def test_activate_confirm_param_ignored_without_responses(
+def test_activate_confirm_param_ignored_when_no_responses_lost(
     client: TestClient, db: Session
 ) -> None:
-    """A stale ``?activate_confirm=responses`` param on a session
-    with no responses renders no banner — the builder guards on the
-    actual response count."""
-    review_session = _seed_pair_plus_pinned(client, db, code="confirm-none")
+    """A stale ``?activate_confirm=responses`` renders no banner when a
+    run would delete no responses — the builder dry-runs the reconcile
+    and guards on its impact, not on whether responses merely exist."""
+    review_session = _seed_reverted_session_with_response(
+        client, db, code="no-banner"
+    )
     body = client.get(
         f"/operator/sessions/{review_session.id}"
         f"/assignments?activate_confirm=responses"
