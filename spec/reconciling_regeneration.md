@@ -1,7 +1,10 @@
 # Reconciling assignment regeneration
 
-**Status: proposed.** The code does not implement this yet. This
-file is the target contract for a follow-up to PR #1066.
+**Status: partially implemented.** PR slice 1 (the reconcile core)
+has landed — `_materialise_one_instrument` reconciles. Slice 2 (the
+impact-driven super-button confirmation) is still pending; the
+super-button confirmation remains the binary keep / regenerate from
+PR #1066.
 
 ## Problem
 
@@ -158,19 +161,22 @@ Assignments-page preview on one code path. The engine evaluation is
 in-memory and cheap, so a dry-run plus a real run per click is
 acceptable.
 
-## Suggested PR slices
+## PR slices
 
-1. **Reconcile core.** Rewrite `_materialise_one_instrument` to
-   diff-and-reconcile; update the `assignments.generated` counts +
-   `EVENT_SCHEMAS`. Behaviour-preserving for sessions without
-   responses; existing `replace_assignments` tests stay green. Add
-   tests for the add / remove / unchanged reviewer cases asserting
-   `to_keep` responses survive.
-2. **Impact-driven confirmation.** Add `reconcile_impact(...)`;
-   rework the super-button detour to dry-run, skip the confirmation
-   when `responses_deleted == 0`, and show the precise count
-   otherwise; retire `regen_choice=keep`. Update
-   `spec/workflow_card.md`.
+1. **Reconcile core.** *(Done.)* `_materialise_one_instrument`
+   reconciles; the `assignments.generated` `counts` payload moved
+   from `new` / `replaced` to `new` / `deleted` / `kept` /
+   `responses_deleted` (the `counts` slot is freeform, so
+   `EVENT_SCHEMAS` needed no change). `replace_assignments` keeps
+   its `(replaced, new)` 2-tuple, where `replaced` now counts
+   deleted pairs. The final assignment set is unchanged for
+   sessions without responses; the per-instrument tests cover the
+   add / drop / unchanged cases.
+2. **Impact-driven confirmation.** *(Pending.)* Add
+   `reconcile_impact(...)`; rework the super-button detour to
+   dry-run, skip the confirmation when `responses_deleted == 0`,
+   and show the precise count otherwise; retire `regen_choice=keep`.
+   Update `spec/workflow_card.md`.
 
 ## Source-of-truth pointers
 

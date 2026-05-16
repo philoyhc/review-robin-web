@@ -383,12 +383,13 @@ def test_super_button_keep_preserves_responses_and_activates(
     assert _response_count(db, review_session.id) == 1
 
 
-def test_super_button_regenerate_deletes_responses_and_activates(
+def test_super_button_regenerate_reconciles_and_activates(
     client: TestClient, db: Session
 ) -> None:
-    """``regen_choice=regenerate`` runs the Generate step, which
-    replaces assignments and deletes their responses, then
-    activates."""
+    """``regen_choice=regenerate`` runs the Generate step and
+    activates. Generation reconciles rather than wholesale-replaces,
+    so with an unchanged roster the saved response sits on a kept
+    pair and survives the run."""
     review_session = _seed_reverted_session_with_response(
         client, db, code="regen-path"
     )
@@ -406,7 +407,8 @@ def test_super_button_regenerate_deletes_responses_and_activates(
 
     db.refresh(review_session)
     assert lifecycle.is_ready(review_session)
-    assert _response_count(db, review_session.id) == 0
+    # Reconcile kept the unchanged pair — the response survives.
+    assert _response_count(db, review_session.id) == 1
 
 
 def test_activate_confirm_banner_renders_on_host_page(

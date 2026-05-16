@@ -212,8 +212,11 @@ The Activate session button POSTs to a single
    instrument)` triple eligible under each instrument's pinned
    rule. This step is **skipped** when the operator picked
    `regen_choice=keep` in the saved-response confirmation detour
-   below; otherwise it runs and replaces any existing assignment
-   rows (deleting their responses).
+   below; otherwise it runs and **reconciles** the existing rows
+   (see `spec/reconciling_regeneration.md`) — inserting newly
+   eligible pairs, deleting pairs the rule no longer produces along
+   with their responses, and leaving matched pairs and their
+   responses untouched.
 2. **Validate.** `validation.validate_session_setup(...)` →
    `lifecycle.build_readiness_report(...)`. When the report is
    clean, `lifecycle.mark_validated(...)` flips `draft →
@@ -231,9 +234,9 @@ when the saved-response detour resolved to `regen_choice=keep`.
 
 A session reverted from `ready` back to `draft` keeps its
 responses (`revert_session_to_draft` preserves them). The Generate
-step's `replace_assignments(...)` deletes assignments and their
-responses, so re-activating such a session would silently destroy
-recorded data.
+step's reconcile can delete responses for any pair the rule no
+longer produces, so re-activating such a session could destroy
+recorded data without warning.
 
 To prevent that, the super-button checks for saved responses
 before running. When the session is editable, has responses, and
@@ -249,8 +252,12 @@ banner in the card body with two buttons, both POSTing back to
   responses survive, and the run proceeds straight to Validate +
   Activate.
 - **Regenerate & activate** — `regen_choice=regenerate`. The
-  Generate step runs, replacing assignments and deleting the
-  responses, then Validate + Activate proceed.
+  Generate step runs and reconciles; responses on pairs the rule no
+  longer produces are deleted, the rest are kept. Validate +
+  Activate then proceed. (The banner copy still phrases this as a
+  blanket deletion — the impact-driven rework that follows the
+  reconcile lands in a later PR; see
+  `spec/reconciling_regeneration.md`.)
 
 Like the warnings detour, the confirmation detour writes no
 `workflow_run_failed` event — the run is paused at the

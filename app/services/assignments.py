@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import (
@@ -173,8 +173,6 @@ def included_count_per_instrument(
     :func:`existing_count_per_instrument`, which surfaces the total
     row count regardless of ``include``.
     """
-    from sqlalchemy import func
-
     rows = db.execute(
         session_scoped(
             Assignment.instrument_id, session_id
@@ -507,11 +505,16 @@ def _materialise_one_instrument(
     """Materialise ``Assignment`` rows for a single instrument.
 
     Runs the engine against the instrument's pinned ``SessionRuleSet``,
-    deletes existing rows scoped to this instrument only, inserts the
-    new pair fan-out, and emits one ``assignments.generated`` audit
-    event keyed by ``refs.instrument_id``.
+    then **reconciles** the result against the instrument's existing
+    rows: newly eligible pairs are inserted, pairs the rule no longer
+    produces are deleted (along with their responses), and pairs
+    present before and after are left untouched so their responses
+    survive. Emits one ``assignments.generated`` audit event keyed by
+    ``refs.instrument_id``.
 
-    Returns ``(replaced, new)`` for this instrument.
+    Returns ``(deleted, new)`` for this instrument — the ``replaced``
+    slot of the ``replace_assignments`` 2-tuple now carries the count
+    of pairs removed by the reconcile.
     """
     from app.services.rules import engine
 
@@ -525,35 +528,56 @@ def _materialise_one_instrument(
         pair_context_lookup=pair_context_lookup,
     )
 
-    replaced_here = existing_count(
-        db, review_session.id, instrument_id=instrument.id
-    )
-    # The bulk Core ``delete`` below bypasses the ORM
-    # ``delete-orphan`` cascade on ``Assignment.responses``, so any
-    # responses still pointing at these assignments must be cleared
-    # first or the FK constraint fails.
-    instrument_assignment_ids = (
-        select(Assignment.id)
-        .where(Assignment.session_id == review_session.id)
-        .where(Assignment.instrument_id == instrument.id)
-    )
-    db.execute(
-        delete(Response).where(
-            Response.assignment_id.in_(instrument_assignment_ids)
-        )
-    )
-    db.execute(
-        delete(Assignment)
-        .where(Assignment.session_id == review_session.id)
-        .where(Assignment.instrument_id == instrument.id)
-    )
-
-    new_here = 0
+    # The engine's pair fan-out, keyed by ``(reviewer_id, reviewee_id)``
+    # — the same tuple ``uq_assignment_unique`` enforces.
+    new_pairs: dict[tuple[int, int], tuple[Reviewer, Reviewee, bool]] = {}
     for reviewer, reviewee in result.pairs:
         if is_self_review(reviewer, reviewee):
             pair_include = review_session.self_reviews_active
         else:
             pair_include = True
+        new_pairs[(reviewer.id, reviewee.id)] = (
+            reviewer,
+            reviewee,
+            pair_include,
+        )
+
+    existing_rows: dict[tuple[int, int], Assignment] = {
+        (row.reviewer_id, row.reviewee_id): row
+        for row in db.execute(
+            select(Assignment)
+            .where(Assignment.session_id == review_session.id)
+            .where(Assignment.instrument_id == instrument.id)
+        ).scalars()
+    }
+
+    new_keys = set(new_pairs)
+    existing_keys = set(existing_rows)
+    to_insert = new_keys - existing_keys
+    to_delete = existing_keys - new_keys
+    to_keep = new_keys & existing_keys
+
+    # Drop pairs the rule no longer produces. Their responses go first
+    # so the FK constraint holds (the bulk Core ``delete`` bypasses the
+    # ORM ``delete-orphan`` cascade — see PR #1065).
+    responses_deleted = 0
+    if to_delete:
+        delete_ids = [existing_rows[key].id for key in to_delete]
+        responses_deleted = int(
+            db.execute(
+                select(func.count(Response.id)).where(
+                    Response.assignment_id.in_(delete_ids)
+                )
+            ).scalar_one()
+        )
+        db.execute(
+            delete(Response).where(Response.assignment_id.in_(delete_ids))
+        )
+        db.execute(delete(Assignment).where(Assignment.id.in_(delete_ids)))
+
+    # Insert newly eligible pairs.
+    for key in to_insert:
+        reviewer, reviewee, pair_include = new_pairs[key]
         db.add(
             Assignment(
                 session_id=review_session.id,
@@ -564,12 +588,21 @@ def _materialise_one_instrument(
                 created_by_mode=mode.value,
             )
         )
-        new_here += 1
+
+    # Matched pairs keep their row + responses; only refresh ``include``
+    # in place when a ``self_reviews_active`` toggle changed it.
+    for key in to_keep:
+        _, _, pair_include = new_pairs[key]
+        row = existing_rows[key]
+        if row.include != pair_include:
+            row.include = pair_include
     db.flush()
 
     counts_kwargs: dict[str, int] = {
-        "new": new_here,
-        "replaced": replaced_here,
+        "new": len(to_insert),
+        "deleted": len(to_delete),
+        "kept": len(to_keep),
+        "responses_deleted": responses_deleted,
         "pairs": len(result.pairs),
         "instruments": 1,
     }
@@ -586,9 +619,9 @@ def _materialise_one_instrument(
         db,
         event_type="assignments.generated",
         summary=(
-            f"Generated {new_here} assignments for {instrument.name!r} "
-            f"({len(result.pairs)} pair{'' if len(result.pairs) == 1 else 's'}) "
-            f"via {mode.value} (replaced {replaced_here})"
+            f"Reconciled assignments for {instrument.name!r}: "
+            f"+{len(to_insert)} new, -{len(to_delete)} removed, "
+            f"{len(to_keep)} kept via {mode.value}"
         ),
         actor_user_id=user.id,
         session=review_session,
@@ -597,7 +630,7 @@ def _materialise_one_instrument(
         refs=refs,
         correlation_id=correlation_id,
     )
-    return replaced_here, new_here
+    return len(to_delete), len(to_insert)
 
 
 def replace_assignments(

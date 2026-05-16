@@ -214,8 +214,10 @@ def test_scoped_replace_only_touches_named_instrument(db: Session) -> None:
         instrument_id=inst_a.id,
     )
 
-    # 4 rows replaced on inst_a, 4 new on inst_a, 4 untouched on inst_b.
-    assert (replaced, new) == (4, 4)
+    # The roster is unchanged, so the reconcile re-run on inst_a
+    # inserts and deletes nothing — every pair is kept in place.
+    # inst_b is out of scope and untouched.
+    assert (replaced, new) == (0, 0)
     inst_a_rows = assignments.existing_count(
         db, review_session.id, instrument_id=inst_a.id
     )
@@ -247,57 +249,119 @@ def test_scoped_replace_rejects_unpinned_instrument(db: Session) -> None:
         )
 
 
-def test_regenerate_clears_responses_on_replaced_assignments(
-    db: Session,
-) -> None:
-    """Regenerating assignments for an instrument that already has
-    submitted responses removes the dependent ``responses`` rows
-    instead of tripping the FK constraint.
+def _attach_response(
+    db: Session, *, instrument_id: int, assignment: Assignment, key: str
+) -> int:
+    """Attach one ``Response`` to ``assignment`` and return its id.
 
-    The per-instrument delete is a bulk Core statement, which bypasses
-    the ORM ``delete-orphan`` cascade on ``Assignment.responses``; the
-    service must clear the responses explicitly.
+    Builds the response-type definition + instrument field the
+    ``Response`` row needs; ``key`` makes both unique per session /
+    instrument.
     """
-
-    user, review_session, inst_a, inst_b, rule_set = _seed_two_instruments(db)
-    inst_a.rule_set_id = rule_set.id
-    db.flush()
-
-    # First materialisation — gives inst_a a set of Assignment rows.
-    assignments.replace_assignments(
-        db, review_session=review_session, user=user, correlation_id="c1"
-    )
-
-    # Attach a response to one of inst_a's assignments.
     rtd = ResponseTypeDefinition(
-        session_id=review_session.id,
-        response_type="Rating",
+        session_id=assignment.session_id,
+        response_type=f"RT-{key}",
         data_type="number",
     )
     db.add(rtd)
     db.flush()
     field = InstrumentResponseField(
-        instrument_id=inst_a.id,
-        field_key="score",
+        instrument_id=instrument_id,
+        field_key=key,
         label="Score",
         response_type_id=rtd.id,
     )
     db.add(field)
     db.flush()
-    an_assignment = db.execute(
-        select(Assignment).where(Assignment.instrument_id == inst_a.id)
-    ).scalars().first()
-    db.add(
-        Response(
-            assignment_id=an_assignment.id,
-            response_field_id=field.id,
-            value="5",
-        )
+    response = Response(
+        assignment_id=assignment.id,
+        response_field_id=field.id,
+        value="5",
     )
+    db.add(response)
     db.flush()
     db.commit()
+    return response.id
 
-    # Regenerate — must not raise an IntegrityError.
+
+def _seed_self_review_session(
+    db: Session,
+) -> tuple[User, ReviewSession, Instrument]:
+    """A session whose roster has one self-review pair: reviewer
+    ``Sam`` and reviewee ``Sam`` share an email, so a Full Matrix
+    run pairs them. The default instrument is pinned to that rule
+    set."""
+    user = User(email="op-selfrev@example.edu")
+    db.add(user)
+    db.flush()
+    review_session = ReviewSession(
+        name="SelfRev",
+        code="selfrev",
+        created_by_user_id=user.id,
+        self_reviews_active=True,
+    )
+    db.add(review_session)
+    db.flush()
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Sam",
+                email="sam@example.edu",
+            ),
+            Reviewer(
+                session_id=review_session.id,
+                name="Tom",
+                email="tom@example.edu",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Sam",
+                email_or_identifier="sam@example.edu",
+            ),
+        ]
+    )
+    db.flush()
+    instrument = ensure_default_instrument(db, review_session)
+    rule_set = SessionRuleSet(
+        session_id=review_session.id,
+        name="Full Matrix",
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=False,
+        seed=None,
+        rules_json=[],
+        is_seeded=True,
+    )
+    db.add(rule_set)
+    db.flush()
+    instrument.rule_set_id = rule_set.id
+    db.flush()
+    return user, review_session, instrument
+
+
+def test_reconcile_unchanged_run_keeps_responses(db: Session) -> None:
+    """Re-running generation with no roster change inserts and
+    deletes nothing — the matched pairs and their responses survive
+    the reconcile."""
+
+    user, review_session, inst_a, inst_b, rule_set = _seed_two_instruments(db)
+    inst_a.rule_set_id = rule_set.id
+    db.flush()
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+    an_assignment = (
+        db.execute(
+            select(Assignment).where(Assignment.instrument_id == inst_a.id)
+        )
+        .scalars()
+        .first()
+    )
+    resp_id = _attach_response(
+        db, instrument_id=inst_a.id, assignment=an_assignment, key="unchanged"
+    )
+
     replaced, new = assignments.replace_assignments(
         db,
         review_session=review_session,
@@ -306,11 +370,175 @@ def test_regenerate_clears_responses_on_replaced_assignments(
         instrument_id=inst_a.id,
     )
 
-    assert (replaced, new) == (4, 4)
-    # The orphaned response was cleared with its assignment.
+    assert (replaced, new) == (0, 0)
+    assert db.get(Response, resp_id) is not None
     assert (
-        db.execute(select(Response)).first() is None
+        assignments.existing_count(
+            db, review_session.id, instrument_id=inst_a.id
+        )
+        == 4
     )
+
+
+def test_reconcile_added_reviewer_inserts_pairs_and_keeps_responses(
+    db: Session,
+) -> None:
+    """Adding a reviewer before a re-run inserts only that reviewer's
+    new pairs; the pre-existing pairs and their responses are left
+    untouched."""
+
+    user, review_session, inst_a, inst_b, rule_set = _seed_two_instruments(db)
+    inst_a.rule_set_id = rule_set.id
+    db.flush()
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+    an_assignment = (
+        db.execute(
+            select(Assignment).where(Assignment.instrument_id == inst_a.id)
+        )
+        .scalars()
+        .first()
+    )
+    resp_id = _attach_response(
+        db, instrument_id=inst_a.id, assignment=an_assignment, key="added"
+    )
+
+    # Add a third reviewer — the engine now produces 3 x 2 = 6 pairs.
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Eve",
+            email="eve@example.edu",
+        )
+    )
+    db.flush()
+
+    replaced, new = assignments.replace_assignments(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id="c2",
+        instrument_id=inst_a.id,
+    )
+
+    assert (replaced, new) == (0, 2)
+    assert db.get(Response, resp_id) is not None
+    assert (
+        assignments.existing_count(
+            db, review_session.id, instrument_id=inst_a.id
+        )
+        == 6
+    )
+
+
+def test_reconcile_dropped_pair_deletes_only_its_responses(
+    db: Session,
+) -> None:
+    """A pair the rule no longer produces is deleted along with its
+    responses; pairs that survive the reconcile keep theirs.
+
+    Exercises the FK-safe delete order — the bulk Core delete of the
+    orphaned ``Assignment`` would trip the ``responses`` foreign key
+    if its ``Response`` rows were not cleared first."""
+
+    user, review_session, instrument = _seed_self_review_session(db)
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+    rows = list(
+        db.execute(
+            select(Assignment).where(
+                Assignment.instrument_id == instrument.id
+            )
+        ).scalars()
+    )
+    # Full Matrix over 2 reviewers x 1 reviewee — Sam's self-review
+    # plus Tom -> Sam.
+    assert len(rows) == 2
+    self_pair = next(
+        r
+        for r in rows
+        if r.reviewer.email == "sam@example.edu"
+        and r.reviewee.email_or_identifier == "sam@example.edu"
+    )
+    other_pair = next(r for r in rows if r.id != self_pair.id)
+
+    self_resp = _attach_response(
+        db, instrument_id=instrument.id, assignment=self_pair, key="selfp"
+    )
+    other_resp = _attach_response(
+        db, instrument_id=instrument.id, assignment=other_pair, key="otherp"
+    )
+
+    # Re-run excluding self-reviews — the self-pair drops out.
+    replaced, new = assignments.replace_assignments(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id="c2",
+        instrument_id=instrument.id,
+        override_exclude_self_reviews=True,
+    )
+
+    assert (replaced, new) == (1, 0)
+    assert db.get(Response, self_resp) is None
+    assert db.get(Response, other_resp) is not None
+    assert (
+        assignments.existing_count(
+            db, review_session.id, instrument_id=instrument.id
+        )
+        == 1
+    )
+
+
+def test_reconcile_audit_event_carries_reconcile_counts(
+    db: Session,
+) -> None:
+    """``assignments.generated`` carries the reconcile counts —
+    ``new`` / ``deleted`` / ``kept`` / ``responses_deleted`` — and no
+    longer the retired ``replaced`` key."""
+
+    user, review_session, inst_a, inst_b, rule_set = _seed_two_instruments(db)
+    inst_a.rule_set_id = rule_set.id
+    db.flush()
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="c1"
+    )
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Eve",
+            email="eve@example.edu",
+        )
+    )
+    db.flush()
+    assignments.replace_assignments(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id="c2",
+        instrument_id=inst_a.id,
+    )
+
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(
+                AuditEvent.session_id == review_session.id,
+                AuditEvent.event_type == "assignments.generated",
+            )
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
+    counts = event.detail["counts"]
+    assert counts["new"] == 2
+    assert counts["deleted"] == 0
+    assert counts["kept"] == 4
+    assert counts["responses_deleted"] == 0
+    assert "replaced" not in counts
 
 
 def test_existing_count_filters_by_instrument(db: Session) -> None:
