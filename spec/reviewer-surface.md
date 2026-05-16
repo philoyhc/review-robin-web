@@ -464,8 +464,10 @@ operator-side mirror `build_preview_context`) as
 }
 ```
 
-Keep this dict shape stable — the AG Grid migration (see
-"Designed-for-extensibility") mounts against the same payload.
+Keep this dict shape stable — the large-table ergonomics work
+(see "Large-table ergonomics" below) builds on the same
+payload, and it would also feed a future JS-driven grid
+unchanged should one ever be adopted.
 
 ---
 
@@ -752,9 +754,13 @@ re-architecting; see "Designed-for-extensibility" below.
   Today the post-submit signal is the per-page `submitted` pill in
   the right-half status panel and the per-row submitted-timestamp in
   the status column.
-- **AG Grid replacement of the reviewer-surface `<table>`** —
-  Segment 22 (stub plan at
-  `guide/segment_22_ag_grid_replacement.md`).
+- **Large-table ergonomics** (cell autosave, sticky headers,
+  return-to-place, visible progress, filter-to-incomplete) —
+  Segment 17B, as targeted progressive enhancement. A wholesale
+  JS data-grid swap (AG Grid or equivalent) is *not* planned —
+  judged overkill; recorded as an aspirational possibility in
+  `guide/future_possibilities.md`. See "Large-table ergonomics"
+  below.
 
 ---
 
@@ -802,17 +808,21 @@ makes today + the small follow-on the deferred work needs.
 - **What lands later.** A new template (`reviewer/submitted.html` or
   similar) plus the helper change. The surface itself doesn't move.
 
-### AG Grid table + large-table ergonomics
+### Large-table ergonomics
 
 `spec/visual_style_rrw.md` "Response form layout and instrument
 pacing → Large-table ergonomics" pins the following as first-class
 requirements (since the app's positioning depends on tabular review
 artifacts at scale): auto-save, return-to-place, visible progress,
 sticky column headers, filter-to-incomplete, keyboard navigation,
-and column-type ergonomics. None of those land in this surface
-spec; they belong in the forthcoming `response_form_component_spec.md`
-that picks up the AG-Grid (or equivalent) implementation. Notes on
-how the surface stays compatible:
+and column-type ergonomics. **Segment 17B owns these**, pursued as
+targeted progressive enhancement (debounced `fetch` to `POST /save`,
+CSS `position: sticky`, small inline scripts) — *not* a JS
+data-grid framework. A wholesale grid swap (AG Grid or equivalent)
+was considered and taken off the roadmap as overkill; it is
+recorded as an aspirational possibility in
+`guide/future_possibilities.md`. Notes on how the surface stays
+compatible either way:
 
 - **Today.** Per-instrument rows render as a plain `<table>` inside
   `.table-scroll`. Column-width hint classes (`.rs-narrow` /
@@ -824,18 +834,16 @@ how the surface stays compatible:
 - **Design call.** Keep all table-specific markup confined to
   `review_surface.html`; route handlers and view-shape adapters never
   emit HTML. Field metadata (label / data_type / validation) ships
-  alongside the row data so a future JS-driven grid can render the
-  same view shape without a second round-trip. The dict shape
-  becomes the implicit AG Grid column-defs source. None of today's
-  routes need to change to swap the rendering layer.
-- **What lands later.** A new partial (`reviewer/_response_grid.html`
-  or similar) loads AG Grid and mounts against a JSON payload built
-  from the same `_surface_context` shape. The current `<table>` block
-  is replaced; nothing else moves. The grid component picks up
-  auto-save, return-to-place, visible progress, sticky headers,
-  filter-to-incomplete, and keyboard navigation as part of the
-  same change — the principle treats them as one bundle, not as
-  individual follow-on features.
+  alongside the row data, so the ergonomics work needs no route or
+  view-adapter change — and the same payload would also feed a
+  JS-driven grid unchanged, should one ever be adopted.
+- **What lands later (Segment 17B).** The ergonomics arrive
+  incrementally as progressive enhancement on the existing
+  `<table>` — autosave wired to `POST /save`, `position: sticky`
+  headers, a progress indicator, a filter-to-incomplete toggle —
+  each a small independent PR. They are *not* treated as one
+  all-or-nothing bundle gated on a grid library; that bundling was
+  the AG-Grid framing, now off the roadmap.
 
 ---
 
