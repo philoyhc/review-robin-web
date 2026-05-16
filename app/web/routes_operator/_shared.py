@@ -14,23 +14,27 @@ evolves.
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import urlencode
 
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, Request, UploadFile, status
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import ReviewSession
-from app.services import date_formatting
+from app.db.models import ReviewSession, User
+from app.services import assignments, csv_imports, date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import lifecycle_display, session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
+from app.web import breadcrumbs, views
 from app.web.date_filters import (
     display_timezone_context_processor,
     format_date_filter,
     format_datetime_filter,
 )
+from app.web.deps import request_correlation_id
 
 
 # ------------------------------------------------------------------ #
@@ -173,3 +177,212 @@ def _quick_setup_unlocked(
     return (
         request.cookies.get(_quick_setup_cookie_name(review_session.id)) == "1"
     )
+
+
+# ------------------------------------------------------------------ #
+# Setup-roster plumbing (cross-slice).
+#
+# Shared by the Reviewers / Reviewees / Relationships Setup-page
+# slices (``_setup_reviewers.py`` / ``_setup_reviewees.py`` /
+# ``_setup_relationships.py``). ``_handle_import`` backs only the
+# Reviewers + Reviewees CSV imports; ``_redirect_keeping_selection``
+# and ``_save_field_labels`` back all three.
+# ------------------------------------------------------------------ #
+
+# Row caps for the Reviewers / Reviewees / Relationships Setup tables:
+# 200 unfiltered, 500 when a search / status filter is applied
+# (Segment 15F PR 2). Applied after sort so the visible window
+# matches the operator's chosen order.
+_SETUP_DEFAULT_CAP: int = 200
+_SETUP_FILTERED_CAP: int = 500
+
+
+def _redirect_keeping_selection(
+    base_url: str,
+    selected_ids: list[int],
+    *,
+    filter_params: list[tuple[str, str]] | None = None,
+) -> RedirectResponse:
+    """303 back to a Setup page, carrying the acted-on row ids as
+    ``?selected=`` params. The page re-checks those checkboxes so
+    the operator clears the selection themselves rather than the
+    action silently clearing it (Segment 15F).
+
+    ``filter_params`` carries the active search / status filter
+    (empty values dropped) through the action so the operator
+    lands back on the same filtered view."""
+    params: list[tuple[str, object]] = []
+    if filter_params:
+        params.extend((key, value) for key, value in filter_params if value)
+    params.extend(("selected", i) for i in selected_ids)
+    url = base_url if not params else base_url + "?" + urlencode(params)
+    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+
+
+async def _handle_import(
+    *,
+    request: Request,
+    file: UploadFile,
+    confirm_replace: str | None,
+    acknowledge_response_loss: str | None,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+    kind: str,
+    existing_count_fn,
+    parse_fn,
+    save_fn,
+) -> HTMLResponse | RedirectResponse:
+    """Shared Reviewers / Reviewees CSV-import handler.
+
+    ``kind`` is ``"reviewers"`` or ``"reviewees"``; the *_fn callables
+    are the matching ``csv_imports`` entry points. On a parse / confirm
+    / ack failure it re-renders the Setup page with the issues; on
+    success it saves and 303s back to the page."""
+    _require_editable(review_session)
+    content = await file.read()
+    result = parse_fn(content)
+    if not result.is_blocked:
+        result.issues.extend(
+            csv_imports.check_cross_table_identity(
+                db,
+                session_id=review_session.id,
+                rows=result.rows,
+                kind=kind,
+            )
+        )
+    existing = existing_count_fn(db, review_session.id)
+    assignment_count = csv_imports.existing_assignment_count(db, review_session.id)
+
+    if kind == "reviewers":
+        template = "operator/session_reviewers.html"
+        crumb_label = "Reviewers"
+        list_key = "reviewers"
+        list_items = assignments.list_reviewers(db, review_session.id)
+    else:
+        template = "operator/session_reviewees.html"
+        crumb_label = "Reviewees"
+        list_key = "reviewees"
+        list_items = assignments.list_reviewees(db, review_session.id)
+
+    def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
+        context: dict[str, object] = {
+            "user": user,
+            "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
+            list_key: list_items,
+            "existing_count": existing,
+            "assignment_count": assignment_count,
+            "issues": result.issues,
+            "filename": file.filename,
+            "breadcrumbs": breadcrumbs.operator_session_child(
+                review_session, crumb_label
+            ),
+        }
+        if kind in ("reviewers", "reviewees"):
+            # Segment 15F — the Reviewers / Reviewees templates'
+            # right-side operator-actions card needs the filter / cap
+            # context even on the CSV-import error-render path so the
+            # form keeps reading consistent. The error render is
+            # never an edit state.
+            if kind == "reviewers":
+                status_options = views.REVIEWERS_STATUS_OPTIONS
+                search_options = views.reviewers_search_options(list_items)
+                fields_with_data = assignments.reviewer_fields_with_data(
+                    db, review_session.id
+                )
+            else:
+                status_options = views.REVIEWEES_STATUS_OPTIONS
+                search_options = views.reviewees_search_options(list_items)
+                fields_with_data = assignments.reviewee_fields_with_data(
+                    db, review_session.id
+                )
+            context.update(
+                {
+                    "total_row_count": len(list_items),
+                    "displayed_row_count": len(list_items),
+                    "filter_status": "all",
+                    "filter_search": "",
+                    "filter_status_options": status_options,
+                    "filter_search_options": search_options,
+                    "is_ready": lifecycle.is_ready(review_session),
+                    "fields_with_data": fields_with_data,
+                    "edit_id": None,
+                    "add_mode": False,
+                    "edit_values": None,
+                    "edit_error": None,
+                    "selected_ids": set(),
+                }
+            )
+        return _templates.TemplateResponse(
+            request, template, context, status_code=status_code
+        )
+
+    if result.is_blocked:
+        return render(status_code=status.HTTP_400_BAD_REQUEST)
+
+    if existing > 0 and confirm_replace != "true":
+        return render(status_code=status.HTTP_400_BAD_REQUEST)
+
+    if existing > 0:
+        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
+
+    save_fn(
+        db,
+        session=review_session,
+        user=user,
+        rows=result.rows,
+        filename=file.filename or "",
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/{kind}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+def _save_field_labels(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    source_type: str,
+    slots: tuple[tuple[str, str], ...],
+    submitted: dict[str, str],
+    correlation_id: str | None,
+) -> None:
+    """Upsert / clear per submitted slot (Segment 15A Slice 3).
+
+    Rejected with 409 when ``is_ready`` — labels are locked
+    alongside the rest of the page's data on a live session;
+    operators revert to draft to rename.
+    """
+    if lifecycle.is_ready(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Session is {review_session.status}; revert to "
+                "draft to rename labels."
+            ),
+        )
+    for form_param, source_field in slots:
+        value = (submitted.get(form_param) or "").strip()
+        if value:
+            field_labels_service.upsert(
+                db,
+                review_session,
+                source_type=source_type,
+                source_field=source_field,
+                label=value,
+                user=user,
+                correlation_id=correlation_id,
+            )
+        else:
+            field_labels_service.clear(
+                db,
+                review_session,
+                source_type=source_type,
+                source_field=source_field,
+                user=user,
+                correlation_id=correlation_id,
+            )
