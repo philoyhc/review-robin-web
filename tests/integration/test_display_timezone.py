@@ -113,8 +113,10 @@ def test_create_session_with_explicit_timezone_and_deadline(
         select(ReviewSession).where(ReviewSession.code == "tz-create")
     ).scalar_one()
     assert session.display_timezone == "Asia/Singapore"
-    # 17:00 Singapore (+08) is stored as 09:00 UTC.
-    assert session.deadline == datetime(2026, 6, 2, 9, 0)
+    # 17:00 Singapore (+08) is stored as the 09:00 UTC instant.
+    # Compared via format_datetime so the assertion is dialect-agnostic
+    # (Postgres returns tz-aware, SQLite naive).
+    assert format_datetime(session.deadline, "UTC") == "2026-06-02 09:00"
 
 
 def test_create_page_renders_timezone_field(
