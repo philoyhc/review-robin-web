@@ -57,17 +57,17 @@
         </div>
       {% endif %}
       {% if page_statuses %}
-        {# Session-wide rollup pill — Submitted (every page submitted)
-           / Saved but not submitted / Draft (nothing started). Sits
-           above the per-page pills as the at-a-glance summary. #}
-        {% if session_status %}
-          <p class="rs-session-status">
-            <span class="pill {% if session_status == 'submitted' %}pill-success{% elif session_status == 'saved' %}pill-warning{% else %}pill-empty{% endif %}">
-              {% if session_status == 'submitted' %}Submitted{% elif session_status == 'saved' %}Saved but not submitted{% else %}Draft{% endif %}
-            </span>
-          </p>
-        {% endif %}
         <ul class="rs-page-status-pills">
+          {# Session-wide rollup pill — Submitted / Saved but not
+             submitted / Draft — leads the per-page pills on the
+             same row. #}
+          {% if session_status %}
+            <li>
+              <span class="pill {% if session_status == 'submitted' %}pill-success{% elif session_status == 'saved' %}pill-warning{% else %}pill-empty{% endif %}">
+                {% if session_status == 'submitted' %}Submitted{% elif session_status == 'saved' %}Saved but not submitted{% else %}Draft{% endif %}
+              </span>
+            </li>
+          {% endif %}
           {% for ps in page_statuses %}
             <li>
               <span class="pill {% if ps.state == 'submitted' or ps.state == 'complete' %}pill-success{% elif ps.state == 'in_progress' %}pill-warning{% else %}pill-empty{% endif %}">
