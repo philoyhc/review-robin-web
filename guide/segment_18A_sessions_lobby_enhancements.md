@@ -60,16 +60,26 @@ session off an old one. Three major items:
 
 ## Scope (sketch)
 
-### Lobby quality-of-life (small enhancements)
+### Sessions quality-of-life (small enhancements)
 
 Standalone tidy-ups that don't need a full Part — landed
 opportunistically as the segment opens:
 
-- **Select-all checkbox** — *shipped.* The select-row column's
-  `<th>` header carries a select-all checkbox that toggles every
-  row checkbox at once; inline JS keeps it in sync with the rows
-  (checked / `indeterminate` / clear). See
+- **Select-all checkbox** (Sessions lobby) — *shipped.* The
+  select-row column's `<th>` header carries a select-all checkbox
+  that toggles every row checkbox at once; inline JS keeps it in
+  sync with the rows (checked / `indeterminate` / clear). See
   `spec/sessions_overview.md`.
+- **Multi-paragraph session description** — *planned.* The
+  session description (`ReviewSession.description`, a
+  `maxlength=2000` `<textarea>` on the Create / Edit forms)
+  renders today inside a single `<p>` on Session Home and the
+  reviewer surface, so an operator's line breaks collapse to
+  whitespace. Make the display preserve paragraph + line breaks
+  — the lightweight route is `white-space: pre-line` on the
+  description element (or splitting on blank lines into separate
+  `<p>`s); no input change, no new dependency. See the rich-text
+  note under Working notes for how much further the stack can go.
 
 ### Part 1 — Session cloning
 
@@ -270,3 +280,26 @@ When parts ship:
   archived sessions should be read-only (export still works;
   setup / response paths return 409 like `ready`-state sessions
   do today). Confirm at scoping.
+- **Rich text in the session description — what the stack
+  supports.** The app is server-rendered Jinja with no JS
+  framework and no JS build step (`CLAUDE.md`). Three tiers of
+  affordance:
+  1. *Plain multi-paragraph* (this segment's small-enhancement
+     item) — preserve line / paragraph breaks on display via
+     `white-space: pre-line` or a split-to-`<p>` render. No
+     dependency, no input change. The MVP.
+  2. *Markdown subset, server-rendered* — bold / italic / lists /
+     links authored as plain markdown in the existing
+     `<textarea>`, rendered to **sanitised** HTML. Needs two
+     Python deps (a markdown renderer + an HTML sanitiser such as
+     `nh3`); no JS framework, so it fits the stack. An optional
+     inline-JS toolbar over the textarea (inserts `**bold**`
+     etc.) is progressive enhancement — still no build step.
+  3. *True WYSIWYG* — a `contenteditable` editor library. A
+     single pre-built file can be vendored without a build step,
+     but it stores HTML (server-side sanitisation mandatory — a
+     real XSS surface) and pushes against the no-frontend-
+     framework posture. Not recommended without a deliberate
+     call.
+  Recommendation: tier 1 now; tier 2 only if pilot feedback asks
+  for formatting; tier 3 is overkill for a session description.
