@@ -123,3 +123,16 @@ def timezone_label(tz_name: str | None, at: datetime | None = None) -> str:
     except Exception:
         name = ""
     return name or tz_name or DEFAULT_TIMEZONE
+
+
+def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
+    """Parse a browser ``datetime-local`` string (``YYYY-MM-DDTHH:MM``)
+    as wall-clock in ``tz_name``'s zone and return the equivalent UTC
+    instant, naive (matching how stored timestamps are kept).
+
+    Raises ``ValueError`` for an unparseable string — callers turn
+    that into a 4xx. Segment 18B PR 4.
+    """
+    naive = datetime.fromisoformat(value)
+    local = naive.replace(tzinfo=resolve_zone(tz_name))
+    return local.astimezone(timezone.utc).replace(tzinfo=None)

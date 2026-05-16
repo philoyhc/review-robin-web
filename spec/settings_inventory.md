@@ -71,8 +71,10 @@ Owners section on the Edit page, Segment 16B PR 2).
 
 **Surface:**
 
-- **Create:** `/operator/sessions/new` (Session Details form +
-  optional Quick Setup uploads).
+- **Create:** `/operator/sessions/new` (Session Details form —
+  incl. a Timezone field that sets `display_timezone` and scopes
+  the deadline picker, Segment 18B PR 4 — plus optional Quick
+  Setup uploads).
 - **Read:** Session Home > Session Details card (`session_detail.html`).
 - **Edit:** `/operator/sessions/{id}/edit` (Edit Session sub-page,
   reached via the Edit Secondary in the Session Details card).

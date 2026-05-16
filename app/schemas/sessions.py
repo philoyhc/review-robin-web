@@ -16,6 +16,10 @@ class SessionCreate(BaseModel):
     # surface and as the ``$help_contact`` merge field in the email
     # template editor (Segment 11E).
     help_contact: str | None = Field(default=None, max_length=320)
+    # Per-session display timezone (an IANA zone name), picked on the
+    # Create Session form. None ⇒ the service falls back to the
+    # creating operator's default. Segment 18B PR 4.
+    display_timezone: str | None = None
 
 
 class SessionRead(BaseModel):

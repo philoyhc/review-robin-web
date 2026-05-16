@@ -212,7 +212,7 @@ The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Wo
 
 Single-page form. No session top nav (the session doesn't exist yet); breadcrumb reads `Sessions → Create New Session`.
 
-Fields: Name (required, max 255), Code (required, max 64; unique per operator), Deadline (optional, datetime-local), Description (optional, max 2000). Action row: **Create session** (Primary) submits to `POST /operator/sessions` → inserts the session + a `SessionOperator` row + a `session.created` audit event + 303 to `/operator/sessions/{id}`. **Cancel** (Secondary) → `/operator/sessions`.
+Fields: Name (required, max 255), Code (required, max 64; unique per operator), Timezone (required, IANA-zone `<datalist>`, pre-filled with the operator's default; Segment 18B PR 4), Deadline (optional, datetime-local — interpreted as wall-clock in the picked Timezone), Description (optional, max 2000), Help contact (optional). Action row: **Create session** (Primary) submits to `POST /operator/sessions` → inserts the session + a `SessionOperator` row + a `session.created` audit event + 303 to `/operator/sessions/{id}`. **Cancel** (Secondary) → `/operator/sessions`.
 
 ### `/operator/sessions/{id}/edit` — Edit session
 

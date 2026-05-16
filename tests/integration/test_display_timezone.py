@@ -94,6 +94,38 @@ def test_new_session_stamped_utc_when_operator_has_no_default(
     assert session.display_timezone == "UTC"
 
 
+def test_create_session_with_explicit_timezone_and_deadline(
+    client: TestClient, db: Session
+) -> None:
+    """The Create form's timezone field sets the session zone, and the
+    deadline picker is interpreted as wall-clock in that zone (18B PR 4)."""
+    client.post(
+        "/operator/sessions",
+        data={
+            "name": "TZ Create",
+            "code": "tz-create",
+            "display_timezone": "Asia/Singapore",
+            "deadline": "2026-06-02T17:00",
+        },
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "tz-create")
+    ).scalar_one()
+    assert session.display_timezone == "Asia/Singapore"
+    # 17:00 Singapore (+08) is stored as 09:00 UTC.
+    assert session.deadline == datetime(2026, 6, 2, 9, 0)
+
+
+def test_create_page_renders_timezone_field(
+    client: TestClient, db: Session
+) -> None:
+    body = client.get("/operator/sessions/new").text
+    assert 'name="display_timezone"' in body
+    assert 'id="deadline-zone"' in body
+    assert "Entered in" in body
+
+
 def test_session_timezone_override_persists_and_audits(
     client: TestClient, db: Session
 ) -> None:

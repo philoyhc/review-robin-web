@@ -34,6 +34,8 @@ from app.schemas.sessions import SessionCreate
 from app.services import (
     assignments,
     csv_imports,
+    date_formatting,
+    operator_settings,
     relationships as relationships_service,
     session_config_io,
     sessions,
@@ -59,6 +61,7 @@ async def create_session(
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
+    display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
@@ -67,10 +70,25 @@ async def create_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    # 18B PR 4: the Create form carries the per-session display
+    # timezone. Blank ⇒ fall back to the operator's default. The
+    # deadline picker is wall-clock in this zone.
+    timezone_name = (
+        display_timezone.strip()
+        or operator_settings.get_display_timezone(user)
+    )
+    if not operator_settings.is_valid_timezone(timezone_name):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"unknown timezone {timezone_name!r}",
+        )
+
     parsed_deadline: datetime | None = None
     if deadline:
         try:
-            parsed_deadline = datetime.fromisoformat(deadline)
+            parsed_deadline = date_formatting.parse_local_datetime(
+                deadline, timezone_name
+            )
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -82,6 +100,7 @@ async def create_session(
         code=code,
         description=description or None,
         deadline=parsed_deadline,
+        display_timezone=timezone_name,
         help_contact=help_contact or None,
     )
     review_session = sessions.create_session(
