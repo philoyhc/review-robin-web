@@ -1,11 +1,12 @@
 # Segment 18B — Date and time settings
 
-> **Complete — all 3 PRs shipped 2026-05-15.** PR 1 (canonical
+> **Complete — fully closed 2026-05-16.** PR 1 (canonical
 > format + shared display helper), PR 2 (per-operator default
 > timezone + `/operator/settings` card), and PR 3 (per-session
-> override + Session Edit card) are all shipped. 13F PR 6 + PR 7
+> override + Session Edit card) shipped 2026-05-15. 13F PR 6 + PR 7
 > (the inert columns this segment consumes) shipped 2026-05-15.
-> The Post-MVP input-consistency item below remains deferred.
+> The Post-MVP input-consistency item below also shipped — see the
+> "Post-ship: input consistency" note added below.
 >
 > **Post-ship adjustment (2026-05-15).** Decision 7's canonical
 > date-time format dropped its trailing zone token. IANA reports
@@ -37,6 +38,21 @@
 > reviewer dashboard + review-surface deadlines render in their
 > session's zone with the CLDR name in parentheses. `at` selects
 > the standard / daylight variant.
+>
+> **Post-ship: input consistency (2026-05-16, PRs #1037 / #1038).**
+> The deferred Post-MVP item — the `datetime-local` deadline
+> picker ignored the session zone — is now done. #1037 gave the
+> Create Session form a Timezone field (before the deadline) and
+> interprets the deadline as wall-clock in it; #1038 folded the
+> per-session timezone control out of its standalone card into
+> the Edit Session Details form as a field, so it is now
+> lifecycle-gated, the blank-clears-to-inherit option is dropped,
+> and the `POST /operator/sessions/{id}/timezone` route is
+> retired. New helpers `date_formatting.parse_local_datetime` /
+> `format_datetime_local` convert between the picker's wall-clock
+> and the stored UTC instant; a shared `_timezone_preview.html`
+> partial re-renders the picker when the zone changes so the
+> instant stays fixed.
 >
 > The 18B segment number was previously held by "Session tagging
 > + archiving", which was folded into 18A (Sessions lobby
@@ -336,14 +352,20 @@ Original scope notes:
   instruments page, and the `$deadline` / `$submitted_at` email
   merge fields — carries the right zone + token.
 
-### Post-MVP — input consistency
+### Post-MVP — input consistency — ✅ shipped 2026-05-16 (PRs #1037 / #1038)
 
-The deadline `<input type="datetime-local">` on Session Edit is
-implicitly browser-local; reconcile it with the session's
-configured zone so an operator entering "5 PM" gets "5 PM" in the
-session zone, not the browser's. Likewise the audit-log
-`<input type="date">` filter. Deferred — confirm need once the
-display side is in operators' hands.
+The deadline `<input type="datetime-local">` no longer ignores
+the session zone. The Create Session form (#1037) and the Edit
+Session Details form (#1038) both carry a Timezone field before
+the deadline, and the deadline is read as wall-clock in that
+zone (`parse_local_datetime`) and rendered back from the stored
+UTC instant (`format_datetime_local`). #1038 also retired the
+standalone Display timezone card / `POST .../timezone` route,
+folding the control into the (lifecycle-gated) edit form.
+
+Still genuinely deferred: the audit-log `<input type="date">`
+filter is unchanged — low-stakes (a whole-day filter) and left
+for a future pass.
 
 ## Hard dependencies
 
