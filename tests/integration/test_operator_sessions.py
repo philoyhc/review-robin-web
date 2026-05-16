@@ -226,6 +226,21 @@ def test_sessions_list_renders_danger_zone_with_delete_form(
     assert "Delete selected sessions" in body
 
 
+def test_sessions_list_renders_select_all_header_checkbox(
+    client: TestClient,
+) -> None:
+    """The select-row column carries a select-all checkbox in its
+    header — it toggles every row checkbox client-side."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Spring Reviews", "code": "spring-2026"},
+        follow_redirects=False,
+    )
+
+    body = client.get("/operator/sessions").text
+    assert 'class="sessions-list-select-all"' in body
+
+
 def test_delete_selected_removes_ticked_drafts(
     client: TestClient, db: Session
 ) -> None:

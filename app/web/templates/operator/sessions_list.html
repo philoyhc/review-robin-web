@@ -26,7 +26,11 @@
             <th>Last Modified</th>
             <th>Timezone</th>
             <th>Status</th>
-            <th class="col-shrink"></th>
+            <th class="col-shrink">
+              <input type="checkbox"
+                     class="sessions-list-select-all"
+                     aria-label="Select all sessions">
+            </th>
           </tr>
           {% for s in sessions %}
             <tr>
@@ -94,17 +98,33 @@
       (function () {
         var dangerZone = document.getElementById("sessions-list-danger-zone");
         var rowCheckboxes = document.querySelectorAll(".sessions-list-select-row");
+        var selectAll = document.querySelector(".sessions-list-select-all");
         if (!dangerZone || !rowCheckboxes.length) return;
         function refresh() {
-          var anyChecked = false;
+          var checkedCount = 0;
           rowCheckboxes.forEach(function (cb) {
-            if (cb.checked) anyChecked = true;
+            if (cb.checked) checkedCount++;
           });
-          dangerZone.style.display = anyChecked ? "" : "none";
+          dangerZone.style.display = checkedCount ? "" : "none";
+          // Header checkbox reflects the rows: all → checked, none →
+          // clear, a partial selection → indeterminate.
+          if (selectAll) {
+            selectAll.checked = checkedCount === rowCheckboxes.length;
+            selectAll.indeterminate =
+              checkedCount > 0 && checkedCount < rowCheckboxes.length;
+          }
         }
         rowCheckboxes.forEach(function (cb) {
           cb.addEventListener("change", refresh);
         });
+        if (selectAll) {
+          selectAll.addEventListener("change", function () {
+            rowCheckboxes.forEach(function (cb) {
+              cb.checked = selectAll.checked;
+            });
+            refresh();
+          });
+        }
         refresh();
       })();
     </script>

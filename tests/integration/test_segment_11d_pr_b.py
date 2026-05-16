@@ -58,8 +58,9 @@ def test_sessions_list_columns_match_spec(
     assert "<th>Created by</th>" in body
     assert "<th>Created</th>" in body
     assert "<th>Last Modified</th>" in body
-    # Trailing action column has no header label.
-    assert '<th class="col-shrink"></th>' in body
+    # Trailing select column's header carries the select-all
+    # checkbox rather than a text label.
+    assert 'class="sessions-list-select-all"' in body
 
 
 def test_sessions_list_deadline_renders_as_pill_when_set(

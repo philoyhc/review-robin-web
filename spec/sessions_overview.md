@@ -89,7 +89,7 @@ ordered by `created_at DESC` (most recent first).
 | 6 | **Last Modified** | `session.updated_at` | `<span class="pill pill-count">{when}</span>`. `YYYY-MM-DD HH:MM` via `format_datetime`. |
 | 7 | **Timezone** | `resolve_session_timezone(session)` (the `session_timezone` Jinja global) | Inline `<code>` tag with the raw IANA id, e.g. `Asia/Singapore`. The lobby lists many sessions, so its timestamp cells (Deadline / Created / Last Modified) render in the *viewing operator's* zone; this column names each row's own resolved session zone. See `spec/timezone_display.md`. |
 | 8 | **Status** | `session.status` | `<span class="pill pill-lifecycle-{status}">{label}</span>` — same lifecycle-tinted variants the session-home `session_setup_status_row.html` and the 16A Admin Sessions Diagnostics table use (draft / validated / ready / closed each carry distinct tints from `base.html`). The label is the human-readable form produced by the `lifecycle_label` Jinja filter. |
-| 9 | *(unlabelled)* | `session.id` | Bulk-action select-row checkbox. |
+| 9 | *select-all checkbox* | `session.id` | Bulk-action select-row checkbox. The column **header** carries a select-all checkbox (see below). |
 
 The trailing column has `class="col-shrink"` (auto-narrow CSS).
 
@@ -107,6 +107,13 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
 
   Submitting the form with zero ticks is allowed — the bulk-delete
   handler 303-redirects back to the page as a no-op.
+
+- **Select-all checkbox** sits in the select column's `<th>`
+  header (`class="sessions-list-select-all"`, no `name` — it never
+  submits). Clicking it toggles every row checkbox at once. Inline
+  JS keeps it in sync with the rows: `checked` when every row is
+  ticked, `indeterminate` on a partial selection, clear when none
+  are — and any row-checkbox change re-derives that state.
 
 ### Sort / filter / search
 
