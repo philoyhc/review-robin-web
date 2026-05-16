@@ -250,9 +250,8 @@ def build_quick_setup_context(
             "Bulk-populate reviewers, reviewees, relationships, and "
             "session settings from files in one place. Quick Setup is "
             "locked because this session already holds reviewer "
-            "responses from a prior activation — a bulk re-import "
-            "replaces rosters or settings wholesale and would discard "
-            "them. Use the individual Setup pages to make changes."
+            "responses from a prior activation. Use the individual "
+            "Setup pages to make changes."
         )
     else:
         description = (
