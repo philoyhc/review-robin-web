@@ -24,6 +24,7 @@
             <th>Created by</th>
             <th>Created</th>
             <th>Last Modified</th>
+            <th>Timezone</th>
             <th>Status</th>
             <th class="col-shrink"></th>
           </tr>
@@ -49,6 +50,7 @@
               <td>
                 <span class="pill pill-count">{{ s.updated_at | format_datetime }}</span>
               </td>
+              <td><code>{{ session_timezone(s) }}</code></td>
               <td>
                 <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
               </td>

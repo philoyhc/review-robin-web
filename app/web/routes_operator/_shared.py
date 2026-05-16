@@ -25,6 +25,7 @@ from app.services import date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import lifecycle_display, session_lifecycle as lifecycle
+from app.services import sessions as sessions_service
 from app.web.date_filters import (
     display_timezone_context_processor,
     format_date_filter,
@@ -71,6 +72,12 @@ _templates.env.filters["format_date"] = format_date_filter
 # Mirrors the date_formatting.SHOW_ZONE_TOKEN switch into templates
 # so the two timezone-card live previews match the server render.
 _templates.env.globals["show_zone_token"] = date_formatting.SHOW_ZONE_TOKEN
+# Resolves a session's effective display zone (the raw IANA id) —
+# used by the sessions-lobby Timezone column, where the table lists
+# many sessions and so can't pick one zone for its timestamp cells.
+_templates.env.globals["session_timezone"] = (
+    sessions_service.resolve_session_timezone
+)
 
 
 # ------------------------------------------------------------------ #
