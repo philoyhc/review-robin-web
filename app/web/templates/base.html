@@ -1896,16 +1896,14 @@
         font-size: var(--fs-small);
         margin: 0 0 var(--space-2) 0;
       }
-      /* Reviewer-surface top row (PR β) — description card on the
-         left, flash + per-page status panel on the right. The
-         existing .bottom-grid primitive handles the responsive
-         stacking; the per-card max-width is unset here because
-         .bottom-grid already constrains widths. */
-      body.ui-v2 .rs-description-card {
-        margin-bottom: 0;
+      /* Reviewer-surface overview card — one full-width card rolling
+         together the session description, the transient
+         session-closed banner, and the per-page status pills. */
+      body.ui-v2 .rs-status-panel .rs-session-description {
+        margin: 0;
       }
-      body.ui-v2 .rs-status-panel {
-        margin-bottom: 0;
+      body.ui-v2 .rs-status-panel .rs-session-description:not(:last-child) {
+        margin-bottom: var(--space-3);
       }
       body.ui-v2 .rs-status-panel .rs-page-status-pills {
         list-style: none;
@@ -1914,6 +1912,9 @@
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-2);
+      }
+      body.ui-v2 .rs-status-panel .rs-page-status-pills:last-child {
+        margin-bottom: 0;
       }
       body.ui-v2 .rs-status-panel .rs-page-status-pills li {
         margin: 0;

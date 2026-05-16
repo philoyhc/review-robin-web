@@ -92,18 +92,19 @@ def rae() -> AuthenticatedUser:
     )
 
 
-# ── Top-row layout — bottom-grid carries description + status panel ───
+# ── Overview card — description + status pills rolled into one card ───
 
 
-def test_top_row_uses_bottom_grid_layout(
+def test_overview_card_carries_description_and_pills(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """The reviewer surface's top-row is a `.bottom-grid` carrying
-    the description card on the left and the status panel on the
-    right. Both render as `.card` instances inside the grid."""
+    """The reviewer surface's overview card (`.card.rs-status-panel`)
+    rolls the session description and the per-page status pills into
+    one full-width card — no separate description card, no
+    `.bottom-grid` 2-column row."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -115,22 +116,22 @@ def test_top_row_uses_bottom_grid_layout(
     )
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
-    assert '<div class="bottom-grid">' in body
-    assert 'class="card rs-description-card"' in body
     assert 'class="card rs-status-panel"' in body
-    # Description content lives inside the card.
+    assert 'class="rs-session-description"' in body
+    assert 'class="card rs-description-card"' not in body
+    # Description content lives inside the overview card.
     assert "Some context for the reviewers." in body
 
 
-def test_status_panel_renders_when_no_description(
+def test_overview_card_renders_when_no_description(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """When the session has no description, the status panel still
-    renders on the right. The left slot collapses to an empty `<div>`
-    so the grid keeps its 2-column shape."""
+    """When the session has no description, the overview card still
+    renders — the per-page status pills alone are enough content —
+    but it carries no `.rs-session-description` paragraph."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -141,10 +142,9 @@ def test_status_panel_renders_when_no_description(
     )
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}/1").text
-    assert '<div class="bottom-grid">' in body
     assert 'class="card rs-status-panel"' in body
-    # Description card is suppressed.
-    assert 'class="card rs-description-card"' not in body
+    # No description paragraph when the session has no description.
+    assert 'class="rs-session-description"' not in body
 
 
 # ── Per-page status pill — fresh "not started" session ────────────────
@@ -284,14 +284,14 @@ def test_page_status_pill_flips_to_submitted_after_submit(
 # ── Operator preview suppresses per-page pills ────────────────────────
 
 
-def test_operator_preview_status_panel_has_no_per_page_pills(
+def test_operator_preview_omits_overview_card(
     client: TestClient, db: Session
 ) -> None:
-    """Operator preview reuses the surface template but the panel
-    renders without per-page pills (preview is read-only and synthetic;
-    per-page state is moot). After Segment 11F PR C the surface
-    renders inside an iframe srcdoc on the previews hub; the iframe's
-    inner HTML still carries the panel contract."""
+    """Operator preview reuses the surface template; preview mode
+    ships no per-page pills (read-only / synthetic — per-page state
+    is moot), so with no session description the overview card has
+    no content and is omitted entirely. After Segment 11F PR C the
+    surface renders inside an iframe srcdoc on the previews hub."""
     review_session_response = client.post(
         "/operator/sessions",
         data={"name": "Prev", "code": "rae-prev-pills"},
@@ -328,6 +328,6 @@ def test_operator_preview_status_panel_has_no_per_page_pills(
     body = get_surface_preview_html(
         client, review_session.id, "r@example.edu"
     )
-    # The panel still renders (layout-stable) but the pill list is empty.
-    assert 'class="card rs-status-panel"' in body
+    # No description + no pills ⇒ the overview card is omitted.
+    assert 'class="card rs-status-panel"' not in body
     assert 'class="rs-page-status-pills"' not in body

@@ -35,20 +35,27 @@
     {% endif %}
   </div>
 
-  {# Top-row layout (PR β): description card half-width-left,
-     per-page status panel half-width-right. The panel always renders
-     so the reviewer always has a per-page progress summary. Below the
-     800px breakpoint the .bottom-grid stacks. #}
-  <div class="bottom-grid">
-    {% if session.description %}
-      <div class="card rs-description-card">
-        <p style="margin: 0;">{{ session.description }}</p>
-      </div>
-    {% else %}
-      <div></div>
-    {% endif %}
-
+  {# Reviewer-surface overview card — the session description, the
+     transient session-closed banner, and the per-page status pills,
+     rolled into one full-width card. Omitted only when there is
+     neither a description nor any status pills. #}
+  {% if session.description or page_statuses %}
     <div class="card rs-status-panel">
+      {% if session.description %}
+        <p class="rs-session-description">{{ session.description }}</p>
+      {% endif %}
+      {% if rows and not any_accepting %}
+        <div class="banner banner-warning">
+          This session is no longer accepting responses.
+          {% if any_closed_with_hidden_values %}
+            Your previously saved values are hidden by the operator's
+            visibility setting.
+          {% else %}
+            Your previously saved values remain visible below in
+            read-only form.
+          {% endif %}
+        </div>
+      {% endif %}
       {% if page_statuses %}
         <ul class="rs-page-status-pills">
           {% for ps in page_statuses %}
@@ -61,7 +68,7 @@
         </ul>
       {% endif %}
     </div>
-  </div>
+  {% endif %}
 
   {# Invalid-values warning card. Surfaces server-side rejections for
      out-of-range / wrong-shape numeric input. Same chrome as the
@@ -121,19 +128,8 @@
   {% endif %}
 
   {% if rows %}
-    {% if not any_accepting %}
-      <div class="banner banner-warning">
-        This session is no longer accepting responses.
-        {% if any_closed_with_hidden_values %}
-          Your previously saved values are hidden by the operator's
-          visibility setting.
-        {% else %}
-          Your previously saved values remain visible below in read-only
-          form.
-        {% endif %}
-      </div>
-    {% endif %}
-
+    {# The session-closed banner now renders inline in the overview
+       card above, not as a standalone full-width banner here. #}
     {% if preview_mode %}<div>{% else %}<form method="post" action="/reviewer/sessions/{{ session.id }}/{{ current_position }}/save">
     <input type="hidden" name="current_position" value="{{ current_position }}">
     {% endif %}

@@ -102,26 +102,27 @@ Top-to-bottom, the page renders:
    07:59 (Australian Eastern Standard Time)` — with the raw IANA id
    as the fallback. (D7 — settled in Segment 11D PR C and adjusted
    post-merge.)
-4. **Description + status bar** — a `.bottom-grid` 2-column row with:
-   - **Description card** — half-width `.card.rs-description-card`
-     flushed left, only when `session.description` is set. Collapses
-     to full width below the 800px breakpoint.
-   - **Flash + status panel** — half-width on the right. Always
-     renders (collapses to full width below 800px). Hosts:
-     - Per-page status pills — one pill per instrument labelled
-       e.g. `Page 1: in progress`, `Page 2: complete`. State
-       computed server-side from response data (see "Per-page status"
-       below).
-     - Transient session-closed banner inline within the panel when
-       the session is no longer accepting responses; does not push
-       other layout around. (Save / Submit no longer flash — the
-       per-page status pills are the canonical signal — and the
-       missing-required and invalid-value warnings render as their
-       own full-width cards below the bottom-grid, not inside the
-       panel.)
-5. **Action row (top)** — `.rs-action-row.rs-action-row-top`, flush
-   right, the surface's main control strip. One row carrying every
-   action, page-level and review-level, in this left-to-right order:
+4. **Overview card** — a single full-width `.card.rs-status-panel`
+   rolling together, top to bottom:
+   - The session **description**, when `session.description` is set.
+   - The transient **session-closed banner** — a
+     `.banner.banner-warning` shown inline in the card when the
+     session is no longer accepting responses; does not push other
+     layout around.
+   - **Per-page status pills** — one pill per instrument labelled
+     e.g. `Page 1: in progress`, `Page 2: complete`. State computed
+     server-side from response data (see "Per-page status" below).
+
+   The card is omitted entirely only when there is neither a
+   description nor any status pills. (Save / Submit no longer flash
+   — the per-page status pills are the canonical signal — and the
+   missing-required and invalid-value warnings render as their own
+   full-width cards below, not inside this card.)
+5. **Action row (top)** — `.rs-action-row.rs-action-row-top`,
+   **left-aligned** so it reads as the lead-in to the form (the
+   bottom action row is flush right — see §8). The surface's main
+   control strip: one row carrying every action, page-level and
+   review-level, in this left-to-right order:
    - `Save` (Primary) — persists the current page's dirty inputs.
      Greyed out (`disabled`) when the current page has no unsaved
      edits (see "Save button enabled state" below).
@@ -154,7 +155,7 @@ Top-to-bottom, the page renders:
 6. **Instrument body** — heading, help-text card(s), reviewer table.
    Exactly one instrument's content renders per page.
 7. **Missing-required warning card** — `.rs-missing-card`, full-width
-   below the bottom-grid, two-column flow. Renders only after a
+   below the overview card, two-column flow. Renders only after a
    blocked Submit attempt; enumerates gaps as `Page N: Reviewee X —
    field Y`. Submit is a **hard gate** (no acknowledge-and-submit-
    anyway path); the reviewer fills the gaps and resubmits.
@@ -162,8 +163,9 @@ Top-to-bottom, the page renders:
    validation rejections, with the typed value preserved in the
    originating input so the reviewer can correct in place.
 8. **Action row (bottom)** — `.rs-action-row`, flush right. Mirrors
-   the top action row exactly: same buttons, same order, same
-   divider before Submit. The repetition lets the reviewer act
+   the top action row's buttons, order, and divider exactly; it is
+   flush right rather than left-aligned (§5) so it reads as a
+   trailing control strip. The repetition lets the reviewer act
    without scrolling back to either end of the table.
 9. **Danger zone** — `.card.danger-zone.rs-danger-zone` with the
    Clear-all-responses form. Half-width, flush right, 24px above the
@@ -206,7 +208,7 @@ guards that gap.
 
 | Button | Scope | HTTP | Behavior |
 |---|---|---|---|
-| **Save** | Page | POST `…/{position}/save` | Persist the **current page's** dirty inputs to the database. The form body carries inputs from every page (since they all live in the DOM); the route filters by `{position}` and ignores inputs that don't belong to that page's instrument. Greys out when the current page has no dirty inputs. On success: 303 → `…/{position}` (no flash; the page-status pill in the right-half panel is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
+| **Save** | Page | POST `…/{position}/save` | Persist the **current page's** dirty inputs to the database. The form body carries inputs from every page (since they all live in the DOM); the route filters by `{position}` and ignores inputs that don't belong to that page's instrument. Greys out when the current page has no dirty inputs. On success: 303 → `…/{position}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Discard** | Page | none — JS only | Reset every input on the current page to its **server-saved value** (a per-input baseline that the server renders into the page; the JS handler reads it and writes it back on click). No HTTP request, no database write, no audit. Other pages' unsaved edits are untouched. |
 | **Page N** | Page | none — JS only | Swap which instrument group is visible (CSS class toggle); update the URL via `pushState`. No HTTP request. Reviewer's typed-but-not-saved values on the previously-visible page stay in the DOM. The button for the current page is disabled. |
 | **Submit** | Review-session | POST `/reviewer/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{position}` (no flash; the per-page pill flips to `submitted` and the per-row submitted-timestamp surfaces in the status column). |
@@ -289,7 +291,7 @@ all-or-nothing rather than "submitted on some pages but not others".
 
 ## Per-page status
 
-The right-half panel renders one status pill per instrument,
+The overview card renders one status pill per instrument,
 positioned immediately above any transient flash banners that may
 land. Status is computed **server-side from saved response data**;
 client-side dirty edits don't shift a pill until the reviewer
@@ -304,7 +306,7 @@ clicks Save (and the page re-renders).
 
 Pill copy: `Page #1: in progress`, `Page #2: complete`, etc.
 Single-instrument sessions still show one pill (`Page #1: …`),
-since the status panel always renders. Pill copy uses bare
+since the overview card renders whenever there are status pills. Pill copy uses bare
 `Page #{N}` rather than `Page #{N}: {short_label}` to keep the
 panel compact — short labels live on the Page button labels and
 on the per-instrument H2 above each table, where the reviewer
@@ -482,7 +484,7 @@ field before the submit lands.
    blank anywhere in the session.
 2. Server returns 400 + re-renders the page they were on (whichever
    `{position}` they submitted from) with the full-width
-   `.rs-missing-card` below the bottom-grid, enumerating the gaps as
+   `.rs-missing-card` below the overview card, enumerating the gaps as
    `Page N: Reviewee X — field Y` so the reviewer knows where to
    navigate.
 3. The reviewer fills the gaps (using the per-page navigation
@@ -522,7 +524,7 @@ degrades to read-only:
   the reviewer can walk through their other instruments (which may
   or may not also be closed).
 - The Danger Zone card hides (no Clear all).
-- A `.banner.banner-warning` lands in the right-half status panel
+- A `.banner.banner-warning` lands inline in the overview card
   explaining the state, e.g. "This session is no longer accepting
   responses." Two variants depending on the operator's per-
   instrument visibility flag:
@@ -593,7 +595,7 @@ template directly. In preview mode:
   collapse to just the Page N buttons (no vertical divider, since
   there's nothing to separate). Danger zone doesn't render.
 - Inputs render disabled.
-- The right-half status panel renders without the per-page status
+- The overview card renders without the per-page status
   pills (preview is read-only and synthetic; per-page state is
   moot).
 - **Synthetic-row padding.** Up to three real assignments render
@@ -752,7 +754,7 @@ re-architecting; see "Designed-for-extensibility" below.
 - **`beforeunload` warning** when the form is dirty.
 - **Standalone submission-confirmation page** ("thank you" surface).
   Today the post-submit signal is the per-page `submitted` pill in
-  the right-half status panel and the per-row submitted-timestamp in
+  the overview card and the per-row submitted-timestamp in
   the status column.
 - **Large-table ergonomics** (cell autosave, sticky headers,
   return-to-place, visible progress, filter-to-incomplete) —
@@ -797,7 +799,7 @@ makes today + the small follow-on the deferred work needs.
 
 - **Today.** `POST /reviewer/sessions/{id}/submit` 303s to
   `…/{position}` (no flash). The reviewer reads the post-submit
-  signal off the per-page `submitted` pill in the right-half panel
+  signal off the per-page `submitted` pill in the overview card
   and the per-row submitted-timestamp in the status column.
 - **Design call.** The submit route's redirect target is computed via
   a small helper (`submit_redirect_url(review_session, position)`)

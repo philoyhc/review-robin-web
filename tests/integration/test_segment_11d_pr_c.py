@@ -363,14 +363,15 @@ def test_review_surface_action_rows_render_above_and_below_tables(
     )
 
 
-def test_review_surface_session_description_renders_in_half_width_card(
+def test_review_surface_session_description_renders_in_overview_card(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Session description sits in a `.card.rs-description-card` (the
-    half-width, flush-left modifier) instead of as a loose `<p>`."""
+    """Session description renders inside the overview card
+    (`.card.rs-status-panel`) as a `.rs-session-description`
+    paragraph — rolled together with the per-page status pills."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -384,7 +385,8 @@ def test_review_surface_session_description_renders_in_half_width_card(
 
     rae_client = make_client(rae)
     body = rae_client.get(f"/reviewer/sessions/{review_session.id}").text
-    assert 'class="card rs-description-card"' in body
+    assert 'class="card rs-status-panel"' in body
+    assert 'class="rs-session-description"' in body
     assert "Please rate each reviewee on the rubric." in body
 
 
