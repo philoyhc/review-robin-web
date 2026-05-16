@@ -1,6 +1,7 @@
 # Segment 17A — Housekeeping (file splits + test-suite runtime)
 
-**Status:** Stub. Created 2026-05-16.
+**Status:** Planned. Created 2026-05-16; PR sequence added
+2026-05-16.
 
 The "17A" segment number was freed when the AG Grid
 replacement was taken off the roadmap (2026-05-16) — it is now
@@ -33,6 +34,35 @@ landable on its own.
   file splits and the faster suite pay off more the earlier
   they land.
 
+## PR sequence
+
+Both tracks are pursued. The two tracks are independent — the
+only ordering that matters is *within* each track — but the
+recommended interleave runs **Track B first**: the suite
+speed-ups are small, low-risk, and land before the splits, so
+every Track A PR (each verified by re-running the full suite)
+is cheaper to iterate on.
+
+| PR | Track | Title | Depends on |
+|---|---|---|---|
+| 1 | B | Parallelise the suite with `pytest-xdist` (`-n auto`) | — |
+| 2 | B | Swap migration replay for `Base.metadata.create_all()` in the SQLite engine fixture | PR 1 (compounds; not strictly required) |
+| 3 | A | Split `_setup_rosters.py` into per-page slices | — |
+| 4 | A | Promote `session_config_io.py` to a package | — |
+| 5 | A | *(optional)* Carve Response Type Definition routes out of `_instruments.py` | — |
+
+PR 1 → 2 is the one hard ordering (Track B order). PRs 3-5 can
+land in any order and can interleave with PRs 1-2; the table
+order is the recommended cadence, not a dependency chain. PR 5
+is discretionary — land it only if `_instruments.py` is still
+growing when the rest of the segment is done.
+
+Each PR ships with a passing full `pytest` run on the session
+container. A split (PRs 3-5) that needs test edits beyond
+import-path fixes is a signal the split was not purely
+structural — stop and reconsider rather than editing behaviour
+tests.
+
 ## Track A — file splits
 
 From assessment §6. The codebase precedent is the May 9 splits
@@ -41,15 +71,15 @@ of `instruments.py` and `views.py` into packages, plus the
 services split by concern into packages). Each split is pure
 structure — move code, keep the public import surface stable.
 
-- **PR 1 — `app/web/routes_operator/_setup_rosters.py`
+- **PR 3 — `app/web/routes_operator/_setup_rosters.py`
   (1,759 LOC).** Carries three independent Setup pages in one
   slice. Split into `_setup_reviewers.py` / `_setup_reviewees.py`
   / `_setup_relationships.py`; lift the shared plumbing
   (`_redirect_keeping_selection`, the sort-value helpers, the
   `_picker_label` datalist helper) into `_shared.py`. Highest
   priority — the three route groups already barely
-  cross-reference.
-- **PR 2 — `app/services/session_config_io.py` (1,733 LOC).**
+  cross-reference. Land first of Track A.
+- **PR 4 — `app/services/session_config_io.py` (1,733 LOC).**
   Promote to a `session_config_io/` package mirroring
   `extracts/` and `instruments/`: `_serialize.py` (the
   six-section exporter), `_apply.py` (the two-phase importer),
@@ -57,7 +87,7 @@ structure — move code, keep the public import surface stable.
   `_int` / `_decimal` / `_json` typed-cell helpers), and an
   `__init__.py` re-exporting the public surface so callers keep
   writing `from app.services import session_config_io`.
-- **PR 3 (optional) — `app/web/routes_operator/_instruments.py`
+- **PR 5 (optional) — `app/web/routes_operator/_instruments.py`
   (1,398 LOC).** Carve the Response Type Definition routes
   (the block already marked "Slice 4b") into a
   `_response_types.py` slice. Do only if `_instruments.py`
@@ -76,38 +106,38 @@ engine that replays all 40 migrations once. Not painful yet —
 this track is "do it before the suite crosses ~2-3 min", which
 14B / 21 will push it toward.
 
-- **`pytest-xdist` (`pytest -n auto`).** Process-level
+- **PR 1 — `pytest-xdist` (`pytest -n auto`).** Process-level
   parallelism — the big lever (~90 s → an estimated ~25-35 s on
   a typical multi-core box). Fits the codebase: `:memory:`
   SQLite is already per-process and the per-test
   transaction-rollback isolation means no cross-test shared
   state. Each worker re-runs `alembic upgrade head` once at
-  startup — offset many times over by the parallelism. A short
-  spike should confirm worker isolation behaves before
-  committing.
-- **Swap `alembic upgrade head` → `Base.metadata.create_all()`**
-  in the SQLite `engine` fixture (`tests/conftest.py`). The
-  40-migration replay is pure session-startup cost;
-  `create_all` is near-instant. Fidelity tradeoff: SQLite tests
-  stop exercising the migration chain — acceptable because the
-  `ci-postgres` job already round-trips migrations. Compounds
-  with xdist (every worker saves the replay).
-- **(Optional) hoist app / `TestClient` construction** to
-  module or session scope if `tests/integration/conftest.py`
-  rebuilds it per-test. Modest win; check first.
-- **Not pursued alone:** a fast/slow marker split — it only
-  changes *perceived* time, not total, and is not worth the
-  marker-maintenance burden unless paired with the above.
-
-Recommended Track B order: xdist first, then the `create_all`
-swap (they compound). Wire `-n auto` into the CI pytest job and
-document the change in `README.md` per the testing-expectations
-note in `CLAUDE.md`.
+  startup — offset many times over by the parallelism. Add
+  `pytest-xdist` to the `[dev]` extra, wire `-n auto` into the
+  CI pytest job, and document the change in `README.md` per the
+  testing-expectations note in `CLAUDE.md`. A short spike at
+  the top of the PR should confirm worker isolation behaves
+  before committing. **Also in this PR:** if
+  `tests/integration/conftest.py` rebuilds the app /
+  `TestClient` per-test, hoist it to module or session scope —
+  it is a modest, naturally-related win; check first and skip
+  the hoist if construction is already shared.
+- **PR 2 — swap `alembic upgrade head` →
+  `Base.metadata.create_all()`** in the SQLite `engine` fixture
+  (`tests/conftest.py`). The 40-migration replay is pure
+  session-startup cost; `create_all` is near-instant. Fidelity
+  tradeoff: SQLite tests stop exercising the migration chain —
+  acceptable because the `ci-postgres` job already round-trips
+  migrations. Compounds with PR 1 (every xdist worker saves the
+  replay). Land after PR 1.
+- **Not pursued:** a fast/slow marker split — it only changes
+  *perceived* time, not total, and is not worth the
+  marker-maintenance burden on top of the two PRs above.
 
 ## Done when
 
 - No `app/` production file is over ~1,200 LOC without a
-  deliberate reason (Track A PRs 1-2 landed; PR 3 at
+  deliberate reason (Track A PRs 3-4 landed; PR 5 at
   discretion).
 - The full `pytest` suite runs in well under a minute on the
   session container, and CI runs it parallelised.
