@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 
+import pytest
+
 from app.services import date_formatting
 from app.services.date_formatting import (
     format_date,
     format_datetime,
+    parse_local_datetime,
     resolve_zone,
     timezone_label,
 )
@@ -137,3 +140,24 @@ def test_timezone_label_picks_standard_or_daylight_from_at() -> None:
 
 def test_timezone_label_none_resolves_to_utc_name() -> None:
     assert timezone_label(None) == "Coordinated Universal Time"
+
+
+# ── datetime-local parsing — parse_local_datetime ────────────────────────
+
+
+def test_parse_local_datetime_converts_zone_wall_clock_to_utc() -> None:
+    # 17:00 in Singapore (+08) is 09:00 UTC; the result is naive.
+    result = parse_local_datetime("2026-06-02T17:00", "Asia/Singapore")
+    assert result == datetime(2026, 6, 2, 9, 0)
+    assert result.tzinfo is None
+
+
+def test_parse_local_datetime_utc_is_identity() -> None:
+    assert parse_local_datetime("2026-06-02T17:00", "UTC") == datetime(
+        2026, 6, 2, 17, 0
+    )
+
+
+def test_parse_local_datetime_rejects_unparseable_string() -> None:
+    with pytest.raises(ValueError):
+        parse_local_datetime("not-a-date", "UTC")

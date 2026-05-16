@@ -25,10 +25,16 @@ def create_session(
         deadline=payload.deadline,
         help_contact=payload.help_contact,
         created_by_user_id=user.id,
-        # 18B PR 3: stamp the creating operator's default display
-        # timezone at create time. A snapshot, not a live link —
-        # changing the operator default later leaves this untouched.
-        display_timezone=operator_settings.get_display_timezone(user),
+        # 18B PR 3 / PR 4: the per-session display timezone. The
+        # Create Session form submits an explicit zone (defaulted to
+        # the operator's default in the picker); callers that omit it
+        # fall back to the operator default here. Either way it's a
+        # snapshot — changing the operator default later leaves this
+        # untouched.
+        display_timezone=(
+            payload.display_timezone
+            or operator_settings.get_display_timezone(user)
+        ),
     )
     db.add(review_session)
     db.flush()

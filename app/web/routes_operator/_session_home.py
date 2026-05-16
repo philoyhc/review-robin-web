@@ -63,6 +63,7 @@ def new_session_form(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    current_timezone = operator_settings.get_display_timezone(user)
     return _templates.TemplateResponse(
         request,
         "operator/session_new.html",
@@ -72,6 +73,11 @@ def new_session_form(
                 db, user
             ),
             "breadcrumbs": breadcrumbs.operator_new_session(),
+            "current_timezone": current_timezone,
+            "timezone_options": operator_settings.timezone_options(),
+            "timezone_sample": date_formatting.format_datetime(
+                datetime.now(timezone.utc), current_timezone
+            ),
         },
     )
 
