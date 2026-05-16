@@ -78,11 +78,13 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    — no SQL, no business rules. The operator routes are split by
    feature area into sibling sub-modules (`_lobby.py`,
    `_settings.py`, `_session_home.py`, `_quick_setup.py`,
-   `_setup_rosters.py`, `_setup_invite.py`, `_assignments.py`,
-   `_rule_builder.py`, `_operations.py`, `_instruments.py`,
-   `_extracts.py`), with shared plumbing (the `Jinja2Templates`
-   instance, lifecycle / edit-lock guards, Quick Setup cookie
-   naming) in `_shared.py`. New operator routes belong in their
+   `_setup_reviewers.py`, `_setup_reviewees.py`,
+   `_setup_relationships.py`, `_setup_invite.py`,
+   `_assignments.py`, `_rule_builder.py`, `_operations.py`,
+   `_instruments.py`, `_extracts.py`), with shared plumbing (the
+   `Jinja2Templates` instance, lifecycle / edit-lock guards, Quick
+   Setup cookie naming, and the cross-slice Setup-roster import /
+   redirect / field-label helpers) in `_shared.py`. New operator routes belong in their
    feature-area sub-module. Slices import only from `_shared.py`
    and from outside the package — no slice-to-slice imports. See
    `guide/archive/major_refactor.md` for the full split rationale and

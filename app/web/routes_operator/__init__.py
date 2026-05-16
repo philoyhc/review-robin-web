@@ -33,7 +33,9 @@ from . import (
     _session_home,
     _settings,
     _setup_invite,
-    _setup_rosters,
+    _setup_relationships,
+    _setup_reviewees,
+    _setup_reviewers,
     _sys_admin,
     _workflow,
 )
@@ -47,7 +49,9 @@ router.include_router(_lobby.router)
 router.include_router(_settings.router)
 router.include_router(_session_home.router)
 router.include_router(_quick_setup.router)
-router.include_router(_setup_rosters.router)
+router.include_router(_setup_reviewers.router)
+router.include_router(_setup_reviewees.router)
+router.include_router(_setup_relationships.router)
 router.include_router(_setup_invite.router)
 router.include_router(_assignments.router)
 router.include_router(_rule_builder.router)
