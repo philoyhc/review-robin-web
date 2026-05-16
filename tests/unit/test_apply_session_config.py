@@ -23,11 +23,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    Assignment,
     AuditEvent,
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    Response,
     ResponseTypeDefinition,
+    Reviewee,
+    Reviewer,
     ReviewSession,
     SessionRuleSet,
     User,
@@ -760,3 +764,72 @@ def test_json_rules_apply_writes_through(db: Session) -> None:
         )
     ).scalar_one()
     assert snap.rules_json == rules_payload
+
+
+def test_apply_session_config_clears_responses_without_fk_error(
+    db: Session,
+) -> None:
+    """A settings re-import on a session that still holds reviewer
+    responses (e.g. one reverted from ``ready``) must not trip the
+    ``responses`` foreign key on the bulk assignment delete.
+
+    A settings re-import rebuilds the instrument structure, so those
+    responses cannot survive it — ``apply_session_config`` clears them
+    explicitly before the bulk delete instead of crashing.
+    """
+    review_session = _bare_session(db, code="resp-reimport")
+    rtd = (
+        db.execute(
+            select(ResponseTypeDefinition).where(
+                ResponseTypeDefinition.session_id == review_session.id
+            )
+        )
+        .scalars()
+        .first()
+    )
+    instrument = Instrument(
+        session_id=review_session.id, name="Eval", order=1
+    )
+    db.add(instrument)
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="score",
+        label="Score",
+        response_type_id=rtd.id,
+    )
+    reviewer = Reviewer(
+        session_id=review_session.id, name="Al", email="al@example.edu"
+    )
+    reviewee = Reviewee(
+        session_id=review_session.id,
+        name="Cy",
+        email_or_identifier="cy@example.edu",
+    )
+    db.add_all([field, reviewer, reviewee])
+    db.flush()
+    assignment = Assignment(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="4",
+        )
+    )
+    db.flush()
+
+    rows = serialize_session_config(db, review_session)
+    # Must not raise sqlalchemy.exc.IntegrityError.
+    result = apply_session_config(db, review_session, rows)
+    assert result.ok
+
+    # The re-import rebuilt the instrument structure; the responses
+    # tied to the old structure are cleared.
+    assert db.execute(select(Response)).all() == []

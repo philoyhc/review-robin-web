@@ -26,6 +26,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    Response,
     ResponseTypeDefinition,
     ReviewSession,
     SessionFieldLabel,
@@ -889,6 +890,20 @@ def _apply_rtds(
     # are wiped does the upsert + delete. Instead, simpler:
     # delete instruments here first, then process RTDs, then
     # re-create instruments downstream.
+    # Responses FK ``assignments``; the bulk Core delete below would
+    # trip that constraint on a session reverted from ``ready`` (which
+    # keeps its responses) unless they go first. The settings
+    # re-import rebuilds the whole instrument structure, so these
+    # responses cannot survive it regardless — clear them explicitly.
+    db.execute(
+        Response.__table__.delete().where(
+            Response.assignment_id.in_(
+                select(Assignment.id).where(
+                    Assignment.session_id == review_session.id
+                )
+            )
+        )
+    )
     db.execute(
         Assignment.__table__.delete().where(
             Assignment.session_id == review_session.id
