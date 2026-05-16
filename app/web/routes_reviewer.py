@@ -23,11 +23,13 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
+from app.services import date_formatting
 from app.services import instruments as instruments_service
 from app.services import invitations as invitations_service
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
+from app.services import sessions as sessions_service
 from app.web import breadcrumbs, views
 from app.web.date_filters import (
     display_timezone_context_processor,
@@ -175,11 +177,18 @@ def reviewer_dashboard(
         pill = responses_service.session_pill_for_reviewer(
             db, reviewer=reviewer, session_id=review_session.id
         )
+        session_zone = sessions_service.resolve_session_timezone(review_session)
         items.append(
             {
                 "reviewer": reviewer,
                 "session": review_session,
                 "pill": pill,
+                "deadline_text": date_formatting.format_datetime(
+                    review_session.deadline, session_zone
+                ),
+                "deadline_timezone_label": date_formatting.timezone_label(
+                    session_zone, at=review_session.deadline
+                ),
                 "instrument_rows": _build_dashboard_instrument_rows(
                     db, reviewer, review_session
                 ),
@@ -674,6 +683,10 @@ def _surface_context(
         "page_statuses": page_statuses,
         "page_buttons": page_buttons,
         "current_position": current_position,
+        "deadline_timezone_label": date_formatting.timezone_label(
+            sessions_service.resolve_session_timezone(review_session),
+            at=review_session.deadline,
+        ),
     }
 
 
@@ -810,6 +823,10 @@ def build_preview_context(
             "page_statuses": [],
             "page_buttons": [],
             "current_position": 1,
+            "deadline_timezone_label": date_formatting.timezone_label(
+                sessions_service.resolve_session_timezone(review_session),
+                at=review_session.deadline,
+            ),
             "preview_mode": True,
         }
 
@@ -1013,6 +1030,10 @@ def build_preview_context(
         "page_statuses": [],
         "page_buttons": page_buttons,
         "current_position": 1,
+        "deadline_timezone_label": date_formatting.timezone_label(
+            sessions_service.resolve_session_timezone(review_session),
+            at=review_session.deadline,
+        ),
         "preview_mode": True,
     }
 

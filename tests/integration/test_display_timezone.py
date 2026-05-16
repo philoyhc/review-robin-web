@@ -207,6 +207,23 @@ def test_session_with_no_override_inherits_operator_default(
     assert format_datetime(session.created_at, "Asia/Singapore") in body
 
 
+def test_session_detail_shows_timezone_label(
+    client: TestClient, db: Session
+) -> None:
+    """The Session Details card's Timezone item shows the CLDR
+    display name of the session's resolved zone."""
+    session = _create_session(client, db, code="tz-label")
+    client.post(
+        f"/operator/sessions/{session.id}/timezone",
+        data={"display_timezone": "Asia/Singapore"},
+        follow_redirects=False,
+    )
+
+    body = client.get(f"/operator/sessions/{session.id}").text
+    assert "Timezone" in body
+    assert "Singapore Standard Time" in body
+
+
 def _build_active_session_with_reviewer(
     operator: TestClient,
     db: Session,
@@ -301,9 +318,45 @@ def test_reviewer_surface_renders_deadline_in_session_zone(
     response = reviewer.get(f"/reviewer/sessions/{session.id}")
     assert response.status_code == 200
     # 02:00 UTC is 10:00 in Singapore — the deadline is converted to
-    # the session zone (rendered bare, no zone token).
+    # the session zone (rendered bare, no zone token), with the CLDR
+    # zone name in parentheses.
     assert format_datetime(session.deadline, "Asia/Singapore") in response.text
     assert format_datetime(session.deadline, "UTC") not in response.text
+    assert "(Singapore Standard Time)" in response.text
+
+
+def test_reviewer_dashboard_shows_deadline_with_timezone_label(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The reviewer dashboard renders each session's deadline in that
+    session's zone, with the CLDR zone name in parentheses."""
+    operator = make_client(alice)
+    session = _build_active_session_with_reviewer(
+        operator, db, code="tz-dash", reviewer_email="rae@example.edu"
+    )
+    session.deadline = datetime(2026, 6, 1, 2, 0)
+    db.commit()
+    operator.post(
+        f"/operator/sessions/{session.id}/timezone",
+        data={"display_timezone": "Asia/Singapore"},
+        follow_redirects=False,
+    )
+    db.refresh(session)
+
+    reviewer = make_client(
+        AuthenticatedUser(
+            principal_id="rae-oid",
+            email="rae@example.edu",
+            name="Rae Reviewer",
+            provider="aad",
+        )
+    )
+    response = reviewer.get("/reviewer")
+    assert response.status_code == 200
+    assert format_datetime(session.deadline, "Asia/Singapore") in response.text
+    assert "(Singapore Standard Time)" in response.text
 
 
 # ── Timezone-sample preview on the config cards ──────────────────────────
