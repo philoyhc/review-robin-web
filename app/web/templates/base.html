@@ -1814,6 +1814,17 @@
       body.ui-v2 .rs-paginated > .rs-instrument-group:not(.rs-active) {
         display: none;
       }
+      /* Denser reviewer-table rows (Segment 17B). The reviewer
+         response table is one input-per-cell and can run to hundreds
+         of reviewees, so it carries a tighter vertical cell padding
+         than the global v2 table rule — half the row gap, same
+         horizontal padding. Scoped to the reviewer surface only;
+         operator tables keep the standard spacing. */
+      body.ui-v2 .rs-instrument-group th,
+      body.ui-v2 .rs-instrument-group td {
+        padding-top: var(--space-2);
+        padding-bottom: var(--space-2);
+      }
       /* Missing-required warning card — full-width, two-column flow
          so a long list of gaps stays compact. Sits below the bottom-
          grid (description + status panel) so it spans the whole

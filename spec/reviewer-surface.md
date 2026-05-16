@@ -327,6 +327,13 @@ one row, with response fields as columns. Wrapped in
 `.table-scroll` so very wide instruments scroll horizontally instead
 of forcing the surrounding layout to grow.
 
+Reviewer-table rows use a **tighter vertical cell padding** than the
+standard v2 table — half the global row gap, same horizontal
+padding — since the table is one input per cell and can run to
+hundreds of reviewees, so the denser rows keep vertical scrolling
+down. The rule is scoped to the reviewer surface; operator tables
+keep the standard spacing.
+
 ### Above the table — heading + help block
 
 The per-instrument heading is a `.rs-instrument-heading` flex row
