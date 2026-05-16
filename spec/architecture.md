@@ -497,7 +497,11 @@ decide which shape to interpret.
 - Replace-all over append/merge for destructive operator workflows,
   with explicit confirm checkboxes and audit trails. Cascade effects
   (e.g. assignments deleted when a reviewer roster is replaced) are
-  surfaced to the operator before they confirm.
+  surfaced to the operator before they confirm. The one deliberate
+  exception is assignment **regeneration**, which reconciles rather
+  than replaces — inserting newly eligible pairs, dropping orphaned
+  ones, and leaving matched pairs (and their saved responses)
+  untouched. See `spec/reconciling_regeneration.md`.
 - Materialise rather than virtualise: FullMatrix generates concrete
   Assignment rows rather than implying them, so downstream features
   query one uniform table regardless of mode.

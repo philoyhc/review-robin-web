@@ -580,6 +580,27 @@ Every PR was pure structure — the test suite passed unchanged
 across all five. Plan archived:
 `guide/archive/segment_17A_housekeeping.md`.
 
+### Reconciling assignment regeneration — done 2026-05-16 (PRs #1065 → #1069)
+
+Closed a mid-cycle data-loss path: re-activating a session that was
+paused back to draft (e.g. to fix a friendly label) regenerated
+assignments and silently wiped every saved response. **#1065** fixed
+the underlying FK crash — `replace_assignments` now clears dependent
+`responses` before the bulk `Assignment` delete. **#1066** added a
+saved-response confirmation to the workflow super-button so
+regeneration could no longer destroy responses unprompted. **#1067**
+specced the fuller fix. **#1068** made `_materialise_one_instrument`
+**reconcile** instead of wholesale delete-then-insert — inserting
+newly eligible pairs, dropping orphaned ones, and leaving matched
+pairs and their responses untouched; the `assignments.generated`
+counts moved to `new` / `deleted` / `kept` / `responses_deleted`.
+**#1069** made the super-button confirmation **impact-driven**: it
+dry-runs the reconcile (`assignments.reconcile_impact`) and prompts
+only when a run would actually delete responses, showing the precise
+count — `regen_choice` retired for an `acknowledge_response_loss`
+flag. Spec (kept as the design record):
+`spec/reconciling_regeneration.md`.
+
 ---
 
 ## Upcoming
