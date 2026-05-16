@@ -4,18 +4,15 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from alembic import command
-from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
+from _sqlite_schema import build_sqlite_schema
 from app.auth.identity import AuthenticatedUser, get_current_user
 from app.config import settings
 from app.db.session import get_db
 from app.main import app
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 # The Segment 16A PR 1 operator-allowlist gate is mounted on the
@@ -144,21 +141,19 @@ def make_client(db: Session) -> Iterator[object]:
 
 @pytest.fixture
 def committed_engine(tmp_path: Path) -> Iterator[Engine]:
-    """Fresh per-test SQLite engine with the full migration applied.
-    Routes commit to disk; a separate Session can verify persistence."""
+    """Fresh per-test SQLite engine with the full schema built.
+    Routes commit to disk; a separate Session can verify persistence.
+
+    Builds the schema from ORM metadata (``build_sqlite_schema``)
+    rather than replaying the migration chain — the same fast path the
+    session-scoped ``engine`` fixture takes."""
     db_path = tmp_path / "regression.db"
     eng = create_engine(
         f"sqlite+pysqlite:///{db_path}",
         connect_args={"check_same_thread": False},
         future=True,
     )
-    cfg = Config(str(REPO_ROOT / "alembic.ini"))
-    cfg.set_main_option("script_location", str(REPO_ROOT / "alembic"))
-    cfg.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{db_path}")
-    with eng.connect() as connection:
-        cfg.attributes["connection"] = connection
-        command.upgrade(cfg, "head")
-        connection.commit()
+    build_sqlite_schema(eng)
     yield eng
     eng.dispose()
 

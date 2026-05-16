@@ -20,6 +20,8 @@ from alembic.config import Config  # noqa: E402
 from sqlalchemy import Engine, create_engine, text  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
+from _sqlite_schema import build_sqlite_schema  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_TEST_DATABASE_URL = "sqlite+pysqlite:///:memory:"
@@ -33,11 +35,18 @@ def _test_database_url() -> str:
 
 @pytest.fixture(scope="session")
 def engine() -> Iterator[Engine]:
-    """Engine for the test session with the full Alembic migration applied.
+    """Engine for the test session.
 
-    Defaults to in-memory SQLite. When ``TEST_DATABASE_URL`` (or
-    ``DATABASE_URL``) points at Postgres, runs the suite against that DB
-    so CI can exercise dialect divergence the SQLite path hides.
+    Defaults to in-memory SQLite, where the schema is built directly
+    from the ORM metadata (``Base.metadata.create_all``) — the
+    40-migration replay is pure session-startup cost that ``create_all``
+    skips. The migration chain is still exercised on every PR by the
+    ``ci-postgres`` job, so SQLite tests can take the fast path.
+
+    When ``TEST_DATABASE_URL`` (or ``DATABASE_URL``) points at Postgres,
+    runs the suite against that DB with the full Alembic migration
+    applied so CI exercises both dialect divergence and the migration
+    round-trip the SQLite path now skips.
     """
     url = _test_database_url()
     is_sqlite = url.startswith("sqlite")
@@ -53,13 +62,17 @@ def engine() -> Iterator[Engine]:
         from app.db.session import _enable_sqlite_fk_enforcement
 
         _enable_sqlite_fk_enforcement(eng)
-    else:
-        # Postgres CI service container may carry over schema between job
-        # retries on the same runner; start from a clean slate so the
-        # migration round-trip is deterministic.
-        with eng.begin() as connection:
-            connection.execute(text("DROP SCHEMA public CASCADE"))
-            connection.execute(text("CREATE SCHEMA public"))
+        build_sqlite_schema(eng)
+        yield eng
+        eng.dispose()
+        return
+
+    # Postgres CI service container may carry over schema between job
+    # retries on the same runner; start from a clean slate so the
+    # migration round-trip is deterministic.
+    with eng.begin() as connection:
+        connection.execute(text("DROP SCHEMA public CASCADE"))
+        connection.execute(text("CREATE SCHEMA public"))
 
     cfg = Config(str(REPO_ROOT / "alembic.ini"))
     cfg.set_main_option("script_location", str(REPO_ROOT / "alembic"))

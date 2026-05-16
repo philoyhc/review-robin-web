@@ -187,10 +187,17 @@ alembic downgrade -1    # round-trip check
 engine is per-process and tests roll back per-test, so the
 workers stay isolated. The SQLite CI job runs `pytest -n auto`.
 
+The SQLite test path builds its schema directly from the ORM
+metadata (`Base.metadata.create_all`) rather than replaying the
+migration chain — faster, and the chain is still exercised on
+every PR by the `ci-postgres` job. Data-only migrations are
+replayed in `tests/_sqlite_schema.py`.
+
 CI runs the same `pytest` against a `postgres:16` service
 container too (`ci-postgres` job) — the suite covers both
 dialects on every PR. That job stays single-process: its
-workers would otherwise share one Postgres database.
+workers would otherwise share one Postgres database. It applies
+the full Alembic migration chain.
 
 ## Project documents
 
