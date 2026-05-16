@@ -241,12 +241,25 @@ def build_quick_setup_context(
         ),
     ]
 
-    description = (
-        "Bulk-populate reviewers, reviewees, relationships, and "
-        "session settings from files in one place. Available only "
-        "when session is in draft mode and does not have any "
-        "responses."
-    )
+    if has_responses:
+        # A session reverted from ``ready`` keeps its responses, so it
+        # lands here in ``draft`` but permanently locked. Spell out
+        # why — Quick Setup's bulk imports replace rosters / settings
+        # wholesale and would discard those responses.
+        description = (
+            "Bulk-populate reviewers, reviewees, relationships, and "
+            "session settings from files in one place. Quick Setup is "
+            "locked because this session already holds reviewer "
+            "responses from a prior activation. Use the individual "
+            "Setup pages to make changes."
+        )
+    else:
+        description = (
+            "Bulk-populate reviewers, reviewees, relationships, and "
+            "session settings from files in one place. Available only "
+            "when session is in draft mode and does not have any "
+            "responses."
+        )
 
     # Default-locked on every fresh page load when the card is
     # available; the cookie-driven ``is_unlocked`` flips it off
