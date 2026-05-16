@@ -10,9 +10,10 @@ exist to land them on it.
 This spec rewrites the response surface around **multi-instrument
 awareness**: the URL carries an explicit instrument segment, the page
 renders one instrument at a time, and an action row at the top + bottom
-of the surface carries every control — page-level (Save / Discard / Page
-N) and review-level (Submit) — in one strip per side, separated by a
-vertical divider. Single-instrument sessions are a degenerate case of
+of the surface carries every control — the review-level controls
+(Save / Discard / Submit) and the per-page navigation (Page N) — in
+one strip per side, the two groups separated by a vertical divider.
+Single-instrument sessions are a degenerate case of
 the same model.
 
 Cross-references:
@@ -121,14 +122,25 @@ Top-to-bottom, the page renders:
 5. **Action row (top)** — `.rs-action-row.rs-action-row-top`,
    **left-aligned** so it reads as the lead-in to the form (the
    bottom action row is flush right — see §8). The surface's main
-   control strip: one row carrying every action, page-level and
-   review-level, in this left-to-right order:
+   control strip: one row carrying every action — the review-level
+   controls first, then the per-page navigation — in this
+   left-to-right order:
    - `Save` (Primary) — persists the current page's dirty inputs.
      Greyed out (`disabled`) when the current page has no unsaved
      edits (see "Save button enabled state" below).
    - `Discard` (Secondary button, `type="button"`) — JS-resets the
      current page's inputs back to their server-saved values.
      Other pages' unsaved edits are untouched.
+   - `Submit` (Primary) — review-session-wide. Commits every saved
+     response across every instrument and stamps `submitted_at` on
+     every assignment. (See "Form scope" below.)
+   - **Vertical divider** — a `.rs-action-divider` element separating
+     the review-level controls (Save / Discard / Submit) from the
+     per-page navigation (Page #N). 1px wide, full button-height,
+     `border-default` colored, with horizontal margin. Rendered
+     only when there are page buttons to its right; in
+     operator-preview mode Save / Discard / Submit and the divider
+     are all suppressed, leaving just the Page #N buttons.
    - `Page #{N}: {Instrument.short_label}`, one button per
      instrument, Primary style. The label combines the position
      with the operator-set short label so the reviewer sees both
@@ -141,17 +153,6 @@ Top-to-bottom, the page renders:
      `history.pushState(...)` so the address bar stays truthful
      and Back/Forward work; no server round-trip. The button for
      the current page renders disabled (`aria-disabled="true"`).
-   - **Vertical divider** — a `.rs-action-divider` element separating
-     the page-level controls (Save / Discard / Page N) from the
-     review-level Submit. 1px wide, full button-height,
-     `border-default` colored, with horizontal margin to give the
-     Submit button breathing room. Hidden when Submit isn't
-     rendered (e.g. read-only or operator-preview mode).
-   - `Submit` (Primary) — review-session-wide. Commits every saved
-     response across every instrument and stamps `submitted_at` on
-     every assignment. Sits at the rightmost edge of the row so
-     "I'm done" is the visually terminal action. (See "Form scope"
-     below.)
 6. **Instrument body** — heading, help-text card(s), reviewer table.
    Exactly one instrument's content renders per page.
 7. **Missing-required warning card** — `.rs-missing-card`, full-width
@@ -317,6 +318,23 @@ The route threads a `page_statuses: list[PageStatus]` into context
 populated for every instrument regardless of how many there are. The
 template iterates and renders one pill per entry.
 
+### Session-wide status pill
+
+Above the per-page pills, the overview card renders a single
+session-wide rollup pill — the at-a-glance "where is this review
+overall", set from the per-page states:
+
+| Pill | Pill class | Condition |
+|---|---|---|
+| `Submitted` | `.pill.pill-success` | Every page is `submitted`. |
+| `Draft` | `.pill.pill-empty` | Every page is `not started`. |
+| `Saved but not submitted` | `.pill.pill-warning` | Anything in between — some pages carry saved data, not all submitted. |
+
+The route adds `session_status: Literal["submitted", "saved",
+"draft"] | None` to context (`None` when the reviewer has no pages,
+so no pill renders — and in operator preview, which passes no
+`page_statuses`).
+
 ---
 
 ## Per-instrument table
@@ -367,7 +385,25 @@ class InstrumentHeading:
     subtitle: str | None   # rendered as a body-weight muted span; absent when None
 ```
 
-The template renders the row only when `heading.title` is truthy.
+The template renders the H2 heading row only when `heading.title`
+is truthy. The instrument card (`.rs-instrument-card`) that hosts
+it renders whenever there is a heading title **or** per-instrument
+progress pills to show — so a bare single-instrument session with
+no title still gets the card for its progress pills.
+
+**Per-instrument progress pills.** Inside the instrument card, two
+`.pill` spans report response-cell completion for that instrument,
+where an *item* is one response cell (one field for one reviewee):
+
+- `Required items completed: {N}/{M}` — required field-cells filled
+  vs total (`.pill-success` when `N == M`, else `.pill-warning`).
+- `All items completed: {P}/{Q}` — every response cell filled vs
+  total (`.pill-success` when `P == Q`, else `.pill-count`).
+
+`_surface_context` adds a `completion` dict per instrument group
+(`required_done` / `required_total` / `all_done` / `all_total`);
+`required_done` is DB-accurate, derived from each row's
+`missing_count`.
 
 - **Help block** above the table (below the heading row), listing each
   response field that has both `help_text` set and
@@ -848,13 +884,22 @@ compatible either way:
   alongside the row data, so the ergonomics work needs no route or
   view-adapter change — and the same payload would also feed a
   JS-driven grid unchanged, should one ever be adopted.
-- **What lands later (Segment 17B).** The ergonomics arrive
-  incrementally as progressive enhancement on the existing
-  `<table>` — autosave wired to `POST /save`, a progress
-  indicator, a filter-to-incomplete toggle — each a small
-  independent PR. They are *not* treated as one all-or-nothing
-  bundle gated on a grid library; that bundling was the AG-Grid
-  framing, now off the roadmap.
+- **What has shipped (Segment 17B).** *Keyboard navigation* — Tab
+  walks cells across a row natively; Enter / Shift+Enter move focus
+  down / up a column (an Enter `keydown` handler on `.rs-paginated`
+  intercepts the form submit; textareas keep native Enter for
+  newlines). *Visible progress* — the session-wide status pill plus
+  the per-instrument `Required / All items completed` pills (see
+  "Session-wide status pill" and "Above the table" above). The
+  action row was also reordered to Save / Discard / Submit /
+  divider / Page #N.
+- **What lands later (Segment 17B).** The remaining ergonomics
+  arrive incrementally as progressive enhancement on the existing
+  `<table>` — autosave wired to `POST /save`, a filter-to-incomplete
+  toggle, return-to-place — each a small independent PR. They are
+  *not* treated as one all-or-nothing bundle gated on a grid
+  library; that bundling was the AG-Grid framing, now off the
+  roadmap.
 - **Investigated and dropped — sticky column headers.** Pinned as
   first-class by `visual_style_rrw.md`, but dropped in Segment 17B
   (2026-05-16). `position: sticky` on the `<th>` row does nothing

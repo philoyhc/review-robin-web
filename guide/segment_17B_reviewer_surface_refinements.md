@@ -1,6 +1,11 @@
 # Segment 17B — Reviewer surface refinements
 
-**Status:** Stub — revised 2026-05-16 against the codebase.
+**Status:** Partly shipped (2026-05-16). PR 1 (`routes_reviewer`
+packaging, commit `801af2f`), the action-row reorder, keyboard
+navigation, and the progress pills have landed (PRs #1076 / #1077).
+Autosave, filter-to-incomplete, and return-to-place remain; the
+reviewer-facing timezone-clarity item is covered incidentally by
+the 18B follow-ups (the deadline carries a zone label).
 
 A polish + ergonomics pass on the reviewer response surface
 (`GET /reviewer/sessions/{id}/{instrument_position}`, rendered
@@ -18,6 +23,10 @@ actual stack (`CLAUDE.md`: inline JS for progressive
 enhancement is fine; a framework / build pipeline is not).
 
 ## PR 1 — package `routes_reviewer.py` first
+
+**Shipped — commit `801af2f`.** `routes_reviewer/` is now a package
+(`_dashboard.py` / `_surface.py` / `_preview.py` / `_invite.py` /
+`_shared.py`). The rest of this section is the original rationale.
 
 `app/web/routes_reviewer.py` is **1,362 LOC** — the one
 operator-or-reviewer route file still a single module rather
@@ -48,11 +57,13 @@ reviewer `_top_bar.html` variant, and the `rs-page-header` H1 +
 deadline header. So "move it to v2" is *done*; what remains is
 small judgement-call polish:
 
-- Button order in the unified action row; status-card location.
-- Row height — the table can go slightly denser.
+- Button order in the unified action row — **shipped (#1076)**:
+  the row now reads Save / Discard / Submit / divider / Page #N.
+- Status-card location; row height — the table can go slightly
+  denser. Still open; screenshot-driven tweaks.
 
-These are screenshot-driven tweaks; land them as one small PR
-once the shape is agreed.
+These remaining tweaks are screenshot-driven; land them once the
+shape is agreed.
 
 ## Large-table ergonomics (no JS framework)
 
@@ -91,18 +102,18 @@ work is template + inline JS + CSS.
   change was judged not worth a header that stays put, so the
   surface keeps whole-page scroll and a non-sticky header. Not a
   17B PR.
-- **Return-to-place + visible progress.** Preserve scroll
-  position across save / reload; a small "N of M complete"
-  progress indicator. (`_surface_context` already computes
-  per-row completion state for the incomplete-marks render, so
-  the count is in the payload.)
+- **Return-to-place + visible progress.** *Visible progress —
+  shipped (#1077):* a session-wide status pill (Submitted / Saved
+  but not submitted / Draft) and per-instrument
+  `Required / All items completed` pills. *Return-to-place*
+  (preserve scroll position across save / reload) remains open.
 - **Filter-to-incomplete.** A client-side toggle that hides
   rows already complete, so a reviewer can find what is left.
-- **Keyboard navigation + column-type ergonomics.**
-  `spec/visual_style_rrw.md` also pins tab / arrow movement
-  between cells and per-column-type input affordances as
-  first-class. Lower priority than the four items above; land
-  only if the surface still feels heavy after them.
+- **Keyboard navigation — shipped (#1076).** Tab walks cells
+  across a row natively; Enter / Shift+Enter move focus down / up
+  a column (per `spec/visual_style_rrw.md`, which pins Tab +
+  Enter — arrow keys were ruled out as they conflict with in-cell
+  editing). Per-column-type input affordances remain open.
 
 ## Reviewer-facing timezone clarity
 
