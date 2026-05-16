@@ -4,15 +4,16 @@
 15B per-instrument assignments → 15C operator libraries → 15E
 Operations Workflow Card → 15F enhanced Setup pages), the
 **Sys-Admin arc** (16A Sys Admin page → 16B role delegation →
-16C MVP in-app audit viewer), **13B** sortable tables, and
-**Segment 18B** date / time settings. Five days after the
+16C MVP in-app audit viewer), **13B** sortable tables, **Segment
+18B** date / time settings, and **Segment 17A** housekeeping
+(file splits + test-suite runtime). Five days after the
 [2026-05-11 assessment](codebase_assessment_11may.md). Numbers
-taken on `main` at commit `4ec05d0`. Citizen project,
+taken on `main` at commit `a6f8e6e`. Citizen project,
 single-author + AI-agent cadence; not yet pilot-deployed.
 
 This is an audit-style snapshot. Authoritative ship-state lives
 in `docs/status.md`; this document re-baselines the May 11
-assessment after a heavy five-day landing window (~146 PRs).
+assessment after a heavy five-day landing window (~152 PRs).
 The functional spec it audits against has moved —
 `spec/functional_spec.md` was relocated to
 `guide/archive/functional_spec.md` on 2026-05-11; section
@@ -21,20 +22,10 @@ numbers (§21 / §22 / §23) are unchanged.
 > **History note.** The visible git history was linearised at
 > some point after the May 11 assessment — the pre-`2026-05-12`
 > commits (including the `b46081d` baseline the last assessment
-> cited) are no longer ancestors of `main`. The visible tree is
-> 306 commits / 146 PR merges spanning 2026-05-12 → 2026-05-16,
-> which covers the whole inter-assessment window. Exact
-> commit-level archaeology across the May 11 boundary is lossy.
-
-> **Update — later the same day (2026-05-16).** Segment **17A**
-> (Housekeeping) shipped after this assessment was written, as a
-> direct response to it: it actioned every §6 file-split
-> recommendation and closed §5 weaknesses 3 and 8. Five PRs
-> (#1052 → #1056), all pure structure. The §2 LOC tables stay
-> pinned to commit `4ec05d0` (pre-17A); §5, §6, §7 and §8 below
-> carry inline **17A update** notes recording what changed. Net
-> effect: the test suite runs ~90 s → ~22 s, and no `app/`
-> production file is over ~1,200 LOC without a deliberate reason.
+> cited) are no longer ancestors of `main`. The visible tree
+> spans 2026-05-12 → 2026-05-16, which covers the whole
+> inter-assessment window. Exact commit-level archaeology across
+> the May 11 boundary is lossy.
 
 ---
 
@@ -60,11 +51,13 @@ Management, Sessions Diagnostics, per-session owner management,
 and an in-app per-session **audit-log viewer** with filter
 strip. **Sortable tables** (13B) and a full **date / time
 display subsystem** (18B — per-operator + per-session
-timezones, one canonical render format) round it out. Email is
-still staged to a dev outbox — **deliberately**: the production
-transport shape awaits the host institution's IT decision among
-the Option B–D backends (§5, weakness 1), so the rest of the
-system was built out first.
+timezones, one canonical render format) round out the feature
+work, and **Segment 17A** closed the window with a pure-structure
+housekeeping pass — file splits + a parallelised test suite.
+Email is still staged to a dev outbox — **deliberately**: the
+production transport shape awaits the host institution's IT
+decision among the Option B–D backends (§5, weakness 1), so the
+rest of the system was built out first.
 
 ## 2. By the numbers (LOC + counts)
 
@@ -72,16 +65,16 @@ system was built out first.
 
 | Area | LOC | Files | Δ vs 5-11 |
 |---|---:|---:|---:|
-| `app/services` (business logic) | 18,051 | 25 modules + `rules/` + `instruments/` + `extracts/` packages | +5,055 |
-| `app/web` (routes + view-shape adapters) | 15,265 | 4 top-level route files + `routes_operator/` + `views/` | +4,690 |
-|  ├ `routes_operator/` (14 slices + `_shared`) | 7,926 | 14 | +2,687 |
+| `app/services` (business logic) | 18,123 | 24 modules + `rules/` + `instruments/` + `extracts/` + `session_config_io/` packages | +5,127 |
+| `app/web` (routes + view-shape adapters) | 15,412 | 4 top-level route files + `routes_operator/` + `views/` | +4,837 |
+|  ├ `routes_operator/` (16 slices + `_shared`) | 8,073 | 18 | +2,834 |
 |  ├ `routes_reviewer.py` | 1,362 | 1 | +227 |
-|  └ `views/` (14 sub-modules) | 5,443 | 14 | +1,589 |
+|  └ `views/` (14 sub-modules) | 5,443 | 15 | +1,589 |
 | `app/db/models` (SQLAlchemy 2.x declarative) | 1,316 | 18 files / 20 classes | +92 |
 | `app/schemas` (Pydantic shapes) | 505 | 5 | -5 |
 | `app/auth` | 153 | 2 | 0 |
 | `app/main.py`, `app/config.py` | 154 | 2 | +36 |
-| **Total `app/` Python** | **35,515** | — | **+9,879 (+39%)** |
+| **Total `app/` Python** | **35,734** | — | **+10,098 (+39%)** |
 | Alembic migrations | 3,489 | 40 | +346 / +5 files |
 | Templates (`*.html`) | 11,876 | 53 | +3,743 / +11 |
 
@@ -89,39 +82,40 @@ system was built out first.
 
 | Area | LOC | Files | Δ vs 5-11 |
 |---|---:|---:|---:|
-| Integration | 42,501 | 130 | +15,265 / +45 |
+| Integration | 42,496 | 130 | +15,260 / +45 |
 | Unit | 11,699 | 41 | +893 / +3 |
-| Helpers + conftest | ~1,050 | ~8 | — |
-| **Total tests** | **~55,250** | **~179** | **+16,155 / +48** |
+| Helpers + conftest | ~1,138 | ~9 | +1 (`tests/_sqlite_schema.py`) |
+| **Total tests** | **~55,333** | **180** | **+16,238 / +49** |
 
-Test/code ratio: **1.56 ×** (up from 1.53 ×). The integration
-suite carried most of the growth (+56%) — the Segment 15 family
-and the Sys-Admin arc are both heavily route-driven, so their
-coverage lands integration-first. The full suite is **1,766
-tests, ~90 s** on the session container (**~22 s after 17A**
-parallelised it the same day — see the update note above).
+Test/code ratio: **1.55 ×** (vs 1.53 × on May 11). The
+integration suite carried most of the growth (+56%) — the
+Segment 15 family and the Sys-Admin arc are both heavily
+route-driven, so their coverage lands integration-first. The
+full suite is **1,767 tests**; Segment 17A parallelised it with
+`pytest-xdist`, so it now runs in **~22 s** on the session
+container (down from ~90 s single-process).
 
 ### Documentation
 
 | Area | LOC | Files | Δ vs 5-11 |
 |---|---:|---:|---:|
-| `spec/` (UI + per-page + reference) | 10,738 | 27 | +1,025 / +5 |
-| `guide/` (active plans + roadmap) | 5,771 | 20 | +1,686 / +4 |
-| `guide/archive/` (shipped + retired plans) | 37,269 | 75 | +7,143 / +13 |
-| `docs/` (subsystem deep-dives + status) | 1,660 | 7 | +128 |
-| `CLAUDE.md` / `AGENTS.md` (byte-identical) | ~221 each | 2 | ~0 |
-| `README.md` | ~212 | 1 | 0 |
+| `spec/` (UI + per-page + reference) | 10,746 | 27 | +1,033 / +5 |
+| `guide/` (active plans + roadmap) | 6,335 | 21 | +2,250 / +5 |
+| `guide/archive/` (shipped + retired plans) | 37,453 | 76 | +7,327 / +14 |
+| `docs/` (subsystem deep-dives + status) | 1,661 | 7 | +129 |
+| `CLAUDE.md` / `AGENTS.md` (byte-identical) | 224 each | 2 | ~0 |
+| `README.md` | 225 | 1 | +13 |
 
 New specs since May 11: `workflow_card.md`, `instruments.md`,
 `sort_by_reviewee.md`, `group_scoped_instruments.md`,
 `timezone_display.md`. Active `guide/` grew despite heavy
-archiving — five upcoming-segment stubs were added or revised
-(17B, 18B → done, 18C, 18D, 21, 22) faster than shipped plans
-left.
+archiving — upcoming-segment stubs (17B, 18C, 18D, 21) and the
+2026-05-16 codebase assessment were added faster than shipped
+plans (17A, 18B) left for `archive/`.
 
 ### Surface area
 
-- **~136 HTTP routes** (+~36 vs May 11) — the Sys-Admin pages,
+- **~143 HTTP routes** (+~43 vs May 11) — the Sys-Admin pages,
   workflow-card POST endpoints, per-row roster CRUD, library
   save / add actions, the timezone routes.
 - **18 model files / 20 mapped classes**, **40 migrations**
@@ -131,13 +125,15 @@ left.
 - **103 audit event types** registered in the `EVENT_SCHEMAS`
   strict-mode registry (+41 since May 11) — every 15-family
   and 16-family emitter registered cleanly.
-- **25 service modules** + the `rules/` (2,463 LOC),
-  `instruments/` (3,402 LOC), and `extracts/` (583 LOC)
-  sub-packages.
+- **24 service modules** + the `rules/` (2,463 LOC),
+  `instruments/` (3,402 LOC), `extracts/` (583 LOC) and
+  `session_config_io/` (1,805 LOC) sub-packages — the last
+  promoted from a flat module by Segment 17A.
 - **53 templates** + partials (21 operator partials).
-- **~146 PRs** merged across the May 12 → 16 window — the
-  Segment 15 family, the 16A/B/C arc, 13B, 18B, plus the
-  timezone-display follow-on and the segment-21 stub.
+- **~152 PRs** merged across the May 12 → 16 window — the
+  Segment 15 family, the 16A/B/C arc, 13B, 18B, the
+  timezone-display follow-on, the segment-21 stub, and the six
+  Segment 17A housekeeping PRs.
 
 ## 3. Compliance against the functional spec
 
@@ -195,9 +191,9 @@ pair (#8 / #13, outbox-only until 14B Part A) and retention
 | Administrative dashboards | ✅ **shipped (16A)** — Sys Admin page: workspace allowlist, Accounts Management, Sessions Diagnostics | **upgraded ⚠️→✅** |
 
 Three §22 items crossed the line since May 11 — all from the
-Sys-Admin arc. Five remain open: cloning (18A), targeted
-reminders (14C), advanced retention (18C). The expanded-release
-surface is now mostly shipped.
+Sys-Admin arc. Open: cloning (18A), targeted reminders (14C),
+advanced retention (18C). The expanded-release surface is now
+mostly shipped.
 
 ### §23 End-to-end acceptance criteria
 
@@ -244,15 +240,25 @@ not just the CSV export.
    `EVENT_SCHEMAS` cleanly.
 
 5. **The three-layer + view-adapter seam held under heavy
-   pressure.** `routes_operator/` grew +2,687 LOC and `views/`
-   +1,589 — and both stayed split (14 sub-modules each); no
-   monolith re-formed. New feature areas (`_sys_admin`,
-   workflow card) slotted into the existing package shapes.
+   pressure — and was actively maintained.** `routes_operator/`
+   grew +2,834 LOC and `views/` +1,589, and both stayed split;
+   no monolith re-formed. When three files did drift past
+   ~1.3k LOC, **Segment 17A re-split them cleanly** —
+   `_setup_rosters.py` into three per-page slices,
+   `session_config_io.py` into a package, the Response Type
+   routes out of `_instruments.py` — all pure-structure PRs with
+   the suite passing unchanged. The operator package is now 16
+   feature slices; no `app/` production file is over ~1,200 LOC
+   without a deliberate reason.
 
-6. **Tests scaled with code.** Ratio held at **1.56 ×** while
-   production code grew 39%. The integration suite (+15k LOC)
-   carried the route-heavy 15/16 work; 1,766 tests run in
-   ~90 s (~22 s after 17A's same-day parallelisation).
+6. **Tests scaled with code, and the suite stays fast.** Ratio
+   held at **1.55 ×** while production code grew 39%. The
+   integration suite (+15k LOC) carried the route-heavy 15/16
+   work. Segment 17A parallelised the run with `pytest-xdist`
+   and swapped the SQLite path's migration replay for
+   `create_all` — 1,767 tests now run in **~22 s** (was ~90 s),
+   with real headroom for the route-heavy 14B / 21 coverage to
+   come.
 
 7. **Date / time done as one coherent subsystem.** 18B
    standardised every render site on one format via
@@ -262,9 +268,12 @@ not just the CSV export.
    standalone `spec/timezone_display.md`. A textbook
    cross-cutting refactor.
 
-8. **Cadence held.** ~146 PRs over five days, still
-   small-and-reviewable — the largest segment (15E) landed as
-   ~12 PRs rather than one big drop.
+8. **Cadence held, and the codebase acts on its own audits.**
+   ~152 PRs over five days, still small-and-reviewable — the
+   largest segment (15E) landed as ~12 PRs rather than one big
+   drop. When this very assessment flagged three oversized
+   files and a creeping suite runtime, Segment 17A shipped the
+   fixes the same day as five tightly-scoped PRs.
 
 9. **Spec discipline intact.** `spec/` is now 27 files; every
    shipped segment that locked a contract wrote it down
@@ -298,139 +307,55 @@ not just the CSV export.
    Segment 18C owns it as a stub; no implementation, no
    scheduled cadence.
 
-3. **Large files are creeping.** `_setup_rosters.py` is now
-   **1,759 LOC** (15F's per-row CRUD bloated it),
-   `session_config_io.py` 1,733, `_instruments.py` 1,398.
-   Three files over 1.3k, none on a split plan. The
-   `_instruments.py` warning from May 11 went unaddressed and
-   `_setup_rosters.py` overtook it. **§6 below recommends the
-   specific splits.**
-   **17A update:** resolved. Segment 17A Track A (#1054 → #1056)
-   actioned all three §6 splits — `_setup_rosters.py` into three
-   per-page slices, `session_config_io.py` into a package,
-   `_instruments.py`'s Response Type routes into
-   `_response_types.py` (it drops to ~1,105 LOC). No `app/`
-   production file is now over ~1,200 LOC without a deliberate
-   reason.
-
-4. **`guide/archive/` keeps ballooning** — **37,269 LOC / 75
-   files** (+24% since May 11). The "compression would matter
-   at scale" note is now three assessments old. Not yet a real
-   problem; still drifting the wrong way.
-
-5. **Production hardening (14A) untouched.** Key Vault, VNet,
+3. **Production hardening (14A) untouched.** Key Vault, VNet,
    soft-delete, full-Postgres pytest — 521-LOC plan, not
    started. It gates pilot-readiness alongside email.
 
-6. **Reviewer surface still plain HTML, no autosave.** The
+4. **Reviewer surface still plain HTML, no autosave.** The
    reviewer table is `<input>` / `<textarea>` / `<select>` with
    per-page form-based save. The large-table ergonomics
    (cell-level autosave, sticky headers, visible progress) are
-   now owned by **Segment 17B** as vanilla progressive
-   enhancement — the AG Grid framing was taken off the roadmap
-   (see `guide/future_possibilities.md`).
+   owned by **Segment 17B** as vanilla progressive enhancement
+   — the AG Grid framing was taken off the roadmap (see
+   `guide/future_possibilities.md`). One structural note for
+   17B: `app/web/routes_reviewer.py` (1,362 LOC) is still a
+   single file rather than a package — unlike the operator
+   side — so converting it to a `routes_reviewer/` package is
+   the natural first step of 17B before the surface grows.
 
-7. **The reviewee is still not an audience.** A whole
+5. **The reviewee is still not an audience.** A whole
    third-audience surface (results-sharing, feedback
    acknowledgement, non-confidential peer review) is only just
    stubbed as **Segment 21** — sizeable greenfield work, no
    implementation.
 
-8. **Test-suite runtime is creeping.** 1,766 tests / ~90 s is
-   fine today but has no headroom plan (no parallelisation,
-   no split fast/slow tiers). Worth watching as 14B / 21 add
-   route-heavy coverage.
-   **17A update:** resolved. Segment 17A Track B parallelised
-   the SQLite suite with `pytest-xdist` (`-n auto`, #1052) and
-   replaced its 40-migration replay with `Base.metadata.create_all()`
-   (#1053) — full run ~90 s → ~22 s, with real headroom for the
-   14B / 21 coverage to come. The `ci-postgres` job stays
-   single-process by design (its workers would share one DB).
+6. **`guide/archive/` keeps ballooning** — **37,453 LOC / 76
+   files** (+24% since May 11). The "compression would matter
+   at scale" note is now three assessments old. Not yet a real
+   problem; still drifting the wrong way.
 
-9. **Structural caveats unchanged.** No multi-tenant story
+7. **Structural caveats unchanged.** No multi-tenant story
    (single-deployment by design); CSRF leans on Easy Auth
    (documented in `docs/authentication.md`); no reviewer
    self-service profile (not an MVP requirement).
 
-## 6. Recommended file splits
+Two weaknesses from the morning's draft of this assessment —
+oversized files and a slow test suite — are **not listed above
+because Segment 17A resolved them the same day** (see strengths
+5 and 6).
 
-> **17A update.** All three recommendations below were actioned
-> the same day by Segment 17A Track A — Priority 1 in #1054,
-> Priority 2 in #1055, Priority 3 in #1056. Each landed as a
-> pure-structure PR with the test suite passing unchanged. The
-> text below is kept as the rationale of record.
-
-Weakness #3 calls out three production files past 1.3k LOC,
-none on a refactor plan. The codebase has a working precedent —
-the May 9 splits of `instruments.py` (2,469 LOC → package) and
-`views.py` (3,483 LOC → package) both held under heavy pressure
-since — and a documented convention (`CLAUDE.md`: operator
-routes split by feature area; services split by concern into
-packages). The recommendations below apply that precedent.
-
-**Priority 1 — `app/web/routes_operator/_setup_rosters.py`
-(1,759 LOC).** The clearest case. This one slice carries
-*three* independent Setup pages — Reviewers, Reviewees,
-Relationships — each with its own page-render helper, per-row
-create / update, bulk inactivate / reactivate, and delete-all.
-That is three feature areas in one file, directly against the
-"one slice per feature area" convention every other operator
-route follows. Split into three sibling slices —
-`_setup_reviewers.py`, `_setup_reviewees.py`,
-`_setup_relationships.py` — with the shared plumbing
-(`_redirect_keeping_selection`, the sort-value helpers, the
-`_picker_label` datalist helper) lifted into `_shared.py`.
-Low-risk: the three route groups already have near-zero
-cross-references.
-
-**Priority 2 — `app/services/session_config_io.py` (1,733
-LOC).** Two genuinely separate halves live here:
-`serialize_session_config` (the six-section CSV exporter) and
-`apply_session_config` (the two-phase importer — its inverse).
-Promote to a `session_config_io/` package mirroring
-`extracts/` and `instruments/`: `_serialize.py`, `_apply.py`,
-a shared `_rows.py` (the `Row` NamedTuple + the `_str` /
-`_bool` / `_int` / `_decimal` / `_json` typed-cell helpers),
-and an `__init__.py` re-exporting the public surface so
-callers keep writing `from app.services import
-session_config_io` unchanged.
-
-**Priority 3 — `app/web/routes_operator/_instruments.py`
-(1,398 LOC).** Less urgent — it is reasonably cohesive
-(instrument + display-field + response-field CRUD all serve
-one page). The cleanest carve is the Response Type Definition
-routes (operator add / edit / delete / add-from-library, the
-block already marked "Slice 4b", ~250 LOC) into a
-`_response_types.py` slice. Worth doing if `_instruments.py`
-keeps growing; not pressing today.
-
-**Watch list (not yet actionable).**
-`app/web/routes_reviewer.py` (1,362 LOC) is the only reviewer
-route file and — unlike the operator side — is *not* a
-package. Segment 17B (reviewer refinements + large-table
-ergonomics) will grow it, so converting it to a
-`routes_reviewer/` package is worth doing as the first step of
-17B. `app/web/views/_rule_builder.py` (1,043 LOC) is a
-single large view-adapter sub-module — monitor, no split
-needed yet.
-
-Every split above is pure structure — no behaviour change,
-each a small reviewable PR. They fold naturally into Segment
-19 (spec / hygiene) or are best done opportunistically, just
-ahead of whichever segment next touches each surface.
-
-## 7. LOC budget estimate to project completion
+## 6. LOC budget estimate to project completion
 
 The May 11 model forecast the 15-family at ~5,400 code /
-~8,100 tests; actuals across the whole window were +9,879 code
-/ +16,155 tests — but that window also absorbed the unforecast
-16-family, 13B, and the entire 18B subsystem. Per-segment the
-model held to within its stated ±20%; the tests/code ratio for
-new work stayed near **1.0–1.5 ×** depending on how
-route-driven the segment was.
+~8,100 tests; actuals across the whole window were +10,098 code
+/ +16,238 tests — but that window also absorbed the unforecast
+16-family, 13B, the entire 18B subsystem, and the 17A
+housekeeping pass. Per-segment the model held to within its
+stated ±20%; the tests/code ratio for new work stayed near
+**1.0–1.5 ×** depending on how route-driven the segment was.
 
-Thirteen segments remained when this assessment was written;
-**17A shipped the same day** (see below), leaving twelve:
+Twelve segments remain (per `guide/todo_master.md`; Segment 17A
+shipped 2026-05-16 and is no longer listed):
 
 | Segment | Est. code | Est. tests | Migrations |
 |---|---:|---:|---:|
@@ -440,7 +365,6 @@ Thirteen segments remained when this assessment was written;
 | 14B — email infra (Parts A → E) | ~1,800 | ~2,000 | 0 |
 | 14B — email infra (Parts F → H, optional backends) | ~1,800 | ~1,500 | 0 |
 | 14C — reminders workflow | ~1,200 | ~1,400 | 0-1 |
-| ~~17A — housekeeping (file splits + test runtime)~~ | ✅ shipped | ✅ shipped | 0 |
 | 17B — reviewer surface refinements + ergonomics | ~900 | ~900 | 0 |
 | 18A — session cloning + tagging + archiving | ~1,300 | ~1,500 | 0-1 |
 | 18C — retention / deletion workflow | ~900 | ~1,000 | 0-1 |
@@ -450,28 +374,26 @@ Thirteen segments remained when this assessment was written;
 | 21 — peer review enhancements (reviewee surface) | ~2,500 | ~2,500 | 1-2 |
 | **Total remaining** | **~14,500** | **~14,600** | **~3-9** |
 
-> **17A update.** 17A was forecast at ~600 code / ~300 tests but
-> shipped as a pure-structure refactor — file splits are
-> LOC-neutral, so its net production-code delta was roughly zero
-> (a new ~70-LOC `tests/_sqlite_schema.py` helper plus small
-> `conftest` / `pyproject` edits). The "Total remaining" row
-> above already nets 17A out; the completion estimate below is
-> unchanged within its ±20% band.
+Segment 17A is absent from the table because it shipped — and
+it was LOC-neutral anyway: file splits move code rather than add
+it, so its net production-code delta was roughly zero (a new
+~70-LOC `tests/_sqlite_schema.py` helper plus small `conftest` /
+`pyproject` edits).
 
 ### Likely shape at completion
 
 | Area | Today | At completion (estimate) | Δ |
 |---|---:|---:|---:|
-| `app/` Python | 35,515 | **~50,500** | +43% |
-| Tests Python | 55,250 | **~70,000** | +27% |
+| `app/` Python | 35,734 | **~50,500** | +41% |
+| Tests Python | 55,333 | **~70,000** | +27% |
 | Templates | 11,876 | **~14,500** | +22% |
 | Alembic migrations | 40 files / 3,489 LOC | **~46 / ~3,900** | +15% |
-| Specs | 10,738 | **~13,500** | +26% |
-| Guides (active + archive) | 43,040 | **~45,000** | +5% |
-| **Total project (all artifacts)** | **~162k LOC** | **~200k LOC** | **+23%** |
+| Specs | 10,746 | **~13,500** | +26% |
+| Guides (active + archive) | 43,788 | **~45,500** | +4% |
+| **Total project (all artifacts)** | **~163k LOC** | **~200k LOC** | **+23%** |
 
-**Production Python at completion: ~50–51k LOC, ~+43% over
-today.** The two biggest remaining chunks are now **Segment 21**
+**Production Python at completion: ~50–51k LOC, ~+41% over
+today.** The two biggest remaining chunks are **Segment 21**
 (the reviewee surface — a new audience, ~2,500 code / ~2,500
 tests) and **Segment 14B** (email infra). The 14B figure above
 assumes every backend ships, which it likely will not — the
@@ -483,7 +405,7 @@ Segment 21, which is genuine greenfield (new auth posture, new
 chrome) rather than the operator-polish breadth that dominated
 the May 11–16 window and estimates more reliably.
 
-## 8. Five-day delta summary
+## 7. Five-day delta summary
 
 What changed between the May 11 baseline and this assessment:
 
@@ -499,30 +421,32 @@ What changed between the May 11 baseline and this assessment:
   `spec/timezone_display.md` follow-on.
 - **Sortable tables** (13B) landed across the operator and
   reviewer surfaces.
+- **Segment 17A housekeeping** closed the window — five
+  pure-structure PRs split the three oversized files
+  (`_setup_rosters.py`, `session_config_io.py`,
+  `_instruments.py`) and parallelised the test suite (~90 s →
+  ~22 s).
 - **MVP score: 10 → 13 of 16.** Audit event types 62 → 103;
-  routes ~100 → ~136; production Python +39%.
+  routes ~100 → ~143; production Python +39%.
 - **Roadmap reshaped.** Segment 21 (peer review / reviewee
-  surface) stubbed; a housekeeping segment took the 17A slot;
-  the AG Grid replacement was taken off the roadmap as overkill
-  (now an aspirational item in `guide/future_possibilities.md`),
-  its reviewer-surface ergonomics folded into 17B.
-- **Segment 17A shipped the same day** (#1052 → #1056) — a
-  pure-structure response to this assessment: it actioned every
-  §6 file split and closed §5 weaknesses 3 and 8. Test suite
-  ~90 s → ~22 s; no `app/` production file now over ~1,200 LOC
-  without a deliberate reason.
+  surface) stubbed; the recycled 17A slot was used for the
+  housekeeping segment and has now shipped; the AG Grid
+  replacement was taken off the roadmap as overkill (now an
+  aspirational item in `guide/future_possibilities.md`), its
+  reviewer-surface ergonomics folded into 17B.
 
-## 9. One-line verdict
+## 8. One-line verdict
 
 A disciplined, well-tested, well-documented FastAPI monolith at
-**~35.5k LOC of production code (+39% in five days)**, **~55k
-LOC of tests (1.56 × ratio)**, with the **operator surface now
-genuinely polished** and **13 of 16 MVP acceptance criteria
-fully met**. The last functional gap before a real pilot —
-**email send activation (Segment 14B Part A)** — is deliberately
-deferred, not stalled: its backend shape awaits the host
-institution's IT decision among the Option B–D transports, the
-pluggable seam for it is already built, and the rest of the
-system was sequenced ahead of it on purpose. Production
-hardening (14A) and retention tooling (18C) are the next two
-pilot gates.
+**~35.7k LOC of production code (+39% in five days)**, **~55k
+LOC of tests (1.55 × ratio, ~22 s suite)**, with the **operator
+surface now genuinely polished**, **13 of 16 MVP acceptance
+criteria fully met**, and no production file left oversized
+after the 17A housekeeping pass. The last functional gap before
+a real pilot — **email send activation (Segment 14B Part A)** —
+is deliberately deferred, not stalled: its backend shape awaits
+the host institution's IT decision among the Option B–D
+transports, the pluggable seam for it is already built, and the
+rest of the system was sequenced ahead of it on purpose.
+Production hardening (14A) and retention tooling (18C) are the
+next two pilot gates.
