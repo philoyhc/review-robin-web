@@ -517,12 +517,17 @@ tokens read unevenly) and added the live worked-sample preview
 on both cards; #1032 swept `guide/` + `spec/` for the
 follow-up; #1033 put the zone token behind one internal switch
 (`date_formatting.SHOW_ZONE_TOKEN`, off by default — flip +
-restart, no env var or migration).
+restart, no env var or migration). CLDR display names: #1034
+(card previews via `Intl`) + #1035 (`babel` + `timezone_label`
+for the Session Details card and reviewer deadlines).
 
-The Post-MVP input-consistency item (reconciling the
-`datetime-local` deadline input with the session zone) remains
-deferred. Spec: `spec/settings_inventory.md` §1 / §2 / §8.5.
-Plan archived: `guide/archive/segment_18B_date_and_time_settings.md`.
+Post-MVP input consistency — the formerly-deferred item — landed
+as #1037 (Create Session gains a Timezone field; deadline picker
+scoped to it) and #1038 (the Edit Session Details form folds the
+timezone in as a field, lifecycle-gated; the `/timezone` route is
+retired). 18B is fully closed. Spec: `spec/settings_inventory.md`
+§1 / §2 / §8.5. Plan archived:
+`guide/archive/segment_18B_date_and_time_settings.md`.
 
 ---
 
