@@ -1,7 +1,10 @@
 # Segment 17A — Housekeeping (file splits + test-suite runtime)
 
-**Status:** Planned. Created 2026-05-16; PR sequence added
-2026-05-16.
+**Status:** Shipped 2026-05-16 (PRs #1052 → #1056). Created
+2026-05-16; PR sequence added 2026-05-16. All five PRs landed
+the same day — Track B (#1052 / #1053) then Track A (#1054 /
+#1055 / #1056). This plan is now a historical record; current
+behaviour is described in `docs/status.md`.
 
 The "17A" segment number was freed when the AG Grid
 replacement was taken off the roadmap (2026-05-16) — it is now

@@ -543,6 +543,45 @@ held at UTC as the documented exception (#1043).
 
 ---
 
+### Segment 17A — Housekeeping (file splits + test-suite runtime) — done 2026-05-16 (PRs #1052 → #1056)
+
+Pure structural / infrastructure cleanup, no behaviour change —
+the code-hygiene items surfaced by the 2026-05-16 codebase
+assessment (§6 file splits + §5 weakness 8 test-suite runtime).
+Five PRs across two tracks, Track B first.
+
+**Track B — test-suite runtime.** #1052 added `pytest-xdist` to
+the `[dev]` extra and runs the SQLite CI job with `pytest -n auto`
+(the `ci-postgres` job stays single-process — its workers would
+otherwise share one Postgres database). #1053 swapped the SQLite
+test path's 40-migration replay for `Base.metadata.create_all()`
+in both the session-scoped `engine` and the per-test
+`committed_engine` fixtures; the one data-only migration (the
+seeded RuleSet library) is replayed from the ORM models in the
+new `tests/_sqlite_schema.py`. Postgres CI still round-trips the
+full migration chain, so drift is still caught. Net: full suite
+~90s → ~22s.
+
+**Track A — file splits.** #1054 carved the 1,759-LOC
+`_setup_rosters.py` into three per-page operator slices
+(`_setup_reviewers.py` / `_setup_reviewees.py` /
+`_setup_relationships.py`), with the cross-slice import /
+redirect / field-label plumbing moved to `_shared.py`. #1055
+promoted the 1,733-LOC `session_config_io.py` to a package split
+by concern — `_rows.py` (the `Row` primitive + cell formatters),
+`_serialize.py` (export), `_apply.py` (import) — with
+`__init__.py` re-exporting the public surface. #1056 carved the
+Response Type Definition routes out of `_instruments.py` into a
+sibling `_response_types.py` slice (the `_require_instrument_editable`
+guard moved to `_shared.py`). After this, no `app/` production
+file is over ~1,200 LOC without a deliberate reason.
+
+Every PR was pure structure — the test suite passed unchanged
+across all five. Plan archived:
+`guide/archive/segment_17A_housekeeping.md`.
+
+---
+
 ## Upcoming
 
 Each item below has a detailed plan in its own doc; entries
@@ -556,7 +595,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 3-5), 14A, 14B, 14C, 17A, 17B,
+**13C, 13F (PRs 3-5), 14A, 14B, 14C, 17B,
 18A, 18C, 18D, 19, 20, 21**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
@@ -639,24 +678,6 @@ bottom of this file.
    **Plan:** `guide/segment_14C_reminders_workflow.md`.
 
 #### Stubs
-
-- **17A — Housekeeping (file splits + test-suite runtime)**
-  *(planned 2026-05-16; PR sequence set)*. Pure structural /
-  infrastructure cleanup, no behaviour change. Five PRs, both
-  tracks pursued, Track B first: **PR 1** `pytest-xdist`
-  (`-n auto`); **PR 2** swap the SQLite engine fixture's
-  migration replay for `Base.metadata.create_all()`; **PR 3**
-  split `_setup_rosters.py` into three Setup-page slices;
-  **PR 4** promote `session_config_io.py` to a package; **PR 5**
-  *(optional)* carve the Response Type routes out of
-  `_instruments.py`. Track B (PRs 1-2) cuts test-suite runtime
-  per assessment §5 weakness 8; Track A (PRs 3-5) splits the
-  production files past 1.3k LOC per assessment §6. PR 1 → 2 is
-  the one hard ordering; the rest can interleave. The "17A"
-  number is recycled from the AG Grid segment, which was taken
-  off the roadmap (now an aspirational item in
-  `guide/future_possibilities.md`); the scopes are unrelated.
-  **Plan:** `guide/segment_17A_housekeeping.md`.
 
 - **17B — Reviewer surface refinements** *(stub created
   2026-05-12)*. Polish pass on the reviewer surface — to
@@ -755,7 +776,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **14C
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13C, 13F (PRs 3-5), 14A, 17A, 17B, 18A,
+- **13C, 13F (PRs 3-5), 14A, 17B, 18A,
   18C, 18D, 19, 20, 21** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —

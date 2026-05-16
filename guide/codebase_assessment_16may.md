@@ -26,6 +26,16 @@ numbers (§21 / §22 / §23) are unchanged.
 > which covers the whole inter-assessment window. Exact
 > commit-level archaeology across the May 11 boundary is lossy.
 
+> **Update — later the same day (2026-05-16).** Segment **17A**
+> (Housekeeping) shipped after this assessment was written, as a
+> direct response to it: it actioned every §6 file-split
+> recommendation and closed §5 weaknesses 3 and 8. Five PRs
+> (#1052 → #1056), all pure structure. The §2 LOC tables stay
+> pinned to commit `4ec05d0` (pre-17A); §5, §6, §7 and §8 below
+> carry inline **17A update** notes recording what changed. Net
+> effect: the test suite runs ~90 s → ~22 s, and no `app/`
+> production file is over ~1,200 LOC without a deliberate reason.
+
 ---
 
 ## 1. What's in the box (one-paragraph summary)
@@ -88,7 +98,8 @@ Test/code ratio: **1.56 ×** (up from 1.53 ×). The integration
 suite carried most of the growth (+56%) — the Segment 15 family
 and the Sys-Admin arc are both heavily route-driven, so their
 coverage lands integration-first. The full suite is **1,766
-tests, ~90 s** on the session container.
+tests, ~90 s** on the session container (**~22 s after 17A**
+parallelised it the same day — see the update note above).
 
 ### Documentation
 
@@ -241,7 +252,7 @@ not just the CSV export.
 6. **Tests scaled with code.** Ratio held at **1.56 ×** while
    production code grew 39%. The integration suite (+15k LOC)
    carried the route-heavy 15/16 work; 1,766 tests run in
-   ~90 s.
+   ~90 s (~22 s after 17A's same-day parallelisation).
 
 7. **Date / time done as one coherent subsystem.** 18B
    standardised every render site on one format via
@@ -294,6 +305,13 @@ not just the CSV export.
    `_instruments.py` warning from May 11 went unaddressed and
    `_setup_rosters.py` overtook it. **§6 below recommends the
    specific splits.**
+   **17A update:** resolved. Segment 17A Track A (#1054 → #1056)
+   actioned all three §6 splits — `_setup_rosters.py` into three
+   per-page slices, `session_config_io.py` into a package,
+   `_instruments.py`'s Response Type routes into
+   `_response_types.py` (it drops to ~1,105 LOC). No `app/`
+   production file is now over ~1,200 LOC without a deliberate
+   reason.
 
 4. **`guide/archive/` keeps ballooning** — **37,269 LOC / 75
    files** (+24% since May 11). The "compression would matter
@@ -322,6 +340,12 @@ not just the CSV export.
    fine today but has no headroom plan (no parallelisation,
    no split fast/slow tiers). Worth watching as 14B / 21 add
    route-heavy coverage.
+   **17A update:** resolved. Segment 17A Track B parallelised
+   the SQLite suite with `pytest-xdist` (`-n auto`, #1052) and
+   replaced its 40-migration replay with `Base.metadata.create_all()`
+   (#1053) — full run ~90 s → ~22 s, with real headroom for the
+   14B / 21 coverage to come. The `ci-postgres` job stays
+   single-process by design (its workers would share one DB).
 
 9. **Structural caveats unchanged.** No multi-tenant story
    (single-deployment by design); CSRF leans on Easy Auth
@@ -329,6 +353,12 @@ not just the CSV export.
    self-service profile (not an MVP requirement).
 
 ## 6. Recommended file splits
+
+> **17A update.** All three recommendations below were actioned
+> the same day by Segment 17A Track A — Priority 1 in #1054,
+> Priority 2 in #1055, Priority 3 in #1056. Each landed as a
+> pure-structure PR with the test suite passing unchanged. The
+> text below is kept as the rationale of record.
 
 Weakness #3 calls out three production files past 1.3k LOC,
 none on a refactor plan. The codebase has a working precedent —
@@ -399,7 +429,8 @@ model held to within its stated ±20%; the tests/code ratio for
 new work stayed near **1.0–1.5 ×** depending on how
 route-driven the segment was.
 
-Thirteen segments remain (per `guide/todo_master.md`):
+Thirteen segments remained when this assessment was written;
+**17A shipped the same day** (see below), leaving twelve:
 
 | Segment | Est. code | Est. tests | Migrations |
 |---|---:|---:|---:|
@@ -409,7 +440,7 @@ Thirteen segments remain (per `guide/todo_master.md`):
 | 14B — email infra (Parts A → E) | ~1,800 | ~2,000 | 0 |
 | 14B — email infra (Parts F → H, optional backends) | ~1,800 | ~1,500 | 0 |
 | 14C — reminders workflow | ~1,200 | ~1,400 | 0-1 |
-| 17A — housekeeping (file splits + test runtime) | ~600 | ~300 | 0 |
+| ~~17A — housekeeping (file splits + test runtime)~~ | ✅ shipped | ✅ shipped | 0 |
 | 17B — reviewer surface refinements + ergonomics | ~900 | ~900 | 0 |
 | 18A — session cloning + tagging + archiving | ~1,300 | ~1,500 | 0-1 |
 | 18C — retention / deletion workflow | ~900 | ~1,000 | 0-1 |
@@ -417,7 +448,15 @@ Thirteen segments remain (per `guide/todo_master.md`):
 | 19 — spec documentation | n/a (docs) | n/a | 0 |
 | 20 — operator polish + docs | ~500 | ~400 | 0 |
 | 21 — peer review enhancements (reviewee surface) | ~2,500 | ~2,500 | 1-2 |
-| **Total remaining** | **~15,100** | **~14,900** | **~3-9** |
+| **Total remaining** | **~14,500** | **~14,600** | **~3-9** |
+
+> **17A update.** 17A was forecast at ~600 code / ~300 tests but
+> shipped as a pure-structure refactor — file splits are
+> LOC-neutral, so its net production-code delta was roughly zero
+> (a new ~70-LOC `tests/_sqlite_schema.py` helper plus small
+> `conftest` / `pyproject` edits). The "Total remaining" row
+> above already nets 17A out; the completion estimate below is
+> unchanged within its ±20% band.
 
 ### Likely shape at completion
 
@@ -467,6 +506,11 @@ What changed between the May 11 baseline and this assessment:
   the AG Grid replacement was taken off the roadmap as overkill
   (now an aspirational item in `guide/future_possibilities.md`),
   its reviewer-surface ergonomics folded into 17B.
+- **Segment 17A shipped the same day** (#1052 → #1056) — a
+  pure-structure response to this assessment: it actioned every
+  §6 file split and closed §5 weaknesses 3 and 8. Test suite
+  ~90 s → ~22 s; no `app/` production file now over ~1,200 LOC
+  without a deliberate reason.
 
 ## 9. One-line verdict
 
