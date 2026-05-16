@@ -211,9 +211,9 @@ def test_missing_required_renders_in_full_width_card(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """The missing-required warning lives in its own full-width card
-    (`.rs-missing-card`) below the bottom-grid — not inside the
-    half-width status panel — because the list can be long enough
-    that cramming it into the panel produced a tall, narrow scroll."""
+    (`.rs-missing-card`) below the overview card — not inside it —
+    because the list can be long enough that cramming it into the
+    card produced a tall, narrow scroll."""
     operator = make_client(alice)
     review_session, first, _ = _setup_two_instrument_session(
         operator, db, code="rae-e-card"
@@ -233,12 +233,11 @@ def test_missing_required_renders_in_full_width_card(
         follow_redirects=False,
     ).text
     assert 'class="card rs-missing-card"' in body
-    # Card sits *below* the bottom-grid, not inside the status panel.
-    grid_close = body.find("</div>\n  </div>")  # bottom-grid close
+    # Card sits *below* the overview card, as its own full-width
+    # card — not inside it.
     panel_open = body.find('class="card rs-status-panel"')
     card_open = body.find('class="card rs-missing-card"')
-    assert grid_close >= 0 and panel_open >= 0 and card_open >= 0
-    # Card opens after the status panel closes — ie after the bottom-grid.
+    assert panel_open >= 0 and card_open >= 0
     assert card_open > panel_open
 
 
