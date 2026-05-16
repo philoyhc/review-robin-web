@@ -46,7 +46,8 @@ The allowlist is `_REVERT_RETURN_TO` in
 Every page route builds the card's context with one call to
 `views.build_workflow_card_context(db, review_session, *,
 return_to, validated_just_ran=False, super_failure=None,
-user=None, correlation_id=None)` and merges the returned dict into
+activate_confirm=None, user=None, correlation_id=None)` and merges
+the returned dict into
 its template context via `**workflow_ctx`. The builder lives in
 `app/web/views/_workflow_card.py`. It returns:
 
@@ -83,6 +84,12 @@ its template context via `**workflow_ctx`. The builder lives in
   `?super_status=failed&super_step=...&super_error=...` query-
   param triple via `views.parse_super_failure`. Drives the
   right-column failure banner.
+- `activate_confirm` — `dict | None`. Populated (`response_count`
+  key) when the builder is called with
+  `activate_confirm="responses"` AND the session actually has
+  saved responses. Drives the saved-response confirmation banner
+  in the card body. `None` outside the super-button's
+  `?activate_confirm=responses` detour.
 - `next_action_return_to` — the `return_to` slug, passed
   through.
 
@@ -203,9 +210,10 @@ The Activate session button POSTs to a single
 1. **Generate.** `assignments.replace_assignments(...)` —
    materialises one `Assignment` row per `(reviewer, reviewee,
    instrument)` triple eligible under each instrument's pinned
-   rule. The route's confirm-replace + response-loss-ack form
-   fields are pre-set so the chain fires without confirmation
-   dialogs.
+   rule. This step is **skipped** when the operator picked
+   `regen_choice=keep` in the saved-response confirmation detour
+   below; otherwise it runs and replaces any existing assignment
+   rows (deleting their responses).
 2. **Validate.** `validation.validate_session_setup(...)` →
    `lifecycle.build_readiness_report(...)`. When the report is
    clean, `lifecycle.mark_validated(...)` flips `draft →
@@ -215,10 +223,38 @@ The Activate session button POSTs to a single
    (`accepting_responses = True`), and emits
    `session.activated`.
 
-The route always tries all three steps regardless of starting
-state. Re-Generate is idempotent for a session without responses,
-and only `draft` / `validated` states (where no responses can
-exist yet) ever reach the super-button.
+The route runs Validate + Activate from any `draft` / `validated`
+starting state. The Generate step runs on every click **except**
+when the saved-response detour resolved to `regen_choice=keep`.
+
+#### Saved-response confirmation detour
+
+A session reverted from `ready` back to `draft` keeps its
+responses (`revert_session_to_draft` preserves them). The Generate
+step's `replace_assignments(...)` deletes assignments and their
+responses, so re-activating such a session would silently destroy
+recorded data.
+
+To prevent that, the super-button checks for saved responses
+before running. When the session is editable, has responses, and
+the POST carried no `regen_choice` form field, the route 303s back
+to the host page with `?activate_confirm=responses` instead of
+running. The workflow card decodes that param (via the
+`activate_confirm` builder kwarg) and renders a confirmation
+banner in the card body with two buttons, both POSTing back to
+`/workflow/activate`:
+
+- **Activate without regenerating** — `regen_choice=keep`. The
+  Generate step is skipped; the existing assignments and their
+  responses survive, and the run proceeds straight to Validate +
+  Activate.
+- **Regenerate & activate** — `regen_choice=regenerate`. The
+  Generate step runs, replacing assignments and deleting the
+  responses, then Validate + Activate proceed.
+
+Like the warnings detour, the confirmation detour writes no
+`workflow_run_failed` event — the run is paused at the
+operator-choice step, not failed.
 
 #### Warnings detour
 
@@ -358,7 +394,7 @@ routes:
 
 | Route | Service | Allowed prior state | Resulting state | Audit event |
 | --- | --- | --- | --- | --- |
-| `POST /operator/sessions/{id}/workflow/activate` | `assignments.replace_assignments` → `lifecycle.mark_validated` → `lifecycle.activate_session` | `draft` or `validated` (`is_editable`) | `ready` (or detour to Validate page in warnings case) | `session.workflow_run_started` + per-step events; `session.workflow_run_failed` on failure |
+| `POST /operator/sessions/{id}/workflow/activate` | `assignments.replace_assignments` (skipped on `regen_choice=keep`) → `lifecycle.mark_validated` → `lifecycle.activate_session` | `draft` or `validated` (`is_editable`) | `ready` (or detour to Validate page in warnings case, or to the host page in the saved-response confirmation case) | `session.workflow_run_started` + per-step events; `session.workflow_run_failed` on failure |
 | `POST /operator/sessions/{id}/assignments/generate` | `assignments.replace_assignments` | `draft` or `validated` | unchanged | `assignments.generated` |
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |

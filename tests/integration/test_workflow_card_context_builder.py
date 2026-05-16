@@ -88,6 +88,7 @@ _EXPECTED_KEYS = {
     "validation_issues_by_severity",
     "setup_checklist",
     "super_failure",
+    "activate_confirm",
     "next_action_return_to",
 }
 

@@ -34,6 +34,12 @@
      preserves the Session Home behaviour where every action
      redirects back to Home.
 
+   - ``activate_confirm`` (dict | None) — when set (``response_count``
+     key), the card renders the saved-response confirmation banner
+     so the operator chooses between activating without regenerating
+     and regenerating (which deletes the responses). ``None`` outside
+     the super-button's ``?activate_confirm=responses`` detour.
+
    The card renders the same seven-stage workflow stepper across
    every state: Generate assignments / Validate setup / Start
    session / Create invites / Send invites / Send reminders /
@@ -68,6 +74,34 @@
   <div class="next-action-grid">
     <div class="next-action-main">
       <div class="next-action-body">
+    {% if activate_confirm %}
+      {# Saved-response confirmation. The session was reverted from
+         ``ready`` and still holds responses; the Activate super-
+         button's Generate step would delete them. The operator
+         picks a path before the run proceeds. #}
+      <div class="banner banner-warning banner-scroll-target"
+           id="next-action-activate-confirm-banner">
+        <p class="banner-headline">
+          This session has {{ activate_confirm.response_count }}
+          saved response{{ "" if activate_confirm.response_count == 1 else "s" }}.
+        </p>
+        <p style="margin: var(--space-2) 0 0 0;">
+          Activating regenerates assignment pairs, which deletes
+          those responses. Activate without regenerating to keep the
+          existing assignments and responses instead.
+        </p>
+        <div class="next-action-buttons" style="margin-top: var(--space-3);">
+          <button class="btn" type="submit"
+                  form="next-action-activate-keep-form">
+            Activate without regenerating
+          </button>
+          <button class="btn danger-solid" type="submit"
+                  form="next-action-activate-regenerate-form">
+            Regenerate &amp; activate
+          </button>
+        </div>
+      </div>
+    {% endif %}
     {% if is_setup_empty %}
       {# State 1: rosters / rule pins missing. No live action. #}
       <p>Session not fully set up. Make sure that reviewers, reviewees, and relationships (optional), and instruments have been set up before continuing.</p>
@@ -139,6 +173,28 @@
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
         {% endif %}
+      </form>
+    {% endif %}
+    {% if activate_confirm %}
+      {# Saved-response confirmation forms — referenced by the
+         banner's two buttons via ``form=``. ``keep`` skips the
+         Generate step; ``regenerate`` runs it and deletes the
+         responses. #}
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/workflow/activate"
+            id="next-action-activate-keep-form">
+        {% if _next_action_return_to %}
+          <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+        {% endif %}
+        <input type="hidden" name="regen_choice" value="keep">
+      </form>
+      <form method="post"
+            action="/operator/sessions/{{ session.id }}/workflow/activate"
+            id="next-action-activate-regenerate-form">
+        {% if _next_action_return_to %}
+          <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
+        {% endif %}
+        <input type="hidden" name="regen_choice" value="regenerate">
       </form>
     {% endif %}
     {% if is_validated %}
