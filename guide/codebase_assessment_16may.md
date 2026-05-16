@@ -51,8 +51,10 @@ and an in-app per-session **audit-log viewer** with filter
 strip. **Sortable tables** (13B) and a full **date / time
 display subsystem** (18B — per-operator + per-session
 timezones, one canonical render format) round it out. Email is
-still staged to a dev outbox; real send activation remains the
-**Segment 14B Part A** boundary.
+still staged to a dev outbox — **deliberately**: the production
+transport shape awaits the host institution's IT decision among
+the Option B–D backends (§5, weakness 1), so the rest of the
+system was built out first.
 
 ## 2. By the numbers (LOC + counts)
 
@@ -260,14 +262,26 @@ not just the CSV export.
 
 ## 5. Weaknesses and gaps
 
-1. **Email is *still* not actually sent.** Unchanged across
-   three assessments. #8 (invitations) and #13 (reminders)
-   stop at `email_outbox.status="queued"`. This is now the
-   single largest — and increasingly conspicuous — gap:
-   everything *around* the send path is polished, hardened,
-   and tested, and the path itself is inert. **Segment 14B
-   Part A is the one thing standing between "demo" and
-   "pilot."**
+1. **Email send is deliberately deferred — not neglected.**
+   #8 (invitations) and #13 (reminders) still stop at
+   `email_outbox.status="queued"`. It is the largest
+   *functional* gap, and it remains the last pilot
+   prerequisite — but the deferral is a sound sequencing
+   decision, not a slip. The **backend shape is gated on an
+   external dependency**: institutional Microsoft 365 tenants
+   typically block basic SMTP AUTH, so the production
+   transport must be one of Options B–D in
+   `spec/email_infra_options.md` (Graph / ACS / third-party),
+   and *which* one is the host institution's IT decision to
+   make. Building the rest of the system first — while that
+   decision is pending — is the right call. The groundwork is
+   already laid so the wait costs nothing: the pluggable
+   `EmailTransport` interface (11E) and the `email_outbox`
+   audit-log schema (11C Part 2) are in place, so Segment 14B
+   Part A is a backend driver slotting into a ready seam
+   rather than a from-scratch build. The risk to watch is
+   simply that the IT decision stays open long enough to
+   become the critical path to a pilot date.
 
 2. **Retention / purge still not built.** §21 #16 / §23 #15.
    Segment 18C owns it as a stub; no implementation, no
@@ -417,12 +431,15 @@ Thirteen segments remain (per `guide/todo_master.md`):
 **Production Python at completion: ~50–52k LOC, ~+44% over
 today.** The two biggest remaining chunks are now **Segment 21**
 (the reviewee surface — a new audience, ~2,500 code / ~2,500
-tests) and **Segment 14B** (email infra with all backend
-options — ~3,600 code if every backend ships). Estimates carry
-roughly **±20%**; the largest unknown is Segment 21, which is
-genuine greenfield (new auth posture, new chrome) rather than
-the operator-polish breadth that dominated the May 11–16 window
-and estimates more reliably.
+tests) and **Segment 14B** (email infra). The 14B figure above
+assumes every backend ships, which it likely will not — the
+host institution's IT decision picks the production transport,
+so in practice one or two of the Option B–D drivers land, not
+all three; treat ~1,800–2,800 code as the realistic 14B range.
+Estimates carry roughly **±20%**; the largest unknown is
+Segment 21, which is genuine greenfield (new auth posture, new
+chrome) rather than the operator-polish breadth that dominated
+the May 11–16 window and estimates more reliably.
 
 ## 8. Five-day delta summary
 
@@ -451,8 +468,11 @@ A disciplined, well-tested, well-documented FastAPI monolith at
 **~35.5k LOC of production code (+39% in five days)**, **~55k
 LOC of tests (1.56 × ratio)**, with the **operator surface now
 genuinely polished** and **13 of 16 MVP acceptance criteria
-fully met**. The one blocker between "runs locally,
-fully featured" and "runs a real pilot" is unchanged and now
-starkly isolated: **email send activation (Segment 14B Part A)**
-— with production hardening (14A) and retention tooling (18C)
-the next two pilot gates behind it.
+fully met**. The last functional gap before a real pilot —
+**email send activation (Segment 14B Part A)** — is deliberately
+deferred, not stalled: its backend shape awaits the host
+institution's IT decision among the Option B–D transports, the
+pluggable seam for it is already built, and the rest of the
+system was sequenced ahead of it on purpose. Production
+hardening (14A) and retention tooling (18C) are the next two
+pilot gates.
