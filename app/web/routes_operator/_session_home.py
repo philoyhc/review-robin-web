@@ -49,7 +49,6 @@ from app.web.routes_operator._shared import (
     _lifecycle_error_response,
     _quick_setup_unlocked,
     _require_editable,
-    _require_response_loss_ack,
     _templates,
 )
 
@@ -178,15 +177,17 @@ def session_edit_submit(
     deadline: str | None = Form(default=None),
     display_timezone: str = Form(default=""),
     help_contact: str | None = Form(default=None),
-    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
         require_sys_admin_or_session_operator
     ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    # Editing session metadata (name / code / description / deadline /
+    # help contact / timezone) touches only scalar ``sessions`` columns
+    # — ``update_session`` never deletes assignments or responses — so
+    # this route carries no response-loss acknowledgement gate.
     _require_editable(review_session)
-    _require_response_loss_ack(db, review_session, acknowledge_response_loss)
 
     # 18B PR 5: the display timezone is a field of this form (folded
     # in from the former standalone card). Blank ⇒ leave the session's

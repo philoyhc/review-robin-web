@@ -333,6 +333,48 @@ def test_delete_data_wipes_responses_and_preserves_setup(
     assert audit.session_id == review_session.id
 
 
+def test_edit_session_details_succeeds_with_responses_present(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Editing session metadata is non-destructive — ``update_session``
+    never deletes responses — so the edit form must not be gated
+    behind a response-loss acknowledgement, even on a session that
+    holds responses."""
+    operator = make_client(alice)
+    review_session, count_before = _seed_responses(operator, db)
+    assert count_before > 0
+
+    operator = make_client(alice)
+    # Revert ready → draft so the lifecycle-gated edit form is reachable.
+    revert = operator.post(
+        f"/operator/sessions/{review_session.id}/revert",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert revert.status_code == 303
+
+    response = operator.post(
+        f"/operator/sessions/{review_session.id}/edit",
+        data={"name": "Renamed Session", "code": "renamed-code"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    db.refresh(review_session)
+    assert review_session.name == "Renamed Session"
+    assert review_session.code == "renamed-code"
+
+    # The edit left every response untouched.
+    remaining = db.execute(
+        select(Response)
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .where(Assignment.session_id == review_session.id)
+    ).all()
+    assert len(remaining) == count_before
+
+
 def test_delete_data_requires_confirm(
     client: TestClient, db: Session
 ) -> None:
