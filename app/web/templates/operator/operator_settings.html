@@ -110,7 +110,7 @@
       <label for="display_timezone">Default timezone</label>
       <p class="muted tz-sample-line" style="margin: 4px 0 10px;">
         Sample (right now): <strong id="tz-sample">{{ timezone_sample }}</strong>
-        in timezone <strong id="tz-sample-zone">{{ current_timezone }}</strong>
+        in <strong id="tz-sample-zone">{{ current_timezone }}</strong>
       </p>
       <input type="text" id="display_timezone" name="display_timezone"
              list="timezone-options" autocomplete="off" required
@@ -131,8 +131,11 @@
 
   {# Live timezone-sample preview — progressive enhancement. The
      server renders the sample for the saved zone; this updates it
-     as the operator picks a different zone. Shared verbatim with
-     the Session Edit "Display timezone" card. #}
+     as the operator picks a different zone. The zone is shown by
+     its CLDR long display name (e.g. "Singapore Standard Time")
+     resolved client-side via Intl; the no-JS server fallback
+     shows the raw IANA id. Shared verbatim with the Session Edit
+     "Display timezone" card. #}
   <script>
     (function () {
       var input = document.getElementById("display_timezone");
@@ -160,12 +163,23 @@
           return out;
         } catch (e) { return null; }
       }
+      function longName(zone) {
+        try {
+          var parts = new Intl.DateTimeFormat("en", {
+            timeZone: zone, year: "numeric", timeZoneName: "long",
+          }).formatToParts(new Date());
+          for (var i = 0; i < parts.length; i++) {
+            if (parts[i].type === "timeZoneName") return parts[i].value;
+          }
+          return null;
+        } catch (e) { return null; }
+      }
       function update() {
         var zone = input.value.trim() || fallback;
         var text = render(zone);
         if (text === null) return;
         sample.textContent = text;
-        zoneLabel.textContent = zone;
+        zoneLabel.textContent = longName(zone) || zone;
       }
       input.addEventListener("input", update);
       input.addEventListener("change", update);

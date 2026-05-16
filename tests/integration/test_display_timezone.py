@@ -318,6 +318,8 @@ def test_settings_card_renders_timezone_sample(
     assert "Sample (right now):" in body
     # The SHOW_ZONE_TOKEN switch wires through to the preview JS.
     assert "var showToken = false;" in body
+    # The preview resolves the zone's CLDR long name client-side.
+    assert 'timeZoneName: "long"' in body
 
 
 def test_edit_card_renders_timezone_sample(
@@ -329,3 +331,4 @@ def test_edit_card_renders_timezone_sample(
     assert 'id="tz-sample-zone"' in body
     assert "Sample (right now):" in body
     assert "var showToken = false;" in body
+    assert 'timeZoneName: "long"' in body
