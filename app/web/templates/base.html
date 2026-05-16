@@ -1912,9 +1912,18 @@
          session-closed banner, and the per-page status pills. */
       body.ui-v2 .rs-status-panel .rs-session-description {
         margin: 0;
+        /* Preserve the operator's line + paragraph breaks — the
+           description is authored in a <textarea>. */
+        white-space: pre-line;
       }
       body.ui-v2 .rs-status-panel .rs-session-description:not(:last-child) {
         margin-bottom: var(--space-3);
+      }
+      /* Session Details card description (Session Home) — same
+         line-break preservation as the reviewer-surface variant. */
+      .session-detail-description {
+        margin: 0 0 var(--space-3) 0;
+        white-space: pre-line;
       }
       body.ui-v2 .rs-status-panel .rs-page-status-pills {
         list-style: none;

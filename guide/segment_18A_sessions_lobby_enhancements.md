@@ -70,16 +70,15 @@ opportunistically as the segment opens:
   that toggles every row checkbox at once; inline JS keeps it in
   sync with the rows (checked / `indeterminate` / clear). See
   `spec/sessions_overview.md`.
-- **Multi-paragraph session description** — *planned.* The
-  session description (`ReviewSession.description`, a
-  `maxlength=2000` `<textarea>` on the Create / Edit forms)
-  renders today inside a single `<p>` on Session Home and the
-  reviewer surface, so an operator's line breaks collapse to
-  whitespace. Make the display preserve paragraph + line breaks
-  — the lightweight route is `white-space: pre-line` on the
-  description element (or splitting on blank lines into separate
-  `<p>`s); no input change, no new dependency. See the rich-text
-  note under Working notes for how much further the stack can go.
+- **Multi-paragraph session description** — *shipped.* The
+  session description display — Session Home's Session Details
+  card (`.session-detail-description`) and the reviewer-surface
+  overview card (`.rs-session-description`) — carries
+  `white-space: pre-line`, so the line + paragraph breaks the
+  operator types in the `maxlength=2000` `<textarea>` survive on
+  display instead of collapsing to whitespace. No input change,
+  no new dependency. Richer formatting (markdown / WYSIWYG) stays
+  deferred — see the rich-text note under Working notes.
 
 ### Part 1 — Session cloning
 

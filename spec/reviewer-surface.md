@@ -106,6 +106,8 @@ Top-to-bottom, the page renders:
 4. **Overview card** — a single full-width `.card.rs-status-panel`
    rolling together, top to bottom:
    - The session **description**, when `session.description` is set.
+     Renders with `white-space: pre-line` (the `.rs-session-description`
+     class) so the operator's line / paragraph breaks are preserved.
    - The transient **session-closed banner** — a
      `.banner.banner-warning` shown inline in the card when the
      session is no longer accepting responses; does not push other
