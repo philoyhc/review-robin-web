@@ -1,5 +1,10 @@
 # Segment 18C — Operator-triggered purge
 
+> **Status: shipped 2026-05-17** (PR #1123) — the "Purge and
+> archive" expander action + `app/services/session_purge.py`.
+> See `docs/status.md`. This plan is kept as the design-of-record;
+> not yet archived.
+>
 > **Stub created 2026-05-11; re-scoped 2026-05-17.** Originally
 > "Retention / deletion workflow", spanning both operator-triggered
 > *and* scheduled / policy-driven purge. The **scheduled** half —
