@@ -4,11 +4,14 @@ How Review Robin Web decides which timezone every date / time is
 **rendered** in. Storage is uniform — every timestamp is stored in
 UTC — so this doc is only about display. The mechanics (the
 canonical format, the `app/services/date_formatting.py` helpers
-`format_datetime` / `format_date` / `timezone_label` /
-`parse_local_datetime` / `format_datetime_local`, the
-`SHOW_ZONE_TOKEN` switch) landed in Segment 18B; see
+`format_datetime` / `format_date` / `parse_local_datetime` /
+`format_datetime_local`, the `SHOW_ZONE_TOKEN` switch) landed in
+Segment 18B; see
 `guide/archive/segment_18B_date_and_time_settings.md` for that
-history.
+history. The zone-identity helpers `gmt_offset_label` /
+`gmt_offset_zone_label` (and the now-unused CLDR-name helper
+`timezone_label`) live in the same module — see Rendering format
+below.
 
 ## Layers
 
@@ -70,12 +73,13 @@ unambiguous zone — localises to it:
   `2026-06-02T08:00:00+08:00`) — a precise, round-trip-safe
   machine format whose offset reflects the session zone.
 
-**The sessions lobby** (`/operator/sessions`) lists many
-sessions at once, so it cannot pick one session zone for its
-timestamp columns. Created / Last Modified render in the viewing
-operator's zone; a dedicated **Timezone** column (immediately
-after Last Modified) names each row's own session zone as a raw
-IANA id (e.g. `Asia/Singapore`).
+**The sessions lobby** (`/operator/sessions`) and the
+**archived-sessions page** (`/operator/sessions/archived`) each
+list many sessions at once, so they cannot pick one session zone
+for their timestamp columns. The per-row timestamp columns
+(Created, and so on) render in the viewing operator's zone; a
+dedicated **Timezone** column names each row's own session zone
+(see Rendering format below for its compact form).
 
 **The Sys Admin audit-log viewer is the one deliberate
 exception — UTC end-to-end.** A forensic surface correlating
@@ -91,13 +95,21 @@ filter are labelled `(UTC)`.
   uniform token is not possible; the token is instead available
   behind the `date_formatting.SHOW_ZONE_TOKEN` source switch
   (`spec/settings_inventory.md` §8.5).
-- Where a *zone name* is shown to a person — the Settings and
-  Session forms' live previews, the Session Details card's
-  Timezone item, the reviewer-surface deadline — it is the CLDR
-  long display name (e.g. `Australian Eastern Standard Time`),
-  with the raw IANA id as the fallback. The sessions-lobby
-  Timezone column is the exception: it shows the raw IANA id,
-  since that column is a compact at-a-glance reference.
+- Where a **zone identity** is shown to a person — the Settings
+  and Session forms' live previews, the Session Details card's
+  Timezone item, the reviewer dashboard / review-surface deadline
+  labels — it renders as the **compact GMT-offset followed by the
+  raw IANA id**, e.g. `GMT+8 Asia/Singapore`, via
+  `date_formatting.gmt_offset_zone_label`. The offset gives
+  at-a-glance orientation; the IANA id is the unambiguous
+  identifier. A bare `UTC` is shown once, not doubled.
+- The **sessions-lobby and archived-page Timezone columns** are
+  tighter still: the cell shows just the compact GMT-offset
+  (`gmt_offset_label`, e.g. `GMT+8`), with the full
+  `GMT+8 Asia/Singapore` in the cell's hover tooltip.
+- The **CLDR long display name** (e.g. `Australian Eastern
+  Standard Time`, via `timezone_label`) is no longer shown on any
+  surface; the helper is retained for potential reuse.
 
 ## See also
 

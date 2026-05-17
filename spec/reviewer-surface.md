@@ -99,10 +99,10 @@ Top-to-bottom, the page renders:
 3. **Page header** — `.rs-page-header` flex row carrying the session
    name as H1 plus the deadline inline as `.muted`. The deadline
    renders in the session's resolved zone followed by that zone's
-   CLDR display name in parentheses — e.g. `Deadline: 2026-06-02
-   07:59 (Australian Eastern Standard Time)` — with the raw IANA id
-   as the fallback. (D7 — settled in Segment 11D PR C and adjusted
-   post-merge.)
+   compact GMT-offset + raw IANA id in parentheses — e.g.
+   `Deadline: 2026-06-02 07:59 (GMT+10 Australia/Melbourne)` — via
+   `date_formatting.gmt_offset_zone_label`. (D7 — settled in
+   Segment 11D PR C and adjusted post-merge.)
 4. **Overview card** — a single full-width `.card.rs-status-panel`
    rolling together, top to bottom:
    - The session **description**, when `session.description` is set.
@@ -686,8 +686,9 @@ is an active reviewer on, with a per-session progress pill.
     lands on Page 1; the surface itself handles which page is
     "current").
   - **Deadline** — the canonical `YYYY-MM-DD HH:MM` timestamp in
-    that session's own resolved zone, followed by the zone's CLDR
-    display name in parentheses (raw IANA id as fallback); or
+    that session's own resolved zone, followed by the zone's
+    compact GMT-offset + raw IANA id in parentheses (e.g.
+    `(GMT+8 Asia/Singapore)`, via `gmt_offset_zone_label`); or
     `<span class="muted">—</span>` when null.
   - **Status** — pill (`not started` / `in progress` /
     `submitted`) computed from the reviewer's `Response` rows; plus
