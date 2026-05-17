@@ -348,6 +348,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.invalidated": EventSchema(_IDENTITY | {"reason"}),
     "session.activated": EventSchema(_IDENTITY | {"counts", "context"}),
     "session.reverted_to_draft": EventSchema(_IDENTITY | {"counts"}),
+    # Segment 18A Part 2 — session tagging. The added / removed tag
+    # string rides in ``context.tag``.
+    "session.tag_added": EventSchema(_IDENTITY | {"context"}),
+    "session.tag_removed": EventSchema(_IDENTITY | {"context"}),
     # Workflow super-button (per spec/workflow_card.md). The
     # ``started`` event marks each Activate-session click; per-step
     # success continues to write the underlying ``session.validated``

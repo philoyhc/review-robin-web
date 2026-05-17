@@ -107,6 +107,9 @@ def test_every_emitted_event_type_has_a_registered_schema() -> None:
         "operator_email_settings.cleared",
         "email_template.updated",
         "email_template.reset",
+        # Segment 18A — session tagging
+        "session.tag_added",
+        "session.tag_removed",
     }
     missing = expected - set(audit.EVENT_SCHEMAS.keys())
     assert not missing, (

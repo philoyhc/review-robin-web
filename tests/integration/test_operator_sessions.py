@@ -7,7 +7,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
+from app.db.models import (
+    AuditEvent,
+    ReviewSession,
+    SessionOperator,
+    SessionTag,
+    User,
+)
 
 
 def test_create_redirects_to_detail(client: TestClient, db: Session) -> None:
@@ -268,6 +274,45 @@ def test_sessions_list_renders_inline_expander_fragments(
     assert "data-expander-cancel" in body
     assert "data-expander-clear-all" in body
     assert "data-expander-clear-others" in body
+
+
+def test_lobby_renders_real_session_tags(
+    client: TestClient, db: Session
+) -> None:
+    """The Tags column renders each session's real tags, and the
+    filter strip lists the operator's tag vocabulary."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Tagged", "code": "tagged-1"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "tagged-1")
+    ).scalar_one()
+    db.add(SessionTag(session_id=review_session.id, tag="pilot"))
+    db.add(SessionTag(session_id=review_session.id, tag="cohort-a"))
+    db.commit()
+
+    body = client.get("/operator/sessions").text
+    assert '<span class="pill pill-count">pilot</span>' in body
+    assert '<span class="pill pill-count">cohort-a</span>' in body
+    assert "Show sessions tagged with:" in body
+    # No placeholder literals survive.
+    assert "HSH1000" not in body
+
+
+def test_lobby_renders_no_tags_state(client: TestClient) -> None:
+    """A session with no tags shows a muted 'No tags', and the filter
+    strip is hidden when the operator has no tags at all."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Bare", "code": "bare-1"},
+        follow_redirects=False,
+    )
+
+    body = client.get("/operator/sessions").text
+    assert "No tags" in body
+    assert "Show sessions tagged with:" not in body
 
 
 def test_delete_selected_removes_ticked_drafts(
