@@ -162,14 +162,14 @@ def test_sessions_list_create_button_lives_in_header(
     body = response.text
     # Old top-of-page "Create session" link no longer present.
     assert ">Create session<" not in body
-    # Per Segment 11D PR B (D4) and the cards-vs-table revisit, the
-    # Primary "Create new session" affordance sits in the header row
-    # to the right of the H1, above the lobby's table-in-a-card.
+    # Per Segment 18A, the "Create new session" affordance lives in the
+    # half-width session-actions card above the lobby's table-in-a-card.
     assert 'href="/operator/sessions/new"' in body
     assert "Create new session" in body
-    header_close = body.find("</div>", body.find('class="sessions-list-header"'))
+    action_card = body.find('class="card sessions-action-card"')
     create_btn = body.find("Create new session")
-    assert header_close != -1 and 0 < create_btn < header_close
+    table_card = body.find('id="sessions-list-form"')
+    assert action_card != -1 and action_card < create_btn < table_card
 
 
 def test_about_page_is_reachable_without_easy_auth(client: TestClient) -> None:
