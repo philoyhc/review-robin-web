@@ -285,11 +285,31 @@ operator does occasionally need to update session metadata
 and Home is the natural place for that since it's where session
 identity lives.
 
-**Contents.** Two-column meta row above a single-column Name + Description + Help contact block:
+**Contents.** Top to bottom — there is no "Session Details" card
+heading; the card title *is* the session:
 
-- **Column 1 (all rendered as count pills):** Created by · Created · Last Modified. Created and Last Modified render the canonical `YYYY-MM-DD HH:MM` timestamp in the session's resolved display zone, matching Deadline's grain.
-- **Column 2:** Code (rendered in `<code>`) · Deadline (count pill with the canonical timestamp, or `pill-empty` "Not set" when null) · Timezone (count pill with the session's resolved zone as its CLDR display name — e.g. "Singapore Standard Time" — falling back to the raw IANA id).
-- **Below the meta row:** full-width Name, Description, and Help contact (plain text, "—" when null) rows. The Description renders with `white-space: pre-line` (the `.session-detail-description` class), so the line and paragraph breaks the operator typed in the edit `<textarea>` are preserved on display rather than collapsing to whitespace.
+- **Title row.** The card's `<h2>` is the **session name**. The
+  **session code** trails it inline in body-text size + weight
+  (the `.session-detail-code` class) so it reads as secondary
+  metadata, not part of the heading. Neither carries a label.
+- **Description.** Directly below the title, unlabelled, full
+  width — plain text, "—" when null. Renders with
+  `white-space: pre-line` (the `.session-detail-description`
+  class), so the line and paragraph breaks the operator typed in
+  the edit `<textarea>` are preserved rather than collapsing to
+  whitespace.
+- **Three-column labelled meta grid** (`.session-meta-row`) — each
+  cell is a `form-help` label above its value:
+  - **Column 1:** Created by · Help contact. Created by is a
+    count pill; Help contact is plain text ("—" when null).
+  - **Column 2:** Created · Modified. Both count pills carrying
+    the canonical `YYYY-MM-DD HH:MM` timestamp in the session's
+    resolved display zone.
+  - **Column 3:** Deadline (count pill with the canonical
+    timestamp, or `pill-empty` "Not set" when null) · Timezone
+    (count pill with the session's resolved zone as its CLDR
+    display name — e.g. "Singapore Standard Time" — falling back
+    to the raw IANA id).
 - **Edit button** (Secondary styling), bottom-right of the card.
   Opens `session_edit.html` as a sub-page of Home for full
   metadata editing.

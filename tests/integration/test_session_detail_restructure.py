@@ -132,7 +132,10 @@ def test_session_detail_renders_session_layout(
     body = response.text
 
     assert response.status_code == 200
-    assert "<h2>Session Details</h2>" in body
+    # The Session Details card's H2 is the session name, with the
+    # session code trailing inline in body-text font.
+    assert 'class="session-detail-code' in body
+    assert "<h2>Spring<span" in body
     # Per spec/workflow_card.md, the Workflow card
     # back to Session Home (full-width, just below the chrome).
     assert 'id="next-action"' in body

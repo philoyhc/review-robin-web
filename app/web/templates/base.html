@@ -287,6 +287,14 @@
         margin: 0 0 6px 0;
       }
       .session-meta-row > div { flex: 1; }
+      /* Session code trailing the session name in the Session
+         Details card's H2 — body-text size + weight so it reads
+         as secondary metadata, not part of the heading. */
+      .session-detail-code {
+        font-size: var(--fs-body);
+        font-weight: 400;
+        margin-left: var(--space-2);
+      }
       .session-status-row {
         display: flex;
         justify-content: space-between;
