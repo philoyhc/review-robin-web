@@ -105,6 +105,11 @@ moved here out of **Segment 18C** when 18C was re-scoped to the
   `session.retention_policy_updated` emitter.
 - Reuses 18C's `session_purge` service for the actual deletes —
   this part adds only the schedule + policy resolution.
+- **Ride-along: 18D Part 5.** The Settings-CSV round-trip of the
+  retention columns (`retention_exception` / `retention_overrides`)
+  — Segment 18D's Part 5 — was handed to this part: once 13F PR 5
+  lands the columns, add the `retention.*` rows to the Settings
+  CSV serialiser / importer as part of Part 4.
 
 ### Reminders — owned by 14C, reconciled here
 
