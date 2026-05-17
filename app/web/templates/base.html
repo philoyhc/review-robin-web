@@ -1359,6 +1359,23 @@
         background: var(--bg-muted);
         color: var(--text-primary);
       }
+      /* Sessions-lobby Tags editor card — revealed below the Actions
+         card by the "Tags" button. Right-aligned to sit under it. */
+      body.ui-v2 .sessions-tags-card {
+        max-width: 50%;
+        margin-left: auto;
+        margin-bottom: var(--space-4);
+      }
+      body.ui-v2 .sessions-tags-card h2 { margin-top: 0; }
+      body.ui-v2 .sessions-tags-input {
+        width: 100%;
+        margin-bottom: var(--space-3);
+      }
+      body.ui-v2 .sessions-tags-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-2);
+      }
       /* Forms — input padding 8/12, tokenized borders, labels at
          medium weight with 4px gap, .form-help / .form-error for
          supporting text. */
