@@ -155,6 +155,59 @@
         </p>
       </div>
     </form>
+
+    {# Inline row-expander fragments — cloned + injected by the
+       expander script below. Placeholder: the action buttons are
+       disabled; only the selection-management buttons are wired. #}
+    <template id="single-session-expander">
+      <tr class="session-expander session-expander-single">
+        <td colspan="10">
+          <div class="session-expander-body">
+            <p class="session-expander-title">
+              Session: <strong data-expander-session-name></strong>
+            </p>
+            <div class="session-expander-fields">
+              <label>Name
+                <input type="text" data-expander-field="name" disabled>
+              </label>
+              <label>Code
+                <input type="text" data-expander-field="code" disabled>
+              </label>
+              <label>Deadline
+                <input type="text" data-expander-field="deadline" disabled>
+              </label>
+            </div>
+            <div class="session-expander-actions">
+              <button type="button" class="btn secondary" disabled>Tags</button>
+              <button type="button" class="btn secondary" disabled>Duplicate</button>
+              <button type="button" class="btn secondary" disabled>
+                Duplicate settings only
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </template>
+    <template id="bulk-expander">
+      <tr class="session-expander session-expander-bulk">
+        <td colspan="10">
+          <div class="session-expander-body">
+            <p class="session-expander-title">
+              <strong data-expander-count></strong> sessions selected
+            </p>
+            <div class="session-expander-actions">
+              <button type="button" class="btn secondary" disabled>Bulk tags</button>
+              <button type="button" class="btn alert" disabled>Archive</button>
+              <button type="button" class="btn destructive" disabled>Delete</button>
+              <button type="button" class="btn secondary"
+                      data-expander-clear-all>Clear all selected</button>
+              <button type="button" class="btn secondary"
+                      data-expander-clear-others>Clear all others</button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </template>
     <script>
       (function () {
         var dangerZone = document.getElementById("sessions-list-danger-zone");
@@ -204,6 +257,126 @@
         }
         if (cancel) cancel.addEventListener("click", close);
         if (save) save.addEventListener("click", close);
+      })();
+    </script>
+    <script>
+      (function () {
+        var table = document.querySelector("#sessions-list-form table");
+        var singleTpl = document.getElementById("single-session-expander");
+        var bulkTpl = document.getElementById("bulk-expander");
+        if (!table || !singleTpl || !bulkTpl) return;
+
+        var rowCheckboxes = Array.prototype.slice.call(
+          table.querySelectorAll(".sessions-list-select-row")
+        );
+        var selectAll = table.querySelector(".sessions-list-select-all");
+        var colCount = table.rows[0].cells.length;
+
+        // Checkboxes in the order they were individually ticked —
+        // drives the bulk expander's "anchor under the last-selected
+        // row" + the re-anchoring rule when a row is un-ticked.
+        var tickOrder = [];
+
+        function removeExpander() {
+          var existing = table.querySelector(".session-expander");
+          if (existing) existing.remove();
+        }
+
+        function fireChange(cb) {
+          cb.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        function selectedCheckboxes() {
+          return rowCheckboxes.filter(function (cb) { return cb.checked; });
+        }
+
+        // Most-recently-ticked checkbox that is still selected.
+        function currentAnchor() {
+          for (var i = tickOrder.length - 1; i >= 0; i--) {
+            if (tickOrder[i].checked) return tickOrder[i];
+          }
+          return null;
+        }
+
+        function fillSingle(row) {
+          var node = singleTpl.content.firstElementChild.cloneNode(true);
+          node.querySelector("td").colSpan = colCount;
+          var cells = row.children;
+          var fields = {
+            name: cells[0].textContent.trim(),
+            code: cells[1].textContent.trim(),
+            deadline: cells[2].textContent.trim(),
+          };
+          var nameEl = node.querySelector("[data-expander-session-name]");
+          if (nameEl) nameEl.textContent = fields.name;
+          node.querySelectorAll("[data-expander-field]").forEach(
+            function (input) {
+              input.value =
+                fields[input.getAttribute("data-expander-field")] || "";
+            }
+          );
+          return node;
+        }
+
+        function fillBulk(count) {
+          var node = bulkTpl.content.firstElementChild.cloneNode(true);
+          node.querySelector("td").colSpan = colCount;
+          var countEl = node.querySelector("[data-expander-count]");
+          if (countEl) countEl.textContent = String(count);
+          var clearAll = node.querySelector("[data-expander-clear-all]");
+          var clearOthers = node.querySelector("[data-expander-clear-others]");
+          if (clearAll) clearAll.addEventListener("click", function () {
+            rowCheckboxes.forEach(function (cb) {
+              if (cb.checked) { cb.checked = false; fireChange(cb); }
+            });
+          });
+          if (clearOthers) clearOthers.addEventListener("click", function () {
+            var anchor = currentAnchor();
+            rowCheckboxes.forEach(function (cb) {
+              if (cb.checked && cb !== anchor) {
+                cb.checked = false;
+                fireChange(cb);
+              }
+            });
+          });
+          return node;
+        }
+
+        function refreshExpander() {
+          removeExpander();
+          var selected = selectedCheckboxes();
+          if (selected.length === 0) return;
+          if (selected.length === 1) {
+            var row = selected[0].closest("tr");
+            row.insertAdjacentElement("afterend", fillSingle(row));
+            return;
+          }
+          var anchor = currentAnchor() || selected[selected.length - 1];
+          anchor.closest("tr").insertAdjacentElement(
+            "afterend", fillBulk(selected.length)
+          );
+        }
+
+        rowCheckboxes.forEach(function (cb) {
+          cb.addEventListener("change", function () {
+            var idx = tickOrder.indexOf(cb);
+            if (cb.checked) {
+              if (idx === -1) tickOrder.push(cb);
+            } else if (idx !== -1) {
+              tickOrder.splice(idx, 1);
+            }
+            refreshExpander();
+          });
+        });
+
+        if (selectAll) {
+          // Select-all sets row .checked programmatically — no row
+          // change events fire — so rebuild the tick order here.
+          selectAll.addEventListener("change", function () {
+            tickOrder = selectAll.checked ? rowCheckboxes.slice() : [];
+            refreshExpander();
+          });
+        }
       })();
     </script>
   {% else %}

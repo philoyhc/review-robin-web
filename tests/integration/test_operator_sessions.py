@@ -241,6 +241,31 @@ def test_sessions_list_renders_select_all_header_checkbox(
     assert 'class="sessions-list-select-all"' in body
 
 
+def test_sessions_list_renders_inline_expander_fragments(
+    client: TestClient,
+) -> None:
+    """The lobby ships the two inline row-expander <template>
+    fragments — a single-session and a bulk variant — that the
+    selection-aware script clones and injects below the table rows."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Spring Reviews", "code": "spring-2026"},
+        follow_redirects=False,
+    )
+
+    body = client.get("/operator/sessions").text
+    assert 'id="single-session-expander"' in body
+    assert 'id="bulk-expander"' in body
+    # Single-session expander hosts the per-session action placeholders
+    # plus the Name / Code / Deadline edit boxes.
+    assert 'data-expander-field="name"' in body
+    assert 'data-expander-field="code"' in body
+    assert 'data-expander-field="deadline"' in body
+    # Bulk expander hosts the bulk actions + selection-management.
+    assert "data-expander-clear-all" in body
+    assert "data-expander-clear-others" in body
+
+
 def test_delete_selected_removes_ticked_drafts(
     client: TestClient, db: Session
 ) -> None:
