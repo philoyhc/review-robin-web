@@ -24,7 +24,10 @@ re-swept again 2026-05-17 to open a **pending scheduled-lifecycle
 schema audit** (auto-archive datetime, auto-send-invitations
 datetime, the session "opening" gate) — candidates captured in
 the "Scope re-sweep (2026-05-17)" section below; the resolved
-column set becomes a new 13F PR once the audit completes.
+column set becomes a new 13F PR once the audit completes. The
+"opening" gate is settled as a gate within `ready` (no new
+`SessionStatus` value) — activation assumes the gate is closed
+until opened by datetime or operator action.
 Mirrors the **Segment 13D** (and 13E) inert-migrations pattern:
 pre-position the additive, nullable, no-backfill schema changes
 the rest of the active workplan needs, so the downstream feature
@@ -213,29 +216,49 @@ is not lost.
 | **Auto-archive datetime** | A point (or deadline + grace period) at which a session flips `closed → archived` automatically. | **18A Part 3** | Reuses `archive_session`; only the trigger is new. |
 | **Auto-send-invitations datetime** | A point at which an activated session's invitations are dispatched, rather than sending them immediately on activation. | invitations workflow | Lets the operator stage a session ahead of an announced start. |
 | **Reminder datetime(s)** | Scheduled reminder dispatch. | **14C** | **Partly already covered** — `sessions.reminder_settings` JSON (PR 4) carries `cadence` / `time_of_day`. The audit must reconcile: are absolute reminder datetimes a *new* slot, or do they fold into the existing JSON? |
-| **Session "opening" datetime + gate** | A point at which an *activated* session opens for responses. See the new-gate note below. | new lifecycle gate | The most structurally significant — needs a lifecycle change, not just a column. |
+| **Session "opening" datetime + gate** | A point at which an *activated* session opens for responses. See the gate note below. | response-acceptance gate | Implemented as a gate within `ready` — **no new enum state**. |
 
-**The "opening" gate — more than a column.** Today activation
-(`draft`/`validated` → `ready`) both sends invitations *and*
-opens the session for responses in one step. A real use case
-wants those decoupled: send every invitation first, but have the
-actual review **start at the same moment for everyone** — a
-synchronised open. That requires **a new gate after
-`ready`**: a session can be activated (invites out) yet not yet
-open for responses until an `opens_at` point is reached (or the
-operator opens it manually).
+**The "opening" gate — a gate within `ready`, not a new enum
+state.** Today activation (`draft`/`validated` → `ready`) opens
+the session for responses immediately (`activate_session` flips
+every instrument's `accepting_responses` to `True`). A real use
+case wants the *start of reviewing* decoupled from activation:
+get every invitation out first, but have the review **begin at
+the same moment for everyone** — a synchronised open.
 
-This is a `spec/lifecycle.md` change as much as a schema one:
+**Decision — implement "open" as a gate, not a lifecycle state.**
+The session stays in `ready`; "open" is a derived condition, the
+same shape as the existing per-instrument `accepting_responses`
+flag and the session `deadline` — all of which already funnel
+through the single `session_lifecycle.session_accepts_responses()`
+chokepoint. No `SessionStatus` enum value is added, so the ~91
+`is_ready()` call sites are untouched.
 
-- Schema side (the part 13F pre-positions): an `opens_at`
-  datetime, and possibly a flag/state distinguishing
-  "activated but not open" from "open".
-- Lifecycle side (owned by whichever segment lights it up, not
-  13F): the new gate, the transition rules, the reviewer-surface
-  behaviour when a session is activated-but-not-open.
+**The behaviour change this assumes.** Activation no longer
+implies "open." Once the gate exists, **`activate_session`
+assumes the open-gate is CLOSED** — the session goes `ready`,
+invitations are sendable, but responses are not accepted until
+the gate opens. The gate opens by **either**:
 
-13F only pre-positions the inert column(s); the gate semantics
-are a separate feature segment's job.
+- the `opens_at` datetime being reached (the scheduled path), **or**
+- an explicit **operator "Open now" action** (the manual path).
+
+`opens_at = NULL` means "no scheduled open" — the session then
+relies entirely on the manual action (and, for backward
+compatibility, the lighting-up segment decides whether a NULL
+`opens_at` on a freshly-activated session means "open
+immediately" to preserve today's one-step behaviour, or "stay
+closed until Open now"). `session_accepts_responses()` gains the
+gate check alongside its existing `is_ready` + `accepting_responses`
++ `deadline` tests.
+
+**Split of ownership.** 13F pre-positions only the inert
+`opens_at` datetime column (plus, if the audit finds it needed, a
+nullable `opened_at` stamp recording when the gate actually
+opened). The gate *semantics* — the `activate_session` behaviour
+change, the "Open now" operator control, the reviewer-surface
+"activated — opens at X" messaging, the `session.opened` audit
+event — are a separate feature segment's job, not 13F's.
 
 **Shape decision for the audit.** The open question the audit
 must settle: individual nullable datetime columns
