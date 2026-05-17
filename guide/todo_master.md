@@ -511,7 +511,7 @@ Audit log — sit after the Allow-delete checkbox.
   retention half moved to **Segment 18F** Part 4. Closes the
   operator-facing half of the §21 #16 acceptance criterion.
 
-Plan: `guide/segment_18C_retention_deletion.md`.
+Plan archived: `guide/archive/segment_18C_retention_deletion.md`.
 
 ---
 

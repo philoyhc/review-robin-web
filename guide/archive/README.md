@@ -111,3 +111,4 @@ alongside its replacement.
 | `segment_16C_richer_audit_views.md` | 376 | Segment 16C — richer audit views (in-app audit-log viewer). |
 | `segment_17A_housekeeping.md` | 184 | Segment 17A — housekeeping: file splits + test-suite runtime. |
 | `segment_18B_date_and_time_settings.md` | 452 | Segment 18B — date and time settings (display formatting + timezones). |
+| `segment_18C_retention_deletion.md` | 159 | Segment 18C — operator-triggered purge ("Purge and archive" expander action). |
