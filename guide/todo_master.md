@@ -638,7 +638,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13C, 13F (PRs 3-5), 14A, 14B, 14C, 17B,
-18A, 18C, 18D, 18E, 19, 20, 21**. No global ordering
+18A, 18C, 18D, 18E, 18F, 19, 20, 21**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -789,6 +789,17 @@ bottom of this file.
   client-side, no schema.
   **Plan:** `guide/segment_18E_small_enhancements.md`.
 
+- **18F — Scheduled events** *(stub created 2026-05-17)*.
+  Consolidates every scheduled / automatic session-lifecycle
+  automation behind the one 13F scheduled-lifecycle schema audit:
+  **auto-archive** (a timed `archive_session`, moved out of 18A),
+  **auto-send invitations** (timed invitation dispatch), and the
+  **session "opening" gate** — a gate within `ready` so invites
+  go out first and reviewing starts synchronously. Reminders stay
+  14C's. Schema-blocked on the 13F audit resolving to a locked
+  column set.
+  **Plan:** `guide/segment_18F_scheduled_events.md`.
+
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
   coverage-gap closure for Tier-1 specs flagged in
@@ -841,7 +852,7 @@ bottom of this file.
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 3-5), 14A, 17B, 18A,
-  18C, 18D, 18E, 19, 20, 21** are independent of the email +
+  18C, 18D, 18E, 18F, 19, 20, 21** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
   13C's re-scoped 3-PR ladder (2026-05-15) needs no rule-engine

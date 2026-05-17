@@ -204,6 +204,12 @@ audit of every scheduled session-lifecycle automation** the
 workplan wants, so the schema lands as one coherent slice instead
 of accreting a column per feature.
 
+**Consumer side consolidated in Segment 18F.** The scheduled
+automations below are owned by **Segment 18F — Scheduled events**
+(`guide/segment_18F_scheduled_events.md`) — auto-archive moved
+there out of 18A. This 13F audit is the schema half; 18F is the
+service / scheduling half.
+
 **This audit is not yet locked** — the candidates below are the
 inputs to it; the resolved column / table set becomes a new 13F
 PR (or PRs) once the audit completes. Captured here so the need
@@ -213,10 +219,10 @@ is not lost.
 
 | Candidate | What it schedules | Consumer | Notes |
 |---|---|---|---|
-| **Auto-archive datetime** | A point (or deadline + grace period) at which a session flips `closed → archived` automatically. | **18A Part 3** | Reuses `archive_session`; only the trigger is new. |
-| **Auto-send-invitations datetime** | A point at which an activated session's invitations are dispatched, rather than sending them immediately on activation. | invitations workflow | Lets the operator stage a session ahead of an announced start. |
+| **Auto-archive datetime** | A point (or deadline + grace period) at which a session flips `draft → archived` automatically. | **18F Part 1** | Reuses 18A's `archive_session`; only the trigger is new. |
+| **Auto-send-invitations datetime** | A point at which an activated session's invitations are dispatched, rather than sending them immediately on activation. | **18F Part 2** | Lets the operator stage a session ahead of an announced start. |
 | **Reminder datetime(s)** | Scheduled reminder dispatch. | **14C** | **Partly already covered** — `sessions.reminder_settings` JSON (PR 4) carries `cadence` / `time_of_day`. The audit must reconcile: are absolute reminder datetimes a *new* slot, or do they fold into the existing JSON? |
-| **Session "opening" datetime + gate** | A point at which an *activated* session opens for responses. See the gate note below. | response-acceptance gate | Implemented as a gate within `ready` — **no new enum state**. |
+| **Session "opening" datetime + gate** | A point at which an *activated* session opens for responses. See the gate note below. | **18F Part 3** | Implemented as a gate within `ready` — **no new enum state**. |
 
 **The "opening" gate — a gate within `ready`, not a new enum
 state.** Today activation (`draft`/`validated` → `ready`) opens
