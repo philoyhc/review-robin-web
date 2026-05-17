@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Archived sessions — Review Robin Web{% endblock %}
+
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <h1>Archived sessions</h1>
+
+  {% if sessions %}
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Session Name</th>
+            <th>Session Code</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+            <tr>
+              <td><a href="/operator/sessions/{{ s.id }}">{{ s.name }}</a></td>
+              <td><code>{{ s.code }}</code></td>
+              <td>
+                <span class="pill pill-lifecycle-archived">{{ s.status | lifecycle_label }}</span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card">
+      <p>No archived sessions.</p>
+      <p class="muted">Sessions you archive from the lobby appear here.</p>
+    </div>
+  {% endif %}
+{% endblock %}

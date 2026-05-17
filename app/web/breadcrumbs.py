@@ -64,6 +64,15 @@ def operator_new_session() -> list[Crumb]:
     ]
 
 
+def operator_sessions_child(label: str) -> list[Crumb]:
+    """Breadcrumb for a child page of the Sessions lobby that is not
+    session-scoped — e.g. the archived-sessions page."""
+    return [
+        ("Sessions", "/operator/sessions"),
+        (label, None),
+    ]
+
+
 def reviewer_root() -> list[Crumb]:
     return [("Reviewer", None)]
 

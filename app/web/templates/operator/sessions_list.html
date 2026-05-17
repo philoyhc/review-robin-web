@@ -39,6 +39,8 @@
           <button type="button" class="btn secondary"
                   data-search-cancel>Cancel</button>
           <a class="btn" href="/operator/sessions/new">Add new</a>
+          <a class="btn secondary"
+             href="/operator/sessions/archived">Go to Archive</a>
         </div>
       </div>
     </div>
@@ -138,29 +140,6 @@
         </table>
       </div>
 
-      <div class="card danger-zone"
-           id="sessions-list-danger-zone"
-           style="margin-top: 16px; display: none;">
-        <h2 style="margin-top: 0;">Danger Zone</h2>
-        <p class="form-help">
-          Tick the rows above, then submit here to delete the selected
-          sessions. Only draft sessions are eligible — anything Activated
-          stays in place. Each delete also removes its reviewers,
-          reviewees, instruments, assignments, invitations, and email
-          outbox rows.
-        </p>
-        <p>
-          <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required>
-            Yes, delete the selected sessions and all their data.
-          </label>
-        </p>
-        <p style="margin-bottom: 0;">
-          <button class="btn destructive" type="submit">
-            Delete selected sessions
-          </button>
-        </p>
-      </div>
     </form>
 
     {# Inline row-expander fragments — cloned + injected by the
@@ -189,7 +168,8 @@
             </div>
             <div class="session-expander-actions exp-actions-right">
               <label class="exp-allow-delete">
-                <input type="checkbox"> Allow delete
+                <input type="checkbox" name="confirm" value="true"
+                       data-expander-allow-delete> Allow delete
               </label>
               <button type="button" class="btn"
                       data-expander-save>Save</button>
@@ -201,9 +181,10 @@
                       data-expander-duplicate-config>Duplicate settings only</button>
               <button type="submit" class="btn alert"
                       formaction="/operator/sessions/archive-selected"
-                      formnovalidate
                       data-expander-archive>Archive</button>
-              <button type="button" class="btn destructive" disabled>Delete</button>
+              <button type="submit" class="btn destructive"
+                      formaction="/operator/sessions/delete-selected"
+                      data-expander-delete disabled>Delete</button>
             </div>
           </div>
         </td>
@@ -223,7 +204,8 @@
             </div>
             <div class="session-expander-actions exp-actions-right">
               <label class="exp-allow-delete">
-                <input type="checkbox"> Allow delete
+                <input type="checkbox" name="confirm" value="true"
+                       data-expander-allow-delete> Allow delete
               </label>
               <button type="button" class="btn secondary"
                       data-expander-cancel>Cancel</button>
@@ -232,9 +214,10 @@
               <button type="button" class="btn secondary"
                       data-expander-clear-all>Unselect all</button>
               <button type="submit" class="btn alert"
-                      formaction="/operator/sessions/archive-selected"
-                      formnovalidate>Archive all</button>
-              <button type="button" class="btn destructive" disabled>Delete all</button>
+                      formaction="/operator/sessions/archive-selected">Archive all</button>
+              <button type="submit" class="btn destructive"
+                      formaction="/operator/sessions/delete-selected"
+                      data-expander-delete disabled>Delete all</button>
             </div>
           </div>
         </td>
@@ -242,35 +225,29 @@
     </template>
     <script>
       (function () {
-        var dangerZone = document.getElementById("sessions-list-danger-zone");
         var rowCheckboxes = document.querySelectorAll(".sessions-list-select-row");
         var selectAll = document.querySelector(".sessions-list-select-all");
-        if (!dangerZone || !rowCheckboxes.length) return;
+        if (!rowCheckboxes.length || !selectAll) return;
+        // Header checkbox reflects the rows: all → checked, none →
+        // clear, a partial selection → indeterminate.
         function refresh() {
           var checkedCount = 0;
           rowCheckboxes.forEach(function (cb) {
             if (cb.checked) checkedCount++;
           });
-          dangerZone.style.display = checkedCount ? "" : "none";
-          // Header checkbox reflects the rows: all → checked, none →
-          // clear, a partial selection → indeterminate.
-          if (selectAll) {
-            selectAll.checked = checkedCount === rowCheckboxes.length;
-            selectAll.indeterminate =
-              checkedCount > 0 && checkedCount < rowCheckboxes.length;
-          }
+          selectAll.checked = checkedCount === rowCheckboxes.length;
+          selectAll.indeterminate =
+            checkedCount > 0 && checkedCount < rowCheckboxes.length;
         }
         rowCheckboxes.forEach(function (cb) {
           cb.addEventListener("change", refresh);
         });
-        if (selectAll) {
-          selectAll.addEventListener("change", function () {
-            rowCheckboxes.forEach(function (cb) {
-              cb.checked = selectAll.checked;
-            });
-            refresh();
+        selectAll.addEventListener("change", function () {
+          rowCheckboxes.forEach(function (cb) {
+            cb.checked = selectAll.checked;
           });
-        }
+          refresh();
+        });
         refresh();
       })();
     </script>
@@ -329,6 +306,17 @@
           });
           document.body.appendChild(form);
           form.submit();
+        }
+
+        // The expander Delete button stays disabled until its
+        // "Allow delete" checkbox is ticked — the confirm gate.
+        function wireDeleteGate(node) {
+          var allow = node.querySelector("[data-expander-allow-delete]");
+          var del = node.querySelector("[data-expander-delete]");
+          if (!allow || !del) return;
+          function sync() { del.disabled = !allow.checked; }
+          allow.addEventListener("change", sync);
+          sync();
         }
 
         function fillSingle(row) {
@@ -394,6 +382,7 @@
           }
           cloneAction("[data-expander-duplicate]", "all");
           cloneAction("[data-expander-duplicate-config]", "config");
+          wireDeleteGate(node);
           return node;
         }
 
@@ -427,6 +416,7 @@
             var anchor = currentAnchor();
             if (anchor) { anchor.checked = false; fireChange(anchor); }
           });
+          wireDeleteGate(node);
           return node;
         }
 

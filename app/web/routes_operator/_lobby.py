@@ -101,6 +101,31 @@ def list_sessions(
     )
 
 
+@router.get("/sessions/archived", response_class=HTMLResponse)
+def archived_sessions(
+    request: Request,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    """The archived-sessions child page (Segment 18A Part 3) — a
+    stub: lists the operator's archived sessions. The full surface
+    (Search card, tag-chip info card, bulk-only expander) follows."""
+    archived = [
+        s
+        for s in sessions.list_for_user(db, user)
+        if s.status == "archived"
+    ]
+    return _templates.TemplateResponse(
+        request,
+        "operator/sessions_archived.html",
+        {
+            "user": user,
+            "sessions": archived,
+            "breadcrumbs": breadcrumbs.operator_sessions_child("Archived"),
+        },
+    )
+
+
 @router.post("/sessions/{session_id}/lobby-edit")
 def lobby_edit_submit(
     name: str = Form(...),
