@@ -8,28 +8,116 @@
   <h1>Archived sessions</h1>
 
   {% if sessions %}
-    <div class="card">
-      <table>
-        <thead>
+    <form method="post" id="archived-sessions-form">
+      <div class="card">
+        <table data-rrw-sortable="rrw-sort-archived">
+          <thead>
           <tr>
-            <th>Session Name</th>
-            <th>Session Code</th>
-            <th>Status</th>
+            <th class="rrw-sortable" data-sort-key="name">Session Name<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Session Name"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="rrw-sortable" data-sort-key="code">Session Code<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Session Code"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="rrw-sortable" data-sort-key="created_by">Created by<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Created by"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="rrw-sortable" data-sort-key="created">Created<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Created"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="rrw-sortable" data-sort-key="archived">Archived<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Archived"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="col-shrink rrw-sortable" data-sort-key="timezone">Timezone<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Timezone"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="rrw-sortable" data-sort-key="status">Status<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Status"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th>Tags</th>
+            <th class="col-shrink">
+              <input type="checkbox"
+                     class="archived-list-select-all"
+                     aria-label="Select all archived sessions">
+            </th>
           </tr>
-        </thead>
-        <tbody>
+          </thead>
+          <tbody class="rrw-rows">
           {% for s in sessions %}
             <tr>
-              <td><a href="/operator/sessions/{{ s.id }}">{{ s.name }}</a></td>
+              <td>
+                <a href="/operator/sessions/{{ s.id }}">{{ s.name }}</a>
+              </td>
               <td><code>{{ s.code }}</code></td>
               <td>
-                <span class="pill pill-lifecycle-archived">{{ s.status | lifecycle_label }}</span>
+                <span class="pill pill-count">{{ s.created_by_user.display_name or s.created_by_user.email }}</span>
+              </td>
+              <td>
+                <span class="pill pill-count">{{ s.created_at | format_datetime }}</span>
+              </td>
+              <td>
+                <span class="pill pill-count">{{ s.updated_at | format_datetime }}</span>
+              </td>
+              {% set tz = session_timezone(s) %}
+              <td class="col-shrink">
+                <span class="pill pill-count">
+                  <abbr class="tz-gmt" title="{{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
+                </span>
+              </td>
+              <td>
+                <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
+              </td>
+              <td>
+                {% set s_tags = tags_by_session.get(s.id, []) %}
+                {% if s_tags %}
+                  <div class="session-tags">
+                    {% for tag in s_tags %}
+                      <span class="pill pill-count">{{ tag }}</span>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <span class="muted">No tags</span>
+                {% endif %}
+              </td>
+              <td class="col-shrink">
+                <input type="checkbox"
+                       name="session_ids"
+                       value="{{ s.id }}"
+                       class="archived-list-select-row"
+                       aria-label="Select {{ s.name }}">
               </td>
             </tr>
           {% endfor %}
-        </tbody>
-      </table>
-    </div>
+          </tbody>
+        </table>
+      </div>
+    </form>
+    <script>
+      (function () {
+        var rowCheckboxes = document.querySelectorAll(".archived-list-select-row");
+        var selectAll = document.querySelector(".archived-list-select-all");
+        if (!rowCheckboxes.length || !selectAll) return;
+        function refresh() {
+          var checkedCount = 0;
+          rowCheckboxes.forEach(function (cb) {
+            if (cb.checked) checkedCount++;
+          });
+          selectAll.checked = checkedCount === rowCheckboxes.length;
+          selectAll.indeterminate =
+            checkedCount > 0 && checkedCount < rowCheckboxes.length;
+        }
+        rowCheckboxes.forEach(function (cb) {
+          cb.addEventListener("change", refresh);
+        });
+        selectAll.addEventListener("change", function () {
+          rowCheckboxes.forEach(function (cb) {
+            cb.checked = selectAll.checked;
+          });
+          refresh();
+        });
+        refresh();
+      })();
+    </script>
   {% else %}
     <div class="card">
       <p>No archived sessions.</p>
