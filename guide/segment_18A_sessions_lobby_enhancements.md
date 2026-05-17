@@ -87,6 +87,134 @@ opportunistically as the segment opens:
   labelled grid — Created by / Help contact · Created / Modified
   · Deadline / Timezone. See `spec/session_home.md`.
 
+### Lobby action surface — inline row expander
+
+**Current state (placeholders shipped).** The lobby carries a
+two-card row above the table — a "Sessions lobby" stats card and
+an "Actions" card (Add new / Duplicate / Duplicate settings only /
+Tags / Archive / Delete) — plus a reveal-on-click "Tags" editor
+card and the legacy Danger Zone delete card. The action buttons
+are disabled placeholders; the Tags card is a UI-only stub. This
+subsection specs the **interaction model** those placeholders are
+heading toward.
+
+**Problem.** When the operator selects a row far down a long
+list, the fixed Actions / Tags cards at the top are scrolled out
+of view — the selection and the controls that act on it are far
+apart.
+
+**Model — selection-anchored inline expander.** Instead of fixed
+top-of-page cards, the action surface is an extra table row
+injected directly **below the relevant selected row**, as a
+single `<td colspan="N">` (N = every column, so it spans the full
+table width). Exactly one expander row exists at a time, and its
+contents depend on **how many rows are selected**:
+
+- **Zero rows selected** — no expander row. The table is just
+  the table.
+- **Exactly one row selected** — a **single-session expander**
+  appears directly under that row, hosting the actions that
+  operate on one session: **Tags**, **Duplicate**, **Duplicate
+  settings only**. The Tags editor (the comma-separated text box
+  + Save / Cancel) opens inline within this expander. The
+  expander also carries inline **edit boxes for the session's
+  core fields — Name, Code, Deadline** — so the operator can
+  rename / recode / re-deadline a session straight from the lobby
+  without opening Session Home. These boxes back the existing
+  Session Details edit path, so they inherit its lifecycle gating
+  (editable in `draft` / `validated`; the existing edit-lock and
+  response-loss rules apply) — when a session is past that point
+  the boxes render read-only / disabled rather than absent, so
+  the expander layout stays stable. Field-level validation
+  (unique code, deadline shape) reuses the Session Details
+  rules.
+- **Two or more rows selected** — the single-session expander is
+  removed and a **bulk expander** appears instead, anchored under
+  the **last-selected row** (the most recently ticked checkbox).
+  It hosts only the actions that operate on a set: **Archive**
+  and **Delete** (Delete absorbs today's Danger Zone card,
+  carrying its confirm checkbox into the expander), a **bulk
+  tags** affordance, plus the two selection-management buttons
+  below. Single-session actions (and the single-session
+  Name / Code / Deadline edit boxes) are hidden — they have no
+  unambiguous target across a set.
+  - **Bulk tags — precise details TBD.** The intent is a
+    set-wide tag operation; the open question is the operation
+    *shape*. Candidates to settle at scoping: **add a tag to
+    every selected session**, **remove a tag from every
+    selected session**, or a fuller "show the union of tags
+    across the selection, tick / untick to apply." Whichever
+    shape lands, it goes through the same `session.tag_added` /
+    `session.tag_removed` audit events as the single-session
+    Tags editor, once per affected session.
+- Dropping back from two selected rows to one swaps the bulk
+  expander back to the single-session expander under the
+  remaining row; clearing the selection removes the expander
+  entirely.
+
+**Re-anchoring when the selection changes.** The bulk expander
+always sits under the **most-recently-ticked row that is still
+selected**. The JS keeps the ticked rows in an ordered list (tick
+order); the anchor is the last entry still selected. So:
+
+- Un-ticking an **earlier** (non-anchor) row leaves the anchor —
+  and the expander — exactly where it is; only the selection set
+  shrinks.
+- Un-ticking the **anchor row itself** re-anchors the expander to
+  the new last entry — the next-most-recently-ticked row that is
+  still selected — and the expander moves there.
+- Either un-tick that drops the count to exactly one swaps to the
+  single-session expander under the surviving row; down to zero
+  removes the expander.
+
+**Bulk-expander selection-management buttons.** The bulk expander
+carries two buttons for trimming the selection without scrolling
+back through the table:
+
+- **Clear all selected** — un-ticks every selected row. The
+  selection empties, so the expander disappears.
+- **Clear all others** — un-ticks every selected row *except the
+  anchor row*. One row remains selected, so the expander swaps to
+  the single-session expander under it — a quick "I over-selected;
+  just keep this one" path.
+
+**"Add new" stays fixed.** Creating a session is not
+session-scoped, so it does not belong in any expander — it
+remains a standalone affordance above the table (a single button
+where the Actions card sits today).
+
+**Why this works.** Selection count is a clean discriminator:
+one-vs-many maps exactly onto single-session-vs-bulk action
+scope, so the expander never shows an action whose target is
+ambiguous. Anchoring to the last-selected row keeps the controls
+next to where the operator's attention just was.
+
+Likely shape:
+
+- Pure client-side, no schema, no server round-trip for the
+  show/hide/relocate logic. The expander markup is rendered once
+  as a hidden template fragment (or two — single + bulk) and the
+  inline JS detaches it and re-inserts it as a `<tr>` after the
+  anchor row when the selection changes.
+- The JS tracks the most-recently-ticked checkbox to know the
+  bulk expander's anchor; it extends (does not fight) the
+  existing select-all / `indeterminate` sync script.
+- Form semantics: the bulk expander's Archive / Delete still post
+  the ticked `session_ids` (the table is already wrapped in the
+  bulk `<form>`); the single-session expander's Duplicate / Tags
+  act on the one selected `session_id`.
+- Accessibility: the injected `<tr>` needs a sensible reading
+  order and focus move (focus into the expander on appear);
+  `colspan` row gets an `aria` label naming the anchor session.
+- Decide at scoping: animation (none vs slide-down), and whether
+  the expander row re-anchors live as the operator re-sorts the
+  table.
+
+Out of scope for this subsection: the actual cloning / tagging /
+archiving / delete *behavior* — that is Parts 1-3 plus the
+existing delete route. This is purely the placement / reveal
+model for those actions' controls.
+
 ### Part 1 — Session cloning
 
 **Goal.** A new `sessions.clone_session(db, source_session, *,
