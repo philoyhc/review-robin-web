@@ -91,15 +91,18 @@ def test_lobby_shows_session_timezone_column(
     client: TestClient, db: Session
 ) -> None:
     """The lobby names each row's resolved session zone in a Timezone
-    column as a compact GMT-offset label, with the raw IANA id in the
-    title tooltip — the timestamp cells stay in the operator's zone
-    since the table lists many sessions."""
+    column as a compact GMT-offset label, with the GMT-offset + raw
+    IANA id in the title tooltip — the timestamp cells stay in the
+    operator's zone since the table lists many sessions."""
     session = _create_session(client, db, code="tz-lobby")
     _set_session_timezone(client, session, "Asia/Singapore")
 
     body = client.get("/operator/sessions").text
     assert 'data-sort-key="timezone"' in body
-    assert '<abbr class="tz-gmt" title="Asia/Singapore">GMT+8</abbr>' in body
+    assert (
+        '<abbr class="tz-gmt" title="GMT+8 Asia/Singapore">GMT+8</abbr>'
+        in body
+    )
 
 
 # ── PR 3 — per-session timezone override ─────────────────────────────────
