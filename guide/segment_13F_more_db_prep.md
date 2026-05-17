@@ -19,7 +19,12 @@ follows (PRs 3-5); revised again 2026-05-15 to add PR 6
 per-session timezone work; revised again 2026-05-15 — after a
 fresh sweep of every upcoming segment — to add PR 7
 (`users.preferences`) as the per-operator preferences container
-for 18B PR 2 and future operator-level display settings.
+for 18B PR 2 and future operator-level display settings;
+re-swept again 2026-05-17 to open a **pending scheduled-lifecycle
+schema audit** (auto-archive datetime, auto-send-invitations
+datetime, the session "opening" gate) — candidates captured in
+the "Scope re-sweep (2026-05-17)" section below; the resolved
+column set becomes a new 13F PR once the audit completes.
 Mirrors the **Segment 13D** (and 13E) inert-migrations pattern:
 pre-position the additive, nullable, no-backfill schema changes
 the rest of the active workplan needs, so the downstream feature
@@ -184,6 +189,66 @@ additive schema need.
   group-fanout metadata before any of its schema can be
   pre-positioned; the column name / shape is undefined, so it is
   **not** a 13F candidate now. Raise with whoever picks up 13C.
+
+---
+
+## Scope re-sweep (2026-05-17) — scheduled-lifecycle schema audit (pending)
+
+Triggered by Segment 18A Part 3 surfacing an **auto-archive on a
+deadline** need. Rather than pre-position a single one-off
+`auto_archive_at` column, the call is to run **one comprehensive
+audit of every scheduled session-lifecycle automation** the
+workplan wants, so the schema lands as one coherent slice instead
+of accreting a column per feature.
+
+**This audit is not yet locked** — the candidates below are the
+inputs to it; the resolved column / table set becomes a new 13F
+PR (or PRs) once the audit completes. Captured here so the need
+is not lost.
+
+**Candidate scheduled-lifecycle automations:**
+
+| Candidate | What it schedules | Consumer | Notes |
+|---|---|---|---|
+| **Auto-archive datetime** | A point (or deadline + grace period) at which a session flips `closed → archived` automatically. | **18A Part 3** | Reuses `archive_session`; only the trigger is new. |
+| **Auto-send-invitations datetime** | A point at which an activated session's invitations are dispatched, rather than sending them immediately on activation. | invitations workflow | Lets the operator stage a session ahead of an announced start. |
+| **Reminder datetime(s)** | Scheduled reminder dispatch. | **14C** | **Partly already covered** — `sessions.reminder_settings` JSON (PR 4) carries `cadence` / `time_of_day`. The audit must reconcile: are absolute reminder datetimes a *new* slot, or do they fold into the existing JSON? |
+| **Session "opening" datetime + gate** | A point at which an *activated* session opens for responses. See the new-gate note below. | new lifecycle gate | The most structurally significant — needs a lifecycle change, not just a column. |
+
+**The "opening" gate — more than a column.** Today activation
+(`draft`/`validated` → `ready`) both sends invitations *and*
+opens the session for responses in one step. A real use case
+wants those decoupled: send every invitation first, but have the
+actual review **start at the same moment for everyone** — a
+synchronised open. That requires **a new gate after
+`ready`**: a session can be activated (invites out) yet not yet
+open for responses until an `opens_at` point is reached (or the
+operator opens it manually).
+
+This is a `spec/lifecycle.md` change as much as a schema one:
+
+- Schema side (the part 13F pre-positions): an `opens_at`
+  datetime, and possibly a flag/state distinguishing
+  "activated but not open" from "open".
+- Lifecycle side (owned by whichever segment lights it up, not
+  13F): the new gate, the transition rules, the reviewer-surface
+  behaviour when a session is activated-but-not-open.
+
+13F only pre-positions the inert column(s); the gate semantics
+are a separate feature segment's job.
+
+**Shape decision for the audit.** The open question the audit
+must settle: individual nullable datetime columns
+(`auto_archive_at`, `invitations_send_at`, `opens_at`, …) vs a
+single `sessions.schedule` JSON container (same reasoning that
+put `reminder_settings` in JSON — open-ended, render-time read,
+never queried/filtered). A JSON container keeps the migration
+footprint flat but is harder for a scheduled job to query
+efficiently ("find every session whose `opens_at` has passed");
+individual datetime columns are queryable and indexable. Lean:
+**individual datetime columns**, since a scheduler *does* query
+these by value — unlike `reminder_settings`, which is read per
+session. Lock in the audit.
 
 ---
 
