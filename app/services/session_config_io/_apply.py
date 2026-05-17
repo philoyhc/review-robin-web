@@ -355,6 +355,12 @@ def _apply_session_kv(
     if key == "deadline":
         plan.session_overrides[key] = _parse_datetime(value)
         return
+    if key == "display_timezone":
+        plan.session_overrides[key] = value or None
+        return
+    if key == "self_reviews_active":
+        plan.session_overrides[key] = _parse_bool(value, default=True)
+        return
     if key in {"name", "code", "description", "help_contact"}:
         plan.session_overrides[key] = value or None
 
@@ -407,6 +413,11 @@ def _apply_rtd_kv(
         return
     if attr == "list_csv":
         spec.list_csv = value or None
+        return
+    if attr == "library_name":
+        # 15C library-provenance cell — export leg only (18D
+        # export part). Recognise and skip; the link-to-library
+        # logic is the 18D import part.
         return
     raise _ParseError(f"unknown rtds[] attribute {attr!r}")
     del data_type  # unused
@@ -529,6 +540,10 @@ def _apply_rule_set_kv(
         spec.seed = _parse_int(value)
     elif attr == "rules_json":
         spec.rules_json = _parse_json(value, default=[])
+    elif attr == "library_name":
+        # 15C library-provenance cell — export leg only; recognise
+        # and skip (see _apply_rtd_kv).
+        pass
     else:
         raise _ParseError(f"unknown session_rule_sets[] attribute {attr!r}")
     del data_type  # unused
@@ -853,6 +868,16 @@ def _apply_session_metadata(
             continue
         setattr(review_session, key, overrides[key])
         written += 1
+    # ``display_timezone`` + ``self_reviews_active`` are session
+    # *config*, not operator-typed identity — force-apply them. The
+    # empty-only fallback rule above would never fire for either: a
+    # created session always carries a stamped timezone and a
+    # default ``self_reviews_active``. Force-apply matches the
+    # wholesale replace of every other config section.
+    for key in ("display_timezone", "self_reviews_active"):
+        if key in overrides:
+            setattr(review_session, key, overrides[key])
+            written += 1
     return written
 
 

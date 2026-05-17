@@ -418,6 +418,46 @@ def test_apply_writes_metadata_only_to_empty_destination(
     assert review_session.help_contact == "i@example.edu"
 
 
+def test_apply_force_applies_display_timezone_and_self_reviews(
+    db: Session,
+) -> None:
+    """18D export part — display_timezone + self_reviews_active are
+    session *config*, not operator-typed identity: the importer
+    force-applies them over a destination that already holds
+    (default) values, unlike the empty-only name/code fallback."""
+
+    review_session = _bare_session(db, code="cfg-force")
+    review_session.display_timezone = "UTC"
+    review_session.self_reviews_active = True
+    db.flush()
+
+    rows = [
+        Row("session.display_timezone", "Asia/Singapore", "string"),
+        Row("session.self_reviews_active", "false", "boolean"),
+    ]
+    result = apply_session_config(db, review_session, rows)
+    assert result.ok, result.errors
+    db.refresh(review_session)
+    assert review_session.display_timezone == "Asia/Singapore"
+    assert review_session.self_reviews_active is False
+
+
+def test_apply_accepts_library_name_provenance_cells(
+    db: Session,
+) -> None:
+    """The export-only `…library_name` provenance cells are
+    recognised and skipped by the importer (not rejected as an
+    unknown attribute), so an export → re-import round-trip holds."""
+
+    review_session = _bare_session(db, code="libname")
+    rows = [
+        Row("rtds[GPA4].data_type", "decimal", "enum"),
+        Row("rtds[GPA4].library_name", "GPA4 (library)", "string"),
+    ]
+    result = apply_session_config(db, review_session, rows)
+    assert result.ok, result.errors
+
+
 def test_apply_replaces_email_overrides_wholesale(db: Session) -> None:
     review_session = _bare_session(db, code="emails")
     review_session.email_template_overrides = {

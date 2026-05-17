@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     AuditEvent,
     Instrument,
+    OperatorResponseTypeDefinition,
     ResponseTypeDefinition,
     ReviewSession,
     RuleSet,
@@ -61,8 +62,9 @@ def serialize_session_config(
     Section ordering (also pinned in the unit-test golden
     fixture):
 
-    1. Session-level rows (name → code → description → deadline →
-       help_contact).
+    1. Session-level rows (name → code → description →
+       display_timezone → deadline → help_contact →
+       self_reviews_active).
     2. Email-template overrides (invitation → reminder →
        responses_received, with subject → body → cc → bcc →
        enabled inside each kind).
@@ -99,6 +101,14 @@ def _session_rows(review_session: ReviewSession) -> list[Row]:
             _str(review_session.description),
             "string",
         ),
+        # The per-session display timezone — sits before the
+        # deadline it scopes. Without it a ported session would
+        # fall back to the importing operator's default zone.
+        Row(
+            "session.display_timezone",
+            _str(review_session.display_timezone),
+            "string",
+        ),
         Row(
             "session.deadline",
             iso_in_zone(
@@ -111,6 +121,13 @@ def _session_rows(review_session: ReviewSession) -> list[Row]:
             "session.help_contact",
             _str(review_session.help_contact),
             "string",
+        ),
+        # Master self-review toggle — load-bearing for assignment
+        # generation (self-review pairs are gated on it).
+        Row(
+            "session.self_reviews_active",
+            _bool(review_session.self_reviews_active),
+            "boolean",
         ),
     ]
 
@@ -174,6 +191,7 @@ def _rtd_rows(db: Session, review_session: ReviewSession) -> list[Row]:
         .scalars()
         .all()
     )
+    library_names = _library_rtd_name_lookup(db, rtds)
     rows: list[Row] = []
     for rtd in rtds:
         prefix = f"rtds[{rtd.response_type}]"
@@ -184,7 +202,37 @@ def _rtd_rows(db: Session, review_session: ReviewSession) -> list[Row]:
         rows.append(
             Row(f"{prefix}.list_csv", _str(rtd.list_csv), "csv_list")
         )
+        # 15C library provenance — the name of the operator-library
+        # RTD this per-session copy came from. Export leg only; the
+        # importer recognises and skips it (link/clone is the 18D
+        # import part). Empty when authored in-session.
+        rows.append(
+            Row(
+                f"{prefix}.library_name",
+                _str(library_names.get(rtd.library_origin_id)),
+                "string",
+            )
+        )
     return rows
+
+
+def _library_rtd_name_lookup(
+    db: Session, rtds: list[ResponseTypeDefinition]
+) -> dict[int, str]:
+    """Map each referenced ``operator_response_type_definitions.id``
+    to its name — resolves ``ResponseTypeDefinition.library_origin_id``
+    into the export's name-based provenance cell."""
+    ids = {r.library_origin_id for r in rtds if r.library_origin_id is not None}
+    if not ids:
+        return {}
+    return {
+        row.id: row.name
+        for row in db.execute(
+            select(OperatorResponseTypeDefinition).where(
+                OperatorResponseTypeDefinition.id.in_(ids)
+            )
+        ).scalars()
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -205,7 +253,7 @@ def _instrument_blocks(
         .all()
     )
     rule_set_name_by_id = _rule_set_name_lookup(db, review_session)
-    # PR 1a — pre-15B fallback. Resolved once per export so a
+    # Un-pinned-instrument fallback. Resolved once per export so a
     # multi-instrument session hits the audit table once.
     audit_log_rule_set_name = _audit_log_rule_set_name(db, review_session)
 
@@ -231,12 +279,12 @@ def _instrument_rows(
     audit_log_rule_set_name: str | None,
 ) -> list[Row]:
     prefix = f"instruments[{n}]"
-    # Per-instrument selection (post-15B) wins. Pre-15B
-    # ``Instrument.rule_set_id`` is always NULL, so we fall back
-    # to the seeded-RuleSet name resolved from the latest
-    # ``assignments.generated`` audit row (PR 1a). When neither
-    # source resolves, the cell stays empty — matches today's
-    # behaviour for sessions that never ran rule-based Generate.
+    # Per-instrument selection (``Instrument.rule_set_id``, 15B)
+    # wins. An un-pinned instrument (NULL ``rule_set_id``) falls
+    # back to the seeded-RuleSet name resolved from the latest
+    # ``assignments.generated`` audit row. When neither source
+    # resolves, the cell stays empty — matches behaviour for
+    # sessions that never ran rule-based Generate.
     if instrument.rule_set_id is not None:
         rule_set_name_value = rule_set_name_by_id.get(instrument.rule_set_id)
     else:
@@ -367,6 +415,14 @@ def _session_rule_set_rows(
                 "json",
             )
         )
+        # 15C library provenance — see _rtd_rows. Export leg only.
+        rows.append(
+            Row(
+                f"{prefix}.library_name",
+                _str(snap.library_origin.name if snap.library_origin else None),
+                "string",
+            )
+        )
     return rows
 
 
@@ -389,13 +445,15 @@ def _non_seeded_session_rule_sets(
 def _audit_log_rule_set_name(
     db: Session, review_session: ReviewSession
 ) -> str | None:
-    """Pre-15B fallback for ``instruments[N].rule_set_name``.
+    """Un-pinned-instrument fallback for ``instruments[N].rule_set_name``.
 
-    Reads the latest ``assignments.generated`` audit row for
-    ``review_session``, resolves ``detail.refs.rule_set_id`` against
-    ``operator_rule_sets`` (the workspace-tier ``RuleSet`` model),
-    and returns the row's ``name`` **only when it's a seed**
-    (``is_seed=True``).
+    Post-15B ``Instrument.rule_set_id`` is the source of truth for
+    a pinned instrument; this fallback only fires for an instrument
+    whose ``rule_set_id`` is still NULL (never pinned). It reads the
+    latest ``assignments.generated`` audit row for ``review_session``,
+    resolves ``detail.refs.rule_set_id`` against ``operator_rule_sets``
+    (the workspace-tier ``RuleSet`` model), and returns the row's
+    ``name`` **only when it's a seed** (``is_seed=True``).
 
     Returns ``None`` when:
 
@@ -407,12 +465,7 @@ def _audit_log_rule_set_name(
     - the referenced ``operator_rule_sets`` row no longer exists;
     - the referenced row is a Personal-library RuleSet
       (``is_seed=False``) — Personal-library portability is
-      out of scope for 12A-1, see "Pre-15B / pre-15C transient
-      gap" in the segment doc.
-
-    Once 15B + 15C ship and ``Instrument.rule_set_id`` becomes the
-    populated source of truth, this fallback only applies to
-    instruments whose per-instrument selection is still NULL.
+      out of scope here.
     """
 
     audit_row = db.execute(

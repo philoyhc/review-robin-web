@@ -237,6 +237,30 @@ def test_operator_defined_rtds_emit_full_row_block(db: Session) -> None:
     assert by_field["rtds[GPA4].list_csv"] == Row(
         "rtds[GPA4].list_csv", "", "csv_list"
     )
+    # 18D export part — library-provenance cell; empty for an
+    # RTD authored directly in the session (no library origin).
+    assert by_field["rtds[GPA4].library_name"] == Row(
+        "rtds[GPA4].library_name", "", "string"
+    )
+
+
+def test_session_emits_display_timezone_and_self_reviews(
+    db: Session,
+) -> None:
+    """18D export part — the Settings CSV carries the per-session
+    display timezone and the self-reviews toggle."""
+    review_session = _bare_session(db, code="s18d")
+    review_session.display_timezone = "Asia/Singapore"
+    review_session.self_reviews_active = False
+    db.flush()
+
+    by_field = _row_dict(serialize_session_config(db, review_session))
+    assert by_field["session.display_timezone"] == Row(
+        "session.display_timezone", "Asia/Singapore", "string"
+    )
+    assert by_field["session.self_reviews_active"] == Row(
+        "session.self_reviews_active", "false", "boolean"
+    )
 
 
 # --------------------------------------------------------------------------- #

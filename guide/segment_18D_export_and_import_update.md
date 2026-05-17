@@ -311,10 +311,13 @@ gaps surfaced by the 2026-05-17 audit.
   may have been renamed, so resolve the origin, not the
   copy's own name); empty when `library_origin_id` is NULL.
   This is the export leg only; the import part lands the
-  link/clone logic. **No importer change is needed** for the
-  inert column — the importer silently ignores unknown keys
-  (`_apply.py:341`), so emitting `library_name` does not
-  break the export → re-import round-trip.
+  link/clone logic. **One small importer touch is needed:**
+  `_apply.py:341` silently ignores unknown *top-level
+  prefixes*, but `_apply_rtd_kv` / `_apply_rule_set_kv` *reject*
+  an unknown *attribute* within a known prefix — so
+  `…library_name` must be explicitly recognised-and-skipped in
+  both, or an export → re-import round-trip would fail. (The
+  link/clone logic stays the import part's job.)
 - **`rule_set_name` fallback re-document (Part 2).** The
   `_audit_log_rule_set_name` fallback in `_serialize.py` is
   no longer "pre-15B" — post-15B it is the genuine *un-pinned
@@ -391,11 +394,13 @@ When parts ship:
   later (or hand them to 13C and 18F Part 4 as ride-along
   CSV work).
 - **Versioning the Settings CSV — decided: no version
-  cell.** The importer is already version-tolerant in both
-  directions — missing rows are accepted, and unknown keys
-  are silently ignored (`_apply.py:341`), not rejected. The
-  export part adds new rows without a `version` cell or any
-  fast-fail machinery; revisit only if a future shape change
+  cell.** The importer is version-tolerant for missing rows
+  (absence-handling) and for unknown top-level prefixes
+  (`_apply.py:341` ignores them). New *attributes* under an
+  existing prefix do need a one-line recognise-and-skip in
+  the relevant `_apply_*_kv` (as PR E2 does for `library_name`)
+  — small and additive, no `version` cell or fast-fail
+  machinery warranted; revisit only if a future shape change
   is genuinely incompatible rather than additive.
 - **Library link vs clone on import.** The default
   proposed in Part 1 is "link by name match"; an
