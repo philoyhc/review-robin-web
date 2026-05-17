@@ -1,10 +1,10 @@
 # Segment 18D — Export and import update
 
-> **Stub created 2026-05-12** as part of the Segment 18
-> (Session lifecycle adjacencies) family. Siblings: **18A**
-> (Sessions lobby enhancements — cloning / tagging /
-> archiving, `guide/segment_18A_sessions_lobby_enhancements.md`)
-> and **18C** (Retention / deletion workflow,
+> **Stub created 2026-05-12; swept 2026-05-17** against the
+> shipped codebase. Siblings: **18A** (Sessions lobby
+> enhancements — *shipped 2026-05-17*,
+> `guide/segment_18A_sessions_lobby_enhancements.md`) and
+> **18C** (Operator-triggered purge — *shipped 2026-05-17*,
 > `guide/archive/segment_18C_retention_deletion.md`).
 
 **Stub. Sketch-level scope only.** Detailed PR breakdowns
@@ -17,21 +17,24 @@ post-15C / post-15B session model. **Segment 12A-3** (PRs
 #779 → #783, 2026-05-10) was the last full pass on this
 surface; since then the data shape has moved on:
 
-- **15C** (2026-05-12) introduced the per-operator
+- **15C** (shipped 2026-05-12) introduced the per-operator
   RTD / RuleSet **library tier** above the per-session
   copies — `library_origin_id` provenance pointers on both
   `response_type_definitions` and `session_rule_sets`,
   plus `is_seeded` flags on each. The Settings CSV
   round-trip predates this column set and doesn't carry
   library-tier provenance.
-- **15B** (upcoming) flips `instruments.rule_set_id` to
+- **15B** (shipped 2026-05-13) made `instruments.rule_set_id`
   load-bearing — each instrument carries its own RuleSet
-  pointer. The Settings CSV's `instruments[N].rule_set_name`
-  cell needs to round-trip *per-instrument* rather than
-  via the pre-15B audit-log fallback in
-  `session_config_io.py`.
-- **15F** (upcoming) adds per-row inline edit on the
-  Manage pages. The per-entity CSVs are still the only
+  pointer. The Settings CSV serialiser
+  (`session_config_io/_serialize.py`) already reads
+  `instrument.rule_set_id` live for the
+  `instruments[N].rule_set_name` cell, **with** the pre-15B
+  `_audit_log_rule_set_name` fallback retained for instruments
+  still left un-pinned. Part 2 below is now a fallback-retirement
+  + importer-parity audit rather than a fresh build.
+- **15F** (shipped 2026-05-15) added per-row inline edit on
+  the Manage pages. The per-entity CSVs are still the only
   bulk-edit surface and stay the porting backbone, but
   the analytical "Responses" extract is overdue an
   `Instrument` flavour column once 13C ships group-scoped
@@ -41,20 +44,22 @@ This segment is the catch-up pass that picks up whichever
 of those columns / flavours have shipped at the point of
 scoping, and lands the round-trip parity work in one
 coherent direction rather than dribbled across each
-consumer segment.
+consumer segment. As of the 2026-05-17 sweep its three live
+consumers (15B / 15C / 15F) have all shipped — Parts 1, 2
+and 4 are actionable now; Parts 3 and 5 remain blocked.
 
 ## Why now
 
 - **Round-trip parity drift.** Each segment that adds a
   column to a serialised entity (15C `is_seeded` /
   `library_origin_id`; 15B `instruments.rule_set_id`;
-  13C group-scoping; 13F PR 5 retention overrides)
-  expands the gap between what the export emits and what
-  the importer accepts. Without a periodic catch-up
-  segment, the Settings CSV stops round-tripping cleanly
-  and the porting use case (Setup → Settings →
-  Reviewers → Reviewees → Relationships into a fresh
-  session) starts dropping fields.
+  13C group-scoping; 13F PR 5 retention overrides — now
+  an 18F Part 4 consumer) expands the gap between what the
+  export emits and what the importer accepts. Without a
+  periodic catch-up segment, the Settings CSV stops
+  round-tripping cleanly and the porting use case (Setup →
+  Settings → Reviewers → Reviewees → Relationships into a
+  fresh session) starts dropping fields.
 - **Library-tier provenance is genuinely new.** Pre-15C
   there was no library tier, so the Settings CSV
   serialised per-session RTDs / RuleSets in full and the
@@ -65,12 +70,13 @@ consumer segment.
   to the library (set `library_origin_id`) or **clone**
   (NULL + standalone)? That's a UX decision worth its
   own scoping pass.
-- **Composes with 18A** (Session cloning). The cloning
-  service in 18A copies entity-by-entity; the export /
-  import surface in 18D defines the canonical
-  per-entity payload shape. If 18A lands first it
-  should be reviewed against the 18D parity goals so
-  the two paths stay aligned.
+- **Aligns with the shipped 18A cloning service.** 18A's
+  `app/services/session_clone.py` (shipped 2026-05-17)
+  deep-copies a session's config graph entity-by-entity;
+  the export / import surface in 18D defines the canonical
+  per-entity payload shape. 18D should be reviewed against
+  `clone_session` so the two copy paths stay aligned (e.g.
+  both treating `library_origin_id` provenance the same way).
 
 ## Scope (sketch)
 
@@ -101,30 +107,47 @@ Likely shape:
   produces byte-identical output on the same operator.
 
 ### Part 2 — Settings CSV round-trip: per-instrument
-RuleSet (post-15B)
+RuleSet — fallback retirement (15B shipped)
 
-**Goal.** When 15B has shipped, `instruments[N].rule_set_name`
-moves from "audit-log fallback" to "live read off
-`instruments.rule_set_id`" on export, and the importer
-sets `instruments.rule_set_id` directly rather than
-leaving it NULL.
+**Status (2026-05-17 sweep).** 15B shipped — the export
+serialiser (`session_config_io/_serialize.py`) **already**
+reads `instrument.rule_set_id` live for the
+`instruments[N].rule_set_name` cell, and the importer
+(`_apply.py`) already round-trips a `rule_set_name` cell.
+The fresh-build framing of this Part is obsolete; what
+remains is a cleanup audit.
 
-Likely shape:
+**Goal.** Confirm full per-instrument RuleSet parity now
+that 15B is live, and decide the fate of the transitional
+fallback.
 
-- Drop the pre-15B `_audit_log_rule_set_name` fallback
-  in `session_config_io.py` once 15B is live (or guard
-  it on a feature flag during the transition).
-- Importer resolves `rule_set_name` against the
-  destination session's `session_rule_sets` (Phase 2
-  apply pass — needs the RuleSets to already exist in
-  the session by the time the importer reaches the
-  instruments rows).
-- Cross-row validation: catch typo references with the
-  same error shape today's importer uses for missing
-  RTDs.
+Remaining work:
+
+- Audit the pre-15B `_audit_log_rule_set_name` fallback in
+  `_serialize.py` — it still fires for instruments whose
+  `rule_set_id` is NULL (never pinned). Decide: keep it as
+  the genuine "un-pinned instrument" path, or retire it if
+  post-15B every instrument is guaranteed pinned. Lean:
+  keep, but re-document — it is no longer "pre-15B".
+- Verify the importer sets `instruments.rule_set_id`
+  directly (resolving `rule_set_name` against the
+  destination session's `session_rule_sets` in the apply
+  pass) rather than leaving it NULL, and that cross-row
+  validation catches typo references with the missing-RTD
+  error shape.
 
 ### Part 3 — Responses extract: `Instrument` flavour
-column (post-13C)
+column (blocked on 13C)
+
+**Status (2026-05-17 sweep).** Still blocked — 13C has not
+shipped, and the 13F re-sweep flagged `segment_13C` itself
+as a **stale plan**: it builds group fanout on
+`Assignment.context` JSON, a column retired in 15D PR 6b.
+13C needs a re-scope before its group-scoped-instrument
+shape is even defined, so this Part cannot be scoped until
+then. The Responses extract HEADER carries no flavour
+column today (`InstrumentName` / `InstrumentShortLabel`
+only).
 
 **Goal.** When 13C ships group-scoped instruments, the
 Responses CSV gains a derived `Instrument.flavour` (or
@@ -165,7 +188,16 @@ Likely shape:
   two bundles: `*_porting.zip` and `*_analysis.zip`).
 
 ### Part 5 — Retention overrides CSV column
-(post-13F PR 5)
+(blocked on 13F PR 5)
+
+**Status (2026-05-17 sweep).** Still blocked — 13F PR 5
+(`sessions.retention_exception` + `retention_overrides`)
+has not shipped. Its consumer moved when 18C was re-scoped:
+the retention *feature* is now **Segment 18F Part 4**
+(scheduled / policy-driven retention), not 18C. This Part
+stays valid — once the columns exist, the Settings CSV
+should port them — but it should be sequenced after 18F
+Part 4, not 18C.
 
 **Goal.** When 13F PR 5 lands the
 `sessions.retention_exception` Boolean +
@@ -187,11 +219,15 @@ Likely shape:
 
 ## Hard dependencies
 
-- **15B** for Part 2 (per-instrument RuleSet writes).
-- **13C** for Part 3 (group-scoped instrument flavours).
-- **13F PR 5** for Part 5 (retention columns).
-- Part 1 (library-tier provenance) and Part 4 (Zip-all)
-  are unblocked today.
+- **Parts 1, 2 and 4 are unblocked** as of the 2026-05-17
+  sweep — 15B / 15C / 15F have all shipped, the Zip-all tile
+  is still inert, and library provenance needs no consumer.
+- **Part 3** is blocked on **13C**, which itself needs a
+  re-scope first (its `Assignment.context` base column was
+  retired in 15D PR 6b — see the 13F 2026-05-15 re-sweep).
+- **Part 5** is blocked on **13F PR 5** (the retention
+  columns); sequence it after **18F Part 4**, which now
+  owns the retention feature.
 
 ## Out of scope
 
@@ -224,13 +260,16 @@ When parts ship:
 ## Working notes
 
 - _(placeholder for decisions during PR scoping)_
-- **Pin order against the segment queue.** This segment
-  should be picked up *after* the consumer segments
-  (15B, 13C, 13F PR 5) it carries parity for, otherwise
-  each part would ship inert and need re-touching when
-  the consumer lands. Part 1 (library provenance) +
-  Part 4 (Zip-all) can ship ahead of the others if
-  there's a porting-UX reason to.
+- **Pin order against the segment queue.** As of the
+  2026-05-17 sweep the picture has split. Parts 1, 2 and 4
+  carry parity for already-shipped consumers (15C / 15B /
+  15F) and can be picked up now — a worthwhile minimum
+  scope. Parts 3 and 5 still carry parity for unshipped
+  consumers (13C, 13F PR 5) and should wait, otherwise they
+  ship inert and need re-touching. Cleanest: scope 18D as a
+  **Parts 1 + 2 + 4** segment now, and fold Parts 3 / 5 in
+  later (or hand them to 13C and 18F Part 4 as ride-along
+  CSV work).
 - **Versioning the Settings CSV.** Today the importer
   is per-version-tolerant via absence-handling. If 18D
   adds enough new rows it may be worth bumping a

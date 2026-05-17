@@ -787,15 +787,19 @@ bottom of this file.
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
 - **18D — Export and import update** *(stub created
-  2026-05-12)*. Catch-up pass on the export / import
-  surface (last touched by 12A-3, 2026-05-10) to pick up
-  15C library-tier provenance (`library_origin_id` on
-  RTDs / RuleSets), 15B per-instrument `rule_set_id`,
-  13C group-scoped instrument flavours on the Responses
-  CSV, the inert Zip-all tile, and 13F PR 5 retention
-  columns. Picks up *after* the consumer segments it
-  carries parity for; Part 1 (library provenance) +
-  Part 4 (Zip-all) are unblocked today.
+  2026-05-12; swept 2026-05-17)*. Catch-up pass on the
+  export / import surface (last touched by 12A-3,
+  2026-05-10) to pick up 15C library-tier provenance
+  (`library_origin_id` on RTDs / RuleSets), 15B
+  per-instrument `rule_set_id`, 13C group-scoped instrument
+  flavours on the Responses CSV, the inert Zip-all tile,
+  and 13F PR 5 retention columns. **2026-05-17 sweep:** the
+  three live consumers (15B / 15C / 15F) have all shipped,
+  so Parts 1 (library provenance), 2 (per-instrument
+  RuleSet — now a fallback-retirement audit) and 4 (Zip-all
+  bundle) are actionable now; Parts 3 and 5 stay blocked on
+  13C (itself a stale plan) and 13F PR 5 / 18F Part 4.
+  Cleanest cut: scope 18D as a Parts 1 + 2 + 4 segment.
   **Plan:** `guide/segment_18D_export_and_import_update.md`.
 
 - **18E — Small enhancements** *(stub created 2026-05-17)*.
