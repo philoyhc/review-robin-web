@@ -536,6 +536,76 @@ def test_archived_page_lists_archived_sessions(
     assert 'data-sort-key="archived"' in body
     assert 'data-rrw-sortable="rrw-sort-archived"' in body
     assert 'class="archived-list-select-all"' in body
+    # Search card + the bulk-only expander template.
+    assert 'class="archived-search-input"' in body
+    assert 'id="archived-bulk-expander"' in body
+
+
+def test_unarchive_selected_restores_session_to_draft(
+    client: TestClient, db: Session
+) -> None:
+    """The archived-page bulk expander's Unarchive flips a session
+    archived → draft, returning it to the main lobby."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Bring Back", "code": "unarch-me"},
+        follow_redirects=False,
+    )
+    session_id = db.execute(
+        select(ReviewSession.id).where(ReviewSession.code == "unarch-me")
+    ).scalar_one()
+    client.post(
+        "/operator/sessions/archive-selected",
+        data={"session_ids": [session_id]},
+        follow_redirects=False,
+    )
+
+    response = client.post(
+        "/operator/sessions/unarchive-selected",
+        data={"session_ids": [session_id]},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db.expire_all()
+    assert db.get(ReviewSession, session_id).status == "draft"
+
+
+def test_delete_archived_selected_removes_session(
+    client: TestClient, db: Session
+) -> None:
+    """The archived-page bulk Delete removes an archived session; it
+    requires the confirm gate."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Purge Me", "code": "del-arch"},
+        follow_redirects=False,
+    )
+    session_id = db.execute(
+        select(ReviewSession.id).where(ReviewSession.code == "del-arch")
+    ).scalar_one()
+    client.post(
+        "/operator/sessions/archive-selected",
+        data={"session_ids": [session_id]},
+        follow_redirects=False,
+    )
+
+    # Without the confirm gate the route rejects.
+    no_confirm = client.post(
+        "/operator/sessions/delete-archived-selected",
+        data={"session_ids": [session_id]},
+        follow_redirects=False,
+    )
+    assert no_confirm.status_code == 400
+
+    response = client.post(
+        "/operator/sessions/delete-archived-selected",
+        data={"session_ids": [session_id], "confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    db.expire_all()
+    assert db.get(ReviewSession, session_id) is None
 
 
 def test_lobby_search_box_is_wired(client: TestClient) -> None:

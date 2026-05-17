@@ -141,8 +141,67 @@ def archived_sessions(
             "user": user,
             "sessions": archived,
             "tags_by_session": session_tags.tags_for_sessions(db, session_ids),
+            "archived_tags": session_tags.vocabulary(db, session_ids),
             "breadcrumbs": breadcrumbs.operator_sessions_child("Archived"),
         },
+    )
+
+
+@router.post("/sessions/unarchive-selected")
+def sessions_unarchive_selected(
+    session_ids: list[int] = Form(default=[]),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Unarchive the ticked sessions — backs the archived-page bulk
+    expander's Unarchive. Filters server-side to caller-owned archived
+    sessions; anything not archived is silently skipped."""
+    correlation_id = request_correlation_id()
+    for session_id in session_ids:
+        review_session = sessions.get_for_user(db, user, session_id)
+        if review_session is None or review_session.status != "archived":
+            continue
+        lifecycle.unarchive_session(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id,
+        )
+    return RedirectResponse(
+        url="/operator/sessions/archived",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/delete-archived-selected")
+def sessions_delete_archived_selected(
+    session_ids: list[int] = Form(default=[]),
+    confirm: str | None = Form(default=None),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Delete the ticked archived sessions — backs the archived-page
+    bulk expander's Delete. Requires the Allow-delete confirm; filters
+    server-side to caller-owned archived sessions."""
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required",
+        )
+    correlation_id = request_correlation_id()
+    for session_id in session_ids:
+        review_session = sessions.get_for_user(db, user, session_id)
+        if review_session is None or review_session.status != "archived":
+            continue
+        sessions.delete_session(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id,
+        )
+    return RedirectResponse(
+        url="/operator/sessions/archived",
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
