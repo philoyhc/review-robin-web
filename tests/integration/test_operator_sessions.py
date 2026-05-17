@@ -262,7 +262,10 @@ def test_sessions_list_renders_inline_expander_fragments(
     assert 'data-expander-field="code"' in body
     assert 'data-expander-field="deadline"' in body
     assert 'data-expander-field="tags"' in body
-    # Bulk expander hosts the bulk actions + selection-management.
+    # Bulk expander hosts a Tags box + the bulk actions, Cancel, and
+    # the selection-management buttons.
+    assert 'data-expander-field="bulk-tags"' in body
+    assert "data-expander-cancel" in body
     assert "data-expander-clear-all" in body
     assert "data-expander-clear-others" in body
 

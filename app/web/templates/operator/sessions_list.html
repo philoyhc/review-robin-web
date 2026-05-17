@@ -201,14 +201,20 @@
             <p class="session-expander-title">
               <strong data-expander-count></strong> sessions selected
             </p>
-            <div class="session-expander-actions">
-              <button type="button" class="btn secondary" disabled>Bulk tags</button>
-              <button type="button" class="btn alert" disabled>Archive</button>
-              <button type="button" class="btn destructive" disabled>Delete</button>
+            <div class="session-expander-fields exp-fields-right">
+              <label class="exp-field-bulk-tags">Tags
+                <input type="text" data-expander-field="bulk-tags" disabled>
+              </label>
+            </div>
+            <div class="session-expander-actions exp-actions-right">
               <button type="button" class="btn secondary"
-                      data-expander-clear-all>Clear all selected</button>
+                      data-expander-cancel>Cancel</button>
               <button type="button" class="btn secondary"
-                      data-expander-clear-others>Clear all others</button>
+                      data-expander-clear-others>Unselect others</button>
+              <button type="button" class="btn secondary"
+                      data-expander-clear-all>Unselect all</button>
+              <button type="button" class="btn alert" disabled>Archive all</button>
+              <button type="button" class="btn destructive" disabled>Delete all</button>
             </div>
           </div>
         </td>
@@ -332,6 +338,7 @@
           if (countEl) countEl.textContent = String(count);
           var clearAll = node.querySelector("[data-expander-clear-all]");
           var clearOthers = node.querySelector("[data-expander-clear-others]");
+          var cancel = node.querySelector("[data-expander-cancel]");
           if (clearAll) clearAll.addEventListener("click", function () {
             rowCheckboxes.forEach(function (cb) {
               if (cb.checked) { cb.checked = false; fireChange(cb); }
@@ -345,6 +352,14 @@
                 fireChange(cb);
               }
             });
+          });
+          // Cancel — un-tick this expander's anchor row, which
+          // re-anchors the expander back to the previous
+          // last-selected row (or swaps to the single-session
+          // expander once one row remains).
+          if (cancel) cancel.addEventListener("click", function () {
+            var anchor = currentAnchor();
+            if (anchor) { anchor.checked = false; fireChange(anchor); }
           });
           return node;
         }
