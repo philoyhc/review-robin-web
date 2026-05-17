@@ -1406,10 +1406,10 @@
       body.ui-v2 .session-expander-fields .exp-field-code { flex-grow: 2; }
       body.ui-v2 .session-expander-fields .exp-field-deadline { flex-grow: 2; }
       body.ui-v2 .session-expander-fields .exp-field-tags { flex-grow: 3; }
-      /* Bulk expander Tags box — 3/10 of the row, flush right
-         (matches the single-session Tags field). */
+      /* Bulk expander Tags box — half the row, flush right; holds the
+         union of the selected sessions' tags. */
       body.ui-v2 .session-expander-fields .exp-field-bulk-tags {
-        flex: 0 0 30%;
+        flex: 0 0 50%;
       }
       /* Allow-delete confirm checkbox — flush left on the expander
          button row; the auto margin pushes the buttons to the right. */

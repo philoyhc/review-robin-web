@@ -199,7 +199,8 @@
             </p>
             <div class="session-expander-fields exp-fields-right">
               <label class="exp-field-bulk-tags">Tags
-                <input type="text" data-expander-field="bulk-tags" disabled>
+                <input type="text" name="tags"
+                       data-expander-field="bulk-tags">
               </label>
             </div>
             <div class="session-expander-actions exp-actions-right">
@@ -213,6 +214,10 @@
                       data-expander-clear-others>Unselect others</button>
               <button type="button" class="btn secondary"
                       data-expander-clear-all>Unselect all</button>
+              <button type="submit" class="btn secondary" name="op" value="add"
+                      formaction="/operator/sessions/bulk-tags">All tags to all</button>
+              <button type="submit" class="btn secondary" name="op" value="remove"
+                      formaction="/operator/sessions/bulk-tags">Remove from all</button>
               <button type="submit" class="btn alert"
                       formaction="/operator/sessions/archive-selected">Archive all</button>
               <button type="submit" class="btn destructive"
@@ -386,11 +391,30 @@
           return node;
         }
 
-        function fillBulk(count) {
+        function fillBulk(selected) {
           var node = bulkTpl.content.firstElementChild.cloneNode(true);
           node.querySelector("td").colSpan = colCount;
           var countEl = node.querySelector("[data-expander-count]");
-          if (countEl) countEl.textContent = String(count);
+          if (countEl) countEl.textContent = String(selected.length);
+          // Prefill the Tags box with the union of every selected
+          // session's tags — what "Remove from all" acts on, and the
+          // starting point the operator edits before "All tags to all".
+          var union = {};
+          selected.forEach(function (cb) {
+            var tags;
+            try {
+              tags = JSON.parse(
+                cb.closest("tr").getAttribute("data-tags")
+              ) || [];
+            } catch (e) { tags = []; }
+            tags.forEach(function (t) { union[t] = true; });
+          });
+          var tagsInput = node.querySelector(
+            "[data-expander-field='bulk-tags']"
+          );
+          if (tagsInput) {
+            tagsInput.value = Object.keys(union).sort().join(", ");
+          }
           var clearAll = node.querySelector("[data-expander-clear-all]");
           var clearOthers = node.querySelector("[data-expander-clear-others]");
           var cancel = node.querySelector("[data-expander-cancel]");
@@ -431,7 +455,7 @@
           }
           var anchor = currentAnchor() || selected[selected.length - 1];
           anchor.closest("tr").insertAdjacentElement(
-            "afterend", fillBulk(selected.length)
+            "afterend", fillBulk(selected)
           );
         }
 
