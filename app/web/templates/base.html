@@ -1714,26 +1714,36 @@
          table inside a single .card; the empty state is a separate
          .card with explanatory text and a .btn-cta that doubles as
          the prominent affordance. */
-      body.ui-v2 .sessions-list-header {
+      /* Sessions-lobby row — two equal half-width cards side by side
+         above the sessions table: a stats card (left) and an actions
+         card (right). */
+      body.ui-v2 .sessions-lobby-row {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
+        gap: var(--space-4);
         margin-bottom: var(--space-4);
-        gap: var(--space-3);
+        align-items: stretch;
       }
-      body.ui-v2 .sessions-list-header h1 { margin: 0; }
-      /* Session-actions card — half-width, right-aligned, above the
-         sessions table. Holds Create / Duplicate / Archive. */
+      body.ui-v2 .sessions-lobby-card,
       body.ui-v2 .sessions-action-card {
-        max-width: 50%;
-        margin-left: auto;
-        margin-bottom: var(--space-4);
+        flex: 1 1 0;
+        min-width: 0;
+        margin-bottom: 0;
       }
+      body.ui-v2 .sessions-lobby-card h2,
       body.ui-v2 .sessions-action-card h2 { margin-top: 0; }
+      body.ui-v2 .sessions-lobby-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+      }
       body.ui-v2 .sessions-action-buttons {
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-2);
+      }
+      body.ui-v2 .pill-lifecycle-archived {
+        background: var(--bg-muted);
+        color: var(--text-primary);
       }
       /* Return-to-origin "← Back to {context}" link rendered at the
          top of detour destinations (About, /me/debug). Per

@@ -29,12 +29,21 @@ def list_sessions(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     review_sessions = sessions.list_for_user(db, user)
+    lobby_stats = {
+        "total": len(review_sessions),
+        "draft": sum(
+            1 for s in review_sessions if s.status in ("draft", "validated")
+        ),
+        "activated": sum(1 for s in review_sessions if s.status == "ready"),
+        "archived": sum(1 for s in review_sessions if s.status == "archived"),
+    }
     return _templates.TemplateResponse(
         request,
         "operator/sessions_list.html",
         {
             "user": user,
             "sessions": review_sessions,
+            "lobby_stats": lobby_stats,
             "breadcrumbs": breadcrumbs.operator_root(),
         },
     )
