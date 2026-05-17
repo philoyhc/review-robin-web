@@ -15,13 +15,15 @@
           <span class="pill pill-lifecycle-ready">{{ lobby_stats.activated }} activated</span>
           <span class="pill pill-lifecycle-archived">{{ lobby_stats.archived }} archived</span>
         </div>
-        <div class="sessions-tag-filter">
-          <span class="sessions-tag-filter-label">Show sessions tagged with:</span>
-          <span class="pill pill-count">HSH1000</span>
-          <span class="pill pill-count">2610</span>
-          <span class="pill pill-count">PEER</span>
-          <span class="pill pill-tag-clear">Clear all</span>
-        </div>
+        {% if lobby_tags %}
+          <div class="sessions-tag-filter">
+            <span class="sessions-tag-filter-label">Show sessions tagged with:</span>
+            {% for tag in lobby_tags %}
+              <span class="pill pill-count">{{ tag }}</span>
+            {% endfor %}
+            <span class="pill pill-tag-clear">Clear all</span>
+          </div>
+        {% endif %}
       </div>
 
       <div class="card sessions-action-card">
@@ -89,11 +91,16 @@
                 <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
               </td>
               <td>
-                <div class="session-tags">
-                  <span class="pill pill-count">HSH1000</span>
-                  <span class="pill pill-count">2610</span>
-                  <span class="pill pill-count">PEER</span>
-                </div>
+                {% set s_tags = tags_by_session.get(s.id, []) %}
+                {% if s_tags %}
+                  <div class="session-tags">
+                    {% for tag in s_tags %}
+                      <span class="pill pill-count">{{ tag }}</span>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <span class="muted">No tags</span>
+                {% endif %}
               </td>
               <td class="col-shrink">
                 <input type="checkbox"
@@ -283,7 +290,10 @@
             name: cells[0].textContent.trim(),
             code: cells[1].textContent.trim(),
             deadline: cells[2].textContent.trim(),
-            tags: cells[8].textContent.trim().split(/\s+/).join(", "),
+            tags: Array.prototype.slice
+              .call(cells[8].querySelectorAll(".pill"))
+              .map(function (p) { return p.textContent.trim(); })
+              .join(", "),
           };
           var nameEl = node.querySelector("[data-expander-session-name]");
           if (nameEl) nameEl.textContent = fields.name;

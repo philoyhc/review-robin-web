@@ -14,6 +14,7 @@ from app.db.models import User
 from app.db.session import get_db
 from app.services import sessions
 from app.services import session_lifecycle as lifecycle
+from app.services import session_tags
 from app.web import breadcrumbs
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.routes_operator._shared import _templates
@@ -29,6 +30,7 @@ def list_sessions(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     review_sessions = sessions.list_for_user(db, user)
+    session_ids = [s.id for s in review_sessions]
     lobby_stats = {
         "total": len(review_sessions),
         "draft": sum(
@@ -44,6 +46,8 @@ def list_sessions(
             "user": user,
             "sessions": review_sessions,
             "lobby_stats": lobby_stats,
+            "tags_by_session": session_tags.tags_for_sessions(db, session_ids),
+            "lobby_tags": session_tags.vocabulary(db, session_ids),
             "breadcrumbs": breadcrumbs.operator_root(),
         },
     )
