@@ -199,7 +199,10 @@
                       data-expander-duplicate>Duplicate</button>
               <button type="button" class="btn secondary"
                       data-expander-duplicate-config>Duplicate settings only</button>
-              <button type="button" class="btn alert" disabled>Archive</button>
+              <button type="submit" class="btn alert"
+                      formaction="/operator/sessions/archive-selected"
+                      formnovalidate
+                      data-expander-archive>Archive</button>
               <button type="button" class="btn destructive" disabled>Delete</button>
             </div>
           </div>
@@ -228,7 +231,9 @@
                       data-expander-clear-others>Unselect others</button>
               <button type="button" class="btn secondary"
                       data-expander-clear-all>Unselect all</button>
-              <button type="button" class="btn alert" disabled>Archive all</button>
+              <button type="submit" class="btn alert"
+                      formaction="/operator/sessions/archive-selected"
+                      formnovalidate>Archive all</button>
               <button type="button" class="btn destructive" disabled>Delete all</button>
             </div>
           </div>
@@ -350,6 +355,9 @@
               if (key !== "tags" && !isDraft) input.disabled = true;
             }
           );
+          // Archiving is draft-only — grey the button off-draft.
+          var archiveBtn = node.querySelector("[data-expander-archive]");
+          if (archiveBtn && !isDraft) archiveBtn.disabled = true;
           function fieldValue(key) {
             var el = node.querySelector(
               "[data-expander-field='" + key + "']"

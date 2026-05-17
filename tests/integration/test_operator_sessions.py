@@ -425,6 +425,69 @@ def test_lobby_sort_cookie_orders_the_table(client: TestClient) -> None:
     assert body.index("Zzz Session") < body.index("Aaa Session")
 
 
+def test_archive_selected_archives_draft_and_excludes_from_lobby(
+    client: TestClient, db: Session
+) -> None:
+    """Archive-selected flips draft sessions to archived; the main
+    lobby table then excludes them while the stats pill still counts
+    them."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Archive Me", "code": "arch-me"},
+        follow_redirects=False,
+    )
+    client.post(
+        "/operator/sessions",
+        data={"name": "Keep Me", "code": "keep-me"},
+        follow_redirects=False,
+    )
+    session_id = db.execute(
+        select(ReviewSession.id).where(ReviewSession.code == "arch-me")
+    ).scalar_one()
+
+    response = client.post(
+        "/operator/sessions/archive-selected",
+        data={"session_ids": [session_id]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    db.expire_all()
+    assert db.get(ReviewSession, session_id).status == "archived"
+
+    body = client.get("/operator/sessions").text
+    assert "Archive Me" not in body
+    assert "Keep Me" in body
+    assert "1 archived" in body
+
+
+def test_archive_selected_skips_non_draft(
+    client: TestClient, db: Session
+) -> None:
+    """A non-draft session ticked for archive is silently skipped —
+    archiving is draft-only."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Running", "code": "arch-running"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "arch-running")
+    ).scalar_one()
+    session_id = review_session.id
+    review_session.status = "ready"
+    db.commit()
+
+    client.post(
+        "/operator/sessions/archive-selected",
+        data={"session_ids": [session_id]},
+        follow_redirects=False,
+    )
+
+    db.expire_all()
+    assert db.get(ReviewSession, session_id).status == "ready"
+
+
 def test_lobby_search_box_is_wired(client: TestClient) -> None:
     """The Search card ships a live search box and a Cancel hook; the
     retired Apply button is gone."""

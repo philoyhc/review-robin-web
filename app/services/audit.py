@@ -348,6 +348,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.invalidated": EventSchema(_IDENTITY | {"reason"}),
     "session.activated": EventSchema(_IDENTITY | {"counts", "context"}),
     "session.reverted_to_draft": EventSchema(_IDENTITY | {"counts"}),
+    # Segment 18A Part 3 — session archiving (draft ⇄ archived).
+    "session.archived": EventSchema(_IDENTITY | {"changes"}),
+    "session.unarchived": EventSchema(_IDENTITY | {"changes"}),
     # Segment 18A Part 2 — session tagging. The added / removed tag
     # string rides in ``context.tag``.
     "session.tag_added": EventSchema(_IDENTITY | {"context"}),
