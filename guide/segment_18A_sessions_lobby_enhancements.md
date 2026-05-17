@@ -116,15 +116,37 @@ contents depend on **how many rows are selected**:
   appears directly under that row, hosting the actions that
   operate on one session: **Tags**, **Duplicate**, **Duplicate
   settings only**. The Tags editor (the comma-separated text box
-  + Save / Cancel) opens inline within this expander.
+  + Save / Cancel) opens inline within this expander. The
+  expander also carries inline **edit boxes for the session's
+  core fields — Name, Code, Deadline** — so the operator can
+  rename / recode / re-deadline a session straight from the lobby
+  without opening Session Home. These boxes back the existing
+  Session Details edit path, so they inherit its lifecycle gating
+  (editable in `draft` / `validated`; the existing edit-lock and
+  response-loss rules apply) — when a session is past that point
+  the boxes render read-only / disabled rather than absent, so
+  the expander layout stays stable. Field-level validation
+  (unique code, deadline shape) reuses the Session Details
+  rules.
 - **Two or more rows selected** — the single-session expander is
   removed and a **bulk expander** appears instead, anchored under
   the **last-selected row** (the most recently ticked checkbox).
   It hosts only the actions that operate on a set: **Archive**
   and **Delete** (Delete absorbs today's Danger Zone card,
-  carrying its confirm checkbox into the expander), plus the two
-  selection-management buttons below. Single-session actions are
-  hidden — they have no unambiguous target.
+  carrying its confirm checkbox into the expander), a **bulk
+  tags** affordance, plus the two selection-management buttons
+  below. Single-session actions (and the single-session
+  Name / Code / Deadline edit boxes) are hidden — they have no
+  unambiguous target across a set.
+  - **Bulk tags — precise details TBD.** The intent is a
+    set-wide tag operation; the open question is the operation
+    *shape*. Candidates to settle at scoping: **add a tag to
+    every selected session**, **remove a tag from every
+    selected session**, or a fuller "show the union of tags
+    across the selection, tick / untick to apply." Whichever
+    shape lands, it goes through the same `session.tag_added` /
+    `session.tag_removed` audit events as the single-session
+    Tags editor, once per affected session.
 - Dropping back from two selected rows to one swaps the bulk
   expander back to the single-session expander under the
   remaining row; clearing the selection removes the expander
