@@ -492,6 +492,29 @@ edited rows can be surfaced without busting the 200-row cap
 
 ---
 
+### Segment 18C — Operator-triggered purge — done 2026-05-17
+
+Selective hard-delete of a session's data, shipped as a **"Purge
+and archive"** action on the 18A Sessions-lobby row expander
+(PR #1123). The expander's Archive button is renamed; three
+"Archive after purging" checkboxes — Responses / Rosters /
+Audit log — sit after the Allow-delete checkbox.
+
+- New `app/services/session_purge.py` — `purge_responses`,
+  `purge_rosters`, `purge_audit_log`: FK-safe hard-delete
+  cascades, each emitting a `counts`-envelope audit event.
+- `/operator/sessions/archive-selected` runs the chosen purges
+  (audit log → responses → rosters) then archives; no checkbox
+  ticked is a plain archive. Ticking Rosters force-ticks
+  Responses (the cascade makes it implied).
+- Re-scoped on the way in: the *scheduled* / policy-driven
+  retention half moved to **Segment 18F** Part 4. Closes the
+  operator-facing half of the §21 #16 acceptance criterion.
+
+Plan: `guide/segment_18C_retention_deletion.md`.
+
+---
+
 ### Segment 18A — Sessions lobby enhancements — done 2026-05-17
 
 The operator Sessions lobby (`/operator/sessions`) rebuilt around a
@@ -668,7 +691,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13C, 13F (PRs 3-5), 14A, 14B, 14C, 17B,
-18C, 18D, 18E, 18F, 19, 20, 21**. No global ordering
+18D, 18E, 18F, 19, 20, 21**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -765,18 +788,6 @@ bottom of this file.
   is off the roadmap, see `guide/future_possibilities.md`.
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
-- **18C — Operator-triggered purge** *(stub created
-  2026-05-11; re-scoped 2026-05-17)*. Selective hard-delete of
-  a session's data — purge responses, purge rosters, purge
-  audit log — offered as a **"Purge and archive"** action on
-  the Sessions-lobby row expander (18A). A new
-  `app/services/session_purge.py` does the FK-safe cascades.
-  Closes the operator-facing half of the §21 #16 acceptance
-  criterion "Basic retention/deletion workflow". The
-  *scheduled* / policy-driven retention half moved to **18F**
-  Part 4.
-  **Plan:** `guide/segment_18C_retention_deletion.md`.
-
 - **18D — Export and import update** *(stub created
   2026-05-12)*. Catch-up pass on the export / import
   surface (last touched by 12A-3, 2026-05-10) to pick up
@@ -863,7 +874,7 @@ bottom of this file.
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 3-5), 14A, 17B,
-  18C, 18D, 18E, 18F, 19, 20, 21** are independent of the email +
+  18D, 18E, 18F, 19, 20, 21** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
   13C's re-scoped 3-PR ladder (2026-05-15) needs no rule-engine
