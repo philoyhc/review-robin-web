@@ -8,6 +8,37 @@
   <h1>Archived sessions</h1>
 
   {% if sessions %}
+    <div class="sessions-lobby-row">
+      <div class="card sessions-lobby-card">
+        <h2>Archived</h2>
+        <div class="sessions-lobby-pills">
+          <span class="pill pill-lifecycle-archived">{{ sessions | length }} archived</span>
+        </div>
+        {% if archived_tags %}
+          <div class="sessions-tag-filter" id="archived-tag-filter">
+            <span class="sessions-tag-filter-label">Show sessions tagged with:</span>
+            {% for tag in archived_tags %}
+              <span class="pill pill-count tag-chip" data-tag-chip="{{ tag }}"
+                    role="button" tabindex="0">{{ tag }}</span>
+            {% endfor %}
+            <span class="pill pill-tag-clear" data-tag-clear
+                  role="button" tabindex="0">Clear all</span>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="card sessions-action-card">
+        <h2>Search</h2>
+        <input type="text" class="archived-search-input"
+               placeholder="Search by name, code, or tag"
+               aria-label="Search archived sessions">
+        <div class="sessions-action-buttons">
+          <button type="button" class="btn secondary"
+                  data-search-cancel>Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <form method="post" id="archived-sessions-form">
       <div class="card">
         <table data-rrw-sortable="rrw-sort-archived">
@@ -44,7 +75,8 @@
           </thead>
           <tbody class="rrw-rows">
           {% for s in sessions %}
-            <tr>
+            <tr data-tags='{{ tags_by_session.get(s.id, []) | tojson }}'
+                data-session-id="{{ s.id }}">
               <td>
                 <a href="/operator/sessions/{{ s.id }}">{{ s.name }}</a>
               </td>
@@ -88,10 +120,42 @@
               </td>
             </tr>
           {% endfor %}
+          <tr class="archived-no-match" style="display: none;">
+            <td colspan="9">No sessions match.</td>
+          </tr>
           </tbody>
         </table>
       </div>
     </form>
+
+    {# Bulk-only inline row-expander for the archived page — injected
+       below the last-selected row whenever one or more rows are
+       ticked. #}
+    <template id="archived-bulk-expander">
+      <tr class="session-expander session-expander-bulk">
+        <td colspan="9">
+          <div class="session-expander-body">
+            <p class="session-expander-title">
+              <strong data-expander-count></strong> sessions selected
+            </p>
+            <div class="session-expander-actions exp-actions-right">
+              <label class="exp-allow-delete">
+                <input type="checkbox" name="confirm" value="true"
+                       data-expander-allow-delete> Allow delete
+              </label>
+              <button type="button" class="btn secondary"
+                      data-expander-clear-all>Unselect all</button>
+              <button type="submit" class="btn"
+                      formaction="/operator/sessions/unarchive-selected">Unarchive</button>
+              <button type="button" class="btn secondary" disabled>Download</button>
+              <button type="submit" class="btn destructive"
+                      formaction="/operator/sessions/delete-archived-selected"
+                      data-expander-delete disabled>Delete</button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </template>
     <script>
       (function () {
         var rowCheckboxes = document.querySelectorAll(".archived-list-select-row");
@@ -116,6 +180,215 @@
           refresh();
         });
         refresh();
+      })();
+    </script>
+    <script>
+      (function () {
+        var table = document.querySelector("#archived-sessions-form table");
+        if (!table) return;
+        var strip = document.getElementById("archived-tag-filter");
+        var searchInput = document.querySelector(".archived-search-input");
+        var searchCancel = document.querySelector("[data-search-cancel]");
+        var rows = Array.prototype.slice.call(
+          table.querySelectorAll("tr[data-tags]")
+        );
+        var noMatch = table.querySelector(".archived-no-match");
+
+        var STORAGE_KEY = "rrw-archived-tag-filter";
+        var chips = strip
+          ? Array.prototype.slice.call(strip.querySelectorAll(".tag-chip"))
+          : [];
+        var clearChip = strip ? strip.querySelector("[data-tag-clear]") : null;
+        var vocabulary = chips.map(function (c) {
+          return c.getAttribute("data-tag-chip");
+        });
+
+        var selected = {};
+        var searchTerm = "";
+
+        function load() {
+          var raw;
+          try { raw = JSON.parse(localStorage.getItem(STORAGE_KEY)); }
+          catch (e) { raw = null; }
+          if (Array.isArray(raw)) {
+            raw.forEach(function (tag) {
+              if (vocabulary.indexOf(tag) !== -1) selected[tag] = true;
+            });
+          }
+        }
+        function save() {
+          try {
+            localStorage.setItem(
+              STORAGE_KEY, JSON.stringify(Object.keys(selected))
+            );
+          } catch (e) { /* storage unavailable — filter still works */ }
+        }
+        function rowTags(row) {
+          try { return JSON.parse(row.getAttribute("data-tags")) || []; }
+          catch (e) { return []; }
+        }
+        function matchesTags(row) {
+          var picks = Object.keys(selected);
+          if (picks.length === 0) return true;
+          var tags = rowTags(row);
+          return picks.some(function (t) { return tags.indexOf(t) !== -1; });
+        }
+        function matchesSearch(row) {
+          if (!searchTerm) return true;
+          var hay = (
+            row.cells[0].textContent + " " +
+            row.cells[1].textContent + " " +
+            rowTags(row).join(" ")
+          ).toLowerCase();
+          return hay.indexOf(searchTerm) !== -1;
+        }
+        function apply() {
+          var visible = 0;
+          rows.forEach(function (row) {
+            var show = matchesTags(row) && matchesSearch(row);
+            row.style.display = show ? "" : "none";
+            if (show) visible++;
+          });
+          if (noMatch) {
+            noMatch.style.display = visible === 0 ? "" : "none";
+          }
+        }
+        function renderChips() {
+          chips.forEach(function (chip) {
+            var tag = chip.getAttribute("data-tag-chip");
+            chip.classList.toggle("is-selected", !!selected[tag]);
+          });
+          if (clearChip) {
+            clearChip.textContent =
+              Object.keys(selected).length ? "Clear all" : "Select all";
+          }
+        }
+        function refresh() {
+          renderChips();
+          apply();
+        }
+        function bind(el, handler) {
+          if (!el) return;
+          el.addEventListener("click", handler);
+          el.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handler();
+            }
+          });
+        }
+        chips.forEach(function (chip) {
+          bind(chip, function () {
+            var tag = chip.getAttribute("data-tag-chip");
+            if (selected[tag]) delete selected[tag];
+            else selected[tag] = true;
+            save();
+            refresh();
+          });
+        });
+        bind(clearChip, function () {
+          if (Object.keys(selected).length) {
+            selected = {};
+          } else {
+            vocabulary.forEach(function (tag) { selected[tag] = true; });
+          }
+          save();
+          refresh();
+        });
+        if (searchInput) {
+          searchInput.addEventListener("input", function () {
+            searchTerm = searchInput.value.trim().toLowerCase();
+            apply();
+          });
+        }
+        if (searchCancel) {
+          searchCancel.addEventListener("click", function () {
+            if (searchInput) searchInput.value = "";
+            searchTerm = "";
+            apply();
+          });
+        }
+        load();
+        refresh();
+      })();
+    </script>
+    <script>
+      (function () {
+        var table = document.querySelector("#archived-sessions-form table");
+        var tpl = document.getElementById("archived-bulk-expander");
+        if (!table || !tpl) return;
+        var rowCheckboxes = Array.prototype.slice.call(
+          table.querySelectorAll(".archived-list-select-row")
+        );
+        var selectAll = table.querySelector(".archived-list-select-all");
+        var colCount = table.rows[0].cells.length;
+        // Ticked rows in tick order — the expander anchors under the
+        // most-recently-ticked row still selected.
+        var tickOrder = [];
+
+        function removeExpander() {
+          var e = table.querySelector(".session-expander");
+          if (e) e.remove();
+        }
+        function fireChange(cb) {
+          cb.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        function selectedCheckboxes() {
+          return rowCheckboxes.filter(function (cb) { return cb.checked; });
+        }
+        function currentAnchor() {
+          for (var i = tickOrder.length - 1; i >= 0; i--) {
+            if (tickOrder[i].checked) return tickOrder[i];
+          }
+          return null;
+        }
+        function fill(count) {
+          var node = tpl.content.firstElementChild.cloneNode(true);
+          node.querySelector("td").colSpan = colCount;
+          var countEl = node.querySelector("[data-expander-count]");
+          if (countEl) countEl.textContent = String(count);
+          var clearAll = node.querySelector("[data-expander-clear-all]");
+          if (clearAll) clearAll.addEventListener("click", function () {
+            rowCheckboxes.forEach(function (cb) {
+              if (cb.checked) { cb.checked = false; fireChange(cb); }
+            });
+          });
+          // Delete stays disabled until "Allow delete" is ticked.
+          var allow = node.querySelector("[data-expander-allow-delete]");
+          var del = node.querySelector("[data-expander-delete]");
+          if (allow && del) {
+            function sync() { del.disabled = !allow.checked; }
+            allow.addEventListener("change", sync);
+            sync();
+          }
+          return node;
+        }
+        function refreshExpander() {
+          removeExpander();
+          var selected = selectedCheckboxes();
+          if (selected.length === 0) return;
+          var anchor = currentAnchor() || selected[selected.length - 1];
+          anchor.closest("tr").insertAdjacentElement(
+            "afterend", fill(selected.length)
+          );
+        }
+        rowCheckboxes.forEach(function (cb) {
+          cb.addEventListener("change", function () {
+            var idx = tickOrder.indexOf(cb);
+            if (cb.checked) {
+              if (idx === -1) tickOrder.push(cb);
+            } else if (idx !== -1) {
+              tickOrder.splice(idx, 1);
+            }
+            refreshExpander();
+          });
+        });
+        if (selectAll) {
+          selectAll.addEventListener("change", function () {
+            tickOrder = selectAll.checked ? rowCheckboxes.slice() : [];
+            refreshExpander();
+          });
+        }
       })();
     </script>
   {% else %}
