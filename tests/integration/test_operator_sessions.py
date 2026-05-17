@@ -326,6 +326,21 @@ def test_lobby_tag_filter_strip_is_interactive(
     assert 'class="sessions-no-match"' in body
 
 
+def test_lobby_search_box_is_wired(client: TestClient) -> None:
+    """The Search card ships a live search box and a Cancel hook; the
+    retired Apply button is gone."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Searchable", "code": "search-1"},
+        follow_redirects=False,
+    )
+
+    body = client.get("/operator/sessions").text
+    assert 'class="sessions-search-input"' in body
+    assert "data-search-cancel" in body
+    assert ">Apply<" not in body
+
+
 def test_lobby_renders_no_tags_state(client: TestClient) -> None:
     """A session with no tags shows a muted 'No tags', and the filter
     strip is hidden when the operator has no tags at all."""
