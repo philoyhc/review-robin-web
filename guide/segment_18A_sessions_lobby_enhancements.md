@@ -155,9 +155,26 @@ Likely shape:
   `tag VARCHAR(64)` / `UNIQUE (session_id, tag)` / `created_at`).
 - Operator-facing Add / Remove tag affordance on Session Home or
   the Sessions lobby (decide at scoping).
-- Sessions lobby gains a filter strip showing every tag the
-  operator has used; clicking a tag filters the table to
-  sessions carrying it. Multi-tag filter = AND.
+- Sessions lobby gains a tag-filter strip in the "Sessions lobby"
+  card, below the status-count pills, introduced by a
+  "Show sessions tagged with:" label. It lists every tag the
+  operator has used as a clickable chip.
+  - **Selection is additive and per-tag.** Each tag chip toggles
+    independently — clicking one shows/hides the sessions carrying
+    it without disturbing the other chips' state. With several
+    chips selected the table shows sessions matching the selected
+    set (multi-tag combine rule — AND vs OR — to be locked at
+    scoping; the lobby Tags column already AND-implies a row
+    carries all its own tags).
+  - **Clear all / Select all toggle.** A trailing "Clear all"
+    chip deselects every tag at once. When no tags are selected
+    it is replaced in place by a "Select all" chip that
+    re-selects them all.
+  - **Placeholder shipped first.** The strip currently renders
+    static placeholder chips (`HSH1000` / `2610` / `PEER` +
+    `Clear all`) with no behavior — the click-to-filter wiring,
+    selected-state styling, and the Clear all ⇄ Select all swap
+    land with the rest of Part 2.
 - Audit events: `session.tag_added` / `session.tag_removed`
   (`changes` or `set_changes` envelope).
 - No friendly-label resolver involvement — tags are free-form
