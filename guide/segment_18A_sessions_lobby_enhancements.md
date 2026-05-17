@@ -122,12 +122,39 @@ contents depend on **how many rows are selected**:
   the **last-selected row** (the most recently ticked checkbox).
   It hosts only the actions that operate on a set: **Archive**
   and **Delete** (Delete absorbs today's Danger Zone card,
-  carrying its confirm checkbox into the expander). Single-session
-  actions are hidden — they have no unambiguous target.
+  carrying its confirm checkbox into the expander), plus the two
+  selection-management buttons below. Single-session actions are
+  hidden — they have no unambiguous target.
 - Dropping back from two selected rows to one swaps the bulk
   expander back to the single-session expander under the
   remaining row; clearing the selection removes the expander
   entirely.
+
+**Re-anchoring when the selection changes.** The bulk expander
+always sits under the **most-recently-ticked row that is still
+selected**. The JS keeps the ticked rows in an ordered list (tick
+order); the anchor is the last entry still selected. So:
+
+- Un-ticking an **earlier** (non-anchor) row leaves the anchor —
+  and the expander — exactly where it is; only the selection set
+  shrinks.
+- Un-ticking the **anchor row itself** re-anchors the expander to
+  the new last entry — the next-most-recently-ticked row that is
+  still selected — and the expander moves there.
+- Either un-tick that drops the count to exactly one swaps to the
+  single-session expander under the surviving row; down to zero
+  removes the expander.
+
+**Bulk-expander selection-management buttons.** The bulk expander
+carries two buttons for trimming the selection without scrolling
+back through the table:
+
+- **Clear all selected** — un-ticks every selected row. The
+  selection empties, so the expander disappears.
+- **Clear all others** — un-ticks every selected row *except the
+  anchor row*. One row remains selected, so the expander swaps to
+  the single-session expander under it — a quick "I over-selected;
+  just keep this one" path.
 
 **"Add new" stays fixed.** Creating a session is not
 session-scoped, so it does not belong in any expander — it
