@@ -5,10 +5,11 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
+  <h1>Sessions Lobby</h1>
   {% if sessions %}
     <div class="sessions-lobby-row">
       <div class="card sessions-lobby-card">
-        <h2>Sessions lobby</h2>
+        <h2>Sessions</h2>
         <div class="sessions-lobby-pills">
           <span class="pill pill-count">{{ lobby_stats.total }} sessions</span>
           <span class="pill pill-lifecycle-draft">{{ lobby_stats.draft }} draft</span>
