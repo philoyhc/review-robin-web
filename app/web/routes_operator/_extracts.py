@@ -1,14 +1,15 @@
-"""Extract Data downloads — Segment 12A-1 + 12A-3 + 12B.
+"""Extract Data downloads — Segment 12A-1 + 12A-3 + 12B + 18D.
 
-Six GET routes, one per Extract Data card row:
+Seven GET routes:
 
 - Settings (12A-1 PR 1) — 3-column key/value/data-type CSV.
 - Reviewers / Reviewees (12A-1 PR 2) — wide CSVs that
   round-trip with the existing per-entity importers.
-- Responses (12A-1 PR 4) — wide row-per-observation CSV for
-  downstream analysis (no import counterpart).
+- Responses (12A-1 PR 4) — analysis-facing per-session CSV
+  (no import counterpart).
 - Relationships (12A-3 PR 1) — wide CSV that round-trips with
   the importer shipped by 15D PR 1.
+- Bundle (18D PR E1) — a zip of the five CSVs above.
 - Audit log (12B PR 1) — wide CSV of ``audit_events`` rows
   for the session; system-emitted, no import counterpart.
 
@@ -28,7 +29,7 @@ card is active; lock disables setup mutations only, not reads.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -42,6 +43,7 @@ from app.services.extracts.relationships_extract import serialize_relationships
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
+from app.services.extracts.zip_bundle import build_session_bundle
 from app.services.session_config_io import (
     HEADER,
     serialize_session_config,
@@ -216,6 +218,39 @@ def export_responses_csv(
         media_type="text/csv",
         headers={
             "Content-Disposition": f'attachment; filename="{download_name}"',
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/export/bundle.zip")
+def export_bundle_zip(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """The Zip-all bundle — every operator-facing CSV (Reviewers /
+    Reviewees / Relationships / Responses / Settings) in one
+    archive (Segment 18D PR E1). Built fully in memory; the
+    audit-events extract stays out of the bundle."""
+    zip_bytes, counts = build_session_bundle(db, review_session)
+
+    audit.write_event(
+        db,
+        event_type="session.bundle_extracted",
+        summary=(
+            f"Extracted Zip-all bundle for session {review_session.code}"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(**counts),
+    )
+
+    code = (review_session.code or "session").strip() or "session"
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{code}_bundle.zip"',
         },
     )
 

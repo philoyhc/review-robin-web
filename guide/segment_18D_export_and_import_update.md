@@ -256,7 +256,7 @@ and is shippable today against the post-15B/C/F codebase.
   (Part 5, also blocked on 13F PR 5); the Responses flavour
   column (Part 3, blocked on 13C).
 
-### PR E1 — Zip-all bundle graduation
+### PR E1 — Zip-all bundle graduation — ✅ shipped 2026-05-17
 
 Graduates the inert "Zip all" tile on the Extract Data card
 (`is_wired=False`, `coming_in=...` today) to a real download.
@@ -281,7 +281,7 @@ Graduates the inert "Zip all" tile on the Extract Data card
   members; `session.bundle_extracted` emitted with the
   per-CSV counts; the tile renders wired.
 
-### PR E2 — Settings CSV export refresh
+### PR E2 — Settings CSV export refresh — ✅ shipped 2026-05-17
 
 Three `session_config_io/_serialize.py` changes (with the
 matching `_apply.py` round-trip for the two new session-level
