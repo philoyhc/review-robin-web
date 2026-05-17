@@ -167,22 +167,28 @@
               Session: <strong data-expander-session-name></strong>
             </p>
             <div class="session-expander-fields">
-              <label>Name
+              <label class="exp-field-name">Name
                 <input type="text" data-expander-field="name" disabled>
               </label>
-              <label>Code
+              <label class="exp-field-code">Code
                 <input type="text" data-expander-field="code" disabled>
               </label>
-              <label>Deadline
+              <label class="exp-field-deadline">Deadline
                 <input type="text" data-expander-field="deadline" disabled>
               </label>
+              <label class="exp-field-tags">Tags
+                <input type="text" data-expander-field="tags" disabled>
+              </label>
             </div>
-            <div class="session-expander-actions">
-              <button type="button" class="btn secondary" disabled>Tags</button>
+            <div class="session-expander-actions exp-actions-right">
+              <button type="button" class="btn" disabled>Save</button>
+              <button type="button" class="btn secondary" disabled>Cancel</button>
               <button type="button" class="btn secondary" disabled>Duplicate</button>
               <button type="button" class="btn secondary" disabled>
                 Duplicate settings only
               </button>
+              <button type="button" class="btn alert" disabled>Archive</button>
+              <button type="button" class="btn destructive" disabled>Delete</button>
             </div>
           </div>
         </td>
@@ -306,6 +312,7 @@
             name: cells[0].textContent.trim(),
             code: cells[1].textContent.trim(),
             deadline: cells[2].textContent.trim(),
+            tags: cells[8].textContent.trim().split(/\s+/).join(", "),
           };
           var nameEl = node.querySelector("[data-expander-session-name]");
           if (nameEl) nameEl.textContent = fields.name;
