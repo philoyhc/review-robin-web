@@ -145,6 +145,7 @@ def _add_field(
     label: str,
     rtd: ResponseTypeDefinition,
     order: int = 0,
+    help_text: str | None = None,
 ) -> InstrumentResponseField:
     f = InstrumentResponseField(
         instrument_id=instrument.id,
@@ -152,6 +153,7 @@ def _add_field(
         label=label,
         response_type_id=rtd.id,
         order=order,
+        help_text=help_text,
     )
     db.add(f)
     db.flush()
@@ -202,6 +204,18 @@ def _add_response(
     return resp
 
 
+def _data(rows: list[tuple[str, ...]]) -> list[tuple[str, ...]]:
+    """The data rows — everything after HEADER (skips the
+    per-instrument preamble + blank-row gap)."""
+    return rows[rows.index(HEADER) + 1 :]
+
+
+def _preamble(rows: list[tuple[str, ...]]) -> list[tuple[str, ...]]:
+    """The preamble rows — everything before the blank-row gap."""
+    pre = rows[: rows.index(HEADER)]
+    return pre[:-1] if pre and pre[-1] == () else pre
+
+
 # --------------------------------------------------------------------------- #
 # Tests
 # --------------------------------------------------------------------------- #
@@ -239,9 +253,69 @@ def test_header_is_20_columns_in_canonical_order() -> None:
 
 
 def test_empty_session_emits_header_only(db: Session) -> None:
+    """A session with no instruments has no preamble and no gap —
+    just the header."""
     review_session = _session(db, code="empty")
     rows = list(serialize_responses(db, review_session))
     assert rows == [HEADER]
+
+
+def test_preamble_lists_instrument_with_field_help_texts(
+    db: Session,
+) -> None:
+    """The preamble names the instrument positionally, then emits
+    one (FieldKey, HelpText) row per response field — a field
+    dictionary that keeps help text out of the data table."""
+    review_session = _session(db, code="preamble")
+    likert = _likert(db, review_session)
+    instr = _add_instrument(db, review_session, name="Default")
+    _add_field(
+        db, instr, field_key="q1", label="Q1", rtd=likert, order=0,
+        help_text="How clear was the explanation?",
+    )
+    _add_field(
+        db, instr, field_key="q2", label="Q2", rtd=likert, order=1
+    )
+
+    rows = list(serialize_responses(db, review_session))
+    assert _preamble(rows) == [
+        ("instrument_1",),
+        ("q1", "How clear was the explanation?"),
+        ("q2", ""),
+    ]
+
+
+def test_preamble_stacks_multiple_instruments(db: Session) -> None:
+    """Each instrument gets its own stacked preamble block, named
+    positionally by instrument order."""
+    review_session = _session(db, code="multi-pre")
+    likert = _likert(db, review_session)
+    first = _add_instrument(db, review_session, name="A", order=0)
+    second = _add_instrument(db, review_session, name="B", order=1)
+    _add_field(db, first, field_key="a1", label="A1", rtd=likert)
+    _add_field(
+        db, second, field_key="b1", label="B1", rtd=likert,
+        help_text="B help",
+    )
+
+    rows = list(serialize_responses(db, review_session))
+    assert _preamble(rows) == [
+        ("instrument_1",),
+        ("a1", ""),
+        ("instrument_2",),
+        ("b1", "B help"),
+    ]
+
+
+def test_blank_row_gap_precedes_the_header(db: Session) -> None:
+    """A blank row separates the preamble from the data table."""
+    review_session = _session(db, code="gap")
+    likert = _likert(db, review_session)
+    instr = _add_instrument(db, review_session, name="I")
+    _add_field(db, instr, field_key="q", label="Q", rtd=likert)
+
+    rows = list(serialize_responses(db, review_session))
+    assert rows[rows.index(HEADER) - 1] == ()
 
 
 def test_per_row_shape_denormalises_all_join_keys(db: Session) -> None:
@@ -291,14 +365,14 @@ def test_per_row_shape_denormalises_all_join_keys(db: Session) -> None:
     )
 
     rows = list(serialize_responses(db, review_session))
-    assert rows[0] == HEADER
-    body_row = rows[1]
+    body_row = _data(rows)[0]
     # 20 columns; spot-check identity, tags, instrument, field,
-    # response type, value, self-review, version. ``saved_at`` /
-    # ``submitted_at`` round-trip an ISO-8601 prefix; the
-    # exact timezone suffix varies between SQLite (strips tz)
-    # and Postgres (preserves it), so just assert the
-    # iso-prefix is present.
+    # response type, value, self-review, version. ``InstrumentName``
+    # is the positional id ``instrument_1`` (not the operator's
+    # typed name). ``saved_at`` / ``submitted_at`` round-trip an
+    # ISO-8601 prefix; the exact timezone suffix varies between
+    # SQLite (strips tz) and Postgres (preserves it), so just
+    # assert the iso-prefix is present.
     assert body_row[:17] == (
         "Alex Adams",
         "alex@example.edu",
@@ -310,7 +384,7 @@ def test_per_row_shape_denormalises_all_join_keys(db: Session) -> None:
         "design",
         "",
         "",
-        "Peer evaluation",
+        "instrument_1",
         "Peer",
         "overall",
         "Overall",
@@ -351,8 +425,7 @@ def test_null_value_emits_empty_cell_with_row_still_present(
     )
     _add_response(db, assignment=a, field=field, value=None)
 
-    rows = list(serialize_responses(db, review_session))
-    body = rows[1:]
+    body = _data(list(serialize_responses(db, review_session)))
     assert len(body) == 1
     assert body[0][15] == ""  # Value column
 
@@ -384,7 +457,9 @@ def test_assignment_with_no_responses_emits_no_row(db: Session) -> None:
     # reviewer never touched the field.
 
     rows = list(serialize_responses(db, review_session))
-    assert rows == [HEADER]
+    # No data rows — the preamble still lists the instrument + field.
+    assert _data(rows) == []
+    assert _preamble(rows) == [("instrument_1",), ("q", "")]
 
 
 def test_submitted_at_distinguishes_drafts_from_submitted(
@@ -416,7 +491,7 @@ def test_submitted_at_distinguishes_drafts_from_submitted(
     )
 
     rows = list(serialize_responses(db, review_session))
-    assert rows[1][18] == ""  # SubmittedAt empty for drafts.
+    assert _data(rows)[0][18] == ""  # SubmittedAt empty for drafts.
 
 
 def test_ordering_groups_by_reviewer_then_reviewee_then_instrument_then_field(
@@ -490,13 +565,15 @@ def test_ordering_groups_by_reviewer_then_reviewee_then_instrument_then_field(
     _add_response(db, assignment=a_alice_second, field=f2, value="a2")
     _add_response(db, assignment=a_bob_first, field=f1, value="b1")
 
-    body = list(serialize_responses(db, review_session))[1:]
-    # alice→Carol[First/q1, Second/q2], bob→Carol[First/q1, Second/q2].
+    body = _data(list(serialize_responses(db, review_session)))
+    # alice→Carol[first/q1, second/q2], bob→Carol[first/q1, second/q2].
+    # InstrumentName is the positional id: First→instrument_1,
+    # Second→instrument_2 (by Instrument.order).
     assert [(r[1], r[10], r[12]) for r in body] == [
-        ("alice@example.edu", "First", "q1"),
-        ("alice@example.edu", "Second", "q2"),
-        ("bob@example.edu", "First", "q1"),
-        ("bob@example.edu", "Second", "q2"),
+        ("alice@example.edu", "instrument_1", "q1"),
+        ("alice@example.edu", "instrument_2", "q2"),
+        ("bob@example.edu", "instrument_1", "q1"),
+        ("bob@example.edu", "instrument_2", "q2"),
     ]
 
 
@@ -539,7 +616,7 @@ def test_response_type_resolves_for_seeded_and_operator_defined_rtds(
     _add_response(db, assignment=a, field=field_seed, value="3")
     _add_response(db, assignment=a, field=field_custom, value="3.7")
 
-    body = list(serialize_responses(db, review_session))[1:]
+    body = _data(list(serialize_responses(db, review_session)))
     response_types = [r[14] for r in body]
     assert response_types == ["Likert5", "GPA4"]
 
@@ -578,7 +655,7 @@ def test_list_response_value_round_trips_as_stored(db: Session) -> None:
     )
     _add_response(db, assignment=a, field=field, value="design,research")
 
-    body = list(serialize_responses(db, review_session))[1:]
+    body = _data(list(serialize_responses(db, review_session)))
     assert body[0][15] == "design,research"
 
 
@@ -615,7 +692,7 @@ def test_self_review_emits_TRUE_when_reviewer_email_matches_reviewee_id(
     )
     _add_response(db, assignment=a, field=field, value="3")
 
-    body = list(serialize_responses(db, review_session))[1:]
+    body = _data(list(serialize_responses(db, review_session)))
     assert body[0][16] == "TRUE"
 
 
@@ -639,7 +716,7 @@ def test_self_review_emits_FALSE_when_emails_differ(db: Session) -> None:
     )
     _add_response(db, assignment=a, field=field, value="3")
 
-    body = list(serialize_responses(db, review_session))[1:]
+    body = _data(list(serialize_responses(db, review_session)))
     assert body[0][16] == "FALSE"
 
 
@@ -667,7 +744,7 @@ def test_self_review_is_case_insensitive(db: Session) -> None:
     )
     _add_response(db, assignment=a, field=field, value="3")
 
-    body = list(serialize_responses(db, review_session))[1:]
+    body = _data(list(serialize_responses(db, review_session)))
     assert body[0][16] == "TRUE"
 
 
@@ -698,5 +775,5 @@ def test_self_review_emits_FALSE_when_reviewee_id_is_not_an_email(
     )
     _add_response(db, assignment=a, field=field, value="3")
 
-    body = list(serialize_responses(db, review_session))[1:]
+    body = _data(list(serialize_responses(db, review_session)))
     assert body[0][16] == "FALSE"

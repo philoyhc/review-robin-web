@@ -132,17 +132,23 @@ def test_route_streams_csv_with_canonical_filename(
     )
 
     rows = list(csv.reader(io.StringIO(response.text)))
+    # The file opens with a per-instrument preamble; locate the
+    # data table by its header row.
+    header_idx = next(
+        i for i, r in enumerate(rows) if r and r[0] == "ReviewerName"
+    )
     # 20 columns in the header (PR 4a added ``SelfReview``).
-    assert len(rows[0]) == 20
-    assert rows[0][0] == "ReviewerName"
-    assert rows[0][-1] == "Version"
+    assert len(rows[header_idx]) == 20
+    assert rows[header_idx][-1] == "Version"
     # One body row from the seeded response.
-    assert len(rows) == 2
-    assert rows[1][1] == "alex@example.edu"
-    assert rows[1][6] == "carol@example.edu"
-    assert rows[1][14] == "Likert5"
-    assert rows[1][15] == "4"
-    assert rows[1][16] == "FALSE"  # alex@ != carol@
+    data = rows[header_idx + 1 :]
+    assert len(data) == 1
+    assert data[0][1] == "alex@example.edu"
+    assert data[0][6] == "carol@example.edu"
+    assert data[0][10] == "instrument_1"  # positional InstrumentName
+    assert data[0][14] == "Likert5"
+    assert data[0][15] == "4"
+    assert data[0][16] == "FALSE"  # alex@ != carol@
 
 
 def test_route_emits_audit_event_with_row_count(
@@ -167,16 +173,25 @@ def test_route_emits_audit_event_with_row_count(
     assert detail["counts"]["rows"] == 1
 
 
-def test_empty_session_emits_header_only(
+def test_session_with_no_responses_emits_no_data_rows(
     client: TestClient, db: Session
 ) -> None:
+    """A session with setup but no reviewer responses: the
+    preamble still lists the instrument's fields, but there are no
+    data rows below the header."""
     review_session = _make_session(client, db, code="rsp-empty")
     response = client.get(
         f"/operator/sessions/{review_session.id}/export/responses.csv"
     )
     assert response.status_code == 200
     rows = list(csv.reader(io.StringIO(response.text)))
-    assert len(rows) == 1  # header only
+    header_idx = next(
+        i for i, r in enumerate(rows) if r and r[0] == "ReviewerName"
+    )
+    # No data rows below the header.
+    assert rows[header_idx + 1 :] == []
+    # The preamble names the default instrument positionally.
+    assert rows[0] == ["instrument_1"]
 
     db.expire_all()
     event = db.execute(

@@ -1,19 +1,29 @@
-"""Responses extract — Segment 12A-1 PR 4 + PR 4a.
+"""Responses extract — the analysis-facing per-session CSV.
 
-Streams the session's reviewer responses as a wide CSV designed
-for **downstream analysis** (Excel pivots, pandas groupby, BI
-tools). Different use case from the porting-flow CSVs (settings
-+ reviewers + reviewees + assignments): each row is
-self-contained — denormalised reviewer / reviewee identity +
-tags, instrument + field context, and the response-type name —
-so the file is readable without joining against the other
-extracts.
+Streams the session's reviewer responses as a CSV designed for
+**downstream analysis** (Excel pivots, pandas groupby, BI tools)
+by an external analyst — *not* the app itself. The file has two
+parts:
+
+1. A **preamble** — one block per instrument: a row carrying the
+   instrument's positional name (``instrument_1``, ``instrument_2``,
+   …), then one ``FieldKey, HelpText`` row per response field. The
+   preamble doubles as a field dictionary, keeping the per-field
+   help text out of the (denormalised) data table where it would
+   repeat on every row. A blank row separates it from the table.
+2. The **data table** — :data:`HEADER` then one row per
+   ``Response``: denormalised reviewer / reviewee identity + tags,
+   instrument + field context, and the response-type name, so the
+   table is readable without joining against the other extracts.
+
+The instrument name — in both the preamble and the table's
+``InstrumentName`` column — is the positional id ``instrument_{n}``
+(by instrument order); the operator's typed name is intentionally
+not exported (not analysis-relevant). An analyst joins a help text
+to its data column via the shared ``FieldKey``.
 
 No import counterpart. Operators don't upload responses; only
 reviewers create them via the response surface.
-
-Plan: ``guide/segment_12A-1_export.md`` "Responses extract"
-section + PR 4 + PR 4a (SelfReview column).
 """
 
 from __future__ import annotations
@@ -58,7 +68,9 @@ HEADER: tuple[str, ...] = (
     "RevieweeTag1",
     "RevieweeTag2",
     "RevieweeTag3",
-    # Instrument context (2 cols).
+    # Instrument context (2 cols). ``InstrumentName`` is the
+    # positional id ``instrument_{n}``; it maps to the matching
+    # preamble block.
     "InstrumentName",
     "InstrumentShortLabel",
     # Field context (3 cols).
@@ -88,29 +100,54 @@ def serialize_responses(
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for ``review_session``'s responses.
 
-    First yield is :data:`HEADER`; subsequent yields are one
-    tuple per ``Response`` row in deterministic order
-    (``(reviewer.email, reviewee.email_or_identifier,
-    instrument.order, instrument.id, response_field.order,
-    response_field.id)``). Streams through a ``yield_per`` cursor
-    so memory stays flat on sessions with hundreds of thousands
-    of rows.
+    Yields, in order: the per-instrument preamble blocks (an
+    ``(instrument_{n},)`` row followed by one
+    ``(field_key, help_text)`` row per response field); a blank
+    row; :data:`HEADER`; then one tuple per ``Response`` row in
+    deterministic order (``(reviewer.email,
+    reviewee.email_or_identifier, instrument.order, instrument.id,
+    response_field.order, response_field.id)``). The data query
+    streams through a ``yield_per`` cursor so memory stays flat on
+    sessions with hundreds of thousands of rows.
 
-    Per the segment plan's "Empty / missing values" section,
-    a ``Response`` row with ``value IS NULL`` (reviewer cleared
-    the field) emits an empty ``Value`` cell — the row is still
-    emitted because the reviewer interacted with the field. A
-    field with no ``Response`` row at all (the reviewer never
-    touched it) emits no row in the CSV; the row count equals
-    ``responses.session_response_count(...)``.
+    A session with no instruments emits just :data:`HEADER` (no
+    preamble, no gap). Per the "Empty / missing values" rule, a
+    ``Response`` row with ``value IS NULL`` (reviewer cleared the
+    field) emits an empty ``Value`` cell — the row is still emitted
+    because the reviewer interacted with the field. A field with no
+    ``Response`` row at all emits no data row.
     """
-
-    yield HEADER
 
     # Timestamps render in the session's resolved zone (18B) — ISO
     # 8601 carrying that zone's offset, so the cell is precise and
     # round-trip-safe while still naming the session zone.
     session_zone = resolve_session_timezone(review_session)
+
+    # Preamble — per-instrument field dictionary. Instruments are
+    # named positionally by their sorted order; the operator's
+    # typed name is not exported.
+    instruments = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    instrument_label: dict[int, str] = {}
+    for n, instrument in enumerate(instruments, start=1):
+        label = f"instrument_{n}"
+        instrument_label[instrument.id] = label
+        yield (label,)
+        fields = sorted(
+            instrument.response_fields, key=lambda f: (f.order, f.id)
+        )
+        for field in fields:
+            yield (field.field_key, field.help_text or "")
+    if instruments:
+        # Blank-row gap between the preamble and the data table.
+        yield ()
+
+    yield HEADER
 
     stmt = (
         select(
@@ -160,7 +197,7 @@ def serialize_responses(
             reviewee.tag_1 or "",
             reviewee.tag_2 or "",
             reviewee.tag_3 or "",
-            instrument.name,
+            instrument_label.get(instrument.id, ""),
             instrument.short_label or "",
             field.field_key,
             field.label,
