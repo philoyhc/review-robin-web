@@ -170,6 +170,15 @@ Likely shape:
     chip deselects every tag at once. When no tags are selected
     it is replaced in place by a "Select all" chip that
     re-selects them all.
+  - **Selection persists per browser via `localStorage`.** The
+    chosen tag set survives reload, stored under a per-page key
+    (`rrw-lobby-tag-filter`) — mirroring the Setup pages'
+    column-visibility toggles (`rrw-reviewer-tag-visibility` &
+    siblings, `spec/setup_pages.md`). No cookie: filter state is
+    pure presentation, so it stays client-side rather than riding
+    on every request. Inline JS reads the key on load and writes
+    it on each toggle. A stored tag no longer present in the
+    operator's current tag set is silently dropped on load.
   - **Placeholder shipped first.** The strip currently renders
     static placeholder chips (`HSH1000` / `2610` / `PEER` +
     `Clear all`) with no behavior — the click-to-filter wiring,
@@ -273,7 +282,9 @@ When parts ship:
 - `spec/architecture.md` — audit-event detail schema picks up the
   new `session.cloned` / `session.archived` / `session.unarchived`
   / `session.tag_added` / `session.tag_removed` envelopes.
-- `spec/settings_inventory.md` — session-level tags row added.
+- `spec/settings_inventory.md` — session-level tags row added,
+  plus the `rrw-lobby-tag-filter` `localStorage` key in the
+  browser-local UI-state primitives list.
 - `guide/codebase_assessment_11may.md` §22 rows updated.
 
 ## Working notes

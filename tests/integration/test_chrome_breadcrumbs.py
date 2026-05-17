@@ -162,12 +162,11 @@ def test_sessions_list_create_button_lives_in_header(
     body = response.text
     # Old top-of-page "Create session" link no longer present.
     assert ">Create session<" not in body
-    # Per Segment 18A, the "Create new session" affordance lives in the
+    # Per Segment 18A, the "Add new" session affordance lives in the
     # half-width session-actions card above the lobby's table-in-a-card.
     assert 'href="/operator/sessions/new"' in body
-    assert "Create new session" in body
+    create_btn = body.find('href="/operator/sessions/new"')
     action_card = body.find('class="card sessions-action-card"')
-    create_btn = body.find("Create new session")
     table_card = body.find('id="sessions-list-form"')
     assert action_card != -1 and action_card < create_btn < table_card
 
