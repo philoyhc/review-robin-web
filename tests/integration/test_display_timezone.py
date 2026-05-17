@@ -98,7 +98,7 @@ def test_lobby_shows_session_timezone_column(
     _set_session_timezone(client, session, "Asia/Singapore")
 
     body = client.get("/operator/sessions").text
-    assert '<th class="col-shrink">Timezone</th>' in body
+    assert 'data-sort-key="timezone"' in body
     assert '<abbr class="tz-gmt" title="Asia/Singapore">GMT+8</abbr>' in body
 
 

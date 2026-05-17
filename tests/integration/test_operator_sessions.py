@@ -403,6 +403,28 @@ def test_lobby_tag_filter_strip_is_interactive(
     assert 'class="sessions-no-match"' in body
 
 
+def test_lobby_sort_cookie_orders_the_table(client: TestClient) -> None:
+    """The lobby opts into the shared rrw-sortable primitive — a sort
+    cookie reorders the server-rendered rows."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Aaa Session", "code": "sort-a"},
+        follow_redirects=False,
+    )
+    client.post(
+        "/operator/sessions",
+        data={"name": "Zzz Session", "code": "sort-z"},
+        follow_redirects=False,
+    )
+
+    client.cookies.set("rrw-sort-lobby", '[{"key": "name", "dir": "desc"}]')
+    body = client.get("/operator/sessions").text
+    client.cookies.delete("rrw-sort-lobby")
+
+    # Descending by name — "Zzz Session" sorts above "Aaa Session".
+    assert body.index("Zzz Session") < body.index("Aaa Session")
+
+
 def test_lobby_search_box_is_wired(client: TestClient) -> None:
     """The Search card ships a live search box and a Cancel hook; the
     retired Apply button is gone."""
