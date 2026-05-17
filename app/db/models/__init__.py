@@ -17,6 +17,7 @@ from app.db.models.rule_set import RuleSet, RuleSetRevision
 from app.db.models.session_field_label import SessionFieldLabel
 from app.db.models.session_operator import SessionOperator
 from app.db.models.session_rule_set import SessionRuleSet
+from app.db.models.session_tag import SessionTag
 from app.db.models.user import User
 
 __all__ = [
@@ -39,5 +40,6 @@ __all__ = [
     "SessionFieldLabel",
     "SessionOperator",
     "SessionRuleSet",
+    "SessionTag",
     "User",
 ]
