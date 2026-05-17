@@ -379,24 +379,19 @@ Likely shape:
     align with 18D's zip-bundle work); `Delete` is the existing
     destructive delete, carrying its confirm checkbox into the
     expander as on the main lobby.
+- **Auto-archive on a deadline — in scope, schema pending.** Beyond
+  the manual Archive action, a session can carry an
+  **auto-archive date/time**: a scheduled point (or
+  deadline + grace period) at which it flips `closed → archived`
+  on its own. The transition logic reuses `archive_session`; only
+  the trigger differs. **This needs a schema slot** —
+  pre-positioned via the 13F scheduled-lifecycle schema audit
+  (see `guide/segment_13F_more_db_prep.md`, "Scope re-sweep
+  2026-05-17"). 18A Part 3 lights up the column once 13F lands
+  it; the column's exact shape (a datetime vs a grace-period int
+  vs a key inside a session-schedule JSON) is the audit's call.
 - Audit-event registrations: `session.archived` /
   `session.unarchived` (`changes` envelope on the status column).
-
-### Post-MVP
-
-Deferred — confirm need with pilot feedback before scoping:
-
-- **Cross-operator clone handoff.** Clone a session into another
-  operator's ownership (or copy a colleague's session to
-  yourself): the clone target's `creator_id` is the destination
-  operator, a `SessionOperator` row is inserted only for them,
-  and the audit-event payload widens to include both actor +
-  target operator IDs. Depends on **16B** (operator role
-  delegation surface — shipped).
-- **Auto-archive on deadline + N days.** A scheduled job (or the
-  lazy deadline-close hook per `spec/lifecycle.md` "lazy
-  deadline-close") flips a session `closed → archived` after a
-  configurable grace period. Default off; per-deployment env var.
 
 ## Hard dependencies
 
@@ -410,7 +405,10 @@ Deferred — confirm need with pilot feedback before scoping:
 - **Tagging:** wants `session_tags` from **13F PR 3**.
 - **Archiving:** wants `spec/lifecycle.md`'s reserved `archived`
   state — already in the canonical enum.
-- **Cross-operator handoff (post-MVP):** 16B.
+- **Auto-archive:** wants the auto-archive datetime column from
+  the 13F scheduled-lifecycle schema audit (see
+  `guide/segment_13F_more_db_prep.md`). Manual archiving has no
+  schema dependency; only the scheduled trigger does.
 
 ## Out of scope
 
@@ -426,8 +424,18 @@ Deferred — confirm need with pilot feedback before scoping:
   security boundary.
 - **Cross-operator shared tag vocabulary** — every operator
   curates their own tag set; no global tag table.
-- **Auto-archive on age / retention policy.** That's
-  retention-policy territory, owned by **18C**.
+- **Cross-operator clone handoff.** Cloning a session directly
+  into *another* operator's ownership is **not** a clone mode.
+  The supported workflow is **clone, then add the other operator**
+  — clone the session normally (the cloner owns the copy), then
+  use the existing operator-delegation surface (16B) to add the
+  colleague as an operator on it. Folding a handoff into the
+  clone step would duplicate that surface and widen the
+  clone audit payload for no real gain.
+- **Retention-driven auto-purge.** Auto-*archive* (a scheduled
+  `closed → archived` flip) is in scope for Part 3; auto-*delete*
+  / retention purge is retention-policy territory, owned by
+  **18C**.
 
 ## Doc impact
 
