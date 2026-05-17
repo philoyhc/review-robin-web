@@ -177,9 +177,9 @@
                 <label><input type="checkbox" name="purge"
                        value="responses"> Responses</label>
                 <label><input type="checkbox" name="purge"
-                       value="rosters"> rosters</label>
+                       value="rosters"> Rosters</label>
                 <label><input type="checkbox" name="purge"
-                       value="audit_log"> audit log</label>
+                       value="audit_log"> Audit log</label>
               </span>
               <button type="button" class="btn"
                       data-expander-save>Save</button>
@@ -223,9 +223,9 @@
                 <label><input type="checkbox" name="purge"
                        value="responses"> Responses</label>
                 <label><input type="checkbox" name="purge"
-                       value="rosters"> rosters</label>
+                       value="rosters"> Rosters</label>
                 <label><input type="checkbox" name="purge"
-                       value="audit_log"> audit log</label>
+                       value="audit_log"> Audit log</label>
               </span>
               <button type="button" class="btn secondary"
                       data-expander-cancel>Cancel</button>
@@ -343,6 +343,28 @@
           sync();
         }
 
+        // Purging rosters cascades the responses out too, so ticking
+        // Rosters forces Responses on (and locks it while ticked).
+        function wirePurgeOpts(node) {
+          var rosters = node.querySelector(
+            "input[name='purge'][value='rosters']"
+          );
+          var responses = node.querySelector(
+            "input[name='purge'][value='responses']"
+          );
+          if (!rosters || !responses) return;
+          function sync() {
+            if (rosters.checked) {
+              responses.checked = true;
+              responses.disabled = true;
+            } else {
+              responses.disabled = false;
+            }
+          }
+          rosters.addEventListener("change", sync);
+          sync();
+        }
+
         function fillSingle(row) {
           var node = singleTpl.content.firstElementChild.cloneNode(true);
           node.querySelector("td").colSpan = colCount;
@@ -407,6 +429,7 @@
           cloneAction("[data-expander-duplicate]", "all");
           cloneAction("[data-expander-duplicate-config]", "config");
           wireDeleteGate(node);
+          wirePurgeOpts(node);
           return node;
         }
 
@@ -460,6 +483,7 @@
             if (anchor) { anchor.checked = false; fireChange(anchor); }
           });
           wireDeleteGate(node);
+          wirePurgeOpts(node);
           return node;
         }
 
