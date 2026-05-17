@@ -492,6 +492,36 @@ edited rows can be surfaced without busting the 200-row cap
 
 ---
 
+### Segment 18A — Sessions lobby enhancements — done 2026-05-17
+
+The operator Sessions lobby (`/operator/sessions`) rebuilt around a
+selection-aware inline row-expander action surface, plus session
+tagging, archiving, one-click cloning, client-side search, and
+sortable columns. Built placeholder-first (the UI shell across
+PRs #1080 → #1105), then the implementation ladder PRs A → H
+(#1106 → #1117):
+
+- **A** — `app/services/session_tags.py` (tag read/write +
+  `session.tag_added` / `.tag_removed` audit events); real tags on
+  the lobby. **B** — the tag-filter strip (clickable chips, AND/OR
+  mode chip, `localStorage`). **C** — client-side lobby search.
+  **D** — the expander action-submission helper + single-session
+  Save. **E** — `app/services/session_clone.py`, `clone_session`
+  (full-setup / config-shell modes). **F** — `draft ⇄ archived`
+  archiving. **G** — confirm-gated expander Delete (Danger Zone
+  retired) + bulk tags. **H** — the `/operator/sessions/archived`
+  child page.
+- The lobby table was reordered (Last Modified dropped) and opted
+  into the shared `rrw-sortable` primitive.
+- Scheduled automation (auto-archive et al.) split out to the new
+  stub **Segment 18F — Scheduled events**; **18B is retired** as a
+  segment number (the old 18A cloning + 18B tagging/archiving
+  stubs were consolidated here 2026-05-15).
+
+Plan: `guide/segment_18A_sessions_lobby_enhancements.md`.
+
+---
+
 ### Segment 18B — Date and time settings — done 2026-05-15
 
 Cross-cutting display change: one shared date/time formatting
@@ -638,7 +668,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13C, 13F (PRs 3-5), 14A, 14B, 14C, 17B,
-18A, 18C, 18D, 18E, 18F, 19, 20, 21**. No global ordering
+18C, 18D, 18E, 18F, 19, 20, 21**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -735,27 +765,6 @@ bottom of this file.
   is off the roadmap, see `guide/future_possibilities.md`.
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
-- **18A — Sessions lobby enhancements** *(stubs created
-  2026-05-11; consolidated 2026-05-15; in flight 2026-05-17)*.
-  **Small enhancements shipped** (sessions quality-of-life,
-  2026-05-17): the lobby select-all header checkbox (#1080),
-  multi-paragraph session descriptions (#1082), and the Session
-  Details card refresh (#1083). **Three big Parts remain:**
-  **session cloning** — two modes: A "duplicate all except
-  responses" (full setup incl. roster) and B "duplicate all
-  except responses, reviewers, reviewees, relationships"
-  (configuration shell only) — into a new `draft` session,
-  without responses / audit history / runtime state; **session
-  tagging / grouping** (free-form per-session tags surfaced as
-  filterable lobby chips); and **session archiving** (the
-  `closed → archived` lifecycle transition lighting up the
-  reserved `archived` state). Consolidated from the former 18A
-  (cloning) + 18B (tagging + archiving) stubs; **18B is retired**
-  as a segment number. Cloning lands more cleanly after 15C
-  (library auto-copy precedent) and 15B (per-instrument RuleSet
-  pointers); tagging wants `session_tags` from 13F PR 3.
-  **Plan:** `guide/segment_18A_sessions_lobby_enhancements.md`.
-
 - **18C — Retention / deletion workflow** *(stub created
   2026-05-11)*. Per-session selective purge (responses /
   audit log / rosters) + per-deployment retention policy
@@ -851,7 +860,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **14C
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13C, 13F (PRs 3-5), 14A, 17B, 18A,
+- **13C, 13F (PRs 3-5), 14A, 17B,
   18C, 18D, 18E, 18F, 19, 20, 21** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —

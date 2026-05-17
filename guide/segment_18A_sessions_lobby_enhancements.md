@@ -1,7 +1,12 @@
 # Segment 18A — Sessions lobby enhancements
 
-> **Stub. Sketch-level scope only.** Detailed PR breakdowns get
-> drafted when this segment is picked up.
+> **Status: shipped 2026-05-17** — implementation ladder PRs A → H
+> landed across PRs #1080 → #1117 (see the "Implementation PR
+> ladder" section below and `docs/status.md`). Scheduled
+> automation (auto-archive et al.) was split out to
+> **Segment 18F — Scheduled events**
+> (`guide/segment_18F_scheduled_events.md`). This plan is kept as
+> the design-of-record for the lobby surface; not yet archived.
 >
 > **Consolidated 2026-05-15** from the former `18A — Session
 > cloning` and `18B — Session tagging + archiving` stubs (both
@@ -394,6 +399,9 @@ Likely shape:
 
 ## Implementation PR ladder (2026-05-17)
 
+> **All shipped 2026-05-17** — ladder PRs A → H landed across
+> PRs #1106 → #1117 (bulk tags, the last PR-G piece, in #1117).
+
 The main-lobby UI shell is fully placeholdered (PRs #1080–#1104):
 the stats card, tag-filter strip, Search card, Tags column, and the
 selection-aware inline row expanders all render; only the *behavior*
@@ -418,7 +426,7 @@ expander's fields, and submits it — targeted progressive
 enhancement, no framework. This helper lands in PR D and is reused
 by every later action-wiring PR.
 
-### PR A — Tagging service + real tags rendered
+### PR A — Tagging service + real tags rendered — ✅ shipped
 
 - New `app/services/session_tags.py`: `list_tags` / `add_tag` /
   `remove_tag` / `set_tags`, each emitting `session.tag_added` /
@@ -429,7 +437,7 @@ by every later action-wiring PR.
   `HSH1000 / 2610 / PEER` placeholder literals from both. Chips are
   still non-clickable at this point.
 
-### PR B — Tag-filter strip behavior
+### PR B — Tag-filter strip behavior — ✅ shipped
 
 - Clickable chips filter the table client-side (stamp each `<tr>`
   with `data-tags`, hide non-matching rows).
@@ -437,14 +445,14 @@ by every later action-wiring PR.
 - `localStorage` persistence under `rrw-lobby-tag-filter` (chosen
   tags + mode); stale tags dropped on load.
 
-### PR C — Lobby search
+### PR C — Lobby search — ✅ shipped
 
 - Wire the Search card's box to a client-side row filter
   (case-insensitive substring over name / code / tags); Apply /
   Cancel become live. Composes with the PR B tag filter (a row
   shows only if it passes both).
 
-### PR D — Expander action-submission helper + single-session Save
+### PR D — Expander action-submission helper + single-session Save — ✅ shipped
 
 - The transient-hidden-form JS helper described above.
 - Single-session expander **Save** persists the Name / Code /
@@ -453,20 +461,20 @@ by every later action-wiring PR.
   gating + response-loss acknowledgment), Tags through PR A's
   service. **Cancel** collapses the expander (deselects the row).
 
-### PR E — Session cloning (Part 1)
+### PR E — Session cloning (Part 1) — ✅ shipped
 
 - `sessions.clone_session(...)` service, modes A / B.
 - Wire the single-session expander **Duplicate** (mode A) and
   **Duplicate settings only** (mode B); each lands a fresh `draft`
   session and redirects to it.
 
-### PR F — Archiving service + Archive actions (Part 3 core)
+### PR F — Archiving service + Archive actions (Part 3 core) — ✅ shipped
 
 - `sessions.archive_session` / `unarchive_session`; the main lobby
   query excludes `archived`.
 - Wire single-session **Archive** and bulk **Archive all**.
 
-### PR G — Bulk Delete + bulk tags; retire the Danger Zone
+### PR G — Bulk Delete + bulk tags; retire the Danger Zone — ✅ shipped
 
 - Wire the bulk expander **Delete all** behind the Allow-delete
   checkbox, posting the existing `delete-selected` route; **Bulk
@@ -474,7 +482,7 @@ by every later action-wiring PR.
 - Remove the standalone Danger Zone card — the bulk expander now
   carries delete + its confirm checkbox.
 
-### PR H — Archived-sessions child page (Part 3 surface)
+### PR H — Archived-sessions child page (Part 3 surface) — ✅ shipped
 
 - `/operator/sessions/archived`: separate table, tag-chip info
   card, Search card, and a bulk-only expander offering
