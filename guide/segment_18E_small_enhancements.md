@@ -5,7 +5,7 @@
 > (Sessions lobby enhancements — cloning / tagging /
 > archiving, `guide/segment_18A_sessions_lobby_enhancements.md`),
 > **18C** (Retention / deletion workflow,
-> `guide/segment_18C_retention_deletion.md`), and **18D**
+> `guide/archive/segment_18C_retention_deletion.md`), and **18D**
 > (Export and import update,
 > `guide/segment_18D_export_and_import_update.md`).
 

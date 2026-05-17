@@ -5,7 +5,7 @@
 > (Sessions lobby enhancements — cloning / tagging /
 > archiving, `guide/segment_18A_sessions_lobby_enhancements.md`)
 > and **18C** (Retention / deletion workflow,
-> `guide/segment_18C_retention_deletion.md`).
+> `guide/archive/segment_18C_retention_deletion.md`).
 
 **Stub. Sketch-level scope only.** Detailed PR breakdowns
 get drafted when this segment is picked up.

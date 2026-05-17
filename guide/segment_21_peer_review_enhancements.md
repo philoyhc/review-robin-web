@@ -52,10 +52,16 @@ each other, 360-degree feedback, and results-sharing flows.
   the surface is gated by Easy Auth (like operators), by a
   per-reviewee tokened link (like reviewer invitations), or
   both depending on the use case.
-- Confidential vs non-confidential is a per-session property:
-  some sessions must never expose a reviewee surface. Likely a
-  session-level setting that gates whether reviewee surfaces /
-  notifications exist at all.
+- Confidential vs non-confidential is a **per-instrument**
+  property, not per-session: one review session can carry both
+  confidential instruments (never exposed to the reviewee) and
+  non-confidential ones (results shared with the reviewee).
+  Likely a per-instrument flag that gates whether *that
+  instrument's* responses surface on the reviewee view — the
+  reviewee surface for a session shows the non-confidential
+  instruments and omits the confidential ones. A session with
+  no non-confidential instruments simply has nothing to show a
+  reviewee.
 
 ### Results-sharing surface
 
@@ -103,7 +109,8 @@ each other, 360-degree feedback, and results-sharing flows.
   before slice scoping.
 - Anonymisation model — does the reviewee see per-reviewer
   responses, aggregated numbers, or an operator-written
-  summary? Probably a per-session / per-instrument setting.
+  summary? Probably a per-instrument setting (it sits alongside
+  the per-instrument confidential / non-confidential flag).
 - Naming — "Peer review enhancements" is the working title;
   the segment may end up better named once the auth +
   results-sharing model is decided.

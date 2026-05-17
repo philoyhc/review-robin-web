@@ -278,7 +278,7 @@ Smallest possible slice — adds a per-session `audit_events` CSV download. The 
 
 ### Segment 16A — Sys Admin page + workspace user/role management — done 2026-05-10 → 2026-05-11 (PRs #834 → #852)
 
-All six planned PRs shipped (PRs #834 / #841 / #844 / #845 / #851 / #852), plus a handful of follow-on reshape + polish PRs (#835 / #836 / #837 / #838 / #839 / #840 / #842 / #843 / #846 / #847 / #848 / #849 / #850). The "Option C strict-allowlist" access model locks in: `users.is_operator` + `users.is_sys_admin` Boolean columns (13F PR 2 + PR 4) gate the operator surface; `OPERATOR_EMAILS` + `SYS_ADMIN_EMAILS` env vars seed both at user-create time. The Sys Admin chrome lives at workspace level under `/operator/sys-admin/*` and surfaces Sessions Diagnostics + Accounts Management tabs. Plan archived: `guide/archive/segment_16A_sys_admin_page.md`.
+All six planned PRs shipped (PRs #834 / #841 / #844 / #845 / #851 / #852), plus a handful of follow-on reshape + polish PRs (#835 / #836 / #837 / #838 / #839 / #840 / #842 / #843 / #846 / #847 / #848 / #849 / #850). The "Option C strict-allowlist" access model locks in: `users.is_operator` + `users.is_sys_admin` Boolean columns (13F PR 2 + PR 1) gate the operator surface; `OPERATOR_EMAILS` + `SYS_ADMIN_EMAILS` env vars seed both at user-create time. The Sys Admin chrome lives at workspace level under `/operator/sys-admin/*` and surfaces Sessions Diagnostics + Accounts Management tabs. Plan archived: `guide/archive/segment_16A_sys_admin_page.md`.
 
 - **#834 — PR 1a (Operator-allowlist gate)** Foundation: `operator_emails` / `sys_admin_emails` / `operator_contact_email` in `app/config.py`; `get_or_create_user` reads both at user-create time and sets `users.is_operator` / `users.is_sys_admin` accordingly; `require_operator` dependency redirects denied users to `/request-access` via `OperatorAllowlistDenied`; new `request_access.html` renders the contact + mailto + sign-out chrome.
 - **#835 — PR 1b (apply the gate)** Applies `require_operator` to the operator router so every `/operator/*` route except `/request-access` is gated.
@@ -511,7 +511,7 @@ Audit log — sit after the Allow-delete checkbox.
   retention half moved to **Segment 18F** Part 4. Closes the
   operator-facing half of the §21 #16 acceptance criterion.
 
-Plan: `guide/segment_18C_retention_deletion.md`.
+Plan archived: `guide/archive/segment_18C_retention_deletion.md`.
 
 ---
 
@@ -690,37 +690,35 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 3-5), 14A, 14B, 14C, 17B,
+**13C, 13F (PRs 4-5), 14A, 14B, 14C, 17B,
 18D, 18E, 18F, 19, 20, 21**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
 #### Numbered queue
 
-1. **13F — More DB prep (14C / 16A / 16B / 18A / 18B / 18C
+1. **13F — More DB prep (14C / 16A / 16B / 18A / 18B / 18F
    ride-along)** *(in flight — **PRs 1 + 2 shipped 2026-05-11**,
-   **PRs 6 + 7 shipped 2026-05-15**; PRs 3-5 deferred until
-   consumer segments)*. Mirrors the
+   **PRs 6 + 7 shipped 2026-05-15**, **PR 3 shipped 2026-05-17**;
+   only PRs 4 + 5 outstanding)*. Mirrors the
    13D / 13E inert-migrations pattern for the **next** batch
    of schema needs identified during the Segment 16 PR-ladder
    sizing pass. Reordered 2026-05-11 so the 16-series work
    leads: **PR 1 (shipped)** — `users.is_sys_admin` Boolean
    + model-only `session_operators.role` value-set lock and
    Python-default fix; **PR 2 (shipped)** — `users.is_operator`
-   Boolean for Option C strict-allowlist access (16A PR 1
-   reads it); **PR 6 (shipped)** — `sessions.display_timezone`
+   Boolean for Option C strict-allowlist access; **PR 3
+   (shipped)** — the `session_tags` table for 18A tagging;
+   **PR 6 (shipped)** — `sessions.display_timezone`
    String for 18B PR 3; **PR 7 (shipped)** —
-   `users.preferences` JSON for 18B PR 2. PRs 3-5
-   (`session_tags`, `sessions.reminder_settings`,
-   `sessions.retention_exception` + `retention_overrides`)
-   ride with their consumer segments (18A / 14C / 18C) when
-   those segments are picked up. A fresh schema sweep across
-   every upcoming segment (2026-05-15) confirmed PR 7
-   (`users.preferences` JSON — a per-operator preferences
-   container for 18B PR 2 and future operator-level display
-   settings) is the only new addition; 14A's type migrations
-   stay out of 13F. **The 16-series schema scaffolding is now
-   complete — Segment 16A is unblocked.**
+   `users.preferences` JSON for 18B PR 2. The two outstanding
+   PRs ride with their consumer segments: **PR 4**
+   (`sessions.reminder_settings`) with 14C; **PR 5**
+   (`sessions.retention_exception` + `retention_overrides`)
+   with **18F Part 4** (moved from 18C when 18C was re-scoped
+   to operator-triggered purge, which needed no schema).
+   14A's type migrations stay out of 13F. **The 16-series
+   schema scaffolding is complete — Segment 16A is unblocked.**
    **Plan:** `guide/segment_13F_more_db_prep.md`.
 
 2. **13C — Enhanced instruments.**
@@ -873,7 +871,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **14C
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13C, 13F (PRs 3-5), 14A, 17B,
+- **13C, 13F (PRs 4-5), 14A, 17B,
   18D, 18E, 18F, 19, 20, 21** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
