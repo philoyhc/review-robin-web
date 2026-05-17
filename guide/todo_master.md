@@ -765,14 +765,16 @@ bottom of this file.
   is off the roadmap, see `guide/future_possibilities.md`.
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
-- **18C — Retention / deletion workflow** *(stub created
-  2026-05-11)*. Per-session selective purge (responses /
-  audit log / rosters) + per-deployment retention policy
-  enforced by a scheduled job. Closes the §21 #16
-  acceptance criterion "Basic retention/deletion workflow"
-  + the §22 row "Advanced retention policies". Reuses
-  14B Part C's worker scaffold if available; sys-admin
-  surface gated by 16A.
+- **18C — Operator-triggered purge** *(stub created
+  2026-05-11; re-scoped 2026-05-17)*. Selective hard-delete of
+  a session's data — purge responses, purge rosters, purge
+  audit log — offered as a **"Purge and archive"** action on
+  the Sessions-lobby row expander (18A). A new
+  `app/services/session_purge.py` does the FK-safe cascades.
+  Closes the operator-facing half of the §21 #16 acceptance
+  criterion "Basic retention/deletion workflow". The
+  *scheduled* / policy-driven retention half moved to **18F**
+  Part 4.
   **Plan:** `guide/segment_18C_retention_deletion.md`.
 
 - **18D — Export and import update** *(stub created

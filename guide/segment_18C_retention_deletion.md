@@ -1,180 +1,154 @@
-# Segment 18C — Retention / deletion workflow
+# Segment 18C — Operator-triggered purge
 
-> **Stub created 2026-05-11** as part of the Stage 4 guide/
-> reorg. Sibling: **18A** (Sessions lobby enhancements —
-> cloning / tagging / archiving,
-> `guide/segment_18A_sessions_lobby_enhancements.md`).
-
-**Stub. Sketch-level scope only.** Detailed PR breakdowns
-get drafted when this segment is picked up.
+> **Stub created 2026-05-11; re-scoped 2026-05-17.** Originally
+> "Retention / deletion workflow", spanning both operator-triggered
+> *and* scheduled / policy-driven purge. The **scheduled** half —
+> per-deployment retention policy, per-session overrides, the
+> scheduled worker — moved to **Segment 18F — Scheduled events**
+> (`guide/segment_18F_scheduled_events.md`, Part 4). 18C now owns
+> only the **operator-triggered** purge: explicit, immediate
+> "delete just these rows" actions an operator runs by hand.
 
 ## Goal
 
-Close the **retention / purge** gap that's been hanging since
-Segment 12B reduced to the audit-events export only. Two
-related capabilities:
+Give operators **selective hard-delete** of a session's data —
+finer-grained than today's only sub-session option (none: the
+sole deletion path is the whole-session Danger Zone delete).
+Three purge operations, offered together as a **"Purge and
+archive"** action on the Sessions-lobby row expander:
 
-1. **Policy-driven retention** — a per-deployment (or
-   per-session) policy that says "responses older than N days
-   get purged" / "audit rows older than M days get purged"
-   etc., enforced by a scheduled job.
-2. **Operator-triggered purge** — explicit "delete every
-   response on this session but keep the setup" or "delete
-   every audit row older than X" affordances for operators
-   who need to honour a one-off retention obligation.
+- **Purge responses** — hard-delete every `response` + `invitation`
+  row for the session. Assignments and all setup retain.
+- **Purge rosters** — hard-delete reviewers + reviewees +
+  relationships. Because assignments / responses / invitations
+  carry foreign keys onto the rosters, those cascade out too;
+  instruments, RTDs, display / response fields and settings
+  retain. Reverts the session to a "setup skeleton with no
+  people".
+- **Purge audit log** — hard-delete every `audit_event` row for
+  the session.
 
-Today's only deletion path is **whole-session hard-delete**
-(the Danger Zone "Delete session" button on Session Home +
-Sessions lobby), which cascades to every related row via the
-explicit pre-delete pattern in `app/services/sessions.py`.
-That's a blunt tool — there's no "delete just the responses"
-or "delete just the audit log".
+All three are **hard-deletes, no undo** (soft-delete stays out
+of scope — see below).
 
 ## Why now
 
-- **§21 #16** "Basic retention/deletion workflow" is still
-  ❌ in `guide/codebase_assessment_11may.md` — the only MVP
-  acceptance criterion not even partially satisfied.
-- **§22** "Advanced retention policies" is also ❌ "deferred
-  (no current plan owner)".
-- **Weakness #2** of the May 11 assessment names this gap
-  explicitly: *"Retention / purge tooling deferred. Segment
-  12B was re-scoped during the sprint: the audit-log export
-  shipped, but the retention/purge piece the original 12B
-  plan owned has no current plan file. Functional spec §12.2
-  / §12.4 still go unanswered."*
-- The original 12B plan's "Audit-events purge / retention
-  policy" sub-bullet was deferred with this prescription:
-  *"If pilot feedback flips that, it lands in its own
-  segment with proper retention-policy + scheduled-job
-  design."* — 18C is that segment.
+- **§21 #16** "Basic retention/deletion workflow" is the only
+  MVP acceptance criterion not even partially satisfied in
+  `guide/codebase_assessment_11may.md`; Weakness #2 names the
+  gap. Operator-triggered purge closes the operator-facing half.
+- Segment 18A shipped the Sessions-lobby inline row expander and
+  `draft ⇄ archived` archiving. "Purge and archive" composes
+  directly onto that surface — the operator is already there to
+  archive a finished session; offering "and purge X while you're
+  at it" needs no new page.
 
-## Scope (sketch)
+## Delivery — the "Purge and archive" expander action
 
-### Part 1 — Per-session selective purge
+The single-session and bulk Sessions-lobby expanders today carry
+an **Archive** / **Archive all** button (posts the ticked
+`session_ids` to `/operator/sessions/archive-selected`) and an
+**Allow delete** confirm checkbox gating the Delete button.
 
-**Goal.** Operator-triggered "delete responses but keep
-setup" / "delete audit log" / "delete reviewers + reviewees
-but keep instruments" affordances, all from the same Danger
-Zone surface.
+18C extends that row:
 
-Likely shape:
+- The **Archive** / **Archive all** button is renamed **"Purge
+  and archive"**.
+- Immediately after the **Allow delete** checkbox, inline: the
+  label **"Archive after purging"** followed by three
+  checkboxes — **Responses**, **rosters**, **audit log**.
+- **No purge checkbox ticked** → the action archives exactly as
+  wired today (plain `archive_session`, no deletes).
+- **One or more ticked** → for each ticked session the selected
+  purges run *first*, then `archive_session`.
 
-- New Danger Zone sub-cards on Session Home (or a dedicated
-  `/operator/sessions/{id}/retention` page — decide at
-  scoping):
-  - **Purge responses.** Hard-deletes every `response` row +
-    `invitation` row; `assignments` retain; setup retain.
-    Triggerable on any lifecycle state ≥ `validated`.
-  - **Purge audit log.** Hard-deletes every `audit_event`
-    row for this session. Triggerable on any state.
-    Confirmation requires re-typing the session code
-    (GitHub-repo-delete pattern); no undo.
-  - **Purge rosters.** Hard-deletes reviewers + reviewees +
-    relationships; instruments retain. Effectively reverts
-    the session to "setup skeleton with no people".
-- Each action emits its own audit event with the deleted
-  row count in a `counts` envelope: `session.responses_purged`,
-  `session.audit_log_purged`, `session.rosters_purged`.
-- Lives behind 16A's sys-admin gate? Probably yes —
-  destructive actions of this scale belong behind the
-  diagnostic doorway, not in the everyday operator surface.
-  Revisit at scoping.
+Archiving stays **draft-only** (18A's locked `draft ⇄ archived`
+model), so "Purge and archive" only acts on draft sessions; a
+non-draft session ticked in a bulk selection is skipped whole
+(no purge, no archive), exactly as `archive-selected` skips it
+today.
 
-### Part 2 — Per-deployment retention policy
+### Purge order and the audit log
 
-**Goal.** A scheduled job that enforces a retention policy
-defined per-deployment (env var or admin-set settings).
+When more than one purge is selected they run in a fixed order
+so the audit trail of *this* action survives:
 
-Likely shape:
+1. **Audit log** first — deletes every pre-existing
+   `audit_event` row, then emits its own
+   `session.audit_log_purged` event (which therefore survives).
+2. **Responses**, then **rosters** — each emits its event.
+3. **`archive_session`** — emits `session.archived`.
 
-- Env-var-backed config in `app/config.py`:
-  - `RETENTION_RESPONSE_DAYS` (default unset = no auto-purge).
-  - `RETENTION_AUDIT_DAYS` (default unset = no auto-purge).
-  - `RETENTION_SESSION_ARCHIVED_DAYS` (default unset = no
-    auto-purge of archived sessions).
-- Scheduled worker (reuses 14B Part C's queue + worker
-  scaffold if available; otherwise an Azure Functions timer
-  trigger or equivalent).
-- Per-batch audit event: `retention.policy_run` with a
-  `counts` envelope summarising rows purged per category.
-- Manual override: an operator can opt their session **out**
-  of the auto-purge via the `sessions.retention_exception`
-  Boolean column **pre-positioned by Segment 13F PR 5** (e.g.
-  for a session under legal hold).
+So after a full purge-and-archive the audit log holds a clean
+record of just the action that produced the current state.
 
-### Part 3 — Per-session retention policy (post-MVP)
+## Service shape
 
-**Goal.** Beyond per-deployment defaults, let each session
-carry its own policy (e.g. "this session purges responses
-after 30 days; the deployment default is 90").
+A new `app/services/session_purge.py`:
 
-Likely shape (deferred — confirm need with pilot feedback):
+- `purge_responses(db, *, review_session, user, correlation_id)`
+  — FK-safe delete of `responses` then `invitations`; emits
+  `session.responses_purged` (`counts` envelope).
+- `purge_rosters(db, *, ...)` — FK-safe cascade: `responses`,
+  `invitations`, `assignments`, `relationships`, then
+  `reviewers` + `reviewees`; emits `session.rosters_purged`.
+- `purge_audit_log(db, *, ...)` — delete `audit_events` for the
+  session; emits `session.audit_log_purged` *after* the delete.
 
-- The `sessions.retention_overrides` JSON column
-  **pre-positioned by Segment 13F PR 5** carries the
-  per-session override (`response_days` / `audit_days` /
-  `archived_days` keys; NULL = "use deployment default").
-- Settings-page editor surface.
-- Audit emitter: `session.retention_policy_updated`.
+The FK-safe delete order mirrors the explicit pre-delete pattern
+in `sessions.delete_session`. Each emitter is registered in
+`audit.EVENT_SCHEMAS`.
+
+The `/operator/sessions/archive-selected` route grows optional
+`purge` form values; the bulk-tags-style "buttons carry the
+choice" pattern is not needed — the three checkboxes submit
+their own names.
 
 ## Hard dependencies
 
-- **14A** (production hardening) for the scheduled-job
-  infrastructure if Part 2 reuses it.
-- **16A** (Sys Admin gate) if Part 1 lives behind sys-admin
-  rather than operator-facing chrome.
+- **Segment 18A** — the Sessions-lobby inline expander and
+  `archive_session` (both shipped).
 
 ## Out of scope
 
-- **Soft-delete** (mark deleted, retain in DB). All purges
-  in this segment are hard-deletes; soft-delete would be a
-  bigger schema change and a separate ask. The reserved
-  `archived` lifecycle state (owned by 18A) covers the
-  closest-to-soft-delete use case for whole sessions.
-- **Cross-session purge** ("delete every session's responses
-  older than X"). 18C is per-session-scoped or
-  per-deployment-scheduled-job; cross-session ad-hoc purge
-  would be a Sys Admin feature.
-- **Backup integration.** Database-level backups are owned
-  by 14A's "backup and restore notes". 18C purges run
-  against live data; backup retention is a separate concern.
+- **Scheduled / policy-driven retention** — per-deployment
+  retention policy, per-session overrides, the scheduled worker.
+  Moved to **Segment 18F — Scheduled events** Part 4.
+- **Soft-delete** (mark-deleted, retain in DB). Every purge here
+  is a hard-delete; soft-delete is a bigger schema change and a
+  separate ask. The `archived` lifecycle state covers the
+  closest-to-soft-delete case for whole sessions.
+- **Cross-session purge** ("every session's responses older
+  than X"). 18C is per-session and operator-triggered; a
+  cross-session sweep would be a Sys Admin / 18F concern.
+- **Outbox + email-audit rows.** "Purge responses" deletes
+  `responses` + `invitations` only; `email_outbox` rows and the
+  `email.sent` / `email.send_failed` audit rows are left
+  (the audit rows go anyway if "purge audit log" is also
+  ticked).
 
 ## Doc impact
 
-When parts ship:
+When it ships:
 
-- `docs/status.md` timeline entry per Part.
-- `guide/todo_master.md` updated.
-- `guide/codebase_assessment_11may.md` §21 #16 row flips
-  ❌ → ⚠️ / ✅; Weakness #2 closes; §22 "Advanced retention
-  policies" row picks up the plan.
-- `spec/session_home.md` — Danger Zone card picks up the
-  selective-purge sub-cards.
-- `spec/architecture.md` — audit-event detail schema picks
-  up the new emitters.
-- `spec/settings_inventory.md` — retention-policy env vars
-  + per-session columns rows added.
-- `docs/operations_runbook.md` (when 14A's runbook lands)
-  — retention-policy operational pages.
+- `docs/status.md` timeline entry; `guide/todo_master.md`.
+- `guide/codebase_assessment_11may.md` §21 #16 flips ❌ → ⚠️/✅;
+  Weakness #2 closes (operator-facing half).
+- `spec/sessions_overview.md` — the expander's "Purge and
+  archive" action + the three purge checkboxes.
+- `spec/architecture.md` — the `session.responses_purged` /
+  `session.rosters_purged` / `session.audit_log_purged`
+  audit-event envelopes.
 
 ## Working notes
 
 - _(placeholder for decisions during PR scoping)_
-- **Operator surface vs sys-admin surface.** Per-session
-  selective purge is plausibly an operator-facing action
-  (an operator wants to wipe a session's responses without
-  destroying the setup template they spent two weeks
-  building). But the bulkier "purge audit log" is closer to
-  sys-admin territory. Split the surfaces by action?
-- **Schedule job home.** 14B Part C ships the bulk-send
-  queue + worker; whether 18C Part 2 reuses that worker or
-  stands up its own is a 14B-readiness question.
-- **Legal-hold override.** Worth a one-line note in the
-  pilot operator runbook either way.
-- **Cascade depth.** "Purge responses" deletes responses +
-  invitations + outbox rows; does it also delete the
-  `email.sent` / `email.send_failed` audit rows that
-  reference the deleted outbox? Default: yes (the audit
-  events were a side-effect of the data we're deleting).
-  Confirm during scoping.
+- **Purge rosters is a superset of purge responses.** Both
+  delete `responses` + `invitations`; ticking both is harmless
+  (the second purge finds the rows already gone).
+- **No re-type confirmation.** The earlier stub floated a
+  GitHub-style "re-type the session code" gate. With the action
+  living on the expander behind the existing **Allow delete**
+  checkbox — and the purges only running as part of an
+  already-deliberate archive — a single confirm checkbox is the
+  gate. Revisit if pilot feedback wants more friction.

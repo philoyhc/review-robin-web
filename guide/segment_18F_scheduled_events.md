@@ -86,6 +86,26 @@ the session `deadline`, all funnelled through
   reviewer surface shows "activated — opens at X"; a
   `session.opened` audit event records the open.
 
+### Part 4 — Scheduled / policy-driven purge (retention)
+
+**Goal.** A retention policy that purges aged data on a schedule —
+moved here out of **Segment 18C** when 18C was re-scoped to the
+*operator-triggered* purge only (2026-05-17). 18C owns the purge
+*mechanics*; 18F Part 4 owns the *scheduled trigger* that runs them.
+
+- **Per-deployment policy** — env-var config in `app/config.py`
+  (`RETENTION_RESPONSE_DAYS` / `RETENTION_AUDIT_DAYS` /
+  `RETENTION_SESSION_ARCHIVED_DAYS`; unset = no auto-purge), a
+  scheduled worker, and a `retention.policy_run` audit event with
+  a `counts` envelope.
+- **Per-session override** — the `sessions.retention_exception`
+  Boolean (opt a session out, e.g. legal hold) and the
+  `sessions.retention_overrides` JSON column, both pre-positioned
+  by **13F PR 5**; a Settings-page editor; a
+  `session.retention_policy_updated` emitter.
+- Reuses 18C's `session_purge` service for the actual deletes —
+  this part adds only the schedule + policy resolution.
+
 ### Reminders — owned by 14C, reconciled here
 
 Scheduled reminder dispatch is **Segment 14C**'s
