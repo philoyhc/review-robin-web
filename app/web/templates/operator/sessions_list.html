@@ -5,25 +5,33 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
-  <div class="sessions-list-header">
-    <h1>Sessions</h1>
-  </div>
-
   {% if sessions %}
-    <div class="card sessions-action-card">
-      <h2>Session actions</h2>
-      <p class="form-help">
-        Select sessions to duplicate or archive them. Archive can take
-        several at once.
-      </p>
-      <div class="sessions-action-buttons">
-        <a class="btn" href="/operator/sessions/new">Create new session</a>
-        <button type="button" class="btn secondary" disabled>Duplicate</button>
-        <button type="button" class="btn secondary" disabled>
-          Duplicate settings only
-        </button>
-        <button type="button" class="btn alert" disabled>Archive</button>
-        <button type="button" class="btn destructive" disabled>Delete</button>
+    <div class="sessions-lobby-row">
+      <div class="card sessions-lobby-card">
+        <h2>Sessions lobby</h2>
+        <div class="sessions-lobby-pills">
+          <span class="pill pill-count">{{ lobby_stats.total }} sessions</span>
+          <span class="pill pill-lifecycle-draft">{{ lobby_stats.draft }} draft</span>
+          <span class="pill pill-lifecycle-ready">{{ lobby_stats.activated }} activated</span>
+          <span class="pill pill-lifecycle-archived">{{ lobby_stats.archived }} archived</span>
+        </div>
+      </div>
+
+      <div class="card sessions-action-card">
+        <h2>Actions</h2>
+        <p class="form-help">
+          Select sessions to duplicate or archive them. Archive can take
+          several at once.
+        </p>
+        <div class="sessions-action-buttons">
+          <a class="btn" href="/operator/sessions/new">Create new session</a>
+          <button type="button" class="btn secondary" disabled>Duplicate</button>
+          <button type="button" class="btn secondary" disabled>
+            Duplicate settings only
+          </button>
+          <button type="button" class="btn alert" disabled>Archive</button>
+          <button type="button" class="btn destructive" disabled>Delete</button>
+        </div>
       </div>
     </div>
 

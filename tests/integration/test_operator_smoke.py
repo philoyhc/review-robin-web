@@ -27,7 +27,7 @@ def test_operator_sessions_renders(client: TestClient) -> None:
     response = client.get("/operator/sessions")
 
     assert response.status_code == 200
-    assert "<h1>Sessions</h1>" in response.text
+    assert "You don't have any sessions yet." in response.text
 
 
 def test_operator_session_home_renders(client: TestClient) -> None:
