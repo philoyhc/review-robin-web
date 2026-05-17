@@ -302,11 +302,13 @@ Likely shape:
   operator has used as a clickable chip.
   - **Selection is additive and per-tag.** Each tag chip toggles
     independently — clicking one shows/hides the sessions carrying
-    it without disturbing the other chips' state. With several
-    chips selected the table shows sessions matching the selected
-    set (multi-tag combine rule — AND vs OR — to be locked at
-    scoping; the lobby Tags column already AND-implies a row
-    carries all its own tags).
+    it without disturbing the other chips' state.
+  - **AND / OR mode chip.** With several chips selected the
+    combine rule is operator-controlled: the strip carries an
+    extra **mode chip that toggles AND ⇄ OR** (locked
+    2026-05-17). `OR` shows sessions carrying *any* selected tag;
+    `AND` shows only sessions carrying *every* selected tag. The
+    mode persists alongside the chosen tags in `localStorage`.
   - **Clear all / Select all toggle.** A trailing "Clear all"
     chip deselects every tag at once. When no tags are selected
     it is replaced in place by a "Select all" chip that
@@ -392,6 +394,105 @@ Likely shape:
   vs a key inside a session-schedule JSON) is the audit's call.
 - Audit-event registrations: `session.archived` /
   `session.unarchived` (`changes` envelope on the status column).
+
+## Implementation PR ladder (2026-05-17)
+
+The main-lobby UI shell is fully placeholdered (PRs #1080–#1104):
+the stats card, tag-filter strip, Search card, Tags column, and the
+selection-aware inline row expanders all render; only the *behavior*
+behind the placeholders is outstanding. `session_tags` schema is in
+place (13F PR 3, shipped #1098). This ladder turns the placeholders
+real, in small reviewable slices.
+
+**Decisions locked 2026-05-17** (drove this ladder):
+
+1. **Multi-tag filter combine** — operator-controlled: the strip
+   carries an AND ⇄ OR mode chip (not a fixed rule).
+2. **Bulk tags** — a text box plus *Add to all* / *Remove from all*
+   buttons (not a union tick-to-apply chip list).
+3. **Lobby search** — client-side filter over the rendered rows
+   (no server `?q=` round-trip while the lobby isn't paginated).
+
+**Expander action submission.** The expander `<tr>` is injected
+inside `#sessions-list-form` (the bulk-delete form); HTML forbids a
+nested `<form>`. So expander actions submit via a small JS helper
+that builds a transient hidden `<form>`, fills it from the
+expander's fields, and submits it — targeted progressive
+enhancement, no framework. This helper lands in PR D and is reused
+by every later action-wiring PR.
+
+### PR A — Tagging service + real tags rendered
+
+- New `app/services/session_tags.py`: `list_tags` / `add_tag` /
+  `remove_tag` / `set_tags`, each emitting `session.tag_added` /
+  `session.tag_removed` (registered in `EVENT_SCHEMAS`).
+- A `app/web/views/` adapter feeds each lobby row its tags.
+- Lobby route + template render real tag pills in the Tags column
+  and real chips in the tag-filter strip — removing the
+  `HSH1000 / 2610 / PEER` placeholder literals from both. Chips are
+  still non-clickable at this point.
+
+### PR B — Tag-filter strip behavior
+
+- Clickable chips filter the table client-side (stamp each `<tr>`
+  with `data-tags`, hide non-matching rows).
+- The AND ⇄ OR mode chip; the Clear all ⇄ Select all swap.
+- `localStorage` persistence under `rrw-lobby-tag-filter` (chosen
+  tags + mode); stale tags dropped on load.
+
+### PR C — Lobby search
+
+- Wire the Search card's box to a client-side row filter
+  (case-insensitive substring over name / code / tags); Apply /
+  Cancel become live. Composes with the PR B tag filter (a row
+  shows only if it passes both).
+
+### PR D — Expander action-submission helper + single-session Save
+
+- The transient-hidden-form JS helper described above.
+- Single-session expander **Save** persists the Name / Code /
+  Deadline / Tags edit boxes — Name/Code/Deadline through the
+  existing Session Details edit service (inheriting its lifecycle
+  gating + response-loss acknowledgment), Tags through PR A's
+  service. **Cancel** collapses the expander (deselects the row).
+
+### PR E — Session cloning (Part 1)
+
+- `sessions.clone_session(...)` service, modes A / B.
+- Wire the single-session expander **Duplicate** (mode A) and
+  **Duplicate settings only** (mode B); each lands a fresh `draft`
+  session and redirects to it.
+
+### PR F — Archiving service + Archive actions (Part 3 core)
+
+- `sessions.archive_session` / `unarchive_session`; the main lobby
+  query excludes `archived`.
+- Wire single-session **Archive** and bulk **Archive all**.
+
+### PR G — Bulk Delete + bulk tags; retire the Danger Zone
+
+- Wire the bulk expander **Delete all** behind the Allow-delete
+  checkbox, posting the existing `delete-selected` route; **Bulk
+  tags** text box + Add to all / Remove from all.
+- Remove the standalone Danger Zone card — the bulk expander now
+  carries delete + its confirm checkbox.
+
+### PR H — Archived-sessions child page (Part 3 surface)
+
+- `/operator/sessions/archived`: separate table, tag-chip info
+  card, Search card, and a bulk-only expander offering
+  Unarchive / Download / Delete.
+
+### PR I — Auto-archive *(blocked)*
+
+- Deferred until the 13F scheduled-lifecycle schema audit locks
+  the `auto_archive_at` column. Lights up the scheduled
+  `closed → archived` flip on top of PR F's `archive_session`.
+
+**Sequencing.** A → B → C are the tagging + filter + search
+front; A blocks B. D establishes the action-submission helper that
+E / F / G depend on. H follows F (needs `archived` sessions to
+exist). I is blocked on 13F.
 
 ## Hard dependencies
 
