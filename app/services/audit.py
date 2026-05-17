@@ -352,6 +352,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # string rides in ``context.tag``.
     "session.tag_added": EventSchema(_IDENTITY | {"context"}),
     "session.tag_removed": EventSchema(_IDENTITY | {"context"}),
+    # Segment 18A Part 1 — session cloning. ``counts`` carries the
+    # copied-entity tallies, ``refs.source_session_id`` the origin,
+    # ``context.mode`` the clone mode (``all`` / ``config``).
+    "session.cloned": EventSchema(_IDENTITY | {"counts", "refs", "context"}),
     # Workflow super-button (per spec/workflow_card.md). The
     # ``started`` event marks each Activate-session click; per-step
     # success continues to write the underlying ``session.validated``

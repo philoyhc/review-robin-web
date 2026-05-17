@@ -110,6 +110,8 @@ def test_every_emitted_event_type_has_a_registered_schema() -> None:
         # Segment 18A — session tagging
         "session.tag_added",
         "session.tag_removed",
+        # Segment 18A — session cloning
+        "session.cloned",
     }
     missing = expected - set(audit.EVENT_SCHEMAS.keys())
     assert not missing, (
