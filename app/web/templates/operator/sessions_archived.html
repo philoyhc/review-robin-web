@@ -93,7 +93,7 @@
               {% set tz = session_timezone(s) %}
               <td class="col-shrink">
                 <span class="pill pill-count">
-                  <abbr class="tz-gmt" title="{{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
+                  <abbr class="tz-gmt" title="{{ gmt_offset_label(tz) }} {{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
                 </span>
               </td>
               <td>
