@@ -1406,12 +1406,19 @@
         min-width: 0;
       }
       body.ui-v2 .session-expander-fields input { width: 100%; }
+      body.ui-v2 .exp-fields-right { justify-content: flex-end; }
       /* Single-session expander field widths — Name 3 / Code 2 /
-         Deadline 2 / Tags 3 (out of 10). */
-      body.ui-v2 .exp-field-name { flex-grow: 3; }
-      body.ui-v2 .exp-field-code { flex-grow: 2; }
-      body.ui-v2 .exp-field-deadline { flex-grow: 2; }
-      body.ui-v2 .exp-field-tags { flex-grow: 3; }
+         Deadline 2 / Tags 3 (out of 10). Selectors include the
+         .session-expander-fields ancestor so they out-specify the
+         label rule above. */
+      body.ui-v2 .session-expander-fields .exp-field-name { flex-grow: 3; }
+      body.ui-v2 .session-expander-fields .exp-field-code { flex-grow: 2; }
+      body.ui-v2 .session-expander-fields .exp-field-deadline { flex-grow: 2; }
+      body.ui-v2 .session-expander-fields .exp-field-tags { flex-grow: 3; }
+      /* Bulk expander Tags box — a quarter of the row, flush right. */
+      body.ui-v2 .session-expander-fields .exp-field-bulk-tags {
+        flex: 0 0 25%;
+      }
       body.ui-v2 .session-expander-actions {
         display: flex;
         flex-wrap: wrap;
