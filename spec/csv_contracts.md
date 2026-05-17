@@ -108,25 +108,40 @@ reviewee identifier.
 
 ### 2.4 Responses — `extracts/responses_extract.py`
 
-Shipped 12A-1 PR 4 + #781 polish. 20-column wide format. No
-import counterpart (responses are reviewer-generated, not
+Shipped 12A-1 PR 4 + #781 polish; preamble + positional
+instrument naming added in Segment 18D. Analysis-facing per-session
+CSV — the consumer is an external analyst, not the app. No import
+counterpart (responses are reviewer-generated, not
 operator-uploaded).
+
+The file has two parts:
+
+1. **Preamble** — one block per instrument: a row carrying the
+   instrument's positional name (`instrument_1`, `instrument_2`,
+   … by instrument order), then one `FieldKey, HelpText` row per
+   response field (a field dictionary). A blank row separates the
+   preamble from the table. A session with no instruments emits
+   no preamble and no gap.
+2. **Data table** — the 20-column wide format below.
 
 | Block | Columns |
 |---|---|
 | Reviewer identity (5) | `ReviewerName`, `ReviewerEmail`, `ReviewerTag1`, `ReviewerTag2`, `ReviewerTag3` |
 | Reviewee identity (5) | `RevieweeName`, `RevieweeEmail`, `RevieweeTag1`, `RevieweeTag2`, `RevieweeTag3` |
-| Instrument (2) | `InstrumentName`, `InstrumentShortLabel` |
+| Instrument (2) | `InstrumentName` (the positional id `instrument_{n}` — the operator's typed name is not exported), `InstrumentShortLabel` |
 | Field context (3) | `FieldKey`, `FieldLabel`, `ResponseType` |
 | Value (1) | `Value` (empty cell ⇒ reviewer cleared the field) |
 | Self-review (1) | `SelfReview` — uppercase `TRUE` / `FALSE` per Excel idiom. Computed via `is_self_review(reviewer, reviewee)` (case-insensitive email match; `FALSE` for non-email reviewee identifiers). |
 | Lifecycle (3) | `SavedAt`, `SubmittedAt`, `Version` |
 
+An analyst joins a preamble help text to its data column via the
+shared `FieldKey`.
+
 `SavedAt` / `SubmittedAt` are ISO 8601 carrying the **session
 zone's** UTC offset (e.g. `2026-06-02T08:00:00+08:00`), via
 `date_formatting.iso_in_zone` — see `spec/timezone_display.md`.
 
-**Streaming:** the serialiser uses `yield_per(1000)` cursor
+**Streaming:** the data-table query uses `yield_per(1000)` cursor
 streaming so large sessions don't materialise every Response
 row in memory. Row order: `(reviewer_id, reviewee_id,
 instrument.order, field.order)`.
