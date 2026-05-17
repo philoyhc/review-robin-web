@@ -1359,11 +1359,16 @@
         background: var(--bg-muted);
         color: var(--text-primary);
       }
-      /* Sessions-lobby Tags editor card — revealed below the Actions
-         card by the "Tags" button. Right-aligned to sit under it. */
-      body.ui-v2 .sessions-tags-card {
-        max-width: 50%;
+      /* Sessions-lobby Tags editor + Danger Zone cards — revealed
+         below the Actions card. Right-aligned and width-matched to
+         the Actions card: half the row minus half the lobby-row gap,
+         so they line up under it rather than overhanging. */
+      body.ui-v2 .sessions-tags-card,
+      body.ui-v2 #sessions-list-danger-zone {
+        width: calc(50% - var(--space-4) / 2);
         margin-left: auto;
+      }
+      body.ui-v2 .sessions-tags-card {
         margin-bottom: var(--space-4);
       }
       body.ui-v2 .sessions-tags-card h2 { margin-top: 0; }
