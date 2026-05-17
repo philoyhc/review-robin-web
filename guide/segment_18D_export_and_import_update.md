@@ -217,6 +217,100 @@ Likely shape:
   (Settings CSV is per-version-tolerant — missing rows
   are accepted, unknown rows are rejected).
 
+## Export part — detailed plan (2026-05-17)
+
+The actionable scope of 18D splits cleanly into an **export
+part** (planned here) and an **import part** (planned
+separately). The export part is the read-out side: it lands
+the Zip-all bundle and the Settings-CSV *export* additions,
+and is shippable today against the post-15B/C/F codebase.
+
+### Locked scope decisions
+
+- **Covers** the Zip-all bundle (Part 4), the per-instrument
+  `rule_set_name` fallback audit (Part 2), and the **export
+  leg** of library-tier provenance (Part 1) — the Settings
+  CSV emits the `library_name` provenance cell now, inert
+  until the import part lands the matching / linking logic.
+- **Zip-all bundle = one `{code}_bundle.zip`** containing all
+  five operator-facing CSVs (Reviewers / Reviewees /
+  Relationships / Responses / Settings). No porting/analysis
+  split. The Sys-Admin-gated audit-events extract is not in
+  the bundle.
+- **No Settings-CSV `version` cell.** The importer stays
+  per-version-tolerant via absence-handling (missing rows
+  accepted). The export part adds no fast-fail machinery.
+- **Out of the export part** (→ import-part plan): matching
+  `library_name` to a destination operator's library and
+  setting `library_origin_id`; `rule_set_name` typo
+  cross-validation on apply; retention-column round-trip
+  (Part 5, also blocked on 13F PR 5); the Responses flavour
+  column (Part 3, blocked on 13C).
+
+### PR E1 — Zip-all bundle graduation
+
+Graduates the inert "Zip all" tile on the Extract Data card
+(`is_wired=False`, `coming_in=...` today) to a real download.
+
+- New `app/services/extracts/zip_bundle.py` —
+  `build_session_bundle(db, review_session)` collects each of
+  the five extract serialisers' CSV output, writes each as a
+  `{code}_{kind}.csv` member into an in-memory
+  `zipfile.ZipFile` (`ZIP_DEFLATED` over a `BytesIO`), and
+  returns the zip bytes plus a per-CSV row-count dict.
+- New route `GET /operator/sessions/{id}/export/bundle.zip`
+  in `routes_operator/_extracts.py` (behind
+  `require_session_operator`) — builds the bundle, emits the
+  audit event, returns the bytes with
+  `Content-Disposition: attachment; filename={code}_bundle.zip`.
+- New audit event `session.bundle_extracted` — `counts`
+  envelope, one key per CSV with its row count. Register in
+  `audit.EVENT_SCHEMAS` (`_IDENTITY | {"counts"}`).
+- `app/web/views/_extract_data.py` — flip the `bundle` row to
+  `is_wired=True`, set `download_url`, drop `coming_in`.
+- Tests: route returns a valid zip with the five expected
+  members; `session.bundle_extracted` emitted with the
+  per-CSV counts; the tile renders wired.
+
+### PR E2 — Settings CSV export refresh
+
+Two cohesive `session_config_io/_serialize.py` changes plus a
+minimal importer touch.
+
+- **`library_name` provenance cell.** For each
+  `response_type_definitions[N]` and `session_rule_sets[N]`
+  group, emit a `…library_name` key — the *library entry's*
+  `name` resolved via `library_origin_id` (the session copy
+  may have been renamed, so resolve the origin, not the
+  copy's own name); empty when `library_origin_id` is NULL.
+- **Importer tolerates the new key.** Because the Settings
+  CSV importer *rejects unknown rows*, emitting `library_name`
+  inert would break a session's own export→re-import
+  round-trip. `_apply.py` must **recognise `…library_name`
+  as a known-but-ignored key** — the link/clone logic itself
+  is the import part's job, but the recognise-and-skip is
+  required here so the column is genuinely inert, not
+  round-trip-breaking.
+- **`rule_set_name` fallback re-document (Part 2).** The
+  `_audit_log_rule_set_name` fallback in `_serialize.py` is
+  no longer "pre-15B" — post-15B it is the genuine *un-pinned
+  instrument* path (instruments whose `rule_set_id` is NULL).
+  Re-document its docstring accordingly; keep the function.
+  Add a test pinning both branches: a pinned instrument reads
+  `rule_set_id`, an un-pinned one falls back.
+- Tests: round-trip stability — export → re-import → export
+  is byte-identical on the same operator; the importer
+  accepts a CSV carrying `library_name` rows without error.
+
+### Sequencing
+
+PR E1 and PR E2 are independent — no ordering constraint.
+Both are pure serialisation / route work; the underlying
+tables already carry every column read. The import part
+(library link/clone, validation) is planned after, and may
+itself wait on a UX decision (link-by-name-match vs
+always-clone — see Working notes).
+
 ## Hard dependencies
 
 - **Parts 1, 2 and 4 are unblocked** as of the 2026-05-17
