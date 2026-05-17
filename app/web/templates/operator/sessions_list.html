@@ -64,7 +64,10 @@
             </th>
           </tr>
           {% for s in sessions %}
-            <tr data-tags='{{ tags_by_session.get(s.id, []) | tojson }}'>
+            <tr data-tags='{{ tags_by_session.get(s.id, []) | tojson }}'
+                data-session-id="{{ s.id }}"
+                data-status="{{ s.status }}"
+                data-deadline="{{ format_datetime_local(s.deadline, session_timezone(s)) }}">
               <td>
                 <a href="/operator/sessions/{{ s.id }}">{{ s.name }}</a>
               </td>
@@ -158,24 +161,26 @@
             </p>
             <div class="session-expander-fields">
               <label class="exp-field-name">Name
-                <input type="text" data-expander-field="name" disabled>
+                <input type="text" data-expander-field="name">
               </label>
               <label class="exp-field-code">Code
-                <input type="text" data-expander-field="code" disabled>
+                <input type="text" data-expander-field="code">
               </label>
               <label class="exp-field-deadline">Deadline
-                <input type="text" data-expander-field="deadline" disabled>
+                <input type="datetime-local" data-expander-field="deadline">
               </label>
               <label class="exp-field-tags">Tags
-                <input type="text" data-expander-field="tags" disabled>
+                <input type="text" data-expander-field="tags">
               </label>
             </div>
             <div class="session-expander-actions exp-actions-right">
               <label class="exp-allow-delete">
                 <input type="checkbox"> Allow delete
               </label>
-              <button type="button" class="btn" disabled>Save</button>
-              <button type="button" class="btn secondary" disabled>Cancel</button>
+              <button type="button" class="btn"
+                      data-expander-save>Save</button>
+              <button type="button" class="btn secondary"
+                      data-expander-cancel>Cancel</button>
               <button type="button" class="btn secondary" disabled>Duplicate</button>
               <button type="button" class="btn secondary" disabled>
                 Duplicate settings only
@@ -289,14 +294,33 @@
           return null;
         }
 
+        // Builds a transient hidden <form> and submits it. The
+        // expander row lives inside the bulk-delete form, so a nested
+        // <form> is invalid HTML — expander actions post this way.
+        function submitExpanderForm(action, fields) {
+          var form = document.createElement("form");
+          form.method = "post";
+          form.action = action;
+          Object.keys(fields).forEach(function (name) {
+            var input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = fields[name];
+            form.appendChild(input);
+          });
+          document.body.appendChild(form);
+          form.submit();
+        }
+
         function fillSingle(row) {
           var node = singleTpl.content.firstElementChild.cloneNode(true);
           node.querySelector("td").colSpan = colCount;
           var cells = row.children;
+          var isDraft = row.getAttribute("data-status") === "draft";
           var fields = {
             name: cells[0].textContent.trim(),
             code: cells[1].textContent.trim(),
-            deadline: cells[2].textContent.trim(),
+            deadline: row.getAttribute("data-deadline") || "",
             tags: Array.prototype.slice
               .call(cells[8].querySelectorAll(".pill"))
               .map(function (p) { return p.textContent.trim(); })
@@ -306,10 +330,36 @@
           if (nameEl) nameEl.textContent = fields.name;
           node.querySelectorAll("[data-expander-field]").forEach(
             function (input) {
-              input.value =
-                fields[input.getAttribute("data-expander-field")] || "";
+              var key = input.getAttribute("data-expander-field");
+              input.value = fields[key] || "";
+              // Name / Code / Deadline edit in draft only; Tags always.
+              if (key !== "tags" && !isDraft) input.disabled = true;
             }
           );
+          function fieldValue(key) {
+            var el = node.querySelector(
+              "[data-expander-field='" + key + "']"
+            );
+            return el ? el.value : "";
+          }
+          var save = node.querySelector("[data-expander-save]");
+          if (save) save.addEventListener("click", function () {
+            submitExpanderForm(
+              "/operator/sessions/" +
+                row.getAttribute("data-session-id") + "/lobby-edit",
+              {
+                name: fieldValue("name"),
+                code: fieldValue("code"),
+                deadline: fieldValue("deadline"),
+                tags: fieldValue("tags"),
+              }
+            );
+          });
+          var cancel = node.querySelector("[data-expander-cancel]");
+          if (cancel) cancel.addEventListener("click", function () {
+            var cb = row.querySelector(".sessions-list-select-row");
+            if (cb) { cb.checked = false; fireChange(cb); }
+          });
           return node;
         }
 
