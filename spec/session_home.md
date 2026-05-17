@@ -307,9 +307,10 @@ heading; the card title *is* the session:
     resolved display zone.
   - **Column 3:** Deadline (count pill with the canonical
     timestamp, or `pill-empty` "Not set" when null) · Timezone
-    (count pill with the session's resolved zone as its CLDR
-    display name — e.g. "Singapore Standard Time" — falling back
-    to the raw IANA id).
+    (count pill with the session's resolved zone as a compact
+    GMT-offset + raw IANA id — e.g. "GMT+8 Asia/Singapore" — via
+    `date_formatting.gmt_offset_zone_label`; see
+    `spec/timezone_display.md`).
 - **Edit button** (Secondary styling), bottom-right of the card.
   Opens `session_edit.html` as a sub-page of Home for full
   metadata editing.
