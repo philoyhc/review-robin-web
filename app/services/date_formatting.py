@@ -30,7 +30,7 @@ these helpers only take the resolved zone name.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from babel.dates import get_timezone_name
@@ -123,6 +123,30 @@ def timezone_label(tz_name: str | None, at: datetime | None = None) -> str:
     except Exception:
         name = ""
     return name or tz_name or DEFAULT_TIMEZONE
+
+
+def gmt_offset_label(tz_name: str | None, at: datetime | None = None) -> str:
+    """Compact GMT-offset label for an IANA zone — e.g. ``Asia/Singapore``
+    becomes ``GMT+8``, ``Asia/Kolkata`` ``GMT+5:30``, and a zero offset
+    (``UTC``) becomes ``UTC``.
+
+    Far narrower than the raw IANA id for the sessions-lobby Timezone
+    column. ``at`` selects the standard / daylight offset variant; with
+    ``at`` unset the current moment is used.
+    """
+    zone = resolve_zone(tz_name)
+    reference = (
+        _as_utc(at).astimezone(zone) if at is not None else datetime.now(zone)
+    )
+    offset = reference.utcoffset()
+    if offset is None or offset == timedelta(0):
+        return "UTC"
+    total_minutes = int(offset.total_seconds() // 60)
+    sign = "+" if total_minutes >= 0 else "-"
+    hours, minutes = divmod(abs(total_minutes), 60)
+    if minutes:
+        return f"GMT{sign}{hours}:{minutes:02d}"
+    return f"GMT{sign}{hours}"
 
 
 def parse_local_datetime(value: str, tz_name: str | None) -> datetime:

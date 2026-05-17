@@ -46,8 +46,9 @@
             <th>Created by</th>
             <th>Created</th>
             <th>Last Modified</th>
-            <th>Timezone</th>
+            <th class="col-shrink">Timezone</th>
             <th>Status</th>
+            <th>Tags</th>
             <th class="col-shrink">
               <input type="checkbox"
                      class="sessions-list-select-all"
@@ -76,9 +77,17 @@
               <td>
                 <span class="pill pill-count">{{ s.updated_at | format_datetime }}</span>
               </td>
-              <td><code>{{ session_timezone(s) }}</code></td>
+              {% set tz = session_timezone(s) %}
+              <td class="col-shrink">
+                <abbr class="tz-gmt" title="{{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
+              </td>
               <td>
                 <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
+              </td>
+              <td>
+                <span class="pill pill-count">HSH1000</span>
+                <span class="pill pill-count">2610</span>
+                <span class="pill pill-count">PEER</span>
               </td>
               <td class="col-shrink">
                 <input type="checkbox"

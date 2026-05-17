@@ -142,6 +142,28 @@ def test_timezone_label_none_resolves_to_utc_name() -> None:
     assert timezone_label(None) == "Coordinated Universal Time"
 
 
+# ── compact GMT-offset labels — gmt_offset_label ─────────────────────────
+
+
+def test_gmt_offset_label_whole_hour() -> None:
+    assert date_formatting.gmt_offset_label("Asia/Singapore") == "GMT+8"
+
+
+def test_gmt_offset_label_half_hour() -> None:
+    assert date_formatting.gmt_offset_label("Asia/Kolkata") == "GMT+5:30"
+
+
+def test_gmt_offset_label_negative() -> None:
+    # New York is GMT-5 in January (standard time).
+    winter = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+    assert date_formatting.gmt_offset_label("America/New_York", at=winter) == "GMT-5"
+
+
+def test_gmt_offset_label_utc_and_none() -> None:
+    assert date_formatting.gmt_offset_label("UTC") == "UTC"
+    assert date_formatting.gmt_offset_label(None) == "UTC"
+
+
 # ── datetime-local parsing — parse_local_datetime ────────────────────────
 
 

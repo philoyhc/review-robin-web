@@ -82,6 +82,9 @@ _templates.env.globals["show_zone_token"] = date_formatting.SHOW_ZONE_TOKEN
 _templates.env.globals["session_timezone"] = (
     sessions_service.resolve_session_timezone
 )
+# Compact GMT-offset label for the sessions-lobby Timezone column —
+# narrower than the raw IANA id (e.g. ``GMT+8`` for ``Asia/Singapore``).
+_templates.env.globals["gmt_offset_label"] = date_formatting.gmt_offset_label
 
 
 # ------------------------------------------------------------------ #
