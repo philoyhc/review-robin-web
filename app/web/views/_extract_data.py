@@ -159,12 +159,12 @@ def build_extract_data_context(
     bundle = ExtractDataRow(
         key="bundle",
         label="Zip all",
-        filename=f"session-{code}-export.zip",
+        filename=f"{code}_bundle.zip",
         count=sum(r.count for r in rows),
         count_summary="zip of all five CSVs above",
-        is_wired=False,
-        download_url=None,
-        coming_in="Wired in Segment 12A PR 6",
+        is_wired=True,
+        download_url=f"/operator/sessions/{sid}/export/bundle.zip",
+        coming_in=None,
     )
 
     return ExtractDataContext(rows=rows, bundle=bundle)

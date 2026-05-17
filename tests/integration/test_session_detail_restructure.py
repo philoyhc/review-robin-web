@@ -512,11 +512,9 @@ def test_quick_setup_card_renders_scaffold_in_draft(
         assert f'id="quick-setup-{key}"' in body
     # Legacy Assignments slot retired in PR 7a.
     assert 'id="quick-setup-assignments"' not in body
-    # Slot 4 (Settings) remains inert pending Segment 12A PR 6;
-    # the wired slots have shed their wiring tooltips.
+    # The wired slots have shed their wiring tooltips.
     assert "Wired in Segment 11J PR A" not in body
     assert "Wired in Segment 11J PR B" not in body
-    assert "Wired in Segment 12A PR 6" in body
     # The consolidated submit-all form posts at the card level —
     # the per-slot Submit buttons + per-slot form actions were
     # retired in PR C of the rule-builder follow-on stream.
@@ -672,12 +670,12 @@ def test_extract_data_card_renders_scaffold_in_draft(
     assert 'id="extract-data-assignments"' not in body
     # Cell labels — bundle is "Zip all".
     assert "Zip all" in body
-    # Wiring tooltips: 12A-1 + 12A-3 PR 1 lit every per-entity
-    # row live; only the zip bundle row's tooltip remains.
+    # Wiring tooltips: every row — including the zip bundle
+    # (Segment 18D PR E1) — is live, so no wiring tooltip remains.
     assert "Wired in Segment 12A PR 1" not in body  # settings — live
     assert "Wired in Segment 12A PR 3" not in body  # reviewers/reviewees — live
     assert "Wired in Segment 12A PR 5" not in body  # responses — live
-    assert "Wired in Segment 12A PR 6" in body  # bundle
+    assert "Wired in Segment 12A PR 6" not in body  # bundle — live
 
 
 def test_extract_data_card_stays_interactive_in_ready(

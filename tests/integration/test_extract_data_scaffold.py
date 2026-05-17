@@ -123,8 +123,12 @@ def test_build_extract_data_context_returns_five_rows_plus_bundle(
         assert by_key[key].is_wired is False, key
         assert by_key[key].download_url is None, key
         assert by_key[key].coming_in is not None, key
-    # Bundle row stays inert until its own PR.
-    assert context.bundle.is_wired is False
+    # Bundle row is wired (Segment 18D PR E1) — the session
+    # always has at least the Settings CSV to bundle.
+    assert context.bundle.is_wired is True
+    assert context.bundle.download_url == (
+        f"/operator/sessions/{review_session.id}/export/bundle.zip"
+    )
     # Retired / never-surfaced keys absent.
     assert "assignments" not in by_key
     assert "audit_log" not in by_key
@@ -165,14 +169,13 @@ def test_extract_data_filenames_carry_session_code(
     context = views.build_extract_data_context(db, review_session)
     by_key = {row.key: row for row in context.rows}
 
-    # Live rows use the {code}_{kind}.csv convention; only the
-    # zip bundle keeps its pre-12A-1 placeholder filename until
-    # its own PR graduates it.
+    # Every row uses the {code}_{kind} convention; the zip bundle
+    # is {code}_bundle.zip (Segment 18D PR E1).
     assert by_key["reviewers"].filename == "abc123_reviewers.csv"
     assert by_key["reviewees"].filename == "abc123_reviewees.csv"
     assert by_key["relationships"].filename == "abc123_relationships.csv"
     assert by_key["responses"].filename == "abc123_responses.csv"
-    assert context.bundle.filename == "session-abc123-export.zip"
+    assert context.bundle.filename == "abc123_bundle.zip"
 
 
 def test_extract_data_count_summaries_pluralise_correctly(
@@ -279,9 +282,9 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
     """While inert, every Download button renders as an anchor
     without an ``href`` and with ``aria-disabled="true"`` (anchors
     don't honour native ``disabled``). On a freshly-created draft
-    every per-entity row is inert (nothing to download yet); only
-    Settings stays live. So 5 inert anchors total — the four
-    empty per-entity rows + the zip bundle."""
+    the four empty per-entity rows are inert (nothing to download
+    yet); Settings and the Zip-all bundle stay live. So 4 inert
+    anchors total — the four empty per-entity rows."""
 
     review_session = _make_session(client, db, code="ed-anchors")
     body = client.get(f"/operator/sessions/{review_session.id}").text
@@ -292,7 +295,7 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
         '       role="button"\n'
         '       aria-disabled="true"'
     )
-    assert download_count == 5
+    assert download_count == 4
 
 
 def test_extract_data_card_renders_when_session_is_activated(

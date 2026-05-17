@@ -576,6 +576,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.settings_imported": EventSchema(_IDENTITY | {"counts"}),
     # Segment 12B PR 1 — Audit-events export.
     "session.audit_log_extracted": EventSchema(_IDENTITY | {"counts", "context"}),
+    # Segment 18D PR E1 — Zip-all bundle export.
+    "session.bundle_extracted": EventSchema(_IDENTITY | {"counts"}),
     # Segment 16A PR 6 — workspace user-role management.
     # Workspace-scoped (no session identity); the actor is on the
     # audit row's ``actor_user_id`` slot, the target user goes

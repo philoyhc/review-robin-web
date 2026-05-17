@@ -345,6 +345,7 @@ shares. Public surface:
 | Extract Data — Relationships tile | Out | `serialize_relationships` | same |
 | Extract Data — Responses tile | Out | `serialize_responses` | same |
 | Extract Data — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
+| Extract Data — Zip all tile | Out | `build_session_bundle` — a zip of the five CSVs above (`GET /export/bundle.zip`, Segment 18D PR E1) | same |
 | `GET /export/audit_log.csv` | Out | `serialize_audit_events` | Sys Admin → Sessions Diagnostics per-row "Audit log" link (`guide/archive/segment_16A_sys_admin_page.md` PR 4 — shipped) |
 | Reviewers Setup page — Upload CSV | In | `parse_reviewer_csv` + `save_reviewers` | `spec/setup_pages.md` |
 | Reviewees Setup page — Upload CSV | In | `parse_reviewee_csv` + `save_reviewees` | same |
