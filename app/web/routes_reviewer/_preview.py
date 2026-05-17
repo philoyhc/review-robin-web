@@ -163,7 +163,7 @@ def build_preview_context(
             "page_statuses": [],
             "page_buttons": [],
             "current_position": 1,
-            "deadline_timezone_label": date_formatting.timezone_label(
+            "deadline_timezone_label": date_formatting.gmt_offset_zone_label(
                 sessions_service.resolve_session_timezone(review_session),
                 at=review_session.deadline,
             ),
@@ -370,7 +370,7 @@ def build_preview_context(
         "page_statuses": [],
         "page_buttons": page_buttons,
         "current_position": 1,
-        "deadline_timezone_label": date_formatting.timezone_label(
+        "deadline_timezone_label": date_formatting.gmt_offset_zone_label(
             sessions_service.resolve_session_timezone(review_session),
             at=review_session.deadline,
         ),

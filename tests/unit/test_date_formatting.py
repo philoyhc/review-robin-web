@@ -164,6 +164,25 @@ def test_gmt_offset_label_utc_and_none() -> None:
     assert date_formatting.gmt_offset_label(None) == "UTC"
 
 
+# ── GMT-offset + raw IANA zone — gmt_offset_zone_label ───────────────────
+
+
+def test_gmt_offset_zone_label_offset_plus_iana() -> None:
+    assert (
+        date_formatting.gmt_offset_zone_label("Asia/Singapore")
+        == "GMT+8 Asia/Singapore"
+    )
+    assert (
+        date_formatting.gmt_offset_zone_label("Asia/Kolkata")
+        == "GMT+5:30 Asia/Kolkata"
+    )
+
+
+def test_gmt_offset_zone_label_dedupes_bare_utc() -> None:
+    assert date_formatting.gmt_offset_zone_label("UTC") == "UTC"
+    assert date_formatting.gmt_offset_zone_label(None) == "UTC"
+
+
 # ── datetime-local parsing — parse_local_datetime ────────────────────────
 
 

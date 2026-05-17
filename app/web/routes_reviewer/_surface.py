@@ -591,7 +591,7 @@ def _surface_context(
         "session_status": _session_status(page_statuses),
         "page_buttons": page_buttons,
         "current_position": current_position,
-        "deadline_timezone_label": date_formatting.timezone_label(
+        "deadline_timezone_label": date_formatting.gmt_offset_zone_label(
             sessions_service.resolve_session_timezone(review_session),
             at=review_session.deadline,
         ),

@@ -131,11 +131,10 @@
 
   {# Live timezone-sample preview — progressive enhancement. The
      server renders the sample for the saved zone; this updates it
-     as the operator picks a different zone. The zone is shown by
-     its CLDR long display name (e.g. "Singapore Standard Time")
-     resolved client-side via Intl; the no-JS server fallback
-     shows the raw IANA id. Shared verbatim with the Session Edit
-     "Display timezone" card. #}
+     as the operator picks a different zone. The zone is shown as
+     a GMT-offset + raw IANA id (e.g. "GMT+8 Asia/Singapore"), the
+     offset resolved client-side via Intl; the server render uses
+     the same form. #}
   <script>
     (function () {
       var input = document.getElementById("display_timezone");
@@ -163,23 +162,27 @@
           return out;
         } catch (e) { return null; }
       }
-      function longName(zone) {
+      function offsetLabel(zone) {
         try {
           var parts = new Intl.DateTimeFormat("en", {
-            timeZone: zone, year: "numeric", timeZoneName: "long",
+            timeZone: zone, year: "numeric", timeZoneName: "shortOffset",
           }).formatToParts(new Date());
           for (var i = 0; i < parts.length; i++) {
-            if (parts[i].type === "timeZoneName") return parts[i].value;
+            if (parts[i].type === "timeZoneName") {
+              return parts[i].value === "GMT" ? "UTC" : parts[i].value;
+            }
           }
-          return null;
-        } catch (e) { return null; }
+        } catch (e) { /* fall through to "" */ }
+        return "";
       }
       function update() {
         var zone = input.value.trim() || fallback;
         var text = render(zone);
         if (text === null) return;
         sample.textContent = text;
-        zoneLabel.textContent = longName(zone) || zone;
+        var off = offsetLabel(zone);
+        zoneLabel.textContent =
+          (off && off !== zone) ? off + " " + zone : zone;
       }
       input.addEventListener("input", update);
       input.addEventListener("change", update);
