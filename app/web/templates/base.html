@@ -1417,8 +1417,22 @@
         display: flex;
         align-items: center;
         gap: var(--space-1);
+        font-size: var(--fs-small);
+      }
+      /* Purge-on-archive checkboxes — sit beside Allow delete; the
+         auto right-margin pushes the action buttons to the right. */
+      body.ui-v2 .exp-purge-opts {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-2);
         margin-right: auto;
         font-size: var(--fs-small);
+      }
+      body.ui-v2 .exp-purge-opts label {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
       }
       body.ui-v2 .session-expander-actions {
         display: flex;

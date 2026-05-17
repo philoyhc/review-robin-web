@@ -115,6 +115,10 @@ def test_every_emitted_event_type_has_a_registered_schema() -> None:
         # Segment 18A — session archiving
         "session.archived",
         "session.unarchived",
+        # Segment 18C — operator-triggered purge
+        "session.responses_purged",
+        "session.rosters_purged",
+        "session.audit_log_purged",
     }
     missing = expected - set(audit.EVENT_SCHEMAS.keys())
     assert not missing, (
