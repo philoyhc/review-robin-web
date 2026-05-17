@@ -25,39 +25,15 @@
       </div>
 
       <div class="card sessions-action-card">
-        <h2>Actions</h2>
-        <p class="form-help">
-          Select sessions to duplicate or archive them. Archive can take
-          several at once.
-        </p>
+        <h2>Search</h2>
+        <input type="text" class="sessions-search-input"
+               placeholder="Search by name, code, or tag"
+               aria-label="Search sessions">
         <div class="sessions-action-buttons">
+          <button type="button" class="btn" disabled>Apply</button>
+          <button type="button" class="btn secondary" disabled>Cancel</button>
           <a class="btn" href="/operator/sessions/new">Add new</a>
-          <button type="button" class="btn secondary" disabled>Duplicate</button>
-          <button type="button" class="btn secondary" disabled>
-            Duplicate settings only
-          </button>
-          <button type="button" class="btn secondary"
-                  id="sessions-tags-toggle">Tags</button>
-          <button type="button" class="btn alert" disabled>Archive</button>
-          <button type="button" class="btn destructive" disabled>Delete</button>
         </div>
-      </div>
-    </div>
-
-    <div class="card sessions-tags-card" id="sessions-tags-card"
-         style="display: none;">
-      <h2>Tags</h2>
-      <p class="form-help">
-        Comma-separated tags for the selected session.
-      </p>
-      <input type="text" class="sessions-tags-input"
-             id="sessions-tags-input"
-             value="HSH1000, 2610, PEER"
-             aria-label="Session tags">
-      <div class="sessions-tags-actions">
-        <button type="button" class="btn secondary"
-                id="sessions-tags-cancel">Cancel</button>
-        <button type="button" class="btn" id="sessions-tags-save">Save</button>
       </div>
     </div>
 
@@ -258,23 +234,6 @@
           });
         }
         refresh();
-      })();
-    </script>
-    <script>
-      (function () {
-        var toggle = document.getElementById("sessions-tags-toggle");
-        var card = document.getElementById("sessions-tags-card");
-        var cancel = document.getElementById("sessions-tags-cancel");
-        var save = document.getElementById("sessions-tags-save");
-        if (!toggle || !card) return;
-        toggle.addEventListener("click", function () {
-          card.style.display = "";
-        });
-        function close() {
-          card.style.display = "none";
-        }
-        if (cancel) cancel.addEventListener("click", close);
-        if (save) save.addEventListener("click", close);
       })();
     </script>
     <script>

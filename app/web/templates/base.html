@@ -1359,27 +1359,12 @@
         background: var(--bg-muted);
         color: var(--text-primary);
       }
-      /* Sessions-lobby Tags editor + Danger Zone cards — revealed
-         below the Actions card. Right-aligned and width-matched to
-         the Actions card: half the row minus half the lobby-row gap,
-         so they line up under it rather than overhanging. */
-      body.ui-v2 .sessions-tags-card,
+      /* Sessions-lobby Danger Zone card — right-aligned and
+         width-matched to the Search card: half the row minus half
+         the lobby-row gap, so it lines up under it. */
       body.ui-v2 #sessions-list-danger-zone {
         width: calc(50% - var(--space-4) / 2);
         margin-left: auto;
-      }
-      body.ui-v2 .sessions-tags-card {
-        margin-bottom: var(--space-4);
-      }
-      body.ui-v2 .sessions-tags-card h2 { margin-top: 0; }
-      body.ui-v2 .sessions-tags-input {
-        width: 100%;
-        margin-bottom: var(--space-3);
-      }
-      body.ui-v2 .sessions-tags-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--space-2);
       }
       /* Inline row-expander — a full-width action panel injected
          below the selected row(s) on the sessions lobby. */
@@ -1846,7 +1831,12 @@
       body.ui-v2 .sessions-action-buttons {
         display: flex;
         flex-wrap: wrap;
+        justify-content: flex-end;
         gap: var(--space-2);
+      }
+      body.ui-v2 .sessions-search-input {
+        width: 100%;
+        margin-bottom: var(--space-3);
       }
       body.ui-v2 .pill-lifecycle-archived {
         background: var(--bg-muted);
