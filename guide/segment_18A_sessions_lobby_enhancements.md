@@ -381,17 +381,14 @@ Likely shape:
     align with 18D's zip-bundle work); `Delete` is the existing
     destructive delete, carrying its confirm checkbox into the
     expander as on the main lobby.
-- **Auto-archive on a deadline — in scope, schema pending.** Beyond
-  the manual Archive action, a session can carry an
-  **auto-archive date/time**: a scheduled point (or
-  deadline + grace period) at which it flips `closed → archived`
-  on its own. The transition logic reuses `archive_session`; only
-  the trigger differs. **This needs a schema slot** —
-  pre-positioned via the 13F scheduled-lifecycle schema audit
-  (see `guide/segment_13F_more_db_prep.md`, "Scope re-sweep
-  2026-05-17"). 18A Part 3 lights up the column once 13F lands
-  it; the column's exact shape (a datetime vs a grace-period int
-  vs a key inside a session-schedule JSON) is the audit's call.
+- **Auto-archive — moved to Segment 18F.** A scheduled
+  `archive_session` trigger (an auto-archive date/time) is *not*
+  18A scope: it joins the other scheduled-lifecycle automations in
+  **Segment 18F — Scheduled events**
+  (`guide/segment_18F_scheduled_events.md`), which owns the 13F
+  scheduled-lifecycle schema audit. 18A ships only the **manual**
+  Archive action; the `archive_session` service it adds is the
+  reusable transition 18F's scheduled trigger calls.
 - Audit-event registrations: `session.archived` /
   `session.unarchived` (`changes` envelope on the status column).
 
@@ -483,16 +480,18 @@ by every later action-wiring PR.
   card, Search card, and a bulk-only expander offering
   Unarchive / Download / Delete.
 
-### PR I — Auto-archive *(blocked)*
-
-- Deferred until the 13F scheduled-lifecycle schema audit locks
-  the `auto_archive_at` column. Lights up the scheduled
-  `closed → archived` flip on top of PR F's `archive_session`.
+*Auto-archive — the scheduled `closed → archived` trigger — is
+**not** an 18A PR. It moved to **Segment 18F — Scheduled events**
+(`guide/segment_18F_scheduled_events.md`), which consolidates every
+scheduled / auto lifecycle automation behind the one 13F
+scheduled-lifecycle schema audit. 18A ships the manual
+`archive_session` transition (PR F); 18F's scheduled trigger reuses
+it.*
 
 **Sequencing.** A → B → C are the tagging + filter + search
 front; A blocks B. D establishes the action-submission helper that
 E / F / G depend on. H follows F (needs `archived` sessions to
-exist). I is blocked on 13F.
+exist).
 
 ## Hard dependencies
 
@@ -505,11 +504,8 @@ exist). I is blocked on 13F.
   to the equivalent target-session row" semantic). Both shipped.
 - **Tagging:** wants `session_tags` from **13F PR 3**.
 - **Archiving:** wants `spec/lifecycle.md`'s reserved `archived`
-  state — already in the canonical enum.
-- **Auto-archive:** wants the auto-archive datetime column from
-  the 13F scheduled-lifecycle schema audit (see
-  `guide/segment_13F_more_db_prep.md`). Manual archiving has no
-  schema dependency; only the scheduled trigger does.
+  state — already in the canonical enum. (Scheduled auto-archive
+  is **Segment 18F**, not 18A.)
 
 ## Out of scope
 
