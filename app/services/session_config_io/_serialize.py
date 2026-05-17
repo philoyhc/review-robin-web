@@ -221,12 +221,14 @@ def _library_rtd_name_lookup(
 ) -> dict[int, str]:
     """Map each referenced ``operator_response_type_definitions.id``
     to its name — resolves ``ResponseTypeDefinition.library_origin_id``
-    into the export's name-based provenance cell."""
+    into the export's name-based provenance cell. An operator-library
+    RTD's name is its ``response_type`` (the operator-chosen label),
+    matching the per-session RTD's own keying."""
     ids = {r.library_origin_id for r in rtds if r.library_origin_id is not None}
     if not ids:
         return {}
     return {
-        row.id: row.name
+        row.id: row.response_type
         for row in db.execute(
             select(OperatorResponseTypeDefinition).where(
                 OperatorResponseTypeDefinition.id.in_(ids)

@@ -23,6 +23,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    OperatorResponseTypeDefinition,
     ResponseTypeDefinition,
     ReviewSession,
     RuleSet,
@@ -241,6 +242,36 @@ def test_operator_defined_rtds_emit_full_row_block(db: Session) -> None:
     # RTD authored directly in the session (no library origin).
     assert by_field["rtds[GPA4].library_name"] == Row(
         "rtds[GPA4].library_name", "", "string"
+    )
+
+
+def test_rtd_library_name_resolves_through_origin(db: Session) -> None:
+    """18D export part — rtds[N].library_name carries the
+    operator-library RTD's name, resolved via library_origin_id
+    (an operator-library RTD's name is its `response_type`)."""
+    review_session = _bare_session(db, code="rtdlib")
+    operator_id = review_session.created_by_user_id
+    library_rtd = OperatorResponseTypeDefinition(
+        owner_user_id=operator_id,
+        response_type="GPA4",
+        data_type="decimal",
+    )
+    db.add(library_rtd)
+    db.flush()
+    db.add(
+        ResponseTypeDefinition(
+            session_id=review_session.id,
+            response_type="GPA4",
+            data_type="decimal",
+            is_seeded=False,
+            library_origin_id=library_rtd.id,
+        )
+    )
+    db.flush()
+
+    by_field = _row_dict(serialize_session_config(db, review_session))
+    assert by_field["rtds[GPA4].library_name"] == Row(
+        "rtds[GPA4].library_name", "GPA4", "string"
     )
 
 
