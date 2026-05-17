@@ -16,6 +16,7 @@ from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
 from app.services import date_formatting
+from app.services import session_clone
 from app.services import sessions
 from app.services import session_lifecycle as lifecycle
 from app.services import session_tags
@@ -120,6 +121,40 @@ def lobby_edit_submit(
 
     return RedirectResponse(
         url="/operator/sessions",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/clone")
+def clone_session_submit(
+    mode: str = Form(...),
+    review_session: ReviewSession = Depends(
+        require_sys_admin_or_session_operator
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Single-session expander Duplicate / Duplicate settings only.
+
+    ``mode="all"`` clones the full setup incl. the roster;
+    ``mode="config"`` clones the configuration shell only. Either way
+    the clone is a fresh ``draft`` — the operator lands on it to
+    rename it.
+    """
+    if mode not in session_clone.CLONE_MODES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"unknown clone mode {mode!r}",
+        )
+    clone = session_clone.clone_session(
+        db,
+        source=review_session,
+        user=user,
+        mode=mode,
+        correlation_id=request_correlation_id(),
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{clone.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

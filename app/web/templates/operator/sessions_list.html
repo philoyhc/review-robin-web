@@ -181,10 +181,10 @@
                       data-expander-save>Save</button>
               <button type="button" class="btn secondary"
                       data-expander-cancel>Cancel</button>
-              <button type="button" class="btn secondary" disabled>Duplicate</button>
-              <button type="button" class="btn secondary" disabled>
-                Duplicate settings only
-              </button>
+              <button type="button" class="btn secondary"
+                      data-expander-duplicate>Duplicate</button>
+              <button type="button" class="btn secondary"
+                      data-expander-duplicate-config>Duplicate settings only</button>
               <button type="button" class="btn alert" disabled>Archive</button>
               <button type="button" class="btn destructive" disabled>Delete</button>
             </div>
@@ -360,6 +360,18 @@
             var cb = row.querySelector(".sessions-list-select-row");
             if (cb) { cb.checked = false; fireChange(cb); }
           });
+          function cloneAction(selector, mode) {
+            var btn = node.querySelector(selector);
+            if (btn) btn.addEventListener("click", function () {
+              submitExpanderForm(
+                "/operator/sessions/" +
+                  row.getAttribute("data-session-id") + "/clone",
+                { mode: mode }
+              );
+            });
+          }
+          cloneAction("[data-expander-duplicate]", "all");
+          cloneAction("[data-expander-duplicate-config]", "config");
           return node;
         }
 
