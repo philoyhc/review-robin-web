@@ -289,3 +289,14 @@ When 13C kicks off:
 - `spec/group_scoped_instruments.md` ticks off when each
   Open question / Out-of-scope item from its design spec
   resolves.
+
+## Ride-along — Segment 18D Part 3
+
+Segment 18D (Export and import update) handed its **Part 3** to
+13C: once group-scoped instruments exist, the analysis-facing
+Responses extract (`extracts/responses_extract.py`) should gain a
+derived `Instrument` *flavour* column so downstream analysis can
+split group-scoped answers from per-pair answers without
+re-deriving from the schema. Add it as a small ride-along when
+13C ships — see `guide/segment_18D_export_and_import_update.md`
+Part 3.

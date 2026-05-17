@@ -1,14 +1,17 @@
 # Segment 18D — Export and import update
 
-> **Stub created 2026-05-12; swept 2026-05-17** against the
-> shipped codebase. Siblings: **18A** (Sessions lobby
-> enhancements — *shipped 2026-05-17*,
-> `guide/segment_18A_sessions_lobby_enhancements.md`) and
-> **18C** (Operator-triggered purge — *shipped 2026-05-17*,
-> `guide/archive/segment_18C_retention_deletion.md`).
-
-**Stub. Sketch-level scope only.** Detailed PR breakdowns
-get drafted when this segment is picked up.
+> **Status: actionable scope shipped 2026-05-17** (PRs
+> #1129 → #1133 — see the "Export part" / "Import part"
+> sections and `docs/status.md`). Parts 1, 2, 4 + the import
+> part are done. The two consumer-blocked parts are handed
+> off: **Part 3** (Responses `Instrument` flavour column)
+> rides with **Segment 13C**; **Part 5** (retention CSV
+> columns) with **Segment 18F Part 4**. This plan is kept as
+> the design-of-record; not yet archived (Parts 3 / 5 still
+> reference it).
+>
+> Siblings: **18A** (Sessions lobby enhancements — shipped),
+> **18C** (Operator-triggered purge — shipped).
 
 ## Goal
 
@@ -130,17 +133,15 @@ Remaining work:
   error shape.
 
 ### Part 3 — Responses extract: `Instrument` flavour
-column (blocked on 13C)
+column (handed to Segment 13C)
 
-**Status (2026-05-17 sweep).** Still blocked — 13C has not
-shipped, and the 13F re-sweep flagged `segment_13C` itself
-as a **stale plan**: it builds group fanout on
-`Assignment.context` JSON, a column retired in 15D PR 6b.
-13C needs a re-scope before its group-scoped-instrument
-shape is even defined, so this Part cannot be scoped until
-then. The Responses extract HEADER carries no flavour
-column today (`InstrumentName` / `InstrumentShortLabel`
-only).
+**Status (2026-05-17).** Handed off to **Segment 13C — Enhanced
+instruments** as a ride-along. 13C was re-scoped 2026-05-15 (the
+group is derived live from `Instrument.group_kind` + the
+reviewee's `tag_N`; no `Assignment` schema change) and is
+unblocked. The Responses extract carries no flavour column
+today; the column gets added to `responses_extract` when 13C
+ships its group-scoped instruments.
 
 **Goal.** When 13C ships group-scoped instruments, the
 Responses CSV gains a derived `Instrument.flavour` (or
@@ -181,16 +182,14 @@ Likely shape:
   two bundles: `*_porting.zip` and `*_analysis.zip`).
 
 ### Part 5 — Retention overrides CSV column
-(blocked on 13F PR 5)
+(handed to Segment 18F Part 4)
 
-**Status (2026-05-17 sweep).** Still blocked — 13F PR 5
-(`sessions.retention_exception` + `retention_overrides`)
-has not shipped. Its consumer moved when 18C was re-scoped:
-the retention *feature* is now **Segment 18F Part 4**
-(scheduled / policy-driven retention), not 18C. This Part
-stays valid — once the columns exist, the Settings CSV
-should port them — but it should be sequenced after 18F
-Part 4, not 18C.
+**Status (2026-05-17).** Handed off to **Segment 18F Part 4**
+(scheduled / policy-driven retention) as a ride-along — it is
+blocked on 13F PR 5 (`sessions.retention_exception` +
+`retention_overrides`), and the retention *feature* itself is
+18F Part 4's. When 18F Part 4 lands those columns, the Settings
+CSV should port them as part of that work.
 
 **Goal.** When 13F PR 5 lands the
 `sessions.retention_exception` Boolean +

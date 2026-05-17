@@ -515,6 +515,35 @@ Plan archived: `guide/archive/segment_18C_retention_deletion.md`.
 
 ---
 
+### Segment 18D — Export and import update — done 2026-05-17
+
+Catch-up pass on the export / import surface after the
+15-series moved the session model on. Actionable scope shipped
+across PRs **#1129 → #1133**:
+
+- **Settings CSV export refresh** (PR E2) — `display_timezone`
+  + `self_reviews_active` round-trip (force-applied on import);
+  a `library_name` provenance cell emits per RTD / RuleSet; the
+  `rule_set_name` un-pinned-instrument fallback re-documented.
+- **Responses extract restructure** — per-instrument preamble
+  (positional `instrument_{n}` name + a `FieldKey, HelpText`
+  field dictionary) + a blank-row gap before the data table;
+  `InstrumentName` is the positional id, not the operator name.
+- **Zip-all bundle** (PR E1) — the "Zip all" tile graduates to
+  a real `{code}_bundle.zip` of the five operator CSVs, via
+  `extracts/zip_bundle.py` + a `session.bundle_extracted` event.
+- **Import part** — resolved with no code: `library_name` is
+  always-clone (imported copies stay standalone,
+  `library_origin_id` NULL); `rule_set_name` typo validation
+  already existed.
+
+Two consumer-blocked parts handed off: **Part 3** (Responses
+`Instrument` flavour column) rides with **13C**; **Part 5**
+(retention CSV columns) with **18F Part 4**. Plan:
+`guide/segment_18D_export_and_import_update.md`.
+
+---
+
 ### Segment 18A — Sessions lobby enhancements — done 2026-05-17
 
 The operator Sessions lobby (`/operator/sessions`) rebuilt around a
@@ -691,7 +720,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13C, 13F (PRs 4-5), 14A, 14B, 14C, 17B,
-18D, 18E, 18F, 19, 20, 21**. No global ordering
+18E, 18F, 19, 20, 21**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -786,22 +815,6 @@ bottom of this file.
   is off the roadmap, see `guide/future_possibilities.md`.
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
-- **18D — Export and import update** *(stub created
-  2026-05-12; swept 2026-05-17)*. Catch-up pass on the
-  export / import surface (last touched by 12A-3,
-  2026-05-10) to pick up 15C library-tier provenance
-  (`library_origin_id` on RTDs / RuleSets), 15B
-  per-instrument `rule_set_id`, 13C group-scoped instrument
-  flavours on the Responses CSV, the inert Zip-all tile,
-  and 13F PR 5 retention columns. **2026-05-17 sweep:** the
-  three live consumers (15B / 15C / 15F) have all shipped,
-  so Parts 1 (library provenance), 2 (per-instrument
-  RuleSet — now a fallback-retirement audit) and 4 (Zip-all
-  bundle) are actionable now; Parts 3 and 5 stay blocked on
-  13C (itself a stale plan) and 13F PR 5 / 18F Part 4.
-  Cleanest cut: scope 18D as a Parts 1 + 2 + 4 segment.
-  **Plan:** `guide/segment_18D_export_and_import_update.md`.
-
 - **18E — Small enhancements** *(stub created 2026-05-17)*.
   A holding pen for small, self-contained operator-surface
   enhancements — each one a single small PR, landed
@@ -876,7 +889,7 @@ bottom of this file.
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 4-5), 14A, 17B,
-  18D, 18E, 18F, 19, 20, 21** are independent of the email +
+  18E, 18F, 19, 20, 21** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
   13C's re-scoped 3-PR ladder (2026-05-15) needs no rule-engine
