@@ -36,10 +36,28 @@
           <button type="button" class="btn secondary" disabled>
             Duplicate settings only
           </button>
-          <button type="button" class="btn secondary" disabled>Edit tags</button>
+          <button type="button" class="btn secondary"
+                  id="sessions-tags-toggle">Tags</button>
           <button type="button" class="btn alert" disabled>Archive</button>
           <button type="button" class="btn destructive" disabled>Delete</button>
         </div>
+      </div>
+    </div>
+
+    <div class="card sessions-tags-card" id="sessions-tags-card"
+         style="display: none;">
+      <h2>Tags</h2>
+      <p class="form-help">
+        Comma-separated tags for the selected session.
+      </p>
+      <input type="text" class="sessions-tags-input"
+             id="sessions-tags-input"
+             value="HSH1000, 2610, PEER"
+             aria-label="Session tags">
+      <div class="sessions-tags-actions">
+        <button type="button" class="btn secondary"
+                id="sessions-tags-cancel">Cancel</button>
+        <button type="button" class="btn" id="sessions-tags-save">Save</button>
       </div>
     </div>
 
@@ -169,6 +187,23 @@
           });
         }
         refresh();
+      })();
+    </script>
+    <script>
+      (function () {
+        var toggle = document.getElementById("sessions-tags-toggle");
+        var card = document.getElementById("sessions-tags-card");
+        var cancel = document.getElementById("sessions-tags-cancel");
+        var save = document.getElementById("sessions-tags-save");
+        if (!toggle || !card) return;
+        toggle.addEventListener("click", function () {
+          card.style.display = "";
+        });
+        function close() {
+          card.style.display = "none";
+        }
+        if (cancel) cancel.addEventListener("click", close);
+        if (save) save.addEventListener("click", close);
       })();
     </script>
   {% else %}
