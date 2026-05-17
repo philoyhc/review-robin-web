@@ -214,8 +214,9 @@ Likely shape:
   the JSON shape (response_days / audit_days /
   archived_days keys, each optional int).
 - Skip on environments where 13F PR 5 hasn't landed
-  (Settings CSV is per-version-tolerant — missing rows
-  are accepted, unknown rows are rejected).
+  (the Settings CSV importer is per-version-tolerant —
+  missing rows are accepted, and unknown keys are silently
+  ignored, `_apply.py:341`).
 
 ## Export part — detailed plan (2026-05-17)
 
@@ -228,10 +229,18 @@ and is shippable today against the post-15B/C/F codebase.
 ### Locked scope decisions
 
 - **Covers** the Zip-all bundle (Part 4), the per-instrument
-  `rule_set_name` fallback audit (Part 2), and the **export
+  `rule_set_name` fallback audit (Part 2), the **export
   leg** of library-tier provenance (Part 1) — the Settings
   CSV emits the `library_name` provenance cell now, inert
-  until the import part lands the matching / linking logic.
+  until the import part lands the matching / linking logic —
+  and the **two session-level export gaps** the 2026-05-17
+  audit surfaced: `session.display_timezone` and
+  `session.self_reviews_active` (see PR E2).
+- **The two session-level gaps round-trip fully** (export +
+  apply), unlike `library_name` — they are not inert. Both
+  are live config a ported session needs and both are
+  already preserved by `clone_session`, so the CSV path is
+  just catching up to the clone path.
 - **Zip-all bundle = one `{code}_bundle.zip`** containing all
   five operator-facing CSVs (Reviewers / Reviewees /
   Relationships / Responses / Settings). No porting/analysis
@@ -274,23 +283,38 @@ Graduates the inert "Zip all" tile on the Extract Data card
 
 ### PR E2 — Settings CSV export refresh
 
-Two cohesive `session_config_io/_serialize.py` changes plus a
-minimal importer touch.
+Three `session_config_io/_serialize.py` changes (with the
+matching `_apply.py` round-trip for the two new session-level
+rows), cohesive because they all close Settings-CSV export
+gaps surfaced by the 2026-05-17 audit.
 
+- **Close two session-level export gaps.** The audit found
+  two live per-session columns the export silently drops —
+  both copied by `clone_session`, so the CSV path is behind
+  the clone path:
+  - **`session.display_timezone`** (string) — without it an
+    imported session loses its 18B per-session timezone and
+    falls back to the importing operator's default. Emit it
+    in `_session_rows`; `_apply.py` writes it back.
+  - **`session.self_reviews_active`** (boolean) — load-bearing
+    for generation (`assignments.py:542` gates self-review
+    pairs on it). Without it an imported-then-Generated
+    session produces a different assignment set. Emit + apply.
+  - Both ride the existing `session.*` key namespace and the
+    importer's `_apply_session_kv` fallback writer; neither
+    is in the `{assignment_mode, status}` machine-derived
+    ignore set.
 - **`library_name` provenance cell.** For each
   `response_type_definitions[N]` and `session_rule_sets[N]`
   group, emit a `…library_name` key — the *library entry's*
   `name` resolved via `library_origin_id` (the session copy
   may have been renamed, so resolve the origin, not the
   copy's own name); empty when `library_origin_id` is NULL.
-- **Importer tolerates the new key.** Because the Settings
-  CSV importer *rejects unknown rows*, emitting `library_name`
-  inert would break a session's own export→re-import
-  round-trip. `_apply.py` must **recognise `…library_name`
-  as a known-but-ignored key** — the link/clone logic itself
-  is the import part's job, but the recognise-and-skip is
-  required here so the column is genuinely inert, not
-  round-trip-breaking.
+  This is the export leg only; the import part lands the
+  link/clone logic. **No importer change is needed** for the
+  inert column — the importer silently ignores unknown keys
+  (`_apply.py:341`), so emitting `library_name` does not
+  break the export → re-import round-trip.
 - **`rule_set_name` fallback re-document (Part 2).** The
   `_audit_log_rule_set_name` fallback in `_serialize.py` is
   no longer "pre-15B" — post-15B it is the genuine *un-pinned
@@ -299,8 +323,10 @@ minimal importer touch.
   Add a test pinning both branches: a pinned instrument reads
   `rule_set_id`, an un-pinned one falls back.
 - Tests: round-trip stability — export → re-import → export
-  is byte-identical on the same operator; the importer
-  accepts a CSV carrying `library_name` rows without error.
+  is byte-identical on the same operator; `display_timezone`
+  + `self_reviews_active` survive the round-trip; the
+  importer accepts a CSV carrying `library_name` rows without
+  error.
 
 ### Sequencing
 
@@ -364,11 +390,13 @@ When parts ship:
   **Parts 1 + 2 + 4** segment now, and fold Parts 3 / 5 in
   later (or hand them to 13C and 18F Part 4 as ride-along
   CSV work).
-- **Versioning the Settings CSV.** Today the importer
-  is per-version-tolerant via absence-handling. If 18D
-  adds enough new rows it may be worth bumping a
-  `version` cell at the top of the file for fast-fail
-  on mismatched-shape uploads. Decide at scoping.
+- **Versioning the Settings CSV — decided: no version
+  cell.** The importer is already version-tolerant in both
+  directions — missing rows are accepted, and unknown keys
+  are silently ignored (`_apply.py:341`), not rejected. The
+  export part adds new rows without a `version` cell or any
+  fast-fail machinery; revisit only if a future shape change
+  is genuinely incompatible rather than additive.
 - **Library link vs clone on import.** The default
   proposed in Part 1 is "link by name match"; an
   alternative is "always clone, never link". The link
