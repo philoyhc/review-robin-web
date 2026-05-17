@@ -47,17 +47,18 @@ def test_sessions_list_renders_v2_table_inside_a_card(
 def test_sessions_list_columns_match_spec(
     client: TestClient, db: Session
 ) -> None:
-    """Six labelled columns (Session Name / Session Code / Deadline /
-    Created by / Created / Last Modified) plus an unlabelled action
-    column for the Delete button."""
+    """Sortable columns — Session Name / Session Code / Created by /
+    Created / Deadline / Timezone / Status — plus the Tags column and
+    the trailing select column. The Last Modified column is dropped."""
     _create_session(client, db, code="rrw-cols")
     body = client.get("/operator/sessions").text
-    assert "<th>Session Name</th>" in body
-    assert "<th>Session Code</th>" in body
-    assert "<th>Deadline</th>" in body
-    assert "<th>Created by</th>" in body
-    assert "<th>Created</th>" in body
-    assert "<th>Last Modified</th>" in body
+    for sort_key in (
+        "name", "code", "created_by", "created", "deadline",
+        "timezone", "status",
+    ):
+        assert f'data-sort-key="{sort_key}"' in body
+    assert "<th>Tags</th>" in body
+    assert "Last Modified" not in body
     # Trailing select column's header carries the select-all
     # checkbox rather than a text label.
     assert 'class="sessions-list-select-all"' in body

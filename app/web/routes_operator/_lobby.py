@@ -20,7 +20,7 @@ from app.services import session_clone
 from app.services import sessions
 from app.services import session_lifecycle as lifecycle
 from app.services import session_tags
-from app.web import breadcrumbs
+from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -31,6 +31,33 @@ from app.web.routes_operator._shared import _templates
 
 router = APIRouter()
 
+# Cookie-backed personal sort for the sessions lobby — shares the
+# ``rrw-sortable`` primitive with the Setup preview tables.
+_LOBBY_SORT_KEYS = {
+    "name", "code", "created_by", "created", "deadline", "timezone",
+    "status",
+}
+
+
+def _session_sort_value(review_session: ReviewSession, key: str):
+    """Sort-key resolver for the sessions-lobby table."""
+    if key == "name":
+        return review_session.name
+    if key == "code":
+        return review_session.code
+    if key == "created_by":
+        creator = review_session.created_by_user
+        return creator.display_name or creator.email or ""
+    if key == "created":
+        return review_session.created_at
+    if key == "deadline":
+        return review_session.deadline
+    if key == "timezone":
+        return sessions.resolve_session_timezone(review_session)
+    if key == "status":
+        return review_session.status
+    return None
+
 
 @router.get("/sessions", response_class=HTMLResponse)
 def list_sessions(
@@ -39,6 +66,14 @@ def list_sessions(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     review_sessions = sessions.list_for_user(db, user)
+    sort_spec = views.decode_cookie_sort_spec(
+        cookies=dict(request.cookies),
+        cookie_name="rrw-sort-lobby",
+        valid_keys=_LOBBY_SORT_KEYS,
+    )
+    review_sessions = views.apply_cookie_sort(
+        review_sessions, sort_spec, value_resolver=_session_sort_value
+    )
     session_ids = [s.id for s in review_sessions]
     lobby_stats = {
         "total": len(review_sessions),
