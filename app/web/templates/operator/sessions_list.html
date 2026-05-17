@@ -79,15 +79,21 @@
               </td>
               {% set tz = session_timezone(s) %}
               <td class="col-shrink">
-                <abbr class="tz-gmt" title="{{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
+                <span class="pill pill-count">
+                  <abbr class="tz-gmt" title="{{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
+                </span>
               </td>
               <td>
                 <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
               </td>
               <td>
-                <span class="pill pill-count">HSH1000</span>
-                <span class="pill pill-count">2610</span>
-                <span class="pill pill-count">PEER</span>
+                <div class="session-tags">
+                  <span class="pill pill-count">HSH1000</span>
+                  <span class="pill pill-count">2610</span>
+                  <span class="pill pill-count">PEER</span>
+                  <span class="pill pill-count">Noself</span>
+                  <span class="pill pill-count">Scored</span>
+                </div>
               </td>
               <td class="col-shrink">
                 <input type="checkbox"

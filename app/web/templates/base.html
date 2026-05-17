@@ -1334,6 +1334,14 @@
         text-decoration: underline dotted;
         cursor: help;
       }
+      /* Sessions-lobby Tags column — pills wrap and grow the cell
+         vertically rather than forcing the column wider. */
+      body.ui-v2 .session-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+      }
+      body.ui-v2 .session-tags .pill { margin-right: 0; }
       /* Forms — input padding 8/12, tokenized borders, labels at
          medium weight with 4px gap, .form-help / .form-error for
          supporting text. */
