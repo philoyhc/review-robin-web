@@ -36,8 +36,8 @@
                placeholder="Search by name, code, or tag"
                aria-label="Search sessions">
         <div class="sessions-action-buttons">
-          <button type="button" class="btn secondary" disabled>Apply</button>
-          <button type="button" class="btn secondary" disabled>Cancel</button>
+          <button type="button" class="btn secondary"
+                  data-search-cancel>Cancel</button>
           <a class="btn" href="/operator/sessions/new">Add new</a>
         </div>
       </div>
@@ -116,7 +116,7 @@
             </tr>
           {% endfor %}
           <tr class="sessions-no-match" style="display: none;">
-            <td colspan="10">No sessions match the selected tags.</td>
+            <td colspan="10">No sessions match.</td>
           </tr>
         </table>
       </div>
@@ -385,26 +385,30 @@
     </script>
     <script>
       (function () {
-        var strip = document.getElementById("sessions-tag-filter");
         var table = document.querySelector("#sessions-list-form table");
-        if (!strip || !table) return;
+        if (!table) return;
 
-        var STORAGE_KEY = "rrw-lobby-tag-filter";
-        var chips = Array.prototype.slice.call(
-          strip.querySelectorAll(".tag-chip")
-        );
-        var modeChip = strip.querySelector("[data-tag-mode]");
-        var clearChip = strip.querySelector("[data-tag-clear]");
+        var strip = document.getElementById("sessions-tag-filter");
+        var searchInput = document.querySelector(".sessions-search-input");
+        var searchCancel = document.querySelector("[data-search-cancel]");
         var rows = Array.prototype.slice.call(
           table.querySelectorAll("tr[data-tags]")
         );
         var noMatch = table.querySelector(".sessions-no-match");
+
+        var STORAGE_KEY = "rrw-lobby-tag-filter";
+        var chips = strip
+          ? Array.prototype.slice.call(strip.querySelectorAll(".tag-chip"))
+          : [];
+        var modeChip = strip ? strip.querySelector("[data-tag-mode]") : null;
+        var clearChip = strip ? strip.querySelector("[data-tag-clear]") : null;
         var vocabulary = chips.map(function (c) {
           return c.getAttribute("data-tag-chip");
         });
 
         var selected = {};   // tag -> true
         var mode = "or";
+        var searchTerm = "";
 
         function load() {
           var raw;
@@ -421,10 +425,10 @@
         }
 
         function save() {
-          var tags = Object.keys(selected);
           try {
             localStorage.setItem(
-              STORAGE_KEY, JSON.stringify({ tags: tags, mode: mode })
+              STORAGE_KEY,
+              JSON.stringify({ tags: Object.keys(selected), mode: mode })
             );
           } catch (e) { /* storage unavailable — filter still works */ }
         }
@@ -434,7 +438,7 @@
           catch (e) { return []; }
         }
 
-        function rowMatches(row) {
+        function matchesTags(row) {
           var picks = Object.keys(selected);
           if (picks.length === 0) return true;
           var tags = rowTags(row);
@@ -444,10 +448,20 @@
           return picks.some(function (t) { return tags.indexOf(t) !== -1; });
         }
 
+        function matchesSearch(row) {
+          if (!searchTerm) return true;
+          var hay = (
+            row.cells[0].textContent + " " +
+            row.cells[1].textContent + " " +
+            rowTags(row).join(" ")
+          ).toLowerCase();
+          return hay.indexOf(searchTerm) !== -1;
+        }
+
         function apply() {
           var visible = 0;
           rows.forEach(function (row) {
-            var show = rowMatches(row);
+            var show = matchesTags(row) && matchesSearch(row);
             row.style.display = show ? "" : "none";
             if (show) visible++;
           });
@@ -473,23 +487,6 @@
           apply();
         }
 
-        chips.forEach(function (chip) {
-          function toggle() {
-            var tag = chip.getAttribute("data-tag-chip");
-            if (selected[tag]) delete selected[tag];
-            else selected[tag] = true;
-            save();
-            refresh();
-          }
-          chip.addEventListener("click", toggle);
-          chip.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              toggle();
-            }
-          });
-        });
-
         function bind(el, handler) {
           if (!el) return;
           el.addEventListener("click", handler);
@@ -500,6 +497,16 @@
             }
           });
         }
+
+        chips.forEach(function (chip) {
+          bind(chip, function () {
+            var tag = chip.getAttribute("data-tag-chip");
+            if (selected[tag]) delete selected[tag];
+            else selected[tag] = true;
+            save();
+            refresh();
+          });
+        });
 
         bind(modeChip, function () {
           mode = mode === "or" ? "and" : "or";
@@ -516,6 +523,20 @@
           save();
           refresh();
         });
+
+        if (searchInput) {
+          searchInput.addEventListener("input", function () {
+            searchTerm = searchInput.value.trim().toLowerCase();
+            apply();
+          });
+        }
+        if (searchCancel) {
+          searchCancel.addEventListener("click", function () {
+            if (searchInput) searchInput.value = "";
+            searchTerm = "";
+            apply();
+          });
+        }
 
         load();
         refresh();
