@@ -85,26 +85,19 @@ have shipped at scoping time; the items below are the
 **candidate list** to triage at that point.
 
 ### Part 1 — Settings CSV round-trip: library-tier
-provenance
+provenance — ✅ resolved
 
-**Goal.** Carry `library_origin_id` provenance through
-the Settings CSV so a destination operator's RTDs /
-RuleSets can be linked to their library entries on
-import where the name matches.
-
-Likely shape:
-
-- New optional `LibraryName` column per RTD / RuleSet
-  row group. Export writes the source operator's library
-  entry's `name` when `library_origin_id` is set;
-  destination importer matches by `(name, data_type)` on
-  the destination operator's library and links via
-  `library_origin_id`. Unmatched names fall back to
-  per-session copies (today's behaviour).
-- `session.settings_imported` audit envelope picks up a
-  `library_links` count.
-- Round-trip stability test: export → import → export
-  produces byte-identical output on the same operator.
+**Outcome.** The **export leg** shipped in PR E2: the Settings
+CSV emits a `library_name` cell per RTD / RuleSet row group
+(the library origin's name, via `library_origin_id`). The
+**import leg** was resolved 2026-05-17 as **always clone** — the
+importer recognises and skips `library_name`; imported RTDs /
+RuleSets stay standalone per-session copies. See the "Import
+part — resolved" section. No `library_links` audit count and no
+destination-library matching: rejected as coupling a fresh
+import to a differently-defined library entry on a loose name
+match. The export → import → export round-trip is byte-stable
+either way (`test_round_trip_byte_stable_self_apply`).
 
 ### Part 2 — Settings CSV round-trip: per-instrument
 RuleSet — fallback retirement (15B shipped)
@@ -335,10 +328,35 @@ gaps surfaced by the 2026-05-17 audit.
 
 PR E1 and PR E2 are independent — no ordering constraint.
 Both are pure serialisation / route work; the underlying
-tables already carry every column read. The import part
-(library link/clone, validation) is planned after, and may
-itself wait on a UX decision (link-by-name-match vs
-always-clone — see Working notes).
+tables already carry every column read. Both shipped
+2026-05-17.
+
+## Import part — resolved 2026-05-17 (no code change)
+
+The Settings CSV importer (`apply_session_config`, the
+`POST …/import-config` route, Quick Setup Slot 4) already works
+end-to-end; PR E2 wired the `display_timezone` /
+`self_reviews_active` apply legs. Two items were carved out for
+an "import part"; both resolve without new code:
+
+- **`library_name` link vs clone — decided: always clone.** The
+  `library_name` provenance cells PR E2 emits are recognised and
+  skipped on import; every imported RTD / RuleSet stays a
+  standalone per-session copy (`library_origin_id` NULL), never
+  linked to the importing operator's library. This is exactly
+  the importer's current behaviour — `_apply_rtds` /
+  `_apply_rule_set_kv` never set `library_origin_id`. Pinned by
+  `test_apply_library_name_cells_always_clone`. *(The
+  earlier-floated "link by name match" was rejected — it would
+  couple a freshly-imported copy to a differently-defined
+  library entry on a loose name match.)*
+- **`rule_set_name` typo cross-validation — already done.** The
+  importer already rejects an unknown `rule_set_name` reference
+  (`test_unknown_rule_set_name_rejected`), same as it does for a
+  missing RTD reference.
+
+So the 18D **import part requires no implementation** — the
+Settings CSV import is complete as of the export part.
 
 ## Hard dependencies
 
@@ -402,10 +420,8 @@ When parts ship:
   — small and additive, no `version` cell or fast-fail
   machinery warranted; revisit only if a future shape change
   is genuinely incompatible rather than additive.
-- **Library link vs clone on import.** The default
-  proposed in Part 1 is "link by name match"; an
-  alternative is "always clone, never link". The link
-  default preserves library-side delete-cascade
-  semantics (15C invariant #3 — session copies survive
-  via `ON DELETE SET NULL`) and matches the
-  auto-copy-on-create UX.
+- **Library link vs clone on import — decided 2026-05-17:
+  always clone.** See the "Import part" section above. An
+  imported RTD / RuleSet stays a standalone per-session copy;
+  `library_name` is provenance metadata only and is not used to
+  link the copy to the importing operator's library.
