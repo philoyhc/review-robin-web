@@ -1,12 +1,15 @@
-# Segment 13F — More DB prep (14C / 16A / 16B / 18A / 18B / 18C ride-along)
+# Segment 13F — More DB prep (14C / 16A / 16B / 18A / 18B / 18F ride-along)
 
 **Status:** In flight — **PRs 1 + 2 shipped 2026-05-11**
 (migrations `779b90e4b397` + `8003c2be99d8`); **PRs 6 + 7
 shipped 2026-05-15** (migrations `2fec0f646bd2` +
-`e9277c43b251`) ahead of Segment 18B being picked up; PRs 3-5
-deferred until their consumer segments (18A / 14C / 18C) are
-picked up, per the "piecemeal, front-load the 16-series work"
-sequencing decision. The 16-series schema scaffolding is
+`e9277c43b251`) ahead of Segment 18B; **PR 3 shipped
+2026-05-17** (migration `c7d1e9f3a4b2`) with Segment 18A;
+PRs 4 + 5 remain deferred until their consumer segments
+(14C / 18F) are picked up, per the "piecemeal, front-load the
+16-series work" sequencing decision. **Only PRs 4 + 5 are
+outstanding** (`sessions.reminder_settings`,
+`sessions.retention_*`). The 16-series schema scaffolding is
 now complete — Segment 16A is unblocked to start its PR ladder.
 Stub created 2026-05-11; revised 2026-05-11 to fold in the
 16-series admin / owner-role requirements after a codebase
@@ -38,8 +41,8 @@ segments are pure service / UI / template work.
 **Unblocks:** 14C (reminder cadence), 16A (Sys Admin auth via
 persisted flag instead of env-allowlist), 16B (per-session
 owner UI), 18A (session tagging), 18B (per-operator default +
-per-session display timezone), 18C (retention exception +
-per-session policy).
+per-session display timezone), 18F Part 4 (retention exception
++ per-session policy).
 
 ---
 
@@ -72,10 +75,12 @@ users.is_operator                         # PR 2: ✅ shipped — 16A workspace 
                                           #       under Option C access model
                                           #       (strict admit-by-sys-admin)
                                           #       (migration 8003c2be99d8)
-session_tags                              # PR 3: 18A per-session free-form tags (pending)
+session_tags                              # PR 3: ✅ shipped — 18A per-session
+                                          #       free-form tags
+                                          #       (migration c7d1e9f3a4b2)
 sessions.reminder_settings                # PR 4: 14C reminder cadence (JSON, pending)
-sessions.retention_exception              # PR 5: 18C per-session opt-out (Bool, pending)
-sessions.retention_overrides              # PR 5: 18C per-session policy (JSON, post-MVP, pending)
+sessions.retention_exception              # PR 5: 18F Part 4 per-session opt-out (Bool, pending)
+sessions.retention_overrides              # PR 5: 18F Part 4 per-session policy (JSON, pending)
 sessions.display_timezone                 # PR 6: ✅ shipped — 18B per-session display
                                           #       timezone (String) (migration 2fec0f646bd2)
 users.preferences                         # PR 7: ✅ shipped — per-operator preferences
@@ -130,8 +135,8 @@ needs identified for the remaining workplan:
 |---|---|---|
 | **14C** — Reminders workflow Part 1 | New `sessions.reminder_settings` JSON column (`auto_enabled` / `cadence` / `max_count` / `time_of_day` / `quiet_hours`) | Required by 14C Part 1 (per-session reminder cadence). One column, JSON-shaped (`14C` calls out "columns or JSON blob"; JSON keeps the migration footprint flat). |
 | **18A** — Session tagging | New table `session_tags` | Required by 18A Part 2. The plan flags "Tag table vs JSON column" as an open scoping question; we lock the answer here (table — easier per-tag indexing + delete-cascade). |
-| **18C** — Retention / deletion workflow Part 2 | New `sessions.retention_exception` Boolean (default `False`, nullable) | Required by 18C Part 2 (per-session opt-out of auto-purge — e.g. legal hold). Minimal cost, large policy value. |
-| **18C** — Retention / deletion workflow Part 3 (post-MVP) | New `sessions.retention_overrides` JSON column | Required by 18C Part 3 if it lands. Per-session retention-policy overrides (`response_days` / `audit_days` / `archived_days` keys). NULL means "use deployment default". |
+| **18F Part 4** — Scheduled / policy-driven retention | New `sessions.retention_exception` Boolean (default `False`, nullable) | Required by the scheduled-retention work (per-session opt-out of auto-purge — e.g. legal hold). Minimal cost, large policy value. *(Was scoped to 18C; moved to 18F Part 4 when 18C was re-scoped to operator-triggered purge only — 2026-05-17.)* |
+| **18F Part 4** — Scheduled / policy-driven retention | New `sessions.retention_overrides` JSON column | Per-session retention-policy overrides (`response_days` / `audit_days` / `archived_days` keys). NULL means "use deployment default". |
 | **18B** — Date and time settings | New `sessions.display_timezone` String column (nullable; IANA zone name) | Required by 18B PR 3 (per-session display-timezone override). One nullable string column; `NULL` means "inherit the operator default timezone". |
 | **18B** — Date and time settings | New `users.preferences` JSON column (nullable) | Required by 18B PR 2 (per-operator default timezone). A general per-operator preferences container — first key `display_timezone`, future keys for other operator-level display settings (display sizing, the typography knob). JSON over flat columns: the key set is open-ended — same reasoning as `sessions.reminder_settings`. Added 2026-05-15 after the re-sweep below. |
 | **16A** — Sys Admin page + admin user role | New `users.is_sys_admin` Boolean column (server-default `false`) | Required by 16A PR 2 (sys-admin gate). Persisted per-user flag bootstrapped from the existing `SYS_ADMIN_EMAILS` env var on first-sign-in but extensible in-app afterwards via 16A PR 6. |
@@ -285,9 +290,10 @@ session. Lock in the audit.
 
 PRs land in two waves: the **16-series wave** (PR 1 + PR 2)
 pre-positions the admin / allowlist plumbing for Segment 16A;
-the **consumer-deferred wave** (PRs 3-6) pre-positions the
+the **consumer-deferred wave** (PRs 3-7) pre-positions the
 remaining tables and columns when their consumer segments
-(18A / 14C / 18C / 18B) are ready to be picked up.
+(18A / 14C / 18F / 18B) are ready to be picked up. As of
+2026-05-17 only PRs 4 + 5 remain — PRs 3 / 6 / 7 have shipped.
 
 ### PR 1 — `users.is_sys_admin` Boolean + lock `session_operators.role` value-set + default fix (16A / 16B ride-along) — ✅ **shipped 2026-05-11**
 
@@ -467,7 +473,15 @@ PR 1 in principle. Kept separate because (a) PR 1 already
 shipped, (b) the access-model decision came after PR 1 landed,
 (c) one migration per PR is the 13D / 13E precedent.
 
-### PR 3 — New table `session_tags` (18A ride-along)
+### PR 3 — New table `session_tags` (18A ride-along) — ✅ **shipped 2026-05-17**
+
+**Outcome.** Migration `c7d1e9f3a4b2` adds the `session_tags`
+table (`SessionTag` model in `app/db/models/session_tag.py`),
+with the `(session_id, tag)` unique constraint and the
+`ON DELETE CASCADE` FK. Round-trip tests in
+`tests/integration/test_session_tags_schema.py`. Landed inert;
+lit up the same day by **Segment 18A Part 2** (the lobby
+tag-filter chips + `app/services/session_tags.py`).
 
 **Scope.** SQL + model only. New table:
 
@@ -514,7 +528,7 @@ acquire meaning.
 fixture JSON blob (the actual shape lives in 14C tests). Inert
 audit: zero service / web references at PR close.
 
-### PR 5 — Two columns on `sessions`: `retention_exception` + `retention_overrides` (18C ride-along)
+### PR 5 — Two columns on `sessions`: `retention_exception` + `retention_overrides` (18F Part 4 ride-along)
 
 **Scope.** Two nullable columns on `sessions`, landed together
 because they're tightly coupled (one is the "opt out entirely"
@@ -527,8 +541,8 @@ retention_overrides: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 ```
 
 `retention_exception=NULL` and `=False` both mean "no exception"
-(18C Part 2 will normalise read-path). `retention_overrides=NULL`
-means "use the deployment retention defaults" (18C Part 2's env
+(18F Part 4 will normalise read-path). `retention_overrides=NULL`
+means "use the deployment retention defaults" (18F Part 4's env
 vars).
 
 **Tests.** Migration round-trip on both dialects. Default reads
@@ -640,15 +654,15 @@ migration history.
   Unblocks 16A PR 1 (operator-allowlist gate read) + 16A PR 6
   (workspace admit/revoke surface) + 16B PR 1 + 2
   (admitted-pool query).
-- **PR 3** — defer until 18A (session tagging + archiving)
-  is picked up.
+- **PR 3** — ✅ shipped 2026-05-17 (migration `c7d1e9f3a4b2`),
+  with Segment 18A Part 2 (session tagging).
 - **PR 4** — defer until 14C (reminders workflow) is picked
   up. Specifically Part 1 (per-session cadence settings)
   is the consumer.
-- **PR 5** — defer until 18C (retention / deletion workflow)
-  is picked up. Specifically Part 2 (per-deployment retention
-  policy) is the first consumer; Part 3 (per-session policy
-  overrides) is the second.
+- **PR 5** — defer until 18F Part 4 (scheduled / policy-driven
+  retention) is picked up. *(Was scoped to 18C; moved when 18C
+  was re-scoped to operator-triggered purge only — that purge
+  needed no schema.)*
 - **PR 6** — ✅ shipped 2026-05-15 (migration `2fec0f646bd2`).
   Unblocks 18B PR 3 (per-session display-timezone override +
   Session Edit card).
@@ -670,7 +684,8 @@ A reviewer can model the whole contract in one sitting per PR.
 - **JSON shape commitments.** PR 4's `reminder_settings`,
   PR 5's `retention_overrides`, and PR 7's `users.preferences`
   are JSON; the actual key schema is locked by 14C Part 1,
-  18C Part 2-3, and 18B PR 2 respectively. Until then, the
+  18F Part 4, and 18B PR 2 respectively (PR 7's `preferences`
+  shape was pinned by 18B PR 2 on ship). Until then, the
   columns are inert containers. Worth a short note in each PR
   description naming where the shape will be pinned.
 - **`session_operators.role` Python-default flip.** PR 1
@@ -755,7 +770,7 @@ When PRs ship:
   the relevant per-session settings sections (each marked
   **Inert** until the owning feature segment lights it up,
   mirroring the post-13D entries).
-- Owning feature plans (14C / 16A / 16B / 18A / 18B / 18C)
+- Owning feature plans (14C / 16A / 16B / 18A / 18B / 18F)
   updated to reference "schema pre-positioned in 13F PR N"
   instead of "new column / new table". In particular 16A flips from
   Option C (env-allowlist) to Option B (persisted flag with
