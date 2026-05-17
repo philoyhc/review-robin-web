@@ -37,10 +37,18 @@ _LOBBY_SORT_KEYS = {
     "name", "code", "created_by", "created", "deadline", "timezone",
     "status",
 }
+# The archived-sessions table shows an "Archived" column where the
+# lobby shows "Deadline" — backed by ``updated_at`` (an archived
+# session is inert, so its last mutation is the archive itself).
+_ARCHIVED_SORT_KEYS = {
+    "name", "code", "created_by", "created", "archived", "timezone",
+    "status",
+}
 
 
 def _session_sort_value(review_session: ReviewSession, key: str):
-    """Sort-key resolver for the sessions-lobby table."""
+    """Sort-key resolver shared by the sessions-lobby and archived
+    tables."""
     if key == "name":
         return review_session.name
     if key == "code":
@@ -52,6 +60,8 @@ def _session_sort_value(review_session: ReviewSession, key: str):
         return review_session.created_at
     if key == "deadline":
         return review_session.deadline
+    if key == "archived":
+        return review_session.updated_at
     if key == "timezone":
         return sessions.resolve_session_timezone(review_session)
     if key == "status":
@@ -115,12 +125,22 @@ def archived_sessions(
         for s in sessions.list_for_user(db, user)
         if s.status == "archived"
     ]
+    sort_spec = views.decode_cookie_sort_spec(
+        cookies=dict(request.cookies),
+        cookie_name="rrw-sort-archived",
+        valid_keys=_ARCHIVED_SORT_KEYS,
+    )
+    archived = views.apply_cookie_sort(
+        archived, sort_spec, value_resolver=_session_sort_value
+    )
+    session_ids = [s.id for s in archived]
     return _templates.TemplateResponse(
         request,
         "operator/sessions_archived.html",
         {
             "user": user,
             "sessions": archived,
+            "tags_by_session": session_tags.tags_for_sessions(db, session_ids),
             "breadcrumbs": breadcrumbs.operator_sessions_child("Archived"),
         },
     )

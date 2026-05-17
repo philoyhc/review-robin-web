@@ -531,6 +531,11 @@ def test_archived_page_lists_archived_sessions(
     assert "Archived sessions" in body
     assert "Filed Away" in body
     assert "Still Active" not in body
+    # The table carries sortable headers (incl. the Archived column)
+    # and a select-checkbox column.
+    assert 'data-sort-key="archived"' in body
+    assert 'data-rrw-sortable="rrw-sort-archived"' in body
+    assert 'class="archived-list-select-all"' in body
 
 
 def test_lobby_search_box_is_wired(client: TestClient) -> None:
