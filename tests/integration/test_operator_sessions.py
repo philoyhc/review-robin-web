@@ -14,6 +14,7 @@ from app.db.models import (
     SessionTag,
     User,
 )
+from app.services import session_tags
 
 
 def test_create_redirects_to_detail(client: TestClient, db: Session) -> None:
@@ -268,12 +269,88 @@ def test_sessions_list_renders_inline_expander_fragments(
     assert 'data-expander-field="code"' in body
     assert 'data-expander-field="deadline"' in body
     assert 'data-expander-field="tags"' in body
+    # Single-session expander Save is wired (no longer a placeholder).
+    assert "data-expander-save" in body
     # Bulk expander hosts a Tags box + the bulk actions, Cancel, and
     # the selection-management buttons.
     assert 'data-expander-field="bulk-tags"' in body
     assert "data-expander-cancel" in body
     assert "data-expander-clear-all" in body
     assert "data-expander-clear-others" in body
+
+
+def test_lobby_edit_updates_draft_session_and_tags(
+    client: TestClient, db: Session
+) -> None:
+    """The single-session expander Save route updates a draft
+    session's name / code and replaces its tag set."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Old Name", "code": "old-1"},
+        follow_redirects=False,
+    )
+    session_id = db.execute(
+        select(ReviewSession.id).where(ReviewSession.code == "old-1")
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{session_id}/lobby-edit",
+        data={
+            "name": "New Name",
+            "code": "new-1",
+            "deadline": "",
+            "tags": "Pilot, cohort-a",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db.expire_all()
+    updated = db.get(ReviewSession, session_id)
+    assert updated.name == "New Name"
+    assert updated.code == "new-1"
+    assert session_tags.tags_for_sessions(db, [session_id])[session_id] == [
+        "cohort-a",
+        "pilot",
+    ]
+
+
+def test_lobby_edit_skips_name_code_when_not_draft(
+    client: TestClient, db: Session
+) -> None:
+    """Off draft, the lobby-edit route ignores Name / Code (the boxes
+    render read-only) but still applies the always-editable tags."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Locked", "code": "locked-1"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "locked-1")
+    ).scalar_one()
+    session_id = review_session.id
+    review_session.status = "ready"
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{session_id}/lobby-edit",
+        data={
+            "name": "Attempted",
+            "code": "attempted-1",
+            "deadline": "",
+            "tags": "live-tag",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db.expire_all()
+    updated = db.get(ReviewSession, session_id)
+    assert updated.name == "Locked"
+    assert updated.code == "locked-1"
+    assert session_tags.tags_for_sessions(db, [session_id])[session_id] == [
+        "live-tag",
+    ]
 
 
 def test_lobby_renders_real_session_tags(

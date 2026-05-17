@@ -6,17 +6,25 @@ Source ranges in pre-refactor ``routes_operator.py``: 64-123.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.db.models import User
+from app.db.models import ReviewSession, User
 from app.db.session import get_db
+from app.schemas.sessions import SessionCreate
+from app.services import date_formatting
 from app.services import sessions
 from app.services import session_lifecycle as lifecycle
 from app.services import session_tags
 from app.web import breadcrumbs
-from app.web.deps import get_or_create_user, request_correlation_id
+from app.web.deps import (
+    get_or_create_user,
+    request_correlation_id,
+    require_sys_admin_or_session_operator,
+)
 from app.web.routes_operator._shared import _templates
 
 
@@ -50,6 +58,69 @@ def list_sessions(
             "lobby_tags": session_tags.vocabulary(db, session_ids),
             "breadcrumbs": breadcrumbs.operator_root(),
         },
+    )
+
+
+@router.post("/sessions/{session_id}/lobby-edit")
+def lobby_edit_submit(
+    name: str = Form(...),
+    code: str = Form(...),
+    deadline: str | None = Form(default=None),
+    tags: str = Form(default=""),
+    review_session: ReviewSession = Depends(
+        require_sys_admin_or_session_operator
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Single-session expander Save on the sessions lobby.
+
+    Tags are editable in any lifecycle state. Name / Code / Deadline
+    are applied only while the session is in ``draft`` — matching the
+    Session Details edit affordance's draft-only gating; the expander
+    renders those boxes read-only otherwise, and this route ignores
+    them server-side so a stale post can't slip past that gate.
+    """
+    correlation_id = request_correlation_id()
+
+    session_tags.set_tags(
+        db,
+        review_session=review_session,
+        user=user,
+        tags=tags.split(","),
+        correlation_id=correlation_id,
+    )
+
+    if lifecycle.is_draft(review_session):
+        timezone_name = sessions.resolve_session_timezone(review_session)
+        parsed_deadline: datetime | None = None
+        if deadline:
+            try:
+                parsed_deadline = date_formatting.parse_local_datetime(
+                    deadline, timezone_name
+                )
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="deadline must be ISO-8601",
+                ) from exc
+        sessions.update_session(
+            db,
+            review_session=review_session,
+            user=user,
+            payload=SessionCreate(
+                name=name,
+                code=code,
+                description=review_session.description,
+                deadline=parsed_deadline,
+                help_contact=review_session.help_contact,
+            ),
+            correlation_id=correlation_id,
+        )
+
+    return RedirectResponse(
+        url="/operator/sessions",
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

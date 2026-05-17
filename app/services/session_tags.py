@@ -98,6 +98,74 @@ def add_tag(
     return True
 
 
+def set_tags(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    tags: list[str],
+    correlation_id: str | None = None,
+) -> tuple[list[str], list[str]]:
+    """Replace a session's tag set with ``tags`` (raw free-form
+    strings — each normalized, blanks skipped, duplicates collapsed).
+
+    Adds the tags new to the session and removes the dropped ones,
+    one ``session.tag_added`` / ``session.tag_removed`` audit event
+    per change, in a single transaction. Returns ``(added, removed)``,
+    each sorted.
+    """
+    desired: set[str] = set()
+    for raw in tags:
+        try:
+            desired.add(normalize_tag(raw))
+        except ValueError:
+            continue
+    current = set(
+        db.execute(
+            select(SessionTag.tag).where(
+                SessionTag.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    to_add = sorted(desired - current)
+    to_remove = sorted(current - desired)
+
+    for tag in to_add:
+        db.add(SessionTag(session_id=review_session.id, tag=tag))
+    for tag in to_remove:
+        row = db.execute(
+            select(SessionTag).where(
+                SessionTag.session_id == review_session.id,
+                SessionTag.tag == tag,
+            )
+        ).scalar_one()
+        db.delete(row)
+    db.flush()
+
+    for tag in to_add:
+        audit.write_event(
+            db,
+            event_type="session.tag_added",
+            summary=f"Tag '{tag}' added to session {review_session.code}",
+            actor_user_id=user.id,
+            session=review_session,
+            context={"tag": tag},
+            correlation_id=correlation_id,
+        )
+    for tag in to_remove:
+        audit.write_event(
+            db,
+            event_type="session.tag_removed",
+            summary=f"Tag '{tag}' removed from session {review_session.code}",
+            actor_user_id=user.id,
+            session=review_session,
+            context={"tag": tag},
+            correlation_id=correlation_id,
+        )
+    db.commit()
+    return (to_add, to_remove)
+
+
 def remove_tag(
     db: Session,
     *,
