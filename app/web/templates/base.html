@@ -1722,6 +1722,19 @@
         gap: var(--space-3);
       }
       body.ui-v2 .sessions-list-header h1 { margin: 0; }
+      /* Session-actions card — half-width, right-aligned, above the
+         sessions table. Holds Create / Duplicate / Archive. */
+      body.ui-v2 .sessions-action-card {
+        max-width: 50%;
+        margin-left: auto;
+        margin-bottom: var(--space-4);
+      }
+      body.ui-v2 .sessions-action-card h2 { margin-top: 0; }
+      body.ui-v2 .sessions-action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+      }
       /* Return-to-origin "← Back to {context}" link rendered at the
          top of detour destinations (About, /me/debug). Per
          spec/visual_style_rrw.md "Return-to-origin behavior". */

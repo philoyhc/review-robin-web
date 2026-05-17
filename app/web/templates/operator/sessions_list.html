@@ -7,12 +7,25 @@
 {% block content %}
   <div class="sessions-list-header">
     <h1>Sessions</h1>
-    {% if sessions %}
-      <a class="btn" href="/operator/sessions/new">Create new session</a>
-    {% endif %}
   </div>
 
   {% if sessions %}
+    <div class="card sessions-action-card">
+      <h2>Session actions</h2>
+      <p class="form-help">
+        Tick rows in the table below, then choose an action. Duplicate
+        works on a single session; Archive can take several at once.
+      </p>
+      <div class="sessions-action-buttons">
+        <a class="btn" href="/operator/sessions/new">Create new session</a>
+        <button type="button" class="btn secondary" disabled>Duplicate</button>
+        <button type="button" class="btn secondary" disabled>
+          Duplicate settings only
+        </button>
+        <button type="button" class="btn alert" disabled>Archive</button>
+      </div>
+    </div>
+
     <form method="post" action="/operator/sessions/delete-selected"
           id="sessions-list-form">
       <div class="card">
