@@ -147,6 +147,59 @@ def archived_sessions(
     )
 
 
+@router.post("/sessions/bulk-tags")
+def sessions_bulk_tags(
+    session_ids: list[int] = Form(default=[]),
+    tags: str = Form(default=""),
+    op: str = Form(...),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Add or remove a set of tags across the ticked sessions — backs
+    the bulk expander's "All tags to all" / "Remove from all".
+
+    ``op="add"`` adds every tag in ``tags`` to each selected session;
+    ``op="remove"`` removes them. Both are idempotent and skip blank /
+    invalid tags. Tagging is not lifecycle-gated.
+    """
+    if op not in ("add", "remove"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"unknown bulk-tag op {op!r}",
+        )
+    correlation_id = request_correlation_id()
+    raw_tags = tags.split(",")
+    for session_id in session_ids:
+        review_session = sessions.get_for_user(db, user, session_id)
+        if review_session is None:
+            continue
+        for raw in raw_tags:
+            try:
+                if op == "add":
+                    session_tags.add_tag(
+                        db,
+                        review_session=review_session,
+                        user=user,
+                        tag=raw,
+                        correlation_id=correlation_id,
+                    )
+                else:
+                    session_tags.remove_tag(
+                        db,
+                        review_session=review_session,
+                        user=user,
+                        tag=raw,
+                        correlation_id=correlation_id,
+                    )
+            except ValueError:
+                # Blank / over-long tag from the split — skip it.
+                continue
+    return RedirectResponse(
+        url="/operator/sessions",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @router.post("/sessions/unarchive-selected")
 def sessions_unarchive_selected(
     session_ids: list[int] = Form(default=[]),

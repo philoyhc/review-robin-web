@@ -608,6 +608,72 @@ def test_delete_archived_selected_removes_session(
     assert db.get(ReviewSession, session_id) is None
 
 
+def _two_sessions(client: TestClient, db: Session) -> list[int]:
+    for name, code in (("Bulk A", "bt-a"), ("Bulk B", "bt-b")):
+        client.post(
+            "/operator/sessions",
+            data={"name": name, "code": code},
+            follow_redirects=False,
+        )
+    return [
+        db.execute(
+            select(ReviewSession.id).where(ReviewSession.code == code)
+        ).scalar_one()
+        for code in ("bt-a", "bt-b")
+    ]
+
+
+def test_bulk_tags_add_to_all(client: TestClient, db: Session) -> None:
+    """The bulk expander's 'All tags to all' adds every tag in the box
+    to each selected session."""
+    ids = _two_sessions(client, db)
+
+    response = client.post(
+        "/operator/sessions/bulk-tags",
+        data={"session_ids": ids, "tags": "Alpha, beta", "op": "add"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    for session_id in ids:
+        assert session_tags.tags_for_sessions(db, [session_id])[
+            session_id
+        ] == ["alpha", "beta"]
+
+
+def test_bulk_tags_remove_from_all(client: TestClient, db: Session) -> None:
+    """'Remove from all' strips every tag in the box from each
+    selected session."""
+    ids = _two_sessions(client, db)
+    client.post(
+        "/operator/sessions/bulk-tags",
+        data={"session_ids": ids, "tags": "shared, gone", "op": "add"},
+        follow_redirects=False,
+    )
+
+    response = client.post(
+        "/operator/sessions/bulk-tags",
+        data={"session_ids": ids, "tags": "gone", "op": "remove"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    for session_id in ids:
+        assert session_tags.tags_for_sessions(db, [session_id])[
+            session_id
+        ] == ["shared"]
+
+
+def test_bulk_tags_rejects_unknown_op(client: TestClient, db: Session) -> None:
+    ids = _two_sessions(client, db)
+    response = client.post(
+        "/operator/sessions/bulk-tags",
+        data={"session_ids": ids, "tags": "x", "op": "sideways"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+
+
 def test_lobby_search_box_is_wired(client: TestClient) -> None:
     """The Search card ships a live search box and a Cancel hook; the
     retired Apply button is gone."""
