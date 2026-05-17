@@ -257,14 +257,14 @@ def test_session_with_null_timezone_resolves_to_operator_default(
 def test_session_detail_shows_timezone_label(
     client: TestClient, db: Session
 ) -> None:
-    """The Session Details card's Timezone item shows the CLDR
-    display name of the session's resolved zone."""
+    """The Session Details card's Timezone item shows the resolved
+    zone as a GMT-offset + raw IANA id."""
     session = _create_session(client, db, code="tz-label")
     _set_session_timezone(client, session, "Asia/Singapore")
 
     body = client.get(f"/operator/sessions/{session.id}").text
     assert "Timezone" in body
-    assert "Singapore Standard Time" in body
+    assert "GMT+8 Asia/Singapore" in body
 
 
 def _build_active_session_with_reviewer(
@@ -359,11 +359,11 @@ def test_reviewer_surface_renders_deadline_in_session_zone(
     response = reviewer.get(f"/reviewer/sessions/{session.id}")
     assert response.status_code == 200
     # 02:00 UTC is 10:00 in Singapore — the deadline is converted to
-    # the session zone (rendered bare, no zone token), with the CLDR
-    # zone name in parentheses.
+    # the session zone (rendered bare, no zone token), with the
+    # GMT-offset + raw IANA id in parentheses.
     assert format_datetime(session.deadline, "Asia/Singapore") in response.text
     assert format_datetime(session.deadline, "UTC") not in response.text
-    assert "(Singapore Standard Time)" in response.text
+    assert "(GMT+8 Asia/Singapore)" in response.text
 
 
 def test_reviewer_dashboard_shows_deadline_with_timezone_label(
@@ -372,7 +372,7 @@ def test_reviewer_dashboard_shows_deadline_with_timezone_label(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """The reviewer dashboard renders each session's deadline in that
-    session's zone, with the CLDR zone name in parentheses."""
+    session's zone, with the GMT-offset + raw IANA id in parentheses."""
     operator = make_client(alice)
     session = _build_active_session_with_reviewer(
         operator, db, code="tz-dash", reviewer_email="rae@example.edu"
@@ -395,7 +395,7 @@ def test_reviewer_dashboard_shows_deadline_with_timezone_label(
     response = reviewer.get("/reviewer")
     assert response.status_code == 200
     assert format_datetime(session.deadline, "Asia/Singapore") in response.text
-    assert "(Singapore Standard Time)" in response.text
+    assert "(GMT+8 Asia/Singapore)" in response.text
 
 
 # ── Timezone-sample preview on the config cards ──────────────────────────
@@ -410,8 +410,8 @@ def test_settings_card_renders_timezone_sample(
     assert "Sample (right now):" in body
     # The SHOW_ZONE_TOKEN switch wires through to the preview JS.
     assert "var showToken = false;" in body
-    # The preview resolves the zone's CLDR long name client-side.
-    assert 'timeZoneName: "long"' in body
+    # The preview resolves the zone's GMT-offset client-side.
+    assert 'timeZoneName: "shortOffset"' in body
 
 
 def test_edit_card_renders_timezone_sample(
@@ -423,4 +423,4 @@ def test_edit_card_renders_timezone_sample(
     assert 'id="tz-sample-zone"' in body
     assert "Sample (right now):" in body
     assert "var showToken = false;" in body
-    assert 'timeZoneName: "long"' in body
+    assert 'timeZoneName: "shortOffset"' in body

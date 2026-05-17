@@ -140,7 +140,7 @@ def reviewer_dashboard(
                 "deadline_text": date_formatting.format_datetime(
                     review_session.deadline, session_zone
                 ),
-                "deadline_timezone_label": date_formatting.timezone_label(
+                "deadline_timezone_label": date_formatting.gmt_offset_zone_label(
                     session_zone, at=review_session.deadline
                 ),
                 "instrument_rows": _build_dashboard_instrument_rows(

@@ -149,6 +149,22 @@ def gmt_offset_label(tz_name: str | None, at: datetime | None = None) -> str:
     return f"GMT{sign}{hours}"
 
 
+def gmt_offset_zone_label(tz_name: str | None, at: datetime | None = None) -> str:
+    """The compact GMT-offset followed by the raw IANA zone id — e.g.
+    ``Asia/Singapore`` becomes ``GMT+8 Asia/Singapore``.
+
+    The display form for zone identity across the app: an at-a-glance
+    offset for orientation, the unambiguous IANA id for precision. When
+    the two would be redundant (a bare ``UTC``) only one is shown.
+    ``at`` selects the standard / daylight offset variant.
+    """
+    zone = tz_name or DEFAULT_TIMEZONE
+    offset = gmt_offset_label(tz_name, at)
+    if offset == zone:
+        return zone
+    return f"{offset} {zone}"
+
+
 def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
     """Parse a browser ``datetime-local`` string (``YYYY-MM-DDTHH:MM``)
     as wall-clock in ``tz_name``'s zone and return the equivalent UTC

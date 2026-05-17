@@ -3,11 +3,11 @@
    Details forms (Segment 18B PR 5). Requires a `display_timezone`
    input plus `tz-sample` / `tz-sample-zone` spans; the `deadline`
    input and `deadline-zone` span are optional. As the operator
-   picks a zone it updates the worked sample, the CLDR zone label
-   and the "Entered in" deadline hint, and re-renders the deadline
-   input so its wall-clock tracks the picked zone — the instant
-   stays fixed, only the display moves. The no-JS fallback is the
-   server-rendered sample + the raw IANA id. #}
+   picks a zone it updates the worked sample, the zone label
+   (GMT-offset + raw IANA id) and the "Entered in" deadline hint,
+   and re-renders the deadline input so its wall-clock tracks the
+   picked zone — the instant stays fixed, only the display moves.
+   The no-JS fallback is the server-rendered sample + zone label. #}
 <script>
   (function () {
     var input = document.getElementById("display_timezone");
@@ -46,16 +46,22 @@
         return out;
       } catch (e) { return null; }
     }
-    function longName(zone) {
+    function offsetLabel(zone) {
       try {
         var parts = new Intl.DateTimeFormat("en", {
-          timeZone: zone, year: "numeric", timeZoneName: "long",
+          timeZone: zone, year: "numeric", timeZoneName: "shortOffset",
         }).formatToParts(new Date());
         for (var i = 0; i < parts.length; i++) {
-          if (parts[i].type === "timeZoneName") return parts[i].value;
+          if (parts[i].type === "timeZoneName") {
+            return parts[i].value === "GMT" ? "UTC" : parts[i].value;
+          }
         }
-      } catch (e) { /* fall through to null */ }
-      return null;
+      } catch (e) { /* fall through to "" */ }
+      return "";
+    }
+    function zoneText(zone) {
+      var off = offsetLabel(zone);
+      return (off && off !== zone) ? off + " " + zone : zone;
     }
     function instantOf(str, zone) {
       var m = str.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
@@ -80,7 +86,7 @@
       }
       prevZone = zone;
       sample.textContent = text;
-      var name = longName(zone) || zone;
+      var name = zoneText(zone);
       zoneLabel.textContent = name;
       if (deadlineZone) deadlineZone.textContent = name;
     }
