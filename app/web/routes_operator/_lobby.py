@@ -65,7 +65,19 @@ def list_sessions(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    review_sessions = sessions.list_for_user(db, user)
+    all_sessions = sessions.list_for_user(db, user)
+    lobby_stats = {
+        "total": len(all_sessions),
+        "draft": sum(
+            1 for s in all_sessions if s.status in ("draft", "validated")
+        ),
+        "activated": sum(1 for s in all_sessions if s.status == "ready"),
+        "archived": sum(1 for s in all_sessions if s.status == "archived"),
+    }
+    # The main lobby table shows only non-archived sessions; archived
+    # ones live on their own child page (Segment 18A Part 3). The
+    # stats above still count them so the "archived" pill is accurate.
+    review_sessions = [s for s in all_sessions if s.status != "archived"]
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
         cookie_name="rrw-sort-lobby",
@@ -75,14 +87,6 @@ def list_sessions(
         review_sessions, sort_spec, value_resolver=_session_sort_value
     )
     session_ids = [s.id for s in review_sessions]
-    lobby_stats = {
-        "total": len(review_sessions),
-        "draft": sum(
-            1 for s in review_sessions if s.status in ("draft", "validated")
-        ),
-        "activated": sum(1 for s in review_sessions if s.status == "ready"),
-        "archived": sum(1 for s in review_sessions if s.status == "archived"),
-    }
     return _templates.TemplateResponse(
         request,
         "operator/sessions_list.html",
@@ -190,6 +194,38 @@ def clone_session_submit(
     )
     return RedirectResponse(
         url=f"/operator/sessions/{clone.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/archive-selected")
+def sessions_archive_selected(
+    session_ids: list[int] = Form(default=[]),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Archive the ticked sessions — backs the single-session expander
+    Archive and the bulk Archive all.
+
+    Filters server-side to caller-owned ``draft`` sessions; anything
+    not in draft is silently skipped (archiving is draft-only). No
+    confirm gate — archiving is reversible and deletes no data.
+    """
+    correlation_id = request_correlation_id()
+    for session_id in session_ids:
+        review_session = sessions.get_for_user(db, user, session_id)
+        if review_session is None:
+            continue
+        if not lifecycle.is_draft(review_session):
+            continue
+        lifecycle.archive_session(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id,
+        )
+    return RedirectResponse(
+        url="/operator/sessions",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

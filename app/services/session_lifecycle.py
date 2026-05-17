@@ -346,6 +346,71 @@ def revert_session_to_draft(
     return review_session
 
 
+def archive_session(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str | None = None,
+) -> ReviewSession:
+    """Flip ``draft → archived`` — file a session out of the active lobby.
+
+    Archiving is reversible (see ``unarchive_session``) and deletes no
+    data. Only ``draft`` sessions are eligible: a running session is
+    reverted to draft first. Raises ``LifecycleError`` otherwise.
+    """
+    if not is_draft(review_session):
+        raise LifecycleError(
+            f"Session is {review_session.status}, can only archive from draft",
+            code="not_draft",
+        )
+    review_session.status = SessionStatus.archived.value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session.archived",
+        summary=f"Session {review_session.code} archived",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.changes({"status": ["draft", "archived"]}),
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    db.refresh(review_session)
+    return review_session
+
+
+def unarchive_session(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    correlation_id: str | None = None,
+) -> ReviewSession:
+    """Flip ``archived → draft`` — restore an archived session to the
+    active lobby. Raises ``LifecycleError`` if not archived."""
+    if review_session.status != SessionStatus.archived.value:
+        raise LifecycleError(
+            f"Session is {review_session.status}, can only unarchive from "
+            "archived",
+            code="not_archived",
+        )
+    review_session.status = SessionStatus.draft.value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session.unarchived",
+        summary=f"Session {review_session.code} unarchived",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.changes({"status": ["archived", "draft"]}),
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    db.refresh(review_session)
+    return review_session
+
+
 # --------------------------------------------------------------------------- #
 # Per-instrument controls
 # --------------------------------------------------------------------------- #
@@ -594,6 +659,8 @@ __all__ = [
     "invalidate_session",
     "activate_session",
     "revert_session_to_draft",
+    "archive_session",
+    "unarchive_session",
     "open_instrument",
     "close_instrument",
     "set_responses_visible_when_closed",
