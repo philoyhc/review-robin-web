@@ -638,7 +638,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13C, 13F (PRs 3-5), 14A, 14B, 14C, 17B,
-18A, 18C, 18D, 19, 20, 21**. No global ordering
+18A, 18C, 18D, 18E, 19, 20, 21**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -778,6 +778,17 @@ bottom of this file.
   Part 4 (Zip-all) are unblocked today.
   **Plan:** `guide/segment_18D_export_and_import_update.md`.
 
+- **18E — Small enhancements** *(stub created 2026-05-17)*.
+  A holding pen for small, self-contained operator-surface
+  enhancements — each one a single small PR, landed
+  independently; items accumulate as they surface. **Part 1:**
+  reuse the 18A Part 2 tag-filter chip mechanism on the
+  Reviewers / Reviewees / Relationships Setup pages — clickable
+  column chips that show / hide preview-table columns, off the
+  column-presence readout the info cards already render. Pure
+  client-side, no schema.
+  **Plan:** `guide/segment_18E_small_enhancements.md`.
+
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
   Periodic spec-hygiene sweeps on `spec/` — initial
   coverage-gap closure for Tier-1 specs flagged in
@@ -830,7 +841,7 @@ bottom of this file.
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 3-5), 14A, 17B, 18A,
-  18C, 18D, 19, 20, 21** are independent of the email +
+  18C, 18D, 18E, 19, 20, 21** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
   13C's re-scoped 3-PR ladder (2026-05-15) needs no rule-engine
