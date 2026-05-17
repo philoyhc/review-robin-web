@@ -736,21 +736,24 @@ bottom of this file.
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
 - **18A — Sessions lobby enhancements** *(stubs created
-  2026-05-11; consolidated 2026-05-15)*. Three Sessions-lobby
-  items: **session cloning** (one-click clone of an existing
-  session's setup — reviewers / reviewees / relationships /
-  instruments / RTDs / RuleSets / email-template overrides /
-  settings — into a new session, without responses, audit
-  history, or runtime state), **session tagging / grouping**
-  (free-form per-session tags surfaced as filterable lobby
-  chips), and **session archiving** (the `closed → archived`
-  lifecycle transition lighting up the reserved `archived`
-  state). Consolidated from the former 18A (cloning) + 18B
-  (tagging + archiving) stubs; **18B is retired** as a
-  segment number. Cloning lands more cleanly after 15C
-  (library auto-copy precedent) and 15B (per-instrument
-  RuleSet pointers); tagging wants `session_tags` from 13F
-  PR 3.
+  2026-05-11; consolidated 2026-05-15; in flight 2026-05-17)*.
+  **Small enhancements shipped** (sessions quality-of-life,
+  2026-05-17): the lobby select-all header checkbox (#1080),
+  multi-paragraph session descriptions (#1082), and the Session
+  Details card refresh (#1083). **Three big Parts remain:**
+  **session cloning** — two modes: A "duplicate all except
+  responses" (full setup incl. roster) and B "duplicate all
+  except responses, reviewers, reviewees, relationships"
+  (configuration shell only) — into a new `draft` session,
+  without responses / audit history / runtime state; **session
+  tagging / grouping** (free-form per-session tags surfaced as
+  filterable lobby chips); and **session archiving** (the
+  `closed → archived` lifecycle transition lighting up the
+  reserved `archived` state). Consolidated from the former 18A
+  (cloning) + 18B (tagging + archiving) stubs; **18B is retired**
+  as a segment number. Cloning lands more cleanly after 15C
+  (library auto-copy precedent) and 15B (per-instrument RuleSet
+  pointers); tagging wants `session_tags` from 13F PR 3.
   **Plan:** `guide/segment_18A_sessions_lobby_enhancements.md`.
 
 - **18C — Retention / deletion workflow** *(stub created
