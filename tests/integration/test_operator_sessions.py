@@ -301,6 +301,31 @@ def test_lobby_renders_real_session_tags(
     assert "HSH1000" not in body
 
 
+def test_lobby_tag_filter_strip_is_interactive(
+    client: TestClient, db: Session
+) -> None:
+    """The tag-filter strip ships clickable chips, an AND/OR mode
+    chip, and a clear chip; each row carries its tag set for the
+    client-side filter."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Filterable", "code": "filter-1"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "filter-1")
+    ).scalar_one()
+    db.add(SessionTag(session_id=review_session.id, tag="pilot"))
+    db.commit()
+
+    body = client.get("/operator/sessions").text
+    assert 'data-tag-chip="pilot"' in body
+    assert "data-tag-mode" in body
+    assert "data-tag-clear" in body
+    assert "data-tags=" in body
+    assert 'class="sessions-no-match"' in body
+
+
 def test_lobby_renders_no_tags_state(client: TestClient) -> None:
     """A session with no tags shows a muted 'No tags', and the filter
     strip is hidden when the operator has no tags at all."""

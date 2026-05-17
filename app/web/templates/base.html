@@ -1358,6 +1358,19 @@
       body.ui-v2 .pill.pill-tag-clear {
         background: var(--bg-muted);
         color: var(--text-primary);
+        cursor: pointer;
+      }
+      /* Tag-filter chips — clickable; the selected ones flip to a
+         filled accent so the active filter set reads at a glance. */
+      body.ui-v2 .tag-chip { cursor: pointer; }
+      body.ui-v2 .tag-chip.is-selected {
+        background: var(--accent-blue);
+        color: #fff;
+      }
+      body.ui-v2 .pill.tag-mode-chip {
+        background: var(--bg-muted);
+        color: var(--text-primary);
+        cursor: pointer;
       }
       /* Sessions-lobby Danger Zone card — right-aligned and
          width-matched to the Search card: half the row minus half
