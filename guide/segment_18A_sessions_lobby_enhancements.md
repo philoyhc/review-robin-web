@@ -79,6 +79,13 @@ opportunistically as the segment opens:
   display instead of collapsing to whitespace. No input change,
   no new dependency. Richer formatting (markdown / WYSIWYG) stays
   deferred — see the rich-text note under Working notes.
+- **Session Details card refresh** — *shipped.* The Session Home
+  Session Details card drops its "Session Details" heading: the
+  card `<h2>` is the session name (the session code trails it
+  inline in body-text font), the description sits unlabelled
+  directly below, and the metadata moves into a three-column
+  labelled grid — Created by / Help contact · Created / Modified
+  · Deadline / Timezone. See `spec/session_home.md`.
 
 ### Part 1 — Session cloning
 

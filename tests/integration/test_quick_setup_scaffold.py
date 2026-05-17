@@ -329,7 +329,9 @@ def test_quick_setup_card_lives_in_right_column_above_extract_data(
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     workflow_pos = body.find('id="next-action"')
-    session_details_pos = body.find("<h2>Session Details</h2>")
+    # The Session Details card's H2 is the session name; its
+    # code span is the stable anchor.
+    session_details_pos = body.find('class="session-detail-code')
     danger_zone_pos = body.find('id="danger-zone"')
     quick_setup_pos = body.find('id="quick-setup"')
     extract_data_pos = body.find('id="extract-data"')
