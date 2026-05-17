@@ -442,12 +442,12 @@ def test_apply_force_applies_display_timezone_and_self_reviews(
     assert review_session.self_reviews_active is False
 
 
-def test_apply_accepts_library_name_provenance_cells(
-    db: Session,
-) -> None:
-    """The export-only `…library_name` provenance cells are
-    recognised and skipped by the importer (not rejected as an
-    unknown attribute), so an export → re-import round-trip holds."""
+def test_apply_library_name_cells_always_clone(db: Session) -> None:
+    """18D import part — the `…library_name` provenance cells are
+    recognised and skipped (not rejected), and the imported RTD is
+    **always a standalone clone**: `library_origin_id` stays NULL,
+    never linked to a destination-operator library entry. The
+    link-vs-clone decision (2026-05-17) is always-clone."""
 
     review_session = _bare_session(db, code="libname")
     rows = [
@@ -456,6 +456,14 @@ def test_apply_accepts_library_name_provenance_cells(
     ]
     result = apply_session_config(db, review_session, rows)
     assert result.ok, result.errors
+
+    rtd = db.execute(
+        select(ResponseTypeDefinition).where(
+            ResponseTypeDefinition.session_id == review_session.id,
+            ResponseTypeDefinition.response_type == "GPA4",
+        )
+    ).scalar_one()
+    assert rtd.library_origin_id is None
 
 
 def test_apply_replaces_email_overrides_wholesale(db: Session) -> None:
