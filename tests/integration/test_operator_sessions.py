@@ -257,10 +257,11 @@ def test_sessions_list_renders_inline_expander_fragments(
     assert 'id="single-session-expander"' in body
     assert 'id="bulk-expander"' in body
     # Single-session expander hosts the per-session action placeholders
-    # plus the Name / Code / Deadline edit boxes.
+    # plus the Name / Code / Deadline / Tags edit boxes.
     assert 'data-expander-field="name"' in body
     assert 'data-expander-field="code"' in body
     assert 'data-expander-field="deadline"' in body
+    assert 'data-expander-field="tags"' in body
     # Bulk expander hosts the bulk actions + selection-management.
     assert "data-expander-clear-all" in body
     assert "data-expander-clear-others" in body
