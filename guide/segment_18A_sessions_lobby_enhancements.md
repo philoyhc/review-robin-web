@@ -178,10 +178,23 @@ back through the table:
   the single-session expander under it — a quick "I over-selected;
   just keep this one" path.
 
-**"Add new" stays fixed.** Creating a session is not
-session-scoped, so it does not belong in any expander — it
-remains a standalone affordance above the table (a single button
-where the Actions card sits today).
+**Repurposing the Actions card.** Once the per-row expanders host
+every session-scoped action, the standing **Actions card** above
+the table no longer needs its button cluster. Rather than delete
+it, repurpose it as the lobby's **search + create** strip:
+
+- A **search box** — case-insensitive substring match against
+  session name / code / tags, filtering the table rows. (This
+  promotes the former Post-MVP "Lobby search bar" item into the
+  segment proper.) Whether the filter is client-side over
+  rendered rows or a server `?q=` round-trip is a scoping
+  decision — client-side is consistent with the tag-filter chips
+  and needs no route change while the lobby isn't paginated.
+- The **"Add new" button** — the one genuinely global,
+  non-session-scoped affordance — stays here alongside search.
+
+So the transition is: action *buttons* migrate into the inline
+expanders; the Actions card becomes the search-and-create card.
 
 **Why this works.** Selection count is a clean discriminator:
 one-vs-many maps exactly onto single-session-vs-bulk action
@@ -337,10 +350,35 @@ Likely shape:
 - **No data deletion.** Archived sessions retain every reviewer /
   reviewee / response / audit row. The archive bucket is a UI
   filter, not a retention mechanism (that's 18C).
-- Sessions lobby gains a "Show archived" toggle / filter (off by
-  default — the default view hides archived rows).
-- Per-row "Archive" affordance on closed sessions; per-row
-  "Restore" on archived ones.
+- **Archived sessions live on a separate child page, not in the
+  main lobby table.** The main `/operator/sessions` table shows
+  only non-archived sessions; archiving a session removes it from
+  that table entirely. A child page — e.g.
+  `/operator/sessions/archived` — hosts a **separate table** of
+  the operator's archived sessions, reached by a link from the
+  main lobby (decide placement at scoping — likely near the
+  Sessions-lobby stats card, where the "archived" count pill
+  already sits).
+- **The archived page is a pared-down mirror of the lobby:**
+  - An **info card** with the archived sessions' **tag chips**
+    (the same chip vocabulary as the main lobby's tag-filter
+    strip, scoped to archived sessions).
+  - An **Actions card** hosting **search** over the archived
+    table (name / code / tags) — no "Add new" here, since you
+    cannot create a session directly into the archived bucket.
+  - The same inline row-expander mechanism, but **bulk-only and
+    archived-specific**: archived sessions need no
+    rename / clone / re-deadline affordance. Selecting one or
+    more archived rows opens a bulk expander offering
+    **Unarchive**, **Download**, and **Delete** on the selected
+    archived sessions. There is no single-session expander on
+    this page — the expander is the bulk expander regardless of
+    selection count (one or many).
+  - `Unarchive` is the `archived → closed` inverse transition;
+    `Download` exports the selected sessions (extract / bundle —
+    align with 18D's zip-bundle work); `Delete` is the existing
+    destructive delete, carrying its confirm checkbox into the
+    expander as on the main lobby.
 - Audit-event registrations: `session.archived` /
   `session.unarchived` (`changes` envelope on the status column).
 
@@ -355,8 +393,6 @@ Deferred — confirm need with pilot feedback before scoping:
   and the audit-event payload widens to include both actor +
   target operator IDs. Depends on **16B** (operator role
   delegation surface — shipped).
-- **Lobby search bar.** Case-insensitive substring match against
-  session name + session code + tags.
 - **Auto-archive on deadline + N days.** A scheduled job (or the
   lazy deadline-close hook per `spec/lifecycle.md` "lazy
   deadline-close") flips a session `closed → archived` after a
@@ -399,9 +435,12 @@ When parts ship:
 
 - `docs/status.md` timeline entry per Part.
 - `guide/todo_master.md` updated.
-- `spec/sessions_overview.md` — Sessions lobby gains the per-row
-  Clone affordance, the tag filter strip, the "Show archived"
-  toggle, and (post-MVP) the search bar.
+- `spec/sessions_overview.md` — Sessions lobby gains the inline
+  row-expander action surface, the repurposed Actions card
+  (search + "Add new"), the tag filter strip, and a link to the
+  separate archived-sessions child page; the archived page (its
+  table, info card, Actions card, and bulk-only expander) gets
+  its own section or sibling spec.
 - `spec/session_home.md` — Session Home gains the clone surface
   if it lives there, and the Add / Remove tag affordance.
 - `spec/lifecycle.md` §44 — the `archived` row flips from
