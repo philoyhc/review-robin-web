@@ -17,6 +17,7 @@ from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
 from app.services import date_formatting
 from app.services import session_clone
+from app.services import session_purge
 from app.services import sessions
 from app.services import session_lifecycle as lifecycle
 from app.services import session_tags
@@ -358,15 +359,18 @@ def clone_session_submit(
 @router.post("/sessions/archive-selected")
 def sessions_archive_selected(
     session_ids: list[int] = Form(default=[]),
+    purge: list[str] = Form(default=[]),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Archive the ticked sessions — backs the single-session expander
-    Archive and the bulk Archive all.
+    """Purge-and-archive the ticked sessions — backs the expander's
+    "Purge and archive" action.
 
     Filters server-side to caller-owned ``draft`` sessions; anything
-    not in draft is silently skipped (archiving is draft-only). No
-    confirm gate — archiving is reversible and deletes no data.
+    not in draft is silently skipped (archiving is draft-only). With
+    no ``purge`` values this is a plain archive. Any of
+    ``responses`` / ``rosters`` / ``audit_log`` runs that purge first,
+    in audit-log → responses → rosters order, then archives.
     """
     correlation_id = request_correlation_id()
     for session_id in session_ids:
@@ -375,6 +379,21 @@ def sessions_archive_selected(
             continue
         if not lifecycle.is_draft(review_session):
             continue
+        if "audit_log" in purge:
+            session_purge.purge_audit_log(
+                db, review_session=review_session, user=user,
+                correlation_id=correlation_id,
+            )
+        if "responses" in purge:
+            session_purge.purge_responses(
+                db, review_session=review_session, user=user,
+                correlation_id=correlation_id,
+            )
+        if "rosters" in purge:
+            session_purge.purge_rosters(
+                db, review_session=review_session, user=user,
+                correlation_id=correlation_id,
+            )
         lifecycle.archive_session(
             db,
             review_session=review_session,

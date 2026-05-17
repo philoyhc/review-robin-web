@@ -351,6 +351,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 18A Part 3 — session archiving (draft ⇄ archived).
     "session.archived": EventSchema(_IDENTITY | {"changes"}),
     "session.unarchived": EventSchema(_IDENTITY | {"changes"}),
+    # Segment 18C — operator-triggered selective purge.
+    "session.responses_purged": EventSchema(_IDENTITY | {"counts"}),
+    "session.rosters_purged": EventSchema(_IDENTITY | {"counts"}),
+    "session.audit_log_purged": EventSchema(_IDENTITY | {"counts"}),
     # Segment 18A Part 2 — session tagging. The added / removed tag
     # string rides in ``context.tag``.
     "session.tag_added": EventSchema(_IDENTITY | {"context"}),
