@@ -208,16 +208,16 @@ def test_delete_session_with_email_outbox_rows_succeeds(
 
 
 # ---------------------------------------------------------------------------
-# Bulk delete via the Danger Zone card on /operator/sessions
+# Bulk delete via the inline row expander on /operator/sessions
 # ---------------------------------------------------------------------------
 
 
-def test_sessions_list_renders_danger_zone_with_delete_form(
+def test_sessions_list_delete_lives_in_the_expander(
     client: TestClient,
 ) -> None:
-    """When at least one session exists, the sessions list renders a
-    Danger Zone card in the bottom-right with a confirm checkbox and a
-    submit button posting to /operator/sessions/delete-selected."""
+    """The standalone Danger Zone card is retired — delete now lives in
+    the inline row expander: an Allow-delete confirm checkbox plus a
+    Delete button posting the ticked session_ids to delete-selected."""
 
     client.post(
         "/operator/sessions",
@@ -226,11 +226,10 @@ def test_sessions_list_renders_danger_zone_with_delete_form(
     )
 
     body = client.get("/operator/sessions").text
-    assert 'id="sessions-list-danger-zone"' in body
-    assert 'action="/operator/sessions/delete-selected"' in body
-    assert 'name="session_ids"' in body
-    assert 'name="confirm"' in body
-    assert "Delete selected sessions" in body
+    assert 'id="sessions-list-danger-zone"' not in body
+    assert "data-expander-allow-delete" in body
+    assert "data-expander-delete" in body
+    assert 'formaction="/operator/sessions/delete-selected"' in body
 
 
 def test_sessions_list_renders_select_all_header_checkbox(
@@ -486,6 +485,52 @@ def test_archive_selected_skips_non_draft(
 
     db.expire_all()
     assert db.get(ReviewSession, session_id).status == "ready"
+
+
+def test_lobby_search_card_has_go_to_archive(client: TestClient) -> None:
+    """The Search card carries a 'Go to Archive' link to the archived
+    sessions child page."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Anchor", "code": "goarch"},
+        follow_redirects=False,
+    )
+
+    body = client.get("/operator/sessions").text
+    assert 'href="/operator/sessions/archived"' in body
+    assert "Go to Archive" in body
+
+
+def test_archived_page_lists_archived_sessions(
+    client: TestClient, db: Session
+) -> None:
+    """The archived-sessions child page lists the operator's archived
+    sessions; a draft stays off it."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Filed Away", "code": "arch-page"},
+        follow_redirects=False,
+    )
+    client.post(
+        "/operator/sessions",
+        data={"name": "Still Active", "code": "active-page"},
+        follow_redirects=False,
+    )
+    archived_id = db.execute(
+        select(ReviewSession.id).where(ReviewSession.code == "arch-page")
+    ).scalar_one()
+    client.post(
+        "/operator/sessions/archive-selected",
+        data={"session_ids": [archived_id]},
+        follow_redirects=False,
+    )
+
+    response = client.get("/operator/sessions/archived")
+    assert response.status_code == 200
+    body = response.text
+    assert "Archived sessions" in body
+    assert "Filed Away" in body
+    assert "Still Active" not in body
 
 
 def test_lobby_search_box_is_wired(client: TestClient) -> None:
