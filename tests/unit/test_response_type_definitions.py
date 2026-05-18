@@ -5,7 +5,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    Assignment,
     InstrumentResponseField,
+    Response,
+    Reviewee,
+    Reviewer,
     ResponseTypeDefinition,
     ReviewSession,
     User,
@@ -516,6 +520,97 @@ def test_delete_rtd_not_in_use_drops_immediately(db: Session) -> None:
         )
     ).scalar_one_or_none()
     assert remaining is None
+
+
+def test_delete_rtd_in_use_with_saved_responses_cascades(
+    db: Session,
+) -> None:
+    """Deleting a confirmed in-use RTD whose fields carry saved
+    `Response` rows succeeds — the dependent responses are cleared
+    before the delete. Regression: `responses.response_field_id`
+    has no `ON DELETE CASCADE`, so the DB cascade alone would abort
+    on a foreign-key violation."""
+    user = _user(db)
+    review = _session(db, user, code="rtd-del-responses")
+    instrument = ensure_default_instrument(db, review)
+
+    custom = add_response_type_definition(
+        db,
+        review_session=review,
+        response_type="Scored",
+        data_type="Integer",
+        min=0,
+        max=5,
+        step=1,
+        list_csv=None,
+        actor=user,
+    )
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one()
+    rating.response_type_id = custom.id
+    rating_id = rating.id
+
+    reviewer = Reviewer(
+        session_id=review.id, name="R", email="r@example.edu"
+    )
+    reviewee = Reviewee(
+        session_id=review.id, name="E", email_or_identifier="e@example.edu"
+    )
+    db.add_all([reviewer, reviewee])
+    db.flush()
+    assignment = Assignment(
+        session_id=review.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+        include=True,
+        created_by_mode="manual",
+    )
+    db.add(assignment)
+    db.flush()
+    response = Response(
+        assignment_id=assignment.id,
+        response_field_id=rating_id,
+        value="3",
+    )
+    db.add(response)
+    db.commit()
+
+    custom_id = custom.id
+    dependents = delete_response_type_definition(
+        db, rtd=custom, confirm=True, actor=user
+    )
+    assert dependents["response_count"] == 1
+
+    # Re-query the DB rather than trusting the identity map — the
+    # response-field row is removed by the DB cascade, not the ORM.
+    db.expire_all()
+    assert (
+        db.execute(
+            select(ResponseTypeDefinition).where(
+                ResponseTypeDefinition.id == custom_id
+            )
+        ).scalar_one_or_none()
+        is None
+    )
+    assert (
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.id == rating_id
+            )
+        ).scalar_one_or_none()
+        is None
+    )
+    assert (
+        db.execute(
+            select(Response).where(Response.response_field_id == rating_id)
+        ).scalar_one_or_none()
+        is None
+    )
 
 
 def test_delete_rtd_in_use_without_confirm_raises_with_dependent_counts(
