@@ -156,6 +156,104 @@ Segment 14A: Production hardening pass
 
 ---
 
+## 4.1 Implementation PR ladder (planned 2026-05-18)
+
+### Scoping decisions
+
+Three decisions narrowed the segment from the full §5 list:
+
+1. **Type migrations deferred.** The §3.1 inherited Postgres
+   type migrations — JSON→`JSONB`, `String(36)`→`UUID`,
+   `String`→DB `ENUM` — are *all* deferred out of 14A to a
+   future DB-performance pass. The §5.5 index review therefore
+   adds plain B-tree indexes only — no `JSONB` GIN indexes.
+2. **CSRF — document, don't tokenise.** No anti-CSRF token
+   machinery. Azure Easy Auth + same-site session cookies is
+   the standing mitigation; the dependence is written up in
+   the security-posture note (PR 6) rather than coded around.
+3. **Azure infra is out of the ladder.** Key Vault references,
+   VNet / private endpoints, the staging slot, the Application
+   Insights *resource*, and the migration-approval deploy gate
+   need the Azure portal and are not agent-implementable. They
+   are documented as deployment prerequisites in the runbook
+   (PR 6), not built here. Structured logging itself (PR 1)
+   *is* in scope and is App-Insights-ingestible once the
+   resource exists.
+
+So 14A as laddered here is the **pure in-app hardening**:
+logging, error handling, indexes, permission / destructive-
+action review, accessibility, and the config + runbook
+documentation. §3.1, §3.2 and §5.1 (deployment-slot work) are
+out; §5.9 folds into PR 6's docs.
+
+### PRs
+
+Independent — no ordering constraint — each PR-sized.
+
+**PR 1 — Structured logging + observability (§5.3).** A
+structured-logging setup (JSON-shaped records, level from
+config) with explicit log lines at the §5.3 points — session
+activation, import failures, permission denials,
+retention / deletion actions, reviewer-save / export failures.
+Keeps the three streams distinct: application logs vs
+`audit_events` vs user-facing validation messages. No App
+Insights resource wiring (infra); the records are structured
+so ingestion is a later config-only step.
+
+**PR 2 — Error handling (§5.4).** A global exception handler in
+`app/main.py` that renders a friendly error page and never
+leaks a traceback, plus specific handling for the §5.4 cases —
+unauthorized, session-not-found, invalid / expired invitation
+link, validation / save / export failure. Closes the
+assessment's "sparse boundary error handling — raw 500s"
+weakness. New `error.html` template (status-specific variants).
+
+**PR 3 — Database indexes (§5.5).** Review the common query
+paths (sessions-for-operator, reviewers / reviewees by session,
+assignments by reviewer / session, responses by assignment,
+monitoring counts, audit events by session / date); add the
+missing B-tree indexes in one migration, each with a one-line
+rationale. Cross-dialect — no Postgres-only index types (those
+wait on the deferred type migrations).
+
+**PR 4 — Permission + destructive-action review (§5.6 + §5.7).**
+Audit every operator / reviewer / sys-admin / export /
+retention route's permission dependency; add explicit
+denial-path tests for the load-bearing ones. Confirm each
+destructive action (delete responses, close / reopen session,
+replace rosters / assignments, delete instrument, purge,
+revoke link) carries confirm + permission + audit + a clear
+warning; fix any gap found. Largely a verification +
+test-writing PR — the assessment already read the auth gating
+as clean.
+
+**PR 5 — Accessibility pass (§5.8).** A basic pass — keyboard
+navigation, visible focus state, form-field labels, contrast,
+error-message-to-field association — focused on the reviewer
+response table. Not a full WCAG audit.
+
+**PR 6 — Config hardening + runbooks + docs (§5.2, §5.9,
+§5.10).** Startup checks that fail fast on missing critical
+settings in non-local environments; document every required
+environment variable. Then the documentation set: operator
+runbook, deployment guide (with the deferred Azure-infra
+prerequisites spelled out), troubleshooting guide,
+backup / restore note, known-limitations page, data-retention
+note, and the **security / compliance posture note** — which
+records the Easy-Auth trust model, the CSRF posture
+(decision 2), the `ALLOW_FAKE_AUTH` gating, and the deferred
+infra items.
+
+### Success-criteria coverage
+
+The ladder satisfies 14A success criteria **1–3, 5–12**.
+**#4 (Application Insights configured)** is the one criterion
+the in-app ladder cannot meet — it needs the Azure resource
+and is documented as a deployment prerequisite in PR 6's
+runbook.
+
+---
+
 ## 5. Hardening areas
 
 ## 5.1 Deployment hardening
