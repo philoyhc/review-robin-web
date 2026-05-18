@@ -77,4 +77,35 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
+class ConfigurationError(RuntimeError):
+    """A critical setting is missing or unsafe for a deployed
+    (non-local) environment. Raised at startup so a misconfigured
+    deploy fails fast rather than surfacing as a confusing runtime
+    symptom later."""
+
+
+def validate_critical_settings(s: "Settings") -> None:
+    """Fail-fast guard, run from ``create_app`` before the app
+    accepts traffic. A no-op when ``app_env == "local"`` — the
+    checks below only matter for a deployed environment.
+
+    Segment 14A PR 6a. The check set is deliberately minimal; see
+    ``docs/security_posture.md`` for the settings that are guarded
+    elsewhere (e.g. ``allow_fake_auth`` via the auth layer).
+    """
+    if s.app_env == "local":
+        return
+    problems: list[str] = []
+    if not s.operator_emails and not s.sys_admin_emails:
+        problems.append(
+            "operator_emails and sys_admin_emails are both empty — "
+            "no one could sign in to this environment"
+        )
+    if problems:
+        raise ConfigurationError(
+            f"Critical configuration problem(s) for app_env={s.app_env!r}: "
+            + "; ".join(problems)
+        )
+
+
 settings = Settings()
