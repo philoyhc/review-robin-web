@@ -80,6 +80,16 @@ A RuleSet is an ordered list of Rules together with a top-level **combinator**. 
 
 Filter and Match rules are defined as predicates over a candidate pair `(r, e)`. The vocabulary uses two address spaces: `reviewer.*` and `reviewee.*`. The available fields are `email`, `tag1`, `tag2`, `tag3`.
 
+> **Planned addition (13C-era).** A third address space,
+> `pair.*` — the per-`(reviewer, reviewee)` relationship tags
+> `tag1` / `tag2` / `tag3` from the `relationships` table — is
+> planned, so a rule can cluster pairs on pair-context. The Rule
+> Builder field selector (§7.2) already orders pair-context tags
+> after reviewee tags in anticipation. Adding it requires the
+> engine to read relationship rows at evaluation time and
+> assumes relationships are imported before generation —
+> confirm scope before implementing.
+
 | Operator | Operand | Meaning |
 |---|---|---|
 | `equals` / `not_equals` | literal or field | Direct comparison. Compare to a literal (`"Group01"`) or to another field (`reviewee.tag1`). |
@@ -375,6 +385,8 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 ### 7.2 Predicate editor
 
 Inside the Rule Builder card's editable branches, each rule row is an indented inline-composite form: an `enabled` checkbox + a kind selector + a field/operator/operand picker (or quota controls for `QUOTA`, or a child rule list for `COMPOSITE`). Field, operator, and operand pickers are populated from the schema's vocabulary (§4.4); they aren't tied to the loaded populations' actual values — populations may not yet exist when the RuleSet is authored. (A future enhancement could populate operand suggestions from the live populations once present.)
+
+**Field-selector ordering.** The predicate's **field** picker — the selector immediately after the rule-kind (include / exclude) selector — lists the **reviewee tags** first, then the **pair-context tags**, and **omits the reviewer tags**. Reviewer-side fields are reached as **operands** (the picker after the operator) via the `same_as` / `different_from` cross-side operators. This is deliberate: anchoring the predicate's field on the reviewee or pair-context side means nearly every rule keeps a reviewee or pair-context tag "in play" — which is exactly what a group-scoped instrument's tag-composed identity needs to name the group (see `spec/group_scoped_instruments.md` "Composing the group identity"). A rule like "reviewer and reviewee share tag1" is authored as `reviewee.tag1 same_as reviewer.tag1` rather than the reviewer-first form — the two are equivalent, but the reviewee-first field keeps the reviewee tag visible to the identity composer. (Pair-context tags appear in the field selector once the §4.4 `pair.*` address space lands; until then the selector is reviewee-tags-only with reviewer tags omitted.)
 
 ### 7.3 Save / Save-As / Delete
 
