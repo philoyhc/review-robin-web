@@ -72,65 +72,21 @@ live in **14C**, not here.
 
 ---
 
-## 3.1 Inherited from Segment 4A
+## 3.1 Deferred infrastructure & platform debt
 
-Segment 4 (per `guide/archive/segment_04A.md`) deliberately used cross-dialect column
-types so the same migration runs on SQLite (tests) and PostgreSQL (deployed).
-The following Postgres-specific optimizations were deferred here:
+The inherited Segment 4A / 5A debt — **Azure infrastructure**
+(Key Vault references, VNet / private endpoints, the staging
+slot, Application Insights, the migration-on-deploy safety
+gate) and the **Postgres platform migrations** (JSON→`JSONB`,
+`String(36)`→`UUID`, DB `ENUM`s, Postgres-specific indexes),
+plus a couple of non-infra inherited items (CSS extraction,
+first-time-user auditing) — is **out of 14A's PR ladder**. It
+is captured in **`guide/deferred_infra.md`**.
 
-- **Migrate JSON columns to `JSONB`.** `AuditEvent.detail` and any other
-  JSON columns introduced in later segments should be moved to `JSONB` for
-  indexing and operator-friendly queries. Postgres-only migration; tests
-  continue to run on SQLite using `JSON`.
-- **Migrate string-UUID columns to native `UUID`.** Where Segment 4 used
-  `String(36)` for UUID-shaped columns, swap to Postgres `UUID` for storage
-  efficiency and constraint correctness. Add explicit casting in
-  application code if needed.
-- **Add a Postgres-against-Docker CI job.** Segment 4's `ci.yml` runs
-  `pytest` against SQLite. Add a parallel job that spins up a Postgres
-  service container (GitHub Actions `services:` block) and runs the test
-  suite against it, so dialect drift is caught in CI rather than on
-  deploy. *(Largely shipped — the `ci-postgres` workflow runs the full
-  pytest suite against `postgres:16`; remaining hardening lives here.)*
-- **Review and add Postgres-specific indexes.** GIN indexes on `JSONB`
-  columns where queried; partial indexes for frequently-filtered subsets;
-  expression indexes if any.
-- **Consider DB-level enums.** Where Segment 4 used `String` + Python enum
-  validation (e.g. `AuditEvent.event_type`, `AuditEvent.severity`), decide
-  per column whether a Postgres `ENUM` type is worth the migration cost.
-
-These items belong in this segment because they only matter once the app is
-heading toward a real internal pilot.
-
----
-
-## 3.2 Inherited from Segment 5A
-
-Segment 5 (per `guide/archive/segment_05A.md`) provisioned dev Postgres with the
-simplest acceptable infrastructure choices. The following hardening items
-were deferred here:
-
-- **Move `DATABASE_URL` (and any other secrets) to Key Vault references.**
-  Segment 5A stored the connection string as a plain App Service App
-  Setting and as a GitHub Actions secret. For staging/production, switch
-  the App Setting to a Key Vault reference and assign the App Service a
-  managed identity with `Get` permissions on the relevant secrets.
-- **VNet integration / private endpoints for Azure Postgres.** Segment 5
-  used public access with firewall rules. For staging/production, put the
-  database behind a private endpoint, integrate the App Service into the
-  VNet, and remove "Allow Azure services" plus the developer-IP firewall
-  rules.
-- **Migration-on-deploy safety controls.** Segment 5A's migrate-on-deploy
-  step fails the workflow if migration fails, but does not gate
-  destructive migrations. Add: a manual-approval gate for staging/production
-  deploys, a "long migration" detector, and a documented rollback playbook.
-- **CSS extraction and design pass.** Segment 5A used inline `<style>`
-  blocks in `base.html`. Extract to static assets, decide on a design
-  language, and migrate `me_debug.html` to extend `base.html`.
-- **First-time-user creation auditing.** Segment 5A creates a `User` row
-  on first sign-in without writing an audit event. Decide whether
-  first-sign-in deserves its own audit event, or whether the
-  Easy-Auth-side sign-in record is sufficient.
+14A's runbook (PR 6) documents the Azure items as deployment
+prerequisites; the index review (§5.5) adds cross-dialect
+B-tree indexes only, leaving the Postgres-specific index types
+to the deferred platform pass.
 
 ---
 
@@ -153,6 +109,105 @@ Suggested umbrella PR title:
 ```text
 Segment 14A: Production hardening pass
 ```
+
+---
+
+## 4.1 Implementation PR ladder (planned 2026-05-18)
+
+### Scoping decisions
+
+Three decisions narrowed the segment from the full §5 list:
+
+1. **Type migrations deferred.** The inherited Postgres type
+   migrations — JSON→`JSONB`, `String(36)`→`UUID`, `String`→DB
+   `ENUM` — are *all* deferred out of 14A to
+   `guide/deferred_infra.md`. The §5.5 index review therefore
+   adds plain B-tree indexes only — no `JSONB` GIN indexes.
+2. **CSRF — document, don't tokenise.** No anti-CSRF token
+   machinery. Azure Easy Auth + same-site session cookies is
+   the standing mitigation; the dependence is written up in
+   the security-posture note (PR 6) rather than coded around.
+3. **Azure infra is out of the ladder.** Key Vault references,
+   VNet / private endpoints, the staging slot, the Application
+   Insights *resource*, and the migration-approval deploy gate
+   need the Azure portal and are not agent-implementable. They
+   are documented as deployment prerequisites in the runbook
+   (PR 6), not built here. Structured logging itself (PR 1)
+   *is* in scope and is App-Insights-ingestible once the
+   resource exists.
+
+So 14A as laddered here is the **pure in-app hardening**:
+logging, error handling, indexes, permission / destructive-
+action review, accessibility, and the config + runbook
+documentation. The deferred infrastructure + platform debt
+(§3.1) and §5.1's deployment-slot work are out — see
+`guide/deferred_infra.md`; §5.9 folds into PR 6's docs.
+
+### PRs
+
+Independent — no ordering constraint — each PR-sized.
+
+**PR 1 — Structured logging + observability (§5.3).** A
+structured-logging setup (JSON-shaped records, level from
+config) with explicit log lines at the §5.3 points — session
+activation, import failures, permission denials,
+retention / deletion actions, reviewer-save / export failures.
+Keeps the three streams distinct: application logs vs
+`audit_events` vs user-facing validation messages. No App
+Insights resource wiring (infra); the records are structured
+so ingestion is a later config-only step.
+
+**PR 2 — Error handling (§5.4).** A global exception handler in
+`app/main.py` that renders a friendly error page and never
+leaks a traceback, plus specific handling for the §5.4 cases —
+unauthorized, session-not-found, invalid / expired invitation
+link, validation / save / export failure. Closes the
+assessment's "sparse boundary error handling — raw 500s"
+weakness. New `error.html` template (status-specific variants).
+
+**PR 3 — Database indexes (§5.5).** Review the common query
+paths (sessions-for-operator, reviewers / reviewees by session,
+assignments by reviewer / session, responses by assignment,
+monitoring counts, audit events by session / date); add the
+missing B-tree indexes in one migration, each with a one-line
+rationale. Cross-dialect — no Postgres-only index types (those
+wait on the deferred type migrations).
+
+**PR 4 — Permission + destructive-action review (§5.6 + §5.7).**
+Audit every operator / reviewer / sys-admin / export /
+retention route's permission dependency; add explicit
+denial-path tests for the load-bearing ones. Confirm each
+destructive action (delete responses, close / reopen session,
+replace rosters / assignments, delete instrument, purge,
+revoke link) carries confirm + permission + audit + a clear
+warning; fix any gap found. Largely a verification +
+test-writing PR — the assessment already read the auth gating
+as clean.
+
+**PR 5 — Accessibility pass (§5.8).** A basic pass — keyboard
+navigation, visible focus state, form-field labels, contrast,
+error-message-to-field association — focused on the reviewer
+response table. Not a full WCAG audit.
+
+**PR 6 — Config hardening + runbooks + docs (§5.2, §5.9,
+§5.10).** Startup checks that fail fast on missing critical
+settings in non-local environments; document every required
+environment variable. Then the documentation set: operator
+runbook, deployment guide (with the deferred Azure-infra
+prerequisites spelled out), troubleshooting guide,
+backup / restore note, known-limitations page, data-retention
+note, and the **security / compliance posture note** — which
+records the Easy-Auth trust model, the CSRF posture
+(decision 2), the `ALLOW_FAKE_AUTH` gating, and the deferred
+infra items.
+
+### Success-criteria coverage
+
+The ladder satisfies 14A success criteria **1–3, 5–12**.
+**#4 (Application Insights configured)** is the one criterion
+the in-app ladder cannot meet — it needs the Azure resource
+and is documented as a deployment prerequisite in PR 6's
+runbook.
 
 ---
 
