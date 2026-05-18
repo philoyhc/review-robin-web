@@ -184,6 +184,41 @@ present and never contend with the editing-state machine.
 `Delete this instrument` continues to live in the right-hand
 Danger Zone card.
 
+## Follow-on — harmonize the normal instrument card
+
+Once the group-scoped instrument card is fully implemented, the
+**ordinary per-reviewee instrument card is reorganized to match
+its layout** — a separate, self-contained follow-on step, landed
+after the group-card work is done (not bundled into PRs 1-3).
+
+The group-scoped card's placeholder build (Segment 13C, the
+2026-05-18 slices) established a tidier card layout that the
+ordinary card should converge on:
+
+- **Status pills move into the card heading**, beside the
+  instrument number — `accepting responses` / `not accepting`
+  and `showing when closed` / `not showing when closed`.
+- **The separate "This Instrument's Status" card is retired.**
+  Its open / close and show / don't-show-when-closed buttons
+  move next to `Edit` near the title.
+- **The Assignment Rule card moves up into Section A**, taking
+  the slot the status card vacated.
+- **Section E pairs the Danger Zone (half-width, left) with the
+  action-button row (right)** in one bottom grid.
+
+Net effect: one card layout for both instrument flavours, the
+difference being only the group-scoped card's reshaped Display
+Fields table and `Group-scoped` chip. The shared Jinja macros
+introduced during the group-card build (`instrument_action_row`,
+`assignment_rule_card`, and the identity-card macros) already
+make this convergence mostly a matter of pointing the ordinary
+card at the same macros.
+
+This follow-on touches only the operator Instruments page
+template; no schema, route, or service change. Update
+`spec/instruments.md` (the per-instrument card layout, Sections
+A / C) when it lands.
+
 ## Schema
 
 13C ships **one migration** (PR 1):
