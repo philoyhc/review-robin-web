@@ -723,7 +723,7 @@
             <p>
               Number of eligible pairs found:
               <span class="pill pill-info"
-                    data-instrument-rule-picker-count="{{ instrument.id }}">{% if rule_picker.selected_eligible_pair_count is not none %}{{ rule_picker.selected_eligible_pair_count }}{% else %}--{% endif %}</span>
+                    data-instrument-rule-picker-count="{{ instrument.id }}">{% if rule_picker.selected_eligible_pair_count is not none %}{{ rule_picker.selected_eligible_pair_count }}{% else %}—{% endif %}</span>
             </p>
             <p style="margin-top: 12px;">
               <a class="btn secondary"
@@ -1643,7 +1643,7 @@
         var pinnedText = pill.textContent;
         select.addEventListener('change', function () {
           pill.textContent =
-            select.value === pinnedValue ? pinnedText : '--';
+            select.value === pinnedValue ? pinnedText : '—';
         });
       });
     })();
