@@ -15,16 +15,16 @@ not foreclosed and so the eventual segments share a foundation.
 
 ## Roadmap numbering
 
-A convention for the `todo_master.md` roadmap:
+A convention for how the project's work is numbered:
 
 - **Segments 1–20** — the MVP of the *current* review-platform
-  model (operator configures, reviewer responds). Substantially
-  shipped; what remains in the band is email infrastructure
-  (14B / 14C), enhanced instruments (13C), and the polish /
-  documentation segments (17B–20).
+  model (operator configures, reviewer responds). Tracked in
+  `guide/todo_master.md`, which covers this MVP band **only**.
 - **Segments 21–30 (and beyond)** — the **participant-model
-  upgrade** described here. Each future segment in the band
-  gets its own `segment_2X_*.md` plan when it is scoped.
+  upgrade** described here. Deliberately **not** tracked in
+  `todo_master.md`; a dedicated todo file is started if and
+  when this work begins. Each future segment gets its own
+  `segment_2X_*.md` plan when it is scoped.
 
 ---
 
@@ -108,9 +108,12 @@ observers
 
 Mirrors the `reviewers` shape deliberately so the importer,
 the Setup-page table, the friendly-label resolver, and the
-sort primitive all extend with no new patterns. Observer tags
-let a future refinement scope *which* observers see *which*
-instruments; an MVP can treat observers session-wide.
+sort primitive all extend with no new patterns. Observers carry
+**at least one tag** so they can be categorized — the
+per-instrument visibility policy (§3.3) can scope an observer
+viewing-grant to a tag, so only observers of a given category
+see a given instrument's responses. Three tag slots mirror
+`reviewers`; one is the minimum that has to be meaningful.
 
 ### 3.2 Reviewee identity — a reachable email
 
@@ -133,9 +136,11 @@ exist.
 
 ### 3.3 `instrument_view_policies` — who sees responses, how
 
-The heart of the visibility model. The operator authors
-visibility **per instrument**; the resolver applies it
-**per response** at view time (no materialization — see §3.6).
+The heart of the visibility model. **Visibility is handled at
+the instrument level**: each instrument specifies who may see
+its responses and in what form. The operator authors the policy
+**per instrument**; the resolver applies it **per response** at
+view time (no materialization — see §3.6).
 
 ```
 instrument_view_policies
@@ -145,6 +150,9 @@ instrument_view_policies
   enabled         Boolean     NOT NULL    default FALSE
   granularity     String(16)  NOT NULL    'per_line' | 'summarized'
   identification  String(16)  NOT NULL    'identified' | 'deidentified'
+  observer_tag    String        NULL      (observer audience only — restrict the
+                                           grant to observers carrying this tag;
+                                           NULL = all observers on the session)
   UNIQUE (instrument_id, audience)
 ```
 
@@ -157,7 +165,12 @@ audience:
   responses about the same reviewee on this instrument? (Their
   own submission is always theirs; this governs peers.)
 - **`observer`** — may session observers see this instrument's
-  responses?
+  responses? Optionally **tag-scoped** via `observer_tag`, so
+  only a category of observers (e.g. tag = `committee`) sees
+  it. This mirrors how eligible reviewers / reviewees are
+  tag-filtered for *assignment* — here the same idea governs
+  observer *viewing*. (Exact match shape — which tag slot,
+  multi-tag — is a slice-scoping detail.)
 
 The **operator** is not a row: the operator always sees
 everything, identified and per-line. That is the baseline, not
@@ -203,14 +216,14 @@ Notes and open points:
   and the lazy-close deadline machinery already exists.
 - `opens_at` overlaps **Segment 18F**'s "session opening gate."
   The upgrade should *consume* 18F's scheduler, not build a
-  second one (see §9).
+  second one (see §8).
 - The viewing window (`results_open_at` / `results_close_at`)
   is genuinely new — nothing today gates *viewing* by time.
 
 If per-instrument viewing windows turn out to be needed (one
 instrument's results released earlier than another's), these
 move to a per-instrument table — flagged as an open question
-(§10), not built up front.
+(§9), not built up front.
 
 ### 3.5 Audit events
 
@@ -286,9 +299,9 @@ three participant audiences:
   Nothing shows for confidential instruments or before
   `results_open_at`.
 - **Observer surface** — read-only collation view across the
-  instruments whose `observer` policy is enabled. Scope of
-  *which* reviewees an observer sees is an open question (§10) —
-  an MVP shows all session reviewees.
+  instruments whose `observer` policy is enabled *and* whose
+  `observer_tag` (if set) matches the signed-in observer's
+  tags.
 - **Unified participant landing** — one entry point. For the
   signed-in identity it resolves every role across every
   session: review forms to complete (reviewer), results to
@@ -325,7 +338,7 @@ field type:
 - list (single-choice RTDs) — tallies per option;
 - free-text (String RTDs) — the hard one. Options: a plain
   concatenated list, or an operator-curated written summary.
-  Likely operator-curated for text — flagged in §10.
+  Likely operator-curated for text — flagged in §9.
 
 `identification = deidentified` is a render-layer concern: the
 collation builder omits reviewer attribution. Both axes belong
@@ -333,34 +346,7 @@ in `app/web/views/` adapters (the established view-shape seam)
 plus an `app/services/collation.py` service — services compute,
 views shape, templates render markup, exactly as today.
 
-## 8. Exploratory — Excel import/export
-
-**Exploratory, not committed.** Today the import / export
-surface is CSV throughout (`app/services/extracts/`,
-`app/services/session_config_io/`). A single workbook with
-**multiple worksheets** would carry structure CSV cannot — the
-responses for each instrument on their own worksheet, settings
-on one sheet, rosters on another, a per-reviewee collation
-sheet, etc.
-
-Worth exploring as the participant model multiplies the kinds
-of data a session export holds. Considerations to weigh when /
-if this is picked up:
-
-- Needs an Excel library (`openpyxl` is the obvious choice) —
-  the first non-stdlib data-format dependency.
-- CSV's virtues — diff-friendly, trivially round-trippable,
-  zero-dependency — are real; an `.xlsx` move trades them for
-  structure. A both/and (CSV stays, `.xlsx` added as a richer
-  alternative) may beat a wholesale switch.
-- Round-trip import parsing of `.xlsx` is heavier than CSV;
-  the two-phase validate-then-apply discipline in
-  `session_config_io` must carry over.
-
-Recorded here as a forward option; it would become its own
-segment (or a slice of one) if pursued.
-
-## 9. Sequencing & dependencies
+## 8. Sequencing & dependencies
 
 - **Hard-depends on Segment 14B** for the notification half
   (§6) — without email send, results-ready notices have no
@@ -376,7 +362,7 @@ segment (or a slice of one) if pursued.
   the new participant surfaces inherit a settled visual
   baseline.
 
-## 10. Open questions
+## 9. Open questions
 
 Decide before any segment in this band is scoped:
 
@@ -389,17 +375,13 @@ Decide before any segment in this band is scoped:
 3. **Per-instrument vs per-session viewing window.** §3.4 puts
    the window on the session; confirm no instrument needs its
    own release schedule, or move to a per-instrument table.
-4. **Observer scope.** Do observers see all reviewees in a
-   session, or a tag-filtered subset?
+4. **Per-row visibility override.** Is per-instrument policy
+   enough, or is an `assignment_view_overrides` table needed?
 5. **Free-text summarization.** Concatenated list vs
    operator-curated written summary for `summarized` text
    fields.
-6. **Per-row visibility override.** Is per-instrument policy
-   enough, or is an `assignment_view_overrides` table needed?
-7. **Excel format (§8).** Pursue at all; both/and vs wholesale
-   switch; its own segment vs a slice.
 
-## 11. Candidate segment breakdown
+## 10. Candidate segment breakdown
 
 Not a committed plan — a sketch of how the band might divide
 into `segment_2X_*.md` plans once scoped. Each line is
@@ -417,9 +399,8 @@ plausibly one segment (some may split or merge):
 - Observer surface.
 - Unified participant landing.
 - Acknowledgement + notifications (gated on 14B).
-- Excel import/export (exploratory, §8).
 
-## 12. Out of scope
+## 11. Out of scope
 
 - **Confidential sessions stay the default.** Every audience
   grant is opt-in (`enabled = FALSE` by default); a session
@@ -429,8 +410,15 @@ plausibly one segment (some may split or merge):
 - **Reviewee / observer self-service roster edits** — they do
   not manage their own rows; that stays operator-only.
 - **Multi-tenancy / cross-workspace identity** — unchanged.
+- **Excel / `.xlsx` import-export.** Considered and set aside.
+  CSV stays the interchange format throughout; when several
+  files must travel together they go in a zip container (the
+  existing `{code}_bundle.zip` pattern from Segment 18D). A
+  multi-worksheet workbook would carry more structure but is
+  not worth the new dependency and the loss of CSV's
+  diff-friendly, zero-dependency round-trip.
 
-## 13. Related context
+## 12. Related context
 
 - **`spec/audience_and_identity_model.md`** — §3 (reviewee,
   forward-looking) and §4 (audiences). The authoritative doc on
@@ -444,5 +432,7 @@ plausibly one segment (some may split or merge):
   notification half depends on it.
 - **`spec/rule_based_assignment.md`** — the eligibility engine
   this work builds on unchanged.
-- **`guide/todo_master.md`** — the roadmap; segments 21+ in its
-  Upcoming section point back here.
+- **`guide/todo_master.md`** — the roadmap; it tracks the MVP
+  (segments 1–20) only. The participant-model upgrade is
+  deliberately not in it — a dedicated todo file is started
+  when this work begins.
