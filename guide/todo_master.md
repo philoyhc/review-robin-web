@@ -823,14 +823,14 @@ bottom of this file.
   is off the roadmap, see `guide/future_possibilities.md`.
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
-- **18E — Small enhancements** *(holding pen — open; both
-  current Parts shipped 2026-05-18)*.
+- **18E — Small enhancements** *(holding pen — open; Parts 1-3
+  shipped 2026-05-18)*.
   A holding pen for small, self-contained operator-surface
   enhancements — each one a single small PR, landed
-  independently; items accumulate as they surface. **Both
-  current Parts have shipped; the segment stays open** in
-  `guide/` so future small enhancements land here as additional
-  Parts rather than spawning one-off segment stubs.
+  independently; items accumulate as they surface. **The current
+  Parts have shipped; the segment stays open** in `guide/` so
+  future small enhancements land here as additional Parts rather
+  than spawning one-off segment stubs.
   **Part 1 (shipped 2026-05-18):** column-visibility chips on
   the Reviewers / Reviewees / Relationships Setup pages — a
   `Show columns:` pill-chip row in the top card replaces the old
@@ -839,7 +839,11 @@ bottom of this file.
   column). Pure client-side, no schema. **Part 2 (shipped
   2026-05-18):** eligible-pair count performance — evaluate only
   pinned rules, plus a lazy persisted cache on
-  `session_rule_sets`.
+  `session_rule_sets`. **Part 3 (shipped 2026-05-18):** the
+  "Fields with data" pills on the three Setup pages now render
+  friendly field labels (operator override → builtin default)
+  instead of raw CSV column names, via
+  `views.friendly_fields_with_data`.
   **Plan:** `guide/segment_18E_small_enhancements.md`.
 
 - **18F — Scheduled events** *(stub created 2026-05-17)*.

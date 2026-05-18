@@ -263,3 +263,123 @@ def test_assignments_page_picks_up_friendly_label_in_table_and_toggle(
     # Toggle-widget chip for reviewee Tag 2 now reads the friendly
     # label instead of literal ``Tag2``.
     assert "Lab section" in body
+
+
+# ── "Fields with data" pills ─────────────────────────────────────────────
+
+
+def test_reviewers_fields_with_data_pill_uses_friendly_override(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, "fl-rev-pill")
+    actor = _actor(db)
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="reviewer",
+        source_field="tag_1",
+        label="Cohort",
+        user=actor,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail,ReviewerTag1\n"
+                b"Alice,alice@example.edu,senior\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewers"
+    ).text
+    # The "Fields with data" pill reads the friendly override, not
+    # the raw CSV column name.
+    assert '<span class="pill pill-count">Cohort</span>' in body
+    assert '<span class="pill pill-count">ReviewerTag1</span>' not in body
+
+
+def test_reviewees_fields_with_data_pills_use_default_friendly_labels(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, "fl-ree-pill")
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,PhotoLink,RevieweeTag1\n"
+                b"Carol,carol@example.edu,"
+                b"https://example.edu/c.jpg,cohort-a\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/reviewees"
+    ).text
+    # Renamable slots fall back to their builtin friendly default.
+    for label in ("Name", "Email", "Profile", "Tag 1"):
+        assert f'<span class="pill pill-count">{label}</span>' in body
+    assert '<span class="pill pill-count">RevieweeName</span>' not in body
+    assert '<span class="pill pill-count">PhotoLink</span>' not in body
+
+
+def test_relationships_fields_with_data_pill_uses_friendly_override(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, "fl-rel-pill")
+    actor = _actor(db)
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="pair_context",
+        source_field="1",
+        label="Mentorship",
+        user=actor,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/relationships/import",
+        files={
+            "file": (
+                "rel.csv",
+                b"ReviewerEmail,RevieweeEmail,PairContextTag1\n"
+                b"alice@example.edu,carol@example.edu,mentor\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/relationships"
+    ).text
+    assert '<span class="pill pill-count">Mentorship</span>' in body
+    assert (
+        '<span class="pill pill-count">PairContextTag1</span>' not in body
+    )

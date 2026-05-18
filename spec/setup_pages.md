@@ -48,7 +48,14 @@ Every Setup Page renders, top-to-bottom:
    `reviewee_fields_with_data` in `app/services/assignments.py`;
    `relationships.fields_with_data` in
    `app/services/relationships.py`). Drives operator awareness of
-   which optional fields the latest import populated.
+   which optional fields the latest import populated. The raw CSV
+   column names are mapped through `views.friendly_fields_with_data`
+   so that a column corresponding to one of the 12 renamable
+   field-label slots shows its **friendly label** (operator
+   override → builtin default — the same label the preview-table
+   header and the `Show columns:` chip render); columns with no
+   renamable slot (`ReviewerName`, `ReviewerEmail`,
+   `IncludeAssignment`) keep their canonical CSV name.
 4. **Lifecycle gate cards** (when the session is Activated): a
    `card lock` carrying "The {entity} cannot be modified while the
    session is ongoing. Revert the session to draft if you wish to
@@ -418,12 +425,15 @@ above.
 - The shared visibility-toggle pattern lives inline per template
   (HTML structure + `<style>` + `<script>`). Each page picks its
   own `STORAGE_KEY` and CSS class names so they don't collide.
-- Per-entity row counts and "fields with data" pill labels come
-  from the helpers in `app/services/assignments.py`
+- Per-entity row counts and the raw "fields with data" CSV column
+  names come from the helpers in `app/services/assignments.py`
   (`reviewer_fields_with_data`, `reviewee_fields_with_data`) and
   `app/services/relationships.py`
   (`fields_with_data`) — keep them in sync with any new optional
-  column added to the model + CSV importer.
+  column added to the model + CSV importer. The route then runs
+  the raw list through `views.friendly_fields_with_data`
+  (`app/web/views/_setup.py`) to swap renamable-slot columns for
+  their friendly label before the pills render.
 - Lifecycle gating is the existing pattern: a `card lock` at the
   top of the body when `is_ready`, and the Upload + Danger Zone
   cards conditionally rendered behind `{% if not is_ready %}`. The

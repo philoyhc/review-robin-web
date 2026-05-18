@@ -314,15 +314,18 @@ async def _handle_import(
             if kind == "reviewers":
                 status_options = views.REVIEWERS_STATUS_OPTIONS
                 search_options = views.reviewers_search_options(list_items)
-                fields_with_data = assignments.reviewer_fields_with_data(
+                raw_fields = assignments.reviewer_fields_with_data(
                     db, review_session.id
                 )
             else:
                 status_options = views.REVIEWEES_STATUS_OPTIONS
                 search_options = views.reviewees_search_options(list_items)
-                fields_with_data = assignments.reviewee_fields_with_data(
+                raw_fields = assignments.reviewee_fields_with_data(
                     db, review_session.id
                 )
+            fields_with_data = views.friendly_fields_with_data(
+                review_session, raw_fields
+            )
             context.update(
                 {
                     "total_row_count": len(list_items),

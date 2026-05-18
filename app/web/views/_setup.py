@@ -23,7 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession
-from app.services import assignments, csv_imports
+from app.services import assignments, csv_imports, field_labels
 from app.services import relationships as relationships_service
 
 
@@ -130,3 +130,43 @@ def session_status_pills(
         # for a real check (e.g. a non-empty email template row).
         email_invites_set_up=False,
     )
+
+
+# Raw CSV column name -> renamable (source_type, source_field)
+# slot. Only the 12 in-scope friendly-label slots appear; columns
+# with no renamable slot (ReviewerName, ReviewerEmail,
+# IncludeAssignment) keep their canonical CSV name.
+_FIELD_LABEL_SLOTS: dict[str, tuple[str, str]] = {
+    "ReviewerTag1": ("reviewer", "tag_1"),
+    "ReviewerTag2": ("reviewer", "tag_2"),
+    "ReviewerTag3": ("reviewer", "tag_3"),
+    "RevieweeName": ("reviewee", "name"),
+    "RevieweeEmail": ("reviewee", "email_or_identifier"),
+    "PhotoLink": ("reviewee", "profile_link"),
+    "RevieweeTag1": ("reviewee", "tag_1"),
+    "RevieweeTag2": ("reviewee", "tag_2"),
+    "RevieweeTag3": ("reviewee", "tag_3"),
+    "PairContextTag1": ("pair_context", "1"),
+    "PairContextTag2": ("pair_context", "2"),
+    "PairContextTag3": ("pair_context", "3"),
+}
+
+
+def friendly_fields_with_data(
+    review_session: ReviewSession, raw_labels: list[str]
+) -> list[str]:
+    """Map raw CSV column names to friendly field labels for the
+    "Fields with data" pills on the Setup pages.
+
+    Columns that correspond to one of the 12 renamable slots
+    resolve through the session's field-label config (operator
+    override → builtin default), so the pill reads the same as the
+    preview-table column header. Columns with no renamable slot
+    keep their canonical CSV name.
+    """
+    return [
+        field_labels.resolve(review_session, *_FIELD_LABEL_SLOTS[raw])
+        if raw in _FIELD_LABEL_SLOTS
+        else raw
+        for raw in raw_labels
+    ]
