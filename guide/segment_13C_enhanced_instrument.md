@@ -27,11 +27,13 @@
 > **Revised 2026-05-19 — group-boundary tags.** A reviewer's
 > group is no longer their *whole* rule-eligible set. The pinned
 > rule selects the **universe** (which reviewees a reviewer
-> interacts with); a new **Group** checkbox column on the Display
-> Fields table marks the reviewee / pair-context tags whose
-> shared values **partition** that universe into the groups the
-> reviewer actually rates (additive — members share every ticked
-> tag's value). The boundary spec is stored in the existing
+> interacts with); a new **Group by** checkbox column on the
+> Display Fields table marks the reviewee / pair-context tags
+> whose shared values **partition** that universe into the groups
+> the reviewer actually rates (additive — members share every
+> ticked tag's value). A constrained **Include** column governs
+> what shows: boundary tags are locked Included, non-boundary
+> tags are not Includable, only the Name row is free. The boundary spec is stored in the existing
 > `group_kind` column (still **no migration**). This re-cuts the
 > PR ladder below: a Group-column editor slice lands before the
 > reviewer surface, and the surface / fan-out / aggregation are
@@ -189,18 +191,20 @@ The reviewer-facing feature, re-cut into slices by the
 2026-05-19 group-boundary revision. Slice 1 (write fan-out) has
 landed; the remaining slices are below.
 
-**Slice A — Group-boundary editor (operator-only).** Replace the
-group-scoped Display Fields table's **Include** column (shipped
-in PR 1) with a **Group** checkbox column. On a tag row Group
-marks a boundary key; on the Name row it toggles the member-name
-list. On save, the ticked tags' key-codes (`r1`-`r3`, `p1`-`p3`)
-are encoded — ordered by the Sort spec — into the `group_kind`
-column, replacing the inert `"both"` marker; a group instrument
-with no boundary tag keeps `"both"` as the no-partition sentinel.
-The Name row's checkbox keeps writing
-`InstrumentDisplayField.visible`. Add the encode/decode helper
-and a helper line under the table. No reviewer-visible change —
-safe to land alone.
+**Slice A — Group-boundary editor (operator-only).** Add a
+**Group by** checkbox column to the group-scoped Display Fields
+table (tag rows only; the Name row has no Group-by cell) and keep
+the **Include** column shipped in PR 1, now *constrained by Group
+by*: a boundary tag is locked Included, a non-boundary tag is not
+Includable, only the Name row's Include stays free. On save, the
+Group-by ticks' key-codes (`r1`-`r3`, `p1`-`p3`) are encoded —
+ordered by the Sort spec — into the `group_kind` column,
+replacing the inert `"both"` marker; a group instrument with no
+boundary tag keeps `"both"` as the no-partition sentinel. Tag
+rows' `InstrumentDisplayField.visible` follows the Group-by tick;
+the Name row's `visible` is the free Include. Add the
+encode/decode helper and a helper line under the table. No
+reviewer-visible change — safe to land alone.
 
 **Slice B — write fan-out re-scope.** `_expand_group_upserts`
 (shipped in slice 1) fans across the reviewer's whole universe;
@@ -322,11 +326,12 @@ exists:
   sentinel so the column stays non-null. Six codes + commas = 17
   chars, inside `String(32)`. No migration.
 - **`InstrumentDisplayField.visible`** (`Boolean`) — the
-  existing per-row flag. On a group-scoped instrument only the
-  **Name** row's `visible` is meaningful — the "list members"
-  toggle. Tag identity comes from the `group_kind` boundary spec.
-  PR 1 wired the (now-removed) Include column to it; PR 2 slice A
-  repurposes it to the Name-row toggle only.
+  existing per-row flag, the **Include** checkbox. On a
+  group-scoped instrument a tag row's `visible` follows its
+  Group-by tick (locked on for boundary tags, off otherwise);
+  the Name row's `visible` is the freely-chosen "list members"
+  toggle. PR 1 wired Include; PR 2 slice A adds the Group-by
+  constraint.
 - **`Instrument.rule_set_id`** (`ForeignKey | NULL`, Segment 15B)
   — the pinned rule. PR 1 adds the group-scoped rule-required
   gate on top; it does not change the column.
@@ -434,7 +439,7 @@ both have shipped.
 - Update `spec/instruments.md` Section C "Action row" for the
   three create-flavour buttons, and the Display Fields section
   for the group-scoped variant (the tag-rows + Name-row table
-  with the **Group** and Sort columns — no Include column).
+  with the **Group by**, Include, and Sort columns).
 - Update `spec/reviewer-surface.md` for the group-block
   treatment — one row per boundary-defined group (PR 2).
 - `spec/rule_based_assignment.md` §7.2 already specs the

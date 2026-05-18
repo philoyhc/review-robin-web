@@ -46,18 +46,19 @@ rather than per-individual.
 > actually rates). A rule whose universe is "every reviewee in
 > the course" still has to split into the tutorial groups within
 > it. The boundary is now a separate operator control: a
-> **Group** checkbox column on the Display Fields table marks the
-> reviewee / pair-context tags whose shared values define a
+> **Group by** checkbox column on the Display Fields table marks
+> the reviewee / pair-context tags whose shared values define a
 > group. Members of a group share *every* ticked tag's value
 > (additive); with no tag ticked the whole universe is one group
 > (the prior behaviour). The boundary spec is stored in the
-> existing `group_kind` column — still no migration. The boundary
-> tags also **compose the group's on-screen identity** directly:
-> the group-identity column *is* the boundary tag values. The
-> earlier per-tag *Include* column is dropped — the only display
-> choice left is a checkbox to also list the group's member
-> names. The sections below carry this model; "exactly one group
-> per reviewer" no longer holds.
+> existing `group_kind` column — still no migration. The Display
+> Fields table keeps an *Include* column, but it is constrained:
+> a tag picked for the boundary is locked Included, a tag not
+> picked is not Includable, and only the Name row is freely
+> Includable — so the group's on-screen identity is the boundary
+> tag values, optionally plus the member-name list. The sections
+> below carry this model; "exactly one group per reviewer" no
+> longer holds.
 
 This file is the source of truth for the design. The
 implementation plan lives at
@@ -103,8 +104,8 @@ control:
   exactly as it does for a per-reviewee instrument. No
   rule-engine change, no fan-out step at generation time.
 - It carries **group-boundary tags** — zero or more reviewee /
-  pair-context tags the operator marks **Group** on the Display
-  Fields table. They partition each reviewer's universe into the
+  pair-context tags the operator marks **Group by** on the
+  Display Fields table. They partition each reviewer's universe into the
   groups the reviewer actually rates: two reviewees fall in the
   same group for a reviewer iff they share the same value for
   **every** boundary tag (the boundary is *additive*). With no
@@ -113,7 +114,7 @@ control:
   once per reviewee.
 
 Worked example. A rule's universe is "every reviewee in the
-course." The operator ticks **Group** on `Class` and `Team`. A
+course." The operator ticks **Group by** on `Class` and `Team`. A
 reviewer whose universe spans two classes of three teams each
 faces six group rows — one per `(Class, Team)` value pair — and
 answers each once. Ticking only `Team` would merge same-named
@@ -160,7 +161,7 @@ carried entirely by columns that already exist:
 | Field | Where | Type | Notes |
 |---|---|---|---|
 | `group_kind` | `Instrument` | `String(32) \| NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument; **any non-null value** flags the instrument group-scoped. The value now **encodes the group-boundary spec**: an ordered, comma-separated list of boundary tag-key codes (`r1`-`r3` reviewee tags, `p1`-`p3` pair-context tags), e.g. `r1,p2`. A group-scoped instrument with no boundary tag keeps the sentinel `"both"` (the legacy marker) so the column stays non-null. Six codes + commas = 17 chars, well inside `String(32)`. |
-| `visible` | `InstrumentDisplayField` | `Boolean` | Existing per-row flag. On a group-scoped instrument only the **Name** row's `visible` is meaningful — it is the "list group members" toggle. Tag-row identity is driven by the boundary spec in `group_kind`, not by `visible`. |
+| `visible` | `InstrumentDisplayField` | `Boolean` | Existing per-row flag — the **Include** checkbox. On a group-scoped instrument a tag row's `visible` follows its Group-by tick (locked on for boundary tags, off otherwise); the **Name** row's `visible` is the freely-chosen "list group members" toggle. |
 | `sort_display_fields` | `Instrument` | `JSON \| NULL` | Existing Segment 13B per-instrument sort spec. Orders the tag rows and the member-name list. |
 
 No `Assignment`, `Response`, or RuleSet change. The free-text
@@ -207,22 +208,31 @@ restricted to **tag rows plus a Name row**:
 - **Columns.**
   - **Friendly Label** — the tag's session-wide friendly label,
     read-only (`app/services/field_labels.py`).
-  - **Group** — a checkbox per row. On a **tag** row it marks
-    that tag a group-boundary key (see "The model"): the ticked
-    tags both define the group *and* compose its on-screen
-    identity — there is no separate Include choice. The ticked
-    tags' key-codes are persisted, ordered, into `group_kind`.
-    On the **Name** row the checkbox means something different —
-    a group can never be bounded by a per-individual identifier —
-    so it instead toggles the optional **member-name list** (see
-    "Composing the group identity"), persisted to that row's
-    `InstrumentDisplayField.visible` flag. With no tag ticked the
-    reviewer's whole universe is one group. A short helper line
-    under the table explains both senses.
+  - **Group by** — a checkbox per **tag** row marking that tag a
+    group-boundary key (see "The model"); ticking more than one
+    splits the universe additively. The ticked tags' key-codes
+    are persisted, ordered, into `group_kind`. The **Name row has
+    no Group-by cell** — a group can never be bounded by a
+    per-individual identifier. With no tag ticked the reviewer's
+    whole universe is one group.
+  - **Include** — a checkbox per row, persisted to the existing
+    `InstrumentDisplayField.visible` flag; the ticked rows
+    compose the group identity on the reviewer surface (see
+    "Composing the group identity"). It is **constrained by
+    Group by**: a tag ticked for the boundary is **locked
+    Included** (its Include box follows the Group-by tick and
+    cannot be unticked); a tag *not* ticked for the boundary is
+    **not Includable** (its Include box is disabled). Only the
+    **Name** row is freely Includable — its Include is
+    operator-choosable and independent of any boundary tick.
   - **Sort** — the per-instrument sort control (the Segment 13B
     sort spec, `Instrument.sort_display_fields`), ordering the
     boundary tag-key codes written to `group_kind` and the tag
     values within the composed identity.
+
+  A short helper line under the table explains the split: Group
+  by picks how the universe is cut into groups; Include picks
+  what renders in the group-identity column.
 
 **There is no free-text group-description field.** The group's
 on-screen identity is composed from the Included tags. When the
@@ -274,16 +284,16 @@ picker-selected reviewer.
 
 ### Composing the group identity
 
-The group-identity column is composed automatically from the
-instrument's **boundary tags** — the tags ticked **Group** — with
-no separate operator choice:
+The group-identity column is composed from the Display Fields
+rows marked **Include** — which, by the Include constraint above,
+is exactly the boundary tags plus optionally the Name row:
 
-1. **Boundary tag values** — the group's value for each boundary
-   tag, comma-separated, in Sort order, on one line. By
+1. **Boundary tag values** — the group's value for each Included
+   boundary tag, comma-separated, in Sort order, on one line. By
    construction every member shares these values, so each renders
    a single crisp value.
-2. **Member names** — when the Name row's checkbox is ticked, the
-   group members' names, comma-separated, on a second line below.
+2. **Member names** — when the Name row is Included, the group
+   members' names, comma-separated, on a second line below.
 
 Tag **values are shown verbatim** — no friendly-label prefix.
 The operator names the tag values themselves, so a boundary tag
