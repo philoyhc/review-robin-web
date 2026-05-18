@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    InstrumentResponseField,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -259,6 +261,42 @@ def test_reviewer_session_state_submitted(db: Session) -> None:
     assert state.completed_count == 1
     assert state.missing_required_count == 0
     assert state.pill_state == "submitted"
+
+
+def test_reviewer_session_state_no_required_field_draft_is_in_progress(
+    db: Session,
+) -> None:
+    """An instrument with only optional fields: a saved-but-not-
+    submitted draft rolls up as "in progress", not "submitted".
+    Regression — the submitted check was gated on required fields,
+    so a no-required instrument's drafts were mis-flagged submitted."""
+    op, reviewer, review_session, assignment = _seed(db)
+    # Make every field on the (default) instrument optional.
+    for field in db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == assignment.instrument_id
+        )
+    ).scalars():
+        field.required = False
+    db.flush()
+
+    responses_service.save_draft(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=op,
+        upserts=[
+            ResponseUpsert(
+                assignment_id=assignment.id, field_key="comments", value="hi"
+            ),
+        ],
+        correlation_id="c1",
+    )
+
+    state = responses_service.reviewer_session_state(
+        db, reviewer=reviewer, session_id=review_session.id
+    )
+    assert state.pill_state == "in progress"
 
 
 def test_reviewer_session_state_session_pill_projection(db: Session) -> None:
