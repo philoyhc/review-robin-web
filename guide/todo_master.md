@@ -739,14 +739,14 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 4-5), 14B, 14C, 17B,
+**13C, 13F (PRs 4-5), 14B, 17B,
 18E, 18F, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
 #### Numbered queue
 
-1. **13F — More DB prep (14C / 16A / 16B / 18A / 18B / 18F
+1. **13F — More DB prep (16A / 16B / 18A / 18B / 18F
    ride-along)** *(in flight — **PRs 1 + 2 shipped 2026-05-11**,
    **PRs 6 + 7 shipped 2026-05-15**, **PR 3 shipped 2026-05-17**;
    only PRs 4 + 5 outstanding)*. Mirrors the
@@ -762,7 +762,8 @@ bottom of this file.
    String for 18B PR 3; **PR 7 (shipped)** —
    `users.preferences` JSON for 18B PR 2. The two outstanding
    PRs ride with their consumer segments: **PR 4**
-   (`sessions.reminder_settings`) with 14C; **PR 5**
+   (`sessions.reminder_settings`) with 18F Part 5 (reminders);
+   **PR 5**
    (`sessions.retention_exception` + `retention_overrides`)
    with **18F Part 4** (moved from 18C when 18C was re-scoped
    to operator-triggered purge, which needed no schema).
@@ -806,14 +807,6 @@ bottom of this file.
    **Plan:** `guide/segment_14B_email_infrastructure.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-4. **14C — Reminders workflow.**
-   Scheduled, policy-driven reminder dispatch sitting on top
-   of 14B's transport. Per-session cadence settings + a
-   background scheduler + post-MVP cohort slicing + reminder
-   analytics. Stub-state plan; hard-deps on 14B Parts A / B
-   (and reuses 14B Part C's worker scaffold if available).
-   **Plan:** `guide/segment_14C_reminders_workflow.md`.
-
 #### Stubs
 
 - **17B — Reviewer surface refinements** *(partly shipped
@@ -847,9 +840,10 @@ bottom of this file.
   **auto-archive** (a timed `archive_session`, moved out of 18A),
   **auto-send invitations** (timed invitation dispatch), and the
   **session "opening" gate** — a gate within `ready` so invites
-  go out first and reviewing starts synchronously. Reminders stay
-  14C's. Schema-blocked on the 13F audit resolving to a locked
-  column set.
+  go out first and reviewing starts synchronously. **Scheduled
+  reminders** — the former Segment 14C — were consolidated in
+  (2026-05-18) as Part 5. Schema-blocked on the 13F audit
+  resolving to a locked column set.
   **Plan:** `guide/segment_18F_scheduled_events.md`.
 
 - **19 — Spec documentation** *(stub created 2026-05-11)*.
@@ -893,8 +887,8 @@ bottom of this file.
   `email_outbox` audit-log schema landed inert in 11C Part 2
   (Migration `c4f6a8b0d2e5`); 14B Part A is the first writer.
 - **Within 14B**, Parts B-E are sequential enhancements on top
-  of Part A; Parts F-H are independent backend swaps. **14C
-  reminders workflow** layers on top of 14B Parts A / B / C and
+  of Part A; Parts F-H are independent backend swaps. **18F
+  Part 5 (reminders)** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 4-5), 17B,
   18E, 18F, 19, 20** are independent of the email +

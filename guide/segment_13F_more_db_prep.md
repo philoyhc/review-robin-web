@@ -1,4 +1,10 @@
-# Segment 13F — More DB prep (14C / 16A / 16B / 18A / 18B / 18F ride-along)
+# Segment 13F — More DB prep (16A / 16B / 18A / 18B / 18F ride-along)
+
+> **Segment 14C consolidated into Segment 18F (2026-05-18).**
+> PR 4's `sessions.reminder_settings` column was scoped as a
+> "14C ride-along"; reminders are now **Segment 18F Part 5**, so
+> PR 4 is an 18F ride-along. Where "14C" still appears below it
+> denotes that 18F reminders work.
 
 **Status:** In flight — **PRs 1 + 2 shipped 2026-05-11**
 (migrations `779b90e4b397` + `8003c2be99d8`); **PRs 6 + 7
@@ -6,7 +12,8 @@ shipped 2026-05-15** (migrations `2fec0f646bd2` +
 `e9277c43b251`) ahead of Segment 18B; **PR 3 shipped
 2026-05-17** (migration `c7d1e9f3a4b2`) with Segment 18A;
 PRs 4 + 5 remain deferred until their consumer segments
-(14C / 18F) are picked up, per the "piecemeal, front-load the
+(18F — reminders Part 5, retention Part 4) are picked up, per
+the "piecemeal, front-load the
 16-series work" sequencing decision. **Only PRs 4 + 5 are
 outstanding** (`sessions.reminder_settings`,
 `sessions.retention_*`). The 16-series schema scaffolding is

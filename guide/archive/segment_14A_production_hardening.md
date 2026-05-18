@@ -14,8 +14,9 @@ supportable, and more credible for a real internal pilot
 > - **14A** (this file) — production hardening proper.
 > - **14B** — `guide/segment_14B_email_infrastructure.md` (absorbs
 >   the former `segment_14-1_email_infra.md`).
-> - **14C** — `guide/segment_14C_reminders_workflow.md` (auto /
->   scheduled reminder cadence on top of 14B's transport).
+> - **14C** — auto / scheduled reminder cadence on top of 14B's
+>   transport. *(Consolidated into Segment 18F Part 5 on
+>   2026-05-18 — see `guide/segment_18F_scheduled_events.md`.)*
 >
 > Inherited-debt items from earlier segments (4A / 5A) that
 > describe Postgres-specific optimisations + secret management

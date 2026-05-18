@@ -8,6 +8,10 @@
 > rather than each consumer segment growing its own
 > column-per-feature. Auto-archive moved here out of **Segment 18A**
 > (Sessions lobby enhancements) — 18A ships only manual archiving.
+> **Segment 14C (Reminders workflow) was consolidated into this
+> segment on 2026-05-18** — scheduled reminder dispatch is itself
+> a scheduled event; it lives here as Part 5 and the standalone
+> 14C plan is retired.
 
 ## Goal
 
@@ -32,7 +36,8 @@ mechanism instead of a column and a half-worker per feature.
   (2026-05-17)".
 - **The transitions already exist or are cheap.** `archive_session`
   shipped in 18A; the invitation send-path and the reminder
-  dispatch exist / are 14C's. 18F is mostly *scheduling* glue.
+  email transport (14B) exist or are cheap. 18F is mostly
+  *scheduling* glue.
 - **Shared dispatch.** A scheduled job (or the lazy
   deadline-observer pattern in `spec/lifecycle.md`) fires all of
   these; building it once is the segment's backbone.
@@ -111,12 +116,52 @@ moved here out of **Segment 18C** when 18C was re-scoped to the
   lands the columns, add the `retention.*` rows to the Settings
   CSV serialiser / importer as part of Part 4.
 
-### Reminders — owned by 14C, reconciled here
+### Part 5 — Reminders workflow
 
-Scheduled reminder dispatch is **Segment 14C**'s
-(`sessions.reminder_settings` JSON, 13F PR 4). 18F does not own
-reminders; the 13F audit reconciles whether absolute reminder
-datetimes are a new slot or fold into the existing JSON.
+Scheduled, policy-driven reminder dispatch — **consolidated from
+the former Segment 14C on 2026-05-18** (that standalone plan is
+retired). Today reminders are operator-triggered: the Manage
+Invitations bulk "Send reminder to incomplete reviewers" button
+enqueues `kind="reminder"` outbox rows, and the send itself
+activates in 14B Part A. Part 5 makes dispatch scheduled and
+policy-driven. Unlike Parts 1–4, this is a **recurring
+cadence**, not a fire-once trigger — the deliberate exception
+in this segment.
+
+- **5a — Per-session reminder cadence settings.** An
+  operator-facing surface for "when reminders go out
+  automatically", persisted in the `sessions.reminder_settings`
+  JSON column (pre-positioned by 13F PR 4). Keys, locked at
+  scoping: auto-reminders enabled (default off); cadence — a
+  small named-policy enum (`weekly` / `bi-weekly` /
+  `pre-deadline-cascade`), not a general cron editor; max
+  reminder count per reviewer (default 3); dispatch time-of-day
+  (operator timezone); optional quiet-hours / weekend skip. A
+  cadence card on the Email Template editor or Session Home
+  (TBD at scoping); a `session.reminder_cadence_updated` audit
+  event (`changes` envelope).
+- **5b — Scheduled dispatch job.** A background worker scans
+  sessions with auto-reminders enabled and enqueues
+  `kind="reminder"` rows for incomplete reviewers who are due.
+  Per-reviewer dedup (skip if the last reminder enqueued less
+  than the cadence interval ago — uses 14B Part B's
+  `reminder:{session_id}:{reviewer_id}:{n}` correlation_id);
+  per-reviewer cap at `max_reminder_count`; only `ready`
+  sessions inside their accepting-responses window; respects
+  per-instrument open/close. A `session.reminder_batch_enqueued`
+  audit event. Reuses 14B Part C's queue + worker scaffold if
+  landed; otherwise the shared dispatch mechanism below.
+- **5c — Targeted reminder cohorts (post-MVP).** Beyond the
+  "incomplete" cohort, richer slicing off
+  `monitoring.AT_RISK_THRESHOLDS` (At risk / No responses) —
+  per-cohort bulk Send buttons, optional per-cohort template
+  differentiation, a `session.reminder_cohort_sent` event.
+  Confirm need before scoping.
+- **5d — Reminder analytics (post-MVP).** A small "Reminders"
+  card on Manage Invitations — reminders sent, delivery success
+  rate (reads 14B's `email.sent` / `email.send_failed`),
+  completion-after-reminder rate. No new tables; reads the
+  audit log + outbox.
 
 ## Hard dependencies
 
@@ -126,16 +171,21 @@ datetimes are a new slot or fold into the existing JSON.
 - **Part 1** wants 18A's `archive_session` (shipped).
 - **Part 3** is also a `spec/lifecycle.md` change (the gate
   semantics), not just a column.
+- **Part 5 (reminders)** hard-depends on **14B Parts A / B**
+  (the email transport, and the `correlation_id` strategy the
+  per-reviewer dedup uses) and reuses **14B Part C**'s
+  queue / worker scaffold if available.
 - A **dispatch mechanism** — a scheduled job or the lazy
   deadline-observer hook — shared across all parts.
 
 ## Out of scope
 
 - The underlying transitions themselves (`archive_session`,
-  invitation send, reminder dispatch) — those belong to their
-  owning segments; 18F only schedules them.
-- Recurring / cron-style schedules — each item fires once at a
-  set point. Repeating cadences (reminders) stay 14C's.
+  invitation send, the 14B email transport) — those belong to
+  their owning segments; 18F only schedules them.
+- Email *transport* activation and backend swaps — 14B's.
+  Part 5 owns the reminder *cadence* and the *scheduled
+  enqueue*; 14B owns the *send*.
 
 ## Doc impact
 
@@ -146,9 +196,12 @@ When parts ship:
 - `spec/lifecycle.md` — the `opens_at` gate (Part 3) as a real
   gate within `ready`; activation's "gate starts closed" change.
 - `spec/settings_inventory.md` — the new scheduled-datetime
-  columns.
-- `spec/architecture.md` — `session.opened` (and any other new)
-  audit-event envelopes.
+  columns, plus the Part 5 reminder-cadence settings.
+- `spec/operations_pages.md` — Manage Invitations picks up the
+  Part 5c cohort buttons / Part 5d reminders card if those
+  ship.
+- `spec/architecture.md` — `session.opened`, the reminder
+  events, and any other new audit-event envelopes.
 
 ## Working notes
 
