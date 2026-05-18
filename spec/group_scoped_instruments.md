@@ -1,10 +1,14 @@
 # Enhanced instruments — group-scoped review
 
-**Status.** Forward-looking design spec. Not yet implemented.
-Captures the design for a second kind of instrument — a
-**group-scoped instrument** — alongside today's per-reviewee
-instrument, so a reviewer records one rating / comment / etc.
-about a *group* of reviewees rather than per-individual.
+**Status.** Partly implemented. The **operator-side editor**
+shipped in Segment 13C PR 1 (#1176-#1181) — group-scoped
+instruments can be created, authored, and rule-pinned. The
+**reviewer surface** (group block, write fan-out, aggregation)
+is still pending (13C PR 2). This file captures the full design
+for a second kind of instrument — a **group-scoped instrument**
+— alongside today's per-reviewee instrument, so a reviewer
+records one rating / comment / etc. about a *group* of reviewees
+rather than per-individual.
 
 > **Rewritten 2026-05-18.** Earlier drafts of this spec defined a
 > group by **clustering reviewees on their tag values** — a
