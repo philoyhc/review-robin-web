@@ -400,6 +400,27 @@
     </div>
   {% endmacro %}
 
+  {# Group-scoped Display Fields — the merged Group Description cell:
+     an edit box (defaults to the pinned rule's group description) plus
+     two include-checkboxes encoding `group_kind`. Placeholder — not
+     persisted until the group editor is wired (Segment 13C PR 2). #}
+  {% macro group_description_cell(instrument) %}
+    <textarea rows="4" style="width: 100%;"
+              placeholder="Defaults to the pinned rule's group description"></textarea>
+    <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
+      <label style="font-weight: normal;">
+        <input type="checkbox" name="include_group_description"
+               {% if instrument.group_kind in ('summary', 'both') %}checked{% endif %}>
+        Include group description
+      </label>
+      <label style="font-weight: normal;">
+        <input type="checkbox" name="include_reviewee_names"
+               {% if instrument.group_kind in ('members', 'both') %}checked{% endif %}>
+        Include reviewee names
+      </label>
+    </div>
+  {% endmacro %}
+
   {% for instrument in instruments %}
     {% set is_editing = (editing_instrument_id == instrument.id) %}
     {% set was_saved = (saved_instrument_id == instrument.id) %}
@@ -451,8 +472,7 @@
                       <tr>
                         {% if loop.first %}
                           <td rowspan="{{ tag_fields | length }}" style="vertical-align: top;">
-                            <textarea rows="4" style="width: 100%;"
-                                      placeholder="Defaults to the pinned rule's group description"></textarea>
+                            {{ group_description_cell(instrument) }}
                           </td>
                         {% endif %}
                         <td>{{ display_field_label(df, session=session) }}</td>
@@ -461,10 +481,7 @@
                     {% endfor %}
                   {% else %}
                     <tr>
-                      <td>
-                        <textarea rows="4" style="width: 100%;"
-                                  placeholder="Defaults to the pinned rule's group description"></textarea>
-                      </td>
+                      <td>{{ group_description_cell(instrument) }}</td>
                       <td class="muted">No reviewee tags imported yet.</td>
                       <td class="sort-cell"><span class="muted">—</span></td>
                     </tr>
