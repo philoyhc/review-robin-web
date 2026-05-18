@@ -277,10 +277,11 @@ When 13C kicks off:
   group-scoped variant (the Group display control).
 - Update `spec/reviewer-surface.md` for the group-block
   treatment.
-- Update `spec/rule_based_assignment.md` §7.2 for the
-  `reviewee_group_description` text box on the Rule Builder page.
-  (§5.4's seeded-RuleSet table already carries the seeded
-  `reviewee_group_description` values — done ahead of 13C.)
+- `spec/rule_based_assignment.md` is already updated ahead of
+  13C: §5.4's seeded-RuleSet table carries the seeded
+  `reviewee_group_description` values, and §7.2 specs the
+  Rule Builder's side-by-side Rule Description / Reviewee Group
+  Description text boxes plus the parenthesised display form.
 - Update `spec/settings_inventory.md` for the new column.
 - Update `guide/todo_master.md` — move 13C to in-progress, then
   Done when PR 3 lands.
