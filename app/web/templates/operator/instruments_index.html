@@ -424,9 +424,14 @@
            Response Fields Help. Visual placeholders for Segment 13C —
            not editable until the group editor lands. #}
         {% set sorted_response_fields = instrument.response_fields | sort(attribute='order') %}
+        {# Eligible Display Fields rows for a group instrument follow
+           the normal-instrument standard: every populated reviewee tag
+           and pair-context tag (up to 6). The instruments page prunes
+           unpopulated display fields on GET, so rejecting the non-tag
+           sources (Name / Email / Profile) leaves exactly the eligible
+           tag rows. #}
         {% set tag_fields = (sorted_display_fields
-              | selectattr('source_type', 'equalto', 'reviewee')
-              | selectattr('source_field', 'in', ['tag_1', 'tag_2', 'tag_3'])
+              | rejectattr('source_field', 'in', ['name', 'email_or_identifier', 'profile_link'])
               | list) %}
         <div class="bottom-grid field-builder">
           <div class="card" style="border: none; background: transparent; padding: 0;">
