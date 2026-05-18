@@ -341,7 +341,7 @@
      pills sit in the heading and the open/close + visibility buttons
      sit beside Edit — the separate status card is retired for group
      cards (its slot holds the Assignment Rule card instead). #}
-  {% macro group_instrument_identity(session, instrument, index, is_ready) %}
+  {% macro group_instrument_identity(session, instrument, index, is_editing, is_ready) %}
     <div class="card instrument-edit"
          style="border-color: transparent; background: transparent; padding: 0;
                 display: flex; flex-direction: column;">
@@ -359,15 +359,34 @@
           <span class="pill pill-empty">not showing when closed</span>
         {% endif %}
       </h2>
-      {% if instrument.short_label %}
-        <p class="short-label-text"
-           style="margin: 0 0 4px 0; font-weight: 600; color: var(--text-primary, #111827);">{{ instrument.short_label }}</p>
+      {% if is_editing %}
+        <input form="dfsave-{{ instrument.id }}"
+               type="text"
+               name="short_label"
+               maxlength="32"
+               placeholder="(optional short label, e.g. Skills)"
+               value="{{ instrument.short_label or '' }}"
+               style="width: 100%; margin-bottom: 8px;">
+        <textarea form="dfsave-{{ instrument.id }}" name="description"
+                  placeholder="(no description)"
+                  style="width: 100%;">{{ instrument.description or "" }}</textarea>
+      {% else %}
+        {% if instrument.short_label %}
+          <p class="short-label-text"
+             style="margin: 0 0 4px 0; font-weight: 600; color: var(--text-primary, #111827);">{{ instrument.short_label }}</p>
+        {% endif %}
+        <p class="description-text">{{ instrument.description or "(no description)" }}</p>
       {% endif %}
-      <p class="description-text">{{ instrument.description or "(no description)" }}</p>
       <div style="display: flex; gap: 8px; justify-content: flex-start; margin-top: auto; padding-top: 12px; flex-wrap: wrap;">
-        <a class="btn secondary{% if is_ready %} disabled{% endif %}"
-           href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-           {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
+        {% if is_editing %}
+          <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary">Save</button>
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}">Cancel</a>
+        {% else %}
+          <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+             href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+             {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
+        {% endif %}
         {% if is_ready and not instrument.accepting_responses %}
           <form method="post"
                 action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
@@ -409,20 +428,24 @@
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
       {% set is_group = instrument.group_kind is not none %}
       {% if is_group %}
-        {# Segment 13C placeholder — group-scoped instrument card.
-           Section A holds the identity card (status pills in the
-           heading, open/close + visibility buttons beside Edit) and
-           the Assignment Rule card; the separate status card is
-           retired here. Danger Zone + action row follow. The fields
-           editor lands in a later 13C PR. #}
+        {# Segment 13C group-scoped instrument card. Section A holds
+           the identity card (status pills in the heading, open/close
+           + visibility buttons beside Edit) and the Assignment Rule
+           card. Section B's Display Fields table is editable; the
+           Response Fields tables are still read-only placeholders. #}
         {% set rule_picker = rule_picker_by_instrument_id.get(instrument.id) %}
+        {% if is_editing %}
+          {# Bulk-save form. Display-field inputs + the identity-card
+             short_label / description join it via ``form=``. #}
+          <form id="dfsave-{{ instrument.id }}" method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/fields/save"></form>
+        {% endif %}
         <div class="bottom-grid" style="align-items: stretch;">
-          {{ group_instrument_identity(session, instrument, loop.index, is_ready) }}
-          {{ assignment_rule_card(session, instrument, rule_picker, false) }}
+          {{ group_instrument_identity(session, instrument, loop.index, is_editing, is_ready) }}
+          {{ assignment_rule_card(session, instrument, rule_picker, is_editing) }}
         </div>
         {# Section B — Display Fields (group) + Response Fields, then
-           Response Fields Help. Visual placeholders for Segment 13C —
-           not editable until the group editor lands. #}
+           Response Fields Help. #}
         {% set sorted_response_fields = instrument.response_fields | sort(attribute='order') %}
         {# Group-scoped Display Fields rows: the populated reviewee +
            pair-context tag rows (same eligibility as a normal
@@ -450,14 +473,38 @@
                   {% for df in group_tag_fields %}
                     <tr>
                       <td>{{ display_field_label(df, session=session) }}</td>
-                      <td><input type="checkbox" disabled {% if df.visible %}checked{% endif %}></td>
+                      <td>
+                        {% if is_editing %}
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="display">
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="{{ df.id }}">
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ loop.index0 }}">
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="label" value="">
+                          <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                                 name="visible_ids" value="{{ df.id }}"
+                                 {% if df.visible %}checked{% endif %}>
+                        {% else %}
+                          <input type="checkbox" disabled {% if df.visible %}checked{% endif %}>
+                        {% endif %}
+                      </td>
                       <td class="sort-cell"><span class="sort-badge sort-badge-empty">↕</span></td>
                     </tr>
                   {% endfor %}
                   {% if group_name_field %}
                     <tr>
                       <td>{{ display_field_label(group_name_field, session=session) }}</td>
-                      <td><input type="checkbox" disabled {% if group_name_field.visible %}checked{% endif %}></td>
+                      <td>
+                        {% if is_editing %}
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="display">
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="{{ group_name_field.id }}">
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ group_tag_fields | length }}">
+                          <input form="dfsave-{{ instrument.id }}" type="hidden" name="label" value="">
+                          <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                                 name="visible_ids" value="{{ group_name_field.id }}"
+                                 {% if group_name_field.visible %}checked{% endif %}>
+                        {% else %}
+                          <input type="checkbox" disabled {% if group_name_field.visible %}checked{% endif %}>
+                        {% endif %}
+                      </td>
                       <td class="sort-cell"><span class="sort-badge sort-badge-empty">↕</span></td>
                     </tr>
                   {% endif %}
@@ -577,7 +624,7 @@
             </form>
           </div>
           <div class="card" style="border: none; background: transparent; padding: 0;">
-            {{ instrument_action_row(session, instrument, false, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) }}
+            {{ instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) }}
           </div>
         </div>
       {% else %}
