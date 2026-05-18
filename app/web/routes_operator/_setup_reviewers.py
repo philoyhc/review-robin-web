@@ -201,8 +201,9 @@ def _render_reviewers_page(
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "issues": [],
             "is_ready": is_ready,
-            "fields_with_data": assignments.reviewer_fields_with_data(
-                db, review_session.id
+            "fields_with_data": views.friendly_fields_with_data(
+                review_session,
+                assignments.reviewer_fields_with_data(db, review_session.id),
             ),
             "edit_id": edit_id,
             "add_mode": add_mode,

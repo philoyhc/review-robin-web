@@ -79,6 +79,7 @@ from ._setup import (
     SessionStatusPills,
     SetupRow,
     build_setup_rows,
+    friendly_fields_with_data,
     session_status_pills,
 )
 
@@ -244,6 +245,7 @@ __all__ = [
     "build_surface_preview_context",
     "build_validate_context",
     "build_workflow_card_context",
+    "friendly_fields_with_data",
     "parse_super_failure",
     "compute_next_action_generate_state",
     "constraint_summary_for_field",

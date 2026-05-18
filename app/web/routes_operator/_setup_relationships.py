@@ -616,8 +616,11 @@ def _render_relationships_page(
                     search_by="reviewee",
                 )
             ),
-            "fields_with_data": relationships_service.fields_with_data(
-                db, review_session.id
+            "fields_with_data": views.friendly_fields_with_data(
+                review_session,
+                relationships_service.fields_with_data(
+                    db, review_session.id
+                ),
             ),
             "issues": issues,
             "missing_confirm": missing_confirm,

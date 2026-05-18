@@ -9,9 +9,11 @@
 > (Export and import update,
 > `guide/archive/segment_18D_export_and_import_update.md`).
 
-**Holding pen.** **Part 1 has shipped** (2026-05-18) and
-**Part 2 has shipped** (2026-05-18). New items land as
-additional Parts as they surface.
+**Holding pen — open.** **Parts 1, 2 and 3 have shipped**
+(all 2026-05-18). The current Parts are done, but this plan is
+**deliberately kept in `guide/` (not archived)**: it stays open
+as the intake point for future small operator-surface
+enhancements, which land as additional Parts as they surface.
 
 ## Goal
 
@@ -98,9 +100,38 @@ Shipped across two PRs:
 Recorded here rather than as its own segment because it was two
 small PRs. This Part is **done**, not sketch scope.
 
+### Part 3 — "Fields with data" pills use friendly labels — shipped 2026-05-18
+
+**Context.** The Reviewers / Reviewees / Relationships Setup
+pages each carry a "Fields with data:" pill row listing the CSV
+columns the latest import populated. The pills rendered the raw
+CSV column names (`ReviewerTag1`, `RevieweeName`, `PhotoLink`,
+`PairContextTag1`, …) even when the operator had renamed those
+slots via the per-session field-label editor — so the pills
+disagreed with the preview-table column headers and the
+`Show columns:` chips, which both already render the friendly
+label.
+
+**What shipped.** A new `views.friendly_fields_with_data`
+(`app/web/views/_setup.py`) maps each raw CSV column name to its
+friendly label when the column corresponds to one of the 12
+renamable `(source_type, source_field)` slots, resolving through
+`field_labels.resolve` (operator override → builtin default).
+Columns with no renamable slot (`ReviewerName`, `ReviewerEmail`,
+`IncludeAssignment`) keep their canonical CSV name. The three
+Setup routes — plus the CSV-import error-render path in
+`_shared.py` — run the service helpers' raw output through it
+before passing `fields_with_data` to the template. No service or
+schema change: the `*_fields_with_data` helpers still return
+canonical CSV names (other callers, e.g. the Instruments page's
+`display_source_presence`, depend on that).
+
+Spec: `spec/setup_pages.md` (Shared body shape §3 + Implementation
+notes).
+
 ## Hard dependencies
 
-- _(none outstanding — Parts 1 and 2 have shipped.)_
+- _(none outstanding — Parts 1, 2 and 3 have shipped.)_
 
 ## Out of scope
 
@@ -113,10 +144,10 @@ small PRs. This Part is **done**, not sketch scope.
 
 When parts ship:
 
-- `docs/status.md` timeline entry per Part. _(Done — Parts 1 & 2.)_
+- `docs/status.md` timeline entry per Part. _(Done — Parts 1, 2 & 3.)_
 - `guide/todo_master.md` updated. _(Done.)_
-- `spec/setup_pages.md` — column-toggle behaviour on the
-  preview tables. _(Done — Part 1.)_
+- `spec/setup_pages.md` — column-toggle behaviour + friendly
+  "Fields with data" pill labels. _(Done — Parts 1 & 3.)_
 
 ## Working notes
 
