@@ -871,22 +871,12 @@ bottom of this file.
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-- **Participant-model upgrade (segments 21+)** — Review
-  Robin's planned evolution beyond the MVP into a generalized
-  participant model: reviewees and a new observer audience get
-  surfaces, response visibility becomes explicit per-instrument
-  policy data, sessions gain open / close / results-viewing
-  schedules, and magic links become an in-scope optional
-  affordance for reviewers / reviewees / observers.
-  **Roadmap numbering:** segments **1–20** cover the MVP of the
-  current review-platform model; **21–30 and beyond** are
-  reserved for the participant-model upgrade — each gets its
-  own `segment_2X_*.md` plan when scoped. Nothing in the band is
-  scheduled yet; the standing design guidance (the new data
-  structures, auth posture, surfaces, and an exploratory
-  Excel-workbook import/export item) lives in
-  `guide/participant_model_upgrade.md`.
-  **Guidance:** `guide/participant_model_upgrade.md`.
+> **Beyond the MVP — segments 21+.** This file tracks the
+> current review-platform MVP only (segments **1–20**). The
+> **participant-model upgrade** (segments **21–30+**) is
+> deliberately out of scope here; its standing design guidance
+> is `guide/participant_model_upgrade.md`, and a dedicated todo
+> file is started if and when that work begins.
 
 > The AG Grid replacement of the reviewer-surface table was
 > briefly a segment here (numbered 17 → 17A → 22) but was
