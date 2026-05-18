@@ -106,24 +106,29 @@ optional columns. The pattern (Segment 18E Part 1):
 
 - A `Show columns:` chip row sits in the top "Fields with data"
   card, directly below the `Fields with data:` line. Each chip is
-  a `<button class="col-chip" data-col-toggle="<slot>">` carrying
-  the column's **friendly label** (the operator-set field label,
-  falling back to the default — same label the header renders).
+  a `<span class="pill … tag-chip" data-col-toggle="<slot>"
+  role="button" tabindex="0">` carrying the column's **friendly
+  label** (the operator-set field label, falling back to the
+  default — same label the header renders). The chips reuse the
+  Sessions-lobby tag-filter chip styling (`.pill` + `.tag-chip` +
+  `.is-selected`); the inline JS binds both `click` and
+  `keydown` (Enter / Space).
 - Optional tag / context columns always render in the DOM (so
   empty columns can be revealed). Clicking a chip toggles
   per-column visibility via a CSS class on the table (e.g.
   `col-hidden-tag-1` → `display: none` for cells with class
   `tag-col-1`). The chip flips between filled (`is-selected`,
-  column shown) and outline (column hidden), with `aria-pressed`
+  column shown) and plain pill (column hidden), with `aria-pressed`
   tracking the state.
 - Each chip defaults to **selected iff that column has at least
   one populated value** in the current preview rows.
-- **Empty columns render the chip disabled** (`disabled
-  aria-disabled="true" title="No data in this column"`, struck
-  through). The operator can't toggle an empty column on, and
-  stored "show" preferences carried over from a load when the
-  column had data are ignored — the chip stays unselected and the
-  column stays hidden until the next import populates it.
+- **Empty columns render a disabled chip** (`pill-empty
+  tag-chip is-disabled`, struck through, `aria-disabled="true"
+  title="No data in this column"`, no `role="button"`). The
+  operator can't toggle an empty column on, and stored "show"
+  preferences carried over from a load when the column had data
+  are ignored — the chip stays unselected and the column stays
+  hidden until the next import populates it.
 - The Reviewees row also carries a chip for the **profile-link
   column** (`data-col-toggle="profile"`, cells `class="profile-col"`).
   That column is server-rendered only when some row has a link, so
@@ -137,9 +142,9 @@ optional columns. The pattern (Segment 18E Part 1):
   Stored "hide" keeps a populated column hidden; stored "show"
   reveals an explicitly-toggled-on column on next load. Disabled
   chips ignore storage entirely (see above).
-- The inline JS targets `.col-chip` and early-returns on
-  `chip.disabled` so listeners aren't bound and storage isn't
-  applied.
+- The inline JS targets `[data-col-toggle]` and early-returns on
+  the `is-disabled` chip class so listeners aren't bound and
+  storage isn't applied.
 
 The pattern is intentionally not extracted into a Jinja macro —
 each page's column shape differs enough (Reviewees adds the

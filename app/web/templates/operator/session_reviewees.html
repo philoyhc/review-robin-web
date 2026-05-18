@@ -36,19 +36,14 @@
       <p class="col-chip-row" style="margin: 12px 0 0 0;">
         <span>Show columns:</span>
         {% if has_photo %}
-          <button type="button" class="col-chip is-selected"
-                  data-col-toggle="profile" aria-pressed="true">
-            {{ field_label_header(session, "reviewee", "profile_link") }}
-          </button>
+          <span class="pill pill-count tag-chip is-selected"
+                data-col-toggle="profile" role="button" tabindex="0"
+                aria-pressed="true">{{ field_label_header(session, "reviewee", "profile_link") }}</span>
         {% endif %}
         {% for slot, has_data in [(1, has_tag_1), (2, has_tag_2), (3, has_tag_3)] %}
-          <button type="button"
-                  class="col-chip{% if has_data %} is-selected{% endif %}"
-                  data-col-toggle="tag-{{ slot }}"
-                  aria-pressed="{{ 'true' if has_data else 'false' }}"
-                  {% if not has_data %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-            {{ field_label_header(session, "reviewee", "tag_" ~ slot) }}
-          </button>
+          <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
+                data-col-toggle="tag-{{ slot }}"
+                {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ field_label_header(session, "reviewee", "tag_" ~ slot) }}</span>
         {% endfor %}
       </p>
     {% endif %}
@@ -393,7 +388,7 @@
       (function () {
         var STORAGE_KEY = "rrw-reviewee-tag-visibility";
         var table = document.getElementById("reviewees-table");
-        var chips = document.querySelectorAll(".col-chip");
+        var chips = document.querySelectorAll("[data-col-toggle]");
         if (!table || !chips.length) return;
         var stored = null;
         try {
@@ -401,7 +396,7 @@
         } catch (e) {}
         chips.forEach(function (chip) {
           var slot = chip.getAttribute("data-col-toggle");
-          if (chip.disabled) {
+          if (chip.classList.contains("is-disabled")) {
             apply(slot, false);
             return;
           }
@@ -410,11 +405,20 @@
             visible = !!stored[slot];
           }
           setChip(chip, slot, visible);
-          chip.addEventListener("click", function () {
+          bind(chip, function () {
             setChip(chip, slot, chip.getAttribute("aria-pressed") !== "true");
             persist();
           });
         });
+        function bind(el, handler) {
+          el.addEventListener("click", handler);
+          el.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handler();
+            }
+          });
+        }
         function setChip(chip, slot, visible) {
           chip.classList.toggle("is-selected", visible);
           chip.setAttribute("aria-pressed", visible ? "true" : "false");
@@ -426,7 +430,7 @@
         function persist() {
           var state = {};
           chips.forEach(function (chip) {
-            if (!chip.disabled) {
+            if (!chip.classList.contains("is-disabled")) {
               state[chip.getAttribute("data-col-toggle")] =
                 chip.getAttribute("aria-pressed") === "true";
             }

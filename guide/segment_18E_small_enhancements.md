@@ -36,10 +36,12 @@ persisted CSS class on the table.
 `Show columns:` **chip row** in the top "Fields with data" card,
 directly below the `Fields with data:` line:
 
-- Each optional column gets a `<button class="col-chip">` carrying
-  the column's **friendly label** (the operator-set field label,
-  falling back to the default). Filled (`is-selected`) means the
-  column is shown; clicking toggles it.
+- Each optional column gets a pill chip (`<span class="pill …
+  tag-chip" role="button" tabindex="0">`, reusing the
+  Sessions-lobby tag-filter chip styling) carrying the column's
+  **friendly label** (the operator-set field label, falling back
+  to the default). Filled (`is-selected`) means the column is
+  shown; clicking — or Enter / Space — toggles it.
 - Coverage is **all optional columns**, not just tags: the
   Reviewees row additionally carries a chip for the profile-link
   column (`data-col-toggle="profile"`, `class="profile-col"`).
@@ -53,7 +55,8 @@ directly below the `Fields with data:` line:
   minimal. No schema; visibility is CSS class toggling on the
   table. The mechanism stays inline JS + scoped `<style>` per
   template (the column shapes differ enough that a macro wasn't
-  worth it); `.col-chip` styling lives in `base.html`.
+  worth it); the chip styling reuses `.pill` / `.tag-chip` from
+  `base.html`.
 
 Spec: `spec/setup_pages.md` "Preview tables (shared toggle
 pattern)".
