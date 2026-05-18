@@ -3,7 +3,7 @@
 > **Carved out of the original Segment 14 family (2026-05-11).**
 > Renamed from `segment_14-1_email_infra.md`. Production
 > hardening proper lives in **14A**
-> (`guide/segment_14A_production_hardening.md`); reminder
+> (`guide/archive/segment_14A_production_hardening.md`); reminder
 > cadence + auto-scheduled reminders live in **14C**
 > (`guide/segment_14C_reminders_workflow.md`).
 

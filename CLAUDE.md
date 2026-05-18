@@ -15,7 +15,7 @@ other AI coding agent working in this repository.
 - Use Pydantic for request/response schemas.
 - Use SQLAlchemy 2.x declarative style with `Mapped[]` and `mapped_column`.
   Do not import from `sqlalchemy.dialects.postgresql` in `app/db/models/` —
-  Postgres-specific column types are deferred to Segment 14.
+  Postgres-specific column types are deferred infrastructure (`guide/deferred_infra.md`).
 - Keep route handlers thin.
 - Put business logic in service modules.
 - Add or update tests for every behavior change.
@@ -92,7 +92,7 @@ The app is a server-rendered FastAPI + Jinja monolith with a strict three-layer 
    `guide/archive/major_refactor.md` for the full split rationale and
    slice boundaries.
 2. **Service modules** (`app/services/*.py`) hold all business logic — querying, mutation, validation, lifecycle transitions, audit-event emission. Routes import these; templates do not. The largest service, `app/services/instruments/`, is split by concern into a package — `_state.py` (cross-slice plumbing including `_instrument_label`), `_rtds.py` (Response Type Definitions), `_display_fields.py`, `_response_fields.py` (incl. `bulk_save_fields`), `_instrument_crud.py` — with `__init__.py` re-exporting the public surface so callers continue to write `from app.services import instruments` unchanged. See `guide/archive/major_refactor.md` §12.A.
-3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative classes using `Mapped[]` / `mapped_column`. **Do not import `sqlalchemy.dialects.postgresql` here** — Postgres-specific column types are deferred to Segment 14.
+3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative classes using `Mapped[]` / `mapped_column`. **Do not import `sqlalchemy.dialects.postgresql` here** — Postgres-specific column types are deferred infrastructure (`guide/deferred_infra.md`).
 
 A small but important fourth seam:
 
@@ -143,7 +143,7 @@ reject it.
   progressive enhancement (e.g. the Save/Edit lock toggle and
   live-preview render on the Instruments page) is fine; framework
   / build pipeline is not. Inline `<style>` in `base.html`; CSS
-  extraction is a Segment 14 concern.
+  extraction is deferred.
 - **Schemas / config.** Pydantic 2 (`pydantic` for request /
   response shapes, `pydantic-settings` for env config).
 - **ORM + migrations.** SQLAlchemy 2.x declarative
@@ -166,7 +166,7 @@ reject it.
   `app/auth/identity.py`.
 - **Hosting.** Azure App Service (Linux, Python 3.12) + Azure
   Postgres Flexible Server. Public access with firewall
-  allow-list; VNet integration is a Segment 14 concern.
+  allow-list; VNet integration is deferred infrastructure (`guide/deferred_infra.md`).
 - **Deploy.** GitHub Actions, OIDC-authenticated; three jobs
   (`build` → `migrate` → `deploy`). Migrations land via
   `alembic upgrade head` against Azure Postgres before the App

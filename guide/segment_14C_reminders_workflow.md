@@ -2,7 +2,7 @@
 
 > **Carved out of the original Segment 14 family (2026-05-11).**
 > Production hardening lives in **14A**
-> (`guide/segment_14A_production_hardening.md`); email
+> (`guide/archive/segment_14A_production_hardening.md`); email
 > transport activation + backend swaps live in **14B**
 > (`guide/segment_14B_email_infrastructure.md`, formerly
 > `segment_14-1`). 14C is the *reminders policy* layer that

@@ -6,7 +6,7 @@ Postgres-only migrations, and so sit outside the in-app feature
 and hardening segments.
 
 Carved out of **Segment 14A — Production hardening**
-(`guide/segment_14A_production_hardening.md`) on 2026-05-18.
+(`guide/archive/segment_14A_production_hardening.md`) on 2026-05-18.
 14A's PR ladder is the *in-app* hardening — logging, error
 handling, indexes, permissions, accessibility, runbooks; the
 items below are out of that ladder. They are inherited debt
@@ -104,5 +104,5 @@ drift is caught in CI.
 
 ## See also
 
-- `guide/segment_14A_production_hardening.md` — the in-app
+- `guide/archive/segment_14A_production_hardening.md` — the in-app
   hardening 14A *does* cover, and its 6-PR ladder.
