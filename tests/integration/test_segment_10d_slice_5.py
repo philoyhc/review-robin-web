@@ -456,6 +456,54 @@ def test_group_instrument_display_fields_editable_and_save(
     assert name_df.visible is False
 
 
+def test_group_instrument_display_fields_sort_save(
+    client: TestClient, db: Session
+) -> None:
+    """The group-scoped card's Display Fields Sort control persists to
+    instruments.sort_display_fields (Segment 13C PR 1)."""
+    session = _create_session(client, db, code="grp-sort")
+    [default] = _instruments(db, session.id)
+    client.post(
+        f"/operator/sessions/{session.id}/instruments/add-group",
+        data={"after": str(default.id)},
+        follow_redirects=False,
+    )
+    group = next(i for i in _instruments(db, session.id) if i.group_kind)
+
+    page = client.get(
+        f"/operator/sessions/{session.id}/instruments?editing={group.id}"
+    )
+    assert page.status_code == 200
+    assert 'class="sort-btn"' in page.text
+    assert f'id="sort-spec-inputs-{group.id}"' in page.text
+
+    name_df = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == group.id,
+            InstrumentDisplayField.source_field == "name",
+        )
+    ).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{group.id}/fields/save",
+        data={
+            "kind": "display",
+            "id": str(name_df.id),
+            "order": "0",
+            "label": "",
+            "visible_ids": str(name_df.id),
+            "sort_display_field_id": str(name_df.id),
+            "sort_dir": "asc",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(group)
+    assert group.sort_display_fields == [
+        {"display_field_id": name_df.id, "dir": "asc"}
+    ]
+
+
 # --------------------------------------------------------------------------- #
 # POST /instruments/{iid}/delete
 # --------------------------------------------------------------------------- #
