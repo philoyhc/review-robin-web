@@ -263,6 +263,11 @@ def activate_session(
         ).scalars()
     )
     for instrument in instruments:
+        if instrument.group_kind is not None and instrument.rule_set_id is None:
+            # A group-scoped instrument with no pinned rule cannot
+            # accept responses (Segment 13C rule-required gate); it
+            # stays closed until the operator pins a rule and opens it.
+            continue
         instrument.accepting_responses = True
         instrument.deadline_closed_at = None
     db.flush()
@@ -451,6 +456,13 @@ def open_instrument(
         raise LifecycleError(
             "Cannot open an instrument past the session deadline",
             code="deadline_passed",
+        )
+
+    if instrument.group_kind is not None and instrument.rule_set_id is None:
+        raise LifecycleError(
+            "A group-scoped instrument needs an assignment rule before "
+            "it can accept responses. Pin one on the Assignments page.",
+            code="group_instrument_no_rule",
         )
 
     if not instrument.accepting_responses:
