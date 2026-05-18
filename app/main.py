@@ -6,6 +6,7 @@ from starlette.responses import RedirectResponse
 
 from app.logging_config import configure_logging
 from app.web.deps import OperatorAllowlistDenied
+from app.web.error_handlers import register_error_handlers
 from app.web.routes_about import router as about_router
 from app.web.routes_auth import router as auth_router
 from app.web.routes_health import router as health_router
@@ -39,6 +40,8 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(operator_router)
     app.include_router(reviewer_router)
+
+    register_error_handlers(app)
 
     @app.exception_handler(OperatorAllowlistDenied)
     async def _operator_allowlist_denied(

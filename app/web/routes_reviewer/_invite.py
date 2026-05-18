@@ -40,7 +40,10 @@ def reviewer_invite(
     """
     found = invitations_service.lookup_invitation_by_token(db, token)
     if found is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This invitation link is invalid or has expired.",
+        )
     invitation, review_session, reviewer = found
     if (user.email or "").casefold() != reviewer.email.casefold():
         return _templates.TemplateResponse(
