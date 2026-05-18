@@ -27,6 +27,16 @@ drive position — e.g., Segment 12B (PRs #788, #789) sits
 between 12A-3 (#779) and 16A (#834) because that's where its
 PRs landed in the global chronology.
 
+> **Adding a completed entry — keep this section sorted.** Insert
+> a new entry at its **first-PR-number** position, not at the
+> bottom by default and not next to its same-numbered siblings.
+> A just-finished segment *usually* has the highest PR numbers
+> and so does land at the end — but verify against the entry
+> above it rather than assuming. Order by PR number, never by
+> segment number or completion date. Keep each segment's own
+> sub-bullets / nested PR detail together as one contiguous
+> block; only the ordering of whole blocks follows PR number.
+
 ### P0 — Stop the bleeding (Instruments UI ↔ data drift)
 
 - **#13 — Fix Display Fields placeholder** — done 2026-05-01 (option 2: wired to existing routes).
@@ -55,7 +65,7 @@ PRs landed in the global chronology.
 
 ### Segment 11
 
-Segment 11's sub-segments and their catalog items, in completion order. Each entry names the plan it ships against; per-PR detail lives there.
+Segment 11's sub-segments and their catalog items, in first-PR-number order. Each entry names the plan it ships against; per-PR detail lives there.
 
 - **Segment 11A — Tier 1–3 cleanup punch list** — done 2026-05-03 across PRs **#309, #314, #315, #319 → #324, #328, #329, #330**. v2 chrome rebuild rolled out across the session-centric pages (**#21a**, ticked off in `guide/ui_checklist.md`). Tier 3 polish items closed under this segment:
   - **#9 — Refresh `get_or_create_default_instrument` docstring** (PR #309).
@@ -78,9 +88,9 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
 
 - **Segment 11D — #21b v2 sweep, non-session-centric pages** — done 2026-05-04. PRs **#407 (A) → #408 (B) → #409 (C)** plus follow-up refinements **#410 → #413**. PR A swept `sessions_list`, `session_new`, `about`, and `me_debug` onto `body.ui-v2` and landed the return-to-origin helper for detour destinations (`app/web/return_to.py`); PR B added the two-row session chrome to `session_edit` (with `current_page = ""` so no tab activates per "Sub-pages of Home") and made an initial run at the sessions-list lobby as a flex column of `.card.session-card` rows; PR C introduced the lighter reviewer top-bar variant via a new `{% block top_bar %}` in `base.html` plus `reviewer/_top_bar.html`, and swept the three reviewer templates onto `body.ui-v2 reviewer` with D5 status icons (`.status-icon-{complete,incomplete}`), D6 banners (`.banner.banner-{info,success,warning}`), and D7 page header. Post-11D follow-ups (#410–#413) reverted the lobby back to a v2 `<table>` inside a single `.card` and settled the column set at Session Name (link) / Session Code / Deadline (pill) / Created by / Created / Last Modified plus an unlabelled trailing column carrying an unwired select-row checkbox; retired the redundant Access button and the per-row Delete anchor; dropped the redundant `/about` link from the top-left chrome identity; and surfaced inline validation feedback in the Next Action card on Session Home when `?validated=1` fails on a draft session. Plan: `guide/archive/segment_11D_v2_sweep_non_session.md`. Catalog `guide/archive/unfinished_business.md` #21.
 
-- **Segment 11L — Instrument friendly short label** — done 2026-05-04 (PR #429). New `Instrument.short_label String(32) | NULL` column + Setup-side editor on `/operator/sessions/{id}/instruments`. Two reviewer-side helpers (`views.page_button_label(instrument, position)` and `views.instrument_heading(instrument, position, total_count)`) ship inside Segment 11D follow-on PR γ. Plan: `guide/archive/segment_11L_instrument_short_label.md`.
-
 - **Segment 11D follow-on — Reviewer surface, multi-instrument rewrite** — done 2026-05-05. The five planned PRs **#428 (α) → #430 (β) → #431 (γ) → #432 (δ) → #433 (ε)** landed in dependency order, then a polish stream **#434 → #448** swept the missing-required UX, the per-instrument intro grid + tinted help cards, the auto-seed-assignments-on-instrument-add behaviour, the missing-required Cancel-back-to-source-page link, the numeric-field journey (`type="number"` with `min`/`max` + `step="any"` + hidden spinners + `title` constraint hint + JS `setCustomValidity` step-grid popup with `1e-6` tolerance + server-side `validate_value` backstop in `responses.py`), and the per-instrument constraint summary line above each table (List rows omitted). Save / Submit flash banners retired in #441; missing-required moved to its own full-width 2-column `.rs-missing-card` and Submit became a hard gate (acknowledge-and-submit-anyway retired) in #436. New helpers: `views.placeholder_for_field`, `views.constraint_summary_for_field`. Plan: `guide/archive/segment_11D_v2_sweep_non_session.md` "Follow-on". Catalog `guide/archive/unfinished_business.md` #32 partial (general "further refinement" remains a Segment 15 catch-all).
+
+- **Segment 11L — Instrument friendly short label** — done 2026-05-04 (PR #429). New `Instrument.short_label String(32) | NULL` column + Setup-side editor on `/operator/sessions/{id}/instruments`. Two reviewer-side helpers (`views.page_button_label(instrument, position)` and `views.instrument_heading(instrument, position, total_count)`) ship inside Segment 11D follow-on PR γ. Plan: `guide/archive/segment_11L_instrument_short_label.md`.
 
 - **Segment 11E — Operator-editable email template editor + SMTP scaffolding** — done 2026-05-07. Six PRs landed against the plan (PR 3 collapsed into PR 1 — the renderer wiring landed there; PR 7 absorbed into Segment 14B) plus one polish PR:
   - **PR 1 (#461)** — schema + service-layer renderer. `sessions.help_contact` (String 320, nullable) and `sessions.email_template_overrides` (JSON, nullable) columns; new `app/services/email_templates.py` rendering `string.Template.safe_substitute` over the canonical five-tag merge field set (`$reviewer_name` / `$session_name` / `$deadline` / `$help_contact` / `$invite_url`); `_email_body` / `_reminder_body` retire in favour of the new `render_invitation` / `render_reminder`. Help-contact also surfaces on the reviewer surface as a small "Questions? Contact X" line.
@@ -93,16 +103,6 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - Spec at `spec/email_infra_options.md` for the broader transport landscape (Options A–D: SMTP, Microsoft Graph application permission, Azure Communication Services, third-party transactional). The Graph stub will become Option B once the institution's IT conversation lands; the wiring lives in **Segment 14B**.
   - Plan: `guide/archive/segment_11E_email_template_editor.md`. Catalog `guide/archive/unfinished_business.md` #24 (closed by this segment). The submit-time send wiring (formerly planned as 11E PR 7) absorbed into **Segment 14B Part A** so all email *sending* lives on one segment regardless of which transport backend lights up.
 
-- **Segment 11K — Audit-event `detail` schema convention** — done 2026-05-07. PRs **#544 (PR 1) → #545 (PR 2) → #546 (PR 3) → #547 (PR 4) → #548 (PR 5) → #549 (PR 6) → #550 (PR 7) → this PR (PR 8)**. Pins the canonical envelope schema for `AuditEvent.detail` and migrates every emitter in the codebase to it.
-  - **PR 1 (#544)** — spec section in `spec/architecture.md` ("Audit-event detail schema") + typed envelope helpers (`audit.changes` / `.snapshot` / `.counts` / `.set_changes`) + new `write_event` kwargs (`session=` / `payload=` / `reason=` / `refs=` / `context=`) + session-lifecycle family migrated as proof.
-  - **PRs 2–5 (#545 → #548)** — service-module sweeps: instruments (~18 emitters), invitations (6), responses (4), assignments (2). PR 5 introduced the `excluded_<reason>` flatten-into-counts pattern that lets 13A's RuleBased exclusions plug in without schema churn.
-  - **PR 6 (#549)** — relocated `email_template.updated` / `.reset` from `routes_operator.py` into `app/services/email_templates.py::record_template_change` / `.record_template_reset` so PR 7 could sweep them with the rest of the settings family. Pure relocation; no shape change.
-  - **PR 7 (#550)** — settings sweep: CSV imports (4), operator settings (2), email templates (2). Replaces the legacy `detail={}` on `operator_email_settings.cleared` with the canonical `detail=None`. Every emitter in the codebase now uses canonical shape.
-  - **PR 8 (this PR)** — Pydantic write-validation gate. New `app/services/audit.py::EVENT_SCHEMAS` registry pins the allowed envelopes/slots per event_type; `validate_detail` runs in `write_event` after composition. `settings.audit_strict_mode` gates strict (raise) vs lenient (warn-and-write). `tests/conftest.py` flips strict on so CI catches drift. New `tests/unit/test_audit_detail_schema.py` covers the gate.
-  - Closes catalog `guide/archive/unfinished_business.md` #5. Plan: `guide/archive/segment_11K_audit_event_detail_schema.md`. Spec: `spec/architecture.md` "Audit-event detail schema".
-
-- **Segment 11C Part 2 — Outbox audit-log scaffolding** — done 2026-05-07. **PR #541** (PR F). Migration `c4f6a8b0d2e5` adds the seven nullable audit-log columns to `email_outbox` (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`, `correlation_id`) + an index on `correlation_id` (the dispatch helper's idempotent-retry lookup key). `app/db/models/email_outbox.py` gains matching `Mapped[X | None]` declarations and the canonical value-set constants `EMAIL_OUTBOX_STATUSES = (queued, sending, sent, failed)` / `EMAIL_OUTBOX_KINDS = (invitation, reminder, responses_received)` so any future widening is a deliberate edit. Pure additive — all columns nullable, no defaults, no backfill, no service-layer reads or writes; today's enqueue paths continue to write only the existing columns. New tests at `tests/integration/test_email_outbox_schema.py`. The columns sit inert until **Segment 14B Part A** lights up the dispatch helper against this stable schema. Plan: `guide/archive/segment_11C_operations_consolidation.md` "Part 2".
-
 - **Segment 11C Part 1 — Operations consolidation** — done 2026-05-06. PRs **#490 → #491 → #492 → #493**.
   - **#490** — chrome restored Outbox as a tab (later removed in #493).
   - **#491** — Manage Invitations (`/operator/sessions/{id}/invitations`) rewrite. Seven-column reviewer-centric table — Reviewer / Email Status / Email Sent / Review Progress / Required Fields / Last reminder / Action — absorbs the retired Monitoring page's reviewer-centric surface (per-reviewer progress, per-row reminders). New helper `views.build_invitations_rows` joins `monitoring.per_reviewer_progress` with a single batched outbox query for "latest invitation outbox row per reviewer". Reviewer drill-in scaffold at `.../invitations/{inv_id}/detail`. Outbox schema slice: Migration `b3d5e7f9a1c4` adds `email_outbox.cc_emails` / `bcc_emails` (Text); `send_invitation` / `send_reminder` populate them at queue time from the `email_template_overrides` JSON (new `email_templates.cc_bcc_for(session, kind)` helper). Columns sit unused at send time until Part 2.
@@ -111,16 +111,6 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - **Polish stream (#494 → #500).** Docs sync (#494); Responses table column rename + pill styling on `Reviewers completed` + `Last response` (#495); status-dropdown + name/email search filter strip on both pages closing the `spec/operations_pages.md` "Filtering" gap (#496) plus visual refinements — half-width filter card, side-by-side inputs, bottom-right Apply (#497); summary card + filter card paired side-by-side in `.bottom-grid` with new generic `.card-action-row` v2 primitive on Responses (#498) then Manage Invitations (#499); bulk **Regenerate all** secondary button + `invitations.regenerate_all_tokens` service helper + batch `invitations.regenerated` audit event (#500).
   - Test reorg: `tests/integration/test_monitoring.py` → `test_reminders.py`; new `test_segment_11c_pr3_responses.py`.
   - Plan: `guide/archive/segment_11C_operations_consolidation.md`. Functional spec: `spec/operations_pages.md`.
-
-- **Segment 11H — Placeholder card scaffolds (Quick Setup + Extract Data)** — done. Both Session Home placeholder cards have shipped their inert-but-fully-rendered real shapes via the `_quick_setup_card.html` and `_extract_data_card.html` partials (included from `session_detail.html`), backed by the `QuickSetupSlot` / `QuickSetupContext` and `ExtractDataRow` / `ExtractDataContext` dataclasses + builder helpers in `app/web/views.py`. Every slot / row / button is laid out and accessible; every interactive control renders disabled (`is_wired=False`, `wire_url=None`) until the wiring segments. The Quick Setup card on `/operator/sessions/new` is also wired to the same scaffold via `build_new_session_quick_setup_context`. Plan: `guide/archive/segment_11H_placeholder_card_scaffolds.md`. Unblocks Segment 11J (Quick Setup wiring) and Segment 12A PR 6 (Configuration import slot graduation).
-
-- **Segment 11J — Quick Setup wiring** — done 2026-05-07. PRs **#526 → #527 → #528**.
-  - **#526** — plan revision. `guide/archive/segment_11J_quick_setup_card.md` rewritten to refocus on wiring the three "existing capability" slots (Reviewers / Reviewees / Assignments) and to unify the card's status-awareness model behind a single Lock / Unlock toggle that applies in every editable-conceivable lifecycle state, including `ready`. Slot 4 (Session settings, the configuration-import slot) explicitly carved out as a separate sub-plan and deferred to Segment 12A PR 6.
-  - **#527 (PR A)** — Reviewers + Reviewees slots go live, plus the Lock / Unlock toggle wiring. New routes `POST /sessions/{id}/quick-setup/reviewers` / `.../reviewees` delegate to a thin `_handle_quick_setup_import` wrapper that reuses the same `parse / save / invalidate-if-validated` pipeline the per-entity Setup pages use. New `POST /sessions/{id}/quick-setup/lock` flips a per-session `HttpOnly` cookie (`qsu_{session_id}`, scoped to `/operator/sessions/{id}`) that the context-builder reads to decide `is_locked`. `views.cascade_message_for_replace` centralises the "this will replace N existing X (and clears M assignments)" copy. Status awareness collapses on a single signal — `is_locked` — and the body wrapper carries `.locked` greying by default in every editable-conceivable state; `.card.disabled` is retired in favour of body-greying, and `show_lock_toggle=True` on `ready` (visual unlock only — `_require_editable` stays the hard gate, with rejection surfacing as a scoped `banner-error` carrying the "Pause first" copy).
-  - **#528 (PR B)** — Assignments slot goes live. New route `POST /sessions/{id}/quick-setup/assignments` auto-detects mode from the form payload: when `file` is attached and non-empty it runs the existing `parse_manual_csv` → `manual_rows_to_pairs` → `replace_assignments(mode=manual)` pipeline; otherwise it generates `full_matrix` from the stored rule via `generate_full_matrix` → `replace_assignments(mode=full_matrix)`. `exclude_self_review` honoured on both branches. Cascade banner reuses PR A's shape (banner-warning above the submit form, required confirm checkbox, Cancel + Confirm replacement); per spec assignments are leaf data so the cascade copy stops at "This will replace N existing assignments." with no further consequence to surface.
-  - Slot 4 (Session settings / configuration-import) stays inert — graduates with Segment 12A PR 6, which flips `is_wired=False → True` and supplies `wire_url` against the seam 11H pinned. No markup or scaffold changes needed there.
-  - New tests: `tests/integration/test_quick_setup_card.py` covers per-slot golden path, cookie-scoped lock toggle (round-trip + per-session isolation), cascade copy + helper unit-side, replace-confirmation flow, scoped parse-error / lifecycle-rejection / needs-confirm banners. Updated scaffold expectations in `tests/integration/test_quick_setup_scaffold.py` and `tests/integration/test_session_detail_restructure.py` for the unified pattern (toggle visible on `ready`, `.card.disabled` retired, all three live slots posting to their wire URLs).
-  - Plan: `guide/archive/segment_11J_quick_setup_card.md`. Catalog `guide/archive/unfinished_business.md` #30 (closed by this segment, modulo slot 4 which carries forward into 12A).
 
 - **Segment 11G — Validate page** — done 2026-05-06. PRs **#505 → #506 → #507 → #508** (the four-PR sequence in the plan) plus polish PRs **#509 → #511**. Builds the Validate page out from a thin read-only issue list into a find-and-fix surface:
   - **#505 (PR A)** — page layout (later simplified): three-card structure with severity counts + lifecycle-aware copy + setup-coverage matrix + existing issue list. New `views.build_validate_context` adapter + `views.validate_lifecycle_copy` pure function.
@@ -137,6 +127,26 @@ Segment 11's sub-segments and their catalog items, in completion order. Each ent
   - Plan: `guide/archive/segment_11F_previews_page.md`.
   - **#509 → #511 polish** — readiness summary card removed (severity counts already live in the chip strip); setup-coverage matrix moved off `<table>` markup onto a flex-row-per-cell + 4-column grid layout (3-col → 4-col after #511) with the descriptive subtitle inline next to the H2.
   - Plan: `guide/archive/segment_11G_validate_page.md`. New: `tests/integration/test_session_validate_page.py` covering the four-PR surface end-to-end.
+
+- **Segment 11J — Quick Setup wiring** — done 2026-05-07. PRs **#526 → #527 → #528**.
+  - **#526** — plan revision. `guide/archive/segment_11J_quick_setup_card.md` rewritten to refocus on wiring the three "existing capability" slots (Reviewers / Reviewees / Assignments) and to unify the card's status-awareness model behind a single Lock / Unlock toggle that applies in every editable-conceivable lifecycle state, including `ready`. Slot 4 (Session settings, the configuration-import slot) explicitly carved out as a separate sub-plan and deferred to Segment 12A PR 6.
+  - **#527 (PR A)** — Reviewers + Reviewees slots go live, plus the Lock / Unlock toggle wiring. New routes `POST /sessions/{id}/quick-setup/reviewers` / `.../reviewees` delegate to a thin `_handle_quick_setup_import` wrapper that reuses the same `parse / save / invalidate-if-validated` pipeline the per-entity Setup pages use. New `POST /sessions/{id}/quick-setup/lock` flips a per-session `HttpOnly` cookie (`qsu_{session_id}`, scoped to `/operator/sessions/{id}`) that the context-builder reads to decide `is_locked`. `views.cascade_message_for_replace` centralises the "this will replace N existing X (and clears M assignments)" copy. Status awareness collapses on a single signal — `is_locked` — and the body wrapper carries `.locked` greying by default in every editable-conceivable state; `.card.disabled` is retired in favour of body-greying, and `show_lock_toggle=True` on `ready` (visual unlock only — `_require_editable` stays the hard gate, with rejection surfacing as a scoped `banner-error` carrying the "Pause first" copy).
+  - **#528 (PR B)** — Assignments slot goes live. New route `POST /sessions/{id}/quick-setup/assignments` auto-detects mode from the form payload: when `file` is attached and non-empty it runs the existing `parse_manual_csv` → `manual_rows_to_pairs` → `replace_assignments(mode=manual)` pipeline; otherwise it generates `full_matrix` from the stored rule via `generate_full_matrix` → `replace_assignments(mode=full_matrix)`. `exclude_self_review` honoured on both branches. Cascade banner reuses PR A's shape (banner-warning above the submit form, required confirm checkbox, Cancel + Confirm replacement); per spec assignments are leaf data so the cascade copy stops at "This will replace N existing assignments." with no further consequence to surface.
+  - Slot 4 (Session settings / configuration-import) stays inert — graduates with Segment 12A PR 6, which flips `is_wired=False → True` and supplies `wire_url` against the seam 11H pinned. No markup or scaffold changes needed there.
+  - New tests: `tests/integration/test_quick_setup_card.py` covers per-slot golden path, cookie-scoped lock toggle (round-trip + per-session isolation), cascade copy + helper unit-side, replace-confirmation flow, scoped parse-error / lifecycle-rejection / needs-confirm banners. Updated scaffold expectations in `tests/integration/test_quick_setup_scaffold.py` and `tests/integration/test_session_detail_restructure.py` for the unified pattern (toggle visible on `ready`, `.card.disabled` retired, all three live slots posting to their wire URLs).
+  - Plan: `guide/archive/segment_11J_quick_setup_card.md`. Catalog `guide/archive/unfinished_business.md` #30 (closed by this segment, modulo slot 4 which carries forward into 12A).
+
+- **Segment 11C Part 2 — Outbox audit-log scaffolding** — done 2026-05-07. **PR #541** (PR F). Migration `c4f6a8b0d2e5` adds the seven nullable audit-log columns to `email_outbox` (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`, `correlation_id`) + an index on `correlation_id` (the dispatch helper's idempotent-retry lookup key). `app/db/models/email_outbox.py` gains matching `Mapped[X | None]` declarations and the canonical value-set constants `EMAIL_OUTBOX_STATUSES = (queued, sending, sent, failed)` / `EMAIL_OUTBOX_KINDS = (invitation, reminder, responses_received)` so any future widening is a deliberate edit. Pure additive — all columns nullable, no defaults, no backfill, no service-layer reads or writes; today's enqueue paths continue to write only the existing columns. New tests at `tests/integration/test_email_outbox_schema.py`. The columns sit inert until **Segment 14B Part A** lights up the dispatch helper against this stable schema. Plan: `guide/archive/segment_11C_operations_consolidation.md` "Part 2".
+
+- **Segment 11K — Audit-event `detail` schema convention** — done 2026-05-07. PRs **#544 (PR 1) → #545 (PR 2) → #546 (PR 3) → #547 (PR 4) → #548 (PR 5) → #549 (PR 6) → #550 (PR 7) → this PR (PR 8)**. Pins the canonical envelope schema for `AuditEvent.detail` and migrates every emitter in the codebase to it.
+  - **PR 1 (#544)** — spec section in `spec/architecture.md` ("Audit-event detail schema") + typed envelope helpers (`audit.changes` / `.snapshot` / `.counts` / `.set_changes`) + new `write_event` kwargs (`session=` / `payload=` / `reason=` / `refs=` / `context=`) + session-lifecycle family migrated as proof.
+  - **PRs 2–5 (#545 → #548)** — service-module sweeps: instruments (~18 emitters), invitations (6), responses (4), assignments (2). PR 5 introduced the `excluded_<reason>` flatten-into-counts pattern that lets 13A's RuleBased exclusions plug in without schema churn.
+  - **PR 6 (#549)** — relocated `email_template.updated` / `.reset` from `routes_operator.py` into `app/services/email_templates.py::record_template_change` / `.record_template_reset` so PR 7 could sweep them with the rest of the settings family. Pure relocation; no shape change.
+  - **PR 7 (#550)** — settings sweep: CSV imports (4), operator settings (2), email templates (2). Replaces the legacy `detail={}` on `operator_email_settings.cleared` with the canonical `detail=None`. Every emitter in the codebase now uses canonical shape.
+  - **PR 8 (this PR)** — Pydantic write-validation gate. New `app/services/audit.py::EVENT_SCHEMAS` registry pins the allowed envelopes/slots per event_type; `validate_detail` runs in `write_event` after composition. `settings.audit_strict_mode` gates strict (raise) vs lenient (warn-and-write). `tests/conftest.py` flips strict on so CI catches drift. New `tests/unit/test_audit_detail_schema.py` covers the gate.
+  - Closes catalog `guide/archive/unfinished_business.md` #5. Plan: `guide/archive/segment_11K_audit_event_detail_schema.md`. Spec: `spec/architecture.md` "Audit-event detail schema".
+
+- **Segment 11H — Placeholder card scaffolds (Quick Setup + Extract Data)** — done. Both Session Home placeholder cards have shipped their inert-but-fully-rendered real shapes via the `_quick_setup_card.html` and `_extract_data_card.html` partials (included from `session_detail.html`), backed by the `QuickSetupSlot` / `QuickSetupContext` and `ExtractDataRow` / `ExtractDataContext` dataclasses + builder helpers in `app/web/views.py`. Every slot / row / button is laid out and accessible; every interactive control renders disabled (`is_wired=False`, `wire_url=None`) until the wiring segments. The Quick Setup card on `/operator/sessions/new` is also wired to the same scaffold via `build_new_session_quick_setup_context`. Plan: `guide/archive/segment_11H_placeholder_card_scaffolds.md`. Unblocks Segment 11J (Quick Setup wiring) and Segment 12A PR 6 (Configuration import slot graduation).
 
 ### Segment 13
 
@@ -492,88 +502,6 @@ edited rows can be surfaced without busting the 200-row cap
 
 ---
 
-### Segment 18C — Operator-triggered purge — done 2026-05-17
-
-Selective hard-delete of a session's data, shipped as a **"Purge
-and archive"** action on the 18A Sessions-lobby row expander
-(PR #1123). The expander's Archive button is renamed; three
-"Archive after purging" checkboxes — Responses / Rosters /
-Audit log — sit after the Allow-delete checkbox.
-
-- New `app/services/session_purge.py` — `purge_responses`,
-  `purge_rosters`, `purge_audit_log`: FK-safe hard-delete
-  cascades, each emitting a `counts`-envelope audit event.
-- `/operator/sessions/archive-selected` runs the chosen purges
-  (audit log → responses → rosters) then archives; no checkbox
-  ticked is a plain archive. Ticking Rosters force-ticks
-  Responses (the cascade makes it implied).
-- Re-scoped on the way in: the *scheduled* / policy-driven
-  retention half moved to **Segment 18F** Part 4. Closes the
-  operator-facing half of the §21 #16 acceptance criterion.
-
-Plan archived: `guide/archive/segment_18C_retention_deletion.md`.
-
----
-
-### Segment 18D — Export and import update — done 2026-05-17
-
-Catch-up pass on the export / import surface after the
-15-series moved the session model on. Actionable scope shipped
-across PRs **#1129 → #1133**:
-
-- **Settings CSV export refresh** (PR E2) — `display_timezone`
-  + `self_reviews_active` round-trip (force-applied on import);
-  a `library_name` provenance cell emits per RTD / RuleSet; the
-  `rule_set_name` un-pinned-instrument fallback re-documented.
-- **Responses extract restructure** — per-instrument preamble
-  (positional `instrument_{n}` name + a `FieldKey, HelpText`
-  field dictionary) + a blank-row gap before the data table;
-  `InstrumentName` is the positional id, not the operator name.
-- **Zip-all bundle** (PR E1) — the "Zip all" tile graduates to
-  a real `{code}_bundle.zip` of the five operator CSVs, via
-  `extracts/zip_bundle.py` + a `session.bundle_extracted` event.
-- **Import part** — resolved with no code: `library_name` is
-  always-clone (imported copies stay standalone,
-  `library_origin_id` NULL); `rule_set_name` typo validation
-  already existed.
-
-Two consumer-blocked parts handed off: **Part 3** (Responses
-`Instrument` flavour column) rides with **13C**; **Part 5**
-(retention CSV columns) with **18F Part 4**. Plan:
-`guide/segment_18D_export_and_import_update.md`.
-
----
-
-### Segment 18A — Sessions lobby enhancements — done 2026-05-17
-
-The operator Sessions lobby (`/operator/sessions`) rebuilt around a
-selection-aware inline row-expander action surface, plus session
-tagging, archiving, one-click cloning, client-side search, and
-sortable columns. Built placeholder-first (the UI shell across
-PRs #1080 → #1105), then the implementation ladder PRs A → H
-(#1106 → #1117):
-
-- **A** — `app/services/session_tags.py` (tag read/write +
-  `session.tag_added` / `.tag_removed` audit events); real tags on
-  the lobby. **B** — the tag-filter strip (clickable chips, AND/OR
-  mode chip, `localStorage`). **C** — client-side lobby search.
-  **D** — the expander action-submission helper + single-session
-  Save. **E** — `app/services/session_clone.py`, `clone_session`
-  (full-setup / config-shell modes). **F** — `draft ⇄ archived`
-  archiving. **G** — confirm-gated expander Delete (Danger Zone
-  retired) + bulk tags. **H** — the `/operator/sessions/archived`
-  child page.
-- The lobby table was reordered (Last Modified dropped) and opted
-  into the shared `rrw-sortable` primitive.
-- Scheduled automation (auto-archive et al.) split out to the new
-  stub **Segment 18F — Scheduled events**; **18B is retired** as a
-  segment number (the old 18A cloning + 18B tagging/archiving
-  stubs were consolidated here 2026-05-15).
-
-Plan: `guide/segment_18A_sessions_lobby_enhancements.md`.
-
----
-
 ### Segment 18B — Date and time settings — done 2026-05-15
 
 Cross-cutting display change: one shared date/time formatting
@@ -662,6 +590,8 @@ Every PR was pure structure — the test suite passed unchanged
 across all five. Plan archived:
 `guide/archive/segment_17A_housekeeping.md`.
 
+---
+
 ### Reconciling assignment regeneration — done 2026-05-16 (PRs #1065 → #1069)
 
 Closed a mid-cycle data-loss path: re-activating a session that was
@@ -682,6 +612,8 @@ only when a run would actually delete responses, showing the precise
 count — `regen_choice` retired for an `acknowledge_response_loss`
 flag. Spec (kept as the design record):
 `spec/reconciling_regeneration.md`.
+
+---
 
 ### Mid-cycle edit safety + UI gating follow-ups — done 2026-05-16 (PRs #1071 → #1074)
 
@@ -704,7 +636,93 @@ card description responses-aware so a reverted, permanently-locked
 session explains why. Specs updated: `spec/quick_setup_card_spec.md`,
 `spec/session_home.md`.
 
-- **Segment 14A — Production hardening (in-app ladder)** — done 2026-05-18. Eight PRs (#1140 → #1147, plus the earlier structured-logging PR): structured JSON logging + observability; global error handling (friendly pages, tracebacks logged not leaked); database index review (composite `ix_audit_events_session_created`); permission + destructive-action audit (no gaps found — recorded in `docs/security_posture.md`); a basic reviewer-surface accessibility pass; a fail-fast config startup check (`validate_critical_settings`); the documentation set (`operations_runbook.md`, `troubleshooting.md`, `backup_restore.md`, `known_limitations.md`, completed `security_posture.md`); and dev-deploy-workflow hardening (a `concurrency` group serialising `build → migrate → deploy`). Azure infrastructure — Key Vault, VNet, staging slot, production environment, the App Insights resource, and the Postgres type migrations — stays deferred; see `guide/deferred_infra.md`. **Plan:** `guide/archive/segment_14A_production_hardening.md`.
+---
+
+### Segment 18A — Sessions lobby enhancements — done 2026-05-17
+
+The operator Sessions lobby (`/operator/sessions`) rebuilt around a
+selection-aware inline row-expander action surface, plus session
+tagging, archiving, one-click cloning, client-side search, and
+sortable columns. Built placeholder-first (the UI shell across
+PRs #1080 → #1105), then the implementation ladder PRs A → H
+(#1106 → #1117):
+
+- **A** — `app/services/session_tags.py` (tag read/write +
+  `session.tag_added` / `.tag_removed` audit events); real tags on
+  the lobby. **B** — the tag-filter strip (clickable chips, AND/OR
+  mode chip, `localStorage`). **C** — client-side lobby search.
+  **D** — the expander action-submission helper + single-session
+  Save. **E** — `app/services/session_clone.py`, `clone_session`
+  (full-setup / config-shell modes). **F** — `draft ⇄ archived`
+  archiving. **G** — confirm-gated expander Delete (Danger Zone
+  retired) + bulk tags. **H** — the `/operator/sessions/archived`
+  child page.
+- The lobby table was reordered (Last Modified dropped) and opted
+  into the shared `rrw-sortable` primitive.
+- Scheduled automation (auto-archive et al.) split out to the new
+  stub **Segment 18F — Scheduled events**; **18B is retired** as a
+  segment number (the old 18A cloning + 18B tagging/archiving
+  stubs were consolidated here 2026-05-15).
+
+Plan: `guide/segment_18A_sessions_lobby_enhancements.md`.
+
+---
+
+### Segment 18C — Operator-triggered purge — done 2026-05-17
+
+Selective hard-delete of a session's data, shipped as a **"Purge
+and archive"** action on the 18A Sessions-lobby row expander
+(PR #1123). The expander's Archive button is renamed; three
+"Archive after purging" checkboxes — Responses / Rosters /
+Audit log — sit after the Allow-delete checkbox.
+
+- New `app/services/session_purge.py` — `purge_responses`,
+  `purge_rosters`, `purge_audit_log`: FK-safe hard-delete
+  cascades, each emitting a `counts`-envelope audit event.
+- `/operator/sessions/archive-selected` runs the chosen purges
+  (audit log → responses → rosters) then archives; no checkbox
+  ticked is a plain archive. Ticking Rosters force-ticks
+  Responses (the cascade makes it implied).
+- Re-scoped on the way in: the *scheduled* / policy-driven
+  retention half moved to **Segment 18F** Part 4. Closes the
+  operator-facing half of the §21 #16 acceptance criterion.
+
+Plan archived: `guide/archive/segment_18C_retention_deletion.md`.
+
+---
+
+### Segment 18D — Export and import update — done 2026-05-17
+
+Catch-up pass on the export / import surface after the
+15-series moved the session model on. Actionable scope shipped
+across PRs **#1129 → #1133**:
+
+- **Settings CSV export refresh** (PR E2) — `display_timezone`
+  + `self_reviews_active` round-trip (force-applied on import);
+  a `library_name` provenance cell emits per RTD / RuleSet; the
+  `rule_set_name` un-pinned-instrument fallback re-documented.
+- **Responses extract restructure** — per-instrument preamble
+  (positional `instrument_{n}` name + a `FieldKey, HelpText`
+  field dictionary) + a blank-row gap before the data table;
+  `InstrumentName` is the positional id, not the operator name.
+- **Zip-all bundle** (PR E1) — the "Zip all" tile graduates to
+  a real `{code}_bundle.zip` of the five operator CSVs, via
+  `extracts/zip_bundle.py` + a `session.bundle_extracted` event.
+- **Import part** — resolved with no code: `library_name` is
+  always-clone (imported copies stay standalone,
+  `library_origin_id` NULL); `rule_set_name` typo validation
+  already existed.
+
+Two consumer-blocked parts handed off: **Part 3** (Responses
+`Instrument` flavour column) rides with **13C**; **Part 5**
+(retention CSV columns) with **18F Part 4**. Plan:
+`guide/segment_18D_export_and_import_update.md`.
+
+---
+
+### Segment 14A — Production hardening (in-app ladder) — done 2026-05-18
+
+Eight PRs (#1140 → #1147, plus the earlier structured-logging PR): structured JSON logging + observability; global error handling (friendly pages, tracebacks logged not leaked); database index review (composite `ix_audit_events_session_created`); permission + destructive-action audit (no gaps found — recorded in `docs/security_posture.md`); a basic reviewer-surface accessibility pass; a fail-fast config startup check (`validate_critical_settings`); the documentation set (`operations_runbook.md`, `troubleshooting.md`, `backup_restore.md`, `known_limitations.md`, completed `security_posture.md`); and dev-deploy-workflow hardening (a `concurrency` group serialising `build → migrate → deploy`). Azure infrastructure — Key Vault, VNet, staging slot, production environment, the App Insights resource, and the Postgres type migrations — stays deferred; see `guide/deferred_infra.md`. Plan: `guide/archive/segment_14A_production_hardening.md`.
 
 ---
 
