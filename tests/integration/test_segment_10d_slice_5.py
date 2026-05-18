@@ -504,6 +504,48 @@ def test_group_instrument_display_fields_sort_save(
     ]
 
 
+def test_group_instrument_response_fields_editable_and_save(
+    client: TestClient, db: Session
+) -> None:
+    """The group-scoped card's Response Fields table is editable and a
+    label change persists via the bulk-save route (Segment 13C PR 1)."""
+    session = _create_session(client, db, code="grp-rf")
+    [default] = _instruments(db, session.id)
+    client.post(
+        f"/operator/sessions/{session.id}/instruments/add-group",
+        data={"after": str(default.id)},
+        follow_redirects=False,
+    )
+    group = next(i for i in _instruments(db, session.id) if i.group_kind)
+
+    page = client.get(
+        f"/operator/sessions/{session.id}/instruments?editing={group.id}"
+    )
+    assert page.status_code == 200
+    assert f'data-rf-tbody="{group.id}"' in page.text
+    assert f'id="rf-template-{group.id}"' in page.text
+
+    rf = db.execute(
+        select(InstrumentResponseField)
+        .where(InstrumentResponseField.instrument_id == group.id)
+        .order_by(InstrumentResponseField.order)
+    ).scalars().first()
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{group.id}/fields/save",
+        data={
+            "kind": "response",
+            "id": str(rf.id),
+            "order": "0",
+            "label": "Renamed Rating",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(rf)
+    assert rf.label == "Renamed Rating"
+
+
 # --------------------------------------------------------------------------- #
 # POST /instruments/{iid}/delete
 # --------------------------------------------------------------------------- #

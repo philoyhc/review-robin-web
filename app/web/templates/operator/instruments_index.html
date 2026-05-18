@@ -455,6 +455,224 @@
     </td>
   {% endmacro %}
 
+  {# Response Fields table — shared by the ordinary instrument card
+     and the group-scoped card. Read-only unless ``is_editing``. #}
+  {% macro response_fields_table(instrument, rtds, is_editing) %}
+    {% set sorted_response_fields = instrument.response_fields | sort(attribute='order') %}
+    <div class="card" style="border: none; background: transparent; padding: 0;">
+      <h3 style="margin-top: 0;">Response Fields</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Friendly Label</th>
+              <th>Type</th>
+              <th>Required</th>
+              <th>Order</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody data-rf-tbody="{{ instrument.id }}">
+            {% for field in sorted_response_fields %}
+              <tr class="rf-row" data-rf-id="{{ field.id }}">
+                <td><code>{{ field.field_key }}</code></td>
+                <td>
+                  {% if is_editing %}
+                    <input form="dfsave-{{ instrument.id }}" type="text" name="label"
+                           value="{{ field.label }}"
+                           style="width: 100%;">
+                    <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="response">
+                    <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="{{ field.id }}">
+                    <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ loop.index0 }}">
+                  {% else %}
+                    {{ field.label }}
+                  {% endif %}
+                </td>
+                <td>
+                  <select disabled
+                          title="Type cannot be changed after a field is created.">
+                    {% for rtd in rtds %}
+                      <option value="{{ rtd.id }}"{% if rtd.id == field.response_type_id %} selected{% endif %}>{{ rtd.response_type }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td>
+                  {% if is_editing %}
+                    <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                           name="required_ids" value="{{ field.id }}"
+                           {% if field.required %}checked{% endif %}>
+                  {% else %}
+                    <input type="checkbox" disabled
+                           {% if field.required %}checked{% endif %}>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="order-cell">
+                    <span class="order-num">{{ loop.index }}</span>
+                    {% if is_editing %}
+                      <span class="order-arrows">
+                        <button type="button" onclick="moveRow(this, 'up')"
+                                class="btn-icon move-up" title="Move up"
+                                {% if loop.first %}disabled{% endif %}>&#9650;</button>
+                        <button type="button" onclick="moveRow(this, 'down')"
+                                class="btn-icon move-down" title="Move down"
+                                {% if loop.last %}disabled{% endif %}>&#9660;</button>
+                      </span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td style="white-space: nowrap; width: 1%;">
+                  {% if is_editing %}
+                    <div style="display: inline-flex; gap: 0; align-items: center;">
+                      <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
+                              class="btn-icon danger rf-delete"
+                              title="Delete row (applied on Save)">&#10007;</button>
+                      <button type="button" onclick="addRow(this, {{ instrument.id }})"
+                              class="btn-icon action rf-add"
+                              title="Add row after (applied on Save)">&#10133;</button>
+                    </div>
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            <tr class="rf-empty"{% if sorted_response_fields %} style="display: none;"{% endif %}>
+              <td colspan="6" class="muted" style="font-style: italic;">
+                {% if is_editing %}
+                  <button type="button" class="btn secondary"
+                          onclick="addRow(this, {{ instrument.id }})">Add a response field</button>
+                {% else %}
+                  No response fields.
+                {% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endmacro %}
+
+  {# Response Fields Help table — shared, full-width. #}
+  {% macro response_fields_help_table(instrument, is_editing) %}
+    {% set sorted_response_fields = instrument.response_fields | sort(attribute='order') %}
+    <div class="card" style="border: none; background: transparent; padding: 0; margin-top: 12px;">
+      <h3 style="margin-top: 0;">Response Fields Help</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Text</th>
+              <th>Show</th>
+            </tr>
+          </thead>
+          <tbody data-rfhelp-tbody="{{ instrument.id }}">
+            {% for field in sorted_response_fields %}
+              <tr class="rfhelp-row" data-rfhelp-for="{{ field.id }}">
+                <td><code>{{ field.field_key }}</code></td>
+                <td>
+                  {% if is_editing %}
+                    <input form="dfsave-{{ instrument.id }}" type="hidden"
+                           name="help_text_id" value="{{ field.id }}">
+                    <textarea form="dfsave-{{ instrument.id }}" name="help_text"
+                              rows="2" style="width: 100%;">{{ field.help_text or "" }}</textarea>
+                  {% else %}
+                    {% if field.help_text %}{{ field.help_text }}{% else %}<span class="muted">—</span>{% endif %}
+                  {% endif %}
+                </td>
+                <td>
+                  {% if is_editing %}
+                    <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                           name="help_text_visible_ids" value="{{ field.id }}"
+                           {% if field.help_text_visible %}checked{% endif %}>
+                  {% else %}
+                    <input type="checkbox" disabled
+                           {% if field.help_text_visible %}checked{% endif %}>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            <tr class="rfhelp-empty"{% if sorted_response_fields %} style="display: none;"{% endif %}>
+              <td colspan="3" class="muted" style="font-style: italic;">
+                No response fields.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endmacro %}
+
+  {# Hidden <template> rows cloned by ``addRow`` JS. Caller renders
+     these only in edit mode. #}
+  {% macro response_field_templates(instrument, rtds) %}
+    <template id="rf-template-{{ instrument.id }}">
+      <tr class="rf-row" data-rf-id="__TEMP_ID__" data-rf-new="1">
+        <td><code class="muted">(new)</code></td>
+        <td>
+          <input form="dfsave-{{ instrument.id }}" type="text" name="label"
+                 value="__DEFAULT_LABEL__" style="width: 100%;">
+          <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="response">
+          <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="__TEMP_ID__">
+          <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="0">
+        </td>
+        <td>
+          <input form="dfsave-{{ instrument.id }}" type="hidden"
+                 name="new_rtd_target" value="__TEMP_ID__">
+          <select form="dfsave-{{ instrument.id }}"
+                  name="new_rtd_id"
+                  title="Pick the Response Type for this new field. Locks once saved.">
+            {% for rtd in rtds %}
+              <option value="{{ rtd.id }}"{% if rtd.response_type == "1-to-5int" %} selected{% endif %}>{{ rtd.response_type }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td>
+          <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                 name="required_ids" value="__TEMP_ID__" checked>
+        </td>
+        <td>
+          <div class="order-cell">
+            <span class="order-num">0</span>
+            <span class="order-arrows">
+              <button type="button" onclick="moveRow(this, 'up')"
+                      class="btn-icon move-up" title="Move up">&#9650;</button>
+              <button type="button" onclick="moveRow(this, 'down')"
+                      class="btn-icon move-down" title="Move down">&#9660;</button>
+            </span>
+          </div>
+        </td>
+        <td style="white-space: nowrap; width: 1%;">
+          <div style="display: inline-flex; gap: 0; align-items: center;">
+            <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
+                    class="btn-icon danger rf-delete"
+                    title="Delete row (applied on Save)">&#10007;</button>
+            <button type="button" onclick="addRow(this, {{ instrument.id }})"
+                    class="btn-icon action rf-add"
+                    title="Add row after (applied on Save)">&#10133;</button>
+          </div>
+        </td>
+      </tr>
+    </template>
+    <template id="rfhelp-template-{{ instrument.id }}">
+      <tr class="rfhelp-row" data-rfhelp-for="__TEMP_ID__" data-rfhelp-new="1">
+        <td><code class="muted">(new)</code></td>
+        <td>
+          <input form="dfsave-{{ instrument.id }}" type="hidden"
+                 name="help_text_id" value="__TEMP_ID__">
+          <textarea form="dfsave-{{ instrument.id }}" name="help_text"
+                    rows="2" style="width: 100%;"></textarea>
+        </td>
+        <td>
+          <input form="dfsave-{{ instrument.id }}" type="checkbox"
+                 name="help_text_visible_ids" value="__TEMP_ID__" checked>
+        </td>
+      </tr>
+    </template>
+  {% endmacro %}
+
   {% for instrument in instruments %}
     {% set is_editing = (editing_instrument_id == instrument.id) %}
     {% set was_saved = (saved_instrument_id == instrument.id) %}
@@ -566,83 +784,14 @@
             {% endif %}
           </div>
 
-          <div class="card" style="border: none; background: transparent; padding: 0;">
-            <h3 style="margin-top: 0;">Response Fields</h3>
-            <div class="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Key</th>
-                    <th>Friendly Label</th>
-                    <th>Type</th>
-                    <th>Required</th>
-                    <th>Order</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for field in sorted_response_fields %}
-                    <tr>
-                      <td><code>{{ field.field_key }}</code></td>
-                      <td>{{ field.label }}</td>
-                      <td>
-                        <select disabled
-                                title="Type cannot be changed after a field is created.">
-                          {% for rtd in rtds %}
-                            <option value="{{ rtd.id }}"{% if rtd.id == field.response_type_id %} selected{% endif %}>{{ rtd.response_type }}</option>
-                          {% endfor %}
-                        </select>
-                      </td>
-                      <td><input type="checkbox" disabled {% if field.required %}checked{% endif %}></td>
-                      <td>
-                        <div class="order-cell">
-                          <span class="order-num">{{ loop.index }}</span>
-                        </div>
-                      </td>
-                      <td style="white-space: nowrap; width: 1%;">
-                        <span class="muted">—</span>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                  {% if not sorted_response_fields %}
-                    <tr>
-                      <td colspan="6" class="muted" style="font-style: italic;">No response fields.</td>
-                    </tr>
-                  {% endif %}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          {{ response_fields_table(instrument, rtds, is_editing) }}
         </div>
 
-        <div class="card" style="border: none; background: transparent; padding: 0; margin-top: 12px;">
-          <h3 style="margin-top: 0;">Response Fields Help</h3>
-          <div class="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Field</th>
-                  <th>Text</th>
-                  <th>Show</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for field in sorted_response_fields %}
-                  <tr>
-                    <td><code>{{ field.field_key }}</code></td>
-                    <td>{% if field.help_text %}{{ field.help_text }}{% else %}<span class="muted">—</span>{% endif %}</td>
-                    <td><input type="checkbox" disabled {% if field.help_text_visible %}checked{% endif %}></td>
-                  </tr>
-                {% endfor %}
-                {% if not sorted_response_fields %}
-                  <tr>
-                    <td colspan="3" class="muted" style="font-style: italic;">No response fields.</td>
-                  </tr>
-                {% endif %}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {{ response_fields_help_table(instrument, is_editing) }}
+
+        {% if is_editing %}
+          {{ response_field_templates(instrument, rtds) }}
+        {% endif %}
 
         {# Section E — Danger Zone (half-width, left) + action buttons. #}
         {% set add_delete_disabled = is_ready or is_some_instrument_editing or is_some_rtd_unlocked %}
@@ -861,236 +1010,13 @@
           </form>
         </div>
 
-        <div class="card" style="border: none; background: transparent; padding: 0;">
-          <h3 style="margin-top: 0;">Response Fields</h3>
-          {% set sorted_response_fields = instrument.response_fields | sort(attribute='order') %}
-          {# Order ▲ / ▼ swap rows client-side and update the bulk-
-             save form's hidden ``order`` inputs so the new order
-             only commits on Save (Cancel discards). #}
-          <div class="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Key</th>
-                  <th>Friendly Label</th>
-                  <th>Type</th>
-                  <th>Required</th>
-                  <th>Order</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody data-rf-tbody="{{ instrument.id }}">
-                {% for field in sorted_response_fields %}
-                  <tr class="rf-row" data-rf-id="{{ field.id }}">
-                    <td><code>{{ field.field_key }}</code></td>
-                    <td>
-                      {% if is_editing %}
-                        <input form="dfsave-{{ instrument.id }}" type="text" name="label"
-                               value="{{ field.label }}"
-                               style="width: 100%;">
-                        <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="response">
-                        <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="{{ field.id }}">
-                        <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ loop.index0 }}">
-                      {% else %}
-                        {{ field.label }}
-                      {% endif %}
-                    </td>
-                    <td>
-                      <select disabled
-                              title="Type cannot be changed after a field is created.">
-                        {% for rtd in rtds %}
-                          <option value="{{ rtd.id }}"{% if rtd.id == field.response_type_id %} selected{% endif %}>{{ rtd.response_type }}</option>
-                        {% endfor %}
-                      </select>
-                    </td>
-                    <td>
-                      {% if is_editing %}
-                        {# The hidden ``required_ids`` input is keyed
-                           per row id; the bulk-save route reads it as
-                           a set. #}
-                        <input form="dfsave-{{ instrument.id }}" type="checkbox"
-                               name="required_ids" value="{{ field.id }}"
-                               {% if field.required %}checked{% endif %}>
-                      {% else %}
-                        <input type="checkbox" disabled
-                               {% if field.required %}checked{% endif %}>
-                      {% endif %}
-                    </td>
-                    <td>
-                      <div class="order-cell">
-                        <span class="order-num">{{ loop.index }}</span>
-                        {% if is_editing %}
-                          <span class="order-arrows">
-                            <button type="button" onclick="moveRow(this, 'up')"
-                                    class="btn-icon move-up" title="Move up"
-                                    {% if loop.first %}disabled{% endif %}>&#9650;</button>
-                            <button type="button" onclick="moveRow(this, 'down')"
-                                    class="btn-icon move-down" title="Move down"
-                                    {% if loop.last %}disabled{% endif %}>&#9660;</button>
-                          </span>
-                        {% endif %}
-                      </div>
-                    </td>
-                    <td style="white-space: nowrap; width: 1%;">
-                      {% if is_editing %}
-                        <div style="display: inline-flex; gap: 0; align-items: center;">
-                          <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
-                                  class="btn-icon danger rf-delete"
-                                  title="Delete row (applied on Save)">&#10007;</button>
-                          <button type="button" onclick="addRow(this, {{ instrument.id }})"
-                                  class="btn-icon action rf-add"
-                                  title="Add row after (applied on Save)">&#10133;</button>
-                        </div>
-                      {% else %}
-                        <span class="muted">—</span>
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% endfor %}
-                <tr class="rf-empty"{% if sorted_response_fields %} style="display: none;"{% endif %}>
-                  <td colspan="6" class="muted" style="font-style: italic;">
-                    {% if is_editing %}
-                      <button type="button" class="btn secondary"
-                              onclick="addRow(this, {{ instrument.id }})">Add a response field</button>
-                    {% else %}
-                      No response fields.
-                    {% endif %}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {{ response_fields_table(instrument, rtds, is_editing) }}
       </div>
 
-      {# Section B continued — Response Fields Help (full-width).
-         Editable in edit mode; the inputs join the same
-         ``dfsave-{iid}`` bulk-save form via per-row ``help_*``
-         parallel arrays. #}
-      <div class="card" style="border: none; background: transparent; padding: 0; margin-top: 12px;">
-        <h3 style="margin-top: 0;">Response Fields Help</h3>
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Text</th>
-                <th>Show</th>
-              </tr>
-            </thead>
-            <tbody data-rfhelp-tbody="{{ instrument.id }}">
-              {% for field in sorted_response_fields %}
-                <tr class="rfhelp-row" data-rfhelp-for="{{ field.id }}">
-                  <td><code>{{ field.field_key }}</code></td>
-                  <td>
-                    {% if is_editing %}
-                      <input form="dfsave-{{ instrument.id }}" type="hidden"
-                             name="help_text_id" value="{{ field.id }}">
-                      <textarea form="dfsave-{{ instrument.id }}" name="help_text"
-                                rows="2" style="width: 100%;">{{ field.help_text or "" }}</textarea>
-                    {% else %}
-                      {% if field.help_text %}{{ field.help_text }}{% else %}<span class="muted">—</span>{% endif %}
-                    {% endif %}
-                  </td>
-                  <td>
-                    {% if is_editing %}
-                      <input form="dfsave-{{ instrument.id }}" type="checkbox"
-                             name="help_text_visible_ids" value="{{ field.id }}"
-                             {% if field.help_text_visible %}checked{% endif %}>
-                    {% else %}
-                      <input type="checkbox" disabled
-                             {% if field.help_text_visible %}checked{% endif %}>
-                    {% endif %}
-                  </td>
-                </tr>
-              {% endfor %}
-              <tr class="rfhelp-empty"{% if sorted_response_fields %} style="display: none;"{% endif %}>
-                <td colspan="3" class="muted" style="font-style: italic;">
-                  No response fields.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {{ response_fields_help_table(instrument, is_editing) }}
 
       {% if is_editing %}
-        {# Hidden templates cloned by ``addRow`` JS to insert a new
-           Response Fields row + matching Help row. The ``__TEMP_ID__``
-           placeholder is replaced with a fresh ``new_{counter}`` id;
-           the route's bulk-save handler creates a real field for any
-           ``new_*`` id and applies the operator's typed label /
-           required / help. Cancel discards them by never submitting. #}
-        <template id="rf-template-{{ instrument.id }}">
-          <tr class="rf-row" data-rf-id="__TEMP_ID__" data-rf-new="1">
-            <td><code class="muted">(new)</code></td>
-            <td>
-              <input form="dfsave-{{ instrument.id }}" type="text" name="label"
-                     value="__DEFAULT_LABEL__" style="width: 100%;">
-              <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="response">
-              <input form="dfsave-{{ instrument.id }}" type="hidden" name="id" value="__TEMP_ID__">
-              <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="0">
-            </td>
-            <td>
-              {# Type is operator-picked on new rows (Slice 4c) — the
-                 ``<select>`` is enabled until Save commits the row,
-                 then locks per the read-only-post-create rule. The
-                 hidden ``new_rtd_target`` input pairs the chosen RTD
-                 with the row's draft id; the bulk-save route reads
-                 the parallel ``new_rtd_target`` / ``new_rtd_id``
-                 arrays to wire the new field at its right Type. #}
-              <input form="dfsave-{{ instrument.id }}" type="hidden"
-                     name="new_rtd_target" value="__TEMP_ID__">
-              <select form="dfsave-{{ instrument.id }}"
-                      name="new_rtd_id"
-                      title="Pick the Response Type for this new field. Locks once saved.">
-                {% for rtd in rtds %}
-                  <option value="{{ rtd.id }}"{% if rtd.response_type == "1-to-5int" %} selected{% endif %}>{{ rtd.response_type }}</option>
-                {% endfor %}
-              </select>
-            </td>
-            <td>
-              <input form="dfsave-{{ instrument.id }}" type="checkbox"
-                     name="required_ids" value="__TEMP_ID__" checked>
-            </td>
-            <td>
-              <div class="order-cell">
-                <span class="order-num">0</span>
-                <span class="order-arrows">
-                  <button type="button" onclick="moveRow(this, 'up')"
-                          class="btn-icon move-up" title="Move up">&#9650;</button>
-                  <button type="button" onclick="moveRow(this, 'down')"
-                          class="btn-icon move-down" title="Move down">&#9660;</button>
-                </span>
-              </div>
-            </td>
-            <td style="white-space: nowrap; width: 1%;">
-              <div style="display: inline-flex; gap: 0; align-items: center;">
-                <button type="button" onclick="deleteRow(this, {{ instrument.id }})"
-                        class="btn-icon danger rf-delete"
-                        title="Delete row (applied on Save)">&#10007;</button>
-                <button type="button" onclick="addRow(this, {{ instrument.id }})"
-                        class="btn-icon action rf-add"
-                        title="Add row after (applied on Save)">&#10133;</button>
-              </div>
-            </td>
-          </tr>
-        </template>
-        <template id="rfhelp-template-{{ instrument.id }}">
-          <tr class="rfhelp-row" data-rfhelp-for="__TEMP_ID__" data-rfhelp-new="1">
-            <td><code class="muted">(new)</code></td>
-            <td>
-              <input form="dfsave-{{ instrument.id }}" type="hidden"
-                     name="help_text_id" value="__TEMP_ID__">
-              <textarea form="dfsave-{{ instrument.id }}" name="help_text"
-                        rows="2" style="width: 100%;"></textarea>
-            </td>
-            <td>
-              <input form="dfsave-{{ instrument.id }}" type="checkbox"
-                     name="help_text_visible_ids" value="__TEMP_ID__" checked>
-            </td>
-          </tr>
-        </template>
+        {{ response_field_templates(instrument, rtds) }}
       {% endif %}
 
       {# Section E — action row. Two half-width cards sit side by side:
