@@ -157,11 +157,16 @@ def create_instrument(
     review_session: ReviewSession,
     after_instrument_id: int | None = None,
     actor: User,
+    group_kind: str | None = None,
 ) -> Instrument:
     """Create a new instrument seeded with default response and display
     fields. If ``after_instrument_id`` is given, slot the new instrument
     immediately after that one and bump subsequent ``order`` values; else
     append at the end.
+
+    ``group_kind`` is the Segment 13C group-scoping flavour — ``None``
+    for an ordinary per-reviewee instrument, or a non-null value
+    (``members`` / ``summary`` / ``both``) for a group-scoped one.
     """
     lifecycle.invalidate_if_validated(
         db, review_session=review_session, user=actor, reason="instrument_added"
@@ -196,6 +201,7 @@ def create_instrument(
         order=new_order,
         accepting_responses=False,
         responses_visible_when_closed=False,
+        group_kind=group_kind,
     )
     db.add(instrument)
     db.flush()

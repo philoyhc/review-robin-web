@@ -909,6 +909,32 @@ def instruments_add(
     )
 
 
+@router.post("/sessions/{session_id}/instruments/add-group")
+def instruments_add_group(
+    after: int | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Create a group-scoped instrument (Segment 13C placeholder).
+
+    The card renders as a stub — only the Danger Zone and the action
+    row — until the group-scoped editor lands in a later 13C PR.
+    """
+    _require_instrument_editable(review_session)
+    instrument = instruments_service.create_instrument(
+        db,
+        review_session=review_session,
+        after_instrument_id=after,
+        actor=user,
+        group_kind="both",
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/instruments#instrument-{instrument.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/delete")
 def instruments_delete(
     instrument_id: int,
