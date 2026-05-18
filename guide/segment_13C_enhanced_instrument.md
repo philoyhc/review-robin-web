@@ -24,6 +24,21 @@
 > flag is the Include checkbox. The PR ladder, schema, and
 > progress log below are re-cut to match.
 
+> **Revised 2026-05-19 — group-boundary tags.** A reviewer's
+> group is no longer their *whole* rule-eligible set. The pinned
+> rule selects the **universe** (which reviewees a reviewer
+> interacts with); a new **Group** checkbox column on the Display
+> Fields table marks the reviewee / pair-context tags whose
+> shared values **partition** that universe into the groups the
+> reviewer actually rates (additive — members share every ticked
+> tag's value). The boundary spec is stored in the existing
+> `group_kind` column (still **no migration**). This re-cuts the
+> PR ladder below: a Group-column editor slice lands before the
+> reviewer surface, and the surface / fan-out / aggregation are
+> all group-key-aware. See
+> [`spec/group_scoped_instruments.md`](../spec/group_scoped_instruments.md)
+> for the canonical design.
+
 Implementation plan for two additions to the per-instrument
 operator card on `/operator/sessions/{id}/instruments`:
 
@@ -45,8 +60,12 @@ one segment.
 
 In progress. **PR 1 — the operator-side group-scoped instrument
 editor — shipped 2026-05-18** (#1176-#1181, atop the placeholder
-slices #1161-#1175). PR 2 (reviewer surface) and PR 3 (Replicate)
-remain. **Zero migrations.**
+slices #1161-#1175). PR 2 slice 1 — the reviewer write fan-out —
+shipped 2026-05-18 (#1183); it pre-dates the group-boundary
+revision and fans across the reviewer's whole universe, so it
+needs a group-key-aware follow-up (PR 2 slice B below). The
+Group-column editor, the partition-aware reviewer surface, and
+PR 3 (Replicate) remain. **Zero migrations.**
 
 ## Progress log
 
@@ -91,6 +110,16 @@ small slices:
 - Editable Response Fields + Response Fields Help, via shared
   `response_fields_table` / `_help_table` / `_templates` macros
   reused from the ordinary card (#1181).
+
+### PR 2 slice 1 — write fan-out — landed (2026-05-18)
+
+`responses._expand_group_upserts` / `_group_instrument_ids`
+(#1183) fan a reviewer's saved answer to one `Response` row per
+member assignment. **Pre-dates the group-boundary revision** — it
+fans across every assignment the reviewer has for the instrument
+(the whole universe). Correct only while no instrument sets a
+boundary tag; PR 2 slice B re-scopes it to the boundary-defined
+group.
 
 ### Remaining work — two PRs, no migration
 
@@ -154,42 +183,57 @@ renders them per-reviewee until PR 2. The `accepting_responses`
 toggle (default `False`, plus the rule-required gate) keeps
 reviewers from premature exposure in that interim.
 
-### PR 2 — Reviewer surface: group block + write fan-out + aggregation sweep
+### PR 2 — Reviewer surface: group-boundary editor + group blocks + aggregation
 
-The end-to-end reviewer-facing feature, landed as one PR so there
-is never a window where group responses exist but aggregators
-over-count them.
+The reviewer-facing feature, re-cut into slices by the
+2026-05-19 group-boundary revision. Slice 1 (write fan-out) has
+landed; the remaining slices are below.
 
-- A service helper collapses a reviewer's assignments for a
-  group-scoped instrument into one logical group row.
-- The reviewer surface renders a group-scoped instrument as a
-  self-contained block — one group row, one **group-identity
-  column** composed from the Display Fields rows the operator
-  marked Include (reviewee tags, then pair-context tags, then
-  member names — each comma-separated on its own line), one set
-  of response inputs. The preview hub renders the same block.
-- A selected tag that varies across the group's members renders
-  its distinct values comma-separated (see the spec's "Composing
-  the group identity").
-- Submit fans the reviewer's single answer across all N
-  assignments' response rows for the group.
-- `responses.collapse_group_duplicates(rows)` + the mandatory
-  sweep migrating every aggregator — Manage Invitations Review
-  Progress, Responses page coverage, Extract Data exports — see
-  "Aggregation contract" below.
-- Extract Data: collapse per-member rows to one row per group;
-  surface the composed group identity (Included tag values /
-  member names) in place of per-reviewee identity columns.
+**Slice A — Group-boundary editor (operator-only).** Add the
+**Group** checkbox column to the group-scoped Display Fields
+table, between Include and Sort. Ticking it on a tag row marks
+that tag a boundary key; the Name row has no Group cell. On save,
+the ticked tags' key-codes (`r1`-`r3`, `p1`-`p3`) are encoded —
+ordered by the Sort spec — into the `group_kind` column,
+replacing the inert `"both"` marker; a group instrument with no
+boundary tag keeps `"both"` as the no-partition sentinel. Add the
+encode/decode helper and a helper line under the table. No
+reviewer-visible change — safe to land alone.
+
+**Slice B — write fan-out re-scope.** `_expand_group_upserts`
+(shipped in slice 1) fans across the reviewer's whole universe;
+re-scope it to fan only within the boundary-defined group the
+answer was submitted for. Coupled to slice C (which supplies the
+per-group input grouping).
+
+**Slice C — reviewer surface render.** Render a group-scoped
+instrument as a self-contained block — **one row per group**, the
+universe partitioned by the boundary tags (one row when no
+boundary tag is set). Each row carries a **group-identity
+column** composed from the Included Display Fields rows (reviewee
+tags, then pair-context tags, then member names — each
+comma-separated on its own line) and one set of response inputs.
+A boundary tag always renders a single crisp value; a varying
+non-boundary Included tag renders its distinct values
+comma-separated. The preview hub renders the same block.
+
+**Slice D — aggregation sweep.** `responses.collapse_group_duplicates(rows)`
+keyed on `(reviewer_id, instrument_id, group_key, response_field_id)`
++ the mandatory sweep migrating every aggregator — Manage
+Invitations Review Progress, Responses page coverage, Extract
+Data exports — see "Aggregation contract" below. Extract Data
+collapses per-member rows to one row per group and surfaces the
+composed group identity in place of per-reviewee identity
+columns.
 
 No rule-engine change — the rule emits ordinary
-`(reviewer, reviewee)` assignments; the surface does the collapse
-on read and the submit path fans on write.
+`(reviewer, reviewee)` assignments; the surface partitions and
+collapses on read and the submit path fans within a group on
+write.
 
-> **Sizing note.** PR 2 is the largest PR. Split into 2a
-> (render + write fan-out) / 2b (aggregation sweep) **only** if
-> the diff is unwieldy *and* group-scoped instruments are kept
-> un-openable to reviewers until 2b lands — otherwise the
-> over-count window opens. Default: one PR.
+> **Over-count window.** Slices B-D must land together (or
+> group-scoped instruments stay un-openable to reviewers until D
+> lands). Slice A is operator-only and lands independently first.
 
 ### PR 3 — Replicate instrument button
 
@@ -270,10 +314,13 @@ exists:
 
 - **`Instrument.group_kind`** (`String(32) | NULL`) — exists,
   shipped inert in 13D PR 6. `NULL` = per-reviewee instrument;
-  **any non-null value** flags the instrument group-scoped. The
-  placeholder `add-group` route already writes the inert marker
-  `"both"`; the string is not interpreted. PR 1 updates the
-  model docstring.
+  **any non-null value** flags the instrument group-scoped. PR 2
+  slice A starts **interpreting** the value: it encodes the
+  group-boundary spec — an ordered, comma-separated list of
+  boundary tag-key codes (`r1`-`r3`, `p1`-`p3`), e.g. `r1,p2`. A
+  group instrument with no boundary tag keeps the `"both"`
+  sentinel so the column stays non-null. Six codes + commas = 17
+  chars, inside `String(32)`. No migration.
 - **`InstrumentDisplayField.visible`** (`Boolean`) — the
   existing per-row flag. On a group-scoped instrument it is the
   **Include** checkbox: which tag / Name rows compose the group
@@ -295,21 +342,25 @@ exists:
 
 ## How a group is defined
 
-A group-scoped instrument's group, for any reviewer, is **that
-reviewer's `Assignment` rows for the instrument** — the set the
-pinned rule made eligible. Exactly one group per reviewer per
-group-scoped instrument. Nothing is stored or derived from tags:
+The pinned rule selects a reviewer's **universe** — their
+`Assignment` rows for the instrument, exactly as for a
+per-reviewee instrument. The instrument's **boundary tags** (the
+Group column, encoded in `group_kind`) then partition that
+universe into the **groups** the reviewer rates: two reviewees
+share a group iff they share a value for every boundary tag
+(additive). With no boundary tag the universe is one group.
 
-- The reviewer surface collapses the reviewer's assignment set
-  into one logical group row on read.
+- The reviewer surface partitions the reviewer's assignment set
+  by the boundary-tag values into one row per group on read.
 - The submit path fans the single answer to one `Response` row
-  per member assignment on write.
+  per member assignment **of that group** on write.
 - `collapse_group_duplicates` collapses those member rows back to
-  one keyed on `(reviewer_id, instrument_id, response_field_id)`.
+  one per group, keyed on `(reviewer_id, instrument_id,
+  group_key, response_field_id)`.
 
-`Full Matrix` makes every reviewer's group every reviewee; a
-predicate / quota rule narrows it. Either way the rule is the
-sole definition of membership.
+`Full Matrix` with no boundary tag makes every reviewer's group
+every reviewee; a boundary tag splits it. The rule defines the
+universe; the boundary tags define the cut.
 
 ## Audit events
 
@@ -325,21 +376,24 @@ sole definition of membership.
 
 ## Aggregation contract for group-scoped responses
 
-PR 2 introduces `responses.collapse_group_duplicates(rows)` per
-the spec. It collapses the N group-duplicate response rows to
-one, keyed on `(reviewer_id, instrument_id, response_field_id)`.
-Every consumer that aggregates by reviewee or reports
-"completion" routes through the helper:
+PR 2 slice D introduces `responses.collapse_group_duplicates(rows)`
+per the spec. It collapses the N group-duplicate response rows to
+one **per group**, keyed on `(reviewer_id, instrument_id,
+group_key, response_field_id)` — `group_key` being the
+boundary-tag value tuple (empty when the instrument has no
+boundary tag). Every consumer that aggregates by reviewee or
+reports "completion" routes through the helper:
 
 - `views.build_invitations_rows` — Review Progress column.
 - `views.build_responses_rows` — Responses page coverage.
 - Extract Data exports (the per-entity + unified exporters).
 
-The contract: a single group response counts as **one
-completion** at the group-scoped-instrument level, not N. The
-test suite gains a shared fixture (a group-scoped instrument with
-N assignments and one rendered response) + assertions against
-each consumer's output. The sweep over every aggregator is
+The contract: a single group response counts as **one completion
+per group**, not N per member, and an instrument with K
+boundary-defined groups counts K completions. The test suite
+gains a shared fixture (a group-scoped instrument with a boundary
+tag, multiple groups, and one rendered response per group) +
+assertions against each consumer's output. The sweep over every aggregator is
 **mandatory** — missing one means an export over-counts group
 responses by the group size. Pin this note in the PR 2
 description.
@@ -347,9 +401,12 @@ description.
 ## Out of scope
 
 - **Per-question group scope** — a whole instrument is one mode.
-- **Tag-cluster grouping** — the superseded mechanism; do not
-  reintroduce composite `group_kind` / derived tag tuples /
-  multiple groups per instrument.
+- **Tags as membership** — boundary tags only *partition* a
+  rule-selected universe; they never add or remove reviewees.
+  Membership is always the rule's job. The superseded
+  pre-2026-05-18 design used a composite `group_kind` of tag keys
+  *as the membership mechanism with no rule* — that conflation
+  stays out of scope, not the use of tags to draw a boundary.
 - **Mode-flipping after creation** — operators delete and
   recreate.
 - **Manual CSV assignment mode for group-scoped instruments** —
@@ -375,9 +432,9 @@ both have shipped.
 - Update `spec/instruments.md` Section C "Action row" for the
   three create-flavour buttons, and the Display Fields section
   for the group-scoped variant (the tag-rows + Name-row table
-  with the Include column).
+  with the Include, **Group**, and Sort columns).
 - Update `spec/reviewer-surface.md` for the group-block
-  treatment (PR 2).
+  treatment — one row per boundary-defined group (PR 2).
 - `spec/rule_based_assignment.md` §7.2 already specs the
   predicate-editor field-selector ordering ahead of 13C; the
   `pair.*` predicate vocabulary (§4.4) is a flagged, separately
