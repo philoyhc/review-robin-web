@@ -139,54 +139,54 @@ tool. The one true functional shortfall is **email send**.
   job** — the SQLite suite uses `create_all`, not migration
   replay. That job should be mandatory on PRs.
 
-## 6. Bugs found
+## 6. Bugs found — all fixed
 
-### HIGH — deleting an in-use response type with saved responses fails with an FK violation
+The bug hunt found one high- and two low-severity defects. **All
+three have since been fixed** (2026-05-18); each has a regression
+test. Recorded here for the audit trail.
+
+### HIGH — deleting an in-use response type with saved responses failed with an FK violation — ✅ fixed (PR #1136)
 
 `delete_response_type_definition`
-(`app/services/instruments/_rtds.py`) does `db.delete(rtd)` and
-relies on a DB-level `ON DELETE CASCADE` to remove the dependent
-`instrument_response_fields` rows. The cascade chain is broken
-one link down:
+(`app/services/instruments/_rtds.py`) did `db.delete(rtd)` and
+relied on a DB-level `ON DELETE CASCADE` to remove the dependent
+rows. The cascade chain broke one link down:
 
 - `instrument_response_fields.response_type_id` → CASCADE ✓
-- `responses.response_field_id` → **no `ondelete`** (defaults
-  to `NO ACTION`; `app/db/models/response.py:28`)
+- `responses.response_field_id` → **no `ondelete`** (`NO ACTION`;
+  `app/db/models/response.py:28`)
 
-So when an operator confirms deletion of a response type whose
-fields have any saved `Response` rows, the DB tries to delete
-the `instrument_response_fields` rows, the `responses` still
-reference them, and the statement aborts. This fails on both
-**Postgres** and **SQLite** — `app/db/session.py:20` turns on
-`PRAGMA foreign_keys = ON`. The `delete_response_type_definition`
-docstring claims "the cascade fires through the FK ON DELETE
-CASCADE", but it does not for in-use types. No test covers
-RTD-delete-after-responses-exist, so the suite is green.
+So deleting a response type whose fields had any saved
+`Response` rows aborted on a foreign-key violation — on both
+**Postgres** and **SQLite** (`app/db/session.py:20` turns on
+`PRAGMA foreign_keys = ON`). A pilot operator making a normal
+late-setup correction would have got a 500.
 
-*Impact:* a pilot operator making a normal late-setup
-correction (delete a response type that has collected real
-responses) gets a 500 / failed transaction instead of the
-documented cascade delete.
+*Fix:* `delete_response_type_definition` now clears the
+dependent `responses` rows explicitly before `db.delete(rtd)`;
+the DB cascade still handles the `instrument_response_fields`
+rows. Service-layer fix rather than a schema migration — the
+existing FK is anonymous, which the repo's migrations
+deliberately avoid altering in SQLite batch mode.
 
-*Fix direction:* add `ondelete="CASCADE"` to
-`responses.response_field_id` (model + migration), or have
-`delete_response_type_definition` delete the dependent
-`Response` rows explicitly before `db.delete(rtd)`.
+### LOW — "submitted" pill on a no-required-field instrument — ✅ fixed (2026-05-18)
 
-### LOW — "submitted" pill on a no-required-field instrument
+`responses._state_from_assignments` could roll a saved-but-not-
+submitted draft up as "submitted" for an instrument with zero
+required fields — the draft (`submitted_at is None`) check was
+gated on `response_field_id in required_ids`, an empty set.
+Display-only; no data corruption. *Fix:* the draft check now
+fires on any unsubmitted row, not only required-field rows.
 
-`responses._state_from_assignments` can show a draft as
-"submitted" on the dashboard for an instrument with zero
-required fields (the `all_required_with_submitted` check
-inspects an empty set). Display-only; no data corruption.
+### LOW — engine pair dedup keyed on email — ✅ fixed (2026-05-18)
 
-### LOW — engine pair dedup keys on email
-
-`rules/engine.py` `_pair_sort_key` collapses pairs by
-`(reviewer.email, reviewee identifier)` for `ANY_OF` /
-`PIPELINE`, while diffing keys by id. CSV import blocks
-duplicate reviewer emails, so this is safe today; reviewers
-added via a non-CSV path sharing an email could silently merge.
+`rules/engine.py` collapsed pairs into a dict keyed by
+`(reviewer.email, reviewee identifier)` for the `ANY_OF` /
+`PIPELINE` combinators. CSV import blocks duplicate reviewer
+emails, so this was safe in practice; but two reviewers sharing
+an email added via a non-CSV path would silently merge. *Fix:*
+the dedup key is now object identity (`_pair_identity_key`);
+email is kept only for the deterministic output sort.
 
 No other high-severity correctness defects were found across
 the assignment-generation, lifecycle, purge, clone, CSV-import,
@@ -230,6 +230,6 @@ met, the loop runs end-to-end. Before a real pilot, three
 things gate readiness: **email transport (14B)**, **production
 hardening (14A)**, and **explicit verification that the Azure
 Easy Auth gate is enforced** — plus a recommended pass on
-boundary error handling and CSRF posture. One **HIGH-severity
-bug** (RTD-delete FK gap) should be fixed regardless; it is a
-small, well-understood change.
+boundary error handling and CSRF posture. The three bugs the
+hunt surfaced — one HIGH (RTD-delete FK gap), two LOW — have all
+been fixed with regression tests.

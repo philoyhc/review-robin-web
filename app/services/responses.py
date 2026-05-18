@@ -667,11 +667,12 @@ def _state_from_assignments(
             completed_count += 1
         if row_missing > 0:
             all_required_with_submitted = False
+        # A draft row (submitted_at unset) means this assignment was
+        # saved but not submitted. Not gated on required fields — an
+        # instrument with only optional fields must not roll up as
+        # "submitted" while an unsubmitted draft is outstanding.
         for r in rows:
-            if (
-                r.submitted_at is None
-                and r.response_field_id in required_ids
-            ):
+            if r.submitted_at is None:
                 all_required_with_submitted = False
 
     if not any_response:

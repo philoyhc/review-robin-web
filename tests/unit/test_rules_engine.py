@@ -215,6 +215,36 @@ def test_any_of_unions_per_rule_allowed_sets() -> None:
     }
 
 
+def test_any_of_keeps_distinct_reviewers_sharing_an_email() -> None:
+    """Two distinct reviewers with the same email address must not
+    collapse into one pair — the engine dedups by object identity,
+    not by email (which can legitimately collide for non-CSV-added
+    roster rows)."""
+
+    twin_a = Reviewer(email="twin@x.edu", tag_1="A", tag_2="X")
+    twin_b = Reviewer(email="twin@x.edu", tag_1="A", tag_2="X")
+    reviewers = [twin_a, twin_b]
+    reviewees = [Reviewee(email_or_identifier="c@x.edu", tag_1="A", tag_2="X")]
+    rs = _ruleset(
+        combinator=Combinator.ANY_OF,
+        rules=[
+            MatchRule(
+                id="intra",
+                predicate=Predicate(
+                    field="reviewer.tag1",
+                    operator="same_as",
+                    operand="reviewee.tag1",
+                ),
+            ),
+        ],
+        exclude_self=False,
+    )
+    result = evaluate(rs, reviewers=reviewers, reviewees=reviewees)
+    # Both twins → c. An email-keyed dedup would merge them to one.
+    assert len(result.pairs) == 2
+    assert {id(r) for r, _ in result.pairs} == {id(twin_a), id(twin_b)}
+
+
 def test_pipeline_applies_rules_in_declaration_order() -> None:
     """Start with everything, MATCH intra-group, then FILTER away
     leads. Final = intra-group non-lead pairs (excl. self)."""

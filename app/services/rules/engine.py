@@ -298,6 +298,22 @@ def _pair_sort_key(pair: tuple[object, object]) -> tuple[str, str]:
     )
 
 
+def _pair_identity_key(pair: tuple[object, object]) -> tuple[int, int]:
+    """Stable dedup key — object identity of the ``(reviewer,
+    reviewee)`` pair.
+
+    Distinct from :func:`_pair_sort_key`: two different reviewers can
+    share an email address, so an email tuple is unsafe as a dedup
+    key — it would silently merge their pairs. The engine reuses the
+    same roster object references across every rule application in
+    one run, so ``id()`` identity is both stable and collision-free
+    for distinct people (and needs no persisted DB id, so it holds
+    for unsaved objects too).
+    """
+    reviewer, reviewee = pair
+    return (id(reviewer), id(reviewee))
+
+
 def _is_self_review(reviewer: object, reviewee: object) -> bool:
     a = (getattr(reviewer, "email", "") or "").strip().lower()
     b = (
@@ -335,12 +351,12 @@ def _apply_content_rules(
     if combinator == Combinator.ANY_OF:
         # Union of allowed sets across rules. A pair is kept if at
         # least one rule includes it.
-        kept: dict[tuple[str, str], tuple[object, object]] = {}
+        kept: dict[tuple[int, int], tuple[object, object]] = {}
         for rule in rules:
             included, _ = _apply_one_content_rule(candidates, rule)
             for pair in included:
-                kept[_pair_sort_key(pair)] = pair
-        survivors = [kept[k] for k in sorted(kept)]
+                kept[_pair_identity_key(pair)] = pair
+        survivors = sorted(kept.values(), key=_pair_sort_key)
         excluded_counts["predicate.any_of"] = len(candidates) - len(survivors)
         if excluded_counts["predicate.any_of"] == 0:
             excluded_counts.pop("predicate.any_of")
@@ -350,14 +366,14 @@ def _apply_content_rules(
     # from the working set. FILTER drops; MATCH/COMPOSITE keep matching
     # pairs and re-add any candidate that matched even if a previous
     # FILTER removed it. Last-writer-wins per pair.
-    working: dict[tuple[str, str], tuple[object, object]] = {
-        _pair_sort_key(p): p for p in candidates
+    working: dict[tuple[int, int], tuple[object, object]] = {
+        _pair_identity_key(p): p for p in candidates
     }
     for rule in rules:
         if isinstance(rule, FilterRule):
             for pair in list(working.values()):
                 if _content_rule_matches(rule, pair):
-                    key = _pair_sort_key(pair)
+                    key = _pair_identity_key(pair)
                     if key in working:
                         excluded_counts[f"predicate.{rule.id}"] = (
                             excluded_counts.get(f"predicate.{rule.id}", 0) + 1
@@ -366,8 +382,8 @@ def _apply_content_rules(
         else:
             for pair in candidates:
                 if _content_rule_matches(rule, pair):
-                    working[_pair_sort_key(pair)] = pair
-    return [working[k] for k in sorted(working)], excluded_counts
+                    working[_pair_identity_key(pair)] = pair
+    return sorted(working.values(), key=_pair_sort_key), excluded_counts
 
 
 def _apply_one_content_rule(
