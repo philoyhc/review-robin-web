@@ -1,13 +1,9 @@
 # Security posture
 
-> **Draft — Segment 14A PR 4.** This file currently holds only the
-> permission and destructive-action audit matrices produced by the
-> §5.6 / §5.7 review. Segment 14A **PR 6** (§5.10) completes it into
-> the full security / compliance posture note by adding: the Azure
-> Easy Auth trust model, the CSRF posture (segment-plan decision 2),
-> `ALLOW_FAKE_AUTH` gating, and the deferred-infrastructure items.
-> Until then, treat the sections below as the authoritative audit
-> record and the rest of the note as pending.
+The security / compliance posture of Review Robin Web: who can do
+what, what the app trusts, and which hardening items are
+deliberately deferred. Pairs with `docs/authentication.md` (the
+identity subsystem) and `docs/known_limitations.md`.
 
 ## Authorization model
 
@@ -91,3 +87,84 @@ suite and are verified on the dev slot.
 | `require_reviewer_in_session` | `test_reviewer_response_flow.py::test_other_session_url_returns_403`, `::test_inactive_reviewer_row_403s_on_surface` |
 | Client-id trust (reviewer POST) | `test_reviewer_response_flow.py::test_save_drops_foreign_assignment_id_from_post` |
 | Export sys-admin gate | `test_extracts_audit_log_route.py::test_audit_log_route_rejects_non_sys_admin` |
+
+## Identity trust model — Azure Easy Auth
+
+In deployed environments the app does **not** implement
+authentication itself. Azure App Service Authentication ("Easy
+Auth") sits in front of the app: an unauthenticated request is
+bounced to Microsoft Entra ID and never reaches Python. A request
+that does reach a route handler has already been authenticated by
+the platform, and Easy Auth injects the identity as request
+headers (`X-MS-CLIENT-PRINCIPAL` and friends).
+
+What this means for the trust boundary:
+
+- `app/auth/identity.py` **trusts** the `X-MS-CLIENT-PRINCIPAL*`
+  headers. That trust is only sound because Easy Auth strips
+  client-supplied copies of those headers before forwarding — a
+  caller cannot forge identity by setting the header themselves.
+  This holds **only** while the app is reached through the App
+  Service front end with Easy Auth enabled. Exposing the
+  container directly (or disabling Easy Auth) would break the
+  model.
+- The app's own gates (`require_operator` / `require_session_operator`
+  / `require_sys_admin` / `require_reviewer_in_session`, see the
+  Authorization model above) are layered **on top** of that
+  authenticated identity — they decide *what* an authenticated
+  user may do, not *whether* they are who they claim.
+- `/health` is the one route excluded from Easy Auth (so platform
+  probes don't bounce through sign-in). It exposes no data.
+
+## CSRF posture
+
+Review Robin relies on **Easy Auth + `SameSite=Lax` session
+cookies** for CSRF protection and does not implement anti-CSRF
+tokens in app code (segment-plan decision 2). A `SameSite=Lax`
+cookie is not sent on a cross-origin POST, so a forged
+state-changing request arrives with no auth cookie and fails the
+Easy Auth gate before reaching a handler; every state-changing
+route is a POST, never a GET. The full threat model, the
+verification, and the alternatives considered are written up in
+`docs/authentication.md` → "CSRF defense". This is a deliberate
+fit-for-purpose choice for a single-tenant pilot behind Easy
+Auth, not an oversight.
+
+## `ALLOW_FAKE_AUTH` gating
+
+`ALLOW_FAKE_AUTH=true` swaps the Easy Auth header parsing for a
+fake injected identity — the local development escape hatch, since
+there is no Easy Auth in front of a laptop / sandbox. It **must
+stay `false` in every deployed environment**; with it on, anyone
+would be handed a fake operator identity.
+
+Defence against that footgun:
+
+- It defaults to `false` (`app/config.py`).
+- The companion `FAKE_AUTH_OPERATOR` / `FAKE_AUTH_SYS_ADMIN`
+  flags are honoured only when `ALLOW_FAKE_AUTH` is also true and
+  the resolved identity is `is_fake`, so they are inert in a
+  deployed environment regardless.
+- `docs/deployment_dev.md` and `docs/authentication.md` both
+  state it must not be enabled in App Service config.
+
+Note: the PR 6a startup check (`validate_critical_settings`) does
+**not** currently hard-fail on `ALLOW_FAKE_AUTH=true` in a
+deployed environment — the check set was scoped to the
+empty-allowlist case. Adding a fake-auth assertion there is a
+reasonable future tightening.
+
+## Deferred hardening
+
+The following are out of scope for the Segment 14A in-app
+hardening ladder — they need the Azure portal or a later segment.
+Tracked in `guide/deferred_infra.md`.
+
+| Item | Status |
+|---|---|
+| Key Vault references for App Settings secrets | Deferred — secrets live as plain App Settings / GitHub secrets today |
+| VNet integration / private endpoints for Postgres | Deferred — public access + firewall allow-list today |
+| Staging slot + manual-approval production deploy gate | Deferred — single dev slot today (see `docs/deployment_dev.md`) |
+| Application Insights resource | Deferred — logs are already structured/JSON and ingestible once it exists (PR 1) |
+| Postgres-specific column types / `ENUM` / `JSONB` GIN indexes | Deferred to the Segment 14 type migrations |
+| In-app operator/sys-admin revoke UI | Segment 16A PR 6 — not yet shipped; revoke is a manual DB update today |
