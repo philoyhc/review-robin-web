@@ -392,7 +392,7 @@ def test_add_group_instrument_sets_group_kind_and_renders_stub(
         f'action="/operator/sessions/{session.id}/instruments/add-group"'
         in body
     )
-    assert "Replicate this instrument" in body
+    assert ">Replicate</button>" in body
 
 
 def test_add_group_instrument_returns_409_when_session_ready(
