@@ -55,9 +55,14 @@ runs three jobs in order: **build → migrate → deploy**.
    the App Service. The client, tenant, and subscription IDs are stored
    as GitHub repository secrets (`AZUREAPPSERVICE_CLIENTID_*`,
    `AZUREAPPSERVICE_TENANTID_*`, `AZUREAPPSERVICE_SUBSCRIPTIONID_*`) —
-   no publish profile is committed. The job runs under a GitHub
-   `dev` Environment, so each run is recorded under the repo's
-   Deployments and protection rules can be attached later.
+   no publish profile is committed.
+
+> **Do not add a GitHub `environment:` to the `deploy` job** unless
+> you also add a matching Azure AD federated identity credential.
+> The OIDC subject claim GitHub presents changes from
+> `repo:<owner>/<repo>:ref:refs/heads/main` to
+> `repo:<owner>/<repo>:environment:<name>`; with no matching
+> federated credential, `azure/login` fails with `AADSTS700213`.
 
 The workflow declares a `concurrency` group so the whole
 `build → migrate → deploy` pipeline is **serialized** — two pushes
