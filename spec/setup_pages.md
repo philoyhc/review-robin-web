@@ -101,42 +101,51 @@ Every Setup Page renders, top-to-bottom:
 ## Preview tables (shared toggle pattern)
 
 The Reviewers, Reviewees, and Relationships preview tables share
-a **visibility-toggle row** that lets the operator hide optional
-columns. The pattern:
+a **column-visibility chip row** that lets the operator hide
+optional columns. The pattern (Segment 18E Part 1):
 
+- A `Show columns:` chip row sits in the top "Fields with data"
+  card, directly below the `Fields with data:` line. Each chip is
+  a `<button class="col-chip" data-col-toggle="<slot>">` carrying
+  the column's **friendly label** (the operator-set field label,
+  falling back to the default — same label the header renders).
 - Optional tag / context columns always render in the DOM (so
-  empty columns can be revealed by ticking).
-- A right-flushed checkbox row above the table toggles per-column
-  visibility via a CSS class on the table (e.g.
-  `tag-hidden-1` → `display: none` for cells with class
-  `tag-col-1`).
-- Each toggle defaults to **ticked iff that column has at least
+  empty columns can be revealed). Clicking a chip toggles
+  per-column visibility via a CSS class on the table (e.g.
+  `col-hidden-tag-1` → `display: none` for cells with class
+  `tag-col-1`). The chip flips between filled (`is-selected`,
+  column shown) and outline (column hidden), with `aria-pressed`
+  tracking the state.
+- Each chip defaults to **selected iff that column has at least
   one populated value** in the current preview rows.
-- **Empty columns render the toggle disabled** (`disabled
-  aria-disabled="true" title="No data in this column"`). The
-  operator can't tick an empty column on, and stored "show"
-  preferences carried over from a load when the column had data
-  are ignored — the toggle stays unticked and the column stays
-  hidden until the next import populates it.
+- **Empty columns render the chip disabled** (`disabled
+  aria-disabled="true" title="No data in this column"`, struck
+  through). The operator can't toggle an empty column on, and
+  stored "show" preferences carried over from a load when the
+  column had data are ignored — the chip stays unselected and the
+  column stays hidden until the next import populates it.
+- The Reviewees row also carries a chip for the **profile-link
+  column** (`data-col-toggle="profile"`, cells `class="profile-col"`).
+  That column is server-rendered only when some row has a link, so
+  its chip never reaches the disabled state.
 - Operator choice persists per browser via `localStorage` under a
   per-page key:
   - Reviewers preview: `rrw-reviewer-tag-visibility`.
   - Reviewees preview: `rrw-reviewee-tag-visibility`.
   - Relationships preview: `rrw-relationship-tag-visibility`.
-- Stored choice wins over the data-driven default for live
-  toggles. Stored "hide" keeps a populated column hidden;
-  stored "show" reveals an explicitly-toggled-on column on next
-  load. Disabled toggles ignore storage entirely (see above).
-- The toggle inputs carry `data-tag-toggle="<slot>"` /
-  `data-col-toggle="<slot>"` for the inline JS to target. The JS
-  early-returns on `cb.disabled` so listeners aren't bound and
-  storage isn't applied.
+- Stored choice wins over the data-driven default for live chips.
+  Stored "hide" keeps a populated column hidden; stored "show"
+  reveals an explicitly-toggled-on column on next load. Disabled
+  chips ignore storage entirely (see above).
+- The inline JS targets `.col-chip` and early-returns on
+  `chip.disabled` so listeners aren't bound and storage isn't
+  applied.
 
 The pattern is intentionally not extracted into a Jinja macro —
-each page's column shape differs enough (Reviewers has 3 toggles,
-Reviewees has 3, Relationships has 3) that the inline JS +
-scoped `<style>` block per template is more legible than a macro
-with a sprawling parameter list.
+each page's column shape differs enough (Reviewees adds the
+profile-link chip) that the inline JS + scoped `<style>` block per
+template is more legible than a macro with a sprawling parameter
+list.
 
 ## Sortable headers (shared affordance)
 
@@ -279,15 +288,15 @@ section beneath:
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the Operator actions card |
 | 1 | Name | — | `reviewer.name` |
 | 2 | Email | — | `<code>{{ reviewer.email }}</code>` |
-| 3 | Tag1 | ✓ | `data-tag-toggle="1"` / `class="tag-col tag-col-1"` |
-| 4 | Tag2 | ✓ | `data-tag-toggle="2"` / `class="tag-col tag-col-2"` |
-| 5 | Tag3 | ✓ | `data-tag-toggle="3"` / `class="tag-col tag-col-3"` |
+| 3 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
+| 4 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
+| 5 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
 | 6 | Status | — | `reviewer.status` |
 | 7 | Updated | — | `reviewer.updated_at` (`%Y-%m-%d %H:%M`) |
 
-Toggle row sits right-flushed above the table (`Tag1`, `Tag2`,
-`Tag3` checkboxes); see "Preview tables (shared toggle pattern)"
-above for default-state and persistence rules.
+The `Show columns:` chip row sits in the top "Fields with data"
+card; see "Preview tables (shared toggle pattern)" above for
+default-state and persistence rules.
 
 ## Reviewees page (`session_reviewees.html`)
 
@@ -304,18 +313,19 @@ Danger Zone on the right. CSV header copy lists `RevieweeName`,
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the Operator actions card |
 | 1 | Name | — | `reviewee.name` |
 | 2 | Email / Identifier | — | `<code>{{ reviewee.email_or_identifier }}</code>` |
-| 3 | Photo | — | Conditional: rendered only when at least one reviewee has `profile_link`. Cell renders `<a href="…" target="_blank">link</a>`. |
-| 4 | Tag1 | ✓ | Same toggle scheme as Reviewers |
-| 5 | Tag2 | ✓ | |
-| 6 | Tag3 | ✓ | |
+| 3 | Photo | ✓ | Conditional: rendered only when at least one reviewee has `profile_link`. Cell renders `<a href="…" target="_blank">link</a>`. `data-col-toggle="profile"` / `class="profile-col"` |
+| 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
+| 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
+| 6 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
 | 7 | Status | — | `reviewee.status` |
 | 8 | Updated | — | `reviewee.updated_at` (`%Y-%m-%d %H:%M`) |
 
-The Photo column is *not* on a toggle — its presence is governed
-solely by whether any reviewee has a populated `profile_link` in
-the current preview rows. Position 3 sits between the identity
-columns and the toggleable tag columns so the canonical column
-order is consistent across reviewers / reviewees.
+Whether the Photo column renders at all is governed by whether any
+reviewee has a populated `profile_link` in the current preview
+rows; when it renders, its `Show columns:` chip can hide / show it
+like the tag columns. Position 3 sits between the identity columns
+and the toggleable tag columns so the canonical column order is
+consistent across reviewers / reviewees.
 
 ## Relationships page (`session_relationships.html`)
 
@@ -356,15 +366,15 @@ from `relationships.fields_with_data(...)` in
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the Operator actions card |
 | 1 | Reviewer | — | Resolved **name** stacked above `<code>email</code>`; sorts on name |
 | 2 | Reviewee | — | Resolved **name** stacked above `<code>email_or_identifier</code>`; sorts on name |
-| 3 | Tag1 | ✓ | `data-tag-toggle="1"` / `class="tag-col tag-col-1"` |
-| 4 | Tag2 | ✓ | `data-tag-toggle="2"` / `class="tag-col tag-col-2"` |
-| 5 | Tag3 | ✓ | `data-tag-toggle="3"` / `class="tag-col tag-col-3"` |
+| 3 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
+| 4 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
+| 5 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
 | 6 | Status | — | `<span class="pill pill-info\|pill-empty">active\|inactive</span>` per the canonical pill treatment (post-15 cleanup polish #768) |
 | 7 | Updated | — | `relationship.updated_at` (`%Y-%m-%d %H:%M`) |
 
-Toggle row sits right-flushed above the table (`Tag1`, `Tag2`,
-`Tag3` checkboxes); same default-state and persistence rules as
-Reviewers / Reviewees per the shared section above.
+The `Show columns:` chip row sits in the top "Fields with data"
+card; same default-state and persistence rules as Reviewers /
+Reviewees per the shared section above.
 
 The Status column is *not* toggleable — every relationship has a
 status by design, and the pill treatment makes the value visually

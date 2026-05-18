@@ -826,14 +826,16 @@ bottom of this file.
 - **18E — Small enhancements** *(stub created 2026-05-17)*.
   A holding pen for small, self-contained operator-surface
   enhancements — each one a single small PR, landed
-  independently; items accumulate as they surface. **Part 1:**
-  reuse the 18A Part 2 tag-filter chip mechanism on the
-  Reviewers / Reviewees / Relationships Setup pages — clickable
-  column chips that show / hide preview-table columns, off the
-  column-presence readout the info cards already render. Pure
-  client-side, no schema. **Part 2 (shipped 2026-05-18):**
-  eligible-pair count performance — evaluate only pinned rules,
-  plus a lazy persisted cache on `session_rule_sets`.
+  independently; items accumulate as they surface.
+  **Part 1 (shipped 2026-05-18):** column-visibility chips on
+  the Reviewers / Reviewees / Relationships Setup pages — a
+  `Show columns:` chip row in the top card replaces the old
+  Tag1/Tag2/Tag3 checkbox strip; chips carry friendly labels and
+  toggle preview-table columns (tags + the Reviewees profile-link
+  column). Pure client-side, no schema. **Part 2 (shipped
+  2026-05-18):** eligible-pair count performance — evaluate only
+  pinned rules, plus a lazy persisted cache on
+  `session_rule_sets`.
   **Plan:** `guide/segment_18E_small_enhancements.md`.
 
 - **18F — Scheduled events** *(stub created 2026-05-17)*.

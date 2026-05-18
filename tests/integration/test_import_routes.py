@@ -606,20 +606,23 @@ def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
     assert "Tag3" in body
     assert "<th>Tags</th>" not in body
 
-    # Toggle row above the table — Tag1 / Tag2 ticked (have data),
-    # Tag3 disabled because the column has no data anywhere.
-    # Whitespace-normalised so the assertions survive template
-    # indentation changes (e.g. the Segment 15F edit-mode wrapper).
+    # "Show columns:" chip row in the top card — Tag1 / Tag2 chips
+    # selected (have data), Tag3 disabled because the column has no
+    # data anywhere. Whitespace-normalised so the assertions survive
+    # template indentation changes.
     flat = re.sub(r"\s+", " ", body)
-    assert 'data-tag-toggle="1" checked' in flat
-    assert 'data-tag-toggle="2" checked' in flat
-    assert 'data-tag-toggle="3" checked' not in flat
+    assert "Show columns:" in flat
+    assert 'data-col-toggle="tag-1" aria-pressed="true"' in flat
+    assert 'data-col-toggle="tag-2" aria-pressed="true"' in flat
     assert (
-        'data-tag-toggle="3" disabled aria-disabled="true" '
-        'title="No data in this column"'
+        'data-col-toggle="tag-3" aria-pressed="false" disabled '
+        'aria-disabled="true" title="No data in this column"'
     ) in flat
-    # Tag1 / Tag2 are NOT disabled (they have data).
-    assert 'data-tag-toggle="1" disabled' not in flat
+    # Tag1 / Tag2 chips are NOT disabled (they have data).
+    assert 'data-col-toggle="tag-1" aria-pressed="false"' not in flat
+    assert 'data-col-toggle="tag-1" aria-pressed="true" disabled' not in flat
+    # The old checkbox toggle strip is gone.
+    assert "data-tag-toggle" not in flat
 
     # Tag values render in their own cells (no "1: " prefix).
     assert "1: senior" not in body
@@ -650,6 +653,64 @@ def test_reviewees_page_lists_imported_rows_with_photolink(
     assert "Dan" in body
     assert "dan-2026" in body
     assert "https://example.edu/c.jpg" in body
+    # The profile-link column joins the "Show columns:" chip row as a
+    # toggleable optional column (Segment 18E Part 1).
+    flat = re.sub(r"\s+", " ", body)
+    assert "Show columns:" in flat
+    assert 'data-col-toggle="profile" aria-pressed="true"' in flat
+    assert 'class="profile-col"' in flat
+
+
+def test_relationships_page_renders_column_chips(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="rel-chips")
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{review_session.id}/relationships/import",
+        files={
+            "file": (
+                "rel.csv",
+                b"ReviewerEmail,RevieweeEmail,PairContextTag1\n"
+                b"alice@example.edu,carol@example.edu,mentor\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    flat = re.sub(
+        r"\s+", " ", client.get(
+            f"/operator/sessions/{review_session.id}/relationships"
+        ).text
+    )
+
+    assert "Show columns:" in flat
+    # PairContextTag1 has data → chip selected; 2 / 3 empty → disabled.
+    assert 'data-col-toggle="tag-1" aria-pressed="true"' in flat
+    assert 'data-col-toggle="tag-2" aria-pressed="false" disabled' in flat
+    assert "data-tag-toggle" not in flat
 
 
 def test_non_operator_gets_403_on_roster_pages(
