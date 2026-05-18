@@ -137,38 +137,45 @@ creation; Lock / Unlock governs visibility, not data shape).
 ### Editor surface for a group-scoped instrument
 
 Identical to the per-reviewee editor except for the **Display
-Fields** section, which is **replaced**:
+Fields** section, which is **reshaped, not removed**.
 
-- The multi-column Display Fields table does not apply — a
-  group-scoped row has no per-reviewee identity columns. In its
-  place the editor shows a single **Group display** control: the
-  operator picks what the one group column shows on the reviewer
-  surface —
-  - **Member names** — the group members listed inline,
-    comma-separated.
-  - **Rule summary** — the pinned rule's
-    `reviewee_group_description` (or its `name` / `description`
-    fallback).
-  - **Both** — the rule summary followed by the member list.
+For a group-scoped instrument the Display Fields table carries
+three columns:
 
-  This choice is stored in `group_kind`
-  (`members` / `summary` / `both`); the default for a freshly
-  created group-scoped instrument is `both`.
-- **Sort.** The instrument keeps the **standard per-instrument
-  sort spec** (`Instrument.sort_display_fields`, the Segment 13B
-  mechanism) — the operator orders by any available / populated
-  reviewee field or tag, exactly as for a per-reviewee
-  instrument. For a group-scoped instrument the same sort spec
-  orders **two things**: the inline member-name list within a
-  group cell, and, where group rows are listed on operator pages,
-  the group rows themselves (a group sorts by its first member
-  under the spec).
-- Response Fields, Response Fields Help, descriptions, ordering,
-  accepting-responses / visibility toggles, and the Save / Edit /
-  Delete affordances are all unchanged.
-- A small chip near the instrument-card heading reads
-  **Group-scoped** so the operator never wonders which mode they
-  are editing.
+- **Group Description** — a single vertically-merged cell
+  spanning every row, holding an edit box. It defaults to the
+  pinned rule's `reviewee_group_description` (which itself falls
+  back to the rule's `description`); the operator may override
+  the text here.
+- **Friendly Label** — the tag's session-wide friendly label,
+  read-only, resolved the same way as a per-reviewee instrument's
+  Display Fields labels (`app/services/field_labels.py`).
+- **Sort** — the per-instrument sort control (the Segment 13B
+  sort spec, `Instrument.sort_display_fields`). For a group-scoped
+  instrument the sort orders **two things**: the inline
+  member-name list within a group cell, and, where group rows are
+  listed on operator pages, the group rows themselves (a group
+  sorts by its first member under the spec).
+
+**Eligible rows.** The table's rows are the reviewee tags and
+pair-context tags that **carry data** — the *same eligibility
+standard* as a per-reviewee instrument's Display Fields (see
+`spec/instruments.md` "Display Fields"): every populated
+`RevieweeTag1/2/3` and `PairContextTag1/2/3`, **up to six rows**.
+Name, Email, and Profile are individual attributes and never
+appear on a group-scoped instrument's Display Fields table.
+
+The reviewer-surface group column's content
+(`members` / `summary` / `both`, stored in `group_kind`) is a
+separate display choice — see "Reviewer surface". Its editor
+control is not yet sited; the default for a freshly created
+group-scoped instrument is `both`.
+
+Response Fields, Response Fields Help, descriptions,
+accepting-responses / visibility toggles, and the Save / Edit /
+Delete affordances are all unchanged. A small chip near the
+instrument-card heading reads **Group-scoped** so the operator
+never wonders which mode they are editing.
 
 ### Rule is required
 
