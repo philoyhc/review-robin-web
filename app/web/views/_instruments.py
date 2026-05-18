@@ -376,6 +376,12 @@ def build_instruments_context(
         db, review_session
     )
     db.commit()
+    # The session runs ``expire_on_commit=False``, so the commit
+    # above leaves any already-loaded ``display_fields`` collections
+    # stale — they miss rows the lazy seeds added this request (e.g.
+    # tag rows on an instrument created after the reviewee import).
+    # Expire so the render below reloads them fresh.
+    db.expire_all()
 
     is_ready = lifecycle.is_ready(review_session)
     can_edit = not is_ready

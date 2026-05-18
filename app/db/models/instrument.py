@@ -55,21 +55,22 @@ class Instrument(Base, TimestampMixin):
     13B PR 1 (#TBD) lit up the reviewer-surface render-path
     consumer + the service writer."""
     group_kind: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    """Group-scoping flavour for Segment 13C's group-scoped
-    instruments — e.g. one shared answer covers a whole group of
-    reviewees instead of per-reviewee. NULL = "regular per-reviewee
-    instrument" (current behaviour). A non-null value is an
-    ordered, comma-joined list of one or more distinct reviewee
-    tag keys (``tag_1`` / ``tag_2`` / ``tag_3``) — e.g. ``tag_1``
-    or ``tag_1,tag_2,tag_3``. The group a reviewee belongs to is
-    the tuple of its values for those keys, so a composite key
-    can partition by e.g. (cohort, class, small group). See
-    ``spec/group_scoped_instruments.md``.
+    """Group-scoping flag + group-boundary spec for Segment 13C's
+    group-scoped instruments — one shared answer covers a whole
+    group of reviewees instead of per-reviewee. NULL = "regular
+    per-reviewee instrument". Any non-null value flags the
+    instrument group-scoped.
 
-    Lands inert in 13D PR 6 — no service module reads or writes
-    the column; reviewer-surface render behaviour unchanged. 13C
-    PR 1 (now pure render path) reads it via the new render
-    adapter."""
+    The non-null value encodes the group-boundary spec: an ordered,
+    comma-joined list of tag key-codes (``r1``-``r3`` reviewee
+    tags, ``p1``-``p3`` pair-context tags) — e.g. ``r1`` or
+    ``r1,p2``. A reviewer's rule-eligible universe is partitioned
+    into groups by the shared values of those boundary tags
+    (additive). A group-scoped instrument with no boundary tag
+    keeps the sentinel ``"both"`` so the column stays non-null.
+    Encoded / decoded by ``app.services.instruments`` —
+    ``encode_group_kind`` / ``decode_group_kind`` /
+    ``set_group_boundary``. See ``spec/group_scoped_instruments.md``."""
     rule_set_id: Mapped[int | None] = mapped_column(
         ForeignKey("session_rule_sets.id", ondelete="SET NULL"),
         index=True,

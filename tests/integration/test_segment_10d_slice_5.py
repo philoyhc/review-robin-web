@@ -546,6 +546,89 @@ def test_group_instrument_response_fields_editable_and_save(
     assert rf.label == "Renamed Rating"
 
 
+def test_group_instrument_group_by_encodes_group_kind(
+    client: TestClient, db: Session
+) -> None:
+    """Ticking *Group by* on a group-scoped instrument's Display
+    Fields tag row encodes the boundary spec into ``group_kind``;
+    unticking it reverts to the no-boundary sentinel. The tag row's
+    Include (``visible``) is derived from the Group-by tick (Segment
+    13C PR 2 slice A)."""
+    session = _create_session(client, db, code="grp-by")
+    [default] = _instruments(db, session.id)
+    # A reviewee tag column seeds a RevieweeTag1 display field on
+    # every instrument in the session (re-seeded on the index GET).
+    client.post(
+        f"/operator/sessions/{session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/operator/sessions/{session.id}/instruments/add-group",
+        data={"after": str(default.id)},
+        follow_redirects=False,
+    )
+    group = next(i for i in _instruments(db, session.id) if i.group_kind)
+    assert group.group_kind == "both"  # no boundary tag yet
+
+    page = client.get(
+        f"/operator/sessions/{session.id}/instruments?editing={group.id}"
+    )
+    assert page.status_code == 200
+    assert 'name="group_by_ids"' in page.text
+
+    tag_df = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == group.id,
+            InstrumentDisplayField.source_type == "reviewee",
+            InstrumentDisplayField.source_field == "tag_1",
+        )
+    ).scalar_one()
+
+    # Save with the tag row ticked Group by.
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{group.id}/fields/save",
+        data={
+            "kind": "display",
+            "id": str(tag_df.id),
+            "order": "0",
+            "label": "",
+            "group_by_ids": str(tag_df.id),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(group)
+    db.refresh(tag_df)
+    assert group.group_kind == "r1"
+    assert tag_df.visible is True  # Include derived from Group by
+
+    # Save again with Group by unticked → back to the sentinel, and
+    # the tag row's derived Include drops to False.
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{group.id}/fields/save",
+        data={
+            "kind": "display",
+            "id": str(tag_df.id),
+            "order": "0",
+            "label": "",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(group)
+    db.refresh(tag_df)
+    assert group.group_kind == "both"
+    assert tag_df.visible is False
+
+
 # --------------------------------------------------------------------------- #
 # POST /instruments/{iid}/delete
 # --------------------------------------------------------------------------- #

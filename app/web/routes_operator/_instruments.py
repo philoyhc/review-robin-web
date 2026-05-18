@@ -560,6 +560,14 @@ async def instrument_bulk_save_fields(
     visible_id_strs: set[str] = {
         str(v) for v in form.getlist("visible_ids")
     }
+    # Segment 13C — the group-scoped Display Fields table submits
+    # ``group_by_ids`` (the tag rows ticked *Group by*). On a
+    # group-scoped instrument a tag row's Include is derived from
+    # its Group-by tick, so these ids fold into ``visible_ids``
+    # below and also drive the encoded ``group_kind`` boundary spec.
+    group_by_id_strs: set[str] = {
+        str(v) for v in form.getlist("group_by_ids")
+    }
     required_id_strs: set[str] = {
         str(v) for v in form.getlist("required_ids")
     }
@@ -709,6 +717,17 @@ async def instrument_bulk_save_fields(
         rid = _resolve_id(s)
         if rid is not None:
             visible_ids.add(rid)
+    group_by_ids: set[int] = set()
+    for s in group_by_id_strs:
+        rid = _resolve_id(s)
+        if rid is not None:
+            group_by_ids.add(rid)
+    # On a group-scoped instrument a tag row's Include == its
+    # Group-by tick; fold so ``bulk_save_fields`` stores ``visible``
+    # for the tag rows. The Name row's Include rides ``visible_ids``
+    # directly.
+    if instrument.group_kind is not None:
+        visible_ids |= group_by_ids
     required_ids: set[int] = set()
     for s in required_id_strs:
         rid = _resolve_id(s)
@@ -758,6 +777,23 @@ async def instrument_bulk_save_fields(
     instruments_service.bulk_save_fields(
         db, instrument=instrument, rows=rows, actor=user
     )
+    # Segment 13C — persist the group-boundary spec encoded from the
+    # tag rows the operator ticked *Group by*, ordered by the
+    # display-field order. Only group-scoped instruments carry it.
+    if instrument.group_kind is not None:
+        df_by_id = {f.id: f for f in instrument.display_fields}
+        boundary_fields = sorted(
+            (df_by_id[i] for i in group_by_ids if i in df_by_id),
+            key=lambda f: f.order,
+        )
+        instruments_service.set_group_boundary(
+            db,
+            instrument=instrument,
+            boundary_pairs=[
+                (f.source_type, f.source_field) for f in boundary_fields
+            ],
+            actor=user,
+        )
     # Sort spec (Segment 13B PR 2) — parsed from the Display
     # Fields card's hidden ``sort_display_field_id`` + ``sort_dir``
     # parallel arrays. Empty / missing → clear the spec back to
@@ -916,10 +952,11 @@ def instruments_add_group(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Create a group-scoped instrument (Segment 13C placeholder).
+    """Create a group-scoped instrument (Segment 13C).
 
-    The card renders as a stub — only the Danger Zone and the action
-    row — until the group-scoped editor lands in a later 13C PR.
+    The new instrument starts with the no-boundary sentinel
+    (``GROUP_KIND_SENTINEL``); the operator picks boundary tags via
+    the Display Fields table's *Group by* column.
     """
     _require_instrument_editable(review_session)
     instrument = instruments_service.create_instrument(
@@ -927,7 +964,7 @@ def instruments_add_group(
         review_session=review_session,
         after_instrument_id=after,
         actor=user,
-        group_kind="both",
+        group_kind=instruments_service.GROUP_KIND_SENTINEL,
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/instruments#instrument-{instrument.id}",

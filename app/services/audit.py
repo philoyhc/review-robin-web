@@ -402,6 +402,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "instrument.rule_pinned": EventSchema(
         _IDENTITY | {"changes", "refs"}
     ),
+    "instrument.group_boundary_updated": EventSchema(
+        _IDENTITY | {"changes", "refs"}
+    ),
     "instrument.field_added": EventSchema(
         _IDENTITY | {"snapshot", "refs", "context"}
     ),

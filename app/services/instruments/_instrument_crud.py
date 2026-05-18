@@ -164,9 +164,11 @@ def create_instrument(
     immediately after that one and bump subsequent ``order`` values; else
     append at the end.
 
-    ``group_kind`` is the Segment 13C group-scoping flavour — ``None``
-    for an ordinary per-reviewee instrument, or a non-null value
-    (``members`` / ``summary`` / ``both``) for a group-scoped one.
+    ``group_kind`` is the Segment 13C group-scoping flag — ``None``
+    for an ordinary per-reviewee instrument, or a non-null value for
+    a group-scoped one. A new group-scoped instrument is created
+    with the no-boundary sentinel (``GROUP_KIND_SENTINEL``); the
+    operator picks boundary tags later via ``set_group_boundary``.
     """
     lifecycle.invalidate_if_validated(
         db, review_session=review_session, user=actor, reason="instrument_added"
@@ -486,6 +488,119 @@ def pin_rule_set(
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
         payload=audit.changes({"rule_set_id": [old_value, rule_set_id]}),
+        refs={"instrument_id": instrument.id},
+    )
+    db.commit()
+    return instrument
+
+
+# ---------------------------------------------------------------------------
+# Group-boundary tags (Segment 13C PR 2 slice A)
+# ---------------------------------------------------------------------------
+#
+# A group-scoped instrument's ``group_kind`` column encodes its
+# group-boundary spec — an ordered, comma-separated list of tag
+# key-codes (``r1``-``r3`` reviewee tags, ``p1``-``p3`` pair-context
+# tags). A group-scoped instrument with no boundary tag keeps the
+# sentinel ``"both"`` so the column stays non-null (non-null is the
+# group-scoped flag). See ``spec/group_scoped_instruments.md``.
+
+GROUP_KIND_SENTINEL = "both"
+
+_GROUP_BOUNDARY_CODE_BY_SOURCE: dict[tuple[str, str], str] = {
+    ("reviewee", "tag_1"): "r1",
+    ("reviewee", "tag_2"): "r2",
+    ("reviewee", "tag_3"): "r3",
+    ("pair_context", "1"): "p1",
+    ("pair_context", "2"): "p2",
+    ("pair_context", "3"): "p3",
+}
+_GROUP_BOUNDARY_SOURCE_BY_CODE: dict[str, tuple[str, str]] = {
+    code: pair for pair, code in _GROUP_BOUNDARY_CODE_BY_SOURCE.items()
+}
+
+
+def encode_group_kind(boundary_pairs: list[tuple[str, str]]) -> str:
+    """Encode an ordered list of boundary ``(source_type, source_field)``
+    pairs into the ``group_kind`` column string. An empty list (no
+    boundary tag) encodes to the no-boundary sentinel. Pairs that
+    are not boundary-eligible tags are skipped."""
+    codes: list[str] = []
+    for pair in boundary_pairs:
+        code = _GROUP_BOUNDARY_CODE_BY_SOURCE.get(pair)
+        if code is not None and code not in codes:
+            codes.append(code)
+    return ",".join(codes) if codes else GROUP_KIND_SENTINEL
+
+
+def decode_group_kind(group_kind: str | None) -> list[tuple[str, str]]:
+    """Decode a ``group_kind`` column string into its ordered list of
+    boundary ``(source_type, source_field)`` pairs. ``None`` (a
+    per-reviewee instrument) and the no-boundary sentinel both decode
+    to ``[]``; unrecognised codes are skipped."""
+    if not group_kind:
+        return []
+    pairs: list[tuple[str, str]] = []
+    for code in group_kind.split(","):
+        pair = _GROUP_BOUNDARY_SOURCE_BY_CODE.get(code.strip())
+        if pair is not None and pair not in pairs:
+            pairs.append(pair)
+    return pairs
+
+
+def group_boundary_pairs(instrument: Instrument) -> set[tuple[str, str]]:
+    """Set of ``(source_type, source_field)`` pairs that are
+    group-boundary tags on this instrument. Empty for a per-reviewee
+    instrument or a group instrument with no boundary tag. A
+    template-facing convenience over :func:`decode_group_kind`."""
+    return set(decode_group_kind(instrument.group_kind))
+
+
+def set_group_boundary(
+    db: Session,
+    *,
+    instrument: Instrument,
+    boundary_pairs: list[tuple[str, str]],
+    actor: User,
+) -> Instrument:
+    """Persist a group-scoped instrument's group-boundary spec.
+
+    ``boundary_pairs`` is the ordered list of tag
+    ``(source_type, source_field)`` pairs the operator ticked
+    *Group by* on the Display Fields table. It is encoded into the
+    ``group_kind`` column; an empty list stores the no-boundary
+    sentinel so the column stays non-null. No-op saves skip the
+    audit + lifecycle side effects.
+
+    Only valid on a group-scoped instrument (``group_kind`` already
+    non-null); raises ``ValueError`` on a per-reviewee instrument.
+    """
+    if instrument.group_kind is None:
+        raise ValueError(
+            "set_group_boundary is only valid on a group-scoped instrument."
+        )
+    new_value = encode_group_kind(boundary_pairs)
+    if instrument.group_kind == new_value:
+        return instrument
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_group_boundary_updated",
+    )
+    old_value = instrument.group_kind
+    instrument.group_kind = new_value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="instrument.group_boundary_updated",
+        summary=(
+            f"Updated group boundary on instrument "
+            f"{_instrument_label(instrument)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.changes({"group_kind": [old_value, new_value]}),
         refs={"instrument_id": instrument.id},
     )
     db.commit()
