@@ -140,10 +140,10 @@
 
   {# Per-instrument action row. Shared by the ordinary instrument card
      and the Segment 13C group-scoped placeholder card so both carry
-     the same button set: Edit / (Save, Cancel), Add new instrument,
-     Add new group instrument, Replicate this instrument. #}
+     the same button set: Edit / (Save, Cancel), Add instrument,
+     Add group instrument, Replicate. #}
   {% macro instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) %}
-    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
       <div style="display: flex; gap: 8px;">
         {% if is_editing %}
           <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary"
@@ -161,24 +161,24 @@
              {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
         {% endif %}
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/add"
               style="display: inline; margin: 0;">
           <input type="hidden" name="after" value="{{ instrument.id }}">
           <button class="btn secondary" type="submit"
-                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add new instrument</button>
+                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add instrument</button>
         </form>
         <form method="post"
               action="/operator/sessions/{{ session.id }}/instruments/add-group"
               style="display: inline; margin: 0;">
           <input type="hidden" name="after" value="{{ instrument.id }}">
           <button class="btn secondary" type="submit"
-                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add new group instrument</button>
+                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add group instrument</button>
         </form>
         {# Placeholder — Replicate is wired in Segment 13C PR 3. #}
         <button class="btn secondary" type="button"
-                title="Coming soon — Segment 13C">Replicate this instrument</button>
+                title="Coming soon — Segment 13C">Replicate</button>
       </div>
     </div>
   {% endmacro %}
@@ -420,9 +420,127 @@
           {{ group_instrument_identity(session, instrument, loop.index, is_ready) }}
           {{ assignment_rule_card(session, instrument, rule_picker, false) }}
         </div>
-        <p class="form-help">
-          Group-scoped instrument — the fields editor is not built yet.
-        </p>
+        {# Section B — Display Fields (group) + Response Fields, then
+           Response Fields Help. Visual placeholders for Segment 13C —
+           not editable until the group editor lands. #}
+        {% set sorted_response_fields = instrument.response_fields | sort(attribute='order') %}
+        {% set tag_fields = (sorted_display_fields
+              | selectattr('source_type', 'equalto', 'reviewee')
+              | selectattr('source_field', 'in', ['tag_1', 'tag_2', 'tag_3'])
+              | list) %}
+        <div class="bottom-grid field-builder">
+          <div class="card" style="border: none; background: transparent; padding: 0;">
+            <h3 style="margin-top: 0;">Display Fields</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Group Description</th>
+                    <th>Friendly Label</th>
+                    <th>Sort</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if tag_fields %}
+                    {% for df in tag_fields %}
+                      <tr>
+                        {% if loop.first %}
+                          <td rowspan="{{ tag_fields | length }}" style="vertical-align: top;">
+                            <textarea rows="4" style="width: 100%;"
+                                      placeholder="Defaults to the pinned rule's group description"></textarea>
+                          </td>
+                        {% endif %}
+                        <td>{{ display_field_label(df, session=session) }}</td>
+                        <td class="sort-cell"><span class="sort-badge sort-badge-empty">↕</span></td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr>
+                      <td>
+                        <textarea rows="4" style="width: 100%;"
+                                  placeholder="Defaults to the pinned rule's group description"></textarea>
+                      </td>
+                      <td class="muted">No reviewee tags imported yet.</td>
+                      <td class="sort-cell"><span class="muted">—</span></td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card" style="border: none; background: transparent; padding: 0;">
+            <h3 style="margin-top: 0;">Response Fields</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Key</th>
+                    <th>Friendly Label</th>
+                    <th>Type</th>
+                    <th>Required</th>
+                    <th>Order</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for field in sorted_response_fields %}
+                    <tr>
+                      <td><code>{{ field.field_key }}</code></td>
+                      <td>{{ field.label }}</td>
+                      <td>
+                        <select disabled>
+                          {% for rtd in rtds %}
+                            <option value="{{ rtd.id }}"{% if rtd.id == field.response_type_id %} selected{% endif %}>{{ rtd.response_type }}</option>
+                          {% endfor %}
+                        </select>
+                      </td>
+                      <td><input type="checkbox" disabled {% if field.required %}checked{% endif %}></td>
+                      <td><span class="order-num">{{ loop.index }}</span></td>
+                      <td><span class="muted">—</span></td>
+                    </tr>
+                  {% endfor %}
+                  {% if not sorted_response_fields %}
+                    <tr>
+                      <td colspan="6" class="muted" style="font-style: italic;">No response fields.</td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="border: none; background: transparent; padding: 0; margin-top: 12px;">
+          <h3 style="margin-top: 0;">Response Fields Help</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Text</th>
+                  <th>Show</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for field in sorted_response_fields %}
+                  <tr>
+                    <td><code>{{ field.field_key }}</code></td>
+                    <td>{% if field.help_text %}{{ field.help_text }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                    <td><input type="checkbox" disabled {% if field.help_text_visible %}checked{% endif %}></td>
+                  </tr>
+                {% endfor %}
+                {% if not sorted_response_fields %}
+                  <tr>
+                    <td colspan="3" class="muted" style="font-style: italic;">No response fields.</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# Section E — Danger Zone (half-width, left) + action buttons. #}
         {% set add_delete_disabled = is_ready or is_some_instrument_editing or is_some_rtd_unlocked %}
         {% if is_ready %}
           {% set add_delete_disabled_title = "Revert to draft to add or delete instruments." %}
@@ -435,25 +553,29 @@
         {% endif %}
         {% set is_only_instrument = (instruments | length == 1) %}
         {% set delete_disabled = add_delete_disabled or is_only_instrument %}
-        <div class="card danger-zone" style="margin-top: 12px;">
-          <h2>Danger Zone</h2>
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete">
-            <p>
-              <label style="font-weight: normal;">
-                <input type="checkbox" name="confirm" value="true" required>
-                Yes, delete <strong>Group Instrument #{{ loop.index }}</strong>. This
-                will also delete its assignments and any submitted reviewer
-                responses.
-              </label>
-            </p>
-            <p>
-              <button class="btn destructive" type="submit"
-                      {% if delete_disabled %}disabled title="{% if is_only_instrument %}Cannot delete the only instrument on this session.{% else %}{{ add_delete_disabled_title }}{% endif %}"{% endif %}>Delete this instrument</button>
-            </p>
-          </form>
+        <div class="bottom-grid" style="margin-top: 12px; align-items: start;">
+          <div class="card danger-zone">
+            <h2>Danger Zone</h2>
+            <form method="post"
+                  action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete">
+              <p>
+                <label style="font-weight: normal;">
+                  <input type="checkbox" name="confirm" value="true" required>
+                  Yes, delete <strong>Group Instrument #{{ loop.index }}</strong>. This
+                  will also delete its assignments and any submitted reviewer
+                  responses.
+                </label>
+              </p>
+              <p>
+                <button class="btn destructive" type="submit"
+                        {% if delete_disabled %}disabled title="{% if is_only_instrument %}Cannot delete the only instrument on this session.{% else %}{{ add_delete_disabled_title }}{% endif %}"{% endif %}>Delete this instrument</button>
+              </p>
+            </form>
+          </div>
+          <div class="card" style="border: none; background: transparent; padding: 0;">
+            {{ instrument_action_row(session, instrument, false, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) }}
+          </div>
         </div>
-        {{ instrument_action_row(session, instrument, false, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) }}
       {% else %}
 
       {# Section A — Identity + status. #}
