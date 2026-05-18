@@ -823,13 +823,17 @@ bottom of this file.
   is off the roadmap, see `guide/future_possibilities.md`.
   **Plan:** `guide/segment_17B_reviewer_surface_refinements.md`.
 
-- **18E — Small enhancements** *(stub created 2026-05-17)*.
+- **18E — Small enhancements** *(holding pen — open; both
+  current Parts shipped 2026-05-18)*.
   A holding pen for small, self-contained operator-surface
   enhancements — each one a single small PR, landed
-  independently; items accumulate as they surface.
+  independently; items accumulate as they surface. **Both
+  current Parts have shipped; the segment stays open** in
+  `guide/` so future small enhancements land here as additional
+  Parts rather than spawning one-off segment stubs.
   **Part 1 (shipped 2026-05-18):** column-visibility chips on
   the Reviewers / Reviewees / Relationships Setup pages — a
-  `Show columns:` chip row in the top card replaces the old
+  `Show columns:` pill-chip row in the top card replaces the old
   Tag1/Tag2/Tag3 checkbox strip; chips carry friendly labels and
   toggle preview-table columns (tags + the Reviewees profile-link
   column). Pure client-side, no schema. **Part 2 (shipped

@@ -9,9 +9,12 @@
 > (Export and import update,
 > `guide/archive/segment_18D_export_and_import_update.md`).
 
-**Holding pen.** **Part 1 has shipped** (2026-05-18) and
-**Part 2 has shipped** (2026-05-18). New items land as
-additional Parts as they surface.
+**Holding pen — open.** **Part 1 has shipped** (2026-05-18)
+and **Part 2 has shipped** (2026-05-18). Both current Parts are
+done, but this plan is **deliberately kept in `guide/` (not
+archived)**: it stays open as the intake point for future
+small operator-surface enhancements, which land as additional
+Parts as they surface.
 
 ## Goal
 
