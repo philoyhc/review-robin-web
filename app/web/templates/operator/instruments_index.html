@@ -294,6 +294,112 @@
     </div>
   {% endmacro %}
 
+  {# Assignment Rule sub-card (Segment 15B). Pins
+     ``instruments.rule_set_id``. Shared by the ordinary instrument
+     card's bottom grid and the group-scoped card's Section A. #}
+  {% macro assignment_rule_card(session, instrument, rule_picker, is_editing) %}
+    <div class="card" id="instrument-{{ instrument.id }}-rule-picker">
+      <h2>Assignment Rule</h2>
+      {% if rule_picker and rule_picker.options %}
+        <p>
+          <label for="rule-picker-{{ instrument.id }}">RuleSet</label>
+          <select id="rule-picker-{{ instrument.id }}"
+                  name="rule_set_id"
+                  {% if is_editing %}form="dfsave-{{ instrument.id }}"{% endif %}
+                  data-instrument-rule-picker="{{ instrument.id }}"
+                  {% if not is_editing %}disabled aria-disabled="true"{% endif %}>
+            <option value=""
+                    {% if rule_picker.selected_rule_set_id is none %}selected{% endif %}>— No rule —</option>
+            {% for option in rule_picker.options %}
+              <option value="{{ option.id }}"
+                      {% if option.id == rule_picker.selected_rule_set_id %}selected{% endif %}>{{ option.name }}</option>
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          Number of eligible pairs found:
+          <span class="pill pill-info"
+                data-instrument-rule-picker-count="{{ instrument.id }}">{% if rule_picker.selected_eligible_pair_count is not none %}{{ rule_picker.selected_eligible_pair_count }}{% else %}—{% endif %}</span>
+        </p>
+        <p style="margin-top: 12px;">
+          <a class="btn secondary"
+             href="{{ rule_picker.open_rule_builder_url }}">Open Rule Builder</a>
+        </p>
+      {% else %}
+        <p class="form-help">
+          No RuleSets visible in this session yet.
+        </p>
+        <p style="margin-top: 12px;">
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.id }}/assignments/rule-based-editor?new=1&amp;instrument_id={{ instrument.id }}">Open Rule Builder</a>
+        </p>
+      {% endif %}
+    </div>
+  {% endmacro %}
+
+  {# Section A identity card for a group-scoped instrument. The status
+     pills sit in the heading and the open/close + visibility buttons
+     sit beside Edit — the separate status card is retired for group
+     cards (its slot holds the Assignment Rule card instead). #}
+  {% macro group_instrument_identity(session, instrument, index, is_ready) %}
+    <div class="card instrument-edit"
+         style="border-color: transparent; background: transparent; padding: 0;
+                display: flex; flex-direction: column;">
+      <h2 style="margin-top: 0; font-size: 1.5rem;">
+        Instrument #{{ index }}
+        <span class="pill pill-info">Group-scoped</span>
+        {% if instrument.accepting_responses %}
+          <span class="pill pill-count">accepting responses</span>
+        {% else %}
+          <span class="pill pill-empty">not accepting responses</span>
+        {% endif %}
+        {% if instrument.responses_visible_when_closed %}
+          <span class="pill pill-count">showing when closed</span>
+        {% else %}
+          <span class="pill pill-empty">not showing when closed</span>
+        {% endif %}
+      </h2>
+      {% if instrument.short_label %}
+        <p class="short-label-text"
+           style="margin: 0 0 4px 0; font-weight: 600; color: var(--text-primary, #111827);">{{ instrument.short_label }}</p>
+      {% endif %}
+      <p class="description-text">{{ instrument.description or "(no description)" }}</p>
+      <div style="display: flex; gap: 8px; justify-content: flex-start; margin-top: auto; padding-top: 12px; flex-wrap: wrap;">
+        <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+           href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+           {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
+        {% if is_ready and not instrument.accepting_responses %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/open"
+                style="margin: 0;">
+            <button class="btn secondary" type="submit">Open this Instrument</button>
+          </form>
+        {% endif %}
+        {% if is_ready and instrument.accepting_responses %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/close"
+                style="margin: 0;">
+            <button class="btn secondary" type="submit">Close this instrument</button>
+          </form>
+        {% endif %}
+        {% if not instrument.responses_visible_when_closed %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
+                style="margin: 0;">
+            <input type="hidden" name="visible_when_closed" value="true">
+            <button class="btn secondary" type="submit">Show when closed</button>
+          </form>
+        {% else %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/visibility"
+                style="margin: 0;">
+            <button class="btn secondary" type="submit">Don't show when closed</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  {% endmacro %}
+
   {% for instrument in instruments %}
     {% set is_editing = (editing_instrument_id == instrument.id) %}
     {% set was_saved = (saved_instrument_id == instrument.id) %}
@@ -304,14 +410,18 @@
       {% set is_group = instrument.group_kind is not none %}
       {% if is_group %}
         {# Segment 13C placeholder — group-scoped instrument card.
-           Identity + status + Danger Zone + action row render; the
-           fields / rule editor land in a later 13C PR. The card is
-           not editable yet (no bulk-save form), so the identity macro
-           is called with ``is_editing=false``. #}
-        {{ instrument_identity_status(session, instrument, loop.index, false, is_ready, is_some_rtd_unlocked, instrument_saved_state, true) }}
+           Section A holds the identity card (status pills in the
+           heading, open/close + visibility buttons beside Edit) and
+           the Assignment Rule card; the separate status card is
+           retired here. Danger Zone + action row follow. The fields
+           editor lands in a later 13C PR. #}
+        {% set rule_picker = rule_picker_by_instrument_id.get(instrument.id) %}
+        <div class="bottom-grid" style="align-items: stretch;">
+          {{ group_instrument_identity(session, instrument, loop.index, is_ready) }}
+          {{ assignment_rule_card(session, instrument, rule_picker, false) }}
+        </div>
         <p class="form-help">
-          Group-scoped instrument — the fields and rule editor are not
-          built yet.
+          Group-scoped instrument — the fields editor is not built yet.
         </p>
         {% set add_delete_disabled = is_ready or is_some_instrument_editing or is_some_rtd_unlocked %}
         {% if is_ready %}
@@ -785,43 +895,7 @@
          relocates to a separate row below the two sub-cards. #}
       {% set rule_picker = rule_picker_by_instrument_id.get(instrument.id) %}
       <div class="bottom-grid" style="margin-top: 12px;">
-        <div class="card" id="instrument-{{ instrument.id }}-rule-picker">
-          <h2>Assignment Rule</h2>
-          {% if rule_picker and rule_picker.options %}
-            <p>
-              <label for="rule-picker-{{ instrument.id }}">RuleSet</label>
-              <select id="rule-picker-{{ instrument.id }}"
-                      name="rule_set_id"
-                      {% if is_editing %}form="dfsave-{{ instrument.id }}"{% endif %}
-                      data-instrument-rule-picker="{{ instrument.id }}"
-                      {% if not is_editing %}disabled aria-disabled="true"{% endif %}>
-                <option value=""
-                        {% if rule_picker.selected_rule_set_id is none %}selected{% endif %}>— No rule —</option>
-                {% for option in rule_picker.options %}
-                  <option value="{{ option.id }}"
-                          {% if option.id == rule_picker.selected_rule_set_id %}selected{% endif %}>{{ option.name }}</option>
-                {% endfor %}
-              </select>
-            </p>
-            <p>
-              Number of eligible pairs found:
-              <span class="pill pill-info"
-                    data-instrument-rule-picker-count="{{ instrument.id }}">{% if rule_picker.selected_eligible_pair_count is not none %}{{ rule_picker.selected_eligible_pair_count }}{% else %}—{% endif %}</span>
-            </p>
-            <p style="margin-top: 12px;">
-              <a class="btn secondary"
-                 href="{{ rule_picker.open_rule_builder_url }}">Open Rule Builder</a>
-            </p>
-          {% else %}
-            <p class="form-help">
-              No RuleSets visible in this session yet.
-            </p>
-            <p style="margin-top: 12px;">
-              <a class="btn secondary"
-                 href="/operator/sessions/{{ session.id }}/assignments/rule-based-editor?new=1&amp;instrument_id={{ instrument.id }}">Open Rule Builder</a>
-            </p>
-          {% endif %}
-        </div>
+        {{ assignment_rule_card(session, instrument, rule_picker, is_editing) }}
 
         <div class="card danger-zone">
           <h2>Danger Zone</h2>
