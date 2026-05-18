@@ -60,6 +60,47 @@ runs three jobs in order: **build → migrate → deploy**.
 There is no startup-time migration hook in the app; that pattern is
 fragile under concurrent deploys.
 
+## Production deployment (planned)
+
+There is **no production environment yet** — the app runs on a
+single dev slot. The intended production flow, once the Azure
+infrastructure is provisioned, is:
+
+```text
+main → deploy to dev → verify → manual approval → deploy/swap to production
+```
+
+Provisioning the production side (a production App Service or a
+staging slot to swap from, a production Postgres server, a GitHub
+`production` environment with required reviewers for the approval
+gate, and its own OIDC credentials / `DATABASE_URL`) needs the
+Azure portal and is tracked as deferred infrastructure — see
+`docs/security_posture.md` → "Deferred hardening" and
+`guide/deferred_infra.md`. The production deploy workflow is not
+in the repository yet.
+
+## Environment variables
+
+Set as **App Service App Settings** in deployed environments and
+in `.env` for local development. All are read at process start —
+restart the app after a change.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `APP_ENV` | `local` | Environment name. Any value other than `local` activates the fail-fast startup checks (`validate_critical_settings`). |
+| `DATABASE_URL` | local SQLite | Database connection string. Postgres in deployed environments — see "Database configuration" below. |
+| `LOG_LEVEL` | `INFO` | Root log level for the structured-logging setup. |
+| `OPERATOR_EMAILS` | empty | Comma-separated operator allowlist (first-sign-in bootstrap). |
+| `SYS_ADMIN_EMAILS` | empty | Comma-separated sys-admin allowlist. In a non-local environment, at least one of these two must be non-empty or the app refuses to boot. |
+| `OPERATOR_CONTACT_EMAIL` | unset | Optional contact address shown on the `/request-access` page. |
+| `ALLOW_FAKE_AUTH` | `false` | Local-only fake-identity escape hatch. **Must stay `false`** in any deployed environment. |
+| `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` / `FAKE_AUTH_PRINCIPAL_ID` / `FAKE_AUTH_OPERATOR` / `FAKE_AUTH_SYS_ADMIN` | dev values | Tune the fake identity; inert unless `ALLOW_FAKE_AUTH=true`. |
+| `SMTP_ENCRYPTION_KEY` | unset | Fernet key encrypting operator SMTP passwords at rest. Needed once email infrastructure (Segment 14B) is in use. |
+| `AUDIT_STRICT_MODE` | `false` | When true, `audit.write_event` raises on a detail-shape violation. Tests enable it; production leaves it off. |
+
+`APP_NAME`, `APP_VERSION`, and `DEBUG` also exist but are
+cosmetic / dev-only.
+
 ## Database configuration
 
 `DATABASE_URL` lives in two places, with identical values:
