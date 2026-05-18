@@ -713,11 +713,9 @@
                       data-instrument-rule-picker="{{ instrument.id }}"
                       {% if not is_editing %}disabled aria-disabled="true"{% endif %}>
                 <option value=""
-                        data-eligible-pairs="0"
                         {% if rule_picker.selected_rule_set_id is none %}selected{% endif %}>— No rule —</option>
                 {% for option in rule_picker.options %}
                   <option value="{{ option.id }}"
-                          data-eligible-pairs="{{ option.eligible_pair_count }}"
                           {% if option.id == rule_picker.selected_rule_set_id %}selected{% endif %}>{{ option.name }}</option>
                 {% endfor %}
               </select>
@@ -725,7 +723,7 @@
             <p>
               Number of eligible pairs found:
               <span class="pill pill-info"
-                    data-instrument-rule-picker-count="{{ instrument.id }}">{{ rule_picker.selected_eligible_pair_count }}</span>
+                    data-instrument-rule-picker-count="{{ instrument.id }}">{% if rule_picker.selected_eligible_pair_count is not none %}{{ rule_picker.selected_eligible_pair_count }}{% else %}--{% endif %}</span>
             </p>
             <p style="margin-top: 12px;">
               <a class="btn secondary"
@@ -1624,11 +1622,12 @@
     })();
   </script>
 
-  {# Slice 2a — Assignment Rule picker live count refresh. The
-     ``<option>`` rows carry the eligibility count in
-     ``data-eligible-pairs``; on selection change, swap the pill text
-     without a server round-trip. Same shape as the pre-15B Rule
-     Based card's selector JS. #}
+  {# Assignment Rule picker count refresh. The eligible-pair count
+     is known only for the rule currently *pinned* to the
+     instrument (server-rendered) — the engine is not run for
+     unpinned rules. A different, not-yet-saved selection has no
+     count, so the pill shows "--" until the operator saves and
+     the page re-renders. #}
   <script>
     (function () {
       var pickers = document.querySelectorAll(
@@ -1640,11 +1639,11 @@
           'span[data-instrument-rule-picker-count="' + instrumentId + '"]'
         );
         if (!pill) return;
+        var pinnedValue = select.value;
+        var pinnedText = pill.textContent;
         select.addEventListener('change', function () {
-          var option = select.options[select.selectedIndex];
-          pill.textContent = option && option.dataset.eligiblePairs
-            ? option.dataset.eligiblePairs
-            : '0';
+          pill.textContent =
+            select.value === pinnedValue ? pinnedText : '--';
         });
       });
     })();
