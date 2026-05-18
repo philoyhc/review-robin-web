@@ -511,15 +511,22 @@
                       <td><code>{{ field.field_key }}</code></td>
                       <td>{{ field.label }}</td>
                       <td>
-                        <select disabled>
+                        <select disabled
+                                title="Type cannot be changed after a field is created.">
                           {% for rtd in rtds %}
                             <option value="{{ rtd.id }}"{% if rtd.id == field.response_type_id %} selected{% endif %}>{{ rtd.response_type }}</option>
                           {% endfor %}
                         </select>
                       </td>
                       <td><input type="checkbox" disabled {% if field.required %}checked{% endif %}></td>
-                      <td><span class="order-num">{{ loop.index }}</span></td>
-                      <td><span class="muted">—</span></td>
+                      <td>
+                        <div class="order-cell">
+                          <span class="order-num">{{ loop.index }}</span>
+                        </div>
+                      </td>
+                      <td style="white-space: nowrap; width: 1%;">
+                        <span class="muted">—</span>
+                      </td>
                     </tr>
                   {% endfor %}
                   {% if not sorted_response_fields %}
