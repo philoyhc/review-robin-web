@@ -147,6 +147,7 @@ def _lifecycle_error_response(exc: lifecycle.LifecycleError) -> HTTPException:
         "not_ready": status.HTTP_409_CONFLICT,
         "session_not_ready": status.HTTP_409_CONFLICT,
         "deadline_passed": status.HTTP_409_CONFLICT,
+        "group_instrument_no_rule": status.HTTP_409_CONFLICT,
         "locked": status.HTTP_409_CONFLICT,
         "has_errors": status.HTTP_400_BAD_REQUEST,
         "needs_acknowledge": status.HTTP_400_BAD_REQUEST,

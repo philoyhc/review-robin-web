@@ -522,3 +522,87 @@ def test_instrument_close_open_visibility_audits(
     manual_close = [e for e in closed if (e.detail or {}).get("reason") == "manual"]
     assert len(manual_close) == 1
     assert len(opened) == 1
+
+
+# --------------------------------------------------------------------------- #
+# Segment 13C — group-scoped instrument rule-required gate
+# --------------------------------------------------------------------------- #
+
+
+def _add_group_instrument(
+    client: TestClient, db: Session, session_id: int
+) -> Instrument:
+    response = client.post(
+        f"/operator/sessions/{session_id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    return db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == session_id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+
+
+def test_group_instrument_open_blocked_without_rule(
+    client: TestClient, db: Session
+) -> None:
+    """A group-scoped instrument cannot be opened until a rule is
+    pinned (Segment 13C rule-required gate)."""
+    session = _create_session(client, db, code="grp-norule")
+    group = _add_group_instrument(client, db, session.id)
+    _populate_rosters(client, session.id)
+    _generate_full_matrix(client, db, session.id)
+
+    # Unpin the group instrument's rule before activation.
+    db.refresh(group)
+    group.rule_set_id = None
+    db.commit()
+
+    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    activate = client.post(
+        f"/operator/sessions/{session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    assert activate.status_code == 303, activate.text
+
+    # Activation skips the rule-less group instrument.
+    db.refresh(group)
+    assert group.accepting_responses is False
+
+    # An explicit open is rejected too.
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{group.id}/open",
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+    db.refresh(group)
+    assert group.accepting_responses is False
+
+
+def test_group_instrument_open_allowed_with_rule(
+    client: TestClient, db: Session
+) -> None:
+    """With a rule pinned, the group-scoped instrument opens."""
+    session = _create_session(client, db, code="grp-rule")
+    group = _add_group_instrument(client, db, session.id)
+    _populate_rosters(client, session.id)
+    _generate_full_matrix(client, db, session.id)
+    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    activate = client.post(
+        f"/operator/sessions/{session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    assert activate.status_code == 303, activate.text
+    db.refresh(group)
+    assert group.rule_set_id is not None  # Full Matrix pinned by the helper
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{group.id}/open",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(group)
+    assert group.accepting_responses is True
