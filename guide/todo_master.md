@@ -871,18 +871,21 @@ bottom of this file.
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-- **21 — Peer review enhancements** *(stub created
-  2026-05-16)*. Brings the **reviewee** online as a third
-  live audience — the people being reviewed get their own
-  surface, instead of being purely subjects of review.
-  Pivots Review Robin toward the non-confidential use cases
-  `spec/audience_and_identity_model.md` §3 records as
-  forward-looking: peer review where participants see each
-  other, 360-degree feedback, results-sharing. Reviewee
-  identity / auth, a results-sharing surface, feedback
-  acknowledgement, and reviewee-facing notifications. Opt-in
-  per session — confidential sessions keep no reviewee
-  surface.
+- **21 — Generalized audiences & response visibility**
+  *(stub 2026-05-16; built out 2026-05-18)*. Generalizes Review
+  Robin from an operator-and-reviewer review platform into a
+  participant system: reviewees and a new **observer** audience
+  get their own surfaces, and **response visibility becomes
+  explicit data** — a per-instrument policy for which audiences
+  may view responses and in what form (identified/de-identified,
+  per-line/summarized). Adds a session schedule (open / close /
+  results-viewing windows). The assignment-generation model
+  (per-instrument rule engine) stays; 21 enhances it. New data
+  structures: `observers`, `instrument_view_policies`,
+  `reviewees.contact_email`, session schedule columns. Hard-deps
+  14B (notifications) and coordinates with 18F (the scheduler).
+  Opt-in per instrument — confidential instruments keep no
+  reviewee/observer view.
   **Plan:** `guide/segment_21_peer_review_enhancements.md`.
 
 > The AG Grid replacement of the reviewer-surface table was
