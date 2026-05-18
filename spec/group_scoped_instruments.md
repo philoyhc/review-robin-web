@@ -51,9 +51,13 @@ rather than per-individual.
 > group. Members of a group share *every* ticked tag's value
 > (additive); with no tag ticked the whole universe is one group
 > (the prior behaviour). The boundary spec is stored in the
-> existing `group_kind` column — still no migration. The
-> sections below carry this model; "exactly one group per
-> reviewer" no longer holds.
+> existing `group_kind` column — still no migration. The boundary
+> tags also **compose the group's on-screen identity** directly:
+> the group-identity column *is* the boundary tag values. The
+> earlier per-tag *Include* column is dropped — the only display
+> choice left is a checkbox to also list the group's member
+> names. The sections below carry this model; "exactly one group
+> per reviewer" no longer holds.
 
 This file is the source of truth for the design. The
 implementation plan lives at
@@ -156,7 +160,7 @@ carried entirely by columns that already exist:
 | Field | Where | Type | Notes |
 |---|---|---|---|
 | `group_kind` | `Instrument` | `String(32) \| NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument; **any non-null value** flags the instrument group-scoped. The value now **encodes the group-boundary spec**: an ordered, comma-separated list of boundary tag-key codes (`r1`-`r3` reviewee tags, `p1`-`p3` pair-context tags), e.g. `r1,p2`. A group-scoped instrument with no boundary tag keeps the sentinel `"both"` (the legacy marker) so the column stays non-null. Six codes + commas = 17 chars, well inside `String(32)`. |
-| `visible` | `InstrumentDisplayField` | `Boolean` | Existing per-row flag. On a group-scoped instrument it is the **Include** checkbox — which tag (or Name) rows compose the group identity on the reviewer surface. |
+| `visible` | `InstrumentDisplayField` | `Boolean` | Existing per-row flag. On a group-scoped instrument only the **Name** row's `visible` is meaningful — it is the "list group members" toggle. Tag-row identity is driven by the boundary spec in `group_kind`, not by `visible`. |
 | `sort_display_fields` | `Instrument` | `JSON \| NULL` | Existing Segment 13B per-instrument sort spec. Orders the tag rows and the member-name list. |
 
 No `Assignment`, `Response`, or RuleSet change. The free-text
@@ -203,29 +207,22 @@ restricted to **tag rows plus a Name row**:
 - **Columns.**
   - **Friendly Label** — the tag's session-wide friendly label,
     read-only (`app/services/field_labels.py`).
-  - **Include** — a checkbox per row, persisted to the existing
-    `InstrumentDisplayField.visible` flag. The ticked rows
-    compose the group identity on the reviewer surface (see
-    "Composing the group identity"). Unlike a per-reviewee
-    instrument, the **Name row is not locked** here — its
-    Include is operator-choosable (unticking it omits the
-    member-name list).
-  - **Group** — a checkbox per **tag** row marking that tag as a
-    group-boundary key (see "The model"). The ticked tags'
-    key-codes are persisted, ordered, into `group_kind`. The
-    **Name row has no Group cell** — a group cannot be bounded by
-    a per-individual identifier (it would put every reviewee in
-    their own group). With no tag ticked the reviewer's whole
-    universe is one group. A short helper line under the table
-    explains the column ("Tick *Group* to split this instrument's
-    reviewees into separate groups by that tag; a reviewer
-    answers once per group. Tick more than one tag to split
-    additively — a group's members share every ticked tag's
-    value.").
+  - **Group** — a checkbox per row. On a **tag** row it marks
+    that tag a group-boundary key (see "The model"): the ticked
+    tags both define the group *and* compose its on-screen
+    identity — there is no separate Include choice. The ticked
+    tags' key-codes are persisted, ordered, into `group_kind`.
+    On the **Name** row the checkbox means something different —
+    a group can never be bounded by a per-individual identifier —
+    so it instead toggles the optional **member-name list** (see
+    "Composing the group identity"), persisted to that row's
+    `InstrumentDisplayField.visible` flag. With no tag ticked the
+    reviewer's whole universe is one group. A short helper line
+    under the table explains both senses.
   - **Sort** — the per-instrument sort control (the Segment 13B
     sort spec, `Instrument.sort_display_fields`), ordering the
-    tag rows and the member-name list. It also orders the
-    boundary tag-key codes written to `group_kind`.
+    boundary tag-key codes written to `group_kind` and the tag
+    values within the composed identity.
 
 **There is no free-text group-description field.** The group's
 on-screen identity is composed from the Included tags. When the
@@ -277,29 +274,26 @@ picker-selected reviewer.
 
 ### Composing the group identity
 
-The group-identity column is built from the Display Fields rows
-the operator marked **Include**, rendered as up to three lines:
+The group-identity column is composed automatically from the
+instrument's **boundary tags** — the tags ticked **Group** — with
+no separate operator choice:
 
-1. **Reviewee tags** — the Included reviewee-tag values,
-   comma-separated.
-2. **Pair-context tags** — the Included pair-context-tag values,
-   comma-separated, on the next line.
-3. **Member names** — when the Name row is Included, the group
-   members' names, comma-separated, on the next line.
+1. **Boundary tag values** — the group's value for each boundary
+   tag, comma-separated, in Sort order, on one line. By
+   construction every member shares these values, so each renders
+   a single crisp value.
+2. **Member names** — when the Name row's checkbox is ticked, the
+   group members' names, comma-separated, on a second line below.
 
 Tag **values are shown verbatim** — no friendly-label prefix.
-The operator names the tag values themselves, so a `tag2` value
-of `Group 5` and a `tag3` value of `Team A` render directly as
+The operator names the tag values themselves, so a boundary tag
+value of `Group 5` and another of `Team A` render directly as
 `Group 5, Team A`.
 
-A group's members share, by construction, one value for every
-**boundary** tag — so an Included boundary tag always renders a
-single crisp value. A non-boundary Included tag may still vary
-across the group; when it has more than one distinct value, all
-distinct values are shown comma-separated. Operators normally
-Include the boundary tags (so the row reads as the group it is),
-which makes the identity crisp in the common case; the Name row
-is the unambiguous fallback for any varying non-boundary tag.
+When an instrument has no boundary tag the whole universe is one
+group with no tag values to show; the member-name list (if the
+Name checkbox is ticked) is then the group's only identity, and
+operators will normally tick it in that case.
 
 ### Write fan-out
 
