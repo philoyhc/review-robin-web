@@ -606,21 +606,18 @@ def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
     assert "Tag3" in body
     assert "<th>Tags</th>" not in body
 
-    # "Show columns:" chip row in the top card — Tag1 / Tag2 chips
-    # selected (have data), Tag3 disabled because the column has no
-    # data anywhere. Whitespace-normalised so the assertions survive
-    # template indentation changes.
+    # "Show columns:" chip row in the top card — Tag1 / Tag2 pill
+    # chips selected (have data), Tag3 disabled because the column
+    # has no data anywhere. Whitespace-normalised so the assertions
+    # survive template indentation changes.
     flat = re.sub(r"\s+", " ", body)
     assert "Show columns:" in flat
-    assert 'data-col-toggle="tag-1" aria-pressed="true"' in flat
-    assert 'data-col-toggle="tag-2" aria-pressed="true"' in flat
-    assert (
-        'data-col-toggle="tag-3" aria-pressed="false" disabled '
-        'aria-disabled="true" title="No data in this column"'
-    ) in flat
+    assert 'tag-chip is-selected" data-col-toggle="tag-1"' in flat
+    assert 'tag-chip is-selected" data-col-toggle="tag-2"' in flat
+    assert 'tag-chip is-disabled" data-col-toggle="tag-3"' in flat
+    assert 'data-col-toggle="tag-3" aria-disabled="true"' in flat
     # Tag1 / Tag2 chips are NOT disabled (they have data).
-    assert 'data-col-toggle="tag-1" aria-pressed="false"' not in flat
-    assert 'data-col-toggle="tag-1" aria-pressed="true" disabled' not in flat
+    assert 'is-disabled" data-col-toggle="tag-1"' not in flat
     # The old checkbox toggle strip is gone.
     assert "data-tag-toggle" not in flat
 
@@ -657,7 +654,7 @@ def test_reviewees_page_lists_imported_rows_with_photolink(
     # toggleable optional column (Segment 18E Part 1).
     flat = re.sub(r"\s+", " ", body)
     assert "Show columns:" in flat
-    assert 'data-col-toggle="profile" aria-pressed="true"' in flat
+    assert 'tag-chip is-selected" data-col-toggle="profile"' in flat
     assert 'class="profile-col"' in flat
 
 
@@ -708,8 +705,8 @@ def test_relationships_page_renders_column_chips(
 
     assert "Show columns:" in flat
     # PairContextTag1 has data → chip selected; 2 / 3 empty → disabled.
-    assert 'data-col-toggle="tag-1" aria-pressed="true"' in flat
-    assert 'data-col-toggle="tag-2" aria-pressed="false" disabled' in flat
+    assert 'tag-chip is-selected" data-col-toggle="tag-1"' in flat
+    assert 'tag-chip is-disabled" data-col-toggle="tag-2"' in flat
     assert "data-tag-toggle" not in flat
 
 
