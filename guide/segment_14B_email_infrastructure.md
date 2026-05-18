@@ -4,8 +4,9 @@
 > Renamed from `segment_14-1_email_infra.md`. Production
 > hardening proper lives in **14A**
 > (`guide/archive/segment_14A_production_hardening.md`); reminder
-> cadence + auto-scheduled reminders live in **14C**
-> (`guide/segment_14C_reminders_workflow.md`).
+> cadence + auto-scheduled reminders live in **Segment 18F
+> Part 5** (`guide/segment_18F_scheduled_events.md`) — the
+> former Segment 14C, consolidated into 18F on 2026-05-18.
 
 The home for **all email *wiring* work** absorbed from the
 formerly-broader Segment 11C Part 2. Per
@@ -305,10 +306,11 @@ party".
   the editor's overrides; per-cohort would be a future
   enhancement on the editor side.
 - **Auto-scheduled reminder cadence.** When and how often to
-  enqueue reminders for incomplete reviewers (cron / time-of-day
-  / per-reviewer dedup) lives in **14C**. 14B's Part A enqueues
-  the `kind="reminder"` rows on operator-triggered Send today;
-  14C is the scheduler that fires them automatically.
+  enqueue reminders for incomplete reviewers (cadence policy /
+  time-of-day / per-reviewer dedup) lives in **Segment 18F
+  Part 5** (the former Segment 14C). 14B's Part A enqueues the
+  `kind="reminder"` rows on operator-triggered Send today;
+  18F Part 5 is the scheduler that fires them automatically.
 
 ## Doc impact
 
