@@ -106,11 +106,25 @@ def rule_builder_page(
             "builder": context,
             "back_url": back_url,
             "back_label": back_label,
+            "instrument_id": instrument_id,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Rule Builder"
             ),
         },
     )
+
+
+def _with_instrument(url: str, instrument_id: int | None) -> str:
+    """Append ``instrument_id`` to a Rule Builder redirect URL.
+
+    Threads the originating Instruments card through Copy / Save /
+    Delete redirects so the page's back-link keeps pointing at
+    Instruments instead of falling back to Assignments.
+    """
+    if instrument_id is None:
+        return url
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}instrument_id={instrument_id}"
 
 
 @router.post(
@@ -121,6 +135,7 @@ def rule_builder_page(
 def rule_builder_copy(
     from_rule_set_id: int = Form(...),
     previous_id: int | None = Form(default=None),
+    instrument_id: int | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -145,14 +160,16 @@ def rule_builder_copy(
     )
     if source is None:
         return RedirectResponse(
-            url=base_url, status_code=status.HTTP_303_SEE_OTHER
+            url=_with_instrument(base_url, instrument_id),
+            status_code=status.HTTP_303_SEE_OTHER,
         )
 
     redirect = f"{base_url}?draft_from={from_rule_set_id}"
     if previous_id is not None and previous_id > 0:
         redirect = f"{redirect}&previous_id={previous_id}"
     return RedirectResponse(
-        url=redirect, status_code=status.HTTP_303_SEE_OTHER
+        url=_with_instrument(redirect, instrument_id),
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
@@ -173,6 +190,7 @@ def rule_builder_save(
     seed: str | None = Form(default=None),
     auto_name: str | None = Form(default=None),
     is_blank_draft: str | None = Form(default=None),
+    instrument_id: int | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -230,7 +248,8 @@ def rule_builder_save(
         else:
             target = f"{base_url}?error={error}"
         return RedirectResponse(
-            url=target, status_code=status.HTTP_303_SEE_OTHER
+            url=_with_instrument(target, instrument_id),
+            status_code=status.HTTP_303_SEE_OTHER,
         )
 
     is_draft = rule_set_id is None
@@ -331,7 +350,9 @@ def rule_builder_save(
             return _redirect_back("name_collision", blank=True)
         db.commit()
         return RedirectResponse(
-            url=f"{base_url}?rule_set_id={new_row.id}&saved=1",
+            url=_with_instrument(
+                f"{base_url}?rule_set_id={new_row.id}&saved=1", instrument_id
+            ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -346,7 +367,8 @@ def rule_builder_save(
         )
         if source is None:
             return RedirectResponse(
-                url=base_url, status_code=status.HTTP_303_SEE_OTHER
+                url=_with_instrument(base_url, instrument_id),
+                status_code=status.HTTP_303_SEE_OTHER,
             )
 
         # Auto-suffix when the operator hasn't edited the literal
@@ -407,7 +429,9 @@ def rule_builder_save(
             )
         db.commit()
         return RedirectResponse(
-            url=f"{base_url}?rule_set_id={new_row.id}&saved=1",
+            url=_with_instrument(
+                f"{base_url}?rule_set_id={new_row.id}&saved=1", instrument_id
+            ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -417,7 +441,8 @@ def rule_builder_save(
     )
     if row is None:
         return RedirectResponse(
-            url=base_url, status_code=status.HTTP_303_SEE_OTHER
+            url=_with_instrument(base_url, instrument_id),
+            status_code=status.HTTP_303_SEE_OTHER,
         )
 
     # Inline rename via the name field — Save commits the edited
@@ -469,7 +494,9 @@ def rule_builder_save(
         ) from exc
     db.commit()
     return RedirectResponse(
-        url=f"{base_url}?rule_set_id={row.id}&saved=1",
+        url=_with_instrument(
+            f"{base_url}?rule_set_id={row.id}&saved=1", instrument_id
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -482,6 +509,7 @@ def rule_builder_save(
 def rule_builder_delete(
     rule_set_id: int = Form(...),
     confirm: str | None = Form(default=None),
+    instrument_id: int | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -501,8 +529,11 @@ def rule_builder_delete(
 
     if confirm != "true":
         return RedirectResponse(
-            url=f"{base_url}?rule_set_id={rule_set_id}"
-            "&error=needs_delete_confirm",
+            url=_with_instrument(
+                f"{base_url}?rule_set_id={rule_set_id}"
+                "&error=needs_delete_confirm",
+                instrument_id,
+            ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -511,7 +542,8 @@ def rule_builder_delete(
     )
     if row is None:
         return RedirectResponse(
-            url=base_url, status_code=status.HTTP_303_SEE_OTHER
+            url=_with_instrument(base_url, instrument_id),
+            status_code=status.HTTP_303_SEE_OTHER,
         )
 
     try:
@@ -527,7 +559,8 @@ def rule_builder_delete(
         ) from exc
     db.commit()
     return RedirectResponse(
-        url=base_url, status_code=status.HTTP_303_SEE_OTHER
+        url=_with_instrument(base_url, instrument_id),
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
@@ -597,6 +630,7 @@ def _resolve_save_as_name(
 )
 def rule_builder_save_to_library(
     rule_set_id: int = Form(...),
+    instrument_id: int | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -617,7 +651,8 @@ def rule_builder_save_to_library(
     )
     if row is None:
         return RedirectResponse(
-            url=base_url, status_code=status.HTTP_303_SEE_OTHER
+            url=_with_instrument(base_url, instrument_id),
+            status_code=status.HTTP_303_SEE_OTHER,
         )
     try:
         session_library.save_to_library(
@@ -632,12 +667,17 @@ def rule_builder_save_to_library(
         ) from exc
     except session_library.LibraryRuleSetNameConflictError:
         return RedirectResponse(
-            url=f"{base_url}?rule_set_id={row.id}&error=name_collision",
+            url=_with_instrument(
+                f"{base_url}?rule_set_id={row.id}&error=name_collision",
+                instrument_id,
+            ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
     db.commit()
     return RedirectResponse(
-        url=f"{base_url}?rule_set_id={row.id}&saved=1",
+        url=_with_instrument(
+            f"{base_url}?rule_set_id={row.id}&saved=1", instrument_id
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

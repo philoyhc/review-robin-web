@@ -508,3 +508,30 @@ def test_eligibility_cache_skips_engine_on_unchanged_inputs(
     db.commit()
     session_library.evaluate_session_rule_eligibility(db, review_session)
     assert len(calls) == 2  # recomputed
+
+
+def test_rule_builder_back_nav_threads_instrument_id(
+    client: TestClient, db: Session
+) -> None:
+    """Opening the Rule Builder from an instrument card keeps the
+    instrument_id in the page's forms, so in-page navigation (e.g. a
+    RuleSet dropdown change) does not drop the Back-to-Instruments
+    link."""
+    review_session = _make_session(client, db, code="rb-back")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    editor = (
+        f"/operator/sessions/{review_session.id}"
+        "/assignments/rule-based-editor"
+    )
+
+    # Arrived from an instrument card.
+    body = client.get(f"{editor}?instrument_id={instrument.id}").text
+    assert "Back to Instruments" in body
+    assert f'name="instrument_id" value="{instrument.id}"' in body
+
+    # Arrived from the Assignments page — no instrument_id anywhere.
+    plain = client.get(editor).text
+    assert "Back to Assignments" in plain
+    assert 'name="instrument_id"' not in plain
