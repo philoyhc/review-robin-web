@@ -1490,6 +1490,49 @@
         border-color: var(--accent-blue);
         box-shadow: 0 0 0 1px var(--accent-blue-bg);
       }
+      /* Keyboard focus gets a strong, high-contrast ring on top of
+         the subtle border treatment above. ``:focus-visible`` keeps
+         it keyboard-only — mouse clicks don't draw the ring. */
+      body.ui-v2 input[type="text"]:focus-visible,
+      body.ui-v2 input[type="datetime-local"]:focus-visible,
+      body.ui-v2 input[type="number"]:focus-visible,
+      body.ui-v2 input[type="email"]:focus-visible,
+      body.ui-v2 textarea:focus-visible,
+      body.ui-v2 select:focus-visible {
+        outline: 2px solid var(--accent-blue);
+        outline-offset: 1px;
+      }
+      /* Skip-to-content link — first focusable element on every
+         page; sits off-screen until it receives keyboard focus. */
+      .skip-link {
+        position: absolute;
+        left: 8px;
+        top: -48px;
+        z-index: 1000;
+        padding: var(--space-2) var(--space-4);
+        background: var(--accent-blue, #2563eb);
+        color: #ffffff;
+        border-radius: var(--radius-button, 6px);
+        text-decoration: none;
+        transition: top 0.15s ease;
+      }
+      .skip-link:focus {
+        top: 8px;
+      }
+      /* Screen-reader-only text: removed from the visual layout but
+         still in the accessibility tree (e.g. a label for an
+         icon-only or visually-empty cell). */
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
       body.ui-v2 .form-help {
         font-size: var(--fs-small);
         color: var(--text-secondary);
@@ -2224,6 +2267,7 @@
     {% block extra_head %}{% endblock %}
   </head>
   <body class="{% block body_class %}{% endblock %}">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     {# Operator top bar is the default; reviewer templates override
        this block to render the lighter "Review Robin" chrome
        (spec/visual_style_rrw.md "Reviewer-facing pages → Top bar"). #}
@@ -2251,7 +2295,11 @@
       </div>
     {% endblock %}
 
-    {% block content %}{% endblock %}
+    {# ``tabindex="-1"`` lets the skip link move keyboard focus into
+       the landmark (a bare <main> is not focusable on its own). #}
+    <main id="main-content" tabindex="-1">
+      {% block content %}{% endblock %}
+    </main>
 
     <script>
       // Segment 13B Part 2 PR 4 — shared sort primitive.

@@ -1098,3 +1098,78 @@ def test_save_drops_foreign_assignment_id_from_post(
         )
     ).scalars().all()
     assert written == []
+
+
+def test_reviewer_surface_response_inputs_carry_aria_labels(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Segment 14A PR 5 — every response control in the reviewer
+    table names its column and row, so a screen-reader user hears
+    "{field} for {reviewee}" rather than an unlabelled box."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-a11y",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+
+    rae_client = make_client(rae)
+    page = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+
+    assert page.status_code == 200
+    assert 'aria-label="' in page.text
+    assert " for Carol" in page.text
+
+
+def test_reviewer_surface_table_headers_have_scope(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Segment 14A PR 5 — column headers are marked scope="col" so
+    assistive tech associates each header with its column."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-scope",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+
+    rae_client = make_client(rae)
+    page = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+
+    assert page.status_code == 200
+    assert '<th scope="col"' in page.text
+
+
+def test_base_layout_has_skip_link_and_main_landmark(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Segment 14A PR 5 — base.html exposes a skip-to-content link
+    and a <main> landmark on every page."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-skip",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+
+    rae_client = make_client(rae)
+    page = rae_client.get(f"/reviewer/sessions/{review_session.id}")
+
+    assert page.status_code == 200
+    assert '<a class="skip-link" href="#main-content">' in page.text
+    assert '<main id="main-content" tabindex="-1">' in page.text
