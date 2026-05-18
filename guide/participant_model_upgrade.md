@@ -1,16 +1,30 @@
-# Segment 21 — Generalized audiences & response visibility
+# Participant-model upgrade
 
-**Status:** Planned, not scheduled. Built out 2026-05-18 from
-the 2026-05-16 stub after the audience model was spelled out in
-more detail. Still forward-looking — "if we ever get there."
+**Standing guidance for Review Robin's planned evolution beyond
+the MVP** — from the current operator-and-reviewer review
+*platform* into a generalized **participant** system where
+reviewees and observers are first-class participants too, and
+where response visibility is explicit, governed data.
 
-Supersedes the earlier "Peer review enhancements" stub framing.
-The work is broader than a reviewee surface: it generalizes
-Review Robin from an operator-and-reviewer review *platform*
-into a system where **reviewees and observers are first-class
-participants too**, and where **who may see a response — and in
-what form — is explicit, configurable data** rather than an
-implicit "only the operator and the reviewer who wrote it."
+This is the umbrella document for the post-MVP arc. It is **not**
+a segment plan and carries no PR ladder: fine-grained
+implementation plans (`segment_21_*.md`, `segment_22_*.md`, …)
+are written when specific work is scheduled. Nothing is
+scheduled yet — this doc records the design direction so it is
+not foreclosed and so the eventual segments share a foundation.
+
+## Roadmap numbering
+
+A convention for the `todo_master.md` roadmap:
+
+- **Segments 1–20** — the MVP of the *current* review-platform
+  model (operator configures, reviewer responds). Substantially
+  shipped; what remains in the band is email infrastructure
+  (14B / 14C), enhanced instruments (13C), and the polish /
+  documentation segments (17B–20).
+- **Segments 21–30 (and beyond)** — the **participant-model
+  upgrade** described here. Each future segment in the band
+  gets its own `segment_2X_*.md` plan when it is scoped.
 
 ---
 
@@ -22,7 +36,8 @@ A reviewee is a passive row in `reviewees` — assigned, scored,
 never a participant. Responses are visible to the operator and,
 trivially, to the reviewer who wrote them. Nothing else.
 
-Segment 21 turns this into a **generalized participant system**:
+The participant-model upgrade turns this into a **generalized
+participant system**:
 
 - **Reviewers, reviewees, and observers are all participants
   with a surface.** One signed-in person may, across their
@@ -42,7 +57,7 @@ Segment 21 turns this into a **generalized participant system**:
 
 The current generation model — assignment rows produced from
 reviewers × reviewees × relationships by a per-instrument rule —
-**stays**. Segment 21 *enhances* it; it does not replace it.
+**stays**. This work *enhances* it; it does not replace it.
 
 ## 2. What stays, what is new
 
@@ -52,11 +67,11 @@ tags and pair-context" is exactly what the per-instrument
 `RuleSet` + rule engine already does: reviewer-tag, reviewee-tag,
 and `pair_context.tag_N` predicates are all existing rule
 grammar (`app/services/rules/`), and each instrument already
-pins its own rule (`instruments.rule_set_id`). Segment 21 needs
+pins its own rule (`instruments.rule_set_id`). The upgrade needs
 **no new structure for eligibility** — it builds on the rule
 engine as-is.
 
-**New — three things the current model cannot express:**
+**New — things the current model cannot express:**
 
 1. **A response-visibility policy** — per instrument, which
    audiences may view the responses and in what form.
@@ -65,14 +80,12 @@ engine as-is.
 3. **Observers, and reviewee identity** — observers do not
    exist at all today; reviewees exist but have no reachable
    identity for a surface.
-
-The rest of this document is about those three.
-
----
+4. **Magic-link participation** — an in-scope optional auth
+   affordance for all three participant audiences (§4).
 
 ## 3. New data structures
 
-This is the core of the segment. Five additions; all follow the
+The core of the design. Five additions; all follow the
 established additive-migration playbook (13D / 13E / 13F) —
 nullable / defaulted columns and new tables that ship **inert**,
 each lit up by its owning slice.
@@ -97,7 +110,7 @@ Mirrors the `reviewers` shape deliberately so the importer,
 the Setup-page table, the friendly-label resolver, and the
 sort primitive all extend with no new patterns. Observer tags
 let a future refinement scope *which* observers see *which*
-instruments; the MVP can treat observers session-wide.
+instruments; an MVP can treat observers session-wide.
 
 ### 3.2 Reviewee identity — a reachable email
 
@@ -158,11 +171,10 @@ Two orthogonal **form** axes per grant:
   name is shown) or `deidentified` (responses shown without
   attribution).
 
-This subsumes the "confidential instrument" idea from the
-earlier stub: a *confidential* instrument is simply one whose
-`reviewee` policy row is `enabled = FALSE`. No separate
-confidential flag is needed — confidentiality is the absence of
-a viewing grant.
+This subsumes any "confidential instrument" flag: a
+*confidential* instrument is simply one whose `reviewee` policy
+row is `enabled = FALSE`. Confidentiality is the absence of a
+viewing grant.
 
 Default on instrument create: all three audiences `enabled =
 FALSE` (today's behaviour — operator-only). The operator opts
@@ -185,21 +197,20 @@ sessions
 Notes and open points:
 
 - `responses_close_at` and the existing `deadline` overlap.
-  Decide whether `responses_close_at` *is* `deadline` renamed /
-  reused, or a distinct hard gate with `deadline` staying
-  advisory. Leaning: reuse `deadline` as the hard close and not
-  add `responses_close_at` — fewer columns, and the lazy-close
-  deadline machinery already exists.
+  Decide whether `responses_close_at` *is* `deadline` reused, or
+  a distinct hard gate with `deadline` staying advisory.
+  Leaning: reuse `deadline` as the hard close — fewer columns,
+  and the lazy-close deadline machinery already exists.
 - `opens_at` overlaps **Segment 18F**'s "session opening gate."
-  21 should *consume* 18F's scheduler, not build a second one
-  (see §8).
+  The upgrade should *consume* 18F's scheduler, not build a
+  second one (see §9).
 - The viewing window (`results_open_at` / `results_close_at`)
   is genuinely new — nothing today gates *viewing* by time.
 
 If per-instrument viewing windows turn out to be needed (one
 instrument's results released earlier than another's), these
 move to a per-instrument table — flagged as an open question
-(§9), not built up front.
+(§10), not built up front.
 
 ### 3.5 Audit events
 
@@ -213,8 +224,7 @@ canonical-envelope convention:
 - `observer.added` / `observer.removed` / `observer.bulk_*` —
   mirror the `reviewer.*` family.
 - `results.released` — the first moment a collation becomes
-  viewable for a session (snapshot envelope; useful for "when
-  did reviewees gain access").
+  viewable for a session (snapshot envelope).
 - `results.acknowledged` — a reviewee marks their results seen
   (§6).
 
@@ -238,28 +248,34 @@ canonical-envelope convention:
   reviewees and observers join that spine through their email
   columns.
 
----
-
-## 4. Auth posture for the new surfaces
+## 4. Auth posture & magic links
 
 Per `spec/audience_and_identity_model.md` the standing posture
-is **institutional SSO (Easy Auth) by default, magic-link as a
-fallback**, and "tokenized link replaces auth" is explicitly
-*not* the model. Segment 21 holds that line:
+is **institutional SSO (Easy Auth) by default**. The
+participant-model upgrade holds that as the default and adds
+**magic links as an in-scope, optional affordance** for all
+three participant audiences:
 
-- Reviewee and observer surfaces gate on Easy Auth identity,
-  matched to `reviewees.contact_email` / `observers.email`
-  case-insensitively — the same mechanism `require_reviewer_in_session`
-  already uses. New dependencies `require_reviewee_in_session`
-  / `require_observer_in_session` in `app/web/deps.py`.
-- Magic-link invitations (the existing `invitations` +
-  tokened-landing machinery) extend to reviewees / observers as
-  the fallback for external participants without institutional
-  SSO.
-- **Open risk** — external reviewees (a job candidate in a
-  360, an outside subject) may have no institutional identity
-  at all. This is the single biggest auth question and must be
-  decided before slice scoping. See §9.
+- **Magic links are in scope** — an operator may issue a
+  magic-link invitation to a reviewer, a reviewee, or an
+  observer as an alternative entry path, chosen per session (or
+  per participant). They suit external participants without an
+  institutional identity — an outside panellist, a job
+  candidate in a 360, a partner-institution observer.
+- A magic link still **authenticates** (it proves possession of
+  the email account); it does **not** bypass identity. The
+  "tokenized link replaces auth" pattern remains rejected. The
+  existing `invitations` tokened-landing machinery (built for
+  reviewers) is the foundation — the upgrade extends it to
+  reviewees and observers and surfaces it as a first-class,
+  operator-selectable affordance rather than an undocumented
+  fallback.
+- Reviewee and observer surfaces otherwise gate on Easy Auth
+  identity matched to `reviewees.contact_email` /
+  `observers.email` case-insensitively — the mechanism
+  `require_reviewer_in_session` already uses. New dependencies
+  `require_reviewee_in_session` / `require_observer_in_session`
+  in `app/web/deps.py`.
 
 ## 5. Surfaces
 
@@ -271,8 +287,8 @@ fallback**, and "tokenized link replaces auth" is explicitly
   `results_open_at`.
 - **Observer surface** — read-only collation view across the
   instruments whose `observer` policy is enabled. Scope of
-  *which* reviewees an observer sees is an open question (§9) —
-  MVP: all session reviewees.
+  *which* reviewees an observer sees is an open question (§10) —
+  an MVP shows all session reviewees.
 - **Unified participant landing** — one entry point. For the
   signed-in identity it resolves every role across every
   session: review forms to complete (reviewer), results to
@@ -297,9 +313,9 @@ components stay universal.
 - Reviewee / observer email surfaces ("your results are
   ready", acknowledgement nudges) ride the existing
   `email_outbox` + transport plumbing. **Hard-depends on
-  Segment 14B** (email send) actually being live.
+  Segment 14B** (email send) being live.
 
-## 7. Cross-cutting: summarization & de-identification
+## 7. Summarization & de-identification
 
 `granularity = summarized` needs aggregation logic, by response
 field type:
@@ -309,7 +325,7 @@ field type:
 - list (single-choice RTDs) — tallies per option;
 - free-text (String RTDs) — the hard one. Options: a plain
   concatenated list, or an operator-curated written summary.
-  Likely operator-curated for text — flagged in §9.
+  Likely operator-curated for text — flagged in §10.
 
 `identification = deidentified` is a render-layer concern: the
 collation builder omits reviewer attribution. Both axes belong
@@ -317,93 +333,116 @@ in `app/web/views/` adapters (the established view-shape seam)
 plus an `app/services/collation.py` service — services compute,
 views shape, templates render markup, exactly as today.
 
-## 8. Sequencing & dependencies
+## 8. Exploratory — Excel import/export
+
+**Exploratory, not committed.** Today the import / export
+surface is CSV throughout (`app/services/extracts/`,
+`app/services/session_config_io/`). A single workbook with
+**multiple worksheets** would carry structure CSV cannot — the
+responses for each instrument on their own worksheet, settings
+on one sheet, rosters on another, a per-reviewee collation
+sheet, etc.
+
+Worth exploring as the participant model multiplies the kinds
+of data a session export holds. Considerations to weigh when /
+if this is picked up:
+
+- Needs an Excel library (`openpyxl` is the obvious choice) —
+  the first non-stdlib data-format dependency.
+- CSV's virtues — diff-friendly, trivially round-trippable,
+  zero-dependency — are real; an `.xlsx` move trades them for
+  structure. A both/and (CSV stays, `.xlsx` added as a richer
+  alternative) may beat a wholesale switch.
+- Round-trip import parsing of `.xlsx` is heavier than CSV;
+  the two-phase validate-then-apply discipline in
+  `session_config_io` must carry over.
+
+Recorded here as a forward option; it would become its own
+segment (or a slice of one) if pursued.
+
+## 9. Sequencing & dependencies
 
 - **Hard-depends on Segment 14B** for the notification half
   (§6) — without email send, results-ready notices have no
   channel.
 - **Coordinates with Segment 18F** (scheduled events). 18F
   owns the scheduler that fires timed lifecycle transitions
-  (auto-archive, auto-send, the opening gate). Segment 21's
-  `opens_at` / `results_open_at` / `results_close_at` should be
-  *driven by 18F's scheduler*, not a second timer. If 21 lands
-  before 18F, it ships the columns inert with a manual operator
-  toggle; 18F (or 21's own slice) then wires the automation.
+  (auto-archive, auto-send, the opening gate). The §3.4 windows
+  must be *driven by 18F's scheduler*, not a second timer. If
+  participant-model work lands before 18F, it ships the columns
+  inert with a manual operator toggle; 18F (or a later slice)
+  then wires the automation.
 - **Naturally follows 17B** (reviewer-surface refinements) so
   the new participant surfaces inherit a settled visual
   baseline.
-- No hard dependency on 13C / 18E.
 
-## 9. Open questions — decide before slice scoping
+## 10. Open questions
 
-1. **External-participant auth.** Reviewees / observers without
-   institutional SSO — magic-link only, or out of scope for the
-   first cut? Biggest single design question.
+Decide before any segment in this band is scoped:
+
+1. **External-participant auth.** Magic links (§4) are the
+   intended answer for participants with no institutional SSO —
+   confirm that covers every external case, or scope which do
+   not get a surface at all.
 2. **`responses_close_at` vs `deadline`.** Reuse `deadline` as
    the hard close (recommended) or add a distinct column.
 3. **Per-instrument vs per-session viewing window.** §3.4 puts
    the window on the session; confirm no instrument needs its
    own release schedule, or move to a per-instrument table.
 4. **Observer scope.** Do observers see all reviewees in a
-   session, or a tag-filtered subset? MVP says all; tag-scoping
-   is the refinement.
+   session, or a tag-filtered subset?
 5. **Free-text summarization.** Concatenated list vs
    operator-curated written summary for `summarized` text
    fields.
 6. **Per-row visibility override.** Is per-instrument policy
-   enough, or is an `assignment_view_overrides` table needed
-   for the case where one reviewee's row diverges?
-7. **Naming.** "Peer review enhancements" no longer fits;
-   "Generalized audiences & response visibility" is the working
-   title — confirm.
+   enough, or is an `assignment_view_overrides` table needed?
+7. **Excel format (§8).** Pursue at all; both/and vs wholesale
+   switch; its own segment vs a slice.
 
-## 10. Sketch PR ladder
+## 11. Candidate segment breakdown
 
-Not a committed slice plan — sized once the §9 questions
-resolve. Rough shape:
+Not a committed plan — a sketch of how the band might divide
+into `segment_2X_*.md` plans once scoped. Each line is
+plausibly one segment (some may split or merge):
 
-1. **Schema prep** — all of §3 as inert additive migrations
-   (`observers`, `instrument_view_policies`,
-   `reviewees.contact_email`, the session schedule columns,
-   `EVENT_SCHEMAS` registrations).
-2. **Observer roster** — importer + Setup page, mirroring the
-   reviewer roster.
-3. **Reviewee identity** — `contact_email` editor on the
-   Reviewees Setup page; `require_reviewee_in_session`.
-4. **Visibility-policy authoring** — the per-instrument
-   view-policy editor card on the Instruments page.
-5. **Session schedule authoring** — open / close / results
-   windows on Session Edit; manual gate first, 18F-driven
-   automation second.
-6. **Collation service** — `collation.py` + view adapters;
-   summarization + de-identification.
-7. **Reviewee results surface.**
-8. **Observer surface.**
-9. **Unified participant landing.**
-10. **Acknowledgement + notifications** (gated on 14B).
+- Schema prep — the §3 additions as inert additive migrations.
+- Observer roster — importer + Setup page.
+- Reviewee identity — `contact_email` + `require_reviewee_in_session`.
+- Magic-link affordance — extend the tokened-landing path to
+  reviewees / observers; operator-selectable per session.
+- Per-instrument visibility-policy authoring.
+- Session schedule authoring + 18F integration.
+- Collation service — summarization + de-identification.
+- Reviewee results surface.
+- Observer surface.
+- Unified participant landing.
+- Acknowledgement + notifications (gated on 14B).
+- Excel import/export (exploratory, §8).
 
-## 11. Out of scope
+## 12. Out of scope
 
-- **Confidential sessions stay the default.** Every new
-  audience grant is opt-in (`enabled = FALSE` by default); a
-  session that exposes nothing behaves exactly as today.
+- **Confidential sessions stay the default.** Every audience
+  grant is opt-in (`enabled = FALSE` by default); a session
+  that exposes nothing behaves exactly as today.
 - **Operator-facing aggregate analytics** — cross-session
   reporting is its own concern, not a participant surface.
 - **Reviewee / observer self-service roster edits** — they do
   not manage their own rows; that stays operator-only.
 - **Multi-tenancy / cross-workspace identity** — unchanged.
 
-## 12. Related context
+## 13. Related context
 
 - **`spec/audience_and_identity_model.md`** — §3 (reviewee,
   forward-looking) and §4 (audiences). The authoritative doc on
   what adding an audience entails; update it *first* when this
-  segment is picked up — observers and the reviewee surface
-  become live audiences §3 / §4 must then describe.
+  work is picked up — observers and the reviewee surface become
+  live audiences §3 / §4 must then describe, and magic links
+  move from "fallback" to an in-scope affordance.
 - **`guide/segment_18F_scheduled_events.md`** — owns the
   scheduler the §3.4 windows must ride on.
 - **`guide/segment_14B_email_infrastructure.md`** — the
   notification half depends on it.
 - **`spec/rule_based_assignment.md`** — the eligibility engine
-  Segment 21 builds on unchanged.
-- **`docs/status.md`** — current audience inventory.
+  this work builds on unchanged.
+- **`guide/todo_master.md`** — the roadmap; segments 21+ in its
+  Upcoming section point back here.
