@@ -75,32 +75,34 @@
   </div>
 
   {% if builder.editable %}
-    <div style="display: flex; gap: 12px; margin-top: 12px;">
+    <div style="display: flex; gap: 16px; align-items: start; margin-top: 12px;">
       <div style="flex: 1 1 0;">
-        <label for="rule-builder-description-input"
-               style="display: block; margin-bottom: 4px;">
-          <strong>Rule Description</strong>
-          <span class="form-help" style="font-weight: normal;">(optional)</span>
-        </label>
-        <textarea id="rule-builder-description-input"
-                  name="description"
-                  form="rule-based-editor-form"
-                  rows="2"
-                  style="width: 100%;">{{ builder.description }}</textarea>
+        <p style="margin: 0;">
+          <label for="rule-builder-description-input">
+            <strong>Rule Description</strong>
+            <span class="form-help" style="font-weight: normal;">(optional)</span>
+          </label>
+          <textarea id="rule-builder-description-input"
+                    name="description"
+                    form="rule-based-editor-form"
+                    rows="2"
+                    style="width: 100%;">{{ builder.description }}</textarea>
+        </p>
       </div>
       <div style="flex: 1 1 0;">
         {# Placeholder box — the reviewee_group_description column and
            its persistence land in Segment 13C PR 1. Not yet wired. #}
-        <label for="rule-builder-group-description-input"
-               style="display: block; margin-bottom: 4px;">
-          <strong>Reviewee Group Description</strong>
-          <span class="form-help" style="font-weight: normal;">(optional)</span>
-        </label>
-        <textarea id="rule-builder-group-description-input"
-                  name="reviewee_group_description"
-                  form="rule-based-editor-form"
-                  rows="2"
-                  style="width: 100%;"></textarea>
+        <p style="margin: 0;">
+          <label for="rule-builder-group-description-input">
+            <strong>Reviewee Group Description</strong>
+            <span class="form-help" style="font-weight: normal;">(optional)</span>
+          </label>
+          <textarea id="rule-builder-group-description-input"
+                    name="reviewee_group_description"
+                    form="rule-based-editor-form"
+                    rows="2"
+                    style="width: 100%;"></textarea>
+        </p>
       </div>
     </div>
   {% endif %}
