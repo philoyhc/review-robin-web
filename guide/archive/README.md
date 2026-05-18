@@ -110,5 +110,7 @@ alongside its replacement.
 | `segment_16B_role_delegation.md` | 331 | Segment 16B — user role management + role delegation among operators. |
 | `segment_16C_richer_audit_views.md` | 376 | Segment 16C — richer audit views (in-app audit-log viewer). |
 | `segment_17A_housekeeping.md` | 184 | Segment 17A — housekeeping: file splits + test-suite runtime. |
+| `segment_18A_sessions_lobby_enhancements.md` | 619 | Segment 18A — Sessions lobby enhancements (tagging, archiving, cloning, search, sort). |
 | `segment_18B_date_and_time_settings.md` | 452 | Segment 18B — date and time settings (display formatting + timezones). |
 | `segment_18C_retention_deletion.md` | 159 | Segment 18C — operator-triggered purge ("Purge and archive" expander action). |
+| `segment_18D_export_and_import_update.md` | 426 | Segment 18D — export / import update (Parts 3 / 5 ride 13C and 18F Part 4). |

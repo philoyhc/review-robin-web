@@ -664,7 +664,7 @@ PRs #1080 → #1105), then the implementation ladder PRs A → H
   segment number (the old 18A cloning + 18B tagging/archiving
   stubs were consolidated here 2026-05-15).
 
-Plan: `guide/segment_18A_sessions_lobby_enhancements.md`.
+Plan: `guide/archive/segment_18A_sessions_lobby_enhancements.md`.
 
 ---
 
@@ -716,7 +716,7 @@ across PRs **#1129 → #1133**:
 Two consumer-blocked parts handed off: **Part 3** (Responses
 `Instrument` flavour column) rides with **13C**; **Part 5**
 (retention CSV columns) with **18F Part 4**. Plan:
-`guide/segment_18D_export_and_import_update.md`.
+`guide/archive/segment_18D_export_and_import_update.md`.
 
 ---
 

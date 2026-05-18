@@ -7,8 +7,9 @@
 > off: **Part 3** (Responses `Instrument` flavour column)
 > rides with **Segment 13C**; **Part 5** (retention CSV
 > columns) with **Segment 18F Part 4**. This plan is kept as
-> the design-of-record; not yet archived (Parts 3 / 5 still
-> reference it).
+> the design-of-record; archived 2026-05-18 — Parts 3 / 5 are
+> now owned as ride-alongs by Segment 13C and Segment 18F
+> Part 4 respectively.
 >
 > Siblings: **18A** (Sessions lobby enhancements — shipped),
 > **18C** (Operator-triggered purge — shipped).

@@ -6,7 +6,7 @@
 > automation (auto-archive et al.) was split out to
 > **Segment 18F — Scheduled events**
 > (`guide/segment_18F_scheduled_events.md`). This plan is kept as
-> the design-of-record for the lobby surface; not yet archived.
+> the design-of-record for the lobby surface; archived 2026-05-18.
 >
 > **Consolidated 2026-05-15** from the former `18A — Session
 > cloning` and `18B — Session tagging + archiving` stubs (both

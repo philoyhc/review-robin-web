@@ -298,5 +298,5 @@ Responses extract (`extracts/responses_extract.py`) should gain a
 derived `Instrument` *flavour* column so downstream analysis can
 split group-scoped answers from per-pair answers without
 re-deriving from the schema. Add it as a small ride-along when
-13C ships — see `guide/segment_18D_export_and_import_update.md`
+13C ships — see `guide/archive/segment_18D_export_and_import_update.md`
 Part 3.
