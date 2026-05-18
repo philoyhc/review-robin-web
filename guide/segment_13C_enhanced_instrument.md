@@ -103,12 +103,30 @@ instrument card's Edit / Save / Cancel state machine.
 
 - **Display Fields table.** Reshape the placeholder to the
   per-reviewee table restricted to the eligible **tag rows**
-  (≤6 reviewee + pair-context tags with data) plus a single
-  **Name** row. Columns: Friendly Label (read-only), **Include**
-  (a checkbox per row, persisted to the existing
-  `InstrumentDisplayField.visible` flag), and **Sort** (the 13B
-  sort spec, `Instrument.sort_display_fields`). This replaces the
-  interim Group Description cell + two checkboxes.
+  (reviewee + pair-context tags) plus a single **Name** row.
+  Columns: Friendly Label (read-only), **Include** (a checkbox
+  per row, persisted to the existing `InstrumentDisplayField.visible`
+  flag), and **Sort** (the 13B sort spec,
+  `Instrument.sort_display_fields`). This replaces the interim
+  Group Description cell + two checkboxes.
+  - **RevieweeName is not a locked row here.** On a per-reviewee
+    instrument Name (and Email) are locked `visible=True` —
+    `bulk_save_fields` (`_response_fields.py`) force-sets them and
+    `update_display_field` rejects hiding them. On a *group-scoped*
+    instrument the Name row's Include is operator-choosable
+    (unticking it drops the member-name list from the composed
+    identity). PR 1 must make the locked-row `visible` force
+    conditional on `instrument.group_kind is None` so a group
+    instrument can store Name's Include state.
+  - **Row set — to settle in PR 1.** The placeholder shows a
+    fixed seven rows (all three reviewee tags + all three
+    pair-context tags + Name). The spec's eligibility rule is
+    "tags that carry data". If PR 1 keeps the fixed seven (so a
+    tag can be Included before its data is imported) it must
+    ensure an `InstrumentDisplayField` row exists for every
+    offered source — Include writes `visible` on that row, so a
+    missing row has nothing to write to (seed-on-demand, or
+    pre-seed all six tag rows on group-instrument creation).
 - **Response Fields + Response Fields Help** become editable,
   reusing the ordinary instrument card's response-field save
   path.

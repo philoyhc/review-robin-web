@@ -166,7 +166,10 @@ restricted to **tag rows plus a Name row**:
   - **Include** — a checkbox per row, persisted to the existing
     `InstrumentDisplayField.visible` flag. The ticked rows
     compose the group identity on the reviewer surface (see
-    "Composing the group identity").
+    "Composing the group identity"). Unlike a per-reviewee
+    instrument, the **Name row is not locked** here — its
+    Include is operator-choosable (unticking it omits the
+    member-name list).
   - **Sort** — the per-instrument sort control (the Segment 13B
     sort spec, `Instrument.sort_display_fields`), ordering the
     tag rows and the member-name list.
