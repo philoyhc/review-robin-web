@@ -67,7 +67,8 @@ shipped 2026-05-18 (#1183); it pre-dates the group-boundary
 revision and fans across the reviewer's whole universe, so it
 needs a group-key-aware follow-up (PR 2 slice B below). PR 2
 slice A — the Group-boundary editor column — shipped 2026-05-19.
-The partition-aware reviewer surface (slices B-D) and PR 3
+Slice B — the boundary-scoped write fan-out — shipped 2026-05-19.
+The partition-aware reviewer surface (slices C-D) and PR 3
 (Replicate) remain. **Zero migrations.**
 
 ## Progress log
@@ -217,11 +218,17 @@ as the no-partition sentinel. What shipped:
 
 No reviewer-visible change.
 
-**Slice B — write fan-out re-scope.** `_expand_group_upserts`
-(shipped in slice 1) fans across the reviewer's whole universe;
-re-scope it to fan only within the boundary-defined group the
-answer was submitted for. Coupled to slice C (which supplies the
-per-group input grouping).
+**Slice B — write fan-out re-scope — done (2026-05-19).**
+`_expand_group_upserts` (shipped in slice 1) fanned across the
+reviewer's whole universe; it now fans only within the
+boundary-defined group. New `_group_key_by_assignment` helper in
+`responses.py` computes each assignment's group key — the tuple
+of boundary-tag values for its `(reviewer, reviewee)` pair
+(reviewee tags off the reviewee, pair-context tags off the active
+`Relationship`) — and the fan-out / dedup are keyed on
+`(instrument, group_key, field_key)`. A group instrument with no
+boundary tag still yields one group (empty key), so the
+no-boundary case is unchanged.
 
 **Slice C — reviewer surface render.** Render a group-scoped
 instrument as a self-contained block — **one row per group**, the
