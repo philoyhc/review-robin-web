@@ -99,8 +99,9 @@ response_field_id)`.
 
 | Field | Where | Type | Notes |
 |---|---|---|---|
-| `group_kind` | `Instrument` | `String(32) \| NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument (today's default). A non-null value flags the instrument group-scoped **and** stores the display-content choice: one of `members` / `summary` / `both` (see "Reviewer surface"). The column is **repurposed** by this design — it no longer stores tag keys. 13C PR 1 is the first writer. |
-| `reviewee_group_description` | `operator_rule_sets` **and** `session_rule_sets` | `Text \| NULL` | **New — one migration in 13C PR 1.** Operator-authored plain-English description of the group the rule forms (e.g. "Each reviewer's project team"). Used as the `summary` display content. `NULL` / blank → fall back to the RuleSet's `description`. Lives on both the library row and the per-session copy, mirroring how `description` is carried on both. The five seeded RuleSets ship with a default value (`spec/rule_based_assignment.md` §5.4). |
+| `group_kind` | `Instrument` | `String(32) \| NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument (today's default). A non-null value flags the instrument group-scoped **and** encodes the two include-checkboxes (see "Editor surface") as `summary` / `members` / `both`. The column is **repurposed** by this design — it no longer stores tag keys. |
+| `reviewee_group_description` | `operator_rule_sets` **and** `session_rule_sets` | `Text \| NULL` | **New — 13C migration.** Operator-authored plain-English description of the group the rule forms (e.g. "Each reviewer's project team"). The **default** group-description text for any group-scoped instrument pinned to this rule. `NULL` / blank → fall back to the RuleSet's `description`. Lives on both the library row and the per-session copy, mirroring how `description` is carried on both. The five seeded RuleSets ship with a default value (`spec/rule_based_assignment.md` §5.4). |
+| `group_description` | `Instrument` | `Text \| NULL` | **New — 13C migration.** Per-instrument **override** of the group-description text. `NULL` = use the pinned rule's `reviewee_group_description` as the default; non-null = the operator's override, typed into the Display Fields table's Group Description cell. |
 
 No `Assignment` change. No `Response` change. The per-instrument
 sort spec reuses the existing `Instrument.sort_display_fields`
@@ -143,10 +144,20 @@ For a group-scoped instrument the Display Fields table carries
 three columns:
 
 - **Group Description** — a single vertically-merged cell
-  spanning every row, holding an edit box. It defaults to the
-  pinned rule's `reviewee_group_description` (which itself falls
-  back to the rule's `description`); the operator may override
-  the text here.
+  spanning every row. It holds an edit box plus two checkboxes:
+  - The **edit box** prefills with the pinned rule's
+    `reviewee_group_description` (which itself falls back to the
+    rule's `description`). Editing it saves a **per-instrument
+    override** to `Instrument.group_description` — the rule's
+    value is only the default / prefill.
+  - **Two checkboxes** below the box — *Include group
+    description* and *Include reviewee names* — choose what the
+    reviewer-surface group column shows. The operator ticks one
+    or both (at least one); the combination is stored in
+    `group_kind` (`summary` / `members` / `both`). With both
+    ticked the reviewer surface shows the group description
+    first, then the comma-separated member list on the next
+    line.
 - **Friendly Label** — the tag's session-wide friendly label,
   read-only, resolved the same way as a per-reviewee instrument's
   Display Fields labels (`app/services/field_labels.py`).
@@ -165,11 +176,8 @@ standard* as a per-reviewee instrument's Display Fields (see
 Name, Email, and Profile are individual attributes and never
 appear on a group-scoped instrument's Display Fields table.
 
-The reviewer-surface group column's content
-(`members` / `summary` / `both`, stored in `group_kind`) is a
-separate display choice — see "Reviewer surface". Its editor
-control is not yet sited; the default for a freshly created
-group-scoped instrument is `both`.
+The default for a freshly created group-scoped instrument is
+both checkboxes ticked (`group_kind = both`).
 
 Response Fields, Response Fields Help, descriptions,
 accepting-responses / visibility toggles, and the Save / Edit /
@@ -207,11 +215,12 @@ copy — "Your work squad", "Your tutorial group", "Your lab
 group", and so on. Because the override lives on the per-session
 RuleSet copy (`session_rule_sets`), it is per-session.
 
-When a group-scoped instrument's display choice is `summary` or
-`both`, the reviewer surface and the operator preview render the
-group **summary**, resolved as: `reviewee_group_description`,
-and — when that is blank — a fallback to the RuleSet's
-`description`.
+When a group-scoped instrument's display includes the group
+description, the reviewer surface and the operator preview
+render it, resolved in order: the instrument's own
+`group_description` override if set; otherwise the pinned
+rule's `reviewee_group_description`; and — when that is blank —
+a fallback to the RuleSet's `description`.
 
 ## Reviewer surface
 
@@ -222,9 +231,13 @@ visually distinct from per-reviewee instrument blocks:
   same as today.
 - **One group row.** The reviewer has exactly one group for the
   instrument (their eligible-reviewee set). The row carries a
-  single **group column** whose content follows `group_kind`
-  (member names / rule summary / both) and one set of response
-  inputs — one rating, one comment, etc., for the whole group.
+  single **group column** and one set of response inputs — one
+  rating, one comment, etc., for the whole group. The group
+  column's content follows the instrument's two include
+  checkboxes (`group_kind`): the group description, the
+  comma-separated member-name list, or — when both are ticked —
+  the group description followed by the member list on the next
+  line.
 - A reviewer with no assignments for the instrument gets no row.
 
 The visual distinction from per-reviewee tables is intentional:
