@@ -27,6 +27,16 @@ drive position — e.g., Segment 12B (PRs #788, #789) sits
 between 12A-3 (#779) and 16A (#834) because that's where its
 PRs landed in the global chronology.
 
+> **Adding a completed entry — keep this section sorted.** Insert
+> a new entry at its **first-PR-number** position, not at the
+> bottom by default and not next to its same-numbered siblings.
+> A just-finished segment *usually* has the highest PR numbers
+> and so does land at the end — but verify against the entry
+> above it rather than assuming. Order by PR number, never by
+> segment number or completion date. Keep each segment's own
+> sub-bullets / nested PR detail together as one contiguous
+> block; only the ordering of whole blocks follows PR number.
+
 ### P0 — Stop the bleeding (Instruments UI ↔ data drift)
 
 - **#13 — Fix Display Fields placeholder** — done 2026-05-01 (option 2: wired to existing routes).
