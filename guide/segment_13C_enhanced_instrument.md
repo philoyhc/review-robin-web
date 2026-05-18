@@ -32,11 +32,39 @@ one segment.
 
 ## Status
 
-Planning — re-scoped 2026-05-18 to the rule-based group model.
+In progress — re-scoped 2026-05-18 to the rule-based group model.
 **3 PRs, one migration.** The migration (PR 1) adds
 `reviewee_group_description` to the two RuleSet tables; everything
 else reuses columns that already exist (`Instrument.group_kind`,
 `Instrument.rule_set_id`, `Instrument.sort_display_fields`).
+
+## Progress log
+
+Landed so far — being built deliberately as small slices, with
+onscreen placeholders ahead of the persistence wiring:
+
+- **Spec.** `spec/group_scoped_instruments.md` rewritten to the
+  rule-based model (#1161); `spec/rule_based_assignment.md` §5.4
+  carries the seeded `reviewee_group_description` values and §7.2
+  specs the Rule Builder description boxes (#1162, #1163).
+- **Rule Builder placeholders.** The editable "Friendly
+  Description" box was renamed "Rule Description (optional)" and a
+  side-by-side "Reviewee Group Description (optional)" placeholder
+  textarea was added (#1164), then aligned with the RuleSet/Name
+  row (#1165, #1166). The new box carries
+  `name="reviewee_group_description"` but does not persist yet —
+  the column lands with PR 1's migration.
+- **Instruments page placeholders.** The per-instrument action
+  row was revised to `Edit / (Save, Cancel)`, `Add new
+  instrument`, `Add new group instrument`, and `Replicate this
+  instrument`. `Add new group instrument` creates a real
+  instrument with `group_kind="both"`; its card renders as a stub
+  (heading + Danger Zone + action row only) until the
+  group-scoped editor lands. `Replicate this instrument` is a
+  pure placeholder button — wired in PR 3.
+
+Still to do: PR 1's migration + the group-scoped editor surface,
+PR 2 (reviewer surface), PR 3 (Replicate / duplicate wiring).
 
 ### PR 1 — Operator editor: "Add a group-scoped instrument"
 

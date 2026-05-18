@@ -357,6 +357,56 @@ def test_add_instrument_returns_409_when_session_ready(
 
 
 # --------------------------------------------------------------------------- #
+# POST /instruments/add-group (Segment 13C placeholder)
+# --------------------------------------------------------------------------- #
+
+
+def test_add_group_instrument_sets_group_kind_and_renders_stub(
+    client: TestClient, db: Session
+) -> None:
+    session = _create_session(client, db, code="add-group")
+    [default] = _instruments(db, session.id)
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/add-group",
+        data={"after": str(default.id)},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    instruments = _instruments(db, session.id)
+    assert len(instruments) == 2
+    new = instruments[1]
+    assert new.group_kind == "both"
+    assert response.headers["location"].endswith(f"#instrument-{new.id}")
+
+    # The group-scoped card renders as a stub: heading + Danger Zone
+    # only, no Display/Response Fields tables.
+    page = client.get(f"/operator/sessions/{session.id}/instruments")
+    assert page.status_code == 200
+    body = page.text
+    assert "Group Instrument #2" in body
+    assert (
+        f'action="/operator/sessions/{session.id}/instruments/add-group"'
+        in body
+    )
+    assert "Replicate this instrument" in body
+
+
+def test_add_group_instrument_returns_409_when_session_ready(
+    client: TestClient, db: Session
+) -> None:
+    session = _ready_session(client, db, code="add-group-ready")
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+    assert len(_instruments(db, session.id)) == 1
+
+
+# --------------------------------------------------------------------------- #
 # POST /instruments/{iid}/delete
 # --------------------------------------------------------------------------- #
 

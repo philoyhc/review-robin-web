@@ -137,6 +137,52 @@
      for instrument identification while keeping table grid lines
      legible on the tinted background. #}
   {% set instrument_palette = ['#f0f9ff', '#ecfdf5', '#f5f3ff', '#fff7ed', '#fff1f2', '#fffbeb'] %}
+
+  {# Per-instrument action row. Shared by the ordinary instrument card
+     and the Segment 13C group-scoped placeholder card so both carry
+     the same button set: Edit / (Save, Cancel), Add new instrument,
+     Add new group instrument, Replicate this instrument. #}
+  {% macro instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) %}
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px;">
+      <div style="display: flex; gap: 8px;">
+        {% if is_editing %}
+          <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary"
+                  {% if is_ready %}disabled{% endif %}>Save</button>
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
+             {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
+        {% elif is_some_rtd_unlocked %}
+          <a class="btn secondary disabled"
+             aria-disabled="true"
+             title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
+        {% else %}
+          <a class="btn secondary{% if is_ready %} disabled{% endif %}"
+             href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+             {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
+        {% endif %}
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/add"
+              style="display: inline; margin: 0;">
+          <input type="hidden" name="after" value="{{ instrument.id }}">
+          <button class="btn secondary" type="submit"
+                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add new instrument</button>
+        </form>
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/add-group"
+              style="display: inline; margin: 0;">
+          <input type="hidden" name="after" value="{{ instrument.id }}">
+          <button class="btn secondary" type="submit"
+                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add new group instrument</button>
+        </form>
+        {# Placeholder — Replicate is wired in Segment 13C PR 3. #}
+        <button class="btn secondary" type="button"
+                title="Coming soon — Segment 13C">Replicate this instrument</button>
+      </div>
+    </div>
+  {% endmacro %}
+
   {% for instrument in instruments %}
     {% set is_editing = (editing_instrument_id == instrument.id) %}
     {% set was_saved = (saved_instrument_id == instrument.id) %}
@@ -144,6 +190,48 @@
 
     <div class="card" id="instrument-{{ instrument.id }}"
          style="background: {{ instrument_palette[loop.index0 % instrument_palette | length] }};">
+      {% set is_group = instrument.group_kind is not none %}
+      {% if is_group %}
+        {# Segment 13C placeholder — group-scoped instrument card.
+           Only the heading, Danger Zone, and action row render; the
+           identity / fields / rule editor land in a later 13C PR. #}
+        <h2 style="margin-top: 0; font-size: 1.5rem;">Group Instrument #{{ loop.index }}</h2>
+        <p class="form-help" style="margin-top: 0;">
+          Group-scoped instrument. The editor is not built yet — only the
+          Danger Zone is available for now.
+        </p>
+        {% set add_delete_disabled = is_ready or is_some_instrument_editing or is_some_rtd_unlocked %}
+        {% if is_ready %}
+          {% set add_delete_disabled_title = "Revert to draft to add or delete instruments." %}
+        {% elif is_some_instrument_editing %}
+          {% set add_delete_disabled_title = "Save or cancel the open instrument edit first." %}
+        {% elif is_some_rtd_unlocked %}
+          {% set add_delete_disabled_title = "Save or cancel the Response Type Definitions edit first." %}
+        {% else %}
+          {% set add_delete_disabled_title = "" %}
+        {% endif %}
+        {% set is_only_instrument = (instruments | length == 1) %}
+        {% set delete_disabled = add_delete_disabled or is_only_instrument %}
+        <div class="card danger-zone" style="margin-top: 12px;">
+          <h2>Danger Zone</h2>
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/delete">
+            <p>
+              <label style="font-weight: normal;">
+                <input type="checkbox" name="confirm" value="true" required>
+                Yes, delete <strong>Group Instrument #{{ loop.index }}</strong>. This
+                will also delete its assignments and any submitted reviewer
+                responses.
+              </label>
+            </p>
+            <p>
+              <button class="btn destructive" type="submit"
+                      {% if delete_disabled %}disabled title="{% if is_only_instrument %}Cannot delete the only instrument on this session.{% else %}{{ add_delete_disabled_title }}{% endif %}"{% endif %}>Delete this instrument</button>
+            </p>
+          </form>
+        </div>
+        {{ instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) }}
+      {% else %}
 
       {# Section A — Identity + status. ``align-items: stretch`` makes
          the two cards equal-height so the description-card Edit pair
@@ -767,34 +855,8 @@
         </div>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px;">
-        <div style="display: flex; gap: 8px;">
-          {% if is_editing %}
-            <button form="dfsave-{{ instrument.id }}" type="submit" class="btn secondary"
-                    {% if is_ready %}disabled{% endif %}>Save</button>
-            <a class="btn secondary"
-               href="/operator/sessions/{{ session.id }}/instruments#instrument-{{ instrument.id }}"
-               {% if is_ready %}aria-disabled="true"{% endif %}>Cancel</a>
-          {% elif is_some_rtd_unlocked %}
-            <a class="btn secondary disabled"
-               aria-disabled="true"
-               title="Save or cancel the Response Type Definitions edit before editing an instrument.">Edit</a>
-          {% else %}
-            <a class="btn secondary{% if is_ready %} disabled{% endif %}"
-               href="/operator/sessions/{{ session.id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
-               {% if is_ready %}aria-disabled="true"{% endif %}>Edit</a>
-          {% endif %}
-        </div>
-        <div>
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/instruments/add"
-                style="display: inline; margin: 0;">
-            <input type="hidden" name="after" value="{{ instrument.id }}">
-            <button class="btn secondary" type="submit"
-                    {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add new instrument</button>
-          </form>
-        </div>
-      </div>
+      {{ instrument_action_row(session, instrument, is_editing, is_ready, is_some_rtd_unlocked, add_delete_disabled, add_delete_disabled_title) }}
+      {% endif %}
     </div>
   {% endfor %}
 
