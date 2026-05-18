@@ -43,10 +43,10 @@ one segment.
 
 ## Status
 
-In progress — re-scoped twice on 2026-05-18 (rule-based model,
-then tag-composed identity). The operator-facing surfaces were
-built first as **visual placeholders**; the remaining work is
-**persistence wiring**, in three PRs. **Zero migrations.**
+In progress. **PR 1 — the operator-side group-scoped instrument
+editor — shipped 2026-05-18** (#1176-#1181, atop the placeholder
+slices #1161-#1175). PR 2 (reviewer surface) and PR 3 (Replicate)
+remain. **Zero migrations.**
 
 ## Progress log
 
@@ -77,16 +77,25 @@ of the wiring:
 - **Plan.** A follow-on section was added to harmonize the
   ordinary instrument card with the group card's layout (#1171).
 
-> **Placeholder drift.** The group card's Display Fields
-> placeholder still shows the interim Group Description cell +
-> two include-checkboxes. PR 1 reshapes it to the tag-composed
-> form — an **Include** checkbox column over the tag rows + a
-> Name row.
+### PR 1 — landed (2026-05-18)
 
-### Remaining work — three PRs, no migration
+The operator-side group-scoped instrument editor shipped across
+small slices:
 
-The PRs below wire persistence onto the placeholders. PR 1 is the
-prerequisite for PR 2; PR 3 is independent.
+- Row-set locked to the populated tag rows + Name (#1176).
+- Rule-required gate — a group instrument can't accept responses
+  without a pinned rule (#1177).
+- RevieweeName locked-row relaxation in `bulk_save_fields` (#1178).
+- Editable Display Fields — Include checkboxes (#1179) and the
+  Sort tri-state control (#1180).
+- Editable Response Fields + Response Fields Help, via shared
+  `response_fields_table` / `_help_table` / `_templates` macros
+  reused from the ordinary card (#1181).
+
+### Remaining work — two PRs, no migration
+
+The PRs below are the reviewer-facing feature (PR 2) and the
+Replicate button (PR 3, independent).
 
 **Related (separate matter).** The Rule Builder predicate-editor
 field-selector reordering — reviewee tags, then pair-context
@@ -95,11 +104,11 @@ vocabulary it implies are specced in `spec/rule_based_assignment.md`
 §4.4 / §7.2. The `pair.*` address space is a new engine
 capability, scoped separately; confirm before implementing.
 
-### PR 1 — Group-scoped instrument editor
+### PR 1 — Group-scoped instrument editor — **done** (#1176-#1181)
 
-Make the group-scoped card editable — today it is a read-only
-placeholder. One bulk-save round-trip, mirroring the ordinary
-instrument card's Edit / Save / Cancel state machine.
+The group-scoped card is editable: one bulk-save round-trip,
+mirroring the ordinary instrument card's Edit / Save / Cancel
+state machine. What shipped:
 
 - **Display Fields table.** Reshape the placeholder to the
   per-reviewee table restricted to the eligible **tag rows**
@@ -115,9 +124,9 @@ instrument card's Edit / Save / Cancel state machine.
     `update_display_field` rejects hiding them. On a *group-scoped*
     instrument the Name row's Include is operator-choosable
     (unticking it drops the member-name list from the composed
-    identity). PR 1 must make the locked-row `visible` force
-    conditional on `instrument.group_kind is None` so a group
-    instrument can store Name's Include state.
+    identity). `bulk_save_fields` skips the locked-row `visible`
+    force when `instrument.group_kind` is set, so a group
+    instrument stores Name's Include state.
   - **Row set (locked).** The table shows only the **populated**
     reviewee + pair-context tag rows — the same eligibility rule
     as a per-reviewee instrument's Display Fields — followed by
