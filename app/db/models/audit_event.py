@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, func
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -15,6 +15,15 @@ if TYPE_CHECKING:
 
 class AuditEvent(Base):
     __tablename__ = "audit_events"
+    __table_args__ = (
+        # Serves the per-session audit-log paths (§5.5 review): the
+        # CSV exporter's `WHERE session_id = ? ORDER BY created_at,
+        # id` walk and the in-app viewer's optional created_at
+        # date-range filter on top of the same session_id filter.
+        Index(
+            "ix_audit_events_session_created", "session_id", "created_at"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     session_id: Mapped[int | None] = mapped_column(ForeignKey("sessions.id"), index=True)
