@@ -419,6 +419,42 @@
     </div>
   {% endmacro %}
 
+  {# Display Fields Sort cell (Segment 13B tri-state control). Used by
+     the group-scoped card's Display Fields table; ``toggleSort`` and
+     the ``#sort-spec-inputs-{id}`` slot carry the spec to the
+     bulk-save form. #}
+  {% macro sort_cell(instrument, df, sort_spec, is_editing) %}
+    {% set _entry = (sort_spec
+          | selectattr('display_field_id', 'equalto', df.id) | first) %}
+    {% set _priority = (sort_spec
+          | map(attribute='display_field_id') | list).index(df.id) + 1
+          if _entry else 0 %}
+    <td class="sort-cell">
+      {% if is_editing %}
+        <button type="button"
+                class="sort-btn"
+                data-df-id="{{ df.id }}"
+                data-instrument-id="{{ instrument.id }}"
+                data-priority="{{ _priority }}"
+                data-dir="{{ _entry.dir if _entry else '' }}"
+                onclick="toggleSort(this)"
+                title="Click to cycle sort: unsorted → asc → desc → unsorted">
+          {% if _entry %}
+            <span class="sort-badge">{{ _priority }}{{ '↑' if _entry.dir == 'asc' else '↓' }}</span>
+          {% else %}
+            <span class="sort-badge sort-badge-empty">↕</span>
+          {% endif %}
+        </button>
+      {% else %}
+        {% if _entry %}
+          <span class="sort-badge">{{ _priority }}{{ '↑' if _entry.dir == 'asc' else '↓' }}</span>
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+      {% endif %}
+    </td>
+  {% endmacro %}
+
   {% for instrument in instruments %}
     {% set is_editing = (editing_instrument_id == instrument.id) %}
     {% set was_saved = (saved_instrument_id == instrument.id) %}
@@ -457,6 +493,7 @@
         {% set group_name_field = (sorted_display_fields
               | selectattr('source_field', 'equalto', 'name')
               | list | first) %}
+        {% set _sort_spec = instrument.sort_display_fields or [] %}
         <div class="bottom-grid field-builder">
           <div class="card" style="border: none; background: transparent; padding: 0;">
             <h3 style="margin-top: 0;">Display Fields</h3>
@@ -486,7 +523,7 @@
                           <input type="checkbox" disabled {% if df.visible %}checked{% endif %}>
                         {% endif %}
                       </td>
-                      <td class="sort-cell"><span class="sort-badge sort-badge-empty">↕</span></td>
+                      {{ sort_cell(instrument, df, _sort_spec, is_editing) }}
                     </tr>
                   {% endfor %}
                   {% if group_name_field %}
@@ -505,12 +542,28 @@
                           <input type="checkbox" disabled {% if group_name_field.visible %}checked{% endif %}>
                         {% endif %}
                       </td>
-                      <td class="sort-cell"><span class="sort-badge sort-badge-empty">↕</span></td>
+                      {{ sort_cell(instrument, group_name_field, _sort_spec, is_editing) }}
                     </tr>
                   {% endif %}
                 </tbody>
               </table>
             </div>
+            {% if is_editing %}
+              {# Segment 13B sort spec — toggleSort clears + repopulates
+                 these hidden inputs so the encoded order matches the
+                 cascade priority. #}
+              <div id="sort-spec-inputs-{{ instrument.id }}"
+                   data-instrument-id="{{ instrument.id }}"
+                   hidden>
+                {% for entry in _sort_spec %}
+                  <input form="dfsave-{{ instrument.id }}" type="hidden"
+                         name="sort_display_field_id"
+                         value="{{ entry.display_field_id }}">
+                  <input form="dfsave-{{ instrument.id }}" type="hidden"
+                         name="sort_dir" value="{{ entry.dir }}">
+                {% endfor %}
+              </div>
+            {% endif %}
           </div>
 
           <div class="card" style="border: none; background: transparent; padding: 0;">
