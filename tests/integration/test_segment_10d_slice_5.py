@@ -408,6 +408,54 @@ def test_add_group_instrument_returns_409_when_session_ready(
     assert len(_instruments(db, session.id)) == 1
 
 
+def test_group_instrument_display_fields_editable_and_save(
+    client: TestClient, db: Session
+) -> None:
+    """The group-scoped card's Display Fields Include checkboxes are
+    editable and persist via the bulk-save route (Segment 13C PR 1).
+    Group instruments have no locked rows, so the Name row can be
+    hidden."""
+    session = _create_session(client, db, code="grp-edit")
+    [default] = _instruments(db, session.id)
+    client.post(
+        f"/operator/sessions/{session.id}/instruments/add-group",
+        data={"after": str(default.id)},
+        follow_redirects=False,
+    )
+    group = next(i for i in _instruments(db, session.id) if i.group_kind)
+
+    # Edit mode renders the bulk-save form.
+    page = client.get(
+        f"/operator/sessions/{session.id}/instruments?editing={group.id}"
+    )
+    assert page.status_code == 200
+    assert f'id="dfsave-{group.id}"' in page.text
+    assert 'name="visible_ids"' in page.text
+
+    name_df = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == group.id,
+            InstrumentDisplayField.source_field == "name",
+        )
+    ).scalar_one()
+    assert name_df.visible is True
+
+    # Save with the Name row submitted but omitted from visible_ids.
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{group.id}/fields/save",
+        data={
+            "kind": "display",
+            "id": str(name_df.id),
+            "order": "0",
+            "label": "",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(name_df)
+    assert name_df.visible is False
+
+
 # --------------------------------------------------------------------------- #
 # POST /instruments/{iid}/delete
 # --------------------------------------------------------------------------- #
