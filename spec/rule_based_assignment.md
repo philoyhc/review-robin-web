@@ -210,15 +210,15 @@ The system ships with five seeds. Each is intended to be useful as-is and also a
 
 `Full Matrix` is the degenerate empty-rules case (combinator `ALL_OF`, zero rules); it appears as row 1 below with an empty Rules cell.
 
-The **Rule description** column carries the operator-facing summary stored on each RuleSet (the `description` field in `app/services/rules/seeds.py`). The **Reviewee group description** column carries the seeded value of `reviewee_group_description` (Segment 13C) — the plain-English name for the group a reviewer reviews, surfaced on group-scoped instruments (see `spec/group_scoped_instruments.md`). Operators may override it per session.
+The **Rule description** column carries the operator-facing summary stored on each RuleSet (the `description` field in `app/services/rules/seeds.py`).
 
-| # | Name | Combinator | excludeSelfReviews | Rules | Rule description | Reviewee group description |
-|---|---|---|---|---|---|---|
-| 1 | **Full Matrix** | `ALL_OF` | `true` | *(none — degenerate empty-rules case)* | Pair every reviewer with every reviewee. | All reviewees |
-| 2 | **Intra-group peer review** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 same_as reviewee.tag1)` | Reviewer and reviewee share tag1. | All reviewees with the same tag1 as reviewer |
-| 3 | **Cross-group peer review** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 different_from reviewee.tag1)` | Reviewer and reviewee have different tag1 — useful for fresh-perspective rounds. | All reviewees with a different tag1 as reviewer |
-| 4 | **Same group, different role** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 same_as reviewee.tag1)` &nbsp;∧&nbsp; `MATCH(reviewer.tag2 different_from reviewee.tag2)` | Same tag1, different tag2. Pair within the team but never with someone of the same role. | All reviewees with the same tag1, but with a different tag2, as reviewer |
-| 5 | **Three reviewers per reviewee** | `ALL_OF` | `true` | `QUOTA(scope=PER_REVIEWEE, min=3, max=3, selection=RANDOM(seed=42))` | Full candidate pool, then a PER_REVIEWEE quota of min=3, max=3, random with a fixed seed. | A random group of three reviewees |
+| # | Name | Combinator | excludeSelfReviews | Rules | Rule description |
+|---|---|---|---|---|---|
+| 1 | **Full Matrix** | `ALL_OF` | `true` | *(none — degenerate empty-rules case)* | Pair every reviewer with every reviewee. |
+| 2 | **Intra-group peer review** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 same_as reviewee.tag1)` | Reviewer and reviewee share tag1. |
+| 3 | **Cross-group peer review** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 different_from reviewee.tag1)` | Reviewer and reviewee have different tag1 — useful for fresh-perspective rounds. |
+| 4 | **Same group, different role** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 same_as reviewee.tag1)` &nbsp;∧&nbsp; `MATCH(reviewer.tag2 different_from reviewee.tag2)` | Same tag1, different tag2. Pair within the team but never with someone of the same role. |
+| 5 | **Three reviewers per reviewee** | `ALL_OF` | `true` | `QUOTA(scope=PER_REVIEWEE, min=3, max=3, selection=RANDOM(seed=42))` | Full candidate pool, then a PER_REVIEWEE quota of min=3, max=3, random with a fixed seed. |
 
 #### 5.4.1 Reading the cells
 
@@ -308,9 +308,9 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 │  Pair every reviewer with every reviewee.   │  │    Pair every reviewer with every…   │
 │  (caption only on seeded read-only)         │  │                                      │
 │                                             │  │    Intra-group peer review  [seed]   │
-│  Rule Description (opt.) Reviewee Group Dsc │  │    Match same-group reviewer/…       │
-│  [ User created rules ]  [ (optional)     ] │  │                                      │
-│  (editable branches — side by side, ½ each) │  │    Cross-group peer review  [seed]   │
+│  Rule Description (optional)                │  │    Match same-group reviewer/…       │
+│  [ User created ruleset ]                   │  │                                      │
+│  (editable branches only)                   │  │    Cross-group peer review  [seed]   │
 │                                             │  │    …                                 │
 │  Combine these rules with:                  │  │                                      │
 │  [ All of  ▾ ]                              │  │    My team review     [personal]     │
@@ -333,13 +333,13 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 2. **Inner row** at the top — chromeless (no card border, no padding, transparent background — visually part of the outer card, structurally a flex row). Two flex children at 1/2 each:
    - **RuleSet selector** (left). Always present, in every state.
    - **Name input** (right). Visible only when an editable name exists — i.e., on saved Personal RuleSets, Copy drafts (pre-populated with `Copy of <source>`), and the blank draft (pre-populated with `New RuleSet`). Hidden for seeded selections; when hidden, the selector stays at 1/2 width and the right half stays empty (the selector does **not** expand).
-   - On seeded read-only selections the RuleSet's stored description renders as a one-line caption immediately under the dropdown, with the **Reviewee Group Description appended in parentheses** when present — e.g. `Reviewer and reviewee share tag1 (All reviewees with the same tag1 as reviewer)`. Editable branches drop this caption — both descriptions move into the editable textareas below (rule #4).
+   - On seeded read-only selections the RuleSet's stored description renders as a one-line caption immediately under the dropdown. Editable branches drop this caption — the description moves into the editable textarea below (rule #4).
 
 3. **No separate title heading.** The dropdown's selected option (for seeds) and the inline name input (for editable selections) carry the title. No `<h2>` heading row, no scope pill above the body.
 
-4. **Description row** — two textareas side by side, each half-width, below the inner row. Editable branches only (drafts + saved Personal). Both are hoisted into the editable POST form via the HTML `form="rule-based-editor-form"` attribute so they sit visually outside the form's body but still submit with it. Both persist via the existing `/save` route.
-   - **Rule Description (optional)** (left). The operator-facing summary of what the rule does. Renamed from "Friendly Description" — same field, same persistence: writes through to `operator_rule_sets.description`. Default value on a fresh Copy / blank draft is `"User created ruleset"`; operators are expected to overwrite it. Saved-Personal selections preserve their stored value across reloads.
-   - **Reviewee Group Description (optional)** (right). The plain-English name of the group a reviewer reviews, surfaced on group-scoped instruments (Segment 13C — see `spec/group_scoped_instruments.md`). Writes through to `operator_rule_sets.reviewee_group_description`. Blank is fine: group-scoped instruments fall back to the Rule Description. Helper copy notes the field is only shown to reviewers on group-scoped instruments, so it can be left empty when the session has none.
+4. **Rule Description (optional)** textarea, full width, below the inner row. Editable branches only (drafts + saved Personal).
+   - Renamed from "Friendly Description" — same field, same persistence: writes through to `operator_rule_sets.description` via the `/save` route. Hoisted into the editable POST form via the HTML `form="rule-based-editor-form"` attribute so it sits visually outside the form's body but still submits with it.
+   - Default value on a fresh Copy / blank draft is `"User created ruleset"`; operators are expected to overwrite it. Saved-Personal selections preserve their stored value across reloads.
 
 5. **Body** — single column, top-to-bottom:
    - `Combine these rules with:` helper sentence above the combinator selector / read-only pill. No bold "Combinator" heading.
@@ -370,7 +370,7 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 3. **List.** One row per visible RuleSet, in the same order as the Rule Builder dropdown:
    - Seeds first, in install order (Full Matrix → Intra-group → Cross-group → Same-group different-role → Three reviewers per reviewee).
    - Caller-owned Personal RuleSets after, in id order (matches the dropdown convention until the field reports a need for most-recently-updated sort).
-   - Each row carries `name`, a `seed` / `personal` pill, and the RuleSet's `description` as a `form-help` caption beneath — with the `reviewee_group_description` appended in parentheses when present.
+   - Each row carries `name`, a `seed` / `personal` pill, and the RuleSet's `description` as a `form-help` caption beneath.
 
 4. **Active row highlight.** The row matching the Rule Builder's current selection renders highlighted (`▶` prefix on the name + `available-ruleset-row-active` class). Drafts (Copy / blank) produce no highlight — they don't correspond to a persisted row.
 
