@@ -55,7 +55,18 @@ runs three jobs in order: **build → migrate → deploy**.
    the App Service. The client, tenant, and subscription IDs are stored
    as GitHub repository secrets (`AZUREAPPSERVICE_CLIENTID_*`,
    `AZUREAPPSERVICE_TENANTID_*`, `AZUREAPPSERVICE_SUBSCRIPTIONID_*`) —
-   no publish profile is committed.
+   no publish profile is committed. The job runs under a GitHub
+   `dev` Environment, so each run is recorded under the repo's
+   Deployments and protection rules can be attached later.
+
+The workflow declares a `concurrency` group so the whole
+`build → migrate → deploy` pipeline is **serialized** — two pushes
+close together (or a push plus a manual dispatch) queue rather
+than running overlapping `alembic upgrade head` / deploys.
+`cancel-in-progress` is false, so an in-flight run is never
+cancelled mid-migrate or mid-deploy. A future production deploy
+workflow will be a small delta on this file once the production
+environment exists.
 
 There is no startup-time migration hook in the app; that pattern is
 fragile under concurrent deploys.
