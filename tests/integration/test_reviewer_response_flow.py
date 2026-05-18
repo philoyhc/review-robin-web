@@ -1173,3 +1173,97 @@ def test_base_layout_has_skip_link_and_main_landmark(
     assert page.status_code == 200
     assert '<a class="skip-link" href="#main-content">' in page.text
     assert '<main id="main-content" tabindex="-1">' in page.text
+
+
+def test_group_instrument_save_fans_out_to_all_members(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Saving a group-scoped instrument's response fans the single
+    answer out to every member assignment (Segment 13C PR 2 write
+    fan-out)."""
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp Fan", "code": "grp-fan"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-fan")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\n"
+                b"Carol,carol@example.edu\nDan,dan@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    _activate(operator, db, review_session)
+
+    group = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    group_assignments = list(
+        db.execute(
+            select(Assignment)
+            .where(Assignment.session_id == review_session.id)
+            .where(Assignment.instrument_id == group.id)
+        ).scalars()
+    )
+    assert len(group_assignments) == 2  # one reviewer x two reviewees
+
+    ordered_ids = list(
+        db.execute(
+            select(Instrument.id)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    position = ordered_ids.index(group.id) + 1
+
+    rae_client = make_client(rae)
+    first = group_assignments[0]
+    response = rae_client.post(
+        f"/reviewer/sessions/{review_session.id}/{position}/save",
+        data={
+            f"response[{first.id}][rating]": "4",
+            f"response[{first.id}][comments]": "team did well",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    # The single answer landed on every member assignment.
+    for assignment in group_assignments:
+        rows = db.execute(
+            select(Response).where(Response.assignment_id == assignment.id)
+        ).scalars().all()
+        by_key = {r.response_field.field_key: r.value for r in rows}
+        assert by_key.get("rating") == "4"
+        assert by_key.get("comments") == "team did well"

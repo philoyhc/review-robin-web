@@ -329,6 +329,72 @@ def _session_position_map(
     return {inst.id: idx + 1 for idx, inst in enumerate(instruments)}
 
 
+def _group_instrument_ids(db: Session, instrument_ids: set[int]) -> set[int]:
+    """Of ``instrument_ids``, the ones that are group-scoped — i.e.
+    ``Instrument.group_kind`` is non-null (Segment 13C)."""
+    if not instrument_ids:
+        return set()
+    return set(
+        db.execute(
+            select(Instrument.id)
+            .where(Instrument.id.in_(instrument_ids))
+            .where(Instrument.group_kind.is_not(None))
+        ).scalars()
+    )
+
+
+def _expand_group_upserts(
+    upserts: list[ResponseUpsert],
+    *,
+    assignments: list[Assignment],
+    group_instrument_ids: set[int],
+) -> list[ResponseUpsert]:
+    """Fan a group-scoped instrument's upserts out to every member.
+
+    For a group-scoped instrument the reviewer answers once for the
+    whole group; each posted upsert is replicated to every assignment
+    the reviewer holds for that instrument, so the single answer lands
+    on all members' Response rows (Segment 13C "write fan-out").
+    Per-reviewee upserts pass through unchanged. Group upserts are
+    first deduplicated per ``(instrument, field_key)`` — last value
+    wins — so a payload that still carries one row per member (the
+    interim before the reviewer surface collapses to one group row)
+    does not blow up into N x N.
+    """
+    if not group_instrument_ids:
+        return upserts
+    assignment_instrument = {a.id: a.instrument_id for a in assignments}
+    members_by_instrument: dict[int, list[int]] = {}
+    for a in assignments:
+        if a.instrument_id in group_instrument_ids:
+            members_by_instrument.setdefault(a.instrument_id, []).append(a.id)
+
+    passthrough: list[ResponseUpsert] = []
+    group_value: dict[tuple[int, str], str] = {}
+    group_order: list[tuple[int, str]] = []
+    for upsert in upserts:
+        instrument_id = assignment_instrument.get(upsert.assignment_id)
+        if instrument_id is None or instrument_id not in group_instrument_ids:
+            passthrough.append(upsert)
+            continue
+        key = (instrument_id, upsert.field_key)
+        if key not in group_value:
+            group_order.append(key)
+        group_value[key] = upsert.value
+
+    expanded = list(passthrough)
+    for instrument_id, field_key in group_order:
+        for member_id in members_by_instrument.get(instrument_id, []):
+            expanded.append(
+                ResponseUpsert(
+                    assignment_id=member_id,
+                    field_key=field_key,
+                    value=group_value[(instrument_id, field_key)],
+                )
+            )
+    return expanded
+
+
 def save_draft(
     db: Session,
     *,
@@ -346,6 +412,13 @@ def save_draft(
     with the typed value still in the box."""
     assignments = _reviewer_assignments(db, reviewer, review_session.id)
     assignment_index = {a.id: a for a in assignments}
+    upserts = _expand_group_upserts(
+        upserts,
+        assignments=assignments,
+        group_instrument_ids=_group_instrument_ids(
+            db, {a.instrument_id for a in assignments}
+        ),
+    )
     fields_by_instrument = _instrument_fields_by_id(
         db, {a.instrument_id for a in assignments}
     )
@@ -413,6 +486,13 @@ def submit(
     """
     assignments = _reviewer_assignments(db, reviewer, review_session.id)
     assignment_index = {a.id: a for a in assignments}
+    upserts = _expand_group_upserts(
+        upserts,
+        assignments=assignments,
+        group_instrument_ids=_group_instrument_ids(
+            db, {a.instrument_id for a in assignments}
+        ),
+    )
     fields_by_instrument = _instrument_fields_by_id(
         db, {a.instrument_id for a in assignments}
     )
