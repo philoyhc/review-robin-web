@@ -29,6 +29,12 @@
             action="{{ builder.page_url }}"
             id="rule-builder-selector-form"
             style="margin: 0;">
+        {% if instrument_id %}
+          {# Keep the originating instrument in the URL so the
+             back-link still points at the Instruments card after a
+             dropdown change. #}
+          <input type="hidden" name="instrument_id" value="{{ instrument_id }}">
+        {% endif %}
         <p style="margin: 0;">
           <label for="rule-builder-selector"><strong>RuleSet</strong></label>
           <select id="rule-builder-selector"
@@ -151,6 +157,9 @@
       {% endif %}
       {% if builder.selected_is_blank %}
         <input type="hidden" name="is_blank_draft" value="true">
+      {% endif %}
+      {% if instrument_id %}
+        <input type="hidden" name="instrument_id" value="{{ instrument_id }}">
       {% endif %}
       <input type="hidden" name="rules_json" id="rule-based-editor-rules-json" value="{{ builder.rules_json_initial }}">
 
@@ -379,6 +388,9 @@
       {% if builder.can_copy %}
         <form method="post" action="{{ builder.copy_url }}" style="margin: 0;">
           <input type="hidden" name="from_rule_set_id" value="{{ builder.selected_id }}">
+          {% if instrument_id %}
+            <input type="hidden" name="instrument_id" value="{{ instrument_id }}">
+          {% endif %}
           <button class="btn secondary"
                   type="submit"
                   id="rule-builder-copy-button">Copy</button>

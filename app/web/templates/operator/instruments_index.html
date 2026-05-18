@@ -400,27 +400,6 @@
     </div>
   {% endmacro %}
 
-  {# Group-scoped Display Fields — the merged Group Description cell:
-     an edit box (defaults to the pinned rule's group description) plus
-     two include-checkboxes encoding `group_kind`. Placeholder — not
-     persisted until the group editor is wired (Segment 13C PR 2). #}
-  {% macro group_description_cell(instrument) %}
-    <textarea rows="4" style="width: 100%;"
-              placeholder="Defaults to the pinned rule's group description"></textarea>
-    <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
-      <label style="font-weight: normal;">
-        <input type="checkbox" name="include_group_description"
-               {% if instrument.group_kind in ('summary', 'both') %}checked{% endif %}>
-        Include group description
-      </label>
-      <label style="font-weight: normal;">
-        <input type="checkbox" name="include_reviewee_names"
-               {% if instrument.group_kind in ('members', 'both') %}checked{% endif %}>
-        Include reviewee names
-      </label>
-    </div>
-  {% endmacro %}
-
   {% for instrument in instruments %}
     {% set is_editing = (editing_instrument_id == instrument.id) %}
     {% set was_saved = (saved_instrument_id == instrument.id) %}
@@ -445,15 +424,14 @@
            Response Fields Help. Visual placeholders for Segment 13C —
            not editable until the group editor lands. #}
         {% set sorted_response_fields = instrument.response_fields | sort(attribute='order') %}
-        {# Eligible Display Fields rows for a group instrument follow
-           the normal-instrument standard: every populated reviewee tag
-           and pair-context tag (up to 6). The instruments page prunes
-           unpopulated display fields on GET, so rejecting the non-tag
-           sources (Name / Email / Profile) leaves exactly the eligible
-           tag rows. #}
-        {% set tag_fields = (sorted_display_fields
-              | rejectattr('source_field', 'in', ['name', 'email_or_identifier', 'profile_link'])
-              | list) %}
+        {# Group-scoped Display Fields rows: the three reviewee tags,
+           the three pair-context tags, and RevieweeName. The Include
+           checkbox reflects the matching InstrumentDisplayField.visible
+           flag when a row exists. Placeholder — not wired until PR 1. #}
+        {% set group_display_rows = [
+             ('reviewee', 'tag_1'), ('reviewee', 'tag_2'), ('reviewee', 'tag_3'),
+             ('pair_context', '1'), ('pair_context', '2'), ('pair_context', '3'),
+             ('reviewee', 'name')] %}
         <div class="bottom-grid field-builder">
           <div class="card" style="border: none; background: transparent; padding: 0;">
             <h3 style="margin-top: 0;">Display Fields</h3>
@@ -461,31 +439,26 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Group Description</th>
                     <th>Friendly Label</th>
+                    <th>Include</th>
                     <th>Sort</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% if tag_fields %}
-                    {% for df in tag_fields %}
-                      <tr>
-                        {% if loop.first %}
-                          <td rowspan="{{ tag_fields | length }}" style="vertical-align: top;">
-                            {{ group_description_cell(instrument) }}
-                          </td>
-                        {% endif %}
-                        <td>{{ display_field_label(df, session=session) }}</td>
-                        <td class="sort-cell"><span class="sort-badge sort-badge-empty">↕</span></td>
-                      </tr>
-                    {% endfor %}
-                  {% else %}
+                  {% for source_type, source_field in group_display_rows %}
+                    {% set df = (instrument.display_fields
+                          | selectattr('source_type', 'equalto', source_type)
+                          | selectattr('source_field', 'equalto', source_field)
+                          | list | first) %}
                     <tr>
-                      <td>{{ group_description_cell(instrument) }}</td>
-                      <td class="muted">No reviewee tags imported yet.</td>
-                      <td class="sort-cell"><span class="muted">—</span></td>
+                      <td>{{ field_label(session, source_type, source_field) }}</td>
+                      <td>
+                        <input type="checkbox" disabled
+                               {% if df and df.visible %}checked{% endif %}>
+                      </td>
+                      <td class="sort-cell"><span class="sort-badge sort-badge-empty">↕</span></td>
                     </tr>
-                  {% endif %}
+                  {% endfor %}
                 </tbody>
               </table>
             </div>
