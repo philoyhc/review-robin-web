@@ -117,3 +117,40 @@ teardown, so tests do not pollute each other.
 5. Apply locally (`alembic upgrade head`), confirm round-trip
    (`alembic downgrade -1 && alembic upgrade head`).
 6. Add tests under `tests/db/`.
+
+## Indexes
+
+Most indexes are implicit: every `ForeignKey` column declares
+`index=True`, every natural key (`sessions.code`, `users.email`,
+`invitations.token_hash`, …) is `unique=True, index=True`, and a
+multi-column `UniqueConstraint` (e.g. `assignments
+(session_id, reviewer_id, reviewee_id, instrument_id)`,
+`session_operators (session_id, user_id)`) also serves as a
+B-tree index whose **leading-column prefixes** cover prefix
+lookups.
+
+### §5.5 query-path review (Segment 14A PR 3)
+
+The main workflow queries were reviewed against the indexes
+above:
+
+| Query path | Covered by |
+|---|---|
+| Sessions for an operator | `session_operators.user_id` index (join), `sessions.id` PK |
+| Reviewers / reviewees by session | `reviewers.session_id` / `reviewees.session_id` FK indexes |
+| Assignments by reviewer / session | `uq_assignment_unique` prefix `(session_id, reviewer_id, …)` + FK indexes |
+| Responses by assignment | `responses.assignment_id` FK index |
+| Monitoring counts | session-scoped selects on the FK indexes above |
+| Export queries | per-session `WHERE session_id = ?` selects on FK indexes |
+| Audit events by session / date | **`ix_audit_events_session_created`** — added by this review |
+
+Only the audit-log path lacked an index. `audit_events` had a
+single-column `session_id` index but nothing covering the
+`created_at` predicate the CSV exporter
+(`ORDER BY created_at, id`) and the in-app viewer's date-range
+filter both use — so PR 3 added the composite
+`ix_audit_events_session_created (session_id, created_at)`.
+
+Index work here stays **plain cross-dialect B-tree**. Postgres-only
+index types (e.g. `JSONB` GIN) wait on the deferred type
+migrations — see `guide/deferred_infra.md`.
