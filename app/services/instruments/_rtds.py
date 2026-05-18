@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -593,8 +593,12 @@ def delete_response_type_definition(
     affected instrument first). When the row has dependent
     Response Fields rows and ``confirm`` is False, raises
     ``RTDInUseError`` so the route can render the cascade-preview
-    confirmation. The actual cascade fires through the FK
-    ``ON DELETE CASCADE`` from Slice 4a."""
+    confirmation. The Response Fields cascade fires through the FK
+    ``ON DELETE CASCADE`` from Slice 4a; the dependent ``responses``
+    rows are cleared explicitly first — ``responses.response_field_id``
+    has no ``ON DELETE CASCADE``, so deleting an RTD whose fields
+    carry saved responses would otherwise abort on a foreign-key
+    violation."""
     if rtd.is_seeded:
         raise RTDLockedError(
             f"Seeded Response Type {rtd.response_type!r} cannot be deleted."
@@ -623,6 +627,20 @@ def delete_response_type_definition(
     }
     review_session = rtd.session
     rtd_id = rtd.id
+    # Clear dependent ``responses`` before the delete. The DB
+    # cascade reaches ``instrument_response_fields`` but not the
+    # ``responses`` below them (``response_field_id`` has no
+    # ``ON DELETE CASCADE``), so an RTD whose fields carry saved
+    # responses would otherwise abort the delete on an FK violation.
+    db.execute(
+        delete(Response).where(
+            Response.response_field_id.in_(
+                select(InstrumentResponseField.id).where(
+                    InstrumentResponseField.response_type_id == rtd_id
+                )
+            )
+        )
+    )
     db.delete(rtd)
     db.flush()
 
