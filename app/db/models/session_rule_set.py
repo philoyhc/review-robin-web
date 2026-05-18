@@ -114,5 +114,23 @@ class SessionRuleSet(Base, TimestampMixin):
     library origin has since been deleted). Provenance-only — the
     column is never read for resolution."""
 
+    # ----- Lazy persisted eligibility cache (perf). -----
+    cached_eligible_pair_count: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    """Last computed "eligible pairs" count for this rule. NULL =
+    never computed (cache miss). Written by
+    ``session_library.evaluate_session_rule_eligibility``; never
+    authoritative — it is recomputed whenever the stamp below
+    no longer matches the current inputs."""
+
+    cached_eligibility_stamp: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    """Content-hash of the inputs (reviewer / reviewee /
+    relationship rows + this rule's definition) that
+    ``cached_eligible_pair_count`` was computed from. A mismatch
+    on read means the cache is stale."""
+
     session: Mapped[ReviewSession] = relationship()
     library_origin: Mapped[RuleSet | None] = relationship()

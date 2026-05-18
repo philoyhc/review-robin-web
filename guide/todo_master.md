@@ -831,7 +831,9 @@ bottom of this file.
   Reviewers / Reviewees / Relationships Setup pages — clickable
   column chips that show / hide preview-table columns, off the
   column-presence readout the info cards already render. Pure
-  client-side, no schema.
+  client-side, no schema. **Part 2 (shipped 2026-05-18):**
+  eligible-pair count performance — evaluate only pinned rules,
+  plus a lazy persisted cache on `session_rule_sets`.
   **Plan:** `guide/segment_18E_small_enhancements.md`.
 
 - **18F — Scheduled events** *(stub created 2026-05-17)*.

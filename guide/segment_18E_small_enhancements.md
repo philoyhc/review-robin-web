@@ -9,8 +9,9 @@
 > (Export and import update,
 > `guide/archive/segment_18D_export_and_import_update.md`).
 
-**Stub. Sketch-level scope only.** Detailed PR breakdowns
-get drafted when this segment is picked up.
+**Holding pen.** Part 1 is sketch-level scope; **Part 2 has
+shipped** (2026-05-18). New items land as additional Parts as
+they surface.
 
 ## Goal
 
@@ -64,6 +65,43 @@ Likely shape:
   rows / columns already rendered (fine while these tables
   aren't paginated) and state resets on reload unless
   mirrored into a query param.
+
+### Part 2 — Eligible-pair count performance — shipped 2026-05-18
+
+**Context.** A ~1,000-reviewer × ~1,000-reviewee test session
+made the Instruments page, instrument edit / save, and the
+Assignments page lag perceptibly.
+`session_library.evaluate_session_rule_eligibility` ran the rule
+engine over the full reviewer × reviewee space for **every
+visible session RuleSet** on every render — roughly 5 × 1,000,000
+pair evaluations per page load — purely to print "N eligible
+pairs" on each rule-picker dropdown option and per instrument.
+Reviewers / Reviewees pages and the Quick Setup upload never
+touch the engine, which is why they stayed responsive.
+
+Shipped across two PRs:
+
+- **PR 1 (#1156) — evaluate only pinned rules.**
+  `evaluate_session_rule_eligibility` now runs the engine only
+  for rules pinned to an instrument. The rule-picker dropdown
+  options carry no per-option count, and an instrument with no
+  rule pinned shows "—" for its eligible-pair count rather than
+  a number — consistent with the Assignments-page status block,
+  which already did. A session mid-setup with no rules pinned
+  runs zero engine passes on these pages.
+- **PR 2 — lazy persisted cache.** Migration `c5a9b7e3d1f0`
+  adds `cached_eligible_pair_count` + `cached_eligibility_stamp`
+  to `session_rule_sets`. The stamp is a content-hash of the
+  roster (every reviewer / reviewee / relationship row) plus the
+  rule definition; on read, a matching stamp returns the stored
+  count without re-running the engine, and a roster or rule edit
+  changes the hash and forces a recompute. The cache is
+  persisted — shared across gunicorn workers, survives restart.
+  After this, a pinned-rule session's count is computed once per
+  roster / rule change instead of on every render.
+
+Recorded here rather than as its own segment because it was two
+small PRs. This Part is **done**, not sketch scope.
 
 ## Hard dependencies
 

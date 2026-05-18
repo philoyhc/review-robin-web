@@ -353,11 +353,12 @@ def test_picker_options_carry_no_eligibility_count(
     )[1].split("Open Rule Builder", 1)[0]
     # No per-option count attribute anywhere in the picker.
     assert "data-eligible-pairs" not in section
-    # Unpinned instrument → "--" rather than a number.
+    # Unpinned instrument → "—" rather than a number (consistent
+    # with the Assignments-page status block).
     pill = section.split(
         f'data-instrument-rule-picker-count="{instrument.id}"', 1
     )[1].split("</span>", 1)[0]
-    assert "--" in pill
+    assert "—" in pill
 
 
 def test_picker_count_shows_number_once_a_rule_is_pinned(
@@ -385,7 +386,7 @@ def test_picker_count_shows_number_once_a_rule_is_pinned(
     pill = section.split(
         f'data-instrument-rule-picker-count="{instrument.id}"', 1
     )[1].split("</span>", 1)[0]
-    assert "--" not in pill
+    assert "—" not in pill
     assert "0" in pill
 
 
@@ -447,3 +448,63 @@ def test_picker_save_invalidates_validated_session(
 
     db.refresh(review_session)
     assert review_session.status == "draft"
+
+
+def test_eligibility_cache_skips_engine_on_unchanged_inputs(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """`evaluate_session_rule_eligibility` caches the per-rule count
+    on the `session_rule_sets` row: a second call with unchanged
+    rosters + rule returns the cached count without re-running the
+    rule engine; a roster change forces a recompute."""
+    from app.db.models import Reviewer, Reviewee
+    from app.services.rules import engine as engine_mod, session_library
+
+    review_session = _make_session(client, db, code="elig-cache")
+    rule = _add_session_rule_set(
+        db, review_session=review_session, name="My Rule"
+    )
+    [instrument] = list(
+        db.execute(
+            select(Instrument).where(Instrument.session_id == review_session.id)
+        ).scalars()
+    )
+    instrument.rule_set_id = rule.id
+    db.add(Reviewer(session_id=review_session.id, name="R", email="r@x.edu"))
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="E",
+            email_or_identifier="e@x.edu",
+        )
+    )
+    db.commit()
+
+    calls: list[int] = []
+    real_evaluate = engine_mod.evaluate
+
+    def _counting(*args: object, **kwargs: object) -> object:
+        calls.append(1)
+        return real_evaluate(*args, **kwargs)
+
+    monkeypatch.setattr(engine_mod, "evaluate", _counting)
+
+    first = session_library.evaluate_session_rule_eligibility(
+        db, review_session
+    )
+    assert len(calls) == 1  # cold compute
+    assert rule.id in first
+
+    second = session_library.evaluate_session_rule_eligibility(
+        db, review_session
+    )
+    assert len(calls) == 1  # cache hit — engine not re-run
+    assert second == first
+
+    # A roster change invalidates the cache.
+    db.add(
+        Reviewer(session_id=review_session.id, name="R2", email="r2@x.edu")
+    )
+    db.commit()
+    session_library.evaluate_session_rule_eligibility(db, review_session)
+    assert len(calls) == 2  # recomputed

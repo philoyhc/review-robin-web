@@ -33,6 +33,8 @@ Public API:
 
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import datetime, timezone
 from typing import Any
 
@@ -134,6 +136,17 @@ def evaluate_session_rule_eligibility(
     a malformed snapshot fall back to ``0`` for that rule rather
     than tearing down the whole page render.
 
+    The count is cached on each ``session_rule_sets`` row
+    (``cached_eligible_pair_count`` + ``cached_eligibility_stamp``).
+    The stamp is a content-hash of the roster + rule inputs, so a
+    later call with unchanged inputs returns the stored count
+    without re-running the engine; a roster or rule edit changes
+    the hash and forces a recompute. Cache writes are committed
+    (the callers are GET renders that otherwise would not, and the
+    one POST caller — the Workflow super-button — uses compensating
+    writes, not transaction rollback, so an in-place commit here is
+    safe).
+
     No pinned rules (or empty rosters) → ``{}``.
     """
     from pydantic import TypeAdapter
@@ -178,8 +191,20 @@ def evaluate_session_rule_eligibility(
     pair_context_lookup = relationships_service.pair_context_lookup(
         db, review_session.id
     )
+    roster_sig = _roster_signature(reviewers, reviewees, pair_context_lookup)
+
     out: dict[int, int] = {}
+    cache_dirty = False
     for row in rule_sets:
+        stamp = hashlib.sha256(
+            (roster_sig + _rule_signature(row)).encode()
+        ).hexdigest()
+        if (
+            row.cached_eligibility_stamp == stamp
+            and row.cached_eligible_pair_count is not None
+        ):
+            out[row.id] = row.cached_eligible_pair_count
+            continue
         try:
             schema = RuleSetSchema(
                 id=row.id,
@@ -203,10 +228,65 @@ def evaluate_session_rule_eligibility(
                 revision_seed=row.id,
                 pair_context_lookup=pair_context_lookup,
             )
-            out[row.id] = len(result.pairs)
         except Exception:
+            # A malformed snapshot falls back to 0 and is NOT
+            # cached — a transient error must not stick.
             out[row.id] = 0
+            continue
+        count = len(result.pairs)
+        out[row.id] = count
+        row.cached_eligible_pair_count = count
+        row.cached_eligibility_stamp = stamp
+        cache_dirty = True
+    if cache_dirty:
+        db.commit()
     return out
+
+
+def _roster_signature(
+    reviewers: list[Any],
+    reviewees: list[Any],
+    pair_context_lookup: dict[Any, Any],
+) -> str:
+    """Content hash of the reviewer / reviewee / relationship inputs
+    the rule engine consumes — every column value of every roster
+    row plus the pair-context lookup. Any add, delete, or edit
+    changes the hash. This is how a stale eligibility cache is
+    detected without an ``updated_at`` column on the roster tables.
+    """
+
+    def _rows(objs: list[Any]) -> list[list[str]]:
+        return [
+            [str(getattr(o, col.name)) for col in o.__table__.columns]
+            for o in sorted(objs, key=lambda o: o.id)
+        ]
+
+    payload = repr(
+        (
+            _rows(reviewers),
+            _rows(reviewees),
+            sorted(
+                (repr(k), repr(v)) for k, v in pair_context_lookup.items()
+            ),
+        )
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def _rule_signature(row: SessionRuleSet) -> str:
+    """Content hash of one rule's definition — the inputs that,
+    alongside the roster, determine its eligible-pair count."""
+    payload = json.dumps(
+        {
+            "combinator": row.combinator,
+            "exclude_self_reviews": row.exclude_self_reviews,
+            "seed": row.seed,
+            "rules": row.rules_json,
+        },
+        sort_keys=True,
+        default=str,
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()
 
 
 def list_library_rule_sets_not_in_session(
