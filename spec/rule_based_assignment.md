@@ -298,9 +298,9 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 │  Pair every reviewer with every reviewee.   │  │    Pair every reviewer with every…   │
 │  (caption only on seeded read-only)         │  │                                      │
 │                                             │  │    Intra-group peer review  [seed]   │
-│  Friendly Description (optional)            │  │    Match same-group reviewer/…       │
-│  [ User created ruleset                  ]  │  │                                      │
-│  (only on editable branches)                │  │    Cross-group peer review  [seed]   │
+│  Rule Description (opt.) Reviewee Group Dsc │  │    Match same-group reviewer/…       │
+│  [ User created rules ]  [ (optional)     ] │  │                                      │
+│  (editable branches — side by side, ½ each) │  │    Cross-group peer review  [seed]   │
 │                                             │  │    …                                 │
 │  Combine these rules with:                  │  │                                      │
 │  [ All of  ▾ ]                              │  │    My team review     [personal]     │
@@ -323,14 +323,13 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 2. **Inner row** at the top — chromeless (no card border, no padding, transparent background — visually part of the outer card, structurally a flex row). Two flex children at 1/2 each:
    - **RuleSet selector** (left). Always present, in every state.
    - **Name input** (right). Visible only when an editable name exists — i.e., on saved Personal RuleSets, Copy drafts (pre-populated with `Copy of <source>`), and the blank draft (pre-populated with `New RuleSet`). Hidden for seeded selections; when hidden, the selector stays at 1/2 width and the right half stays empty (the selector does **not** expand).
-   - On seeded read-only selections the RuleSet's stored description renders as a one-line caption immediately under the dropdown. Editable branches drop this caption — the description moves into the editable textarea below (rule #4).
+   - On seeded read-only selections the RuleSet's stored description renders as a one-line caption immediately under the dropdown, with the **Reviewee Group Description appended in parentheses** when present — e.g. `Reviewer and reviewee share tag1 (All reviewees with the same tag1 as reviewer)`. Editable branches drop this caption — both descriptions move into the editable textareas below (rule #4).
 
 3. **No separate title heading.** The dropdown's selected option (for seeds) and the inline name input (for editable selections) carry the title. No `<h2>` heading row, no scope pill above the body.
 
-4. **Friendly Description (optional)** textarea, full width, below the inner row. Editable branches only (drafts + saved Personal).
-   - Hoisted into the editable POST form via the HTML `form="rule-based-editor-form"` attribute so it can sit visually outside the form's body but still submit with it.
-   - **Default value on a fresh Copy / blank draft:** `"User created ruleset"`. Operators are expected to overwrite. Saved-Personal selections preserve their stored description across reloads.
-   - Persists via the existing `/save` route, which writes through to `operator_rule_sets.description`.
+4. **Description row** — two textareas side by side, each half-width, below the inner row. Editable branches only (drafts + saved Personal). Both are hoisted into the editable POST form via the HTML `form="rule-based-editor-form"` attribute so they sit visually outside the form's body but still submit with it. Both persist via the existing `/save` route.
+   - **Rule Description (optional)** (left). The operator-facing summary of what the rule does. Renamed from "Friendly Description" — same field, same persistence: writes through to `operator_rule_sets.description`. Default value on a fresh Copy / blank draft is `"User created ruleset"`; operators are expected to overwrite it. Saved-Personal selections preserve their stored value across reloads.
+   - **Reviewee Group Description (optional)** (right). The plain-English name of the group a reviewer reviews, surfaced on group-scoped instruments (Segment 13C — see `spec/group_scoped_instruments.md`). Writes through to `operator_rule_sets.reviewee_group_description`. Blank is fine: group-scoped instruments fall back to the Rule Description. Helper copy notes the field is only shown to reviewers on group-scoped instruments, so it can be left empty when the session has none.
 
 5. **Body** — single column, top-to-bottom:
    - `Combine these rules with:` helper sentence above the combinator selector / read-only pill. No bold "Combinator" heading.
@@ -361,7 +360,7 @@ The page renders, top-to-bottom: the chrome (with `Assignments` highlighted as t
 3. **List.** One row per visible RuleSet, in the same order as the Rule Builder dropdown:
    - Seeds first, in install order (Full Matrix → Intra-group → Cross-group → Same-group different-role → Three reviewers per reviewee).
    - Caller-owned Personal RuleSets after, in id order (matches the dropdown convention until the field reports a need for most-recently-updated sort).
-   - Each row carries `name`, a `seed` / `personal` pill, and the RuleSet's `description` as a `form-help` caption beneath.
+   - Each row carries `name`, a `seed` / `personal` pill, and the RuleSet's `description` as a `form-help` caption beneath — with the `reviewee_group_description` appended in parentheses when present.
 
 4. **Active row highlight.** The row matching the Rule Builder's current selection renders highlighted (`▶` prefix on the name + `available-ruleset-row-active` class). Drafts (Copy / blank) produce no highlight — they don't correspond to a persisted row.
 
