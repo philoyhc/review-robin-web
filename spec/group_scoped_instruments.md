@@ -19,10 +19,23 @@ about a *group* of reviewees rather than per-individual.
 > design is gone — do not reintroduce composite `group_kind`,
 > derived tag tuples, or multi-group-per-instrument.
 
+> **Revised 2026-05-18 — tag-composed identity.** A later
+> iteration of the same day dropped the free-text "Group
+> Description" field — and its `reviewee_group_description`
+> (RuleSet) and `Instrument.group_description` columns. The
+> group's on-screen identity is instead **composed from the
+> reviewee / pair-context tags the operator marks Include** on
+> the Display Fields table, plus optionally the member Name
+> list. This needs **no new columns** — the existing
+> `InstrumentDisplayField.visible` flag is the Include checkbox
+> and the 13B sort spec orders the rows. The sections below
+> reflect this model. The interim free-text design (and its
+> migration) is superseded.
+
 This file is the source of truth for the design. The
 implementation plan lives at
 **`guide/segment_13C_enhanced_instrument.md`**; 13C also picks up
-the duplicate-instrument button on the same action-row sweep.
+the Replicate-instrument button on the same action-row sweep.
 
 Subsequent edits to this design go here and propagate to the
 implementation, not the other way around.
@@ -95,22 +108,22 @@ response_field_id)`.
   through one shared helper, `responses.collapse_group_duplicates`
   (see "Aggregation contract").
 
-### Schema
+### Schema — no migration
+
+13C ships **zero migrations.** The group-scoped instrument is
+carried entirely by columns that already exist:
 
 | Field | Where | Type | Notes |
 |---|---|---|---|
-| `group_kind` | `Instrument` | `String(32) \| NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument (today's default). A non-null value flags the instrument group-scoped **and** encodes the two include-checkboxes (see "Editor surface") as `summary` / `members` / `both`. The column is **repurposed** by this design — it no longer stores tag keys. |
-| `reviewee_group_description` | `operator_rule_sets` **and** `session_rule_sets` | `Text \| NULL` | **New — 13C migration.** Operator-authored plain-English description of the group the rule forms (e.g. "Each reviewer's project team"). The **default** group-description text for any group-scoped instrument pinned to this rule. `NULL` / blank → fall back to the RuleSet's `description`. Lives on both the library row and the per-session copy, mirroring how `description` is carried on both. The five seeded RuleSets ship with a default value (`spec/rule_based_assignment.md` §5.4). |
-| `group_description` | `Instrument` | `Text \| NULL` | **New — 13C migration.** Per-instrument **override** of the group-description text. `NULL` = use the pinned rule's `reviewee_group_description` as the default; non-null = the operator's override, typed into the Display Fields table's Group Description cell. |
+| `group_kind` | `Instrument` | `String(32) \| NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument; **any non-null value** flags the instrument group-scoped. The specific string is not interpreted — the `add-group` route writes `"both"` as an inert marker; a future cleanup could simplify it. |
+| `visible` | `InstrumentDisplayField` | `Boolean` | Existing per-row flag. On a group-scoped instrument it is the **Include** checkbox — which tag (or Name) rows compose the group identity on the reviewer surface. |
+| `sort_display_fields` | `Instrument` | `JSON \| NULL` | Existing Segment 13B per-instrument sort spec. Orders the tag rows and the member-name list. |
 
-No `Assignment` change. No `Response` change. The per-instrument
-sort spec reuses the existing `Instrument.sort_display_fields`
-column (Segment 13B) — see "Operator editor".
-
-`group_kind` keeping the name "kind" is mild legacy drift — it now
-holds a display-content choice, not a grouping kind. Renaming the
-column would cost a migration for no behavioural gain; 13C PR 1
-updates the model docstring instead.
+No `Assignment`, `Response`, or RuleSet change. The free-text
+"Group Description" field explored in an interim draft — and its
+`reviewee_group_description` / `Instrument.group_description`
+columns — was dropped (see the 2026-05-18 revision note); the
+group identity is composed from tags instead.
 
 ## Operator editor
 
@@ -121,11 +134,10 @@ Two creation entrypoints on the action row of
 
 - **Add an instrument** — today's button. Creates a per-reviewee
   instrument (`group_kind = NULL`).
-- **Add a group-scoped instrument** — new button. Creates a
-  group-scoped instrument with `group_kind` set to the default
-  display choice (`both` — rule summary followed by the member
-  list). Inserted immediately after the current card, like "Add
-  an instrument".
+- **Add group instrument** — new button. Creates a group-scoped
+  instrument (`group_kind` non-null — the `add-group` route
+  writes the inert marker `"both"`). Inserted immediately after
+  the current card, like "Add instrument".
 
 **Mode is set at creation and is not toggleable.** An operator who
 wants to change an instrument's mode deletes it and recreates it.
@@ -138,46 +150,33 @@ creation; Lock / Unlock governs visibility, not data shape).
 ### Editor surface for a group-scoped instrument
 
 Identical to the per-reviewee editor except for the **Display
-Fields** section, which is **reshaped, not removed**.
+Fields** section, which is reshaped to the per-reviewee table
+restricted to **tag rows plus a Name row**:
 
-For a group-scoped instrument the Display Fields table carries
-three columns:
+- **Rows.** Every reviewee tag and pair-context tag that
+  **carries data** — `RevieweeTag1/2/3` and
+  `PairContextTag1/2/3`, up to six rows, the same eligibility
+  standard as a per-reviewee instrument's Display Fields
+  (`spec/instruments.md` "Display Fields") — followed by a
+  single **Name** (`RevieweeName`) row. Email and Profile never
+  appear.
+- **Columns.**
+  - **Friendly Label** — the tag's session-wide friendly label,
+    read-only (`app/services/field_labels.py`).
+  - **Include** — a checkbox per row, persisted to the existing
+    `InstrumentDisplayField.visible` flag. The ticked rows
+    compose the group identity on the reviewer surface (see
+    "Composing the group identity").
+  - **Sort** — the per-instrument sort control (the Segment 13B
+    sort spec, `Instrument.sort_display_fields`), ordering the
+    tag rows and the member-name list.
 
-- **Group Description** — a single vertically-merged cell
-  spanning every row. It holds an edit box plus two checkboxes:
-  - The **edit box** prefills with the pinned rule's
-    `reviewee_group_description` (which itself falls back to the
-    rule's `description`). Editing it saves a **per-instrument
-    override** to `Instrument.group_description` — the rule's
-    value is only the default / prefill.
-  - **Two checkboxes** below the box — *Include group
-    description* and *Include reviewee names* — choose what the
-    reviewer-surface group column shows. The operator ticks one
-    or both (at least one); the combination is stored in
-    `group_kind` (`summary` / `members` / `both`). With both
-    ticked the reviewer surface shows the group description
-    first, then the comma-separated member list on the next
-    line.
-- **Friendly Label** — the tag's session-wide friendly label,
-  read-only, resolved the same way as a per-reviewee instrument's
-  Display Fields labels (`app/services/field_labels.py`).
-- **Sort** — the per-instrument sort control (the Segment 13B
-  sort spec, `Instrument.sort_display_fields`). For a group-scoped
-  instrument the sort orders **two things**: the inline
-  member-name list within a group cell, and, where group rows are
-  listed on operator pages, the group rows themselves (a group
-  sorts by its first member under the spec).
-
-**Eligible rows.** The table's rows are the reviewee tags and
-pair-context tags that **carry data** — the *same eligibility
-standard* as a per-reviewee instrument's Display Fields (see
-`spec/instruments.md` "Display Fields"): every populated
-`RevieweeTag1/2/3` and `PairContextTag1/2/3`, **up to six rows**.
-Name, Email, and Profile are individual attributes and never
-appear on a group-scoped instrument's Display Fields table.
-
-The default for a freshly created group-scoped instrument is
-both checkboxes ticked (`group_kind = both`).
+**There is no free-text group-description field.** The group's
+on-screen identity is composed from the Included tags. When the
+operator wants to convey something the tags do not, they use the
+**instrument's own friendly description** (the block heading,
+`Instrument.description`) — exactly as for a per-reviewee
+instrument.
 
 Response Fields, Response Fields Help, descriptions,
 accepting-responses / visibility toggles, and the Save / Edit /
@@ -197,31 +196,6 @@ layer rejects the open with an inline banner pointing the
 operator at the Assignments page. `Full Matrix` is a valid pin
 (group = every reviewee).
 
-## The rule and its group description
-
-The `reviewee_group_description` field is authored in an
-operator-editable **text box on the Rule Builder page**
-(`spec/rule_based_assignment.md` §7.2) alongside the RuleSet's
-name and description — it is a property of the rule, not of the
-instrument. One rule may be pinned to several instruments; the
-description travels with the rule.
-
-The five seeded RuleSets ship with a sensible default
-`reviewee_group_description` (e.g. *Intra-group peer review* →
-"All reviewees with the same tag1 as reviewer" — see
-`spec/rule_based_assignment.md` §5.4). The operator overrides
-that default in the text box with friendlier session-specific
-copy — "Your work squad", "Your tutorial group", "Your lab
-group", and so on. Because the override lives on the per-session
-RuleSet copy (`session_rule_sets`), it is per-session.
-
-When a group-scoped instrument's display includes the group
-description, the reviewer surface and the operator preview
-render it, resolved in order: the instrument's own
-`group_description` override if set; otherwise the pinned
-rule's `reviewee_group_description`; and — when that is blank —
-a fallback to the RuleSet's `description`.
-
 ## Reviewer surface
 
 A group-scoped instrument renders as a self-contained block,
@@ -231,13 +205,8 @@ visually distinct from per-reviewee instrument blocks:
   same as today.
 - **One group row.** The reviewer has exactly one group for the
   instrument (their eligible-reviewee set). The row carries a
-  single **group column** and one set of response inputs — one
-  rating, one comment, etc., for the whole group. The group
-  column's content follows the instrument's two include
-  checkboxes (`group_kind`): the group description, the
-  comma-separated member-name list, or — when both are ticked —
-  the group description followed by the member list on the next
-  line.
+  single **group-identity column** and one set of response
+  inputs — one rating, one comment, etc., for the whole group.
 - A reviewer with no assignments for the instrument gets no row.
 
 The visual distinction from per-reviewee tables is intentional:
@@ -248,6 +217,36 @@ ambiguity about whether the rating is per-person or per-group.
 The reviewer-surface preview hub (`spec/preview_hub.md`) renders
 these blocks alongside the per-reviewee ones for the
 picker-selected reviewer.
+
+### Composing the group identity
+
+The group-identity column is built from the Display Fields rows
+the operator marked **Include**, rendered as up to three lines:
+
+1. **Reviewee tags** — the Included reviewee-tag values,
+   comma-separated.
+2. **Pair-context tags** — the Included pair-context-tag values,
+   comma-separated, on the next line.
+3. **Member names** — when the Name row is Included, the group
+   members' names, comma-separated, on the next line.
+
+Tag **values are shown verbatim** — no friendly-label prefix.
+The operator names the tag values themselves, so a `tag2` value
+of `Group 5` and a `tag3` value of `Team A` render directly as
+`Group 5, Team A`.
+
+The group is **rule-defined**, so its members are not guaranteed
+to share a value for a given tag. When an Included tag has more
+than one distinct value across the group, all distinct values
+are shown comma-separated. In practice this composed identity
+works cleanly because operators Include the tags the pinned rule
+clusters on — the vast majority of group-review cases (e.g. an
+*Intra-group* rule with its group tag Included) — so a single
+crisp value per tag is the norm; the Name row is the unambiguous
+fallback when it is not. (See also `spec/rule_based_assignment.md`
+§7.2 on ordering the predicate-editor field selector
+reviewee-/pair-tags-first, which keeps a relevant tag in play
+for nearly every rule.)
 
 ### Write fan-out
 
@@ -294,9 +293,9 @@ PR 2).
 The Extract Data exports collapse the per-member rows to **one
 row per group** (one per reviewer per group-scoped instrument).
 Because a group-scoped row has no single reviewee identity, the
-export surfaces the group instead — a column carrying the member
-list and / or the rule summary (matching the instrument's
-`group_kind` choice) in place of the per-reviewee identity
+export surfaces the **composed group identity** instead — the
+Included tag values and, when the Name row is Included, the
+member-name list — in place of the per-reviewee identity
 columns. Per-reviewee instruments are unaffected.
 
 Segment 18D Part 3 rides along here: the analysis-facing
@@ -318,11 +317,10 @@ the two without re-deriving from the schema.
   The rule is required, so assignment is always rule-driven.
 - **A separate `Group` entity.** The group is just a reviewer's
   assignment set; no table is needed.
-- **A rule-tree → English renderer.** The `summary` display
-  content comes from the operator-authored
-  `reviewee_group_description` (with a name / description
-  fallback), not from machine-generating prose from the predicate
-  tree.
+- **A free-text group-description field.** Dropped in favour of
+  the tag-composed identity (see the 2026-05-18 revision note).
+  The instrument's own friendly description carries any prose
+  the operator wants to add.
 
 ## Open questions
 
@@ -338,17 +336,20 @@ the two without re-deriving from the schema.
 ## Cross-references
 
 - `app/db/models/instrument.py` — `group_kind` column (exists;
-  repurposed by this design) and `rule_set_id` (the pinned rule).
-- `app/db/models/rule_set.py` / `app/db/models/session_rule_set.py`
-  — gain `reviewee_group_description` (13C PR 1 migration).
-- `app/services/instruments/_display_fields.py` — the sort-spec
-  service (`set_sort_display_fields`) a group-scoped instrument
-  reuses unchanged.
+  the group-scoped flag) and `rule_set_id` (the pinned rule).
+- `app/db/models/instrument_field.py` — `InstrumentDisplayField`,
+  whose existing `visible` flag is the Include checkbox on a
+  group-scoped instrument.
+- `app/services/instruments/_display_fields.py` — the display-
+  field CRUD + the sort-spec service (`set_sort_display_fields`),
+  both reused by the group-scoped editor.
 - `app/services/responses.py` — home of the proposed
   `collapse_group_duplicates` helper.
 - `spec/rule_based_assignment.md` — §7.1 (pinning a rule to an
-  instrument) and §7.2 (the Rule Builder page, where
-  `reviewee_group_description` is authored).
+  instrument) and §7.2 (the Rule Builder predicate editor, whose
+  field selector lists reviewee tags then pair-context tags,
+  omitting reviewer tags — so nearly every rule keeps a
+  reviewee/pair tag in play for the composed identity).
 - `spec/instruments.md` — the operator Instruments page; the
   action-row and Display Fields sections gain the group-scoped
   variant.
