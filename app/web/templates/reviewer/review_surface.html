@@ -210,16 +210,16 @@
           <table data-rrw-sortable="rrw-sort-rs-{{ session.id }}-{{ group.instrument.id }}">
             <thead>
             <tr>
-              <th class="rs-reviewee rrw-sortable" data-sort-key="reviewee.name">
+              <th scope="col" class="rs-reviewee rrw-sortable" data-sort-key="reviewee.name">
                 Reviewee<button type="button" class="rrw-sort-btn"
                     aria-label="Sort by Reviewee"
-                    onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>
+                    onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button>
               </th>
               {% for header in group.display_fields %}
-                <th{% if header.is_profile_link %} class="rs-narrow rrw-sortable"{% else %} class="rrw-sortable"{% endif %}
+                <th scope="col"{% if header.is_profile_link %} class="rs-narrow rrw-sortable"{% else %} class="rrw-sortable"{% endif %}
                     data-sort-key="display:{{ header.field.id }}">{{ header.label }}<button type="button" class="rrw-sort-btn"
                     aria-label="Sort by {{ header.label }}"
-                    onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+                    onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button></th>
               {% endfor %}
               {% set first_row = group.rows[0] %}
               {% for cell in first_row.cells %}
@@ -227,13 +227,13 @@
                 {% set col_class = 'rrw-sortable' %}
                 {% if cell.field.data_type in ('Integer', 'Decimal') %}{% set col_class = 'rs-narrow rrw-sortable' %}
                 {% elif cell.field.data_type == 'String' and max_len > 100 %}{% set col_class = 'rs-textlong rrw-sortable' %}{% endif %}
-                <th class="{{ col_class }}"
+                <th scope="col" class="{{ col_class }}"
                     data-sort-key="response:{{ cell.field.id }}"
                     data-sort-type="{{ cell.field.data_type }}">{{ cell.field.label }}{% if cell.field.required %} *{% endif %}<button type="button" class="rrw-sort-btn"
                     aria-label="Sort by {{ cell.field.label }}"
-                    onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+                    onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button></th>
               {% endfor %}
-              {% if group.show_status_col %}<th class="rs-narrow"></th>{% endif %}
+              {% if group.show_status_col %}<th scope="col" class="rs-narrow"><span class="visually-hidden">Status</span></th>{% endif %}
             </tr>
             </thead>
             <tbody class="rrw-rows">
@@ -248,7 +248,7 @@
                   <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}
                       data-sort-value="{{ cell.value or '' }}">
                     {% if cell.is_profile_link %}
-                      {% if cell.value %}<a href="{{ cell.value }}">View</a>{% endif %}
+                      {% if cell.value %}<a href="{{ cell.value }}" aria-label="View — {{ row.assignment.reviewee.name }}">View</a>{% endif %}
                     {% else %}
                       {{ cell.value or "" }}
                     {% endif %}
@@ -265,6 +265,10 @@
                       data-sort-value="{{ cell.value or '' }}">
                     {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
                     {% set disabled_attr = "" if row.accepting else "disabled" %}
+                    {# Each response control names its column and row
+                       so a screen-reader user hears "{field} for
+                       {reviewee}" rather than an unlabelled box. #}
+                    {% set cell_aria = cell.field.label ~ " for " ~ row.assignment.reviewee.name ~ (" (required)" if cell.field.required else "") %}
                     {# Render is driven by the RTD's ``data_type`` —
                        any String row with max_length > 100 gets a
                        textarea, smaller String rows get a text input,
@@ -279,6 +283,7 @@
                     {% if data_type == "String" %}
                       {% if max_len > 100 %}
                         <textarea name="{{ field_name }}"
+                                  aria-label="{{ cell_aria }}"
                                   rows="2"
                                   style="min-height: 44px;"
                                   data-rs-saved-value="{{ cell.value }}"
@@ -288,6 +293,7 @@
                       {% else %}
                         <input type="text"
                                name="{{ field_name }}"
+                               aria-label="{{ cell_aria }}"
                                value="{{ cell.value }}"
                                data-rs-saved-value="{{ cell.value }}"
                                {% if cell.placeholder %}placeholder="{{ cell.placeholder }}"{% endif %}
@@ -312,6 +318,7 @@
                       <input type="number"
                              inputmode="{{ 'numeric' if data_type == 'Integer' else 'decimal' }}"
                              name="{{ field_name }}"
+                             aria-label="{{ cell_aria }}"
                              value="{{ cell.value }}"
                              data-rs-saved-value="{{ cell.value }}"
                              {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
@@ -323,6 +330,7 @@
                              {{ disabled_attr }}>
                     {% elif data_type == "List" %}
                       <select name="{{ field_name }}"
+                              aria-label="{{ cell_aria }}"
                               data-rs-saved-value="{{ cell.value }}"
                               {{ disabled_attr }}>
                         <option value=""{% if not cell.value %} selected{% endif %}>—</option>
@@ -333,6 +341,7 @@
                     {% else %}
                       <input type="text"
                              name="{{ field_name }}"
+                             aria-label="{{ cell_aria }}"
                              value="{{ cell.value }}"
                              data-rs-saved-value="{{ cell.value }}"
                              {{ disabled_attr }}>
@@ -343,10 +352,13 @@
                   <td style="width: 1%; white-space: nowrap; text-align: center;">
                     {% if row.submitted_at or show_incomplete_marks %}
                       {% if row.is_complete %}
-                        <span class="status-icon-complete" title="Complete">✓</span>
+                        <span class="status-icon-complete" role="img"
+                              aria-label="Complete" title="Complete">✓</span>
                       {% else %}
-                        <span class="status-icon-incomplete"
-                              title="{{ row.missing_count }} required field{{ '' if row.missing_count == 1 else 's' }} missing">⚠</span>
+                        {% set missing_label = (row.missing_count ~ " required field" ~ ("" if row.missing_count == 1 else "s") ~ " missing") %}
+                        <span class="status-icon-incomplete" role="img"
+                              aria-label="{{ missing_label }}"
+                              title="{{ missing_label }}">⚠</span>
                       {% endif %}
                       {% if row.submitted_at %}
                         <div class="muted"
