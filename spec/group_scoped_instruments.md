@@ -36,6 +36,30 @@ rather than per-individual.
 > reflect this model. The interim free-text design (and its
 > migration) is superseded.
 
+> **Revised 2026-05-19 — group-boundary tags.** The rule-based
+> model defined a reviewer's group as their *entire*
+> rule-eligible reviewee set — one group per reviewer. That
+> conflated two separate things: the **universe** (which
+> reviewees a reviewer interacts with — the rule's job, exactly
+> as for a per-reviewee instrument) and the **group boundary**
+> (how that universe partitions into the groups the reviewer
+> actually rates). A rule whose universe is "every reviewee in
+> the course" still has to split into the tutorial groups within
+> it. The boundary is now a separate operator control: a
+> **Group by** checkbox column on the Display Fields table marks
+> the reviewee / pair-context tags whose shared values define a
+> group. Members of a group share *every* ticked tag's value
+> (additive); with no tag ticked the whole universe is one group
+> (the prior behaviour). The boundary spec is stored in the
+> existing `group_kind` column — still no migration. The Display
+> Fields table keeps an *Include* column, but it is constrained:
+> a tag picked for the boundary is locked Included, a tag not
+> picked is not Includable, and only the Name row is freely
+> Includable — so the group's on-screen identity is the boundary
+> tag values, optionally plus the member-name list. The sections
+> below carry this model; "exactly one group per reviewer" no
+> longer holds.
+
 This file is the source of truth for the design. The
 implementation plan lives at
 **`guide/segment_13C_enhanced_instrument.md`**; 13C also picks up
@@ -63,34 +87,46 @@ label-level choice ("Add an instrument" vs "Add a group-scoped
 instrument") rather than a per-field fork. The reviewer never
 sees the same question wording twice in different contexts.
 
-## The model — a group is what the rule selects
+## The model — rule selects the universe, tags draw the boundary
 
-A group-scoped instrument behaves exactly like an ordinary
-instrument with one shift in **presentation**:
+A group-scoped instrument behaves like an ordinary instrument
+with one shift in **presentation** and one added operator
+control:
 
 - It carries a **pinned rule** (`instruments.rule_set_id`, the
   Segment 15B per-instrument RuleSet). The rule is **required**
-  before the instrument may accept responses.
+  before the instrument may accept responses. The rule does
+  exactly what it does for a per-reviewee instrument: it selects
+  the **universe** — the set of reviewees a given reviewer
+  interacts with.
 - Assignment generation is **unchanged** — the rule emits
   ordinary `(reviewer, reviewee, instrument)` `Assignment` rows,
   exactly as it does for a per-reviewee instrument. No
   rule-engine change, no fan-out step at generation time.
-- The shift: for a group-scoped instrument, **all of a reviewer's
-  assignments collapse into one group**. The set of reviewees the
-  rule made eligible for that reviewer *is* the reviewer's group.
-  The reviewer answers **once** for the whole set instead of once
-  per reviewee.
+- It carries **group-boundary tags** — zero or more reviewee /
+  pair-context tags the operator marks **Group by** on the
+  Display Fields table. They partition each reviewer's universe into the
+  groups the reviewer actually rates: two reviewees fall in the
+  same group for a reviewer iff they share the same value for
+  **every** boundary tag (the boundary is *additive*). With no
+  boundary tag set, the whole universe is one group.
+- The shift: the reviewer answers **once per group** instead of
+  once per reviewee.
 
-This yields exactly **one group per reviewer per group-scoped
-instrument** — the reviewer's eligible-reviewee set. There is no
-tag clustering and no notion of multiple groups within one
-instrument. A reviewer with no assignments for the instrument
-simply has no group row.
+Worked example. A rule's universe is "every reviewee in the
+course." The operator ticks **Group by** on `Class` and `Team`. A
+reviewer whose universe spans two classes of three teams each
+faces six group rows — one per `(Class, Team)` value pair — and
+answers each once. Ticking only `Team` would merge same-named
+teams across classes into one row; the additive `Class + Team`
+boundary keeps them distinct without forcing the operator to give
+every team a globally-unique name.
 
-`Full Matrix` is the natural maximal case: every reviewer's group
-is *every reviewee*. A predicate / quota rule narrows each
-reviewer's group to whatever it makes eligible. Either way the
-rule defines membership and nothing else does.
+A reviewer with no assignments for the instrument has no group
+row. `Full Matrix` with no boundary tag is the maximal degenerate
+case — one group, every reviewee; a boundary tag splits it. The
+rule defines the universe; the boundary tags, and nothing else,
+define how it is cut into groups.
 
 ## Data model
 
@@ -98,14 +134,19 @@ The mechanism: keep ordinary single-reviewee `Assignment` and
 `Response` rows, **fan one reviewer answer out to a `Response` row
 per group member on write**, and **collapse the duplicates back
 to one on read** keyed on `(reviewer_id, instrument_id,
-response_field_id)`.
+group_key, response_field_id)` — where `group_key` is the tuple
+of boundary-tag values shared by the group's members (empty when
+the instrument has no boundary tag).
 
 - `Response.assignment_id` stays strictly single-reviewee — no
   nullable FKs, no polymorphic target. Every existing
   non-group-aware query keeps working unchanged.
-- The group of a `(reviewer, instrument)` pair is simply *that
-  reviewer's `Assignment` rows for that instrument*. No stored
-  group identity, no derivation from tags.
+- The groups of a `(reviewer, instrument)` pair are the
+  partitions of *that reviewer's `Assignment` rows for that
+  instrument*, cut by the boundary tags' values. With no boundary
+  tag there is a single group — all the reviewer's rows. The only
+  stored group identity is the boundary-tag values themselves;
+  nothing else is derived or persisted.
 - Downstream code that aggregates by reviewee — Manage
   Invitations' Review Progress column, the Responses page's
   per-reviewee coverage, the Extract Data exports — routes
@@ -119,8 +160,8 @@ carried entirely by columns that already exist:
 
 | Field | Where | Type | Notes |
 |---|---|---|---|
-| `group_kind` | `Instrument` | `String(32) \| NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument; **any non-null value** flags the instrument group-scoped. The specific string is not interpreted — the `add-group` route writes `"both"` as an inert marker; a future cleanup could simplify it. |
-| `visible` | `InstrumentDisplayField` | `Boolean` | Existing per-row flag. On a group-scoped instrument it is the **Include** checkbox — which tag (or Name) rows compose the group identity on the reviewer surface. |
+| `group_kind` | `Instrument` | `String(32) \| NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument; **any non-null value** flags the instrument group-scoped. The value now **encodes the group-boundary spec**: an ordered, comma-separated list of boundary tag-key codes (`r1`-`r3` reviewee tags, `p1`-`p3` pair-context tags), e.g. `r1,p2`. A group-scoped instrument with no boundary tag keeps the sentinel `"both"` (the legacy marker) so the column stays non-null. Six codes + commas = 17 chars, well inside `String(32)`. |
+| `visible` | `InstrumentDisplayField` | `Boolean` | Existing per-row flag — the **Include** checkbox. On a group-scoped instrument a tag row's `visible` follows its Group-by tick (locked on for boundary tags, off otherwise); the **Name** row's `visible` is the freely-chosen "list group members" toggle. |
 | `sort_display_fields` | `Instrument` | `JSON \| NULL` | Existing Segment 13B per-instrument sort spec. Orders the tag rows and the member-name list. |
 
 No `Assignment`, `Response`, or RuleSet change. The free-text
@@ -167,16 +208,31 @@ restricted to **tag rows plus a Name row**:
 - **Columns.**
   - **Friendly Label** — the tag's session-wide friendly label,
     read-only (`app/services/field_labels.py`).
+  - **Group by** — a checkbox per **tag** row marking that tag a
+    group-boundary key (see "The model"); ticking more than one
+    splits the universe additively. The ticked tags' key-codes
+    are persisted, ordered, into `group_kind`. The **Name row has
+    no Group-by cell** — a group can never be bounded by a
+    per-individual identifier. With no tag ticked the reviewer's
+    whole universe is one group.
   - **Include** — a checkbox per row, persisted to the existing
-    `InstrumentDisplayField.visible` flag. The ticked rows
+    `InstrumentDisplayField.visible` flag; the ticked rows
     compose the group identity on the reviewer surface (see
-    "Composing the group identity"). Unlike a per-reviewee
-    instrument, the **Name row is not locked** here — its
-    Include is operator-choosable (unticking it omits the
-    member-name list).
+    "Composing the group identity"). It is **constrained by
+    Group by**: a tag ticked for the boundary is **locked
+    Included** (its Include box follows the Group-by tick and
+    cannot be unticked); a tag *not* ticked for the boundary is
+    **not Includable** (its Include box is disabled). Only the
+    **Name** row is freely Includable — its Include is
+    operator-choosable and independent of any boundary tick.
   - **Sort** — the per-instrument sort control (the Segment 13B
     sort spec, `Instrument.sort_display_fields`), ordering the
-    tag rows and the member-name list.
+    boundary tag-key codes written to `group_kind` and the tag
+    values within the composed identity.
+
+  A short helper line under the table explains the split: Group
+  by picks how the universe is cut into groups; Include picks
+  what renders in the group-identity column.
 
 **There is no free-text group-description field.** The group's
 on-screen identity is composed from the Included tags. When the
@@ -210,10 +266,11 @@ visually distinct from per-reviewee instrument blocks:
 
 - **Heading** — the instrument's operator-editable description,
   same as today.
-- **One group row.** The reviewer has exactly one group for the
-  instrument (their eligible-reviewee set). The row carries a
-  single **group-identity column** and one set of response
-  inputs — one rating, one comment, etc., for the whole group.
+- **One row per group.** The reviewer's universe is partitioned
+  by the instrument's boundary tags into one or more groups (just
+  one when no boundary tag is set). Each group is a row carrying
+  a **group-identity column** and one set of response inputs —
+  one rating, one comment, etc., for that whole group.
 - A reviewer with no assignments for the instrument gets no row.
 
 The visual distinction from per-reviewee tables is intentional:
@@ -227,41 +284,35 @@ picker-selected reviewer.
 
 ### Composing the group identity
 
-The group-identity column is built from the Display Fields rows
-the operator marked **Include**, rendered as up to three lines:
+The group-identity column is composed from the Display Fields
+rows marked **Include** — which, by the Include constraint above,
+is exactly the boundary tags plus optionally the Name row:
 
-1. **Reviewee tags** — the Included reviewee-tag values,
-   comma-separated.
-2. **Pair-context tags** — the Included pair-context-tag values,
-   comma-separated, on the next line.
-3. **Member names** — when the Name row is Included, the group
-   members' names, comma-separated, on the next line.
+1. **Boundary tag values** — the group's value for each Included
+   boundary tag, comma-separated, in Sort order, on one line. By
+   construction every member shares these values, so each renders
+   a single crisp value.
+2. **Member names** — when the Name row is Included, the group
+   members' names, comma-separated, on a second line below.
 
 Tag **values are shown verbatim** — no friendly-label prefix.
-The operator names the tag values themselves, so a `tag2` value
-of `Group 5` and a `tag3` value of `Team A` render directly as
+The operator names the tag values themselves, so a boundary tag
+value of `Group 5` and another of `Team A` render directly as
 `Group 5, Team A`.
 
-The group is **rule-defined**, so its members are not guaranteed
-to share a value for a given tag. When an Included tag has more
-than one distinct value across the group, all distinct values
-are shown comma-separated. In practice this composed identity
-works cleanly because operators Include the tags the pinned rule
-clusters on — the vast majority of group-review cases (e.g. an
-*Intra-group* rule with its group tag Included) — so a single
-crisp value per tag is the norm; the Name row is the unambiguous
-fallback when it is not. (See also `spec/rule_based_assignment.md`
-§7.2 on ordering the predicate-editor field selector
-reviewee-/pair-tags-first, which keeps a relevant tag in play
-for nearly every rule.)
+When an instrument has no boundary tag the whole universe is one
+group with no tag values to show; the member-name list (if the
+Name checkbox is ticked) is then the group's only identity, and
+operators will normally tick it in that case.
 
 ### Write fan-out
 
-The reviewer submits one answer per response field. On submit the
-write path **fans that answer out** to a `Response` row for every
-`(reviewer, reviewee)` assignment in the group — the same value
-written N times, once per member. Each row remains an ordinary
-single-assignment `Response`.
+The reviewer submits one answer per response field per group. On
+submit the write path **fans that answer out** to a `Response`
+row for every `(reviewer, reviewee)` assignment **in that
+group** — the same value written once per member of the group it
+was answered for, not across the reviewer's whole universe. Each
+row remains an ordinary single-assignment `Response`.
 
 ## Aggregation contract
 
@@ -274,18 +325,21 @@ def collapse_group_duplicates(rows):
     """Collapse the N group-duplicate response rows back to one.
 
     For rows belonging to a group-scoped instrument, emit a single
-    row keyed on (reviewer_id, instrument_id, response_field_id)
-    with the shared value. Per-reviewee rows pass through
-    unchanged. Consumers that need the per-member fan-out shape
-    (e.g. a CSV export with one row per member) use the raw rows
-    without routing through this helper.
+    row per group keyed on (reviewer_id, instrument_id, group_key,
+    response_field_id) with the shared value — where group_key is
+    the boundary-tag value tuple (empty when the instrument has no
+    boundary tag). Per-reviewee rows pass through unchanged.
+    Consumers that need the per-member fan-out shape (e.g. a CSV
+    export with one row per member) use the raw rows without
+    routing through this helper.
     """
 ```
 
 Every consumer that aggregates by reviewee or reports
 "completion" routes through the helper. The contract: a single
-group response counts as **one completion** at the
-group-scoped-instrument level, not N.
+group response counts as **one completion per group**, not N per
+member, and a group-scoped instrument with K boundary-defined
+groups counts K completions, not one.
 
 **Trade-off — dedup discipline.** The collapse must be honored
 everywhere data leaves the system or rolls up. A missed collapse
@@ -315,9 +369,14 @@ the two without re-deriving from the schema.
 - **Per-question group scope.** A whole instrument is one mode or
   the other; an instrument never mixes per-reviewee and group
   questions.
-- **Tag-cluster grouping.** The superseded mechanism — composite
-  `group_kind`, derived tag tuples, multiple groups per
-  instrument. Do not reintroduce it.
+- **Tags as membership.** A group's *membership* is never defined
+  by tags — the pinned rule defines the universe, exactly as for
+  a per-reviewee instrument. Boundary tags only **partition** an
+  already rule-selected universe; they never add or remove
+  reviewees. (The superseded pre-2026-05-18 design used a
+  composite `group_kind` of tag keys *as the membership
+  mechanism, with no rule* — that conflation is what is out of
+  scope, not the use of tags to draw a boundary.)
 - **Mode-flipping after creation.** Operators delete and
   recreate.
 - **Manual CSV assignment mode for group-scoped instruments.**
@@ -339,11 +398,17 @@ the two without re-deriving from the schema.
   group-scoped instrument — does the reminder say "you have an
   unanswered group rating" or enumerate the group? Probably the
   former; confirm with an operator before shipping.
+- **Boundary tags with blank values.** A reviewee missing a
+  boundary tag's value — do the blanks form their own labelled
+  "(unset)" group, or is the row dropped? Probably an "(unset)"
+  group so no reviewee silently vanishes; confirm when PR 2
+  starts.
 
 ## Cross-references
 
 - `app/db/models/instrument.py` — `group_kind` column (exists;
-  the group-scoped flag) and `rule_set_id` (the pinned rule).
+  the group-scoped flag, and the encoded group-boundary spec)
+  and `rule_set_id` (the pinned rule).
 - `app/db/models/instrument_field.py` — `InstrumentDisplayField`,
   whose existing `visible` flag is the Include checkbox on a
   group-scoped instrument.
