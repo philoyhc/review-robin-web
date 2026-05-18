@@ -8,7 +8,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Assignment, AuditEvent, Instrument, Reviewer, ReviewSession
+from app.db.models import (
+    Assignment,
+    AuditEvent,
+    Instrument,
+    Response,
+    Reviewer,
+    ReviewSession,
+)
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -1038,3 +1045,56 @@ def test_inactive_reviewer_row_403s_on_surface(
     rae_client = make_client(rae)
     response = rae_client.get(f"/reviewer/sessions/{review_session.id}")
     assert response.status_code == 403
+
+
+def test_save_drops_foreign_assignment_id_from_post(
+    db: Session,
+    alice: AuthenticatedUser,
+    bob: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A reviewer save POST must not trust a client-supplied
+    assignment_id: an id belonging to another session's reviewer is
+    silently dropped, never written. Guards the §5.6 "POST endpoints
+    do not trust client-side identifiers" contract.
+    """
+    op_alice = make_client(alice)
+    rae_session = _operator_creates_session_with_pair(
+        op_alice,
+        db,
+        code="rae-tamper",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    op_bob = make_client(bob)
+    foreign_session = _operator_creates_session_with_pair(
+        op_bob,
+        db,
+        code="bob-tamper",
+        reviewer_email="someone@example.edu",
+        reviewee_ident="dan@example.edu",
+    )
+    foreign_assignment = db.execute(
+        select(Assignment).where(
+            Assignment.session_id == foreign_session.id
+        )
+    ).scalar_one()
+
+    rae_client = make_client(rae)
+    response = rae_client.post(
+        f"/reviewer/sessions/{rae_session.id}/1/save",
+        data={
+            f"response[{foreign_assignment.id}][rating]": "4",
+            f"response[{foreign_assignment.id}][comments]": "tampered",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    written = db.execute(
+        select(Response).where(
+            Response.assignment_id == foreign_assignment.id
+        )
+    ).scalars().all()
+    assert written == []

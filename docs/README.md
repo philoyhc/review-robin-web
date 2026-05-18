@@ -15,6 +15,7 @@ Authoritative for "what does the code currently do" — read
 | `imports.md` | CSV import format for reviewers / reviewees / assignments (operator-facing how-to). |
 | `local_setup.md` | Developer how-to for running tests, migrations, and the dev server locally. |
 | `deployment_dev.md` | Dev Azure App Service deployment notes (resource names, GRANT bootstrap, etc.). |
+| `security_posture.md` | Authorization model + permission / destructive-action audit matrices. Draft — Segment 14A PR 6 completes it into the full security posture note. |
 
 Sibling folders:
 
