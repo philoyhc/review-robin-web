@@ -28,6 +28,30 @@
         <span class="muted">—</span>
       {% endfor %}
     </p>
+    {% if reviewees and not edit_mode %}
+      {% set has_photo = reviewees | selectattr("profile_link") | list | length > 0 %}
+      {% set has_tag_1 = reviewees | selectattr("tag_1") | list | length > 0 %}
+      {% set has_tag_2 = reviewees | selectattr("tag_2") | list | length > 0 %}
+      {% set has_tag_3 = reviewees | selectattr("tag_3") | list | length > 0 %}
+      <p class="col-chip-row" style="margin: 12px 0 0 0;">
+        <span>Show columns:</span>
+        {% if has_photo %}
+          <button type="button" class="col-chip is-selected"
+                  data-col-toggle="profile" aria-pressed="true">
+            {{ field_label_header(session, "reviewee", "profile_link") }}
+          </button>
+        {% endif %}
+        {% for slot, has_data in [(1, has_tag_1), (2, has_tag_2), (3, has_tag_3)] %}
+          <button type="button"
+                  class="col-chip{% if has_data %} is-selected{% endif %}"
+                  data-col-toggle="tag-{{ slot }}"
+                  aria-pressed="{{ 'true' if has_data else 'false' }}"
+                  {% if not has_data %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+            {{ field_label_header(session, "reviewee", "tag_" ~ slot) }}
+          </button>
+        {% endfor %}
+      </p>
+    {% endif %}
   </div>
 
   {% if is_ready %}
@@ -194,38 +218,7 @@
     {# Profile-link column always shows in edit mode so the operator
        can fill / clear it; otherwise only when some row has data. #}
     {% set show_profile_link = edit_mode or has_photo %}
-    {% if not edit_mode %}
-      {% set has_tag_1 = reviewees | selectattr("tag_1") | list | length > 0 %}
-      {% set has_tag_2 = reviewees | selectattr("tag_2") | list | length > 0 %}
-      {% set has_tag_3 = reviewees | selectattr("tag_3") | list | length > 0 %}
-    {% endif %}
     <div class="card">
-      {% if not edit_mode %}
-        <div class="tag-col-toggles"
-             style="display: flex; justify-content: flex-end; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2);">
-          <label style="font-weight: normal;">
-            <input type="checkbox"
-                   class="tag-col-toggle"
-                   data-tag-toggle="1"
-                   {% if has_tag_1 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-            Tag1
-          </label>
-          <label style="font-weight: normal;">
-            <input type="checkbox"
-                   class="tag-col-toggle"
-                   data-tag-toggle="2"
-                   {% if has_tag_2 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-            Tag2
-          </label>
-          <label style="font-weight: normal;">
-            <input type="checkbox"
-                   class="tag-col-toggle"
-                   data-tag-toggle="3"
-                   {% if has_tag_3 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-            Tag3
-          </label>
-        </div>
-      {% endif %}
       <table id="reviewees-table"
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewees-{{ session.id }}"{% endif %}>
         <thead>
@@ -252,7 +245,7 @@
             <th class="rrw-sortable" data-sort-key="email_or_identifier">{{ field_label_header(session, "reviewee", "email_or_identifier") }}<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Email / Identifier"
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "email_or_identifier") }}</th>
-            {% if show_profile_link %}<th>{{ field_label_header(session, "reviewee", "profile_link") }}{{ field_label_canonical_subtext(session, "reviewee", "profile_link") }}</th>{% endif %}
+            {% if show_profile_link %}<th class="profile-col">{{ field_label_header(session, "reviewee", "profile_link") }}{{ field_label_canonical_subtext(session, "reviewee", "profile_link") }}</th>{% endif %}
             <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1">{{ field_label_header(session, "reviewee", "tag_1") }}<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Tag1"
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "tag_1") }}</th>
@@ -358,7 +351,7 @@
               <td data-sort-value="{{ reviewee.name }}">{{ reviewee.name }}</td>
               <td data-sort-value="{{ reviewee.email_or_identifier }}"><code>{{ reviewee.email_or_identifier }}</code></td>
               {% if show_profile_link %}
-                <td>
+                <td class="profile-col">
                   {% if reviewee.profile_link %}
                     <a href="{{ reviewee.profile_link }}" target="_blank" rel="noopener">link</a>
                   {% endif %}
@@ -387,11 +380,12 @@
     </div>
   {% endif %}
 
-  {% if not edit_mode %}
+  {% if reviewees and not edit_mode %}
     <style>
-      #reviewees-table.tag-hidden-1 .tag-col-1,
-      #reviewees-table.tag-hidden-2 .tag-col-2,
-      #reviewees-table.tag-hidden-3 .tag-col-3 {
+      #reviewees-table.col-hidden-tag-1 .tag-col-1,
+      #reviewees-table.col-hidden-tag-2 .tag-col-2,
+      #reviewees-table.col-hidden-tag-3 .tag-col-3,
+      #reviewees-table.col-hidden-profile .profile-col {
         display: none;
       }
     </style>
@@ -399,34 +393,43 @@
       (function () {
         var STORAGE_KEY = "rrw-reviewee-tag-visibility";
         var table = document.getElementById("reviewees-table");
-        var toggles = document.querySelectorAll(".tag-col-toggle");
-        if (!table || !toggles.length) return;
+        var chips = document.querySelectorAll(".col-chip");
+        if (!table || !chips.length) return;
         var stored = null;
         try {
           stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
         } catch (e) {}
-        toggles.forEach(function (cb) {
-          var slot = cb.getAttribute("data-tag-toggle");
-          if (cb.disabled) {
+        chips.forEach(function (chip) {
+          var slot = chip.getAttribute("data-col-toggle");
+          if (chip.disabled) {
             apply(slot, false);
             return;
           }
+          var visible = true;
           if (stored && Object.prototype.hasOwnProperty.call(stored, slot)) {
-            cb.checked = !!stored[slot];
+            visible = !!stored[slot];
           }
-          apply(slot, cb.checked);
-          cb.addEventListener("change", function () {
-            apply(slot, cb.checked);
+          setChip(chip, slot, visible);
+          chip.addEventListener("click", function () {
+            setChip(chip, slot, chip.getAttribute("aria-pressed") !== "true");
             persist();
           });
         });
+        function setChip(chip, slot, visible) {
+          chip.classList.toggle("is-selected", visible);
+          chip.setAttribute("aria-pressed", visible ? "true" : "false");
+          apply(slot, visible);
+        }
         function apply(slot, visible) {
-          table.classList.toggle("tag-hidden-" + slot, !visible);
+          table.classList.toggle("col-hidden-" + slot, !visible);
         }
         function persist() {
           var state = {};
-          toggles.forEach(function (cb) {
-            state[cb.getAttribute("data-tag-toggle")] = cb.checked;
+          chips.forEach(function (chip) {
+            if (!chip.disabled) {
+              state[chip.getAttribute("data-col-toggle")] =
+                chip.getAttribute("aria-pressed") === "true";
+            }
           });
           try {
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));

@@ -9,9 +9,9 @@
 > (Export and import update,
 > `guide/archive/segment_18D_export_and_import_update.md`).
 
-**Holding pen.** Part 1 is sketch-level scope; **Part 2 has
-shipped** (2026-05-18). New items land as additional Parts as
-they surface.
+**Holding pen.** **Part 1 has shipped** (2026-05-18) and
+**Part 2 has shipped** (2026-05-18). New items land as
+additional Parts as they surface.
 
 ## Goal
 
@@ -24,47 +24,39 @@ at the time, not by building a fixed scope.
 
 ## Scope (sketch)
 
-### Part 1 — Reuse the tag-filter chip mechanism on the Setup pages
+### Part 1 — Column-visibility chips on the Setup pages — shipped 2026-05-18
 
-**Context.** Segment 18A Part 2 introduces a tag-filter
-strip on the Sessions lobby: clickable chips that show /
-hide table rows by tag membership. The mechanism is a pure
-client-side JS toggle over already-rendered rows — chips
-stamped with a selector, rows stamped with `data-` markers,
-no schema and no server round-trip.
+**Context.** The **Reviewers / Reviewees / Relationships**
+Setup pages each carried a right-flushed strip of three
+disabled-when-empty `Tag1`/`Tag2`/`Tag3` checkboxes above the
+preview table, toggling per-column visibility via a localStorage-
+persisted CSS class on the table.
 
-The **Reviewers / Reviewees / Relationships** Setup pages
-already have info cards that report **which columns hold
-data**. The same chip mechanism applies cleanly there, with
-one shape difference: the lobby filters *rows* by tag
-membership, whereas the Setup pages would toggle *column*
-visibility — clicking a column-name chip shows / hides that
-column of the already-rendered preview table.
+**What shipped.** The checkbox strip is retired in favour of a
+`Show columns:` **chip row** in the top "Fields with data" card,
+directly below the `Fields with data:` line:
 
-**Goal.** Let the operator collapse empty / uninteresting
-columns on the preview tables by clicking the column chips
-the info card already renders, so a wide roster table can
-be narrowed to the columns that matter.
+- Each optional column gets a `<button class="col-chip">` carrying
+  the column's **friendly label** (the operator-set field label,
+  falling back to the default). Filled (`is-selected`) means the
+  column is shown; clicking toggles it.
+- Coverage is **all optional columns**, not just tags: the
+  Reviewees row additionally carries a chip for the profile-link
+  column (`data-col-toggle="profile"`, `class="profile-col"`).
+  Name / Email / Status / Updated stay always-visible.
+- An optional column with no data renders a **disabled, struck-
+  through chip** (the profile-link column is server-rendered only
+  when it has data, so its chip never reaches that state).
+- Per-browser localStorage persistence is preserved, under the
+  same per-page keys (`rrw-{reviewer,reviewee,relationship}-tag-visibility`).
+- No `and`/`or`, no `Select all` / `Clear all` — deliberately
+  minimal. No schema; visibility is CSS class toggling on the
+  table. The mechanism stays inline JS + scoped `<style>` per
+  template (the column shapes differ enough that a macro wasn't
+  worth it); `.col-chip` styling lives in `base.html`.
 
-Likely shape:
-
-- Generalise the 18A tag-filter script into a small generic
-  helper — "chip toggles the elements matching its
-  selector" — rather than one bespoke filter function. The
-  lobby uses it for row visibility; the Setup pages use it
-  for column visibility.
-- The Setup-page info cards make their existing
-  column-presence readout the clickable chip set. A column
-  with no data starts hidden (or starts shown — decide at
-  scoping); a `Clear all` / `Select all` chip mirrors the
-  lobby's toggle.
-- No schema: column-presence is already computed for the
-  current info cards; visibility is CSS class toggling on
-  `<col>` / `<td>` / `<th>` elements.
-- Tradeoff to settle at scoping: client-side only covers
-  rows / columns already rendered (fine while these tables
-  aren't paginated) and state resets on reload unless
-  mirrored into a query param.
+Spec: `spec/setup_pages.md` "Preview tables (shared toggle
+pattern)".
 
 ### Part 2 — Eligible-pair count performance — shipped 2026-05-18
 
@@ -105,10 +97,7 @@ small PRs. This Part is **done**, not sketch scope.
 
 ## Hard dependencies
 
-- **Part 1** wants the 18A Part 2 tag-filter script as the
-  generalisation base. It can also ship standalone (the
-  generic helper written first, the lobby refactored onto
-  it second) if 18E is picked up before 18A Part 2.
+- _(none outstanding — Parts 1 and 2 have shipped.)_
 
 ## Out of scope
 
@@ -121,13 +110,10 @@ small PRs. This Part is **done**, not sketch scope.
 
 When parts ship:
 
-- `docs/status.md` timeline entry per Part.
-- `guide/todo_master.md` updated.
+- `docs/status.md` timeline entry per Part. _(Done — Parts 1 & 2.)_
+- `guide/todo_master.md` updated. _(Done.)_
 - `spec/setup_pages.md` — column-toggle behaviour on the
-  preview tables, if Part 1 ships.
-- `spec/sessions_overview.md` — cross-reference to the
-  shared chip-toggle helper if the lobby is refactored
-  onto it.
+  preview tables. _(Done — Part 1.)_
 
 ## Working notes
 

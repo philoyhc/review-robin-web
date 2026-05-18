@@ -30,6 +30,23 @@
         <span class="muted">—</span>
       {% endfor %}
     </p>
+    {% if reviewers and not edit_mode %}
+      {% set has_tag_1 = reviewers | selectattr("tag_1") | list | length > 0 %}
+      {% set has_tag_2 = reviewers | selectattr("tag_2") | list | length > 0 %}
+      {% set has_tag_3 = reviewers | selectattr("tag_3") | list | length > 0 %}
+      <p class="col-chip-row" style="margin: 12px 0 0 0;">
+        <span>Show columns:</span>
+        {% for slot, has_data in [(1, has_tag_1), (2, has_tag_2), (3, has_tag_3)] %}
+          <button type="button"
+                  class="col-chip{% if has_data %} is-selected{% endif %}"
+                  data-col-toggle="tag-{{ slot }}"
+                  aria-pressed="{{ 'true' if has_data else 'false' }}"
+                  {% if not has_data %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
+            {{ field_label_header(session, "reviewer", "tag_" ~ slot) }}
+          </button>
+        {% endfor %}
+      </p>
+    {% endif %}
   </div>
 
   {% if is_ready %}
@@ -191,38 +208,7 @@
 
   {% if reviewers or add_mode %}
     {% set selectable = not edit_mode and not is_ready %}
-    {% if not edit_mode %}
-      {% set has_tag_1 = reviewers | selectattr("tag_1") | list | length > 0 %}
-      {% set has_tag_2 = reviewers | selectattr("tag_2") | list | length > 0 %}
-      {% set has_tag_3 = reviewers | selectattr("tag_3") | list | length > 0 %}
-    {% endif %}
     <div class="card">
-      {% if not edit_mode %}
-        <div class="tag-col-toggles"
-             style="display: flex; justify-content: flex-end; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2);">
-          <label style="font-weight: normal;">
-            <input type="checkbox"
-                   class="tag-col-toggle"
-                   data-tag-toggle="1"
-                   {% if has_tag_1 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-            Tag1
-          </label>
-          <label style="font-weight: normal;">
-            <input type="checkbox"
-                   class="tag-col-toggle"
-                   data-tag-toggle="2"
-                   {% if has_tag_2 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-            Tag2
-          </label>
-          <label style="font-weight: normal;">
-            <input type="checkbox"
-                   class="tag-col-toggle"
-                   data-tag-toggle="3"
-                   {% if has_tag_3 %}checked{% else %}disabled aria-disabled="true" title="No data in this column"{% endif %}>
-            Tag3
-          </label>
-        </div>
-      {% endif %}
       <table id="reviewers-table"
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewers-{{ session.id }}"{% endif %}>
         <thead>
@@ -360,11 +346,11 @@
     </div>
   {% endif %}
 
-  {% if not edit_mode %}
+  {% if reviewers and not edit_mode %}
     <style>
-      #reviewers-table.tag-hidden-1 .tag-col-1,
-      #reviewers-table.tag-hidden-2 .tag-col-2,
-      #reviewers-table.tag-hidden-3 .tag-col-3 {
+      #reviewers-table.col-hidden-tag-1 .tag-col-1,
+      #reviewers-table.col-hidden-tag-2 .tag-col-2,
+      #reviewers-table.col-hidden-tag-3 .tag-col-3 {
         display: none;
       }
     </style>
@@ -372,34 +358,43 @@
       (function () {
         var STORAGE_KEY = "rrw-reviewer-tag-visibility";
         var table = document.getElementById("reviewers-table");
-        var toggles = document.querySelectorAll(".tag-col-toggle");
-        if (!table || !toggles.length) return;
+        var chips = document.querySelectorAll(".col-chip");
+        if (!table || !chips.length) return;
         var stored = null;
         try {
           stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
         } catch (e) {}
-        toggles.forEach(function (cb) {
-          var slot = cb.getAttribute("data-tag-toggle");
-          if (cb.disabled) {
+        chips.forEach(function (chip) {
+          var slot = chip.getAttribute("data-col-toggle");
+          if (chip.disabled) {
             apply(slot, false);
             return;
           }
+          var visible = true;
           if (stored && Object.prototype.hasOwnProperty.call(stored, slot)) {
-            cb.checked = !!stored[slot];
+            visible = !!stored[slot];
           }
-          apply(slot, cb.checked);
-          cb.addEventListener("change", function () {
-            apply(slot, cb.checked);
+          setChip(chip, slot, visible);
+          chip.addEventListener("click", function () {
+            setChip(chip, slot, chip.getAttribute("aria-pressed") !== "true");
             persist();
           });
         });
+        function setChip(chip, slot, visible) {
+          chip.classList.toggle("is-selected", visible);
+          chip.setAttribute("aria-pressed", visible ? "true" : "false");
+          apply(slot, visible);
+        }
         function apply(slot, visible) {
-          table.classList.toggle("tag-hidden-" + slot, !visible);
+          table.classList.toggle("col-hidden-" + slot, !visible);
         }
         function persist() {
           var state = {};
-          toggles.forEach(function (cb) {
-            state[cb.getAttribute("data-tag-toggle")] = cb.checked;
+          chips.forEach(function (chip) {
+            if (!chip.disabled) {
+              state[chip.getAttribute("data-col-toggle")] =
+                chip.getAttribute("aria-pressed") === "true";
+            }
           });
           try {
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
