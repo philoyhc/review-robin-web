@@ -740,7 +740,7 @@ Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
 **13C, 13F (PRs 4-5), 14B, 14C, 17B,
-18E, 18F, 19, 20, 21**. No global ordering
+18E, 18F, 19, 20**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
 
@@ -871,22 +871,22 @@ bottom of this file.
   page through Known limitations page).
   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-- **21 — Generalized audiences & response visibility**
-  *(stub 2026-05-16; built out 2026-05-18)*. Generalizes Review
-  Robin from an operator-and-reviewer review platform into a
-  participant system: reviewees and a new **observer** audience
-  get their own surfaces, and **response visibility becomes
-  explicit data** — a per-instrument policy for which audiences
-  may view responses and in what form (identified/de-identified,
-  per-line/summarized). Adds a session schedule (open / close /
-  results-viewing windows). The assignment-generation model
-  (per-instrument rule engine) stays; 21 enhances it. New data
-  structures: `observers`, `instrument_view_policies`,
-  `reviewees.contact_email`, session schedule columns. Hard-deps
-  14B (notifications) and coordinates with 18F (the scheduler).
-  Opt-in per instrument — confidential instruments keep no
-  reviewee/observer view.
-  **Plan:** `guide/segment_21_peer_review_enhancements.md`.
+- **Participant-model upgrade (segments 21+)** — Review
+  Robin's planned evolution beyond the MVP into a generalized
+  participant model: reviewees and a new observer audience get
+  surfaces, response visibility becomes explicit per-instrument
+  policy data, sessions gain open / close / results-viewing
+  schedules, and magic links become an in-scope optional
+  affordance for reviewers / reviewees / observers.
+  **Roadmap numbering:** segments **1–20** cover the MVP of the
+  current review-platform model; **21–30 and beyond** are
+  reserved for the participant-model upgrade — each gets its
+  own `segment_2X_*.md` plan when scoped. Nothing in the band is
+  scheduled yet; the standing design guidance (the new data
+  structures, auth posture, surfaces, and an exploratory
+  Excel-workbook import/export item) lives in
+  `guide/participant_model_upgrade.md`.
+  **Guidance:** `guide/participant_model_upgrade.md`.
 
 > The AG Grid replacement of the reviewer-surface table was
 > briefly a segment here (numbered 17 → 17A → 22) but was
@@ -907,7 +907,7 @@ bottom of this file.
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
 - **13C, 13F (PRs 4-5), 17B,
-  18E, 18F, 19, 20, 21** are independent of the email +
+  18E, 18F, 19, 20** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
   13C's re-scoped 3-PR ladder (2026-05-15) needs no rule-engine
