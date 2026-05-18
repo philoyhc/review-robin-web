@@ -53,6 +53,12 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./review_robin_web.db"
 
+    # Root log level for the structured-logging setup configured by
+    # ``app.logging_config.configure_logging`` (called from
+    # ``create_app``). Any standard ``logging`` level name; an
+    # unrecognised value falls back to ``INFO``.
+    log_level: str = "INFO"
+
     # Symmetric Fernet key (Base64-urlsafe-encoded 32 bytes) used to
     # encrypt operator SMTP passwords at rest. ``None`` is fail-loud at
     # encrypt / decrypt time rather than at startup so local dev / tests

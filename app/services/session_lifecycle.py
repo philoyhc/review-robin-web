@@ -22,8 +22,11 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.logging_config import get_logger
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit
+
+log = get_logger(__name__)
 
 
 class SessionStatus(str, Enum):
@@ -283,6 +286,16 @@ def activate_session(
     )
     db.commit()
     db.refresh(review_session)
+    log.info(
+        "session activated",
+        extra={
+            "session_id": review_session.id,
+            "code": review_session.code,
+            "instruments": len(instruments),
+            "override_warnings": bool(report.has_non_blocking_findings),
+            "correlation_id": correlation_id,
+        },
+    )
     return review_session
 
 

@@ -26,7 +26,10 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.logging_config import get_logger
 from app.services import audit
+
+log = get_logger(__name__)
 
 __all__ = ["purge_responses", "purge_rosters", "purge_audit_log"]
 
@@ -74,6 +77,16 @@ def purge_responses(
         correlation_id=correlation_id,
     )
     db.commit()
+    log.info(
+        "session data purged",
+        extra={
+            "session_id": session_id,
+            "kind": "responses",
+            "responses": responses,
+            "invitations": invitations,
+            "correlation_id": correlation_id,
+        },
+    )
 
 
 def purge_rosters(
@@ -134,6 +147,20 @@ def purge_rosters(
         correlation_id=correlation_id,
     )
     db.commit()
+    log.info(
+        "session data purged",
+        extra={
+            "session_id": session_id,
+            "kind": "rosters",
+            "reviewers": reviewers,
+            "reviewees": reviewees,
+            "relationships": relationships,
+            "assignments": assignments,
+            "responses": responses,
+            "invitations": invitations,
+            "correlation_id": correlation_id,
+        },
+    )
 
 
 def purge_audit_log(
@@ -162,3 +189,12 @@ def purge_audit_log(
         correlation_id=correlation_id,
     )
     db.commit()
+    log.info(
+        "session data purged",
+        extra={
+            "session_id": review_session.id,
+            "kind": "audit_log",
+            "audit_events": purged,
+            "correlation_id": correlation_id,
+        },
+    )

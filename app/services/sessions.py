@@ -4,11 +4,14 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
+from app.logging_config import get_logger
 from app.schemas.sessions import SessionCreate
 from app.services import audit, operator_settings, session_lifecycle as lifecycle
 from app.services.instruments import ensure_default_instrument
 from app.services.library_materialise import materialise_operator_libraries
 from app.services.rules.seeds import materialise_seed_rule_sets
+
+log = get_logger(__name__)
 
 
 def create_session(
@@ -296,3 +299,11 @@ def delete_session(
         correlation_id=correlation_id,
     )
     db.commit()
+    log.info(
+        "session deleted",
+        extra={
+            "session_id": captured["id"],
+            "code": captured["code"],
+            "correlation_id": correlation_id,
+        },
+    )

@@ -13,7 +13,13 @@ from app.db import models as _models  # noqa: F401  (registers all models on Bas
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # ``disable_existing_loggers=False`` so configuring Alembic's own
+    # logging does not silently disable the application loggers
+    # (``app.*``) when ``env.py`` runs in-process — e.g. the test
+    # suite, or a future in-process migrate-on-deploy step. The
+    # default (``True``) would mark every pre-existing logger
+    # ``disabled``, swallowing the structured-logging stream.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 if not config.get_main_option("sqlalchemy.url"):
     config.set_main_option("sqlalchemy.url", settings.database_url)

@@ -15,8 +15,11 @@ from app.schemas.imports import (
     ReviewerImportRow,
     RevieweeImportRow,
 )
+from app.logging_config import get_logger
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, session_lifecycle as lifecycle
+
+log = get_logger(__name__)
 
 MAX_BYTES = 1 * 1024 * 1024
 MAX_ROWS = 5000
@@ -51,6 +54,10 @@ def decode_csv(
     ``MANUAL_CSV_MAX_BYTES`` constant without forking the helper.
     """
     if len(content) > max_bytes:
+        log.warning(
+            "csv import rejected",
+            extra={"source": source, "reason": "too_large", "bytes": len(content)},
+        )
         return None, ValidationIssue(
             severity=Severity.error,
             source=source,
@@ -59,6 +66,10 @@ def decode_csv(
     try:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError:
+        log.warning(
+            "csv import rejected",
+            extra={"source": source, "reason": "not_utf8"},
+        )
         return None, ValidationIssue(
             severity=Severity.error,
             source=source,
@@ -570,6 +581,17 @@ def _save(
     )
 
     db.commit()
+    log.info(
+        "roster imported",
+        extra={
+            "session_id": session.id,
+            "source": source_label,
+            "new": len(rows),
+            "replaced": replaced,
+            "cascaded_assignments": cascaded_assignment_count,
+            "correlation_id": correlation_id,
+        },
+    )
     return replaced, len(rows)
 
 
@@ -662,4 +684,14 @@ def _delete_all(
         correlation_id=correlation_id,
     )
     db.commit()
+    log.info(
+        "roster deleted",
+        extra={
+            "session_id": review_session.id,
+            "source": source_label,
+            "deleted": deleted,
+            "cascaded_assignments": cascaded,
+            "correlation_id": correlation_id,
+        },
+    )
     return deleted, cascaded
