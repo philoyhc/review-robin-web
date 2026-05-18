@@ -40,6 +40,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    Instrument,
     ReviewSession,
     RuleSet,
     RuleSetRevision,
@@ -115,17 +116,25 @@ def evaluate_session_rule_eligibility(
     db: Session, review_session: ReviewSession
 ) -> dict[int, int]:
     """Per-rule eligibility-count map (``session_rule_sets.id ->
-    N pairs``) computed by running the rule engine against the
+    N pairs``) for the rules **pinned to an instrument** in this
+    session — computed by running the rule engine against the
     session's current reviewer / reviewee populations.
 
-    Shared by the Slice 2a per-instrument card picker (eligibility
-    pill on each option) and the Slice 3a Assignments-page status
-    blocks (Eligible-pairs count per instrument). Engine errors on
+    Only pinned rules are evaluated. An unpinned rule has no
+    instrument showing its count, so running the engine for it
+    is wasted work — and the engine pass over the full
+    reviewer × reviewee space is the expensive step (it scales
+    with the product of the two roster sizes). Callers render
+    "--" for an instrument with no pinned rule rather than a
+    number.
+
+    Shared by the per-instrument card picker, the Assignments-page
+    status blocks, and the Validate page's staleness rule — all
+    of which only ever read pinned-rule entries. Engine errors on
     a malformed snapshot fall back to ``0`` for that rule rather
     than tearing down the whole page render.
 
-    Empty rosters → returns ``{rule_set_id: 0, ...}`` for every
-    visible rule.
+    No pinned rules (or empty rosters) → ``{}``.
     """
     from pydantic import TypeAdapter
 
@@ -142,9 +151,25 @@ def evaluate_session_rule_eligibility(
     )
     from app.services.rules import engine
 
-    rule_sets = list_visible_session_rule_sets(
-        db, session_id=review_session.id
+    pinned_ids = set(
+        db.execute(
+            select(Instrument.rule_set_id)
+            .where(
+                Instrument.session_id == review_session.id,
+                Instrument.rule_set_id.is_not(None),
+            )
+            .distinct()
+        ).scalars()
     )
+    if not pinned_ids:
+        return {}
+    rule_sets = [
+        row
+        for row in list_visible_session_rule_sets(
+            db, session_id=review_session.id
+        )
+        if row.id in pinned_ids
+    ]
     if not rule_sets:
         return {}
     rule_adapter = TypeAdapter(Rule)

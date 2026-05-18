@@ -210,7 +210,6 @@ class InstrumentRulePickerOption:
     id: int
     name: str
     description: str
-    eligible_pair_count: int
     is_seeded: bool
 
 
@@ -225,24 +224,30 @@ class InstrumentRulePickerContext:
     RuleSets); the per-card variation lives in
     ``selected_rule_set_id`` + ``selected_eligible_pair_count`` +
     ``open_rule_builder_url``.
+
+    ``selected_eligible_pair_count`` is ``None`` when the instrument
+    has no rule pinned — the template renders "--" rather than a
+    number, and the rule engine is not run for it.
     """
 
     options: list[InstrumentRulePickerOption]
     selected_rule_set_id: int | None
-    selected_eligible_pair_count: int
+    selected_eligible_pair_count: int | None
     open_rule_builder_url: str
 
 
 def _build_rule_picker_options(
     db: Session, review_session: ReviewSession
 ) -> tuple[list[InstrumentRulePickerOption], dict[int, int]]:
-    """Compute the picker option list + a per-rule eligibility-count
-    map (``rule_set_id -> N pairs``) once per page load.
+    """Compute the picker option list + the eligibility-count map
+    for the rules **pinned to instruments** (``rule_set_id ->
+    N pairs``), once per page load.
 
-    Each option's count comes from the shared
-    :func:`session_library.evaluate_session_rule_eligibility` engine
-    pass — same helper drives the Slice 3a Assignments-page status
-    blocks. Empty rule pool → ``([], {})``.
+    The dropdown options carry no per-option count — the engine is
+    run only for rules actually pinned to an instrument
+    (:func:`session_library.evaluate_session_rule_eligibility`),
+    so an unpinned rule is never evaluated. Empty rule pool →
+    ``([], {})``.
     """
     from app.services.rules import session_library
 
@@ -259,7 +264,6 @@ def _build_rule_picker_options(
             id=row.id,
             name=row.name,
             description=row.description or "",
-            eligible_pair_count=eligibility_by_id.get(row.id, 0),
             is_seeded=row.is_seeded,
         )
         for row in rule_sets
@@ -284,9 +288,9 @@ def build_instrument_rule_picker_contexts(
     for instrument in instruments:
         selected_id = instrument.rule_set_id
         selected_count = (
-            eligibility_by_id.get(selected_id, 0)
+            eligibility_by_id.get(selected_id)
             if selected_id is not None
-            else 0
+            else None
         )
         builder_url = (
             f"/operator/sessions/{review_session.id}"

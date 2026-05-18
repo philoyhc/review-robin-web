@@ -331,12 +331,13 @@ def test_open_rule_builder_threads_instrument_id(
     assert "Back to Assignments" not in editor_body
 
 
-def test_picker_eligibility_data_attributes_present(
+def test_picker_options_carry_no_eligibility_count(
     client: TestClient, db: Session
 ) -> None:
-    """Each `<option>` carries ``data-eligible-pairs`` so the
-    inline JS can swap the displayed count without a server
-    round-trip on selection change."""
+    """The dropdown `<option>` rows carry no per-option eligibility
+    count — the rule engine is run only for a rule actually pinned
+    to an instrument. An instrument with no rule pinned shows "--"
+    for its eligible-pair count, not a number."""
 
     review_session = _make_session(client, db, code="pick-elig")
     _add_session_rule_set(db, review_session=review_session, name="My Rule")
@@ -349,10 +350,43 @@ def test_picker_eligibility_data_attributes_present(
     body = client.get(_index_url(review_session.id)).text
     section = body.split(
         f'id="instrument-{instrument.id}-rule-picker"', 1
-    )[1].split("</select>", 1)[0]
-    assert 'data-eligible-pairs="0"' in section  # — No rule — option
-    # Every actual rule option has the attribute as well.
-    assert section.count("data-eligible-pairs=") >= 2
+    )[1].split("Open Rule Builder", 1)[0]
+    # No per-option count attribute anywhere in the picker.
+    assert "data-eligible-pairs" not in section
+    # Unpinned instrument → "--" rather than a number.
+    pill = section.split(
+        f'data-instrument-rule-picker-count="{instrument.id}"', 1
+    )[1].split("</span>", 1)[0]
+    assert "--" in pill
+
+
+def test_picker_count_shows_number_once_a_rule_is_pinned(
+    client: TestClient, db: Session
+) -> None:
+    """Once a rule is pinned to the instrument the eligible-pair
+    count renders as a number (0 here — empty rosters), not "--"."""
+
+    review_session = _make_session(client, db, code="pick-pinned")
+    rule = _add_session_rule_set(
+        db, review_session=review_session, name="My Rule"
+    )
+    [instrument] = list(
+        db.execute(
+            select(Instrument).where(Instrument.session_id == review_session.id)
+        ).scalars()
+    )
+    instrument.rule_set_id = rule.id
+    db.commit()
+
+    body = client.get(_index_url(review_session.id)).text
+    section = body.split(
+        f'id="instrument-{instrument.id}-rule-picker"', 1
+    )[1].split("Open Rule Builder", 1)[0]
+    pill = section.split(
+        f'data-instrument-rule-picker-count="{instrument.id}"', 1
+    )[1].split("</span>", 1)[0]
+    assert "--" not in pill
+    assert "0" in pill
 
 
 def test_picker_renders_no_rule_sets_state(
