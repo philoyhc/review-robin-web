@@ -155,9 +155,11 @@ realistic threat anyway.
 - No Microsoft Graph calls.
 - No MSAL or custom OpenID Connect implementation in app code.
 
-## Future authorization model
+## Authorization model
 
-Once the data model lands (Segment 4) and operator/reviewer concepts are
-introduced (Segments 5+), authorization will be layered on top of the
-authenticated identity from Easy Auth. The `AuthenticatedUser` object is the
-intended stable input to those checks.
+Authorization is layered on top of the authenticated identity from Easy
+Auth. `AuthenticatedUser` is the stable input; the route-level gates in
+`app/web/deps.py` — `require_operator`, `require_session_operator`,
+`require_sys_admin`, and `require_reviewer_in_session` — decide what an
+authenticated user may do. See `docs/security_posture.md` for the full
+authorization model and the permission audit.

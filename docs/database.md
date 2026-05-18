@@ -70,16 +70,22 @@ migration instead.
 Segment 4 keeps every column type cross-dialect so the same migration runs
 on both:
 
-| Need              | Used in Segment 4              | Postgres-specific upgrade in Segment 14A |
-|-------------------|-------------------------------|-----------------------------------------|
+| Need              | Used in Segment 4              | Postgres-specific upgrade (deferred) |
+|-------------------|-------------------------------|--------------------------------------|
 | JSON blob         | `sqlalchemy.JSON`             | `JSONB`                                  |
 | UUID column       | `String(36)` (where used)     | native `UUID`                            |
 | Datetime          | `DateTime(timezone=True)`     | n/a                                      |
 | Enum-like field   | `String` + Python enum check  | optional DB-level `ENUM`                 |
 
-Do **not** import from `sqlalchemy.dialects.postgresql` in `app/db/models/`
-in this segment — those imports break SQLite tests and tie us to one
-dialect prematurely.
+The Postgres-specific upgrades are **deferred** — they are
+destructive, Postgres-only migrations that break the cross-dialect
+contract, so they sit outside the in-app feature work. They are
+tracked in `guide/deferred_infra.md` (the Segment 14A index review
+deliberately added plain cross-dialect B-tree indexes only).
+
+Do **not** import from `sqlalchemy.dialects.postgresql` in `app/db/models/` —
+those imports break SQLite tests and tie the models to one dialect
+prematurely.
 
 ## Tests
 

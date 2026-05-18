@@ -704,6 +704,8 @@ card description responses-aware so a reverted, permanently-locked
 session explains why. Specs updated: `spec/quick_setup_card_spec.md`,
 `spec/session_home.md`.
 
+- **Segment 14A — Production hardening (in-app ladder)** — done 2026-05-18. Eight PRs (#1140 → #1147, plus the earlier structured-logging PR): structured JSON logging + observability; global error handling (friendly pages, tracebacks logged not leaked); database index review (composite `ix_audit_events_session_created`); permission + destructive-action audit (no gaps found — recorded in `docs/security_posture.md`); a basic reviewer-surface accessibility pass; a fail-fast config startup check (`validate_critical_settings`); the documentation set (`operations_runbook.md`, `troubleshooting.md`, `backup_restore.md`, `known_limitations.md`, completed `security_posture.md`); and dev-deploy-workflow hardening (a `concurrency` group serialising `build → migrate → deploy`). Azure infrastructure — Key Vault, VNet, staging slot, production environment, the App Insights resource, and the Postgres type migrations — stays deferred; see `guide/deferred_infra.md`. **Plan:** `guide/segment_14A_production_hardening.md`.
+
 ---
 
 ## Upcoming
@@ -719,7 +721,7 @@ that originated there before the catalog retired.
 Outstanding work, mutually independent unless flagged in
 **Sequencing notes** below. Each item carries its own plan
 doc — pick one and start when ready. Schedule items:
-**13C, 13F (PRs 4-5), 14A, 14B, 14C, 17B,
+**13C, 13F (PRs 4-5), 14B, 14C, 17B,
 18E, 18F, 19, 20, 21**. No global ordering
 constraints beyond the few dep chains called out at the
 bottom of this file.
@@ -746,7 +748,7 @@ bottom of this file.
    (`sessions.retention_exception` + `retention_overrides`)
    with **18F Part 4** (moved from 18C when 18C was re-scoped
    to operator-triggered purge, which needed no schema).
-   14A's type migrations stay out of 13F. **The 16-series
+   The deferred Postgres type migrations stay out of 13F. **The 16-series
    schema scaffolding is complete — Segment 16A is unblocked.**
    **Plan:** `guide/segment_13F_more_db_prep.md`.
 
@@ -768,12 +770,7 @@ bottom of this file.
    **Plan:** `guide/segment_13C_enhanced_instrument.md`.
    **Functional spec:** `spec/group_scoped_instruments.md`.
 
-3. **14A — Production hardening.**
-   Observability, security, support runbooks, real-pilot prep.
-   Catalog #26 (local Postgres docker-compose for dev).
-   **Plan:** `guide/segment_14A_production_hardening.md`.
-
-4. **14B — Email infrastructure (send activation + backends).**
+3. **14B — Email infrastructure (send activation + backends).**
    *(Renamed from 14-1 on 2026-05-11 as part of the 14 → 14A /
    14B / 14C split.)* All email *wiring* lives here. The schema
    columns Part A writes to landed with **Segment 11C Part 2**
@@ -791,7 +788,7 @@ bottom of this file.
    **Plan:** `guide/segment_14B_email_infrastructure.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-5. **14C — Reminders workflow.**
+4. **14C — Reminders workflow.**
    Scheduled, policy-driven reminder dispatch sitting on top
    of 14B's transport. Per-session cadence settings + a
    background scheduler + post-MVP cohort slicing + reminder
@@ -888,7 +885,7 @@ bottom of this file.
   of Part A; Parts F-H are independent backend swaps. **14C
   reminders workflow** layers on top of 14B Parts A / B / C and
   ships on its own pace.
-- **13C, 13F (PRs 4-5), 14A, 17B,
+- **13C, 13F (PRs 4-5), 17B,
   18E, 18F, 19, 20, 21** are independent of the email +
   audit pipelines and can interleave at any time. The three
   13-family segments are also independent of each other —
