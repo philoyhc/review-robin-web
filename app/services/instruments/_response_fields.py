@@ -200,7 +200,15 @@ def bulk_save_fields(
         # operator UI suppresses the checkbox + arrows for these rows;
         # this is a server-side defense in case a forged form ever
         # arrives.
-        if is_locked_display_source(field.source_type, field.source_field):
+        #
+        # Segment 13C: a group-scoped instrument has no locked rows —
+        # the RevieweeName row's Include is operator-choosable
+        # (unticking it omits the member-name list from the composed
+        # group identity), so the force does not apply there.
+        if (
+            is_locked_display_source(field.source_type, field.source_field)
+            and instrument.group_kind is None
+        ):
             new_visible = True
         per_row_changes: dict[str, list[Any]] = {}
         if field.visible != new_visible:
