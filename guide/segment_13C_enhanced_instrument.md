@@ -42,13 +42,21 @@ else reuses columns that already exist (`Instrument.group_kind`,
 
 New action-row button alongside the existing "Add an instrument".
 Creates a group-scoped instrument with `group_kind` set to the
-default display choice (`members`); inserted immediately after
-the current card.
+default display choice (`both` — rule summary followed by the
+member list); inserted immediately after the current card.
 
 - **Schema.** One migration: nullable `reviewee_group_description`
   (`Text`) on `operator_rule_sets` **and** `session_rule_sets`.
   Update the `Instrument.group_kind` model docstring to record
   the repurposed meaning (display-content choice, not tag keys).
+- **Seeded rulesets.** Add a `reviewee_group_description` to each
+  of the five seeded RuleSets in `app/services/rules/seeds.py`
+  (and the `RuleSetSchema` it deserialises into), using the
+  seeded values tabled in `spec/rule_based_assignment.md` §5.4 —
+  e.g. *Full Matrix* → "All reviewees", *Intra-group peer review*
+  → "All reviewees with the same tag1 as reviewer". The
+  `materialise_seed_rule_sets` writer carries the value onto each
+  new `session_rule_sets` row.
 - **Editor.** For a group-scoped instrument the Display Fields
   table is replaced by a single **Group display** control —
   `members` / `summary` / `both`, persisted to `group_kind`. The
@@ -87,9 +95,9 @@ over-count them.
   self-contained block — one group row, one group column
   (member names / rule summary / both per `group_kind`), one set
   of response inputs. The preview hub renders the same block.
-- The `summary` / `both` content resolves
-  `reviewee_group_description` → RuleSet `description` →
-  RuleSet `name`.
+- The `summary` / `both` content resolves the group summary as
+  `reviewee_group_description`, falling back to the RuleSet's
+  `description` when that is blank.
 - Submit fans the reviewer's single answer across all N
   assignments' response rows for the group.
 - `responses.collapse_group_duplicates(rows)` + the mandatory
@@ -270,7 +278,9 @@ When 13C kicks off:
 - Update `spec/reviewer-surface.md` for the group-block
   treatment.
 - Update `spec/rule_based_assignment.md` §7.2 for the
-  `reviewee_group_description` field on the Rule Builder page.
+  `reviewee_group_description` text box on the Rule Builder page.
+  (§5.4's seeded-RuleSet table already carries the seeded
+  `reviewee_group_description` values — done ahead of 13C.)
 - Update `spec/settings_inventory.md` for the new column.
 - Update `guide/todo_master.md` — move 13C to in-progress, then
   Done when PR 3 lands.

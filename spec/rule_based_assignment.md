@@ -198,14 +198,17 @@ Each Save updates `updatedAt` and writes a new revision. The library shows the c
 
 The system ships with five seeds. Each is intended to be useful as-is and also as a starting point for duplication. Seed names are illustrative; the final set is chosen with the product owner before release. The point is that the library is non-empty on first use, so a user can pick a working RuleSet without authoring one from scratch.
 
-`Full Matrix` is the degenerate empty-rules case (combinator `ALL_OF`, zero rules, `excludeSelfReviews=true`); it's installed as a fifth seed for parity with Simple mode but is not laid out in the table below because there's no rule expression to show.
+`Full Matrix` is the degenerate empty-rules case (combinator `ALL_OF`, zero rules); it appears as row 1 below with an empty Rules cell.
 
-| # | Name | Combinator | excludeSelfReviews | Rules |
-|---|---|---|---|---|
-| 1 | **Intra-group peer review** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 same_as reviewee.tag1)` |
-| 2 | **Cross-group peer review** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 different_from reviewee.tag1)` |
-| 3 | **Same group, different role** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 same_as reviewee.tag1)` &nbsp;∧&nbsp; `MATCH(reviewer.tag2 different_from reviewee.tag2)` |
-| 4 | **Three reviewers per reviewee** | `ALL_OF` | `true` | `QUOTA(scope=PER_REVIEWEE, min=3, max=3, selection=RANDOM(seed=42))` |
+The **Rule description** column carries the operator-facing summary stored on each RuleSet (the `description` field in `app/services/rules/seeds.py`). The **Reviewee group description** column carries the seeded value of `reviewee_group_description` (Segment 13C) — the plain-English name for the group a reviewer reviews, surfaced on group-scoped instruments (see `spec/group_scoped_instruments.md`). Operators may override it per session.
+
+| # | Name | Combinator | excludeSelfReviews | Rules | Rule description | Reviewee group description |
+|---|---|---|---|---|---|---|
+| 1 | **Full Matrix** | `ALL_OF` | `true` | *(none — degenerate empty-rules case)* | Pair every reviewer with every reviewee. | All reviewees |
+| 2 | **Intra-group peer review** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 same_as reviewee.tag1)` | Reviewer and reviewee share tag1. | All reviewees with the same tag1 as reviewer |
+| 3 | **Cross-group peer review** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 different_from reviewee.tag1)` | Reviewer and reviewee have different tag1 — useful for fresh-perspective rounds. | All reviewees with a different tag1 as reviewer |
+| 4 | **Same group, different role** | `ALL_OF` | `true` | `MATCH(reviewer.tag1 same_as reviewee.tag1)` &nbsp;∧&nbsp; `MATCH(reviewer.tag2 different_from reviewee.tag2)` | Same tag1, different tag2. Pair within the team but never with someone of the same role. | All reviewees with the same tag1, but with a different tag2, as reviewer |
+| 5 | **Three reviewers per reviewee** | `ALL_OF` | `true` | `QUOTA(scope=PER_REVIEWEE, min=3, max=3, selection=RANDOM(seed=42))` | Full candidate pool, then a PER_REVIEWEE quota of min=3, max=3, random with a fixed seed. | A random group of three reviewees |
 
 #### 5.4.1 Reading the cells
 
@@ -229,11 +232,11 @@ The four rule-bearing seeds together exercise the engine primitives that operato
 
 | Primitive | Exercised by |
 |---|---|
-| `MATCH` rule kind | 1, 2, 3 |
-| `QUOTA` rule kind, `RANDOM` selection | 4 |
-| `ALL_OF` combinator | 1, 2, 3, 4 |
-| Cross-side operators (`same_as`, `different_from`) | 1, 2, 3 |
-| `excludeSelfReviews` desugar | all four |
+| `MATCH` rule kind | 2, 3, 4 |
+| `QUOTA` rule kind, `RANDOM` selection | 5 |
+| `ALL_OF` combinator | 2, 3, 4, 5 |
+| Cross-side operators (`same_as`, `different_from`) | 2, 3, 4 |
+| `excludeSelfReviews` desugar | 2, 3, 4, 5 |
 
 Engine primitives **not** exercised by the seeds — `ANY_OF`, `PIPELINE`, `COMPOSITE` (with `AND` / `OR` / `NOT`), `FILTER`, literal-equality `equals`, `in` / `not_in`, `matches` / `not_matches`, `is_empty` / `is_not_empty`, `case_sensitive=true`, and `ROUND_ROBIN` selection — are still covered by the engine unit tests in `tests/unit/test_rules_engine.py` and remain available to operator-built RuleSets through the editor.
 

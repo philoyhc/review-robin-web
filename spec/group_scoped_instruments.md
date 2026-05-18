@@ -100,7 +100,7 @@ response_field_id)`.
 | Field | Where | Type | Notes |
 |---|---|---|---|
 | `group_kind` | `Instrument` | `String(32) \| NULL` | **Already exists** — shipped inert in 13D PR 6. `NULL` = per-reviewee instrument (today's default). A non-null value flags the instrument group-scoped **and** stores the display-content choice: one of `members` / `summary` / `both` (see "Reviewer surface"). The column is **repurposed** by this design — it no longer stores tag keys. 13C PR 1 is the first writer. |
-| `reviewee_group_description` | `operator_rule_sets` **and** `session_rule_sets` | `Text \| NULL` | **New — one migration in 13C PR 1.** Operator-authored plain-English description of the group the rule forms (e.g. "Each reviewer's project team"). Used as the `summary` display content. `NULL` / blank → fall back to the RuleSet's `name` / `description`. Lives on both the library row and the per-session copy, mirroring how `description` is carried on both. |
+| `reviewee_group_description` | `operator_rule_sets` **and** `session_rule_sets` | `Text \| NULL` | **New — one migration in 13C PR 1.** Operator-authored plain-English description of the group the rule forms (e.g. "Each reviewer's project team"). Used as the `summary` display content. `NULL` / blank → fall back to the RuleSet's `description`. Lives on both the library row and the per-session copy, mirroring how `description` is carried on both. The five seeded RuleSets ship with a default value (`spec/rule_based_assignment.md` §5.4). |
 
 No `Assignment` change. No `Response` change. The per-instrument
 sort spec reuses the existing `Instrument.sort_display_fields`
@@ -122,8 +122,9 @@ Two creation entrypoints on the action row of
   instrument (`group_kind = NULL`).
 - **Add a group-scoped instrument** — new button. Creates a
   group-scoped instrument with `group_kind` set to the default
-  display choice (`members`). Inserted immediately after the
-  current card, like "Add an instrument".
+  display choice (`both` — rule summary followed by the member
+  list). Inserted immediately after the current card, like "Add
+  an instrument".
 
 **Mode is set at creation and is not toggleable.** An operator who
 wants to change an instrument's mode deletes it and recreates it.
@@ -151,7 +152,8 @@ Fields** section, which is **replaced**:
   - **Both** — the rule summary followed by the member list.
 
   This choice is stored in `group_kind`
-  (`members` / `summary` / `both`).
+  (`members` / `summary` / `both`); the default for a freshly
+  created group-scoped instrument is `both`.
 - **Sort.** The instrument keeps the **standard per-instrument
   sort spec** (`Instrument.sort_display_fields`, the Segment 13B
   mechanism) — the operator orders by any available / populated
@@ -182,18 +184,27 @@ operator at the Assignments page. `Full Matrix` is a valid pin
 
 ## The rule and its group description
 
-The `reviewee_group_description` field is authored on the **Rule
-Builder page** (`spec/rule_based_assignment.md` §7.2) alongside
-the RuleSet's name and description — it is a property of the
-rule, not of the instrument. One rule may be pinned to several
-instruments; the description travels with the rule.
+The `reviewee_group_description` field is authored in an
+operator-editable **text box on the Rule Builder page**
+(`spec/rule_based_assignment.md` §7.2) alongside the RuleSet's
+name and description — it is a property of the rule, not of the
+instrument. One rule may be pinned to several instruments; the
+description travels with the rule.
+
+The five seeded RuleSets ship with a sensible default
+`reviewee_group_description` (e.g. *Intra-group peer review* →
+"All reviewees with the same tag1 as reviewer" — see
+`spec/rule_based_assignment.md` §5.4). The operator overrides
+that default in the text box with friendlier session-specific
+copy — "Your work squad", "Your tutorial group", "Your lab
+group", and so on. Because the override lives on the per-session
+RuleSet copy (`session_rule_sets`), it is per-session.
 
 When a group-scoped instrument's display choice is `summary` or
-`both`, the reviewer surface and the operator preview render
-`reviewee_group_description`. When that field is blank the
-surface falls back to the RuleSet's `description`, then its
-`name`. A `Full Matrix` pin with no description therefore reads
-as "Full Matrix" until an operator writes something better.
+`both`, the reviewer surface and the operator preview render the
+group **summary**, resolved as: `reviewee_group_description`,
+and — when that is blank — a fallback to the RuleSet's
+`description`.
 
 ## Reviewer surface
 
