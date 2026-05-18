@@ -65,9 +65,10 @@ editor — shipped 2026-05-18** (#1176-#1181, atop the placeholder
 slices #1161-#1175). PR 2 slice 1 — the reviewer write fan-out —
 shipped 2026-05-18 (#1183); it pre-dates the group-boundary
 revision and fans across the reviewer's whole universe, so it
-needs a group-key-aware follow-up (PR 2 slice B below). The
-Group-column editor, the partition-aware reviewer surface, and
-PR 3 (Replicate) remain. **Zero migrations.**
+needs a group-key-aware follow-up (PR 2 slice B below). PR 2
+slice A — the Group-boundary editor column — shipped 2026-05-19.
+The partition-aware reviewer surface (slices B-D) and PR 3
+(Replicate) remain. **Zero migrations.**
 
 ## Progress log
 
@@ -191,20 +192,30 @@ The reviewer-facing feature, re-cut into slices by the
 2026-05-19 group-boundary revision. Slice 1 (write fan-out) has
 landed; the remaining slices are below.
 
-**Slice A — Group-boundary editor (operator-only).** Add a
-**Group by** checkbox column to the group-scoped Display Fields
-table (tag rows only; the Name row has no Group-by cell) and keep
-the **Include** column shipped in PR 1, now *constrained by Group
-by*: a boundary tag is locked Included, a non-boundary tag is not
-Includable, only the Name row's Include stays free. On save, the
-Group-by ticks' key-codes (`r1`-`r3`, `p1`-`p3`) are encoded —
-ordered by the Sort spec — into the `group_kind` column,
-replacing the inert `"both"` marker; a group instrument with no
-boundary tag keeps `"both"` as the no-partition sentinel. Tag
-rows' `InstrumentDisplayField.visible` follows the Group-by tick;
-the Name row's `visible` is the free Include. Add the
-encode/decode helper and a helper line under the table. No
-reviewer-visible change — safe to land alone.
+**Slice A — Group-boundary editor (operator-only) — done.** The
+group-scoped Display Fields table gained a **Group by** checkbox
+column (tag rows only; the Name row shows an em-dash). The
+**Include** column is now *constrained by Group by*: tag-row
+Include is derived from — and live-mirrors — the Group-by tick
+(disabled), only the Name row's Include stays a free checkbox. On
+save the Group-by ticks' key-codes (`r1`-`r3`, `p1`-`p3`) are
+encoded — ordered by display-field order — into the `group_kind`
+column; a group instrument with no boundary tag keeps `"both"`
+as the no-partition sentinel. What shipped:
+
+- `encode_group_kind` / `decode_group_kind` / `group_boundary_pairs`
+  pure helpers + `set_group_boundary` mutator (audit
+  `instrument.group_boundary_updated`, registered in `EVENT_SCHEMAS`)
+  in `app/services/instruments/_instrument_crud.py`.
+- The bulk-save route folds `group_by_ids` into `visible_ids` for
+  group instruments (tag-row Include == Group-by) and calls
+  `set_group_boundary`.
+- `build_instruments_context` now `expire_all()`s after the
+  lazy-seed commit so a group instrument created after the
+  reviewee import renders its freshly-seeded tag rows on the same
+  request (the session runs `expire_on_commit=False`).
+
+No reviewer-visible change.
 
 **Slice B — write fan-out re-scope.** `_expand_group_upserts`
 (shipped in slice 1) fans across the reviewer's whole universe;

@@ -704,7 +704,9 @@
         {# Group-scoped Display Fields rows: the populated reviewee +
            pair-context tag rows (same eligibility as a normal
            instrument — only tags with data) followed by RevieweeName.
-           Placeholder — not wired until PR 1. #}
+           Group by picks the boundary tags; Include is derived from
+           it for tag rows and free only on the Name row (Segment
+           13C PR 2 slice A). #}
         {% set group_tag_fields = (sorted_display_fields
               | rejectattr('source_field', 'in', ['name', 'email_or_identifier', 'profile_link'])
               | list) %}
@@ -712,6 +714,7 @@
               | selectattr('source_field', 'equalto', 'name')
               | list | first) %}
         {% set _sort_spec = instrument.sort_display_fields or [] %}
+        {% set _boundary = group_boundary_pairs(instrument) %}
         <div class="bottom-grid field-builder">
           <div class="card" style="border: none; background: transparent; padding: 0;">
             <h3 style="margin-top: 0;">Display Fields</h3>
@@ -720,12 +723,14 @@
                 <thead>
                   <tr>
                     <th>Friendly Label</th>
+                    <th>Group by</th>
                     <th>Include</th>
                     <th>Sort</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for df in group_tag_fields %}
+                    {% set is_boundary = (df.source_type, df.source_field) in _boundary %}
                     <tr>
                       <td>{{ display_field_label(df, session=session) }}</td>
                       <td>
@@ -735,11 +740,21 @@
                           <input form="dfsave-{{ instrument.id }}" type="hidden" name="order" value="{{ loop.index0 }}">
                           <input form="dfsave-{{ instrument.id }}" type="hidden" name="label" value="">
                           <input form="dfsave-{{ instrument.id }}" type="checkbox"
-                                 name="visible_ids" value="{{ df.id }}"
-                                 {% if df.visible %}checked{% endif %}>
+                                 class="group-by-checkbox" data-df-id="{{ df.id }}"
+                                 onchange="syncGroupByInclude(this)"
+                                 name="group_by_ids" value="{{ df.id }}"
+                                 {% if is_boundary %}checked{% endif %}>
                         {% else %}
-                          <input type="checkbox" disabled {% if df.visible %}checked{% endif %}>
+                          <input type="checkbox" disabled {% if is_boundary %}checked{% endif %}>
                         {% endif %}
+                      </td>
+                      <td>
+                        {# Include is derived from Group by for tag
+                           rows — always disabled, mirrors the
+                           Group-by tick. #}
+                        <input type="checkbox" disabled
+                               class="include-mirror" data-df-id="{{ df.id }}"
+                               {% if is_boundary %}checked{% endif %}>
                       </td>
                       {{ sort_cell(instrument, df, _sort_spec, is_editing) }}
                     </tr>
@@ -747,6 +762,7 @@
                   {% if group_name_field %}
                     <tr>
                       <td>{{ display_field_label(group_name_field, session=session) }}</td>
+                      <td><span style="color: var(--muted, #888);">—</span></td>
                       <td>
                         {% if is_editing %}
                           <input form="dfsave-{{ instrument.id }}" type="hidden" name="kind" value="display">
@@ -766,6 +782,14 @@
                 </tbody>
               </table>
             </div>
+            <p class="hint" style="font-size: 0.85rem; color: var(--muted, #666);">
+              <strong>Group by</strong> splits this instrument's reviewees
+              into separate groups by the ticked tags — a reviewer answers
+              once per group, and tags ticked together split additively.
+              <strong>Include</strong> picks what shows in each group's
+              identity: boundary tags are shown automatically; tick
+              <em>Name</em> to also list the group's members.
+            </p>
             {% if is_editing %}
               {# Segment 13B sort spec — toggleSort clears + repopulates
                  these hidden inputs so the encoded order matches the
@@ -1550,6 +1574,18 @@
         slot.appendChild(idInput);
         slot.appendChild(dirInput);
       });
+    }
+
+    // Segment 13C — group-scoped Display Fields table. The Include
+    // column for tag rows is derived from Group by: ticking a tag's
+    // Group-by checkbox marks it a boundary tag, which auto-includes
+    // it in the group identity. Mirror the state live so the
+    // operator sees the effect before Save.
+    function syncGroupByInclude(checkbox) {
+      var row = checkbox.closest('tr');
+      if (!row) return;
+      var mirror = row.querySelector('.include-mirror');
+      if (mirror) mirror.checked = checkbox.checked;
     }
 
     // Order ▲ / ▼ buttons swap the row with its sibling client-side

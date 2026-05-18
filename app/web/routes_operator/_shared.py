@@ -58,6 +58,12 @@ _templates.env.globals["display_field_label"] = (
 _templates.env.globals["is_locked_display_source"] = (
     instruments_service.is_locked_display_source
 )
+# Segment 13C — the set of (source_type, source_field) tag pairs a
+# group-scoped instrument groups by; drives the group Display
+# Fields table's Group-by / Include columns.
+_templates.env.globals["group_boundary_pairs"] = (
+    instruments_service.group_boundary_pairs
+)
 # Friendly-label resolver globals — Segment 15A Slice 2.
 # ``field_label`` returns just the resolved string (friendly →
 # canonical default → fallback). ``field_label_pair`` returns the
