@@ -424,14 +424,16 @@
            Response Fields Help. Visual placeholders for Segment 13C —
            not editable until the group editor lands. #}
         {% set sorted_response_fields = instrument.response_fields | sort(attribute='order') %}
-        {# Group-scoped Display Fields rows: the three reviewee tags,
-           the three pair-context tags, and RevieweeName. The Include
-           checkbox reflects the matching InstrumentDisplayField.visible
-           flag when a row exists. Placeholder — not wired until PR 1. #}
-        {% set group_display_rows = [
-             ('reviewee', 'tag_1'), ('reviewee', 'tag_2'), ('reviewee', 'tag_3'),
-             ('pair_context', '1'), ('pair_context', '2'), ('pair_context', '3'),
-             ('reviewee', 'name')] %}
+        {# Group-scoped Display Fields rows: the populated reviewee +
+           pair-context tag rows (same eligibility as a normal
+           instrument — only tags with data) followed by RevieweeName.
+           Placeholder — not wired until PR 1. #}
+        {% set group_tag_fields = (sorted_display_fields
+              | rejectattr('source_field', 'in', ['name', 'email_or_identifier', 'profile_link'])
+              | list) %}
+        {% set group_name_field = (sorted_display_fields
+              | selectattr('source_field', 'equalto', 'name')
+              | list | first) %}
         <div class="bottom-grid field-builder">
           <div class="card" style="border: none; background: transparent; padding: 0;">
             <h3 style="margin-top: 0;">Display Fields</h3>
@@ -445,20 +447,20 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for source_type, source_field in group_display_rows %}
-                    {% set df = (instrument.display_fields
-                          | selectattr('source_type', 'equalto', source_type)
-                          | selectattr('source_field', 'equalto', source_field)
-                          | list | first) %}
+                  {% for df in group_tag_fields %}
                     <tr>
-                      <td>{{ field_label(session, source_type, source_field) }}</td>
-                      <td>
-                        <input type="checkbox" disabled
-                               {% if df and df.visible %}checked{% endif %}>
-                      </td>
+                      <td>{{ display_field_label(df, session=session) }}</td>
+                      <td><input type="checkbox" disabled {% if df.visible %}checked{% endif %}></td>
                       <td class="sort-cell"><span class="sort-badge sort-badge-empty">↕</span></td>
                     </tr>
                   {% endfor %}
+                  {% if group_name_field %}
+                    <tr>
+                      <td>{{ display_field_label(group_name_field, session=session) }}</td>
+                      <td><input type="checkbox" disabled {% if group_name_field.visible %}checked{% endif %}></td>
+                      <td class="sort-cell"><span class="sort-badge sort-badge-empty">↕</span></td>
+                    </tr>
+                  {% endif %}
                 </tbody>
               </table>
             </div>

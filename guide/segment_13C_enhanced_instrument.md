@@ -118,15 +118,13 @@ instrument card's Edit / Save / Cancel state machine.
     identity). PR 1 must make the locked-row `visible` force
     conditional on `instrument.group_kind is None` so a group
     instrument can store Name's Include state.
-  - **Row set — to settle in PR 1.** The placeholder shows a
-    fixed seven rows (all three reviewee tags + all three
-    pair-context tags + Name). The spec's eligibility rule is
-    "tags that carry data". If PR 1 keeps the fixed seven (so a
-    tag can be Included before its data is imported) it must
-    ensure an `InstrumentDisplayField` row exists for every
-    offered source — Include writes `visible` on that row, so a
-    missing row has nothing to write to (seed-on-demand, or
-    pre-seed all six tag rows on group-instrument creation).
+  - **Row set (locked).** The table shows only the **populated**
+    reviewee + pair-context tag rows — the same eligibility rule
+    as a per-reviewee instrument's Display Fields — followed by
+    the Name row. No fixed seven-row scaffold: every offered row
+    is an existing `InstrumentDisplayField` (seeded on import,
+    pruned when its data goes away), so Include always has a real
+    row to write `visible` to.
 - **Response Fields + Response Fields Help** become editable,
   reusing the ordinary instrument card's response-field save
   path.
