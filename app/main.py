@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
+from app.config import settings, validate_critical_settings
 from app.logging_config import configure_logging
 from app.web.deps import OperatorAllowlistDenied
 from app.web.error_handlers import register_error_handlers
@@ -34,6 +35,7 @@ _QUICK_SETUP_COOKIE_RE = re.compile(r"^qsu_(\d+)$")
 
 def create_app() -> FastAPI:
     configure_logging()
+    validate_critical_settings(settings)
     app = FastAPI(title="Review Robin Web")
     app.include_router(health_router)
     app.include_router(about_router)
