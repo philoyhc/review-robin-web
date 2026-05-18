@@ -10,7 +10,10 @@ from app.auth.identity import AuthenticatedUser, get_current_user
 from app.config import settings as default_settings
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
+from app.logging_config import get_logger
 from app.services import operator_settings, permissions, sessions
+
+log = get_logger(__name__)
 
 
 class OperatorAllowlistDenied(Exception):
@@ -95,6 +98,10 @@ def require_operator(user: User = Depends(get_or_create_user)) -> User:
     """
     if user.is_operator or user.is_sys_admin:
         return user
+    log.warning(
+        "permission denied",
+        extra={"gate": "require_operator", "user_id": user.id},
+    )
     raise OperatorAllowlistDenied()
 
 
@@ -106,6 +113,10 @@ def require_sys_admin(user: User = Depends(get_or_create_user)) -> User:
     """
     if user.is_sys_admin:
         return user
+    log.warning(
+        "permission denied",
+        extra={"gate": "require_sys_admin", "user_id": user.id},
+    )
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="sys_admin required",
@@ -131,6 +142,14 @@ def require_session_operator(
     db: Session = Depends(get_db),
 ) -> ReviewSession:
     if not permissions.user_can_view_session(db, user, session_id):
+        log.warning(
+            "permission denied",
+            extra={
+                "gate": "require_session_operator",
+                "user_id": user.id,
+                "session_id": session_id,
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have access to this session",
@@ -199,6 +218,14 @@ def require_reviewer_in_session(
             matched = r
             break
     if matched is None:
+        log.warning(
+            "permission denied",
+            extra={
+                "gate": "require_reviewer_in_session",
+                "user_id": user.id,
+                "session_id": session_id,
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not an active reviewer in this session",
