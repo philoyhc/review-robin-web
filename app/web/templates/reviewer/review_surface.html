@@ -237,7 +237,12 @@
                   {% if cell.field.data_type in ('Integer', 'Decimal') %}{% set col_class = 'rs-narrow rrw-sortable' %}
                   {% elif cell.field.data_type == 'String' and max_len > 100 %}{% set col_class = 'rs-textlong rrw-sortable' %}{% endif %}
                 {% endif %}
+                {# Pin a numeric column on a fixed-layout group table
+                   to a width keyed to its header + RTD digit span, so
+                   a 1-5 Rating box doesn't sprawl. #}
+                {% set col_width = numeric_column_ch_width(cell.field) if group.is_group else none %}
                 <th scope="col" class="{{ col_class }}"
+                    {% if col_width %}style="width: {{ col_width }}ch"{% endif %}
                     data-sort-key="response:{{ cell.field.id }}"
                     data-sort-type="{{ cell.field.data_type }}">{{ cell.field.label }}{% if cell.field.required %} *{% endif %}<button type="button" class="rrw-sort-btn"
                     aria-label="Sort by {{ cell.field.label }}"
