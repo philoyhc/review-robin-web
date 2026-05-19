@@ -91,13 +91,16 @@
         <form method="post" action="/operator/sessions/{{ session.id }}/delete-data">
           <p>
             <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required>
+              <input type="checkbox" name="confirm" value="true" required
+                     data-delete-confirm="delete-data">
               Yes, delete every reviewer response on
               <strong>{{ session.name }}</strong>. Setup data is preserved.
             </label>
           </p>
           <p>
-            <button class="btn destructive" type="submit">Delete Data</button>
+            <button class="btn destructive" type="submit"
+                    data-delete-btn="delete-data"
+                    disabled aria-disabled="true">Delete Data</button>
           </p>
         </form>
 
@@ -114,13 +117,20 @@
           <p>
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required
+                     data-delete-confirm="delete-session"
                      {% if is_ready %}disabled{% endif %}>
               Yes, delete <strong>{{ session.name }}</strong> and all its data.
             </label>
           </p>
           <p>
-            <button class="btn destructive" type="submit"
-                    {% if is_ready %}disabled aria-disabled="true"{% endif %}>Delete session</button>
+            {% if is_ready %}
+              <button class="btn destructive" type="submit"
+                      disabled aria-disabled="true">Delete session</button>
+            {% else %}
+              <button class="btn destructive" type="submit"
+                      data-delete-btn="delete-session"
+                      disabled aria-disabled="true">Delete session</button>
+            {% endif %}
           </p>
           {% if is_ready %}
             <p class="form-help" style="margin-bottom: 0;">

@@ -2693,5 +2693,33 @@
         }
       })();
     </script>
+    {# Confirm-checkbox gates the destructive button — app-wide
+       standard. A ``data-delete-confirm="{key}"`` checkbox enables
+       its paired ``data-delete-btn="{key}"`` button only while
+       ticked; the button ships ``disabled``. Pairs are matched by
+       key, so any operator / reviewer page picks this up for free
+       just by tagging the checkbox + button. #}
+    <script>
+      (function () {
+        var boxes = document.querySelectorAll("[data-delete-confirm]");
+        Array.prototype.forEach.call(boxes, function (cb) {
+          var key = cb.getAttribute("data-delete-confirm");
+          var btn = document.querySelector(
+            '[data-delete-btn="' + key + '"]'
+          );
+          if (!btn) return;
+          function sync() {
+            btn.disabled = !cb.checked;
+            if (cb.checked) {
+              btn.removeAttribute("aria-disabled");
+            } else {
+              btn.setAttribute("aria-disabled", "true");
+            }
+          }
+          cb.addEventListener("change", sync);
+          sync();
+        });
+      })();
+    </script>
   </body>
 </html>

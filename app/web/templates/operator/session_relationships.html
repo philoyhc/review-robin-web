@@ -53,12 +53,15 @@
         <input type="hidden" name="return_to" value="relationships">
         <p>
           <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required>
+            <input type="checkbox" name="confirm" value="true" required
+                   data-delete-confirm="revert">
             Yes, revert <strong>{{ session.name }}</strong> to draft.
           </label>
         </p>
         <p style="margin-bottom: 0;">
-          <button class="btn alert" type="submit">Revert to draft</button>
+          <button class="btn alert" type="submit"
+                  data-delete-btn="revert"
+                  disabled aria-disabled="true">Revert to draft</button>
         </p>
       </form>
     </div>
@@ -581,7 +584,8 @@
         {% if existing_count and existing_count > 0 %}
           <p>
             <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm_replace" value="true" required>
+              <input type="checkbox" name="confirm_replace" value="true" required
+                     data-delete-confirm="replace-roster">
               Yes, replace the existing
               <span class="pill pill-empty">{{ existing_count }} relationship{% if existing_count != 1 %}s{% endif %}</span>.
             </label>
@@ -589,7 +593,13 @@
         {% endif %}
 
         <div class="btn-pair" style="margin-top: 20px;">
-          <button class="btn secondary" type="submit">Upload</button>
+          {% if existing_count and existing_count > 0 %}
+            <button class="btn secondary" type="submit"
+                    data-delete-btn="replace-roster"
+                    disabled aria-disabled="true">Upload</button>
+          {% else %}
+            <button class="btn secondary" type="submit">Upload</button>
+          {% endif %}
         </div>
       </form>
     </section>
@@ -600,13 +610,16 @@
         <form method="post" action="/operator/sessions/{{ session.id }}/relationships/delete-all">
           <p>
             <label style="font-weight: normal;">
-              <input type="checkbox" name="confirm" value="true" required>
+              <input type="checkbox" name="confirm" value="true" required
+                     data-delete-confirm="delete-all">
               Yes, delete the existing
               <span class="pill pill-empty">{{ total_row_count }} relationship{% if total_row_count != 1 %}s{% endif %}</span>.
             </label>
           </p>
           <p>
-            <button class="btn destructive" type="submit">Delete all relationships</button>
+            <button class="btn destructive" type="submit"
+                    data-delete-btn="delete-all"
+                    disabled aria-disabled="true">Delete all relationships</button>
           </p>
         </form>
       </div>

@@ -102,12 +102,15 @@
         <input type="hidden" name="return_to" value="instruments">
         <p>
           <label style="font-weight: normal;">
-            <input type="checkbox" name="confirm" value="true" required>
+            <input type="checkbox" name="confirm" value="true" required
+                   data-delete-confirm="revert">
             Yes, revert <strong>{{ session.name }}</strong> to draft.
           </label>
         </p>
         <p style="margin-bottom: 0;">
-          <button class="btn alert" type="submit">Revert to draft</button>
+          <button class="btn alert" type="submit"
+                  data-delete-btn="revert"
+                  disabled aria-disabled="true">Revert to draft</button>
         </p>
       </form>
     </div>
@@ -1857,32 +1860,6 @@
             groupCount.textContent = atPinned ? groupText : '';
           }
         });
-      });
-    })();
-  </script>
-  {# Confirm-checkbox gates the destructive Delete button — a
-     ``data-delete-confirm`` checkbox enables its paired
-     ``data-delete-btn`` button only while ticked. Standard
-     pairing, intended for reuse on other destructive actions. #}
-  <script>
-    (function () {
-      var boxes = document.querySelectorAll("[data-delete-confirm]");
-      boxes.forEach(function (cb) {
-        var id = cb.getAttribute("data-delete-confirm");
-        var btn = document.querySelector(
-          '[data-delete-btn="' + id + '"]'
-        );
-        if (!btn) return;
-        function sync() {
-          btn.disabled = !cb.checked;
-          if (cb.checked) {
-            btn.removeAttribute("aria-disabled");
-          } else {
-            btn.setAttribute("aria-disabled", "true");
-          }
-        }
-        cb.addEventListener("change", sync);
-        sync();
       });
     })();
   </script>
