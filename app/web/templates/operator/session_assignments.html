@@ -172,12 +172,12 @@
         ("rt2", field_label(session, "reviewer", "tag_2"), has_r_tag_2),
         ("rt3", field_label(session, "reviewer", "tag_3"), has_r_tag_3),
       ]),
-      ("reviewees", [
+      ("Show reviewees", [
         ("et1", field_label(session, "reviewee", "tag_1"), has_e_tag_1),
         ("et2", field_label(session, "reviewee", "tag_2"), has_e_tag_2),
         ("et3", field_label(session, "reviewee", "tag_3"), has_e_tag_3),
       ]),
-      ("relationships", [
+      ("Show relationships", [
         ("p1", field_label(session, "pair_context", "1"), ctx.p1),
         ("p2", field_label(session, "pair_context", "2"), ctx.p2),
         ("p3", field_label(session, "pair_context", "3"), ctx.p3),
@@ -185,16 +185,16 @@
     ] %}
     <div class="bottom-grid">
       <div class="card">
-        <p class="col-chip-row" style="margin: 0;">
-          {% for group_label, items in col_groups %}
+        {% for group_label, items in col_groups %}
+          <p class="col-chip-row" style="margin: 0{% if not loop.last %} 0 8px 0{% endif %};">
             <span>{{ group_label }}:</span>
             {% for slot, label, has_data in items %}
               <span class="pill {% if has_data %}pill-count tag-chip is-selected{% else %}pill-empty tag-chip is-disabled{% endif %}"
                     data-col-toggle="{{ slot }}"
                     {% if has_data %}role="button" tabindex="0" aria-pressed="true"{% else %}aria-disabled="true" title="No data in this column"{% endif %}>{{ label }}</span>
             {% endfor %}
-          {% endfor %}
-        </p>
+          </p>
+        {% endfor %}
       </div>
       {# Card B — operator-actions card (right half): a free-text
          search to locate a row, plus row-selection-driven bulk
