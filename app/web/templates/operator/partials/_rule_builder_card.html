@@ -206,21 +206,22 @@
                     <option value="{{ value }}" {% if value == rule.kind %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
-                <select class="rule-field">
-                  {% for value in builder.field_options %}
-                    <option value="{{ value }}" {% if value == rule.field %}selected{% endif %}>{{ value }}</option>
-                  {% endfor %}
-                </select>
-                <select class="rule-operator">
-                  {% for value, label in builder.operator_options %}
-                    <option value="{{ value }}" {% if value == rule.operator %}selected{% endif %}>{{ label }}</option>
-                  {% endfor %}
-                </select>
-                <input type="text"
-                       class="rule-operand"
-                       value="{{ rule.operand_text or '' }}"
-                       placeholder="operand"
-                       style="min-width: 160px;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%;">
+                  <select class="rule-field">
+                    {% for value in builder.field_options %}
+                      <option value="{{ value }}" {% if value == rule.field %}selected{% endif %}>{{ value }}</option>
+                    {% endfor %}
+                  </select>
+                  <select class="rule-operator">
+                    {% for value, label in builder.operator_options %}
+                      <option value="{{ value }}" {% if value == rule.operator %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <input type="text"
+                         class="rule-operand"
+                         value="{{ rule.operand_text or '' }}"
+                         placeholder="operand">
+                </div>
               {% elif rule.kind == "QUOTA" %}
                 <span>Cap at</span>
                 <input type="number" class="rule-quota-min"
@@ -232,20 +233,21 @@
                        min="0" placeholder="max"
                        value="{{ rule.quota_max if rule.quota_max is not none else '' }}"
                        style="width: 80px;">
-                <select class="rule-quota-scope">
-                  {% for value, label in builder.quota_scope_options %}
-                    <option value="{{ value }}" {% if value == rule.quota_scope %}selected{% endif %}>{{ label }}</option>
-                  {% endfor %}
-                </select>
-                <select class="rule-quota-strategy">
-                  {% for value, label in builder.quota_strategy_options %}
-                    <option value="{{ value }}" {% if value == rule.quota_strategy %}selected{% endif %}>{{ label }}</option>
-                  {% endfor %}
-                </select>
-                <input type="number" class="rule-quota-seed"
-                       placeholder="seed"
-                       value="{{ rule.quota_seed if rule.quota_seed is not none else '' }}"
-                       style="width: 80px;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%;">
+                  <select class="rule-quota-scope">
+                    {% for value, label in builder.quota_scope_options %}
+                      <option value="{{ value }}" {% if value == rule.quota_scope %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <select class="rule-quota-strategy">
+                    {% for value, label in builder.quota_strategy_options %}
+                      <option value="{{ value }}" {% if value == rule.quota_strategy %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <input type="number" class="rule-quota-seed"
+                         placeholder="seed"
+                         value="{{ rule.quota_seed if rule.quota_seed is not none else '' }}">
+                </div>
               {% elif rule.kind == "COMPOSITE" %}
                 <select class="rule-composite-op">
                   {% for value, label in builder.composite_op_options %}
