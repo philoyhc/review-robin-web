@@ -101,6 +101,25 @@ scheduling concern, not the fix for this preview problem.
   already runs as its own service. This is a Workflow-card +
   routing + preview-gating change.
 
+**Decisions (2026-05-19).**
+- **No status relabel.** The `validated` state keeps its existing
+  displayed label, "Validated" — *not* renamed to "Prepared".
+  Because `validated` already entails "assignments generated"
+  (today's super-button runs Generate → Validate → `mark_validated`,
+  and the codebase nowhere assumes `validated` means "not yet
+  generated"), the existing state display is accurate after Prepare
+  runs. The button reads "Prepare" while the resulting state pill
+  reads "Validated" — a mild vocabulary gap, but not worth a relabel
+  or a copy sweep. No change to `SessionStatus` and no change to
+  `app/services/lifecycle_display.py`.
+- **"Prepare" button body text.** The Workflow-card body copy for
+  the Prepare action explains it as something like: *"Prepare the
+  session — generate the assignments and validate that the setup
+  is ready for prime time."* Final wording settled at PR scoping;
+  the intent is that the operator reads "Prepare" as the combined
+  generate-plus-validate step, so the "Validated" state label
+  needs no defence.
+
 ### Part 2+ — Holistic workflow work-through (to be catalogued)
 
 A walk of the full operator journey, cataloguing rough edges and
