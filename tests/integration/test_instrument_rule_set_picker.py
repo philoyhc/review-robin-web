@@ -607,6 +607,82 @@ def test_eligibility_cache_skips_engine_on_unchanged_inputs(
     assert len(calls) == 2  # recomputed
 
 
+def test_group_pair_count_cache_skips_engine_on_unchanged_inputs(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """`evaluate_instrument_group_pair_counts` caches the count on
+    the `instruments` row: a second call with unchanged roster /
+    rule / group_kind skips the engine; a `group_kind` edit forces
+    a recompute (Segment 13C PR 4 slice 4b)."""
+    from app.db.models import Reviewee, Reviewer
+    from app.services.rules import engine as engine_mod, session_library
+
+    review_session = _make_session(client, db, code="grp-cache")
+    rule = _add_session_rule_set(
+        db, review_session=review_session, name="Everyone"
+    )
+    db.add(Reviewer(session_id=review_session.id, name="R", email="r@x.edu"))
+    db.add_all(
+        [
+            Reviewee(
+                session_id=review_session.id,
+                name="Carol",
+                email_or_identifier="carol@x.edu",
+                tag_1="A",
+                tag_2="X",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Dan",
+                email_or_identifier="dan@x.edu",
+                tag_1="A",
+                tag_2="Y",
+            ),
+        ]
+    )
+    [instrument] = list(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    instrument.rule_set_id = rule.id
+    instrument.group_kind = "r1"  # both reviewees share tag_1="A"
+    db.commit()
+
+    calls: list[int] = []
+    real_evaluate = engine_mod.evaluate
+
+    def _counting(*args: object, **kwargs: object) -> object:
+        calls.append(1)
+        return real_evaluate(*args, **kwargs)
+
+    monkeypatch.setattr(engine_mod, "evaluate", _counting)
+
+    first = session_library.evaluate_instrument_group_pair_counts(
+        db, review_session
+    )
+    assert len(calls) == 1  # cold compute
+    assert first == {instrument.id: 1}  # one group (tag_1 "A")
+
+    second = session_library.evaluate_instrument_group_pair_counts(
+        db, review_session
+    )
+    assert len(calls) == 1  # cache hit — engine not re-run
+    assert second == first
+
+    # Re-pointing the boundary to tag_2 splits the group; the
+    # group_kind edit must invalidate the per-instrument stamp.
+    instrument.group_kind = "r2"  # tag_2 differs: X vs Y
+    db.commit()
+    third = session_library.evaluate_instrument_group_pair_counts(
+        db, review_session
+    )
+    assert len(calls) == 2  # recomputed
+    assert third == {instrument.id: 2}  # two groups (X, Y)
+
+
 def test_rule_builder_back_nav_threads_instrument_id(
     client: TestClient, db: Session
 ) -> None:

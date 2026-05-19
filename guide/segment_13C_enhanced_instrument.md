@@ -345,13 +345,15 @@ instrument, append a secondary count in parentheses:
   `instruments_index.html` renders `(N reviewer-group pairs)`
   after the raw count, and the inline JS clears it while the
   dropdown is off the pinned rule.
-- **Slice 4b — per-instrument persisted cache.** Mirrors 18E
-  Part 2 PR 2. Migration adds `cached_group_pair_count` +
-  `cached_group_pair_stamp` to `Instrument`; the stamp is a
-  content-hash of roster + rule definition + `group_kind`
-  (so a boundary-tag edit invalidates it). Warm stamp returns
-  the stored count with no engine run. Land only if 4a's
-  per-render engine cost is a concern.
+- **Slice 4b — per-instrument persisted cache — done
+  (2026-05-19).** Mirrors 18E Part 2 PR 2. Migration
+  `c3a9f1d7b2e8` adds `cached_group_pair_count` +
+  `cached_group_pair_stamp` to `instruments`; the stamp is a
+  content-hash of roster + pinned-rule definition + `group_kind`
+  (so a roster, rule, or boundary-tag edit invalidates it).
+  `evaluate_instrument_group_pair_counts` returns the stored
+  count on a stamp match with no engine run, and computes the
+  engine result lazily once per pinned rule on a miss.
 
 ### PR 5 — grouping-tag-change defunct safeguard
 
