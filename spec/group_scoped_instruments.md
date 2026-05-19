@@ -191,6 +191,32 @@ decision would flip only if groups became operator-curated
 stable teams (explicit rosters the operator creates and edits)
 rather than tag-derived partitions.
 
+**Corrections are the strongest case for this model.** The
+common real-world need is not swapping a group member but
+*correcting mis-entered data* — a reviewee recorded in the wrong
+group (operator typed `{A,B,D}` when the real group is
+`{A,B,C}`). A correction is intrinsically surgical: a specific
+reviewer→reviewee judgment was recorded about the wrong person.
+Because every such judgment is stored as an independently
+addressable `(reviewer, reviewee)` atom, a correction maps 1:1
+onto row operations — defunct the wrong atoms (`A→D`, `B→D`,
+`D→A`, `D→B`), create the right ones (`A→C`, `B→C`, …), and
+leave every valid judgment (`A→B`) untouched; only C and D
+redo. Group-scoped instruments inherit the correction: removing
+a reviewee from a group removes them from the relevant
+reviewers' universes, so the wrong member assignments — and the
+fanned-out answer copies riding on them — drop wholesale, while
+the retained members still carry each reviewer's group answer
+through the read-collapse (the representative is a retained,
+answered member). A group-entity row could not be corrected this
+way — a holistic group answer is not decomposable into per-pair
+atoms, so "keep A's and B's contribution, drop the D-ness" is
+inexpressible. And because a session mixes per-reviewee and
+group-scoped instruments, the per-pair model gives **one**
+uniform correction mechanism — defunct / reassign
+`(reviewer, reviewee)` atoms — across both instrument kinds,
+where a group-entity model would need two.
+
 ### Schema — no migration
 
 13C ships **zero migrations.** The group-scoped instrument is
@@ -442,6 +468,25 @@ the two without re-deriving from the schema.
   "(unset)" group, or is the row dropped? Probably an "(unset)"
   group so no reviewee silently vanishes; confirm when PR 2
   starts.
+- **Stale fan-out copies on a grouping-tag change.** *Open —
+  proposed direction.* An assignment's `group_key` is computed
+  from its **reviewee's** boundary-tag values (and, for
+  pair-context boundaries, the `(reviewer, reviewee)`
+  relationship) — never from the reviewer's own tags. So when a
+  person's grouping-tag value is corrected, the answer copies
+  fanned onto every assignment that *points at them* are now
+  mis-attributed to whatever group those rows re-derive into.
+  Proposed safeguard: on a grouping-tag change, defunct every
+  group-scoped `Response` row on assignments where that person
+  is the **reviewee** (the rows whose `group_key` depends on the
+  changed tag) — not the rows they authored, whose `group_key`
+  depends on *their* reviewees and stays valid. This is lossless
+  for the reviewer: their group answer survives redundantly on
+  the group's other member rows (the exception — a two-person
+  group with self-review off — is one where the answer should be
+  revisited anyway). A pair-context boundary-tag change is
+  narrower still: only the one relationship's row. Confirm the
+  scope before implementing.
 - **Eligible-pair count on a group-scoped instrument's rule
   card.** *Decided 2026-05-19 — implementation pending.*
   Because single-reviewee `(reviewer, reviewee)` assignment rows
