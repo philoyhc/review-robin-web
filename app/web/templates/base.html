@@ -202,6 +202,18 @@
         word-wrap: break-word;
         overflow-wrap: anywhere;
       }
+      /*
+       * .rs-group is the group-scoped instrument's identity column
+       * (Segment 13C). Its composed identity — boundary tag values
+       * plus a member-name list — runs longer than a single reviewee
+       * name, so it's capped at a third of the table rather than 20%.
+       */
+      th.rs-group, td.rs-group {
+        max-width: 33%;
+        min-width: 8em;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+      }
       th.rs-textlong, td.rs-textlong { min-width: 14em; }
       .muted { color: #777; }
       /*
