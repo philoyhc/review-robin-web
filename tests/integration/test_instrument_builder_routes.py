@@ -489,3 +489,72 @@ def test_activation_blocked_when_instrument_has_no_response_fields(
         follow_redirects=False,
     )
     assert activate.status_code == 400
+
+
+def test_replicate_instrument_clones_content(
+    client: TestClient, db: Session
+) -> None:
+    """Replicate clones an instrument's description, response /
+    display fields, group_kind and assignment rows into a new card
+    slotted immediately after the source — without the source's
+    pinned rule (Segment 13C PR 3)."""
+    from app.db.models import (
+        AuditEvent,
+        InstrumentDisplayField,
+        InstrumentResponseField,
+    )
+    from app.db.models import Assignment as _Assignment
+
+    review_session = _make_session(client, db, code="replicate-1")
+    _populate_rosters(client, review_session.id)
+    _generate_full_matrix(client, db, review_session.id)
+    source = _instrument(db, review_session.id)
+    source.description = "Peer review round 1"
+    source.group_kind = "r1"
+    db.commit()
+    source_id = source.id
+    source_name = source.name
+
+    def _count(model: object, instrument_id: int) -> int:
+        return len(
+            db.execute(
+                select(model).where(model.instrument_id == instrument_id)
+            ).scalars().all()
+        )
+
+    src_fields = _count(InstrumentResponseField, source_id)
+    src_displays = _count(InstrumentDisplayField, source_id)
+    src_assignments = _count(_Assignment, source_id)
+    assert src_assignments > 0  # the full matrix was generated
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{source_id}/replicate",
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+
+    copy = db.execute(
+        select(Instrument).where(
+            Instrument.session_id == review_session.id,
+            Instrument.id != source_id,
+        )
+    ).scalar_one()
+    assert copy.name == f"{source_name} (copy)"
+    assert copy.description == "Peer review round 1"
+    assert copy.group_kind == "r1"
+    assert copy.accepting_responses is False
+    assert copy.rule_set_id is None
+    assert copy.order == db.get(Instrument, source_id).order + 1
+    assert _count(InstrumentResponseField, copy.id) == src_fields
+    assert _count(InstrumentDisplayField, copy.id) == src_displays
+    assert _count(_Assignment, copy.id) == src_assignments
+
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "instrument.replicated",
+        )
+    ).scalar_one()
+    assert event.detail["refs"]["source_instrument_id"] == source_id
+    assert event.detail["refs"]["instrument_id"] == copy.id

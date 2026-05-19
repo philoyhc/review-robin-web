@@ -71,8 +71,9 @@ Slice B — the boundary-scoped write fan-out — shipped 2026-05-19.
 Slice C — the partition-aware reviewer surface render — shipped
 2026-05-19. Slice D — the aggregation sweep (D1 reviewer-state
 rollup + D2 Extract Data collapse) — shipped 2026-05-19, closing
-the over-count window. PR 3 (Replicate) remains. **Zero
-migrations.**
+the over-count window. PR 3 (Replicate) — shipped 2026-05-19.
+The "harmonize the normal instrument card" follow-on remains.
+**Zero migrations.**
 
 ## Progress log
 
@@ -290,7 +291,18 @@ write.
 > group-scoped instruments stay un-openable to reviewers until D
 > lands). Slice A is operator-only and lands independently first.
 
-### PR 3 — Replicate instrument button
+### PR 3 — Replicate instrument button — done (2026-05-19)
+
+Wired the placeholder `Replicate` action-row button:
+`POST /sessions/{id}/instruments/{instrument_id}/replicate` →
+`instruments.replicate_instrument`, which clones the source's
+description, response fields (+ help), display fields (+ each
+row's `visible` flag), `group_kind`, `sort_display_fields`, and
+its assignment rows into a new `{name} (copy)` instrument slotted
+immediately after the source — `accepting_responses=False`, no
+`rule_set_id`. Audit event `instrument.replicated`.
+
+Original plan:
 
 Wire the placeholder `Replicate` action-row button. A
 server-side endpoint copies the instrument's description /
