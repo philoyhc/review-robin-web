@@ -383,6 +383,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
         _IDENTITY | {"snapshot", "refs", "context"}
     ),
     "instrument.created": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
+    "instrument.replicated": EventSchema(
+        _IDENTITY | {"snapshot", "refs", "context"}
+    ),
     "instrument.deleted": EventSchema(_IDENTITY | {"snapshot", "refs"}),
     "instrument.display_field_added": EventSchema(
         _IDENTITY | {"snapshot", "refs"}

@@ -284,6 +284,142 @@ def create_instrument(
     return instrument
 
 
+def replicate_instrument(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    source: Instrument,
+    actor: User,
+) -> Instrument:
+    """Clone an instrument's content into a new instrument slotted
+    immediately after the source (Segment 13C PR 3).
+
+    Copies the description, the response fields (incl. each
+    field's help text), the display fields (incl. each row's
+    ``visible`` Include flag), ``group_kind``, and
+    ``sort_display_fields``. The copy's name is the source name +
+    " (copy)"; it starts ``accepting_responses=False`` and carries
+    **no** pinned rule (``rule_set_id``) — the operator pins one
+    before opening it. Assignment rows are cloned from the source
+    so the replica joins the matrix immediately, mirroring
+    :func:`create_instrument`."""
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=review_session,
+        user=actor,
+        reason="instrument_replicated",
+    )
+    existing = list(
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    )
+    new_order = source.order + 1
+    for inst in existing:
+        if inst.order >= new_order:
+            inst.order += 1
+
+    instrument = Instrument(
+        session_id=review_session.id,
+        name=f"{source.name} (copy)",
+        description=source.description,
+        order=new_order,
+        accepting_responses=False,
+        responses_visible_when_closed=False,
+        group_kind=source.group_kind,
+        sort_display_fields=(
+            [dict(entry) for entry in source.sort_display_fields]
+            if source.sort_display_fields
+            else source.sort_display_fields
+        ),
+    )
+    db.add(instrument)
+    db.flush()
+
+    source_fields = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == source.id
+        )
+    ).scalars()
+    for field in source_fields:
+        db.add(
+            InstrumentResponseField(
+                instrument_id=instrument.id,
+                field_key=field.field_key,
+                label=field.label,
+                response_type_id=field.response_type_id,
+                required=field.required,
+                order=field.order,
+                validation=(
+                    dict(field.validation)
+                    if field.validation is not None
+                    else None
+                ),
+                help_text=field.help_text,
+                help_text_visible=field.help_text_visible,
+            )
+        )
+    source_displays = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == source.id
+        )
+    ).scalars()
+    for display in source_displays:
+        db.add(
+            InstrumentDisplayField(
+                instrument_id=instrument.id,
+                label=display.label,
+                source_type=display.source_type,
+                source_field=display.source_field,
+                order=display.order,
+                visible=display.visible,
+            )
+        )
+    db.flush()
+
+    cloned_assignments = 0
+    source_rows = db.execute(
+        select(Assignment).where(Assignment.instrument_id == source.id)
+    ).scalars()
+    for source_row in source_rows:
+        db.add(
+            Assignment(
+                session_id=review_session.id,
+                reviewer_id=source_row.reviewer_id,
+                reviewee_id=source_row.reviewee_id,
+                instrument_id=instrument.id,
+                include=source_row.include,
+                created_by_mode=source_row.created_by_mode,
+            )
+        )
+        cloned_assignments += 1
+    db.flush()
+
+    audit.write_event(
+        db,
+        event_type="instrument.replicated",
+        summary=f"Replicated instrument {source.name}",
+        actor_user_id=actor.id if actor else None,
+        session=review_session,
+        payload=audit.snapshot(
+            {
+                "id": instrument.id,
+                "name": instrument.name,
+                "order": new_order,
+            }
+        ),
+        refs={
+            "instrument_id": instrument.id,
+            "source_instrument_id": source.id,
+        },
+        context={"cloned_assignments": cloned_assignments},
+    )
+    db.commit()
+    return instrument
+
+
 def delete_instrument(
     db: Session,
     *,

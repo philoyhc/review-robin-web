@@ -176,9 +176,14 @@
           <button class="btn secondary" type="submit"
                   {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Add group instrument</button>
         </form>
-        {# Placeholder — Replicate is wired in Segment 13C PR 3. #}
-        <button class="btn secondary" type="button"
-                title="Coming soon — Segment 13C">Replicate</button>
+        {# Replicate — clone this instrument's content into a new
+           card slotted immediately after it (Segment 13C PR 3). #}
+        <form method="post"
+              action="/operator/sessions/{{ session.id }}/instruments/{{ instrument.id }}/replicate"
+              style="display: inline; margin: 0;">
+          <button class="btn secondary" type="submit"
+                  {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Replicate</button>
+        </form>
       </div>
     </div>
   {% endmacro %}

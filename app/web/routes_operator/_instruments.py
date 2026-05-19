@@ -972,6 +972,30 @@ def instruments_add_group(
     )
 
 
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/replicate")
+def instruments_replicate(
+    bundle: tuple[Instrument, ReviewSession] = Depends(
+        _require_instrument_in_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Clone an instrument's content into a new instrument slotted
+    immediately after the source (Segment 13C PR 3)."""
+    source, review_session = bundle
+    _require_instrument_editable(review_session)
+    instrument = instruments_service.replicate_instrument(
+        db,
+        review_session=review_session,
+        source=source,
+        actor=user,
+    )
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.id}/instruments#instrument-{instrument.id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/delete")
 def instruments_delete(
     instrument_id: int,
